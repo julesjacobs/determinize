@@ -1,0 +1,301 @@
+\documentclass[acmsmall,screen,review,nonacm]{acmart}
+% For anonymous submission, add `anonymous`; for camera-ready, drop `review`.
+
+\settopmatter{printfolios=true}
+\citestyle{acmauthoryear}
+
+\usepackage{mathpartir}
+
+% POPL uses the PACMPL journal format (single-column, 10pt).
+\acmJournal{PACMPL}
+\acmVolume{9}
+\acmNumber{POPL}
+\acmArticle{TODO}
+\acmYear{2025}
+\acmMonth{1}
+\acmDOI{10.1145/nnnnnnn.nnnnnnn}
+\acmISBN{978-x-xxxx-xxxx-x/25/01}
+\acmSubmissionID{TODO}
+\setcopyright{none}
+
+\newcommand{\E}{\mathsf{E}}
+\newcommand{\G}{\mathsf{G}}
+\newcommand{\Float}[1]{\mathsf{float}[#1]}
+\newcommand{\Bool}{\mathsf{bool}}
+\newcommand{\Unit}{\mathsf{unit}}
+\newcommand{\Nat}{\mathsf{nat}}
+\newcommand{\darrow}{\Downarrow}
+
+\begin{document}
+
+\title[Short Title]{Determinize}
+
+\author{First Author}
+\affiliation{
+  \department{Department}
+  \institution{University Name}
+  \city{City}
+  \country{Country}
+}
+\email{first.last@example.com}
+
+\author{Second Author}
+\affiliation{
+  \department{Department}
+  \institution{Institute Name}
+  \city{City}
+  \country{Country}
+}
+\email{second@example.com}
+
+\renewcommand{\shortauthors}{First et al.}
+\authorsaddresses{} % Suppress automatic “Authors’ addresses” block.
+
+
+\maketitle
+
+\section{Introduction}
+We sketch a simply typed core language with floating-point expressions that carry a \emph{mode} indicating whether a term is restricted to expectation reasoning (\(\E\)) or is a general float (\(\G\)). The following sections make the syntax and typing discipline precise.
+
+\section{Syntax}
+Expressions, types, and modes are defined by the grammar below (\(x\) ranges over variables, \(f\) over floating-point literals):
+\begin{align*}
+  m &::= \E \mid \G \\
+  \tau &::= \Unit \mid \Bool \mid \Nat \mid \Float{m} \mid \tau_1 \times \tau_2 \mid \tau_1 + \tau_2 \mid \tau_1 \to \tau_2 \\
+  e &::= x \mid \lambda x.\,e \mid \mathsf{rec}\;f\;x.\,e \mid e_1\,e_2 \mid \langle e_1, e_2\rangle \mid \mathsf{fst}\,e \mid \mathsf{snd}\,e \mid \mathsf{inl}\,e \mid \mathsf{inr}\,e \mid \mathsf{case}\;e\;\mathsf{of}\;\mathsf{inl}\,x \Rightarrow e_1 \mid \mathsf{inr}\,y \Rightarrow e_2 \\
+    &\quad\mid \mathsf{true} \mid \mathsf{false} \mid \mathsf{if}\;e\;\mathsf{then}\;e_1\;\mathsf{else}\;e_2 \mid \mathsf{let}\;x=e_1\;\mathsf{in}\;e_2 \\
+    &\quad\mid c \mid -e \mid e_1 + e_2 \mid e_1 \times e_2 \mid e_1 < e_2 \mid \mathsf{uniform}(e_1,e_2) \mid \mathsf{gauss}(e_1,e_2)
+\end{align*}
+We include a closed interval sampler that draws a float uniformly between the two bounds.
+
+\section{Typing}
+Judgments have the form \(\Gamma \vdash e : \tau\), where \(\Gamma\) is a standard typing context.
+
+\paragraph{Core rules.}
+\begin{mathpar}
+  \inferrule[\textsc{Var}]
+    {x{:}\tau \in \Gamma}
+    {\Gamma \vdash x : \tau}
+  \and
+  \inferrule[\textsc{Abs}]
+    {\Gamma, x{:}\tau_1 \vdash e : \tau_2}
+    {\Gamma \vdash \lambda x.\,e : \tau_1 \to \tau_2}
+  \and
+  \inferrule[\textsc{Rec}]
+    {\Gamma, f{:}\tau_1 \to \tau_2, x{:}\tau_1 \vdash e : \tau_2}
+    {\Gamma \vdash \mathsf{rec}\;f\;x.\,e : \tau_1 \to \tau_2}
+  \and
+  \inferrule[\textsc{App}]
+    {\Gamma \vdash e_1 : \tau_1 \to \tau_2 \\ \Gamma \vdash e_2 : \tau_1}
+    {\Gamma \vdash e_1\,e_2 : \tau_2}
+\end{mathpar}
+
+\paragraph{Products and sums.}
+\begin{mathpar}
+  \inferrule[\textsc{Pair}]
+    {\Gamma \vdash e_1 : \tau_1 \\ \Gamma \vdash e_2 : \tau_2}
+    {\Gamma \vdash \langle e_1 , e_2\rangle : \tau_1 \times \tau_2}
+  \and
+  \inferrule[\textsc{Fst}]
+    {\Gamma \vdash e : \tau_1 \times \tau_2}
+    {\Gamma \vdash \mathsf{fst}\,e : \tau_1}
+  \and
+  \inferrule[\textsc{Snd}]
+    {\Gamma \vdash e : \tau_1 \times \tau_2}
+    {\Gamma \vdash \mathsf{snd}\,e : \tau_2}
+  \and
+  \inferrule[\textsc{Inl}]
+    {\Gamma \vdash e : \tau_1}
+    {\Gamma \vdash \mathsf{inl}\,e : \tau_1 + \tau_2}
+  \and
+  \inferrule[\textsc{Inr}]
+    {\Gamma \vdash e : \tau_2}
+    {\Gamma \vdash \mathsf{inr}\,e : \tau_1 + \tau_2}
+  \and
+  \inferrule[\textsc{Case}]
+    {\Gamma \vdash e : \tau_1 + \tau_2 \\ \Gamma, x{:}\tau_1 \vdash e_1 : \tau \\ \Gamma, y{:}\tau_2 \vdash e_2 : \tau}
+    {\Gamma \vdash \mathsf{case}\;e\;\mathsf{of}\;\mathsf{inl}\,x \Rightarrow e_1 \mid \mathsf{inr}\,y \Rightarrow e_2 : \tau}
+\end{mathpar}
+
+\paragraph{Booleans and control.}
+\begin{mathpar}
+  \inferrule[\textsc{True}]{\;}{\Gamma \vdash \mathsf{true} : \Bool}
+  \and
+  \inferrule[\textsc{False}]{\;}{\Gamma \vdash \mathsf{false} : \Bool}
+  \and
+  \inferrule[\textsc{If}]
+    {\Gamma \vdash e : \Bool \\ \Gamma \vdash e_1 : \tau \\ \Gamma \vdash e_2 : \tau}
+    {\Gamma \vdash \mathsf{if}\;e\;\mathsf{then}\;e_1\;\mathsf{else}\;e_2 : \tau}
+  \and
+  \inferrule[\textsc{Let}]
+    {\Gamma \vdash e_1 : \tau_1 \\ \Gamma, x{:}\tau_1 \vdash e_2 : \tau_2}
+    {\Gamma \vdash \mathsf{let}\;x=e_1\;\mathsf{in}\;e_2 : \tau_2}
+\end{mathpar}
+
+\paragraph{Floats and arithmetic.}
+\begin{mathpar}
+  \inferrule[\textsc{FloatLit}]{\;}{\Gamma \vdash c : \Float{m}}
+  \and
+  \inferrule[\textsc{Neg}]
+    {\Gamma \vdash e : \Float{m}}
+    {\Gamma \vdash -e : \Float{m}}
+  \and
+  \inferrule[\textsc{Add}]
+    {\Gamma \vdash e_1 : \Float{m} \\ \Gamma \vdash e_2 : \Float{m}}
+    {\Gamma \vdash e_1 + e_2 : \Float{m}}
+  \and
+  \inferrule[\textsc{Mul-G}]
+    {\Gamma \vdash e_1 : \Float{\G} \\ \Gamma \vdash e_2 : \Float{\G}}
+    {\Gamma \vdash e_1 \times e_2 : \Float{\G}}
+  \and
+  \inferrule[\textsc{Mul-ConstL}]
+    {\Gamma \vdash c : \Float{m} \\ \Gamma \vdash e : \Float{m}}
+    {\Gamma \vdash c \times e : \Float{m}}
+  \and
+  \inferrule[\textsc{Mul-ConstR}]
+    {\Gamma \vdash e : \Float{m} \\ \Gamma \vdash c : \Float{m}}
+    {\Gamma \vdash e \times c : \Float{m}}
+  \and
+  \inferrule[\textsc{Cmp}]
+    {\Gamma \vdash e_1 : \Float{\G} \\ \Gamma \vdash e_2 : \Float{\G}}
+    {\Gamma \vdash e_1 < e_2 : \Bool}
+  \and
+  \inferrule[\textsc{Sample}]
+    {\Gamma \vdash e_1 : \Float{m} \\ \Gamma \vdash e_2 : \Float{m}}
+    {\Gamma \vdash \mathsf{uniform}(e_1,e_2) : \Float{m}}
+  \and
+  \inferrule[\textsc{Gauss}]
+    {\Gamma \vdash e_1 : \Float{m} \\ \Gamma \vdash e_2 : \Float{\G}}
+    {\Gamma \vdash \mathsf{gauss}(e_1,e_2) : \Float{m}}
+\end{mathpar}
+
+Multiplication is general-mode only unless one side is a (typed) literal, in which case it follows the literal's mode; addition is parametric in the mode; comparison is only allowed at general mode. Uniform sampling preserves the incoming mode; Gaussian sampling returns the incoming mode but requires a general-typed variance.
+\paragraph{Modes and subtyping.}
+We relate modes with a preorder \(m_1 \preceq m_2\):
+\begin{mathpar}
+  \inferrule[\textsc{Mode-Refl}]{\;}{m \preceq m}
+  \and
+  \inferrule[\textsc{Mode-GE}]{\;}{\G \preceq \E}
+\end{mathpar}
+Float subtyping follows modes: general floats can be used where expectation-mode floats are required, and otherwise floats are covariant in their mode while invariant in everything else.
+\begin{mathpar}
+  \inferrule[\textsc{Sub-Float-Refl}]{\;}{\Float{m} <: \Float{m}}
+  \and
+  \inferrule[\textsc{Sub-Float-GE}]{\;}{\Float{\G} <: \Float{\E}}
+  \and
+  \inferrule[\textsc{Sub-Float}]
+    {m_1 \preceq m_2}
+    {\Float{m_1} <: \Float{m_2}}
+  \and
+  \inferrule[\textsc{Subsumption}]
+    {\Gamma \vdash e : \tau_1 \\ \tau_1 <: \tau_2}
+    {\Gamma \vdash e : \tau_2}
+\end{mathpar}
+
+\paragraph{Structural subtyping (standard).}
+Standard covariant/contravariant rules apply to composite types:
+\begin{mathpar}
+  \inferrule[\textsc{Sub-Refl}]{\;}{\tau <: \tau}
+  \and
+  \inferrule[\textsc{Sub-Prod}]
+    {\tau_1 <: \tau_1' \\ \tau_2 <: \tau_2'}
+    {\tau_1 \times \tau_2 <: \tau_1' \times \tau_2'}
+  \and
+  \inferrule[\textsc{Sub-Sum}]
+    {\tau_1 <: \tau_1' \\ \tau_2 <: \tau_2'}
+    {\tau_1 + \tau_2 <: \tau_1' + \tau_2'}
+  \and
+  \inferrule[\textsc{Sub-Arr}]
+    {\tau_1' <: \tau_1 \\ \tau_2 <: \tau_2'}
+    {\tau_1 \to \tau_2 <: \tau_1' \to \tau_2'}
+\end{mathpar}
+
+\section{Determinization}
+We use a type-directed transformation \(\Gamma \vdash e : \tau \darrow e'\) that preserves non-probabilistic structure and replaces probabilistic sampling by its expected value when the result is typed at expectation mode. Representative clauses are below; other constructs follow the obvious structural recursion.
+\begin{mathpar}
+  \inferrule[\textsc{Det-Uniform-E}]
+    {\Gamma \vdash e_1 : \Float{\E} \darrow e_1' \\ \Gamma \vdash e_2 : \Float{\E} \darrow e_2'}
+    {\Gamma \vdash \mathsf{uniform}(e_1,e_2) : \Float{\E} \darrow (e_1' + e_2') \times 0.5}
+  \and
+  \inferrule[\textsc{Det-Uniform-G}]
+    {\Gamma \vdash e_1 : \Float{\G} \darrow e_1' \\ \Gamma \vdash e_2 : \Float{\G} \darrow e_2'}
+    {\Gamma \vdash \mathsf{uniform}(e_1,e_2) : \Float{\G} \darrow \mathsf{uniform}(e_1',e_2')}
+  \and
+  \inferrule[\textsc{Det-Gauss-E}]
+    {\Gamma \vdash e_1 : \Float{\E} \darrow e_1' \\ \Gamma \vdash e_2 : \Float{\G} \darrow e_2'}
+    {\Gamma \vdash \mathsf{gauss}(e_1,e_2) : \Float{\E} \darrow e_1'}
+  \and
+  \inferrule[\textsc{Det-Gauss-G}]
+    {\Gamma \vdash e_1 : \Float{\G} \darrow e_1' \\ \Gamma \vdash e_2 : \Float{\G} \darrow e_2'}
+    {\Gamma \vdash \mathsf{gauss}(e_1,e_2) : \Float{\G} \darrow \mathsf{gauss}(e_1',e_2')}
+  \and
+  \inferrule[\textsc{Det-Var}]
+    {\Gamma \vdash x : \tau}
+    {\Gamma \vdash x : \tau \darrow x}
+  \and
+  \inferrule[\textsc{Det-Abs}]
+    {\Gamma, x{:}\tau_1 \vdash e : \tau_2 \darrow e'}
+    {\Gamma \vdash \lambda x.\,e : \tau_1 \to \tau_2 \darrow \lambda x.\,e'}
+  \and
+  \inferrule[\textsc{Det-Rec}]
+    {\Gamma, f{:}\tau_1 \to \tau_2, x{:}\tau_1 \vdash e : \tau_2 \darrow e'}
+    {\Gamma \vdash \mathsf{rec}\;f\;x.\,e : \tau_1 \to \tau_2 \darrow \mathsf{rec}\;f\;x.\,e'}
+  \and
+  \inferrule[\textsc{Det-Const}]
+    {\Gamma \vdash c : \Float{m}}
+    {\Gamma \vdash c : \Float{m} \darrow c}
+  \and
+  \inferrule[\textsc{Det-Neg}]
+    {\Gamma \vdash e : \Float{m} \darrow e'}
+    {\Gamma \vdash -e : \Float{m} \darrow -e'}
+  \and
+  \inferrule[\textsc{Det-Add}]
+    {\Gamma \vdash e_1 : \Float{m} \darrow e_1' \\ \Gamma \vdash e_2 : \Float{m} \darrow e_2'}
+    {\Gamma \vdash e_1 + e_2 : \Float{m} \darrow e_1' + e_2'}
+  \and
+  \inferrule[\textsc{Det-Mul}]
+    {\Gamma \vdash e_1 : \Float{\G} \darrow e_1' \\ \Gamma \vdash e_2 : \Float{\G} \darrow e_2'}
+    {\Gamma \vdash e_1 \times e_2 : \Float{\G} \darrow e_1' \times e_2'}
+  \and
+  \inferrule[\textsc{Det-If}]
+    {\Gamma \vdash e : \Bool \darrow e' \\ \Gamma \vdash e_1 : \tau \darrow e_1' \\ \Gamma \vdash e_2 : \tau \darrow e_2'}
+    {\Gamma \vdash \mathsf{if}\;e\;\mathsf{then}\;e_1\;\mathsf{else}\;e_2 : \tau \darrow \mathsf{if}\;e'\;\mathsf{then}\;e_1'\;\mathsf{else}\;e_2'}
+\end{mathpar}
+Lambda, application, pairs, sums, and \(\mathsf{let}\) follow the same shape (recursing on subterms). The key point is that expectation-mode samples are determinized to their expected value, while general-mode samples remain probabilistic but have their subterms determinized.
+
+\section{Related Work}
+We list the main threads of related work we build on:
+\begin{itemize}
+  \item \textbf{Generating functions for programs and exact PPL inference}
+  \begin{itemize}
+    \item Klinkenberg et al.: generating functions for probabilistic programs~\cite{klinkenberg2020gfpp}.
+    \item Klinkenberg et al.: exact Bayesian inference for loopy programs via generating functions (OOPSLA'24)~\cite{klinkenberg2024loopy}.
+    \item Zaiser, Murawski, Ong: exact Bayesian inference on discrete models via PGFs (Genfer, NeurIPS'23)~\cite{zaiser2023pgf}.
+    \item Li, Zhang: compiling with generating functions (TR 2025)~\cite{li2025compiling}.
+    \item Winner, Sheldon: PGFs for latent-count graphical models (NeurIPS'16; ICML'17)~\cite{winner2016pgf}.
+    \item Zhang et al.: probabilistic generating circuits (ICML'21)~\cite{zhang2021pgc}.
+  \end{itemize}
+  \item \textbf{Moment analyses / expectation transformers}
+  \begin{itemize}
+    \item Moosbrugger et al.: moment analysis for probabilistic loops (OOPSLA'22)~\cite{moosbrugger2022moment}.
+    \item Bartocci et al.: MORA moment-based invariants (2021)~\cite{bartocci2021mora}.
+    \item Wang, Hoffmann, Reps: central moment analysis for cost accumulators (2020)~\cite{wang2020central}.
+    \item Kozen: seminal semantics for probabilistic programs (1981)~\cite{kozen1981semantics}.
+  \end{itemize}
+  \item \textbf{Hybrid exact/sampling PPL}
+  \begin{itemize}
+    \item Zinkov, Shan: composing inference algorithms as program transformations (Hakaru; UAI'17)~\cite{zinkov2017hakaru}.
+    \item Murray et al.: delayed sampling / Rao--Blackwellization (2018)~\cite{murray2018delayed}.
+    \item Atkinson et al.: semi-symbolic inference for streaming PPLs (ProbZelus; OOPSLA'22)~\cite{atkinson2022semisymbolic}.
+    \item Gehr et al.: PSI exact symbolic inference (CAV'16)~\cite{gehr2016psi}.
+    \item Holtzen et al.: Dice scaling exact inference for discrete PPLs (OOPSLA'20)~\cite{holtzen2020dice}.
+    \item Saad et al.: SPPL fast exact symbolic inference (PLDI'21)~\cite{saad2021sppl}.
+  \end{itemize}
+\end{itemize}
+
+% Remove this once real citations are added.
+\nocite{*}
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{references}
+
+\end{document}
