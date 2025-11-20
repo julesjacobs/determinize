@@ -21,3 +21,4 @@
 [x] Implement an interpreter for the language; run 100 trials and write .det.out with pretty-print and mean
 [x] Add typed expressions (mutual recursion with per-subexpression type annotations)
 [x] Add lists to the language with [], x::xs, and match on nil/cons.
+[x] Add foldr example summing a list with mixed uniform/gauss samples
