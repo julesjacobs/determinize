@@ -1,0 +1,12 @@
+let foldr =
+  fun f =>
+  fun z =>
+  rec go xs =>
+    match xs with [] => z | x :: xs => f x (go xs)
+in
+let sum = fun xs => ((foldr (fun x => fun acc => x + acc) 0.0) xs)
+in
+let samples =
+  uniform(0.0, 1.0) :: gauss(1.0, 0.2) :: 2.5 :: gauss(0.5, 0.05) :: []
+in
+sum samples

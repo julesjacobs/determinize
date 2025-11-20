@@ -4,40 +4,30 @@ raw:
     ( rec sum xs =>
           ( match ( xs : [ float[?m2] ] ) with
                 | [] => ( 0 : float[?m2] )
-                | x :: xs => ( ( x : float[?m2] ) + ( ( sum : [ float[?m2] ] -> 
-                                  float[?m2] ) ( xs : [ float[?m2] ] ) :
-                            float[?m2] ) : float[?m2] ) : float[?m2] ) : [
-            float[?m2] ] ->  float[?m2] )
+                | x :: xs => ( ( x : float[?m2] ) + ( ( sum : [ float[?m2] ] ->  float[?m2] ) ( xs : [ float[?m2] ] ) : float[?m2] ) :
+                      float[?m2] ) : float[?m2] ) : [ float[?m2] ] ->  float[?m2] )
     in
     ( let values =
-          ( ( 1 : float[?m3] ) :: ( ( 2 : float[?m4] ) :: ( ( 3 : float[?m5] )
-                              :: ( [] : [ float[?m5] ] ) : [ float[?m5] ] ) : [
-                        float[?m4] ] ) : [ float[?m3] ] )
+          ( ( 1 : float[?m3] ) :: ( ( 2 : float[?m4] ) :: ( ( 3 : float[?m5] ) :: ( [] : [ float[?m5] ] ) : [ float[?m5] ] ) : [ float[?m4]
+                      ] ) : [ float[?m3] ] )
           in
-          ( ( sum : [ float[?m2] ] ->  float[?m2] ) ( values : [ float[?m2] ] )
-                : float[?m2] ) : float[?m2] ) : float[?m2] )
+          ( ( sum : [ float[?m2] ] ->  float[?m2] ) ( values : [ float[?m2] ] ) : float[?m2] ) : float[?m2] ) : float[?m2] )
 defaulted:
 ( let sum =
     ( rec sum xs =>
           ( match ( xs : [ float[E] ] ) with
                 | [] => ( 0 : float[E] )
-                | x :: xs => ( ( x : float[E] ) + ( ( sum : [ float[E] ] -> 
-                                  float[E] ) ( xs : [ float[E] ] ) : float[E] )
-                      : float[E] ) : float[E] ) : [ float[E] ] ->  float[E] )
+                | x :: xs => ( ( x : float[E] ) + ( ( sum : [ float[E] ] ->  float[E] ) ( xs : [ float[E] ] ) : float[E] ) : float[E] ) :
+                float[E] ) : [ float[E] ] ->  float[E] )
     in
     ( let values =
-          ( ( 1 : float[E] ) :: ( ( 2 : float[E] ) :: ( ( 3 : float[E] ) :: ( []
-                                  : [ float[E] ] ) : [ float[E] ] ) : [ float[E]
-                      ] ) : [ float[E] ] )
+          ( ( 1 : float[E] ) :: ( ( 2 : float[E] ) :: ( ( 3 : float[E] ) :: ( [] : [ float[E] ] ) : [ float[E] ] ) : [ float[E] ] ) : [
+                  float[E] ] )
           in
-          ( ( sum : [ float[E] ] ->  float[E] ) ( values : [ float[E] ] ) :
-                float[E] ) : float[E] ) : float[E] )
+          ( ( sum : [ float[E] ] ->  float[E] ) ( values : [ float[E] ] ) : float[E] ) : float[E] ) : float[E] )
 
 == Determinized ==
-let sum =
-rec sum xs => match xs with | [] => 0 | x :: xs => x + sum xs
-in
-let values = 1 :: 2 :: 3 :: [] in sum values
+let sum = rec sum xs => match xs with | [] => 0 | x :: xs => x + sum xs in let values = 1 :: 2 :: 3 :: [] in sum values
 
 == Evaluation (100 trials) ==
 program mean: 6

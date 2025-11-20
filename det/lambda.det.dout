@@ -1,10 +1,8 @@
 == Elaboration ==
 raw:
-( ( ( fun x => ( ( x : float[?m2] ) + ( 1 : float[?m2] ) : float[?m2] ) :
-          float[?m2] ->  float[?m2] ) ) ( 5 : float[?m2] ) : float[?m2] )
+( ( ( fun x => ( ( x : float[?m2] ) + ( 1 : float[?m2] ) : float[?m2] ) : float[?m2] ->  float[?m2] ) ) ( 5 : float[?m2] ) : float[?m2] )
 defaulted:
-( ( ( fun x => ( ( x : float[E] ) + ( 1 : float[E] ) : float[E] ) : float[E] -> 
-            float[E] ) ) ( 5 : float[E] ) : float[E] )
+( ( ( fun x => ( ( x : float[E] ) + ( 1 : float[E] ) : float[E] ) : float[E] ->  float[E] ) ) ( 5 : float[E] ) : float[E] )
 
 == Determinized ==
 ( fun x => x + 1 ) 5

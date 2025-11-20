@@ -99,133 +99,155 @@ let doc_mode_meta m =
   | Some m' -> doc_mode m'
   | None -> Doc.text (Format.sprintf "?m%d" m.mode_id)
 
-let rec doc_typ ?(prec = 0) t =
-  let open Doc in
-  let wrap level d = if prec > level then parens d else d in
-  match zonk t with
-  | TUnit -> text "unit"
-  | TBool -> text "bool"
-  | TNat -> text "nat"
-  | TFloat m -> text "float[" ^^ doc_mode_meta m ^^ text "]"
-  | TPair (a, b) ->
-      let d = group (hsep [ doc_typ ~prec:2 a; text "*"; doc_typ ~prec:2 b ]) in
-      wrap 2 d
-  | TSum (a, b) ->
-      let d = group (hsep [ doc_typ ~prec:2 a; text "+"; doc_typ ~prec:2 b ]) in
-      wrap 2 d
-  | TList a ->
-      let d = brackets (doc_typ ~prec:3 a) in
-      wrap 3 d
-  | TArrow (a, b) ->
-      let d =
-        group (hsep [ doc_typ ~prec:1 a; text "->"; nest 2 (softline ^^ doc_typ b) ])
-      in
-      wrap 1 d
-  | TMeta m ->
-      (match m.ty_value with
-       | Some t' -> doc_typ ~prec t' | None -> text (Format.sprintf "?t%d" m.ty_id))
+let typ_cache : ((int * typ), Doc.doc) Stdlib.Hashtbl.t = Stdlib.Hashtbl.create 256
+
+let clear_doc_typ_cache () = Stdlib.Hashtbl.clear typ_cache
+
+let doc_typ =
+  let rec go prec t =
+    match Stdlib.Hashtbl.find_opt typ_cache (prec, t) with
+    | Some d -> d
+    | None ->
+        let open Doc in
+        let wrap level d = if prec > level then parens d else d in
+        let d =
+          match zonk t with
+          | TUnit -> text "unit"
+          | TBool -> text "bool"
+          | TNat -> text "nat"
+          | TFloat m -> text "float[" ^^ doc_mode_meta m ^^ text "]"
+          | TPair (a, b) ->
+              let d = group (hsep [ go 2 a; text "*"; go 2 b ]) in
+              wrap 2 d
+          | TSum (a, b) ->
+              let d = group (hsep [ go 2 a; text "+"; go 2 b ]) in
+              wrap 2 d
+          | TList a ->
+              let d = brackets (go 3 a) in
+              wrap 3 d
+          | TArrow (a, b) ->
+              let d = group (hsep [ go 1 a; text "->"; nest 2 (softline ^^ go 0 b) ]) in
+              wrap 1 d
+          | TMeta m ->
+              (match m.ty_value with
+               | Some t' -> go prec t' | None -> text (Format.sprintf "?t%d" m.ty_id))
+        in
+        Stdlib.Hashtbl.replace typ_cache (prec, t) d;
+        d
+  in
+  fun ?(prec = 0) t -> go prec t
 
 let pp_typ fmt t = Doc.render fmt (doc_typ t)
 
 let doc_typed_expr (t : typed_expr) =
   let open Doc in
+  (* Memoize on physical identity of typed_expr nodes to avoid blowing up
+     the doc tree when the same node is referenced multiple times. *)
+  let cache : (typed_expr, Doc.doc) Hashtbl.t = Hashtbl.create 256 in
   let rec app_chain e acc =
     match e.expr with
     | EApp (f, arg) -> app_chain f (arg :: acc)
     | _ -> (e, acc)
   in
   let rec render ctx_prec t =
-    let prec, doc_body =
-      match t.expr with
-      | EVar x -> (5, text x)
-      | ELam (x, body) ->
-          (1,
-           group
-             (vsep
-                [ hsep [ text "fun"; text x; text "=>" ]
-                ; nest 2 (render 0 body)
-                ]))
-      | ERec (f, x, body) ->
-          (1,
-           group
-             (vsep
-                [ hsep [ text "rec"; text f; text x; text "=>" ]
-                ; nest 2 (render 0 body)
-                ]))
-      | ELet (x, a, b) ->
-          (0,
-           group
-             (vsep
-                [ hsep [ text "let"; text x; text "=" ]
-                ; nest 2 (render 0 a)
-                ; text "in"
-                ; nest 2 (render 0 b)
-                ]))
-      | EIf (c, tbr, fbr) ->
-          (0,
-           group
-             (vsep
+    match Hashtbl.find_opt cache t with
+    | Some d -> d
+    | None ->
+        let prec, doc_body =
+          match t.expr with
+          | EVar x -> (5, text x)
+          | ELam (x, body) ->
+              (1,
+               group
+                 (vsep
+                    [ hsep [ text "fun"; text x; text "=>" ]
+                    ; nest 2 (render 0 body)
+                    ]))
+          | ERec (f, x, body) ->
+              (1,
+               group
+                 (vsep
+                    [ hsep [ text "rec"; text f; text x; text "=>" ]
+                    ; nest 2 (render 0 body)
+                    ]))
+          | ELet (x, a, b) ->
+              (0,
+               group
+                 (vsep
+                    [ hsep [ text "let"; text x; text "=" ]
+                    ; nest 2 (render 0 a)
+                    ; text "in"
+                    ; nest 2 (render 0 b)
+                    ]))
+          | EIf (c, tbr, fbr) ->
+              (0,
+               group
+                 (vsep
+                    [
+                      hsep [ text "if"; render 0 c ];
+                      hsep [ text "then" ];
+                      nest 2 (render 0 tbr);
+                      hsep [ text "else" ];
+                      nest 2 (render 0 fbr);
+                    ]))
+          | EMatchList (e, nil_br, (x, xs, cons_br)) ->
+              let branch_docs =
                 [
-                  hsep [ text "if"; render 0 c ];
-                  hsep [ text "then" ];
-                  nest 2 (render 0 tbr);
-                  hsep [ text "else" ];
-                  nest 2 (render 0 fbr);
-                ]))
-      | EMatchList (e, nil_br, (x, xs, cons_br)) ->
-          let branch_docs =
-            [
-              nest 2 (hsep [ text "|"; text "[]"; text "=>"; render 0 nil_br ]);
-              nest 2
-                (hsep [ text "|"; text x; text "::"; text xs; text "=>"; render 0 cons_br ]);
-            ]
-          in
-          (0, vsep (hsep [ text "match"; render 0 e; text "with" ] :: branch_docs))
-      | EMatch (e, (x, a), (y, b)) ->
-          let branch_docs =
-            [
-              nest 2 (hsep [ text "|"; text "inl"; text x; text "=>"; render 0 a ]);
-              nest 2 (hsep [ text "|"; text "inr"; text y; text "=>"; render 0 b ]);
-            ]
-          in
-          (0, vsep (hsep [ text "match"; render 0 e; text "with" ] :: branch_docs))
-      | EApp _ ->
-          let head, args_rev = app_chain t [] in
-          let docs = render 3 head :: List.rev_map (render 4) args_rev in
-          (3, group (sep docs))
-      | EPair (a, b) ->
-          (4,
-           group (enclose_separated "<" ">" (text "," ^^ softline) [ render 0 a; render 0 b ]))
-      | ENil -> (5, text "[]")
-      | ECons (hd, tl) ->
-          (0, group (nest 2 (sep [ render 1 hd; text "::"; render 0 tl ])))
-      | EUnit -> (5, text "()")
-      | EFst e -> (4, group (hsep [ text "fst"; render 0 e ]))
-      | ESnd e -> (4, group (hsep [ text "snd"; render 0 e ]))
-      | EInl e -> (4, group (hsep [ text "inl"; render 0 e ]))
-      | EInr e -> (4, group (hsep [ text "inr"; render 0 e ]))
-      | EConst f -> (5, text (Format.asprintf "%g" f))
-      | EBool b -> (5, text (string_of_bool b))
-      | ENeg e -> (4, group (hsep [ text "-"; render 4 e ]))
-      | EMul (a, b) ->
-          (2, group (nest 2 (sep [ render 2 a; text "*"; render 3 b ])))
-      | EAdd (a, b) ->
-          (1, group (nest 2 (sep [ render 1 a; text "+"; render 2 b ])))
-      | ELt (a, b) ->
-          (1, group (nest 2 (sep [ render 1 a; text "<"; render 2 b ])))
-      | EUniform (a, b) ->
-          (4,
-           group
-             (text "uniform"
-              ^^ enclose_separated "(" ")" (text "," ^^ softline) [ render 0 a; render 0 b ]))
-      | EGauss (a, b) ->
-          (4,
-           group
-             (text "gauss"
-              ^^ enclose_separated "(" ")" (text "," ^^ softline) [ render 0 a; render 0 b ]))
-    in
-    let doc_with_type = group (parens (nest 2 (sep [ doc_body; text ":"; doc_typ t.typ ]))) in
-    paren_if (prec < ctx_prec) doc_with_type
+                  nest 2 (hsep [ text "|"; text "[]"; text "=>"; render 0 nil_br ]);
+                  nest 2
+                    (hsep [ text "|"; text x; text "::"; text xs; text "=>"; render 0 cons_br ]);
+                ]
+              in
+              (0, vsep (hsep [ text "match"; render 0 e; text "with" ] :: branch_docs))
+          | EMatch (e, (x, a), (y, b)) ->
+              let branch_docs =
+                [
+                  nest 2 (hsep [ text "|"; text "inl"; text x; text "=>"; render 0 a ]);
+                  nest 2 (hsep [ text "|"; text "inr"; text y; text "=>"; render 0 b ]);
+                ]
+              in
+              (0, vsep (hsep [ text "match"; render 0 e; text "with" ] :: branch_docs))
+          | EApp _ ->
+              let head, args_rev = app_chain t [] in
+              let docs = render 3 head :: List.rev_map (render 4) args_rev in
+              (3, group (sep docs))
+          | EPair (a, b) ->
+              (4,
+               group (enclose_separated "<" ">" (text "," ^^ softline) [ render 0 a; render 0 b ]))
+          | ENil -> (5, text "[]")
+          | ECons (hd, tl) ->
+              (0, group (nest 2 (sep [ render 1 hd; text "::"; render 0 tl ])))
+          | EUnit -> (5, text "()")
+          | EFst e -> (4, group (hsep [ text "fst"; render 0 e ]))
+          | ESnd e -> (4, group (hsep [ text "snd"; render 0 e ]))
+          | EInl e -> (4, group (hsep [ text "inl"; render 0 e ]))
+          | EInr e -> (4, group (hsep [ text "inr"; render 0 e ]))
+          | EConst f -> (5, text (Format.asprintf "%g" f))
+          | EBool b -> (5, text (string_of_bool b))
+          | ENeg e -> (4, group (hsep [ text "-"; render 4 e ]))
+          | EMul (a, b) ->
+              (2, group (nest 2 (sep [ render 2 a; text "*"; render 3 b ])))
+          | EAdd (a, b) ->
+              (1, group (nest 2 (sep [ render 1 a; text "+"; render 2 b ])))
+          | ELt (a, b) ->
+              (1, group (nest 2 (sep [ render 1 a; text "<"; render 2 b ])))
+          | EUniform (a, b) ->
+              (4,
+               group
+                 (text "uniform"
+                  ^^ enclose_separated "(" ")" (text "," ^^ softline) [ render 0 a; render 0 b ]))
+          | EGauss (a, b) ->
+              (4,
+               group
+                 (text "gauss"
+                  ^^ enclose_separated "(" ")" (text "," ^^ softline) [ render 0 a; render 0 b ]))
+        in
+        let doc_with_type =
+          group (parens (nest 2 (sep [ doc_body; text ":"; doc_typ t.typ ])))
+        in
+        let result = paren_if (prec < ctx_prec) doc_with_type in
+        Hashtbl.replace cache t result;
+        result
   and paren_if p d = if p then parens d else d in
   render 0 t
 

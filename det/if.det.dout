@@ -1,7 +1,6 @@
 == Elaboration ==
 raw:
-( if ( true : bool ) then ( 1 : float[?m1] ) else ( 0 : float[?m1] ) :
-    float[?m1] )
+( if ( true : bool ) then ( 1 : float[?m1] ) else ( 0 : float[?m1] ) : float[?m1] )
 defaulted:
 ( if ( true : bool ) then ( 1 : float[E] ) else ( 0 : float[E] ) : float[E] )
 

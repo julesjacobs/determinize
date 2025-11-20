@@ -125,6 +125,31 @@ let rec doc_expr ?(ctx_prec = 0) expr =
   in
   paren_if (prec < ctx_prec) body
 
+let doc_size doc =
+  let seen : (Doc.doc, unit) Hashtbl.t = Hashtbl.create 256 in
+  let rec go acc stack =
+    match stack with
+    | [] -> acc
+    | d :: rest ->
+        if Hashtbl.mem seen d then
+          go acc rest
+        else (
+          Hashtbl.add seen d ();
+          match d.Doc.node with
+          | Doc.Empty | Doc.Text _ | Doc.Line -> go (acc + 1) rest
+          | Doc.Nest (_, d') -> go (acc + 1) (d' :: rest)
+          | Doc.Concat (a, b) | Doc.Union (a, b) -> go (acc + 1) (a :: b :: rest)
+        )
+  in
+  go 0 [ doc ]
+
+let trim_doc doc =
+  let size = doc_size doc in
+  if size > 120_000 then
+    Doc.text (Format.sprintf "<omitted: doc too large (%d unique nodes)>" size)
+  else
+    doc
+
 let () =
   if Array.length Sys.argv <> 2 then (
     prerr_endline "Usage: determinize <file.det>";
@@ -134,10 +159,11 @@ let () =
   (* Type/direct elaboration expecting a float result. *)
   let expected = Types.TFloat (Types.fresh_mode_meta ()) in
   let elaborated = Infer.infer [] ast expected in
-  let raw_elab_doc = Det.doc_typed_expr elaborated in
+  let raw_elab_doc = trim_doc (Det.doc_typed_expr elaborated) in
   (* Default modes before determinization/output. *)
   Det.default_modes elaborated;
-  let defaulted_elab_doc = Det.doc_typed_expr elaborated in
+  Det.clear_doc_typ_cache ();
+  let defaulted_elab_doc = trim_doc (Det.doc_typed_expr elaborated) in
   let det_ast = Det.of_texpr elaborated in
   let out_path = path ^ ".dout" in
   let oc = open_out out_path in
@@ -157,7 +183,7 @@ let () =
   let stochastic_mean = mean_over ast "stochastic mean computation" in
   Random.init 0;
   let determinized_mean = mean_over det_ast "determinized mean computation" in
-  let print_doc out doc = Doc.render ~width:80 out doc in
+  let print_doc out doc = Doc.render ~width:140 out doc in
   let report out =
     Format.fprintf out "== Elaboration ==@.@[<v 0>raw:@ %a@,defaulted:@ %a@]@.@."
       print_doc raw_elab_doc print_doc defaulted_elab_doc;
