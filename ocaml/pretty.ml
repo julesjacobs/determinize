@@ -81,6 +81,25 @@ type simple =
   | SText of string * simple
   | SLine of int * simple
 
+(* Memoize best-fit computations by the (width, indent, doc_stack) state.
+   The document stack is shared structurally, so physical identity is a
+   good key to avoid the combinatorial explosion when many Unions are
+   explored. *)
+module Key = struct
+  type t = int * int * (int * doc) list
+
+  let equal (w1, k1, d1) (w2, k2, d2) = w1 = w2 && k1 = k2 && d1 == d2
+
+  let hash (w, k, d) =
+    (* Use the cons cell address of the doc list for a cheap physical hash. *)
+    let addr : int = Obj.magic d in
+    Hashtbl.hash (w, k, addr)
+end
+
+module Cache = Hashtbl.Make (Key)
+
+let cache : simple Cache.t = Cache.create 4096
+
 let rec fits w doc =
   if w < 0 then
     false
@@ -115,8 +134,31 @@ let rec layout buf = function
       layout buf d
 
 let to_string ?(width = 80) doc =
+  Cache.clear cache;
   let b = Buffer.create 256 in
-  layout b (best width 0 [ (0, doc) ]);
+  let rec best_memo w k (docs : (int * doc) list) =
+    match Cache.find_opt cache (w, k, docs) with
+    | Some ans -> ans
+    | None ->
+        let res =
+          match docs with
+          | [] -> SEmpty
+          | (i, d) :: z -> (
+              match d with
+              | Empty -> best_memo w k z
+              | Text s -> SText (s, best_memo w (k + String.length s) z)
+              | Line -> SLine (i, best_memo w i z)
+              | Concat (a, b) -> best_memo w k ((i, a) :: (i, b) :: z)
+              | Nest (j, a) -> best_memo w k ((i + j, a) :: z)
+              | Union (a, b) ->
+                  let x = best_memo w k ((i, a) :: z) in
+                  if fits (w - k) x then x else best_memo w k ((i, b) :: z))
+        in
+        Cache.replace cache (w, k, docs) res;
+        res
+  in
+  (* Preserve original external signature, with memoized core. *)
+  layout b (best_memo width 0 [ (0, doc) ]);
   Buffer.contents b
 
 let render ?(width = 80) fmt doc =
