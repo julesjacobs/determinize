@@ -57,29 +57,30 @@ let rec pp_typ fmt = function
        | None -> Format.fprintf fmt "?t%d" m.ty_id)
 
 let pp_texpr fmt (t : typed_expr) =
-  let rec go fmt texpr =
-    match texpr with
-    | EVar x -> Format.fprintf fmt "%s" x
-    | ELam (x, body) -> Format.fprintf fmt "(fun %s => %a)" x go body.expr
-    | ERec (f, x, body) -> Format.fprintf fmt "(rec %s %s => %a)" f x go body.expr
-    | EApp (a,b) -> Format.fprintf fmt "(%a %a)" go a.expr go b.expr
-    | EUnit -> Format.fprintf fmt "()"
-    | EPair (a,b) -> Format.fprintf fmt "<%a, %a>" go a.expr go b.expr
-    | EFst e -> Format.fprintf fmt "fst %a" go e.expr
-    | ESnd e -> Format.fprintf fmt "snd %a" go e.expr
-    | EInl e -> Format.fprintf fmt "inl %a" go e.expr
-    | EInr e -> Format.fprintf fmt "inr %a" go e.expr
+  let rec go fmt (t : typed_expr) =
+    match t.expr with
+    | EVar x -> Format.fprintf fmt "(%s : %a)" x pp_typ t.typ
+    | ELam (x, body) -> Format.fprintf fmt "(fun %s => %a : %a)" x go body pp_typ t.typ
+    | ERec (f, x, body) -> Format.fprintf fmt "(rec %s %s => %a : %a)" f x go body pp_typ t.typ
+    | EApp (a,b) -> Format.fprintf fmt "(%a %a : %a)" go a go b pp_typ t.typ
+    | EUnit -> Format.fprintf fmt "(() : %a)" pp_typ t.typ
+    | EPair (a,b) -> Format.fprintf fmt "(<%a, %a> : %a)" go a go b pp_typ t.typ
+    | EFst e -> Format.fprintf fmt "(fst %a : %a)" go e pp_typ t.typ
+    | ESnd e -> Format.fprintf fmt "(snd %a : %a)" go e pp_typ t.typ
+    | EInl e -> Format.fprintf fmt "(inl %a : %a)" go e pp_typ t.typ
+    | EInr e -> Format.fprintf fmt "(inr %a : %a)" go e pp_typ t.typ
     | EMatch (e,(x,a),(y,b)) ->
-        Format.fprintf fmt "match %a with inl %s => %a | inr %s => %a" go e.expr x go a.expr y go b.expr
-    | EBool b -> Format.fprintf fmt "%B" b
-    | EIf (c,t,f) -> Format.fprintf fmt "if %a then %a else %a" go c.expr go t.expr go f.expr
-    | ELet (x,a,b) -> Format.fprintf fmt "let %s = %a in %a" x go a.expr go b.expr
-    | EConst f -> Format.fprintf fmt "%g" f
-    | ENeg e -> Format.fprintf fmt "-%a" go e.expr
-    | EAdd (a,b) -> Format.fprintf fmt "(%a + %a)" go a.expr go b.expr
-    | EMul (a,b) -> Format.fprintf fmt "(%a * %a)" go a.expr go b.expr
-    | ELt (a,b) -> Format.fprintf fmt "(%a < %a)" go a.expr go b.expr
-    | EUniform (a,b) -> Format.fprintf fmt "uniform(%a, %a)" go a.expr go b.expr
-    | EGauss (a,b) -> Format.fprintf fmt "gauss(%a, %a)" go a.expr go b.expr
+        Format.fprintf fmt "(match %a with inl %s -> %a | inr %s -> %a : %a)"
+          go e x go a y go b pp_typ t.typ
+    | EBool b -> Format.fprintf fmt "(%B : %a)" b pp_typ t.typ
+    | EIf (c,tbr,fbr) -> Format.fprintf fmt "(if %a then %a else %a : %a)" go c go tbr go fbr pp_typ t.typ
+    | ELet (x,a,b) -> Format.fprintf fmt "(let %s = %a in %a : %a)" x go a go b pp_typ t.typ
+    | EConst f -> Format.fprintf fmt "(%g : %a)" f pp_typ t.typ
+    | ENeg e -> Format.fprintf fmt "(-%a : %a)" go e pp_typ t.typ
+    | EAdd (a,b) -> Format.fprintf fmt "(%a + %a : %a)" go a go b pp_typ t.typ
+    | EMul (a,b) -> Format.fprintf fmt "(%a * %a : %a)" go a go b pp_typ t.typ
+    | ELt (a,b) -> Format.fprintf fmt "(%a < %a : %a)" go a go b pp_typ t.typ
+    | EUniform (a,b) -> Format.fprintf fmt "(uniform(%a, %a) : %a)" go a go b pp_typ t.typ
+    | EGauss (a,b) -> Format.fprintf fmt "(gauss(%a, %a) : %a)" go a go b pp_typ t.typ
   in
-  Format.fprintf fmt "(%a : %a)" go t.expr pp_typ t.typ
+  go fmt t

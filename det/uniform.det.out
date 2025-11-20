@@ -1,3 +1,3 @@
 let a = uniform(0, 1) in (a + 2)
-elab: (let a = uniform(0, 1) in (a + 2) : float[?m2])
-mean: 2.49437
+elab: (let a = (uniform((0 : float[?m2]), (1 : float[?m2])) : float[?m2]) in ((a : float[?m1]) + (2 : float[?m1]) : float[?m1]) : float[?m1])
+mean: 2.50619
