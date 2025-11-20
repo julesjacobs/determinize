@@ -50,7 +50,7 @@ let () =
   (* Type/direct elaboration expecting a float result. *)
   let expected = Types.TFloat (Types.fresh_mode_meta ()) in
   let elaborated = Infer.infer [] ast expected in
-  let out_path = path ^ ".out" in
+  let out_path = path ^ ".dout" in
   let oc = open_out out_path in
   let fmt = Format.formatter_of_out_channel oc in
   Format.fprintf fmt "elab (raw): %a@." Det.pp_texpr elaborated;

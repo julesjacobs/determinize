@@ -19,8 +19,6 @@
 *.log
 *.lot
 *.nav
-tex/*.out
-tex/**/*.out
 *.ps
 *.run.xml
 *.snm
@@ -31,6 +29,7 @@ tex/**/*.out
 *.xdv
 *-blx.bib
 *-converted-to.*
+*.out
 
 # Build outputs
 *.pdf

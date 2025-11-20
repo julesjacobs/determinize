@@ -1,3 +1,0 @@
-det: if true then 1 else 0
-elab (modes defaulted): (if (true : bool) then (1 : float[E]) else (0 : float[E]) : float[E])
-mean: 1

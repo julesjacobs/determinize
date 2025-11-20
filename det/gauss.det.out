@@ -1,3 +1,0 @@
-det: let m = 0 in (m * 2)
-elab (modes defaulted): (let m = (gauss((0 : float[E]), (1 : float[G])) : float[E]) in ((m : float[E]) * (2 : float[E]) : float[E]) : float[E])
-mean: 0
