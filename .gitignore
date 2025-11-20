@@ -41,6 +41,3 @@ dist/
 
 # OS metadata
 .DS_Store
-
-# Generated pretty-printed det outputs
-det/*.pp
