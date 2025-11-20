@@ -1,7 +1,10 @@
-module A = Determinize.Ast
-module P = Determinize.Parser
-module L = Determinize.Lexer
-module I = Determinize.Interp
+module A = Ast
+module P = Parser
+module L = Lexer
+module I = Interp
+module Infer = Infer
+module Types = Types
+module Det = Determinize
 
 let parse_file path =
   let ic = open_in path in
@@ -26,7 +29,7 @@ let rec pp fmt = function
   | A.Inl e -> Format.fprintf fmt "inl %a" pp e
   | A.Inr e -> Format.fprintf fmt "inr %a" pp e
   | A.Case (e, (x, e1), (y, e2)) ->
-      Format.fprintf fmt "match %a with inl %s -> %a | inr %s -> %a" pp e x pp e1 y pp e2
+      Format.fprintf fmt "match %a with inl %s => %a | inr %s => %a" pp e x pp e1 y pp e2
   | A.Bool b -> Format.fprintf fmt "%B" b
   | A.If (e1, e2, e3) -> Format.fprintf fmt "if %a then %a else %a" pp e1 pp e2 pp e3
   | A.Let (x, e1, e2) -> Format.fprintf fmt "let %s = %a in %a" x pp e1 pp e2
@@ -44,19 +47,24 @@ let () =
     exit 1);
   let path = Sys.argv.(1) in
   let ast = parse_file path in
+  (* Type/direct elaboration with an unknown expected type. *)
+  let expected = Types.TMeta (Types.fresh_meta ()) in
+  let elaborated = Infer.infer [] ast expected in
+  let det_ast = Det.of_texpr elaborated in
   let out_path = path ^ ".out" in
   let oc = open_out out_path in
   let fmt = Format.formatter_of_out_channel oc in
-  Format.fprintf fmt "%a@." pp ast;
+  Format.fprintf fmt "%a@." pp det_ast;
+  Format.fprintf fmt "elab: %a@." Det.pp_texpr elaborated;
   Random.self_init ();
   let trials = 100 in
   let acc = ref 0.0 in
   for _ = 1 to trials do
-    match I.eval (module I.StdRng) [] ast with
+    match I.eval (module I.StdRng) [] det_ast with
     | I.VFloat f -> acc := !acc +. f
     | _ -> failwith "expected top-level float result for mean computation"
   done;
   let mean = !acc /. float_of_int trials in
   Format.fprintf fmt "mean: %g@." mean;
   close_out oc;
-  Format.printf "%a@.mean: %g@." pp ast mean
+  Format.printf "%a@.elab: %a@.mean: %g@." pp det_ast Det.pp_texpr elaborated mean

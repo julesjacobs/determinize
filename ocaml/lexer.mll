@@ -7,7 +7,6 @@ exception Lex_error of string
 rule token = parse
   | [' ' '\t' '\r' '\n'] { token lexbuf }
   | "(*"                        { comment lexbuf; token lexbuf }
-  | "->"                        { ARROW }
   | "=>"                        { DARROW }
   | "\\" | "lambda" | "fun"     { FUN }
   | "rec"                       { REC }

@@ -1,1 +1,1 @@
-match inl gauss(0,1) with inl x -> x | inr y -> y
+match inl gauss(0,1) with inl x => x | inr y => y

@@ -1,6 +1,7 @@
 (library
  (name determinize)
- (modules ast types parser lexer interp infer)
+ (wrapped false)
+ (modules ast types parser lexer interp infer determinize)
  (libraries menhirLib))
 
 (menhir
@@ -12,4 +13,4 @@
 (executable
  (name determinize_main)
  (modules determinize_main)
- (libraries determinize))
+ (libraries determinize menhirLib))

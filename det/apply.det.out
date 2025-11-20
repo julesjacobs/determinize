@@ -1,2 +1,3 @@
 let inc = fun x => (x + 1) in (inc (inc 3))
+elab: (let inc = (fun x => (x + 1)) in (inc (inc 3)) : float[?m1])
 mean: 5

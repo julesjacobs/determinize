@@ -36,7 +36,7 @@ let rec of_texpr (t : typed_expr) : Ast.expr =
        | _ -> Gauss (of_texpr a, of_texpr b))
   | _, _ -> failwith " ill-typed texpr"
 
-let rec pp_mode fmt = function
+let pp_mode fmt = function
   | G -> Format.fprintf fmt "G"
   | E -> Format.fprintf fmt "E"
 
@@ -56,7 +56,7 @@ let rec pp_typ fmt = function
        | Some t -> pp_typ fmt t
        | None -> Format.fprintf fmt "?t%d" m.ty_id)
 
-let rec pp_texpr fmt (t : typed_expr) =
+let pp_texpr fmt (t : typed_expr) =
   let rec go fmt texpr =
     match texpr with
     | EVar x -> Format.fprintf fmt "%s" x
@@ -70,7 +70,7 @@ let rec pp_texpr fmt (t : typed_expr) =
     | EInl e -> Format.fprintf fmt "inl %a" go e.expr
     | EInr e -> Format.fprintf fmt "inr %a" go e.expr
     | EMatch (e,(x,a),(y,b)) ->
-        Format.fprintf fmt "match %a with inl %s -> %a | inr %s -> %a" go e.expr x go a.expr y go b.expr
+        Format.fprintf fmt "match %a with inl %s => %a | inr %s => %a" go e.expr x go a.expr y go b.expr
     | EBool b -> Format.fprintf fmt "%B" b
     | EIf (c,t,f) -> Format.fprintf fmt "if %a then %a else %a" go c.expr go t.expr go f.expr
     | ELet (x,a,b) -> Format.fprintf fmt "let %s = %a in %a" x go a.expr go b.expr

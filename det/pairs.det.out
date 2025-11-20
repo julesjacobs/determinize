@@ -1,2 +1,3 @@
 let p = <1, 2> in (fst p + snd p)
+elab: (let p = <1, 2> in (fst p + snd p) : float[?m3])
 mean: 3

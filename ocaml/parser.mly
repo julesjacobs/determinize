@@ -6,7 +6,7 @@
 %token FUN REC LET IN IF THEN ELSE
 %token MATCH WITH INL INR FST SND
 %token UNIFORM GAUSS
-%token ARROW DOT EQ BAR COMMA
+%token DOT EQ BAR COMMA
 %token LPAREN RPAREN LT GT
 %token PLUS TIMES MINUS
 %token DARROW
@@ -20,7 +20,7 @@ main:
 expr:
   | IF expr THEN expr ELSE expr        { If ($2, $4, $6) }
   | LET IDENT EQ expr IN expr          { Let ($2, $4, $6) }
-  | MATCH expr WITH INL IDENT ARROW expr BAR INR IDENT ARROW expr
+  | MATCH expr WITH INL IDENT DARROW expr BAR INR IDENT DARROW expr
                                         { Case ($2, ($5, $7), ($10, $12)) }
   | fun_expr                           { $1 }
 

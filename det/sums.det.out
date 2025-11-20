@@ -1,2 +1,3 @@
-match inl 3 with inl x -> (x + 1) | inr y -> y
+match inl 3 with inl x => (x + 1) | inr y => y
+elab: (match inl 3 with inl x => (x + 1) | inr y => y : float[?m2])
 mean: 4
