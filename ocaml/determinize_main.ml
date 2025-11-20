@@ -18,88 +18,97 @@ let parse_file path =
     close_in_noerr ic;
     raise e
 
-let rec doc_expr ?(paren = false) expr =
+let rec doc_expr ?(ctx_prec = 0) expr =
   let open Doc in
-  let wrap d = if paren then parens d else d in
-  let infix op a b =
-    wrap (group (nest 2 (join softline [ doc_expr ~paren:true a; text op; doc_expr ~paren:true b ])))
-  in
+  let paren_if needed d = if needed then parens d else d in
   let rec app_chain e acc =
     match e with
     | A.App (f, arg) -> app_chain f (arg :: acc)
     | head -> (head, acc)
   in
-  match expr with
-  | A.Var x -> text x
-  | A.Unit -> text "()"
-  | A.Bool b -> text (string_of_bool b)
-  | A.Const f -> text (Format.asprintf "%g" f)
-  | A.Lam (x, e) ->
-      wrap
-        (group
+  let prec, body =
+    match expr with
+    | A.Var x -> (5, text x)
+    | A.Unit -> (5, text "()")
+    | A.Bool b -> (5, text (string_of_bool b))
+    | A.Const f -> (5, text (Format.asprintf "%g" f))
+    | A.Lam (x, e) ->
+        (1,
+         group
            (vsep
               [ hsep [ text "fun"; text x; text "=>" ]
               ; nest 2 (doc_expr e)
               ]))
-  | A.Rec (f, x, e) ->
-      wrap
-        (group
+    | A.Rec (f, x, e) ->
+        (1,
+         group
            (vsep
               [ hsep [ text "rec"; text f; text x; text "=>" ]
               ; nest 2 (doc_expr e)
               ]))
-  | A.App _ ->
-      let head, args_rev = app_chain expr [] in
-      let docs = doc_expr ~paren:true head :: List.rev_map (doc_expr ~paren:true) args_rev in
-      wrap (group (join softline docs))
-  | A.Pair (e1, e2) ->
-      wrap (enclose_separated "<" ">" (text "," ^^ softline) [ doc_expr e1; doc_expr e2 ])
-  | A.Fst e -> group (hsep [ text "fst"; doc_expr e ])
-  | A.Snd e -> group (hsep [ text "snd"; doc_expr e ])
-  | A.Inl e -> group (hsep [ text "inl"; doc_expr e ])
-  | A.Inr e -> group (hsep [ text "inr"; doc_expr e ])
-  | A.Case (e, (x, e1), (y, e2)) ->
-      let branches =
-        vsep
-          [
-            hsep [ text "| inl"; text x; text "=>"; nest 2 (softline ^^ doc_expr e1) ];
-            hsep [ text "| inr"; text y; text "=>"; nest 2 (softline ^^ doc_expr e2) ];
-          ]
-      in
-      wrap (group (vsep [ hsep [ text "match"; doc_expr e; text "with" ]; nest 2 branches ]))
-  | A.If (e1, e2, e3) ->
-      wrap
-        (group
-           (vsep
-              [
-                hsep [ text "if"; doc_expr e1 ];
-                hsep [ text "then" ];
-                nest 2 (doc_expr e2);
-                hsep [ text "else" ];
-                nest 2 (doc_expr e3);
-              ]))
-  | A.Let (x, e1, e2) ->
-      wrap
-        (group
+    | A.Let (x, e1, e2) ->
+        (0,
+         group
            (vsep
               [
                 hsep [ text "let"; text x; text "=" ];
-                nest 2 (doc_expr e1);
+                nest 2 (doc_expr ~ctx_prec:0 e1);
                 text "in";
-                nest 2 (doc_expr e2);
+                nest 2 (doc_expr ~ctx_prec:0 e2);
               ]))
-  | A.Neg e -> wrap (group (hsep [ text "-"; doc_expr e ]))
-  | A.Add (e1, e2) -> infix "+" e1 e2
-  | A.Mul (e1, e2) -> infix "*" e1 e2
-  | A.Lt (e1, e2) -> infix "<" e1 e2
-  | A.Uniform (e1, e2) ->
-      wrap
-        (group
-           (text "uniform" ^^ enclose_separated "(" ")" (text "," ^^ softline) [ doc_expr e1; doc_expr e2 ]))
-  | A.Gauss (e1, e2) ->
-      wrap
-        (group
-           (text "gauss" ^^ enclose_separated "(" ")" (text "," ^^ softline) [ doc_expr e1; doc_expr e2 ]))
+    | A.If (c, tbr, fbr) ->
+        (0,
+         group
+           (vsep
+              [
+                hsep [ text "if"; doc_expr c ];
+                hsep [ text "then" ];
+                nest 2 (doc_expr ~ctx_prec:0 tbr);
+                hsep [ text "else" ];
+                nest 2 (doc_expr ~ctx_prec:0 fbr);
+              ]))
+    | A.Case (e, (x, e1), (y, e2)) ->
+        let branches =
+          vsep
+            [
+              hsep [ text "| inl"; text x; text "=>"; doc_expr ~ctx_prec:0 e1 ];
+              hsep [ text "| inr"; text y; text "=>"; doc_expr ~ctx_prec:0 e2 ];
+            ]
+        in
+        (0, group (vsep [ hsep [ text "match"; doc_expr e; text "with" ]; nest 2 branches ]))
+    | A.App _ ->
+        let head, args_rev = app_chain expr [] in
+        let docs = doc_expr ~ctx_prec:3 head :: List.rev_map (doc_expr ~ctx_prec:4) args_rev in
+        (3, group (sep docs))
+    | A.Pair (e1, e2) ->
+        (4,
+         group
+           (enclose_separated "<" ">" (text "," ^^ softline)
+              [ doc_expr ~ctx_prec:0 e1; doc_expr ~ctx_prec:0 e2 ]))
+    | A.Fst e -> (4, group (hsep [ text "fst"; doc_expr ~ctx_prec:0 e ]))
+    | A.Snd e -> (4, group (hsep [ text "snd"; doc_expr ~ctx_prec:0 e ]))
+    | A.Inl e -> (4, group (hsep [ text "inl"; doc_expr ~ctx_prec:0 e ]))
+    | A.Inr e -> (4, group (hsep [ text "inr"; doc_expr ~ctx_prec:0 e ]))
+    | A.Neg e -> (4, group (hsep [ text "-"; doc_expr ~ctx_prec:4 e ]))
+    | A.Mul (e1, e2) ->
+        (2,
+         group (nest 2 (sep [ doc_expr ~ctx_prec:2 e1; text "*"; doc_expr ~ctx_prec:3 e2 ])))
+    | A.Add (e1, e2) ->
+        (1, group (nest 2 (sep [ doc_expr ~ctx_prec:1 e1; text "+"; doc_expr ~ctx_prec:2 e2 ])))
+    | A.Lt (e1, e2) ->
+        (1, group (nest 2 (sep [ doc_expr ~ctx_prec:1 e1; text "<"; doc_expr ~ctx_prec:2 e2 ])))
+    | A.Uniform (e1, e2) ->
+        (4,
+         group
+           (text "uniform"
+            ^^ enclose_separated "(" ")" (text "," ^^ softline) [ doc_expr e1; doc_expr e2 ]))
+    | A.Gauss (e1, e2) ->
+        (4,
+         group
+           (text "gauss"
+            ^^ enclose_separated "(" ")" (text "," ^^ softline) [ doc_expr e1; doc_expr e2 ]))
+  in
+  paren_if (prec < ctx_prec) body
 
 let () =
   if Array.length Sys.argv <> 2 then (

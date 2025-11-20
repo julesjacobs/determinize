@@ -39,6 +39,11 @@ let hsep docs =
   | [] -> empty
   | d :: ds -> group (List.fold_left (fun acc x -> acc ^^ space ^^ x) d ds)
 
+let sep docs =
+  match docs with
+  | [] -> empty
+  | d :: ds -> group (List.fold_left (fun acc x -> acc ^^ softline ^^ x) d ds)
+
 let vsep docs =
   match docs with
   | [] -> empty

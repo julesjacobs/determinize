@@ -7,7 +7,7 @@ defaulted:
     float[E] )
 
 == Determinized ==
-1 + ( 2 * 3 )
+1 + 2 * 3
 
 == Evaluation (100 trials) ==
 program mean: 7

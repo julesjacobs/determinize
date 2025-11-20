@@ -1,15 +1,15 @@
 == Elaboration ==
 raw:
 ( match ( inl ( 3 : float[?m2] ) : float[?m2] + float[?m1] ) with
-    | inl x =>  ( ( x : float[?m1] ) + ( 1 : float[?m1] ) : float[?m1] )
-      | inr y =>  ( y : float[?m1] ) : float[?m1] )
+    | inl x => ( ( x : float[?m1] ) + ( 1 : float[?m1] ) : float[?m1] )
+      | inr y => ( y : float[?m1] ) : float[?m1] )
 defaulted:
 ( match ( inl ( 3 : float[E] ) : float[E] + float[E] ) with
-    | inl x =>  ( ( x : float[E] ) + ( 1 : float[E] ) : float[E] )
-      | inr y =>  ( y : float[E] ) : float[E] )
+    | inl x => ( ( x : float[E] ) + ( 1 : float[E] ) : float[E] )
+      | inr y => ( y : float[E] ) : float[E] )
 
 == Determinized ==
-match inl 3 with | inl x =>  x + 1 | inr y =>  y
+match inl 3 with | inl x => x + 1 | inr y => y
 
 == Evaluation (100 trials) ==
 program mean: 4

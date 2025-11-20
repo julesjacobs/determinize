@@ -117,89 +117,99 @@ let pp_typ fmt t = Doc.render fmt (doc_typ t)
 
 let doc_typed_expr (t : typed_expr) =
   let open Doc in
-  let annotate typ expr_doc =
-    parens (group (nest 2 (join softline [ expr_doc; text ":"; doc_typ typ ])))
-  in
   let rec app_chain e acc =
     match e.expr with
     | EApp (f, arg) -> app_chain f (arg :: acc)
     | _ -> (e, acc)
-  and infix typ op a b =
-    annotate typ (group (nest 2 (join softline [ go a; text op; go b ])))
-  and go (t : typed_expr) =
-    match t.expr with
-    | EVar x -> annotate t.typ (text x)
-    | ELam (x, body) ->
-        annotate t.typ
-          (group
+  in
+  let rec render ctx_prec t =
+    let prec, doc_body =
+      match t.expr with
+      | EVar x -> (5, text x)
+      | ELam (x, body) ->
+          (1,
+           group
              (vsep
                 [ hsep [ text "fun"; text x; text "=>" ]
-                ; nest 2 (go body)
+                ; nest 2 (render 0 body)
                 ]))
-    | ERec (f, x, body) ->
-        annotate t.typ
-          (group
+      | ERec (f, x, body) ->
+          (1,
+           group
              (vsep
                 [ hsep [ text "rec"; text f; text x; text "=>" ]
-                ; nest 2 (go body)
+                ; nest 2 (render 0 body)
                 ]))
-    | EApp _ ->
-        let head, args_rev = app_chain t [] in
-        let docs = go head :: List.rev_map go args_rev in
-        annotate t.typ (group (join softline docs))
-    | EUnit -> annotate t.typ (text "()")
-    | EPair (a, b) ->
-        annotate t.typ (enclose_separated "<" ">" (text "," ^^ softline) [ go a; go b ])
-    | EFst e -> annotate t.typ (group (hsep [ text "fst"; go e ]))
-    | ESnd e -> annotate t.typ (group (hsep [ text "snd"; go e ]))
-    | EInl e -> annotate t.typ (group (hsep [ text "inl"; go e ]))
-    | EInr e -> annotate t.typ (group (hsep [ text "inr"; go e ]))
-    | EMatch (e, (x, a), (y, b)) ->
-        let branches =
-          vsep
-            [
-              hsep [ text "| inl"; text x; text "=>"; nest 2 (softline ^^ go a) ];
-              hsep [ text "| inr"; text y; text "=>"; nest 2 (softline ^^ go b) ];
-            ]
-        in
-        annotate t.typ
-          (group (vsep [ hsep [ text "match"; go e; text "with" ]; nest 2 branches ]))
-    | EBool b -> annotate t.typ (text (string_of_bool b))
-    | EIf (c, tbr, fbr) ->
-        annotate t.typ
-          (group
+      | ELet (x, a, b) ->
+          (0,
+           group
+             (vsep
+                [ hsep [ text "let"; text x; text "=" ]
+                ; nest 2 (render 0 a)
+                ; text "in"
+                ; nest 2 (render 0 b)
+                ]))
+      | EIf (c, tbr, fbr) ->
+          (0,
+           group
              (vsep
                 [
-                  hsep [ text "if"; go c ];
+                  hsep [ text "if"; render 0 c ];
                   hsep [ text "then" ];
-                  nest 2 (go tbr);
+                  nest 2 (render 0 tbr);
                   hsep [ text "else" ];
-                  nest 2 (go fbr);
+                  nest 2 (render 0 fbr);
                 ]))
-    | ELet (x, a, b) ->
-        annotate t.typ
-          (group
+      | EMatch (e, (x, a), (y, b)) ->
+          let branches =
+            vsep
+              [
+                hsep [ text "| inl"; text x; text "=>"; render 0 a ];
+                hsep [ text "| inr"; text y; text "=>"; render 0 b ];
+              ]
+          in
+          (0,
+           group
              (vsep
                 [
-                  hsep [ text "let"; text x; text "=" ];
-                  nest 2 (go a);
-                  text "in";
-                  nest 2 (go b);
+                  hsep [ text "match"; render 0 e; text "with" ];
+                  nest 2 branches;
                 ]))
-    | EConst f -> annotate t.typ (text (Format.asprintf "%g" f))
-    | ENeg e -> annotate t.typ (group (hsep [ text "-"; go e ]))
-    | EAdd (a, b) -> infix t.typ "+" a b
-    | EMul (a, b) -> infix t.typ "*" a b
-    | ELt (a, b) -> infix t.typ "<" a b
-    | EUniform (a, b) ->
-        annotate t.typ
-          (group
-             (text "uniform" ^^ enclose_separated "(" ")" (text "," ^^ softline) [ go a; go b ]))
-    | EGauss (a, b) ->
-        annotate t.typ
-          (group
-             (text "gauss" ^^ enclose_separated "(" ")" (text "," ^^ softline) [ go a; go b ]))
-  in
-  go t
+      | EApp _ ->
+          let head, args_rev = app_chain t [] in
+          let docs = render 3 head :: List.rev_map (render 4) args_rev in
+          (3, group (sep docs))
+      | EPair (a, b) ->
+          (4,
+           group (enclose_separated "<" ">" (text "," ^^ softline) [ render 0 a; render 0 b ]))
+      | EUnit -> (5, text "()")
+      | EFst e -> (4, group (hsep [ text "fst"; render 0 e ]))
+      | ESnd e -> (4, group (hsep [ text "snd"; render 0 e ]))
+      | EInl e -> (4, group (hsep [ text "inl"; render 0 e ]))
+      | EInr e -> (4, group (hsep [ text "inr"; render 0 e ]))
+      | EConst f -> (5, text (Format.asprintf "%g" f))
+      | EBool b -> (5, text (string_of_bool b))
+      | ENeg e -> (4, group (hsep [ text "-"; render 4 e ]))
+      | EMul (a, b) ->
+          (2, group (nest 2 (sep [ render 2 a; text "*"; render 3 b ])))
+      | EAdd (a, b) ->
+          (1, group (nest 2 (sep [ render 1 a; text "+"; render 2 b ])))
+      | ELt (a, b) ->
+          (1, group (nest 2 (sep [ render 1 a; text "<"; render 2 b ])))
+      | EUniform (a, b) ->
+          (4,
+           group
+             (text "uniform"
+              ^^ enclose_separated "(" ")" (text "," ^^ softline) [ render 0 a; render 0 b ]))
+      | EGauss (a, b) ->
+          (4,
+           group
+             (text "gauss"
+              ^^ enclose_separated "(" ")" (text "," ^^ softline) [ render 0 a; render 0 b ]))
+    in
+    let doc_with_type = group (parens (nest 2 (sep [ doc_body; text ":"; doc_typ t.typ ]))) in
+    paren_if (prec < ctx_prec) doc_with_type
+  and paren_if p d = if p then parens d else d in
+  render 0 t
 
 let pp_texpr fmt t = Doc.render fmt (doc_typed_expr t)
