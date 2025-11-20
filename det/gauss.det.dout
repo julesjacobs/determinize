@@ -1,4 +1,12 @@
-elab (raw): (let m = (gauss((0 : float[?m2]), (1 : float[G])) : float[?m2]) in ((m : float[?m1]) * (2 : float[?m1]) : float[?m1]) : float[?m1])
-det: let m = 0 in (m * 2)
-elab (defaulted): (let m = (gauss((0 : float[E]), (1 : float[G])) : float[E]) in ((m : float[E]) * (2 : float[E]) : float[E]) : float[E])
+== Elaboration ==
+raw: (let m = (gauss((0 : float[?m2]), (1 : float[G])) : float[?m2]) in ((m : float[?m1]) * (2 : float[?m1]) : float[?m1]) : float[?m1])
+defaulted: (let m = (gauss((0 : float[E]), (1 : float[G])) : float[E]) in ((m : float[E]) * (2 : float[E]) : float[E]) : float[E])
+
+== Determinized ==
+let m =
+    0
+in
+(m * 2)
+
+== Evaluation (100 trials) ==
 mean: 0

@@ -1,4 +1,9 @@
-elab (raw): ((1 : float[?m1]) + ((2 : float[?m1]) * (3 : float[?m1]) : float[?m1]) : float[?m1])
-det: (1 + (2 * 3))
-elab (defaulted): ((1 : float[E]) + ((2 : float[E]) * (3 : float[E]) : float[E]) : float[E])
+== Elaboration ==
+raw: ((1 : float[?m1]) + ((2 : float[?m1]) * (3 : float[?m1]) : float[?m1]) : float[?m1])
+defaulted: ((1 : float[E]) + ((2 : float[E]) * (3 : float[E]) : float[E]) : float[E])
+
+== Determinized ==
+(1 + (2 * 3))
+
+== Evaluation (100 trials) ==
 mean: 7

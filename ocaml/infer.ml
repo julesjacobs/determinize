@@ -23,32 +23,15 @@ let rec infer (env : env) (exp : Ast.expr) (expected : typ) : typed_expr =
       assert_subtype ty_var expected;
       { expr = EVar x; typ = expected }
   | Lam (x, body) ->
-      let dom, cod =
-        match zonk expected with
-        | TArrow (a, b) -> (a, b)
-        | TMeta m ->
-            let a = TMeta (fresh_meta ()) in
-            let b = TMeta (fresh_meta ()) in
-            set_type m (TArrow (a, b));
-            (a, b)
-        | _ ->
-            let a = TMeta (fresh_meta ()) in
-            let b = TMeta (fresh_meta ()) in
-            (a, b)
-      in
+      let dom = TMeta (fresh_meta ()) in
+      let cod = TMeta (fresh_meta ()) in
       let body_t = infer ((x, dom) :: env) body cod in
-      let lam_ty = TArrow (dom, body_t.typ) in
+      let lam_ty = TArrow (dom, cod) in
       assert_subtype lam_ty expected;
       { expr = ELam (x, body_t); typ = lam_ty }
   | Rec (f, x, body) ->
-      let dom, cod =
-        match zonk expected with
-        | TArrow (a, b) -> (a, b)
-        | _ ->
-            let a = TMeta (fresh_meta ()) in
-            let b = TMeta (fresh_meta ()) in
-            (a, b)
-      in
+      let dom = TMeta (fresh_meta ()) in
+      let cod = TMeta (fresh_meta ()) in
       let fn_ty = TArrow (dom, cod) in
       let env' = (f, fn_ty) :: (x, dom) :: env in
       let body_t = infer env' body cod in
@@ -67,11 +50,8 @@ let rec infer (env : env) (exp : Ast.expr) (expected : typ) : typed_expr =
       assert_subtype TUnit expected;
       { expr = EUnit; typ = TUnit }
   | Pair (e1, e2) ->
-      let t1, t2 =
-        match zonk expected with
-        | TPair (a, b) -> (a, b)
-        | _ -> (TMeta (fresh_meta ()), TMeta (fresh_meta ()))
-      in
+      let t1 = TMeta (fresh_meta ()) in
+      let t2 = TMeta (fresh_meta ()) in
       let e1_t = infer env e1 t1 in
       let e2_t = infer env e2 t2 in
       let pair_ty = TPair (e1_t.typ, e2_t.typ) in
@@ -92,31 +72,15 @@ let rec infer (env : env) (exp : Ast.expr) (expected : typ) : typed_expr =
       assert_subtype b_ty expected;
       { expr = ESnd e_t; typ = b_ty }
   | Inl e ->
-      let left_ty =
-        match zonk expected with
-        | TSum (l, _) -> l
-        | _ -> TMeta (fresh_meta ())
-      in
-      let right_ty =
-        match zonk expected with
-        | TSum (_, r) -> r
-        | _ -> TMeta (fresh_meta ())
-      in
+      let left_ty = TMeta (fresh_meta ()) in
+      let right_ty = TMeta (fresh_meta ()) in
       let e_t = infer env e left_ty in
       let sum_ty = TSum (e_t.typ, right_ty) in
       assert_subtype sum_ty expected;
       { expr = EInl e_t; typ = sum_ty }
   | Inr e ->
-      let left_ty =
-        match zonk expected with
-        | TSum (l, _) -> l
-        | _ -> TMeta (fresh_meta ())
-      in
-      let right_ty =
-        match zonk expected with
-        | TSum (_, r) -> r
-        | _ -> TMeta (fresh_meta ())
-      in
+      let left_ty = TMeta (fresh_meta ()) in
+      let right_ty = TMeta (fresh_meta ()) in
       let e_t = infer env e right_ty in
       let sum_ty = TSum (left_ty, e_t.typ) in
       assert_subtype sum_ty expected;

@@ -1,4 +1,13 @@
-elab (raw): (let inc = (fun x => ((x : float[?m2]) + (1 : float[?m2]) : float[?m2]) : (float[?m2] -> float[?m2])) in ((inc : (float[?m2] -> float[?m2])) ((inc : (float[?m2] -> float[?m2])) (3 : float[?m2]) : float[?m2]) : float[?m2]) : float[?m2])
-det: let inc = fun x => (x + 1) in (inc (inc 3))
-elab (defaulted): (let inc = (fun x => ((x : float[E]) + (1 : float[E]) : float[E]) : (float[E] -> float[E])) in ((inc : (float[E] -> float[E])) ((inc : (float[E] -> float[E])) (3 : float[E]) : float[E]) : float[E]) : float[E])
+== Elaboration ==
+raw: (let inc = (fun x => ((x : float[?m2]) + (1 : float[?m2]) : float[?m2]) : (float[?m2] -> float[?m2])) in ((inc : (float[?m2] -> float[?m2])) ((inc : (float[?m2] -> float[?m2])) (3 : float[?m2]) : float[?m2]) : float[?m2]) : float[?m2])
+defaulted: (let inc = (fun x => ((x : float[E]) + (1 : float[E]) : float[E]) : (float[E] -> float[E])) in ((inc : (float[E] -> float[E])) ((inc : (float[E] -> float[E])) (3 : float[E]) : float[E]) : float[E]) : float[E])
+
+== Determinized ==
+let inc =
+    fun x =>
+      (x + 1)
+in
+(inc (inc 3))
+
+== Evaluation (100 trials) ==
 mean: 5
