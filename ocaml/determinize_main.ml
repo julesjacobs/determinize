@@ -47,8 +47,8 @@ let () =
     exit 1);
   let path = Sys.argv.(1) in
   let ast = parse_file path in
-  (* Type/direct elaboration with an unknown expected type. *)
-  let expected = Types.TMeta (Types.fresh_meta ()) in
+  (* Type/direct elaboration expecting a float result. *)
+  let expected = Types.TFloat (Types.fresh_mode_meta ()) in
   let elaborated = Infer.infer [] ast expected in
   let det_ast = Det.of_texpr elaborated in
   let out_path = path ^ ".out" in
@@ -56,7 +56,8 @@ let () =
   let fmt = Format.formatter_of_out_channel oc in
   Format.fprintf fmt "%a@." pp det_ast;
   Format.fprintf fmt "elab: %a@." Det.pp_texpr elaborated;
-  Random.self_init ();
+  (* Use a deterministic seed for reproducible sampling. *)
+  Random.init 0;
   let trials = 100 in
   let acc = ref 0.0 in
   for _ = 1 to trials do

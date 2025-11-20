@@ -53,6 +53,7 @@ let rec infer (env : env) (exp : Ast.expr) (expected : typ) : typed_expr =
       let env' = (f, fn_ty) :: (x, dom) :: env in
       let body_t = infer env' body cod in
       assert_subtype body_t.typ cod;
+      assert_subtype fn_ty expected;
       { expr = ERec (f, x, body_t); typ = fn_ty }
   | App (e1, e2) ->
       let arg_ty = TMeta (fresh_meta ()) in
@@ -73,7 +74,9 @@ let rec infer (env : env) (exp : Ast.expr) (expected : typ) : typed_expr =
       in
       let e1_t = infer env e1 t1 in
       let e2_t = infer env e2 t2 in
-      { expr = EPair (e1_t, e2_t); typ = TPair (e1_t.typ, e2_t.typ) }
+      let pair_ty = TPair (e1_t.typ, e2_t.typ) in
+      assert_subtype pair_ty expected;
+      { expr = EPair (e1_t, e2_t); typ = pair_ty }
   | Fst e ->
       let a_ty = TMeta (fresh_meta ()) in
       let b_ty = TMeta (fresh_meta ()) in
@@ -100,7 +103,9 @@ let rec infer (env : env) (exp : Ast.expr) (expected : typ) : typed_expr =
         | _ -> TMeta (fresh_meta ())
       in
       let e_t = infer env e left_ty in
-      { expr = EInl e_t; typ = TSum (e_t.typ, right_ty) }
+      let sum_ty = TSum (e_t.typ, right_ty) in
+      assert_subtype sum_ty expected;
+      { expr = EInl e_t; typ = sum_ty }
   | Inr e ->
       let left_ty =
         match zonk expected with
@@ -113,7 +118,9 @@ let rec infer (env : env) (exp : Ast.expr) (expected : typ) : typed_expr =
         | _ -> TMeta (fresh_meta ())
       in
       let e_t = infer env e right_ty in
-      { expr = EInr e_t; typ = TSum (left_ty, e_t.typ) }
+      let sum_ty = TSum (left_ty, e_t.typ) in
+      assert_subtype sum_ty expected;
+      { expr = EInr e_t; typ = sum_ty }
   | Case (e, (x, e1), (y, e2)) ->
       let l_ty = TMeta (fresh_meta ()) in
       let r_ty = TMeta (fresh_meta ()) in
@@ -148,11 +155,7 @@ let rec infer (env : env) (exp : Ast.expr) (expected : typ) : typed_expr =
       let b_t = infer env b ty in
       { expr = EAdd (a_t, b_t); typ = ty }
   | Mul (a, b) ->
-      let res_ty =
-        match zonk expected with
-        | TFloat m -> TFloat m
-        | _ -> TFloat (fresh_mode_meta ())
-      in
+      let res_ty = ensure_float expected in
       let a_t = infer env a res_ty in
       let b_t = infer env b res_ty in
       { expr = EMul (a_t, b_t); typ = res_ty }
