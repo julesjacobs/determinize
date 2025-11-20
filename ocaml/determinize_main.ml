@@ -67,6 +67,16 @@ let rec doc_expr ?(ctx_prec = 0) expr =
                 hsep [ text "else" ];
                 nest 2 (doc_expr ~ctx_prec:0 fbr);
               ]))
+    | A.MatchList (e, nil_br, (x, xs, cons_br)) ->
+        let branch_docs =
+          [
+            nest 2 (hsep [ text "|"; text "[]"; text "=>"; doc_expr ~ctx_prec:0 nil_br ]);
+            nest 2
+              (hsep [ text "|"; text x; text "::"; text xs; text "=>"
+                    ; doc_expr ~ctx_prec:0 cons_br ]);
+          ]
+        in
+        (0, vsep (hsep [ text "match"; doc_expr e; text "with" ] :: branch_docs))
     | A.Case (e, (x, e1), (y, e2)) ->
         let branch_docs =
           [
@@ -84,6 +94,12 @@ let rec doc_expr ?(ctx_prec = 0) expr =
          group
            (enclose_separated "<" ">" (text "," ^^ softline)
               [ doc_expr ~ctx_prec:0 e1; doc_expr ~ctx_prec:0 e2 ]))
+    | A.Nil -> (5, text "[]")
+    | A.Cons (hd, tl) ->
+        (0,
+         group
+           (nest 2
+              (sep [ doc_expr ~ctx_prec:1 hd; text "::"; doc_expr ~ctx_prec:0 tl ])))
     | A.Fst e -> (4, group (hsep [ text "fst"; doc_expr ~ctx_prec:0 e ]))
     | A.Snd e -> (4, group (hsep [ text "snd"; doc_expr ~ctx_prec:0 e ]))
     | A.Inl e -> (4, group (hsep [ text "inl"; doc_expr ~ctx_prec:0 e ]))

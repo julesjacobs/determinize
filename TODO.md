@@ -20,5 +20,4 @@
 [x] Implement a subtype function along similar lines as the submode function.
 [x] Implement an interpreter for the language; run 100 trials and write .det.out with pretty-print and mean
 [x] Add typed expressions (mutual recursion with per-subexpression type annotations)
-
-Add lists to the language with [], x::xs, and match on nil/cons.
+[x] Add lists to the language with [], x::xs, and match on nil/cons.

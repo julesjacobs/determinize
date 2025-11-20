@@ -24,6 +24,7 @@ and typ =
   | TFloat of mode_meta
   | TPair of typ * typ
   | TSum  of typ * typ
+  | TList of typ
   | TArrow of typ * typ
   | TMeta of meta
 
@@ -44,7 +45,10 @@ and texpr =
   | ESnd of typed_expr
   | EInl of typed_expr
   | EInr of typed_expr
+  | ENil
+  | ECons of typed_expr * typed_expr
   | EMatch of typed_expr * (string * typed_expr) * (string * typed_expr)
+  | EMatchList of typed_expr * typed_expr * (string * string * typed_expr)
   | EBool of bool
   | EIf of typed_expr * typed_expr * typed_expr
   | ELet of string * typed_expr * typed_expr
@@ -138,6 +142,8 @@ and assert_subtype t1 t2 =
   | TSum (a1,b1), TSum (a2,b2) ->
       assert_subtype a1 a2;
       assert_subtype b1 b2
+  | TList a1, TList a2 ->
+      assert_subtype a1 a2
   | TArrow (a1,b1), TArrow (a2,b2) ->
       assert_subtype a2 a1;
       assert_subtype b1 b2

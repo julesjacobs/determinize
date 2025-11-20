@@ -24,6 +24,7 @@
 \newcommand{\Bool}{\mathsf{bool}}
 \newcommand{\Unit}{\mathsf{unit}}
 \newcommand{\Nat}{\mathsf{nat}}
+\newcommand{\List}[1]{\mathsf{list}\,#1}
 \newcommand{\darrow}{\Downarrow}
 
 \begin{document}
@@ -61,8 +62,9 @@ We sketch a simply typed core language with floating-point expressions that carr
 Expressions, types, and modes are defined by the grammar below (\(x\) ranges over variables, \(f\) over floating-point literals):
 \begin{align*}
   m &::= \E \mid \G \\
-  \tau &::= \Unit \mid \Bool \mid \Nat \mid \Float{m} \mid \tau_1 \times \tau_2 \mid \tau_1 + \tau_2 \mid \tau_1 \to \tau_2 \\
+  \tau &::= \Unit \mid \Bool \mid \Nat \mid \Float{m} \mid \List{\tau} \mid \tau_1 \times \tau_2 \mid \tau_1 + \tau_2 \mid \tau_1 \to \tau_2 \\
   e &::= x \mid \lambda x.\,e \mid \mathsf{rec}\;f\;x.\,e \mid e_1\,e_2 \mid \langle e_1, e_2\rangle \mid \mathsf{fst}\,e \mid \mathsf{snd}\,e \mid \mathsf{inl}\,e \mid \mathsf{inr}\,e \mid \mathsf{match}\;e\;\mathsf{with}\;\mathsf{inl}\,x \Rightarrow e_1 \mid \mathsf{inr}\,y \Rightarrow e_2 \\
+    &\quad\mid [\,] \mid e_1 :: e_2 \mid \mathsf{match}\;e\;\mathsf{with}\;[\,] \Rightarrow e_1 \mid x::xs \Rightarrow e_2 \\
     &\quad\mid \mathsf{true} \mid \mathsf{false} \mid \mathsf{if}\;e\;\mathsf{then}\;e_1\;\mathsf{else}\;e_2 \mid \mathsf{let}\;x=e_1\;\mathsf{in}\;e_2 \\
     &\quad\mid c \mid -e \mid e_1 + e_2 \mid e_1 \times e_2 \mid e_1 < e_2 \mid \mathsf{uniform}(e_1,e_2) \mid \mathsf{gauss}(e_1,e_2)
 \end{align*}
@@ -115,6 +117,19 @@ Judgments have the form \(\Gamma \vdash e : \tau\), where \(\Gamma\) is a standa
   \inferrule[\textsc{Match}]
     {\Gamma \vdash e : \tau_1 + \tau_2 \\ \Gamma, x{:}\tau_1 \vdash e_1 : \tau \\ \Gamma, y{:}\tau_2 \vdash e_2 : \tau}
     {\Gamma \vdash \mathsf{match}\;e\;\mathsf{with}\;\mathsf{inl}\,x \Rightarrow e_1 \mid \mathsf{inr}\,y \Rightarrow e_2 : \tau}
+\end{mathpar}
+
+\paragraph{Lists.}
+\begin{mathpar}
+  \inferrule[\textsc{Nil}]{\;}{\Gamma \vdash [\,] : \List{\tau}}
+  \and
+  \inferrule[\textsc{Cons}]
+    {\Gamma \vdash e_1 : \tau \\ \Gamma \vdash e_2 : \List{\tau}}
+    {\Gamma \vdash e_1 :: e_2 : \List{\tau}}
+  \and
+  \inferrule[\textsc{Match-List}]
+    {\Gamma \vdash e : \List{\tau} \\ \Gamma \vdash e_1 : \sigma \\ \Gamma, x{:}\tau, xs{:}\List{\tau} \vdash e_2 : \sigma}
+    {\Gamma \vdash \mathsf{match}\;e\;\mathsf{with}\;[\,] \Rightarrow e_1 \mid x::xs \Rightarrow e_2 : \sigma}
 \end{mathpar}
 
 \paragraph{Booleans and control.}
@@ -204,6 +219,10 @@ Standard covariant/contravariant rules apply to composite types:
   \inferrule[\textsc{Sub-Sum}]
     {\tau_1 <: \tau_1' \\ \tau_2 <: \tau_2'}
     {\tau_1 + \tau_2 <: \tau_1' + \tau_2'}
+  \and
+  \inferrule[\textsc{Sub-List}]
+    {\tau <: \tau'}
+    {\List{\tau} <: \List{\tau'}}
   \and
   \inferrule[\textsc{Sub-Arr}]
     {\tau_1' <: \tau_1 \\ \tau_2 <: \tau_2'}

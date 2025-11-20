@@ -13,6 +13,8 @@ let rec default_modes_typ t =
   | TSum (a, b) ->
       default_modes_typ a;
       default_modes_typ b
+  | TList a ->
+      default_modes_typ a
   | TArrow (a, b) ->
       default_modes_typ a;
       default_modes_typ b
@@ -35,7 +37,10 @@ let default_modes (t : typed_expr) =
     | ESnd e -> go e
     | EInl e -> go e
     | EInr e -> go e
+    | ENil -> ()
+    | ECons (a, b) -> go a; go b
     | EMatch (e, (_, a), (_, b)) -> go e; go a; go b
+    | EMatchList (e, nil_br, (_, _, cons_br)) -> go e; go nil_br; go cons_br
     | EIf (c, t1, t2) -> go c; go t1; go t2
     | ELet (_, a, b) -> go a; go b
     | ENeg e -> go e
@@ -59,8 +64,12 @@ let rec of_texpr (t : typed_expr) : Ast.expr =
   | ESnd e, _ -> Snd (of_texpr e)
   | EInl e, _ -> Inl (of_texpr e)
   | EInr e, _ -> Inr (of_texpr e)
+  | ENil, _ -> Nil
+  | ECons (a, b), _ -> Cons (of_texpr a, of_texpr b)
   | EMatch (e, (x,e1), (y,e2)), _ ->
       Case (of_texpr e, (x, of_texpr e1), (y, of_texpr e2))
+  | EMatchList (e, nil_br, (x, xs, cons_br)), _ ->
+      MatchList (of_texpr e, of_texpr nil_br, (x, xs, of_texpr cons_br))
   | EBool b, _ -> Bool b
   | EIf (c,t,f), _ -> If (of_texpr c, of_texpr t, of_texpr f)
   | ELet (x, e1, e2), _ -> Let (x, of_texpr e1, of_texpr e2)
@@ -104,6 +113,9 @@ let rec doc_typ ?(prec = 0) t =
   | TSum (a, b) ->
       let d = group (hsep [ doc_typ ~prec:2 a; text "+"; doc_typ ~prec:2 b ]) in
       wrap 2 d
+  | TList a ->
+      let d = brackets (doc_typ ~prec:3 a) in
+      wrap 3 d
   | TArrow (a, b) ->
       let d =
         group (hsep [ doc_typ ~prec:1 a; text "->"; nest 2 (softline ^^ doc_typ b) ])
@@ -160,6 +172,15 @@ let doc_typed_expr (t : typed_expr) =
                   hsep [ text "else" ];
                   nest 2 (render 0 fbr);
                 ]))
+      | EMatchList (e, nil_br, (x, xs, cons_br)) ->
+          let branch_docs =
+            [
+              nest 2 (hsep [ text "|"; text "[]"; text "=>"; render 0 nil_br ]);
+              nest 2
+                (hsep [ text "|"; text x; text "::"; text xs; text "=>"; render 0 cons_br ]);
+            ]
+          in
+          (0, vsep (hsep [ text "match"; render 0 e; text "with" ] :: branch_docs))
       | EMatch (e, (x, a), (y, b)) ->
           let branch_docs =
             [
@@ -175,6 +196,9 @@ let doc_typed_expr (t : typed_expr) =
       | EPair (a, b) ->
           (4,
            group (enclose_separated "<" ">" (text "," ^^ softline) [ render 0 a; render 0 b ]))
+      | ENil -> (5, text "[]")
+      | ECons (hd, tl) ->
+          (0, group (nest 2 (sep [ render 1 hd; text "::"; render 0 tl ])))
       | EUnit -> (5, text "()")
       | EFst e -> (4, group (hsep [ text "fst"; render 0 e ]))
       | ESnd e -> (4, group (hsep [ text "snd"; render 0 e ]))

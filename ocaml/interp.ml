@@ -26,6 +26,8 @@ type value =
   | VPair of value * value
   | VInl of value
   | VInr of value
+  | VNil
+  | VCons of value * value
   | VClosure of ident * expr * env
   | VRecClosure of ident * ident * expr * env
 
@@ -55,6 +57,7 @@ let rec eval (module R : RNG) env e =
            eval (module R) ((x,v2)::(f,rec_clo)::clo_env) body
        | _ -> failwith "application to non-function")
   | Unit -> VUnit
+  | Nil -> VNil
   | Pair (e1, e2) -> VPair (eval (module R) env e1, eval (module R) env e2)
   | Fst e -> (match eval (module R) env e with VPair (a, _) -> a | _ -> failwith "fst")
   | Snd e -> (match eval (module R) env e with VPair (_, b) -> b | _ -> failwith "snd")
@@ -65,6 +68,15 @@ let rec eval (module R : RNG) env e =
        | VInl v -> eval (module R) ((x,v)::env) e1
        | VInr v -> eval (module R) ((y,v)::env) e2
        | _ -> failwith "match on non-sum")
+  | Cons (hd, tl) ->
+      let v_hd = eval (module R) env hd in
+      let v_tl = eval (module R) env tl in
+      VCons (v_hd, v_tl)
+  | MatchList (e, nil_br, (x, xs, cons_br)) ->
+      (match eval (module R) env e with
+       | VNil -> eval (module R) env nil_br
+       | VCons (hd, tl) -> eval (module R) ((x, hd)::(xs, tl)::env) cons_br
+       | _ -> failwith "match on non-list")
   | Bool b -> VBool b
   | If (c, t, f) ->
       (match eval (module R) env c with

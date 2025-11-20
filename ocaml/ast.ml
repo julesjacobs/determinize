@@ -6,12 +6,15 @@ type expr =
   | Rec of ident * ident * expr
   | App of expr * expr
   | Unit
+  | Nil
   | Pair of expr * expr
   | Fst of expr
   | Snd of expr
   | Inl of expr
   | Inr of expr
   | Case of expr * (ident * expr) * (ident * expr)
+  | Cons of expr * expr
+  | MatchList of expr * expr * (ident * ident * expr)
   | Bool of bool
   | If of expr * expr * expr
   | Let of ident * expr * expr

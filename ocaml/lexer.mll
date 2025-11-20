@@ -27,8 +27,11 @@ rule token = parse
   | "false"                     { FALSE }
   | "("                         { LPAREN }
   | ")"                         { RPAREN }
+  | "["                         { LBRACK }
+  | "]"                         { RBRACK }
   | "<"                         { LT }
   | ">"                         { GT }
+  | "::"                        { CONS }
   | ","                         { COMMA }
   | "|"                         { BAR }
   | "="                         { EQ }

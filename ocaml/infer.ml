@@ -49,6 +49,18 @@ let rec infer (env : env) (exp : Ast.expr) (expected : typ) : typed_expr =
   | Unit ->
       assert_subtype TUnit expected;
       { expr = EUnit; typ = TUnit }
+  | Nil ->
+      let elem = TMeta (fresh_meta ()) in
+      let list_ty = TList elem in
+      assert_subtype list_ty expected;
+      { expr = ENil; typ = list_ty }
+  | Cons (hd, tl) ->
+      let elem = TMeta (fresh_meta ()) in
+      let list_ty = TList elem in
+      let hd_t = infer env hd elem in
+      let tl_t = infer env tl list_ty in
+      assert_subtype list_ty expected;
+      { expr = ECons (hd_t, tl_t); typ = list_ty }
   | Pair (e1, e2) ->
       let t1 = TMeta (fresh_meta ()) in
       let t2 = TMeta (fresh_meta ()) in
@@ -93,6 +105,14 @@ let rec infer (env : env) (exp : Ast.expr) (expected : typ) : typed_expr =
       let e1_t = infer ((x, l_ty) :: env) e1 expected in
       let e2_t = infer ((y, r_ty) :: env) e2 expected in
       { expr = EMatch (scrut, (x, e1_t), (y, e2_t)); typ = expected }
+  | MatchList (e, nil_br, (x, xs, cons_br)) ->
+      let elem_ty = TMeta (fresh_meta ()) in
+      let list_ty = TList elem_ty in
+      let scrut = infer env e list_ty in
+      let nil_t = infer env nil_br expected in
+      let cons_env = (x, elem_ty) :: (xs, list_ty) :: env in
+      let cons_t = infer cons_env cons_br expected in
+      { expr = EMatchList (scrut, nil_t, (x, xs, cons_t)); typ = expected }
   | Bool b ->
       assert_subtype TBool expected;
       { expr = EBool b; typ = TBool }
@@ -119,10 +139,19 @@ let rec infer (env : env) (exp : Ast.expr) (expected : typ) : typed_expr =
       let b_t = infer env b ty in
       { expr = EAdd (a_t, b_t); typ = ty }
   | Mul (a, b) ->
-      let res_ty = ensure_float expected in
-      let a_t = infer env a res_ty in
-      let b_t = infer env b res_ty in
-      { expr = EMul (a_t, b_t); typ = res_ty }
+        let is_scaling = match (a,b) with (Const _, _) | (_, Const _) -> true | _ -> false in
+        let a_ty, b_ty = 
+            if is_scaling 
+            then 
+                expected, expected
+            else
+                let g_mode = fresh_mode_meta () in
+                set_mode g_mode G;
+                (TFloat g_mode, TFloat g_mode) in
+          let res_ty = ensure_float expected in
+          let a_t = infer env a a_ty in
+          let b_t = infer env b b_ty in
+          { expr = EMul (a_t, b_t); typ = res_ty }
   | Lt (a, b) ->
       let float_g = TFloat (fresh_mode_meta ()) in
       set_mode (match float_g with TFloat m -> m | _ -> assert false) G;
