@@ -1,0 +1,2 @@
+(rec f x => x 3)
+mean: 3

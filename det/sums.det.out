@@ -1,0 +1,2 @@
+match inl 3 with inl x -> (x + 1) | inr y -> y
+mean: 4

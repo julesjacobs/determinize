@@ -1,0 +1,15 @@
+(library
+ (name determinize)
+ (modules ast types parser lexer interp infer)
+ (libraries menhirLib))
+
+(menhir
+ (modules parser)
+ (flags --explain))
+
+(ocamllex (modules lexer))
+
+(executable
+ (name determinize_main)
+ (modules determinize_main)
+ (libraries determinize))

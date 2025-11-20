@@ -19,7 +19,8 @@
 *.log
 *.lot
 *.nav
-*.out
+tex/*.out
+tex/**/*.out
 *.ps
 *.run.xml
 *.snm
@@ -40,3 +41,6 @@ dist/
 
 # OS metadata
 .DS_Store
+
+# Generated pretty-printed det outputs
+det/*.pp
