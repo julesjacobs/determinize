@@ -1,32 +1,178 @@
 open Ast
 open Types
 
-(* Placeholder type inference scaffolding. *)
-
 type env = (string * typ) list
 
-type infer_result = typed_expr
+let lookup x env =
+  try List.assoc x env with Not_found -> failwith ("unbound variable " ^ x)
 
-let infer (_env : env) (e : Ast.expr) : infer_result =
-  match e with
-  | Var _ -> failwith "TODO"
-  | Lam _ -> failwith "TODO"
-  | Rec _ -> failwith "TODO"
-  | App _ -> failwith "TODO"
-  | Unit -> failwith "TODO"
-  | Pair _ -> failwith "TODO"
-  | Fst _ -> failwith "TODO"
-  | Snd _ -> failwith "TODO"
-  | Inl _ -> failwith "TODO"
-  | Inr _ -> failwith "TODO"
-  | Case _ -> failwith "TODO"
-  | Bool _ -> failwith "TODO"
-  | If _ -> failwith "TODO"
-  | Let _ -> failwith "TODO"
-  | Const _ -> failwith "TODO"
-  | Neg _ -> failwith "TODO"
-  | Add _ -> failwith "TODO"
-  | Mul _ -> failwith "TODO"
-  | Lt _ -> failwith "TODO"
-  | Uniform _ -> failwith "TODO"
-  | Gauss _ -> failwith "TODO"
+let fresh_float () = TFloat (fresh_mode_meta ())
+
+let ensure_float expected =
+  match zonk expected with
+  | TFloat m -> TFloat m
+  | TMeta m ->
+      let mvar = fresh_mode_meta () in
+      set_type m (TFloat mvar); TFloat mvar
+  | _ -> failwith "expected float type"
+
+let rec infer (env : env) (exp : Ast.expr) (expected : typ) : typed_expr =
+  match exp with
+  | Var x ->
+      let ty_var = lookup x env in
+      assert_subtype ty_var expected;
+      { expr = EVar x; typ = expected }
+  | Lam (x, body) ->
+      let dom, cod =
+        match zonk expected with
+        | TArrow (a, b) -> (a, b)
+        | TMeta m ->
+            let a = TMeta (fresh_meta ()) in
+            let b = TMeta (fresh_meta ()) in
+            set_type m (TArrow (a, b));
+            (a, b)
+        | _ ->
+            let a = TMeta (fresh_meta ()) in
+            let b = TMeta (fresh_meta ()) in
+            (a, b)
+      in
+      let body_t = infer ((x, dom) :: env) body cod in
+      let lam_ty = TArrow (dom, body_t.typ) in
+      assert_subtype lam_ty expected;
+      { expr = ELam (x, body_t); typ = lam_ty }
+  | Rec (f, x, body) ->
+      let dom, cod =
+        match zonk expected with
+        | TArrow (a, b) -> (a, b)
+        | _ ->
+            let a = TMeta (fresh_meta ()) in
+            let b = TMeta (fresh_meta ()) in
+            (a, b)
+      in
+      let fn_ty = TArrow (dom, cod) in
+      let env' = (f, fn_ty) :: (x, dom) :: env in
+      let body_t = infer env' body cod in
+      assert_subtype body_t.typ cod;
+      { expr = ERec (f, x, body_t); typ = fn_ty }
+  | App (e1, e2) ->
+      let arg_ty = TMeta (fresh_meta ()) in
+      let res_ty = TMeta (fresh_meta ()) in
+      let fn_ty = TArrow (arg_ty, res_ty) in
+      let e1_t = infer env e1 fn_ty in
+      let e2_t = infer env e2 arg_ty in
+      assert_subtype res_ty expected;
+      { expr = EApp (e1_t, e2_t); typ = res_ty }
+  | Unit ->
+      assert_subtype TUnit expected;
+      { expr = EUnit; typ = TUnit }
+  | Pair (e1, e2) ->
+      let t1, t2 =
+        match zonk expected with
+        | TPair (a, b) -> (a, b)
+        | _ -> (TMeta (fresh_meta ()), TMeta (fresh_meta ()))
+      in
+      let e1_t = infer env e1 t1 in
+      let e2_t = infer env e2 t2 in
+      { expr = EPair (e1_t, e2_t); typ = TPair (e1_t.typ, e2_t.typ) }
+  | Fst e ->
+      let a_ty = TMeta (fresh_meta ()) in
+      let b_ty = TMeta (fresh_meta ()) in
+      let pair_ty = TPair (a_ty, b_ty) in
+      let e_t = infer env e pair_ty in
+      assert_subtype a_ty expected;
+      { expr = EFst e_t; typ = a_ty }
+  | Snd e ->
+      let a_ty = TMeta (fresh_meta ()) in
+      let b_ty = TMeta (fresh_meta ()) in
+      let pair_ty = TPair (a_ty, b_ty) in
+      let e_t = infer env e pair_ty in
+      assert_subtype b_ty expected;
+      { expr = ESnd e_t; typ = b_ty }
+  | Inl e ->
+      let left_ty =
+        match zonk expected with
+        | TSum (l, _) -> l
+        | _ -> TMeta (fresh_meta ())
+      in
+      let right_ty =
+        match zonk expected with
+        | TSum (_, r) -> r
+        | _ -> TMeta (fresh_meta ())
+      in
+      let e_t = infer env e left_ty in
+      { expr = EInl e_t; typ = TSum (e_t.typ, right_ty) }
+  | Inr e ->
+      let left_ty =
+        match zonk expected with
+        | TSum (l, _) -> l
+        | _ -> TMeta (fresh_meta ())
+      in
+      let right_ty =
+        match zonk expected with
+        | TSum (_, r) -> r
+        | _ -> TMeta (fresh_meta ())
+      in
+      let e_t = infer env e right_ty in
+      { expr = EInr e_t; typ = TSum (left_ty, e_t.typ) }
+  | Case (e, (x, e1), (y, e2)) ->
+      let l_ty = TMeta (fresh_meta ()) in
+      let r_ty = TMeta (fresh_meta ()) in
+      let scrut_ty = TSum (l_ty, r_ty) in
+      let scrut = infer env e scrut_ty in
+      let e1_t = infer ((x, l_ty) :: env) e1 expected in
+      let e2_t = infer ((y, r_ty) :: env) e2 expected in
+      { expr = EMatch (scrut, (x, e1_t), (y, e2_t)); typ = expected }
+  | Bool b ->
+      assert_subtype TBool expected;
+      { expr = EBool b; typ = TBool }
+  | If (c, t, f) ->
+      let c_t = infer env c TBool in
+      let t_t = infer env t expected in
+      let f_t = infer env f expected in
+      { expr = EIf (c_t, t_t, f_t); typ = expected }
+  | Let (x, e1, e2) ->
+      let ty1 = TMeta (fresh_meta ()) in
+      let e1_t = infer env e1 ty1 in
+      let e2_t = infer ((x, e1_t.typ) :: env) e2 expected in
+      { expr = ELet (x, e1_t, e2_t); typ = e2_t.typ }
+  | Const f ->
+      let ty = ensure_float expected in
+      { expr = EConst f; typ = ty }
+  | Neg e ->
+      let ty = ensure_float expected in
+      let e_t = infer env e ty in
+      { expr = ENeg e_t; typ = ty }
+  | Add (a, b) ->
+      let ty = ensure_float expected in
+      let a_t = infer env a ty in
+      let b_t = infer env b ty in
+      { expr = EAdd (a_t, b_t); typ = ty }
+  | Mul (a, b) ->
+      let res_ty =
+        match zonk expected with
+        | TFloat m -> TFloat m
+        | _ -> TFloat (fresh_mode_meta ())
+      in
+      let a_t = infer env a res_ty in
+      let b_t = infer env b res_ty in
+      { expr = EMul (a_t, b_t); typ = res_ty }
+  | Lt (a, b) ->
+      let float_g = TFloat (fresh_mode_meta ()) in
+      set_mode (match float_g with TFloat m -> m | _ -> assert false) G;
+      let a_t = infer env a float_g in
+      let b_t = infer env b float_g in
+      assert_subtype TBool expected;
+      { expr = ELt (a_t, b_t); typ = TBool }
+  | Uniform (a, b) ->
+      let ty = ensure_float expected in
+      let a_t = infer env a ty in
+      let b_t = infer env b ty in
+      { expr = EUniform (a_t, b_t); typ = ty }
+  | Gauss (a, b) ->
+      let mean_ty = ensure_float expected in
+      let var_mode = fresh_mode_meta () in
+      set_mode var_mode G;
+      let var_ty = TFloat var_mode in
+      let a_t = infer env a mean_ty in
+      let b_t = infer env b var_ty in
+      { expr = EGauss (a_t, b_t); typ = mean_ty }
