@@ -50,12 +50,13 @@ let () =
   (* Type/direct elaboration expecting a float result. *)
   let expected = Types.TFloat (Types.fresh_mode_meta ()) in
   let elaborated = Infer.infer [] ast expected in
+  Det.default_modes elaborated;
   let det_ast = Det.of_texpr elaborated in
   let out_path = path ^ ".out" in
   let oc = open_out out_path in
   let fmt = Format.formatter_of_out_channel oc in
-  Format.fprintf fmt "%a@." pp det_ast;
-  Format.fprintf fmt "elab: %a@." Det.pp_texpr elaborated;
+  Format.fprintf fmt "det: %a@." pp det_ast;
+  Format.fprintf fmt "elab (modes defaulted): %a@." Det.pp_texpr elaborated;
   (* Use a deterministic seed for reproducible sampling. *)
   Random.init 0;
   let trials = 100 in
@@ -68,4 +69,5 @@ let () =
   let mean = !acc /. float_of_int trials in
   Format.fprintf fmt "mean: %g@." mean;
   close_out oc;
-  Format.printf "%a@.elab: %a@.mean: %g@." pp det_ast Det.pp_texpr elaborated mean
+  Format.printf "det: %a@.elab (modes defaulted): %a@.mean: %g@."
+    pp det_ast Det.pp_texpr elaborated mean
