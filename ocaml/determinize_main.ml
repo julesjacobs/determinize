@@ -68,14 +68,13 @@ let rec doc_expr ?(ctx_prec = 0) expr =
                 nest 2 (doc_expr ~ctx_prec:0 fbr);
               ]))
     | A.Case (e, (x, e1), (y, e2)) ->
-        let branches =
-          vsep
-            [
-              hsep [ text "| inl"; text x; text "=>"; doc_expr ~ctx_prec:0 e1 ];
-              hsep [ text "| inr"; text y; text "=>"; doc_expr ~ctx_prec:0 e2 ];
-            ]
+        let branch_docs =
+          [
+            nest 2 (hsep [ text "|"; text "inl"; text x; text "=>"; doc_expr ~ctx_prec:0 e1 ]);
+            nest 2 (hsep [ text "|"; text "inr"; text y; text "=>"; doc_expr ~ctx_prec:0 e2 ]);
+          ]
         in
-        (0, group (vsep [ hsep [ text "match"; doc_expr e; text "with" ]; nest 2 branches ]))
+        (0, vsep (hsep [ text "match"; doc_expr e; text "with" ] :: branch_docs))
     | A.App _ ->
         let head, args_rev = app_chain expr [] in
         let docs = doc_expr ~ctx_prec:3 head :: List.rev_map (doc_expr ~ctx_prec:4) args_rev in

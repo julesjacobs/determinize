@@ -161,20 +161,13 @@ let doc_typed_expr (t : typed_expr) =
                   nest 2 (render 0 fbr);
                 ]))
       | EMatch (e, (x, a), (y, b)) ->
-          let branches =
-            vsep
-              [
-                hsep [ text "| inl"; text x; text "=>"; render 0 a ];
-                hsep [ text "| inr"; text y; text "=>"; render 0 b ];
-              ]
+          let branch_docs =
+            [
+              nest 2 (hsep [ text "|"; text "inl"; text x; text "=>"; render 0 a ]);
+              nest 2 (hsep [ text "|"; text "inr"; text y; text "=>"; render 0 b ]);
+            ]
           in
-          (0,
-           group
-             (vsep
-                [
-                  hsep [ text "match"; render 0 e; text "with" ];
-                  nest 2 branches;
-                ]))
+          (0, vsep (hsep [ text "match"; render 0 e; text "with" ] :: branch_docs))
       | EApp _ ->
           let head, args_rev = app_chain t [] in
           let docs = render 3 head :: List.rev_map (render 4) args_rev in
