@@ -12,6 +12,7 @@ and mode_meta = {
 }
 
 and ty_constraint = {
+  mutable fired : bool;
   lower : meta;
   upper : meta;
 }
@@ -106,21 +107,53 @@ let rec propagate_subtype a b =
   | Some t1, None -> set_type b t1
   | None, Some t2 -> set_type a t2
   | Some t1, Some t2 ->
-      if t1 <> t2 then
-        failwith (Format.sprintf "type mismatch: meta %d and %d" a.ty_id b.ty_id)
+      assert_subtype t1 t2
   | None, None -> ()
+
+and fire_constraint c =
+  if c.fired then () else
+    (c.fired <- true;
+     assert_subtype (TMeta c.lower) (TMeta c.upper))
 
 and set_type metav t =
   match metav.ty_value with
   | None ->
       metav.ty_value <- Some t;
-      List.iter (fun c -> propagate_subtype c.lower c.upper) metav.constraints
+      List.iter fire_constraint metav.constraints
   | Some t' ->
-      if t <> t' then
-        failwith (Format.sprintf "type mismatch: meta %d has different types" metav.ty_id)
+      assert_subtype t t'
+
+and zonk t =
+  match t with
+  | TMeta m ->
+      (match m.ty_value with
+       | None -> t
+       | Some t' -> t')
+  | _ -> t
+
+and assert_subtype t1 t2 =
+  match zonk t1, zonk t2 with
+  | TFloat m1, TFloat m2 -> submode m1 m2
+  | TPair (a1,b1), TPair (a2,b2)
+  | TSum (a1,b1), TSum (a2,b2) ->
+      assert_subtype a1 a2;
+      assert_subtype b1 b2
+  | TArrow (a1,b1), TArrow (a2,b2) ->
+      assert_subtype a2 a1;
+      assert_subtype b1 b2
+  | TUnit, TUnit -> ()
+  | TBool, TBool -> ()
+  | TNat, TNat -> ()
+  | TMeta m1, TMeta m2 when m1.ty_id = m2.ty_id -> ()
+  | TMeta m1, t2 ->
+      set_type m1 t2
+  | t1, TMeta m2 ->
+      set_type m2 t1
+  | t1, t2 ->
+      if t1 <> t2 then failwith "type mismatch"
 
 let subtype a b =
-  let c = { lower = a; upper = b } in
+  let c = { fired = false; lower = a; upper = b } in
   a.constraints <- c :: a.constraints;
   b.constraints <- c :: b.constraints;
-  propagate_subtype a b
+  fire_constraint c
