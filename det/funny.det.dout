@@ -1,0 +1,70 @@
+== Elaboration ==
+raw:
+( let foldr =
+    ( fun f =>
+          ( fun z =>
+                ( rec go xs =>
+                      ( match ( xs : [ float[?m2] ] ) with
+                            | [] => ( z : float[?m2] )
+                            | x :: xs => ( ( f : float[?m2] ->  float[?m2] ->  float[?m2] ) ( ( ( go : [ float[?m2] ] ->  float[?m2] ) ( xs
+                                            : [ float[?m2] ] ) : float[?m2] ) ) ( x : float[?m2] ) : float[?m2] ) : float[?m2] ) : [
+                        float[?m2] ] ->  float[?m2] ) : float[?m2] ->  [ float[?m2] ] ->  float[?m2] ) : float[?m2] ->  float[?m2] -> 
+              float[?m2] ->  float[?m2] ->  [ float[?m2] ] ->  float[?m2] )
+    in
+    ( let sum =
+          ( fun xs =>
+                ( ( foldr : float[?m2] ->  float[?m2] ->  float[?m2] ->  float[?m2] ->  [ float[?m2] ] ->  float[?m2] ) ( xs : [ float[?m2]
+                          ] ) ( 0 : float[?m4] ) ( ( fun x =>
+                            ( fun acc =>
+                                  ( uniform( ( x : float[?m2] ), ( gauss( ( acc : float[?m2] ), ( 2 : float[G] ) ) : float[?m2] ) ) :
+                                        float[?m2] ) : float[?m2] ->  float[?m2] ) : float[?m2] ->  float[?m2] ->  float[?m2] ) ) :
+                      float[?m2] ) : [ float[?m2] ] ->  float[?m2] )
+          in
+          ( let samples =
+                ( ( uniform( ( 0 : float[?m5] ), ( 1 : float[?m5] ) ) : float[?m5] ) :: ( ( gauss( ( 1 : float[?m6] ), ( 0.2 : float[G] ) )
+                                  : float[?m6] ) :: ( ( 2.5 : float[?m8] ) :: ( ( gauss( ( 0.5 : float[?m9] ), ( 0.05 : float[G] ) ) :
+                                              float[?m9] ) :: ( [] : [ float[?m9] ] ) : [ float[?m9] ] ) : [ float[?m8] ] ) : [ float[?m6] ]
+                        ) : [ float[?m5] ] )
+                in
+                ( ( sum : [ float[?m2] ] ->  float[?m2] ) ( samples : [ float[?m2] ] ) : float[?m2] ) : float[?m2] ) : float[?m2] ) :
+    float[?m2] )
+defaulted:
+( let foldr =
+    ( fun f =>
+          ( fun z =>
+                ( rec go xs =>
+                      ( match ( xs : [ float[E] ] ) with
+                            | [] => ( z : float[E] )
+                            | x :: xs => ( ( f : float[E] ->  float[E] ->  float[E] ) ( ( ( go : [ float[E] ] ->  float[E] ) ( xs : [
+                                              float[E] ] ) : float[E] ) ) ( x : float[E] ) : float[E] ) : float[E] ) : [ float[E] ] -> 
+                        float[E] ) : float[E] ->  [ float[E] ] ->  float[E] ) : float[E] ->  float[E] ->  float[E] ->  float[E] ->  [
+                float[E] ] ->  float[E] )
+    in
+    ( let sum =
+          ( fun xs =>
+                ( ( foldr : float[E] ->  float[E] ->  float[E] ->  float[E] ->  [ float[E] ] ->  float[E] ) ( xs : [ float[E] ] ) ( 0 :
+                          float[E] ) ( ( fun x =>
+                            ( fun acc =>
+                                  ( uniform( ( x : float[E] ), ( gauss( ( acc : float[E] ), ( 2 : float[G] ) ) : float[E] ) ) : float[E] ) :
+                                  float[E] ->  float[E] ) : float[E] ->  float[E] ->  float[E] ) ) : float[E] ) : [ float[E] ] ->  float[E]
+            )
+          in
+          ( let samples =
+                ( ( uniform( ( 0 : float[E] ), ( 1 : float[E] ) ) : float[E] ) :: ( ( gauss( ( 1 : float[E] ), ( 0.2 : float[G] ) ) :
+                                  float[E] ) :: ( ( 2.5 : float[E] ) :: ( ( gauss( ( 0.5 : float[E] ), ( 0.05 : float[G] ) ) : float[E] ) ::
+                                          ( [] : [ float[E] ] ) : [ float[E] ] ) : [ float[E] ] ) : [ float[E] ] ) : [ float[E] ] )
+                in
+                ( ( sum : [ float[E] ] ->  float[E] ) ( samples : [ float[E] ] ) : float[E] ) : float[E] ) : float[E] ) : float[E] )
+
+== Determinized ==
+let foldr =
+fun f => fun z => rec go xs => match xs with | [] => z | x :: xs => f ( go xs ) x
+in
+let sum =
+  fun xs => foldr xs 0 ( fun x => fun acc => ( x + acc ) * 0.5 )
+  in
+  let samples = ( 0 + 1 ) * 0.5 :: 1 :: 2.5 :: 0.5 :: [] in sum samples
+
+== Evaluation (100 trials) ==
+program mean: 0.640364
+determinized mean: 0.84375
