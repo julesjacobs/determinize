@@ -4,6 +4,49 @@ open Ast
 (* Determinize a typed expression: strip types and replace expectation-mode 
    samples with their expected values if the type says Float[E]. *)
 
+(* Set any unresolved mode variables to expectation mode for deterministic handling. *)
+let rec default_modes_typ t =
+  match zonk t with
+  | TFloat m ->
+      if m.mode = None then set_mode m E
+  | TPair (a, b)
+  | TSum (a, b) ->
+      default_modes_typ a;
+      default_modes_typ b
+  | TArrow (a, b) ->
+      default_modes_typ a;
+      default_modes_typ b
+  | TMeta m ->
+      (match m.ty_value with
+       | Some t' -> default_modes_typ t'
+       | None -> ())
+  | _ -> ()
+
+let default_modes (t : typed_expr) =
+  let rec go te =
+    default_modes_typ te.typ;
+    match te.expr with
+    | EVar _ | EUnit | EBool _ | EConst _ -> ()
+    | ELam (_, body) -> go body
+    | ERec (_, _, body) -> go body
+    | EApp (a, b) -> go a; go b
+    | EPair (a, b) -> go a; go b
+    | EFst e -> go e
+    | ESnd e -> go e
+    | EInl e -> go e
+    | EInr e -> go e
+    | EMatch (e, (_, a), (_, b)) -> go e; go a; go b
+    | EIf (c, t1, t2) -> go c; go t1; go t2
+    | ELet (_, a, b) -> go a; go b
+    | ENeg e -> go e
+    | EAdd (a, b) -> go a; go b
+    | EMul (a, b) -> go a; go b
+    | ELt (a, b) -> go a; go b
+    | EUniform (a, b) -> go a; go b
+    | EGauss (a, b) -> go a; go b
+  in
+  go t
+
 let rec of_texpr (t : typed_expr) : Ast.expr =
   match t.expr, t.typ with
   | EVar x, _ -> Var x
