@@ -1,10 +1,14 @@
 == Elaboration ==
-raw: ((rec f x => (x : float[?m2]) : (float[?m2] -> float[?m2])) (3 : float[?m2]) : float[?m2])
-defaulted: ((rec f x => (x : float[E]) : (float[E] -> float[E])) (3 : float[E]) : float[E])
+raw:
+( ( rec f x => ( x : float[?m2] ) : float[?m2] ->  float[?m2] ) ( 3 : float[?m2]
+    ) : float[?m2] )
+defaulted:
+( ( rec f x => ( x : float[E] ) : float[E] ->  float[E] ) ( 3 : float[E] ) :
+    float[E] )
 
 == Determinized ==
-(rec f x =>
-   x 3)
+( rec f x => x ) 3
 
 == Evaluation (100 trials) ==
-mean: 3
+program mean: 3
+determinized mean: 3

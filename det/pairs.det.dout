@@ -1,14 +1,21 @@
 == Elaboration ==
-raw: (let p = (<(1 : float[?m2]), (2 : float[?m3])> : (float[?m2] * float[?m3])) in ((fst (p : (float[?m2] * float[?m3])) : float[?m2]) + (snd (p : (float[?m2] * float[?m3])) : float[?m3]) : float[?m1]) : float[?m1])
-defaulted: (let p = (<(1 : float[E]), (2 : float[E])> : (float[E] * float[E])) in ((fst (p : (float[E] * float[E])) : float[E]) + (snd (p : (float[E] * float[E])) : float[E]) : float[E]) : float[E])
+raw:
+( let p =
+    ( < ( 1 : float[?m2] ), ( 2 : float[?m3] ) > : float[?m2] * float[?m3] )
+    in
+    ( ( fst ( p : float[?m2] * float[?m3] ) : float[?m2] ) + ( snd ( p :
+                    float[?m2] * float[?m3] ) : float[?m3] ) : float[?m1] ) :
+    float[?m1] )
+defaulted:
+( let p =
+    ( < ( 1 : float[E] ), ( 2 : float[E] ) > : float[E] * float[E] )
+    in
+    ( ( fst ( p : float[E] * float[E] ) : float[E] ) + ( snd ( p :
+                    float[E] * float[E] ) : float[E] ) : float[E] ) : float[E] )
 
 == Determinized ==
-let p =
-    <1,2>
-in
-(fst
-   p + snd
-         p)
+let p = < 1, 2 > in fst p + snd p
 
 == Evaluation (100 trials) ==
-mean: 3
+program mean: 3
+determinized mean: 3

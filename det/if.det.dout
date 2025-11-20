@@ -1,12 +1,13 @@
 == Elaboration ==
-raw: (if (true : bool) then (1 : float[?m1]) else (0 : float[?m1]) : float[?m1])
-defaulted: (if (true : bool) then (1 : float[E]) else (0 : float[E]) : float[E])
+raw:
+( if ( true : bool ) then ( 1 : float[?m1] ) else ( 0 : float[?m1] ) :
+    float[?m1] )
+defaulted:
+( if ( true : bool ) then ( 1 : float[E] ) else ( 0 : float[E] ) : float[E] )
 
 == Determinized ==
-if true then
-  1
-  else
-  0
+if true then 1 else 0
 
 == Evaluation (100 trials) ==
-mean: 1
+program mean: 1
+determinized mean: 1

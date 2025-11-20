@@ -1,12 +1,18 @@
 == Elaboration ==
-raw: (let a = (uniform((0 : float[?m2]), (1 : float[?m2])) : float[?m2]) in ((a : float[?m1]) + (2 : float[?m1]) : float[?m1]) : float[?m1])
-defaulted: (let a = (uniform((0 : float[E]), (1 : float[E])) : float[E]) in ((a : float[E]) + (2 : float[E]) : float[E]) : float[E])
+raw:
+( let a =
+    ( uniform( ( 0 : float[?m2] ), ( 1 : float[?m2] ) ) : float[?m2] )
+    in
+    ( ( a : float[?m1] ) + ( 2 : float[?m1] ) : float[?m1] ) : float[?m1] )
+defaulted:
+( let a =
+    ( uniform( ( 0 : float[E] ), ( 1 : float[E] ) ) : float[E] )
+    in
+    ( ( a : float[E] ) + ( 2 : float[E] ) : float[E] ) : float[E] )
 
 == Determinized ==
-let a =
-    ((0 + 1) * 0.5)
-in
-(a + 2)
+let a = ( 0 + 1 ) * 0.5 in a + 2
 
 == Evaluation (100 trials) ==
-mean: 2.5
+program mean: 2.50619
+determinized mean: 2.5

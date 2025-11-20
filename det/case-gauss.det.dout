@@ -1,12 +1,18 @@
 == Elaboration ==
-raw: (match (inl (gauss((0 : float[?m2]), (1 : float[G])) : float[?m2]) : (float[?m2] + float[?m1])) with inl x -> (x : float[?m1]) | inr y -> (y : float[?m1]) : float[?m1])
-defaulted: (match (inl (gauss((0 : float[E]), (1 : float[G])) : float[E]) : (float[E] + float[E])) with inl x -> (x : float[E]) | inr y -> (y : float[E]) : float[E])
+raw:
+( match ( inl ( gauss( ( 0 : float[?m2] ), ( 1 : float[G] ) ) : float[?m2] ) :
+        float[?m2] + float[?m1] ) with
+    | inl x =>  ( x : float[?m1] )
+      | inr y =>  ( y : float[?m1] ) : float[?m1] )
+defaulted:
+( match ( inl ( gauss( ( 0 : float[E] ), ( 1 : float[G] ) ) : float[E] ) :
+        float[E] + float[E] ) with
+    | inl x =>  ( x : float[E] )
+      | inr y =>  ( y : float[E] ) : float[E] )
 
 == Determinized ==
-match inl
-        0 with
-  | inl x => x
-  | inr y => y
+match inl 0 with | inl x =>  x | inr y =>  y
 
 == Evaluation (100 trials) ==
-mean: 0
+program mean: 0.106226
+determinized mean: 0

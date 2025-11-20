@@ -79,95 +79,127 @@ let rec of_texpr (t : typed_expr) : Ast.expr =
        | _ -> Gauss (of_texpr a, of_texpr b))
   | _, _ -> failwith " ill-typed texpr"
 
-let pp_mode fmt = function
-  | G -> Format.fprintf fmt "G"
-  | E -> Format.fprintf fmt "E"
+module Doc = Pretty
 
-let rec pp_typ fmt = function
-  | TUnit -> Format.pp_print_string fmt "unit"
-  | TBool -> Format.pp_print_string fmt "bool"
-  | TNat -> Format.pp_print_string fmt "nat"
-  | TFloat m ->
-      (match m.mode with
-       | Some m' -> Format.fprintf fmt "float[%a]" pp_mode m'
-       | None -> Format.fprintf fmt "float[?m%d]" m.mode_id)
+let doc_mode = function
+  | G -> Doc.text "G"
+  | E -> Doc.text "E"
+
+let doc_mode_meta m =
+  match m.mode with
+  | Some m' -> doc_mode m'
+  | None -> Doc.text (Format.sprintf "?m%d" m.mode_id)
+
+let rec doc_typ ?(prec = 0) t =
+  let open Doc in
+  let wrap level d = if prec > level then parens d else d in
+  match zonk t with
+  | TUnit -> text "unit"
+  | TBool -> text "bool"
+  | TNat -> text "nat"
+  | TFloat m -> text "float[" ^^ doc_mode_meta m ^^ text "]"
   | TPair (a, b) ->
-      Format.fprintf fmt "@[<hv 1>(%a@ * %a)@]" pp_typ a pp_typ b
+      let d = group (hsep [ doc_typ ~prec:2 a; text "*"; doc_typ ~prec:2 b ]) in
+      wrap 2 d
   | TSum (a, b) ->
-      Format.fprintf fmt "@[<hv 1>(%a@ + %a)@]" pp_typ a pp_typ b
+      let d = group (hsep [ doc_typ ~prec:2 a; text "+"; doc_typ ~prec:2 b ]) in
+      wrap 2 d
   | TArrow (a, b) ->
-      Format.fprintf fmt "@[<hv 1>(%a@ -> %a)@]" pp_typ a pp_typ b
+      let d =
+        group (hsep [ doc_typ ~prec:1 a; text "->"; nest 2 (softline ^^ doc_typ b) ])
+      in
+      wrap 1 d
   | TMeta m ->
       (match m.ty_value with
-       | Some t -> pp_typ fmt t
-       | None -> Format.fprintf fmt "?t%d" m.ty_id)
+       | Some t' -> doc_typ ~prec t' | None -> text (Format.sprintf "?t%d" m.ty_id))
 
-let pp_texpr fmt (t : typed_expr) =
-  let with_type typ fmt printer =
-    Format.fprintf fmt "@[<v 2>%t@,: %a@]" printer pp_typ typ
+let pp_typ fmt t = Doc.render fmt (doc_typ t)
+
+let doc_typed_expr (t : typed_expr) =
+  let open Doc in
+  let annotate typ expr_doc =
+    parens (group (nest 2 (join softline [ expr_doc; text ":"; doc_typ typ ])))
   in
-  let rec go fmt (t : typed_expr) =
+  let rec app_chain e acc =
+    match e.expr with
+    | EApp (f, arg) -> app_chain f (arg :: acc)
+    | _ -> (e, acc)
+  and infix typ op a b =
+    annotate typ (group (nest 2 (join softline [ go a; text op; go b ])))
+  and go (t : typed_expr) =
     match t.expr with
-    | EVar x ->
-        with_type t.typ fmt (fun fmt -> Format.pp_print_string fmt x)
+    | EVar x -> annotate t.typ (text x)
     | ELam (x, body) ->
-        with_type t.typ fmt (fun fmt ->
-            Format.fprintf fmt "@[<v 2>fun %s =>@,%a@]" x go body)
+        annotate t.typ
+          (group
+             (vsep
+                [ hsep [ text "fun"; text x; text "=>" ]
+                ; nest 2 (go body)
+                ]))
     | ERec (f, x, body) ->
-        with_type t.typ fmt (fun fmt ->
-            Format.fprintf fmt "@[<v 2>rec %s %s =>@,%a@]" f x go body)
-    | EApp (a, b) ->
-        with_type t.typ fmt (fun fmt ->
-            Format.fprintf fmt "@[<hv 2>(%a@ %a)@]" go a go b)
-    | EUnit ->
-        with_type t.typ fmt (fun fmt -> Format.pp_print_string fmt "()")
+        annotate t.typ
+          (group
+             (vsep
+                [ hsep [ text "rec"; text f; text x; text "=>" ]
+                ; nest 2 (go body)
+                ]))
+    | EApp _ ->
+        let head, args_rev = app_chain t [] in
+        let docs = go head :: List.rev_map go args_rev in
+        annotate t.typ (group (join softline docs))
+    | EUnit -> annotate t.typ (text "()")
     | EPair (a, b) ->
-        with_type t.typ fmt (fun fmt ->
-            Format.fprintf fmt "@[<hv 1><%a,@,%a>@]" go a go b)
-    | EFst e ->
-        with_type t.typ fmt (fun fmt ->
-            Format.fprintf fmt "@[<v 2>fst@,%a@]" go e)
-    | ESnd e ->
-        with_type t.typ fmt (fun fmt ->
-            Format.fprintf fmt "@[<v 2>snd@,%a@]" go e)
-    | EInl e ->
-        with_type t.typ fmt (fun fmt ->
-            Format.fprintf fmt "@[<v 2>inl@,%a@]" go e)
-    | EInr e ->
-        with_type t.typ fmt (fun fmt ->
-            Format.fprintf fmt "@[<v 2>inr@,%a@]" go e)
+        annotate t.typ (enclose_separated "<" ">" (text "," ^^ softline) [ go a; go b ])
+    | EFst e -> annotate t.typ (group (hsep [ text "fst"; go e ]))
+    | ESnd e -> annotate t.typ (group (hsep [ text "snd"; go e ]))
+    | EInl e -> annotate t.typ (group (hsep [ text "inl"; go e ]))
+    | EInr e -> annotate t.typ (group (hsep [ text "inr"; go e ]))
     | EMatch (e, (x, a), (y, b)) ->
-        with_type t.typ fmt (fun fmt ->
-            Format.fprintf fmt
-              "@[<v 0>@[<v 2>match %a with@,| inl %s => %a@,| inr %s => %a@]@]"
-              go e x go a y go b)
-    | EBool b ->
-        with_type t.typ fmt (fun fmt -> Format.fprintf fmt "%B" b)
+        let branches =
+          vsep
+            [
+              hsep [ text "| inl"; text x; text "=>"; nest 2 (softline ^^ go a) ];
+              hsep [ text "| inr"; text y; text "=>"; nest 2 (softline ^^ go b) ];
+            ]
+        in
+        annotate t.typ
+          (group (vsep [ hsep [ text "match"; go e; text "with" ]; nest 2 branches ]))
+    | EBool b -> annotate t.typ (text (string_of_bool b))
     | EIf (c, tbr, fbr) ->
-        with_type t.typ fmt (fun fmt ->
-            Format.fprintf fmt "@[<v 0>@[<v 2>if %a then@,%a@,else@,%a@]@]"
-              go c go tbr go fbr)
+        annotate t.typ
+          (group
+             (vsep
+                [
+                  hsep [ text "if"; go c ];
+                  hsep [ text "then" ];
+                  nest 2 (go tbr);
+                  hsep [ text "else" ];
+                  nest 2 (go fbr);
+                ]))
     | ELet (x, a, b) ->
-        with_type t.typ fmt (fun fmt ->
-            Format.fprintf fmt "@[<v 0>@[<v 4>let %s =@,%a@]@,in@,%a@]" x go a go b)
-    | EConst f ->
-        with_type t.typ fmt (fun fmt -> Format.fprintf fmt "%g" f)
-    | ENeg e ->
-        with_type t.typ fmt (fun fmt -> Format.fprintf fmt "@[<hv 1>-@,%a@]" go e)
-    | EAdd (a, b) ->
-        with_type t.typ fmt (fun fmt ->
-            Format.fprintf fmt "@[<hv 1>(%a@ + %a)@]" go a go b)
-    | EMul (a, b) ->
-        with_type t.typ fmt (fun fmt ->
-            Format.fprintf fmt "@[<hv 1>(%a@ * %a)@]" go a go b)
-    | ELt (a, b) ->
-        with_type t.typ fmt (fun fmt ->
-            Format.fprintf fmt "@[<hv 1>(%a@ < %a)@]" go a go b)
+        annotate t.typ
+          (group
+             (vsep
+                [
+                  hsep [ text "let"; text x; text "=" ];
+                  nest 2 (go a);
+                  text "in";
+                  nest 2 (go b);
+                ]))
+    | EConst f -> annotate t.typ (text (Format.asprintf "%g" f))
+    | ENeg e -> annotate t.typ (group (hsep [ text "-"; go e ]))
+    | EAdd (a, b) -> infix t.typ "+" a b
+    | EMul (a, b) -> infix t.typ "*" a b
+    | ELt (a, b) -> infix t.typ "<" a b
     | EUniform (a, b) ->
-        with_type t.typ fmt (fun fmt ->
-            Format.fprintf fmt "@[<hv 1>uniform(@,%a,@ %a)@]" go a go b)
+        annotate t.typ
+          (group
+             (text "uniform" ^^ enclose_separated "(" ")" (text "," ^^ softline) [ go a; go b ]))
     | EGauss (a, b) ->
-        with_type t.typ fmt (fun fmt ->
-            Format.fprintf fmt "@[<hv 1>gauss(@,%a,@ %a)@]" go a go b)
+        annotate t.typ
+          (group
+             (text "gauss" ^^ enclose_separated "(" ")" (text "," ^^ softline) [ go a; go b ]))
   in
-  go fmt t
+  go t
+
+let pp_texpr fmt t = Doc.render fmt (doc_typed_expr t)
