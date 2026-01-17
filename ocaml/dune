@@ -1,7 +1,7 @@
 (library
  (name determinize)
  (wrapped false)
- (modules ast types parser lexer interp infer determinize pretty)
+ (modules ast types parser lexer interp infer determinize pretty to_mc)
  (libraries menhirLib))
 
 (menhir
@@ -13,4 +13,4 @@
 (executable
  (name determinize_main)
  (modules determinize_main)
- (libraries determinize menhirLib))
+ (libraries determinize menhirLib unix))

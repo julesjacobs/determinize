@@ -23,6 +23,8 @@ rule token = parse
   | "snd"                       { SND }
   | "uniform"                   { UNIFORM }
   | "gauss"                     { GAUSS }
+  | "flip"                      { FLIP }
+  | "discrete"                  { DISCRETE }
   | "true"                      { TRUE }
   | "false"                     { FALSE }
   | "("                         { LPAREN }

@@ -172,3 +172,20 @@ let rec infer (env : env) (exp : Ast.expr) (expected : typ) : typed_expr =
       let a_t = infer env a mean_ty in
       let b_t = infer env b var_ty in
       { expr = EGauss (a_t, b_t); typ = mean_ty }
+  | Flip p ->
+      let p_ty = fresh_float () in
+      let p_t = infer env p p_ty in
+      assert_subtype TBool expected;
+      { expr = EFlip p_t; typ = TBool }
+  | Discrete choices ->
+      let ty = ensure_float expected in 
+      let typed_choices =
+          List.map
+            (fun (p, ei) ->
+                if p < 0.0 || p > 1.0 then failwith "Discrete: probability not in [0,1]";
+                let ei_t = infer env ei ty in
+                (p, ei_t))
+            choices
+      in
+      { expr = EDiscrete typed_choices; typ = ty }
+      

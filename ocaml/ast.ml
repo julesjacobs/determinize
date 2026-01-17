@@ -25,3 +25,5 @@ type expr =
   | Lt of expr * expr
   | Uniform of expr * expr
   | Gauss of expr * expr
+  | Flip of expr
+  | Discrete of (float * expr) list

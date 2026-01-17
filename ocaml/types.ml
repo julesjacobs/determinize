@@ -59,6 +59,8 @@ and texpr =
   | ELt of typed_expr * typed_expr
   | EUniform of typed_expr * typed_expr
   | EGauss of typed_expr * typed_expr
+  | EFlip of typed_expr
+  | EDiscrete of (float * typed_expr) list
 
 and typed_expr = {
   expr : texpr;

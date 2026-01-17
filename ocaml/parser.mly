@@ -5,7 +5,7 @@
 %token TRUE FALSE
 %token FUN REC LET IN IF THEN ELSE
 %token MATCH WITH INL INR FST SND
-%token UNIFORM GAUSS
+%token UNIFORM GAUSS FLIP DISCRETE
 %token DOT EQ BAR COMMA CONS
 %token LPAREN RPAREN LBRACK RBRACK LT GT
 %token PLUS TIMES MINUS
@@ -70,3 +70,11 @@ atom:
   | INR atom                           { Inr $2 }
   | UNIFORM LPAREN expr COMMA expr RPAREN { Uniform ($3, $5) }
   | GAUSS LPAREN expr COMMA expr RPAREN    { Gauss ($3, $5) }
+  | FLIP LPAREN expr RPAREN             { Flip ($3) }
+  | DISCRETE LPAREN probs = separated_nonempty_list(COMMA, FLOAT) RPAREN
+    {
+      let cases =
+        List.mapi (fun i p -> (p, Const (float_of_int i))) probs
+      in
+      Discrete cases
+    }

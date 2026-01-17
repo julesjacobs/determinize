@@ -49,6 +49,8 @@ let default_modes (t : typed_expr) =
     | ELt (a, b) -> go a; go b
     | EUniform (a, b) -> go a; go b
     | EGauss (a, b) -> go a; go b
+    | EFlip e -> go e 
+    | EDiscrete choices -> List.iter (fun (_p, ei) -> go ei) choices
   in
   go t
 
@@ -86,6 +88,20 @@ let rec of_texpr (t : typed_expr) : Ast.expr =
       (match mvar.mode with
        | Some E -> of_texpr a
        | _ -> Gauss (of_texpr a, of_texpr b))
+  | EFlip p, _ -> Flip (of_texpr p)
+  | EDiscrete choices, TFloat mvar ->
+    (match mvar.mode with
+     | Some E ->
+        let rec sum_weighted (terms : (float * Ast.expr) list) : Ast.expr =
+          match terms with
+          | [] -> Const 0.0
+          | [ (p, v) ] -> Mul (Const p, v)
+          | (p, v) :: tl -> Add (Mul (Const p, v), sum_weighted tl)
+        in
+        let terms = List.map (fun (p, ei) -> (p, of_texpr ei)) choices in
+        sum_weighted terms
+     | _ ->
+         Discrete (List.map (fun (p, ei) -> (p, of_texpr ei)) choices))
   | _, _ -> failwith " ill-typed texpr"
 
 module Doc = Pretty
@@ -241,6 +257,23 @@ let doc_typed_expr (t : typed_expr) =
                group
                  (text "gauss"
                   ^^ enclose_separated "(" ")" (text "," ^^ softline) [ render 0 a; render 0 b ]))
+          | EFlip e ->
+            (4,
+              group
+                (text "flip"
+                ^^ enclose_separated "(" ")" (text "," ^^ softline) [ render 0 e ]))
+          | EDiscrete choices ->
+            let case_docs =
+              List.map
+                (fun (p, ei) ->
+                  (* render as: p:v *)
+                  group (sep [ text (Format.asprintf "%g" p); text ":"; render 0 ei ]))
+                choices
+            in
+            (4,
+              group
+                (text "discrete"
+                ^^ enclose_separated "(" ")" (text "," ^^ softline) case_docs))
         in
         let doc_with_type =
           group (parens (nest 2 (sep [ doc_body; text ":"; doc_typ t.typ ])))

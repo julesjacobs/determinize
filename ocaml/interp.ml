@@ -3,6 +3,8 @@ open Ast
 module type RNG = sig
   val uniform : float -> float -> float
   val gaussian : float -> float -> float
+  val flip : float -> bool
+  val discrete : float list -> int
 end
 
 module StdRng : RNG = struct
@@ -17,6 +19,26 @@ module StdRng : RNG = struct
     let z0 = sqrt (-2. *. log u1) *. cos (2. *. Float.pi *. u2) in
     let sigma = sqrt var in
     mean +. sigma *. z0
+
+  let flip p =
+    if p < 0.0 || p > 1.0 then failwith "flip: p not in [0,1]";
+    Random.float 1.0 < p
+
+  let discrete ps =
+    match ps with
+    | [] -> failwith "discrete: empty probability list"
+    | _ ->
+        let total = List.fold_left ( +. ) 0.0 ps in
+        if total <= 0.0 then failwith "discrete: total probability <= 0";
+        (* check this? *)
+        let r = Random.float total in
+        let rec pick i acc = function
+          | [] -> max 0 (i - 1)  (* numeric drift fallback *)
+          | p :: tl ->
+              let acc' = acc +. p in
+              if r <= acc' then i else pick (i + 1) acc' tl
+        in
+        pick 0 0.0 ps
 end
 
 type value =
@@ -41,6 +63,10 @@ let rec lookup x env =
 let float_of_value = function
   | VFloat f -> f
   | _ -> failwith "expected float"
+
+let bool_of_value = function
+  | VBool b -> b
+  | _ -> failwith "expected bool"
 
 let rec eval (module R : RNG) env e =
   match e with
@@ -93,3 +119,11 @@ let rec eval (module R : RNG) env e =
   | Lt (e1, e2) -> VBool (float_of_value (eval (module R) env e1) < float_of_value (eval (module R) env e2))
   | Uniform (e1, e2) -> VFloat (R.uniform (float_of_value (eval (module R) env e1)) (float_of_value (eval (module R) env e2)))
   | Gauss (e1, e2) -> VFloat (R.gaussian (float_of_value (eval (module R) env e1)) (float_of_value (eval (module R) env e2)))
+  | Flip e1 ->
+    let p = float_of_value (eval (module R) env e1) in
+    VBool (R.flip p)
+  | Discrete cases ->
+    let ps = List.map fst cases in
+    let i = R.discrete ps in
+    let (_, chosen_e) = List.nth cases i in
+    eval (module R) env chosen_e

@@ -6,6 +6,7 @@ module Infer = Infer
 module Types = Types
 module Det = Determinize
 module Doc = Pretty
+module MC = To_mc
 
 let parse_file path =
   let ic = open_in path in
@@ -122,6 +123,26 @@ let rec doc_expr ?(ctx_prec = 0) expr =
          group
            (text "gauss"
             ^^ enclose_separated "(" ")" (text "," ^^ softline) [ doc_expr e1; doc_expr e2 ]))
+    | A.Flip e ->
+      (4,
+        group
+          (text "flip"
+          ^^ enclose_separated "(" ")" (text "," ^^ softline) [ doc_expr e ]))
+    | A.Discrete choices ->
+      (* prints as: discrete(p1: v1, p2:v2, ...) *)
+      let choice_doc (p, v) =
+        group
+          (sep
+              [ text (Format.asprintf "%g" p)
+              ; text ":"
+              ; doc_expr ~ctx_prec:0 v
+              ])
+      in
+      (4,
+        group
+          (text "discrete"
+          ^^ enclose_separated "(" ")" (text "," ^^ softline)
+                (List.map choice_doc choices)))  
   in
   paren_if (prec < ctx_prec) body
 
@@ -165,6 +186,16 @@ let () =
   Det.clear_doc_typ_cache ();
   let defaulted_elab_doc = trim_doc (Det.doc_typed_expr elaborated) in
   let det_ast = Det.of_texpr elaborated in
+  (* Emit a DTMC .tra file for STORM from the (determinized) AST. *)
+  let mc_result = MC.to_mc det_ast in
+  let mc_path = path ^ ".tra" in
+  MC.write_tra_file mc_result mc_path;
+  (* Emit a lab file for STORM *)
+  let lab_path = path ^ ".lab" in
+  MC.write_lab_file mc_result lab_path;
+  (* Emit a state rewawrds file for STORM *)
+  let state_rew_path = path ^ ".state.rew" in
+  MC.write_state_rew_file mc_result state_rew_path;
   let out_path = path ^ ".dout" in
   let oc = open_out out_path in
   let fmt = Format.formatter_of_out_channel oc in
