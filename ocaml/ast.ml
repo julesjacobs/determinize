@@ -22,8 +22,13 @@ type expr =
   | Neg of expr
   | Add of expr * expr
   | Mul of expr * expr
+  | Sub of expr * expr
+  | Div of expr * expr
   | Lt of expr * expr
   | Uniform of expr * expr
   | Gauss of expr * expr
+  | Exponential of expr
+  | Gamma of expr * expr
+  | Beta of expr * expr
   | Flip of expr
   | Discrete of (float * expr) list

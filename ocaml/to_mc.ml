@@ -1,5 +1,7 @@
 module A = Ast
 
+(* Constructs a Markov chain based off the small-step operational semantics of the langauge *)
+
 type transition = { 
   src : int; 
   dst : int; 
@@ -27,6 +29,8 @@ let rec free_vars (e : A.expr) : StringSet.t =
   | A.Cons (e1, e2)
   | A.Add (e1, e2)
   | A.Mul (e1, e2)
+  | A.Sub (e1, e2)
+  | A.Div (e1, e2)
   | A.Lt (e1, e2) -> StringSet.union (free_vars e1) (free_vars e2)
   | A.Fst e
   | A.Snd e
@@ -52,7 +56,7 @@ let rec free_vars (e : A.expr) : StringSet.t =
         (fun acc (_p, ei) -> StringSet.union acc (free_vars ei))
         StringSet.empty cases
   | A.Unit | A.Nil | A.Bool _ | A.Const _ -> StringSet.empty
-  | A.Uniform _ | A.Gauss _ ->
+  | A.Uniform _ | A.Gauss _ | A.Exponential _ | A.Gamma _ | A.Beta _ ->
       (* should not appear after determinization for MC generation *)
       StringSet.empty
 
@@ -107,11 +111,13 @@ let rec rename (x : string) (x' : string) (e : A.expr) : A.expr =
   | A.Neg a -> A.Neg (rename x x' a)
   | A.Add (a, b) -> A.Add (rename x x' a, rename x x' b)
   | A.Mul (a, b) -> A.Mul (rename x x' a, rename x x' b)
+  | A.Sub (a, b) -> A.Sub (rename x x' a, rename x x' b)
+  | A.Div (a, b) -> A.Div (rename x x' a, rename x x' b)
   | A.Lt (a, b) -> A.Lt (rename x x' a, rename x x' b)
   | A.Flip a -> A.Flip (rename x x' a)
   | A.Discrete cases ->
       A.Discrete (List.map (fun (p, ei) -> (p, rename x x' ei)) cases)
-  | A.Uniform _ | A.Gauss _ ->
+  | A.Uniform _ | A.Gauss _ | A.Exponential _ | A.Gamma _ | A.Beta _ ->
       failwith "to_mc: continuous distributions not supported (Uniform/Gauss)"
 
 (* Capture-avoiding substitution [e[v/x]] *)
@@ -209,10 +215,12 @@ let rec subst (x : string) (v : A.expr) (e : A.expr) : A.expr =
   | A.Neg a -> A.Neg (subst x v a)
   | A.Add (a, b) -> A.Add (subst x v a, subst x v b)
   | A.Mul (a, b) -> A.Mul (subst x v a, subst x v b)
+  | A.Sub (a, b) -> A.Sub (subst x v a, subst x v b)
+  | A.Div (a, b) -> A.Div (subst x v a, subst x v b)
   | A.Lt (a, b) -> A.Lt (subst x v a, subst x v b)
   | A.Flip a -> A.Flip (subst x v a)
   | A.Discrete cases -> A.Discrete (List.map (fun (p, ei) -> (p, subst x v ei)) cases)
-  | A.Uniform _ | A.Gauss _ ->
+  | A.Uniform _ | A.Gauss _ | A.Exponential _ | A.Gamma _ | A.Beta _ ->
       failwith "to_mc: continuous distributions not supported (Uniform/Gauss)"
 
 (* ---------- Values ---------- *)
@@ -254,12 +262,22 @@ let rec simplify (e : A.expr) : A.expr =
       (match (a', b') with
        | A.Const x, A.Const y -> A.Const (x *. y)
        | _ -> A.Mul (a', b'))
-  | A.Lt (a, b) ->
+  | A.Sub (a, b) ->
       let a' = simp a in
       let b' = simp b in
       (match (a', b') with
-       | A.Const x, A.Const y -> A.Bool (x < y)
-       | _ -> A.Lt (a', b'))
+        | A.Const x, A.Const y -> A.Const (x -. y)
+        | _ -> A.Sub (a', b'))
+  | A.Div (a, b) ->
+      let a' = simp a in
+      let b' = simp b in
+      (match (a', b') with
+        | A.Const x, A.Const y -> A.Const (x /. y)
+        | _ -> A.Div (a', b'))
+  | A.Lt (a, b) ->
+      let a' = simp a in
+      let b' = simp b in
+      A.Lt (a', b')
   | A.Fst a ->
       let a' = simp a in
       (match a' with
@@ -283,10 +301,10 @@ let rec simplify (e : A.expr) : A.expr =
   | A.Flip a -> A.Flip (simp a)
   | A.Discrete cases -> A.Discrete (List.map (fun (p, ei) -> (p, simp ei)) cases)
   | A.Var _ | A.Unit | A.Nil | A.Bool _ | A.Const _ | A.Lam _ | A.Rec _ -> e
-  | A.Uniform _ | A.Gauss _ ->
+  | A.Uniform _ | A.Gauss _ | A.Exponential _ | A.Gamma _ | A.Beta _ ->
       failwith "to_mc: continuous distributions not supported (Uniform/Gauss)"
 
-(* ---------- Small-step semantics: e -> { (p_i, e_i) } ---------- *)
+(***** ---------- Small-step semantics: e -> { (p_i, e_i) } ---------- *****)
 
 let check_prob (p : float) : unit =
   if p < 0.0 || p > 1.0 || Float.is_nan p || Float.is_infinite p then
@@ -360,6 +378,24 @@ let rec step (e : A.expr) : (float * A.expr) list =
           (match (a, b) with
            | A.Const x, A.Const y -> [ (1.0, A.Const (x *. y)) ]
            | _ -> failwith "mul: expected floats")
+    | A.Sub (a, b) ->
+        if not (is_value a) then
+          List.map (fun (p, a') -> (p, A.Sub (a', b))) (step a)
+        else if not (is_value b) then
+          List.map (fun (p, b') -> (p, A.Sub (a, b'))) (step b)
+        else
+          (match (a, b) with
+            | A.Const x, A.Const y -> [ (1.0, A.Const (x -. y)) ]
+            | _ -> failwith "sub: expected floats")
+    | A.Div (a, b) ->
+        if not (is_value a) then
+          List.map (fun (p, a') -> (p, A.Div (a', b))) (step a)
+        else if not (is_value b) then
+          List.map (fun (p, b') -> (p, A.Div (a, b'))) (step b)
+        else
+          (match (a, b) with
+            | A.Const x, A.Const y -> [ (1.0, A.Const (x /. y)) ]
+            | _ -> failwith "div: expected floats")
     | A.Lt (a, b) ->
         if not (is_value a) then
           List.map (fun (p, a') -> (p, A.Lt (a', b))) (step a)
@@ -442,8 +478,8 @@ let rec step (e : A.expr) : (float * A.expr) list =
           List.iter check_prob ps;
           check_sum_to_one ps;
           List.map (fun (p, ei) -> (p, ei)) cases
-    | A.Uniform _ | A.Gauss _ ->
-        failwith "to_mc: continuous distributions not supported (Uniform/Gauss)"
+    | A.Uniform _ | A.Gauss _ | A.Exponential _ | A.Gamma _ | A.Beta _ ->
+        failwith "to_mc: continuous distributions not supported"
     | A.Unit | A.Nil | A.Bool _ | A.Const _ | A.Lam _ | A.Rec _ ->
         (* should have been caught by is_value *)
         []

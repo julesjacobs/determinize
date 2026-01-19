@@ -1,0 +1,18 @@
+== Elaboration ==
+raw:
+( let x =
+    ( exponential( ( 2 : float[G] ) ) : float[G] )
+    in
+    ( let y = ( exponential( ( x : float[G] ) ) : float[?m4] ) in ( y : float[?m1] ) : float[?m1] ) : float[?m1] )
+defaulted:
+( let x =
+    ( exponential( ( 2 : float[G] ) ) : float[G] )
+    in
+    ( let y = ( exponential( ( x : float[G] ) ) : float[E] ) in ( y : float[E] ) : float[E] ) : float[E] )
+
+== Determinized ==
+let x = exponential( 2 ) in let y = 1 / x in y
+
+== Evaluation (100 trials) ==
+program mean: 6.60726
+determinized mean: 12.717

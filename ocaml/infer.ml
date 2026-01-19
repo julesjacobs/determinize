@@ -138,6 +138,11 @@ let rec infer (env : env) (exp : Ast.expr) (expected : typ) : typed_expr =
       let a_t = infer env a ty in
       let b_t = infer env b ty in
       { expr = EAdd (a_t, b_t); typ = ty }
+  | Sub (a, b) ->
+      let ty = ensure_float expected in
+      let a_t = infer env a ty in
+      let b_t = infer env b ty in
+      { expr = ESub (a_t, b_t); typ = ty }
   | Mul (a, b) ->
         let is_scaling = match (a,b) with (Const _, _) | (_, Const _) -> true | _ -> false in
         let a_ty, b_ty = 
@@ -152,6 +157,19 @@ let rec infer (env : env) (exp : Ast.expr) (expected : typ) : typed_expr =
           let a_t = infer env a a_ty in
           let b_t = infer env b b_ty in
           { expr = EMul (a_t, b_t); typ = res_ty }
+    | Div (a, b) ->
+        let is_scaling = match (a,b) with (_, Const _) -> true | _ -> false in
+        let a_ty, b_ty =
+            if is_scaling then expected, expected
+            else
+            let g_mode = fresh_mode_meta () in
+            set_mode g_mode G;
+            (TFloat g_mode, TFloat g_mode)
+        in
+        let res_ty = ensure_float expected in
+        let a_t = infer env a a_ty in
+        let b_t = infer env b b_ty in
+        { expr = EDiv (a_t, b_t); typ = res_ty }
   | Lt (a, b) ->
       let float_g = TFloat (fresh_mode_meta ()) in
       set_mode (match float_g with TFloat m -> m | _ -> assert false) G;
@@ -172,6 +190,29 @@ let rec infer (env : env) (exp : Ast.expr) (expected : typ) : typed_expr =
       let a_t = infer env a mean_ty in
       let b_t = infer env b var_ty in
       { expr = EGauss (a_t, b_t); typ = mean_ty }
+  | Exponential e ->
+        let ty = ensure_float expected in
+        let rate_mode = fresh_mode_meta () in
+        set_mode rate_mode G;
+        let rate_ty = TFloat rate_mode in
+        let e_t = infer env e rate_ty in
+        { expr = EExponential e_t; typ = ty }
+  | Gamma (a, b) ->
+        let a_ty = ensure_float expected in 
+        let b_mode = fresh_mode_meta () in 
+        set_mode b_mode G;
+        let b_ty = TFloat b_mode in
+        let a_t = infer env a a_ty in
+        let b_t = infer env b b_ty in
+        { expr = EGamma (a_t, b_t); typ = a_ty }
+  | Beta (a, b) ->
+        let ty = ensure_float expected in
+        let param_mode = fresh_mode_meta () in
+        set_mode param_mode G;
+        let param_ty = TFloat param_mode in
+        let a_t = infer env a param_ty in
+        let b_t = infer env b param_ty in
+        { expr = EBeta (a_t, b_t); typ = ty }
   | Flip p ->
       let p_ty = fresh_float () in
       let p_t = infer env p p_ty in

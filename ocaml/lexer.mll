@@ -23,6 +23,9 @@ rule token = parse
   | "snd"                       { SND }
   | "uniform"                   { UNIFORM }
   | "gauss"                     { GAUSS }
+  | "exponential"               { EXPONENTIAL }
+  | "gamma"                     { GAMMA }
+  | "beta"                      { BETA }
   | "flip"                      { FLIP }
   | "discrete"                  { DISCRETE }
   | "true"                      { TRUE }
@@ -41,6 +44,7 @@ rule token = parse
   | "+"                         { PLUS }
   | "*"                         { TIMES }
   | "-"                         { MINUS }
+  | "/"                         { DIVIDE }
   | ['0'-'9']+ ('.' ['0'-'9']*)? (['e' 'E']['+' '-']? ['0'-'9']+)? as f { FLOAT (float_of_string f) }
   | ['a'-'z''A'-'Z''_']['a'-'z''A'-'Z''0'-'9''_']* as id { IDENT id }
   | eof                        { EOF }

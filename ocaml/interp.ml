@@ -3,11 +3,26 @@ open Ast
 module type RNG = sig
   val uniform : float -> float -> float
   val gaussian : float -> float -> float
+  val exponential : float -> float
+  val gamma : float -> float -> float
+  val beta : float -> float -> float
   val flip : float -> bool
   val discrete : float list -> int
 end
 
 module StdRng : RNG = struct
+  (* Helper functions *)
+  let rand_u01 () =
+    let min_u = 1e-12 in
+    let u = Random.float 1.0 in
+    if u = 0.0 then min_u else u
+
+  let rand_std_normal () =
+    let u1 = rand_u01 () in
+    let u2 = Random.float 1.0 in
+    sqrt (-2. *. log u1) *. cos (2. *. Float.pi *. u2)
+  
+  (* Random samplers *)
   let uniform a b =
     let lo = min a b in
     let hi = max a b in
@@ -39,6 +54,43 @@ module StdRng : RNG = struct
               if r <= acc' then i else pick (i + 1) acc' tl
         in
         pick 0 0.0 ps
+  
+    let exponential lambda =
+      if lambda <= 0.0 then failwith "exponential: rate must be > 0";
+      let u = rand_u01 () in
+      -. (log u) /. lambda
+
+    let rec gamma alpha beta =
+      if alpha <= 0.0 then failwith "gamma: alpha (shape) must be > 0";
+      if beta  <= 0.0 then failwith "gamma: beta (rate) must be > 0";
+      let scale = 1.0 /. beta in
+      if alpha < 1.0 then
+        let u = rand_u01 () in
+        gamma (alpha +. 1.0) beta *. (u ** (1.0 /. alpha))
+      else
+        let d = alpha -. (1.0 /. 3.0) in
+        let c = 1.0 /. sqrt (9.0 *. d) in
+        let rec loop () =
+          let x = rand_std_normal () in
+          let v = 1.0 +. c *. x in
+          if v <= 0.0 then loop ()
+          else
+            let v3 = v *. v *. v in
+            let u = rand_u01 () in
+            if u < 1.0 -. 0.0331 *. (x *. x) *. (x *. x) then
+              scale *. d *. v3
+            else if log u < 0.5 *. x *. x +. d *. (1.0 -. v3 +. log v3) then
+              scale *. d *. v3
+            else
+              loop ()
+        in
+        loop ()
+
+    let beta a b =
+      if a <= 0.0 || b <= 0.0 then failwith "beta: a and b must be > 0";
+      let x = gamma a 1.0 in   (* rate = 1 *)
+      let y = gamma b 1.0 in   (* rate = 1 *)
+      x /. (x +. y)
 end
 
 type value =
@@ -116,9 +168,14 @@ let rec eval (module R : RNG) env e =
   | Neg e -> VFloat (-. float_of_value (eval (module R) env e))
   | Add (e1, e2) -> VFloat (float_of_value (eval (module R) env e1) +. float_of_value (eval (module R) env e2))
   | Mul (e1, e2) -> VFloat (float_of_value (eval (module R) env e1) *. float_of_value (eval (module R) env e2))
+  | Sub (e1, e2) -> VFloat (float_of_value (eval (module R) env e1) -. float_of_value (eval (module R) env e2))
+  | Div (e1, e2) -> VFloat (float_of_value (eval (module R) env e1) /. float_of_value (eval (module R) env e2))
   | Lt (e1, e2) -> VBool (float_of_value (eval (module R) env e1) < float_of_value (eval (module R) env e2))
   | Uniform (e1, e2) -> VFloat (R.uniform (float_of_value (eval (module R) env e1)) (float_of_value (eval (module R) env e2)))
   | Gauss (e1, e2) -> VFloat (R.gaussian (float_of_value (eval (module R) env e1)) (float_of_value (eval (module R) env e2)))
+  | Exponential e1 -> VFloat (R.exponential (float_of_value (eval (module R) env e1)))
+  | Gamma (e1, e2) -> VFloat (R.gamma (float_of_value (eval (module R) env e1)) (float_of_value (eval (module R) env e2)))
+  | Beta (e1, e2) -> VFloat (R.beta (float_of_value (eval (module R) env e1)) (float_of_value (eval (module R) env e2)))
   | Flip e1 ->
     let p = float_of_value (eval (module R) env e1) in
     VBool (R.flip p)

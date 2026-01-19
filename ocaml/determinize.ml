@@ -46,9 +46,14 @@ let default_modes (t : typed_expr) =
     | ENeg e -> go e
     | EAdd (a, b) -> go a; go b
     | EMul (a, b) -> go a; go b
+    | ESub (a, b) -> go a; go b
+    | EDiv (a, b) -> go a; go b
     | ELt (a, b) -> go a; go b
     | EUniform (a, b) -> go a; go b
     | EGauss (a, b) -> go a; go b
+    | EExponential e -> go e
+    | EGamma (a, b) -> go a; go b
+    | EBeta (a, b) -> go a; go b
     | EFlip e -> go e 
     | EDiscrete choices -> List.iter (fun (_p, ei) -> go ei) choices
   in
@@ -79,6 +84,8 @@ let rec of_texpr (t : typed_expr) : Ast.expr =
   | ENeg e, _ -> Neg (of_texpr e)
   | EAdd (a,b), _ -> Add (of_texpr a, of_texpr b)
   | EMul (a,b), _ -> Mul (of_texpr a, of_texpr b)
+  | ESub (a,b), _ -> Sub (of_texpr a, of_texpr b)
+  | EDiv (a,b), _ -> Div (of_texpr a, of_texpr b)
   | ELt (a,b), _ -> Lt (of_texpr a, of_texpr b)
   | EUniform (a,b), TFloat mvar ->
       (match mvar.mode with
@@ -88,6 +95,18 @@ let rec of_texpr (t : typed_expr) : Ast.expr =
       (match mvar.mode with
        | Some E -> of_texpr a
        | _ -> Gauss (of_texpr a, of_texpr b))
+  | EExponential e, TFloat mvar ->
+      (match mvar.mode with
+        | Some E -> Div (Const 1.0, of_texpr e)
+        | _ -> Exponential (of_texpr e))
+  | EGamma (a,b), TFloat mvar ->
+      (match mvar.mode with
+        | Some E -> Div (of_texpr a, of_texpr b)
+        | _ -> Gamma (of_texpr a, of_texpr b))
+  | EBeta (a,b), TFloat mvar ->
+      (match mvar.mode with
+        | Some E -> Div (of_texpr a, Add (of_texpr a, of_texpr b))
+        | _ -> Beta (of_texpr a, of_texpr b))
   | EFlip p, _ -> Flip (of_texpr p)
   | EDiscrete choices, TFloat mvar ->
     (match mvar.mode with
@@ -245,6 +264,10 @@ let doc_typed_expr (t : typed_expr) =
               (2, group (nest 2 (sep [ render 2 a; text "*"; render 3 b ])))
           | EAdd (a, b) ->
               (1, group (nest 2 (sep [ render 1 a; text "+"; render 2 b ])))
+          | EDiv (a, b) ->
+              (2, group (nest 2 (sep [ render 2 a; text "/"; render 3 b ])))
+          | ESub (a, b) ->
+              (1, group (nest 2 (sep [ render 1 a; text "-"; render 2 b ])))
           | ELt (a, b) ->
               (1, group (nest 2 (sep [ render 1 a; text "<"; render 2 b ])))
           | EUniform (a, b) ->
@@ -256,6 +279,21 @@ let doc_typed_expr (t : typed_expr) =
               (4,
                group
                  (text "gauss"
+                  ^^ enclose_separated "(" ")" (text "," ^^ softline) [ render 0 a; render 0 b ]))
+          | EExponential e ->
+              (4,
+                group
+                  (text "exponential"
+                  ^^ enclose_separated "(" ")" (text "," ^^ softline) [ render 0 e ]))
+          | EGamma (a, b) ->
+              (4,
+                group
+                  (text "gamma"
+                  ^^ enclose_separated "(" ")" (text "," ^^ softline) [ render 0 a; render 0 b ]))
+          | EBeta (a, b) ->
+              (4,
+                group
+                  (text "beta"
                   ^^ enclose_separated "(" ")" (text "," ^^ softline) [ render 0 a; render 0 b ]))
           | EFlip e ->
             (4,

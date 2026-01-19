@@ -1,0 +1,3 @@
+(* By the law of total expectation, can be determinized *)
+let x = gamma(1,2) in
+let y = gamma(x,8) in y + 1

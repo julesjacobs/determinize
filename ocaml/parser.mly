@@ -5,10 +5,10 @@
 %token TRUE FALSE
 %token FUN REC LET IN IF THEN ELSE
 %token MATCH WITH INL INR FST SND
-%token UNIFORM GAUSS FLIP DISCRETE
+%token UNIFORM GAUSS EXPONENTIAL GAMMA BETA FLIP DISCRETE
 %token DOT EQ BAR COMMA CONS
 %token LPAREN RPAREN LBRACK RBRACK LT GT
-%token PLUS TIMES MINUS
+%token PLUS TIMES MINUS DIVIDE
 %token DARROW
 %token EOF
 
@@ -41,10 +41,12 @@ cons:
 
 add:
   | add PLUS mul                       { Add ($1, $3) }
+  | add MINUS mul                      { Sub ($1, $3) }
   | mul                                { $1 }
 
 mul:
   | mul TIMES unary                    { Mul ($1, $3) }
+  | mul DIVIDE unary                   { Div ($1, $3) }
   | unary                              { $1 }
 
 unary:
@@ -63,13 +65,16 @@ atom:
   | LBRACK RBRACK                      { Nil }
   | LPAREN RPAREN                      { Unit }
   | LPAREN expr RPAREN                 { $2 }
-  | LT expr COMMA expr GT              { Pair ($2, $4) }
+  | LPAREN expr COMMA expr RPAREN      { Pair ($2, $4) }
   | FST atom                           { Fst $2 }
   | SND atom                           { Snd $2 }
   | INL atom                           { Inl $2 }
   | INR atom                           { Inr $2 }
   | UNIFORM LPAREN expr COMMA expr RPAREN { Uniform ($3, $5) }
   | GAUSS LPAREN expr COMMA expr RPAREN    { Gauss ($3, $5) }
+  | EXPONENTIAL LPAREN expr RPAREN         { Exponential ($3) }
+  | GAMMA LPAREN expr COMMA expr RPAREN    { Gamma ($3, $5) }
+  | BETA  LPAREN expr COMMA expr RPAREN    { Beta ($3, $5) }
   | FLIP LPAREN expr RPAREN             { Flip ($3) }
   | DISCRETE LPAREN probs = separated_nonempty_list(COMMA, FLOAT) RPAREN
     {

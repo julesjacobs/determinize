@@ -111,6 +111,10 @@ let rec doc_expr ?(ctx_prec = 0) expr =
          group (nest 2 (sep [ doc_expr ~ctx_prec:2 e1; text "*"; doc_expr ~ctx_prec:3 e2 ])))
     | A.Add (e1, e2) ->
         (1, group (nest 2 (sep [ doc_expr ~ctx_prec:1 e1; text "+"; doc_expr ~ctx_prec:2 e2 ])))
+    | A.Div (e1, e2) ->
+        (2, group (nest 2 (sep [ doc_expr ~ctx_prec:2 e1; text "/"; doc_expr ~ctx_prec:3 e2 ])))
+    | A.Sub (e1, e2) ->
+        (1, group (nest 2 (sep [ doc_expr ~ctx_prec:1 e1; text "-"; doc_expr ~ctx_prec:2 e2 ])))
     | A.Lt (e1, e2) ->
         (1, group (nest 2 (sep [ doc_expr ~ctx_prec:1 e1; text "<"; doc_expr ~ctx_prec:2 e2 ])))
     | A.Uniform (e1, e2) ->
@@ -122,6 +126,21 @@ let rec doc_expr ?(ctx_prec = 0) expr =
         (4,
          group
            (text "gauss"
+            ^^ enclose_separated "(" ")" (text "," ^^ softline) [ doc_expr e1; doc_expr e2 ]))
+    | A.Exponential e ->
+        (4,
+          group
+            (text "exponential"
+            ^^ enclose_separated "(" ")" (text "," ^^ softline) [ doc_expr e ]))
+    | A.Gamma (e1, e2) ->
+        (4,
+          group
+            (text "gamma"
+            ^^ enclose_separated "(" ")" (text "," ^^ softline) [ doc_expr e1; doc_expr e2 ]))
+    | A.Beta (e1, e2) ->
+        (4,
+          group
+            (text "beta"
             ^^ enclose_separated "(" ")" (text "," ^^ softline) [ doc_expr e1; doc_expr e2 ]))
     | A.Flip e ->
       (4,
@@ -186,16 +205,14 @@ let () =
   Det.clear_doc_typ_cache ();
   let defaulted_elab_doc = trim_doc (Det.doc_typed_expr elaborated) in
   let det_ast = Det.of_texpr elaborated in
-  (* Emit a DTMC .tra file for STORM from the (determinized) AST. *)
+  (* Storm backend *)
   let mc_result = MC.to_mc det_ast in
   let mc_path = path ^ ".tra" in
-  MC.write_tra_file mc_result mc_path;
-  (* Emit a lab file for STORM *)
+  MC.write_tra_file mc_result mc_path; (* Emit a transition file (.tra) for Storm *)
   let lab_path = path ^ ".lab" in
-  MC.write_lab_file mc_result lab_path;
-  (* Emit a state rewawrds file for STORM *)
+  MC.write_lab_file mc_result lab_path; (* Emit a label file (.lab) for Storm *)
   let state_rew_path = path ^ ".state.rew" in
-  MC.write_state_rew_file mc_result state_rew_path;
+  MC.write_state_rew_file mc_result state_rew_path; (* Emit a state rewards file (.state.rew) for Storm *)
   let out_path = path ^ ".dout" in
   let oc = open_out out_path in
   let fmt = Format.formatter_of_out_channel oc in

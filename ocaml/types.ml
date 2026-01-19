@@ -56,9 +56,14 @@ and texpr =
   | ENeg of typed_expr
   | EAdd of typed_expr * typed_expr
   | EMul of typed_expr * typed_expr
+  | ESub of typed_expr * typed_expr
+  | EDiv of typed_expr * typed_expr
   | ELt of typed_expr * typed_expr
   | EUniform of typed_expr * typed_expr
   | EGauss of typed_expr * typed_expr
+  | EExponential of typed_expr
+  | EGamma of typed_expr * typed_expr
+  | EBeta of typed_expr * typed_expr
   | EFlip of typed_expr
   | EDiscrete of (float * typed_expr) list
 

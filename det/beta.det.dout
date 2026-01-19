@@ -1,0 +1,18 @@
+== Elaboration ==
+raw:
+( let x =
+    ( beta( ( 1 : float[G] ), ( 2 : float[G] ) ) : float[G] )
+    in
+    ( let y = ( beta( ( x : float[G] ), ( 8 : float[G] ) ) : float[?m4] ) in ( y : float[?m1] ) : float[?m1] ) : float[?m1] )
+defaulted:
+( let x =
+    ( beta( ( 1 : float[G] ), ( 2 : float[G] ) ) : float[G] )
+    in
+    ( let y = ( beta( ( x : float[G] ), ( 8 : float[G] ) ) : float[E] ) in ( y : float[E] ) : float[E] ) : float[E] )
+
+== Determinized ==
+let x = beta( 1, 2 ) in let y = x / ( x + 8 ) in y
+
+== Evaluation (100 trials) ==
+program mean: 0.0319881
+determinized mean: 0.0433409
