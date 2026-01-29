@@ -49,12 +49,15 @@ let default_modes (t : typed_expr) =
     | ESub (a, b) -> go a; go b
     | EDiv (a, b) -> go a; go b
     | ELt (a, b) -> go a; go b
+    | ELeq (a, b) -> go a; go b
     | EUniform (a, b) -> go a; go b
     | EGauss (a, b) -> go a; go b
     | EExponential e -> go e
     | EGamma (a, b) -> go a; go b
     | EBeta (a, b) -> go a; go b
     | EFlip e -> go e 
+    | EBernoulli e -> go e
+    | EPoisson e -> go e
     | EDiscrete choices -> List.iter (fun (_p, ei) -> go ei) choices
   in
   go t
@@ -87,6 +90,7 @@ let rec of_texpr (t : typed_expr) : Ast.expr =
   | ESub (a,b), _ -> Sub (of_texpr a, of_texpr b)
   | EDiv (a,b), _ -> Div (of_texpr a, of_texpr b)
   | ELt (a,b), _ -> Lt (of_texpr a, of_texpr b)
+  | ELeq (a,b), _ -> Leq (of_texpr a, of_texpr b)
   | EUniform (a,b), TFloat mvar ->
       (match mvar.mode with
        | Some E -> Add (of_texpr a, of_texpr b) |> fun sum -> Mul (sum, Const 0.5)
@@ -108,6 +112,14 @@ let rec of_texpr (t : typed_expr) : Ast.expr =
         | Some E -> Div (of_texpr a, Add (of_texpr a, of_texpr b))
         | _ -> Beta (of_texpr a, of_texpr b))
   | EFlip p, _ -> Flip (of_texpr p)
+  | EBernoulli p, TFloat mvar ->
+      (match mvar.mode with
+        | Some E -> of_texpr p
+        | _ -> Bernoulli (of_texpr p))
+  | EPoisson p, TFloat mvar ->
+      (match mvar.mode with
+        | Some E -> of_texpr p
+        | _ -> Poisson (of_texpr p))
   | EDiscrete choices, TFloat mvar ->
     (match mvar.mode with
      | Some E ->
@@ -270,6 +282,8 @@ let doc_typed_expr (t : typed_expr) =
               (1, group (nest 2 (sep [ render 1 a; text "-"; render 2 b ])))
           | ELt (a, b) ->
               (1, group (nest 2 (sep [ render 1 a; text "<"; render 2 b ])))
+          | ELeq (a, b) ->
+              (1, group (nest 2 (sep [ render 1 a; text "<="; render 2 b ])))
           | EUniform (a, b) ->
               (4,
                group
@@ -299,6 +313,16 @@ let doc_typed_expr (t : typed_expr) =
             (4,
               group
                 (text "flip"
+                ^^ enclose_separated "(" ")" (text "," ^^ softline) [ render 0 e ]))
+          | EBernoulli e ->
+            (4,
+              group
+                (text "bernoulli"
+                ^^ enclose_separated "(" ")" (text "," ^^ softline) [ render 0 e ]))
+          | EPoisson e ->
+            (4,
+              group
+                (text "poisson"
                 ^^ enclose_separated "(" ")" (text "," ^^ softline) [ render 0 e ]))
           | EDiscrete choices ->
             let case_docs =

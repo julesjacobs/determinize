@@ -7,6 +7,8 @@ module type RNG = sig
   val gamma : float -> float -> float
   val beta : float -> float -> float
   val flip : float -> bool
+  val bernoulli : float -> float (* can also be float -> int *)
+  val poisson : float -> float
   val discrete : float list -> int
 end
 
@@ -38,6 +40,9 @@ module StdRng : RNG = struct
   let flip p =
     if p < 0.0 || p > 1.0 then failwith "flip: p not in [0,1]";
     Random.float 1.0 < p
+
+  let bernoulli p =
+    if flip p then 1.0 else 0.0
 
   let discrete ps =
     match ps with
@@ -91,6 +96,20 @@ module StdRng : RNG = struct
       let x = gamma a 1.0 in   (* rate = 1 *)
       let y = gamma b 1.0 in   (* rate = 1 *)
       x /. (x +. y)
+
+    let poisson lambda =
+      if lambda < 0.0 then failwith "poisson: lambda must be >= 0";
+      if lambda = 0.0 then 0.0
+      else
+        (* Knuth's algorithm *)
+        let l = exp (-. lambda) in
+        let rec loop k p =
+          if p <= l then float_of_int (k - 1)
+          else
+            let u = rand_u01 () in
+            loop (k + 1) (p *. u)
+        in
+        loop 0 1.0
 end
 
 type value =
@@ -171,6 +190,7 @@ let rec eval (module R : RNG) env e =
   | Sub (e1, e2) -> VFloat (float_of_value (eval (module R) env e1) -. float_of_value (eval (module R) env e2))
   | Div (e1, e2) -> VFloat (float_of_value (eval (module R) env e1) /. float_of_value (eval (module R) env e2))
   | Lt (e1, e2) -> VBool (float_of_value (eval (module R) env e1) < float_of_value (eval (module R) env e2))
+  | Leq (e1, e2) -> VBool (float_of_value (eval (module R) env e1) <= float_of_value (eval (module R) env e2))
   | Uniform (e1, e2) -> VFloat (R.uniform (float_of_value (eval (module R) env e1)) (float_of_value (eval (module R) env e2)))
   | Gauss (e1, e2) -> VFloat (R.gaussian (float_of_value (eval (module R) env e1)) (float_of_value (eval (module R) env e2)))
   | Exponential e1 -> VFloat (R.exponential (float_of_value (eval (module R) env e1)))
@@ -179,6 +199,8 @@ let rec eval (module R : RNG) env e =
   | Flip e1 ->
     let p = float_of_value (eval (module R) env e1) in
     VBool (R.flip p)
+  | Bernoulli e1 -> VFloat (R.bernoulli (float_of_value (eval (module R) env e1)))
+  | Poisson e1 -> VFloat (R.poisson (float_of_value (eval (module R) env e1)))
   | Discrete cases ->
     let ps = List.map fst cases in
     let i = R.discrete ps in

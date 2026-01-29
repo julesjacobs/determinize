@@ -25,10 +25,13 @@ type expr =
   | Sub of expr * expr
   | Div of expr * expr
   | Lt of expr * expr
+  | Leq of expr * expr
   | Uniform of expr * expr
   | Gauss of expr * expr
   | Exponential of expr
   | Gamma of expr * expr
   | Beta of expr * expr
   | Flip of expr
+  | Bernoulli of expr
+  | Poisson of expr
   | Discrete of (float * expr) list

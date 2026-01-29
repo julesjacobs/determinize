@@ -177,6 +177,13 @@ let rec infer (env : env) (exp : Ast.expr) (expected : typ) : typed_expr =
       let b_t = infer env b float_g in
       assert_subtype TBool expected;
       { expr = ELt (a_t, b_t); typ = TBool }
+  | Leq (a, b) ->
+      let float_g = TFloat (fresh_mode_meta ()) in
+      set_mode (match float_g with TFloat m -> m | _ -> assert false) G;
+      let a_t = infer env a float_g in
+      let b_t = infer env b float_g in
+      assert_subtype TBool expected;
+      { expr = ELeq (a_t, b_t); typ = TBool }
   | Uniform (a, b) ->
       let ty = ensure_float expected in
       let a_t = infer env a ty in
@@ -218,6 +225,14 @@ let rec infer (env : env) (exp : Ast.expr) (expected : typ) : typed_expr =
       let p_t = infer env p p_ty in
       assert_subtype TBool expected;
       { expr = EFlip p_t; typ = TBool }
+  | Bernoulli p ->
+      let ty = ensure_float expected in
+      let p_t = infer env p ty in
+      { expr = EBernoulli p_t; typ = ty }
+  | Poisson p ->
+      let ty = ensure_float expected in
+      let p_t = infer env p ty in
+      { expr = EPoisson p_t; typ = ty }
   | Discrete choices ->
       let ty = ensure_float expected in 
       let typed_choices =

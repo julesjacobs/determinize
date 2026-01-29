@@ -11,6 +11,7 @@ type transition = {
 type mc = {
   num_states : int;
   sink : int;
+  sink_diverging : int option;
   transitions : transition list;
   expr_of : (int, A.expr) Hashtbl.t;  (* map: state id -> expression *)
 }
@@ -32,12 +33,14 @@ let rec free_vars (e : A.expr) : StringSet.t =
   | A.Sub (e1, e2)
   | A.Div (e1, e2)
   | A.Lt (e1, e2) -> StringSet.union (free_vars e1) (free_vars e2)
+  | A.Leq (e1, e2) -> StringSet.union (free_vars e1) (free_vars e2)
   | A.Fst e
   | A.Snd e
   | A.Inl e
   | A.Inr e
   | A.Neg e
   | A.Flip e -> free_vars e
+  | A.Bernoulli p -> free_vars p
   | A.If (c, t, f) ->
       StringSet.union (free_vars c) (StringSet.union (free_vars t) (free_vars f))
   | A.Let (x, e1, e2) ->
@@ -56,8 +59,8 @@ let rec free_vars (e : A.expr) : StringSet.t =
         (fun acc (_p, ei) -> StringSet.union acc (free_vars ei))
         StringSet.empty cases
   | A.Unit | A.Nil | A.Bool _ | A.Const _ -> StringSet.empty
-  | A.Uniform _ | A.Gauss _ | A.Exponential _ | A.Gamma _ | A.Beta _ ->
-      (* should not appear after determinization for MC generation *)
+  | A.Uniform _ | A.Gauss _ | A.Exponential _ | A.Gamma _ | A.Beta _ | A.Poisson _ ->
+      (* should not appear after determinization for MC generation: Storm cannot support *)
       StringSet.empty
 
 let fresh_name (avoid : StringSet.t) (base : string) : string =
@@ -114,10 +117,12 @@ let rec rename (x : string) (x' : string) (e : A.expr) : A.expr =
   | A.Sub (a, b) -> A.Sub (rename x x' a, rename x x' b)
   | A.Div (a, b) -> A.Div (rename x x' a, rename x x' b)
   | A.Lt (a, b) -> A.Lt (rename x x' a, rename x x' b)
+  | A.Leq (a, b) -> A.Leq (rename x x' a, rename x x' b)
   | A.Flip a -> A.Flip (rename x x' a)
+  | A.Bernoulli p -> A.Bernoulli (rename x x' p)
   | A.Discrete cases ->
       A.Discrete (List.map (fun (p, ei) -> (p, rename x x' ei)) cases)
-  | A.Uniform _ | A.Gauss _ | A.Exponential _ | A.Gamma _ | A.Beta _ ->
+  | A.Uniform _ | A.Gauss _ | A.Exponential _ | A.Gamma _ | A.Beta _ | A.Poisson _ ->
       failwith "to_mc: continuous distributions not supported (Uniform/Gauss)"
 
 (* Capture-avoiding substitution [e[v/x]] *)
@@ -218,9 +223,11 @@ let rec subst (x : string) (v : A.expr) (e : A.expr) : A.expr =
   | A.Sub (a, b) -> A.Sub (subst x v a, subst x v b)
   | A.Div (a, b) -> A.Div (subst x v a, subst x v b)
   | A.Lt (a, b) -> A.Lt (subst x v a, subst x v b)
+  | A.Leq (a, b) -> A.Leq (subst x v a, subst x v b)
   | A.Flip a -> A.Flip (subst x v a)
+  | A.Bernoulli p -> A.Bernoulli (subst x v p)
   | A.Discrete cases -> A.Discrete (List.map (fun (p, ei) -> (p, subst x v ei)) cases)
-  | A.Uniform _ | A.Gauss _ | A.Exponential _ | A.Gamma _ | A.Beta _ ->
+  | A.Uniform _ | A.Gauss _ | A.Exponential _ | A.Gamma _ | A.Beta _ | A.Poisson _ ->
       failwith "to_mc: continuous distributions not supported (Uniform/Gauss)"
 
 (* ---------- Values ---------- *)
@@ -278,6 +285,10 @@ let rec simplify (e : A.expr) : A.expr =
       let a' = simp a in
       let b' = simp b in
       A.Lt (a', b')
+  | A.Leq (a, b) ->
+      let a' = simp a in
+      let b' = simp b in
+      A.Leq (a', b')
   | A.Fst a ->
       let a' = simp a in
       (match a' with
@@ -299,9 +310,10 @@ let rec simplify (e : A.expr) : A.expr =
   | A.Let (x, e1, e2) -> A.Let (x, simp e1, simp e2)
   | A.App (e1, e2) -> A.App (simp e1, simp e2)
   | A.Flip a -> A.Flip (simp a)
+  | A.Bernoulli p -> A.Bernoulli (simp p)
   | A.Discrete cases -> A.Discrete (List.map (fun (p, ei) -> (p, simp ei)) cases)
   | A.Var _ | A.Unit | A.Nil | A.Bool _ | A.Const _ | A.Lam _ | A.Rec _ -> e
-  | A.Uniform _ | A.Gauss _ | A.Exponential _ | A.Gamma _ | A.Beta _ ->
+  | A.Uniform _ | A.Gauss _ | A.Exponential _ | A.Gamma _ | A.Beta _ | A.Poisson _ ->
       failwith "to_mc: continuous distributions not supported (Uniform/Gauss)"
 
 (***** ---------- Small-step semantics: e -> { (p_i, e_i) } ---------- *****)
@@ -405,6 +417,15 @@ let rec step (e : A.expr) : (float * A.expr) list =
           (match (a, b) with
            | A.Const x, A.Const y -> [ (1.0, A.Bool (x < y)) ]
            | _ -> failwith "lt: expected floats")
+    | A.Leq (a, b) ->
+        if not (is_value a) then
+          List.map (fun (p, a') -> (p, A.Leq (a', b))) (step a)
+        else if not (is_value b) then
+          List.map (fun (p, b') -> (p, A.Leq (a, b'))) (step b)
+        else
+          (match (a, b) with
+            | A.Const x, A.Const y -> [ (1.0, A.Bool (x <= y)) ]
+            | _ -> failwith "lt: expected floats")
     | A.Pair (a, b) ->
         if not (is_value a) then
           List.map (fun (p, a') -> (p, A.Pair (a', b))) (step a)
@@ -471,6 +492,20 @@ let rec step (e : A.expr) : (float * A.expr) list =
                check_sum_to_one [ p1; p2 ];
                [ (p1, A.Bool true); (p2, A.Bool false) ]
            | _ -> failwith "flip: expected a float probability")
+    | A.Bernoulli pexpr ->
+        if not (is_value pexpr) then
+          List.map (fun (p, pexpr') -> (p, A.Bernoulli pexpr')) (step pexpr)
+        else
+          (match pexpr with
+            | A.Const p ->
+                check_prob p;
+                let p1 = p in
+                let p0 = 1.0 -. p in
+                check_prob p0;
+                check_sum_to_one [ p1; p0 ];
+                (* 1 with prob p, 0 with prob 1-p *)
+                [ (p1, A.Const 1.0); (p0, A.Const 0.0) ]
+            | _ -> failwith "bernoulli: expected a float probability")
     | A.Discrete cases ->
         if cases = [] then failwith "discrete: empty"
         else
@@ -478,7 +513,7 @@ let rec step (e : A.expr) : (float * A.expr) list =
           List.iter check_prob ps;
           check_sum_to_one ps;
           List.map (fun (p, ei) -> (p, ei)) cases
-    | A.Uniform _ | A.Gauss _ | A.Exponential _ | A.Gamma _ | A.Beta _ ->
+    | A.Uniform _ | A.Gauss _ | A.Exponential _ | A.Gamma _ | A.Beta _ | A.Poisson _ ->
         failwith "to_mc: continuous distributions not supported"
     | A.Unit | A.Nil | A.Bool _ | A.Const _ | A.Lam _ | A.Rec _ ->
         (* should have been caught by is_value *)
@@ -490,64 +525,136 @@ let expr_key (e : A.expr) : string =
   let h = Hashtbl.hash e in
   string_of_int h ^ ":" ^ Marshal.to_string e [ Marshal.No_sharing ]
 
-let to_mc (e0 : A.expr) : mc =
+let to_mc ?(limit : int option = None) (e0 : A.expr) : mc =
   let e0 = simplify e0 in
+  let () =
+    match limit with
+    | None -> ()
+    | Some l ->
+        if l <= 0 then failwith "to_mc: limit must be > 0"
+  in
+
   let id_of : (string, int) Hashtbl.t = Hashtbl.create 4096 in
   let expr_of : (int, A.expr) Hashtbl.t = Hashtbl.create 4096 in
   let q : int Queue.t = Queue.create () in
   let next_id = ref 0 in
 
-  let add_state (e : A.expr) : int =
+  let can_add_new () : bool =
+    match limit with
+    | None -> true
+    | Some l -> !next_id < l
+  in
+
+  let add_state (e : A.expr) : int option =
     let key = expr_key e in
     match Hashtbl.find_opt id_of key with
-    | Some id -> id
+    | Some id -> Some id (* returns an old id *)
     | None ->
-        let id = !next_id in
-        incr next_id;
-        Hashtbl.add id_of key id;
-        Hashtbl.add expr_of id e;
-        Queue.add id q;
-        id
+        if not (can_add_new ()) then
+          None
+        else
+          let id = !next_id in
+          incr next_id;
+          Hashtbl.add id_of key id;
+          Hashtbl.add expr_of id e;
+          Queue.add id q;
+          Some id
   in
-  let start_id = add_state e0 in
+  let start_id =
+    match add_state e0 with
+    | Some id -> id
+    | None -> failwith "to_mc: limit too small to add initial state"
+  in
   if start_id <> 0 then failwith "internal error: initial state is not 0";
 
   let transitions_rev : transition list ref = ref [] in
   let terminal_ids : int list ref = ref [] in
+  let cutoff_ids : int list ref = ref [] in
+
+  let is_value (e : A.expr) : bool =
+    match simplify e with
+    | A.Const _ -> true
+    | A.Bool _ -> true
+    | _ -> false  in
 
   while not (Queue.is_empty q) do
     let sid = Queue.take q in
     let e = Hashtbl.find expr_of sid in
-    let succs = step e in
-    if succs = [] then terminal_ids := sid :: !terminal_ids
+    if is_value e then
+      terminal_ids := sid :: !terminal_ids
     else
-      List.iter
-        (fun (p, e') ->
-          let e' = simplify e' in
-          let tid = add_state e' in
-          transitions_rev := { src = sid; dst = tid; prob = p } :: !transitions_rev)
-        succs
+      let succs = step e in
+      if succs = [] then terminal_ids := sid :: !terminal_ids
+      else
+        (* Process each successor for this state *)
+        let all_cutoff = ref true in
+        List.iter
+          (fun (p, e') ->
+            let e' = simplify e' in
+            match add_state e' with
+            | Some tid ->
+                all_cutoff := false;
+                transitions_rev := { src = sid; dst = tid; prob = p } :: !transitions_rev
+            | None ->
+                (* This branch hit the specified --limit *)
+                ())
+          succs;
+        if !all_cutoff then cutoff_ids := sid :: !cutoff_ids
   done;
 
-  (* Add sink as the last state. *)
-  let sink = !next_id in
-  let transitions =
-    let base = !transitions_rev in
-    let from_terminals =
-      List.map (fun sid -> { src = sid; dst = sink; prob = 1.0 }) !terminal_ids
-    in
-    { src = sink; dst = sink; prob = 1.0 } :: (from_terminals @ base)
-  in
-  (* Sort transitions for nicer output. *)
-  let transitions =
-    List.sort
-      (fun a b ->
-        match compare a.src b.src with
-        | 0 -> (match compare a.dst b.dst with 0 -> compare a.prob b.prob | c -> c)
-        | c -> c)
-      transitions
-  in
-  { num_states = sink + 1; sink; transitions; expr_of }
+  match limit with
+  | None ->
+      (* Add sink as the last state *)
+      let sink = !next_id in
+      let transitions =
+        let base = !transitions_rev in
+        let from_terminals =
+          List.map (fun sid -> { src = sid; dst = sink; prob = 1.0 }) !terminal_ids
+        in
+        { src = sink; dst = sink; prob = 1.0 } :: (from_terminals @ base)
+      in
+      let transitions =
+        List.sort
+          (fun a b ->
+            match compare a.src b.src with
+            | 0 -> (match compare a.dst b.dst with 0 -> compare a.prob b.prob | c -> c)
+            | c -> c)
+          transitions
+      in
+      { num_states = sink + 1; sink; sink_diverging = None; transitions; expr_of }
+
+  | Some l ->
+      let sink_done = l in (* sink state for terminal states *)
+      let sink_diverging = l + 1 in (* sink state for diverging states *)
+      let transitions = !transitions_rev in
+      let transitions =
+        (* add transitions for terminal states to sink_done *)
+        !terminal_ids
+        |> List.map (fun sid -> { src = sid; dst = sink_done; prob = 1.0 })
+        |> List.rev_append transitions
+      in
+      let transitions =
+        (* add transitions for cutoff states to sink_diverging *)
+        !cutoff_ids
+        |> List.map (fun sid -> { src = sid; dst = sink_diverging; prob = 1.0 })
+        |> List.rev_append transitions
+      in
+      let transitions =
+        (* self-loops for sink states *)
+        { src = sink_done; dst = sink_done; prob = 1.0 }
+        :: { src = sink_diverging; dst = sink_diverging; prob = 1.0 }
+        :: transitions
+      in
+      let transitions =
+        List.sort
+          (fun a b ->
+            match compare a.src b.src with
+            | 0 -> (match compare a.dst b.dst with 0 -> compare a.prob b.prob | c -> c)
+            | c -> c)
+          transitions
+      in
+      { num_states = l + 2; sink = sink_done; sink_diverging = Some sink_diverging; transitions; expr_of }
+
 
 (* Transition file (.tra) for STORM backend *)
 let write_tra_file (m : mc) (path : string) : unit =
@@ -570,6 +677,9 @@ let write_lab_file (m : mc) (path : string) : unit =
   Format.fprintf fmt "#END@.";
   Format.fprintf fmt "0 init@.";
   Format.fprintf fmt "%d done@." m.sink;
+  (match m.sink_diverging with
+   | None -> ()
+   | Some s2 -> Format.fprintf fmt "%d done@." s2);
   close_out oc
 
 (* State rewards file (.state.rew) for STORM backend *)

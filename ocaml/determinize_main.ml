@@ -117,6 +117,8 @@ let rec doc_expr ?(ctx_prec = 0) expr =
         (1, group (nest 2 (sep [ doc_expr ~ctx_prec:1 e1; text "-"; doc_expr ~ctx_prec:2 e2 ])))
     | A.Lt (e1, e2) ->
         (1, group (nest 2 (sep [ doc_expr ~ctx_prec:1 e1; text "<"; doc_expr ~ctx_prec:2 e2 ])))
+    | A.Leq (e1, e2) ->
+        (1, group (nest 2 (sep [ doc_expr ~ctx_prec:1 e1; text "<="; doc_expr ~ctx_prec:2 e2 ])))
     | A.Uniform (e1, e2) ->
         (4,
          group
@@ -146,6 +148,16 @@ let rec doc_expr ?(ctx_prec = 0) expr =
       (4,
         group
           (text "flip"
+          ^^ enclose_separated "(" ")" (text "," ^^ softline) [ doc_expr e ]))
+    | A.Bernoulli e ->
+      (4,
+        group
+          (text "bernoulli"
+          ^^ enclose_separated "(" ")" (text "," ^^ softline) [ doc_expr e ]))
+    | A.Poisson e ->
+      (4,
+        group
+          (text "poisson"
           ^^ enclose_separated "(" ")" (text "," ^^ softline) [ doc_expr e ]))
     | A.Discrete choices ->
       (* prints as: discrete(p1: v1, p2:v2, ...) *)
@@ -191,10 +203,33 @@ let trim_doc doc =
     doc
 
 let () =
-  if Array.length Sys.argv <> 2 then (
-    prerr_endline "Usage: determinize <file.det>";
-    exit 1);
-  let path = Sys.argv.(1) in
+  let argc = Array.length Sys.argv in
+  let usage () =
+    prerr_endline "Usage: determinize [--storm] <file.det>";
+    exit 1
+  in
+  let run_storm = ref false in
+  let limit : int option ref = ref None in
+  let path = ref None in
+
+  let i = ref 1 in
+  while !i < argc do
+    match Sys.argv.(!i) with
+    | "--storm" -> run_storm := true; incr i
+    | "--limit" ->
+        if !i + 1 >= argc then usage ();
+        limit := Some (int_of_string Sys.argv.(!i + 1));
+        i := !i + 2
+    | s when String.length s > 0 && s.[0] = '-' -> usage ()
+    | file -> path := Some file; incr i
+  done;
+
+  let path =
+    match !path with
+    | Some p -> p
+    | None -> usage ()
+  in
+
   let ast = parse_file path in
   (* Type/direct elaboration expecting a float result. *)
   let expected = Types.TFloat (Types.fresh_mode_meta ()) in
@@ -206,13 +241,15 @@ let () =
   let defaulted_elab_doc = trim_doc (Det.doc_typed_expr elaborated) in
   let det_ast = Det.of_texpr elaborated in
   (* Storm backend *)
-  let mc_result = MC.to_mc det_ast in
-  let mc_path = path ^ ".tra" in
-  MC.write_tra_file mc_result mc_path; (* Emit a transition file (.tra) for Storm *)
-  let lab_path = path ^ ".lab" in
-  MC.write_lab_file mc_result lab_path; (* Emit a label file (.lab) for Storm *)
-  let state_rew_path = path ^ ".state.rew" in
-  MC.write_state_rew_file mc_result state_rew_path; (* Emit a state rewards file (.state.rew) for Storm *)
+  if !run_storm then (
+    let mc_result = MC.to_mc ~limit:!limit det_ast in
+    let mc_path = path ^ ".tra" in
+    MC.write_tra_file mc_result mc_path; (* Emit a transition file (.tra) for Storm *)
+    let lab_path = path ^ ".lab" in
+    MC.write_lab_file mc_result lab_path; (* Emit a label file (.lab) for Storm *)
+    let state_rew_path = path ^ ".state.rew" in
+    MC.write_state_rew_file mc_result state_rew_path (* Emit a state rewards file (.state.rew) for Storm *)
+  );
   let out_path = path ^ ".dout" in
   let oc = open_out out_path in
   let fmt = Format.formatter_of_out_channel oc in

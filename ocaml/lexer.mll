@@ -27,6 +27,8 @@ rule token = parse
   | "gamma"                     { GAMMA }
   | "beta"                      { BETA }
   | "flip"                      { FLIP }
+  | "bernoulli"                 { BERNOULLI }
+  | "poisson"                   { POISSON }
   | "discrete"                  { DISCRETE }
   | "true"                      { TRUE }
   | "false"                     { FALSE }
@@ -34,6 +36,7 @@ rule token = parse
   | ")"                         { RPAREN }
   | "["                         { LBRACK }
   | "]"                         { RBRACK }
+  | "<="                        { LEQ }
   | "<"                         { LT }
   | ">"                         { GT }
   | "::"                        { CONS }

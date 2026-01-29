@@ -5,9 +5,9 @@
 %token TRUE FALSE
 %token FUN REC LET IN IF THEN ELSE
 %token MATCH WITH INL INR FST SND
-%token UNIFORM GAUSS EXPONENTIAL GAMMA BETA FLIP DISCRETE
+%token UNIFORM GAUSS EXPONENTIAL GAMMA BETA FLIP BERNOULLI POISSON DISCRETE
 %token DOT EQ BAR COMMA CONS
-%token LPAREN RPAREN LBRACK RBRACK LT GT
+%token LPAREN RPAREN LBRACK RBRACK LT LEQ GT
 %token PLUS TIMES MINUS DIVIDE
 %token DARROW
 %token EOF
@@ -33,6 +33,7 @@ fun_expr:
 
 cmp:
   | cmp LT cons                        { Lt ($1, $3) }
+  | cmp LEQ cons                       { Leq ($1, $3) }
   | cons                               { $1 }
 
 cons:
@@ -75,7 +76,9 @@ atom:
   | EXPONENTIAL LPAREN expr RPAREN         { Exponential ($3) }
   | GAMMA LPAREN expr COMMA expr RPAREN    { Gamma ($3, $5) }
   | BETA  LPAREN expr COMMA expr RPAREN    { Beta ($3, $5) }
-  | FLIP LPAREN expr RPAREN             { Flip ($3) }
+  | FLIP LPAREN expr RPAREN                { Flip ($3) }
+  | BERNOULLI LPAREN expr RPAREN           { Bernoulli ($3) }
+  | POISSON LPAREN expr RPAREN             { Poisson ($3) }
   | DISCRETE LPAREN probs = separated_nonempty_list(COMMA, FLOAT) RPAREN
     {
       let cases =
