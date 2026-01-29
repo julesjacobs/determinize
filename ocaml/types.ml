@@ -59,12 +59,15 @@ and texpr =
   | ESub of typed_expr * typed_expr
   | EDiv of typed_expr * typed_expr
   | ELt of typed_expr * typed_expr
+  | ELeq of typed_expr * typed_expr
   | EUniform of typed_expr * typed_expr
   | EGauss of typed_expr * typed_expr
   | EExponential of typed_expr
   | EGamma of typed_expr * typed_expr
   | EBeta of typed_expr * typed_expr
   | EFlip of typed_expr
+  | EBernoulli of typed_expr
+  | EPoisson of typed_expr
   | EDiscrete of (float * typed_expr) list
 
 and typed_expr = {
@@ -126,22 +129,56 @@ and fire_constraint c =
     (c.fired <- true;
      assert_subtype (TMeta c.lower) (TMeta c.upper))
 
-and set_type metav t =
+(* and set_type metav t =
   match metav.ty_value with
   | None ->
       metav.ty_value <- Some t;
       List.iter fire_constraint metav.constraints
   | Some t' ->
-      assert_subtype t t'
-
-and zonk t =
+      assert_subtype t t' *)
+      
+(* and zonk t =
   match t with
   | TMeta m ->
       (match m.ty_value with
        | None -> t
        | Some t' -> t')
-  | _ -> t
+  | _ -> t *)
 
+and zonk t =
+  let rec go seen t =
+    match t with
+    | TMeta m ->
+        if List.mem m.ty_id seen then
+          (* Cycle detected: leave as-is to avoid infinite loop. *)
+          TMeta m
+        else (
+          match m.ty_value with
+          | None -> TMeta m
+          | Some t' ->
+              let t'' = go (m.ty_id :: seen) t' in
+              (* Path compression *)
+              m.ty_value <- Some t'';
+              t'')
+    | _ -> t
+  in
+  go [] t
+
+and set_type metav t =
+  let t = zonk t in
+  match metav.ty_value with
+  | None ->
+      (* Avoid setting ?t = ?t (or cycles) *)
+      (match t with
+        | TMeta m2 when m2.ty_id = metav.ty_id ->
+            ()
+        | _ ->
+            metav.ty_value <- Some t;
+            List.iter fire_constraint metav.constraints)
+  | Some t' ->
+      (* Both sides may have become more concrete; relate them *)
+      assert_subtype t (zonk t')
+  
 and assert_subtype t1 t2 =
   match zonk t1, zonk t2 with
   | TFloat m1, TFloat m2 -> submode m1 m2
