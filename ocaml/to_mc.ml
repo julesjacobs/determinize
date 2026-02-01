@@ -688,14 +688,14 @@ let write_state_rew_file (m : mc) (path : string) : unit =
   let fmt = Format.formatter_of_out_channel oc in
   for sid = 0 to (m.num_states - 1) do
     match Hashtbl.find_opt m.expr_of sid with
+    (* emit rewards only for states whose expression is a numeric or bool constant *)
     | Some (A.Const f) ->
-        (* emit rewards only for states whose expression is a numeric constant *)
         Format.fprintf fmt "%d %.17g@." sid f
+    | Some (A.Bool true) ->
+        Format.fprintf fmt "%d %.17g@." sid 1.0
+    | Some (A.Bool false) ->
+        Format.fprintf fmt "%d %.17g@." sid 0.0
     | _ ->
         ()
   done;
   close_out oc
-  
-
-
-  
