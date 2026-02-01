@@ -231,8 +231,8 @@ let () =
   in
 
   let ast = parse_file path in
-  (* Type/direct elaboration expecting a float result. *)
-  let expected = Types.TFloat (Types.fresh_mode_meta ()) in
+  (* Type/direct elaboration expecting a float or boolean result. *)
+  let expected = Types.TMeta (Types.fresh_meta ()) in
   let elaborated = Infer.infer [] ast expected in
   let raw_elab_doc = trim_doc (Det.doc_typed_expr elaborated) in
   (* Default modes before determinization/output. *)
@@ -259,6 +259,7 @@ let () =
     for _ = 1 to trials do
       match I.eval (module I.StdRng) [] expr with
       | I.VFloat f -> acc := !acc +. f
+      | I.VBool b  -> acc := !acc +. (if b then 1.0 else 0.0)
       | _ -> failwith ("expected top-level float result for " ^ kind)
     done;
     !acc /. float_of_int trials
