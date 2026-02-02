@@ -59,6 +59,7 @@ let default_modes (t : typed_expr) =
     | EBernoulli e -> go e
     | EPoisson e -> go e
     | EDiscrete choices -> List.iter (fun (_p, ei) -> go ei) choices
+    | EObserve c -> go c
   in
   go t
 
@@ -133,6 +134,7 @@ let rec of_texpr (t : typed_expr) : Ast.expr =
         sum_weighted terms
      | _ ->
          Discrete (List.map (fun (p, ei) -> (p, of_texpr ei)) choices))
+  | EObserve c, _ -> Observe (of_texpr c) 
   | _, _ -> failwith " ill-typed texpr"
 
 module Doc = Pretty
@@ -256,7 +258,7 @@ let doc_typed_expr (t : typed_expr) =
               (0, vsep (hsep [ text "match"; render 0 e; text "with" ] :: branch_docs))
           | EApp _ ->
               let head, args_rev = app_chain t [] in
-              let docs = render 3 head :: List.rev_map (render 4) args_rev in
+              let docs = render 3 head :: List.map (render 4) args_rev in
               (3, group (sep docs))
           | EPair (a, b) ->
               (4,
@@ -336,6 +338,11 @@ let doc_typed_expr (t : typed_expr) =
               group
                 (text "discrete"
                 ^^ enclose_separated "(" ")" (text "," ^^ softline) case_docs))
+          | EObserve e ->
+            (4,
+              group
+                (text "observe"
+                ^^ enclose_separated "(" ")" (text "," ^^ softline) [ render 0 e ]))
         in
         let doc_with_type =
           group (parens (nest 2 (sep [ doc_body; text ":"; doc_typ t.typ ])))

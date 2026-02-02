@@ -244,4 +244,8 @@ let rec infer (env : env) (exp : Ast.expr) (expected : typ) : typed_expr =
             choices
       in
       { expr = EDiscrete typed_choices; typ = ty }
+  | Observe cond ->
+      let cond_t = infer env cond TBool in
+      assert_subtype TUnit expected;
+      { expr = EObserve cond_t; typ = TUnit }
       

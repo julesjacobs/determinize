@@ -58,7 +58,7 @@ if [[ "$RUN_STORM" -eq 1 ]]; then
 
   storm --explicit "$TRA" "$LAB" \
     --staterew "$STATE_REW" \
-    --prop 'R=? [ F "done" ]'
+    --prop 'R=? [ F "done" || F "accept" ]'
 else
   dune exec ./determinize_main.exe -- "$DET_IN"
 fi

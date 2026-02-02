@@ -35,3 +35,4 @@ type expr =
   | Bernoulli of expr
   | Poisson of expr
   | Discrete of (float * expr) list
+  | Observe of expr 

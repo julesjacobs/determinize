@@ -88,7 +88,7 @@ let rec doc_expr ?(ctx_prec = 0) expr =
         (0, vsep (hsep [ text "match"; doc_expr e; text "with" ] :: branch_docs))
     | A.App _ ->
         let head, args_rev = app_chain expr [] in
-        let docs = doc_expr ~ctx_prec:3 head :: List.rev_map (doc_expr ~ctx_prec:4) args_rev in
+        let docs = doc_expr ~ctx_prec:3 head :: List.map (doc_expr ~ctx_prec:4) args_rev in
         (3, group (sep docs))
     | A.Pair (e1, e2) ->
         (4,
@@ -153,6 +153,11 @@ let rec doc_expr ?(ctx_prec = 0) expr =
       (4,
         group
           (text "bernoulli"
+          ^^ enclose_separated "(" ")" (text "," ^^ softline) [ doc_expr e ]))
+    | A.Observe e ->
+      (4,
+        group
+          (text "observe"
           ^^ enclose_separated "(" ")" (text "," ^^ softline) [ doc_expr e ]))
     | A.Poisson e ->
       (4,
@@ -256,13 +261,24 @@ let () =
   let trials = 100 in
   let mean_over expr kind =
     let acc = ref 0.0 in
+    let accepted = ref 0 in
     for _ = 1 to trials do
-      match I.eval (module I.StdRng) [] expr with
-      | I.VFloat f -> acc := !acc +. f
-      | I.VBool b  -> acc := !acc +. (if b then 1.0 else 0.0)
-      | _ -> failwith ("expected top-level float result for " ^ kind)
+      try
+        match I.eval (module I.StdRng) [] expr with
+        | I.VFloat f ->
+            acc := !acc +. f;
+            incr accepted
+        | I.VBool b  ->
+            acc := !acc +. (if b then 1.0 else 0.0);
+            incr accepted
+        | _ -> failwith ("expected top-level float result for " ^ kind)
+      with
+      | I.ObserveFailure -> () (* Catch observe rejections and skip them *)
     done;
-    !acc /. float_of_int trials
+    if !accepted = 0 then
+      failwith ("all runs failed observe in " ^ kind)
+    else
+      !acc /. float_of_int !accepted
   in
   (* Use deterministic seeds for reproducible sampling in both runs. *)
   Random.init 0;

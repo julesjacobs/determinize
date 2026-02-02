@@ -9,6 +9,7 @@
 %token DOT EQ BAR COMMA CONS
 %token LPAREN RPAREN LBRACK RBRACK LT LEQ GT
 %token PLUS TIMES MINUS DIVIDE
+%token OBSERVE
 %token DARROW
 %token EOF
 
@@ -71,6 +72,7 @@ atom:
   | SND atom                           { Snd $2 }
   | INL atom                           { Inl $2 }
   | INR atom                           { Inr $2 }
+  | OBSERVE LPAREN expr RPAREN            { Observe ($3) }
   | UNIFORM LPAREN expr COMMA expr RPAREN { Uniform ($3, $5) }
   | GAUSS LPAREN expr COMMA expr RPAREN    { Gauss ($3, $5) }
   | EXPONENTIAL LPAREN expr RPAREN         { Exponential ($3) }

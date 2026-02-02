@@ -30,6 +30,7 @@ rule token = parse
   | "bernoulli"                 { BERNOULLI }
   | "poisson"                   { POISSON }
   | "discrete"                  { DISCRETE }
+  | "observe"                   { OBSERVE }
   | "true"                      { TRUE }
   | "false"                     { FALSE }
   | "("                         { LPAREN }

@@ -39,7 +39,8 @@ let rec free_vars (e : A.expr) : StringSet.t =
   | A.Inl e
   | A.Inr e
   | A.Neg e
-  | A.Flip e -> free_vars e
+  | A.Flip e
+  | A.Observe e -> free_vars e
   | A.Bernoulli p -> free_vars p
   | A.If (c, t, f) ->
       StringSet.union (free_vars c) (StringSet.union (free_vars t) (free_vars f))
@@ -119,6 +120,7 @@ let rec rename (x : string) (x' : string) (e : A.expr) : A.expr =
   | A.Lt (a, b) -> A.Lt (rename x x' a, rename x x' b)
   | A.Leq (a, b) -> A.Leq (rename x x' a, rename x x' b)
   | A.Flip a -> A.Flip (rename x x' a)
+  | A.Observe a -> A.Observe (rename x x' a)
   | A.Bernoulli p -> A.Bernoulli (rename x x' p)
   | A.Discrete cases ->
       A.Discrete (List.map (fun (p, ei) -> (p, rename x x' ei)) cases)
@@ -225,6 +227,7 @@ let rec subst (x : string) (v : A.expr) (e : A.expr) : A.expr =
   | A.Lt (a, b) -> A.Lt (subst x v a, subst x v b)
   | A.Leq (a, b) -> A.Leq (subst x v a, subst x v b)
   | A.Flip a -> A.Flip (subst x v a)
+  | A.Observe a -> A.Observe (subst x v a)
   | A.Bernoulli p -> A.Bernoulli (subst x v p)
   | A.Discrete cases -> A.Discrete (List.map (fun (p, ei) -> (p, subst x v ei)) cases)
   | A.Uniform _ | A.Gauss _ | A.Exponential _ | A.Gamma _ | A.Beta _ | A.Poisson _ ->
@@ -310,6 +313,7 @@ let rec simplify (e : A.expr) : A.expr =
   | A.Let (x, e1, e2) -> A.Let (x, simp e1, simp e2)
   | A.App (e1, e2) -> A.App (simp e1, simp e2)
   | A.Flip a -> A.Flip (simp a)
+  | A.Observe a -> A.Observe (simp a)
   | A.Bernoulli p -> A.Bernoulli (simp p)
   | A.Discrete cases -> A.Discrete (List.map (fun (p, ei) -> (p, simp ei)) cases)
   | A.Var _ | A.Unit | A.Nil | A.Bool _ | A.Const _ | A.Lam _ | A.Rec _ -> e
@@ -506,6 +510,16 @@ let rec step (e : A.expr) : (float * A.expr) list =
                 (* 1 with prob p, 0 with prob 1-p *)
                 [ (p1, A.Const 1.0); (p0, A.Const 0.0) ]
             | _ -> failwith "bernoulli: expected a float probability")
+    | A.Observe c ->
+        if not (is_value c) then
+          List.map (fun (p, c') -> (p, A.Observe c')) (step c)
+        else
+          (match c with
+           | A.Bool true ->
+               [ (1.0, A.Unit) ]
+           | A.Bool false ->
+               []
+           | _ -> failwith "observe: expected bool")
     | A.Discrete cases ->
         if cases = [] then failwith "discrete: empty"
         else
@@ -673,9 +687,16 @@ let write_lab_file (m : mc) (path : string) : unit =
   let oc = open_out path in
   let fmt = Format.formatter_of_out_channel oc in
   Format.fprintf fmt "#DECLARATION@.";
-  Format.fprintf fmt "init done@.";
+  Format.fprintf fmt "init done accept@.";
   Format.fprintf fmt "#END@.";
   Format.fprintf fmt "0 init@.";
+  for sid = 0 to (m.num_states - 1) do
+    match Hashtbl.find_opt m.expr_of sid with
+    | Some (A.Const _) | Some (A.Bool _) ->
+        Format.fprintf fmt "%d accept@." sid
+    | _ ->
+        ()
+  done;
   Format.fprintf fmt "%d done@." m.sink;
   (match m.sink_diverging with
    | None -> ()

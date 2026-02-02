@@ -1,5 +1,7 @@
 open Ast
 
+exception ObserveFailure (* New custom exception for observe failures *)
+
 module type RNG = sig
   val uniform : float -> float -> float
   val gaussian : float -> float -> float
@@ -206,3 +208,8 @@ let rec eval (module R : RNG) env e =
     let i = R.discrete ps in
     let (_, chosen_e) = List.nth cases i in
     eval (module R) env chosen_e
+  | Observe c ->
+    (match eval (module R) env c with
+      | VBool true -> VUnit
+      | VBool false -> raise ObserveFailure
+      | _ -> failwith "observe: expected bool")

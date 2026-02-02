@@ -69,6 +69,7 @@ and texpr =
   | EBernoulli of typed_expr
   | EPoisson of typed_expr
   | EDiscrete of (float * typed_expr) list
+  | EObserve of typed_expr
 
 and typed_expr = {
   expr : texpr;
