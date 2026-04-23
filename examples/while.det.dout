@@ -1,0 +1,36 @@
+== Elaboration ==
+raw:
+( ( ( rec loop x =>
+          ( if ( ( x : float[G] ) < ( 5 : float[G] ) : bool )
+                then
+                ( if ( flip( ( 0.5 : float[?m2] ) ) : bool )
+                      then
+                      ( ( loop : float[G] ->  float[G] ) ( x : float[G] ) : float[G] )
+                      else
+                      ( let sum =
+                            ( ( x : float[G] ) + ( uniform( ( 0 : float[G] ), ( 1 : float[G] ) ) : float[G] ) : float[G] )
+                            in
+                            ( ( loop : float[G] ->  float[G] ) ( sum : float[G] ) : float[G] ) : float[G] ) : float[G] )
+                else
+                ( x : float[G] ) : float[G] ) : float[G] ->  float[G] ) ) ( 0 : float[G] ) : float[G] )
+defaulted:
+( ( ( rec loop x =>
+          ( if ( ( x : float[G] ) < ( 5 : float[G] ) : bool )
+                then
+                ( if ( flip( ( 0.5 : float[E] ) ) : bool )
+                      then
+                      ( ( loop : float[G] ->  float[G] ) ( x : float[G] ) : float[G] )
+                      else
+                      ( let sum =
+                            ( ( x : float[G] ) + ( uniform( ( 0 : float[G] ), ( 1 : float[G] ) ) : float[G] ) : float[G] )
+                            in
+                            ( ( loop : float[G] ->  float[G] ) ( sum : float[G] ) : float[G] ) : float[G] ) : float[G] )
+                else
+                ( x : float[G] ) : float[G] ) : float[G] ->  float[G] ) ) ( 0 : float[G] ) : float[G] )
+
+== Determinized ==
+( rec loop x => if x < 5 then if flip( 0.5 ) then loop x else let sum = x + uniform( 0, 1 ) in loop sum else x ) 0
+
+== Evaluation (100 trials) ==
+program mean: 5.31409
+determinized mean: 5.31409

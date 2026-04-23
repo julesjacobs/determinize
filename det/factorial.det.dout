@@ -1,0 +1,30 @@
+== Elaboration ==
+raw:
+( let fact =
+    ( rec fact n =>
+          ( if ( ( n : float[G] ) < ( 1 : float[G] ) : bool )
+                then
+                ( 1 : float[G] )
+                else
+                ( ( n : float[G] ) * ( ( fact : float[G] ->  float[G] ) ( ( ( n : float[G] ) - ( 1 : float[G] ) : float[G] ) ) : float[G] )
+                      : float[G] ) : float[G] ) : float[G] ->  float[G] )
+    in
+    ( ( fact : float[G] ->  float[G] ) ( 4 : float[G] ) : float[G] ) : float[G] )
+defaulted:
+( let fact =
+    ( rec fact n =>
+          ( if ( ( n : float[G] ) < ( 1 : float[G] ) : bool )
+                then
+                ( 1 : float[G] )
+                else
+                ( ( n : float[G] ) * ( ( fact : float[G] ->  float[G] ) ( ( ( n : float[G] ) - ( 1 : float[G] ) : float[G] ) ) : float[G] )
+                      : float[G] ) : float[G] ) : float[G] ->  float[G] )
+    in
+    ( ( fact : float[G] ->  float[G] ) ( 4 : float[G] ) : float[G] ) : float[G] )
+
+== Determinized ==
+let fact = rec fact n => if n < 1 then 1 else n * fact ( n - 1 ) in fact 4
+
+== Evaluation (100 trials) ==
+program mean: 24
+determinized mean: 24

@@ -1,1 +1,1 @@
-let p = <1, 2> in fst p + snd p
+let p = (1, 2) in fst p + snd p

@@ -1,0 +1,16 @@
+(* From the Compiling with Generating Functions paper:
+let 𝑋 = sample Poisson(1) in
+loop 𝑋 sum ForwardPacket() *)
+
+let x = poisson(1) in
+let loop =
+  rec loop i =>
+    fun sum =>
+      if i < 1 then
+        sum
+      else
+        let pkt = 0 in
+        loop (i - 1) (sum + pkt)
+in
+loop x 0
+

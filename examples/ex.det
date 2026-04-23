@@ -1,0 +1,10 @@
+(* Bounded runtime, finite state space *)
+
+let t = 8 in
+(rec loop i =>
+  if i < t then
+    let x = if flip(0.5) then uniform(0,2) else uniform(0,4) in
+    loop (i + 1)
+  else
+    i
+) 0

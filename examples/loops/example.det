@@ -1,0 +1,45 @@
+(rec walk x =>
+  if x <= 0 then 0
+  else if uniform(0,1) < 0.5 and x < 5 then walk (uniform(0,1)) else walk (gaussian(0,1))
+) 1
+
+
+(rec walk x k =>
+  if x <= k then x
+  else if x < 3 then walk x 3
+  else if flip(0.5) then walk x 6
+  else if k < uniform(0,10) then walk x 8
+  else if uniform(0,1) < 0.5 and x < 5 then walk uniform(0,1) k else walk gaussian(0,1) k
+) 0 1 < 7
+
+
+let iter f g x = if g x then x else iter f g (f x) in
+let f (x, k) = 
+    if x < 3 then (x, 3)
+    else if flip(0.5) then (x, 6)
+    else if k < uniform(0,10) then (x, 8)
+    else if uniform(0,1) < 0.5 and x < 5 then (uniform(0,1), k) else (gaussian(0,1), k) in
+let g (x, k) = x <= k in 
+iter f g (0,1) < 7
+
+
+let iter f g x = if g x then x else iter f g (f x) in
+let f (x, k) = 
+    if x < 3 then (x, 3)
+    else if flip(0.5) then (x, 6)
+    else if k < uniform(0,10) then 
+    observe(x < 6); (x, 8)
+    else if uniform(0,1) < 0.5 and x < 5 then (uniform(0,1), k) else (gaussian(0,1), k) in
+let g (x, k) = x <= k in 
+let y = iter f g (0, 1) in 
+let _ = observe(y < 7) in y < 6
+
+
+let iter f g x = if g x then x else iter f g (f x) in
+let f (x, k, d) = 
+    if x < 3 then (x, 3, gaussian)
+    else if flip(0.5) then (x, 6, d)
+    else if k < uniform(0,10) then (x, 8, d)
+    else if uniform(0,1) < 0.5 and x < 5 then (d 0 1, k, d) else (d 0 2, k, d) in
+let g (x, k, d) = x <= k in 
+iter f g (0,1,uniform) < 7

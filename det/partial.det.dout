@@ -1,0 +1,20 @@
+== Elaboration ==
+raw:
+( let x =
+    ( 4 : float[?m1] )
+    in
+    ( let y = ( 5 : float[?m2] ) in ( let z = ( 6 : float[?m3] ) in ( ( x : float[?m4] ) + ( z : float[?m4] ) : float[?m4] ) : float[?m4] )
+          : float[?m4] ) : float[?m4] )
+defaulted:
+( let x =
+    ( 4 : float[E] )
+    in
+    ( let y = ( 5 : float[E] ) in ( let z = ( 6 : float[E] ) in ( ( x : float[E] ) + ( z : float[E] ) : float[E] ) : float[E] ) : float[E] )
+    : float[E] )
+
+== Determinized ==
+let x = 4 in let y = 5 in let z = 6 in x + z
+
+== Evaluation (100 trials) ==
+program mean: 10
+determinized mean: 10

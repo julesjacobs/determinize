@@ -1,0 +1,18 @@
+== Elaboration ==
+raw:
+( let x =
+    ( discrete( 0.1 : ( 0 : float[G] ), 0.2 : ( 1 : float[G] ), 0.7 : ( 2 : float[G] ) ) : float[G] )
+    in
+    ( let _ = ( observe( ( ( x : float[G] ) < ( 2 : float[G] ) : bool ) ) : unit ) in ( x : float[G] ) : float[G] ) : float[G] )
+defaulted:
+( let x =
+    ( discrete( 0.1 : ( 0 : float[G] ), 0.2 : ( 1 : float[G] ), 0.7 : ( 2 : float[G] ) ) : float[G] )
+    in
+    ( let _ = ( observe( ( ( x : float[G] ) < ( 2 : float[G] ) : bool ) ) : unit ) in ( x : float[G] ) : float[G] ) : float[G] )
+
+== Determinized ==
+let x = discrete( 0.1 : 0, 0.2 : 1, 0.7 : 2 ) in let _ = observe( x < 2 ) in x
+
+== Evaluation (100 trials) ==
+program mean: 0.68
+determinized mean: 0.68

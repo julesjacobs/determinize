@@ -1,0 +1,14 @@
+(* Irwin-Hall distribution with conditioning. *)
+
+let M = 5 in
+let loop =
+  rec loop i =>
+    fun x =>
+      if i <= M then
+        let y = uniform(0, 1) in
+        let _ = observe(y <= 0.5) in
+        loop (i + 1) (x + y)
+      else
+        x
+in
+loop 1 0

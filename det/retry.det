@@ -1,0 +1,9 @@
+let retry =
+  rec retry f =>
+    fun x =>
+      if flip(0.7)
+      then f x
+      else retry f x
+in
+let noisy_inc = fun x => x + uniform(0,1) in
+retry noisy_inc 5

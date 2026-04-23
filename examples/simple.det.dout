@@ -1,0 +1,30 @@
+== Elaboration ==
+raw:
+( ( ( rec rw x =>
+          ( if ( ( 0 : float[G] ) <= ( x : float[G] ) : bool )
+                then
+                ( let y =
+                      ( 0.5 : float[G] )
+                      in
+                      ( ( rw : float[G] ->  float[G] ) ( ( ( ( x : float[G] ) + ( ( 3 : float[G] ) * ( y : float[G] ) : float[G] ) :
+                                        float[G] ) - ( 2 : float[G] ) : float[G] ) ) : float[G] ) : float[G] )
+                else
+                ( x : float[G] ) : float[G] ) : float[G] ->  float[G] ) ) ( 1 : float[G] ) : float[G] )
+defaulted:
+( ( ( rec rw x =>
+          ( if ( ( 0 : float[G] ) <= ( x : float[G] ) : bool )
+                then
+                ( let y =
+                      ( 0.5 : float[G] )
+                      in
+                      ( ( rw : float[G] ->  float[G] ) ( ( ( ( x : float[G] ) + ( ( 3 : float[G] ) * ( y : float[G] ) : float[G] ) :
+                                        float[G] ) - ( 2 : float[G] ) : float[G] ) ) : float[G] ) : float[G] )
+                else
+                ( x : float[G] ) : float[G] ) : float[G] ->  float[G] ) ) ( 1 : float[G] ) : float[G] )
+
+== Determinized ==
+( rec rw x => if 0 <= x then let y = 0.5 in rw ( x + 3 * y - 2 ) else x ) 1
+
+== Evaluation (100 trials) ==
+program mean: -0.5
+determinized mean: -0.5

@@ -1,0 +1,11 @@
+(* An almost-surely terminating loop *)
+
+( rec loop x =>
+    if x < 5 then
+        if flip(0.5) then 
+            loop x
+        else
+            let sum = x + uniform(0,1) in 
+            loop sum
+    else
+        x ) 0

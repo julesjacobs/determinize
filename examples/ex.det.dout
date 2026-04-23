@@ -1,0 +1,44 @@
+== Elaboration ==
+raw:
+( let t =
+    ( 8 : float[G] )
+    in
+    ( ( ( rec loop i =>
+                ( if ( ( i : float[G] ) < ( t : float[G] ) : bool )
+                      then
+                      ( let x =
+                            ( if ( flip( ( 0.5 : float[?m4] ) ) : bool )
+                                  then
+                                  ( uniform( ( 0 : float[?m5] ), ( 2 : float[?m5] ) ) : float[?m5] )
+                                  else
+                                  ( uniform( ( 0 : float[?m5] ), ( 4 : float[?m5] ) ) : float[?m5] ) : float[?m5] )
+                            in
+                            ( ( loop : float[G] ->  float[G] ) ( ( ( i : float[G] ) + ( 1 : float[G] ) : float[G] ) ) : float[G] ) :
+                            float[G] )
+                      else
+                      ( i : float[G] ) : float[G] ) : float[G] ->  float[G] ) ) ( 0 : float[G] ) : float[G] ) : float[G] )
+defaulted:
+( let t =
+    ( 8 : float[G] )
+    in
+    ( ( ( rec loop i =>
+                ( if ( ( i : float[G] ) < ( t : float[G] ) : bool )
+                      then
+                      ( let x =
+                            ( if ( flip( ( 0.5 : float[E] ) ) : bool )
+                                  then
+                                  ( uniform( ( 0 : float[E] ), ( 2 : float[E] ) ) : float[E] )
+                                  else
+                                  ( uniform( ( 0 : float[E] ), ( 4 : float[E] ) ) : float[E] ) : float[E] )
+                            in
+                            ( ( loop : float[G] ->  float[G] ) ( ( ( i : float[G] ) + ( 1 : float[G] ) : float[G] ) ) : float[G] ) :
+                            float[G] )
+                      else
+                      ( i : float[G] ) : float[G] ) : float[G] ->  float[G] ) ) ( 0 : float[G] ) : float[G] ) : float[G] )
+
+== Determinized ==
+let t = 8 in ( rec loop i => if i < t then let x = if flip( 0.5 ) then ( 0 + 2 ) * 0.5 else ( 0 + 4 ) * 0.5 in loop ( i + 1 ) else i ) 0
+
+== Evaluation (100 trials) ==
+program mean: 8
+determinized mean: 8

@@ -26,6 +26,12 @@
 \newcommand{\Nat}{\mathsf{nat}}
 \newcommand{\List}[1]{\mathsf{list}\,#1}
 \newcommand{\darrow}{\Downarrow}
+\newcommand{\sem}[1]{\llbracket #1  \rrbracket}
+\newcommand{\bigsemstep}[2]{\langle #1  \rangle_{#2}}
+\newcommand{\bigsem}[1]{\langle #1  \rangle}
+\newcommand{\monbind}{\ensuremath{\ensuremath{\gg\!\!=}}}
+\newcommand{\float}{\textnormal{\ttfamily\bfseries float}}
+\newcommand{\floattype}[1]{\mathnormal{\float}[#1]}
 
 \begin{document}
 
@@ -281,6 +287,178 @@ We use a type-directed transformation \(\Gamma \vdash e : \tau \darrow e'\) that
     {\Gamma \vdash \mathsf{if}\;e\;\mathsf{then}\;e_1\;\mathsf{else}\;e_2 : \tau \darrow \mathsf{if}\;e'\;\mathsf{then}\;e_1'\;\mathsf{else}\;e_2'}
 \end{mathpar}
 Lambda, application, pairs, sums, and \(\mathsf{let}\) follow the same shape (recursing on subterms). The key point is that expectation-mode samples are determinized to their expected value, while general-mode samples remain probabilistic but have their subterms determinized.
+
+\section{Proof Outline}
+
+\begin{lemma}[Measurable space of expressions]
+  Well-typed expressions of each type form a measurable space $(Expr_\tau, \mathcal{F}_{Expr_{\tau}})$.
+\end{lemma}
+
+\subsection{Small-step}
+
+\begin{lemma}[Small-step semantics]
+  The small-step semantics $\sem{e : \tau} \in \mathcal{D}(Expr_{\tau})$ is well-defined for all well-typed $e : \tau$.
+\end{lemma}
+
+\begin{lemma}[Type preservation]
+  Let $e$ be a well-typed expression of type $\tau$, and assume that
+  $\{e' \mid \emptyset \vdash e' : \tau'\}$ is measurable for every type $\tau'$.
+  Then
+  \[
+    \sem{e : \tau}\bigl(\{\,e' \mid \emptyset \nvdash e' : \tau\,\}\bigr) = 0.
+  \]
+  That is, the small-step semantics assigns measure zero to the set of
+  expressions that are not well-typed at type $\tau$.
+\end{lemma}
+
+\begin{lemma}[Step is a Markov kernel]
+  The map $e \mapsto \sem{e : \tau}$ defines a Markov kernel $Expr_\tau \to \mathcal{D}(Expr_\tau)$.
+\end{lemma}
+
+\subsection{Big-step}
+
+\begin{lemma}[$n$-step semantics]
+  The $n$-step semantics $\sem{e : \tau}^n$ is defined by iterating the small-step kernel $n$ times, and is itself a Markov kernel.
+\end{lemma}
+
+\begin{lemma}[Monotone accumulation of mass]
+  For all $n \in \mathbb{N}$:
+  \begin{enumerate}
+    \item $\sem{e : \tau}^n(Val_\tau) \leq \sem{e : \tau}^{n+1}(Val_\tau)$
+  \end{enumerate}
+  That is, probability mass on values accumulates monotonically.
+\end{lemma}
+
+\begin{lemma}[Big-step semantics exists]
+  The pointwise limit
+  \[
+    \bigsem{e : \tau} := \lim_{n \to \infty} \sem{e : \tau}^n
+  \]
+  exists as a sub-probability measure on $Val_\tau$, by the monotone convergence theorem.
+\end{lemma}
+
+\subsection{Transformation}
+
+\begin{definition}[Expectation transformation]
+  Define $\mathcal{E}\langle e : \mathsf{float} \rangle$ inductively on the structure of $e$.
+
+  *** This will be dependent on the types.
+
+  \begin{align*}
+    \mathcal{E}\langle c : \floattype{m} \rangle &= c \quad \text{for float literal } c \\
+    %
+    \mathcal{E}\langle \mathrm{uniform}(a : \floattype{E}, b : \floattype{E}) \rangle &= \tfrac{a+b}{2} \\
+    %
+    \mathcal{E}\langle \mathrm{uniform}(a : \floattype{G}, b : \floattype{G}) \rangle &= \mathrm{uniform}(a, b) \\
+    %
+    \mathcal{E}\langle \mathrm{uniform}(e_1 : \floattype{m}, e_2 : \floattype{m}) \rangle &= \mathrm{uniform}(\mathcal{E}\langle e_1 : \floattype{m} \rangle, \mathcal{E}\langle e_2 : \floattype{m} \rangle) \\
+    %
+    \mathcal{E}\langle \mathrm{gaussian}(m : \floattype{E}, \sigma^2 : \floattype{G}) \rangle &= m \\
+    %
+    \ldots \\
+    %
+    \mathcal{E}\langle \texttt{let } x = e_1 \texttt{ in } e_2 \rangle &= \texttt{let } x = \mathcal{E}\langle e_1 \rangle \texttt{ in } \mathcal{E}\langle  e_2 \rangle 
+  \end{align*}
+\end{definition}
+
+
+\subsection{Expectations}
+
+\begin{lemma}[Expectation is well-defined]
+  For any sub-probability measure $\mu \in \mathcal{D}(Vals_{\tau})$, the expectation
+  \[
+    \mathbb{E}[\mu] := \int x \, d\mu(x)
+  \]
+  is a well-defined real number.
+
+  **Specifically, let us take $\tau = \mathbf{float}$.
+\end{lemma}
+
+\begin{lemma}[Expectation of a Dirac]
+  For any $c \in Vals_{\tau}$:
+  \[
+    \mathbb{E}[\delta_c] = c
+  \]
+\end{lemma}
+
+\begin{lemma}[Linearity of expectation]
+  For sub-probability measures $\mu_1, \mu_2 \in \mathcal{D}(Vals_{\tau})$ and $a, b \in \mathbb{R}$:
+  \[
+    \mathbb{E}[a \cdot \mu_1 + b \cdot \mu_2] = a \cdot \mathbb{E}[\mu_1] + b \cdot \mathbb{E}[\mu_2]
+  \]
+\end{lemma}
+
+\begin{lemma}
+  For $\mu \in \mathcal{D}(Expr_\tau)$ and measurable $K : Expr_\tau \to \mathcal{D}(Vals_{\tau})$:
+  \[
+    \mathbb{E}[\mu \monbind K] = \int \mathbb{E}[K(x)] \, d\mu(x)
+  \]
+\end{lemma}
+
+\begin{lemma}[Expectation of a program is well-defined]
+  For any well-typed expression $e : \mathsf{float}$, the expectation
+  \[
+    \mathbb{E}[\bigsem{e : \mathsf{float}}] 
+  \]
+  is a well-defined real number.
+\end{lemma}
+
+\subsection{Affine condition}
+
+\begin{definition}[Affine continuation]
+  A measurable function $K : \mathbb{R} \to \mathcal{D}(\mathbb{R})$ is called \emph{expectation-affine} if the map
+  \[
+    x \mapsto \mathbb{E}[K(x)]
+  \]
+  is an affine function of $x$, i.e.\ there exist $a, b \in \mathbb{R}$ such that $\mathbb{E}[K(x)] = ax + b$ for all $x$.
+\end{definition}
+
+\begin{itemize}
+  \item The continuation $K(x) = \delta_{ax+b}$ is expectation-affine. 
+  \item If $K_1 : \mathbb{R} \to \mathcal{D}(\mathbb{R})$ is expectation-affine and $K_2 : \mathbb{R} \to \mathcal{D}(\mathbb{R})$ is expectation-affine, then their monadic composition
+  \[
+    x \mapsto K_1(x) \monbind K_2
+  \]
+  is expectation-affine.
+  \item The continuation $K(x) = \mathcal{N}(ax + b, \sigma^2)$ is expectation-affine, with $\mathbb{E}[K(x)] = ax + b$.
+  \item The continuation $K(x) = \mathrm{Uniform}(ax + b,\, cx + d)$ is expectation-affine, with
+  \[
+    \mathbb{E}[K(x)] = \frac{(a+c)}{2} x + \frac{(b+d)}{2}.
+  \]
+\end{itemize}
+
+\begin{lemma}
+  For any $\mu \in \mathcal{D}(Expr_\mathsf{float})$ and any expectation-affine continuation $K$:
+  \[
+    \mathbb{E}[\mu \monbind K] = \mathbb{E}[\delta_{\mathbb{E}[\mu]} \monbind K]
+  \]
+\end{lemma}
+
+\begin{proof}
+  \begin{align*}
+    &\mathbb{E}[\mu \monbind K] \\
+    = \quad&\int \mathbb{E}[K(x)] \, d\mu(x) \tag{Lemma 5.12} \\
+    = \quad&\int (ax + b) \, d\mu(x) \tag{Definition 5.14} \\
+    = \quad&a \cdot \mathbb{E}[\mu] + b \tag{Linearity of expectation} \\
+    = \quad&\mathbb{E}[K(\mathbb{E}[\mu])] \tag{Definition 5.14} \\
+    = \quad&\mathbb{E}[\delta_{\mathbb{E}[\mu]} \monbind K] 
+  \end{align*}
+\end{proof}
+
+\subsection{Soundness?}
+
+\begin{theorem}[Soundness of expectation transformation]
+  Let $e : \mathsf{float}$ be a well-typed expression such that all continuations arising in $e$ are expectation-affine. Then:
+  \[
+    \mathbb{E}[\bigsem{e : \mathsf{float}}] = \mathbb{E}[\bigsem{\mathcal{E}( e : \mathsf{float})}]
+  \]
+  where the right-hand side is a deterministic real value.
+\end{theorem}
+
+
+
+
+
 
 \section{Related Work}
 We list the main threads of related work we build on:

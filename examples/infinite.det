@@ -1,0 +1,7 @@
+let t = 100 in
+(rec loop s =>
+   if s < t then
+     loop (s + uniform(0,1))
+   else
+     s - t
+) 0

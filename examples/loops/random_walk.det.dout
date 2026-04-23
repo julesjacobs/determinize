@@ -1,0 +1,32 @@
+== Elaboration ==
+raw:
+( ( ( rec walk x =>
+          ( if ( ( x : float[G] ) <= ( 0 : float[G] ) : bool )
+                then
+                ( 0 : float[?m2] )
+                else
+                ( if ( flip( ( 0.5 : float[?m3] ) ) : bool )
+                      then
+                      ( ( walk : float[G] ->  float[?m2] ) ( ( ( x : float[G] ) + ( 1 : float[G] ) : float[G] ) ) : float[?m2] )
+                      else
+                      ( ( walk : float[G] ->  float[?m2] ) ( ( ( x : float[G] ) - ( 1 : float[G] ) : float[G] ) ) : float[?m2] ) :
+                      float[?m2] ) : float[?m2] ) : float[G] ->  float[?m2] ) ) ( 1 : float[G] ) : float[?m2] )
+defaulted:
+( ( ( rec walk x =>
+          ( if ( ( x : float[G] ) <= ( 0 : float[G] ) : bool )
+                then
+                ( 0 : float[E] )
+                else
+                ( if ( flip( ( 0.5 : float[E] ) ) : bool )
+                      then
+                      ( ( walk : float[G] ->  float[E] ) ( ( ( x : float[G] ) + ( 1 : float[G] ) : float[G] ) ) : float[E] )
+                      else
+                      ( ( walk : float[G] ->  float[E] ) ( ( ( x : float[G] ) - ( 1 : float[G] ) : float[G] ) ) : float[E] ) : float[E] ) :
+                float[E] ) : float[G] ->  float[E] ) ) ( 1 : float[G] ) : float[E] )
+
+== Determinized ==
+( rec walk x => if x <= 0 then 0 else if flip( 0.5 ) then walk ( x + 1 ) else walk ( x - 1 ) ) 1
+
+== Evaluation (100 trials) ==
+program mean: 0
+determinized mean: 0

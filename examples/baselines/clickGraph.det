@@ -1,0 +1,43 @@
+let similarityAll = uniform(0, 1) in
+
+(* i = 0 *)
+let beta1 =
+  if flip(similarityAll) then uniform(0, 1) else uniform(0, 1)
+in
+let beta2 =
+  if flip(similarityAll) then beta1 else uniform(0, 1)
+in
+
+(* i = 1 *)
+let beta1 =
+  if flip(similarityAll) then uniform(0, 1) else uniform(0, 1)
+in
+let beta2 =
+  if flip(similarityAll) then beta1 else uniform(0, 1)
+in
+
+(* i = 2 *)
+let beta1 =
+  if flip(similarityAll) then uniform(0, 1) else uniform(0, 1)
+in
+let beta2 =
+  if flip(similarityAll) then beta1 else uniform(0, 1)
+in
+
+(* i = 3 *)
+let beta1 =
+  if flip(similarityAll) then uniform(0, 1) else uniform(0, 1)
+in
+let beta2 =
+  if flip(similarityAll) then beta1 else uniform(0, 1)
+in
+
+(* i = 4 *)
+let beta1 =
+  if flip(similarityAll) then uniform(0, 1) else uniform(0, 1)
+in
+let beta2 =
+  if flip(similarityAll) then beta1 else uniform(0, 1)
+in
+
+similarityAll

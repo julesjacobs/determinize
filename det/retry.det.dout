@@ -1,0 +1,46 @@
+== Elaboration ==
+raw:
+( let retry =
+    ( rec retry f =>
+          ( fun x =>
+                ( if ( flip( ( 0.7 : float[?m1] ) ) : bool )
+                      then
+                      ( ( f : float[?m2] ->  float[?m2] ) ( x : float[?m2] ) : float[?m2] )
+                      else
+                      ( ( retry : float[?m2] ->  float[?m2] ->  float[?m2] ->  float[?m2] ) ( f : float[?m2] ->  float[?m2] ) ( x :
+                                float[?m2] ) : float[?m2] ) : float[?m2] ) : float[?m2] ->  float[?m2] ) : float[?m2] ->  float[?m2] -> 
+            float[?m2] ->  float[?m2] )
+    in
+    ( let noisy_inc =
+          ( fun x => ( ( x : float[?m2] ) + ( uniform( ( 0 : float[?m2] ), ( 1 : float[?m2] ) ) : float[?m2] ) : float[?m2] ) :
+                float[?m2] ->  float[?m2] )
+          in
+          ( ( retry : float[?m2] ->  float[?m2] ->  float[?m2] ->  float[?m2] ) ( noisy_inc : float[?m2] ->  float[?m2] ) ( 5 : float[?m2] )
+                : float[?m2] ) : float[?m2] ) : float[?m2] )
+defaulted:
+( let retry =
+    ( rec retry f =>
+          ( fun x =>
+                ( if ( flip( ( 0.7 : float[E] ) ) : bool )
+                      then
+                      ( ( f : float[E] ->  float[E] ) ( x : float[E] ) : float[E] )
+                      else
+                      ( ( retry : float[E] ->  float[E] ->  float[E] ->  float[E] ) ( f : float[E] ->  float[E] ) ( x : float[E] ) :
+                            float[E] ) : float[E] ) : float[E] ->  float[E] ) : float[E] ->  float[E] ->  float[E] ->  float[E] )
+    in
+    ( let noisy_inc =
+          ( fun x => ( ( x : float[E] ) + ( uniform( ( 0 : float[E] ), ( 1 : float[E] ) ) : float[E] ) : float[E] ) : float[E] ->  float[E]
+            )
+          in
+          ( ( retry : float[E] ->  float[E] ->  float[E] ->  float[E] ) ( noisy_inc : float[E] ->  float[E] ) ( 5 : float[E] ) : float[E] )
+          : float[E] ) : float[E] )
+
+== Determinized ==
+let retry =
+rec retry f => fun x => if flip( 0.7 ) then f x else retry f x
+in
+let noisy_inc = fun x => x + ( 0 + 1 ) * 0.5 in retry noisy_inc 5
+
+== Evaluation (100 trials) ==
+program mean: 5.5263
+determinized mean: 5.5

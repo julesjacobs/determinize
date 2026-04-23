@@ -1,0 +1,32 @@
+== Elaboration ==
+raw:
+( let t =
+    ( 100 : float[G] )
+    in
+    ( ( ( rec loop s =>
+                ( if ( ( s : float[G] ) < ( t : float[G] ) : bool )
+                      then
+                      ( ( loop : float[G] ->  float[?m3] ) ( ( ( s : float[G] ) + ( uniform( ( 0 : float[G] ), ( 1 : float[G] ) ) : float[G]
+                                    ) : float[G] ) ) : float[?m3] )
+                      else
+                      ( ( s : float[?m3] ) - ( t : float[?m3] ) : float[?m3] ) : float[?m3] ) : float[G] ->  float[?m3] ) ) ( 0 : float[G] )
+          : float[?m3] ) : float[?m3] )
+defaulted:
+( let t =
+    ( 100 : float[G] )
+    in
+    ( ( ( rec loop s =>
+                ( if ( ( s : float[G] ) < ( t : float[G] ) : bool )
+                      then
+                      ( ( loop : float[G] ->  float[E] ) ( ( ( s : float[G] ) + ( uniform( ( 0 : float[G] ), ( 1 : float[G] ) ) : float[G] )
+                                  : float[G] ) ) : float[E] )
+                      else
+                      ( ( s : float[E] ) - ( t : float[E] ) : float[E] ) : float[E] ) : float[G] ->  float[E] ) ) ( 0 : float[G] ) :
+          float[E] ) : float[E] )
+
+== Determinized ==
+let t = 100 in ( rec loop s => if s < t then loop ( s + uniform( 0, 1 ) ) else s - t ) 0
+
+== Evaluation (100 trials) ==
+program mean: 0.375547
+determinized mean: 0.375547

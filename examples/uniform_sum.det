@@ -1,0 +1,2 @@
+(rec loop x => 
+    if flip(0.5) then 1 + uniform(0,1) else loop (x-1)) 6

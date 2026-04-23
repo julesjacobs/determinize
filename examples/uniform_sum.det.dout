@@ -1,0 +1,24 @@
+== Elaboration ==
+raw:
+( ( ( rec loop x =>
+          ( if ( flip( ( 0.5 : float[?m2] ) ) : bool )
+                then
+                ( ( 1 : float[?m3] ) + ( uniform( ( 0 : float[?m3] ), ( 1 : float[?m3] ) ) : float[?m3] ) : float[?m3] )
+                else
+                ( ( loop : float[?m4] ->  float[?m3] ) ( ( ( x : float[?m4] ) - ( 1 : float[?m4] ) : float[?m4] ) ) : float[?m3] ) :
+                float[?m3] ) : float[?m4] ->  float[?m3] ) ) ( 6 : float[?m4] ) : float[?m3] )
+defaulted:
+( ( ( rec loop x =>
+          ( if ( flip( ( 0.5 : float[E] ) ) : bool )
+                then
+                ( ( 1 : float[E] ) + ( uniform( ( 0 : float[E] ), ( 1 : float[E] ) ) : float[E] ) : float[E] )
+                else
+                ( ( loop : float[E] ->  float[E] ) ( ( ( x : float[E] ) - ( 1 : float[E] ) : float[E] ) ) : float[E] ) : float[E] ) :
+          float[E] ->  float[E] ) ) ( 6 : float[E] ) : float[E] )
+
+== Determinized ==
+( rec loop x => if flip( 0.5 ) then 1 + ( 0 + 1 ) * 0.5 else loop ( x - 1 ) ) 6
+
+== Evaluation (100 trials) ==
+program mean: 1.51061
+determinized mean: 1.5

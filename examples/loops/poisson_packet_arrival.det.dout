@@ -1,0 +1,47 @@
+== Elaboration ==
+raw:
+( let x =
+    ( poisson( ( 1 : float[G] ) ) : float[G] )
+    in
+    ( let loop =
+          ( rec loop i =>
+                ( fun sum =>
+                      ( if ( ( i : float[G] ) < ( 1 : float[G] ) : bool )
+                            then
+                            ( sum : float[?m4] )
+                            else
+                            ( let pkt =
+                                  ( 0 : float[?m3] )
+                                  in
+                                  ( ( loop : float[G] ->  float[?m4] ->  float[?m4] ) ( ( ( i : float[G] ) - ( 1 : float[G] ) : float[G] ) )
+                                        ( ( ( sum : float[?m4] ) + ( pkt : float[?m4] ) : float[?m4] ) ) : float[?m4] ) : float[?m4] ) :
+                            float[?m4] ) : float[?m4] ->  float[?m4] ) : float[G] ->  float[?m4] ->  float[?m4] )
+          in
+          ( ( loop : float[G] ->  float[?m4] ->  float[?m4] ) ( x : float[G] ) ( 0 : float[?m4] ) : float[?m4] ) : float[?m4] ) : float[?m4]
+)
+defaulted:
+( let x =
+    ( poisson( ( 1 : float[G] ) ) : float[G] )
+    in
+    ( let loop =
+          ( rec loop i =>
+                ( fun sum =>
+                      ( if ( ( i : float[G] ) < ( 1 : float[G] ) : bool )
+                            then
+                            ( sum : float[E] )
+                            else
+                            ( let pkt =
+                                  ( 0 : float[E] )
+                                  in
+                                  ( ( loop : float[G] ->  float[E] ->  float[E] ) ( ( ( i : float[G] ) - ( 1 : float[G] ) : float[G] ) ) ( (
+                                            ( sum : float[E] ) + ( pkt : float[E] ) : float[E] ) ) : float[E] ) : float[E] ) : float[E] ) :
+                      float[E] ->  float[E] ) : float[G] ->  float[E] ->  float[E] )
+          in
+          ( ( loop : float[G] ->  float[E] ->  float[E] ) ( x : float[G] ) ( 0 : float[E] ) : float[E] ) : float[E] ) : float[E] )
+
+== Determinized ==
+let x = poisson( 1 ) in let loop = rec loop i => fun sum => if i < 1 then sum else let pkt = 0 in loop ( i - 1 ) ( sum + pkt ) in loop x 0
+
+== Evaluation (100 trials) ==
+program mean: 0
+determinized mean: 0

@@ -1,0 +1,18 @@
+(* ( rec loop h => 
+    fun i => 
+        if i < 2 then h else 
+        let x = uniform(0,1) in 
+        loop (x - h) (i + 1) ) 10 0 *)
+
+(* ( rec loop h => 
+        if h < 2 then h else 
+        let x = uniform(0,1) in 
+        loop (x - h) ) 10 *)
+
+(* let x = uniform(0,1) in 
+let _ = observe(x < 0.5) in x *)
+
+let x = 4 in 
+let y = 5 in
+let z = 6 in 
+x + z
