@@ -69,12 +69,17 @@ Expressions, types, and modes are defined by the grammar below (\(x\) ranges ove
 \begin{align*}
   m &::= \E \mid \G \\
   \tau &::= \Unit \mid \Bool \mid \Nat \mid \Float{m} \mid \List{\tau} \mid \tau_1 \times \tau_2 \mid \tau_1 + \tau_2 \mid \tau_1 \to \tau_2 \\
-  e &::= x \mid \lambda x.\,e \mid \mathsf{rec}\;f\;x.\,e \mid e_1\,e_2 \mid \langle e_1, e_2\rangle \mid \mathsf{fst}\,e \mid \mathsf{snd}\,e \mid \mathsf{inl}\,e \mid \mathsf{inr}\,e \mid \mathsf{match}\;e\;\mathsf{with}\;\mathsf{inl}\,x \Rightarrow e_1 \mid \mathsf{inr}\,y \Rightarrow e_2 \\
+  e &::= x \mid \lambda x.\,e \mid \mathsf{rec}\;f\;x.\,e \mid e_1\,e_2 \\
+    &\quad\mid \langle e_1, e_2\rangle \mid \mathsf{fst}\,e \mid \mathsf{snd}\,e \mid \mathsf{inl}\,e \mid \mathsf{inr}\,e \\
+    &\quad\mid \mathsf{match}\;e\;\mathsf{with}\;\mathsf{inl}\,x \Rightarrow e_1 \mid \mathsf{inr}\,y \Rightarrow e_2 \\
     &\quad\mid [\,] \mid e_1 :: e_2 \mid \mathsf{match}\;e\;\mathsf{with}\;[\,] \Rightarrow e_1 \mid x::xs \Rightarrow e_2 \\
     &\quad\mid \mathsf{true} \mid \mathsf{false} \mid \mathsf{if}\;e\;\mathsf{then}\;e_1\;\mathsf{else}\;e_2 \mid \mathsf{let}\;x=e_1\;\mathsf{in}\;e_2 \\
-    &\quad\mid c \mid -e \mid e_1 + e_2 \mid e_1 \times e_2 \mid e_1 < e_2 \mid \mathsf{uniform}(e_1,e_2) \mid \mathsf{gauss}(e_1,e_2)
+    &\quad\mid c \mid -e \mid e_1 + e_2 \mid e_1 - e_2 \mid e_1 \times e_2 \mid e_1 / e_2 \mid e_1 < e_2 \mid e_1 \leq e_2 \\
+    &\quad\mid \mathsf{uniform}(e_1,e_2) \mid \mathsf{gauss}(e_1,e_2) \mid \mathsf{exponential}(e) \mid \mathsf{gamma}(e_1,e_2) \mid \mathsf{beta}(e_1,e_2) \\
+    &\quad\mid \mathsf{flip}(e) \mid \mathsf{bernoulli}(e) \mid \mathsf{poisson}(e) \\
+    &\quad\mid \mathsf{discrete}(p_1{:}e_1,\ldots,p_n{:}e_n) \mid \mathsf{observe}(e)
 \end{align*}
-We include a closed interval sampler that draws a float uniformly between the two bounds.
+We include a closed interval sampler that draws a float uniformly between the two bounds, along with standard continuous and discrete samplers.
 
 \section{Typing}
 Judgments have the form \(\Gamma \vdash e : \tau\), where \(\Gamma\) is a standard typing context.
@@ -165,6 +170,10 @@ Judgments have the form \(\Gamma \vdash e : \tau\), where \(\Gamma\) is a standa
     {\Gamma \vdash e_1 : \Float{m} \\ \Gamma \vdash e_2 : \Float{m}}
     {\Gamma \vdash e_1 + e_2 : \Float{m}}
   \and
+  \inferrule[\textsc{Sub}]
+    {\Gamma \vdash e_1 : \Float{m} \\ \Gamma \vdash e_2 : \Float{m}}
+    {\Gamma \vdash e_1 - e_2 : \Float{m}}
+  \and
   \inferrule[\textsc{Mul-G}]
     {\Gamma \vdash e_1 : \Float{\G} \\ \Gamma \vdash e_2 : \Float{\G}}
     {\Gamma \vdash e_1 \times e_2 : \Float{\G}}
@@ -177,10 +186,24 @@ Judgments have the form \(\Gamma \vdash e : \tau\), where \(\Gamma\) is a standa
     {\Gamma \vdash e : \Float{m} \\ \Gamma \vdash c : \Float{m}}
     {\Gamma \vdash e \times c : \Float{m}}
   \and
+  \inferrule[\textsc{Div-G}]
+    {\Gamma \vdash e_1 : \Float{\G} \\ \Gamma \vdash e_2 : \Float{\G}}
+    {\Gamma \vdash e_1 / e_2 : \Float{\G}}
+  \and
+  \inferrule[\textsc{Div-ConstR}]
+    {\Gamma \vdash e : \Float{m} \\ \Gamma \vdash c : \Float{m}}
+    {\Gamma \vdash e / c : \Float{m}}
+\end{mathpar}
+\begin{mathpar}
   \inferrule[\textsc{Cmp}]
     {\Gamma \vdash e_1 : \Float{\G} \\ \Gamma \vdash e_2 : \Float{\G}}
     {\Gamma \vdash e_1 < e_2 : \Bool}
   \and
+  \inferrule[\textsc{Cmp-Leq}]
+    {\Gamma \vdash e_1 : \Float{\G} \\ \Gamma \vdash e_2 : \Float{\G}}
+    {\Gamma \vdash e_1 \leq e_2 : \Bool}
+\end{mathpar}
+\begin{mathpar}
   \inferrule[\textsc{Sample}]
     {\Gamma \vdash e_1 : \Float{m} \\ \Gamma \vdash e_2 : \Float{m}}
     {\Gamma \vdash \mathsf{uniform}(e_1,e_2) : \Float{m}}
@@ -188,9 +211,42 @@ Judgments have the form \(\Gamma \vdash e : \tau\), where \(\Gamma\) is a standa
   \inferrule[\textsc{Gauss}]
     {\Gamma \vdash e_1 : \Float{m} \\ \Gamma \vdash e_2 : \Float{\G}}
     {\Gamma \vdash \mathsf{gauss}(e_1,e_2) : \Float{m}}
+  \and
+  \inferrule[\textsc{Exponential}]
+    {\Gamma \vdash e : \Float{\G}}
+    {\Gamma \vdash \mathsf{exponential}(e) : \Float{m}}
+  \and
+  \inferrule[\textsc{Gamma}]
+    {\Gamma \vdash e_1 : \Float{m} \\ \Gamma \vdash e_2 : \Float{\G}}
+    {\Gamma \vdash \mathsf{gamma}(e_1,e_2) : \Float{m}}
+  \and
+  \inferrule[\textsc{Beta}]
+    {\Gamma \vdash e_1 : \Float{\G} \\ \Gamma \vdash e_2 : \Float{\G}}
+    {\Gamma \vdash \mathsf{beta}(e_1,e_2) : \Float{m}}
+\end{mathpar}
+\begin{mathpar}
+  \inferrule[\textsc{Flip}]
+    {\Gamma \vdash e : \Float{m}}
+    {\Gamma \vdash \mathsf{flip}(e) : \Bool}
+  \and
+  \inferrule[\textsc{Bernoulli}]
+    {\Gamma \vdash e : \Float{m}}
+    {\Gamma \vdash \mathsf{bernoulli}(e) : \Float{m}}
+  \and
+  \inferrule[\textsc{Poisson}]
+    {\Gamma \vdash e : \Float{m}}
+    {\Gamma \vdash \mathsf{poisson}(e) : \Float{m}}
+  \and
+  \inferrule[\textsc{Discrete}]
+    {\Gamma \vdash e_i : \Float{m} \quad \text{for } 1 \leq i \leq n}
+    {\Gamma \vdash \mathsf{discrete}(p_1{:}e_1,\ldots,p_n{:}e_n) : \Float{m}}
+  \and
+  \inferrule[\textsc{Observe}]
+    {\Gamma \vdash e : \Bool}
+    {\Gamma \vdash \mathsf{observe}(e) : \Unit}
 \end{mathpar}
 
-Multiplication is general-mode only unless one side is a (typed) literal, in which case it follows the literal's mode; addition is parametric in the mode; comparison is only allowed at general mode. Uniform sampling preserves the incoming mode; Gaussian sampling returns the incoming mode but requires a general-typed variance.
+Multiplication is general-mode only unless one side is a (typed) literal, in which case it follows the literal's mode; division is general-mode only unless the denominator is a literal. Addition and subtraction are parametric in the mode; comparison is only allowed at general mode. Uniform sampling preserves the incoming mode; Gaussian and gamma sampling return the incoming mode but require a general-typed variance/rate parameter. Exponential, beta, bernoulli, poisson, and discrete sampling follow the same mode discipline shown in the rules above.
 \paragraph{Modes and subtyping.}
 We relate modes with a preorder \(m_1 \preceq m_2\):
 \begin{mathpar}
@@ -236,7 +292,7 @@ Standard covariant/contravariant rules apply to composite types:
 \end{mathpar}
 
 \section{Determinization}
-We use a type-directed transformation \(\Gamma \vdash e : \tau \darrow e'\) that preserves non-probabilistic structure and replaces probabilistic sampling by its expected value when the result is typed at expectation mode. Representative clauses are below; other constructs follow the obvious structural recursion.
+We use a type-directed transformation \(\Gamma \vdash e : \tau \darrow e'\) on elaborated expressions. Before applying the transformation, any mode variable left unconstrained by type inference is defaulted to \(\E\). The transformation preserves non-probabilistic structure and replaces float-valued probabilistic sampling by its expected value exactly when the sampler result is typed at expectation mode. General-mode float samplers, boolean samplers, and observations are rebuilt after recursively transforming their subterms.
 \begin{mathpar}
   \inferrule[\textsc{Det-Uniform-E}]
     {\Gamma \vdash e_1 : \Float{\E} \darrow e_1' \\ \Gamma \vdash e_2 : \Float{\E} \darrow e_2'}
@@ -253,7 +309,66 @@ We use a type-directed transformation \(\Gamma \vdash e : \tau \darrow e'\) that
   \inferrule[\textsc{Det-Gauss-G}]
     {\Gamma \vdash e_1 : \Float{\G} \darrow e_1' \\ \Gamma \vdash e_2 : \Float{\G} \darrow e_2'}
     {\Gamma \vdash \mathsf{gauss}(e_1,e_2) : \Float{\G} \darrow \mathsf{gauss}(e_1',e_2')}
+\end{mathpar}
+\begin{mathpar}
+  \inferrule[\textsc{Det-Exponential-E}]
+    {\Gamma \vdash e : \Float{\G} \darrow e'}
+    {\Gamma \vdash \mathsf{exponential}(e) : \Float{\E} \darrow 1 / e'}
   \and
+  \inferrule[\textsc{Det-Exponential-G}]
+    {\Gamma \vdash e : \Float{\G} \darrow e'}
+    {\Gamma \vdash \mathsf{exponential}(e) : \Float{\G} \darrow \mathsf{exponential}(e')}
+  \and
+  \inferrule[\textsc{Det-Gamma-E}]
+    {\Gamma \vdash e_1 : \Float{\E} \darrow e_1' \\ \Gamma \vdash e_2 : \Float{\G} \darrow e_2'}
+    {\Gamma \vdash \mathsf{gamma}(e_1,e_2) : \Float{\E} \darrow e_1' / e_2'}
+  \and
+  \inferrule[\textsc{Det-Gamma-G}]
+    {\Gamma \vdash e_1 : \Float{\G} \darrow e_1' \\ \Gamma \vdash e_2 : \Float{\G} \darrow e_2'}
+    {\Gamma \vdash \mathsf{gamma}(e_1,e_2) : \Float{\G} \darrow \mathsf{gamma}(e_1',e_2')}
+  \and
+  \inferrule[\textsc{Det-Beta-E}]
+    {\Gamma \vdash e_1 : \Float{\G} \darrow e_1' \\ \Gamma \vdash e_2 : \Float{\G} \darrow e_2'}
+    {\Gamma \vdash \mathsf{beta}(e_1,e_2) : \Float{\E} \darrow e_1' / (e_1' + e_2')}
+  \and
+  \inferrule[\textsc{Det-Beta-G}]
+    {\Gamma \vdash e_1 : \Float{\G} \darrow e_1' \\ \Gamma \vdash e_2 : \Float{\G} \darrow e_2'}
+    {\Gamma \vdash \mathsf{beta}(e_1,e_2) : \Float{\G} \darrow \mathsf{beta}(e_1',e_2')}
+\end{mathpar}
+\begin{mathpar}
+  \inferrule[\textsc{Det-Bernoulli-E}]
+    {\Gamma \vdash e : \Float{\E} \darrow e'}
+    {\Gamma \vdash \mathsf{bernoulli}(e) : \Float{\E} \darrow e'}
+  \and
+  \inferrule[\textsc{Det-Bernoulli-G}]
+    {\Gamma \vdash e : \Float{\G} \darrow e'}
+    {\Gamma \vdash \mathsf{bernoulli}(e) : \Float{\G} \darrow \mathsf{bernoulli}(e')}
+  \and
+  \inferrule[\textsc{Det-Poisson-E}]
+    {\Gamma \vdash e : \Float{\E} \darrow e'}
+    {\Gamma \vdash \mathsf{poisson}(e) : \Float{\E} \darrow e'}
+  \and
+  \inferrule[\textsc{Det-Poisson-G}]
+    {\Gamma \vdash e : \Float{\G} \darrow e'}
+    {\Gamma \vdash \mathsf{poisson}(e) : \Float{\G} \darrow \mathsf{poisson}(e')}
+  \and
+  \inferrule[\textsc{Det-Discrete-E}]
+    {\Gamma \vdash e_i : \Float{\E} \darrow e_i' \quad \text{for } 1 \leq i \leq n}
+    {\Gamma \vdash \mathsf{discrete}(p_1{:}e_1,\ldots,p_n{:}e_n) : \Float{\E} \darrow \sum_{i=1}^{n} p_i \times e_i'}
+  \and
+  \inferrule[\textsc{Det-Discrete-G}]
+    {\Gamma \vdash e_i : \Float{\G} \darrow e_i' \quad \text{for } 1 \leq i \leq n}
+    {\Gamma \vdash \mathsf{discrete}(p_1{:}e_1,\ldots,p_n{:}e_n) : \Float{\G} \darrow \mathsf{discrete}(p_1{:}e_1',\ldots,p_n{:}e_n')}
+  \and
+  \inferrule[\textsc{Det-Flip}]
+    {\Gamma \vdash e : \Float{m} \darrow e'}
+    {\Gamma \vdash \mathsf{flip}(e) : \Bool \darrow \mathsf{flip}(e')}
+  \and
+  \inferrule[\textsc{Det-Observe}]
+    {\Gamma \vdash e : \Bool \darrow e'}
+    {\Gamma \vdash \mathsf{observe}(e) : \Unit \darrow \mathsf{observe}(e')}
+\end{mathpar}
+\begin{mathpar}
   \inferrule[\textsc{Det-Var}]
     {\Gamma \vdash x : \tau}
     {\Gamma \vdash x : \tau \darrow x}
@@ -265,7 +380,8 @@ We use a type-directed transformation \(\Gamma \vdash e : \tau \darrow e'\) that
   \inferrule[\textsc{Det-Rec}]
     {\Gamma, f{:}\tau_1 \to \tau_2, x{:}\tau_1 \vdash e : \tau_2 \darrow e'}
     {\Gamma \vdash \mathsf{rec}\;f\;x.\,e : \tau_1 \to \tau_2 \darrow \mathsf{rec}\;f\;x.\,e'}
-  \and
+\end{mathpar}
+\begin{mathpar}
   \inferrule[\textsc{Det-Const}]
     {\Gamma \vdash c : \Float{m}}
     {\Gamma \vdash c : \Float{m} \darrow c}
@@ -278,15 +394,24 @@ We use a type-directed transformation \(\Gamma \vdash e : \tau \darrow e'\) that
     {\Gamma \vdash e_1 : \Float{m} \darrow e_1' \\ \Gamma \vdash e_2 : \Float{m} \darrow e_2'}
     {\Gamma \vdash e_1 + e_2 : \Float{m} \darrow e_1' + e_2'}
   \and
-  \inferrule[\textsc{Det-Mul}]
-    {\Gamma \vdash e_1 : \Float{\G} \darrow e_1' \\ \Gamma \vdash e_2 : \Float{\G} \darrow e_2'}
-    {\Gamma \vdash e_1 \times e_2 : \Float{\G} \darrow e_1' \times e_2'}
+  \inferrule[\textsc{Det-Sub}]
+    {\Gamma \vdash e_1 : \Float{m} \darrow e_1' \\ \Gamma \vdash e_2 : \Float{m} \darrow e_2'}
+    {\Gamma \vdash e_1 - e_2 : \Float{m} \darrow e_1' - e_2'}
   \and
+  \inferrule[\textsc{Det-Mul}]
+    {\Gamma \vdash e_1 : \Float{m} \darrow e_1' \\ \Gamma \vdash e_2 : \Float{m} \darrow e_2'}
+    {\Gamma \vdash e_1 \times e_2 : \Float{m} \darrow e_1' \times e_2'}
+  \and
+  \inferrule[\textsc{Det-Div}]
+    {\Gamma \vdash e_1 : \Float{m} \darrow e_1' \\ \Gamma \vdash e_2 : \Float{m} \darrow e_2'}
+    {\Gamma \vdash e_1 / e_2 : \Float{m} \darrow e_1' / e_2'}
+\end{mathpar}
+\begin{mathpar}
   \inferrule[\textsc{Det-If}]
     {\Gamma \vdash e : \Bool \darrow e' \\ \Gamma \vdash e_1 : \tau \darrow e_1' \\ \Gamma \vdash e_2 : \tau \darrow e_2'}
     {\Gamma \vdash \mathsf{if}\;e\;\mathsf{then}\;e_1\;\mathsf{else}\;e_2 : \tau \darrow \mathsf{if}\;e'\;\mathsf{then}\;e_1'\;\mathsf{else}\;e_2'}
 \end{mathpar}
-Lambda, application, pairs, sums, and \(\mathsf{let}\) follow the same shape (recursing on subterms). The key point is that expectation-mode samples are determinized to their expected value, while general-mode samples remain probabilistic but have their subterms determinized.
+Lambda, recursion, application, pairs, projections, sums, matches, lists, arithmetic, comparisons, conditionals, and \(\mathsf{let}\) follow the same shape: recursively transform the subterms and rebuild the same constructor. The key point is that expectation-mode float samplers are determinized to their expected value, while general-mode float samplers remain probabilistic but have their subterms determinized.
 
 \section{Proof Outline}
 
@@ -340,24 +465,26 @@ Lambda, application, pairs, sums, and \(\mathsf{let}\) follow the same shape (re
 \subsection{Transformation}
 
 \begin{definition}[Expectation transformation]
-  Define $\mathcal{E}\langle e : \mathsf{float} \rangle$ inductively on the structure of $e$.
-
-  *** This will be dependent on the types.
-
+  The expectation transformation is the determinization judgment above when the enclosing expression has result type \(\Float{\E}\). Recursive calls still use the determinization judgment at each subexpression's inferred type. Equivalently, for float-valued samplers it uses the expected-value clauses below, and for every other constructor it recursively transforms subexpressions and rebuilds the same constructor.
   \begin{align*}
-    \mathcal{E}\langle c : \floattype{m} \rangle &= c \quad \text{for float literal } c \\
-    %
-    \mathcal{E}\langle \mathrm{uniform}(a : \floattype{E}, b : \floattype{E}) \rangle &= \tfrac{a+b}{2} \\
-    %
-    \mathcal{E}\langle \mathrm{uniform}(a : \floattype{G}, b : \floattype{G}) \rangle &= \mathrm{uniform}(a, b) \\
-    %
-    \mathcal{E}\langle \mathrm{uniform}(e_1 : \floattype{m}, e_2 : \floattype{m}) \rangle &= \mathrm{uniform}(\mathcal{E}\langle e_1 : \floattype{m} \rangle, \mathcal{E}\langle e_2 : \floattype{m} \rangle) \\
-    %
-    \mathcal{E}\langle \mathrm{gaussian}(m : \floattype{E}, \sigma^2 : \floattype{G}) \rangle &= m \\
-    %
-    \ldots \\
-    %
-    \mathcal{E}\langle \texttt{let } x = e_1 \texttt{ in } e_2 \rangle &= \texttt{let } x = \mathcal{E}\langle e_1 \rangle \texttt{ in } \mathcal{E}\langle  e_2 \rangle 
+    \mathcal{E}\langle c : \floattype{E} \rangle
+      &= c \\
+    \mathcal{E}\langle \mathrm{uniform}(e_1 : \floattype{E}, e_2 : \floattype{E}) \rangle
+      &= \bigl(\mathcal{E}\langle e_1 : \floattype{E} \rangle + \mathcal{E}\langle e_2 : \floattype{E} \rangle\bigr) \times 0.5 \\
+    \mathcal{E}\langle \mathrm{gauss}(e_1 : \floattype{E}, e_2 : \floattype{G}) \rangle
+      &= \mathcal{E}\langle e_1 : \floattype{E} \rangle \\
+    \mathcal{E}\langle \mathrm{exponential}(e : \floattype{G}) \rangle
+      &= 1 / \mathcal{E}\langle e : \floattype{G} \rangle \\
+    \mathcal{E}\langle \mathrm{gamma}(e_1 : \floattype{E}, e_2 : \floattype{G}) \rangle
+      &= \mathcal{E}\langle e_1 : \floattype{E} \rangle / \mathcal{E}\langle e_2 : \floattype{G} \rangle \\
+    \mathcal{E}\langle \mathrm{beta}(e_1 : \floattype{G}, e_2 : \floattype{G}) \rangle
+      &= \frac{\mathcal{E}\langle e_1 : \floattype{G} \rangle}{\mathcal{E}\langle e_1 : \floattype{G} \rangle + \mathcal{E}\langle e_2 : \floattype{G} \rangle} \\
+    \mathcal{E}\langle \mathrm{bernoulli}(e : \floattype{E}) \rangle
+      &= \mathcal{E}\langle e : \floattype{E} \rangle \\
+    \mathcal{E}\langle \mathrm{poisson}(e : \floattype{E}) \rangle
+      &= \mathcal{E}\langle e : \floattype{E} \rangle \\
+    \mathcal{E}\langle \mathrm{discrete}(p_1{:}e_1,\ldots,p_n{:}e_n) : \floattype{E} \rangle
+      &= \sum_{i=1}^{n} p_i \times \mathcal{E}\langle e_i : \floattype{E} \rangle
   \end{align*}
 \end{definition}
 

@@ -27,6 +27,6 @@ Misc:
 [x] Make Transformation equations type-directed in tex/main.tex.
 [x] Finish justification tags in affine-continuation proof in tex/main.tex.
 [x] Fix project-local LaTeX build/PDF display workflow (VS Code + script).
-[] Add support for other distributions, i.e. exponential, gamma, beta, etc.
-[] Subtraction, division not yet supported?
+[x] Add support for other distributions, i.e. exponential, gamma, beta, etc.
+[x] Subtraction, division not yet supported?
 [] Fix the discrete(...) branching
