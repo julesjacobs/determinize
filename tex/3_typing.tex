@@ -1,0 +1,159 @@
+\section{Typing}
+Judgments have the form \(\Gamma \vdash e : \tau\), where \(\Gamma\) is a standard typing context.
+
+\paragraph{Core rules.}
+\begin{mathpar}
+  \inferrule[\textsc{Var}]
+    {x{:}\tau \in \Gamma}
+    {\Gamma \vdash x : \tau}
+  \and
+  \inferrule[\textsc{Abs}]
+    {\Gamma, x{:}\tau_1 \vdash e : \tau_2}
+    {\Gamma \vdash \lambda x.\,e : \tau_1 \to \tau_2}
+  \and
+  \inferrule[\textsc{Rec}]
+    {\Gamma, f{:}\tau_1 \to \tau_2, x{:}\tau_1 \vdash e : \tau_2}
+    {\Gamma \vdash \mathsf{rec}\;f\;x.\,e : \tau_1 \to \tau_2}
+  \and
+  \inferrule[\textsc{App}]
+    {\Gamma \vdash e_1 : \tau_1 \to \tau_2 \\ \Gamma \vdash e_2 : \tau_1}
+    {\Gamma \vdash e_1\,e_2 : \tau_2}
+\end{mathpar}
+
+\paragraph{Products and sums.}
+\begin{mathpar}
+  \inferrule[\textsc{Pair}]
+    {\Gamma \vdash e_1 : \tau_1 \\ \Gamma \vdash e_2 : \tau_2}
+    {\Gamma \vdash \langle e_1 , e_2\rangle : \tau_1 \times \tau_2}
+  \and
+  \inferrule[\textsc{Fst}]
+    {\Gamma \vdash e : \tau_1 \times \tau_2}
+    {\Gamma \vdash \fstkw\,e : \tau_1}
+  \and
+  \inferrule[\textsc{Snd}]
+    {\Gamma \vdash e : \tau_1 \times \tau_2}
+    {\Gamma \vdash \sndkw\,e : \tau_2}
+  \and
+  \inferrule[\textsc{Inl}]
+    {\Gamma \vdash e : \tau_1}
+    {\Gamma \vdash \mathsf{inl}\,e : \tau_1 + \tau_2}
+  \and
+  \inferrule[\textsc{Inr}]
+    {\Gamma \vdash e : \tau_2}
+    {\Gamma \vdash \mathsf{inr}\,e : \tau_1 + \tau_2}
+  \and
+  \inferrule[\textsc{Match}]
+    {\Gamma \vdash e : \tau_1 + \tau_2 \\ \Gamma, x{:}\tau_1 \vdash e_1 : \tau \\ \Gamma, y{:}\tau_2 \vdash e_2 : \tau}
+    {\Gamma \vdash \matchkw\;e\;\withkw\;\mathsf{inl}\,x \Rightarrow e_1 \mid \mathsf{inr}\,y \Rightarrow e_2 : \tau}
+\end{mathpar}
+
+\paragraph{Lists.}
+\begin{mathpar}
+  \inferrule[\textsc{Nil}]{\;}{\Gamma \vdash [\,] : \List{\tau}}
+  \and
+  \inferrule[\textsc{Cons}]
+    {\Gamma \vdash e_1 : \tau \\ \Gamma \vdash e_2 : \List{\tau}}
+    {\Gamma \vdash e_1 :: e_2 : \List{\tau}}
+  \and
+  \inferrule[\textsc{Match-List}]
+    {\Gamma \vdash e : \List{\tau} \\ \Gamma \vdash e_1 : \sigma \\ \Gamma, x{:}\tau, xs{:}\List{\tau} \vdash e_2 : \sigma}
+    {\Gamma \vdash \matchkw\;e\;\withkw\;[\,] \Rightarrow e_1 \mid x::xs \Rightarrow e_2 : \sigma}
+\end{mathpar}
+
+\paragraph{Booleans and control.}
+\begin{mathpar}
+  \inferrule[\textsc{True}]{\;}{\Gamma \vdash \mathsf{true} : \Bool}
+  \and
+  \inferrule[\textsc{False}]{\;}{\Gamma \vdash \mathsf{false} : \Bool}
+  \and
+  \inferrule[\textsc{If}]
+    {\Gamma \vdash e : \Bool \\ \Gamma \vdash e_1 : \tau \\ \Gamma \vdash e_2 : \tau}
+    {\Gamma \vdash \ifkw\;e\;\thenkw\;e_1\;\elsekw\;e_2 : \tau}
+  \and
+  \inferrule[\textsc{Let}]
+    {\Gamma \vdash e_1 : \tau_1 \\ \Gamma, x{:}\tau_1 \vdash e_2 : \tau_2}
+    {\Gamma \vdash \letkw\;x=e_1\;\inkw\;e_2 : \tau_2}
+\end{mathpar}
+
+\paragraph{Floats and arithmetic.}
+\begin{mathpar}
+  \inferrule[\textsc{FloatLit}]{\;}{\Gamma \vdash c : \Float{m}}
+  \and
+  \inferrule[\textsc{Neg}]
+    {\Gamma \vdash e : \Float{m}}
+    {\Gamma \vdash -e : \Float{m}}
+  \and
+  \inferrule[\textsc{Add}]
+    {\Gamma \vdash e_1 : \Float{m} \\ \Gamma \vdash e_2 : \Float{m}}
+    {\Gamma \vdash e_1 + e_2 : \Float{m}}
+  \and
+  \inferrule[\textsc{Mul-G}]
+    {\Gamma \vdash e_1 : \Float{\G} \\ \Gamma \vdash e_2 : \Float{\G}}
+    {\Gamma \vdash e_1 \times e_2 : \Float{\G}}
+  \and
+  \inferrule[\textsc{Mul-ConstL}]
+    {\Gamma \vdash c : \Float{m} \\ \Gamma \vdash e : \Float{m}}
+    {\Gamma \vdash c \times e : \Float{m}}
+  \and
+  \inferrule[\textsc{Mul-ConstR}]
+    {\Gamma \vdash e : \Float{m} \\ \Gamma \vdash c : \Float{m}}
+    {\Gamma \vdash e \times c : \Float{m}}
+  \and
+  \inferrule[\textsc{Cmp}]
+    {\Gamma \vdash e_1 : \Float{\G} \\ \Gamma \vdash e_2 : \Float{\G}}
+    {\Gamma \vdash e_1 < e_2 : \Bool}
+  \and
+  \inferrule[\textsc{Sample}]
+    {\Gamma \vdash e_1 : \Float{m} \\ \Gamma \vdash e_2 : \Float{m}}
+    {\Gamma \vdash \uniform(e_1,e_2) : \Float{m}}
+  \and
+  \inferrule[\textsc{Gauss}]
+    {\Gamma \vdash e_1 : \Float{m} \\ \Gamma \vdash e_2 : \Float{\G}}
+    {\Gamma \vdash \gaussian(e_1,e_2) : \Float{m}}
+\end{mathpar}
+
+Multiplication is general-mode only unless one side is a (typed) literal, in which case it follows the literal's mode; addition is parametric in the mode; comparison is only allowed at general mode. Uniform sampling preserves the incoming mode; Gaussian sampling returns the incoming mode but requires a general-typed variance.
+\paragraph{Modes and subtyping.}
+We relate modes with a preorder \(m_1 \preceq m_2\):
+\begin{mathpar}
+  \inferrule[\textsc{Mode-Refl}]{\;}{m \preceq m}
+  \and
+  \inferrule[\textsc{Mode-GE}]{\;}{\G \preceq \E}
+\end{mathpar}
+Float subtyping follows modes: general floats can be used where expectation-mode floats are required, and otherwise floats are covariant in their mode while invariant in everything else.
+\begin{mathpar}
+  \inferrule[\textsc{Sub-Float-Refl}]{\;}{\Float{m} <: \Float{m}}
+  \and
+  \inferrule[\textsc{Sub-Float-GE}]{\;}{\Float{\G} <: \Float{\E}}
+  \and
+  \inferrule[\textsc{Sub-Float}]
+    {m_1 \preceq m_2}
+    {\Float{m_1} <: \Float{m_2}}
+  \and
+  \inferrule[\textsc{Subsumption}]
+    {\Gamma \vdash e : \tau_1 \\ \tau_1 <: \tau_2}
+    {\Gamma \vdash e : \tau_2}
+\end{mathpar}
+
+\paragraph{Structural subtyping (standard).}
+Standard covariant/contravariant rules apply to composite types:
+\begin{mathpar}
+  \inferrule[\textsc{Sub-Refl}]{\;}{\tau <: \tau}
+  \and
+  \inferrule[\textsc{Sub-Prod}]
+    {\tau_1 <: \tau_1' \\ \tau_2 <: \tau_2'}
+    {\tau_1 \times \tau_2 <: \tau_1' \times \tau_2'}
+  \and
+  \inferrule[\textsc{Sub-Sum}]
+    {\tau_1 <: \tau_1' \\ \tau_2 <: \tau_2'}
+    {\tau_1 + \tau_2 <: \tau_1' + \tau_2'}
+  \and
+  \inferrule[\textsc{Sub-List}]
+    {\tau <: \tau'}
+    {\List{\tau} <: \List{\tau'}}
+  \and
+  \inferrule[\textsc{Sub-Arr}]
+    {\tau_1' <: \tau_1 \\ \tau_2 <: \tau_2'}
+    {\tau_1 \to \tau_2 <: \tau_1' \to \tau_2'}
+\end{mathpar}
+
