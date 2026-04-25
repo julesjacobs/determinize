@@ -41,6 +41,22 @@ where $\alpha$ is a mode metavariable.
     {\Gamma \vdash e_1 : \Float{m_1} \mid C_1 \\ \Gamma \vdash e_2 : \Float{m_2} \mid C_2}
     {\Gamma \vdash \gaussian(e_1,e_2) : \Float{\alpha} \mid C_1, C_2, m_1 \preceq \alpha, m_2 \preceq \G}
   \and
+  \inferrule[\textsc{Poisson}]
+    {\Gamma \vdash e_1 : \Float{m_1} \mid C_1}
+    {\Gamma \vdash \poisson(e_1) : \Float{\alpha} \mid C_1, m_1 \preceq \alpha}
+  \and
+  \inferrule[\textsc{Exponential}]
+    {\Gamma \vdash e_1 : \Float{m_1} \mid C_1}
+    {\Gamma \vdash \exponential(e_1) : \Float{m} \mid C_1, m_1 \preceq \G}
+  \and
+  \inferrule[\textsc{Beta}]
+    {\Gamma \vdash e_1 : \Float{m_1} \mid C_1 \\ \Gamma \vdash e_2 : \Float{m_2} \mid C_2}
+    {\Gamma \vdash \betafn(e_1,e_2) : \Float{\alpha} \mid C_1, C_2, m_1 \preceq \G, m_2 \preceq \G}
+  \and
+  \inferrule[\textsc{Gamma}]
+    {\Gamma \vdash e_1 : \Float{m_1} \mid C_1 \\ \Gamma \vdash e_2 : \Float{m_2} \mid C_2}
+    {\Gamma \vdash \gammafn(e_1,e_2) : \Float{\alpha} \mid C_1, C_2, m_1 \preceq \alpha, m_2 \preceq \G}
+  \and
   \inferrule[\textsc{If}]
     {\Gamma \vdash e_1 : \Bool \mid C_1 \\ \Gamma \vdash e_2 : \tau_2 \mid C_2 \\ \Gamma \vdash e_3 : \tau_3 \mid C_3}
     {\Gamma \vdash \ifkw\;e\;\thenkw\;e_2\;\elsekw\;e_3 : \tau_4 \mid C_1, C_2, C_3, \tau_2 <: \tau_4, \tau_3 <: \tau_4}

@@ -1,0 +1,8 @@
+(* E[gamma(e1, e2)] = e1 / e2. 
+
+Here, gamma(e1: float[G], e2: float[G]) : float[E]
+This determinizes into the program:
+(uniform(0,1)*uniform(0,1)) / 1
+*)
+
+gamma(uniform(0,1)*uniform(0,1), 1)

@@ -102,7 +102,10 @@ Judgments have the form \(\Gamma \vdash e : \tau\), where \(\Gamma\) is a standa
   \inferrule[\textsc{Cmp}]
     {\Gamma \vdash e_1 : \Float{m_1} \\ \Gamma \vdash e_2 : \Float{m_2} \\ m_1 \preceq \G \\ m_2 \preceq \G}
     {\Gamma \vdash e_1 < e_2 : \Bool}
-  \and
+\end{mathpar}
+
+\paragraph{Distributions.}
+\begin{mathpar}
   \inferrule[\textsc{Uniform}]
     {\Gamma \vdash e_1 : \Float{m_1} \\ \Gamma \vdash e_2 : \Float{m_2} \\ m_1 \preceq m \\ m_2 \preceq m}
     {\Gamma \vdash \uniform(e_1,e_2) : \Float{m}}
@@ -110,6 +113,22 @@ Judgments have the form \(\Gamma \vdash e : \tau\), where \(\Gamma\) is a standa
   \inferrule[\textsc{Gauss}]
     {\Gamma \vdash e_1 : \Float{m_1} \\ \Gamma \vdash e_2 : \Float{m_2} \\ m_1 \preceq m \\ m_2 \preceq \G}
     {\Gamma \vdash \gaussian(e_1,e_2) : \Float{m}}
+  \and
+  \inferrule[\textsc{Poisson}]
+    {\Gamma \vdash e_1 : \Float{m_1} \\ m_1 \preceq m}
+    {\Gamma \vdash \poisson(e_1) : \Float{m}}
+  \and
+  \inferrule[\textsc{Exponential}]
+    {\Gamma \vdash e_1 : \Float{m_1} \\ m_1 \preceq \G}
+    {\Gamma \vdash \exponential(e_1) : \Float{m}}
+  \and
+  \inferrule[\textsc{Beta}]
+    {\Gamma \vdash e_1 : \Float{m_1} \\ \Gamma \vdash e_2 : \Float{m_2} \\ m_1 \preceq \G \\ m_2 \preceq \G}
+    {\Gamma \vdash \betafn(e_1,e_2) : \Float{m}}
+  \and
+  \inferrule[\textsc{Gamma}]
+    {\Gamma \vdash e_1 : \Float{m_1} \\ \Gamma \vdash e_2 : \Float{m_2} \\ m_1 \preceq m \\ m_2 \preceq \G}
+    {\Gamma \vdash \gammafn(e_1,e_2) : \Float{m}}
 \end{mathpar}
 
 Multiplication is general-mode only unless one side is a (typed) literal, in which case it follows the literal's mode; addition is parametric in the mode; comparison is only allowed at general mode. Uniform sampling preserves the incoming mode; Gaussian sampling returns the incoming mode but requires a general-typed variance.
