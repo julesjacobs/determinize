@@ -84,31 +84,31 @@ Judgments have the form \(\Gamma \vdash e : \tau\), where \(\Gamma\) is a standa
     {\Gamma \vdash -e : \Float{m}}
   \and
   \inferrule[\textsc{Add}]
-    {\Gamma \vdash e_1 : \Float{m} \\ \Gamma \vdash e_2 : \Float{m}}
+    {\Gamma \vdash e_1 : \Float{m_1} \\ \Gamma \vdash e_2 : \Float{m_2} \\ m_1 \preceq m \\ m_2 \preceq m}
     {\Gamma \vdash e_1 + e_2 : \Float{m}}
   \and
   \inferrule[\textsc{Mul-G}]
-    {\Gamma \vdash e_1 : \Float{\G} \\ \Gamma \vdash e_2 : \Float{\G}}
+    {\Gamma \vdash e_1 : \Float{m_1} \\ \Gamma \vdash e_2 : \Float{m_2} \\ m_1 \preceq \G \\ m_2 \preceq \G}
     {\Gamma \vdash e_1 \times e_2 : \Float{\G}}
   \and
   \inferrule[\textsc{Mul-ConstL}]
-    {\Gamma \vdash c : \Float{m} \\ \Gamma \vdash e : \Float{m}}
+    {\Gamma \vdash c : \Float{m_1} \\ \Gamma \vdash e : \Float{m_2} \\ m_1 \preceq m \\ m_2 \preceq m}
     {\Gamma \vdash c \times e : \Float{m}}
   \and
   \inferrule[\textsc{Mul-ConstR}]
-    {\Gamma \vdash e : \Float{m} \\ \Gamma \vdash c : \Float{m}}
+    {\Gamma \vdash e : \Float{m_1} \\ \Gamma \vdash c : \Float{m_2} \\ m_1 \preceq m \\ m_2 \preceq m}
     {\Gamma \vdash e \times c : \Float{m}}
   \and
   \inferrule[\textsc{Cmp}]
-    {\Gamma \vdash e_1 : \Float{\G} \\ \Gamma \vdash e_2 : \Float{\G}}
+    {\Gamma \vdash e_1 : \Float{m_1} \\ \Gamma \vdash e_2 : \Float{m_2} \\ m_1 \preceq \G \\ m_2 \preceq \G}
     {\Gamma \vdash e_1 < e_2 : \Bool}
   \and
-  \inferrule[\textsc{Sample}]
-    {\Gamma \vdash e_1 : \Float{m} \\ \Gamma \vdash e_2 : \Float{m}}
+  \inferrule[\textsc{Uniform}]
+    {\Gamma \vdash e_1 : \Float{m_1} \\ \Gamma \vdash e_2 : \Float{m_2} \\ m_1 \preceq m \\ m_2 \preceq m}
     {\Gamma \vdash \uniform(e_1,e_2) : \Float{m}}
   \and
   \inferrule[\textsc{Gauss}]
-    {\Gamma \vdash e_1 : \Float{m} \\ \Gamma \vdash e_2 : \Float{\G}}
+    {\Gamma \vdash e_1 : \Float{m_1} \\ \Gamma \vdash e_2 : \Float{m_2} \\ m_1 \preceq m \\ m_2 \preceq \G}
     {\Gamma \vdash \gaussian(e_1,e_2) : \Float{m}}
 \end{mathpar}
 

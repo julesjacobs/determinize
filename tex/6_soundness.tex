@@ -50,37 +50,63 @@
 \subsection{Transformation}
 
 \begin{definition}[Expectation transformation]
-  Define $\mathcal{E}\langle e : \mathsf{float} \rangle$ inductively on the structure of $e$.
+  Define $\exptrans{e : \mathsf{float}}$ inductively on the structure of $e$.
 
   *** This will be dependent on the types.
 
   \begin{figure}[t]
-    \footnotesize
+    \small
     \centering
-    \begin{tabular}{l|l|l}
-      \textbf{$e:\tau$} & \textbf{Condition} & \textbf{$\mathcal{E}(e:\tau)$} \\
+    \begin{tabular}{p{0.35\linewidth}|p{0.16\linewidth}|p{0.43\linewidth}}
+      \textbf{$e:\tau$} & \textbf{Condition} & \textbf{$\exptrans{e : \tau}$} \\
       \hline
-      $c : \floattype{m}$ &
-      for float literal $c$ &
+      \hline
+      $c : \Float{m}$ &
+      -- &
       $c$ \\
-      $\uniform(a : \floattype{E}, b : \floattype{E})$ &
+      \hline
+      %
+      $\uniform(e_1 : \Float{m_1}, e_2 : \Float{m_2}) : \Float{m_3}$ &
+      \begin{tabular}[c]{@{}l@{}}
+        $m_3 = \E$ \\
+        $m_3 = \G$
+      \end{tabular} &
+      \begin{tabular}[c]{@{}l@{}}
+        $(\exptrans{e_1 : \Float{m_1}} + \exptrans{e_2 : \Float{m_2}}) \times 0.5$ \\
+        $\uniform(\exptrans{e_1 : \Float{m_1}}, \exptrans{e_2 : \Float{m_2}})$
+      \end{tabular} \\
+      \hline
+      %
+      %
+      $\gaussian(e_1 : \Float{m_1}, e_2 : \Float{m_2}) : \Float{m_3}$ &
+      \begin{tabular}[c]{@{}l@{}}
+        $m_3 = \E$ \\
+        $m_3 = \G$
+      \end{tabular} &
+      \begin{tabular}[c]{@{}l@{}}
+        $\exptrans{e_1 : \Float{m_1}}$ \\
+        $\gaussian(\exptrans{e_1 : \Float{m_1}}, \exptrans{e_2 : \Float{m_2}})$
+      \end{tabular} \\
+      \hline
+      %
+      $(e_1 : \Float{m_1} + e_2 : \Float{m_2}) : \Float{m_3}$ &
       -- &
-      $\tfrac{a+b}{2}$ \\
-      $\uniform(a : \floattype{G}, b : \floattype{G})$ &
+      $\exptrans{e_1 : \Float{m_1}} + \exptrans{e_2 : \Float{m_2}}$ \\
+      \hline
+      %
+      $(e_1 : \Float{m_1} \times e_2 : \Float{m_2}) : \Float{m_3}$ &
       -- &
-      $\uniform(a, b)$ \\
-      $\uniform(e_1 : \floattype{m}, e_2 : \floattype{m})$ &
+      $\exptrans{e_1 : \Float{m_1}} \times \exptrans{e_2 : \Float{m_2}}$ \\
+      \hline
+      %
+      $(\ifkw\ b : \Bool\ \thenkw\ e_1 : \tau\ \elsekw\ e_2 : \tau) : \tau$ &
       -- &
-      $\uniform(\mathcal{E}\langle e_1 : \floattype{m} \rangle, \mathcal{E}\langle e_2 : \floattype{m} \rangle)$ \\
-      $\gaussian(m : \floattype{E}, \sigma^2 : \floattype{G})$ &
+      $\ifkw\ \exptrans{b : \Bool}\ \thenkw\ \exptrans{e_1 : \tau} \elsekw\ \exptrans{e_2 : \tau}$ \\
+      %
+      \hline
+      $(\letkw\ x = e_1 : \tau_1 \inkw\ e_2 : \tau_2) : \tau_2$ &
       -- &
-      $m$ \\
-      $\ldots$ &
-      -- &
-      $\ldots$ \\
-      $\letkw\ x = e_1 \inkw\ e_2$ &
-      -- &
-      $\letkw\ x = \mathcal{E}\langle e_1 \rangle \inkw\ \mathcal{E}\langle e_2 \rangle$
+      $\letkw\ x = \exptrans{e_1 : \tau_1} \inkw\ \exptrans{e_2 : \tau_2}$
       \\
     \end{tabular}
     \caption{Expectation transformation clauses.}
@@ -181,6 +207,3 @@
   \]
   where the right-hand side is a deterministic real value.
 \end{theorem}
-
-
-

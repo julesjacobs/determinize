@@ -1,0 +1,18 @@
+(* We can use linearity of expectation here: 
+E[x*x + x*x] = E[x*x] + E[x*x].
+
+Annotated program:
+
+( let x =
+    ( gauss( ( 0 : float[G] ), ( 1 : float[G] ) ) : float[G] )
+    in
+    ( ( ( x : float[G] ) * ( x : float[G] ) : float[G] ) + ( ( x : float[G] ) * ( x : float[G] ) : float[G] ) : float[E] ) : float[E] )
+
+In this case, (e1: float[G] + e2: float[G]): float[E].
+This is fine because the typing rule for Add allows this.
+
+However, something like (e1: float[E] + e2: float[E]) : float[G] or 
+(e1: float[G] + e2: float[E]) : float[G] cannot happen.
+*)
+
+let x = gauss(0,1) in x*x + x*x

@@ -1,0 +1,51 @@
+\section{Type Inference}
+We infer types and modes by generating constraints from syntax-directed typing and solving them with subtyping and mode constraints.
+
+\paragraph{Constraint generation}
+Constraint generation rules for type inference for float-typed expressions. Choose the greatest solution with respect to $\G \preceq \E$, i.e. choose $\E$ whenever the constraints do not force $\G$.
+
+Let the modes be:
+\begin{align*}
+    m := E \mid G \mid \alpha
+\end{align*}
+where $\alpha$ is a mode metavariable.
+
+\begin{mathpar}
+  \inferrule[\textsc{FloatLit}]{\;}{\Gamma \vdash c : \Float{\alpha} \mid \emptyset}
+  \and
+  \inferrule[\textsc{Add}]
+    {\Gamma \vdash e_1 : \Float{m_1} \mid C_1 \\ \Gamma \vdash e_2 : \Float{m_2} \mid C_2}
+    {\Gamma \vdash e_1 + e_2 : \Float{\alpha} \mid C_1, C_2, m_1 \preceq \alpha, m_2 \preceq \alpha}
+  \and
+  \inferrule[\textsc{Mul-G}]
+    {\Gamma \vdash e_1 : \Float{m_1} \mid C_1 \\ \Gamma \vdash e_2 : \Float{m_2} \mid C_2}
+    {\Gamma \vdash e_1 \times e_2 : \Float{\G}  \mid C_1, C_2, m_1 \preceq \G, m_2 \preceq \G}
+  \and
+  \inferrule[\textsc{Mul-ConstL}]
+    {\Gamma \vdash c : \Float{m_1} \mid C_1 \\ \Gamma \vdash e : \Float{m_2} \mid C_2}
+    {\Gamma \vdash c \times e : \Float{\alpha} \mid C_1, C_2, m_1 \preceq \alpha, m_2 \preceq \alpha}
+  \and
+  \inferrule[\textsc{Mul-ConstR}]
+    {\Gamma \vdash e : \Float{m_1} \mid C_1 \\ \Gamma \vdash c : \Float{m_2} \mid C_2}
+    {\Gamma \vdash e \times c : \Float{\alpha} \mid C_1, C_2, m_1 \preceq \alpha, m_2 \preceq \alpha}
+  \and
+  \inferrule[\textsc{Cmp}]
+    {\Gamma \vdash e_1 : \Float{m_1} \mid C_1 \\ \Gamma \vdash e_2 : \Float{m_2} \mid C_2}
+    {\Gamma \vdash e_1 < e_2 : \Bool : C_1, C_2, m_1 \preceq \G, m_2 \preceq \G}
+  \and
+  \inferrule[\textsc{Uniform}]
+    {\Gamma \vdash e_1 : \Float{m_1} \mid C_1 \\ \Gamma \vdash e_2 : \Float{m_2} \mid C_2}
+    {\Gamma \vdash \uniform(e_1,e_2) : \Float{\alpha} \mid C_1, C_2, m_1 \preceq \alpha, m_2 \preceq \alpha}
+  \and
+  \inferrule[\textsc{Gauss}]
+    {\Gamma \vdash e_1 : \Float{m_1} \mid C_1 \\ \Gamma \vdash e_2 : \Float{m_2} \mid C_2}
+    {\Gamma \vdash \gaussian(e_1,e_2) : \Float{\alpha} \mid C_1, C_2, m_1 \preceq \alpha, m_2 \preceq \G}
+  \and
+  \inferrule[\textsc{If}]
+    {\Gamma \vdash e_1 : \Bool \mid C_1 \\ \Gamma \vdash e_2 : \tau_2 \mid C_2 \\ \Gamma \vdash e_3 : \tau_3 \mid C_3}
+    {\Gamma \vdash \ifkw\;e\;\thenkw\;e_2\;\elsekw\;e_3 : \tau_4 \mid C_1, C_2, C_3, \tau_2 <: \tau_4, \tau_3 <: \tau_4}
+  \and
+  \inferrule[\textsc{Let}]
+    {\Gamma \vdash e_1 : \tau_1 \mid C_1 \\ \Gamma, x{:}\tau_1 \vdash e_2 : \tau_2 \mid C_2}
+    {\Gamma \vdash \letkw\;x=e_1\;\inkw\;e_2 : \tau_2 \mid C_1, C_2}
+\end{mathpar}

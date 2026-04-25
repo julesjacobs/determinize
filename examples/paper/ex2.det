@@ -1,0 +1,12 @@
+(* This is NOT the same as let x = uniform(0.5, 1) in x*x.
+
+The uniform(0,1) parameter is annotated as: uniform(0: float[G], 1: float[G]): float[G] to prevent determinization.
+
+Annotated program:
+( let x =
+    ( uniform( ( uniform( ( 0 : float[G] ), ( 1 : float[G] ) ) : float[G] ), ( 1 : float[G] ) ) : float[G] )
+    in
+    ( ( x : float[G] ) * ( x : float[G] ) : float[G] ) : float[G] )
+*)
+
+let x = uniform(uniform(0,1), 1) in x*x

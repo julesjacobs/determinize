@@ -1,0 +1,10 @@
+(*
+x is annotated as: uniform(e1: float[G], e2: float[E]): float[E] 
+y is annotated as: uniform(e1: float[G], e2: float[G]): float[E]
+These are fine because the typing rule for Uniform allow these.
+
+This is to demonstrate that something like uniform(e1: float[E], e2: float[G]) : float[G] cannot happen. *)
+
+let x = uniform(uniform(0,1)*uniform(0,2), 4) in 
+let y = uniform(uniform(0,1)*uniform(0,2), gauss(0,1)*gauss(0,2)) in 
+x + y

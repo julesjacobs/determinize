@@ -24,6 +24,19 @@
 [x] Add foldr example summing a list with mixed uniform/gauss samples
 
 Misc:
+[x] Remove \floattype/\float macros and replace all \floattype{...} usages with \Float{...}.
+[x] Insert 4_inference.tex and renumber subsequent TeX section files/includes.
+[x] Set fixed-width wrapped columns for the expectation-transformation figure table.
+[x] Fill expectation transformation figure with recursive clauses for if/let/add/mult.
+[x] Merge uniform transformation clauses into one table row with case-split condition/RHS cells.
+[x] Introduce \exptrans macro and replace angle-bracket expectation-transform uses in soundness.tex.
+[x] Macroize language construct keywords in TeX and centralize definitions in tex/macros.tex.
+[x] Make expectation transformation table a figure with column/row rules.
+[x] Convert expectation transformation equations in soundness.tex to a 3-column table.
+[x] Align non-scaling multiplication inference with Mul-G (result float[G]).
+[x] Move TeX \newcommand definitions into tex/macros.tex.
+[x] Prefix TeX section include files with numeric order.
+[x] Refactor tex/main.tex into per-section include files.
 [x] Make Transformation equations type-directed in tex/main.tex.
 [x] Finish justification tags in affine-continuation proof in tex/main.tex.
 [x] Fix project-local LaTeX build/PDF display workflow (VS Code + script).
