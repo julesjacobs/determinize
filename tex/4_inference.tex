@@ -1,15 +1,19 @@
 \section{Type Inference}
-We infer types and modes by generating constraints from syntax-directed typing and solving them with subtyping and mode constraints.
+Type inference proceeds in two steps: 
 
-\paragraph{Constraint generation}
-Constraint generation rules for type inference for float-typed expressions. Choose the greatest solution with respect to $\G \preceq \E$, i.e. choose $\E$ whenever the constraints do not force $\G$.
+\begin{enumerate}
+    \item \textit{Constraint generation}. Traverses the program once to generate constraints over the modes of float typed expressions.
+    \item \textit{Constraint solving}. Solves the constraints to produce a fully annotated program.
+\end{enumerate}
 
-Let the modes be:
+\subsection{Constraint Generation}
+Let the modes in a float type $\Float{m}$ be:
 \begin{align*}
     m := E \mid G \mid \alpha
 \end{align*}
-where $\alpha$ is a mode metavariable.
+where $\alpha$ is a mode metavariable. In particular, $\alpha$ is an unknown mode introduced by the inference algorithm. Each fresh $\alpha$ stands for a value in $\{\E, \G\}$ that will be fixed later by solving constraints.
 
+\paragraph{Floats and arithmetic}
 \begin{mathpar}
   \inferrule[\textsc{FloatLit}]{\;}{\Gamma \vdash c : \Float{\alpha} \mid \emptyset}
   \and
@@ -32,7 +36,10 @@ where $\alpha$ is a mode metavariable.
   \inferrule[\textsc{Cmp}]
     {\Gamma \vdash e_1 : \Float{m_1} \mid C_1 \\ \Gamma \vdash e_2 : \Float{m_2} \mid C_2}
     {\Gamma \vdash e_1 < e_2 : \Bool : C_1, C_2, m_1 \preceq \G, m_2 \preceq \G}
-  \and
+\end{mathpar}
+
+\paragraph{Distributions}
+\begin{mathpar}
   \inferrule[\textsc{Uniform}]
     {\Gamma \vdash e_1 : \Float{m_1} \mid C_1 \\ \Gamma \vdash e_2 : \Float{m_2} \mid C_2}
     {\Gamma \vdash \uniform(e_1,e_2) : \Float{\alpha} \mid C_1, C_2, m_1 \preceq \alpha, m_2 \preceq \alpha}
@@ -47,7 +54,7 @@ where $\alpha$ is a mode metavariable.
   \and
   \inferrule[\textsc{Exponential}]
     {\Gamma \vdash e_1 : \Float{m_1} \mid C_1}
-    {\Gamma \vdash \exponential(e_1) : \Float{m} \mid C_1, m_1 \preceq \G}
+    {\Gamma \vdash \exponential(e_1) : \Float{\alpha} \mid C_1, m_1 \preceq \G}
   \and
   \inferrule[\textsc{Beta}]
     {\Gamma \vdash e_1 : \Float{m_1} \mid C_1 \\ \Gamma \vdash e_2 : \Float{m_2} \mid C_2}
@@ -56,7 +63,10 @@ where $\alpha$ is a mode metavariable.
   \inferrule[\textsc{Gamma}]
     {\Gamma \vdash e_1 : \Float{m_1} \mid C_1 \\ \Gamma \vdash e_2 : \Float{m_2} \mid C_2}
     {\Gamma \vdash \gammafn(e_1,e_2) : \Float{\alpha} \mid C_1, C_2, m_1 \preceq \alpha, m_2 \preceq \G}
-  \and
+\end{mathpar}
+
+\paragraph{Control}
+\begin{mathpar}
   \inferrule[\textsc{If}]
     {\Gamma \vdash e_1 : \Bool \mid C_1 \\ \Gamma \vdash e_2 : \tau_2 \mid C_2 \\ \Gamma \vdash e_3 : \tau_3 \mid C_3}
     {\Gamma \vdash \ifkw\;e\;\thenkw\;e_2\;\elsekw\;e_3 : \tau_4 \mid C_1, C_2, C_3, \tau_2 <: \tau_4, \tau_3 <: \tau_4}
@@ -65,3 +75,81 @@ where $\alpha$ is a mode metavariable.
     {\Gamma \vdash e_1 : \tau_1 \mid C_1 \\ \Gamma, x{:}\tau_1 \vdash e_2 : \tau_2 \mid C_2}
     {\Gamma \vdash \letkw\;x=e_1\;\inkw\;e_2 : \tau_2 \mid C_1, C_2}
 \end{mathpar}
+
+\begin{example}
+    Consider the following program:
+    \[
+        \letkw\ x = \uniform(0,1)\ \inkw\ \betafn(x, 2)
+    \]
+
+    We annotate it with types:
+    \[
+    \begin{aligned}
+      &(\letkw\ x = \uniform(0 : \Float{\alpha_1},\, 1 : \Float{\alpha_2}) : \Float{\alpha_3} \\
+      &\quad \inkw\ \betafn(x : \Float{\alpha_3},\, 2 : \Float{\alpha_4}) : \Float{\alpha_5}) : \Float{\alpha_5}.
+    \end{aligned}
+    \]
+
+    The following constraints are generated:
+    \begin{align*}
+      \alpha_1 \preceq \alpha_3,\ \alpha_2 \preceq \alpha_3,\ \alpha_3 \preceq \G,\ \alpha_4 \preceq \G.
+    \end{align*}
+
+\end{example}
+
+\begin{example}
+    Consider the following program:
+    \[
+    \ifkw\ \flip(0.5)\ \thenkw\ \gammafn(\uniform(0,1), 1)\ \elsekw\ 2 * \betafn(1,4)
+    \]
+    
+    We annotate it with types:
+    \[
+    \begin{aligned}
+    &(\ifkw\ \flip(0.5) \\
+    &\quad \thenkw\ \gammafn\!\big(
+      \uniform(0 : \Float{\alpha_1},\, 1 : \Float{\alpha_2}) : \Float{\alpha_3},\,
+      1 : \Float{\alpha_4}
+    \big) : \Float{\alpha_5} \\
+    &\quad \elsekw\ \big(
+      2 : \Float{\alpha_6}
+      *\,
+      \betafn(1 : \Float{\alpha_7},\, 4 : \Float{\alpha_8}) : \Float{\alpha_9}
+    \big) : \Float{\alpha_{10}} \\
+    &)\ : \Float{\alpha_{11}}.
+    \end{aligned}
+    \]
+    
+  The following constraints are generated:
+  \begin{align*}
+      \alpha_1 \preceq \alpha_3 &, \alpha_2 \preceq \alpha_3 \\
+      \alpha_3 \preceq \alpha_5 &, \alpha_4 \preceq \G \\
+      \alpha_6 \preceq \alpha_{10} &, \alpha_9 \preceq \alpha_{10} \\
+      \alpha_7 \preceq \G &, \alpha_8 \preceq \G \\
+      \Float{\alpha_5} <: \Float{\alpha_{11}} &, \Float{\alpha_{10}} <: \Float{\alpha_{11}}
+  \end{align*}
+\end{example}
+
+\begin{example}
+    With lists.
+\end{example}
+
+\subsection{Constraint Solving}
+Constraint solving then finds a substitution mapping each metavariable $\alpha$ to $E$ or $G$. We choose the greatest solution with respect to $\G \preceq \E$, i.e. choose $\E$ whenever the constraints do not force $\G$. At the end of the constraint solving phase, set any remaining $\alpha$ to $\E$.
+
+\begin{example}
+  For the generated constraints above, the greatest solution is:
+  \begin{align*}
+    \theta = [&\alpha_1 \mapsto \G,\ \alpha_2 \mapsto \G,\ \alpha_3 \mapsto \G,\ \alpha_4 \mapsto \G,\ \alpha_5 \mapsto \E ].
+  \end{align*}
+  In particular, the program is assigned type $\Float{\E}$.
+\end{example}
+
+\begin{example}
+  For the generated constraints above, the greatest solution is:
+  \begin{align*}
+    \theta = [&\alpha_1 \mapsto \E,\ \alpha_2 \mapsto \E,\ \alpha_3 \mapsto \E,\ \alpha_4 \mapsto \G,\ \alpha_5 \mapsto \E, \\
+              &\alpha_6 \mapsto \E,\ \alpha_7 \mapsto \G,\ \alpha_8 \mapsto \G,\ \alpha_9 \mapsto \E,\ \alpha_{10} \mapsto \E,\ \alpha_{11} \mapsto \E ].
+  \end{align*}
+  In particular, the program is assigned type $\Float{\E}$.
+\end{example}

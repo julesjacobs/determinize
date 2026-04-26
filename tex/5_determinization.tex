@@ -1,53 +1,176 @@
 \section{Determinization}
-We use a type-directed transformation \(\Gamma \vdash e : \tau \darrow e'\) that preserves non-probabilistic structure and replaces probabilistic sampling by its expected value when the result is typed at expectation mode. Representative clauses are below; other constructs follow the obvious structural recursion.
-\begin{mathpar}
-  \inferrule[\textsc{Det-Uniform-E}]
-    {\Gamma \vdash e_1 : \Float{\E} \darrow e_1' \\ \Gamma \vdash e_2 : \Float{\E} \darrow e_2'}
-    {\Gamma \vdash \uniform(e_1,e_2) : \Float{\E} \darrow (e_1' + e_2') \times 0.5}
-  \and
-  \inferrule[\textsc{Det-Uniform-G}]
-    {\Gamma \vdash e_1 : \Float{\G} \darrow e_1' \\ \Gamma \vdash e_2 : \Float{\G} \darrow e_2'}
-    {\Gamma \vdash \uniform(e_1,e_2) : \Float{\G} \darrow \uniform(e_1',e_2')}
-  \and
-  \inferrule[\textsc{Det-Gauss-E}]
-    {\Gamma \vdash e_1 : \Float{\E} \darrow e_1' \\ \Gamma \vdash e_2 : \Float{\G} \darrow e_2'}
-    {\Gamma \vdash \gaussian(e_1,e_2) : \Float{\E} \darrow e_1'}
-  \and
-  \inferrule[\textsc{Det-Gauss-G}]
-    {\Gamma \vdash e_1 : \Float{\G} \darrow e_1' \\ \Gamma \vdash e_2 : \Float{\G} \darrow e_2'}
-    {\Gamma \vdash \gaussian(e_1,e_2) : \Float{\G} \darrow \gaussian(e_1',e_2')}
-  \and
-  \inferrule[\textsc{Det-Var}]
-    {\Gamma \vdash x : \tau}
-    {\Gamma \vdash x : \tau \darrow x}
-  \and
-  \inferrule[\textsc{Det-Abs}]
-    {\Gamma, x{:}\tau_1 \vdash e : \tau_2 \darrow e'}
-    {\Gamma \vdash \lambda x.\,e : \tau_1 \to \tau_2 \darrow \lambda x.\,e'}
-  \and
-  \inferrule[\textsc{Det-Rec}]
-    {\Gamma, f{:}\tau_1 \to \tau_2, x{:}\tau_1 \vdash e : \tau_2 \darrow e'}
-    {\Gamma \vdash \mathsf{rec}\;f\;x.\,e : \tau_1 \to \tau_2 \darrow \mathsf{rec}\;f\;x.\,e'}
-  \and
-  \inferrule[\textsc{Det-Const}]
-    {\Gamma \vdash c : \Float{m}}
-    {\Gamma \vdash c : \Float{m} \darrow c}
-  \and
-  \inferrule[\textsc{Det-Neg}]
-    {\Gamma \vdash e : \Float{m} \darrow e'}
-    {\Gamma \vdash -e : \Float{m} \darrow -e'}
-  \and
-  \inferrule[\textsc{Det-Add}]
-    {\Gamma \vdash e_1 : \Float{m} \darrow e_1' \\ \Gamma \vdash e_2 : \Float{m} \darrow e_2'}
-    {\Gamma \vdash e_1 + e_2 : \Float{m} \darrow e_1' + e_2'}
-  \and
-  \inferrule[\textsc{Det-Mul}]
-    {\Gamma \vdash e_1 : \Float{\G} \darrow e_1' \\ \Gamma \vdash e_2 : \Float{\G} \darrow e_2'}
-    {\Gamma \vdash e_1 \times e_2 : \Float{\G} \darrow e_1' \times e_2'}
-  \and
-  \inferrule[\textsc{Det-If}]
-    {\Gamma \vdash e : \Bool \darrow e' \\ \Gamma \vdash e_1 : \tau \darrow e_1' \\ \Gamma \vdash e_2 : \tau \darrow e_2'}
-    {\Gamma \vdash \ifkw\;e\;\thenkw\;e_1\;\elsekw\;e_2 : \tau \darrow \ifkw\;e'\;\thenkw\;e_1'\;\elsekw\;e_2'}
-\end{mathpar}
-Lambda, application, pairs, sums, and \(\letkw\) follow the same shape (recursing on subterms). The key point is that expectation-mode samples are determinized to their expected value, while general-mode samples remain probabilistic but have their subterms determinized.
+We use a type-directed transformation that preserves non-probabilistic structure and replaces probabilistic sampling by its expected value when the result is typed at expectation mode. \Cref{fig:determinization} shows the determinization function, defined inductively on the structure of $e : \tau$. For all other language constructs, $\exptrans{\cdot}$ recurses structurally over them.
+
+\begin{figure*}[t]
+  \centering
+  \tiny
+  \setlength{\tabcolsep}{6pt}
+  \renewcommand{\arraystretch}{1.2}
+  \begin{adjustbox}{max width=\textwidth}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}m{0.33\textwidth}
+      @{\hspace{3em}}
+      >{\raggedright\arraybackslash}p{0.14\textwidth}
+      @{\hspace{1em}}
+      >{\raggedright\arraybackslash}p{0.43\textwidth}@{}}
+    \toprule
+    \toprule
+    \textbf{$e:\tau$} & \textbf{Condition} & \textbf{$\exptrans{e : \tau}$} \\
+    \midrule
+    %
+    $x : \tau$  & 
+    -- &
+    $x$ \\
+    \midrule
+    %
+    $c : \Float{m}$ &
+    -- &
+    $c$ \\
+    \midrule
+    %
+    $\uniform(e_1 : \Float{m_1}, e_2 : \Float{m_2}) : \Float{m_3}$ &
+    \begin{tabular}[c]{@{}l@{}}
+      $m_3 = \E$ \\
+      $m_3 = \G$
+    \end{tabular} &
+    \begin{tabular}[c]{@{}l@{}}
+      $(\exptrans{e_1 : \Float{m_1}} + \exptrans{e_2 : \Float{m_2}}) \times 0.5$ \\
+      $\uniform(\exptrans{e_1 : \Float{m_1}}, \exptrans{e_2 : \Float{m_2}})$
+    \end{tabular} \\
+    \midrule
+    %
+    %
+    $\gaussian(e_1 : \Float{m_1}, e_2 : \Float{m_2}) : \Float{m_3}$ &
+    \begin{tabular}[c]{@{}l@{}}
+      $m_3 = \E$ \\
+      $m_3 = \G$
+    \end{tabular} &
+    \begin{tabular}[c]{@{}l@{}}
+      $\exptrans{e_1 : \Float{m_1}}$ \\
+      $\gaussian(\exptrans{e_1 : \Float{m_1}}, \exptrans{e_2 : \Float{m_2}})$
+    \end{tabular} \\
+    \midrule
+    %
+    $\betafn(e_1 : \Float{m_1}, e_2 : \Float{m_2}) : \Float{m_3}$ &
+    \begin{tabular}[c]{@{}l@{}}
+      $m_3 = \E$ \\
+      $m_3 = \G$
+    \end{tabular} &
+    \begin{tabular}[c]{@{}l@{}}
+      $\exptrans{e_1 : \Float{m_1}} / (\exptrans{e_1 : \Float{m_1}} + \exptrans{e_2 : \Float{m_2}})$ \\
+      $\betafn(\exptrans{e_1 : \Float{m_1}}, \exptrans{e_2 : \Float{m_2}})$
+    \end{tabular} \\
+    \midrule
+    %
+    $\poisson(e_1 : \Float{m_1}) : \Float{m_2}$ &
+    \begin{tabular}[c]{@{}l@{}}
+      $m_2 = \E$ \\
+      $m_2 = \G$
+    \end{tabular} &
+    \begin{tabular}[c]{@{}l@{}}
+      $\exptrans{e_1 : \Float{m_1}}$ \\
+      $\poisson(\exptrans{e_1 : \Float{m_1}})$
+    \end{tabular} \\
+    \midrule
+    %
+    $\gammafn(e_1 : \Float{m_1}, e_2 : \Float{m_2}) : \Float{m_3}$ &
+    \begin{tabular}[c]{@{}l@{}}
+      $m_3 = \E$ \\
+      $m_3 = \G$
+    \end{tabular} &
+    \begin{tabular}[c]{@{}l@{}}
+      $\exptrans{e_1 : \Float{m_1}} / \exptrans{e_2 : \Float{m_2}}$ \\
+      $\gammafn(\exptrans{e_1 : \Float{m_1}}, \exptrans{e_2 : \Float{m_2}})$
+    \end{tabular} \\
+    \midrule
+    %
+    $\exponential(e_1 : \Float{m_1}) : \Float{m_2}$ &
+    \begin{tabular}[c]{@{}l@{}}
+      $m_2 = \E$ \\
+      $m_2 = \G$
+    \end{tabular} &
+    \begin{tabular}[c]{@{}l@{}}
+      $1 / \exptrans{e_1 : \Float{m_1}}$ \\
+      $\exponential(\exptrans{e_1 : \Float{m_1}})$
+    \end{tabular} \\
+    \midrule
+    %
+    $(e_1 : \Float{m_1} + e_2 : \Float{m_2}) : \Float{m_3}$ &
+    -- &
+    $\exptrans{e_1 : \Float{m_1}} + \exptrans{e_2 : \Float{m_2}}$ \\
+    \midrule
+    %
+    $(e_1 : \Float{m_1} \times e_2 : \Float{m_2}) : \Float{m_3}$ &
+    -- &
+    $\exptrans{e_1 : \Float{m_1}} \times \exptrans{e_2 : \Float{m_2}}$ \\
+    \midrule
+    %
+    $(\ifkw\ b : \Bool\ \thenkw\ e_1 : \tau\ \elsekw\ e_2 : \tau) : \tau$ &
+    -- &
+    $\ifkw\ \exptrans{b : \Bool}\ \thenkw\ \exptrans{e_1 : \tau}\ \elsekw\ \exptrans{e_2 : \tau}$ \\
+    %
+    \midrule
+    $(\letkw\ x = e_1 : \tau_1\ \inkw\ e_2 : \tau_2) : \tau_2$ &
+    -- &
+    $\letkw\ x = \exptrans{e_1 : \tau_1}\ \inkw\ \exptrans{e_2 : \tau_2}$
+    \\
+    \bottomrule
+    \bottomrule
+  \end{tabular}
+  \end{adjustbox}
+  \caption{Determinization function. We case split only on the modes that affect $\exptrans{\cdot}$; all other float modes are independent and may range over $\E$ and $\G$.}
+  \label{fig:determinization}
+\end{figure*}
+
+
+% We use a type-directed transformation \(\Gamma \vdash e : \tau \darrow e'\) that preserves non-probabilistic structure and replaces probabilistic sampling by its expected value when the result is typed at expectation mode. Representative clauses are below; other constructs follow the obvious structural recursion.
+% \begin{mathpar}
+%   \inferrule[\textsc{Det-Uniform-E}]
+%     {\Gamma \vdash e_1 : \Float{\E} \darrow e_1' \\ \Gamma \vdash e_2 : \Float{\E} \darrow e_2'}
+%     {\Gamma \vdash \uniform(e_1,e_2) : \Float{\E} \darrow (e_1' + e_2') \times 0.5}
+%   \and
+%   \inferrule[\textsc{Det-Uniform-G}]
+%     {\Gamma \vdash e_1 : \Float{\G} \darrow e_1' \\ \Gamma \vdash e_2 : \Float{\G} \darrow e_2'}
+%     {\Gamma \vdash \uniform(e_1,e_2) : \Float{\G} \darrow \uniform(e_1',e_2')}
+%   \and
+%   \inferrule[\textsc{Det-Gauss-E}]
+%     {\Gamma \vdash e_1 : \Float{\E} \darrow e_1' \\ \Gamma \vdash e_2 : \Float{\G} \darrow e_2'}
+%     {\Gamma \vdash \gaussian(e_1,e_2) : \Float{\E} \darrow e_1'}
+%   \and
+%   \inferrule[\textsc{Det-Gauss-G}]
+%     {\Gamma \vdash e_1 : \Float{\G} \darrow e_1' \\ \Gamma \vdash e_2 : \Float{\G} \darrow e_2'}
+%     {\Gamma \vdash \gaussian(e_1,e_2) : \Float{\G} \darrow \gaussian(e_1',e_2')}
+%   \and
+%   \inferrule[\textsc{Det-Var}]
+%     {\Gamma \vdash x : \tau}
+%     {\Gamma \vdash x : \tau \darrow x}
+%   \and
+%   \inferrule[\textsc{Det-Abs}]
+%     {\Gamma, x{:}\tau_1 \vdash e : \tau_2 \darrow e'}
+%     {\Gamma \vdash \lambda x.\,e : \tau_1 \to \tau_2 \darrow \lambda x.\,e'}
+%   \and
+%   \inferrule[\textsc{Det-Rec}]
+%     {\Gamma, f{:}\tau_1 \to \tau_2, x{:}\tau_1 \vdash e : \tau_2 \darrow e'}
+%     {\Gamma \vdash \mathsf{rec}\;f\;x.\,e : \tau_1 \to \tau_2 \darrow \mathsf{rec}\;f\;x.\,e'}
+%   \and
+%   \inferrule[\textsc{Det-Const}]
+%     {\Gamma \vdash c : \Float{m}}
+%     {\Gamma \vdash c : \Float{m} \darrow c}
+%   \and
+%   \inferrule[\textsc{Det-Neg}]
+%     {\Gamma \vdash e : \Float{m} \darrow e'}
+%     {\Gamma \vdash -e : \Float{m} \darrow -e'}
+%   \and
+%   \inferrule[\textsc{Det-Add}]
+%     {\Gamma \vdash e_1 : \Float{m} \darrow e_1' \\ \Gamma \vdash e_2 : \Float{m} \darrow e_2'}
+%     {\Gamma \vdash e_1 + e_2 : \Float{m} \darrow e_1' + e_2'}
+%   \and
+%   \inferrule[\textsc{Det-Mul}]
+%     {\Gamma \vdash e_1 : \Float{\G} \darrow e_1' \\ \Gamma \vdash e_2 : \Float{\G} \darrow e_2'}
+%     {\Gamma \vdash e_1 \times e_2 : \Float{\G} \darrow e_1' \times e_2'}
+%   \and
+%   \inferrule[\textsc{Det-If}]
+%     {\Gamma \vdash e : \Bool \darrow e' \\ \Gamma \vdash e_1 : \tau \darrow e_1' \\ \Gamma \vdash e_2 : \tau \darrow e_2'}
+%     {\Gamma \vdash \ifkw\;e\;\thenkw\;e_1\;\elsekw\;e_2 : \tau \darrow \ifkw\;e'\;\thenkw\;e_1'\;\elsekw\;e_2'}
+% \end{mathpar}
+% Lambda, application, pairs, sums, and \(\letkw\) follow the same shape (recursing on subterms). The key point is that expectation-mode samples are determinized to their expected value, while general-mode samples remain probabilistic but have their subterms determinized.
 

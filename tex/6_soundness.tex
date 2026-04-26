@@ -28,13 +28,13 @@
 \subsection{Big-step}
 
 \begin{lemma}[$n$-step semantics]
-  The $n$-step semantics $\sem{e : \tau}^n$ is defined by iterating the small-step kernel $n$ times, and is itself a Markov kernel.
+  The $n$-step semantics $\bigsemstep{e : \tau}{n}$ is defined by iterating the small-step kernel $n$ times, and is itself a Markov kernel.
 \end{lemma}
 
 \begin{lemma}[Monotone accumulation of mass]
   For all $n \in \mathbb{N}$:
   \begin{enumerate}
-    \item $\sem{e : \tau}^n(Val_\tau) \leq \sem{e : \tau}^{n+1}(Val_\tau)$
+    \item $\bigsemstep{e : \tau}{n}(Val_\tau) \leq \bigsemstep{e : \tau}{n+1}(Val_\tau)$
   \end{enumerate}
   That is, probability mass on values accumulates monotonically.
 \end{lemma}
@@ -42,7 +42,7 @@
 \begin{lemma}[Big-step semantics exists]
   The pointwise limit
   \[
-    \bigsem{e : \tau} := \lim_{n \to \infty} \sem{e : \tau}^n
+    \bigsem{e : \tau} := \lim_{n \to \infty} \bigsemstep{e : \tau}{n}
   \]
   exists as a sub-probability measure on $Val_\tau$, by the monotone convergence theorem.
 \end{lemma}
@@ -53,121 +53,6 @@
   Define $\exptrans{e : \mathsf{float}}$ inductively on the structure of $e$.
 
   *** This will be dependent on the types.
-  
-
-  \begin{figure*}[t]
-    \centering
-    \tiny
-    \setlength{\tabcolsep}{6pt}
-    \renewcommand{\arraystretch}{1.2}
-    \begin{adjustbox}{max width=\textwidth}
-    \begin{tabular}{@{}>{\raggedright\arraybackslash}m{0.33\textwidth}
-        @{\hspace{3em}}
-        >{\raggedright\arraybackslash}p{0.14\textwidth}
-        @{\hspace{1em}}
-        >{\raggedright\arraybackslash}p{0.43\textwidth}@{}}
-      \toprule
-      \toprule
-      \textbf{$e:\tau$} & \textbf{Condition} & \textbf{$\exptrans{e : \tau}$} \\
-      \midrule
-      $c : \Float{m}$ &
-      -- &
-      $c$ \\
-      \midrule
-      %
-      $\uniform(e_1 : \Float{m_1}, e_2 : \Float{m_2}) : \Float{m_3}$ &
-      \begin{tabular}[c]{@{}l@{}}
-        $m_3 = \E$ \\
-        $m_3 = \G$
-      \end{tabular} &
-      \begin{tabular}[c]{@{}l@{}}
-        $(\exptrans{e_1 : \Float{m_1}} + \exptrans{e_2 : \Float{m_2}}) \times 0.5$ \\
-        $\uniform(\exptrans{e_1 : \Float{m_1}}, \exptrans{e_2 : \Float{m_2}})$
-      \end{tabular} \\
-      \midrule
-      %
-      %
-      $\gaussian(e_1 : \Float{m_1}, e_2 : \Float{m_2}) : \Float{m_3}$ &
-      \begin{tabular}[c]{@{}l@{}}
-        $m_3 = \E$ \\
-        $m_3 = \G$
-      \end{tabular} &
-      \begin{tabular}[c]{@{}l@{}}
-        $\exptrans{e_1 : \Float{m_1}}$ \\
-        $\gaussian(\exptrans{e_1 : \Float{m_1}}, \exptrans{e_2 : \Float{m_2}})$
-      \end{tabular} \\
-      \midrule
-      %
-      $\betafn(e_1 : \Float{m_1}, e_2 : \Float{m_2}) : \Float{m_3}$ &
-      \begin{tabular}[c]{@{}l@{}}
-        $m_3 = \E$ \\
-        $m_3 = \G$
-      \end{tabular} &
-      \begin{tabular}[c]{@{}l@{}}
-        $\exptrans{e_1 : \Float{m_1}} / (\exptrans{e_1 : \Float{m_1}} + \exptrans{e_2 : \Float{m_2}})$ \\
-        $\betafn(\exptrans{e_1 : \Float{m_1}}, \exptrans{e_2 : \Float{m_2}})$
-      \end{tabular} \\
-      \midrule
-      %
-      $\poisson(e_1 : \Float{m_1}) : \Float{m_2}$ &
-      \begin{tabular}[c]{@{}l@{}}
-        $m_2 = \E$ \\
-        $m_2 = \G$
-      \end{tabular} &
-      \begin{tabular}[c]{@{}l@{}}
-        $\exptrans{e_1 : \Float{m_1}}$ \\
-        $\poisson(\exptrans{e_1 : \Float{m_1}})$
-      \end{tabular} \\
-      \midrule
-      %
-      $\gammafn(e_1 : \Float{m_1}, e_2 : \Float{m_2}) : \Float{m_3}$ &
-      \begin{tabular}[c]{@{}l@{}}
-        $m_3 = \E$ \\
-        $m_3 = \G$
-      \end{tabular} &
-      \begin{tabular}[c]{@{}l@{}}
-        $\exptrans{e_1 : \Float{m_1}} / \exptrans{e_2 : \Float{m_2}}$ \\
-        $\gammafn(\exptrans{e_1 : \Float{m_1}}, \exptrans{e_2 : \Float{m_2}})$
-      \end{tabular} \\
-      \midrule
-      %
-      $\exponential(e_1 : \Float{m_1}) : \Float{m_2}$ &
-      \begin{tabular}[c]{@{}l@{}}
-        $m_2 = \E$ \\
-        $m_2 = \G$
-      \end{tabular} &
-      \begin{tabular}[c]{@{}l@{}}
-        $1 / \exptrans{e_1 : \Float{m_1}}$ \\
-        $\exponential(\exptrans{e_1 : \Float{m_1}})$
-      \end{tabular} \\
-      \midrule
-      %
-      $(e_1 : \Float{m_1} + e_2 : \Float{m_2}) : \Float{m_3}$ &
-      -- &
-      $\exptrans{e_1 : \Float{m_1}} + \exptrans{e_2 : \Float{m_2}}$ \\
-      \midrule
-      %
-      $(e_1 : \Float{m_1} \times e_2 : \Float{m_2}) : \Float{m_3}$ &
-      -- &
-      $\exptrans{e_1 : \Float{m_1}} \times \exptrans{e_2 : \Float{m_2}}$ \\
-      \midrule
-      %
-      $(\ifkw\ b : \Bool\ \thenkw\ e_1 : \tau\ \elsekw\ e_2 : \tau) : \tau$ &
-      -- &
-      $\ifkw\ \exptrans{b : \Bool}\ \thenkw\ \exptrans{e_1 : \tau}\ \elsekw\ \exptrans{e_2 : \tau}$ \\
-      %
-      \midrule
-      $(\letkw\ x = e_1 : \tau_1\ \inkw\ e_2 : \tau_2) : \tau_2$ &
-      -- &
-      $\letkw\ x = \exptrans{e_1 : \tau_1}\ \inkw\ \exptrans{e_2 : \tau_2}$
-      \\
-      \bottomrule
-      \bottomrule
-    \end{tabular}
-    \end{adjustbox}
-    \caption{Expectation transformation clauses.}
-    \label{fig:expectation-transformation}
-  \end{figure*}
 \end{definition}
 
 
