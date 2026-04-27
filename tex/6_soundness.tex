@@ -142,9 +142,12 @@
 \subsection{Soundness?}
 
 \begin{theorem}[Soundness of expectation transformation]
-  Let $e : \mathsf{float}$ be a well-typed expression such that all continuations arising in $e$ are expectation-affine. Then:
+  Let $e : \mathsf{float}$ be a well-typed expression. Then:
   \[
-    \mathbb{E}[\bigsem{e : \mathsf{float}}] = \mathbb{E}[\bigsem{\mathcal{E}( e : \mathsf{float})}]
+    \mathbb{E}[\bigsem{e : \mathsf{float}}] = \mathbb{E}[\bigsem{\mathcal{E}( e : \mathsf{float}) : \mathsf{float}}].
   \]
-  where the right-hand side is a deterministic real value.
+
+  We actually don't necessarily need all continuations arising in $e$ be expectation affine.
+
+  And even if $\bigsem{e : \mathsf{float}}$ and $\bigsem{\mathcal{E}( e : \mathsf{float})}$ are different distributions, they can still have the same expectation.
 \end{theorem}

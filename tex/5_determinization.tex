@@ -1,7 +1,7 @@
 \section{Determinization}
 We use a type-directed transformation that preserves non-probabilistic structure and replaces probabilistic sampling by its expected value when the result is typed at expectation mode. \Cref{fig:determinization} shows the determinization function, defined inductively on the structure of $e : \tau$. For all other language constructs, $\exptrans{\cdot}$ recurses structurally over them.
 
-\begin{figure*}[t]
+\begin{figure}[t]
   \centering
   \tiny
   \setlength{\tabcolsep}{6pt}
@@ -119,7 +119,7 @@ We use a type-directed transformation that preserves non-probabilistic structure
   \end{adjustbox}
   \caption{Determinization function. We case split only on the modes that affect $\exptrans{\cdot}$; all other float modes are independent and may range over $\E$ and $\G$.}
   \label{fig:determinization}
-\end{figure*}
+\end{figure}
 
 
 % We use a type-directed transformation \(\Gamma \vdash e : \tau \darrow e'\) that preserves non-probabilistic structure and replaces probabilistic sampling by its expected value when the result is typed at expectation mode. Representative clauses are below; other constructs follow the obvious structural recursion.
