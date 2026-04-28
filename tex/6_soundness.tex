@@ -27,12 +27,12 @@
     -- &
     $\delta_{v : \tau}$ \\
     \midrule
-    $(<tkw\ x = e_1 : \tau_1\ \inkw\ e_2 : \tau_2) : \tau_2$ &
+    $(\letkw\ x = e_1 : \tau_1\ \inkw\ e_2 : \tau_2) : \tau_2$ &
     $e_1 = v$ &
     $\delta_{e_2[v/x] : \tau_2}$ \\
     &
     o.w. &
-    $\sem{e_1 : \tau_1} \monbind \lambda g.\,\delta_{(<tkw\ x = g\ \inkw\ e_2 : \tau_2) : \tau_2}$ \\
+    $\sem{e_1 : \tau_1} \monbind \lambda g.\,\delta_{(\letkw\ x = g\ \inkw\ e_2 : \tau_2) : \tau_2}$ \\
     \midrule
     $(\ifkw\ e_1 : \Bool\ \thenkw\ e_2 : \tau\ \elsekw\ e_3 : \tau) : \tau$ &
     $e_1 = \mathsf{true}$ &
