@@ -121,6 +121,45 @@ We use a type-directed transformation that preserves non-probabilistic structure
   \label{fig:determinization}
 \end{figure}
 
+\begin{example}
+  Recall the following program, annotated with types:
+  \[
+    \begin{aligned}
+      &(\letkw\ x = \uniform(0 : \Float{\G},\, 1 : \Float{\G}) : \Float{\G} \\
+      &\quad \inkw\ \betafn(x : \Float{\G},\, 2 : \Float{\G}) : \Float{\E}) : \Float{\E}.
+    \end{aligned}
+  \]
+
+  Based on determinization, obtain:
+  \[
+    \letkw\ x = \uniform(0,1)\ \inkw\ x / (x + 2).
+  \]
+\end{example}
+
+\begin{example}
+  Recall the following program, annotated with types:
+  \[
+    \begin{aligned}
+    &(\ifkw\ \flip(0.5) \\
+    &\quad \thenkw\ \gammafn\!\big(
+      \uniform(0 : \Float{\E},\, 1 : \Float{\E}) : \Float{\E},\,
+      1 : \Float{\G}
+    \big) : \Float{\E} \\
+    &\quad \elsekw\ \big(
+      2 : \Float{\E}
+      *\,
+      \betafn(1 : \Float{\G},\, 4 : \Float{\G}) : \Float{\E}
+    \big) : \Float{\E} \\
+    &)\ : \Float{\E}.
+    \end{aligned}
+  \]
+
+  Based on determinization, obtain:
+  \[
+    \ifkw\ \flip( 0.5 )\ \thenkw\ (( 0 + 1 ) * 0.5) / 1\ \elsekw\ 2 * ( 1 / ( 1 + 4 ) )
+  \]
+\end{example}
+
 
 % We use a type-directed transformation \(\Gamma \vdash e : \tau \darrow e'\) that preserves non-probabilistic structure and replaces probabilistic sampling by its expected value when the result is typed at expectation mode. Representative clauses are below; other constructs follow the obvious structural recursion.
 % \begin{mathpar}
