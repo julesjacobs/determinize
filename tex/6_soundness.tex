@@ -563,7 +563,7 @@
 \end{proof}
 
 
-\begin{lemma}[Stabilization]\label{lem:stabilization}
+\begin{lemma}\label{lem:stabilization}
   Let $N = \evalDepth(e : \tau)$. Then for all $n \geq N$,
   \[
     \bigsemstep{e : \tau}{n} = \bigsem{e : \tau}.
@@ -630,7 +630,7 @@
   \]
 \end{proof}
 
-\begin{lemma}[Expectation law for bind]\label{lem:expectation-bind}
+\begin{lemma}[Expectation for bind]\label{lem:expectation-bind}
   Let $\mu \in \mathcal{D}(X)$ be a measure and let
   $K : X \to \mathcal{D}(\mathbb{R})$ be a Markov kernel. Then
   \[
@@ -717,7 +717,7 @@
         \delta_{\exponential(a) : \Float{m}}
       \monbind
       \lambda e'.\,\sem{e' : \Float{m}}
-    \right] \tag{???}\\
+    \right] \tag{???idk}\\
     &=
     \mathbb{E}\!\left[\bigsemstep{e_1 : \Float{m_1}}{d_1}
     \monbind
@@ -728,7 +728,7 @@
     \monbind
     \lambda a.\,
       \sem{\exponential(a) : \Float{m}}\right] \tag{by~\Cref{lem:stabilization}}\\
-  \intertext{Since $a$ is a value, the small-step rule for $\exponential$ gives
+  \intertext{Since $a$ is a value, the small-step semantics for $\exponential$ gives
   $\sem{\exponential(a) : \Float{m}}
   =
   \mathsf{Exponential}(a)
@@ -742,7 +742,7 @@
         \mathsf{Exponential}(a)
         \monbind
         \lambda x.\,\delta_{x : \Float{m}}
-      \right)\right] \tag{by the small-step rule for $\exponential$}\\
+      \right)\right] \tag{by the small-step semantics for $\exponential$}\\
     &=
     \int
       \mathbb{E}\!\left[
@@ -750,7 +750,7 @@
         \monbind
         \lambda x.\,\delta_{x : \Float{m}}
       \right]
-    \,d\bigsem{e_1 : \Float{m_1}}(a) \tag{by the expectation law for bind}\\
+    \,d\bigsem{e_1 : \Float{m_1}}(a) \tag{by~\Cref{lem:expectation-bind}}\\
     &=
     \int
       \left(
@@ -820,14 +820,14 @@
     \bigsemstep{\exptrans{e_1 : \Float{m_1}} : \Float{m_1}}{d_1'}
     \monbind
     \lambda a.\,
-      \sem{1 : \Float{\E} \;/\; a : \Float{m}} \right] \tag{}\\
+      \sem{1 : \Float{\E} \;/\; a : \Float{m}} \right] \tag{???}\\
     &=
     \mathbb{E}\!\left[
     \bigsem{\exptrans{e_1 : \Float{m_1}} : \Float{m_1}}
     \monbind
     \lambda a.\,
       \sem{1 : \Float{\E} \;/\; a : \Float{m}}\right] \tag{by~\Cref{lem:stabilization}}\\
-  \intertext{Since $a$ is a value, the small-step rule for division gives
+  \intertext{Since $a$ is a value, the small-step semantics for division gives
   $\sem{1 : \Float{\E} \;/\; a : \Float{m}}
   =
   \delta_{(1/a) : \Float{m}}$. Hence,}
@@ -836,7 +836,7 @@
     \bigsem{\exptrans{e_1 : \Float{m_1}} : \Float{m_1}}
     \monbind
     \lambda a.\,
-      \delta_{(1/a) : \Float{m}}\right] \tag{by the small-step rule for division}\\
+      \delta_{(1/a) : \Float{m}}\right] \tag{by the small-step semantics for division}\\
     &=
     \int
       \mathbb{E}\!\left[
