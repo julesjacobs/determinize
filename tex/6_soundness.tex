@@ -194,6 +194,23 @@
 
 \end{lemma}
 
+\begin{lemma}[Values are absorbing]\label{lem:values-absorbing}
+  If $v : \tau \in Val_\tau$, then
+  \[
+    \sem{v : \tau} = \delta_{v : \tau}
+    \qquad\text{and}\qquad
+    \bigsemstep{v : \tau}{n} = \delta_{v : \tau}
+  \]
+  for every $n \in \mathbb{N}$.
+\end{lemma}
+
+\begin{proof}
+  The first equality follows by inspection of values in
+  \Cref{tab:small-step-semantics}. The second equality follows by induction on
+  $n$, using the first equality and the left-unit law for Dirac measures in the
+  successor case.
+\end{proof}
+
 \begin{lemma}[Monotone accumulation of mass]
   For all $n \in \mathbb{N}$:
   \begin{enumerate}
@@ -613,86 +630,53 @@
   \]
 \end{proof}
 
+\begin{lemma}[Expectation law for bind]\label{lem:expectation-bind}
+  Let $\mu \in \mathcal{D}(X)$ be a measure and let
+  $K : X \to \mathcal{D}(\mathbb{R})$ be a Markov kernel. Then
+  \[
+  \begin{aligned}
+    \mathbb{E}[\mu \monbind K]
+    &=
+    \int y \, d(\mu \monbind K)(y) \\
+    &=
+    \int
+      \left(
+        \int y \, dK(a)(y)
+      \right)
+    \,d\mu(a) \\
+    &=
+    \int \mathbb{E}[K(a)] \, d\mu(a).
+  \end{aligned}
+  \]
+\end{lemma}
+
 \begin{theorem}[Soundness of determinization]
   Let $e : \tau$ be a well-typed expression. Then:
   \[
-    \mathbb{E}[\bigsem{e : \mathsf{float}}] = \mathbb{E}[\bigsem{\mathcal{E}( e : \mathsf{float}) : \mathsf{float}}].
-  \]
-
-  In particular:
-  \[
-    \mathbb{E}[\bigsem{e : \Float{\E}}]
+    \mathbb{E}[\bigsem{e : \Float{m}}]
     =
-    \mathbb{E}[\bigsem{\exptrans{e : \Float{\E}} : \Float{\E}}]
+    \mathbb{E}[\bigsem{\exptrans{e : \Float{m}} : \Float{m}}]
   \]
 
-  and
+  where $m = \G$ or $\E$, and in particular:
   \[
     \bigsem{e : \Float{\G}}
     =
-    \bigsem{\exptrans{e : \Float{\G}} : \Float{\G}}
+    \bigsem{\exptrans{e : \Float{\G}} : \Float{\G}}.
   \]
 \end{theorem}
 
 \begin{proof}
   By induction on $e : \tau$.
 
-  \textbf{Case} $e : \tau = \exponential(e_1) : \Float{m}$, where $m$ is either $\G$ or $\E$.
+  \textbf{Case} $e = \exponential(e_1) : \Float{m}$, where $m$ is either $\E$ or $\G$.
 
   We want to show:
   \begin{align*}
-    \mathbb{E}[\bigsem{\exponential(e_1) :  \Float{m}}] &= \mathbb{E}[\bigsem{\exptrans{\exponential(e_1) :  \Float{m}}} : \Float{m}] \\
-    %
-    &\iff \\
-    \mathbb{E}[\bigsem{\exponential(e_1) :  \Float{m}}] &= \mathbb{E}[\bigsem{1 : \Float{\E}\; / \exptrans{e_1 :  \Float{m_1}}} : \Float{m}] \tag{by Fig. 1} \\
-  \end{align*}
-
-  Omit types for brevity. Simplifying the RHS:
-  \begin{align*}
-    \mathbb{E}[\bigsem{\exponential(e_1)}] \\
-    = \mathbb{E}[\bigsemstep{\exponential(e_1)}{\evalDepth(\exponential(e_1))}] \\
-    = \mathbb{E}[\bigsemstep{e_1}{\evalDepth(e_1)} \monbind \lambda a. \bigsemstep{\exponential(a)}{1}] \\
-    = \mathbb{E}[\bigsem{e_1} \monbind \lambda a. \sem{\exponential(a)}] \\
-    = \mathbb{E}[\bigsem{e_1} \monbind \lambda a.Exponential(a)] \\
-    = \mathbb{E}[\int x d Exp(a)(x)] d\bigsem{e_1}(a) \\
-  \end{align*}
-
-  Simplifying the LHS:
-  \begin{align*}
-    \mathbb{E}[\bigsem{1 : \Float{\E}\; / \exptrans{e_1 :  \Float{m_1}}} : \Float{m}] \\
-    = \mathbb{E}[\sup_{n \geq \evalDepth(e)} \bigsemstep{e}{n}] \\
-    = \mathbb{E}[\bigsemstep{e}{\evalDepth(e)}] \\
-    = \mathbb{E}[\bigsemstep{\exptrans{e_1}}{\evalDepth(e_1)} \monbind \lambda a. \bigsemstep{1/a}{\evalDepth(\exponential(a))}] \\
-    = \mathbb{E}[\bigsem{\exptrans{e_1}} \monbind \bigsemstep{\delta{1/a}}{1}] \\
-    = \mathbb{E}[\bigsem{\exptrans{e_1}} \monbind \lambda a.\delta_{1/a}] \\
-  \end{align*}
-
-  
-
-  
-
-
-
-
-
-\end{proof}
-
-
-\begin{proof}
-  By induction on $e : \tau$.
-
-  \textbf{Case}
-  \[
-    e = \exponential(e_1) : \Float{m}.
-  \]
-  By the definition of the expectation transformation,
-  \[
-    \exptrans{\exponential(e_1) : \Float{m}}
+    \mathbb{E}[\bigsem{\exponential(e_1) : \Float{m}}]
     =
-    1 : \Float{\E} \;/\; \exptrans{e_1 : \Float{m_1}}.
-  \]
-  Therefore it suffices to show
-  \[
+    \mathbb{E}[\bigsem{\exptrans{\exponential(e_1) : \Float{m}} : \Float{m}}] \\
+    \iff \\
     \mathbb{E}[\bigsem{\exponential(e_1) : \Float{m}}]
     =
     \mathbb{E}\!\left[
@@ -700,168 +684,184 @@
         1 : \Float{\E} \;/\; \exptrans{e_1 : \Float{m_1}}
         : \Float{m}
       }
-    \right].
-  \]
+    \right] \tag{by~\Cref{fig:determinization}}.
+  \end{align*}
 
-  Write
-  \[
-    d_1 = \evalDepth(e_1 : \Float{m_1}).
-  \]
-  By the recursive definition of evaluation depth,
+  First, we simplify the LHS expression: 
+
+  Let $d_1 = \evalDepth(e_1 : \Float{m_1})$. By~\Cref{fig:eval-depth},
   \[
     \evalDepth(\exponential(e_1) : \Float{m})
     =
     d_1 + 1.
   \]
 
-  First, we simplify the original expression. By~\Cref{lem:stabilization},
-  \[
-  \begin{aligned}
-    \mathbb{E}[\bigsem{\exponential(e_1) : \Float{m}}]
+  Then:
+  \begin{align*}
+    &\mathbb{E}[\bigsem{\exponential(e_1) : \Float{m}}]\\
     &=
     \mathbb{E}\!\left[
       \bigsemstep{\exponential(e_1) : \Float{m}}{d_1+1}
-    \right].
-  \end{aligned}
-  \]
-  By the small-step rule for $\exponential(-)$ and the definition of
-  $d_1$,
-  \[
-  \begin{aligned}
-    \bigsemstep{\exponential(e_1) : \Float{m}}{d_1+1}
+    \right] \tag{by~\Cref{lem:stabilization}}\\
     &=
-    \bigsemstep{e_1 : \Float{m_1}}{d_1}
+    \mathbb{E}\!\left[
+      \bigsemstep{\exponential(e_1) : \Float{m}}{d_1}
+      \monbind
+      \lambda e'.\,\sem{e' : \Float{m}}
+    \right]\\
+    &=
+    \mathbb{E}\!\left[
+      \bigsemstep{e_1 : \Float{m_1}}{d_1}
+      \monbind
+      \lambda a.\,
+        \delta_{\exponential(a) : \Float{m}}
+      \monbind
+      \lambda e'.\,\sem{e' : \Float{m}}
+    \right] \tag{???}\\
+    &=
+    \mathbb{E}\!\left[\bigsemstep{e_1 : \Float{m_1}}{d_1}
     \monbind
     \lambda a.\,
-      \sem{\exponential(a) : \Float{m}}.
-  \end{aligned}
-  \]
-  Again by~\Cref{lem:stabilization},
-  \[
-  \begin{aligned}
-    \bigsemstep{\exponential(e_1) : \Float{m}}{d_1+1}
+      \sem{\exponential(a) : \Float{m}} \right] \\
     &=
-    \bigsem{e_1 : \Float{m_1}}
+    \mathbb{E}\!\left[\bigsem{e_1 : \Float{m_1}}
     \monbind
     \lambda a.\,
-      \sem{\exponential(a) : \Float{m}}.
-  \end{aligned}
-  \]
-  Since $a$ is a value, the small-step rule for $\exponential(-)$ gives
-  \[
-    \sem{\exponential(a) : \Float{m}}
-    =
-    \mathsf{Exponential}(a)
+      \sem{\exponential(a) : \Float{m}}\right] \tag{by~\Cref{lem:stabilization}}\\
+  \intertext{Since $a$ is a value, the small-step rule for $\exponential$ gives
+  $\sem{\exponential(a) : \Float{m}}
+  =
+  \mathsf{Exponential}(a)
+  \monbind
+  \lambda x.\,\delta_{x : \Float{m}}$. Hence,}
+    &=
+    \mathbb{E}\!\left[\bigsem{e_1 : \Float{m_1}}
     \monbind
-    \lambda x.\,\delta_{x : \Float{m}}.
-  \]
-  Hence, by the expectation law for bind,
-  \[
-  \begin{aligned}
-    \mathbb{E}[\bigsem{\exponential(e_1) : \Float{m}}]
+    \lambda a.\,
+      \left(
+        \mathsf{Exponential}(a)
+        \monbind
+        \lambda x.\,\delta_{x : \Float{m}}
+      \right)\right] \tag{by the small-step rule for $\exponential$}\\
+    &=
+    \int
+      \mathbb{E}\!\left[
+        \mathsf{Exponential}(a)
+        \monbind
+        \lambda x.\,\delta_{x : \Float{m}}
+      \right]
+    \,d\bigsem{e_1 : \Float{m_1}}(a) \tag{by the expectation law for bind}\\
+    &=
+    \int
+      \left(
+      \int
+        \mathbb{E}\!\left[
+          \delta_{x : \Float{m}}
+        \right]
+      \,d\mathsf{Exponential}(a)(x)
+      \right)
+    \,d\bigsem{e_1 : \Float{m_1}}(a) \\
+    &=
+    \int
+      \left(
+      \int
+        x
+      \,d\mathsf{Exponential}(a)(x)
+      \right)
+    \,d\bigsem{e_1 : \Float{m_1}}(a) \\
     &=
     \int
       \mathbb{E}\!\left[
         \mathsf{Exponential}(a)
       \right]
-    \,d\bigsem{e_1 : \Float{m_1}}(a).
-  \end{aligned}
-  \]
-  Assuming $\mathsf{Exponential}(a)$ is parameterized by rate $a$,
-  \[
-    \mathbb{E}[\mathsf{Exponential}(a)] = \frac{1}{a}.
-  \]
-  Therefore,
-  \[
-  \begin{aligned}
-    \mathbb{E}[\bigsem{\exponential(e_1) : \Float{m}}]
+    \,d\bigsem{e_1 : \Float{m_1}}(a) \\
     &=
     \int
       \frac{1}{a}
     \,d\bigsem{e_1 : \Float{m_1}}(a).
-  \end{aligned}
+  \end{align*}
+
+  Now simplify the transformed expression:
+
+  By~\Cref{fig:eval-depth},
+  \[
+    \evalDepth(1 : \Float{\E} \;/\; \exptrans{e_1 : \Float{m_1}} : \Float{m})
+    =
+    \evalDepth(1 : \Float{\E}) + \evalDepth(\exptrans{e_1 : \Float{m_1}} : \Float{m_1}) + 1.
   \]
 
-  Now simplify the transformed expression. Let
+  Since $1 : \Float{\E}$ is a value,
   \[
-    e_1^\dagger = \exptrans{e_1 : \Float{m_1}}.
+    \evalDepth(1 : \Float{\E}) = 0.
   \]
-  Then the transformed expression is
-  \[
-    1 : \Float{\E} \;/\; e_1^\dagger.
-  \]
+
   Let
   \[
-    d_1^\dagger = \evalDepth(e_1^\dagger).
+    d_1' = \evalDepth(\exptrans{e_1 : \Float{m_1}} : \Float{m_1}).
   \]
-  By~\Cref{lem:stabilization},
-  \[
-  \begin{aligned}
-    \mathbb{E}\!\left[
+
+  Then:
+  \begin{align*}
+    &\mathbb{E}\!\left[
       \bigsem{
-        1 : \Float{\E} \;/\; e_1^\dagger
+        1 : \Float{\E} \;/\; \exptrans{e_1 : \Float{m_1}}
         : \Float{m}
       }
-    \right]
+    \right]\\
     &=
     \mathbb{E}\!\left[
       \bigsemstep{
-        1 : \Float{\E} \;/\; e_1^\dagger
+        1 : \Float{\E} \;/\; \exptrans{e_1 : \Float{m_1}}
         : \Float{m}
-      }{d_1^\dagger+1}
-    \right].
-  \end{aligned}
-  \]
-  By the small-step rule for division, after evaluating $e_1^\dagger$ to
-  a value $a$, the outer division takes one more step:
-  \[
-  \begin{aligned}
-    \bigsemstep{
-      1 : \Float{\E} \;/\; e_1^\dagger
-      : \Float{m}
-    }{d_1^\dagger+1}
+      }{d_1'+1}
+    \right] \tag{by~\Cref{lem:stabilization}}\\
     &=
-    \bigsemstep{e_1^\dagger}{d_1^\dagger}
-    \monbind
-    \lambda a.\,
-      \delta_{(1/a) : \Float{m}}.
-  \end{aligned}
-  \]
-  By~\Cref{lem:stabilization},
-  \[
-  \begin{aligned}
-    \bigsemstep{
-      1 : \Float{\E} \;/\; e_1^\dagger
-      : \Float{m}
-    }{d_1^\dagger+1}
-    &=
-    \bigsem{e_1^\dagger}
-    \monbind
-    \lambda a.\,
-      \delta_{(1/a) : \Float{m}}.
-  \end{aligned}
-  \]
-  Therefore, again by the expectation law for bind,
-  \[
-  \begin{aligned}
     \mathbb{E}\!\left[
-      \bigsem{
-        1 : \Float{\E} \;/\; e_1^\dagger
-        : \Float{m}
-      }
-    \right]
+    \bigsemstep{\exptrans{e_1 : \Float{m_1}} : \Float{m_1}}{d_1'}
+    \monbind
+    \lambda a.\,
+      \sem{1 : \Float{\E} \;/\; a : \Float{m}} \right] \tag{}\\
+    &=
+    \mathbb{E}\!\left[
+    \bigsem{\exptrans{e_1 : \Float{m_1}} : \Float{m_1}}
+    \monbind
+    \lambda a.\,
+      \sem{1 : \Float{\E} \;/\; a : \Float{m}}\right] \tag{by~\Cref{lem:stabilization}}\\
+  \intertext{Since $a$ is a value, the small-step rule for division gives
+  $\sem{1 : \Float{\E} \;/\; a : \Float{m}}
+  =
+  \delta_{(1/a) : \Float{m}}$. Hence,}
+    &=
+    \mathbb{E}\!\left[
+    \bigsem{\exptrans{e_1 : \Float{m_1}} : \Float{m_1}}
+    \monbind
+    \lambda a.\,
+      \delta_{(1/a) : \Float{m}}\right] \tag{by the small-step rule for division}\\
+    &=
+    \int
+      \mathbb{E}\!\left[
+        \delta_{(1/a) : \Float{m}}
+      \right]
+    \,d\bigsem{\exptrans{e_1 : \Float{m_1}} : \Float{m_1}}(a) \tag{by~\Cref{lem:expectation-bind}}\\
+    &=
+    \int
+      \left(
+      \int
+        y
+      \,d\delta_{(1/a) : \Float{m}}(y)
+      \right)
+    \,d\bigsem{\exptrans{e_1 : \Float{m_1}} : \Float{m_1}}(a) \\
     &=
     \int
       \frac{1}{a}
-    \,d\bigsem{e_1^\dagger}(a) \\
+    \,d\bigsem{\exptrans{e_1 : \Float{m_1}} : \Float{m_1}}(a) \\
     &=
     \int
       \frac{1}{a}
     \,d\bigsem{\exptrans{e_1 : \Float{m_1}}}(a).
-  \end{aligned}
-  \]
+  \end{align*}
 
-  Thus the exponential case reduces to showing
+  Thus, this reduces to showing:
   \[
     \int
       \frac{1}{a}
@@ -871,8 +871,7 @@
       \frac{1}{a}
     \,d\bigsem{\exptrans{e_1 : \Float{m_1}}}(a).
   \]
-  This follows from the strengthened induction hypothesis applied to the
-  measurable function $a \mapsto 1/a$.
+  Because $m_1 = \G$, $\bigsem{e_1} = \bigsem{\exptrans{e_1}}$ by the I.H.
 
   Therefore,
   \[
