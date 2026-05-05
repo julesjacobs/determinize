@@ -2,7 +2,7 @@
 Expressions, types, and modes are defined by the grammar below (\(x\) ranges over variables, \(f\) over floating-point literals):
 \begin{align*}
   m &::= \E \mid \G \\
-  \tau &::= \Unit \mid \Bool \mid \Nat \mid \Float{m} \mid \List{\tau} \mid \tau_1 \times \tau_2 \mid \tau_1 + \tau_2 \mid \tau_1 \to \tau_2 \\
+  \tau &::= \Unit \mid \Bool \mid \Float{m} \mid \List{\tau} \mid \tau_1 \times \tau_2 \mid \tau_1 + \tau_2 \mid \tau_1 \to \tau_2 \\
   e &::= x \mid \lambda x.\,e \mid \mathsf{rec}\;f\;x.\,e \mid e_1\,e_2 \mid \langle e_1, e_2\rangle \mid \fstkw\,e \mid \sndkw\,e \mid \mathsf{inl}\,e \mid \mathsf{inr}\,e \mid \matchkw\;e\;\withkw\;\mathsf{inl}\,x \Rightarrow e_1 \mid \mathsf{inr}\,y \Rightarrow e_2 \\
     &\quad\mid [\,] \mid e_1 :: e_2 \mid \matchkw\;e\;\withkw\;[\,] \Rightarrow e_1 \mid x::xs \Rightarrow e_2 \\
     &\quad\mid \mathsf{true} \mid \mathsf{false} \mid \ifkw\;e\;\thenkw\;e_1\;\elsekw\;e_2 \mid \letkw\;x=e_1\;\inkw\;e_2 \\

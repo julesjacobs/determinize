@@ -89,7 +89,7 @@ Judgments have the form \(\Gamma \vdash e : \tau\), where \(\Gamma\) is a standa
   \and
   \inferrule[\textsc{Mul-G}]
     {\Gamma \vdash e_1 : \Float{m_1} \\ \Gamma \vdash e_2 : \Float{m_2} \\ m_1 \preceq \G \\ m_2 \preceq \G}
-    {\Gamma \vdash e_1 \times e_2 : \Float{\G}}
+    {\Gamma \vdash e_1 \times e_2 : \Float{m}}
   \and
   \inferrule[\textsc{Mul-ConstL}]
     {\Gamma \vdash c : \Float{m_1} \\ \Gamma \vdash e : \Float{m_2} \\ m_1 \preceq m \\ m_2 \preceq m}
@@ -98,6 +98,10 @@ Judgments have the form \(\Gamma \vdash e : \tau\), where \(\Gamma\) is a standa
   \inferrule[\textsc{Mul-ConstR}]
     {\Gamma \vdash e : \Float{m_1} \\ \Gamma \vdash c : \Float{m_2} \\ m_1 \preceq m \\ m_2 \preceq m}
     {\Gamma \vdash e \times c : \Float{m}}
+  \and
+  \inferrule[\textsc{Div}]
+  {\Gamma \vdash e : \Float{m_1} \\ \Gamma \vdash c : \Float{m_2} \\ m_1 \preceq m \\ m_2 \preceq \G}
+  {\Gamma \vdash e\; /\; c : \Float{m}}
   \and
   \inferrule[\textsc{Cmp}]
     {\Gamma \vdash e_1 : \Float{m_1} \\ \Gamma \vdash e_2 : \Float{m_2} \\ m_1 \preceq \G \\ m_2 \preceq \G}

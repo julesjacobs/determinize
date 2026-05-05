@@ -23,7 +23,7 @@ where $\alpha$ is a mode metavariable. In particular, $\alpha$ is an unknown mod
   \and
   \inferrule[\textsc{Mul-G}]
     {\Gamma \vdash e_1 : \Float{m_1} \mid C_1 \\ \Gamma \vdash e_2 : \Float{m_2} \mid C_2}
-    {\Gamma \vdash e_1 \times e_2 : \Float{\G}  \mid C_1, C_2, m_1 \preceq \G, m_2 \preceq \G}
+    {\Gamma \vdash e_1 \times e_2 : \Float{\alpha}  \mid C_1, C_2, m_1 \preceq \G, m_2 \preceq \G}
   \and
   \inferrule[\textsc{Mul-ConstL}]
     {\Gamma \vdash c : \Float{m_1} \mid C_1 \\ \Gamma \vdash e : \Float{m_2} \mid C_2}
@@ -32,6 +32,10 @@ where $\alpha$ is a mode metavariable. In particular, $\alpha$ is an unknown mod
   \inferrule[\textsc{Mul-ConstR}]
     {\Gamma \vdash e : \Float{m_1} \mid C_1 \\ \Gamma \vdash c : \Float{m_2} \mid C_2}
     {\Gamma \vdash e \times c : \Float{\alpha} \mid C_1, C_2, m_1 \preceq \alpha, m_2 \preceq \alpha}
+  \and
+  \inferrule[\textsc{Div}]
+    {\Gamma \vdash e : \Float{m_1} \mid C_1 \\ \Gamma \vdash c : \Float{m_2} \mid C_2}
+    {\Gamma \vdash e\; /\; c : \Float{\alpha} \mid C_1, C_2, m_1 \preceq \alpha, m_2 \preceq \G}
   \and
   \inferrule[\textsc{Cmp}]
     {\Gamma \vdash e_1 : \Float{m_1} \mid C_1 \\ \Gamma \vdash e_2 : \Float{m_2} \mid C_2}
@@ -95,6 +99,10 @@ where $\alpha$ is a mode metavariable. In particular, $\alpha$ is an unknown mod
       \alpha_1 \preceq \alpha_3,\ \alpha_2 \preceq \alpha_3,\ \alpha_3 \preceq \G,\ \alpha_4 \preceq \G.
     \end{align*}
 
+\end{example}
+
+\begin{example}
+  exponential(uniform(0,1)*uniform(0,2))
 \end{example}
 
 \begin{example}
