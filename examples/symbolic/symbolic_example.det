@@ -1,0 +1,3 @@
+let x = uniform[E](0, 1) in
+let y = uniform[E](x, 2) in
+x + y

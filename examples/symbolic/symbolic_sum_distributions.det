@@ -1,0 +1,13 @@
+let x =
+  match inl uniform(0, 1) with
+  inl a => a + 1
+  | inr b => b
+in
+gauss(1, 2)
++ exponential(2)
++ gamma(2, 4)
++ beta(2, 3)
++ bernoulli(0.25)
++ poisson(3)
++ discrete(0.25, 0.75)
++ x

@@ -1,0 +1,4 @@
+let dec = rec f x => if x <= 0 then 0 else f (x - 1) in
+let z = dec 2 in
+let xs = uniform(0, 1) :: [] in
+match xs with [] => z | h :: t => h + z

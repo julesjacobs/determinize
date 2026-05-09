@@ -1,0 +1,2 @@
+let p = (uniform(0, 1), uniform(0,2)) in
+fst p + snd p
