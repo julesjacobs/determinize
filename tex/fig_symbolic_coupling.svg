@@ -73,7 +73,7 @@
   <!-- Top row: three objects at the same vertical level -->
   <g filter="url(#shadow)">
     <rect class="blue-panel" x="40" y="160" width="500" height="240" rx="20"/>
-    <rect class="amber-panel" x="590" y="185" width="620" height="260" rx="20"/>
+    <rect class="amber-panel" x="590" y="185" width="620" height="276" rx="20"/>
     <rect class="green-panel" x="1260" y="160" width="500" height="240" rx="20"/>
   </g>
 
@@ -126,14 +126,14 @@
   <text class="code" x="80" y="344">return 2*g + 1</text>
   <text class="body" x="80" y="378">uniform and gamma are E-mode sites</text>
 
-  <text class="panel-title amber-text" x="630" y="233">Symbolic semantics &#x03C3;</text>
+  <text class="panel-title amber-text" x="630" y="233">Symbolic semantics &#x03C3;(e)<tspan baseline-shift="super" font-size="70%">n</tspan></text>
   <text class="label amber-text" x="630" y="268">E-samples symbolic; G-samples step normally</text>
   <rect class="neutral-panel" x="610" y="284" width="580" height="158" rx="12"/>
   <text class="column-title amber-text" x="642" y="310">symbolic samples</text>
   <rect class="badge-e" x="852" y="292" width="38" height="25" rx="13"/>
   <text class="label green-text" x="864" y="311">E</text>
   <path class="plain-line" d="M940,300 L940,380"/>
-  <text class="column-title amber-text" x="975" y="310">random samples</text>
+  <text class="column-title amber-text" x="958" y="310">random samples</text>
   <rect class="badge-g" x="1140" y="292" width="38" height="25" rx="13"/>
   <text class="label blue-text" x="1151" y="311">G</text>
   <text class="code-small" x="642" y="350">u = uniform(0,1)</text>
@@ -152,19 +152,19 @@
     <path class="dist-e" opacity="0.72" d="M4,23 C10,16 18,10 28,12 C40,14 50,18 60,23"/>
     <path class="dist-e" opacity="0.62" d="M10,23 C15,18 24,12 35,10 C47,9 55,16 61,23"/>
   </g>
-  <text class="code-small" x="975" y="350">b = beta(3,2)</text>
-  <g transform="translate(1120 326) scale(1.6)">
-    <path class="dist-axis" d="M0,22 H38"/>
-    <circle class="sample-dot-g" cx="10" cy="18" r="2.7"/>
-    <circle class="sample-dot-g" cx="16" cy="11" r="2.7"/>
-    <circle class="sample-dot-g" cx="21" cy="8" r="2.7"/>
-    <circle class="sample-dot-g" cx="26" cy="10" r="2.7"/>
-    <circle class="sample-dot-g" cx="31" cy="14" r="2.7"/>
-    <circle class="sample-dot-g" cx="35" cy="18" r="2.7"/>
+  <text class="code-small" x="958" y="350">b = beta(3,2)</text>
+  <g transform="translate(1103 332)">
+    <path class="dist-axis" d="M0,24 H72"/>
+    <circle class="sample-dot-g" cx="18" cy="18" r="2.4"/>
+    <circle class="sample-dot-g" cx="27" cy="11" r="2.4"/>
+    <circle class="sample-dot-g" cx="34" cy="8" r="2.4"/>
+    <circle class="sample-dot-g" cx="41" cy="10" r="2.4"/>
+    <circle class="sample-dot-g" cx="48" cy="14" r="2.4"/>
+    <circle class="sample-dot-g" cx="55" cy="19" r="2.4"/>
   </g>
-  <path class="plain-line" d="M644,408 L838,408"/>
+  <path class="plain-line" d="M642,408 L838,408"/>
   <text class="small-title amber-text" x="900" y="414" text-anchor="middle">residual</text>
-  <path class="plain-line" d="M962,408 L1156,408"/>
+  <path class="plain-line" d="M962,408 L1158,408"/>
   <text class="code-small" x="900" y="434" text-anchor="middle">return 2*g + 1</text>
 
   <text class="panel-title green-text" x="1300" y="208">Determinized program D(e)</text>
@@ -221,7 +221,7 @@
   <rect class="neutral-panel" x="206" y="500" width="168" height="42" rx="12"/>
   <text class="label blue-text" x="290" y="527" text-anchor="middle">apply <tspan class="math-inline">&#x27E6;-&#x27E7;<tspan baseline-shift="super" font-size="70%">n</tspan></tspan> to e</text>
 
-  <path class="amber-line" d="M760,446 C635,505 535,555 455,620"/>
+  <path class="amber-line" d="M760,462 C635,510 535,558 455,620"/>
   <rect class="neutral-panel" x="510" y="515" width="260" height="48" rx="14"/>
   <text class="label amber-text" x="640" y="541" text-anchor="middle">sample E-bindings</text>
   <path class="dashed-small" d="M374,521 C397,521 415,527 434,532"/>
@@ -236,7 +236,7 @@
   <rect class="neutral-panel" x="1432" y="500" width="196" height="42" rx="12"/>
   <text class="label green-text" x="1530" y="527" text-anchor="middle">apply <tspan class="math-inline">&#x27E6;-&#x27E7;<tspan baseline-shift="super" font-size="70%">n</tspan></tspan> to D(e)</text>
 
-  <path class="amber-line" d="M1040,446 C1165,505 1265,555 1345,620"/>
+  <path class="amber-line" d="M1040,462 C1165,510 1265,558 1345,620"/>
   <rect class="neutral-panel" x="1035" y="515" width="290" height="48" rx="14"/>
   <text class="label amber-text" x="1180" y="541" text-anchor="middle">replace E-bindings by means</text>
   <path class="dashed-small" d="M1325,539 C1331,539 1337,534 1343,529"/>
