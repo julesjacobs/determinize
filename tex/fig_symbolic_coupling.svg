@@ -1,0 +1,150 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="850" viewBox="0 0 1800 850">
+  <defs>
+    <marker id="arrow-dark" markerWidth="14" markerHeight="14" refX="10" refY="7" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,7 L0,14 Z" fill="#263445"/>
+    </marker>
+    <marker id="arrow-blue" markerWidth="14" markerHeight="14" refX="10" refY="7" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,7 L0,14 Z" fill="#1d4f91"/>
+    </marker>
+    <marker id="arrow-green" markerWidth="14" markerHeight="14" refX="10" refY="7" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,7 L0,14 Z" fill="#21703a"/>
+    </marker>
+    <marker id="arrow-amber" markerWidth="14" markerHeight="14" refX="10" refY="7" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,7 L0,14 Z" fill="#b25b10"/>
+    </marker>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#1f2937" flood-opacity="0.13"/>
+    </filter>
+    <style>
+      .bg { fill: #fbfaf7; }
+      .title { font: 700 42px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #101828; }
+      .subtitle { font: 400 23px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #475467; }
+      .panel-title { font: 700 28px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #101828; }
+      .small-title { font: 700 22px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #101828; }
+      .body { font: 400 21px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #344054; }
+      .body-bold { font: 700 21px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #344054; }
+      .code { font: 500 21px "SF Mono", Menlo, Consolas, monospace; fill: #1f2937; }
+      .code-small { font: 500 18px "SF Mono", Menlo, Consolas, monospace; fill: #1f2937; }
+      .label { font: 700 18px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #263445; }
+      .label-small { font: 700 15px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #263445; }
+      .eq-label { font: 700 22px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #263445; }
+      .blue-panel { fill: #f3f8ff; stroke: #1d4f91; stroke-width: 3; }
+      .green-panel { fill: #f0fbf3; stroke: #21703a; stroke-width: 3; }
+      .amber-panel { fill: #fff7ec; stroke: #d97706; stroke-width: 3; }
+      .neutral-panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 2.5; }
+      .purple-panel { fill: #f5f0ff; stroke: #6941c6; stroke-width: 3; }
+      .blue-text { fill: #1d4f91; }
+      .green-text { fill: #21703a; }
+      .amber-text { fill: #a15c07; }
+      .purple-text { fill: #4c1d95; }
+      .blue-line { fill: none; stroke: #1d4f91; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow-blue); }
+      .green-line { fill: none; stroke: #21703a; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow-green); }
+      .amber-line { fill: none; stroke: #b25b10; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow-amber); }
+      .dark-line { fill: none; stroke: #263445; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow-dark); }
+      .dashed-line { fill: none; stroke: #263445; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 13 12; }
+      .dashed-small { fill: none; stroke: #667085; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 7 7; }
+      .plain-line { fill: none; stroke: #667085; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+      .badge-e { fill: #dcfae6; stroke: #32d583; stroke-width: 2; }
+      .badge-g { fill: #d1e9ff; stroke: #2e90fa; stroke-width: 2; }
+    </style>
+  </defs>
+
+  <rect class="bg" width="1800" height="850"/>
+  <text class="title" x="90" y="74">Symbolic coupling proof shape</text>
+  <text class="subtitle" x="90" y="110">The symbolic state sits between the original and determinized programs; each lower semantics is reached by two equivalent routes.</text>
+
+  <!-- Top row: three objects at the same vertical level -->
+  <g filter="url(#shadow)">
+    <rect class="blue-panel" x="40" y="160" width="500" height="240" rx="20"/>
+    <rect class="amber-panel" x="650" y="190" width="500" height="240" rx="20"/>
+    <rect class="green-panel" x="1220" y="160" width="500" height="240" rx="20"/>
+  </g>
+
+  <text class="panel-title blue-text" x="80" y="208">Original program e</text>
+  <text class="code" x="80" y="250">u = uniform(0,1)</text>
+  <rect class="badge-e" x="350" y="231" width="38" height="25" rx="13"/>
+  <text class="label green-text" x="362" y="250">E</text>
+  <text class="code" x="80" y="285">b = beta(3,2)</text>
+  <rect class="badge-g" x="350" y="266" width="38" height="25" rx="13"/>
+  <text class="label blue-text" x="361" y="285">G</text>
+  <text class="code" x="80" y="320">return gamma(u,b)</text>
+  <rect class="badge-e" x="350" y="301" width="38" height="25" rx="13"/>
+  <text class="label green-text" x="362" y="320">E</text>
+  <text class="body" x="80" y="360">uniform and gamma are E-mode sites</text>
+
+  <text class="panel-title amber-text" x="690" y="238">Symbolic semantics</text>
+  <text class="body-bold amber-text" x="690" y="272">symbolic state S = &lt;sigma || r&gt;</text>
+  <text class="label amber-text" x="720" y="290">E-samples symbolic; G-samples step normally</text>
+  <rect class="neutral-panel" x="690" y="308" width="205" height="93" rx="12"/>
+  <text class="small-title amber-text" x="716" y="329">sigma</text>
+  <text class="code-small" x="716" y="359">u : uniform</text>
+  <rect class="badge-e" x="820" y="339" width="34" height="22" rx="11"/>
+  <text class="label green-text" x="830" y="357">E</text>
+  <text class="body" x="716" y="388">E bindings only</text>
+  <rect class="neutral-panel" x="920" y="308" width="190" height="93" rx="12"/>
+  <text class="small-title amber-text" x="958" y="329">residual r</text>
+  <text class="code-small" x="946" y="359">b sampled</text>
+  <rect class="badge-g" x="1048" y="340" width="34" height="22" rx="11"/>
+  <text class="label blue-text" x="1057" y="358">G</text>
+  <text class="code-small" x="946" y="387">gamma(u,b)</text>
+
+  <text class="panel-title green-text" x="1260" y="208">Determinized program D(e)</text>
+  <text class="code" x="1260" y="250">u = 0.5</text>
+  <text class="code" x="1260" y="285">b = beta(3,2)</text>
+  <text class="code" x="1260" y="320">return u / b</text>
+  <text class="body" x="1260" y="360">beta randomness is preserved</text>
+
+  <!-- Relations among the top objects -->
+  <path class="amber-line" d="M540,280 L640,280"/>
+  <rect class="neutral-panel" x="548" y="232" width="94" height="40" rx="12"/>
+  <text class="label-small amber-text" x="595" y="258" text-anchor="middle">symbolic run</text>
+  <path class="green-line" d="M540,170 C740,132 1040,132 1220,170"/>
+  <rect class="neutral-panel" x="822" y="126" width="156" height="40" rx="12"/>
+  <text class="label green-text" x="900" y="152" text-anchor="middle">determinize e</text>
+
+  <!-- Lower semantics boxes -->
+  <g filter="url(#shadow)">
+    <rect class="blue-panel" x="155" y="625" width="515" height="145" rx="20"/>
+    <rect class="green-panel" x="1130" y="625" width="515" height="145" rx="20"/>
+  </g>
+  <text class="panel-title blue-text" x="198" y="677">semantics of e</text>
+  <text class="code" x="350" y="718">[[e]]</text>
+  <text class="body" x="235" y="748">the distribution of the original program</text>
+
+  <text class="panel-title green-text" x="1173" y="677">semantics of D(e)</text>
+  <text class="code" x="1322" y="718">[[D(e)]]</text>
+  <text class="body" x="1188" y="748">the semantics of the transformed program</text>
+
+  <!-- Equality of expectations between the two semantics -->
+  <path class="dashed-line" d="M670,710 C790,628 1010,628 1130,710"/>
+  <text class="eq-label purple-text" x="900" y="626" text-anchor="middle">E[[e]] = E[[D(e)]]</text>
+
+  <!-- Two incoming arrows into the left semantics -->
+  <path class="blue-line" d="M290,401 L290,620"/>
+  <rect class="neutral-panel" x="206" y="500" width="168" height="42" rx="12"/>
+  <text class="label blue-text" x="290" y="527" text-anchor="middle">apply [[-]] to e</text>
+
+  <path class="amber-line" d="M760,431 C635,500 535,555 455,620"/>
+  <rect class="neutral-panel" x="510" y="515" width="260" height="48" rx="14"/>
+  <text class="label amber-text" x="640" y="541" text-anchor="middle">sample E-bindings in S</text>
+  <path class="dashed-small" d="M374,521 C397,521 415,527 434,532"/>
+  <path class="dashed-small" d="M458,537 C476,539 494,539 510,539"/>
+  <rect class="neutral-panel" x="434" y="515" width="24" height="24" rx="8"/>
+  <text class="label" x="446" y="533" text-anchor="middle">=</text>
+  <path class="dashed-small" d="M770,539 L1035,539"/>
+  <text class="label purple-text" x="900" y="518" text-anchor="middle">equal in expectation</text>
+
+  <!-- Two incoming arrows into the right semantics -->
+  <path class="green-line" d="M1490,401 L1490,620"/>
+  <rect class="neutral-panel" x="1392" y="500" width="196" height="42" rx="12"/>
+  <text class="label green-text" x="1490" y="527" text-anchor="middle">apply [[-]] to D(e)</text>
+
+  <path class="amber-line" d="M1040,431 C1165,500 1265,555 1345,620"/>
+  <rect class="neutral-panel" x="1035" y="515" width="290" height="48" rx="14"/>
+  <text class="label amber-text" x="1180" y="541" text-anchor="middle">replace E-bindings by means</text>
+  <path class="dashed-small" d="M1325,539 C1331,539 1337,534 1343,529"/>
+  <path class="dashed-small" d="M1367,521 C1375,521 1383,521 1392,521"/>
+  <rect class="neutral-panel" x="1343" y="515" width="24" height="24" rx="8"/>
+  <text class="label" x="1355" y="533" text-anchor="middle">=</text>
+
+</svg>
