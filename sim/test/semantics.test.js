@@ -99,6 +99,22 @@ test("coupled trace treats shared distribution domain errors as checked terminal
   assert.match(trace.frames.at(-1).original.message, /shape must be > 0/);
 });
 
+test("coupled trace fails when only one side reaches a distribution domain error", () => {
+  const originalErrors = runCoupledTrace("let x = uniform[E](-10, 30) in\ngamma[E](x, 1)", 1);
+  assert.equal(originalErrors.ok, false);
+  assert.equal(originalErrors.frames.at(-1).original.kind, "DomainError");
+  assert.notEqual(originalErrors.frames.at(-1).determinized.kind, "DomainError");
+  assert.equal(originalErrors.frames.at(-1).consistencyOk, false);
+  assert.match(originalErrors.frames.at(-1).consistencyError, /terminal effect mismatch/);
+
+  const determinizedErrors = runCoupledTrace("let x = uniform[E](-10, 30) in\nuniform[E](x, 1)", 1);
+  assert.equal(determinizedErrors.ok, false);
+  assert.notEqual(determinizedErrors.frames.at(-1).original.kind, "DomainError");
+  assert.equal(determinizedErrors.frames.at(-1).determinized.kind, "DomainError");
+  assert.equal(determinizedErrors.frames.at(-1).consistencyOk, false);
+  assert.match(determinizedErrors.frames.at(-1).consistencyError, /terminal effect mismatch/);
+});
+
 test("distribution domain checks cover bernoulli probability and discrete totals", () => {
   const bernoulli = checkEquivalences("let x = bernoulli[E](1.5) in\nx", 36);
   assert.equal(bernoulli.sampledEquivalent, true);

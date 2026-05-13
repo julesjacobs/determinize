@@ -462,7 +462,7 @@ function renderCoupling(coupled) {
       const ok = frameOk(frame);
       const domainError = hasDomainError(frame);
       return `
-        <section class="coupling-row ${ok ? "" : "failed"} ${domainError ? "domain-error-row" : ""}" style="--sigma-lines: ${sigmaLines}">
+        <section class="coupling-row ${ok ? "" : "failed"} ${ok && domainError ? "domain-error-row" : ""}" style="--sigma-lines: ${sigmaLines}">
           <div class="step-rail">
             <span>${frame.step}</span>
             ${stepCheck(frame, coupled)}
@@ -477,7 +477,7 @@ function renderCoupling(coupled) {
 }
 
 function frameOk(frame) {
-  return frame.originalOk && frame.determinizedOk && frame.symbolicOk !== false;
+  return frame.originalOk && frame.determinizedOk && frame.symbolicOk !== false && frame.consistencyOk !== false;
 }
 
 function hasDomainError(frame) {
@@ -511,6 +511,7 @@ function checkPopoverContent(frame, coupled, ok, domainError) {
     <code>${escapeHtml(determinizedTarget)}</code>
     <span>Source sync: ${frame.originalOk ? `${frame.originalMicroSteps} step${frame.originalMicroSteps === 1 ? "" : "s"}` : `failed${frame.originalError ? `: ${escapeHtml(frame.originalError)}` : ""}`}</span>
     <span>Determinized sync: ${frame.determinizedOk ? `${frame.determinizedMicroSteps} step${frame.determinizedMicroSteps === 1 ? "" : "s"}` : `failed${frame.determinizedError ? `: ${escapeHtml(frame.determinizedError)}` : ""}`}</span>
+    ${frame.consistencyOk === false ? `<span>Terminal consistency: failed: ${escapeHtml(frame.consistencyError)}</span>` : ""}
     ${frame.symbolicOk === false ? `<span>Symbolic next step failed: ${escapeHtml(frame.symbolicError)}</span>` : ""}
     ${coupled.unchecked ? "<em>This trace is running despite type/mode diagnostics, so failures show why the theorem needs the type system.</em>" : ""}
   `;
