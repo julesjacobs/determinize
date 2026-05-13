@@ -18,6 +18,7 @@ const exampleSelect = document.querySelector("#example-select");
 const statusEl = document.querySelector("#status");
 const typeHintsToggle = document.querySelector("#type-hints-toggle");
 const debugToggle = document.querySelector("#debug-toggle");
+const debugToggleControl = document.querySelector(".debug-toggle");
 const editorDiagnostics = document.querySelector("#editor-diagnostics");
 const debugPanel = document.querySelector("#debug-panel");
 const debugLogEl = document.querySelector("#debug-log");
@@ -56,6 +57,9 @@ const samples = {
   determinized: [],
 };
 
+updateDebugVisibility();
+window.addEventListener("hashchange", updateDebugVisibility);
+
 function typeHover() {
   return hoverTooltip((view, pos) => {
     if (!latest?.ok) return null;
@@ -73,6 +77,19 @@ function typeHover() {
       },
     };
   });
+}
+
+function updateDebugVisibility() {
+  const params = new URLSearchParams(window.location.search);
+  const hash = window.location.hash.toLowerCase();
+  const visible = params.has("debug") || hash === "#debug" || hash.includes("debug");
+  debugToggleControl.hidden = !visible;
+  debugToggleControl.style.display = visible ? "" : "none";
+  if (!visible && debugEnabled) {
+    debugEnabled = false;
+    debugToggle.checked = false;
+    debugPanel.hidden = true;
+  }
 }
 
 for (const [index, example] of examples.entries()) {
