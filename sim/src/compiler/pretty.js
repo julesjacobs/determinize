@@ -35,6 +35,8 @@ export function prettyExpr(expr, prec = 0) {
       return expr.value ? "true" : "false";
     case "Unit":
       return "()";
+    case "Reject":
+      return "reject";
     case "Nil":
       return "[]";
     case "Lam":

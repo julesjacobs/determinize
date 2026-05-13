@@ -379,7 +379,7 @@ function step(expr, ctx) {
     case "Observe":
       if (!isValue(expr.cond)) return stepChild(expr, "cond", ctx);
       if (expr.cond.kind !== "Bool") throw new Error("observe: expected bool");
-      if (!expr.cond.value) throw new Error("observe failure");
+      if (!expr.cond.value) return out(n("Reject", {}, expr), ctx);
       return out(n("Unit", {}, expr), ctx);
     case "Uniform":
     case "Gauss":
@@ -529,11 +529,13 @@ function floatResult(affine, source) {
 
 function stepChild(expr, key, ctx) {
   const result = step(expr[key], ctx);
+  if (result.expr.kind === "Reject") return out(result.expr, { ...ctx, ...contextPatch(result) });
   return rebuild(expr, { [key]: result.expr }, ctx, result);
 }
 
 function stepIndexedChild(expr, key, index, ctx) {
   const result = step(expr[key][index], ctx);
+  if (result.expr.kind === "Reject") return out(result.expr, { ...ctx, ...contextPatch(result) });
   const next = expr[key].slice();
   next[index] = result.expr;
   return rebuild(expr, { [key]: next }, ctx, result);
@@ -640,7 +642,7 @@ function concretize(expr, env) {
 }
 
 export function isValue(expr) {
-  return expr.kind === "Const" || expr.kind === "SymFloat" || expr.kind === "Bool" || expr.kind === "Unit" || expr.kind === "Lam" || expr.kind === "Rec" || expr.kind === "Nil" || (expr.kind === "Pair" && isValue(expr.left) && isValue(expr.right)) || (expr.kind === "Inl" && isValue(expr.expr)) || (expr.kind === "Inr" && isValue(expr.expr)) || (expr.kind === "Cons" && isValue(expr.head) && isValue(expr.tail));
+  return expr.kind === "Reject" || expr.kind === "Const" || expr.kind === "SymFloat" || expr.kind === "Bool" || expr.kind === "Unit" || expr.kind === "Lam" || expr.kind === "Rec" || expr.kind === "Nil" || (expr.kind === "Pair" && isValue(expr.left) && isValue(expr.right)) || (expr.kind === "Inl" && isValue(expr.expr)) || (expr.kind === "Inr" && isValue(expr.expr)) || (expr.kind === "Cons" && isValue(expr.head) && isValue(expr.tail));
 }
 
 function numberValue(expr) {
@@ -656,6 +658,7 @@ export function exprEqual(a, b, eps = 1e-9) {
       return a.value === b.value;
     case "Unit":
     case "Nil":
+    case "Reject":
       return true;
     case "Pair":
       return exprEqual(a.left, b.left, eps) && exprEqual(a.right, b.right, eps);

@@ -34,16 +34,20 @@ if ! git diff --cached --quiet; then
 fi
 
 git add -A "$TARGET_REL"
-if [[ "$LEGACY_TARGET_REL" != "$TARGET_REL" ]]; then
+COMMIT_PATHS=("$TARGET_REL")
+if [[ "$LEGACY_TARGET_REL" != "$TARGET_REL" ]] && {
+  [[ -d "$LEGACY_TARGET_DIR" ]] || git ls-files --error-unmatch "$LEGACY_TARGET_REL" >/dev/null 2>&1
+}; then
   git add -A "$LEGACY_TARGET_REL"
+  COMMIT_PATHS+=("$LEGACY_TARGET_REL")
 fi
 
-if git diff --cached --quiet -- "$TARGET_REL" "$LEGACY_TARGET_REL"; then
+if git diff --cached --quiet -- "${COMMIT_PATHS[@]}"; then
   echo "No deployment changes for $TARGET_REL."
   exit 0
 fi
 
-git commit -m "$COMMIT_MESSAGE" -- "$TARGET_REL" "$LEGACY_TARGET_REL"
+git commit -m "$COMMIT_MESSAGE"
 git push origin "$(git branch --show-current)"
 
 echo "Deployed to $TARGET_REL"

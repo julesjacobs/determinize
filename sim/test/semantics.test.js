@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { analyze } from "../src/compiler/analyze.js";
 import { prettyExpr } from "../src/compiler/pretty.js";
+import { examples } from "../src/examples.js";
 import { checkEquivalences, prepareRuntime, projectMean, projectSample, runCoupledTrace, runOrdinary, runSymbolic } from "../src/runtime/semantics.js";
 import { makeStreams } from "../src/runtime/rng.js";
 
@@ -63,6 +65,14 @@ test("ordinary and determinized traces both terminate", () => {
   assert.equal(runOrdinary(determinized, streams).value.kind, "Const");
 });
 
+test("observe failure rejects the trace rather than throwing", () => {
+  const source = "let _ = observe(false) in\n1";
+  const { expr, determinized } = prepareRuntime(source);
+  const streams = makeStreams(37);
+  assert.equal(runOrdinary(expr, streams).value.kind, "Reject");
+  assert.equal(runOrdinary(determinized, streams).value.kind, "Reject");
+});
+
 test("coupled trace checks sampled and mean projections at every symbolic step", () => {
   const source = "let u = uniform[E](0, 1) in\nlet b = beta[G](3, 2) in\nlet g = gamma[E](u, b) in\n2 * g + 1";
   for (const seed of [1, 17, 2026]) {
@@ -71,6 +81,17 @@ test("coupled trace checks sampled and mean projections at every symbolic step",
     assert.ok(trace.frames.length > 4);
     assert.equal(trace.frames.every((frame) => frame.originalOk && frame.determinizedOk), true);
   }
+});
+
+test("coupled trace treats shared observe rejection as a checked terminal outcome", () => {
+  const source = "let _ = observe(false) in\n1";
+  const trace = runCoupledTrace(source, 41);
+  assert.equal(trace.ok, true);
+  assert.equal(trace.frames.at(-1).original.kind, "Reject");
+  assert.equal(trace.frames.at(-1).symbolic.kind, "Reject");
+  assert.equal(trace.frames.at(-1).determinized.kind, "Reject");
+  assert.equal(trace.finalOriginal.kind, "Reject");
+  assert.equal(trace.finalDeterminized.kind, "Reject");
 });
 
 test("coupled trace handles affine symbolic residuals at every step", () => {
@@ -98,5 +119,16 @@ test("recursive gamma coupling does not fail from floating-point underflow", () 
     const trace = runCoupledTrace(source, seed, 1000, 400);
     assert.equal(trace.ok, true, `seed ${seed}`);
     assert.equal(trace.frames.at(-1).symbolic.kind, "SymFloat");
+  }
+});
+
+test("bundled examples analyze and run as intended", () => {
+  for (const example of examples) {
+    const result = analyze(example.source);
+    const intentionallyBad = example.name === "Bad E-branching";
+    assert.equal(result.ok, !intentionallyBad, example.name);
+    const trace = runCoupledTrace(example.source, 2026, 1000, 400, { allowIllTyped: intentionallyBad });
+    assert.equal(trace.ok, !intentionallyBad, example.name);
+    assert.ok(trace.frames.length > 0, example.name);
   }
 });

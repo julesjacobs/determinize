@@ -11,7 +11,7 @@ import { hoveredTypeHintState, modeHints, setTypeHints, typeHintState } from "./
 import { affineConst, affineToNumber, evalAffine, prettyAffine } from "./runtime/affine.js";
 import { meanDistribution } from "./runtime/distributions.js";
 import { runCoupledTrace } from "./runtime/semantics.js";
-import { renderHighlightedText, renderTraceExpr } from "./traceRender.js";
+import { changedPath, renderHighlightedText, renderTraceExpr } from "./traceRender.js";
 
 const editorHost = document.querySelector("#editor");
 const exampleSelect = document.querySelector("#example-select");
@@ -454,7 +454,8 @@ function renderCoupling(coupled) {
     </div>
     <div class="coupling-table-body">
   ` + coupled.frames
-    .map((frame) => {
+    .map((frame, index, frames) => {
+      const previous = index > 0 ? frames[index - 1] : null;
       const sigma = sigmaView(frame.sigma);
       const sigmaLines = Math.max(1, Math.min(4, sigma.lineCount));
       const ok = frameOk(frame);
@@ -464,9 +465,9 @@ function renderCoupling(coupled) {
             <span>${frame.step}</span>
             ${stepCheck(frame, coupled)}
           </div>
-          ${couplingCell(frame.original, "", "original", {})}
-          ${couplingCell(frame.symbolic, sigma.html, "symbolic", {})}
-          ${couplingCell(frame.determinized, "", "determinized", { meanBySymbol: sigma.meanBySymbol, highlightMeans: true })}
+          ${couplingCell(frame.original, "", "original", { focusPath: changedPath(previous?.original, frame.original) })}
+          ${couplingCell(frame.symbolic, sigma.html, "symbolic", { focusPath: changedPath(previous?.symbolic, frame.symbolic) })}
+          ${couplingCell(frame.determinized, "", "determinized", { focusPath: changedPath(previous?.determinized, frame.determinized), meanBySymbol: sigma.meanBySymbol, highlightMeans: true })}
         </section>
       `;
     })

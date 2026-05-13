@@ -1,5 +1,4 @@
 import { prettyExpr } from "./compiler/pretty.js";
-import { isValue } from "./runtime/semantics.js";
 
 const infix = {
   Lt: ["<", 1],
@@ -24,7 +23,14 @@ const distNames = {
 };
 
 export function renderTraceExpr(expr, options = {}) {
-  return renderExpr(expr, 0, stepPath(expr), options);
+  return renderExpr(expr, 0, options.focusPath ?? null, options);
+}
+
+export function changedPath(before, after) {
+  if (!before || !after || sameExpr(before, after)) return null;
+  if (before.kind !== after.kind) return [];
+  const child = changedChildPath(before, after);
+  return child ?? [];
 }
 
 function renderExpr(expr, prec = 0, focusPath = null, options = {}) {
@@ -40,6 +46,7 @@ function renderExpr(expr, prec = 0, focusPath = null, options = {}) {
     case "Bool":
     case "Unit":
     case "Nil":
+    case "Reject":
     case "SymFloat":
       html = renderHighlightedText(prettyExpr(expr), options);
       break;
@@ -146,7 +153,7 @@ function valueSpan(html) {
 }
 
 function stepSpan(html) {
-  return `<span class="trace-step" title="next small-step reduction">${html}</span>`;
+  return `<span class="trace-step" title="result of previous small-step">${html}</span>`;
 }
 
 function corrSpan(text, className, symbol) {
@@ -168,48 +175,37 @@ function meanSymbolForNumber(value, meanBySymbol) {
   return null;
 }
 
-function stepPath(expr) {
-  if (isValue(expr)) return null;
-  switch (expr.kind) {
+function changedChildPath(before, after) {
+  switch (after.kind) {
     case "Let":
-      return isValue(expr.value) ? [] : prepend("value", stepPath(expr.value));
+      return changedFieldPath(before, after, "value") ?? changedFieldPath(before, after, "body");
     case "App":
-      if (!isValue(expr.fn)) return prepend("fn", stepPath(expr.fn));
-      if (!isValue(expr.arg)) return prepend("arg", stepPath(expr.arg));
-      return [];
+      return changedFieldPath(before, after, "fn") ?? changedFieldPath(before, after, "arg");
     case "Pair":
-      if (!isValue(expr.left)) return prepend("left", stepPath(expr.left));
-      if (!isValue(expr.right)) return prepend("right", stepPath(expr.right));
-      return null;
+      return changedFieldPath(before, after, "left") ?? changedFieldPath(before, after, "right");
     case "Fst":
     case "Snd":
-      return isValue(expr.expr) ? [] : prepend("expr", stepPath(expr.expr));
     case "Inl":
     case "Inr":
-      return isValue(expr.expr) ? null : prepend("expr", stepPath(expr.expr));
-    case "Case":
-      return isValue(expr.scrutinee) ? [] : prepend("scrutinee", stepPath(expr.scrutinee));
-    case "Cons":
-      if (!isValue(expr.head)) return prepend("head", stepPath(expr.head));
-      if (!isValue(expr.tail)) return prepend("tail", stepPath(expr.tail));
-      return null;
-    case "MatchList":
-      return isValue(expr.scrutinee) ? [] : prepend("scrutinee", stepPath(expr.scrutinee));
-    case "If":
-      return isValue(expr.cond) ? [] : prepend("cond", stepPath(expr.cond));
     case "Neg":
-      return isValue(expr.expr) ? [] : prepend("expr", stepPath(expr.expr));
+      return changedFieldPath(before, after, "expr");
+    case "Case":
+      return changedFieldPath(before, after, "scrutinee") ?? changedFieldPath(before, after, "left") ?? changedFieldPath(before, after, "right");
+    case "Cons":
+      return changedFieldPath(before, after, "head") ?? changedFieldPath(before, after, "tail");
+    case "MatchList":
+      return changedFieldPath(before, after, "scrutinee") ?? changedFieldPath(before, after, "nilBranch") ?? changedFieldPath(before, after, "consBranch");
+    case "If":
+      return changedFieldPath(before, after, "cond") ?? changedFieldPath(before, after, "thenBranch") ?? changedFieldPath(before, after, "elseBranch");
     case "Add":
     case "Sub":
     case "Mul":
     case "Div":
     case "Lt":
     case "Leq":
-      if (!isValue(expr.left)) return prepend("left", stepPath(expr.left));
-      if (!isValue(expr.right)) return prepend("right", stepPath(expr.right));
-      return [];
+      return changedFieldPath(before, after, "left") ?? changedFieldPath(before, after, "right");
     case "Observe":
-      return isValue(expr.cond) ? [] : prepend("cond", stepPath(expr.cond));
+      return changedFieldPath(before, after, "cond");
     case "Uniform":
     case "Gauss":
     case "Exponential":
@@ -218,19 +214,32 @@ function stepPath(expr) {
     case "Flip":
     case "Bernoulli":
     case "Poisson":
-      for (let i = 0; i < expr.args.length; i++) {
-        if (!isValue(expr.args[i])) return prepend("args", prepend(i, stepPath(expr.args[i])));
-      }
-      return [];
+      return changedIndexedPath(before, after, "args");
     case "Discrete":
-      return [];
+      return null;
     default:
-      return [];
+      return null;
   }
 }
 
-function prepend(part, rest) {
-  return [part, ...(rest ?? [])];
+function changedFieldPath(before, after, key) {
+  if (!(key in before) || !(key in after) || sameExpr(before[key], after[key])) return null;
+  return [key, ...(changedPath(before[key], after[key]) ?? [])];
+}
+
+function changedIndexedPath(before, after, key) {
+  if (!Array.isArray(before[key]) || !Array.isArray(after[key])) return null;
+  const count = Math.min(before[key].length, after[key].length);
+  for (let index = 0; index < count; index++) {
+    if (!sameExpr(before[key][index], after[key][index])) {
+      return [key, index, ...(changedPath(before[key][index], after[key][index]) ?? [])];
+    }
+  }
+  return before[key].length === after[key].length ? null : [];
+}
+
+function sameExpr(before, after) {
+  return prettyExpr(before) === prettyExpr(after);
 }
 
 function childFocus(focusPath, key, index = null) {
