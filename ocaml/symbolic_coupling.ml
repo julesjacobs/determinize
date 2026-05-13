@@ -5,7 +5,7 @@
 
      ocamlc -o /tmp/symbolic_coupling symbolic_coupling.ml
      /tmp/symbolic_coupling
-     /tmp/symbolic_coupling --fuel 12 examples.det
+     /tmp/symbolic_coupling --fuel 12 source.det determinized.det
 
    The prototype models the parser.mly expression language, plus explicit
    [E]/[G] sample-mode annotations for this coupling experiment.  It compares:
@@ -13,7 +13,7 @@
    - ordinary small-step semantics;
    - symbolic small-step semantics, where expectation-mode samples are recorded
      in a symbolic environment instead of sampled immediately;
-   - determinized small-step semantics.
+   - small-step semantics for a provided determinized program.
 
    The symbolic state [<sigma || e>] has two interpretations:
 
@@ -24,7 +24,11 @@
    representation, that:
 
    - original semantics = actual interpretation of symbolic semantics;
-   - determinized semantics = expected interpretation of symbolic semantics.
+   - provided determinized semantics = expected interpretation of symbolic
+     semantics.
+
+   To run:
+     $ /private/tmp/symbolic_coupling --fuel 5 --trace source.det determinized.det
 *)
 
 type mode = E | G
@@ -381,7 +385,7 @@ let tokenize source =
       | '>' -> go (i + 1) (TGt :: acc)
       | ':' when i + 1 < len && source.[i + 1] = ':' ->
           go (i + 2) (TCons :: acc)
-      | c when starts_number i ->
+      | _ when starts_number i ->
           let tok, next = scan_number i in
           go next (tok :: acc)
       | c when is_ident_start c ->
@@ -980,53 +984,6 @@ let mean_of_random = function
   | RPoisson p -> simplify p
   | RDiscrete cases -> weighted_sum cases
 
-let rec determinize expr =
-  let d = determinize in
-  match expr with
-  | Var _ | Float _ | Bool _ | Unit | Nil -> expr
-  | Lam (x, body) -> Lam (x, d body)
-  | Rec (f, x, body) -> Rec (f, x, d body)
-  | App (fn, arg) -> App (d fn, d arg)
-  | Let (x, e1, e2) -> Let (x, d e1, d e2)
-  | If (c, t, f) -> If (d c, d t, d f)
-  | Pair (a, b) -> Pair (d a, d b)
-  | Fst e -> Fst (d e)
-  | Snd e -> Snd (d e)
-  | Inl e -> Inl (d e)
-  | Inr e -> Inr (d e)
-  | Case (scrut, (x, left), (y, right)) ->
-      Case (d scrut, (x, d left), (y, d right))
-  | MatchList (scrut, nil_branch, (h, tl, cons_branch)) ->
-      MatchList (d scrut, d nil_branch, (h, tl, d cons_branch))
-  | Neg e -> simplify (Neg (d e))
-  | Add (a, b) -> simplify (Add (d a, d b))
-  | Mul (a, b) -> simplify (Mul (d a, d b))
-  | Sub (a, b) -> simplify (Sub (d a, d b))
-  | Div (a, b) -> simplify (Div (d a, d b))
-  | Lt (a, b) -> simplify (Lt (d a, d b))
-  | Leq (a, b) -> simplify (Leq (d a, d b))
-  | Uniform (E, a, b) ->
-      mean_of_random (RUniform (d a, d b))
-  | Uniform (G, a, b) -> Uniform (G, d a, d b)
-  | Gauss (E, a, b) -> mean_of_random (RGauss (d a, d b))
-  | Gauss (G, a, b) -> Gauss (G, d a, d b)
-  | Exponential (E, e) -> mean_of_random (RExponential (d e))
-  | Exponential (G, e) -> Exponential (G, d e)
-  | Gamma (E, a, b) -> mean_of_random (RGamma (d a, d b))
-  | Gamma (G, a, b) -> Gamma (G, d a, d b)
-  | Beta (E, a, b) -> mean_of_random (RBeta (d a, d b))
-  | Beta (G, a, b) -> Beta (G, d a, d b)
-  | Flip p -> Flip (d p)
-  | Bernoulli (E, p) -> mean_of_random (RBernoulli (d p))
-  | Bernoulli (G, p) -> Bernoulli (G, d p)
-  | Poisson (E, p) -> mean_of_random (RPoisson (d p))
-  | Poisson (G, p) -> Poisson (G, d p)
-  | Discrete (E, cases) ->
-      mean_of_random (RDiscrete (List.map (fun (p, e) -> (p, d e)) cases))
-  | Discrete (G, cases) -> Discrete (G, List.map (fun (p, e) -> (p, d e)) cases)
-  | Observe c -> Observe (d c)
-  | Cons (h, t) -> Cons (d h, d t)
-
 let sample_random ctx random =
   let name = fresh_sample ctx in
   let sample = { name; random } in
@@ -1346,42 +1303,60 @@ let symbolic_actual_view symbolic =
 let symbolic_expected_view symbolic =
   simplify_measure (measure_bind symbolic interpret_expected_state)
 
-let print_symbolic_trace fuel expr =
+let print_symbolic_trace fuel source determinized_expr =
   let ctx = empty_context () in
   let rec loop step symbolic =
+    let original =
+      let ctx = empty_context () in
+      simplify_measure (nstep_expr ctx step source)
+    in
+    let determinized =
+      let ctx = empty_context () in
+      simplify_measure (nstep_expr ctx step determinized_expr)
+    in
+    let symbolic_actual = symbolic_actual_view symbolic in
+    let symbolic_expected = symbolic_expected_view symbolic in
+    let actual_ok = compare_measures original symbolic_actual in
+    let expected_ok = compare_measures determinized symbolic_expected in
     Printf.printf "\n-- symbolic step %d --\n" step;
     Printf.printf "symbolic states: %s\n"
-      (measure_to_string sym_state_to_string symbolic);
+    (measure_to_string sym_state_to_string symbolic);
+    Printf.printf "original step:   %s\n"
+      (measure_to_string expr_to_string original);
     Printf.printf "actual view:     %s\n"
-      (measure_to_string expr_to_string (symbolic_actual_view symbolic));
+      (measure_to_string expr_to_string symbolic_actual);
+    Printf.printf "determinized step: %s\n"
+      (measure_to_string expr_to_string determinized);
     Printf.printf "expected view:   %s\n"
-      (measure_to_string expr_to_string (symbolic_expected_view symbolic));
+      (measure_to_string expr_to_string symbolic_expected);
+    Printf.printf "actual coupling:   %s\n" (if actual_ok then "OK" else "FAIL");
+    Printf.printf "expected coupling: %s\n" (if expected_ok then "OK" else "FAIL");
     if step < fuel then
       loop (step + 1) (measure_bind symbolic (step_sym_state ctx))
   in
-  loop 0 (Return { sigma = []; residual = expr })
+  loop 0 (Return { sigma = []; residual = source })
 
-let run_case trace name fuel expr =
+let run_case trace name fuel source determinized_expr =
   let original =
     let ctx = empty_context () in
-    simplify_measure (nstep_expr ctx fuel expr)
+    simplify_measure (nstep_expr ctx fuel source)
   in
   let symbolic =
     let ctx = empty_context () in
-    nstep_sym ctx fuel { sigma = []; residual = expr }
+    nstep_sym ctx fuel { sigma = []; residual = source }
   in
   let symbolic_actual = symbolic_actual_view symbolic in
   let symbolic_expected = symbolic_expected_view symbolic in
   let determinized =
     let ctx = empty_context () in
-    simplify_measure (nstep_expr ctx fuel (determinize expr))
+    simplify_measure (nstep_expr ctx fuel determinized_expr)
   in
   let actual_ok = compare_measures original symbolic_actual in
   let expected_ok = compare_measures determinized symbolic_expected in
   Printf.printf "\n=== %s ===\n" name;
-  Printf.printf "source:       %s\n" (expr_to_string expr);
-  Printf.printf "determinized: %s\n" (expr_to_string (determinize expr));
-  if trace then print_symbolic_trace fuel expr;
+  Printf.printf "source:       %s\n" (expr_to_string source);
+  Printf.printf "determinized: %s\n" (expr_to_string determinized_expr);
+  if trace then print_symbolic_trace fuel source determinized_expr;
   Printf.printf "actual coupling:   %s\n" (if actual_ok then "OK" else "FAIL");
   Printf.printf "expected coupling: %s\n" (if expected_ok then "OK" else "FAIL");
   if not actual_ok then (
@@ -1424,8 +1399,9 @@ let parse_fuel text =
 
 let usage () =
   Printf.printf
-    "Usage: symbolic_coupling [--fuel N] [--trace] [file ...]\n\n\
+    "Usage: symbolic_coupling [--fuel N] [--trace] [source.det determinized.det] ...\n\n\
      With no files, runs the built-in examples.\n\
+     With files, arguments are read in source/determinized pairs.\n\
      --trace prints each symbolic small step and its actual/expected views.\n\
      File syntax includes parser.mly constructs: fun, rec, application,\n\
      let, if, pairs, fst/snd, inl/inr case matches, list matches,\n\
@@ -1492,17 +1468,59 @@ let example_mixed_modes =
           uniform_e (Var "g") (f 2.0),
           Add (Var "g", Var "x") ) )
 
+let det_dependent_uniform =
+  Let
+    ( "x",
+      f 0.5,
+      Let
+        ( "y",
+          Div (Add (Var "x", f 2.0), f 2.0),
+          Add (Var "x", Var "y") ) )
+
+let det_flip_kept =
+  Let
+    ( "b",
+      Flip (f 0.5),
+      If (Var "b", f 0.5, f 3.0) )
+
+let det_mixed_modes =
+  Let
+    ( "g",
+      uniform_g (f 0.0) (f 1.0),
+      Let
+        ( "x",
+          Div (Add (Var "g", f 2.0), f 2.0),
+          Add (Var "g", Var "x") ) )
+
 let builtin_cases fuel =
     [
-      ("dependent expectation samples", fuel, example_dependent_uniform);
-      ("flip retained, branch samples determinized", fuel, example_flip_kept);
+      ( "dependent expectation samples",
+        fuel,
+        example_dependent_uniform,
+        det_dependent_uniform );
+      ( "flip retained, branch samples determinized",
+        fuel,
+        example_flip_kept,
+        det_flip_kept );
       ( "general sample retained, dependent expectation sample",
         fuel,
-        example_mixed_modes );
+        example_mixed_modes,
+        det_mixed_modes );
     ]
 
 let file_cases fuel paths =
-  List.map (fun path -> (path, fuel, parse_file path)) paths
+  let rec pair acc = function
+    | [] -> List.rev acc
+    | source_path :: determinized_path :: rest ->
+        let name = source_path ^ " / " ^ determinized_path in
+        let source = parse_file source_path in
+        let determinized = parse_file determinized_path in
+        pair ((name, fuel, source, determinized) :: acc) rest
+    | [ _ ] ->
+        parse_error
+          "file arguments must come in source/determinized pairs"
+  in
+  pair [] paths
 
 let () =
   let fuel, trace, files =
@@ -1525,7 +1543,10 @@ let () =
         exit 2
   in
   let results =
-    List.map (fun (name, fuel, expr) -> run_case trace name fuel expr) cases
+    List.map
+      (fun (name, fuel, source, determinized) ->
+        run_case trace name fuel source determinized)
+      cases
   in
   if List.for_all Fun.id results then (
     Printf.printf "\nAll symbolic coupling checks passed.\n";
