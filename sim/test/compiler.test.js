@@ -34,15 +34,21 @@ test("pretty printer keeps short conditionals on one line", () => {
 test("uniform determinizes to its mean by default", () => {
   const result = analyze("let a = uniform(0, 1) in\na + 2");
   assert.equal(result.ok, true);
-  assert.match(result.pretty.determinized, /0 \+ 1/);
-  assert.match(result.pretty.determinized, /0\.5/);
+  assert.match(result.pretty.determinized, /mean_uniform\(0, 1\)/);
 });
 
-test("multiplication of two samples forces G mode", () => {
+test("multiplication keeps one sample symbolic and samples the other operand", () => {
   const result = analyze("uniform(0, 1) * uniform(1, 2)");
   assert.equal(result.ok, true);
+  assert.match(result.pretty.elaboratedDefaulted, /uniform\[E\]/);
   assert.match(result.pretty.elaboratedDefaulted, /uniform\[G\]/);
-  assert.match(result.pretty.determinized, /uniform\(0, 1\) \* uniform\(1, 2\)/);
+  assert.match(result.pretty.determinized, /mean_uniform\(0, 1\) \* uniform\(1, 2\)/);
+});
+
+test("multiplication is asymmetric, so users commute to keep the symbolic operand on the left", () => {
+  const result = analyze("uniform[E](1, 2) * uniform[G](0, 1)");
+  assert.equal(result.ok, true);
+  assert.match(result.pretty.determinized, /mean_uniform\(1, 2\) \* uniform\(0, 1\)/);
 });
 
 test("nonlinear variable use forces operand G but not result G", () => {
@@ -56,8 +62,8 @@ test("nonlinear variable use forces operand G but not result G", () => {
 test("gamma dependency determinizes by expectation mode", () => {
   const result = analyze("let x = gamma(1, 2) in\nlet y = gamma(x, 8) in\ny + 1");
   assert.equal(result.ok, true);
-  assert.match(result.pretty.determinized, /1 \/ 2/);
-  assert.match(result.pretty.determinized, /x \/ 8/);
+  assert.match(result.pretty.determinized, /mean_gamma\(1, 2\)/);
+  assert.match(result.pretty.determinized, /mean_gamma\(x, 8\)/);
 });
 
 test("syntax errors report diagnostics", () => {

@@ -2,46 +2,65 @@ import { affineAdd, affineDiv, affineMul, affineScale, affineToNumber, evalAffin
 
 export const floatDistributions = new Set(["Uniform", "Gauss", "Exponential", "Gamma", "Beta", "Bernoulli", "Poisson", "Discrete"]);
 const MIN_POSITIVE_SAMPLE = Number.MIN_VALUE;
+const PROBABILITY_EPS = 1e-9;
+const ARITIES = {
+  Uniform: 2,
+  Gauss: 2,
+  Exponential: 1,
+  Gamma: 2,
+  Beta: 2,
+  Flip: 1,
+  Bernoulli: 1,
+  Poisson: 1,
+};
+
+export class DistributionDomainError extends Error {
+  constructor(kind, message) {
+    super(`domain error in ${distributionName(kind)}: ${message}`);
+    this.name = "DistributionDomainError";
+    this.kind = kind;
+    this.reason = message;
+  }
+}
+
+export function isDistributionDomainError(error) {
+  return error instanceof DistributionDomainError;
+}
 
 export function sampleDistribution(kind, args, rng) {
+  const domain = validateSampleDomain(kind, args);
   switch (kind) {
     case "Uniform": {
-      const a = numberArg(args[0]);
-      const b = numberArg(args[1]);
-      const lo = Math.min(a, b);
-      const hi = Math.max(a, b);
+      const [lo, hi] = domain;
       return lo + rng.next() * (hi - lo);
     }
     case "Gauss": {
-      const mean = numberArg(args[0]);
-      const variance = numberArg(args[1]);
+      const [mean, variance] = domain;
       const u1 = rng.positive();
       const u2 = rng.next();
       return mean + Math.sqrt(variance) * Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
     }
     case "Exponential": {
-      const rate = numberArg(args[0]);
-      if (rate <= 0) throw new Error("exponential: rate must be > 0");
+      const [rate] = domain;
       return -Math.log(rng.positive()) / rate;
     }
     case "Gamma":
-      return gammaSample(numberArg(args[0]), numberArg(args[1]), rng);
+      return gammaSample(domain[0], domain[1], rng);
     case "Beta": {
-      const x = gammaSample(numberArg(args[0]), 1, rng);
-      const y = gammaSample(numberArg(args[1]), 1, rng);
+      const x = gammaSample(domain[0], 1, rng);
+      const y = gammaSample(domain[1], 1, rng);
       return x / (x + y);
     }
     case "Flip": {
-      const p = numberArg(args[0]);
-      if (p < 0 || p > 1) throw new Error("flip: p not in [0,1]");
+      const [p] = domain;
       return rng.next() < p;
     }
     case "Bernoulli":
-      return rng.next() < numberArg(args[0]) ? 1 : 0;
+      return rng.next() < domain[0] ? 1 : 0;
     case "Poisson":
-      return poissonSample(numberArg(args[0]), rng);
+      return poissonSample(domain[0], rng);
     case "Discrete": {
-      const probabilities = args.map(numberArg);
+      const probabilities = domain;
       const total = probabilities.reduce((a, b) => a + b, 0);
       const r = rng.next() * total;
       let acc = 0;
@@ -57,6 +76,7 @@ export function sampleDistribution(kind, args, rng) {
 }
 
 export function meanDistribution(kind, args) {
+  validateMeanDomain(kind, args);
   switch (kind) {
     case "Uniform":
       return affineScale(affineAdd(args[0], args[1]), 0.5);
@@ -97,8 +117,99 @@ function numberArg(arg) {
   throw new Error(`expected numeric argument, got ${JSON.stringify(arg)}`);
 }
 
+function validateSampleDomain(kind, args) {
+  const values = args.map(numberArg);
+  validateConcreteDomain(kind, values);
+  return values;
+}
+
+function validateMeanDomain(kind, args) {
+  for (const arg of args) validateFiniteAffine(kind, arg);
+  const values = args.map((arg) => (isConcreteAffine(arg) ? affineToNumber(arg) : null));
+  validateConcreteDomain(kind, values, { skipSymbolic: true });
+}
+
+function validateFiniteAffine(kind, arg) {
+  if (!Number.isFinite(arg.constant)) throw new DistributionDomainError(kind, "parameters must be finite");
+  for (const coeff of Object.values(arg.terms)) {
+    if (!Number.isFinite(coeff)) throw new DistributionDomainError(kind, "parameters must be finite");
+  }
+}
+
+function validateConcreteDomain(kind, values, options = {}) {
+  const skipSymbolic = Boolean(options.skipSymbolic);
+  validateArity(kind, values.length);
+  const concrete = values.filter((value) => value !== null);
+  for (const value of concrete) {
+    if (!Number.isFinite(value)) throw new DistributionDomainError(kind, "parameters must be finite");
+  }
+
+  const arg = (index) => values[index];
+  const check = (index, predicate, message) => {
+    const value = arg(index);
+    if (value === null && skipSymbolic) return;
+    if (!predicate(value)) throw new DistributionDomainError(kind, message);
+  };
+
+  switch (kind) {
+    case "Uniform":
+      if (!(skipSymbolic && (arg(0) === null || arg(1) === null)) && arg(0) > arg(1)) {
+        throw new DistributionDomainError(kind, "lower bound must be <= upper bound");
+      }
+      break;
+    case "Gauss":
+      check(1, (value) => value >= 0, "variance must be >= 0");
+      break;
+    case "Exponential":
+      check(0, (value) => value > 0, "rate must be > 0");
+      break;
+    case "Gamma":
+      check(0, (value) => value > 0, "shape must be > 0");
+      check(1, (value) => value > 0, "rate must be > 0");
+      break;
+    case "Beta":
+      check(0, (value) => value > 0, "alpha must be > 0");
+      check(1, (value) => value > 0, "beta must be > 0");
+      break;
+    case "Flip":
+    case "Bernoulli":
+      check(0, (value) => value >= 0 && value <= 1, "probability must be in [0, 1]");
+      break;
+    case "Poisson":
+      check(0, (value) => value >= 0, "lambda must be >= 0");
+      break;
+    case "Discrete": {
+      if (values.length === 0) throw new DistributionDomainError(kind, "at least one probability is required");
+      for (const [index, value] of values.entries()) {
+        if (value === null && skipSymbolic) continue;
+        if (value < 0 || value > 1) throw new DistributionDomainError(kind, `probability ${index} must be in [0, 1]`);
+      }
+      if (!values.includes(null)) {
+        const total = values.reduce((sum, value) => sum + value, 0);
+        if (Math.abs(total - 1) > PROBABILITY_EPS) throw new DistributionDomainError(kind, "probabilities must sum to 1");
+      }
+      break;
+    }
+    default:
+      throw new Error(`unknown distribution ${kind}`);
+  }
+}
+
+function validateArity(kind, actual) {
+  if (kind === "Discrete") return;
+  const expected = ARITIES[kind];
+  if (expected === undefined) throw new Error(`unknown distribution ${kind}`);
+  if (actual !== expected) {
+    const noun = expected === 1 ? "parameter" : "parameters";
+    throw new DistributionDomainError(kind, `expected ${expected} ${noun}, got ${actual}`);
+  }
+}
+
+function distributionName(kind) {
+  return kind === "Gauss" ? "gauss" : kind.toLowerCase();
+}
+
 function gammaSample(alpha, beta, rng) {
-  if (alpha <= 0 || beta <= 0) throw new Error("gamma: parameters must be > 0");
   const scale = 1 / beta;
   if (alpha < 1) return positiveSample(gammaSample(alpha + 1, beta, rng) * rng.positive() ** (1 / alpha));
   const d = alpha - 1 / 3;
@@ -123,7 +234,6 @@ function stdNormal(rng) {
 }
 
 function poissonSample(lambda, rng) {
-  if (lambda < 0) throw new Error("poisson: lambda must be >= 0");
   if (lambda === 0) return 0;
   const l = Math.exp(-lambda);
   let k = 0;

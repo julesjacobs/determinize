@@ -50,6 +50,9 @@ function renderExpr(expr, prec = 0, focusPath = null, options = {}) {
     case "SymFloat":
       html = renderHighlightedText(prettyExpr(expr), options);
       break;
+    case "DomainError":
+      html = `<span class="trace-domain-error" title="${escapeHtml(expr.message)}">${renderHighlightedText(prettyExpr(expr), options)}</span>`;
+      break;
     case "Let":
       html = renderLet(expr, focusPath, options);
       break;
@@ -86,6 +89,9 @@ function renderExpr(expr, prec = 0, focusPath = null, options = {}) {
     case "Observe":
       html = `${keyword("observe")}(${renderExpr(expr.cond, 0, childFocus(focusPath, "cond"), options)})`;
       break;
+    case "Mean":
+      html = renderMean(expr, focusPath, options);
+      break;
     default:
       if (expr.kind in infix) {
         const [op, level] = infix[expr.kind];
@@ -107,9 +113,10 @@ function renderExpr(expr, prec = 0, focusPath = null, options = {}) {
 export function renderHighlightedText(code, options = {}) {
   const escaped = escapeHtml(code);
   return escaped.replace(
-    /\b(let|in|if|then|else|match|with|fun|rec|true|false|fst|snd|inl|inr|observe)\b|\b(uniform|gauss|exponential|gamma|beta|flip|bernoulli|poisson|discrete)\b|(\[[EG]\])|\b(v\d+)\b|(-?\d+(?:\.\d+)?(?:e[+-]?\d+)?)/gi,
-    (match, keywordMatch, dist, mode, sym, number) => {
+    /\b(let|in|if|then|else|match|with|fun|rec|true|false|fst|snd|inl|inr|observe|domain_error)\b|\b(mean_(?:uniform|gauss|exponential|gamma|beta|bernoulli|poisson|discrete))\b|\b(uniform|gauss|exponential|gamma|beta|flip|bernoulli|poisson|discrete)\b|(\[[EG]\])|\b(v\d+)\b|(-?\d+(?:\.\d+)?(?:e[+-]?\d+)?)/gi,
+    (match, keywordMatch, mean, dist, mode, sym, number) => {
       if (keywordMatch) return `<span class="tok-keyword">${match}</span>`;
+      if (mean) return `<span class="tok-mean">${match}</span>`;
       if (dist) return `<span class="tok-dist">${match}</span>`;
       if (mode) return `<span class="tok-mode">${match}</span>`;
       if (sym) return corrSpan(match, "tok-sym", sym);
@@ -146,6 +153,35 @@ function renderDistribution(expr, focusPath, options) {
     return `${name}${mode}(${expr.choices.map((choice) => renderHighlightedText(String(choice.probability), options)).join(", ")})`;
   }
   return `${name}${mode}(${expr.args.map((arg, index) => renderExpr(arg, 0, childFocus(focusPath, "args", index), options)).join(", ")})`;
+}
+
+function renderMean(expr, focusPath, options) {
+  const name = distNames[expr.distribution] ?? expr.distribution.toLowerCase();
+  const args = expr.args.map((arg, index) => renderExpr(arg, 0, childFocus(focusPath, "args", index), options));
+  const formula = meanFormula(expr.distribution, expr.args.map((arg) => prettyExpr(arg)));
+  return `<span class="mean-form" title="one-step mean redex: ${escapeHtml(formula)}"><span class="tok-mean">mean_${plain(name)}</span>(${args.join(", ")})</span>`;
+}
+
+function meanFormula(distribution, args) {
+  switch (distribution) {
+    case "Uniform":
+      return `(${args[0]} + ${args[1]}) * 0.5`;
+    case "Gauss":
+      return args[0];
+    case "Exponential":
+      return `1 / ${args[0]}`;
+    case "Gamma":
+      return `${args[0]} / ${args[1]}`;
+    case "Beta":
+      return `${args[0]} / (${args[0]} + ${args[1]})`;
+    case "Bernoulli":
+    case "Poisson":
+      return args[0];
+    case "Discrete":
+      return args.map((probability, index) => `${index} * ${probability}`).join(" + ") || "0";
+    default:
+      return `mean(${args.join(", ")})`;
+  }
 }
 
 function valueSpan(html) {
@@ -207,6 +243,8 @@ function changedChildPath(before, after) {
       return changedFieldPath(before, after, "left") ?? changedFieldPath(before, after, "right");
     case "Observe":
       return changedFieldPath(before, after, "cond");
+    case "Mean":
+      return changedIndexedPath(before, after, "args");
     case "Uniform":
     case "Gauss":
     case "Exponential":
@@ -217,6 +255,8 @@ function changedChildPath(before, after) {
     case "Poisson":
       return changedIndexedPath(before, after, "args");
     case "Discrete":
+      return null;
+    case "DomainError":
       return null;
     default:
       return null;

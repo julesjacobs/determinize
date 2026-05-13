@@ -5,7 +5,7 @@ import { parse } from "../compiler/parser.js";
 import { prettyExpr } from "../compiler/pretty.js";
 import { zonk } from "../compiler/types.js";
 import { affineAdd, affineConst, affineDiv, affineMul, affineNeg, affineSub, affineToNumber, affineVar, evalAffine, prettyAffine, symFloat, valueToAffine } from "./affine.js";
-import { floatDistributions, instantiateArgs, meanDistribution, sampleDistribution } from "./distributions.js";
+import { floatDistributions, instantiateArgs, isDistributionDomainError, meanDistribution, sampleDistribution } from "./distributions.js";
 import { makeStreams } from "./rng.js";
 
 export function prepareRuntime(source) {
@@ -102,7 +102,10 @@ export function runtimeFromAst(expr) {
     case "Unit":
     case "Nil":
     case "SymFloat":
+    case "DomainError":
       return clone(expr);
+    case "Mean":
+      return n("Mean", { distribution: expr.distribution, args: expr.args.map(runtimeFromAst) }, expr);
     case "Lam":
       return n("Lam", { param: expr.param, body: runtimeFromAst(expr.body) }, expr);
     case "Rec":
@@ -190,40 +193,55 @@ export function stepSymbolic(state) {
 }
 
 export function projectSample(symbolicState, rngE) {
-  const env = symbolicSampleEnv(symbolicState, rngE);
-  return concretize(symbolicState.expr, env);
+  return projectSampleWithEnv(symbolicState, rngE).expr;
 }
 
 function projectSampleWithEnv(symbolicState, rngE) {
-  const env = symbolicSampleEnv(symbolicState, rngE);
-  return {
-    expr: concretize(symbolicState.expr, env),
-    sampleBySymbol: Object.fromEntries(env),
-  };
-}
-
-function symbolicSampleEnv(symbolicState, rngE) {
   const env = new Map();
   const rng = rngE.clone();
+  const sampleBySymbol = {};
   for (const binding of symbolicState.sigma) {
     const args = instantiateArgs(binding.args, env);
-    env.set(binding.name, sampleDistribution(binding.kind, args, rng));
+    try {
+      const value = sampleDistribution(binding.kind, args, rng);
+      env.set(binding.name, value);
+      sampleBySymbol[binding.name] = value;
+    } catch (error) {
+      if (!isDistributionDomainError(error)) throw error;
+      return {
+        expr: domainErrorExpr(error, symbolicState.expr),
+        sampleBySymbol,
+      };
+    }
   }
-  return env;
+  return {
+    expr: concretize(symbolicState.expr, env),
+    sampleBySymbol,
+  };
 }
 
 export function projectMean(symbolicState) {
   const env = new Map();
   for (const binding of symbolicState.sigma) {
     const args = binding.args.map((arg) => affineConst(evalAffine(arg, env)));
-    env.set(binding.name, affineToNumber(meanDistribution(binding.kind, args)));
+    try {
+      env.set(binding.name, affineToNumber(meanDistribution(binding.kind, args)));
+    } catch (error) {
+      if (!isDistributionDomainError(error)) throw error;
+      return domainErrorExpr(error, symbolicState.expr);
+    }
   }
   return concretize(symbolicState.expr, env);
 }
 
 export function projectMeanDeterminized(symbolicState) {
-  const env = symbolicMeanEnv(symbolicState);
-  return determinizeResidual(concretize(symbolicState.expr, env));
+  try {
+    const env = symbolicMeanEnv(symbolicState);
+    return determinizeResidual(concretize(symbolicState.expr, env));
+  } catch (error) {
+    if (!isDistributionDomainError(error)) throw error;
+    return domainErrorExpr(error, symbolicState.expr);
+  }
 }
 
 export function checkEquivalences(source, seed = 1) {
@@ -395,6 +413,8 @@ function step(expr, ctx) {
       if (expr.cond.kind !== "Bool") throw new Error("observe: expected bool");
       if (!expr.cond.value) return out(n("Reject", {}, expr), ctx);
       return out(n("Unit", {}, expr), ctx);
+    case "Mean":
+      return stepMean(expr, ctx);
     case "Uniform":
     case "Gauss":
     case "Exponential":
@@ -410,9 +430,30 @@ function step(expr, ctx) {
   throw new Error(`stuck expression ${expr.kind}`);
 }
 
+function stepMean(expr, ctx) {
+  for (let i = 0; i < expr.args.length; i++) {
+    if (!isValue(expr.args[i])) return stepIndexedChild(expr, "args", i, ctx);
+  }
+  try {
+    const mean = meanDistribution(expr.distribution, expr.args.map(valueToAffine));
+    return out(floatResult(mean, expr), ctx);
+  } catch (error) {
+    if (!isDistributionDomainError(error)) throw error;
+    return out(domainErrorExpr(error, expr), ctx);
+  }
+}
+
 function stepDistribution(expr, ctx) {
   for (let i = 0; i < expr.args.length; i++) {
     if (!isValue(expr.args[i])) return stepIndexedChild(expr, "args", i, ctx);
+  }
+  if (ctx.kind === "symbolic" && expr.mode === "E" && floatDistributions.has(expr.kind)) {
+    try {
+      meanDistribution(expr.kind, expr.args.map(valueToAffine));
+    } catch (error) {
+      if (!isDistributionDomainError(error)) throw error;
+      return out(domainErrorExpr(error, expr), ctx);
+    }
   }
   if (ctx.kind === "symbolic" && expr.mode === "E" && floatDistributions.has(expr.kind)) {
     const name = `v${ctx.nextSymbol}`;
@@ -421,20 +462,36 @@ function stepDistribution(expr, ctx) {
   }
   const streamName = expr.mode === "E" ? "rngE" : "rngG";
   const rng = ctx[streamName];
-  const value = sampleDistribution(expr.kind, expr.args, rng);
-  return out(typeof value === "boolean" ? n("Bool", { value }, expr) : n("Const", { value }, expr), { ...ctx, [streamName]: rng });
+  try {
+    const value = sampleDistribution(expr.kind, expr.args, rng);
+    return out(typeof value === "boolean" ? n("Bool", { value }, expr) : n("Const", { value }, expr), { ...ctx, [streamName]: rng });
+  } catch (error) {
+    if (!isDistributionDomainError(error)) throw error;
+    return out(domainErrorExpr(error, expr), { ...ctx, [streamName]: rng });
+  }
 }
 
 function stepDiscrete(expr, ctx) {
   if (ctx.kind === "symbolic" && expr.mode === "E") {
+    try {
+      meanDistribution("Discrete", expr.choices.map((choice) => affineConst(choice.probability)));
+    } catch (error) {
+      if (!isDistributionDomainError(error)) throw error;
+      return out(domainErrorExpr(error, expr), ctx);
+    }
     const name = `v${ctx.nextSymbol}`;
     const binding = { name, kind: "Discrete", args: expr.choices.map((choice) => affineConst(choice.probability)) };
     return out(symFloat(affineVar(name), expr.from, expr.to), { ...ctx, sigma: [...ctx.sigma, binding], nextSymbol: ctx.nextSymbol + 1 });
   }
   const streamName = expr.mode === "E" ? "rngE" : "rngG";
   const rng = ctx[streamName];
-  const index = sampleDistribution("Discrete", expr.choices.map((choice) => n("Const", { value: choice.probability }, expr)), rng);
-  return out(expr.choices[index].value, { ...ctx, [streamName]: rng });
+  try {
+    const index = sampleDistribution("Discrete", expr.choices.map((choice) => n("Const", { value: choice.probability }, expr)), rng);
+    return out(expr.choices[index].value, { ...ctx, [streamName]: rng });
+  } catch (error) {
+    if (!isDistributionDomainError(error)) throw error;
+    return out(domainErrorExpr(error, expr), { ...ctx, [streamName]: rng });
+  }
 }
 
 function advanceToTarget(state, target, maxSteps) {
@@ -476,40 +533,44 @@ function symbolicMeanEnv(symbolicState) {
 
 function determinizeResidual(expr) {
   switch (expr.kind) {
+    case "Mean":
+      return n("Mean", { distribution: expr.distribution, args: expr.args.map(determinizeResidual) }, expr);
     case "Uniform": {
       const args = expr.args.map(determinizeResidual);
-      if (expr.mode === "E") return n("Mul", { left: n("Add", { left: args[0], right: args[1] }, expr), right: n("Const", { value: 0.5 }, expr) }, expr);
+      if (expr.mode === "E") return meanNode(expr.kind, args, expr);
       return n("Uniform", { mode: "G", args }, expr);
     }
     case "Gauss": {
       const args = expr.args.map(determinizeResidual);
-      if (expr.mode === "E") return args[0];
+      if (expr.mode === "E") return meanNode(expr.kind, args, expr);
       return n("Gauss", { mode: "G", args }, expr);
     }
     case "Exponential": {
       const args = expr.args.map(determinizeResidual);
-      if (expr.mode === "E") return n("Div", { left: n("Const", { value: 1 }, expr), right: args[0] }, expr);
+      if (expr.mode === "E") return meanNode(expr.kind, args, expr);
       return n("Exponential", { mode: "G", args }, expr);
     }
     case "Gamma": {
       const args = expr.args.map(determinizeResidual);
-      if (expr.mode === "E") return n("Div", { left: args[0], right: args[1] }, expr);
+      if (expr.mode === "E") return meanNode(expr.kind, args, expr);
       return n("Gamma", { mode: "G", args }, expr);
     }
     case "Beta": {
       const args = expr.args.map(determinizeResidual);
-      if (expr.mode === "E") return n("Div", { left: args[0], right: n("Add", { left: args[0], right: args[1] }, expr) }, expr);
+      if (expr.mode === "E") return meanNode(expr.kind, args, expr);
       return n("Beta", { mode: "G", args }, expr);
     }
     case "Bernoulli":
     case "Poisson": {
       const args = expr.args.map(determinizeResidual);
-      if (expr.mode === "E") return args[0];
+      if (expr.mode === "E") return meanNode(expr.kind, args, expr);
       return n(expr.kind, { mode: "G", args }, expr);
     }
     case "Discrete": {
       const choices = expr.choices.map((choice) => ({ probability: choice.probability, value: determinizeResidual(choice.value) }));
-      if (expr.mode === "E") return weightedChoiceSum(choices, expr);
+      if (expr.mode === "E") {
+        return meanNode("Discrete", choices.map((choice) => n("Const", { value: choice.probability }, expr)), expr);
+      }
       return n("Discrete", { mode: "G", choices }, expr);
     }
     case "Flip":
@@ -519,12 +580,8 @@ function determinizeResidual(expr) {
   }
 }
 
-function weightedChoiceSum(choices, source) {
-  if (choices.length === 0) return n("Const", { value: 0 }, source);
-  const [first, ...rest] = choices;
-  const term = n("Mul", { left: n("Const", { value: first.probability }, source), right: first.value }, source);
-  if (rest.length === 0) return term;
-  return n("Add", { left: term, right: weightedChoiceSum(rest, source) }, source);
+function meanNode(distribution, args, source) {
+  return n("Mean", { distribution, args }, source);
 }
 
 function arithmetic(kind, left, right, source) {
@@ -543,16 +600,20 @@ function floatResult(affine, source) {
 
 function stepChild(expr, key, ctx) {
   const result = step(expr[key], ctx);
-  if (result.expr.kind === "Reject") return out(result.expr, { ...ctx, ...contextPatch(result) });
+  if (isTerminalError(result.expr)) return out(result.expr, { ...ctx, ...contextPatch(result) });
   return rebuild(expr, { [key]: result.expr }, ctx, result);
 }
 
 function stepIndexedChild(expr, key, index, ctx) {
   const result = step(expr[key][index], ctx);
-  if (result.expr.kind === "Reject") return out(result.expr, { ...ctx, ...contextPatch(result) });
+  if (isTerminalError(result.expr)) return out(result.expr, { ...ctx, ...contextPatch(result) });
   const next = expr[key].slice();
   next[index] = result.expr;
   return rebuild(expr, { [key]: next }, ctx, result);
+}
+
+function isTerminalError(expr) {
+  return expr.kind === "Reject" || expr.kind === "DomainError";
 }
 
 function rebuild(expr, patch, ctx, result) {
@@ -630,6 +691,8 @@ function mapChildren(expr, f) {
       return n("MatchList", { scrutinee: f(expr.scrutinee), nilBranch: f(expr.nilBranch), headName: expr.headName, tailName: expr.tailName, consBranch: f(expr.consBranch) }, expr);
     case "Observe":
       return n("Observe", { cond: f(expr.cond) }, expr);
+    case "Mean":
+      return n("Mean", { distribution: expr.distribution, args: expr.args.map(f) }, expr);
     case "Uniform":
     case "Gauss":
     case "Exponential":
@@ -650,13 +713,15 @@ function concretize(expr, env) {
   switch (expr.kind) {
     case "SymFloat":
       return n("Const", { value: evalAffine(expr.affine, env) }, expr);
+    case "DomainError":
+      return clone(expr);
     default:
       return mapChildren(expr, (child) => concretize(child, env));
   }
 }
 
 export function isValue(expr) {
-  return expr.kind === "Reject" || expr.kind === "Const" || expr.kind === "SymFloat" || expr.kind === "Bool" || expr.kind === "Unit" || expr.kind === "Lam" || expr.kind === "Rec" || expr.kind === "Nil" || (expr.kind === "Pair" && isValue(expr.left) && isValue(expr.right)) || (expr.kind === "Inl" && isValue(expr.expr)) || (expr.kind === "Inr" && isValue(expr.expr)) || (expr.kind === "Cons" && isValue(expr.head) && isValue(expr.tail));
+  return expr.kind === "Reject" || expr.kind === "DomainError" || expr.kind === "Const" || expr.kind === "SymFloat" || expr.kind === "Bool" || expr.kind === "Unit" || expr.kind === "Lam" || expr.kind === "Rec" || expr.kind === "Nil" || (expr.kind === "Pair" && isValue(expr.left) && isValue(expr.right)) || (expr.kind === "Inl" && isValue(expr.expr)) || (expr.kind === "Inr" && isValue(expr.expr)) || (expr.kind === "Cons" && isValue(expr.head) && isValue(expr.tail));
 }
 
 function numberValue(expr) {
@@ -674,6 +739,8 @@ export function exprEqual(a, b, eps = 1e-9) {
     case "Nil":
     case "Reject":
       return true;
+    case "DomainError":
+      return a.message === b.message;
     case "Pair":
       return exprEqual(a.left, b.left, eps) && exprEqual(a.right, b.right, eps);
     case "Inl":
@@ -690,6 +757,10 @@ export function exprEqual(a, b, eps = 1e-9) {
 
 function valuesEqual(a, b, eps = 1e-9) {
   return exprEqual(a, b, eps);
+}
+
+function domainErrorExpr(error, source) {
+  return n("DomainError", { message: error.message, distribution: error.kind ?? null, reason: error.reason ?? error.message }, source ?? { from: 0, to: 0 });
 }
 
 export function prettySymbolicState(state) {

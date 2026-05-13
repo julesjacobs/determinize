@@ -9,7 +9,7 @@ export const examples = [
   },
   {
     name: "Symbolic affine samples",
-    source: "let u = uniform(0, 1) in\nlet v = uniform(u, 2) in\n2 * u + v - 1",
+    source: "let u = uniform(0, 1) in\nlet v = uniform(u, 2) in\nu * 2 + v - 1",
   },
   {
     name: "Nonlinear use",
@@ -17,7 +17,7 @@ export const examples = [
   },
   {
     name: "Mixed residual randomness",
-    source: "let u = uniform(0, 1) in\nlet b = beta(9, 1) in\nlet g = gamma(u, b) in\n2 * g + 1",
+    source: "let u = uniform(0, 1) in\nlet b = beta(9, 1) in\nlet g = gamma(u, b) in\ng * 2 + 1",
   },
   {
     name: "Pairs",

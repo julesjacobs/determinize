@@ -443,8 +443,9 @@ function runCoupling(source, seed, options = {}) {
 
 function renderCoupling(coupled) {
   hideCheckPopover();
-  panels.couplingStatus.textContent = `seed ${coupled.seed} - ${coupled.ok ? "checked" : "failed"}${coupled.unchecked ? " (unchecked)" : ""}`;
-  panels.couplingStatus.className = `status ${coupled.ok ? "ok" : "error"}`;
+  const terminalDomainError = coupled.frames.some(hasDomainError);
+  panels.couplingStatus.textContent = `seed ${coupled.seed} - ${coupled.ok ? (terminalDomainError ? "checked domain error" : "checked") : "failed"}${coupled.unchecked ? " (unchecked)" : ""}`;
+  panels.couplingStatus.className = `status ${coupled.ok ? (terminalDomainError ? "warning" : "ok") : "error"}`;
   panels.coupling.innerHTML = `
     <div class="coupling-table-head">
       <span></span>
@@ -459,8 +460,9 @@ function renderCoupling(coupled) {
       const sigma = sigmaView(frame.sigma);
       const sigmaLines = Math.max(1, Math.min(4, sigma.lineCount));
       const ok = frameOk(frame);
+      const domainError = hasDomainError(frame);
       return `
-        <section class="coupling-row ${ok ? "" : "failed"}" style="--sigma-lines: ${sigmaLines}">
+        <section class="coupling-row ${ok ? "" : "failed"} ${domainError ? "domain-error-row" : ""}" style="--sigma-lines: ${sigmaLines}">
           <div class="step-rail">
             <span>${frame.step}</span>
             ${stepCheck(frame, coupled)}
@@ -478,23 +480,31 @@ function frameOk(frame) {
   return frame.originalOk && frame.determinizedOk && frame.symbolicOk !== false;
 }
 
+function hasDomainError(frame) {
+  return frame.original?.kind === "DomainError" || frame.symbolic?.kind === "DomainError" || frame.determinized?.kind === "DomainError";
+}
+
 function stepCheck(frame, coupled) {
   const ok = frameOk(frame);
+  const domainError = hasDomainError(frame);
+  const label = domainError && ok ? "ERR" : ok ? "OK" : "FAIL";
+  const aria = domainError && ok ? "Coupling checks reached a shared domain error" : ok ? "Coupling checks passed" : "Coupling check failed";
   return `
-    <span class="step-check ${ok ? "ok" : "fail"}" tabindex="0" aria-label="${ok ? "Coupling checks passed" : "Coupling check failed"}">
-      ${ok ? "OK" : "FAIL"}
+    <span class="step-check ${ok ? (domainError ? "domain" : "ok") : "fail"}" tabindex="0" aria-label="${aria}">
+      ${label}
       <span class="check-popover-source">
-        ${checkPopoverContent(frame, coupled, ok)}
+        ${checkPopoverContent(frame, coupled, ok, domainError)}
       </span>
     </span>
   `;
 }
 
-function checkPopoverContent(frame, coupled, ok) {
+function checkPopoverContent(frame, coupled, ok, domainError) {
   const originalTarget = frame.originalTarget ? prettyExpr(frame.originalTarget) : "not available";
   const determinizedTarget = frame.determinizedTarget ? prettyExpr(frame.determinizedTarget) : "not available";
   return `
-    <strong>${ok ? "Coupling checks passed at this symbolic step." : "Coupling check failed at this symbolic step."}</strong>
+    <strong>${domainError && ok ? "All traces reached the same domain error at this symbolic step." : ok ? "Coupling checks passed at this symbolic step." : "Coupling check failed at this symbolic step."}</strong>
+    ${domainError ? `<span class="domain-error-note">${escapeHtml(domainErrorMessage(frame))}</span>` : ""}
     <span>The source trace must match the symbolic state after sampling stored E-bindings with the same E-randomness.</span>
     <code>${escapeHtml(originalTarget)}</code>
     <span>The determinized trace must match the symbolic state after replacing stored E-bindings by their means.</span>
@@ -504,6 +514,10 @@ function checkPopoverContent(frame, coupled, ok) {
     ${frame.symbolicOk === false ? `<span>Symbolic next step failed: ${escapeHtml(frame.symbolicError)}</span>` : ""}
     ${coupled.unchecked ? "<em>This trace is running despite type/mode diagnostics, so failures show why the theorem needs the type system.</em>" : ""}
   `;
+}
+
+function domainErrorMessage(frame) {
+  return frame.original?.message ?? frame.symbolic?.message ?? frame.determinized?.message ?? "domain error";
 }
 
 function couplingCell(expr, meta, tone, traceOptions = {}) {
@@ -585,22 +599,27 @@ function sigmaView(sigma) {
   const meanBySymbol = {};
   const lines = sigma.map((binding) => {
     let mean = NaN;
+    let meanError = null;
     try {
       const meanArgs = binding.args.map((arg) => affineConst(evalAffine(arg, env)));
       mean = affineToNumber(meanDistribution(binding.kind, meanArgs));
       env.set(binding.name, mean);
       meanBySymbol[binding.name] = mean;
-    } catch {
+    } catch (error) {
+      meanError = error?.message ?? String(error);
       env.set(binding.name, NaN);
       meanBySymbol[binding.name] = NaN;
     }
     const args = binding.args.map((arg) => renderHighlightedText(prettyAffine(arg))).join(", ");
-    return `<span class="sigma-binding corr-item" data-corr="${escapeHtml(binding.name)}" tabindex="0"><span class="sigma-definition"><span class="tok-sym">${escapeHtml(binding.name)}</span> ~ <span class="tok-dist">${binding.kind.toLowerCase()}</span>(${args})</span><span class="sigma-mean">E[<span class="tok-sym">${escapeHtml(binding.name)}</span>] = ${meanMarkup(binding.name, mean)}</span></span>`;
+    return `<span class="sigma-binding corr-item" data-corr="${escapeHtml(binding.name)}" tabindex="0"><span class="sigma-definition"><span class="tok-sym">${escapeHtml(binding.name)}</span> ~ <span class="tok-dist">${binding.kind.toLowerCase()}</span>(${args})</span><span class="sigma-mean">E[<span class="tok-sym">${escapeHtml(binding.name)}</span>] = ${meanMarkup(binding.name, mean, meanError)}</span></span>`;
   });
   return { html: lines.join("\n"), lineCount: lines.length, meanBySymbol };
 }
 
-function meanMarkup(symbol, mean) {
+function meanMarkup(symbol, mean, error = null) {
+  if (error) {
+    return `<span class="sigma-mean-error" title="${escapeHtml(error)}">domain error</span>`;
+  }
   const value = formatNumber(mean);
   return `<span class="corr-item sigma-mean-value" data-corr="${escapeHtml(symbol)}" title="mean substituted for ${escapeHtml(symbol)}">${escapeHtml(value)}</span>`;
 }

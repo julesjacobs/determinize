@@ -3,7 +3,9 @@ import test from "node:test";
 import { analyze } from "../src/compiler/analyze.js";
 import { prettyExpr } from "../src/compiler/pretty.js";
 import { examples } from "../src/examples.js";
-import { checkEquivalences, prepareRuntime, projectMean, projectSample, runCoupledTrace, runOrdinary, runSymbolic } from "../src/runtime/semantics.js";
+import { affineConst, affineScale, affineVar } from "../src/runtime/affine.js";
+import { meanDistribution, sampleDistribution } from "../src/runtime/distributions.js";
+import { checkEquivalences, prepareRuntime, projectMean, projectSample, runCoupledTrace, runOrdinary, runSymbolic, stepOrdinary } from "../src/runtime/semantics.js";
 import { makeStreams } from "../src/runtime/rng.js";
 
 test("symbolic semantics stores E samples in sigma", () => {
@@ -16,7 +18,7 @@ test("symbolic semantics stores E samples in sigma", () => {
 });
 
 test("symbolic arithmetic on E samples is affine", () => {
-  const { expr } = prepareRuntime("let u = uniform[E](0, 1) in\nlet y = uniform[E](u, 2) in\n2 * u + y - 1");
+  const { expr } = prepareRuntime("let u = uniform[E](0, 1) in\nlet y = uniform[E](u, 2) in\nu * 2 + y - 1");
   const result = runSymbolic(expr, makeStreams(11));
   assert.equal(result.sigma.length, 2);
   assert.equal(prettyExpr(result.value), "-1 + 2*v1 + v2");
@@ -31,7 +33,7 @@ test("G samples are sampled during symbolic stepping", () => {
 });
 
 test("sampled projection equals ordinary expression semantics with split streams", () => {
-  const source = "let u = uniform[E](0, 1) in\nlet b = beta[G](3, 2) in\nlet g = gamma[E](u, b) in\n2 * g + 1";
+  const source = "let u = uniform[E](0, 1) in\nlet b = beta[G](3, 2) in\nlet g = gamma[E](u, b) in\ng * 2 + 1";
   for (const seed of [1, 2, 3, 99]) {
     const result = checkEquivalences(source, seed);
     assert.equal(result.sampledEquivalent, true, `seed ${seed}`);
@@ -39,7 +41,7 @@ test("sampled projection equals ordinary expression semantics with split streams
 });
 
 test("mean projection equals determinized semantics under shared G randomness", () => {
-  const source = "let u = uniform[E](0, 1) in\nlet b = beta[G](3, 2) in\nlet g = gamma[E](u, b) in\n2 * g + 1";
+  const source = "let u = uniform[E](0, 1) in\nlet b = beta[G](3, 2) in\nlet g = gamma[E](u, b) in\ng * 2 + 1";
   for (const seed of [4, 5, 6, 100]) {
     const result = checkEquivalences(source, seed);
     assert.equal(result.meanEquivalent, true, `seed ${seed}`);
@@ -65,6 +67,89 @@ test("ordinary and determinized traces both terminate", () => {
   assert.equal(runOrdinary(determinized, streams).value.kind, "Const");
 });
 
+test("determinized mean forms reduce in one primitive step", () => {
+  const { determinized } = prepareRuntime("let u = uniform[E](0, 1) in\nu + 1");
+  assert.equal(prettyExpr(determinized), "let u = mean_uniform(0, 1) in\nu + 1");
+  const streams = makeStreams(33);
+  const afterLetValueStep = stepOrdinary({ expr: determinized, rngE: streams.rngE, rngG: streams.rngG });
+  assert.equal(prettyExpr(afterLetValueStep.expr), "let u = 0.5 in\nu + 1");
+});
+
+test("distribution means check the same domains as sampling", () => {
+  const source = "let x = gauss[E](0, -1) in\nx + 1";
+  const { expr, determinized } = prepareRuntime(source);
+  assert.equal(prettyExpr(determinized), "let x = mean_gauss(0, -1) in\nx + 1");
+
+  const ordinary = runOrdinary(expr, makeStreams(34));
+  const mean = runOrdinary(determinized, makeStreams(34));
+  assert.equal(ordinary.value.kind, "DomainError");
+  assert.equal(mean.value.kind, "DomainError");
+  assert.equal(ordinary.value.message, mean.value.message);
+  assert.match(ordinary.value.message, /variance must be >= 0/);
+});
+
+test("coupled trace treats shared distribution domain errors as checked terminal outcomes", () => {
+  const trace = runCoupledTrace("let x = gamma[E](-1, 2) in\nx + 1", 35);
+  assert.equal(trace.ok, true);
+  assert.equal(trace.frames.at(-1).original.kind, "DomainError");
+  assert.equal(trace.frames.at(-1).symbolic.kind, "DomainError");
+  assert.equal(trace.frames.at(-1).determinized.kind, "DomainError");
+  assert.equal(trace.finalOriginal.kind, "DomainError");
+  assert.equal(trace.finalDeterminized.kind, "DomainError");
+  assert.match(trace.frames.at(-1).original.message, /shape must be > 0/);
+});
+
+test("distribution domain checks cover bernoulli probability and discrete totals", () => {
+  const bernoulli = checkEquivalences("let x = bernoulli[E](1.5) in\nx", 36);
+  assert.equal(bernoulli.sampledEquivalent, true);
+  assert.equal(bernoulli.meanEquivalent, true);
+  assert.equal(bernoulli.ordinary.value.kind, "DomainError");
+  assert.match(bernoulli.ordinary.value.message, /probability must be in \[0, 1\]/);
+
+  const discrete = runCoupledTrace("let x = discrete[E](0.2, 0.2) in\nx", 37);
+  assert.equal(discrete.ok, true);
+  assert.equal(discrete.frames.at(-1).symbolic.kind, "DomainError");
+  assert.match(discrete.frames.at(-1).symbolic.message, /probabilities must sum to 1/);
+});
+
+test("primitive distribution samples and means reject the same invalid concrete domains", () => {
+  const cases = [
+    ["Uniform", [2, 1], /lower bound must be <= upper bound/],
+    ["Gauss", [0, -1], /variance must be >= 0/],
+    ["Exponential", [0], /rate must be > 0/],
+    ["Gamma", [0, 2], /shape must be > 0/],
+    ["Gamma", [1, 0], /rate must be > 0/],
+    ["Beta", [0, 2], /alpha must be > 0/],
+    ["Beta", [1, 0], /beta must be > 0/],
+    ["Bernoulli", [1.5], /probability must be in \[0, 1\]/],
+    ["Poisson", [-1], /lambda must be >= 0/],
+  ];
+
+  for (const [kind, args, message] of cases) {
+    assert.throws(() => sampleDistribution(kind, args, makeStreams(50).rngG), message, `${kind} sample`);
+    assert.throws(() => meanDistribution(kind, args.map(affineConst)), message, `${kind} mean`);
+  }
+});
+
+test("primitive distribution checks reject non-finite parameters and wrong arity", () => {
+  assert.throws(
+    () => sampleDistribution("Beta", [1], makeStreams(51).rngG),
+    /domain error in beta: expected 2 parameters, got 1/,
+  );
+  assert.throws(
+    () => meanDistribution("Beta", [affineConst(1), affineConst(2), affineConst(3)]),
+    /domain error in beta: expected 2 parameters, got 3/,
+  );
+  assert.throws(
+    () => sampleDistribution("Uniform", [0, Infinity], makeStreams(52).rngG),
+    /domain error in uniform: parameters must be finite/,
+  );
+  assert.throws(
+    () => meanDistribution("Uniform", [affineScale(affineVar("v"), Infinity), affineConst(1)]),
+    /domain error in uniform: parameters must be finite/,
+  );
+});
+
 test("observe failure rejects the trace rather than throwing", () => {
   const source = "let _ = observe(false) in\n1";
   const { expr, determinized } = prepareRuntime(source);
@@ -74,7 +159,7 @@ test("observe failure rejects the trace rather than throwing", () => {
 });
 
 test("coupled trace checks sampled and mean projections at every symbolic step", () => {
-  const source = "let u = uniform[E](0, 1) in\nlet b = beta[G](3, 2) in\nlet g = gamma[E](u, b) in\n2 * g + 1";
+  const source = "let u = uniform[E](0, 1) in\nlet b = beta[G](3, 2) in\nlet g = gamma[E](u, b) in\ng * 2 + 1";
   for (const seed of [1, 17, 2026]) {
     const trace = runCoupledTrace(source, seed);
     assert.equal(trace.ok, true, `seed ${seed}`);
@@ -103,7 +188,7 @@ test("coupled trace treats shared observe rejection as a checked terminal outcom
 });
 
 test("coupled trace handles affine symbolic residuals at every step", () => {
-  const source = "let u = uniform[E](0, 1) in\nlet y = uniform[E](u, 2) in\n2 * u + y - 1";
+  const source = "let u = uniform[E](0, 1) in\nlet y = uniform[E](u, 2) in\nu * 2 + y - 1";
   const trace = runCoupledTrace(source, 42);
   assert.equal(trace.ok, true);
   assert.match(prettyExpr(trace.frames.at(-1).symbolic), /v1/);

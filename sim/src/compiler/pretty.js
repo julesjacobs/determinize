@@ -37,6 +37,10 @@ export function prettyExpr(expr, prec = 0) {
       return "()";
     case "Reject":
       return "reject";
+    case "DomainError":
+      return `domain_error(${domainErrorSummary(expr)})`;
+    case "Mean":
+      return prettyMean(expr);
     case "Nil":
       return "[]";
     case "Lam":
@@ -130,6 +134,11 @@ function prettyDistribution(expr) {
   return `${name}${mode}(${expr.args.map((arg) => prettyExpr(arg)).join(", ")})`;
 }
 
+function prettyMean(expr) {
+  const name = distNames[expr.distribution] ?? expr.distribution.toLowerCase();
+  return `mean_${name}(${expr.args.map((arg) => prettyExpr(arg)).join(", ")})`;
+}
+
 function prettyTypedDistribution(te) {
   const name = distNames[te.kind];
   const ty = zonk(te.typ);
@@ -182,6 +191,11 @@ function indent(text) {
 function formatNumber(value) {
   if (Object.is(value, -0)) return "0";
   return Number.isInteger(value) ? String(value) : String(value);
+}
+
+function domainErrorSummary(expr) {
+  const distribution = expr.distribution ? `${distNames[expr.distribution] ?? expr.distribution.toLowerCase()}: ` : "";
+  return `${distribution}${expr.reason ?? expr.message}`;
 }
 
 function prettyAffine(affine) {

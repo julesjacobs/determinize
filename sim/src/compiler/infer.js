@@ -202,24 +202,15 @@ export function infer(env, expr, expected) {
       return typed(expr, ty, { left, right });
     }
     case "Mul": {
-      const scaling = expr.left.kind === "Const" || expr.right.kind === "Const";
-      if (scaling) {
-        const ty = ensureFloat(expected, expr);
-        return typed(expr, ty, { left: infer(env, expr.left, ty), right: infer(env, expr.right, ty) });
-      }
-      const gTy = floatG();
-      const left = infer(env, expr.left, gTy);
-      const right = infer(env, expr.right, gTy);
       const resTy = ensureFloat(expected, expr);
+      const left = infer(env, expr.left, resTy);
+      const right = infer(env, expr.right, floatG());
       return typed(expr, resTy, { left, right });
     }
     case "Div": {
-      const scaling = expr.right.kind === "Const";
-      const aTy = scaling ? expected : floatG();
-      const bTy = scaling ? expected : aTy;
       const resTy = ensureFloat(expected, expr);
-      const left = infer(env, expr.left, aTy);
-      const right = infer(env, expr.right, bTy);
+      const left = infer(env, expr.left, resTy);
+      const right = infer(env, expr.right, floatG());
       return typed(expr, resTy, { left, right });
     }
     case "Lt":
@@ -258,7 +249,7 @@ export function infer(env, expr, expected) {
       return typed(expr, ty, { mode: expr.mode, args: [infer(env, expr.args[0], paramTy), infer(env, expr.args[1], paramTy)] });
     }
     case "Flip": {
-      const p = infer(env, expr.args[0], freshFloat());
+      const p = infer(env, expr.args[0], floatG());
       assertSubtype(TBool, expected, expr);
       return typed(expr, TBool, { mode: expr.mode, args: [p] });
     }

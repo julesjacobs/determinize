@@ -80,32 +80,30 @@ function ofTyped(te) {
     case "Leq":
       return exprNode(te.kind, { left: ofTyped(te.left), right: ofTyped(te.right) }, te.from, te.to);
     case "Uniform":
-      if (floatMode(te) === "E") return exprNode("Mul", { left: exprNode("Add", { left: ofTyped(te.args[0]), right: ofTyped(te.args[1]) }, te.from, te.to), right: exprNode("Const", { value: 0.5 }, te.from, te.to) }, te.from, te.to);
+      if (floatMode(te) === "E") return meanNode(te.kind, te.args.map(ofTyped), te);
       return exprNode("Uniform", { mode: null, args: te.args.map(ofTyped) }, te.from, te.to);
     case "Gauss":
-      if (floatMode(te) === "E") return ofTyped(te.args[0]);
+      if (floatMode(te) === "E") return meanNode(te.kind, te.args.map(ofTyped), te);
       return exprNode("Gauss", { mode: null, args: te.args.map(ofTyped) }, te.from, te.to);
     case "Exponential":
-      if (floatMode(te) === "E") return exprNode("Div", { left: exprNode("Const", { value: 1 }, te.from, te.to), right: ofTyped(te.args[0]) }, te.from, te.to);
+      if (floatMode(te) === "E") return meanNode(te.kind, te.args.map(ofTyped), te);
       return exprNode("Exponential", { mode: null, args: te.args.map(ofTyped) }, te.from, te.to);
     case "Gamma":
-      if (floatMode(te) === "E") return exprNode("Div", { left: ofTyped(te.args[0]), right: ofTyped(te.args[1]) }, te.from, te.to);
+      if (floatMode(te) === "E") return meanNode(te.kind, te.args.map(ofTyped), te);
       return exprNode("Gamma", { mode: null, args: te.args.map(ofTyped) }, te.from, te.to);
     case "Beta":
-      if (floatMode(te) === "E") {
-        const a = ofTyped(te.args[0]);
-        const b = ofTyped(te.args[1]);
-        return exprNode("Div", { left: a, right: exprNode("Add", { left: a, right: b }, te.from, te.to) }, te.from, te.to);
-      }
+      if (floatMode(te) === "E") return meanNode(te.kind, te.args.map(ofTyped), te);
       return exprNode("Beta", { mode: null, args: te.args.map(ofTyped) }, te.from, te.to);
     case "Flip":
       return exprNode("Flip", { mode: null, args: te.args.map(ofTyped) }, te.from, te.to);
     case "Bernoulli":
     case "Poisson":
-      if (floatMode(te) === "E") return ofTyped(te.args[0]);
+      if (floatMode(te) === "E") return meanNode(te.kind, te.args.map(ofTyped), te);
       return exprNode(te.kind, { mode: null, args: te.args.map(ofTyped) }, te.from, te.to);
     case "Discrete":
-      if (floatMode(te) === "E") return weightedSum(te.choices.map((choice) => ({ probability: choice.probability, value: ofTyped(choice.value) })), te);
+      if (floatMode(te) === "E") {
+        return meanNode("Discrete", te.choices.map((choice) => exprNode("Const", { value: choice.probability }, te.from, te.to)), te);
+      }
       return exprNode("Discrete", { mode: null, choices: te.choices.map((choice) => ({ probability: choice.probability, value: ofTyped(choice.value) })) }, te.from, te.to);
     case "Observe":
       return exprNode("Observe", { cond: ofTyped(te.cond) }, te.from, te.to);
@@ -114,10 +112,6 @@ function ofTyped(te) {
   }
 }
 
-function weightedSum(choices, source) {
-  if (choices.length === 0) return exprNode("Const", { value: 0 }, source.from, source.to);
-  const [first, ...rest] = choices;
-  const term = exprNode("Mul", { left: exprNode("Const", { value: first.probability }, source.from, source.to), right: first.value }, source.from, source.to);
-  if (rest.length === 0) return term;
-  return exprNode("Add", { left: term, right: weightedSum(rest, source) }, source.from, source.to);
+function meanNode(distribution, args, source) {
+  return exprNode("Mean", { distribution, args }, source.from, source.to);
 }

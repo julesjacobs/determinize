@@ -103,10 +103,18 @@ const cases = [
   },
   {
     name: "incompatible explicit modes",
-    source: "uniform[E](0, 1) * uniform[G](0, 1)",
+    source: "uniform[E](0, 1) * uniform[E](0, 1)",
     message: "mode mismatch: expected G-mode sample, found E-mode sample",
-    from: 0,
-    to: 16,
+    from: 19,
+    to: 35,
+    highlight: "uniform[E](0, 1)",
+  },
+  {
+    name: "flip probability cannot be E symbolic",
+    source: "flip(uniform[E](0, 1))",
+    message: "mode mismatch: expected G-mode sample, found E-mode sample",
+    from: 5,
+    to: 21,
     highlight: "uniform[E](0, 1)",
   },
   {
