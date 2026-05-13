@@ -190,13 +190,26 @@ export function stepSymbolic(state) {
 }
 
 export function projectSample(symbolicState, rngE) {
+  const env = symbolicSampleEnv(symbolicState, rngE);
+  return concretize(symbolicState.expr, env);
+}
+
+function projectSampleWithEnv(symbolicState, rngE) {
+  const env = symbolicSampleEnv(symbolicState, rngE);
+  return {
+    expr: concretize(symbolicState.expr, env),
+    sampleBySymbol: Object.fromEntries(env),
+  };
+}
+
+function symbolicSampleEnv(symbolicState, rngE) {
   const env = new Map();
   const rng = rngE.clone();
   for (const binding of symbolicState.sigma) {
     const args = instantiateArgs(binding.args, env);
     env.set(binding.name, sampleDistribution(binding.kind, args, rng));
   }
-  return concretize(symbolicState.expr, env);
+  return env;
 }
 
 export function projectMean(symbolicState) {
@@ -241,9 +254,9 @@ export function runCoupledTrace(source, seed = 1, maxSymbolicSteps = 1000, maxSy
   const frames = [];
 
   for (let stepIndex = 0; stepIndex <= maxSymbolicSteps; stepIndex++) {
-    const originalProjection = safe(() => projectSample(symbolic, streams.rngE));
+    const originalProjection = safe(() => projectSampleWithEnv(symbolic, streams.rngE));
     const determinizedProjection = safe(() => projectMeanDeterminized(symbolic));
-    const originalTarget = originalProjection.value;
+    const originalTarget = originalProjection.value?.expr;
     const determinizedTarget = determinizedProjection.value;
     const originalSync = originalProjection.ok
       ? advanceToTarget(original, originalTarget, maxSyncSteps)
@@ -259,6 +272,7 @@ export function runCoupledTrace(source, seed = 1, maxSymbolicSteps = 1000, maxSy
       original: clone(original.expr),
       symbolic: clone(symbolic.expr),
       sigma: symbolic.sigma.map(cloneBinding),
+      sampleBySymbol: originalProjection.value?.sampleBySymbol ?? {},
       determinized: clone(determinizedState.expr),
       originalTarget,
       determinizedTarget,

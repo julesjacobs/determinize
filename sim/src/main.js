@@ -465,9 +465,9 @@ function renderCoupling(coupled) {
             <span>${frame.step}</span>
             ${stepCheck(frame, coupled)}
           </div>
-          ${couplingCell(frame.original, "", "original", { focusPath: changedPath(previous?.original, frame.original) })}
+          ${couplingCell(frame.original, "", "original", { focusPath: changedPath(previous?.original, frame.original), valueBySymbol: frame.sampleBySymbol, valueLabel: "sampled value for" })}
           ${couplingCell(frame.symbolic, sigma.html, "symbolic", { focusPath: changedPath(previous?.symbolic, frame.symbolic) })}
-          ${couplingCell(frame.determinized, "", "determinized", { focusPath: changedPath(previous?.determinized, frame.determinized), meanBySymbol: sigma.meanBySymbol, highlightMeans: true })}
+          ${couplingCell(frame.determinized, "", "determinized", { focusPath: changedPath(previous?.determinized, frame.determinized), valueBySymbol: sigma.meanBySymbol, valueLabel: "mean substituted for" })}
         </section>
       `;
     })

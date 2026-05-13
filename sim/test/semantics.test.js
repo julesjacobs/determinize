@@ -83,6 +83,14 @@ test("coupled trace checks sampled and mean projections at every symbolic step",
   }
 });
 
+test("coupled trace records sampled symbolic values for hover correspondence", () => {
+  const trace = runCoupledTrace("let u = uniform(0, 1) in\nu + 1", 2026);
+  const frame = trace.frames.find((candidate) => candidate.sampleBySymbol.v1 !== undefined);
+  assert.ok(frame);
+  assert.equal(typeof frame.sampleBySymbol.v1, "number");
+  assert.match(prettyExpr(frame.originalTarget), new RegExp(String(frame.sampleBySymbol.v1).replaceAll(".", "\\.")));
+});
+
 test("coupled trace treats shared observe rejection as a checked terminal outcome", () => {
   const source = "let _ = observe(false) in\n1";
   const trace = runCoupledTrace(source, 41);

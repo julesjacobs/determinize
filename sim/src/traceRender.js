@@ -162,15 +162,16 @@ function corrSpan(text, className, symbol) {
 }
 
 function numberSpan(text, options) {
-  const symbol = options.highlightMeans ? meanSymbolForNumber(Number(text), options.meanBySymbol) : null;
+  const symbol = symbolForNumber(Number(text), options.valueBySymbol);
   const html = `<span class="tok-number">${text}</span>`;
-  return symbol ? `<span class="corr-item" data-corr="${escapeHtml(symbol)}" title="mean substituted for ${escapeHtml(symbol)}">${html}</span>` : html;
+  const label = options.valueLabel ?? "corresponds to";
+  return symbol ? `<span class="corr-item" data-corr="${escapeHtml(symbol)}" title="${escapeHtml(label)} ${escapeHtml(symbol)}">${html}</span>` : html;
 }
 
-function meanSymbolForNumber(value, meanBySymbol) {
-  if (!Number.isFinite(value) || !meanBySymbol) return null;
-  for (const [symbol, mean] of Object.entries(meanBySymbol)) {
-    if (Number.isFinite(mean) && Math.abs(value - mean) <= 1e-9) return symbol;
+function symbolForNumber(value, valueBySymbol) {
+  if (!Number.isFinite(value) || !valueBySymbol) return null;
+  for (const [symbol, target] of Object.entries(valueBySymbol)) {
+    if (Number.isFinite(target) && Math.abs(value - target) <= 1e-9) return symbol;
   }
   return null;
 }
