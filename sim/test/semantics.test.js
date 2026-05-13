@@ -93,7 +93,7 @@ test("unchecked coupled trace exposes bad E/G dependencies", () => {
 });
 
 test("recursive gamma coupling does not fail from floating-point underflow", () => {
-  const source = "let f = rec f n =>\n  if n <= 0 then gamma(1, 2) else gamma(f (n - 1), 2)\nin\nf 4";
+  const source = "let f = rec f n =>\n  if n <= 0 then 1 else gamma(f (n - 1), uniform(1, 2))\nin\nf 4";
   for (const seed of [1, 2, 17, 42, 2026]) {
     const trace = runCoupledTrace(source, seed, 1000, 400);
     assert.equal(trace.ok, true, `seed ${seed}`);

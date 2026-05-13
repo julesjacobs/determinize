@@ -41,6 +41,6 @@ export const examples = [
   },
   {
     name: "Recursive function",
-    source: "let f = rec f n =>\n  if n <= 0 then gamma(1, 2) else gamma(f (n - 1), 2)\nin\nf 4",
+    source: "let f = rec f n =>\n  if n <= 0 then 1 else gamma(f (n - 1), uniform(1, 2))\nin\nf 4",
   },
 ];
