@@ -61,6 +61,14 @@ type expr =
   | Exponential of mode * expr
   | Gamma of mode * expr * expr
   | Beta of mode * expr * expr
+  | MeanUniform of expr * expr
+  | MeanGauss of expr * expr
+  | MeanExponential of expr
+  | MeanGamma of expr * expr
+  | MeanBeta of expr * expr
+  | MeanBernoulli of expr
+  | MeanPoisson of expr
+  | MeanDiscrete of (float * expr) list
   | Flip of expr
   | Bernoulli of mode * expr
   | Poisson of mode * expr
@@ -166,6 +174,27 @@ let rec expr_to_string = function
   | Beta (m, a, b) ->
       "beta" ^ mode_suffix m ^ "(" ^ expr_to_string a ^ ", "
       ^ expr_to_string b ^ ")"
+  | MeanUniform (a, b) ->
+      "mean_uniform(" ^ expr_to_string a ^ ", " ^ expr_to_string b ^ ")"
+  | MeanGauss (a, b) ->
+      "mean_gauss(" ^ expr_to_string a ^ ", " ^ expr_to_string b ^ ")"
+  | MeanExponential e ->
+      "mean_exponential(" ^ expr_to_string e ^ ")"
+  | MeanGamma (a, b) ->
+      "mean_gamma(" ^ expr_to_string a ^ ", " ^ expr_to_string b ^ ")"
+  | MeanBeta (a, b) ->
+      "mean_beta(" ^ expr_to_string a ^ ", " ^ expr_to_string b ^ ")"
+  | MeanBernoulli p ->
+      "mean_bernoulli(" ^ expr_to_string p ^ ")"
+  | MeanPoisson p ->
+      "mean_poisson(" ^ expr_to_string p ^ ")"
+  | MeanDiscrete cases ->
+      let probs =
+        cases
+        |> List.map (fun (p, _) -> Printf.sprintf "%.6g" p)
+        |> String.concat ", "
+      in
+      "mean_discrete(" ^ probs ^ ")"
   | Flip p -> "flip(" ^ expr_to_string p ^ ")"
   | Bernoulli (m, p) ->
       "bernoulli" ^ mode_suffix m ^ "(" ^ expr_to_string p ^ ")"
@@ -400,9 +429,11 @@ let tokenize source =
 type parser = {
   tokens : token array;
   mutable position : int;
+  default_mode : mode;
 }
 
-let parser_of_tokens tokens = { tokens = Array.of_list tokens; position = 0 }
+let parser_of_tokens ?(default_mode = E) tokens =
+  { tokens = Array.of_list tokens; position = 0; default_mode }
 
 let peek_token parser =
   if parser.position < Array.length parser.tokens then
@@ -633,7 +664,7 @@ and parse_app parser =
 and parse_optional_mode parser =
   match peek_token parser with
   | TLBracket -> parse_mode parser
-  | _ -> E
+  | _ -> parser.default_mode
 
 and parse_two_arguments parser =
   expect parser TLParen;
@@ -699,31 +730,50 @@ and parse_atom parser =
   | TIdent "uniformG" ->
       let a, b = parse_two_arguments parser in
       Uniform (G, a, b)
+  | TIdent "mean_uniform" ->
+      let a, b = parse_two_arguments parser in
+      MeanUniform (a, b)
   | TGauss ->
       let mode = parse_optional_mode parser in
       let a, b = parse_two_arguments parser in
       Gauss (mode, a, b)
+  | TIdent "mean_gauss" | TIdent "mean_gaussian" ->
+      let a, b = parse_two_arguments parser in
+      MeanGauss (a, b)
   | TExponential ->
       let mode = parse_optional_mode parser in
       Exponential (mode, parse_one_argument parser)
+  | TIdent "mean_exponential" ->
+      MeanExponential (parse_one_argument parser)
   | TGamma ->
       let mode = parse_optional_mode parser in
       let a, b = parse_two_arguments parser in
       Gamma (mode, a, b)
+  | TIdent "mean_gamma" ->
+      let a, b = parse_two_arguments parser in
+      MeanGamma (a, b)
   | TBeta ->
       let mode = parse_optional_mode parser in
       let a, b = parse_two_arguments parser in
       Beta (mode, a, b)
+  | TIdent "mean_beta" ->
+      let a, b = parse_two_arguments parser in
+      MeanBeta (a, b)
   | TFlip -> Flip (parse_flip_argument parser)
   | TBernoulli ->
       let mode = parse_optional_mode parser in
       Bernoulli (mode, parse_one_argument parser)
+  | TIdent "mean_bernoulli" ->
+      MeanBernoulli (parse_one_argument parser)
   | TPoisson ->
       let mode = parse_optional_mode parser in
       Poisson (mode, parse_one_argument parser)
+  | TIdent "mean_poisson" ->
+      MeanPoisson (parse_one_argument parser)
   | TDiscrete ->
       let mode = parse_optional_mode parser in
       Discrete (mode, parse_discrete_cases parser)
+  | TIdent "mean_discrete" -> MeanDiscrete (parse_discrete_cases parser)
   | TObserve -> Observe (parse_one_argument parser)
   | TIdent "nil" -> Nil
   | TIdent x -> Var x
@@ -744,8 +794,8 @@ and parse_atom parser =
   | found ->
       parse_error ("expected expression, found " ^ token_to_string found)
 
-let parse_source source =
-  let parser = parser_of_tokens (tokenize source) in
+let parse_source ?(default_mode = E) source =
+  let parser = parser_of_tokens ~default_mode (tokenize source) in
   let expr = parse_expression parser in
   expect parser TEOF;
   expr
@@ -865,6 +915,15 @@ let rec subst x replacement expr =
   | Exponential (m, e) -> Exponential (m, go e)
   | Gamma (m, a, b) -> Gamma (m, go a, go b)
   | Beta (m, a, b) -> Beta (m, go a, go b)
+  | MeanUniform (a, b) -> MeanUniform (go a, go b)
+  | MeanGauss (a, b) -> MeanGauss (go a, go b)
+  | MeanExponential e -> MeanExponential (go e)
+  | MeanGamma (a, b) -> MeanGamma (go a, go b)
+  | MeanBeta (a, b) -> MeanBeta (go a, go b)
+  | MeanBernoulli p -> MeanBernoulli (go p)
+  | MeanPoisson p -> MeanPoisson (go p)
+  | MeanDiscrete cases ->
+      MeanDiscrete (List.map (fun (p, e) -> (p, go e)) cases)
   | Flip p -> Flip (go p)
   | Bernoulli (m, p) -> Bernoulli (m, go p)
   | Poisson (m, p) -> Poisson (m, go p)
@@ -958,6 +1017,15 @@ let rec simplify expr =
   | Exponential (m, e) -> Exponential (m, s e)
   | Gamma (m, a, b) -> Gamma (m, s a, s b)
   | Beta (m, a, b) -> Beta (m, s a, s b)
+  | MeanUniform (a, b) -> MeanUniform (s a, s b)
+  | MeanGauss (a, b) -> MeanGauss (s a, s b)
+  | MeanExponential e -> MeanExponential (s e)
+  | MeanGamma (a, b) -> MeanGamma (s a, s b)
+  | MeanBeta (a, b) -> MeanBeta (s a, s b)
+  | MeanBernoulli p -> MeanBernoulli (s p)
+  | MeanPoisson p -> MeanPoisson (s p)
+  | MeanDiscrete cases ->
+      MeanDiscrete (List.map (fun (p, e) -> (p, s e)) cases)
   | Flip p -> Flip (s p)
   | Bernoulli (m, p) -> Bernoulli (m, s p)
   | Poisson (m, p) -> Poisson (m, s p)
@@ -984,6 +1052,61 @@ let mean_of_random = function
   | RPoisson p -> simplify p
   | RDiscrete cases -> weighted_sum cases
 
+let rec determinize_residual expr =
+  let d = determinize_residual in
+  match expr with
+  | Var _ | Float _ | Bool _ | Unit | Nil -> expr
+  | Lam (x, body) -> Lam (x, d body)
+  | Rec (f, x, body) -> Rec (f, x, d body)
+  | App (fn, arg) -> App (d fn, d arg)
+  | Let (x, e1, e2) -> Let (x, d e1, d e2)
+  | If (c, t, f) -> If (d c, d t, d f)
+  | Pair (a, b) -> Pair (d a, d b)
+  | Fst e -> Fst (d e)
+  | Snd e -> Snd (d e)
+  | Inl e -> Inl (d e)
+  | Inr e -> Inr (d e)
+  | Case (scrut, (x, left), (y, right)) ->
+      Case (d scrut, (x, d left), (y, d right))
+  | MatchList (scrut, nil_branch, (h, tl, cons_branch)) ->
+      MatchList (d scrut, d nil_branch, (h, tl, d cons_branch))
+  | Neg e -> simplify (Neg (d e))
+  | Add (a, b) -> simplify (Add (d a, d b))
+  | Mul (a, b) -> simplify (Mul (d a, d b))
+  | Sub (a, b) -> simplify (Sub (d a, d b))
+  | Div (a, b) -> simplify (Div (d a, d b))
+  | Lt (a, b) -> simplify (Lt (d a, d b))
+  | Leq (a, b) -> simplify (Leq (d a, d b))
+  | Uniform (E, a, b) -> MeanUniform (d a, d b)
+  | Uniform (G, a, b) -> Uniform (G, d a, d b)
+  | Gauss (E, a, b) -> MeanGauss (d a, d b)
+  | Gauss (G, a, b) -> Gauss (G, d a, d b)
+  | Exponential (E, e) -> MeanExponential (d e)
+  | Exponential (G, e) -> Exponential (G, d e)
+  | Gamma (E, a, b) -> MeanGamma (d a, d b)
+  | Gamma (G, a, b) -> Gamma (G, d a, d b)
+  | Beta (E, a, b) -> MeanBeta (d a, d b)
+  | Beta (G, a, b) -> Beta (G, d a, d b)
+  | Flip p -> Flip (d p)
+  | Bernoulli (E, p) -> MeanBernoulli (d p)
+  | Bernoulli (G, p) -> Bernoulli (G, d p)
+  | Poisson (E, p) -> MeanPoisson (d p)
+  | Poisson (G, p) -> Poisson (G, d p)
+  | Discrete (E, cases) ->
+      MeanDiscrete (List.map (fun (p, e) -> (p, d e)) cases)
+  | Discrete (G, cases) ->
+      Discrete (G, List.map (fun (p, e) -> (p, d e)) cases)
+  | MeanUniform (a, b) -> MeanUniform (d a, d b)
+  | MeanGauss (a, b) -> MeanGauss (d a, d b)
+  | MeanExponential e -> MeanExponential (d e)
+  | MeanGamma (a, b) -> MeanGamma (d a, d b)
+  | MeanBeta (a, b) -> MeanBeta (d a, d b)
+  | MeanBernoulli p -> MeanBernoulli (d p)
+  | MeanPoisson p -> MeanPoisson (d p)
+  | MeanDiscrete cases -> MeanDiscrete (List.map (fun (p, e) -> (p, d e)) cases)
+  | Observe c -> Observe (d c)
+  | Cons (h, t) -> Cons (d h, d t)
+
 let sample_random ctx random =
   let name = fresh_sample ctx in
   let sample = { name; random } in
@@ -1009,6 +1132,18 @@ let rec step_expr ctx expr =
     else if not (is_value b) then
       measure_map (fun b' -> make a b') (step_expr ctx b)
     else Return (simplify (make a b))
+  in
+  let step_mean_unary make random e =
+    if not (is_value e) then
+      measure_map (fun e' -> make e') (step_expr ctx e)
+    else Return (mean_of_random (random e))
+  in
+  let step_mean_binary make random a b =
+    if not (is_value a) then
+      measure_map (fun a' -> make a' b) (step_expr ctx a)
+    else if not (is_value b) then
+      measure_map (fun b' -> make a b') (step_expr ctx b)
+    else Return (mean_of_random (random a b))
   in
   match expr with
   | e when is_value e -> Return e
@@ -1057,6 +1192,42 @@ let rec step_expr ctx expr =
   | Div (a, b) -> step_binary (fun a b -> Div (a, b)) a b
   | Lt (a, b) -> step_binary (fun a b -> Lt (a, b)) a b
   | Leq (a, b) -> step_binary (fun a b -> Leq (a, b)) a b
+  | MeanUniform (a, b) ->
+      step_mean_binary
+        (fun a b -> MeanUniform (a, b))
+        (fun a b -> RUniform (a, b))
+        a b
+  | MeanGauss (a, b) ->
+      step_mean_binary
+        (fun a b -> MeanGauss (a, b))
+        (fun a b -> RGauss (a, b))
+        a b
+  | MeanExponential e ->
+      step_mean_unary
+        (fun e -> MeanExponential e)
+        (fun e -> RExponential e)
+        e
+  | MeanGamma (a, b) ->
+      step_mean_binary
+        (fun a b -> MeanGamma (a, b))
+        (fun a b -> RGamma (a, b))
+        a b
+  | MeanBeta (a, b) ->
+      step_mean_binary
+        (fun a b -> MeanBeta (a, b))
+        (fun a b -> RBeta (a, b))
+        a b
+  | MeanBernoulli p ->
+      step_mean_unary
+        (fun p -> MeanBernoulli p)
+        (fun p -> RBernoulli p)
+        p
+  | MeanPoisson p ->
+      step_mean_unary
+        (fun p -> MeanPoisson p)
+        (fun p -> RPoisson p)
+        p
+  | MeanDiscrete cases -> Return (mean_of_random (RDiscrete cases))
   | Uniform (m, a, b) when not (is_value a) ->
       measure_map (fun a' -> Uniform (m, a', b)) (step_expr ctx a)
   | Uniform (m, a, b) when not (is_value b) ->
@@ -1118,6 +1289,24 @@ let rec step_sym_expr ctx expr =
         (step_sym_expr ctx b)
     else Return ([], simplify (make a b))
   in
+  let step_mean_unary make random e =
+    if not (is_value e) then
+      measure_map
+        (fun (new_samples, e') -> (new_samples, make e'))
+        (step_sym_expr ctx e)
+    else Return ([], mean_of_random (random e))
+  in
+  let step_mean_binary make random a b =
+    if not (is_value a) then
+      measure_map
+        (fun (new_samples, a') -> (new_samples, make a' b))
+        (step_sym_expr ctx a)
+    else if not (is_value b) then
+      measure_map
+        (fun (new_samples, b') -> (new_samples, make a b'))
+        (step_sym_expr ctx b)
+    else Return ([], mean_of_random (random a b))
+  in
   match expr with
   | e when is_value e -> Return ([], e)
   | Let (x, e1, e2) when is_value e1 ->
@@ -1175,6 +1364,42 @@ let rec step_sym_expr ctx expr =
   | Div (a, b) -> step_binary (fun a b -> Div (a, b)) a b
   | Lt (a, b) -> step_binary (fun a b -> Lt (a, b)) a b
   | Leq (a, b) -> step_binary (fun a b -> Leq (a, b)) a b
+  | MeanUniform (a, b) ->
+      step_mean_binary
+        (fun a b -> MeanUniform (a, b))
+        (fun a b -> RUniform (a, b))
+        a b
+  | MeanGauss (a, b) ->
+      step_mean_binary
+        (fun a b -> MeanGauss (a, b))
+        (fun a b -> RGauss (a, b))
+        a b
+  | MeanExponential e ->
+      step_mean_unary
+        (fun e -> MeanExponential e)
+        (fun e -> RExponential e)
+        e
+  | MeanGamma (a, b) ->
+      step_mean_binary
+        (fun a b -> MeanGamma (a, b))
+        (fun a b -> RGamma (a, b))
+        a b
+  | MeanBeta (a, b) ->
+      step_mean_binary
+        (fun a b -> MeanBeta (a, b))
+        (fun a b -> RBeta (a, b))
+        a b
+  | MeanBernoulli p ->
+      step_mean_unary
+        (fun p -> MeanBernoulli p)
+        (fun p -> RBernoulli p)
+        p
+  | MeanPoisson p ->
+      step_mean_unary
+        (fun p -> MeanPoisson p)
+        (fun p -> RPoisson p)
+        p
+  | MeanDiscrete cases -> Return ([], mean_of_random (RDiscrete cases))
   | Uniform (m, a, b) when not (is_value a) ->
       measure_map
         (fun (new_samples, a') -> (new_samples, Uniform (m, a', b)))
@@ -1289,7 +1514,7 @@ let interpret_expected_state st =
         (sample.name, mean) :: env)
       [] st.sigma
   in
-  Return (simplify (subst_many env st.residual))
+  Return (simplify (subst_many env (determinize_residual st.residual)))
 
 let simplify_measure m = measure_map simplify m
 
@@ -1302,6 +1527,41 @@ let symbolic_actual_view symbolic =
 
 let symbolic_expected_view symbolic =
   simplify_measure (measure_bind symbolic interpret_expected_state)
+
+let expected_state_view_to_string st =
+  let _, bindings_rev =
+    List.fold_left
+      (fun (env, bindings) sample ->
+        let random = subst_random env sample.random in
+        let mean = mean_of_random random in
+        ((sample.name, mean) :: env, (sample.name, mean) :: bindings))
+      ([], [])
+      st.sigma
+  in
+  let bindings = List.rev bindings_rev in
+  let prefix =
+    match bindings with
+    | [] -> ""
+    | _ ->
+        bindings
+        |> List.map (fun (name, mean) -> name ^ " = " ^ expr_to_string mean)
+        |> String.concat "; "
+        |> fun bindings_text -> bindings_text ^ "; "
+  in
+  prefix ^ "return "
+  ^ expr_to_string (simplify (determinize_residual st.residual))
+
+let rec symbolic_expected_view_to_string = function
+  | Return st -> expected_state_view_to_string st
+  | Sample (sample, rest) ->
+      sample.name ^ " ~ " ^ random_to_string sample.random ^ "; "
+      ^ symbolic_expected_view_to_string rest
+  | Choice branches ->
+      let render_branch (p, branch) =
+        Printf.sprintf "%.6g" p ^ " => "
+        ^ symbolic_expected_view_to_string branch
+      in
+      "choice {" ^ String.concat " | " (List.map render_branch branches) ^ "}"
 
 let print_symbolic_trace fuel source determinized_expr =
   let ctx = empty_context () in
@@ -1328,7 +1588,7 @@ let print_symbolic_trace fuel source determinized_expr =
     Printf.printf "determinized step: %s\n"
       (measure_to_string expr_to_string determinized);
     Printf.printf "expected view:   %s\n"
-      (measure_to_string expr_to_string symbolic_expected);
+      (symbolic_expected_view_to_string symbolic);
     Printf.printf "actual coupling:   %s\n" (if actual_ok then "OK" else "FAIL");
     Printf.printf "expected coupling: %s\n" (if expected_ok then "OK" else "FAIL");
     if step < fuel then
@@ -1381,8 +1641,8 @@ let read_file path =
     close_in_noerr channel;
     raise exn
 
-let parse_file path =
-  try parse_source (read_file path)
+let parse_file ?(default_mode = E) path =
+  try parse_source ~default_mode (read_file path)
   with Parse_error msg -> parse_error (path ^ ": " ^ msg)
 
 let has_prefix prefix text =
@@ -1407,7 +1667,8 @@ let usage () =
      let, if, pairs, fst/snd, inl/inr case matches, list matches,\n\
      arithmetic, comparisons, observe, and the supported distributions.\n\
      Distribution calls may use [E]/[G], e.g. uniform[E](a,b) or gauss[G](m,v).\n\
-     Unannotated distribution calls default to [E].\n"
+     Unannotated source distributions default to [E].\n\
+     Unannotated determinized distributions default to [G]; use mean_* for means.\n"
 
 let parse_cli argv =
   let fuel = ref 12 in
@@ -1471,17 +1732,20 @@ let example_mixed_modes =
 let det_dependent_uniform =
   Let
     ( "x",
-      f 0.5,
+      MeanUniform (f 0.0, f 1.0),
       Let
         ( "y",
-          Div (Add (Var "x", f 2.0), f 2.0),
+          MeanUniform (Var "x", f 2.0),
           Add (Var "x", Var "y") ) )
 
 let det_flip_kept =
   Let
     ( "b",
       Flip (f 0.5),
-      If (Var "b", f 0.5, f 3.0) )
+      If
+        ( Var "b",
+          MeanUniform (f 0.0, f 1.0),
+          MeanUniform (f 2.0, f 4.0) ) )
 
 let det_mixed_modes =
   Let
@@ -1489,7 +1753,7 @@ let det_mixed_modes =
       uniform_g (f 0.0) (f 1.0),
       Let
         ( "x",
-          Div (Add (Var "g", f 2.0), f 2.0),
+          MeanUniform (Var "g", f 2.0),
           Add (Var "g", Var "x") ) )
 
 let builtin_cases fuel =
@@ -1513,8 +1777,8 @@ let file_cases fuel paths =
     | [] -> List.rev acc
     | source_path :: determinized_path :: rest ->
         let name = source_path ^ " / " ^ determinized_path in
-        let source = parse_file source_path in
-        let determinized = parse_file determinized_path in
+        let source = parse_file ~default_mode:E source_path in
+        let determinized = parse_file ~default_mode:G determinized_path in
         pair ((name, fuel, source, determinized) :: acc) rest
     | [ _ ] ->
         parse_error
