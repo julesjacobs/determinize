@@ -103,6 +103,8 @@ type sym_state = {
   residual : expr;
 }
 
+module StringSet = Set.Make (String)
+
 type context = {
   mutable next_sample : int;
 }
@@ -1518,9 +1520,178 @@ let interpret_expected_state st =
 
 let simplify_measure m = measure_map simplify m
 
+let rec free_vars_expr expr =
+  let open StringSet in
+  let union_many sets = List.fold_left union empty sets in
+  let free_vars_cases cases =
+    cases |> List.map (fun (_, e) -> free_vars_expr e) |> union_many
+  in
+  match expr with
+  | Var x -> singleton x
+  | Float _ | Bool _ | Unit | Nil -> empty
+  | Lam (x, body) -> remove x (free_vars_expr body)
+  | Rec (f, x, body) -> remove f (remove x (free_vars_expr body))
+  | App (fn, arg) -> union (free_vars_expr fn) (free_vars_expr arg)
+  | Let (x, e1, e2) -> union (free_vars_expr e1) (remove x (free_vars_expr e2))
+  | If (c, t, f) -> union_many [ free_vars_expr c; free_vars_expr t; free_vars_expr f ]
+  | Pair (a, b)
+  | Add (a, b)
+  | Mul (a, b)
+  | Sub (a, b)
+  | Div (a, b)
+  | Lt (a, b)
+  | Leq (a, b)
+  | Uniform (_, a, b)
+  | Gauss (_, a, b)
+  | Gamma (_, a, b)
+  | Beta (_, a, b)
+  | MeanUniform (a, b)
+  | MeanGauss (a, b)
+  | MeanGamma (a, b)
+  | MeanBeta (a, b)
+  | Cons (a, b) ->
+      union (free_vars_expr a) (free_vars_expr b)
+  | Fst e
+  | Snd e
+  | Inl e
+  | Inr e
+  | Neg e
+  | Exponential (_, e)
+  | MeanExponential e
+  | Flip e
+  | Bernoulli (_, e)
+  | MeanBernoulli e
+  | Poisson (_, e)
+  | MeanPoisson e
+  | Observe e ->
+      free_vars_expr e
+  | Case (scrut, (x, left), (y, right)) ->
+      union_many
+        [
+          free_vars_expr scrut;
+          remove x (free_vars_expr left);
+          remove y (free_vars_expr right);
+        ]
+  | MatchList (scrut, nil_branch, (h, tl, cons_branch)) ->
+      union_many
+        [
+          free_vars_expr scrut;
+          free_vars_expr nil_branch;
+          remove h (remove tl (free_vars_expr cons_branch));
+        ]
+  | Discrete (_, cases) | MeanDiscrete cases -> free_vars_cases cases
+
+let free_vars_random = function
+  | RUniform (a, b)
+  | RGauss (a, b)
+  | RGamma (a, b)
+  | RBeta (a, b) ->
+      StringSet.union (free_vars_expr a) (free_vars_expr b)
+  | RExponential e | RBernoulli e | RPoisson e -> free_vars_expr e
+  | RDiscrete cases ->
+      cases
+      |> List.map (fun (_, e) -> free_vars_expr e)
+      |> List.fold_left StringSet.union StringSet.empty
+
+let simplify_random = function
+  | RUniform (a, b) -> RUniform (simplify a, simplify b)
+  | RGauss (a, b) -> RGauss (simplify a, simplify b)
+  | RExponential e -> RExponential (simplify e)
+  | RGamma (a, b) -> RGamma (simplify a, simplify b)
+  | RBeta (a, b) -> RBeta (simplify a, simplify b)
+  | RBernoulli p -> RBernoulli (simplify p)
+  | RPoisson p -> RPoisson (simplify p)
+  | RDiscrete cases -> RDiscrete (List.map (fun (p, e) -> (p, simplify e)) cases)
+
+let canonical_sample_name index = "$s" ^ string_of_int index
+
+let canonical_random env random = simplify_random (subst_random env random)
+
+let canonical_random_key env sample =
+  random_to_string (canonical_random env sample.random)
+
+let probability_key p = Printf.sprintf "%.17g" p
+
+let remove_first_sample target samples =
+  let rec go prefix = function
+    | [] -> List.rev prefix
+    | sample :: rest when String.equal sample.name target.name ->
+        List.rev_append prefix rest
+    | sample :: rest -> go (sample :: prefix) rest
+  in
+  go [] samples
+
+let sample_ready remaining_names sample =
+  let deps = free_vars_random sample.random in
+  StringSet.is_empty (StringSet.inter deps remaining_names)
+
+let choose_ready_sample env samples =
+  let remaining_names =
+    samples
+    |> List.map (fun sample -> sample.name)
+    |> List.fold_left (fun names name -> StringSet.add name names) StringSet.empty
+  in
+  let ready =
+    samples |> List.filter (fun sample -> sample_ready remaining_names sample)
+  in
+  let candidates = if ready = [] then samples else ready in
+  candidates
+  |> List.sort (fun lhs rhs ->
+         let by_random =
+           compare (canonical_random_key env lhs) (canonical_random_key env rhs)
+         in
+         if by_random <> 0 then by_random else compare lhs.name rhs.name)
+  |> List.hd
+
+let canonicalize_samples env next samples =
+  let rec loop env next acc remaining =
+    match remaining with
+    | [] -> (List.rev acc, env, next)
+    | _ ->
+        let sample = choose_ready_sample env remaining in
+        let name = canonical_sample_name next in
+        let random = canonical_random env sample.random in
+        let env = (sample.name, Var name) :: env in
+        let acc = { name; random } :: acc in
+        loop env (next + 1) acc (remove_first_sample sample remaining)
+  in
+  loop env next [] samples
+
+let collect_sample_prefix measure =
+  let rec go acc = function
+    | Sample (sample, rest) -> go (sample :: acc) rest
+    | tail -> (List.rev acc, tail)
+  in
+  go [] measure
+
+let rec canonical_measure_to_string env next measure =
+  let samples, tail = collect_sample_prefix measure in
+  let samples, env, next = canonicalize_samples env next samples in
+  let sample_prefix =
+    samples
+    |> List.map (fun sample ->
+           sample.name ^ " ~ " ^ random_to_string sample.random ^ "; ")
+    |> String.concat ""
+  in
+  sample_prefix ^ canonical_measure_tail_to_string env next tail
+
+and canonical_measure_tail_to_string env next = function
+  | Return expr ->
+      "return " ^ expr_to_string (simplify (subst_many env expr))
+  | Choice branches ->
+      let branches =
+        branches
+        |> List.map (fun (p, branch) ->
+               (probability_key p, canonical_measure_to_string env next branch))
+        |> List.sort compare
+      in
+      let render_branch (p, branch) = p ^ " => " ^ branch in
+      "choice {" ^ String.concat " | " (List.map render_branch branches) ^ "}"
+  | Sample _ as measure -> canonical_measure_to_string env next measure
+
 let compare_measures lhs rhs =
-  String.equal (measure_to_string expr_to_string lhs)
-    (measure_to_string expr_to_string rhs)
+  String.equal (canonical_measure_to_string [] 0 lhs)
+    (canonical_measure_to_string [] 0 rhs)
 
 let symbolic_actual_view symbolic =
   simplify_measure (measure_bind symbolic interpret_actual_state)
