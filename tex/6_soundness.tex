@@ -228,6 +228,833 @@
   exists for every measurable $A \subseteq Val_{\tau}$, by the monotone convergence theorem.
 \end{lemma}
 
+\subsection{Symbolic Expressisons}
+A symbolic state is:
+\[
+  \hat{s} = (\sigma \mid \hat{e}) \in State_\tau.
+\]
+
+where $\sigma$ is the symbolic sample enviornment and $\hat{e} \in \widehat{Expr_\tau}$ is the symbolic residual expression.
+
+The syntax for $\hat{e}$ is defined as follows:
+\begin{figure}[h]
+	\begin{align*}
+		\hat e ::= &\; x \mid c \mid \text{true} \mid \text{false} \mid () \mid \mathsf{sym}(u) \mid \mathsf{val}(\hat e) & \text{constants} \\
+		| &\; \letkw \; x = \hat e_1\; \inkw \; \hat e_2  & \text{let binding} \\
+    | &\; \hat e_1 + \hat e_2 \mid  \hat e_1 - \hat e_2 \mid \hat e_1 \times \hat e_2 \mid \hat e_1\; /\; \hat e_2 & \text{arithmetic} \\
+    | &\; \hat e_1 < \hat e_2  & \text{comparisons} \\
+    | &\; \ifkw\; \hat e_1\; \thenkw\; \hat e_2\; \elsekw\; \hat e_3 & \text{conditionals} \\
+    | &\; \langle \hat e_1,\hat e_2\rangle & \text{pairs} \\
+    \ldots & \text{etc.}
+	\end{align*}
+\label{fig:grammar}
+\end{figure}
+
+And formally, a symbolic sample environment $\sigma$ is an ordered context:
+\[
+  \sigma
+  =
+  \bigl(
+    u_1 : \tau_1 \sim D_1,\;
+    u_2 : \tau_2 \sim D_2(u_1),\;
+    \ldots,\;
+    u_k : \tau_k \sim D_k(u_1,\ldots,u_{k-1})
+  \bigr).
+\]
+Here each \(D_i\) is a distribution whose symbolic
+variables, if any, are drawn only from earlier samples.
+
+\subsubsection{Type System}
+
+Judgments have the following forms:
+\[
+  \Gamma \vdash \sigma
+  \qquad
+  \Gamma;\sigma \vdash \hat e : \tau
+  \qquad
+  \Gamma \vdash (\sigma \mid \hat e) : \tau.
+\]
+The judgment \(\Gamma;\sigma \vdash \hat e : \tau\) keeps the ordinary
+typing context separate from the symbolic sample environment, so ordinary
+context extension uses the standard notation \(\Gamma,x:\tau\).  Every
+symbolic sample variable has type \(\Float{\E}\).  In particular, if
+\[
+  \sigma =
+  u_1:\Float{\E} \sim D_1,\ldots,
+  u_k:\Float{\E} \sim D_k,
+\]
+then \(\Gamma;\sigma\) denotes the ordinary context
+\(\Gamma,u_1:\Float{\E},\ldots,u_k:\Float{\E}\), while retaining the
+distribution attached to each \(u_i\).
+
+\paragraph{Symbolic sample environments.}
+\begin{mathpar}
+  \inferrule[\textsc{Sigma-Empty}]
+    {\;}
+    {\Gamma \vdash \emptyset}
+  \and
+  \inferrule[\textsc{Sigma-Uniform}]
+    {\Gamma \vdash \sigma
+      \\ \Gamma;\sigma \vdash \hat e_1 : \Float{m_1}
+      \\ \Gamma;\sigma \vdash \hat e_2 : \Float{m_2}
+      \\ m_1 \preceq \E
+      \\ m_2 \preceq \E}
+    {\Gamma \vdash
+      \sigma,u:\Float{\E} \sim \uniform(\hat e_1,\hat e_2)}
+  \and
+  \inferrule[\textsc{Sigma-Gauss}]
+    {\Gamma \vdash \sigma
+      \\ \Gamma;\sigma \vdash \hat e_1 : \Float{m_1}
+      \\ \Gamma;\sigma \vdash \hat e_2 : \Float{m_2}
+      \\ m_1 \preceq \E
+      \\ m_2 \preceq \G}
+    {\Gamma \vdash
+      \sigma,u:\Float{\E} \sim \gaussian(\hat e_1,\hat e_2)}
+\end{mathpar}
+
+\paragraph{Symbolic residual expressions.}
+The ordinary typing rules lift to symbolic residual expressions by replacing
+\(\Gamma\) with \(\Gamma;\sigma\). The new expression forms are
+\(\mathsf{sym}(u)\), which reads a symbolic variable from \(\sigma\), and
+\(\mathsf{val}(\hat e)\), which preserves the type of the enclosed symbolic
+expression.
+\begin{mathpar}
+  \inferrule[\textsc{Var}]
+    {x:\tau \in \Gamma}
+    {\Gamma;\sigma \vdash x : \tau}
+  \and
+  \inferrule[\textsc{Sym}]
+    {u:\Float{\E} \sim D \in \sigma}
+    {\Gamma;\sigma \vdash \mathsf{sym}(u) : \Float{\E}}
+  \and
+  \inferrule[\textsc{Val}]
+    {\Gamma;\sigma \vdash \hat e : \tau}
+    {\Gamma;\sigma \vdash \mathsf{val}(\hat e) : \tau}
+  \and
+  \inferrule[\textsc{Let}]
+    {\Gamma;\sigma \vdash \hat e_1 : \tau_1
+      \\ \Gamma,x:\tau_1;\sigma \vdash \hat e_2 : \tau_2}
+    {\Gamma;\sigma \vdash
+      \letkw\;x=\hat e_1\;\inkw\;\hat e_2 : \tau_2}
+  \and
+  \inferrule[\textsc{Pair}]
+    {\Gamma;\sigma \vdash \hat e_1 : \tau_1
+      \\ \Gamma;\sigma \vdash \hat e_2 : \tau_2}
+    {\Gamma;\sigma \vdash
+      \langle \hat e_1,\hat e_2\rangle : \tau_1 \times \tau_2}
+  \and
+  \inferrule[\textsc{Add}]
+    {\Gamma;\sigma \vdash \hat e_1 : \Float{m_1}
+      \\ \Gamma;\sigma \vdash \hat e_2 : \Float{m_2}
+      \\ m_1 \preceq m
+      \\ m_2 \preceq m}
+    {\Gamma;\sigma \vdash \hat e_1 + \hat e_2 : \Float{m}}
+  \and
+  \inferrule[\textsc{Uniform}]
+    {\Gamma;\sigma \vdash \hat e_1 : \Float{m_1}
+      \\ \Gamma;\sigma \vdash \hat e_2 : \Float{m_2}
+      \\ m_1 \preceq m
+      \\ m_2 \preceq m}
+    {\Gamma;\sigma \vdash \uniform(\hat e_1,\hat e_2) : \Float{m}}
+  \and
+  \inferrule[\textsc{State}]
+    {\Gamma \vdash \sigma
+      \\ \Gamma;\sigma \vdash \hat e : \tau}
+    {\Gamma \vdash (\sigma \mid \hat e) : \tau}
+\end{mathpar}
+
+\subsubsection{Small-step symbolic semantics}
+We start with the following notation for the one-step symbolic semantics:
+
+\[
+  \widehat{\sem{\widehat{s} : \tau}} \in \mathcal{D}(State_\tau)
+\]
+
+Now, define the $n$-step symbolic semantics as follows:
+
+\begin{align*}
+  \widehat{\bigsemstep{\widehat{s} : \tau}{n}} =
+  \begin{cases}
+    \delta_{\widehat{s} : \tau} &\text{ if } n = 0 \\
+    \widehat{\bigsemstep{\widehat{s} : \tau}{n-1}} \monbind \lambda \widehat{s}. \widehat{\sem{\widehat{s} : \tau}} &\text{ if } n > 0
+  \end{cases}
+\end{align*}
+
+where $\widehat{\bigsemstep{\widehat{s} : \tau}{n}} \in \mathcal{D}(State_\tau)$.
+
+
+\begin{table}[t]
+  \centering
+  \tiny
+  \setlength{\tabcolsep}{4pt}
+  \renewcommand{\arraystretch}{1.18}
+  \begin{adjustbox}{max width=\linewidth}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.34\linewidth}
+      >{\raggedright\arraybackslash}p{0.24\linewidth}
+      >{\raggedright\arraybackslash}p{0.39\linewidth}@{}}
+    \toprule
+    \toprule
+    \textbf{$\widehat{s} : \tau$} & \textbf{Constraint} &
+    \textbf{$\widehat{\sem{\widehat{s} : \tau}}$} \\
+    \midrule
+    %
+    $(\sigma \mid \hat v : \tau)$ &
+    -- &
+    $\delta_{(\sigma \mid \hat v : \tau)}$ \\
+    \midrule
+    %
+    $(\sigma \mid \letkw\ x = \hat e_1 : \tau_1\ \inkw\ \hat e_2 : \tau_2)$ &
+    $\hat e_1 = \hat v$ &
+    $\delta_{(\sigma \mid \hat e_2[\hat v/x] : \tau_2)}$ \\
+    &
+    o.w. &
+    $\widehat{\sem{(\sigma \mid \hat e_1 : \tau_1)}} \monbind
+      \lambda(\sigma' \mid \hat g).\,\delta_{(\sigma' \mid
+      \letkw\ x = \hat g\ \inkw\ \hat e_2 : \tau_2)}$ \\
+    \midrule
+    %
+    $(\sigma \mid \hat e_1 : \Float{m_1} + \hat e_2 : \Float{m_2})
+      : \Float{m_3}$ &
+    $\hat e_1 = \hat v_1,\ \hat e_2 = \hat v_2,\ \hat v_1 = \mathsf{sym}(u_1) \text{ or } \hat v_2 = \mathsf{sym}(u_2)$
+    &
+    $\delta_{(\sigma \mid \mathsf{val}(\hat v_1 + \hat v_2)
+      : \Float{m_3})}$ \\
+    &
+    $\hat e_1 = v_1,\ \hat e_2 = v_2$ &
+    $\delta_{(\sigma \mid (v_1 + v_2) : \Float{m_3})}$ \\
+    &
+    $\hat e_1 = \hat v_1,\ \hat e_2 \neq \hat v_2$ &
+    $\widehat{\sem{(\sigma \mid \hat e_2 : \Float{m_2})}} \monbind
+      \lambda(\sigma' \mid \hat g).\,\delta_{(\sigma' \mid
+      (\hat v_1 : \Float{m_1} + \hat g) : \Float{m_3})}$ \\
+    &
+    o.w. &
+    $\widehat{\sem{(\sigma \mid \hat e_1 : \Float{m_1})}} \monbind
+      \lambda(\sigma' \mid \hat g).\,\delta_{(\sigma' \mid
+      (\hat g + \hat e_2 : \Float{m_2}) : \Float{m_3})}$ \\
+    \midrule
+    %
+    $(\sigma \mid \hat e_1 : \Float{m_1} < \hat e_2 : \Float{m_2}) : \Bool$ &
+    $\hat e_1 = \hat v_1,\ \hat e_2 = \hat v_2,\ \hat v_1 = \mathsf{sym}(u_1) \text{ or } \hat v_2 = \mathsf{sym}(u_2)$ &
+    $\delta_{(\sigma \mid \mathsf{val}(\hat v_1 < \hat v_2) : \Bool)}$ \\
+    &
+    $\hat e_1 = v_1,\ \hat e_2 = v_2,\ v_1 < v_2$ &
+    $\delta_{(\sigma \mid \mathsf{true} : \Bool)}$ \\
+    &
+    $\hat e_1 = v_1,\ \hat e_2 = v_2,\ v_1 \ge v_2$ &
+    $\delta_{(\sigma \mid \mathsf{false} : \Bool)}$ \\
+    &
+    $\hat e_1 = \hat v_1,\ \hat e_2 \neq \hat v_2$&
+    $\widehat{\sem{(\sigma \mid \hat e_2 : \Float{m_2})}} \monbind
+      \lambda(\sigma' \mid \hat g).\,\delta_{(\sigma' \mid
+      (\hat v_1 : \Float{m_1} < \hat g) : \Bool)}$ \\
+    &
+    o.w. &
+    $\widehat{\sem{(\sigma \mid \hat e_1 : \Float{m_1})}} \monbind
+      \lambda(\sigma' \mid \hat g).\,\delta_{(\sigma' \mid
+      (\hat g < \hat e_2 : \Float{m_2}) : \Bool)}$ \\
+    \midrule
+    %
+    $(\sigma \mid \uniform(\hat e_1 : \Float{m_1},\hat e_2 : \Float{m_2})
+      : \Float{m_3})$ &
+    $\hat e_1 = \hat v_1,\ \hat e_2 = \hat v_2,$
+    $m_3 = \E$ &
+    $\delta_{(\sigma,u:\Float{\E} \sim \uniform(\hat v_1,\hat v_2)
+      \mid \mathsf{sym}(u) : \Float{\E})}$ \\
+    &
+    $\hat e_1 = v_1,\ \hat e_2 = v_2,\ m_3 = \G$ &
+    $\sem{\uniform(v_1 : \Float{m_1},v_2 : \Float{m_2}) : \Float{\G}}
+      \monbind \lambda v.\,\delta_{(\sigma \mid v : \Float{\G})}$ \\
+    &
+    $\hat e_1 = \hat v_1,\ \hat e_2 \neq \hat v_2$ &
+    $\widehat{\sem{(\sigma \mid \hat e_2 : \Float{m_2})}} \monbind
+      \lambda(\sigma' \mid \hat g).\,\delta_{(\sigma' \mid
+      \uniform(\hat v_1,\hat g) : \Float{m_3})}$ \\
+    &
+    o.w. &
+    $\widehat{\sem{(\sigma \mid \hat e_1 : \Float{m_1})}} \monbind
+      \lambda(\sigma' \mid \hat g).\,\delta_{(\sigma' \mid
+      \uniform(\hat g,\hat e_2) : \Float{m_3})}$ \\
+    \bottomrule
+    \bottomrule
+  \end{tabular}
+  \end{adjustbox}
+  \caption{Symbolic small-step operational semantics. Symbolic evaluation of an expression \(e : \tau\) begins in the
+  state \((\emptyset \mid e)\).  Denote \(\hat v\) for a symbolic value, which could be an
+  ordinary value $v$, \(\mathsf{sym}(u)\), or \(\mathsf{val}(\hat e)\).}
+  \label{tab:symbolic-small-step-semantics}
+\end{table}
+
+\begin{example}[Symbolic uniform plus constant]
+  \[
+  \begin{aligned}
+    &(\emptyset \mid \uniform(0,1) : \Float{\E} + 1) \\
+    &\longrightarrow
+    (u_1:\Float{\E} \sim \uniform(0,1)
+      \mid \mathsf{sym}(u_1) + 1) \\
+    &\longrightarrow
+    (u_1:\Float{\E} \sim \uniform(0,1)
+      \mid \mathsf{val}(\mathsf{sym}(u_1) + 1)).
+  \end{aligned}
+  \]
+\end{example}
+
+\begin{example}[General-mode uniform]
+  This follows the original small-step semantics:
+  \[
+    \widehat{\sem{(\emptyset \mid \uniform(0,1) : \Float{\G})}}
+    =
+    \mathsf{Uniform}(0,1) \monbind
+    \lambda v.\,\delta_{(\emptyset \mid v : \Float{\G})}.
+  \]
+\end{example}
+
+\subsubsection{Actual interpretation of symbolic semantics}
+
+The actual interpretation turns a symbolic state back into a distribution over
+ordinary expressions by sampling the symbolic environment and substituting the
+sampled values for the symbolic variables.  Suppose
+\[
+  \sigma =
+  u_1:\Float{\E} \sim D_1,\ldots,
+  u_n:\Float{\E} \sim D_n(u_1,\ldots,u_{n-1}).
+\]
+Although \(\sigma\) is an ordered context, it determines a distribution over
+tuples of real numbers:
+\[
+  \sem{\sigma}_{\mathsf{env}} \in \mathcal{D}(\mathbb{R}^n).
+\]
+This distribution is defined sequentially by
+\[
+  \sem{\emptyset}_{\mathsf{env}} = \delta_{()}
+\]
+and
+\[
+\begin{aligned}
+  &\sem{\sigma,u_{k+1}:\Float{\E} \sim D_{k+1}}_{\mathsf{env}} \\
+  &\qquad =
+  \sem{\sigma}_{\mathsf{env}}
+  \monbind
+  \lambda(r_1,\ldots,r_k).\,
+  D_{k+1}(r_1,\ldots,r_k)
+  \monbind
+  \lambda r_{k+1}.\,
+  \delta_{(r_1,\ldots,r_k,r_{k+1})}.
+\end{aligned}
+\]
+Here \(D_{k+1}(r_1,\ldots,r_k)\) means the real-valued distribution obtained by
+replacing each earlier \(\mathsf{sym}(u_i)\) with \(r_i\). 
+
+\begin{example}
+  Let's say:
+  \[
+    \sigma =
+    u_1 \sim D_1,\;
+    u_2 \sim D_2(u_1),\;
+    u_3 \sim D_3(u_1,u_2).
+  \]
+
+  Then:
+  \[
+    \sem{\sigma}_{env}
+    =
+    D_1 \monbind \lambda r_1.\,
+    D_2(r_1) \monbind \lambda r_2.\,
+    D_3(r_1,r_2) \monbind \lambda r_3.\,
+    \delta_{(r_1,r_2,r_3)}.
+  \]
+
+  For a more concrete example, let's say:
+  \[
+    \sigma =
+    u_1 \sim \uniform(0,1),\;
+    u_2 \sim \uniform(\mathsf{sym}(u_1), 2)
+  \]
+
+  Then:
+  \[
+    \sem{\sigma}_{env}
+    =
+    \mathsf{Uniform}(0,1)
+    \monbind \lambda r_1.\,
+    \mathsf{Uniform}(r_1,2)
+    \monbind \lambda r_2.\,
+    \delta_{(r_1,r_2)}.
+  \]
+\end{example}
+
+For a symbolic residual expression \(\hat e\), write
+\[
+  \hat e[r_1/\mathsf{sym}(u_1),\ldots,r_n/\mathsf{sym}(u_n)]
+\]
+for the ordinary expression obtained by replacing each \(\mathsf{sym}(u_i)\)
+with \(r_i\). And for each \(\mathsf{val}(\hat e')\), evaluate \(\hat e'[r_1/\mathsf{sym}(u_1),\ldots,r_n/\mathsf{sym}(u_n)]\).
+
+If
+\[
+  \vdash (\sigma \mid \hat e) : \tau,
+\]
+then
+\[
+  \hat e[r_1/\mathsf{sym}(u_1),\ldots,r_n/\mathsf{sym}(u_n)] \in Expr_\tau.
+\]
+The single-state actual interpretation is the function:
+\[
+  \mathsf{act}_\tau : State_\tau \to \mathcal{D}(Expr_\tau)
+\]
+defined by
+\[
+\begin{aligned}
+  \mathsf{act}_\tau(\sigma \mid \hat e)
+  &=
+  \sem{\sigma}_{\mathsf{env}}
+  \monbind
+  \lambda(r_1,\ldots,r_n).\,
+  \delta_{\hat e[r_1/\mathsf{sym}(u_1),\ldots,r_n/\mathsf{sym}(u_n)] : \tau}.
+\end{aligned}
+\]
+
+The lifted actual interpretation acts on distributions over symbolic states:
+\[
+  \mathsf{Act}_\tau :
+  \mathcal{D}(State_\tau) \to \mathcal{D}(Expr_\tau).
+\]
+It is defined by monadic bind against the single-state kernel:
+\[
+\begin{aligned}
+  \mathsf{Act}_\tau(\mu)
+  &=
+  \mu \monbind \mathsf{act}_\tau \\
+  &=
+  \mu \monbind
+  \lambda(\sigma \mid \hat e).\,\mathsf{act}_\tau(\sigma \mid \hat e).
+\end{aligned}
+\]
+
+\begin{theorem}[Actual interpretation of symbolic \(n\)-step semantics]
+  If \(\emptyset \vdash e : \tau\), then for every \(n \in \mathbb{N}\),
+  \[
+    \bigsemstep{e : \tau}{n}
+    =
+    \mathsf{Act}_\tau\!\left(
+      \widehat{\bigsemstep{(\emptyset \mid e) : \tau}{n}}
+    \right).
+  \]
+\end{theorem}
+
+\begin{proof}
+  Let \(\widehat{s}_0 = (\emptyset \mid e)\).  
+
+  The proof is by induction on \(n\).  For \(n=0\),
+  \begin{align}
+    \mathsf{Act}_\tau\!\left(
+      \widehat{\bigsemstep{\widehat{s}_0 : \tau}{0}}
+    \right)
+    &=
+    \mathsf{Act}_\tau(\delta_{\widehat{s}_0 : \tau})
+    \tag{\text{by definition of n-step symbolic semantics}} \\
+    &=
+    \delta_{\widehat{s}_0 : \tau}
+    \monbind
+    \mathsf{act}_\tau
+    \tag{\text{by definition of Act}} \\
+    &=
+    \mathsf{act}_\tau(\emptyset \mid e)
+    \tag{\text{by monad left identity}} \\
+    &=
+    \delta_{e : \tau}
+    \tag{\text{by definition of act on empty environment}} \\
+    &=
+    \bigsemstep{e : \tau}{0}.
+    \tag{\text{by definition of n-step semantics}}
+  \end{align}
+
+  WE NEED TO PROVE:
+
+  \begin{equation}
+    \mathsf{Act}_\tau\!\left(\widehat{\sem{\widehat{s} : \tau}}\right)
+    =
+    \mathsf{act}_\tau(\widehat{s})
+    \monbind
+    \lambda e'.\,\sem{e' : \tau}
+  \end{equation}
+  for every well-typed symbolic state \(\widehat{s} \in State_\tau\).  Then
+  \begin{align}
+    &\mathsf{Act}_\tau\!\left(
+      \widehat{\bigsemstep{\widehat{s}_0 : \tau}{n+1}}
+    \right) \notag \\
+    &=
+    \mathsf{Act}_\tau\!\left(
+      \widehat{\bigsemstep{\widehat{s}_0 : \tau}{n}}
+      \monbind
+      \lambda \widehat{s}.\,\widehat{\sem{\widehat{s} : \tau}}
+    \right)
+    \tag{\text{by definition of symbolic n-step}} \\
+    &=
+    \left(
+      \widehat{\bigsemstep{\widehat{s}_0 : \tau}{n}}
+      \monbind
+      \lambda \widehat{s}.\,\widehat{\sem{\widehat{s} : \tau}}
+    \right)
+    \monbind
+    \mathsf{act}_\tau
+    \tag{\text{by definition of Act}} \\
+    &=
+    \widehat{\bigsemstep{\widehat{s}_0 : \tau}{n}}
+    \monbind
+    \lambda \widehat{s}.\,
+      \left(\widehat{\sem{\widehat{s} : \tau}}
+      \monbind \mathsf{act}_\tau\right)
+    \tag{\text{by monad associativity}} \\
+    &=
+    \widehat{\bigsemstep{\widehat{s}_0 : \tau}{n}}
+    \monbind
+    \lambda \widehat{s}.\,
+      \mathsf{Act}_\tau\!\left(\widehat{\sem{\widehat{s} : \tau}}\right)
+    \tag{\text{by definition of Act}} \\
+    &=
+    \widehat{\bigsemstep{\widehat{s}_0 : \tau}{n}}
+    \monbind
+    \lambda \widehat{s}.\,
+      \left(\mathsf{act}_\tau(\widehat{s})
+      \monbind \lambda e'.\,\sem{e' : \tau}\right)
+    \tag{\text{by (1)}} \\
+    &=
+    \left(
+      \widehat{\bigsemstep{\widehat{s}_0 : \tau}{n}}
+      \monbind
+      \lambda \widehat{s}.\,\mathsf{act}_\tau(\widehat{s})
+    \right)
+    \monbind
+    \lambda e'.\,\sem{e' : \tau}
+    \tag{\text{by monad associativity}} \\
+    &=
+    \mathsf{Act}_\tau\!\left(
+      \widehat{\bigsemstep{\widehat{s}_0 : \tau}{n}}
+    \right)
+    \monbind
+    \lambda e'.\,\sem{e' : \tau}
+    \tag{\text{by definition of Act}} \\
+    &=
+    \bigsemstep{e : \tau}{n}
+    \monbind
+    \lambda e'.\,\sem{e' : \tau}
+    \tag{\text{by induction hypothesis}} \\
+    &=
+    \bigsemstep{e : \tau}{n+1}.
+    \tag{\text{by definition of n-step semantics}}
+  \end{align}
+\end{proof}
+
+\begin{lemma}
+  If \(\widehat{s} \in State_\tau\), then
+  \begin{equation}
+    \mathsf{Act}_\tau\!\left(\widehat{\sem{\widehat{s} : \tau}}\right)
+    =
+    \mathsf{act}_\tau(\widehat{s})
+    \monbind
+    \lambda e'.\,\sem{e' : \tau}
+  \end{equation}
+\end{lemma}
+
+\begin{proof}
+  By case analysis on the symbolic one-step rules in
+  \Cref{tab:symbolic-small-step-semantics}.  
+  
+  %Write \(\rho = (r_1,\ldots,r_k)\) for a tuple sampled from \(\sem{\sigma}_{\mathsf{env}}\) and write \(\hat e[\rho]^\circ\) for \(\hat e[r_1/u_1,\ldots,r_k/u_k]^\circ\).
+
+  \paragraph{Value case.}
+  Let \(\widehat{s} = (\sigma \mid \hat v : \tau)\).  On the LHS:
+  \begin{align}
+    \mathsf{Act}_\tau\!\left(\widehat{\sem{\widehat{s} : \tau}}\right)
+    &=
+    \mathsf{Act}_\tau(\delta_{(\sigma \mid \hat v : \tau)})
+    \tag{\text{by symbolic value rule}} \\
+    &=
+    \delta_{(\sigma \mid \hat v : \tau)}
+    \monbind
+    \mathsf{act}_\tau
+    \tag{\text{by definition of Act}} \\
+    &=
+    \mathsf{act}_\tau(\sigma \mid \hat v).
+    \tag{\text{by monad left identity}}
+  \end{align}
+  On the RHS:
+  \[
+    \mathsf{act}_\tau(\sigma \mid \hat v)
+    \monbind
+    \lambda e'.\,\sem{e' : \tau}
+    =
+    \mathsf{act}_\tau(\sigma \mid \hat v),
+  \]
+  
+  %because every realized \(\hat v[\rho]^\circ\) is an ordinary value, and \(\sem{\hat v[\rho]^\circ : \tau} = \delta_{\hat v[\rho]^\circ : \tau}\).
+
+  % \paragraph{Concrete addition case.}
+  % Let
+  % \[
+  %   \widehat{s} =
+  %   (\sigma \mid v_1 : \Float{m_1} + v_2 : \Float{m_2}) : \Float{m_3},
+  % \]
+  % where \(v_1\) and \(v_2\) are ordinary values.  The symbolic step is
+  % \[
+  %   \widehat{\sem{\widehat{s} : \Float{m_3}}}
+  %   =
+  %   \delta_{(\sigma \mid (v_1 + v_2) : \Float{m_3})}.
+  % \]
+  % Hence the left side is
+  % \[
+  %   \mathsf{act}_{\Float{m_3}}(\sigma \mid (v_1 + v_2) : \Float{m_3}).
+  % \]
+  % The right side first realizes the same ordinary expression
+  % \(v_1 + v_2\), and then the source small-step rule gives
+  % \[
+  %   \sem{v_1 : \Float{m_1} + v_2 : \Float{m_2} : \Float{m_3}}
+  %   =
+  %   \delta_{(v_1 + v_2) : \Float{m_3}}.
+  % \]
+  % Thus both sides are the same distribution.
+
+  % \paragraph{Symbolic addition case.}
+  % Let
+  % \[
+  %   \widehat{s} =
+  %   (\sigma \mid \hat v_1 : \Float{m_1} + \hat v_2 : \Float{m_2})
+  %   : \Float{m_3},
+  % \]
+  % where some \(\mathsf{sym}(u)\) occurs in \(\hat v_1\) or \(\hat v_2\).  The
+  % symbolic step is
+  % \[
+  %   \widehat{\sem{\widehat{s} : \Float{m_3}}}
+  %   =
+  %   \delta_{(\sigma \mid
+  %     \mathsf{val}(\hat v_1 + \hat v_2) : \Float{m_3})}.
+  % \]
+  % Applying \(\mathsf{Act}_{\Float{m_3}}\) gives
+  % \[
+  %   \sem{\sigma}_{\mathsf{env}}
+  %   \monbind
+  %   \lambda \rho.\,
+  %   \delta_{(\hat v_1[\rho]^\circ + \hat v_2[\rho]^\circ) : \Float{m_3}},
+  % \]
+  % since \(\mathsf{val}\) is realized by evaluating the enclosed expression.
+  % On the right side, \(\mathsf{act}_{\Float{m_3}}(\widehat{s})\) first
+  % produces the ordinary expression
+  % \(\hat v_1[\rho]^\circ + \hat v_2[\rho]^\circ\), and one ordinary
+  % source step evaluates it to the same value.  Therefore the right side is
+  % the same distribution.
+\end{proof}
+
+
+
+
+
+
+
+
+
+\subsection{Soundness (NEW)}
+
+This section states the intended soundness argument using the symbolic
+semantics as the main coupling object.  A symbolic state has the form
+\[
+  \langle \Sigma \mid\mid e \rangle,
+\]
+where \(\Sigma\) is a sequence of symbolic samples
+\[
+  u_1 \sim D_1;\ldots;u_k \sim D_k.
+\]
+The distributions \(D_i\) may mention earlier symbolic variables
+\(u_1,\ldots,u_{i-1}\).
+
+Let \(\mathsf{actual}\) and \(\mathsf{expected}\) be the two interpretations of
+symbolic configurations.  The actual interpretation samples the symbolic
+environment and then returns the residual expression:
+\[
+  \mathsf{actual}(\langle \Sigma \mid\mid e \rangle)
+  =
+  u_1 \sim D_1;\ldots;u_k \sim D_k;\mathsf{return}\ e.
+\]
+The expected interpretation substitutes the expectation of each symbolic
+sample, in order, into the later symbolic environment and residual expression:
+\[
+  \mathsf{expected}(\langle \Sigma \mid\mid e \rangle)
+  =
+  \mathsf{return}
+  e[
+    \mathbb{E}[D_1]/u_1,\ldots,
+    \mathbb{E}[D_k]/u_k
+  ].
+\]
+Both interpretations extend from symbolic states to symbolic configurations by
+bind.
+
+\begin{definition}[Type-indexed observational equivalence]
+  We write \(\mu_1 \approx_\tau \mu_2\) for the equivalence relation induced by
+  type \(\tau\).  At expectation-mode floats this means equal expectations,
+  while at general-mode floats, booleans, and the other non-expectation
+  observations it means equality of distributions:
+  \[
+    \mu_1 \approx_{\Float{\E}} \mu_2
+    \quad\Longleftrightarrow\quad
+    \mathbb{E}[\mu_1] = \mathbb{E}[\mu_2],
+  \]
+  and
+  \[
+    \mu_1 \approx_{\Float{\G}} \mu_2
+    \quad\Longleftrightarrow\quad
+    \mu_1 = \mu_2.
+  \]
+  and
+  \[ 
+    \mu_1 \approx_{\Bool} \mu_2
+    \quad\Longleftrightarrow\quad
+    \mu_1 = \mu_2.
+  \]
+
+  The relation is extended structurally to products, sums, lists, and
+  functions.
+\end{definition}
+
+\begin{lemma}[Determinization preservation]
+  If \(\emptyset \vdash e : \tau\), then
+  \[
+    \emptyset \vdash \exptrans{e : \tau} : \tau.
+  \]
+\end{lemma}
+
+\begin{lemma}[Symbolic preservation]
+  If a symbolic configuration \(C\) is well typed at type \(\tau\), and
+  \[
+    C \longrightarrow_{\mathsf{sym}} C',
+  \]
+  then \(C'\) is also well typed at type \(\tau\).  Consequently, if
+  \[
+    \langle \emptyset \mid\mid e \rangle
+    \longrightarrow_{\mathsf{sym}}^{n}
+    C_n
+  \]
+  and \(\emptyset \vdash e : \tau\), then \(C_n\) is well typed at type
+  \(\tau\).
+\end{lemma}
+
+\begin{lemma}[Actual interpretation]
+  If
+  \[
+    \langle \emptyset \mid\mid e \rangle
+    \longrightarrow_{\mathsf{sym}}^{n}
+    C_n,
+  \]
+  then
+  \[
+    \mathsf{actual}(C_n) = \bigsemstep{e : \tau}{n}.
+  \]
+\end{lemma}
+
+\begin{lemma}[Expected interpretation]
+  If \(\emptyset \vdash e : \tau\) and
+  \[
+    \langle \emptyset \mid\mid e \rangle
+    \longrightarrow_{\mathsf{sym}}^{n}
+    C_n,
+  \]
+  then
+  \[
+    \mathsf{expected}(C_n)
+    \approx_\tau
+    \bigsemstep{\exptrans{e : \tau} : \tau}{n}.
+  \]
+\end{lemma}
+
+\begin{lemma}[Well-typed symbolic configurations are expectation-affine]
+  If \(C\) is a well-typed symbolic configuration at type \(\tau\), then its
+  residual expression is expectation-affine in every expectation-mode symbolic
+  variable.  Therefore
+  \[
+    \mathsf{actual}(C) \approx_\tau \mathsf{expected}(C).
+  \]
+\end{lemma}
+
+\begin{theorem}[$n$-step symbolic soundness]
+  If \(\emptyset \vdash e : \tau\), then for every \(n \in \mathbb{N}\),
+  \[
+    \bigsemstep{e : \tau}{n}
+    \approx_\tau
+    \bigsemstep{\exptrans{e : \tau} : \tau}{n}.
+  \]
+\end{theorem}
+
+\begin{proof}
+  Start with a closed well-typed source expression
+  \[
+    \emptyset \vdash e : \tau.
+  \]
+  By determinization preservation,
+  \[
+    \emptyset \vdash \exptrans{e : \tau} : \tau.
+  \]
+  Embed the source expression into the symbolic semantics and run it for
+  \(n\) steps:
+  \[
+    \langle \emptyset \mid\mid e \rangle
+    \longrightarrow_{\mathsf{sym}}^{n}
+    C_n.
+  \]
+  By symbolic preservation, \(C_n\) is well typed at type \(\tau\).  The actual
+  interpretation theorem gives
+  \[
+    \mathsf{actual}(C_n) = \bigsemstep{e : \tau}{n},
+  \]
+  and the expected interpretation theorem gives
+  \[
+    \mathsf{expected}(C_n)
+    \approx_\tau
+    \bigsemstep{\exptrans{e : \tau} : \tau}{n}.
+  \]
+  Since \(C_n\) is well typed, it is expectation-affine, so
+  \[
+    \mathsf{actual}(C_n) \approx_\tau \mathsf{expected}(C_n).
+  \]
+  Therefore, by transitivity of \(\approx_\tau\),
+  \[
+    \bigsemstep{e : \tau}{n}
+    \approx_\tau
+    \bigsemstep{\exptrans{e : \tau} : \tau}{n}.
+  \]
+\end{proof}
+
+\begin{theorem}[Soundness of determinization]
+  If \(\emptyset \vdash e : \tau\), then
+  \[
+    \bigsem{e : \tau}
+    \approx_\tau
+    \bigsem{\exptrans{e : \tau} : \tau}.
+  \]
+  In particular, if \(\tau = \Float{\E}\), then
+  \[
+    \mathbb{E}[\bigsem{e : \Float{\E}}]
+    =
+    \mathbb{E}[\bigsem{\exptrans{e : \Float{\E}} : \Float{\E}}].
+  \]
+\end{theorem}
+
+\begin{proof}
+  The \(n\)-step symbolic soundness theorem gives
+  \[
+    \bigsemstep{e : \tau}{n}
+    \approx_\tau
+    \bigsemstep{\exptrans{e : \tau} : \tau}{n}
+  \]
+  for every \(n\).  Passing to the big-step semantics gives
+  \[
+    \bigsem{e : \tau}
+    \approx_\tau
+    \bigsem{\exptrans{e : \tau} : \tau}.
+  \]
+  The expectation-mode float case follows by the definition of
+  \(\approx_{\Float{\E}}\).
+\end{proof}
+
 \subsection{Soundness}
 \begin{definition}[Expected value]
   Suppose $\mu$ is a probability measure on $\mathbb{R}$. Then, the expected value of the distribution $\mu$ is:
@@ -650,6 +1477,7 @@
   \]
 \end{lemma}
 
+\section{old}
 \begin{theorem}[Soundness of determinization]
   Let $e : \tau$ be a well-typed expression. Then:
   \[
@@ -967,6 +1795,89 @@
   \]
 \end{itemize}
 
+\begin{definition}[Exepectation equivalence]
+  Define $K \colon Val_\tau \to \mathcal{D}(\mathbb{R})$ respects expectation equivalence if for all $\mu_1, \mu_2$ such that $\mu_1 \equiv_\tau \mu_2$, then $\mathbb{E}[\mu_1 \monbind K] = \mathbb{E}[\mu_2 \monbind K]$.
+\end{definition}
+
+\begin{definition}[Admissible continuations]
+  For each type \(\tau\), an observation continuation is a Markov kernel
+  \[
+    K : Val_\tau \to \mathcal{D}(\mathbb{R}).
+  \]
+  Write
+  \[
+    \overline{K}(v) = \mathbb{E}[K(v)].
+  \]
+  We define a type-indexed predicate \(Adm_\tau(K)\) by cases on \(\tau\).
+
+  \begin{itemize}
+    \item \(\tau = \Unit\). Every continuation is admissible.
+
+    \item \(\tau = \Bool\). Every continuation is admissible.
+
+    \item \(\tau = \Float{\G}\). Every continuation is admissible.
+
+    \item \(\tau = \Float{\E}\). The continuation is admissible iff
+    \(\overline{K}\) is an affine continuation:
+    \[
+      \exists a,b \in \mathbb{R}.\ \forall x \in \mathbb{R},\quad
+      \overline{K}(x) = ax + b.
+    \]
+
+    \item \(\tau = \tau_1 \times \tau_2\). The continuation \(K\) is
+    admissible iff it is admissible in each component separately:
+    \[
+      \forall v_2 \in Val_{\tau_2},\quad
+      Adm_{\tau_1}(\lambda v_1.\,K(v_1,v_2))
+    \]
+    and
+    \[
+      \forall v_1 \in Val_{\tau_1},\quad
+      Adm_{\tau_2}(\lambda v_2.\,K(v_1,v_2)).
+    \]
+
+    \item \(\tau = \tau_1 + \tau_2\). The continuation \(K\) is admissible iff
+    both branch continuations are admissible:
+    \[
+      Adm_{\tau_1}(\lambda v.\,K(\mathsf{inl}\,v))
+    \]
+    and
+    \[
+      Adm_{\tau_2}(\lambda v.\,K(\mathsf{inr}\,v)).
+    \]
+
+    \item \(\tau = Option{\tau'}\). The continuation \(K\) is admissible iff
+    the \(\mathsf{some}\)-branch continuation is admissible:
+    \[
+      Adm_{\tau'}(\lambda v.\,K(\mathsf{some}\,v)).
+    \]
+    The \(\mathsf{none}\) branch is a single point and imposes no condition.
+
+    \item \(\tau = \List{\tau'}\). The continuation \(K\) is admissible iff,
+    for every list context \(C[-]\) with one hole of type \(\tau'\), the induced
+    element continuation is admissible:
+    \[
+      Adm_{\tau'}(\lambda v.\,K(C[v])).
+    \]
+    Equivalently, for every list length \(n\), every position \(i\), and every
+    fixed choice of all other elements, the function obtained by varying only
+    the \(i\)-th element is admissible at type \(\tau'\).
+
+    \item \(\tau = \tau_1 \to \tau_2\). The continuation \(K\) is admissible
+    extensionally: it may observe a function only by applying it to admissible
+    arguments and then observing the result admissibly. Concretely, \(K\) is
+    admissible if it belongs to the least class of continuations closed under
+    constants, affine combinations, and the rule:
+    if \(A\) is an admissible argument-producing computation of type
+    \(\tau_1\), and \(L\) is admissible at type \(\tau_2\), then
+    \[
+      f \mapsto \bigsem{f\,A : \tau_2} \monbind L
+    \]
+    is admissible at type \(\tau_1 \to \tau_2\).
+  \end{itemize}
+\end{definition}
+
+
 \begin{lemma}
   For any $\mu \in \mathcal{D}(Expr_\mathsf{float})$ and any expectation-affine continuation $K$:
   \[
@@ -985,11 +1896,33 @@
   \end{align*}
 \end{proof}
 
-\subsection{Soundness?}
-
-\begin{theorem}[Soundness of expectation transformation]
-  Let $e : \mathsf{float}$ be a well-typed expression. Then:
+\begin{theorem}[Soundness under affine continuations]
+  Let $e : \tau$ be well typed. Let
+  $K : Val_\tau \to \mathcal{D}(\mathbb{R})$
+  be an admissible continuation. Then
   \[
-    \mathbb{E}[\bigsem{e : \mathsf{float}}] = \mathbb{E}[\bigsem{\mathcal{E}( e : \mathsf{float}) : \mathsf{float}}].
+    \mathbb{E}[\bigsem{e : \tau} \monbind K]
+    =
+    \mathbb{E}[\bigsem{\exptrans{e : \tau} : \tau} \monbind K].
   \]
 \end{theorem}
+
+\begin{theorem}[Soundness of determinization]
+  Let $e : \tau$ be a well-typed expression. Then:
+  \[
+    \mathbb{E}[\bigsem{e : \Float{m}}]
+    =
+    \mathbb{E}[\bigsem{\exptrans{e : \Float{m}} : \Float{m}}]
+  \]
+
+  where $m = \G$ or $\E$, and in particular:
+  \[
+    \bigsem{e : \Float{\G}}
+    =
+    \bigsem{\exptrans{e : \Float{\G}} : \Float{\G}}.
+  \]
+\end{theorem}
+
+\begin{proof}
+  Let $\tau = \Float{m}$ and $K(x) = \delta_x$. 
+\end{proof}

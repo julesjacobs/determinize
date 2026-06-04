@@ -27,3 +27,94 @@ We list the main threads of related work we build on:
     \item Saad et al.: SPPL fast exact symbolic inference (PLDI'21)~\cite{saad2021sppl}.
   \end{itemize}
 \end{itemize}
+
+Symbolic residual expressions are defined by the grammar below.  They
+mirror ordinary expressions, but include an additional marker
+$\mathsf{val}(\hat e)$, which records that $\hat e$ has become a
+symbolic value even if it is not yet a concrete value.
+
+\[
+\begin{aligned}
+\hat e ::= {}&
+    \lfloor e \rfloor
+  \mid \mathsf{val}(\hat e)
+  \mid \lambda x.\hat e
+  \mid \mathbf{rec}\ f\ x.\hat e
+  \mid \hat e_1\ \hat e_2
+  \mid \langle \hat e_1,\hat e_2\rangle
+  \mid \mathbf{fst}\ \hat e
+  \mid \mathbf{snd}\ \hat e
+\\
+& \mid \mathbf{inl}\ \hat e
+  \mid \mathbf{inr}\ \hat e
+  \mid \mathbf{match}\ \hat e\ \mathbf{with}\ 
+        \mathbf{inl}\ x \Rightarrow \hat e_1
+        \mid
+        \mathbf{inr}\ y \Rightarrow \hat e_2
+\\
+& \mid []
+  \mid \hat e_1 :: \hat e_2
+  \mid \mathbf{match}\ \hat e\ \mathbf{with}\ 
+        [] \Rightarrow \hat e_1
+        \mid
+        x :: xs \Rightarrow \hat e_2
+\\
+& \mid \mathbf{true}
+  \mid \mathbf{false}
+  \mid \mathbf{if}\ \hat e\ \mathbf{then}\ \hat e_1\ \mathbf{else}\ \hat e_2
+  \mid \mathbf{let}\ x = \hat e_1\ \mathbf{in}\ \hat e_2
+\\
+& \mid c
+  \mid -\hat e
+  \mid \hat e_1 + \hat e_2
+  \mid \hat e_1 \times \hat e_2
+  \mid \hat e_1 < \hat e_2
+  \mid \mathbf{uniform}(\hat e_1,\hat e_2)
+  \mid \mathbf{gaussian}(\hat e_1,\hat e_2).
+\end{aligned}
+\]
+
+Values in the symbolic semantics. 
+
+\[
+\begin{aligned}
+\hat v ::= {}&
+    \lfloor x \rfloor
+  \mid \lfloor () \rfloor
+  \mid \lfloor c \rfloor
+  \mid \lfloor \mathbf{true} \rfloor
+  \mid \lfloor \mathbf{false} \rfloor
+  \mid \langle \hat v_1,\hat v_2\rangle
+  \mid \mathsf{val}(\hat e).
+\end{aligned}
+\]
+
+Updated:
+
+\[
+\begin{aligned}
+\hat e ::= {}&
+    \iota(e)
+  \mid \mathsf{sym}(u)
+  \mid \mathsf{val}(\hat e)
+  \mid \langle \hat e_1,\hat e_2\rangle
+  \mid \mathbf{let}\ x = \hat e_1\ \mathbf{in}\ \hat e_2
+  \mid \hat e_1 + \hat e_2
+  \mid \hat e_1 < \hat e_2
+  \mid \mathbf{if}\ \hat e_1\ \mathbf{then}\ \hat e_2\ \mathbf{else}\ \hat e_3
+  \mid \cdots
+\end{aligned}
+\]
+
+\[
+\begin{aligned}
+\hat v ::= {}&
+    \mathsf{sym}(u)
+  \mid \iota(())
+  \mid \iota(c)
+  \mid \iota(\mathbf{true})
+  \mid \iota(\mathbf{false})
+  \mid \langle \hat v_1,\hat v_2\rangle
+  \mid \mathsf{val}(\hat e).
+\end{aligned}
+\]
