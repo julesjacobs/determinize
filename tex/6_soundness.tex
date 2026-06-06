@@ -531,17 +531,21 @@ This distribution is defined sequentially by:
   \]
 \end{example}
 
-For a symbolic residual expression \(\hat e\), write
+For a symbolic residual expression \(\hat e\) and a tuple
+\(\rho = (r_1,\ldots,r_n)\), write
 \[
-  \hat e[r_1/u_1,\ldots,r_n/u_n]^\circ
+  \mathsf{realize}_\rho(\hat e)
 \]
-for the ordinary expression obtained by the substitution
+for the ordinary expression obtained by replacing each occurrence of
+\(\sym(a)\) in \(\hat e\) with the real number obtained by evaluating the
+affine expression \(a\) under \(\rho\):
 \[
   \sym(a)
   \mapsto
-  a[r_1/u_1,\ldots,r_n/u_n]
+  a[\rho]
+  =
+  a[r_1/u_1,\ldots,r_n/u_n].
 \]
-for each occurrence of \(\sym(a)\) in \(\hat e\).
 
 If
 \[
@@ -549,7 +553,7 @@ If
 \]
 then
 \[
-  \hat e[r_1/u_1,\ldots,r_n/u_n]^\circ \in Expr_\tau.
+  \mathsf{realize}_\rho(\hat e) \in Expr_\tau.
 \]
 The single-state actual interpretation is the function:
 \[
@@ -562,8 +566,8 @@ defined by
   &=
   \sem{\sigma}_{\mathsf{env}}
   \monbind
-  \lambda(r_1,\ldots,r_n).\,
-  \delta_{\hat e[r_1/u_1,\ldots,r_n/u_n]^\circ : \tau}.
+  \lambda\rho.\,
+  \delta_{\mathsf{realize}_\rho(\hat e) : \tau}.
 \end{aligned}
 \]
 
