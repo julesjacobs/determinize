@@ -589,44 +589,55 @@ It is defined by monadic bind against the single-state kernel:
 \]
 
 \begin{theorem}[Actual interpretation of symbolic \(n\)-step semantics]
-  If \(\emptyset \vdash e : \tau\), then for every \(n \in \mathbb{N}\),
+  If \(\hat{s} = (\sigma \mid \hat e : \tau) \in State_\tau\), then for
+  every \(n \in \mathbb{N}\),
   \[
-    \bigsemstep{e : \tau}{n}
-    =
     \mathsf{Act}_\tau\!\left(
-      \widehat{\bigsemstep{(\emptyset \mid e) : \tau}{n}}
-    \right).
+      \widehat{\bigsemstep{\hat{s} : \tau}{n}}
+    \right)
+    =
+    \mathsf{act}_\tau(\hat{s})
+    \monbind
+    \lambda e.\,\bigsemstep{e : \tau}{n}.
   \]
 \end{theorem}
 
 \begin{proof}
-  Let \(\hat{s}_0 = (\emptyset \mid e)\).  
+  The proof is by induction on \(n\), with the statement quantified over all
+  well-typed symbolic states.
 
-  The proof is by induction on \(n\).  For \(n=0\),
+  For \(n=0\), let \(\hat{s} \in State_\tau\). Then
   \begin{align}
     \mathsf{Act}_\tau\!\left(
-      \widehat{\bigsemstep{\hat{s}_0 : \tau}{0}}
+      \widehat{\bigsemstep{\hat{s} : \tau}{0}}
     \right)
     &=
-    \mathsf{Act}_\tau(\delta_{\hat{s}_0 : \tau})
+    \mathsf{Act}_\tau(\delta_{\hat{s} : \tau})
     \tag{\text{by definition of n-step symbolic semantics}} \\
     &=
-    \delta_{\hat{s}_0 : \tau}
+    \delta_{\hat{s} : \tau}
     \monbind
     \mathsf{act}_\tau
     \tag{\text{by definition of Act}} \\
     &=
-    \mathsf{act}_\tau(\emptyset \mid e)
+    \mathsf{act}_\tau(\hat{s})
     \tag{\text{by monad left identity}} \\
     &=
-    \delta_{e : \tau}
-    \tag{\text{by definition of act on empty environment}} \\
+    \mathsf{act}_\tau(\hat{s})
+    \monbind
+    \lambda e.\,\delta_{e : \tau}
+    \tag{\text{by monad right identity}} \\
     &=
-    \bigsemstep{e : \tau}{0}.
+    \mathsf{act}_\tau(\hat{s})
+    \monbind
+    \lambda e.\,\bigsemstep{e : \tau}{0}.
     \tag{\text{by definition of n-step semantics}}
   \end{align}
 
-  WE NEED TO PROVE:
+  For the inductive step, assume the statement holds for \(n\) for every
+  well-typed symbolic state, and let
+  \(\hat{s} = (\sigma \mid \hat e : \tau) \in State_\tau\). We use the
+  one-step compatibility fact:
 
   \begin{equation}
     \mathsf{Act}_\tau\!\left(\widehat{\sem{\hat{s} : \tau}}\right)
@@ -635,70 +646,84 @@ It is defined by monadic bind against the single-state kernel:
     \monbind
     \lambda e'.\,\sem{e' : \tau}
   \end{equation}
-  for every well-typed symbolic state \(\hat{s} \in State_\tau\).  Then
+  for every well-typed symbolic state \(\hat{s} \in State_\tau\). Then
   \begin{align}
     &\mathsf{Act}_\tau\!\left(
-      \widehat{\bigsemstep{\hat{s}_0 : \tau}{n+1}}
+      \widehat{\bigsemstep{\hat{s} : \tau}{n+1}}
     \right) \notag \\
     &=
     \mathsf{Act}_\tau\!\left(
-      \widehat{\bigsemstep{\hat{s}_0 : \tau}{n}}
+      \widehat{\bigsemstep{\hat{s} : \tau}{n}}
       \monbind
-      \lambda \hat{s}.\,\widehat{\sem{\hat{s} : \tau}}
+      \lambda \hat{s}'.\,\widehat{\sem{\hat{s}' : \tau}}
     \right)
     \tag{\text{by definition of symbolic n-step}} \\
     &=
     \left(
-      \widehat{\bigsemstep{\hat{s}_0 : \tau}{n}}
+      \widehat{\bigsemstep{\hat{s} : \tau}{n}}
       \monbind
-      \lambda \hat{s}.\,\widehat{\sem{\hat{s} : \tau}}
+      \lambda \hat{s}'.\,\widehat{\sem{\hat{s}' : \tau}}
     \right)
     \monbind
     \mathsf{act}_\tau
     \tag{\text{by definition of Act}} \\
     &=
-    \widehat{\bigsemstep{\hat{s}_0 : \tau}{n}}
+    \widehat{\bigsemstep{\hat{s} : \tau}{n}}
     \monbind
-    \lambda \hat{s}.\,
-      \left(\widehat{\sem{\hat{s} : \tau}}
+    \lambda \hat{s}'.\,
+      \left(\widehat{\sem{\hat{s}' : \tau}}
       \monbind \mathsf{act}_\tau\right)
     \tag{\text{by monad associativity}} \\
     &=
-    \widehat{\bigsemstep{\hat{s}_0 : \tau}{n}}
+    \widehat{\bigsemstep{\hat{s} : \tau}{n}}
     \monbind
-    \lambda \hat{s}.\,
-      \mathsf{Act}_\tau\!\left(\widehat{\sem{\hat{s} : \tau}}\right)
+    \lambda \hat{s}'.\,
+      \mathsf{Act}_\tau\!\left(\widehat{\sem{\hat{s}' : \tau}}\right)
     \tag{\text{by definition of Act}} \\
     &=
-    \widehat{\bigsemstep{\hat{s}_0 : \tau}{n}}
+    \widehat{\bigsemstep{\hat{s} : \tau}{n}}
     \monbind
-    \lambda \hat{s}.\,
-      \left(\mathsf{act}_\tau(\hat{s})
+    \lambda \hat{s}'.\,
+      \left(\mathsf{act}_\tau(\hat{s}')
       \monbind \lambda e'.\,\sem{e' : \tau}\right)
-    \tag{\text{by (1)}} \\
+    \tag{\text{by one-step compatibility}} \\
     &=
     \left(
-      \widehat{\bigsemstep{\hat{s}_0 : \tau}{n}}
+      \widehat{\bigsemstep{\hat{s} : \tau}{n}}
       \monbind
-      \lambda \hat{s}.\,\mathsf{act}_\tau(\hat{s})
+      \lambda \hat{s}'.\,\mathsf{act}_\tau(\hat{s}')
     \right)
     \monbind
     \lambda e'.\,\sem{e' : \tau}
     \tag{\text{by monad associativity}} \\
     &=
     \mathsf{Act}_\tau\!\left(
-      \widehat{\bigsemstep{\hat{s}_0 : \tau}{n}}
+      \widehat{\bigsemstep{\hat{s} : \tau}{n}}
     \right)
     \monbind
     \lambda e'.\,\sem{e' : \tau}
     \tag{\text{by definition of Act}} \\
     &=
-    \bigsemstep{e : \tau}{n}
+    \left(
+      \mathsf{act}_\tau(\hat{s})
+      \monbind
+      \lambda e.\,\bigsemstep{e : \tau}{n}
+    \right)
     \monbind
     \lambda e'.\,\sem{e' : \tau}
     \tag{\text{by induction hypothesis}} \\
     &=
-    \bigsemstep{e : \tau}{n+1}.
+    \mathsf{act}_\tau(\hat{s})
+    \monbind
+    \lambda e.\,
+      \left(\bigsemstep{e : \tau}{n}
+      \monbind
+      \lambda e'.\,\sem{e' : \tau}\right)
+    \tag{\text{by monad associativity}} \\
+    &=
+    \mathsf{act}_\tau(\hat{s})
+    \monbind
+    \lambda e.\,\bigsemstep{e : \tau}{n+1}.
     \tag{\text{by definition of n-step semantics}}
   \end{align}
 \end{proof}
