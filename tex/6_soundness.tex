@@ -555,38 +555,101 @@ then
 \[
   \mathsf{realize}_\rho(\hat e) \in Expr_\tau.
 \]
-The single-state actual interpretation is the function:
-\[
-  \mathsf{act}_\tau : State_\tau \to \mathcal{D}(Expr_\tau)
-\]
-defined by
-\[
-\begin{aligned}
-  \mathsf{act}_\tau(\sigma \mid \hat e)
-  &=
-  \sem{\sigma}_{\mathsf{env}}
-  \monbind
-  \lambda\rho.\,
-  \delta_{\mathsf{realize}_\rho(\hat e) : \tau}.
-\end{aligned}
-\]
+We also extend realization to symbolic evaluation contexts.  For a symbolic
+context \(C[\cdot]\), \(\mathsf{realize}_\rho(C)[e]\) means: realize the
+symbolic expressions in \(C[\cdot]\) while leaving its hole open, then fill that
+hole with the expression \(e\).  
 
-The lifted actual interpretation acts on distributions over symbolic states:
-\[
-  \mathsf{Act}_\tau :
-  \mathcal{D}(State_\tau) \to \mathcal{D}(Expr_\tau).
-\]
-It is defined by monadic bind against the single-state kernel:
-\[
-\begin{aligned}
-  \mathsf{Act}_\tau(\mu)
-  &=
-  \mu \monbind \mathsf{act}_\tau \\
-  &=
-  \mu \monbind
-  \lambda(\sigma \mid \hat e).\,\mathsf{act}_\tau(\sigma \mid \hat e).
-\end{aligned}
-\]
+\begin{lemma}[Realization commutes with plugging into contexts]
+  \[
+    \mathsf{realize}_\rho(C[\hat e])
+    =
+    \mathsf{realize}_\rho(C)[\mathsf{realize}_\rho(\hat e)].
+  \]
+\end{lemma}
+
+\begin{proof}
+  By induction on the structure of \(C[\cdot]\).
+
+  If \(C[\cdot]=[\cdot]\), then
+  \[
+    \mathsf{realize}_\rho(C[\hat e])
+    =
+    \mathsf{realize}_\rho(\hat e)
+    =
+    \mathsf{realize}_\rho(C)[\mathsf{realize}_\rho(\hat e)].
+  \]
+
+  For the let context case, suppose
+  \[
+    C[\cdot]
+    =
+    \letkw\ x=C_1[\cdot]\ \inkw\ \hat e_2.
+  \]
+  Then
+  \begin{align}
+    \mathsf{realize}_\rho(C[\hat e])
+    &=
+    \letkw\ x=\mathsf{realize}_\rho(C_1[\hat e])
+    \ \inkw\ \mathsf{realize}_\rho(\hat e_2)
+    \tag{\text{by definition of realization}} \\
+    &=
+    \letkw\ x=
+      \mathsf{realize}_\rho(C_1)[\mathsf{realize}_\rho(\hat e)]
+    \ \inkw\ \mathsf{realize}_\rho(\hat e_2)
+    \tag{\text{by induction hypothesis}} \\
+    &=
+    \mathsf{realize}_\rho(C)[\mathsf{realize}_\rho(\hat e)].
+    \tag{\text{by definition of context realization}}
+  \end{align}
+  Other context forms are analogous.
+\end{proof}
+
+\begin{lemma}[Realization substitution]
+  \[
+    \mathsf{realize}_\rho(\hat e[\hat v/x])
+    =
+    \mathsf{realize}_\rho(\hat e)
+    [\mathsf{realize}_\rho(\hat v)/x].
+  \]
+\end{lemma}
+
+\begin{definition}[Single-state actual interpretation]
+  The single-state actual interpretation is the function:
+  \[
+    \mathsf{act}_\tau : State_\tau \to \mathcal{D}(Expr_\tau)
+  \]
+  defined by
+  \[
+  \begin{aligned}
+    \mathsf{act}_\tau(\sigma \mid \hat e)
+    &=
+    \sem{\sigma}_{\mathsf{env}}
+    \monbind
+    \lambda\rho.\,
+    \delta_{\mathsf{realize}_\rho(\hat e) : \tau}.
+  \end{aligned}
+  \]
+\end{definition}
+
+\begin{definition}[Lifted actual interpretation]
+  The lifted actual interpretation acts on distributions over symbolic states:
+  \[
+    \mathsf{Act}_\tau :
+    \mathcal{D}(State_\tau) \to \mathcal{D}(Expr_\tau).
+  \]
+  It is defined by monadic bind against the single-state kernel:
+  \[
+  \begin{aligned}
+    \mathsf{Act}_\tau(\mu)
+    &=
+    \mu \monbind \mathsf{act}_\tau \\
+    &=
+    \mu \monbind
+    \lambda(\sigma \mid \hat e).\,\mathsf{act}_\tau(\sigma \mid \hat e).
+  \end{aligned}
+  \]
+\end{definition}
 
 \begin{theorem}[Actual interpretation of symbolic \(n\)-step semantics]
   If \(\hat{s} = (\sigma \mid \hat e : \tau) \in State_\tau\), then for
@@ -728,7 +791,249 @@ It is defined by monadic bind against the single-state kernel:
   \end{align}
 \end{proof}
 
-\begin{lemma}
+\begin{lemma}[Strengthened one-step compatibility]
+  Let \(C[\cdot]\) be a well-typed symbolic evaluation context whose hole has
+  type \(\tau_0\) and whose whole expression has type \(\tau\).  If
+  \((\sigma \mid \hat e_0 : \tau_0) \in State_{\tau_0}\), then
+  \[
+  \begin{aligned}
+    &
+    \widehat{\sem{(\sigma \mid \hat e_0 : \tau_0)}}
+    \monbind
+    \lambda(\sigma' \mid \hat g).\,
+      \mathsf{act}_\tau(\sigma' \mid C[\hat g]) \\
+    &=
+    \sem{\sigma}_{\mathsf{env}}
+    \monbind
+    \lambda\rho.\,
+      \left(
+        \sem{\mathsf{realize}_\rho(\hat e_0) : \tau_0}
+        \monbind
+        \lambda g.\,
+          \delta_{\mathsf{realize}_\rho(C)[g] : \tau}
+      \right).
+  \end{aligned}
+  \]
+\end{lemma}
+
+\begin{proof}
+  The proof is by induction on \(\hat e_0\).
+
+  \paragraph{Value case.}
+  \begin{align}
+    &\widehat{\sem{(\sigma \mid \hat v : \tau_0)}}
+    \monbind
+    \lambda(\sigma' \mid \hat g).\,
+      \mathsf{act}_\tau(\sigma' \mid C[\hat g]) \notag \\
+    &=
+    \delta_{(\sigma \mid \hat v : \tau_0)}
+    \monbind
+    \lambda(\sigma' \mid \hat g).\,
+      \mathsf{act}_\tau(\sigma' \mid C[\hat g])
+    \tag{\text{by symbolic value rule}} \\
+    &=
+    \mathsf{act}_\tau(\sigma \mid C[\hat v])
+    \tag{\text{by monad left identity}} \\
+    &=
+    \sem{\sigma}_{\mathsf{env}}
+    \monbind
+    \lambda\rho.\,
+      \delta_{\mathsf{realize}_\rho(C[\hat v]) : \tau}
+    \tag{\text{by definition of act}} \\
+    &=
+    \sem{\sigma}_{\mathsf{env}}
+    \monbind
+    \lambda\rho.\,
+      \delta_{\mathsf{realize}_\rho(C)
+        [\mathsf{realize}_\rho(\hat v)] : \tau}
+    \tag{\text{by realization of contexts}} \\
+    &=
+    \sem{\sigma}_{\mathsf{env}}
+    \monbind
+    \lambda\rho.\,
+      \left(
+        \delta_{\mathsf{realize}_\rho(\hat v) : \tau_0}
+        \monbind
+        \lambda g.\,
+          \delta_{\mathsf{realize}_\rho(C)[g] : \tau}
+      \right)
+    \tag{\text{by monad left identity}} \\
+    &=
+    \sem{\sigma}_{\mathsf{env}}
+    \monbind
+    \lambda\rho.\,
+      \left(
+        \sem{\mathsf{realize}_\rho(\hat v) : \tau_0}
+        \monbind
+        \lambda g.\,
+          \delta_{\mathsf{realize}_\rho(C)[g] : \tau}
+      \right).
+    \tag{\text{by ordinary value rule}}
+  \end{align}
+
+  \paragraph{Let value case.}
+  \begin{align}
+    &\widehat{\sem{(\sigma \mid
+      \letkw\ x=\hat v\ \inkw\ \hat e_2 : \tau_2)}}
+    \monbind
+    \lambda(\sigma' \mid \hat g).\,
+      \mathsf{act}_\tau(\sigma' \mid C[\hat g]) \notag \\
+    &=
+    \delta_{(\sigma \mid \hat e_2[\hat v/x] : \tau_2)}
+    \monbind
+    \lambda(\sigma' \mid \hat g).\,
+      \mathsf{act}_\tau(\sigma' \mid C[\hat g])
+    \tag{\text{by symbolic let rule}} \\
+    &=
+    \mathsf{act}_\tau(\sigma \mid C[\hat e_2[\hat v/x]])
+    \tag{\text{by monad left identity}} \\
+    &=
+    \sem{\sigma}_{\mathsf{env}}
+    \monbind
+    \lambda\rho.\,
+      \delta_{\mathsf{realize}_\rho(C[\hat e_2[\hat v/x]]) : \tau}
+    \tag{\text{by definition of act}} \\
+    &=
+    \sem{\sigma}_{\mathsf{env}}
+    \monbind
+    \lambda\rho.\,
+      \delta_{\mathsf{realize}_\rho(C)
+        [\mathsf{realize}_\rho(\hat e_2[\hat v/x])] : \tau}
+    \tag{\text{by realization of contexts}} \\
+    &=
+    \sem{\sigma}_{\mathsf{env}}
+    \monbind
+    \lambda\rho.\,
+      \delta_{\mathsf{realize}_\rho(C)
+        [\mathsf{realize}_\rho(\hat e_2)
+          [\mathsf{realize}_\rho(\hat v)/x]] : \tau}
+    \tag{\text{by realization commuting with substitution}} \\
+    &=
+    \sem{\sigma}_{\mathsf{env}}
+    \monbind
+    \lambda\rho.\,
+      \left(
+        \delta_{\mathsf{realize}_\rho(\hat e_2)
+          [\mathsf{realize}_\rho(\hat v)/x] : \tau_2}
+        \monbind
+        \lambda g.\,
+          \delta_{\mathsf{realize}_\rho(C)[g] : \tau}
+      \right)
+    \tag{\text{by monad left identity}} \\
+    &=
+    \sem{\sigma}_{\mathsf{env}}
+    \monbind
+    \lambda\rho.\,
+      \left(
+        \sem{
+          \letkw\ x=\mathsf{realize}_\rho(\hat v)
+          \ \inkw\ \mathsf{realize}_\rho(\hat e_2) : \tau_2
+        }
+        \monbind
+        \lambda g.\,
+          \delta_{\mathsf{realize}_\rho(C)[g] : \tau}
+      \right).
+    \tag{\text{by ordinary let-value rule}}
+  \end{align}
+
+  \paragraph{Let non-value case.}
+  \begin{align}
+    &\widehat{\sem{(\sigma \mid \hat e_0 : \tau_2)}}
+    \monbind
+    \lambda(\sigma'' \mid \hat h).\,
+      \mathsf{act}_\tau(\sigma'' \mid C[\hat h]) \notag \\
+    &=
+    \left(
+      \widehat{\sem{(\sigma \mid \hat e_1 : \tau_1)}}
+      \monbind
+      \lambda(\sigma' \mid \hat g_1).\,
+        \delta_{(\sigma' \mid
+          \letkw\ x=\hat g_1\ \inkw\ \hat e_2) : \tau_2}
+    \right)
+    \monbind
+    \lambda(\sigma'' \mid \hat h).\,
+      \mathsf{act}_\tau(\sigma'' \mid C[\hat h])
+    \tag{\text{by the symbolic let rule}} \\
+    &=
+    \widehat{\sem{(\sigma \mid \hat e_1 : \tau_1)}}
+    \monbind
+    \lambda(\sigma' \mid \hat g_1).\,
+      \left(
+        \delta_{(\sigma' \mid
+          \letkw\ x=\hat g_1\ \inkw\ \hat e_2) : \tau_2}
+        \monbind
+        \lambda(\sigma'' \mid \hat h).\,
+          \mathsf{act}_\tau(\sigma'' \mid C[\hat h])
+      \right)
+    \tag{\text{by associativity}} \\
+    &=
+    \widehat{\sem{(\sigma \mid \hat e_1 : \tau_1)}}
+    \monbind
+    \lambda(\sigma' \mid \hat g_1).\,
+      \mathsf{act}_\tau(\sigma' \mid
+        C[\letkw\ x=\hat g_1\ \inkw\ \hat e_2]).
+    \tag{\text{by monad left identity}}
+  \end{align}
+  Let
+  \[
+    C_{\mathsf{let}}[\cdot]
+    =
+    C[\letkw\ x=[\cdot]\ \inkw\ \hat e_2].
+  \]
+  Hence:
+  \begin{align}
+    &\widehat{\sem{(\sigma \mid \hat e_1 : \tau_1)}}
+    \monbind
+    \lambda(\sigma' \mid \hat g_1).\,
+      \mathsf{act}_\tau(\sigma' \mid
+        C[\letkw\ x=\hat g_1\ \inkw\ \hat e_2]) \notag \\
+    &=
+    \widehat{\sem{(\sigma \mid \hat e_1 : \tau_1)}}
+    \monbind
+    \lambda(\sigma' \mid \hat g_1).\,
+      \mathsf{act}_\tau(\sigma' \mid C_{\mathsf{let}}[\hat g_1])
+    \tag{\text{by definition of \(C_{\mathsf{let}}\)}} \\
+    &=
+    \sem{\sigma}_{\mathsf{env}}
+    \monbind
+    \lambda\rho.\,
+      \left(
+        \sem{\mathsf{realize}_\rho(\hat e_1) : \tau_1}
+        \monbind
+        \lambda g.\,
+          \delta_{\mathsf{realize}_\rho(C_{\mathsf{let}})[g] : \tau}
+      \right)
+    \tag{\text{by induction hypothesis}} \\
+    &=
+    \sem{\sigma}_{\mathsf{env}}
+    \monbind
+    \lambda\rho.\,
+      \left(
+        \sem{\mathsf{realize}_\rho(\hat e_1) : \tau_1}
+        \monbind
+        \lambda g.\,
+          \delta_{\mathsf{realize}_\rho(C)
+            [\letkw\ x=g\ \inkw\ \mathsf{realize}_\rho(\hat e_2)] : \tau}
+      \right)
+    \tag{\text{by realization of \(C_{\mathsf{let}}\)}} \\
+    &=
+    \sem{\sigma}_{\mathsf{env}}
+    \monbind
+    \lambda\rho.\,
+      \left(
+        \sem{
+          \letkw\ x=\mathsf{realize}_\rho(\hat e_1)
+          \ \inkw\ \mathsf{realize}_\rho(\hat e_2) : \tau_2
+        }
+        \monbind
+        \lambda g.\,
+          \delta_{\mathsf{realize}_\rho(C)[g] : \tau}
+      \right).
+    \tag{\text{by ordinary let rule}}
+  \end{align}
+\end{proof}
+
+\begin{lemma}[One-step compatibility]
   If \(\hat{s} \in State_\tau\), then
   \begin{equation}
     \mathsf{Act}_\tau\!\left(\widehat{\sem{\hat{s} : \tau}}\right)
@@ -740,92 +1045,61 @@ It is defined by monadic bind against the single-state kernel:
 \end{lemma}
 
 \begin{proof}
-  By case analysis on the symbolic one-step rules in
-  \Cref{tab:symbolic-small-step-semantics}.  
-  
-  %Write \(\rho = (r_1,\ldots,r_k)\) for a tuple sampled from \(\sem{\sigma}_{\mathsf{env}}\) and write \(\hat e[\rho]^\circ\) for \(\hat e[r_1/u_1,\ldots,r_k/u_k]^\circ\).
-
-  \paragraph{Value case.}
-  Let \(\hat{s} = (\sigma \mid \hat v : \tau)\).  On the LHS:
+  Let \(\hat{s}=(\sigma \mid \hat e : \tau)\). Apply the strengthened one-step
+  compatibility lemma with the empty surrounding expression \(C[\cdot]=[\cdot]\):
   \begin{align}
-    \mathsf{Act}_\tau\!\left(\widehat{\sem{\hat{s} : \tau}}\right)
+    &\mathsf{Act}_\tau\!\left(\widehat{\sem{\hat{s} : \tau}}\right) \notag \\
     &=
-    \mathsf{Act}_\tau(\delta_{(\sigma \mid \hat v : \tau)})
-    \tag{\text{by symbolic value rule}} \\
-    &=
-    \delta_{(\sigma \mid \hat v : \tau)}
+    \widehat{\sem{(\sigma \mid \hat e : \tau)}}
     \monbind
-    \mathsf{act}_\tau
+    \lambda(\sigma' \mid \hat g).\,
+      \mathsf{act}_\tau(\sigma' \mid \hat g)
     \tag{\text{by definition of Act}} \\
     &=
-    \mathsf{act}_\tau(\sigma \mid \hat v).
-    \tag{\text{by monad left identity}}
-  \end{align}
-  On the RHS:
-  \[
-    \mathsf{act}_\tau(\sigma \mid \hat v)
+    \sem{\sigma}_{\mathsf{env}}
+    \monbind
+    \lambda\rho.\,
+      \left(
+        \sem{\mathsf{realize}_\rho(\hat e) : \tau}
+        \monbind
+        \lambda g.\,\delta_{g : \tau}
+      \right)
+    \tag{\text{by strengthened one-step compatibility}} \\
+    &=
+    \sem{\sigma}_{\mathsf{env}}
+    \monbind
+    \lambda\rho.\,
+      \sem{\mathsf{realize}_\rho(\hat e) : \tau}
+    \tag{\text{by monad right identity}} \\
+    &=
+    \sem{\sigma}_{\mathsf{env}}
+    \monbind
+    \lambda\rho.\,
+      \left(
+        \delta_{\mathsf{realize}_\rho(\hat e) : \tau}
+        \monbind
+        \lambda e'.\,\sem{e' : \tau}
+      \right)
+    \tag{\text{by monad left identity}} \\
+    &=
+    \left(
+      \sem{\sigma}_{\mathsf{env}}
+      \monbind
+      \lambda\rho.\,
+        \delta_{\mathsf{realize}_\rho(\hat e) : \tau}
+    \right)
     \monbind
     \lambda e'.\,\sem{e' : \tau}
-    =
-    \mathsf{act}_\tau(\sigma \mid \hat v),
-  \]
-  
-  %because every realized \(\hat v[\rho]^\circ\) is an ordinary value, and \(\sem{\hat v[\rho]^\circ : \tau} = \delta_{\hat v[\rho]^\circ : \tau}\).
-
-  % \paragraph{Concrete addition case.}
-  % Let
-  % \[
-  %   \hat{s} =
-  %   (\sigma \mid v_1 : \Float{m_1} + v_2 : \Float{m_2}) : \Float{m_3},
-  % \]
-  % where \(v_1\) and \(v_2\) are ordinary values.  The symbolic step is
-  % \[
-  %   \widehat{\sem{\hat{s} : \Float{m_3}}}
-  %   =
-  %   \delta_{(\sigma \mid (v_1 + v_2) : \Float{m_3})}.
-  % \]
-  % Hence the left side is
-  % \[
-  %   \mathsf{act}_{\Float{m_3}}(\sigma \mid (v_1 + v_2) : \Float{m_3}).
-  % \]
-  % The right side first realizes the same ordinary expression
-  % \(v_1 + v_2\), and then the source small-step rule gives
-  % \[
-  %   \sem{v_1 : \Float{m_1} + v_2 : \Float{m_2} : \Float{m_3}}
-  %   =
-  %   \delta_{(v_1 + v_2) : \Float{m_3}}.
-  % \]
-  % Thus both sides are the same distribution.
-
-  % \paragraph{Symbolic addition case.}
-  % Let
-  % \[
-  %   \hat{s} =
-  %   (\sigma \mid \hat v_1 : \Float{m_1} + \hat v_2 : \Float{m_2})
-  %   : \Float{m_3},
-  % \]
-  % where some \(\sym(a)\) occurs in \(\hat v_1\) or \(\hat v_2\).  The
-  % symbolic step is
-  % \[
-  %   \widehat{\sem{\hat{s} : \Float{m_3}}}
-  %   =
-  %   \delta_{(\sigma \mid
-  %     \sym(a_1 + a_2) : \Float{m_3})}.
-  % \]
-  % Applying \(\mathsf{Act}_{\Float{m_3}}\) gives
-  % \[
-  %   \sem{\sigma}_{\mathsf{env}}
-  %   \monbind
-  %   \lambda \rho.\,
-  %   \delta_{(\hat v_1[\rho]^\circ + \hat v_2[\rho]^\circ) : \Float{m_3}},
-  % \]
-  % since \(\sym(a)\) is realized by evaluating the affine expression \(a\).
-  % On the right side, \(\mathsf{act}_{\Float{m_3}}(\hat{s})\) first
-  % produces the ordinary expression
-  % \(\hat v_1[\rho]^\circ + \hat v_2[\rho]^\circ\), and one ordinary
-  % source step evaluates it to the same value.  Therefore the right side is
-  % the same distribution.
+    \tag{\text{by associativity}} \\
+    &=
+    \mathsf{act}_\tau(\hat{s})
+    \monbind
+    \lambda e'.\,\sem{e' : \tau}.
+    \tag{\text{by definition of act}}
+  \end{align}
 \end{proof}
+
+\subsubsection{Expected interpretation of symbolic semantics}
 
 
 
