@@ -1,0 +1,1082 @@
+% Old stuff regarding soundness, will eventually delete.
+
+
+
+
+
+
+
+
+\subsection{Soundness (NEW)}
+
+This section states the intended soundness argument using the symbolic
+semantics as the main coupling object.  A symbolic state has the form
+\[
+  \langle \Sigma \mid\mid e \rangle,
+\]
+where \(\Sigma\) is a sequence of symbolic samples
+\[
+  u_1 \sim D_1;\ldots;u_k \sim D_k.
+\]
+The arguments to \(D_i\) are affine expressions over earlier symbolic variables
+\(u_1,\ldots,u_{i-1}\).
+
+Let \(\mathsf{actual}\) and \(\mathsf{expected}\) be the two interpretations of
+symbolic configurations.  The actual interpretation samples the symbolic
+environment and then returns the residual expression:
+\[
+  \mathsf{actual}(\langle \Sigma \mid\mid e \rangle)
+  =
+  u_1 \sim D_1;\ldots;u_k \sim D_k;\mathsf{return}\ e.
+\]
+The expected interpretation substitutes the expectation of each symbolic
+sample, in order, into the later symbolic environment and residual expression:
+\[
+  \mathsf{expected}(\langle \Sigma \mid\mid e \rangle)
+  =
+  \mathsf{return}
+  e[
+    \mathbb{E}[D_1]/u_1,\ldots,
+    \mathbb{E}[D_k]/u_k
+  ].
+\]
+Both interpretations extend from symbolic states to symbolic configurations by
+bind.
+
+\begin{definition}[Type-indexed observational equivalence]
+  We write \(\mu_1 \approx_\tau \mu_2\) for the equivalence relation induced by
+  type \(\tau\).  At expectation-mode floats this means equal expectations,
+  while at general-mode floats, booleans, and the other non-expectation
+  observations it means equality of distributions:
+  \[
+    \mu_1 \approx_{\Float{\E}} \mu_2
+    \quad\Longleftrightarrow\quad
+    \mathbb{E}[\mu_1] = \mathbb{E}[\mu_2],
+  \]
+  and
+  \[
+    \mu_1 \approx_{\Float{\G}} \mu_2
+    \quad\Longleftrightarrow\quad
+    \mu_1 = \mu_2.
+  \]
+  and
+  \[ 
+    \mu_1 \approx_{\Bool} \mu_2
+    \quad\Longleftrightarrow\quad
+    \mu_1 = \mu_2.
+  \]
+
+  The relation is extended structurally to products, sums, lists, and
+  functions.
+\end{definition}
+
+\begin{lemma}[Determinization preservation]
+  If \(\emptyset \vdash e : \tau\), then
+  \[
+    \emptyset \vdash \exptrans{e : \tau} : \tau.
+  \]
+\end{lemma}
+
+\begin{lemma}[Symbolic preservation]
+  If a symbolic configuration \(C\) is well typed at type \(\tau\), and
+  \[
+    C \longrightarrow_{\sym} C',
+  \]
+  then \(C'\) is also well typed at type \(\tau\).  Consequently, if
+  \[
+    \langle \emptyset \mid\mid e \rangle
+    \longrightarrow_{\sym}^{n}
+    C_n
+  \]
+  and \(\emptyset \vdash e : \tau\), then \(C_n\) is well typed at type
+  \(\tau\).
+\end{lemma}
+
+\begin{lemma}[Actual interpretation]
+  If
+  \[
+    \langle \emptyset \mid\mid e \rangle
+    \longrightarrow_{\sym}^{n}
+    C_n,
+  \]
+  then
+  \[
+    \mathsf{actual}(C_n) = \bigsemstep{e : \tau}{n}.
+  \]
+\end{lemma}
+
+\begin{lemma}[Expected interpretation]
+  If \(\emptyset \vdash e : \tau\) and
+  \[
+    \langle \emptyset \mid\mid e \rangle
+    \longrightarrow_{\sym}^{n}
+    C_n,
+  \]
+  then
+  \[
+    \mathsf{expected}(C_n)
+    \approx_\tau
+    \bigsemstep{\exptrans{e : \tau} : \tau}{n}.
+  \]
+\end{lemma}
+
+\begin{lemma}[Well-typed symbolic configurations are expectation-affine]
+  If \(C\) is a well-typed symbolic configuration at type \(\tau\), then its
+  residual expression is expectation-affine in every expectation-mode symbolic
+  variable.  Therefore
+  \[
+    \mathsf{actual}(C) \approx_\tau \mathsf{expected}(C).
+  \]
+\end{lemma}
+
+\begin{theorem}[$n$-step symbolic soundness]
+  If \(\emptyset \vdash e : \tau\), then for every \(n \in \mathbb{N}\),
+  \[
+    \bigsemstep{e : \tau}{n}
+    \approx_\tau
+    \bigsemstep{\exptrans{e : \tau} : \tau}{n}.
+  \]
+\end{theorem}
+
+\begin{proof}
+  Start with a closed well-typed source expression
+  \[
+    \emptyset \vdash e : \tau.
+  \]
+  By determinization preservation,
+  \[
+    \emptyset \vdash \exptrans{e : \tau} : \tau.
+  \]
+  Embed the source expression into the symbolic semantics and run it for
+  \(n\) steps:
+  \[
+    \langle \emptyset \mid\mid e \rangle
+    \longrightarrow_{\sym}^{n}
+    C_n.
+  \]
+  By symbolic preservation, \(C_n\) is well typed at type \(\tau\).  The actual
+  interpretation theorem gives
+  \[
+    \mathsf{actual}(C_n) = \bigsemstep{e : \tau}{n},
+  \]
+  and the expected interpretation theorem gives
+  \[
+    \mathsf{expected}(C_n)
+    \approx_\tau
+    \bigsemstep{\exptrans{e : \tau} : \tau}{n}.
+  \]
+  Since \(C_n\) is well typed, it is expectation-affine, so
+  \[
+    \mathsf{actual}(C_n) \approx_\tau \mathsf{expected}(C_n).
+  \]
+  Therefore, by transitivity of \(\approx_\tau\),
+  \[
+    \bigsemstep{e : \tau}{n}
+    \approx_\tau
+    \bigsemstep{\exptrans{e : \tau} : \tau}{n}.
+  \]
+\end{proof}
+
+\begin{theorem}[Soundness of determinization]
+  If \(\emptyset \vdash e : \tau\), then
+  \[
+    \bigsem{e : \tau}
+    \approx_\tau
+    \bigsem{\exptrans{e : \tau} : \tau}.
+  \]
+  In particular, if \(\tau = \Float{\E}\), then
+  \[
+    \mathbb{E}[\bigsem{e : \Float{\E}}]
+    =
+    \mathbb{E}[\bigsem{\exptrans{e : \Float{\E}} : \Float{\E}}].
+  \]
+\end{theorem}
+
+\begin{proof}
+  The \(n\)-step symbolic soundness theorem gives
+  \[
+    \bigsemstep{e : \tau}{n}
+    \approx_\tau
+    \bigsemstep{\exptrans{e : \tau} : \tau}{n}
+  \]
+  for every \(n\).  Passing to the big-step semantics gives
+  \[
+    \bigsem{e : \tau}
+    \approx_\tau
+    \bigsem{\exptrans{e : \tau} : \tau}.
+  \]
+  The expectation-mode float case follows by the definition of
+  \(\approx_{\Float{\E}}\).
+\end{proof}
+
+\subsection{Soundness}
+\begin{definition}[Expected value]
+  Suppose $\mu$ is a probability measure on $\mathbb{R}$. Then, the expected value of the distribution $\mu$ is:
+  \[
+    \mathbb{E}[\mu] = \int_{\mathbb{R}} x d\mu(x).
+  \]
+\end{definition}
+
+\begin{lemma}[One-step value]\label{lem:one-step-value}
+  If $e : \tau \in Val_{\tau}$, then 
+  \[
+    \sem{e : \tau} = \delta_{e : \tau}.
+  \]
+\end{lemma}
+
+\begin{proof}
+  By~\Cref{tab:small-step-semantics}.
+\end{proof}
+
+\begin{lemma}[$n$-step value]\label{lem:nstep-value}
+  If $e : \tau \in Val_{\tau}$, then
+  \[
+    \bigsemstep{e : \tau}{n} = \delta_{e : \tau}
+  \]
+  for every $n \in \mathbb{N}$.
+\end{lemma}
+
+\begin{proof}
+  By induction on $n$.
+
+  \textbf{Base case.}
+  Suppose $n = 0$. By definition of the $0$-step semantics,
+  \[
+    \bigsemstep{e : \tau}{0}
+    =
+    \delta_{e : \tau}.
+  \]
+
+  \textbf{Inductive step.}
+  Suppose
+  \[
+    \bigsemstep{e : \tau}{n}
+    =
+    \delta_{e : \tau}.
+  \]
+  We must show
+  \[
+    \bigsemstep{e : \tau}{n+1}
+    =
+    \delta_{e : \tau}.
+  \]
+  By definition of the $(n+1)$-step semantics,
+  \[
+    \bigsemstep{e : \tau}{n+1}
+    =
+    \bigsemstep{e : \tau}{n}
+    \monbind
+    \lambda e'.\,\sem{e' : \tau}.
+  \]
+  By the induction hypothesis,
+  \[
+    \bigsemstep{e : \tau}{n+1}
+    =
+    \delta_{e : \tau}
+    \monbind
+    \lambda e'.\,\sem{e' : \tau}.
+  \]
+  By the left-unit law for Dirac measures,
+  \[
+    \delta_{e : \tau}
+    \monbind
+    \lambda e'.\,\sem{e' : \tau}
+    =
+    \sem{e : \tau}.
+  \]
+  Since $e \in Val_\tau$, by~\Cref{lem:one-step-value},
+  \[
+    \sem{e : \tau} = \delta_{e : \tau}.
+  \]
+  Therefore,
+  \[
+    \bigsemstep{e : \tau}{n+1}
+    =
+    \delta_{e : \tau}.
+  \]
+  Hence the result follows by induction.
+\end{proof}
+
+\begin{definition}[Evaluation depth]\label{def:eval-depth}
+  The evaluation depth of an expression $\evalDepth \colon Expr_{\tau} \to \mathbb{N}$ is defined as the least number of steps after which the $n$-step distribution is supported only on values, i.e.
+  \[
+    \evalDepth(e : \tau)
+    =
+    \min \left\{
+      n \in \mathbb{N}
+      \mid
+      \bigsemstep{e : \tau}{n}(Val_\tau) = 1
+    \right\}.
+  \]
+
+  Explicitly, this is characterized by~\Cref{fig:eval-depth}, defined recursively on $e : \tau$.
+\end{definition}
+
+\begin{figure}
+  \small
+  \[
+  \begin{array}{rcl}
+  \evalDepth(v : \tau)
+  &=&
+  0
+  \\[0.75em]
+
+  \evalDepth(\letkw\ x = e_1 : \tau_1\ \inkw\ e_2 : \tau_2)
+  &=&
+  \begin{cases}
+    1 + \evalDepth(e_2[v/x] : \tau_2),
+      & \text{if } e_1 = v, \\[0.4em]
+    \evalDepth(e_1 : \tau_1)
+    + 1
+    + \displaystyle\sup_{v \in Val_{\tau_1}}
+      \evalDepth(e_2[v/x] : \tau_2),
+      & \text{otherwise.}
+  \end{cases}
+  \\[1.25em]
+
+  \evalDepth(\ifkw\ e_1 : \Bool\ \thenkw\ e_2 : \tau\ \elsekw\ e_3 : \tau)
+  &=&
+  \begin{cases}
+    1 + \evalDepth(e_2 : \tau),
+      & \text{if } e_1 = \mathsf{true}, \\[0.4em]
+    1 + \evalDepth(e_3 : \tau),
+      & \text{if } e_1 = \mathsf{false}, \\[0.4em]
+    \evalDepth(e_1 : \Bool)
+    + 1
+    + \max\{\evalDepth(e_2 : \tau), \evalDepth(e_3 : \tau)\},
+      & \text{otherwise.}
+  \end{cases}
+  \\[1.25em]
+
+  \evalDepth(e_1 + e_2)
+  &=&
+  \evalDepth(e_1) + \evalDepth(e_2) + 1,
+  \\[0.75em]
+
+  \evalDepth(e_1 \times e_2)
+  &=&
+  \evalDepth(e_1) + \evalDepth(e_2) + 1,
+  \\[0.75em]
+
+  \evalDepth(e_1 < e_2)
+  &=&
+  \evalDepth(e_1) + \evalDepth(e_2) + 1,
+  \\[0.75em]
+
+  \evalDepth(\uniform(e_1,e_2))
+  &=&
+  \evalDepth(e_1) + \evalDepth(e_2) + 1,
+  \\[0.75em]
+
+  \evalDepth(\gaussian(e_1,e_2))
+  &=&
+  \evalDepth(e_1) + \evalDepth(e_2) + 1,
+  \\[0.75em]
+
+  \evalDepth(\betafn(e_1,e_2))
+  &=&
+  \evalDepth(e_1) + \evalDepth(e_2) + 1,
+  \\[0.75em]
+
+  \evalDepth(\gammafn(e_1,e_2))
+  &=&
+  \evalDepth(e_1) + \evalDepth(e_2) + 1,
+  \\[0.75em]
+
+  \evalDepth(\exponential(e_1))
+  &=&
+  \evalDepth(e_1) + 1,
+  \\[0.75em]
+
+  \evalDepth(\poisson(e_1))
+  &=&
+  \evalDepth(e_1) + 1.
+  \end{array}
+  \]
+  \caption{The evaluation depth function $\evalDepth$.}
+  \label{fig:eval-depth}
+\end{figure}
+
+\begin{example}
+  Consider the expression
+  \[
+    e_1
+    =
+    (1.0 : \Float{m_1}) + (2.0 : \Float{m_2})
+    :
+    \Float{m_3}.
+  \]
+  By the value case of~\Cref{fig:eval-depth},
+  \[
+    \evalDepth(1.0 : \Float{m_1}) = 0
+    \qquad\text{and}\qquad
+    \evalDepth(2.0 : \Float{m_2}) = 0.
+  \]
+  Therefore, by the addition case,
+  \[
+  \begin{aligned}
+    \evalDepth(e_1 : \Float{m_3})
+    &=
+    \evalDepth(1.0 : \Float{m_1})
+    +
+    \evalDepth(2.0 : \Float{m_2})
+    +
+    1 \\
+    &= 0 + 0 + 1 \\
+    &= 1.
+  \end{aligned}
+  \]
+\end{example}
+
+\begin{example}
+  Let
+  \[
+    e_2 =
+    \gaussian(\uniform(0.0,1.0),1.0) : \Float{m}.
+  \]
+  By the value clause of~\Cref{fig:eval-depth},
+  \[
+    \evalDepth(0.0 : \Float{m_1}) = 0
+    \qquad\text{and}\qquad
+    \evalDepth(1.0 : \Float{m_2}) = 0.
+  \]
+  Therefore, by the uniform clause,
+  \[
+  \begin{aligned}
+    \evalDepth(\uniform(0.0,1.0))
+    &=
+    \evalDepth(0.0)
+    +
+    \evalDepth(1.0)
+    +
+    1 \\
+    &= 0 + 0 + 1 \\
+    &= 1.
+  \end{aligned}
+  \]
+  Similarly,
+  \[
+    \evalDepth(1.0 : \Float{m_3}) = 0.
+  \]
+  Hence, by the Gaussian clause,
+  \[
+  \begin{aligned}
+    \evalDepth(e_2 : \Float{m})
+    &=
+    \evalDepth(\uniform(0.0,1.0))
+    +
+    \evalDepth(1.0)
+    +
+    1 \\
+    &= 1 + 0 + 1 \\
+    &= 2.
+  \end{aligned}
+  \]
+\end{example}
+
+
+
+\begin{lemma}[$n$-step composition]\label{lem:nstep-composition}
+  For all $n,k \in \mathbb{N}$,
+  \[
+    \bigsemstep{e : \tau}{n+k}
+    =
+    \bigsemstep{e : \tau}{n}
+    \monbind
+    \lambda e'.\,\bigsemstep{e' : \tau}{k}.
+  \]
+\end{lemma}
+
+\begin{proof}
+  By induction on $k$.
+
+  If $k=0$, then
+  \begin{align*}
+    \bigsemstep{e : \tau}{n+0} = &\quad \bigsemstep{e : \tau}{n} \\
+    = &\quad \bigsemstep{e : \tau}{n}
+    \monbind
+    \lambda e'.\,\delta_{e' : \tau} \tag{monad right identity}\\
+    = &\quad \bigsemstep{e : \tau}{n}
+    \monbind
+    \lambda e'.\,\bigsemstep{e' : \tau}{0} \tag{definition of $n$-step}.
+  \end{align*}
+
+  For the inductive step, assume
+  \[
+    \bigsemstep{e : \tau}{n+k}
+    =
+    \bigsemstep{e : \tau}{n}
+    \monbind
+    \lambda e'.\,\bigsemstep{e' : \tau}{k}.
+  \]
+  Then, by definition of the $(k+1)$-step semantics and associativity of bind,
+  \begin{align*}
+    \bigsemstep{e : \tau}{n+(k+1)}
+    &=
+    \bigsemstep{e : \tau}{(n+k)+1} \\
+    &=
+    \bigsemstep{e : \tau}{n+k}
+    \monbind
+    \lambda e'.\,\sem{e' : \tau} \tag{definition of $n$-step}\\
+    &=
+    \left(
+      \bigsemstep{e : \tau}{n}
+      \monbind
+      \lambda e'.\,\bigsemstep{e' : \tau}{k}
+    \right)
+    \monbind
+    \lambda e''.\,\sem{e'' : \tau} \tag{I.H.}\\
+    &=
+    \bigsemstep{e : \tau}{n}
+    \monbind
+    \lambda e'.\,
+      \left(
+        \bigsemstep{e' : \tau}{k}
+        \monbind
+        \lambda e''.\,\sem{e'' : \tau}
+      \right) \tag{monad assoc.}\\
+    &=
+    \bigsemstep{e : \tau}{n}
+    \monbind
+    \lambda e'.\,\bigsemstep{e' : \tau}{k+1} \tag{definition of $n$-step}.
+  \end{align*}
+  Hence the result follows by induction.
+\end{proof}
+
+
+\begin{lemma}\label{lem:stabilization}
+  Let $N = \evalDepth(e : \tau)$. Then for all $n \geq N$,
+  \[
+    \bigsemstep{e : \tau}{n} = \bigsem{e : \tau}.
+  \]
+\end{lemma}
+
+\begin{proof}
+  Recall by~\Cref{def:eval-depth}, $\bigsemstep{e : \tau}{N}(Val_\tau) = 1$, so $\bigsemstep{e : \tau}{N}$ is supported entirely on values.
+
+  Let $n \geq N$. Then there exists $k \in \mathbb{N}$ such that
+  \[
+    n = N+k.
+  \]
+
+  Then:
+  \begin{align*}
+    \bigsemstep{e : \tau}{N+k}
+    =
+    \bigsemstep{e : \tau}{N}
+    \monbind
+    \lambda e'.\,\bigsemstep{e' : \tau}{k} \tag{by~\Cref{lem:nstep-composition}}\\
+    = \bigsemstep{e : \tau}{N}
+    \monbind \lambda e'. \delta_{e' : \tau} \tag{by~\Cref{lem:nstep-value}}\\
+    = \bigsemstep{e : \tau}{N} \tag{monad right identity}\\
+  \end{align*}
+
+  Hence
+  \[
+    \bigsemstep{e : \tau}{n} = \bigsemstep{e : \tau}{N}
+  \]
+  for every $n \geq N$.
+
+  Now let $A \subseteq Expr_\tau$ be measurable. Since the sequence
+  $\bigsemstep{e : \tau}{m}(A)$ is constant for all $m \geq N$, its limit is the eventual
+  constant value:
+  \[
+    \lim_{m \to \infty} \bigsemstep{e : \tau}{m}(A)
+    =
+    \bigsemstep{e : \tau}{N}(A).
+  \]
+  By definition of the big-step semantics,
+  \[
+    \bigsem{e : \tau}(A)
+    =
+    \lim_{m \to \infty} \bigsemstep{e : \tau}{m}(A)
+    =
+    \bigsemstep{e : \tau}{N}(A).
+  \]
+  Therefore, for every $n \geq N$,
+  \[
+    \bigsemstep{e : \tau}{n}(A)
+    =
+    \bigsemstep{e : \tau}{n}(A)
+    =
+    \bigsemstep{e : \tau}{N}(A)
+    =
+    \bigsem{e : \tau}(A).
+  \]
+  Since this holds for every measurable $A$, 
+  \[
+    \bigsemstep{e : \tau}{n}
+    =
+    \bigsem{e : \tau}.
+  \]
+\end{proof}
+
+\begin{lemma}[Expectation for bind]\label{lem:expectation-bind}
+  Let $\mu \in \mathcal{D}(X)$ be a measure and let
+  $K : X \to \mathcal{D}(\mathbb{R})$ be a Markov kernel. Then
+  \[
+  \begin{aligned}
+    \mathbb{E}[\mu \monbind K]
+    &=
+    \int y \, d(\mu \monbind K)(y) \\
+    &=
+    \int
+      \left(
+        \int y \, dK(a)(y)
+      \right)
+    \,d\mu(a) \\
+    &=
+    \int \mathbb{E}[K(a)] \, d\mu(a).
+  \end{aligned}
+  \]
+\end{lemma}
+
+\section{old}
+\begin{theorem}[Soundness of determinization]
+  Let $e : \tau$ be a well-typed expression. Then:
+  \[
+    \mathbb{E}[\bigsem{e : \Float{m}}]
+    =
+    \mathbb{E}[\bigsem{\exptrans{e : \Float{m}} : \Float{m}}]
+  \]
+
+  where $m = \G$ or $\E$, and in particular:
+  \[
+    \bigsem{e : \Float{\G}}
+    =
+    \bigsem{\exptrans{e : \Float{\G}} : \Float{\G}}.
+  \]
+\end{theorem}
+
+\begin{proof}
+  By induction on $e : \tau$.
+
+  \textbf{Case} $e = \exponential(e_1) : \Float{m}$, where $m$ is either $\E$ or $\G$.
+
+  We want to show:
+  \begin{align*}
+    \mathbb{E}[\bigsem{\exponential(e_1) : \Float{m}}]
+    =
+    \mathbb{E}[\bigsem{\exptrans{\exponential(e_1) : \Float{m}} : \Float{m}}] \\
+    \iff \\
+    \mathbb{E}[\bigsem{\exponential(e_1) : \Float{m}}]
+    =
+    \mathbb{E}\!\left[
+      \bigsem{
+        1 : \Float{\E} \;/\; \exptrans{e_1 : \Float{m_1}}
+        : \Float{m}
+      }
+    \right] \tag{by~\Cref{fig:determinization}}.
+  \end{align*}
+
+  First, we simplify the LHS expression: 
+
+  Let $d_1 = \evalDepth(e_1 : \Float{m_1})$. By~\Cref{fig:eval-depth},
+  \[
+    \evalDepth(\exponential(e_1) : \Float{m})
+    =
+    d_1 + 1.
+  \]
+
+  Then:
+  \begin{align*}
+    &\mathbb{E}[\bigsem{\exponential(e_1) : \Float{m}}]\\
+    &=
+    \mathbb{E}\!\left[
+      \bigsemstep{\exponential(e_1) : \Float{m}}{d_1+1}
+    \right] \tag{by~\Cref{lem:stabilization}}\\
+    &=
+    \mathbb{E}\!\left[
+      \bigsemstep{\exponential(e_1) : \Float{m}}{d_1}
+      \monbind
+      \lambda e'.\,\sem{e' : \Float{m}}
+    \right]\\
+    &=
+    \mathbb{E}\!\left[
+      \bigsemstep{e_1 : \Float{m_1}}{d_1}
+      \monbind
+      \lambda a.\,
+        \delta_{\exponential(a) : \Float{m}}
+      \monbind
+      \lambda e'.\,\sem{e' : \Float{m}}
+    \right] \tag{???idk}\\
+    &=
+    \mathbb{E}\!\left[\bigsemstep{e_1 : \Float{m_1}}{d_1}
+    \monbind
+    \lambda a.\,
+      \sem{\exponential(a) : \Float{m}} \right] \\
+    &=
+    \mathbb{E}\!\left[\bigsem{e_1 : \Float{m_1}}
+    \monbind
+    \lambda a.\,
+      \sem{\exponential(a) : \Float{m}}\right] \tag{by~\Cref{lem:stabilization}}\\
+  \intertext{Since $a$ is a value, the small-step semantics for $\exponential$ gives
+  $\sem{\exponential(a) : \Float{m}}
+  =
+  \mathsf{Exponential}(a)
+  \monbind
+  \lambda x.\,\delta_{x : \Float{m}}$. Hence,}
+    &=
+    \mathbb{E}\!\left[\bigsem{e_1 : \Float{m_1}}
+    \monbind
+    \lambda a.\,
+      \left(
+        \mathsf{Exponential}(a)
+        \monbind
+        \lambda x.\,\delta_{x : \Float{m}}
+      \right)\right] \tag{by the small-step semantics for $\exponential$}\\
+    &=
+    \int
+      \mathbb{E}\!\left[
+        \mathsf{Exponential}(a)
+        \monbind
+        \lambda x.\,\delta_{x : \Float{m}}
+      \right]
+    \,d\bigsem{e_1 : \Float{m_1}}(a) \tag{by~\Cref{lem:expectation-bind}}\\
+    &=
+    \int
+      \left(
+      \int
+        \mathbb{E}\!\left[
+          \delta_{x : \Float{m}}
+        \right]
+      \,d\mathsf{Exponential}(a)(x)
+      \right)
+    \,d\bigsem{e_1 : \Float{m_1}}(a) \\
+    &=
+    \int
+      \left(
+      \int
+        x
+      \,d\mathsf{Exponential}(a)(x)
+      \right)
+    \,d\bigsem{e_1 : \Float{m_1}}(a) \\
+    &=
+    \int
+      \mathbb{E}\!\left[
+        \mathsf{Exponential}(a)
+      \right]
+    \,d\bigsem{e_1 : \Float{m_1}}(a) \\
+    &=
+    \int
+      \frac{1}{a}
+    \,d\bigsem{e_1 : \Float{m_1}}(a).
+  \end{align*}
+
+  Now simplify the LHS expression:
+
+  By~\Cref{fig:eval-depth},
+  \[
+    \evalDepth(1 : \Float{\E} \;/\; \exptrans{e_1 : \Float{m_1}} : \Float{m})
+    =
+    \evalDepth(1 : \Float{\E}) + \evalDepth(\exptrans{e_1 : \Float{m_1}} : \Float{m_1}) + 1.
+  \]
+
+  Since $1 : \Float{\E}$ is a value,
+  \[
+    \evalDepth(1 : \Float{\E}) = 0.
+  \]
+
+  Let
+  \[
+    d_1' = \evalDepth(\exptrans{e_1 : \Float{m_1}} : \Float{m_1}).
+  \]
+
+  Then:
+  \begin{align*}
+    &\mathbb{E}\!\left[
+      \bigsem{
+        1 : \Float{\E} \;/\; \exptrans{e_1 : \Float{m_1}}
+        : \Float{m}
+      }
+    \right]\\
+    &=
+    \mathbb{E}\!\left[
+      \bigsemstep{
+        1 : \Float{\E} \;/\; \exptrans{e_1 : \Float{m_1}}
+        : \Float{m}
+      }{d_1'+1}
+    \right] \tag{by~\Cref{lem:stabilization}}\\
+    &=
+    \mathbb{E}\!\left[
+    \bigsemstep{\exptrans{e_1 : \Float{m_1}} : \Float{m_1}}{d_1'}
+    \monbind
+    \lambda a.\,
+      \sem{1 : \Float{\E} \;/\; a : \Float{m}} \right] \tag{???}\\
+    &=
+    \mathbb{E}\!\left[
+    \bigsem{\exptrans{e_1 : \Float{m_1}} : \Float{m_1}}
+    \monbind
+    \lambda a.\,
+      \sem{1 : \Float{\E} \;/\; a : \Float{m}}\right] \tag{by~\Cref{lem:stabilization}}\\
+  \intertext{Since $a$ is a value, the small-step semantics for division gives
+  $\sem{1 : \Float{\E} \;/\; a : \Float{m}}
+  =
+  \delta_{(1/a) : \Float{m}}$. Hence,}
+    &=
+    \mathbb{E}\!\left[
+    \bigsem{\exptrans{e_1 : \Float{m_1}} : \Float{m_1}}
+    \monbind
+    \lambda a.\,
+      \delta_{(1/a) : \Float{m}}\right] \tag{by the small-step semantics for division}\\
+    &=
+    \int
+      \mathbb{E}\!\left[
+        \delta_{(1/a) : \Float{m}}
+      \right]
+    \,d\bigsem{\exptrans{e_1 : \Float{m_1}} : \Float{m_1}}(a) \tag{by~\Cref{lem:expectation-bind}}\\
+    &=
+    \int
+      \left(
+      \int
+        y
+      \,d\delta_{(1/a) : \Float{m}}(y)
+      \right)
+    \,d\bigsem{\exptrans{e_1 : \Float{m_1}} : \Float{m_1}}(a) \\
+    &=
+    \int
+      \frac{1}{a}
+    \,d\bigsem{\exptrans{e_1 : \Float{m_1}} : \Float{m_1}}(a) \\
+    &=
+    \int
+      \frac{1}{a}
+    \,d\bigsem{\exptrans{e_1 : \Float{m_1}}}(a).
+  \end{align*}
+
+  Thus, this reduces to showing:
+  \[
+    \int
+      \frac{1}{a}
+    \,d\bigsem{e_1 : \Float{m_1}}(a)
+    =
+    \int
+      \frac{1}{a}
+    \,d\bigsem{\exptrans{e_1 : \Float{m_1}}}(a).
+  \]
+  Because $m_1 = \G$, $\bigsem{e_1 : \Float{\G}} = \bigsem{\exptrans{e_1 : \Float{\G}} : \Float{\G}}$ by the I.H.
+
+  Therefore,
+  \[
+    \mathbb{E}[\bigsem{\exponential(e_1) : \Float{m}}]
+    =
+    \mathbb{E}\!\left[
+      \bigsem{
+        1 : \Float{\E} \;/\; \exptrans{e_1 : \Float{m_1}}
+        : \Float{m}
+      }
+    \right].
+  \]
+\end{proof}
+
+
+\newpage
+\section{old}
+\subsection{Transformation}
+
+\begin{definition}[Expectation transformation]
+  Define $\exptrans{e : \mathsf{float}}$ inductively on the structure of $e$.
+
+  *** This will be dependent on the types.
+\end{definition}
+
+\begin{lemma}
+  Type preservation of the expectation transformer.
+\end{lemma}
+
+
+\subsection{Expectations}
+
+\begin{lemma}[Expectation is well-defined]
+  For any sub-probability measure $\mu \in \mathcal{D}(Vals_{\tau})$, the expectation
+  \[
+    \mathbb{E}[\mu] := \int x \, d\mu(x)
+  \]
+  is a well-defined real number.
+
+  **Specifically, let us take $\tau = \mathbf{float}$.
+\end{lemma}
+
+\begin{lemma}[Expectation of a Dirac]
+  For any $c \in Vals_{\tau}$:
+  \[
+    \mathbb{E}[\delta_c] = c
+  \]
+\end{lemma}
+
+\begin{lemma}[Linearity of expectation]
+  For sub-probability measures $\mu_1, \mu_2 \in \mathcal{D}(Vals_{\tau})$ and $a, b \in \mathbb{R}$:
+  \[
+    \mathbb{E}[a \cdot \mu_1 + b \cdot \mu_2] = a \cdot \mathbb{E}[\mu_1] + b \cdot \mathbb{E}[\mu_2]
+  \]
+\end{lemma}
+
+\begin{lemma}
+  For $\mu \in \mathcal{D}(Expr_\tau)$ and measurable $K : Expr_\tau \to \mathcal{D}(Vals_{\tau})$:
+  \[
+    \mathbb{E}[\mu \monbind K] = \int \mathbb{E}[K(x)] \, d\mu(x)
+  \]
+\end{lemma}
+
+\begin{lemma}[Expectation of a program is well-defined]
+  For any well-typed expression $e : \mathsf{float}$, the expectation
+  \[
+    \mathbb{E}[\bigsem{e : \mathsf{float}}] 
+  \]
+  is a well-defined real number.
+\end{lemma}
+
+\subsection{Affine condition}
+
+\begin{definition}[Affine continuation]
+  A measurable function $K : \mathbb{R} \to \mathcal{D}(\mathbb{R})$ is called \emph{expectation-affine} if the map
+  \[
+    x \mapsto \mathbb{E}[K(x)]
+  \]
+  is an affine function of $x$, i.e.\ there exist $a, b \in \mathbb{R}$ such that $\mathbb{E}[K(x)] = ax + b$ for all $x$.
+\end{definition}
+
+\begin{itemize}
+  \item The continuation $K(x) = \delta_{ax+b}$ is expectation-affine. 
+  \item If $K_1 : \mathbb{R} \to \mathcal{D}(\mathbb{R})$ is expectation-affine and $K_2 : \mathbb{R} \to \mathcal{D}(\mathbb{R})$ is expectation-affine, then their monadic composition
+  \[
+    x \mapsto K_1(x) \monbind K_2
+  \]
+  is expectation-affine.
+  \item The continuation $K(x) = \mathcal{N}(ax + b, \sigma^2)$ is expectation-affine, with $\mathbb{E}[K(x)] = ax + b$.
+  \item The continuation $K(x) = \mathrm{Uniform}(ax + b,\, cx + d)$ is expectation-affine, with
+  \[
+    \mathbb{E}[K(x)] = \frac{(a+c)}{2} x + \frac{(b+d)}{2}.
+  \]
+\end{itemize}
+
+\begin{definition}[Exepectation equivalence]
+  Define $K \colon Val_\tau \to \mathcal{D}(\mathbb{R})$ respects expectation equivalence if for all $\mu_1, \mu_2$ such that $\mu_1 \equiv_\tau \mu_2$, then $\mathbb{E}[\mu_1 \monbind K] = \mathbb{E}[\mu_2 \monbind K]$.
+\end{definition}
+
+\begin{definition}[Admissible continuations]
+  For each type \(\tau\), an observation continuation is a Markov kernel
+  \[
+    K : Val_\tau \to \mathcal{D}(\mathbb{R}).
+  \]
+  Write
+  \[
+    \overline{K}(v) = \mathbb{E}[K(v)].
+  \]
+  We define a type-indexed predicate \(Adm_\tau(K)\) by cases on \(\tau\).
+
+  \begin{itemize}
+    \item \(\tau = \Unit\). Every continuation is admissible.
+
+    \item \(\tau = \Bool\). Every continuation is admissible.
+
+    \item \(\tau = \Float{\G}\). Every continuation is admissible.
+
+    \item \(\tau = \Float{\E}\). The continuation is admissible iff
+    \(\overline{K}\) is an affine continuation:
+    \[
+      \exists a,b \in \mathbb{R}.\ \forall x \in \mathbb{R},\quad
+      \overline{K}(x) = ax + b.
+    \]
+
+    \item \(\tau = \tau_1 \times \tau_2\). The continuation \(K\) is
+    admissible iff it is admissible in each component separately:
+    \[
+      \forall v_2 \in Val_{\tau_2},\quad
+      Adm_{\tau_1}(\lambda v_1.\,K(v_1,v_2))
+    \]
+    and
+    \[
+      \forall v_1 \in Val_{\tau_1},\quad
+      Adm_{\tau_2}(\lambda v_2.\,K(v_1,v_2)).
+    \]
+
+    \item \(\tau = \tau_1 + \tau_2\). The continuation \(K\) is admissible iff
+    both branch continuations are admissible:
+    \[
+      Adm_{\tau_1}(\lambda v.\,K(\mathsf{inl}\,v))
+    \]
+    and
+    \[
+      Adm_{\tau_2}(\lambda v.\,K(\mathsf{inr}\,v)).
+    \]
+
+    \item \(\tau = Option{\tau'}\). The continuation \(K\) is admissible iff
+    the \(\mathsf{some}\)-branch continuation is admissible:
+    \[
+      Adm_{\tau'}(\lambda v.\,K(\mathsf{some}\,v)).
+    \]
+    The \(\mathsf{none}\) branch is a single point and imposes no condition.
+
+    \item \(\tau = \List{\tau'}\). The continuation \(K\) is admissible iff,
+    for every list context \(C[-]\) with one hole of type \(\tau'\), the induced
+    element continuation is admissible:
+    \[
+      Adm_{\tau'}(\lambda v.\,K(C[v])).
+    \]
+    Equivalently, for every list length \(n\), every position \(i\), and every
+    fixed choice of all other elements, the function obtained by varying only
+    the \(i\)-th element is admissible at type \(\tau'\).
+
+    \item \(\tau = \tau_1 \to \tau_2\). The continuation \(K\) is admissible
+    extensionally: it may observe a function only by applying it to admissible
+    arguments and then observing the result admissibly. Concretely, \(K\) is
+    admissible if it belongs to the least class of continuations closed under
+    constants, affine combinations, and the rule:
+    if \(A\) is an admissible argument-producing computation of type
+    \(\tau_1\), and \(L\) is admissible at type \(\tau_2\), then
+    \[
+      f \mapsto \bigsem{f\,A : \tau_2} \monbind L
+    \]
+    is admissible at type \(\tau_1 \to \tau_2\).
+  \end{itemize}
+\end{definition}
+
+
+\begin{lemma}
+  For any $\mu \in \mathcal{D}(Expr_\mathsf{float})$ and any expectation-affine continuation $K$:
+  \[
+    \mathbb{E}[\mu \monbind K] = \mathbb{E}[\delta_{\mathbb{E}[\mu]} \monbind K]
+  \]
+\end{lemma}
+
+\begin{proof}
+  \begin{align*}
+    &\mathbb{E}[\mu \monbind K] \\
+    = \quad&\int \mathbb{E}[K(x)] \, d\mu(x) \tag{Lemma 5.12} \\
+    = \quad&\int (ax + b) \, d\mu(x) \tag{Definition 5.14} \\
+    = \quad&a \cdot \mathbb{E}[\mu] + b \tag{Linearity of expectation} \\
+    = \quad&\mathbb{E}[K(\mathbb{E}[\mu])] \tag{Definition 5.14} \\
+    = \quad&\mathbb{E}[\delta_{\mathbb{E}[\mu]} \monbind K] 
+  \end{align*}
+\end{proof}
+
+\begin{theorem}[Soundness under affine continuations]
+  Let $e : \tau$ be well typed. Let
+  $K : Val_\tau \to \mathcal{D}(\mathbb{R})$
+  be an admissible continuation. Then
+  \[
+    \mathbb{E}[\bigsem{e : \tau} \monbind K]
+    =
+    \mathbb{E}[\bigsem{\exptrans{e : \tau} : \tau} \monbind K].
+  \]
+\end{theorem}
+
+\begin{theorem}[Soundness of determinization]
+  Let $e : \tau$ be a well-typed expression. Then:
+  \[
+    \mathbb{E}[\bigsem{e : \Float{m}}]
+    =
+    \mathbb{E}[\bigsem{\exptrans{e : \Float{m}} : \Float{m}}]
+  \]
+
+  where $m = \G$ or $\E$, and in particular:
+  \[
+    \bigsem{e : \Float{\G}}
+    =
+    \bigsem{\exptrans{e : \Float{\G}} : \Float{\G}}.
+  \]
+\end{theorem}
+
+\begin{proof}
+  Let $\tau = \Float{m}$ and $K(x) = \delta_x$. 
+\end{proof}
