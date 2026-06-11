@@ -1134,3 +1134,211 @@ hole with the expression \(e\). More formally:
 \end{proof}
 
 \subsubsection{Expected interpretation of symbolic semantics}
+
+The expected interpretation also starts from a symbolic state
+\((\sigma \mid \hat e : \tau)\), but it replaces the symbolic samples by their
+expected values rather than sampling them.  Suppose
+\[
+  \sigma =
+  u_1 \sim D_1(\vec a_1),\ldots,
+  u_n \sim D_n(\vec a_n).
+\]
+The expected tuple determined by \(\sigma\) is written
+\[
+  \mathsf{mean}_{\mathsf{env}}(\sigma) \in \mathbb{R}^n.
+\]
+It is defined sequentially by:
+\[
+\mathsf{mean}_{\mathsf{env}}(\sigma) =
+\begin{cases}
+  ()
+    & \text{if } \sigma = \emptyset, \\[0.5em]
+
+  (m,r_2,\ldots,r_n)
+    & \text{if } \sigma = u \sim D(\vec a),\sigma',\\
+    & \text{where } m=\mathbb{E}[D(\vec a)]
+      \text{ and }
+      \mathsf{mean}_{\mathsf{env}}(\sigma'[m/u])
+      =(r_2,\ldots,r_n).
+\end{cases}
+\]
+
+\begin{definition}[Single-state expected interpretation]
+  The single-state expected interpretation is the function:
+  \[
+    \mathsf{exp}_\tau : State_\tau \to \mathcal{D}(Expr_\tau)
+  \]
+  defined by
+  \[
+  \begin{aligned}
+    \mathsf{exp}_\tau(\sigma \mid \hat e)
+    &=
+    \delta_{\mathsf{realize}_{\mathsf{mean}_{\mathsf{env}}(\sigma)}
+      (\hat e) : \tau}.
+  \end{aligned}
+  \]
+\end{definition}
+
+\begin{definition}[Lifted expected interpretation]
+  The lifted expected interpretation acts on distributions over symbolic states:
+  \[
+    \mathsf{Exp}_\tau :
+    \mathcal{D}(State_\tau) \to \mathcal{D}(Expr_\tau).
+  \]
+  It is defined by monadic bind against the single-state expected
+  interpretation:
+  \[
+  \begin{aligned}
+    \mathsf{Exp}_\tau(\mu)
+    &=
+    \mu \monbind \mathsf{exp}_\tau \\
+    &=
+    \mu \monbind
+    \lambda(\sigma \mid \hat e).\,\mathsf{exp}_\tau(\sigma \mid \hat e).
+  \end{aligned}
+  \]
+\end{definition}
+
+NEED TO SHOW:
+
+\begin{equation}
+  \mathsf{Exp}_\tau\!\left(\widehat{\sem{\hat{s} : \tau}}\right)
+  =
+  \mathsf{exp}_\tau(\hat{s})
+  \monbind
+  \lambda e'.\,\sem{e' : \tau}.
+  \label{eq:expected-one-step-compatibility}
+\end{equation}
+
+\begin{theorem}[Expected interpretation of symbolic \(n\)-step semantics]
+  Assume \Cref{eq:expected-one-step-compatibility} holds for every
+  \(\hat{s} \in State_\tau\).  If
+  \(\hat{s} = (\sigma \mid \hat e : \tau) \in State_\tau\), then for every
+  \(n \in \mathbb{N}\),
+  \[
+    \mathsf{Exp}_\tau\!\left(
+      \widehat{\bigsemstep{\hat{s} : \tau}{n}}
+    \right)
+    =
+    \mathsf{exp}_\tau(\hat{s})
+    \monbind
+    \lambda e.\,\bigsemstep{e : \tau}{n}.
+  \]
+\end{theorem}
+
+\begin{proof}
+  The proof is the same induction on \(n\) as for the actual interpretation,
+  using \Cref{eq:expected-one-step-compatibility} in place of
+  \Cref{lem:symbolic-step}.
+
+  For \(n=0\), let \(\hat{s} \in State_\tau\). Then
+  \begin{align}
+    \mathsf{Exp}_\tau\!\left(
+      \widehat{\bigsemstep{\hat{s} : \tau}{0}}
+    \right)
+    &=
+    \mathsf{Exp}_\tau(\delta_{\hat{s} : \tau})
+    \tag{\text{by definition of n-step symbolic semantics}} \\
+    &=
+    \delta_{\hat{s} : \tau}
+    \monbind
+    \mathsf{exp}_\tau
+    \tag{\text{by definition of Exp}} \\
+    &=
+    \mathsf{exp}_\tau(\hat{s})
+    \tag{\text{by monad left identity}} \\
+    &=
+    \mathsf{exp}_\tau(\hat{s})
+    \monbind
+    \lambda e.\,\delta_{e : \tau}
+    \tag{\text{by monad right identity}} \\
+    &=
+    \mathsf{exp}_\tau(\hat{s})
+    \monbind
+    \lambda e.\,\bigsemstep{e : \tau}{0}.
+    \tag{\text{by definition of n-step semantics}}
+  \end{align}
+
+  For the inductive step, assume the statement holds for \(n\) for every
+  well-typed symbolic state, and let
+  \(\hat{s} = (\sigma \mid \hat e : \tau) \in State_\tau\). Then
+  \begin{align}
+    &\mathsf{Exp}_\tau\!\left(
+      \widehat{\bigsemstep{\hat{s} : \tau}{n+1}}
+    \right) \notag \\
+    &=
+    \mathsf{Exp}_\tau\!\left(
+      \widehat{\bigsemstep{\hat{s} : \tau}{n}}
+      \monbind
+      \lambda \hat{s}'.\,\widehat{\sem{\hat{s}' : \tau}}
+    \right)
+    \tag{\text{by definition of symbolic n-step}} \\
+    &=
+    \left(
+      \widehat{\bigsemstep{\hat{s} : \tau}{n}}
+      \monbind
+      \lambda \hat{s}'.\,\widehat{\sem{\hat{s}' : \tau}}
+    \right)
+    \monbind
+    \mathsf{exp}_\tau
+    \tag{\text{by definition of Exp}} \\
+    &=
+    \widehat{\bigsemstep{\hat{s} : \tau}{n}}
+    \monbind
+    \lambda \hat{s}'.\,
+      \left(\widehat{\sem{\hat{s}' : \tau}}
+      \monbind \mathsf{exp}_\tau\right)
+    \tag{\text{by monad associativity}} \\
+    &=
+    \widehat{\bigsemstep{\hat{s} : \tau}{n}}
+    \monbind
+    \lambda \hat{s}'.\,
+      \mathsf{Exp}_\tau\!\left(\widehat{\sem{\hat{s}' : \tau}}\right)
+    \tag{\text{by definition of Exp}} \\
+    &=
+    \widehat{\bigsemstep{\hat{s} : \tau}{n}}
+    \monbind
+    \lambda \hat{s}'.\,
+      \left(\mathsf{exp}_\tau(\hat{s}')
+      \monbind \lambda e'.\,\sem{e' : \tau}\right)
+    \tag{\text{by \Cref{eq:expected-one-step-compatibility}}} \\
+    &=
+    \left(
+      \widehat{\bigsemstep{\hat{s} : \tau}{n}}
+      \monbind
+      \lambda \hat{s}'.\,\mathsf{exp}_\tau(\hat{s}')
+    \right)
+    \monbind
+    \lambda e'.\,\sem{e' : \tau}
+    \tag{\text{by monad associativity}} \\
+    &=
+    \mathsf{Exp}_\tau\!\left(
+      \widehat{\bigsemstep{\hat{s} : \tau}{n}}
+    \right)
+    \monbind
+    \lambda e'.\,\sem{e' : \tau}
+    \tag{\text{by definition of Exp}} \\
+    &=
+    \left(
+      \mathsf{exp}_\tau(\hat{s})
+      \monbind
+      \lambda e.\,\bigsemstep{e : \tau}{n}
+    \right)
+    \monbind
+    \lambda e'.\,\sem{e' : \tau}
+    \tag{\text{by induction hypothesis}} \\
+    &=
+    \mathsf{exp}_\tau(\hat{s})
+    \monbind
+    \lambda e.\,
+      \left(\bigsemstep{e : \tau}{n}
+      \monbind
+      \lambda e'.\,\sem{e' : \tau}\right)
+    \tag{\text{by monad associativity}} \\
+    &=
+    \mathsf{exp}_\tau(\hat{s})
+    \monbind
+    \lambda e.\,\bigsemstep{e : \tau}{n+1}.
+    \tag{\text{by definition of n-step semantics}}
+  \end{align}
+\end{proof}
