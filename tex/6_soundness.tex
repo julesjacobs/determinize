@@ -510,27 +510,6 @@ This distribution is defined sequentially by:
 \end{cases}
 \]
 
-\begin{example}
-  Let's say:
-  \[
-    \sigma = u \sim \mathsf{Uniform}(0,1),\;
-            v \sim \mathsf{Gaussian}(u,1),
-  \]
-
-  Then this gives:
-  \[
-    \sem{\sigma}_{\mathsf{env}}
-    =
-    \mathsf{Uniform}(0,1)
-    \monbind
-    \lambda r.\,
-    \mathsf{Gaussian}(r,1)
-    \monbind
-    \lambda s.\,
-    \delta_{(r,s)}.
-  \]
-\end{example}
-
 For a symbolic residual expression \(\hat e\) and a tuple
 \(\rho = (r_1,\ldots,r_n)\), write
 \[
@@ -555,10 +534,82 @@ then
 \[
   \mathsf{realize}_\rho(\hat e) \in Expr_\tau.
 \]
+
+More formally:
+
+\begin{definition}[Realization]
+  We define \(\mathsf{realize}_\rho(\hat e)\) recursively on symbolic residual
+  expressions:
+  \[
+  \begin{aligned}
+    \mathsf{realize}_\rho(x)
+    &=
+    x,\\
+    \mathsf{realize}_\rho(\text{true})
+    &=
+    \text{true},\\
+    \mathsf{realize}_\rho(\text{false})
+    &=
+    \text{false},\\
+    \mathsf{realize}_\rho(\sym(a))
+    &=
+    a[\rho],\\
+    \mathsf{realize}_\rho(\letkw\ x=\hat e_1\ \inkw\ \hat e_2)
+    &=
+    \letkw\ x=\mathsf{realize}_\rho(\hat e_1)
+    \ \inkw\ \mathsf{realize}_\rho(\hat e_2),\\
+    \mathsf{realize}_\rho(
+      \ifkw\ \hat e_1\ \thenkw\ \hat e_2\ \elsekw\ \hat e_3)
+    &=
+    \ifkw\ \mathsf{realize}_\rho(\hat e_1)
+    \ \thenkw\ \mathsf{realize}_\rho(\hat e_2)
+    \ \elsekw\ \mathsf{realize}_\rho(\hat e_3),\\
+    \mathsf{realize}_\rho(\hat e_1 + \hat e_2)
+    &=
+    \mathsf{realize}_\rho(\hat e_1)
+    +
+    \mathsf{realize}_\rho(\hat e_2) \\
+    \ldots
+  \end{aligned}
+  \]
+\end{definition}
+
+
+
 We also extend realization to symbolic evaluation contexts.  For a symbolic
 context \(C[\cdot]\), \(\mathsf{realize}_\rho(C)[e]\) means: realize the
 symbolic expressions in \(C[\cdot]\) while leaving its hole open, then fill that
-hole with the expression \(e\).  
+hole with the expression \(e\). More formally:
+
+\begin{definition}[Context realization]
+  We define \(\mathsf{realize}_\rho(C)[e]\) recursively on symbolic evaluation contexts.
+  Representative clauses are:
+  \[
+  \begin{aligned}
+    \mathsf{realize}_\rho([\cdot])[e]
+    &=
+    e,\\
+    \mathsf{realize}_\rho(
+      \letkw\ x=C[\cdot]\ \inkw\ \hat e_2)[e]
+    &=
+    \letkw\ x=\mathsf{realize}_\rho(C)[e]
+    \ \inkw\ \mathsf{realize}_\rho(\hat e_2),\\
+    \mathsf{realize}_\rho(
+      \ifkw\ C[\cdot]\ \thenkw\ \hat e_2\ \elsekw\ \hat e_3)[e]
+    &=
+    \ifkw\ \mathsf{realize}_\rho(C)[e]
+    \ \thenkw\ \mathsf{realize}_\rho(\hat e_2)
+    \ \elsekw\ \mathsf{realize}_\rho(\hat e_3),\\
+    \mathsf{realize}_\rho(C[\cdot] + \hat e_2)[e]
+    &=
+    \mathsf{realize}_\rho(C)[e] + \mathsf{realize}_\rho(\hat e_2),\\
+    \mathsf{realize}_\rho(\hat v + C[\cdot])[e]
+    &=
+    \mathsf{realize}_\rho(\hat v) + \mathsf{realize}_\rho(C)[e].
+  \end{aligned}
+  \]
+  Other context forms are defined analogously.
+\end{definition}
 
 \begin{lemma}[Realization commutes with plugging into contexts]
   \[
@@ -651,147 +702,7 @@ hole with the expression \(e\).
   \]
 \end{definition}
 
-\begin{theorem}[Actual interpretation of symbolic \(n\)-step semantics]
-  If \(\hat{s} = (\sigma \mid \hat e : \tau) \in State_\tau\), then for
-  every \(n \in \mathbb{N}\),
-  \[
-    \mathsf{Act}_\tau\!\left(
-      \widehat{\bigsemstep{\hat{s} : \tau}{n}}
-    \right)
-    =
-    \mathsf{act}_\tau(\hat{s})
-    \monbind
-    \lambda e.\,\bigsemstep{e : \tau}{n}.
-  \]
-\end{theorem}
-
-\begin{proof}
-  The proof is by induction on \(n\), with the statement quantified over all
-  well-typed symbolic states.
-
-  For \(n=0\), let \(\hat{s} \in State_\tau\). Then
-  \begin{align}
-    \mathsf{Act}_\tau\!\left(
-      \widehat{\bigsemstep{\hat{s} : \tau}{0}}
-    \right)
-    &=
-    \mathsf{Act}_\tau(\delta_{\hat{s} : \tau})
-    \tag{\text{by definition of n-step symbolic semantics}} \\
-    &=
-    \delta_{\hat{s} : \tau}
-    \monbind
-    \mathsf{act}_\tau
-    \tag{\text{by definition of Act}} \\
-    &=
-    \mathsf{act}_\tau(\hat{s})
-    \tag{\text{by monad left identity}} \\
-    &=
-    \mathsf{act}_\tau(\hat{s})
-    \monbind
-    \lambda e.\,\delta_{e : \tau}
-    \tag{\text{by monad right identity}} \\
-    &=
-    \mathsf{act}_\tau(\hat{s})
-    \monbind
-    \lambda e.\,\bigsemstep{e : \tau}{0}.
-    \tag{\text{by definition of n-step semantics}}
-  \end{align}
-
-  For the inductive step, assume the statement holds for \(n\) for every
-  well-typed symbolic state, and let
-  \(\hat{s} = (\sigma \mid \hat e : \tau) \in State_\tau\). We use the
-  one-step compatibility fact:
-
-  \begin{equation}
-    \mathsf{Act}_\tau\!\left(\widehat{\sem{\hat{s} : \tau}}\right)
-    =
-    \mathsf{act}_\tau(\hat{s})
-    \monbind
-    \lambda e'.\,\sem{e' : \tau}
-  \end{equation}
-  for every well-typed symbolic state \(\hat{s} \in State_\tau\). Then
-  \begin{align}
-    &\mathsf{Act}_\tau\!\left(
-      \widehat{\bigsemstep{\hat{s} : \tau}{n+1}}
-    \right) \notag \\
-    &=
-    \mathsf{Act}_\tau\!\left(
-      \widehat{\bigsemstep{\hat{s} : \tau}{n}}
-      \monbind
-      \lambda \hat{s}'.\,\widehat{\sem{\hat{s}' : \tau}}
-    \right)
-    \tag{\text{by definition of symbolic n-step}} \\
-    &=
-    \left(
-      \widehat{\bigsemstep{\hat{s} : \tau}{n}}
-      \monbind
-      \lambda \hat{s}'.\,\widehat{\sem{\hat{s}' : \tau}}
-    \right)
-    \monbind
-    \mathsf{act}_\tau
-    \tag{\text{by definition of Act}} \\
-    &=
-    \widehat{\bigsemstep{\hat{s} : \tau}{n}}
-    \monbind
-    \lambda \hat{s}'.\,
-      \left(\widehat{\sem{\hat{s}' : \tau}}
-      \monbind \mathsf{act}_\tau\right)
-    \tag{\text{by monad associativity}} \\
-    &=
-    \widehat{\bigsemstep{\hat{s} : \tau}{n}}
-    \monbind
-    \lambda \hat{s}'.\,
-      \mathsf{Act}_\tau\!\left(\widehat{\sem{\hat{s}' : \tau}}\right)
-    \tag{\text{by definition of Act}} \\
-    &=
-    \widehat{\bigsemstep{\hat{s} : \tau}{n}}
-    \monbind
-    \lambda \hat{s}'.\,
-      \left(\mathsf{act}_\tau(\hat{s}')
-      \monbind \lambda e'.\,\sem{e' : \tau}\right)
-    \tag{\text{by one-step compatibility}} \\
-    &=
-    \left(
-      \widehat{\bigsemstep{\hat{s} : \tau}{n}}
-      \monbind
-      \lambda \hat{s}'.\,\mathsf{act}_\tau(\hat{s}')
-    \right)
-    \monbind
-    \lambda e'.\,\sem{e' : \tau}
-    \tag{\text{by monad associativity}} \\
-    &=
-    \mathsf{Act}_\tau\!\left(
-      \widehat{\bigsemstep{\hat{s} : \tau}{n}}
-    \right)
-    \monbind
-    \lambda e'.\,\sem{e' : \tau}
-    \tag{\text{by definition of Act}} \\
-    &=
-    \left(
-      \mathsf{act}_\tau(\hat{s})
-      \monbind
-      \lambda e.\,\bigsemstep{e : \tau}{n}
-    \right)
-    \monbind
-    \lambda e'.\,\sem{e' : \tau}
-    \tag{\text{by induction hypothesis}} \\
-    &=
-    \mathsf{act}_\tau(\hat{s})
-    \monbind
-    \lambda e.\,
-      \left(\bigsemstep{e : \tau}{n}
-      \monbind
-      \lambda e'.\,\sem{e' : \tau}\right)
-    \tag{\text{by monad associativity}} \\
-    &=
-    \mathsf{act}_\tau(\hat{s})
-    \monbind
-    \lambda e.\,\bigsemstep{e : \tau}{n+1}.
-    \tag{\text{by definition of n-step semantics}}
-  \end{align}
-\end{proof}
-
-\begin{lemma}[Strengthened one-step compatibility]
+\begin{lemma}\label{lem:symbolic-step-context}
   Let \(C[\cdot]\) be a well-typed symbolic evaluation context whose hole has
   type \(\tau_0\) and whose whole expression has type \(\tau\).  If
   \((\sigma \mid \hat e_0 : \tau_0) \in State_{\tau_0}\), then
@@ -972,27 +883,7 @@ hole with the expression \(e\).
     \lambda(\sigma' \mid \hat g_1).\,
       \mathsf{act}_\tau(\sigma' \mid
         C[\letkw\ x=\hat g_1\ \inkw\ \hat e_2]).
-    \tag{\text{by monad left identity}}
-  \end{align}
-  Let
-  \[
-    C_{\mathsf{let}}[\cdot]
-    =
-    C[\letkw\ x=[\cdot]\ \inkw\ \hat e_2].
-  \]
-  Hence:
-  \begin{align}
-    &\widehat{\sem{(\sigma \mid \hat e_1 : \tau_1)}}
-    \monbind
-    \lambda(\sigma' \mid \hat g_1).\,
-      \mathsf{act}_\tau(\sigma' \mid
-        C[\letkw\ x=\hat g_1\ \inkw\ \hat e_2]) \notag \\
-    &=
-    \widehat{\sem{(\sigma \mid \hat e_1 : \tau_1)}}
-    \monbind
-    \lambda(\sigma' \mid \hat g_1).\,
-      \mathsf{act}_\tau(\sigma' \mid C_{\mathsf{let}}[\hat g_1])
-    \tag{\text{by definition of \(C_{\mathsf{let}}\)}} \\
+    \tag{\text{by monad left identity}} \\
     &=
     \sem{\sigma}_{\mathsf{env}}
     \monbind
@@ -1001,7 +892,9 @@ hole with the expression \(e\).
         \sem{\mathsf{realize}_\rho(\hat e_1) : \tau_1}
         \monbind
         \lambda g.\,
-          \delta_{\mathsf{realize}_\rho(C_{\mathsf{let}})[g] : \tau}
+          \delta_{
+            \mathsf{realize}_\rho
+              (C[\letkw\ x=[\cdot]\ \inkw\ \hat e_2])[g] : \tau}
       \right)
     \tag{\text{by induction hypothesis}} \\
     &=
@@ -1015,7 +908,7 @@ hole with the expression \(e\).
           \delta_{\mathsf{realize}_\rho(C)
             [\letkw\ x=g\ \inkw\ \mathsf{realize}_\rho(\hat e_2)] : \tau}
       \right)
-    \tag{\text{by realization of \(C_{\mathsf{let}}\)}} \\
+    \tag{\text{by realization of contexts}} \\
     &=
     \sem{\sigma}_{\mathsf{env}}
     \monbind
@@ -1033,7 +926,7 @@ hole with the expression \(e\).
   \end{align}
 \end{proof}
 
-\begin{lemma}[One-step compatibility]
+\begin{lemma}\label{lem:symbolic-step}
   If \(\hat{s} \in State_\tau\), then
   \begin{equation}
     \mathsf{Act}_\tau\!\left(\widehat{\sem{\hat{s} : \tau}}\right)
@@ -1045,8 +938,9 @@ hole with the expression \(e\).
 \end{lemma}
 
 \begin{proof}
-  Let \(\hat{s}=(\sigma \mid \hat e : \tau)\). Apply the strengthened one-step
-  compatibility lemma with the empty surrounding expression \(C[\cdot]=[\cdot]\):
+  Let \(\hat{s}=(\sigma \mid \hat e : \tau)\). Apply
+  \Cref{lem:symbolic-step-context} with the empty surrounding expression
+  \(C[\cdot]=[\cdot]\):
   \begin{align}
     &\mathsf{Act}_\tau\!\left(\widehat{\sem{\hat{s} : \tau}}\right) \notag \\
     &=
@@ -1064,7 +958,7 @@ hole with the expression \(e\).
         \monbind
         \lambda g.\,\delta_{g : \tau}
       \right)
-    \tag{\text{by strengthened one-step compatibility}} \\
+    \tag{\text{by \Cref{lem:symbolic-step-context}}} \\
     &=
     \sem{\sigma}_{\mathsf{env}}
     \monbind
@@ -1096,6 +990,146 @@ hole with the expression \(e\).
     \monbind
     \lambda e'.\,\sem{e' : \tau}.
     \tag{\text{by definition of act}}
+  \end{align}
+\end{proof}
+
+\begin{theorem}[Actual interpretation of symbolic \(n\)-step semantics]
+  If \(\hat{s} = (\sigma \mid \hat e : \tau) \in State_\tau\), then for
+  every \(n \in \mathbb{N}\),
+  \[
+    \mathsf{Act}_\tau\!\left(
+      \widehat{\bigsemstep{\hat{s} : \tau}{n}}
+    \right)
+    =
+    \mathsf{act}_\tau(\hat{s})
+    \monbind
+    \lambda e.\,\bigsemstep{e : \tau}{n}.
+  \]
+\end{theorem}
+
+\begin{proof}
+  The proof is by induction on \(n\), with the statement quantified over all
+  well-typed symbolic states.
+
+  For \(n=0\), let \(\hat{s} \in State_\tau\). Then
+  \begin{align}
+    \mathsf{Act}_\tau\!\left(
+      \widehat{\bigsemstep{\hat{s} : \tau}{0}}
+    \right)
+    &=
+    \mathsf{Act}_\tau(\delta_{\hat{s} : \tau})
+    \tag{\text{by definition of n-step symbolic semantics}} \\
+    &=
+    \delta_{\hat{s} : \tau}
+    \monbind
+    \mathsf{act}_\tau
+    \tag{\text{by definition of Act}} \\
+    &=
+    \mathsf{act}_\tau(\hat{s})
+    \tag{\text{by monad left identity}} \\
+    &=
+    \mathsf{act}_\tau(\hat{s})
+    \monbind
+    \lambda e.\,\delta_{e : \tau}
+    \tag{\text{by monad right identity}} \\
+    &=
+    \mathsf{act}_\tau(\hat{s})
+    \monbind
+    \lambda e.\,\bigsemstep{e : \tau}{0}.
+    \tag{\text{by definition of n-step semantics}}
+  \end{align}
+
+  For the inductive step, assume the statement holds for \(n\) for every
+  well-typed symbolic state, and let
+  \(\hat{s} = (\sigma \mid \hat e : \tau) \in State_\tau\). We use
+  \Cref{lem:symbolic-step}:
+
+  \begin{equation}
+    \mathsf{Act}_\tau\!\left(\widehat{\sem{\hat{s} : \tau}}\right)
+    =
+    \mathsf{act}_\tau(\hat{s})
+    \monbind
+    \lambda e'.\,\sem{e' : \tau}
+  \end{equation}
+  for every well-typed symbolic state \(\hat{s} \in State_\tau\). Then
+  \begin{align}
+    &\mathsf{Act}_\tau\!\left(
+      \widehat{\bigsemstep{\hat{s} : \tau}{n+1}}
+    \right) \notag \\
+    &=
+    \mathsf{Act}_\tau\!\left(
+      \widehat{\bigsemstep{\hat{s} : \tau}{n}}
+      \monbind
+      \lambda \hat{s}'.\,\widehat{\sem{\hat{s}' : \tau}}
+    \right)
+    \tag{\text{by definition of symbolic n-step}} \\
+    &=
+    \left(
+      \widehat{\bigsemstep{\hat{s} : \tau}{n}}
+      \monbind
+      \lambda \hat{s}'.\,\widehat{\sem{\hat{s}' : \tau}}
+    \right)
+    \monbind
+    \mathsf{act}_\tau
+    \tag{\text{by definition of Act}} \\
+    &=
+    \widehat{\bigsemstep{\hat{s} : \tau}{n}}
+    \monbind
+    \lambda \hat{s}'.\,
+      \left(\widehat{\sem{\hat{s}' : \tau}}
+      \monbind \mathsf{act}_\tau\right)
+    \tag{\text{by monad associativity}} \\
+    &=
+    \widehat{\bigsemstep{\hat{s} : \tau}{n}}
+    \monbind
+    \lambda \hat{s}'.\,
+      \mathsf{Act}_\tau\!\left(\widehat{\sem{\hat{s}' : \tau}}\right)
+    \tag{\text{by definition of Act}} \\
+    &=
+    \widehat{\bigsemstep{\hat{s} : \tau}{n}}
+    \monbind
+    \lambda \hat{s}'.\,
+      \left(\mathsf{act}_\tau(\hat{s}')
+      \monbind \lambda e'.\,\sem{e' : \tau}\right)
+    \tag{\text{by \Cref{lem:symbolic-step}}} \\
+    &=
+    \left(
+      \widehat{\bigsemstep{\hat{s} : \tau}{n}}
+      \monbind
+      \lambda \hat{s}'.\,\mathsf{act}_\tau(\hat{s}')
+    \right)
+    \monbind
+    \lambda e'.\,\sem{e' : \tau}
+    \tag{\text{by monad associativity}} \\
+    &=
+    \mathsf{Act}_\tau\!\left(
+      \widehat{\bigsemstep{\hat{s} : \tau}{n}}
+    \right)
+    \monbind
+    \lambda e'.\,\sem{e' : \tau}
+    \tag{\text{by definition of Act}} \\
+    &=
+    \left(
+      \mathsf{act}_\tau(\hat{s})
+      \monbind
+      \lambda e.\,\bigsemstep{e : \tau}{n}
+    \right)
+    \monbind
+    \lambda e'.\,\sem{e' : \tau}
+    \tag{\text{by induction hypothesis}} \\
+    &=
+    \mathsf{act}_\tau(\hat{s})
+    \monbind
+    \lambda e.\,
+      \left(\bigsemstep{e : \tau}{n}
+      \monbind
+      \lambda e'.\,\sem{e' : \tau}\right)
+    \tag{\text{by monad associativity}} \\
+    &=
+    \mathsf{act}_\tau(\hat{s})
+    \monbind
+    \lambda e.\,\bigsemstep{e : \tau}{n+1}.
+    \tag{\text{by definition of n-step semantics}}
   \end{align}
 \end{proof}
 
