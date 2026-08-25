@@ -1,5 +1,5 @@
 \section{Typing}
-Judgments have the form \(\Gamma \vdash e : \tau\), where \(\Gamma\) is a standard typing context.
+Judgments have the form $\Gamma \vdash e : \tau$, where $\Gamma$ is a standard typing context.
 
 \paragraph{Core rules.}
 \begin{mathpar}
@@ -137,7 +137,7 @@ Judgments have the form \(\Gamma \vdash e : \tau\), where \(\Gamma\) is a standa
 
 Multiplication is general-mode only unless one side is a (typed) literal, in which case it follows the literal's mode; addition is parametric in the mode; comparison is only allowed at general mode. Uniform sampling preserves the incoming mode; Gaussian sampling returns the incoming mode but requires a general-typed variance.
 \paragraph{Modes and subtyping.}
-We relate modes with a preorder \(m_1 \preceq m_2\):
+We relate modes with a preorder $m_1 \preceq m_2$:
 \begin{mathpar}
   \inferrule[\textsc{Mode-Refl}]{\;}{m \preceq m}
   \and

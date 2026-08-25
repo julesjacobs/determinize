@@ -14,14 +14,14 @@ semantics as the main coupling object.  A symbolic state has the form
 \[
   \langle \Sigma \mid\mid e \rangle,
 \]
-where \(\Sigma\) is a sequence of symbolic samples
+where $\Sigma$ is a sequence of symbolic samples
 \[
   u_1 \sim D_1;\ldots;u_k \sim D_k.
 \]
-The arguments to \(D_i\) are affine expressions over earlier symbolic variables
-\(u_1,\ldots,u_{i-1}\).
+The arguments to $D_i$ are affine expressions over earlier symbolic variables
+$u_1,\ldots,u_{i-1}$.
 
-Let \(\mathsf{actual}\) and \(\mathsf{expected}\) be the two interpretations of
+Let $\mathsf{actual}$ and $\mathsf{expected}$ be the two interpretations of
 symbolic configurations.  The actual interpretation samples the symbolic
 environment and then returns the residual expression:
 \[
@@ -44,8 +44,8 @@ Both interpretations extend from symbolic states to symbolic configurations by
 bind.
 
 \begin{definition}[Type-indexed observational equivalence]
-  We write \(\mu_1 \approx_\tau \mu_2\) for the equivalence relation induced by
-  type \(\tau\).  At expectation-mode floats this means equal expectations,
+  We write $\mu_1 \approx_\tau \mu_2$ for the equivalence relation induced by
+  type $\tau$.  At expectation-mode floats this means equal expectations,
   while at general-mode floats, booleans, and the other non-expectation
   observations it means equality of distributions:
   \[
@@ -71,25 +71,25 @@ bind.
 \end{definition}
 
 \begin{lemma}[Determinization preservation]
-  If \(\emptyset \vdash e : \tau\), then
+  If $\emptyset \vdash e : \tau$, then
   \[
     \emptyset \vdash \exptrans{e : \tau} : \tau.
   \]
 \end{lemma}
 
 \begin{lemma}[Symbolic preservation]
-  If a symbolic configuration \(C\) is well typed at type \(\tau\), and
+  If a symbolic configuration $C$ is well typed at type $\tau$, and
   \[
     C \longrightarrow_{\sym} C',
   \]
-  then \(C'\) is also well typed at type \(\tau\).  Consequently, if
+  then $C'$ is also well typed at type $\tau$.  Consequently, if
   \[
     \langle \emptyset \mid\mid e \rangle
     \longrightarrow_{\sym}^{n}
     C_n
   \]
-  and \(\emptyset \vdash e : \tau\), then \(C_n\) is well typed at type
-  \(\tau\).
+  and $\emptyset \vdash e : \tau$, then $C_n$ is well typed at type
+  $\tau$.
 \end{lemma}
 
 \begin{lemma}[Actual interpretation]
@@ -106,7 +106,7 @@ bind.
 \end{lemma}
 
 \begin{lemma}[Expected interpretation]
-  If \(\emptyset \vdash e : \tau\) and
+  If $\emptyset \vdash e : \tau$ and
   \[
     \langle \emptyset \mid\mid e \rangle
     \longrightarrow_{\sym}^{n}
@@ -121,7 +121,7 @@ bind.
 \end{lemma}
 
 \begin{lemma}[Well-typed symbolic configurations are expectation-affine]
-  If \(C\) is a well-typed symbolic configuration at type \(\tau\), then its
+  If $C$ is a well-typed symbolic configuration at type $\tau$, then its
   residual expression is expectation-affine in every expectation-mode symbolic
   variable.  Therefore
   \[
@@ -130,7 +130,7 @@ bind.
 \end{lemma}
 
 \begin{theorem}[$n$-step symbolic soundness]
-  If \(\emptyset \vdash e : \tau\), then for every \(n \in \mathbb{N}\),
+  If $\emptyset \vdash e : \tau$, then for every $n \in \mathbb{N}$,
   \[
     \bigsemstep{e : \tau}{n}
     \approx_\tau
@@ -148,13 +148,13 @@ bind.
     \emptyset \vdash \exptrans{e : \tau} : \tau.
   \]
   Embed the source expression into the symbolic semantics and run it for
-  \(n\) steps:
+  $n$ steps:
   \[
     \langle \emptyset \mid\mid e \rangle
     \longrightarrow_{\sym}^{n}
     C_n.
   \]
-  By symbolic preservation, \(C_n\) is well typed at type \(\tau\).  The actual
+  By symbolic preservation, $C_n$ is well typed at type $\tau$.  The actual
   interpretation theorem gives
   \[
     \mathsf{actual}(C_n) = \bigsemstep{e : \tau}{n},
@@ -165,11 +165,11 @@ bind.
     \approx_\tau
     \bigsemstep{\exptrans{e : \tau} : \tau}{n}.
   \]
-  Since \(C_n\) is well typed, it is expectation-affine, so
+  Since $C_n$ is well typed, it is expectation-affine, so
   \[
     \mathsf{actual}(C_n) \approx_\tau \mathsf{expected}(C_n).
   \]
-  Therefore, by transitivity of \(\approx_\tau\),
+  Therefore, by transitivity of $\approx_\tau$,
   \[
     \bigsemstep{e : \tau}{n}
     \approx_\tau
@@ -178,13 +178,13 @@ bind.
 \end{proof}
 
 \begin{theorem}[Soundness of determinization]
-  If \(\emptyset \vdash e : \tau\), then
+  If $\emptyset \vdash e : \tau$, then
   \[
     \bigsem{e : \tau}
     \approx_\tau
     \bigsem{\exptrans{e : \tau} : \tau}.
   \]
-  In particular, if \(\tau = \Float{\E}\), then
+  In particular, if $\tau = \Float{\E}$, then
   \[
     \mathbb{E}[\bigsem{e : \Float{\E}}]
     =
@@ -193,20 +193,20 @@ bind.
 \end{theorem}
 
 \begin{proof}
-  The \(n\)-step symbolic soundness theorem gives
+  The $n$-step symbolic soundness theorem gives
   \[
     \bigsemstep{e : \tau}{n}
     \approx_\tau
     \bigsemstep{\exptrans{e : \tau} : \tau}{n}
   \]
-  for every \(n\).  Passing to the big-step semantics gives
+  for every $n$.  Passing to the big-step semantics gives
   \[
     \bigsem{e : \tau}
     \approx_\tau
     \bigsem{\exptrans{e : \tau} : \tau}.
   \]
   The expectation-mode float case follows by the definition of
-  \(\approx_{\Float{\E}}\).
+  $\approx_{\Float{\E}}$.
 \end{proof}
 
 \subsection{Soundness}
@@ -954,7 +954,7 @@ bind.
 \end{definition}
 
 \begin{definition}[Admissible continuations]
-  For each type \(\tau\), an observation continuation is a Markov kernel
+  For each type $\tau$, an observation continuation is a Markov kernel
   \[
     K : Val_\tau \to \mathcal{D}(\mathbb{R}).
   \]
@@ -962,23 +962,23 @@ bind.
   \[
     \overline{K}(v) = \mathbb{E}[K(v)].
   \]
-  We define a type-indexed predicate \(Adm_\tau(K)\) by cases on \(\tau\).
+  We define a type-indexed predicate $Adm_\tau(K)$ by cases on $\tau$.
 
   \begin{itemize}
-    \item \(\tau = \Unit\). Every continuation is admissible.
+    \item $\tau = \Unit$. Every continuation is admissible.
 
-    \item \(\tau = \Bool\). Every continuation is admissible.
+    \item $\tau = \Bool$. Every continuation is admissible.
 
-    \item \(\tau = \Float{\G}\). Every continuation is admissible.
+    \item $\tau = \Float{\G}$. Every continuation is admissible.
 
-    \item \(\tau = \Float{\E}\). The continuation is admissible iff
-    \(\overline{K}\) is an affine continuation:
+    \item $\tau = \Float{\E}$. The continuation is admissible iff
+    $\overline{K}$ is an affine continuation:
     \[
       \exists a,b \in \mathbb{R}.\ \forall x \in \mathbb{R},\quad
       \overline{K}(x) = ax + b.
     \]
 
-    \item \(\tau = \tau_1 \times \tau_2\). The continuation \(K\) is
+    \item $\tau = \tau_1 \times \tau_2$. The continuation $K$ is
     admissible iff it is admissible in each component separately:
     \[
       \forall v_2 \in Val_{\tau_2},\quad
@@ -990,7 +990,7 @@ bind.
       Adm_{\tau_2}(\lambda v_2.\,K(v_1,v_2)).
     \]
 
-    \item \(\tau = \tau_1 + \tau_2\). The continuation \(K\) is admissible iff
+    \item $\tau = \tau_1 + \tau_2$. The continuation $K$ is admissible iff
     both branch continuations are admissible:
     \[
       Adm_{\tau_1}(\lambda v.\,K(\mathsf{inl}\,v))
@@ -1000,34 +1000,34 @@ bind.
       Adm_{\tau_2}(\lambda v.\,K(\mathsf{inr}\,v)).
     \]
 
-    \item \(\tau = Option{\tau'}\). The continuation \(K\) is admissible iff
-    the \(\mathsf{some}\)-branch continuation is admissible:
+    \item $\tau = Option{\tau'}$. The continuation $K$ is admissible iff
+    the $\mathsf{some}$-branch continuation is admissible:
     \[
       Adm_{\tau'}(\lambda v.\,K(\mathsf{some}\,v)).
     \]
-    The \(\mathsf{none}\) branch is a single point and imposes no condition.
+    The $\mathsf{none}$ branch is a single point and imposes no condition.
 
-    \item \(\tau = \List{\tau'}\). The continuation \(K\) is admissible iff,
-    for every list context \(C[-]\) with one hole of type \(\tau'\), the induced
+    \item $\tau = \List{\tau'}$. The continuation $K$ is admissible iff,
+    for every list context $C[-]$ with one hole of type $\tau'$, the induced
     element continuation is admissible:
     \[
       Adm_{\tau'}(\lambda v.\,K(C[v])).
     \]
-    Equivalently, for every list length \(n\), every position \(i\), and every
+    Equivalently, for every list length $n$, every position $i$, and every
     fixed choice of all other elements, the function obtained by varying only
-    the \(i\)-th element is admissible at type \(\tau'\).
+    the $i$-th element is admissible at type $\tau'$.
 
-    \item \(\tau = \tau_1 \to \tau_2\). The continuation \(K\) is admissible
+    \item $\tau = \tau_1 \to \tau_2$. The continuation $K$ is admissible
     extensionally: it may observe a function only by applying it to admissible
-    arguments and then observing the result admissibly. Concretely, \(K\) is
+    arguments and then observing the result admissibly. Concretely, $K$ is
     admissible if it belongs to the least class of continuations closed under
     constants, affine combinations, and the rule:
-    if \(A\) is an admissible argument-producing computation of type
-    \(\tau_1\), and \(L\) is admissible at type \(\tau_2\), then
+    if $A$ is an admissible argument-producing computation of type
+    $\tau_1$, and $L$ is admissible at type $\tau_2$, then
     \[
       f \mapsto \bigsem{f\,A : \tau_2} \monbind L
     \]
-    is admissible at type \(\tau_1 \to \tau_2\).
+    is admissible at type $\tau_1 \to \tau_2$.
   \end{itemize}
 \end{definition}
 

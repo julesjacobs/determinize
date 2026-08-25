@@ -234,7 +234,118 @@ A symbolic state is:
   \hat{s} = (\sigma \mid \hat{e} : \tau) \in State_\tau.
 \]
 
-where $\sigma$ is the symbolic sample enviornment and $\hat{e} : \tau \in \widehat{Expr_\tau}$ is the well-typed symbolic residual expression.
+where $\sigma$ is the symbolic sample enviornment and $\hat{e} : \tau \in \widehat{Expr_\tau}$ is the well-typed symbolic residual expression. We elaborate on both below.
+
+\subsubsection{Symbolic sample environment}
+A symbolic sample environment records symbolic sampling operations in the
+order in which they occur. Since the parameters of a sampling operation may
+depend on previously introduced symbolic samples, we first define the affine
+expressions permitted as parameters. 
+
+For a finite set of symbolic variables $U=\{u_1,\ldots,u_n\}$, let
+\[
+  \mathsf{Aff}(U)
+  =
+  \left\{
+    c_0+\sum_{\ell=1}^{n} c_\ell u_\ell
+    \;\middle|\;
+    c_0,\ldots,c_n\in\mathbb{R}
+  \right\}.
+\]
+Thus, $\mathsf{Aff}(U)$ is the set of affine expressions over the variables
+in $U$. In particular,
+\[
+  \mathsf{Aff}(\varnothing)=\mathbb{R}.
+\]
+
+\begin{definition}[Symbolic sample environment]
+  The symbolic sample enviornment is defined inductively:
+
+  \textit{Base case.}
+  The empty sequence $\emptyset$ is a symbolic sample environment.
+
+  \textit{Inductive step.}
+  Suppose
+  \[
+    \sigma
+    =
+    \bigl(
+      u_1 \sim D_1(\vec a_1),\;
+      \ldots,\;
+      u_{i-1} \sim D_{i-1}(\vec a_{i-1})
+    \bigr)
+  \]
+  is a symbolic sample environment. Let $D_i$ be a distribution with
+  $r_i$ parameters
+  \[
+    \vec a_i=(a_{i,1},\ldots,a_{i,r_i}),
+  \]
+  where $r_i\in\{1,2\}$ for the distributions in our language, and where
+  \[
+    a_{i,j}\in\mathsf{Aff}(\{u_1,\ldots,u_{i-1}\})
+    \qquad
+    \text{for every }j\in\{1,\ldots,r_i\}.
+  \]
+  If $u_i\notin\{u_1,\ldots,u_{i-1}\}$, then
+  \[
+    \sigma,\;u_i\sim D_i(\vec a_i)
+  \]
+  is a symbolic sample environment.
+\end{definition}
+
+Thus, each distribution parameter may depend affinely on earlier symbolic
+samples, but not on the current sample or any later sample. In particular,
+the parameters of the first distribution are constants.
+
+\begin{example}
+  The symbolic sample environment
+  \[
+    \sigma
+    =
+    \bigl(
+      u_1 \sim \uniform[\E](0,1),\;
+      u_2 \sim \uniform[\E](u_1,u_1+1)
+    \bigr).
+  \]
+  is valid.
+  The parameters of the first distribution are constants, while the parameters
+  $u_1$ and $u_1+1$ of the second distribution belong to
+  $\mathsf{Aff}(\{u_1\})$. 
+\end{example}
+
+Suppose
+\[
+  \sigma =
+  u_1 \sim D_1(\vec a_1),\ldots,
+  u_n \sim D_n(\vec a_n),
+  \qquad
+  a_{i,j} \in \mathsf{Aff}(\{u_1,\ldots,u_{i-1}\}).
+\]
+Although $\sigma$ is an ordered context, it determines a distribution over
+tuples of real numbers:
+\[
+  \sem{\sigma}_{\mathsf{env}} \in \mathcal{D}(\mathbb{R}^n).
+\]
+
+This distribution is defined sequentially by:
+\[
+\begin{aligned}
+  \sem{\emptyset}_{\mathsf{env}}
+  &= \delta_{()}, \\[0.5em]
+  \sem{\sigma,\,u \sim D(\vec a)}_{\mathsf{env}}
+  &=
+  \sem{\sigma}_{\mathsf{env}}
+  \monbind
+  \lambda (r_1,\ldots,r_n).\,
+  D\bigl(\vec a[r_1/u_1,\ldots,r_n/u_n]\bigr)
+  \monbind
+  \lambda r.\,
+  \delta_{(r_1,\ldots,r_n,r)},
+\end{aligned}
+\]
+
+\subsubsection{Symbolic residual expression}
+
 
 The syntax for $\hat{e}$ is defined as follows:
 \begin{figure}[h]
@@ -244,7 +355,7 @@ The syntax for $\hat{e}$ is defined as follows:
 		| &\; \letkw \; x = \hat e_1\; \inkw \; \hat e_2  & \text{let binding} \\
 	    | &\; \hat e_1 + \hat e_2 \mid  \hat e_1 - \hat e_2 \mid \hat e_1 \times \hat e_2 \mid \hat e_1\; /\; \hat e_2 & \text{arithmetic} \\
 	    | &\; \hat e_1 < \hat e_2  & \text{comparisons} \\
-      | &\; \uniform[m](\hat e_1,\hat e_2) & \text{distributions, } m \in \{\E,\G\} \\
+      | &\; \uniform[m](\hat e_1,\hat e_2) \mid \gaussian[m](\hat e_1,\hat e_2) & \text{distributions, } m \in \{\E,\G\} \\
 	    | &\; \ifkw\; \hat e_1\; \thenkw\; \hat e_2\; \elsekw\; \hat e_3 & \text{conditionals} \\
     | &\; \langle \hat e_1,\hat e_2\rangle & \text{pairs} \\
     \ldots & \text{etc.}
@@ -252,35 +363,16 @@ The syntax for $\hat{e}$ is defined as follows:
 \label{fig:grammar}
 \end{figure}
 
-And formally, a symbolic sample environment $\sigma$ is an ordered context:
-\[
-  \sigma
-  =
-  \bigl(
-    u_1 \sim D_1(\vec a_1),\;
-    \ldots,\;
-    u_k \sim D_k(\vec a_k)
-  \bigr).
-\]
-Here each \(\vec a_i\) is a finite tuple of parameters:
-\[
-  \vec a_i = (a_{i,1},\ldots,a_{i,n_i})
-  \qquad\text{with}\qquad
-  a_{i,j} \in \mathsf{Aff}(\{u_1,\ldots,u_{i-1}\}).
-\]
-Thus each distribution may take any number of parameters, and every parameter is
-affine in the samples that appear earlier in \(\sigma\). For \(i=1\), this means
-the parameters are constants.
+Here, $\sym(a)$ is a symbolic value representing the affine expression $a$. The variable $u$ denotes a symbolic sample variable introduced by the symbolic sampling environment $\sigma$. The mode $m$ indicates whether the sample is expectation mode $\E$ or general mode $\G$. All other constructs follow the original syntax.
 
-\subsubsection{Type System}
+\paragraph{Type System}
 
 In a given symbolic state, only the symbolic residual expression is typed. The type system has a single judgment form:
 \[
   \Gamma \vdash \hat e : \tau.
 \]
 
-\paragraph{Symbolic residual expressions.}
-The ordinary typing rules lift to symbolic residual expressions. 
+The typing rules from the ordinary expresisons lift to symbolic residual expressions. 
 \begin{mathpar}
   \inferrule[\textsc{Var}]
     {x:\tau \in \Gamma}
@@ -355,8 +447,8 @@ where $\widehat{\bigsemstep{\hat{s} : \tau}{n}} \in \mathcal{D}(State_\tau)$.
       >{\raggedright\arraybackslash}p{0.39\linewidth}@{}}
     \toprule
     \toprule
-    \textbf{$\hat{s} : \tau$} & \textbf{Constraint} &
-    \textbf{$\widehat{\sem{\hat{s} : \tau}}$} \\
+    \textbf{$\hat{s} \in State_\tau$} & \textbf{Constraint} &
+    \textbf{$\widehat{\sem{\hat{s}}}$} \\
     \midrule
     %
     $(\sigma \mid \hat v : \tau)$ &
@@ -455,8 +547,8 @@ where $\widehat{\bigsemstep{\hat{s} : \tau}{n}} \in \mathcal{D}(State_\tau)$.
     \bottomrule
   \end{tabular}
   \end{adjustbox}
-  \caption{Symbolic small-step operational semantics. Symbolic evaluation of an expression \(e : \tau\) begins in the
-  state \((\emptyset \mid \iota(e) : \tau)\), where we can define $\iota$ as the embedding of ordinary expressions into symbolic residual expressions, replacing each float constant $c : \Float{m}$ with $\sym(c) : \Float{m}$.}
+  \caption{Symbolic small-step operational semantics. Symbolic evaluation of an expression $e : \tau$ begins in the
+  state $(\emptyset \mid \iota(e) : \tau)$, where we can define $\iota$ as the embedding of ordinary expressions into symbolic residual expressions, replacing each float constant $c : \Float{m}$ with $\sym(c) : \Float{m}$.}
   \label{tab:symbolic-small-step-semantics}
 \end{table}
 
@@ -478,70 +570,55 @@ where $\widehat{\bigsemstep{\hat{s} : \tau}{n}} \in \mathcal{D}(State_\tau)$.
 
 The actual interpretation turns a symbolic state back into a distribution over
 ordinary expressions by sampling the symbolic environment and substituting the
-sampled values for the symbolic variables.  Suppose
-\[
-  \sigma =
-  u_1 \sim D_1(\vec a_1),\ldots,
-  u_n \sim D_n(\vec a_n),
-  \qquad
-  a_{i,j} \in \mathsf{Aff}(\{u_1,\ldots,u_{i-1}\}).
-\]
-Although \(\sigma\) is an ordered context, it determines a distribution over
-tuples of real numbers:
-\[
-  \sem{\sigma}_{\mathsf{env}} \in \mathcal{D}(\mathbb{R}^n).
-\]
+sampled values for the symbolic variables.  
 
-This distribution is defined sequentially by:
-\[
-\sem{\sigma}_{\mathsf{env}} =
-\begin{cases}
-  \delta_{()}
-    & \text{if } \sigma = \emptyset, \\[0.5em]
 
-  D(\vec a)
-  \monbind
-  \lambda r_1.\,
-  \sem{\sigma'[r_1/u]}_{\mathsf{env}}
-  \monbind
-  \lambda(r_2,\ldots,r_n).\,
-  \delta_{(r_1,r_2,\ldots,r_n)}
-    & \text{if } \sigma = u \sim D(\vec a), \sigma'.
-\end{cases}
-\]
+Recall $\sym(a)$ embeds an affine expression $a$ into the
+language of symbolic residual expressions. We equip this auxiliary language
+with a big-step semantics.
 
-For a symbolic residual expression \(\hat e\) and a tuple
-\(\rho = (r_1,\ldots,r_n)\), write
+Let $U$ be a finite set of symbolic sample variables. A valuation for $U$
+is a function
 \[
-  \mathsf{realize}_\rho(\hat e)
+  \rho : U \to \mathbb{R}
 \]
-for the ordinary expression obtained by replacing each occurrence of
-\(\sym(a)\) in \(\hat e\) with the real number obtained by evaluating the
-affine expression \(a\) under \(\rho\):
+that assigns a concrete real value to each variable in $U$. For
+$a\in\mathsf{Aff}(U)$, the judgment
 \[
-  \sym(a)
-  \mapsto
-  a[\rho]
-  =
-  a[r_1/u_1,\ldots,r_n/u_n].
+  \rho \vdash a \Downarrow r
 \]
+means that $a$ evaluates to $r\in\mathbb{R}$ under $\rho$. It is defined
+by the following rules:
+\begin{mathpar}
+  \inferrule[\textsc{A-Const}]
+    {\,}
+    {\rho \vdash c \Downarrow c}
+  \and
+  \inferrule[\textsc{A-Var}]
+    {u\in U}
+    {\rho \vdash u \Downarrow \rho(u)}
+  \and
+  \inferrule[\textsc{A-Add}]
+    {\rho \vdash a_1 \Downarrow r_1 \\
+     \rho \vdash a_2 \Downarrow r_2}
+    {\rho \vdash a_1+a_2 \Downarrow r_1+r_2}
+  \and
+  \inferrule[\textsc{A-Scale}]
+    {\rho \vdash a \Downarrow r}
+    {\rho \vdash c\cdot a \Downarrow c\cdot r}
+\end{mathpar}
 
-If
-\[
-  \vdash \hat e : \tau,
-\]
-then
-\[
-  \mathsf{realize}_\rho(\hat e) \in Expr_\tau.
-\]
-
-More formally:
+We can therefore use this semantics to realize symbolic values. 
 
 \begin{definition}[Realization]
-  We define \(\mathsf{realize}_\rho(\hat e)\) recursively on symbolic residual
-  expressions:
-  \[
-  \begin{aligned}
+Given a
+valuation $\rho$, the realization function
+\[
+  \mathsf{realize}_\rho :
+  \widehat{Expr_\tau}\to Expr_\tau
+\]
+is defined recursively on symbolic residual expressions:
+  \begin{align*}
     \mathsf{realize}_\rho(x)
     &=
     x,\\
@@ -553,7 +630,9 @@ More formally:
     \text{false},\\
     \mathsf{realize}_\rho(\sym(a))
     &=
-    a[\rho],\\
+    r
+    \qquad
+    \text{whenever } \rho \vdash a \Downarrow r,\\
     \mathsf{realize}_\rho(\letkw\ x=\hat e_1\ \inkw\ \hat e_2)
     &=
     \letkw\ x=\mathsf{realize}_\rho(\hat e_1)
@@ -570,100 +649,29 @@ More formally:
     +
     \mathsf{realize}_\rho(\hat e_2) \\
     \ldots
-  \end{aligned}
-  \]
+  \end{align*}
 \end{definition}
 
-
-
-We also extend realization to symbolic evaluation contexts.  For a symbolic
-context \(C[\cdot]\), \(\mathsf{realize}_\rho(C)[e]\) means: realize the
-symbolic expressions in \(C[\cdot]\) while leaving its hole open, then fill that
-hole with the expression \(e\). More formally:
-
-\begin{definition}[Context realization]
-  We define \(\mathsf{realize}_\rho(C)[e]\) recursively on symbolic evaluation contexts.
-  Representative clauses are:
+\begin{example}
   \[
-  \begin{aligned}
-    \mathsf{realize}_\rho([\cdot])[e]
-    &=
-    e,\\
-    \mathsf{realize}_\rho(
-      \letkw\ x=C[\cdot]\ \inkw\ \hat e_2)[e]
-    &=
-    \letkw\ x=\mathsf{realize}_\rho(C)[e]
-    \ \inkw\ \mathsf{realize}_\rho(\hat e_2),\\
-    \mathsf{realize}_\rho(
-      \ifkw\ C[\cdot]\ \thenkw\ \hat e_2\ \elsekw\ \hat e_3)[e]
-    &=
-    \ifkw\ \mathsf{realize}_\rho(C)[e]
-    \ \thenkw\ \mathsf{realize}_\rho(\hat e_2)
-    \ \elsekw\ \mathsf{realize}_\rho(\hat e_3),\\
-    \mathsf{realize}_\rho(C[\cdot] + \hat e_2)[e]
-    &=
-    \mathsf{realize}_\rho(C)[e] + \mathsf{realize}_\rho(\hat e_2),\\
-    \mathsf{realize}_\rho(\hat v + C[\cdot])[e]
-    &=
-    \mathsf{realize}_\rho(\hat v) + \mathsf{realize}_\rho(C)[e].
-  \end{aligned}
+    \mathsf{realize}_{\rho}\bigl(\sym(2+1)\bigr)
+    =
+    3.
   \]
-  Other context forms are defined analogously.
-\end{definition}
+\end{example}
 
-\begin{lemma}[Realization commutes with plugging into contexts]
+\begin{example}
+  Let $\rho=[u_1\mapsto 2,\;u_2\mapsto 4]$. Then
   \[
-    \mathsf{realize}_\rho(C[\hat e])
-    =
-    \mathsf{realize}_\rho(C)[\mathsf{realize}_\rho(\hat e)].
+    \begin{aligned}
+      \mathsf{realize}_{(2,4)}
+      \bigl(\sym(3u_1+u_2+1)\bigr)
+      &=
+      3 \cdot 2 + 4 + 1 = 11.
+    \end{aligned}
   \]
-\end{lemma}
+\end{example}
 
-\begin{proof}
-  By induction on the structure of \(C[\cdot]\).
-
-  If \(C[\cdot]=[\cdot]\), then
-  \[
-    \mathsf{realize}_\rho(C[\hat e])
-    =
-    \mathsf{realize}_\rho(\hat e)
-    =
-    \mathsf{realize}_\rho(C)[\mathsf{realize}_\rho(\hat e)].
-  \]
-
-  For the let context case, suppose
-  \[
-    C[\cdot]
-    =
-    \letkw\ x=C_1[\cdot]\ \inkw\ \hat e_2.
-  \]
-  Then
-  \begin{align}
-    \mathsf{realize}_\rho(C[\hat e])
-    &=
-    \letkw\ x=\mathsf{realize}_\rho(C_1[\hat e])
-    \ \inkw\ \mathsf{realize}_\rho(\hat e_2)
-    \tag{\text{by definition of realization}} \\
-    &=
-    \letkw\ x=
-      \mathsf{realize}_\rho(C_1)[\mathsf{realize}_\rho(\hat e)]
-    \ \inkw\ \mathsf{realize}_\rho(\hat e_2)
-    \tag{\text{by induction hypothesis}} \\
-    &=
-    \mathsf{realize}_\rho(C)[\mathsf{realize}_\rho(\hat e)].
-    \tag{\text{by definition of context realization}}
-  \end{align}
-  Other context forms are analogous.
-\end{proof}
-
-\begin{lemma}[Realization substitution]
-  \[
-    \mathsf{realize}_\rho(\hat e[\hat v/x])
-    =
-    \mathsf{realize}_\rho(\hat e)
-    [\mathsf{realize}_\rho(\hat v)/x].
-  \]
-\end{lemma}
 
 \begin{definition}[Single-state actual interpretation]
   The single-state actual interpretation is the function:
@@ -681,255 +689,19 @@ hole with the expression \(e\). More formally:
     \delta_{\mathsf{realize}_\rho(\hat e) : \tau}.
   \end{aligned}
   \]
+  where a tuple $(r_1,\ldots,r_n)$ sampled from
+  $\sem{\sigma}_{\mathsf{env}}$ is identified with the valuation
+  $\rho=[u_1\mapsto r_1,\ldots,u_n\mapsto r_n]$.
 \end{definition}
 
-\begin{definition}[Lifted actual interpretation]
-  The lifted actual interpretation acts on distributions over symbolic states:
-  \[
-    \mathsf{Act}_\tau :
-    \mathcal{D}(State_\tau) \to \mathcal{D}(Expr_\tau).
-  \]
-  It is defined by monadic bind against the single-state kernel:
-  \[
-  \begin{aligned}
-    \mathsf{Act}_\tau(\mu)
-    &=
-    \mu \monbind \mathsf{act}_\tau \\
-    &=
-    \mu \monbind
-    \lambda(\sigma \mid \hat e).\,\mathsf{act}_\tau(\sigma \mid \hat e).
-  \end{aligned}
-  \]
-\end{definition}
+The following lemma states that taking one symbolic step and then realizing the resulting symbolic state yields the same distribution as first realizing the original state and then taking one ordinary step. 
 
-\begin{lemma}\label{lem:symbolic-step-context}
-  Let \(C[\cdot]\) be a well-typed symbolic evaluation context whose hole has
-  type \(\tau_0\) and whose whole expression has type \(\tau\).  If
-  \((\sigma \mid \hat e_0 : \tau_0) \in State_{\tau_0}\), then
-  \[
-  \begin{aligned}
-    &
-    \widehat{\sem{(\sigma \mid \hat e_0 : \tau_0)}}
-    \monbind
-    \lambda(\sigma' \mid \hat g).\,
-      \mathsf{act}_\tau(\sigma' \mid C[\hat g]) \\
-    &=
-    \sem{\sigma}_{\mathsf{env}}
-    \monbind
-    \lambda\rho.\,
-      \left(
-        \sem{\mathsf{realize}_\rho(\hat e_0) : \tau_0}
-        \monbind
-        \lambda g.\,
-          \delta_{\mathsf{realize}_\rho(C)[g] : \tau}
-      \right).
-  \end{aligned}
-  \]
-\end{lemma}
-
-\begin{proof}
-  The proof is by induction on \(\hat e_0\).
-
-  \paragraph{Value case.}
-  \begin{align}
-    &\widehat{\sem{(\sigma \mid \hat v : \tau_0)}}
-    \monbind
-    \lambda(\sigma' \mid \hat g).\,
-      \mathsf{act}_\tau(\sigma' \mid C[\hat g]) \notag \\
-    &=
-    \delta_{(\sigma \mid \hat v : \tau_0)}
-    \monbind
-    \lambda(\sigma' \mid \hat g).\,
-      \mathsf{act}_\tau(\sigma' \mid C[\hat g])
-    \tag{\text{by symbolic value rule}} \\
-    &=
-    \mathsf{act}_\tau(\sigma \mid C[\hat v])
-    \tag{\text{by monad left identity}} \\
-    &=
-    \sem{\sigma}_{\mathsf{env}}
-    \monbind
-    \lambda\rho.\,
-      \delta_{\mathsf{realize}_\rho(C[\hat v]) : \tau}
-    \tag{\text{by definition of act}} \\
-    &=
-    \sem{\sigma}_{\mathsf{env}}
-    \monbind
-    \lambda\rho.\,
-      \delta_{\mathsf{realize}_\rho(C)
-        [\mathsf{realize}_\rho(\hat v)] : \tau}
-    \tag{\text{by realization of contexts}} \\
-    &=
-    \sem{\sigma}_{\mathsf{env}}
-    \monbind
-    \lambda\rho.\,
-      \left(
-        \delta_{\mathsf{realize}_\rho(\hat v) : \tau_0}
-        \monbind
-        \lambda g.\,
-          \delta_{\mathsf{realize}_\rho(C)[g] : \tau}
-      \right)
-    \tag{\text{by monad left identity}} \\
-    &=
-    \sem{\sigma}_{\mathsf{env}}
-    \monbind
-    \lambda\rho.\,
-      \left(
-        \sem{\mathsf{realize}_\rho(\hat v) : \tau_0}
-        \monbind
-        \lambda g.\,
-          \delta_{\mathsf{realize}_\rho(C)[g] : \tau}
-      \right).
-    \tag{\text{by ordinary value rule}}
-  \end{align}
-
-  \paragraph{Let value case.}
-  \begin{align}
-    &\widehat{\sem{(\sigma \mid
-      \letkw\ x=\hat v\ \inkw\ \hat e_2 : \tau_2)}}
-    \monbind
-    \lambda(\sigma' \mid \hat g).\,
-      \mathsf{act}_\tau(\sigma' \mid C[\hat g]) \notag \\
-    &=
-    \delta_{(\sigma \mid \hat e_2[\hat v/x] : \tau_2)}
-    \monbind
-    \lambda(\sigma' \mid \hat g).\,
-      \mathsf{act}_\tau(\sigma' \mid C[\hat g])
-    \tag{\text{by symbolic let rule}} \\
-    &=
-    \mathsf{act}_\tau(\sigma \mid C[\hat e_2[\hat v/x]])
-    \tag{\text{by monad left identity}} \\
-    &=
-    \sem{\sigma}_{\mathsf{env}}
-    \monbind
-    \lambda\rho.\,
-      \delta_{\mathsf{realize}_\rho(C[\hat e_2[\hat v/x]]) : \tau}
-    \tag{\text{by definition of act}} \\
-    &=
-    \sem{\sigma}_{\mathsf{env}}
-    \monbind
-    \lambda\rho.\,
-      \delta_{\mathsf{realize}_\rho(C)
-        [\mathsf{realize}_\rho(\hat e_2[\hat v/x])] : \tau}
-    \tag{\text{by realization of contexts}} \\
-    &=
-    \sem{\sigma}_{\mathsf{env}}
-    \monbind
-    \lambda\rho.\,
-      \delta_{\mathsf{realize}_\rho(C)
-        [\mathsf{realize}_\rho(\hat e_2)
-          [\mathsf{realize}_\rho(\hat v)/x]] : \tau}
-    \tag{\text{by realization commuting with substitution}} \\
-    &=
-    \sem{\sigma}_{\mathsf{env}}
-    \monbind
-    \lambda\rho.\,
-      \left(
-        \delta_{\mathsf{realize}_\rho(\hat e_2)
-          [\mathsf{realize}_\rho(\hat v)/x] : \tau_2}
-        \monbind
-        \lambda g.\,
-          \delta_{\mathsf{realize}_\rho(C)[g] : \tau}
-      \right)
-    \tag{\text{by monad left identity}} \\
-    &=
-    \sem{\sigma}_{\mathsf{env}}
-    \monbind
-    \lambda\rho.\,
-      \left(
-        \sem{
-          \letkw\ x=\mathsf{realize}_\rho(\hat v)
-          \ \inkw\ \mathsf{realize}_\rho(\hat e_2) : \tau_2
-        }
-        \monbind
-        \lambda g.\,
-          \delta_{\mathsf{realize}_\rho(C)[g] : \tau}
-      \right).
-    \tag{\text{by ordinary let-value rule}}
-  \end{align}
-
-  \paragraph{Let non-value case.}
-  \begin{align}
-    &\widehat{\sem{(\sigma \mid \hat e_0 : \tau_2)}}
-    \monbind
-    \lambda(\sigma'' \mid \hat h).\,
-      \mathsf{act}_\tau(\sigma'' \mid C[\hat h]) \notag \\
-    &=
-    \left(
-      \widehat{\sem{(\sigma \mid \hat e_1 : \tau_1)}}
-      \monbind
-      \lambda(\sigma' \mid \hat g_1).\,
-        \delta_{(\sigma' \mid
-          \letkw\ x=\hat g_1\ \inkw\ \hat e_2) : \tau_2}
-    \right)
-    \monbind
-    \lambda(\sigma'' \mid \hat h).\,
-      \mathsf{act}_\tau(\sigma'' \mid C[\hat h])
-    \tag{\text{by the symbolic let rule}} \\
-    &=
-    \widehat{\sem{(\sigma \mid \hat e_1 : \tau_1)}}
-    \monbind
-    \lambda(\sigma' \mid \hat g_1).\,
-      \left(
-        \delta_{(\sigma' \mid
-          \letkw\ x=\hat g_1\ \inkw\ \hat e_2) : \tau_2}
-        \monbind
-        \lambda(\sigma'' \mid \hat h).\,
-          \mathsf{act}_\tau(\sigma'' \mid C[\hat h])
-      \right)
-    \tag{\text{by associativity}} \\
-    &=
-    \widehat{\sem{(\sigma \mid \hat e_1 : \tau_1)}}
-    \monbind
-    \lambda(\sigma' \mid \hat g_1).\,
-      \mathsf{act}_\tau(\sigma' \mid
-        C[\letkw\ x=\hat g_1\ \inkw\ \hat e_2]).
-    \tag{\text{by monad left identity}} \\
-    &=
-    \sem{\sigma}_{\mathsf{env}}
-    \monbind
-    \lambda\rho.\,
-      \left(
-        \sem{\mathsf{realize}_\rho(\hat e_1) : \tau_1}
-        \monbind
-        \lambda g.\,
-          \delta_{
-            \mathsf{realize}_\rho
-              (C[\letkw\ x=[\cdot]\ \inkw\ \hat e_2])[g] : \tau}
-      \right)
-    \tag{\text{by induction hypothesis}} \\
-    &=
-    \sem{\sigma}_{\mathsf{env}}
-    \monbind
-    \lambda\rho.\,
-      \left(
-        \sem{\mathsf{realize}_\rho(\hat e_1) : \tau_1}
-        \monbind
-        \lambda g.\,
-          \delta_{\mathsf{realize}_\rho(C)
-            [\letkw\ x=g\ \inkw\ \mathsf{realize}_\rho(\hat e_2)] : \tau}
-      \right)
-    \tag{\text{by realization of contexts}} \\
-    &=
-    \sem{\sigma}_{\mathsf{env}}
-    \monbind
-    \lambda\rho.\,
-      \left(
-        \sem{
-          \letkw\ x=\mathsf{realize}_\rho(\hat e_1)
-          \ \inkw\ \mathsf{realize}_\rho(\hat e_2) : \tau_2
-        }
-        \monbind
-        \lambda g.\,
-          \delta_{\mathsf{realize}_\rho(C)[g] : \tau}
-      \right).
-    \tag{\text{by ordinary let rule}}
-  \end{align}
-\end{proof}
-
-\begin{lemma}\label{lem:symbolic-step}
-  If \(\hat{s} \in State_\tau\), then
+\begin{lemma}[Actual interpretation of symbolic small-step semantics]\label{lem:symbolic-step}
+  Let $\hat{s}=(\sigma \mid \hat e : \tau) \in State_\tau$, then, for all $\sigma$,
   \begin{equation}
-    \mathsf{Act}_\tau\!\left(\widehat{\sem{\hat{s} : \tau}}\right)
+    \widehat{\sem{\hat{s} : \tau}}
+    \monbind
+    \lambda ((\sigma' \mid \hat e')) .\ \mathsf{act}_\tau((\sigma' \mid \hat e')) 
     =
     \mathsf{act}_\tau(\hat{s})
     \monbind
@@ -938,68 +710,343 @@ hole with the expression \(e\). More formally:
 \end{lemma}
 
 \begin{proof}
-  Let \(\hat{s}=(\sigma \mid \hat e : \tau)\). Apply
-  \Cref{lem:symbolic-step-context} with the empty surrounding expression
-  \(C[\cdot]=[\cdot]\):
+  By structural induction on the symbolic residual expression $\hat e$,
+  with the statement quantified over all $\sigma$. We show the conditional
+  case; the remaining cases are analogous.
+
+  Suppose
+  \[
+    \hat e
+    =
+    \ifkw\ \hat e_1\ \thenkw\ \hat e_2\ \elsekw\ \hat e_3,
+  \]
+  where
+  \[
+    \vdash \hat e_1 : \Bool
+    \qquad\text{and}\qquad
+    \vdash \hat e_2,\hat e_3 : \tau.
+  \]
+
+  We proceed by cases on $\hat e_1$.
+
+  \paragraph{Case $\hat e_1 = \mathsf{true}$.}
+  For the left-hand side,
   \begin{align}
-    &\mathsf{Act}_\tau\!\left(\widehat{\sem{\hat{s} : \tau}}\right) \notag \\
-    &=
-    \widehat{\sem{(\sigma \mid \hat e : \tau)}}
+    &\widehat{\sem{
+      (\sigma \mid
+      \ifkw\ \mathsf{true}\ \thenkw\ \hat e_2\
+      \elsekw\ \hat e_3 : \tau)
+    }}
+    \monbind
+    \lambda(\sigma' \mid \hat e').\,
+    \mathsf{act}_\tau(\sigma' \mid \hat e')
+    \notag \\
+    &\qquad=
+    \delta_{(\sigma \mid \hat e_2 : \tau)}
+    \monbind
+    \lambda(\sigma' \mid \hat e').\,
+    \mathsf{act}_\tau(\sigma' \mid \hat e')
+    \tag{\text{by symbolic $\mathsf{if}$ rule}} \\
+    &\qquad=
+    \mathsf{act}_\tau(\sigma \mid \hat e_2 : \tau)
+    \tag{\text{by monad left identity}} \\
+    &\qquad=
+    \sem{\sigma}_{\mathsf{env}}
+    \monbind
+    \lambda\rho.\,
+    \delta_{\mathsf{realize}_\rho(\hat e_2) : \tau}.
+    \tag{\text{by definition of $\mathsf{act}_\tau$}}
+  \end{align}
+  For the right-hand side,
+  \begin{align}
+    &\mathsf{act}_\tau
+    \bigl(
+      \sigma
+      \mid
+      \ifkw\ \mathsf{true}\ \thenkw\ \hat e_2\
+      \elsekw\ \hat e_3 : \tau
+    \bigr)
+    \monbind
+    \lambda e'.\,\sem{e' : \tau}
+    \notag \\
+    &\qquad=
+    \sem{\sigma}_{\mathsf{env}}
+    \monbind
+    \lambda\rho.\,
+    \sem{
+      \mathsf{realize}_\rho
+      \bigl(
+        \ifkw\ \mathsf{true}\ \thenkw\ \hat e_2\
+        \elsekw\ \hat e_3
+      \bigr)
+      : \tau
+    }
+    \tag{\text{by definition of $\mathsf{act}_\tau$}} \\
+    &\qquad=
+    \sem{\sigma}_{\mathsf{env}}
+    \monbind
+    \lambda\rho.\,
+    \sem{
+      \ifkw\ \mathsf{true}\
+      \thenkw\ \mathsf{realize}_\rho(\hat e_2)\
+      \elsekw\ \mathsf{realize}_\rho(\hat e_3)
+      : \tau
+    }
+    \tag{\text{by $\mathsf{realize}_\rho$ on $\mathsf{if}$}} \\
+    &\qquad=
+    \sem{\sigma}_{\mathsf{env}}
+    \monbind
+    \lambda\rho.\,
+    \delta_{\mathsf{realize}_\rho(\hat e_2) : \tau}.
+    \tag{\text{by ordinary $\mathsf{if}$ rule}}
+  \end{align}
+  The two sides agree.
+
+  \paragraph{Case $\hat e_1 = \mathsf{false}$.} Analogous to above. 
+
+  \paragraph{Case $\hat e_1$ is not a Boolean value.}
+  Abbreviate $\mathsf{If}(\hat g) := \ifkw\ \hat g\ \thenkw\ \hat e_2\
+  \elsekw\ \hat e_3$. The induction hypothesis for the subexpression $\hat e_1$ is:
+  \begin{equation}
+    \label{eq:if-ih}
+    \widehat{\sem{(\sigma \mid \hat e_1 : \Bool)}}
     \monbind
     \lambda(\sigma' \mid \hat g).\,
-      \mathsf{act}_\tau(\sigma' \mid \hat g)
-    \tag{\text{by definition of Act}} \\
-    &=
-    \sem{\sigma}_{\mathsf{env}}
+    \mathsf{act}_{\Bool}(\sigma' \mid \hat g)
+    =
+    \mathsf{act}_{\Bool}(\sigma \mid \hat e_1)
     \monbind
-    \lambda\rho.\,
+    \lambda b.\,\sem{b : \Bool}.
+  \end{equation}
+  
+  We start from the left-hand side:
+
+  \begin{align}
+    &\widehat{\sem{(\sigma \mid \mathsf{If}(\hat e_1) : \tau)}}
+    \monbind
+    \lambda(\sigma' \mid \hat e').\,
+    \mathsf{act}_\tau(\sigma' \mid \hat e')
+    \notag \\
+    &\quad=
+    \left(
+      \widehat{\sem{(\sigma \mid \hat e_1 : \Bool)}}
+      \monbind
+      \lambda(\sigma' \mid \hat g).\,
+      \delta_{(\sigma' \mid \mathsf{If}(\hat g) : \tau)}
+    \right)
+    \monbind
+    \lambda(\sigma' \mid \hat e').\,
+    \mathsf{act}_\tau(\sigma' \mid \hat e')
+    \tag{\text{by symbolic $\mathsf{if}$ rule}} \\
+    &\quad=
+    \widehat{\sem{(\sigma \mid \hat e_1 : \Bool)}}
+    \monbind
+    \lambda(\sigma' \mid \hat g).\,
+    \left(
+      \delta_{(\sigma' \mid \mathsf{If}(\hat g) : \tau)}
+      \monbind
+      \lambda(\sigma'' \mid \hat e'').\,
+      \mathsf{act}_\tau(\sigma'' \mid \hat e'')
+    \right)
+    \tag{\text{by associativity}} \\
+    &\quad=
+    \widehat{\sem{(\sigma \mid \hat e_1 : \Bool)}}
+    \monbind
+    \lambda(\sigma' \mid \hat g).\,
+    \mathsf{act}_\tau(\sigma' \mid \mathsf{If}(\hat g) : \tau)
+    \tag{\text{by left identity}} \\
+    &\quad=
+    \widehat{\sem{(\sigma \mid \hat e_1 : \Bool)}}
+    \monbind
+    \lambda(\sigma' \mid \hat g).\,
+    \left(
+      \sem{\sigma'}_{\mathsf{env}}
+      \monbind
+      \lambda\rho.\,
+      \delta_{\mathsf{realize}_\rho(\mathsf{If}(\hat g)) : \tau}
+    \right)
+    \tag{\text{by definition of $\mathsf{act}_\tau$}} \\
+    &\quad=
+    \widehat{\sem{(\sigma \mid \hat e_1 : \Bool)}}
+    \monbind
+    \lambda(\sigma' \mid \hat g).\,
+    \left(
+      \sem{\sigma'}_{\mathsf{env}}
+      \monbind
+      \lambda\rho.\,
+      \delta_{\mathsf{If}(\mathsf{realize}_\rho(\hat g)) : \tau}
+    \right)
+    \tag{\text{by $\mathsf{realize}_\rho$ on $\mathsf{if}$}} \\
+    &\quad=
+    \widehat{\sem{(\sigma \mid \hat e_1 : \Bool)}}
+    \monbind
+    \lambda(\sigma' \mid \hat g).\,
+    \left(
+      \sem{\sigma'}_{\mathsf{env}}
+      \monbind
+      \lambda\rho.\,
       \left(
-        \sem{\mathsf{realize}_\rho(\hat e) : \tau}
+        \delta_{\mathsf{realize}_\rho(\hat g) : \Bool}
         \monbind
-        \lambda g.\,\delta_{g : \tau}
+        \lambda b.\,\delta_{\mathsf{If}(b) : \tau}
       \right)
-    \tag{\text{by \Cref{lem:symbolic-step-context}}} \\
-    &=
-    \sem{\sigma}_{\mathsf{env}}
+    \right)
+    \tag{\text{by left identity}} \\
+    &\quad=
+    \widehat{\sem{(\sigma \mid \hat e_1 : \Bool)}}
     \monbind
-    \lambda\rho.\,
-      \sem{\mathsf{realize}_\rho(\hat e) : \tau}
-    \tag{\text{by monad right identity}} \\
-    &=
-    \sem{\sigma}_{\mathsf{env}}
+    \lambda(\sigma' \mid \hat g).\,
+    \left(
+      \underbrace{
+        \left(
+          \sem{\sigma'}_{\mathsf{env}}
+          \monbind
+          \lambda\rho.\,
+          \delta_{\mathsf{realize}_\rho(\hat g) : \Bool}
+        \right)
+      }_{=\,\mathsf{act}_{\Bool}(\sigma' \mid \hat g)}
+      \monbind
+      \lambda b.\,\delta_{\mathsf{If}(b) : \tau}
+    \right)
+    \tag{\text{by associativity}} \\
+    &\quad=
+    \widehat{\sem{(\sigma \mid \hat e_1 : \Bool)}}
     \monbind
-    \lambda\rho.\,
-      \left(
-        \delta_{\mathsf{realize}_\rho(\hat e) : \tau}
-        \monbind
-        \lambda e'.\,\sem{e' : \tau}
-      \right)
-    \tag{\text{by monad left identity}} \\
-    &=
+    \lambda(\sigma' \mid \hat g).\,
+    \left(
+      \mathsf{act}_{\Bool}(\sigma' \mid \hat g)
+      \monbind
+      \lambda b.\,\delta_{\mathsf{If}(b) : \tau}
+    \right)
+    \tag{\text{by definition of $\mathsf{act}_{\Bool}$}} \\
+    &\quad=
+    \left(
+      \widehat{\sem{(\sigma \mid \hat e_1 : \Bool)}}
+      \monbind
+      \lambda(\sigma' \mid \hat g).\,
+      \mathsf{act}_{\Bool}(\sigma' \mid \hat g)
+    \right)
+    \monbind
+    \lambda b.\,\delta_{\mathsf{If}(b) : \tau}
+    \tag{\text{by associativity}}
+  \end{align}
+  The head of the expression is now exactly the left-hand side of the induction
+  hypothesis~\eqref{eq:if-ih}. Applying it:
+  \begin{align}
+    &\quad= \left(
+      \mathsf{act}_{\Bool}(\sigma \mid \hat e_1)
+      \monbind
+      \lambda b.\,\sem{b : \Bool}
+    \right)
+    \monbind
+    \lambda b.\,\delta_{\mathsf{If}(b) : \tau}
+    \tag{\text{by \eqref{eq:if-ih}}} \\
+    &\quad=
+    \mathsf{act}_{\Bool}(\sigma \mid \hat e_1)
+    \monbind
+    \lambda b.\,
+    \left(
+      \sem{b : \Bool}
+      \monbind
+      \lambda b'.\,\delta_{\mathsf{If}(b') : \tau}
+    \right)
+    \tag{\text{by associativity}} \\
+    &\quad=
     \left(
       \sem{\sigma}_{\mathsf{env}}
       \monbind
       \lambda\rho.\,
-        \delta_{\mathsf{realize}_\rho(\hat e) : \tau}
+      \delta_{\mathsf{realize}_\rho(\hat e_1) : \Bool}
+    \right)
+    \monbind
+    \lambda b.\,
+    \left(
+      \sem{b : \Bool}
+      \monbind
+      \lambda b'.\,\delta_{\mathsf{If}(b') : \tau}
+    \right)
+    \tag{\text{by definition of $\mathsf{act}_{\Bool}$}} \\
+    &\quad=
+    \sem{\sigma}_{\mathsf{env}}
+    \monbind
+    \lambda\rho.\,
+    \left(
+      \delta_{\mathsf{realize}_\rho(\hat e_1) : \Bool}
+      \monbind
+      \lambda b.\,
+      \left(
+        \sem{b : \Bool}
+        \monbind
+        \lambda b'.\,\delta_{\mathsf{If}(b') : \tau}
+      \right)
+    \right)
+    \tag{\text{by associativity}} \\
+    &\quad=
+    \sem{\sigma}_{\mathsf{env}}
+    \monbind
+    \lambda\rho.\,
+    \left(
+      \sem{\mathsf{realize}_\rho(\hat e_1) : \Bool}
+      \monbind
+      \lambda b'.\,\delta_{\mathsf{If}(b') : \tau}
+    \right)
+    \tag{\text{by left identity}} \\
+    &\quad=
+    \sem{\sigma}_{\mathsf{env}}
+    \monbind
+    \lambda\rho.\,
+    \sem{
+      \ifkw\ \mathsf{realize}_\rho(\hat e_1)\
+      \thenkw\ \mathsf{realize}_\rho(\hat e_2)\
+      \elsekw\ \mathsf{realize}_\rho(\hat e_3)
+      : \tau
+    }
+    \tag{\text{by ordinary $\mathsf{if}$ rule}} \\
+    &\quad=
+    \sem{\sigma}_{\mathsf{env}}
+    \monbind
+    \lambda\rho.\,
+    \sem{\mathsf{realize}_\rho(\mathsf{If}(\hat e_1)) : \tau}
+    \tag{\text{by $\mathsf{realize}_\rho$ on $\mathsf{if}$}} \\
+    &\quad=
+    \sem{\sigma}_{\mathsf{env}}
+    \monbind
+    \lambda\rho.\,
+    \left(
+      \delta_{\mathsf{realize}_\rho(\mathsf{If}(\hat e_1)) : \tau}
+      \monbind
+      \lambda e'.\,\sem{e' : \tau}
+    \right)
+    \tag{\text{by left identity}} \\
+    &\quad=
+    \left(
+      \sem{\sigma}_{\mathsf{env}}
+      \monbind
+      \lambda\rho.\,
+      \delta_{\mathsf{realize}_\rho(\mathsf{If}(\hat e_1)) : \tau}
     \right)
     \monbind
     \lambda e'.\,\sem{e' : \tau}
     \tag{\text{by associativity}} \\
-    &=
-    \mathsf{act}_\tau(\hat{s})
+    &\quad=
+    \mathsf{act}_\tau(\sigma \mid \mathsf{If}(\hat e_1) : \tau)
     \monbind
     \lambda e'.\,\sem{e' : \tau}.
-    \tag{\text{by definition of act}}
+    \tag{\text{by definition of $\mathsf{act}_\tau$}}
   \end{align}
+  This is the right-hand side, completing the conditional case.
 \end{proof}
 
-\begin{theorem}[Actual interpretation of symbolic \(n\)-step semantics]
-  If \(\hat{s} = (\sigma \mid \hat e : \tau) \in State_\tau\), then for
-  every \(n \in \mathbb{N}\),
+
+
+\begin{theorem}[Actual interpretation of symbolic $n$-step semantics]
+  \label{thm:actual-n-step}
+  If $\hat{s} = (\sigma \mid \hat e : \tau) \in State_\tau$, then for
+  every $n \in \mathbb{N}$,
   \[
-    \mathsf{Act}_\tau\!\left(
-      \widehat{\bigsemstep{\hat{s} : \tau}{n}}
-    \right)
+    \widehat{\bigsemstep{\hat{s} : \tau}{n}}
+    \monbind
+    \mathsf{act}_\tau
     =
     \mathsf{act}_\tau(\hat{s})
     \monbind
@@ -1008,22 +1055,19 @@ hole with the expression \(e\). More formally:
 \end{theorem}
 
 \begin{proof}
-  The proof is by induction on \(n\), with the statement quantified over all
+  The proof is by induction on $n$, with the statement quantified over all
   well-typed symbolic states.
 
-  For \(n=0\), let \(\hat{s} \in State_\tau\). Then
+  For $n=0$, let $\hat{s} \in State_\tau$. Then
   \begin{align}
-    \mathsf{Act}_\tau\!\left(
-      \widehat{\bigsemstep{\hat{s} : \tau}{0}}
-    \right)
-    &=
-    \mathsf{Act}_\tau(\delta_{\hat{s} : \tau})
-    \tag{\text{by definition of n-step symbolic semantics}} \\
+    \widehat{\bigsemstep{\hat{s} : \tau}{0}}
+    \monbind
+    \mathsf{act}_\tau
     &=
     \delta_{\hat{s} : \tau}
     \monbind
     \mathsf{act}_\tau
-    \tag{\text{by definition of Act}} \\
+    \tag{\text{by definition of n-step symbolic semantics}} \\
     &=
     \mathsf{act}_\tau(\hat{s})
     \tag{\text{by monad left identity}} \\
@@ -1039,30 +1083,25 @@ hole with the expression \(e\). More formally:
     \tag{\text{by definition of n-step semantics}}
   \end{align}
 
-  For the inductive step, assume the statement holds for \(n\) for every
+  For the inductive step, assume the statement holds for $n$ for every
   well-typed symbolic state, and let
-  \(\hat{s} = (\sigma \mid \hat e : \tau) \in State_\tau\). We use
+  $\hat{s} = (\sigma \mid \hat e : \tau) \in State_\tau$. We use
   \Cref{lem:symbolic-step}:
 
   \begin{equation}
-    \mathsf{Act}_\tau\!\left(\widehat{\sem{\hat{s} : \tau}}\right)
+    \widehat{\sem{\hat{s} : \tau}}
+    \monbind
+    \mathsf{act}_\tau
     =
     \mathsf{act}_\tau(\hat{s})
     \monbind
     \lambda e'.\,\sem{e' : \tau}
   \end{equation}
-  for every well-typed symbolic state \(\hat{s} \in State_\tau\). Then
+  for every well-typed symbolic state $\hat{s} \in State_\tau$. Then
   \begin{align}
-    &\mathsf{Act}_\tau\!\left(
-      \widehat{\bigsemstep{\hat{s} : \tau}{n+1}}
-    \right) \notag \\
-    &=
-    \mathsf{Act}_\tau\!\left(
-      \widehat{\bigsemstep{\hat{s} : \tau}{n}}
-      \monbind
-      \lambda \hat{s}'.\,\widehat{\sem{\hat{s}' : \tau}}
-    \right)
-    \tag{\text{by definition of symbolic n-step}} \\
+    &\widehat{\bigsemstep{\hat{s} : \tau}{n+1}}
+    \monbind
+    \mathsf{act}_\tau \notag \\
     &=
     \left(
       \widehat{\bigsemstep{\hat{s} : \tau}{n}}
@@ -1071,7 +1110,7 @@ hole with the expression \(e\). More formally:
     \right)
     \monbind
     \mathsf{act}_\tau
-    \tag{\text{by definition of Act}} \\
+    \tag{\text{by definition of symbolic n-step}} \\
     &=
     \widehat{\bigsemstep{\hat{s} : \tau}{n}}
     \monbind
@@ -1079,12 +1118,6 @@ hole with the expression \(e\). More formally:
       \left(\widehat{\sem{\hat{s}' : \tau}}
       \monbind \mathsf{act}_\tau\right)
     \tag{\text{by monad associativity}} \\
-    &=
-    \widehat{\bigsemstep{\hat{s} : \tau}{n}}
-    \monbind
-    \lambda \hat{s}'.\,
-      \mathsf{Act}_\tau\!\left(\widehat{\sem{\hat{s}' : \tau}}\right)
-    \tag{\text{by definition of Act}} \\
     &=
     \widehat{\bigsemstep{\hat{s} : \tau}{n}}
     \monbind
@@ -1102,12 +1135,14 @@ hole with the expression \(e\). More formally:
     \lambda e'.\,\sem{e' : \tau}
     \tag{\text{by monad associativity}} \\
     &=
-    \mathsf{Act}_\tau\!\left(
+    \left(
       \widehat{\bigsemstep{\hat{s} : \tau}{n}}
+      \monbind
+      \mathsf{act}_\tau
     \right)
     \monbind
     \lambda e'.\,\sem{e' : \tau}
-    \tag{\text{by definition of Act}} \\
+    \tag{\text{by eta-conversion}} \\
     &=
     \left(
       \mathsf{act}_\tau(\hat{s})
@@ -1136,31 +1171,37 @@ hole with the expression \(e\). More formally:
 \subsubsection{Expected interpretation of symbolic semantics}
 
 The expected interpretation also starts from a symbolic state
-\((\sigma \mid \hat e : \tau)\), but it replaces the symbolic samples by their
+$(\sigma \mid \hat e : \tau)$, but it replaces the symbolic samples by their
 expected values rather than sampling them.  Suppose
 \[
   \sigma =
   u_1 \sim D_1(\vec a_1),\ldots,
-  u_n \sim D_n(\vec a_n).
+  u_n \sim D_n(\vec a_n),
+  \qquad
+  a_{i,j} \in \mathsf{Aff}(\{u_1,\ldots,u_{i-1}\}).
 \]
-The expected tuple determined by \(\sigma\) is written
+The expected tuple determined by $\sigma$ is written
 \[
-  \mathsf{mean}_{\mathsf{env}}(\sigma) \in \mathbb{R}^n.
+  \mathsf{mean}_{\mathsf{env}}(\sigma)
+  =
+  (m_1,\ldots,m_n) \in \mathbb{R}^n,
 \]
-It is defined sequentially by:
+where
 \[
-\mathsf{mean}_{\mathsf{env}}(\sigma) =
-\begin{cases}
-  ()
-    & \text{if } \sigma = \emptyset, \\[0.5em]
-
-  (m,r_2,\ldots,r_n)
-    & \text{if } \sigma = u \sim D(\vec a),\sigma',\\
-    & \text{where } m=\mathbb{E}[D(\vec a)]
-      \text{ and }
-      \mathsf{mean}_{\mathsf{env}}(\sigma'[m/u])
-      =(r_2,\ldots,r_n).
-\end{cases}
+\begin{aligned}
+  m_1
+  &=
+  \mathbb{E}\!\left[D_1(\vec a_1)\right], \\[0.5em]
+  m_i
+  &=
+  \mathbb{E}\!\left[
+    D_i\!\left(
+      \vec a_i
+      [m_1/u_1,\ldots,m_{i-1}/u_{i-1}]
+    \right)
+  \right],
+  \qquad 2 \leq i \leq n.
+\end{aligned}
 \]
 
 \begin{definition}[Single-state expected interpretation]
@@ -1171,7 +1212,7 @@ It is defined sequentially by:
   defined by
   \[
   \begin{aligned}
-    \mathsf{exp}_\tau(\sigma \mid \hat e)
+    \mathsf{exp}_\tau((\sigma \mid \hat e))
     &=
     \delta_{\mathsf{realize}_{\mathsf{mean}_{\mathsf{env}}(\sigma)}
       (\hat e) : \tau}.
@@ -1179,166 +1220,175 @@ It is defined sequentially by:
   \]
 \end{definition}
 
-\begin{definition}[Lifted expected interpretation]
-  The lifted expected interpretation acts on distributions over symbolic states:
+\begin{theorem}[Expected interpretation of symbolic small-step semantics]
+  \label{thm:expected-symbolic-step}
+  Let $\hat{s}=(\sigma \mid \hat e : \tau) \in State_\tau$. Then
   \[
-    \mathsf{Exp}_\tau :
-    \mathcal{D}(State_\tau) \to \mathcal{D}(Expr_\tau).
-  \]
-  It is defined by monadic bind against the single-state expected
-  interpretation:
-  \[
-  \begin{aligned}
-    \mathsf{Exp}_\tau(\mu)
-    &=
-    \mu \monbind \mathsf{exp}_\tau \\
-    &=
-    \mu \monbind
-    \lambda(\sigma \mid \hat e).\,\mathsf{exp}_\tau(\sigma \mid \hat e).
-  \end{aligned}
-  \]
-\end{definition}
-
-NEED TO SHOW:
-
-\begin{equation}
-  \mathsf{Exp}_\tau\!\left(\widehat{\sem{\hat{s} : \tau}}\right)
-  =
-  \mathsf{exp}_\tau(\hat{s})
-  \monbind
-  \lambda e'.\,\sem{e' : \tau}.
-  \label{eq:expected-one-step-compatibility}
-\end{equation}
-
-\begin{theorem}[Expected interpretation of symbolic \(n\)-step semantics]
-  Assume \Cref{eq:expected-one-step-compatibility} holds for every
-  \(\hat{s} \in State_\tau\).  If
-  \(\hat{s} = (\sigma \mid \hat e : \tau) \in State_\tau\), then for every
-  \(n \in \mathbb{N}\),
-  \[
-    \mathsf{Exp}_\tau\!\left(
-      \widehat{\bigsemstep{\hat{s} : \tau}{n}}
-    \right)
+    \widehat{\sem{\hat{s} : \tau}}
+    \monbind
+    \lambda ((\sigma' \mid \hat e')).\ \mathsf{exp}_\tau((\sigma' \mid \hat e'))
     =
     \mathsf{exp}_\tau(\hat{s})
     \monbind
-    \lambda e.\,\bigsemstep{e : \tau}{n}.
+    \lambda e'.\,\sem{\exptrans{e' : \tau} : \tau}.
   \]
 \end{theorem}
 
-\begin{proof}
-  The proof is the same induction on \(n\) as for the actual interpretation,
-  using \Cref{eq:expected-one-step-compatibility} in place of
-  \Cref{lem:symbolic-step}.
+\begin{theorem}[Expected interpretation of symbolic $n$-step semantics]
 
-  For \(n=0\), let \(\hat{s} \in State_\tau\). Then
-  \begin{align}
-    \mathsf{Exp}_\tau\!\left(
-      \widehat{\bigsemstep{\hat{s} : \tau}{0}}
-    \right)
-    &=
-    \mathsf{Exp}_\tau(\delta_{\hat{s} : \tau})
-    \tag{\text{by definition of n-step symbolic semantics}} \\
-    &=
-    \delta_{\hat{s} : \tau}
+  FIX to be like the above.
+
+  
+  If $\hat{s} = (\sigma \mid \hat e : \tau) \in State_\tau$, then for every
+  $n \in \mathbb{N}$,
+  \[
+    \widehat{\bigsemstep{\hat{s} : \tau}{n}}
     \monbind
     \mathsf{exp}_\tau
-    \tag{\text{by definition of Exp}} \\
-    &=
-    \mathsf{exp}_\tau(\hat{s})
-    \tag{\text{by monad left identity}} \\
-    &=
-    \mathsf{exp}_\tau(\hat{s})
+    =
+    \mathsf{act}_\tau(\hat{s})
     \monbind
-    \lambda e.\,\delta_{e : \tau}
-    \tag{\text{by monad right identity}} \\
-    &=
-    \mathsf{exp}_\tau(\hat{s})
-    \monbind
-    \lambda e.\,\bigsemstep{e : \tau}{0}.
-    \tag{\text{by definition of n-step semantics}}
-  \end{align}
+    \lambda e.\,\bigsemstep{\exptrans{e : \tau} : \tau}{n}.
+  \]
+\end{theorem}
 
-  For the inductive step, assume the statement holds for \(n\) for every
-  well-typed symbolic state, and let
-  \(\hat{s} = (\sigma \mid \hat e : \tau) \in State_\tau\). Then
-  \begin{align}
-    &\mathsf{Exp}_\tau\!\left(
-      \widehat{\bigsemstep{\hat{s} : \tau}{n+1}}
-    \right) \notag \\
-    &=
-    \mathsf{Exp}_\tau\!\left(
-      \widehat{\bigsemstep{\hat{s} : \tau}{n}}
-      \monbind
-      \lambda \hat{s}'.\,\widehat{\sem{\hat{s}' : \tau}}
-    \right)
-    \tag{\text{by definition of symbolic n-step}} \\
-    &=
-    \left(
-      \widehat{\bigsemstep{\hat{s} : \tau}{n}}
-      \monbind
-      \lambda \hat{s}'.\,\widehat{\sem{\hat{s}' : \tau}}
-    \right)
-    \monbind
-    \mathsf{exp}_\tau
-    \tag{\text{by definition of Exp}} \\
-    &=
-    \widehat{\bigsemstep{\hat{s} : \tau}{n}}
-    \monbind
-    \lambda \hat{s}'.\,
-      \left(\widehat{\sem{\hat{s}' : \tau}}
-      \monbind \mathsf{exp}_\tau\right)
-    \tag{\text{by monad associativity}} \\
-    &=
-    \widehat{\bigsemstep{\hat{s} : \tau}{n}}
-    \monbind
-    \lambda \hat{s}'.\,
-      \mathsf{Exp}_\tau\!\left(\widehat{\sem{\hat{s}' : \tau}}\right)
-    \tag{\text{by definition of Exp}} \\
-    &=
-    \widehat{\bigsemstep{\hat{s} : \tau}{n}}
-    \monbind
-    \lambda \hat{s}'.\,
-      \left(\mathsf{exp}_\tau(\hat{s}')
-      \monbind \lambda e'.\,\sem{e' : \tau}\right)
-    \tag{\text{by \Cref{eq:expected-one-step-compatibility}}} \\
-    &=
-    \left(
-      \widehat{\bigsemstep{\hat{s} : \tau}{n}}
-      \monbind
-      \lambda \hat{s}'.\,\mathsf{exp}_\tau(\hat{s}')
-    \right)
-    \monbind
-    \lambda e'.\,\sem{e' : \tau}
-    \tag{\text{by monad associativity}} \\
-    &=
-    \mathsf{Exp}_\tau\!\left(
-      \widehat{\bigsemstep{\hat{s} : \tau}{n}}
-    \right)
-    \monbind
-    \lambda e'.\,\sem{e' : \tau}
-    \tag{\text{by definition of Exp}} \\
-    &=
-    \left(
-      \mathsf{exp}_\tau(\hat{s})
-      \monbind
-      \lambda e.\,\bigsemstep{e : \tau}{n}
-    \right)
-    \monbind
-    \lambda e'.\,\sem{e' : \tau}
-    \tag{\text{by induction hypothesis}} \\
-    &=
-    \mathsf{exp}_\tau(\hat{s})
-    \monbind
-    \lambda e.\,
-      \left(\bigsemstep{e : \tau}{n}
-      \monbind
-      \lambda e'.\,\sem{e' : \tau}\right)
-    \tag{\text{by monad associativity}} \\
-    &=
-    \mathsf{exp}_\tau(\hat{s})
-    \monbind
-    \lambda e.\,\bigsemstep{e : \tau}{n+1}.
-    \tag{\text{by definition of n-step semantics}}
-  \end{align}
-\end{proof}
+% \begin{proof}[Proof outline]
+%   As in the proof for the actual interpretation, the proof is by induction on
+%   $n$, with the statement quantified over all well-typed symbolic states.
+
+%   For $n=0$, let $\hat{s} \in State_\tau$. The left-hand side reduces as
+%   follows:
+%   \begin{align}
+%     \widehat{\bigsemstep{\hat{s} : \tau}{0}}
+%     \monbind
+%     \mathsf{exp}_\tau
+%     &=
+%     \delta_{\hat{s} : \tau}
+%     \monbind
+%     \mathsf{exp}_\tau
+%     \tag{\text{by definition of n-step symbolic semantics}} \\
+%     &=
+%     \mathsf{exp}_\tau(\hat{s}).
+%     \tag{\text{by monad left identity}}
+%   \end{align}
+%   The right-hand side reduces to
+%   \begin{align}
+%     &\mathsf{act}_\tau(\hat{s})
+%     \monbind
+%     \lambda e.\,\bigsemstep{\exptrans{e : \tau} : \tau}{0}
+%     \notag \\
+%     &\quad=
+%     \mathsf{act}_\tau(\hat{s})
+%     \monbind
+%     \lambda e.\,\delta_{\exptrans{e : \tau} : \tau}.
+%     \tag{\text{by definition of n-step semantics}}
+%   \end{align}
+%   Thus, the base case requires the following expected-interpretation bridge:
+%   \begin{equation}
+%     \label{eq:expected-interpretation-bridge}
+%     \mathsf{exp}_\tau(\hat{s})
+%     \overset{?}{=}
+%     \mathsf{act}_\tau(\hat{s})
+%     \monbind
+%     \lambda e.\,\delta_{\exptrans{e : \tau} : \tau}.
+%   \end{equation}
+
+%   For the inductive step, assume the theorem holds for $n$ for every
+%   well-typed symbolic state, and let
+%   $\hat{s} = (\sigma \mid \hat e : \tau) \in State_\tau$. Using
+%   \Cref{thm:expected-symbolic-step}, the inductive calculation begins exactly
+%   as in the actual-interpretation proof:
+%   \begin{align}
+%     &\widehat{\bigsemstep{\hat{s} : \tau}{n+1}}
+%     \monbind
+%     \mathsf{exp}_\tau
+%     \notag \\
+%     &=
+%     \left(
+%       \widehat{\bigsemstep{\hat{s} : \tau}{n}}
+%       \monbind
+%       \lambda\hat{s}'.\,\widehat{\sem{\hat{s}' : \tau}}
+%     \right)
+%     \monbind
+%     \mathsf{exp}_\tau
+%     \tag{\text{by definition of symbolic n-step semantics}} \\
+%     &=
+%     \widehat{\bigsemstep{\hat{s} : \tau}{n}}
+%     \monbind
+%     \lambda\hat{s}'.\,
+%     \left(
+%       \widehat{\sem{\hat{s}' : \tau}}
+%       \monbind
+%       \mathsf{exp}_\tau
+%     \right)
+%     \tag{\text{by monad associativity}} \\
+%     &=
+%     \widehat{\bigsemstep{\hat{s} : \tau}{n}}
+%     \monbind
+%     \lambda\hat{s}'.\,
+%     \left(
+%       \mathsf{exp}_\tau(\hat{s}')
+%       \monbind
+%       \lambda e'.\,\sem{\exptrans{e' : \tau} : \tau}
+%     \right)
+%     \tag{\text{by \Cref{thm:expected-symbolic-step}}} \\
+%     &=
+%     \left(
+%       \widehat{\bigsemstep{\hat{s} : \tau}{n}}
+%       \monbind
+%       \mathsf{exp}_\tau
+%     \right)
+%     \monbind
+%     \lambda e'.\,\sem{\exptrans{e' : \tau} : \tau}
+%     \tag{\text{by monad associativity}} \\
+%     &=
+%     \left(
+%       \mathsf{act}_\tau(\hat{s})
+%       \monbind
+%       \lambda e.\,\bigsemstep{\exptrans{e : \tau} : \tau}{n}
+%     \right)
+%     \monbind
+%     \lambda e'.\,\sem{\exptrans{e' : \tau} : \tau}
+%     \tag{\text{by induction hypothesis}} \\
+%     &=
+%     \mathsf{act}_\tau(\hat{s})
+%     \monbind
+%     \lambda e.\,
+%     \left(
+%       \bigsemstep{\exptrans{e : \tau} : \tau}{n}
+%       \monbind
+%       \lambda e'.\,\sem{\exptrans{e' : \tau} : \tau}
+%     \right).
+%     \tag{\text{by monad associativity}}
+%   \end{align}
+%   It remains to establish that expectation transformation is stable under
+%   ordinary reduction from an already transformed expression:
+%   \begin{equation}
+%     \label{eq:expectation-transformation-step-stability}
+%     \bigsemstep{\exptrans{e : \tau} : \tau}{n}
+%     \monbind
+%     \lambda e'.\,\sem{\exptrans{e' : \tau} : \tau}
+%     \overset{?}{=}
+%     \bigsemstep{\exptrans{e : \tau} : \tau}{n+1}.
+%   \end{equation}
+%   Together with \eqref{eq:expected-interpretation-bridge}, this completes the
+%   proof outline.
+% \end{proof}
+
+
+
+\begin{theorem}[Soundness of determinization]
+  Let $e : \tau$ be a well-typed expression. Then:
+  \[
+    \mathbb{E}[\bigsem{e : \Float{m}}]
+    =
+    \mathbb{E}[\bigsem{\exptrans{e : \Float{m}} : \Float{m}}]
+  \]
+
+  where $m = \G$ or $\E$, and in particular:
+  \[
+    \bigsem{e : \Float{\G}}
+    =
+    \bigsem{\exptrans{e : \Float{\G}} : \Float{\G}}.
+  \]
+\end{theorem}

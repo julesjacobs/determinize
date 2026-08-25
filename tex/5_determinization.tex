@@ -168,7 +168,7 @@ We use a type-directed transformation that preserves non-probabilistic structure
 \end{example}
 
 
-% We use a type-directed transformation \(\Gamma \vdash e : \tau \darrow e'\) that preserves non-probabilistic structure and replaces probabilistic sampling by its expected value when the result is typed at expectation mode. Representative clauses are below; other constructs follow the obvious structural recursion.
+% We use a type-directed transformation $\Gamma \vdash e : \tau \darrow e'$ that preserves non-probabilistic structure and replaces probabilistic sampling by its expected value when the result is typed at expectation mode. Representative clauses are below; other constructs follow the obvious structural recursion.
 % \begin{mathpar}
 %   \inferrule[\textsc{Det-Uniform-E}]
 %     {\Gamma \vdash e_1 : \Float{\E} \darrow e_1' \\ \Gamma \vdash e_2 : \Float{\E} \darrow e_2'}
@@ -218,4 +218,4 @@ We use a type-directed transformation that preserves non-probabilistic structure
 %     {\Gamma \vdash e : \Bool \darrow e' \\ \Gamma \vdash e_1 : \tau \darrow e_1' \\ \Gamma \vdash e_2 : \tau \darrow e_2'}
 %     {\Gamma \vdash \ifkw\;e\;\thenkw\;e_1\;\elsekw\;e_2 : \tau \darrow \ifkw\;e'\;\thenkw\;e_1'\;\elsekw\;e_2'}
 % \end{mathpar}
-% Lambda, application, pairs, sums, and \(\letkw\) follow the same shape (recursing on subterms). The key point is that expectation-mode samples are determinized to their expected value, while general-mode samples remain probabilistic but have their subterms determinized.
+% Lambda, application, pairs, sums, and $\letkw$ follow the same shape (recursing on subterms). The key point is that expectation-mode samples are determinized to their expected value, while general-mode samples remain probabilistic but have their subterms determinized.
