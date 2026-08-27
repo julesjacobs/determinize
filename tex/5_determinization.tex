@@ -3,6 +3,43 @@ We use a type-directed transformation that preserves non-probabilistic structure
 
 ** Consider divide by 0.
 
+\paragraph{Atomic mean operators.}
+We introduce something called a mean operator for each distribution. We package the arithmetic used to compute each distribution's mean into an atomic target language construct:
+\[
+  \mathsf{mean}_D(e_1,\ldots,e_k).
+\]
+
+
+\[
+\begin{aligned}
+  \mathsf{mean}_{\mathsf{Uniform}}(e_1,e_2)
+  &\quad\text{represents}\quad
+  (e_1+e_2)\times 0.5,
+  \\
+  \mathsf{mean}_{\mathsf{Gaussian}}(e_1,e_2)
+  &\quad\text{represents}\quad
+  e_1,
+  \\
+  \mathsf{mean}_{\mathsf{Beta}}(e_1,e_2)
+  &\quad\text{represents}\quad
+  e_1/(e_1+e_2),
+  \\
+  \mathsf{mean}_{\mathsf{Poisson}}(e)
+  &\quad\text{represents}\quad
+  e,
+  \\
+  \mathsf{mean}_{\mathsf{Gamma}}(e_1,e_2)
+  &\quad\text{represents}\quad
+  e_1/e_2,
+  \\
+  \mathsf{mean}_{\mathsf{Exponential}}(e)
+  &\quad\text{represents}\quad
+  1/e.
+\end{aligned}
+\]
+
+**The reason behind this becomes clear in the soundness proof, specifically for the expected interpretation of the symbolic semantics.
+
 \begin{figure}[t]
   \centering
   \tiny
@@ -125,6 +162,132 @@ We use a type-directed transformation that preserves non-probabilistic structure
   \end{tabular}
   \end{adjustbox}
   \caption{Determinization function. We case split only on the modes that affect $\exptrans{\cdot}$; all other float modes are independent and may range over $\E$ and $\G$.}
+  \label{fig:determinization}
+\end{figure}
+
+
+\begin{figure}[t]
+  \centering
+  \tiny
+  \setlength{\tabcolsep}{6pt}
+  \renewcommand{\arraystretch}{1.2}
+  \begin{adjustbox}{max width=\textwidth}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}m{0.33\textwidth}
+      @{\hspace{3em}}
+      >{\raggedright\arraybackslash}p{0.14\textwidth}
+      @{\hspace{1em}}
+      >{\raggedright\arraybackslash}p{0.43\textwidth}@{}}
+    \toprule
+    \toprule
+    \textbf{$e:\tau$} & \textbf{Condition} & \textbf{$\exptrans{e : \tau} : \tau$} \\
+    \midrule
+    %
+    $x : \tau$  & 
+    -- &
+    $x : \tau$ \\
+    \midrule
+    %
+    $c : \Float{m}$ &
+    -- &
+    $c : \Float{m}$ \\
+    \midrule
+    %
+    $\uniform(e_1 : \Float{m_1}, e_2 : \Float{m_2}) : \Float{m_3}$ &
+    \begin{tabular}[c]{@{}l@{}}
+      $m_3 = \E$ \\
+      $m_3 = \G$
+    \end{tabular} &
+    \begin{tabular}[c]{@{}>{\raggedright\arraybackslash}p{0.43\textwidth}@{}}
+      $\mathsf{mean}_{\mathsf{Uniform}}(\exptrans{e_1 : \Float{m_1}}, \exptrans{e_2 : \Float{m_2}}) : \Float{m_3}$ \\
+      $\uniform(\exptrans{e_1 : \Float{m_1}}, \exptrans{e_2 : \Float{m_2}}) : \Float{m_3}$
+    \end{tabular} \\
+    \midrule
+    %
+    %
+    $\gaussian(e_1 : \Float{m_1}, e_2 : \Float{m_2}) : \Float{m_3}$ &
+    \begin{tabular}[c]{@{}l@{}}
+      $m_3 = \E$ \\
+      $m_3 = \G$
+    \end{tabular} &
+    \begin{tabular}[c]{@{}>{\raggedright\arraybackslash}p{0.43\textwidth}@{}}
+      $\mathsf{mean}_{\mathsf{Gaussian}}(\exptrans{e_1 : \Float{m_1}}, \exptrans{e_2 : \Float{m_2}}) : \Float{m_3}$ \\
+      $\gaussian(\exptrans{e_1 : \Float{m_1}}, \exptrans{e_2 : \Float{m_2}}) : \Float{m_3}$
+    \end{tabular} \\
+    \midrule
+    %
+    $\betafn(e_1 : \Float{m_1}, e_2 : \Float{m_2}) : \Float{m_3}$ &
+    \begin{tabular}[c]{@{}l@{}}
+      $m_3 = \E$ \\
+      $m_3 = \G$
+    \end{tabular} &
+    \begin{tabular}[c]{@{}>{\raggedright\arraybackslash}p{0.43\textwidth}@{}}
+      $\mathsf{mean}_{\mathsf{Beta}}(\exptrans{e_1 : \Float{m_1}}, \exptrans{e_2 : \Float{m_2}}) : \Float{m_3}$ \\
+      $\betafn(\exptrans{e_1 : \Float{m_1}}, \exptrans{e_2 : \Float{m_2}}) : \Float{m_3}$
+    \end{tabular} \\
+    \midrule
+    %
+    $\poisson(e_1 : \Float{m_1}) : \Float{m_2}$ &
+    \begin{tabular}[c]{@{}l@{}}
+      $m_2 = \E$ \\
+      $m_2 = \G$
+    \end{tabular} &
+    \begin{tabular}[c]{@{}>{\raggedright\arraybackslash}p{0.43\textwidth}@{}}
+      $\mathsf{mean}_{\mathsf{Poisson}}(\exptrans{e_1 : \Float{m_1}}) : \Float{m_2}$ \\
+      $\poisson(\exptrans{e_1 : \Float{m_1}}) : \Float{m_2}$
+    \end{tabular} \\
+    \midrule
+    %
+    $\gammafn(e_1 : \Float{m_1}, e_2 : \Float{m_2}) : \Float{m_3}$ &
+    \begin{tabular}[c]{@{}l@{}}
+      $m_3 = \E$ \\
+      $m_3 = \G$
+    \end{tabular} &
+    \begin{tabular}[c]{@{}>{\raggedright\arraybackslash}p{0.43\textwidth}@{}}
+      $\mathsf{mean}_{\mathsf{Gamma}}(\exptrans{e_1 : \Float{m_1}}, \exptrans{e_2 : \Float{m_2}}) : \Float{m_3}$ \\
+      $\gammafn(\exptrans{e_1 : \Float{m_1}}, \exptrans{e_2 : \Float{m_2}}) : \Float{m_3}$
+    \end{tabular} \\
+    \midrule
+    %
+    $\exponential(e_1 : \Float{m_1}) : \Float{m_2}$ &
+    \begin{tabular}[c]{@{}l@{}}
+      $m_2 = \E$ \\
+      $m_2 = \G$
+    \end{tabular} &
+    \begin{tabular}[c]{@{}>{\raggedright\arraybackslash}p{0.43\textwidth}@{}}
+      $\mathsf{mean}_{\mathsf{Exponential}}(\exptrans{e_1 : \Float{m_1}}) : \Float{m_2}$ \\
+      $\exponential(\exptrans{e_1 : \Float{m_1}}) : \Float{m_2}$
+    \end{tabular} \\
+    \midrule
+    %
+    $(e_1 : \Float{m_1} + e_2 : \Float{m_2}) : \Float{m_3}$ &
+    -- &
+    $(\exptrans{e_1 : \Float{m_1}} + \exptrans{e_2 : \Float{m_2}}) : \Float{m_3}$ \\
+    \midrule
+    %
+    $(e_1 : \Float{m_1} \times e_2 : \Float{m_2}) : \Float{m_3}$ &
+    -- &
+    $(\exptrans{e_1 : \Float{m_1}} \times \exptrans{e_2 : \Float{m_2}}) : \Float{m_3}$ \\
+    \midrule
+    %
+    $(e_1 : \Float{m_1}\; /\; e_2 : \Float{m_2}) : \Float{m_3}$ &
+    -- &
+    $(\exptrans{e_1 : \Float{m_1}}\; /\; \exptrans{e_2 : \Float{m_2}}) : \Float{m_3}$ \\
+    \midrule
+    %
+    $(\ifkw\ b : \Bool\ \thenkw\ e_1 : \tau\ \elsekw\ e_2 : \tau) : \tau$ &
+    -- &
+    $(\ifkw\ \exptrans{b : \Bool}\ \thenkw\ \exptrans{e_1 : \tau}\ \elsekw\ \exptrans{e_2 : \tau}) : \tau$ \\
+    %
+    \midrule
+    $(\letkw\ x = e_1 : \tau_1\ \inkw\ e_2 : \tau_2) : \tau_2$ &
+    -- &
+    $(\letkw\ x = \exptrans{e_1 : \tau_1}\ \inkw\ \exptrans{e_2 : \tau_2}) : \tau_2$
+    \\
+    \bottomrule
+    \bottomrule
+  \end{tabular}
+  \end{adjustbox}
+  \caption{Determinization function (NEW; REFER TO THIS). We case split only on the modes that affect $\exptrans{\cdot}$; all other float modes are independent and may range over $\E$ and $\G$. Note, expanding the mean operator produces exactly the old table.}
   \label{fig:determinization}
 \end{figure}
 

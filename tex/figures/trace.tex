@@ -1,0 +1,26 @@
+\begin{table}[t]
+  \centering
+  \small
+  \renewcommand{\arraystretch}{1.25}
+  \begin{tabular*}{\linewidth}{@{\extracolsep{\fill}}ccc@{}}
+    \toprule
+    \textbf{Original $e$} &
+    \textbf{Symbolic $s$} &
+    \textbf{Determinized $\exptrans{e}$} \\
+    \midrule
+    $\uniform(0,1) : \Float{\E} +1$ &
+    $(\emptyset \mid \uniform[\E](0,1)+\sym(1))$ &
+    $\mathsf{mean}_{\mathsf{Uniform}}(0,1)+1$ \\[1.2em]
+    $c+1$ &
+    $(u_1\sim\uniform[\E](0,1) \mid \sym(u_1)+\sym(1))$ &
+    $0.5+1$ \\[1.2em]
+    $r$ &
+    $(u_1\sim\uniform[\E](0,1) \mid \sym(u_1+1))$ &
+    $1.5$ \\
+    \bottomrule
+  \end{tabular*}
+  \caption{
+    Example.
+  }
+  \label{tab:uniform-step-correspondence}
+\end{table}

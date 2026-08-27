@@ -157,11 +157,89 @@
     o.w. &
     $\sem{e_1 : \Float{m_1}} \monbind \lambda g.\,\delta_{\poisson(g) : \Float{m_2}}$ \\
     \bottomrule
-    \bottomrule
   \end{tabular}
   \end{adjustbox}
   \caption{Small-step operational semantics.}
   \label{tab:small-step-semantics}
+\end{table}
+
+\begin{table}[t]
+  \centering
+  \tiny
+  \setlength{\tabcolsep}{4pt}
+  \renewcommand{\arraystretch}{1.18}
+  \begin{adjustbox}{max width=\linewidth}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.33\linewidth}
+      >{\raggedright\arraybackslash}p{0.24\linewidth}
+      >{\raggedright\arraybackslash}p{0.40\linewidth}@{}}
+    \toprule
+    \toprule
+    \textbf{$e : \tau$} & \textbf{Constraint} & \textbf{$\sem{e : \tau}$} \\
+    \midrule
+    %
+    $\mathsf{mean}_{\mathsf{Uniform}}(e_1 : \Float{m_1}, e_2 : \Float{m_2}) : \Float{\E}$ &
+    $e_1 = v_1,\ e_2 = v_2$ &
+    $\delta_{((v_1 + v_2) \times 0.5) : \Float{\E}}$ \\
+    &
+    $e_1 = v_1,\ e_2$ not a value &
+    $\sem{e_2 : \Float{m_2}} \monbind \lambda g.\,\delta_{\mathsf{mean}_{\mathsf{Uniform}}(v_1 : \Float{m_1}, g) : \Float{\E}}$ \\
+    &
+    o.w. &
+    $\sem{e_1 : \Float{m_1}} \monbind \lambda g.\,\delta_{\mathsf{mean}_{\mathsf{Uniform}}(g, e_2 : \Float{m_2}) : \Float{\E}}$ \\
+    \midrule
+    %
+    $\mathsf{mean}_{\mathsf{Gaussian}}(e_1 : \Float{m_1}, e_2 : \Float{m_2}) : \Float{\E}$ &
+    $e_1 = v_1,\ e_2 = v_2$ &
+    $\delta_{v_1 : \Float{\E}}$ \\
+    &
+    $e_1 = v_1,\ e_2$ not a value &
+    $\sem{e_2 : \Float{m_2}} \monbind \lambda g.\,\delta_{\mathsf{mean}_{\mathsf{Gaussian}}(v_1 : \Float{m_1}, g) : \Float{\E}}$ \\
+    &
+    o.w. &
+    $\sem{e_1 : \Float{m_1}} \monbind \lambda g.\,\delta_{\mathsf{mean}_{\mathsf{Gaussian}}(g, e_2 : \Float{m_2}) : \Float{\E}}$ \\
+    \midrule
+    %
+    $\mathsf{mean}_{\mathsf{Beta}}(e_1 : \Float{m_1}, e_2 : \Float{m_2}) : \Float{\E}$ &
+    $e_1 = v_1,\ e_2 = v_2$ &
+    $\delta_{(v_1 / (v_1 + v_2)) : \Float{\E}}$ \\
+    &
+    $e_1 = v_1,\ e_2$ not a value &
+    $\sem{e_2 : \Float{m_2}} \monbind \lambda g.\,\delta_{\mathsf{mean}_{\mathsf{Beta}}(v_1 : \Float{m_1}, g) : \Float{\E}}$ \\
+    &
+    o.w. &
+    $\sem{e_1 : \Float{m_1}} \monbind \lambda g.\,\delta_{\mathsf{mean}_{\mathsf{Beta}}(g, e_2 : \Float{m_2}) : \Float{\E}}$ \\
+    \midrule
+    %
+    $\mathsf{mean}_{\mathsf{Poisson}}(e_1 : \Float{m_1}) : \Float{\E}$ &
+    $e_1 = v_1$ &
+    $\delta_{v_1 : \Float{\E}}$ \\
+    &
+    o.w. &
+    $\sem{e_1 : \Float{m_1}} \monbind \lambda g.\,\delta_{\mathsf{mean}_{\mathsf{Poisson}}(g) : \Float{\E}}$ \\
+    \midrule
+    %
+    $\mathsf{mean}_{\mathsf{Gamma}}(e_1 : \Float{m_1}, e_2 : \Float{m_2}) : \Float{\E}$ &
+    $e_1 = v_1,\ e_2 = v_2$ &
+    $\delta_{(v_1 / v_2) : \Float{\E}}$ \\
+    &
+    $e_1 = v_1,\ e_2$ not a value &
+    $\sem{e_2 : \Float{m_2}} \monbind \lambda g.\,\delta_{\mathsf{mean}_{\mathsf{Gamma}}(v_1 : \Float{m_1}, g) : \Float{\E}}$ \\
+    &
+    o.w. &
+    $\sem{e_1 : \Float{m_1}} \monbind \lambda g.\,\delta_{\mathsf{mean}_{\mathsf{Gamma}}(g, e_2 : \Float{m_2}) : \Float{\E}}$ \\
+    \midrule
+    %
+    $\mathsf{mean}_{\mathsf{Exponential}}(e_1 : \Float{m_1}) : \Float{\E}$ &
+    $e_1 = v_1$ &
+    $\delta_{(1 / v_1) : \Float{\E}}$ \\
+    &
+    o.w. &
+    $\sem{e_1 : \Float{m_1}} \monbind \lambda g.\,\delta_{\mathsf{mean}_{\mathsf{Exponential}}(g) : \Float{\E}}$ \\
+    \bottomrule
+  \end{tabular}
+  \end{adjustbox}
+  \caption{Small-step operational semantics (continued).}
+  \label{tab:mean-small-step-semantics}
 \end{table}
 
 \begin{lemma}[Type preservation]
@@ -181,8 +259,8 @@
 
 \subsection{Big-step}
 
-\begin{lemma}[$n$-step semantics]
-  The $n$-step semantics $\bigsemstep{e : \tau}{n}$ is defined by iterating the small-step kernel $n$ times, and is itself a Markov kernel:
+\begin{definition}[$n$-step semantics]
+  The $n$-step semantics $\bigsemstep{e : \tau}{n}$ is defined by iterating the small-step kernel $n$ times:
 
   \[
     \bigsemstep{e : \tau}{n} =   
@@ -192,7 +270,9 @@
     \end{cases}
   \]
 
-\end{lemma}
+\end{definition}
+
+This is a Markov kernel (TODO: prove).
 
 \begin{lemma}[Values are absorbing]\label{lem:values-absorbing}
   If $v : \tau \in Val_\tau$, then
@@ -219,19 +299,25 @@
   That is, probability mass on values accumulates monotonically.
 \end{lemma}
 
-\begin{lemma}[Big-step semantics exists]
-  The pointwise limit
+\begin{definition}[Big-step semantics]
+  For a closed, well-typed expression $e : \tau$ and every measurable
+  $A \subseteq Val_\tau$, define
   \[
     \bigsem{e : \tau}(A)
-    := \lim_{n \to \infty} \bigsemstep{e : \tau}{n}(A)
+    :=
+    \lim_{n \to \infty}
+    \bigsemstep{e : \tau}{n}(A).
   \]
-  exists for every measurable $A \subseteq Val_{\tau}$, by the monotone convergence theorem.
-\end{lemma}
+\end{definition}
+
+The pointwise limit exists by the monotone convergence theorem (TODO: prove).
+
+\input{figures/trace.tex}
 
 \subsection{Symbolic Expressions}
 A symbolic state is:
 \[
-  \hat{s} = (\sigma \mid \hat{e} : \tau) \in State_\tau.
+  s = (\sigma \mid \hat{e} : \tau) \in State_\tau.
 \]
 
 where $\sigma$ is the symbolic sample enviornment and $\hat{e} : \tau \in \widehat{Expr_\tau}$ is the well-typed symbolic residual expression. We elaborate on both below.
@@ -259,7 +345,7 @@ in $U$. In particular,
 \]
 
 \begin{definition}[Symbolic sample environment]
-  The symbolic sample enviornment is defined inductively:
+  The symbolic sample environment $\sigma$ is defined inductively:
 
   \textit{Base case.}
   The empty sequence $\emptyset$ is a symbolic sample environment.
@@ -416,24 +502,81 @@ The typing rules from the ordinary expresisons lift to symbolic residual express
     {\Gamma \vdash \hat e_1 < \hat e_2 : \Bool}
 \end{mathpar}
 
-\subsubsection{Small-step symbolic semantics}
+\paragraph{Lifting an ordinary expression to a symbolic residual expression}
+We can define a symbolic lifting:
+\[
+\mathsf{lift} :
+Expr_\tau \longrightarrow \widehat{Expr}_\tau
+\]
+which maps an ordinary expression $e : \tau$ to a symbolic residual expression $\hat e : \tau$ of the same type. It acts structurally on expressions, replacing each floating point constant $c$ with the symbolic constant $\sym(c)$.
+\begin{align*}
+\mathsf{lift}(x) &= x,\\
+\mathsf{lift}(c:\Float{m}) &= \sym(c):\Float{m},\\
+\mathsf{lift}(\mathsf{true}) &= \mathsf{true},\\
+\mathsf{lift}(\mathsf{false}) &= \mathsf{false},\\
+\mathsf{lift}(e_1+e_2)
+  &= \mathsf{lift}(e_1)+\mathsf{lift}(e_2),\\
+\mathsf{lift}(\letkw\ x=e_1\ \inkw\ e_2)
+  &=\letkw\ x=\mathsf{lift}(e_1)\
+    \inkw\ \mathsf{lift}(e_2),\\
+\mathsf{lift}(\ifkw\ e_1\ \thenkw\ e_2\ \elsekw\ e_3)
+  &=\ifkw\ \mathsf{lift}(e_1)\
+    \thenkw\ \mathsf{lift}(e_2)\
+    \elsekw\ \mathsf{lift}(e_3),\\
+\mathsf{lift}\bigl(
+  \uniform(e_1,e_2):\Float{m}
+\bigr)
+  &=
+  \uniform[m]\bigl(
+    \mathsf{lift}(e_1),
+    \mathsf{lift}(e_2)
+  \bigr):\Float{m} \\
+  \ldots etc.
+\end{align*}
+
+\subsubsection{Symbolic semantics}
 We start with the following notation for the one-step symbolic semantics. The small-step symbolic semantics is given in~\Cref{tab:symbolic-small-step-semantics}.
 
 \[
-  \widehat{\sem{\hat{s} : \tau}} \in \mathcal{D}(State_\tau)
+  \symsem{s : \tau} \in \mathcal{D}(State_\tau)
 \]
 
 Now, define the $n$-step symbolic semantics as follows:
 
 \begin{align*}
-  \widehat{\bigsemstep{\hat{s} : \tau}{n}} =
+  \symbigsemstep{s : \tau}{n} =
   \begin{cases}
-    \delta_{\hat{s} : \tau} &\text{ if } n = 0 \\
-    \widehat{\bigsemstep{\hat{s} : \tau}{n-1}} \monbind \lambda \hat{s}. \widehat{\sem{\hat{s} : \tau}} &\text{ if } n > 0
+    \delta_{s : \tau} &\text{ if } n = 0 \\
+    \symbigsemstep{s : \tau}{n-1} \monbind \lambda s. \symsem{s : \tau} &\text{ if } n > 0
   \end{cases}
 \end{align*}
 
-where $\widehat{\bigsemstep{\hat{s} : \tau}{n}} \in \mathcal{D}(State_\tau)$.
+where $\symbigsemstep{s : \tau}{n} \in \mathcal{D}(State_\tau)$.
+
+\begin{example}
+  \[
+  \begin{aligned}
+    &(\emptyset \mid \uniform[\E](0,1) : \Float{\E} + \sym(1)) \\
+    &\longrightarrow
+	    (u_1 \sim \uniform[\E](0,1)
+	      \mid \sym(u_1) + \sym(1)) \\
+	    &\longrightarrow
+	    (u_1 \sim \uniform[\E](0,1)
+	      \mid \sym(u_1 + 1)).
+  \end{aligned}
+  \]
+\end{example}
+
+Now, define the big step semantics as follows:
+
+\[
+  \symbigsem{s : \tau}
+  =
+  \lim_{n\to\infty}
+  \symbigsemstep{s : \tau}{n}
+\]
+
+This is a distribution on terminal symbolic states.
 
 
 \begin{table}[t]
@@ -447,8 +590,8 @@ where $\widehat{\bigsemstep{\hat{s} : \tau}{n}} \in \mathcal{D}(State_\tau)$.
       >{\raggedright\arraybackslash}p{0.39\linewidth}@{}}
     \toprule
     \toprule
-    \textbf{$\hat{s} \in State_\tau$} & \textbf{Constraint} &
-    \textbf{$\widehat{\sem{\hat{s}}}$} \\
+    \textbf{$s \in State_\tau$} & \textbf{Constraint} &
+    \textbf{$\symsem{s}$} \\
     \midrule
     %
     $(\sigma \mid \hat v : \tau)$ &
@@ -461,7 +604,7 @@ where $\widehat{\bigsemstep{\hat{s} : \tau}{n}} \in \mathcal{D}(State_\tau)$.
     $\delta_{(\sigma \mid \hat e_2[\hat v/x] : \tau_2)}$ \\
     &
     o.w. &
-	    $\widehat{\sem{(\sigma \mid \hat e_1 : \tau_1)}} \monbind
+	    $\symsem{(\sigma \mid \hat e_1 : \tau_1)} \monbind
 	      \lambda(\sigma' \mid \hat g).\,\delta_{(\sigma' \mid
 	      \letkw\ x = \hat g\ \inkw\ \hat e_2 : \tau_2)}$ \\
 	    \midrule
@@ -475,7 +618,7 @@ where $\widehat{\bigsemstep{\hat{s} : \tau}{n}} \in \mathcal{D}(State_\tau)$.
     $\delta_{(\sigma \mid \hat e_3 : \tau)}$ \\
     &
     o.w. &
-    $\widehat{\sem{(\sigma \mid \hat e_1 : \Bool)}} \monbind
+    $\symsem{(\sigma \mid \hat e_1 : \Bool)} \monbind
       \lambda(\sigma' \mid \hat g).\,\delta_{(\sigma' \mid
       \ifkw\ \hat g\ \thenkw\ \hat e_2\ \elsekw\ \hat e_3 : \tau)}$ \\
     \midrule
@@ -489,12 +632,12 @@ where $\widehat{\bigsemstep{\hat{s} : \tau}{n}} \in \mathcal{D}(State_\tau)$.
       : \Float{m_3})}$ \\
     &
     $\hat e_1 = \sym(a_1),\ \hat e_2 \neq \sym(a_2)$ &
-    $\widehat{\sem{(\sigma \mid \hat e_2 : \Float{m_2})}} \monbind
+    $\symsem{(\sigma \mid \hat e_2 : \Float{m_2})} \monbind
       \lambda(\sigma' \mid \hat g).\,\delta_{(\sigma' \mid
       (\sym(a_1) : \Float{m_1} + \hat g) : \Float{m_3})}$ \\
     &
     o.w. &
-    $\widehat{\sem{(\sigma \mid \hat e_1 : \Float{m_1})}} \monbind
+    $\symsem{(\sigma \mid \hat e_1 : \Float{m_1})} \monbind
       \lambda(\sigma' \mid \hat g).\,\delta_{(\sigma' \mid
       (\hat g + \hat e_2 : \Float{m_2}) : \Float{m_3})}$ \\
     \midrule
@@ -507,12 +650,12 @@ where $\widehat{\bigsemstep{\hat{s} : \tau}{n}} \in \mathcal{D}(State_\tau)$.
     $\delta_{(\sigma \mid \mathsf{false} : \Bool)}$ \\
     &
     $\hat e_1 = \sym(a_1),\ \hat e_2 \neq \sym(a_2)$&
-    $\widehat{\sem{(\sigma \mid \hat e_2 : \Float{m_2})}} \monbind
+    $\symsem{(\sigma \mid \hat e_2 : \Float{m_2})} \monbind
       \lambda(\sigma' \mid \hat g).\,\delta_{(\sigma' \mid
       (\sym(a_1) : \Float{m_1} < \hat g) : \Bool)}$ \\
     &
     o.w. &
-    $\widehat{\sem{(\sigma \mid \hat e_1 : \Float{m_1})}} \monbind
+    $\symsem{(\sigma \mid \hat e_1 : \Float{m_1})} \monbind
       \lambda(\sigma' \mid \hat g).\,\delta_{(\sigma' \mid
       (\hat g < \hat e_2 : \Float{m_2}) : \Bool)}$ \\
     \midrule
@@ -535,12 +678,12 @@ where $\widehat{\bigsemstep{\hat{s} : \tau}{n}} \in \mathcal{D}(State_\tau)$.
     $(\sigma \mid \uniform[m](\hat e_1 : \Float{m_1},\hat e_2 : \Float{m_2})
       : \Float{m})$ &
     $\hat e_1 = \sym(a_1),\ \hat e_2 \neq \sym(a_2)$ &
-    $\widehat{\sem{(\sigma \mid \hat e_2 : \Float{m_2})}} \monbind
+    $\symsem{(\sigma \mid \hat e_2 : \Float{m_2})} \monbind
       \lambda(\sigma' \mid \hat g).\,\delta_{(\sigma' \mid
       \uniform[m](\sym(a_1),\hat g) : \Float{m})}$ \\
     &
     o.w. &
-    $\widehat{\sem{(\sigma \mid \hat e_1 : \Float{m_1})}} \monbind
+    $\symsem{(\sigma \mid \hat e_1 : \Float{m_1})} \monbind
       \lambda(\sigma' \mid \hat g).\,\delta_{(\sigma' \mid
       \uniform[m](\hat g,\hat e_2) : \Float{m})}$ \\
     \bottomrule
@@ -548,23 +691,9 @@ where $\widehat{\bigsemstep{\hat{s} : \tau}{n}} \in \mathcal{D}(State_\tau)$.
   \end{tabular}
   \end{adjustbox}
   \caption{Symbolic small-step operational semantics. Symbolic evaluation of an expression $e : \tau$ begins in the
-  state $(\emptyset \mid \iota(e) : \tau)$, where we can define $\iota$ as the embedding of ordinary expressions into symbolic residual expressions, replacing each float constant $c : \Float{m}$ with $\sym(c) : \Float{m}$.}
+  state $(\emptyset \mid \mathsf{lift}(e) : \tau)$, where $\mathsf{lift}$ embeds ordinary expressions into symbolic residual expressions, replacing each float constant $c : \Float{m}$ with $\sym(c) : \Float{m}$.}
   \label{tab:symbolic-small-step-semantics}
 \end{table}
-
-\begin{example}
-  \[
-  \begin{aligned}
-    &(\emptyset \mid \uniform[\E](0,1) : \Float{\E} + \sym(1)) \\
-    &\longrightarrow
-	    (u_1 \sim \uniform[\E](0,1)
-	      \mid \sym(u_1) + \sym(1)) \\
-	    &\longrightarrow
-	    (u_1 \sim \uniform[\E](0,1)
-	      \mid \sym(u_1 + 1)).
-  \end{aligned}
-  \]
-\end{example}
 
 \subsubsection{Actual interpretation of symbolic semantics}
 
@@ -697,13 +826,13 @@ is defined recursively on symbolic residual expressions:
 The following lemma states that taking one symbolic step and then realizing the resulting symbolic state yields the same distribution as first realizing the original state and then taking one ordinary step. 
 
 \begin{lemma}[Actual interpretation of symbolic small-step semantics]\label{lem:symbolic-step}
-  Let $\hat{s}=(\sigma \mid \hat e : \tau) \in State_\tau$, then, for all $\sigma$,
+  Let $s=(\sigma \mid \hat e : \tau) \in State_\tau$, then, for all $\sigma$,
   \begin{equation}
-    \widehat{\sem{\hat{s} : \tau}}
+    \symsem{s : \tau}
     \monbind
-    \lambda ((\sigma' \mid \hat e')) .\ \mathsf{act}_\tau((\sigma' \mid \hat e')) 
+    \mathsf{act}_\tau
     =
-    \mathsf{act}_\tau(\hat{s})
+    \mathsf{act}_\tau(s)
     \monbind
     \lambda e'.\,\sem{e' : \tau}
   \end{equation}
@@ -732,11 +861,11 @@ The following lemma states that taking one symbolic step and then realizing the 
   \paragraph{Case $\hat e_1 = \mathsf{true}$.}
   For the left-hand side,
   \begin{align}
-    &\widehat{\sem{
+    &\symsem{
       (\sigma \mid
       \ifkw\ \mathsf{true}\ \thenkw\ \hat e_2\
       \elsekw\ \hat e_3 : \tau)
-    }}
+    }
     \monbind
     \lambda(\sigma' \mid \hat e').\,
     \mathsf{act}_\tau(\sigma' \mid \hat e')
@@ -809,7 +938,7 @@ The following lemma states that taking one symbolic step and then realizing the 
   \elsekw\ \hat e_3$. The induction hypothesis for the subexpression $\hat e_1$ is:
   \begin{equation}
     \label{eq:if-ih}
-    \widehat{\sem{(\sigma \mid \hat e_1 : \Bool)}}
+    \symsem{(\sigma \mid \hat e_1 : \Bool)}
     \monbind
     \lambda(\sigma' \mid \hat g).\,
     \mathsf{act}_{\Bool}(\sigma' \mid \hat g)
@@ -822,14 +951,14 @@ The following lemma states that taking one symbolic step and then realizing the 
   We start from the left-hand side:
 
   \begin{align}
-    &\widehat{\sem{(\sigma \mid \mathsf{If}(\hat e_1) : \tau)}}
+    &\symsem{(\sigma \mid \mathsf{If}(\hat e_1) : \tau)}
     \monbind
     \lambda(\sigma' \mid \hat e').\,
     \mathsf{act}_\tau(\sigma' \mid \hat e')
     \notag \\
     &\quad=
     \left(
-      \widehat{\sem{(\sigma \mid \hat e_1 : \Bool)}}
+      \symsem{(\sigma \mid \hat e_1 : \Bool)}
       \monbind
       \lambda(\sigma' \mid \hat g).\,
       \delta_{(\sigma' \mid \mathsf{If}(\hat g) : \tau)}
@@ -839,7 +968,7 @@ The following lemma states that taking one symbolic step and then realizing the 
     \mathsf{act}_\tau(\sigma' \mid \hat e')
     \tag{\text{by symbolic $\mathsf{if}$ rule}} \\
     &\quad=
-    \widehat{\sem{(\sigma \mid \hat e_1 : \Bool)}}
+    \symsem{(\sigma \mid \hat e_1 : \Bool)}
     \monbind
     \lambda(\sigma' \mid \hat g).\,
     \left(
@@ -850,13 +979,13 @@ The following lemma states that taking one symbolic step and then realizing the 
     \right)
     \tag{\text{by associativity}} \\
     &\quad=
-    \widehat{\sem{(\sigma \mid \hat e_1 : \Bool)}}
+    \symsem{(\sigma \mid \hat e_1 : \Bool)}
     \monbind
     \lambda(\sigma' \mid \hat g).\,
     \mathsf{act}_\tau(\sigma' \mid \mathsf{If}(\hat g) : \tau)
     \tag{\text{by left identity}} \\
     &\quad=
-    \widehat{\sem{(\sigma \mid \hat e_1 : \Bool)}}
+    \symsem{(\sigma \mid \hat e_1 : \Bool)}
     \monbind
     \lambda(\sigma' \mid \hat g).\,
     \left(
@@ -867,7 +996,7 @@ The following lemma states that taking one symbolic step and then realizing the 
     \right)
     \tag{\text{by definition of $\mathsf{act}_\tau$}} \\
     &\quad=
-    \widehat{\sem{(\sigma \mid \hat e_1 : \Bool)}}
+    \symsem{(\sigma \mid \hat e_1 : \Bool)}
     \monbind
     \lambda(\sigma' \mid \hat g).\,
     \left(
@@ -878,7 +1007,7 @@ The following lemma states that taking one symbolic step and then realizing the 
     \right)
     \tag{\text{by $\mathsf{realize}_\rho$ on $\mathsf{if}$}} \\
     &\quad=
-    \widehat{\sem{(\sigma \mid \hat e_1 : \Bool)}}
+    \symsem{(\sigma \mid \hat e_1 : \Bool)}
     \monbind
     \lambda(\sigma' \mid \hat g).\,
     \left(
@@ -893,7 +1022,7 @@ The following lemma states that taking one symbolic step and then realizing the 
     \right)
     \tag{\text{by left identity}} \\
     &\quad=
-    \widehat{\sem{(\sigma \mid \hat e_1 : \Bool)}}
+    \symsem{(\sigma \mid \hat e_1 : \Bool)}
     \monbind
     \lambda(\sigma' \mid \hat g).\,
     \left(
@@ -910,7 +1039,7 @@ The following lemma states that taking one symbolic step and then realizing the 
     \right)
     \tag{\text{by associativity}} \\
     &\quad=
-    \widehat{\sem{(\sigma \mid \hat e_1 : \Bool)}}
+    \symsem{(\sigma \mid \hat e_1 : \Bool)}
     \monbind
     \lambda(\sigma' \mid \hat g).\,
     \left(
@@ -921,7 +1050,7 @@ The following lemma states that taking one symbolic step and then realizing the 
     \tag{\text{by definition of $\mathsf{act}_{\Bool}$}} \\
     &\quad=
     \left(
-      \widehat{\sem{(\sigma \mid \hat e_1 : \Bool)}}
+      \symsem{(\sigma \mid \hat e_1 : \Bool)}
       \monbind
       \lambda(\sigma' \mid \hat g).\,
       \mathsf{act}_{\Bool}(\sigma' \mid \hat g)
@@ -1041,14 +1170,14 @@ The following lemma states that taking one symbolic step and then realizing the 
 
 \begin{theorem}[Actual interpretation of symbolic $n$-step semantics]
   \label{thm:actual-n-step}
-  If $\hat{s} = (\sigma \mid \hat e : \tau) \in State_\tau$, then for
+  If $s = (\sigma \mid \hat e : \tau) \in State_\tau$, then for
   every $n \in \mathbb{N}$,
   \[
-    \widehat{\bigsemstep{\hat{s} : \tau}{n}}
+    \symbigsemstep{s : \tau}{n}
     \monbind
     \mathsf{act}_\tau
     =
-    \mathsf{act}_\tau(\hat{s})
+    \mathsf{act}_\tau(s)
     \monbind
     \lambda e.\,\bigsemstep{e : \tau}{n}.
   \]
@@ -1058,26 +1187,26 @@ The following lemma states that taking one symbolic step and then realizing the 
   The proof is by induction on $n$, with the statement quantified over all
   well-typed symbolic states.
 
-  For $n=0$, let $\hat{s} \in State_\tau$. Then
+  For $n=0$, let $s \in State_\tau$. Then
   \begin{align}
-    \widehat{\bigsemstep{\hat{s} : \tau}{0}}
+    \symbigsemstep{s : \tau}{0}
     \monbind
     \mathsf{act}_\tau
     &=
-    \delta_{\hat{s} : \tau}
+    \delta_{s : \tau}
     \monbind
     \mathsf{act}_\tau
     \tag{\text{by definition of n-step symbolic semantics}} \\
     &=
-    \mathsf{act}_\tau(\hat{s})
+    \mathsf{act}_\tau(s)
     \tag{\text{by monad left identity}} \\
     &=
-    \mathsf{act}_\tau(\hat{s})
+    \mathsf{act}_\tau(s)
     \monbind
     \lambda e.\,\delta_{e : \tau}
     \tag{\text{by monad right identity}} \\
     &=
-    \mathsf{act}_\tau(\hat{s})
+    \mathsf{act}_\tau(s)
     \monbind
     \lambda e.\,\bigsemstep{e : \tau}{0}.
     \tag{\text{by definition of n-step semantics}}
@@ -1085,58 +1214,58 @@ The following lemma states that taking one symbolic step and then realizing the 
 
   For the inductive step, assume the statement holds for $n$ for every
   well-typed symbolic state, and let
-  $\hat{s} = (\sigma \mid \hat e : \tau) \in State_\tau$. We use
+  $s = (\sigma \mid \hat e : \tau) \in State_\tau$. We use
   \Cref{lem:symbolic-step}:
 
   \begin{equation}
-    \widehat{\sem{\hat{s} : \tau}}
+    \symsem{s : \tau}
     \monbind
     \mathsf{act}_\tau
     =
-    \mathsf{act}_\tau(\hat{s})
+    \mathsf{act}_\tau(s)
     \monbind
     \lambda e'.\,\sem{e' : \tau}
   \end{equation}
-  for every well-typed symbolic state $\hat{s} \in State_\tau$. Then
+  for every well-typed symbolic state $s \in State_\tau$. Then
   \begin{align}
-    &\widehat{\bigsemstep{\hat{s} : \tau}{n+1}}
+    &\symbigsemstep{s : \tau}{n+1}
     \monbind
     \mathsf{act}_\tau \notag \\
     &=
     \left(
-      \widehat{\bigsemstep{\hat{s} : \tau}{n}}
+      \symbigsemstep{s : \tau}{n}
       \monbind
-      \lambda \hat{s}'.\,\widehat{\sem{\hat{s}' : \tau}}
+      \lambda s'.\,\symsem{s' : \tau}
     \right)
     \monbind
     \mathsf{act}_\tau
     \tag{\text{by definition of symbolic n-step}} \\
     &=
-    \widehat{\bigsemstep{\hat{s} : \tau}{n}}
+    \symbigsemstep{s : \tau}{n}
     \monbind
-    \lambda \hat{s}'.\,
-      \left(\widehat{\sem{\hat{s}' : \tau}}
+    \lambda s'.\,
+      \left(\symsem{s' : \tau}
       \monbind \mathsf{act}_\tau\right)
     \tag{\text{by monad associativity}} \\
     &=
-    \widehat{\bigsemstep{\hat{s} : \tau}{n}}
+    \symbigsemstep{s : \tau}{n}
     \monbind
-    \lambda \hat{s}'.\,
-      \left(\mathsf{act}_\tau(\hat{s}')
+    \lambda s'.\,
+      \left(\mathsf{act}_\tau(s')
       \monbind \lambda e'.\,\sem{e' : \tau}\right)
     \tag{\text{by \Cref{lem:symbolic-step}}} \\
     &=
     \left(
-      \widehat{\bigsemstep{\hat{s} : \tau}{n}}
+      \symbigsemstep{s : \tau}{n}
       \monbind
-      \lambda \hat{s}'.\,\mathsf{act}_\tau(\hat{s}')
+      \lambda s'.\,\mathsf{act}_\tau(s')
     \right)
     \monbind
     \lambda e'.\,\sem{e' : \tau}
     \tag{\text{by monad associativity}} \\
     &=
     \left(
-      \widehat{\bigsemstep{\hat{s} : \tau}{n}}
+      \symbigsemstep{s : \tau}{n}
       \monbind
       \mathsf{act}_\tau
     \right)
@@ -1145,7 +1274,7 @@ The following lemma states that taking one symbolic step and then realizing the 
     \tag{\text{by eta-conversion}} \\
     &=
     \left(
-      \mathsf{act}_\tau(\hat{s})
+      \mathsf{act}_\tau(s)
       \monbind
       \lambda e.\,\bigsemstep{e : \tau}{n}
     \right)
@@ -1153,7 +1282,7 @@ The following lemma states that taking one symbolic step and then realizing the 
     \lambda e'.\,\sem{e' : \tau}
     \tag{\text{by induction hypothesis}} \\
     &=
-    \mathsf{act}_\tau(\hat{s})
+    \mathsf{act}_\tau(s)
     \monbind
     \lambda e.\,
       \left(\bigsemstep{e : \tau}{n}
@@ -1161,47 +1290,81 @@ The following lemma states that taking one symbolic step and then realizing the 
       \lambda e'.\,\sem{e' : \tau}\right)
     \tag{\text{by monad associativity}} \\
     &=
-    \mathsf{act}_\tau(\hat{s})
+    \mathsf{act}_\tau(s)
     \monbind
     \lambda e.\,\bigsemstep{e : \tau}{n+1}.
     \tag{\text{by definition of n-step semantics}}
   \end{align}
 \end{proof}
 
+\begin{theorem}[Actual interpretation of symbolic big-step semantics]
+  \label{thm:actual-big-step}
+  If $s = (\sigma \mid \hat e : \tau) \in State_\tau$, then
+  \[
+    \symbigsem{s : \tau}
+    \monbind
+    \mathsf{act}_\tau
+    =
+    \mathsf{act}_\tau(s)
+    \monbind
+    \lambda e.\,\bigsem{e : \tau}.
+  \]
+\end{theorem}
+
+\begin{proof}
+  TODO.
+\end{proof}
+
+\begin{lemma}[Initial actual interpretation]
+  Let $e:\tau$ be closed and well typed. Then
+  \[
+    \mathsf{act}_\tau
+    (\emptyset\mid\mathsf{lift}(e):\tau)
+    =
+    \delta_{e:\tau}.
+  \]
+\end{lemma}
+
+\begin{proof}
+  TODO.
+\end{proof}
+
 \subsubsection{Expected interpretation of symbolic semantics}
 
 The expected interpretation also starts from a symbolic state
-$(\sigma \mid \hat e : \tau)$, but it replaces the symbolic samples by their
-expected values rather than sampling them.  Suppose
+$(\sigma \mid \hat e : \tau) \in State_\tau$, but replaces the samples
+recorded in $\sigma$ with their means rather than sampling them. 
+
+The mean valuation determined by a symbolic sample environment is defined
+recursively by
 \[
-  \sigma =
-  u_1 \sim D_1(\vec a_1),\ldots,
-  u_n \sim D_n(\vec a_n),
-  \qquad
-  a_{i,j} \in \mathsf{Aff}(\{u_1,\ldots,u_{i-1}\}).
-\]
-The expected tuple determined by $\sigma$ is written
-\[
-  \mathsf{mean}_{\mathsf{env}}(\sigma)
-  =
-  (m_1,\ldots,m_n) \in \mathbb{R}^n,
+\begin{aligned}
+  \mathsf{mean}_{\mathsf{env}}(\emptyset)
+  &=
+  (),\\
+  \mathsf{mean}_{\mathsf{env}}
+  \bigl(\sigma,\,u\sim D(\vec a)\bigr)
+  &=
+  \left(
+    m_1,\ldots,m_n,\,
+    \mathsf{mean}_D\!\left(
+      \vec a[m_1/u_1,\ldots,m_n/u_n]
+    \right)
+  \right),
+\end{aligned}
 \]
 where
 \[
-\begin{aligned}
-  m_1
-  &=
-  \mathbb{E}\!\left[D_1(\vec a_1)\right], \\[0.5em]
-  m_i
-  &=
-  \mathbb{E}\!\left[
-    D_i\!\left(
-      \vec a_i
-      [m_1/u_1,\ldots,m_{i-1}/u_{i-1}]
-    \right)
-  \right],
-  \qquad 2 \leq i \leq n.
-\end{aligned}
+  \mathsf{mean}_{\mathsf{env}}(\sigma)
+  =
+  (m_1,\ldots,m_n).
+\]
+
+
+As in the actual interpretation, the tuple $(m_1,\ldots,m_n)$ is
+identified with the valuation
+\[
+  [u_1\mapsto m_1,\ldots,u_n\mapsto m_n].
 \]
 
 \begin{definition}[Single-state expected interpretation]
@@ -1214,168 +1377,150 @@ where
   \begin{aligned}
     \mathsf{exp}_\tau((\sigma \mid \hat e))
     &=
-    \delta_{\mathsf{realize}_{\mathsf{mean}_{\mathsf{env}}(\sigma)}
-      (\hat e) : \tau}.
+    \delta_{\exptrans{\mathsf{realize}_{\mathsf{mean}_{\mathsf{env}}(\sigma)}
+      (\hat e) : \tau}}.
   \end{aligned}
   \]
 \end{definition}
 
+\begin{example}
+  \[
+    \mathsf{exp}
+    (\emptyset\mid\uniform[\E](0,1)+1)
+    =
+    \delta_{\mathsf{meanUniform}(0,1)+1}.
+  \]
+\end{example}
+
+\begin{example}
+  \[
+    \mathsf{exp}
+    (u_1\sim\uniform(0,1)\mid\sym(u_1)+\sym(1))
+    =
+    \delta_{0.5+1}.
+  \]
+\end{example}
+
+\begin{example}
+  \[
+    \mathsf{exp}
+    (u_1\sim\uniform(0,1)\mid\sym(u_1+1))
+    =
+    \delta_{1.5}.
+  \]
+\end{example}
+
+\begin{example}
+  \begin{align*}
+    \mathsf{exp}
+    &\bigl(
+      u_1\sim\uniform(1,2),\,
+      u_2\sim\uniform(0,u_1)
+      \mid\sym(u_2)
+    \bigr) \\
+    &=
+    \delta_{\mathsf{meanUniform}
+      (0,\mathsf{meanUniform}(1,2))} \\
+    &=
+    \delta_{0.75}.
+  \end{align*}
+\end{example}
+
+The following theorem states that taking one symbolic step and then applying the expected interpretation produces the same distribution as first applying the expected interpretation and then taking one ordinary step.
+
 \begin{theorem}[Expected interpretation of symbolic small-step semantics]
   \label{thm:expected-symbolic-step}
-  Let $\hat{s}=(\sigma \mid \hat e : \tau) \in State_\tau$. Then
+  Let $s=(\sigma \mid \hat e : \tau) \in State_\tau$.
+  Then
   \[
-    \widehat{\sem{\hat{s} : \tau}}
-    \monbind
-    \lambda ((\sigma' \mid \hat e')).\ \mathsf{exp}_\tau((\sigma' \mid \hat e'))
-    =
-    \mathsf{exp}_\tau(\hat{s})
-    \monbind
-    \lambda e'.\,\sem{\exptrans{e' : \tau} : \tau}.
-  \]
-\end{theorem}
-
-\begin{theorem}[Expected interpretation of symbolic $n$-step semantics]
-
-  FIX to be like the above.
-
-  
-  If $\hat{s} = (\sigma \mid \hat e : \tau) \in State_\tau$, then for every
-  $n \in \mathbb{N}$,
-  \[
-    \widehat{\bigsemstep{\hat{s} : \tau}{n}}
+    \symsem{s : \tau}
     \monbind
     \mathsf{exp}_\tau
     =
-    \mathsf{act}_\tau(\hat{s})
+    \mathsf{exp}_\tau(s)
     \monbind
-    \lambda e.\,\bigsemstep{\exptrans{e : \tau} : \tau}{n}.
+    \lambda e'.\,\sem{e' : \tau}.
   \]
 \end{theorem}
 
-% \begin{proof}[Proof outline]
-%   As in the proof for the actual interpretation, the proof is by induction on
-%   $n$, with the statement quantified over all well-typed symbolic states.
+\begin{proof}
+  TODO.
+\end{proof}
 
-%   For $n=0$, let $\hat{s} \in State_\tau$. The left-hand side reduces as
-%   follows:
-%   \begin{align}
-%     \widehat{\bigsemstep{\hat{s} : \tau}{0}}
-%     \monbind
-%     \mathsf{exp}_\tau
-%     &=
-%     \delta_{\hat{s} : \tau}
-%     \monbind
-%     \mathsf{exp}_\tau
-%     \tag{\text{by definition of n-step symbolic semantics}} \\
-%     &=
-%     \mathsf{exp}_\tau(\hat{s}).
-%     \tag{\text{by monad left identity}}
-%   \end{align}
-%   The right-hand side reduces to
-%   \begin{align}
-%     &\mathsf{act}_\tau(\hat{s})
-%     \monbind
-%     \lambda e.\,\bigsemstep{\exptrans{e : \tau} : \tau}{0}
-%     \notag \\
-%     &\quad=
-%     \mathsf{act}_\tau(\hat{s})
-%     \monbind
-%     \lambda e.\,\delta_{\exptrans{e : \tau} : \tau}.
-%     \tag{\text{by definition of n-step semantics}}
-%   \end{align}
-%   Thus, the base case requires the following expected-interpretation bridge:
-%   \begin{equation}
-%     \label{eq:expected-interpretation-bridge}
-%     \mathsf{exp}_\tau(\hat{s})
-%     \overset{?}{=}
-%     \mathsf{act}_\tau(\hat{s})
-%     \monbind
-%     \lambda e.\,\delta_{\exptrans{e : \tau} : \tau}.
-%   \end{equation}
+\begin{theorem}[Expected interpretation of symbolic $n$-step semantics]
+  \label{thm:expected-symbolic-n-step}
+  Let
+  $s=(\sigma\mid\hat e:\tau)\in State_\tau$.
+  Then, for every $n\in\mathbb N$,
+  \[
+    \symbigsemstep{s:\tau}{n}
+    \monbind
+    \mathsf{exp}_\tau
+    =
+    \mathsf{exp}_\tau(s)
+    \monbind
+    \lambda e.\,
+    \bigsemstep{e:\tau}{n}.
+  \]
+\end{theorem}
 
-%   For the inductive step, assume the theorem holds for $n$ for every
-%   well-typed symbolic state, and let
-%   $\hat{s} = (\sigma \mid \hat e : \tau) \in State_\tau$. Using
-%   \Cref{thm:expected-symbolic-step}, the inductive calculation begins exactly
-%   as in the actual-interpretation proof:
-%   \begin{align}
-%     &\widehat{\bigsemstep{\hat{s} : \tau}{n+1}}
-%     \monbind
-%     \mathsf{exp}_\tau
-%     \notag \\
-%     &=
-%     \left(
-%       \widehat{\bigsemstep{\hat{s} : \tau}{n}}
-%       \monbind
-%       \lambda\hat{s}'.\,\widehat{\sem{\hat{s}' : \tau}}
-%     \right)
-%     \monbind
-%     \mathsf{exp}_\tau
-%     \tag{\text{by definition of symbolic n-step semantics}} \\
-%     &=
-%     \widehat{\bigsemstep{\hat{s} : \tau}{n}}
-%     \monbind
-%     \lambda\hat{s}'.\,
-%     \left(
-%       \widehat{\sem{\hat{s}' : \tau}}
-%       \monbind
-%       \mathsf{exp}_\tau
-%     \right)
-%     \tag{\text{by monad associativity}} \\
-%     &=
-%     \widehat{\bigsemstep{\hat{s} : \tau}{n}}
-%     \monbind
-%     \lambda\hat{s}'.\,
-%     \left(
-%       \mathsf{exp}_\tau(\hat{s}')
-%       \monbind
-%       \lambda e'.\,\sem{\exptrans{e' : \tau} : \tau}
-%     \right)
-%     \tag{\text{by \Cref{thm:expected-symbolic-step}}} \\
-%     &=
-%     \left(
-%       \widehat{\bigsemstep{\hat{s} : \tau}{n}}
-%       \monbind
-%       \mathsf{exp}_\tau
-%     \right)
-%     \monbind
-%     \lambda e'.\,\sem{\exptrans{e' : \tau} : \tau}
-%     \tag{\text{by monad associativity}} \\
-%     &=
-%     \left(
-%       \mathsf{act}_\tau(\hat{s})
-%       \monbind
-%       \lambda e.\,\bigsemstep{\exptrans{e : \tau} : \tau}{n}
-%     \right)
-%     \monbind
-%     \lambda e'.\,\sem{\exptrans{e' : \tau} : \tau}
-%     \tag{\text{by induction hypothesis}} \\
-%     &=
-%     \mathsf{act}_\tau(\hat{s})
-%     \monbind
-%     \lambda e.\,
-%     \left(
-%       \bigsemstep{\exptrans{e : \tau} : \tau}{n}
-%       \monbind
-%       \lambda e'.\,\sem{\exptrans{e' : \tau} : \tau}
-%     \right).
-%     \tag{\text{by monad associativity}}
-%   \end{align}
-%   It remains to establish that expectation transformation is stable under
-%   ordinary reduction from an already transformed expression:
-%   \begin{equation}
-%     \label{eq:expectation-transformation-step-stability}
-%     \bigsemstep{\exptrans{e : \tau} : \tau}{n}
-%     \monbind
-%     \lambda e'.\,\sem{\exptrans{e' : \tau} : \tau}
-%     \overset{?}{=}
-%     \bigsemstep{\exptrans{e : \tau} : \tau}{n+1}.
-%   \end{equation}
-%   Together with \eqref{eq:expected-interpretation-bridge}, this completes the
-%   proof outline.
-% \end{proof}
+\begin{proof}
+  TODO.
+\end{proof}
 
+\begin{theorem}[Expected interpretation of symbolic big step semantics]
+  \label{thm:expected-symbolic-big-step}
+  If $s=(\sigma\mid\hat e:\tau)\in State_\tau$, then
+  \[
+    \symbigsem{s:\tau}
+    \monbind
+    \mathsf{exp}_\tau
+    =
+    \mathsf{exp}_\tau(s)
+    \monbind
+    \lambda e'.\,\bigsem{e':\tau}.
+  \]
+\end{theorem}
 
+\begin{proof}
+  TODO. Apply \Cref{thm:expected-symbolic-n-step} and take the limit as
+  $n\to\infty$. The result follows from the definitions of the ordinary and
+  symbolic big-step semantics and monotone convergence.
+\end{proof}
+
+\begin{lemma}[Initial expected interpretation]
+  Let $e:\tau$ be closed and well typed. Then
+  \[
+    \mathsf{exp}_\tau
+    (\emptyset\mid\mathsf{lift}(e):\tau)
+    =
+    \delta_{\exptrans{e:\tau}:\tau}.
+  \]
+\end{lemma}
+
+\begin{proof}
+  TODO.
+\end{proof}
+
+For a float-valued distribution $\mu$ with finite expectation, let
+\[
+  \mathbb{E}[\mu]
+  :=
+  \int_{\mathbb{R}} r\,d\mu(r).
+\]
+
+\begin{theorem}\label{thm:interpretation-of-means}
+  Let $m\in\{\E,\G\}$, and let
+  \[
+    s=(\sigma\mid\sym(a):\Float m)\in State_{\Float m}
+  \]
+  be a terminal symbolic state. Then
+  \[
+    \mathbb{E}[\mathsf{act}_{\Float m}(s)]
+    =
+    \mathbb{E}[\mathsf{exp}_{\Float m}(s)].
+  \]
+\end{theorem}
 
 \begin{theorem}[Soundness of determinization]
   Let $e : \tau$ be a well-typed expression. Then:
@@ -1385,10 +1530,92 @@ where
     \mathbb{E}[\bigsem{\exptrans{e : \Float{m}} : \Float{m}}]
   \]
 
-  where $m = \G$ or $\E$, and in particular:
-  \[
-    \bigsem{e : \Float{\G}}
-    =
-    \bigsem{\exptrans{e : \Float{\G}} : \Float{\G}}.
-  \]
+  where $m = \G$ or $\E$.
+  % and in particular:
+  % \[
+  %   \bigsem{e : \Float{\G}}
+  %   =
+  %   \bigsem{\exptrans{e : \Float{\G}} : \Float{\G}}.
+  % \]
 \end{theorem}
+
+\begin{proof}
+  \begin{align}
+    \mathbb E[\bigsem{e:\Float m}]
+    &=
+    \mathbb E\left[
+      \delta_{e:\Float m}
+      \monbind
+      \lambda e'.\,\bigsem{e':\Float m}
+    \right]
+    \tag{\text{by the left-unit law}}
+    \\
+    &=
+    \mathbb E\left[
+      \mathsf{act}_{\Float m}
+        (\emptyset\mid\mathsf{lift}(e):\Float m)
+      \monbind
+      \lambda e'.\,\bigsem{e':\Float m}
+    \right]
+    \tag{\text{by definition of initial actual interpretation}}
+    \\
+    &=
+    \mathbb E\left[
+      \symbigsem{
+        (\emptyset\mid\mathsf{lift}(e):\Float m):\Float m
+      }
+      \monbind
+      \mathsf{act}_{\Float m}
+    \right]
+    \tag{\text{by \Cref{thm:actual-big-step}}}
+    \\
+    &=
+    \int
+      \mathbb E[\mathsf{act}_{\Float m}(s)]
+      \,d\symbigsem{
+        (\emptyset\mid\mathsf{lift}(e):\Float m):\Float m
+      }(s)
+    \tag{\text{expectation of a mixture}}
+    \\
+    &=
+    \int
+      \mathbb E[\mathsf{exp}_{\Float m}(s)]
+      \,d\symbigsem{
+        (\emptyset\mid\mathsf{lift}(e):\Float m):\Float m
+      }(s)
+    \tag{\text{by \Cref{thm:interpretation-of-means}}}
+    \\
+    &=
+    \mathbb E\left[
+      \symbigsem{
+        (\emptyset\mid\mathsf{lift}(e):\Float m):\Float m
+      }
+      \monbind
+      \mathsf{exp}_{\Float m}
+    \right]
+    \tag{\text{expectation of a mixture}}
+    \\
+    &=
+    \mathbb E\left[
+      \mathsf{exp}_{\Float m}
+        (\emptyset\mid\mathsf{lift}(e):\Float m)
+      \monbind
+      \lambda e'.\,\bigsem{e':\Float m}
+    \right]
+    \tag{\text{by \Cref{thm:expected-symbolic-big-step}}}
+    \\
+    &=
+    \mathbb E\left[
+      \delta_{\exptrans{e:\Float m}:\Float m}
+      \monbind
+      \lambda e'.\,\bigsem{e':\Float m}
+    \right]
+    \tag{\text{by definition of expected interpretation}}
+    \\
+    &=
+    \mathbb E\left[
+      \bigsem{\exptrans{e:\Float m}:\Float m}
+    \right].
+    \tag{\text{by the left-unit law}}
+  \end{align}
+\end{proof}
