@@ -567,17 +567,6 @@ where $\symbigsemstep{s : \tau}{n} \in \mathcal{D}(State_\tau)$.
   \]
 \end{example}
 
-Now, define the big step semantics as follows:
-
-\[
-  \symbigsem{s : \tau}
-  =
-  \lim_{n\to\infty}
-  \symbigsemstep{s : \tau}{n}
-\]
-
-This is a distribution on terminal symbolic states.
-
 
 \begin{table}[t]
   \centering
@@ -695,6 +684,26 @@ This is a distribution on terminal symbolic states.
   \label{tab:symbolic-small-step-semantics}
 \end{table}
 
+To evaluate an ordinary expression symbolically, we first embed it into the space of symbolic states. We capture this initial state with the following:
+
+\begin{definition}[Initialization]
+  For every type $\tau$, the initialization function
+  \[
+    \mathsf{init}_\tau:
+    Expr_\tau \to State_\tau
+  \]
+  is defined by
+  \[
+    \mathsf{init}_\tau(e:\tau)
+    =
+    (\emptyset\mid\mathsf{lift}(e:\tau):\tau).
+  \]
+\end{definition}
+
+The function $\mathsf{init}_\tau$ is applied only at the beginning of symbolic
+evaluation; subsequent symbolic states are produced by the symbolic small-step
+semantics.
+
 \subsubsection{Actual interpretation of symbolic semantics}
 
 The actual interpretation turns a symbolic state back into a distribution over
@@ -776,10 +785,19 @@ is defined recursively on symbolic residual expressions:
     &=
     \mathsf{realize}_\rho(\hat e_1)
     +
-    \mathsf{realize}_\rho(\hat e_2) \\
+    \mathsf{realize}_\rho(\hat e_2),\\
+    \mathsf{realize}_\rho
+      \bigl(\uniform[m](\hat e_1,\hat e_2)\bigr)
+    &=
+    \uniform\bigl(
+      \mathsf{realize}_\rho(\hat e_1),
+      \mathsf{realize}_\rho(\hat e_2)
+    \bigr) \\
     \ldots
   \end{align*}
 \end{definition}
+
+Strictly speaking, $\mathsf{realize}_{\rho}$ acts on fully type-annotated symbolic residual expressions and preserves their type annotations, but we omit the types here for less notational clutter.
 
 \begin{example}
   \[
@@ -800,6 +818,69 @@ is defined recursively on symbolic residual expressions:
     \end{aligned}
   \]
 \end{example}
+
+\begin{lemma}\label{lem:realize-lift}
+  \[
+    \mathsf{realize}_{()}(\mathsf{lift}(e : \tau)) = e : \tau
+  \]
+\end{lemma}
+
+\begin{proof}
+  By induction on $e : \tau$. 
+
+  \paragraph{Case $e=x:\tau$.}
+  \begin{align*}
+    \mathsf{realize}_{()}
+    \bigl(\mathsf{lift}(x:\tau)\bigr)
+    &=
+    \mathsf{realize}_{()}(x:\tau)
+    \tag{by the definition of $\mathsf{lift}$}
+    \\
+    &=
+    x:\tau
+    \tag{by the definition of $\mathsf{realize}_{()}$}
+  \end{align*}
+
+  \paragraph{Case $e=c:\Float m$.}
+  \begin{align*}
+    \mathsf{realize}_{()}
+    \bigl(\mathsf{lift}(c:\Float m)\bigr)
+    &=
+    \mathsf{realize}_{()}
+    \bigl(\sym(c):\Float m\bigr)
+    \tag{by the definition of $\mathsf{lift}$}
+    \\
+    &=
+    c:\Float m
+    \tag{since $()\vdash c\Downarrow c$}
+  \end{align*}
+
+  \paragraph{Case $e=e_1+e_2:\Float m$.}
+  \begin{align*}
+    \mathsf{realize}_{()}
+    \bigl(\mathsf{lift}(e_1+e_2)\bigr)
+    &=
+    \mathsf{realize}_{()}
+    \bigl(
+      \mathsf{lift}(e_1)+\mathsf{lift}(e_2)
+    \bigr)
+    \tag{by the definition of $\mathsf{lift}$}
+    \\
+    &=
+    \mathsf{realize}_{()}
+    \bigl(\mathsf{lift}(e_1)\bigr)
+    +
+    \mathsf{realize}_{()}
+    \bigl(\mathsf{lift}(e_2)\bigr)
+    \tag{by the definition of $\mathsf{realize}_{()}$}
+    \\
+    &=
+    e_1+e_2
+    \tag{by the I.H.}
+  \end{align*}
+
+  \paragraph{All other cases analogous.}
+\end{proof}
 
 
 \begin{definition}[Single-state actual interpretation]
@@ -823,7 +904,51 @@ is defined recursively on symbolic residual expressions:
   $\rho=[u_1\mapsto r_1,\ldots,u_n\mapsto r_n]$.
 \end{definition}
 
-The following lemma states that taking one symbolic step and then realizing the resulting symbolic state yields the same distribution as first realizing the original state and then taking one ordinary step. 
+
+\begin{lemma}[Initial actual interpretation]
+  Let $e:\tau$ be closed and well typed. Then
+  \[
+    \mathsf{act}_\tau
+    (\mathsf{init}_\tau(e : \tau))
+    =
+    \delta_{e:\tau}.
+  \]
+\end{lemma}
+
+\begin{proof}
+  \begin{align}
+    \mathsf{act}_\tau
+    \bigl(\mathsf{init}_\tau(e:\tau)\bigr)
+    &=
+    \mathsf{act}_\tau
+    \bigl(\emptyset\mid\mathsf{lift}(e:\tau):\tau\bigr)
+    \tag{by the definition of $\mathsf{init}_\tau$}
+    \\
+    &=
+    \sem{\emptyset}_{\mathsf{env}}
+    \monbind
+    \lambda\rho.\,
+    \delta_{\mathsf{realize}_\rho(\mathsf{lift}(e:\tau)):\tau}
+    \tag{by the definition of $\mathsf{act}_\tau$}
+    \\
+    &=
+    \delta_{()}
+    \monbind
+    \lambda\rho.\,
+    \delta_{\mathsf{realize}_\rho(\mathsf{lift}(e:\tau)):\tau}
+    \tag{by the definition of $\sem{\emptyset}_{\mathsf{env}}$}
+    \\
+    &=
+    \delta_{\mathsf{realize}_{()}(\mathsf{lift}(e:\tau)):\tau}
+    \tag{by monad left identity}
+    \\
+    &=
+    \delta_{e:\tau}
+    \tag{by~\Cref{lem:realize-lift}}
+  \end{align}
+\end{proof}
+
+The following lemma states that taking one symbolic step and then actualizing the resulting symbolic state yields the same distribution as first actualizing the original state and then taking one ordinary step. 
 
 \begin{lemma}[Actual interpretation of symbolic small-step semantics]\label{lem:symbolic-step}
   Let $s=(\sigma \mid \hat e : \tau) \in State_\tau$, then, for all $\sigma$,
@@ -1297,89 +1422,145 @@ The following lemma states that taking one symbolic step and then realizing the 
   \end{align}
 \end{proof}
 
-\begin{theorem}[Actual interpretation of symbolic big-step semantics]
-  \label{thm:actual-big-step}
-  If $s = (\sigma \mid \hat e : \tau) \in State_\tau$, then
+
+
+\begin{theorem}[Actual interpretation of initialized symbolic semantics]
+  Let $e:\tau$ be closed and well typed. Then, for every
+  $n\in\mathbb N$,
   \[
-    \symbigsem{s : \tau}
+    \symbigsemstep{\mathsf{init}_\tau(e:\tau)}{n}
     \monbind
     \mathsf{act}_\tau
     =
-    \mathsf{act}_\tau(s)
-    \monbind
-    \lambda e.\,\bigsem{e : \tau}.
+    \bigsemstep{e:\tau}{n}.
   \]
 \end{theorem}
 
 \begin{proof}
-  TODO.
-\end{proof}
-
-\begin{lemma}[Initial actual interpretation]
-  Let $e:\tau$ be closed and well typed. Then
-  \[
+  \begin{align}
+    &\symbigsemstep{\mathsf{init}_\tau(e:\tau)}{n}
+    \monbind
     \mathsf{act}_\tau
-    (\emptyset\mid\mathsf{lift}(e):\tau)
-    =
-    \delta_{e:\tau}.
-  \]
-\end{lemma}
-
-\begin{proof}
-  TODO.
+    \notag
+    \\
+    &=
+    \mathsf{act}_\tau\bigl(\mathsf{init}_\tau(e:\tau)\bigr)
+    \monbind
+    \lambda e'.\,\bigsemstep{e':\tau}{n}
+    \tag{\text{by \Cref{thm:actual-n-step}}}
+    \\
+    &=
+    \delta_{e:\tau}
+    \monbind
+    \lambda e'.\,\bigsemstep{e':\tau}{n}
+    \tag{\text{by the initial actual interpretation lemma}}
+    \\
+    &=
+    \bigsemstep{e:\tau}{n}.
+    \tag{\text{by monad left identity}}
+  \end{align}
 \end{proof}
 
 \subsubsection{Expected interpretation of symbolic semantics}
 
 The expected interpretation also starts from a symbolic state
 $(\sigma \mid \hat e : \tau) \in State_\tau$, but replaces the samples
-recorded in $\sigma$ with their means rather than sampling them. 
+recorded in $\sigma$ with their means rather than sampling them.
 
 The mean valuation determined by a symbolic sample environment is defined
 recursively by
 \[
 \begin{aligned}
-  \mathsf{mean}_{\mathsf{env}}(\emptyset)
+  \mathsf{means}(\emptyset)
   &=
   (),\\
-  \mathsf{mean}_{\mathsf{env}}
+  \mathsf{means}
   \bigl(\sigma,\,u\sim D(\vec a)\bigr)
   &=
-  \left(
-    m_1,\ldots,m_n,\,
-    \mathsf{mean}_D\!\left(
-      \vec a[m_1/u_1,\ldots,m_n/u_n]
-    \right)
-  \right),
+  \rho[u\mapsto m],
 \end{aligned}
 \]
 where
 \[
-  \mathsf{mean}_{\mathsf{env}}(\sigma)
-  =
-  (m_1,\ldots,m_n).
+  \rho=\mathsf{means}(\sigma),
+  \qquad
+  \rho\vdash\vec a\Downarrow\vec r,
+  \qquad
+  m=\mathbb E_{X\sim D(\vec r)}[X].
 \]
 
+\begin{example}
+  \(\mathsf{means}
+\bigl(
+u_1\sim\uniform(1,2),\,
+u_2\sim\uniform(0,u_1)
+\bigr)
+=
+[u_1\mapsto1.5,\;u_2\mapsto0.75].\)
+\end{example}
 
-As in the actual interpretation, the tuple $(m_1,\ldots,m_n)$ is
-identified with the valuation
-\[
-  [u_1\mapsto m_1,\ldots,u_n\mapsto m_n].
-\]
+Now, we define a realization function.
 
-\begin{definition}[Single-state expected interpretation]
-  The single-state expected interpretation is the function:
+\begin{definition}[Expected realization]
+  Given a valuation $\rho$, the expected realization
   \[
-    \mathsf{exp}_\tau : State_\tau \to \mathcal{D}(Expr_\tau)
+    \mathsf{erealize}_\rho :
+    \widehat{Expr_\tau}\to Expr_\tau
   \]
-  defined by
+  is defined structurally by
   \[
   \begin{aligned}
-    \mathsf{exp}_\tau((\sigma \mid \hat e))
+    \mathsf{erealize}_\rho(\sym(a))
     &=
-    \delta_{\exptrans{\mathsf{realize}_{\mathsf{mean}_{\mathsf{env}}(\sigma)}
-      (\hat e) : \tau}}.
+    r
+    &&\text{if }\rho\vdash a\Downarrow r,
+    \\
+    \mathsf{erealize}_\rho(\hat e_1+\hat e_2)
+    &=
+    \mathsf{erealize}_\rho(\hat e_1)
+    +
+    \mathsf{erealize}_\rho(\hat e_2),
+    \\
+    \mathsf{erealize}_\rho
+      \bigl(\uniform[\E](\hat e_1,\ldots,\hat e_k)\bigr)
+    &=
+    \mathsf{mean}_\uniform
+      \bigl(
+        \mathsf{erealize}_\rho(\hat e_1),
+        \ldots,
+        \mathsf{erealize}_\rho(\hat e_k)
+      \bigr),
+    \\
+    \mathsf{erealize}_\rho
+      \bigl(\uniform[\G](\hat e_1,\ldots,\hat e_k)\bigr)
+    &=
+    \uniform\bigl(
+      \mathsf{erealize}_\rho(\hat e_1),
+      \ldots,
+      \mathsf{erealize}_\rho(\hat e_k)
+    \bigr).
   \end{aligned}
+  \]
+  All other constructs are handled structurally.
+\end{definition}
+
+
+\begin{definition}[Single-state expected interpretation]
+  The single-state expected interpretation
+  \[
+    \mathsf{exp}_\tau:
+    State_\tau\to\mathcal{D}(Expr_\tau)
+  \]
+  is defined by
+  \[
+    \mathsf{exp}_\tau
+    (\sigma\mid\hat e:\tau)
+    =
+    \delta_{
+      \mathsf{erealize}_{
+        \mathsf{means}(\sigma)
+      }(\hat e):\tau
+    }.
   \]
 \end{definition}
 
@@ -1417,12 +1598,7 @@ identified with the valuation
       u_1\sim\uniform(1,2),\,
       u_2\sim\uniform(0,u_1)
       \mid\sym(u_2)
-    \bigr) \\
-    &=
-    \delta_{\mathsf{meanUniform}
-      (0,\mathsf{meanUniform}(1,2))} \\
-    &=
-    \delta_{0.75}.
+    \bigr) = \delta_{0.75}.
   \end{align*}
 \end{example}
 
@@ -1468,39 +1644,37 @@ The following theorem states that taking one symbolic step and then applying the
   TODO.
 \end{proof}
 
-\begin{theorem}[Expected interpretation of symbolic big step semantics]
-  \label{thm:expected-symbolic-big-step}
-  If $s=(\sigma\mid\hat e:\tau)\in State_\tau$, then
+\begin{lemma}
   \[
-    \symbigsem{s:\tau}
-    \monbind
-    \mathsf{exp}_\tau
-    =
-    \mathsf{exp}_\tau(s)
-    \monbind
-    \lambda e'.\,\bigsem{e':\tau}.
+    \mathsf{erealize}_{()}(\mathsf{lift}(e)) = \exptrans{e}
   \]
-\end{theorem}
-
-\begin{proof}
-  TODO. Apply \Cref{thm:expected-symbolic-n-step} and take the limit as
-  $n\to\infty$. The result follows from the definitions of the ordinary and
-  symbolic big-step semantics and monotone convergence.
-\end{proof}
+\end{lemma}
 
 \begin{lemma}[Initial expected interpretation]
-  Let $e:\tau$ be closed and well typed. Then
+  Let $e : \tau$ be closed and well-typed. Then,
   \[
     \mathsf{exp}_\tau
     (\emptyset\mid\mathsf{lift}(e):\tau)
     =
-    \delta_{\exptrans{e:\tau}:\tau}.
+    \delta_{\exptrans{e:\tau}}.
   \]
 \end{lemma}
 
-\begin{proof}
-  TODO.
-\end{proof}
+
+\begin{theorem}
+  Let \(s_0=(\emptyset\mid\mathsf{lift}(e)),
+\qquad
+\nu_n=\symbigsemstep{s_0}{n}.\)
+
+\(\bigsemstep{\exptrans e}n=\nu_n\monbind\mathsf{exp}.\)
+
+\end{theorem}
+
+
+
+\subsubsection{Relating original to determinized}
+
+An $n$-step dustribution may still contain non-value expressions, so its expectation is not directly defined. Must restrict each $n$-step distribution to values.
 
 For a float-valued distribution $\mu$ with finite expectation, let
 \[
@@ -1522,12 +1696,12 @@ For a float-valued distribution $\mu$ with finite expectation, let
   \]
 \end{theorem}
 
-\begin{theorem}[Soundness of determinization]
-  Let $e : \tau$ be a well-typed expression. Then:
+\begin{theorem}[Soundness n-step]
+  Let $e : \tau$ be a well-typed expression. Then, for every $n$, when restricted to values
   \[
-    \mathbb{E}[\bigsem{e : \Float{m}}]
+    \mathbb{E}[\bigsemstep{e : \Float{m}}{n}]
     =
-    \mathbb{E}[\bigsem{\exptrans{e : \Float{m}} : \Float{m}}]
+    \mathbb{E}[\bigsemstep{\exptrans{e : \Float{m}} : \Float{m}}{n}]
   \]
 
   where $m = \G$ or $\E$.
@@ -1538,6 +1712,11 @@ For a float-valued distribution $\mu$ with finite expectation, let
   %   \bigsem{\exptrans{e : \Float{\G}} : \Float{\G}}.
   % \]
 \end{theorem}
+
+\begin{theorem}[Soundness big step]
+  
+\end{theorem}
+
 
 \begin{proof}
   \begin{align}
@@ -1617,5 +1796,93 @@ For a float-valued distribution $\mu$ with finite expectation, let
       \bigsem{\exptrans{e:\Float m}:\Float m}
     \right].
     \tag{\text{by the left-unit law}}
+  \end{align}
+\end{proof}
+
+
+
+
+
+
+
+\begin{proof}
+  Fix $n\in\mathbb N$. Then
+  \begin{align}
+    &\mathbb E\!\left[
+      \left.
+        \bigsemstep{e:\Float m}{n}
+      \right|_{Val_{\Float m}}
+    \right]
+    \notag
+    \\
+    &=
+    \mathbb E\!\left[
+      \left.
+        \left(
+          \symbigsemstep{
+            \mathsf{init}_{\Float m}(e:\Float m)
+          }{n}
+          \monbind
+          \mathsf{act}_{\Float m}
+        \right)
+      \right|_{Val_{\Float m}}
+    \right]
+    \tag{\text{by actual interpretation of initialized symbolic semantics}}
+    \\
+    &=
+    \mathbb E_{
+      s\sim
+      \symbigsemstep{
+        \mathsf{init}_{\Float m}(e:\Float m)
+      }{n}
+    }
+    \left[
+      \mathbb E\!\left[
+        \left.
+          \mathsf{act}_{\Float m}(s)
+        \right|_{Val_{\Float m}}
+      \right]
+    \right]
+    \tag{\text{by the definition of monadic bind}}
+    \\
+    &=
+    \mathbb E_{
+      s\sim
+      \symbigsemstep{
+        \mathsf{init}_{\Float m}(e:\Float m)
+      }{n}
+    }
+    \left[
+      \mathbb E\!\left[
+        \left.
+          \mathsf{exp}_{\Float m}(s)
+        \right|_{Val_{\Float m}}
+      \right]
+    \right]
+    \tag{\text{by equality of the interpretations on values}}
+    \\
+    &=
+    \mathbb E\!\left[
+      \left.
+        \left(
+          \symbigsemstep{
+            \mathsf{init}_{\Float m}(e:\Float m)
+          }{n}
+          \monbind
+          \mathsf{exp}_{\Float m}
+        \right)
+      \right|_{Val_{\Float m}}
+    \right]
+    \tag{\text{by the definition of monadic bind}}
+    \\
+    &=
+    \mathbb E\!\left[
+      \left.
+        \bigsemstep{
+          \exptrans{e:\Float m}:\Float m
+        }{n}
+      \right|_{Val_{\Float m}}
+    \right].
+    \tag{\text{by expected interpretation of initialized symbolic semantics}}
   \end{align}
 \end{proof}
