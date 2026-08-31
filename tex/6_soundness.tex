@@ -891,7 +891,7 @@ Strictly speaking, $\mathsf{realize}_{\rho}$ acts on fully type-annotated symbol
   defined by
   \[
   \begin{aligned}
-    \mathsf{act}_\tau(\sigma \mid \hat e)
+    \mathsf{act}_\tau\big(\ (\sigma \mid \hat e)\ \big)
     &=
     \sem{\sigma}_{\mathsf{env}}
     \monbind
@@ -1422,8 +1422,6 @@ The following lemma states that taking one symbolic step and then actualizing th
   \end{align}
 \end{proof}
 
-
-
 \begin{theorem}[Actual interpretation of initialized symbolic semantics]
   Let $e:\tau$ be closed and well typed. Then, for every
   $n\in\mathbb N$,
@@ -1499,6 +1497,28 @@ u_2\sim\uniform(0,u_1)
 [u_1\mapsto1.5,\;u_2\mapsto0.75].\)
 \end{example}
 
+\(\begin{aligned}
+\sem{\emptyset}_{\mathsf{means}}
+&=
+\delta_{()},\\
+\sem{\sigma,u\sim D(\vec a)}_{\mathsf{means}}
+&=
+\sem{\sigma}_{\mathsf{means}}
+\monbind
+\lambda\rho.\,
+\delta_{
+  \rho[
+    u\mapsto
+    \mathbb E_{X\sim D(\vec r)}[X]
+  ]
+},
+\end{aligned}\)
+
+where
+\[
+\rho\vdash\vec a\Downarrow\vec r.
+\]
+
 Now, we define a realization function.
 
 \begin{definition}[Expected realization]
@@ -1508,12 +1528,36 @@ Now, we define a realization function.
     \widehat{Expr_\tau}\to Expr_\tau
   \]
   is defined structurally by
-  \[
-  \begin{aligned}
+  \begin{align*}
+    \mathsf{erealize}_\rho(x)
+    &=
+    x,
+    \\
+    \mathsf{erealize}_\rho(\text{true})
+    &=
+    \text{true},
+    \\
+    \mathsf{erealize}_\rho(\text{false})
+    &=
+    \text{false},
+    \\
     \mathsf{erealize}_\rho(\sym(a))
     &=
     r
-    &&\text{if }\rho\vdash a\Downarrow r,
+    \quad \text{where }\rho\vdash a\Downarrow r,
+    \\
+    \mathsf{erealize}_\rho
+      (\letkw\ x=\hat e_1\ \inkw\ \hat e_2)
+    &=
+    \letkw\ x=\mathsf{erealize}_\rho(\hat e_1)
+    \ \inkw\ \mathsf{erealize}_\rho(\hat e_2),
+    \\
+    \mathsf{erealize}_\rho
+      (\ifkw\ \hat e_1\ \thenkw\ \hat e_2\ \elsekw\ \hat e_3)
+    &=
+    \ifkw\ \mathsf{erealize}_\rho(\hat e_1)
+    \ \thenkw\ \mathsf{erealize}_\rho(\hat e_2)
+    \ \elsekw\ \mathsf{erealize}_\rho(\hat e_3),
     \\
     \mathsf{erealize}_\rho(\hat e_1+\hat e_2)
     &=
@@ -1522,27 +1566,153 @@ Now, we define a realization function.
     \mathsf{erealize}_\rho(\hat e_2),
     \\
     \mathsf{erealize}_\rho
-      \bigl(\uniform[\E](\hat e_1,\ldots,\hat e_k)\bigr)
+      \bigl(\uniform[\E](\hat e_1,\hat e_2)\bigr)
     &=
-    \mathsf{mean}_\uniform
+    \mathsf{mean}_{\mathsf{Uniform}}
       \bigl(
         \mathsf{erealize}_\rho(\hat e_1),
-        \ldots,
-        \mathsf{erealize}_\rho(\hat e_k)
+        \mathsf{erealize}_\rho(\hat e_2)
       \bigr),
     \\
     \mathsf{erealize}_\rho
-      \bigl(\uniform[\G](\hat e_1,\ldots,\hat e_k)\bigr)
+      \bigl(\uniform[\G](\hat e_1,\hat e_2)\bigr)
     &=
     \uniform\bigl(
       \mathsf{erealize}_\rho(\hat e_1),
-      \ldots,
-      \mathsf{erealize}_\rho(\hat e_k)
-    \bigr).
-  \end{aligned}
-  \]
+      \mathsf{erealize}_\rho(\hat e_2)
+    \bigr) \\
+    &\ldots
+  \end{align*}
   All other constructs are handled structurally.
 \end{definition}
+
+Strictly speaking, $\mathsf{erealize}_\rho$ acts on fully type-annotated symbolic residual expressions, preserving their type annotations.
+
+\begin{lemma}\label{lem:erealize-lift}
+  \[
+    \mathsf{erealize}_{()}(\mathsf{lift}(e : \tau)) = \exptrans{e : \tau} : \tau
+  \]
+\end{lemma}
+
+\begin{proof}
+  By induction on $e : \tau$.
+
+  \paragraph{Case $e=c:\Float m$.}
+  \begin{align*}
+    \mathsf{erealize}_{()}
+    \bigl(\mathsf{lift}(c:\Float m)\bigr)
+    &=
+    \mathsf{erealize}_{()}
+    \bigl(\sym(c):\Float m\bigr)
+    \tag{by the definition of $\mathsf{lift}$}
+    \\
+    &=
+    c:\Float m
+    \tag{since $()\vdash c\Downarrow c$}
+    \\
+    &=
+    \exptrans{c:\Float m}:\Float m
+    \tag{by the definition of $\exptrans{\cdot}$}
+  \end{align*}
+
+  \paragraph{Case $e=e_1+e_2:\Float m$.}
+  \begin{align*}
+    \mathsf{erealize}_{()}
+    \bigl(\mathsf{lift}(e_1+e_2)\bigr)
+    &=
+    \mathsf{erealize}_{()}
+    \bigl(
+      \mathsf{lift}(e_1)+\mathsf{lift}(e_2)
+    \bigr)
+    \tag{by the definition of $\mathsf{lift}$}
+    \\
+    &=
+    \mathsf{erealize}_{()}\bigl(\mathsf{lift}(e_1)\bigr)
+    +
+    \mathsf{erealize}_{()}\bigl(\mathsf{lift}(e_2)\bigr)
+    \tag{by the definition of $\mathsf{erealize}_{()}$}
+    \\
+    &=
+    \exptrans{e_1}+\exptrans{e_2}
+    \tag{by the I.H.}
+    \\
+    &=
+    \exptrans{e_1+e_2}
+    \tag{by the definition of $\exptrans{\cdot}$}
+  \end{align*}
+
+  \paragraph{Case $e=\uniform(e_1,e_2):\Float{\E}$.}
+  \begin{align*}
+    &\mathsf{erealize}_{()}
+    \bigl(
+      \mathsf{lift}
+      (\uniform(e_1,e_2):\Float{\E})
+    \bigr)
+    \notag
+    \\
+    &=
+    \mathsf{erealize}_{()}
+    \bigl(
+      \uniform[\E]
+      (\mathsf{lift}(e_1),\mathsf{lift}(e_2))
+      :\Float{\E}
+    \bigr)
+    \tag{by the definition of $\mathsf{lift}$}
+    \\
+    &=
+    \mathsf{mean}_{\mathsf{Uniform}}
+    \bigl(
+      \mathsf{erealize}_{()}(\mathsf{lift}(e_1)),
+      \mathsf{erealize}_{()}(\mathsf{lift}(e_2))
+    \bigr)
+    \tag{by the definition of $\mathsf{erealize}_{()}$}
+    \\
+    &=
+    \mathsf{mean}_{\mathsf{Uniform}}
+    \bigl(\exptrans{e_1},\exptrans{e_2}\bigr)
+    \tag{by the I.H.}
+    \\
+    &=
+    \exptrans{\uniform(e_1,e_2):\Float{\E}}:\Float{\E}
+    \tag{by the definition of $\exptrans{\cdot}$}
+  \end{align*}
+
+  \paragraph{Case $e=\uniform(e_1,e_2):\Float{\G}$.}
+  \begin{align*}
+    &\mathsf{erealize}_{()}
+    \bigl(
+      \mathsf{lift}
+      (\uniform(e_1,e_2):\Float{\G})
+    \bigr)
+    \notag
+    \\
+    &=
+    \mathsf{erealize}_{()}
+    \bigl(
+      \uniform[\G]
+      (\mathsf{lift}(e_1),\mathsf{lift}(e_2))
+      :\Float{\G}
+    \bigr)
+    \tag{by the definition of $\mathsf{lift}$}
+    \\
+    &=
+    \uniform\bigl(
+      \mathsf{erealize}_{()}(\mathsf{lift}(e_1)),
+      \mathsf{erealize}_{()}(\mathsf{lift}(e_2))
+    \bigr)
+    \tag{by the definition of $\mathsf{erealize}_{()}$}
+    \\
+    &=
+    \uniform\bigl(\exptrans{e_1},\exptrans{e_2}\bigr)
+    \tag{by the I.H.}
+    \\
+    &=
+    \exptrans{\uniform(e_1,e_2):\Float{\G}}:\Float{\G}
+    \tag{by the definition of $\exptrans{\cdot}$}
+  \end{align*}
+
+  \paragraph{All other cases analogous.}
+\end{proof}
 
 
 \begin{definition}[Single-state expected interpretation]
@@ -1556,9 +1726,9 @@ Now, we define a realization function.
     \mathsf{exp}_\tau
     (\sigma\mid\hat e:\tau)
     =
-    \delta_{
+    \sem{\sigma}_{\mathsf{means}} \monbind \lambda \rho. \delta_{
       \mathsf{erealize}_{
-        \mathsf{means}(\sigma)
+        \rho
       }(\hat e):\tau
     }.
   \]
@@ -1602,6 +1772,49 @@ Now, we define a realization function.
   \end{align*}
 \end{example}
 
+\begin{lemma}[Initial expected interpretation]
+  Let $e : \tau$ be closed and well-typed. Then,
+  \[
+    \mathsf{exp}_\tau
+    (\mathsf{init}_\tau(e : \tau))
+    =
+    \delta_{\exptrans{e:\tau} : \tau}.
+  \]
+\end{lemma}
+
+\begin{proof}
+  \begin{align}
+    \mathsf{exp}_\tau
+    \bigl(\mathsf{init}_\tau(e:\tau)\bigr)
+    &=
+    \mathsf{exp}_\tau
+    \bigl(\emptyset\mid\mathsf{lift}(e:\tau):\tau\bigr)
+    \tag{by the definition of $\mathsf{init}_\tau$}
+    \\
+    &=
+    \sem{\emptyset}_{\mathsf{means}}
+    \monbind
+    \lambda\rho.\,
+    \delta_{\mathsf{erealize}_\rho(\mathsf{lift}(e:\tau)):\tau}
+    \tag{by the definition of $\mathsf{exp}_\tau$}
+    \\
+    &=
+    \delta_{()}
+    \monbind
+    \lambda\rho.\,
+    \delta_{\mathsf{erealize}_\rho(\mathsf{lift}(e:\tau)):\tau}
+    \tag{by the definition of $\sem{\emptyset}_{\mathsf{means}}$}
+    \\
+    &=
+    \delta_{\mathsf{erealize}_{()}(\mathsf{lift}(e:\tau)):\tau}
+    \tag{by monad left identity}
+    \\
+    &=
+    \delta_{\exptrans{e:\tau}:\tau}
+    \tag{by~\Cref{lem:erealize-lift}}
+  \end{align}
+\end{proof}
+
 The following theorem states that taking one symbolic step and then applying the expected interpretation produces the same distribution as first applying the expected interpretation and then taking one ordinary step.
 
 \begin{theorem}[Expected interpretation of symbolic small-step semantics]
@@ -1644,31 +1857,22 @@ The following theorem states that taking one symbolic step and then applying the
   TODO.
 \end{proof}
 
-\begin{lemma}
-  \[
-    \mathsf{erealize}_{()}(\mathsf{lift}(e)) = \exptrans{e}
-  \]
-\end{lemma}
 
-\begin{lemma}[Initial expected interpretation]
-  Let $e : \tau$ be closed and well-typed. Then,
+\begin{theorem}[Expected interpretation of initialized symbolic semantics]
+  Let $e:\tau$ be closed and well typed. Then, for every
+  $n\in\mathbb N$,
   \[
+    \symbigsemstep{\mathsf{init}_\tau(e:\tau)}{n}
+    \monbind
     \mathsf{exp}_\tau
-    (\emptyset\mid\mathsf{lift}(e):\tau)
     =
-    \delta_{\exptrans{e:\tau}}.
+    \bigsemstep{\exptrans{e:\tau} : \tau}{n}.
   \]
-\end{lemma}
-
-
-\begin{theorem}
-  Let \(s_0=(\emptyset\mid\mathsf{lift}(e)),
-\qquad
-\nu_n=\symbigsemstep{s_0}{n}.\)
-
-\(\bigsemstep{\exptrans e}n=\nu_n\monbind\mathsf{exp}.\)
-
 \end{theorem}
+
+\begin{proof}
+  TODO.
+\end{proof}
 
 
 
