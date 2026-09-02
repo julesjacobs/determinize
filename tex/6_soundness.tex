@@ -294,9 +294,9 @@ This is a Markov kernel (TODO: prove).
 \begin{lemma}[Monotone accumulation of mass]
   For all $n \in \mathbb{N}$:
   \begin{enumerate}
-    \item $\bigsemstep{e : \tau}{n}(Val_\tau) \leq \bigsemstep{e : \tau}{n+1}(Val_\tau)$
+    \item $\bigsemstep{e : \tau}{n}(A) \leq \bigsemstep{e : \tau}{n+1}(A)$
   \end{enumerate}
-  That is, probability mass on values accumulates monotonically.
+  for every measurable $A \subseteq Val_\tau$. That is, probability mass on values accumulates monotonically.
 \end{lemma}
 
 \begin{definition}[Big-step semantics]
@@ -1463,29 +1463,30 @@ The following lemma states that taking one symbolic step and then actualizing th
 
 The expected interpretation also starts from a symbolic state
 $(\sigma \mid \hat e : \tau) \in State_\tau$, but replaces the samples
-recorded in $\sigma$ with their means rather than sampling them.
+recorded in $\sigma$ with their means (replace in residual expression) rather than sampling them.
 
-The mean valuation determined by a symbolic sample environment is defined
-recursively by
+First, we define the following, replacing each symbolic variable in the sampling enviornment by the mean of its distribution. Distribution parameters are evaluated sequentially under the valuation induced by the preceding bindings:
+
 \[
 \begin{aligned}
-  \mathsf{means}(\emptyset)
-  &=
-  (),\\
-  \mathsf{means}
-  \bigl(\sigma,\,u\sim D(\vec a)\bigr)
-  &=
-  \rho[u\mapsto m],
+\sem{\emptyset}_{\mathsf{means}}
+&=
+\delta_{()},\\
+\sem{\sigma,u\sim D(\vec a)}_{\mathsf{means}}
+&=
+\sem{\sigma}_{\mathsf{means}}
+\monbind
+\lambda\rho.\,
+\delta_{\rho\left[
+u\mapsto
+\mathbb{E}_{X\sim D(\vec r)}[X]
+\right]},
 \end{aligned}
 \]
-where
-\[
-  \rho=\mathsf{means}(\sigma),
-  \qquad
-  \rho\vdash\vec a\Downarrow\vec r,
-  \qquad
-  m=\mathbb E_{X\sim D(\vec r)}[X].
-\]
+
+with \(\rho\vdash\vec a\Downarrow\vec r\). Note here that \(\sem{\sigma}_{\mathsf{means}}\) is a Dirac measure concentrated on a single valuation, where 
+\(\sem{\sigma}_{\mathsf{means}} \in \mathcal{D}(\mathbb{R}^n)\).
+
 
 \begin{example}
   \(\mathsf{means}
@@ -1496,28 +1497,6 @@ u_2\sim\uniform(0,u_1)
 =
 [u_1\mapsto1.5,\;u_2\mapsto0.75].\)
 \end{example}
-
-\(\begin{aligned}
-\sem{\emptyset}_{\mathsf{means}}
-&=
-\delta_{()},\\
-\sem{\sigma,u\sim D(\vec a)}_{\mathsf{means}}
-&=
-\sem{\sigma}_{\mathsf{means}}
-\monbind
-\lambda\rho.\,
-\delta_{
-  \rho[
-    u\mapsto
-    \mathbb E_{X\sim D(\vec r)}[X]
-  ]
-},
-\end{aligned}\)
-
-where
-\[
-\rho\vdash\vec a\Downarrow\vec r.
-\]
 
 Now, we define a realization function.
 
@@ -1876,39 +1855,91 @@ The following theorem states that taking one symbolic step and then applying the
 
 
 
-\subsubsection{Relating original to determinized}
+\subsubsection{Relating original and determinized expressions}
 
-An $n$-step dustribution may still contain non-value expressions, so its expectation is not directly defined. Must restrict each $n$-step distribution to values.
-
-For a float-valued distribution $\mu$ with finite expectation, let
+First, we formally define what an expectation is. For a float-valued distribution $\mu$ with finite expectation, let
 \[
   \mathbb{E}[\mu]
   :=
   \int_{\mathbb{R}} r\,d\mu(r).
 \]
 
-\begin{theorem}\label{thm:interpretation-of-means}
-  Let $m\in\{\E,\G\}$, and let
+
+An $n$-step distribution may still contain non-value expressions, so its expectation is not directly defined. Thus, we must restrict each $n$-step distribution to values.
+
+
+% Float types
+\begin{theorem}[Agreement of interpretations]\label{thm:agreement-of-interpretations}
+  Let $s=(\sigma\mid\hat e: \tau)\in State_{\tau}$. 
+  Then
   \[
-    s=(\sigma\mid\sym(a):\Float m)\in State_{\Float m}
-  \]
-  be a terminal symbolic state. Then
-  \[
-    \mathbb{E}[\mathsf{act}_{\Float m}(s)]
+    \mathbb E\!\left[
+      \left.\mathsf{act}_{\tau}(s)\right|_{Val_{\tau}}
+    \right]
     =
-    \mathbb{E}[\mathsf{exp}_{\Float m}(s)].
+    \mathbb E\!\left[
+      \left.\mathsf{exp}_{\tau}(s)\right|_{Val_{\tau}}
+    \right].
   \]
 \end{theorem}
 
-\begin{theorem}[Soundness n-step]
-  Let $e : \tau$ be a well-typed expression. Then, for every $n$, when restricted to values
-  \[
-    \mathbb{E}[\bigsemstep{e : \Float{m}}{n}]
-    =
-    \mathbb{E}[\bigsemstep{\exptrans{e : \Float{m}} : \Float{m}}{n}]
-  \]
+\begin{proof}
+  TODO.
+\end{proof}
 
-  where $m = \G$ or $\E$.
+
+\begin{lemma}[Expectation of bind]\label{lem:expectation-of-bind}
+  Let $\mu\in\mathcal D(X)$ be a probability measure, and let $k:X\to\mathcal D(\mathbb R)$ be a probability kernel. Assuming finite expectation,
+  \[
+    \mathbb E[\mu\monbind k]
+    =
+    \int_X
+      \mathbb E[k(x)]
+      \,d\mu(x).
+  \]
+\end{lemma}
+
+\begin{proof}
+  By definition of monadic bind, for every measurable \(A \subseteq \mathbb R\),
+  \[
+    (\mu \monbind k)(A)
+    =
+    \int_X k(x)(A)\,d\mu(x).
+  \]
+  Therefore, by the definition of expectation and Fubini's theorem,
+  \begin{align}
+    \mathbb E[\mu\monbind k]
+    &=
+    \int_{\mathbb R} r\,d(\mu\monbind k)(r)
+    \tag{\text{by the definition of expectation}}
+    \\
+    &=
+    \int_X
+    \left(
+      \int_{\mathbb R} r\,dk(x)(r)
+    \right)
+    d\mu(x)
+    \tag{\text{by the definition of monadic bind and Fubini's theorem}}
+    \\
+    &=
+    \int_X \mathbb E[k(x)]\,d\mu(x)
+    \tag{\text{by the definition of expectation}}.
+  \end{align}
+\end{proof}
+
+
+\begin{theorem}[Soundness $n$-step]
+  \label{thm:soundness-n-step}
+  Let $e : \tau$ be a well-typed expression, where $\tau = \Float{m}$ and $m = \G$ or $\E$. Then, for every $n$, when restricted to values:
+  \[
+    \mathbb E\!\left[
+      \left.\bigsemstep{e : \tau}{n}\right|_{Val_\tau}
+    \right]
+    =
+    \mathbb E\!\left[
+      \left.\bigsemstep{\exptrans{e : \tau} : \tau}{n}\right|_{Val_\tau}
+    \right].
+  \]
   % and in particular:
   % \[
   %   \bigsem{e : \Float{\G}}
@@ -1917,176 +1948,139 @@ For a float-valued distribution $\mu$ with finite expectation, let
   % \]
 \end{theorem}
 
-\begin{theorem}[Soundness big step]
-  
-\end{theorem}
-
-
 \begin{proof}
+  Let
+  \[
+    \mu_n
+    =
+    \symbigsemstep{\mathsf{init}_\tau(e:\tau)}{n}.
+  \]
+  Then
   \begin{align}
-    \mathbb E[\bigsem{e:\Float m}]
-    &=
-    \mathbb E\left[
-      \delta_{e:\Float m}
-      \monbind
-      \lambda e'.\,\bigsem{e':\Float m}
+    \mathbb E\!\left[
+      \left.\bigsemstep{e:\tau}{n}\right|_{Val_\tau}
     \right]
-    \tag{\text{by the left-unit law}}
-    \\
     &=
-    \mathbb E\left[
-      \mathsf{act}_{\Float m}
-        (\emptyset\mid\mathsf{lift}(e):\Float m)
-      \monbind
-      \lambda e'.\,\bigsem{e':\Float m}
+    \mathbb E\!\left[
+      \left.(\mu_n\monbind\mathsf{act}_\tau)\right|_{Val_\tau}
     \right]
-    \tag{\text{by definition of initial actual interpretation}}
-    \\
-    &=
-    \mathbb E\left[
-      \symbigsem{
-        (\emptyset\mid\mathsf{lift}(e):\Float m):\Float m
-      }
-      \monbind
-      \mathsf{act}_{\Float m}
-    \right]
-    \tag{\text{by \Cref{thm:actual-big-step}}}
+    \tag{\text{by the actual interpretation theorem}}
     \\
     &=
     \int
-      \mathbb E[\mathsf{act}_{\Float m}(s)]
-      \,d\symbigsem{
-        (\emptyset\mid\mathsf{lift}(e):\Float m):\Float m
-      }(s)
-    \tag{\text{expectation of a mixture}}
+      \mathbb E\!\left[
+        \left.\mathsf{act}_\tau(s)\right|_{Val_\tau}
+      \right]
+      \,d\mu_n(s)
+    \tag{by~\Cref{lem:expectation-of-bind}}
     \\
     &=
     \int
-      \mathbb E[\mathsf{exp}_{\Float m}(s)]
-      \,d\symbigsem{
-        (\emptyset\mid\mathsf{lift}(e):\Float m):\Float m
-      }(s)
-    \tag{\text{by \Cref{thm:interpretation-of-means}}}
+      \mathbb E\!\left[
+        \left.\mathsf{exp}_\tau(s)\right|_{Val_\tau}
+      \right]
+      \,d\mu_n(s)
+    \tag{by~\Cref{thm:agreement-of-interpretations}}
     \\
     &=
-    \mathbb E\left[
-      \symbigsem{
-        (\emptyset\mid\mathsf{lift}(e):\Float m):\Float m
-      }
-      \monbind
-      \mathsf{exp}_{\Float m}
+    \mathbb E\!\left[
+      \left.(\mu_n\monbind\mathsf{exp}_\tau)\right|_{Val_\tau}
     \right]
-    \tag{\text{expectation of a mixture}}
+    \tag{by~\Cref{lem:expectation-of-bind}}
     \\
     &=
-    \mathbb E\left[
-      \mathsf{exp}_{\Float m}
-        (\emptyset\mid\mathsf{lift}(e):\Float m)
-      \monbind
-      \lambda e'.\,\bigsem{e':\Float m}
-    \right]
-    \tag{\text{by \Cref{thm:expected-symbolic-big-step}}}
-    \\
-    &=
-    \mathbb E\left[
-      \delta_{\exptrans{e:\Float m}:\Float m}
-      \monbind
-      \lambda e'.\,\bigsem{e':\Float m}
-    \right]
-    \tag{\text{by definition of expected interpretation}}
-    \\
-    &=
-    \mathbb E\left[
-      \bigsem{\exptrans{e:\Float m}:\Float m}
+    \mathbb E\!\left[
+      \left.
+        \bigsemstep{\exptrans{e:\tau}:\tau}{n}
+      \right|_{Val_\tau}
     \right].
-    \tag{\text{by the left-unit law}}
+    \tag{\text{by the expected interpretation theorem}}
   \end{align}
 \end{proof}
 
 
-
-
-
-
+\begin{lemma}[Expectation commutes with increasing limits]
+\label{lem:expectation-increasing-limits}
+Let \(\mu_0 \leq \mu_1 \leq \mu_2 \leq \cdots\) be an increasing sequence of subprobability measures over \(\mathbb{R}_{\geq 0}\), and suppose
+\[
+\mu = \lim_{n \to \infty} \mu_n,
+\]
+where the limit is taken setwise, i.e., \(\mu(A) = \lim_{n \to \infty} \mu_n(A)\) for every measurable set \(A\). Then
+\[
+\mathbb{E}[\mu] = \lim_{n \to \infty} \mathbb{E}[\mu_n].
+\]
+\end{lemma}
 
 \begin{proof}
-  Fix $n\in\mathbb N$. Then
+By definition,
+\[
+\mathbb{E}[\mu] = \int_{\mathbb{R}_{\geq 0}} x \, d\mu(x).
+\]
+Since \((\mu_n)_{n \in \mathbb{N}}\) is increasing and \(\mu = \lim_{n \to \infty} \mu_n\), continuity of integration with respect to increasing limits of measures gives
+\[
+\int_{\mathbb{R}_{\geq 0}} x \, d\mu(x)
+=
+\lim_{n \to \infty}
+\int_{\mathbb{R}_{\geq 0}} x \, d\mu_n(x).
+\]
+Hence,
+\[
+\mathbb{E}[\mu] = \lim_{n \to \infty} \mathbb{E}[\mu_n].
+\]
+\end{proof}
+
+
+\begin{theorem}[Soundness big step]
+    Let $e : \tau$ be a well-typed expression, where $\tau = \Float{m}$ and $m = \G$ or $\E$. Then:
+  \[
+    \mathbb{E}[\bigsem{e : \tau}]
+    =
+    \mathbb{E}[\bigsem{\exptrans{e : \tau} : \tau}].
+  \]
+\end{theorem}
+
+\begin{proof}
+  For each $n\in\mathbb N$, let
+  \[
+    \mu_n
+    =
+    \left.
+      \bigsemstep{e:\tau}{n}
+    \right|_{Val_\tau}
+    \qquad\text{and}\qquad
+    \nu_n
+    =
+    \left.
+      \bigsemstep{\exptrans{e:\tau}:\tau}{n}
+    \right|_{Val_\tau}.
+  \]
+  Since values are absorbing, $(\mu_n)_{n\in\mathbb N}$ and
+  $(\nu_n)_{n\in\mathbb N}$ are increasing sequences of measures on
+  $Val_\tau$. 
   \begin{align}
-    &\mathbb E\!\left[
-      \left.
-        \bigsemstep{e:\Float m}{n}
-      \right|_{Val_{\Float m}}
-    \right]
-    \notag
+    \mathbb E\!\left[\bigsem{e:\tau}\right]
+    &=
+    \mathbb E\!\left[\lim_{n\to\infty}\mu_n\right]
+    \tag{\text{by the definition of the big-step semantics}}
+    \\
+    &=
+    \lim_{n\to\infty}
+    \mathbb E\!\left[\mu_n\right]
+    \tag{\text{by \Cref{lem:expectation-increasing-limits}}}
+    \\
+    &=
+    \lim_{n\to\infty}
+    \mathbb E\!\left[\nu_n\right]
+    \tag{\text{by \Cref{thm:soundness-n-step}}}
+    \\
+    &=
+    \mathbb E\!\left[\lim_{n\to\infty}\nu_n\right]
+    \tag{\text{by \Cref{lem:expectation-increasing-limits}}}
     \\
     &=
     \mathbb E\!\left[
-      \left.
-        \left(
-          \symbigsemstep{
-            \mathsf{init}_{\Float m}(e:\Float m)
-          }{n}
-          \monbind
-          \mathsf{act}_{\Float m}
-        \right)
-      \right|_{Val_{\Float m}}
-    \right]
-    \tag{\text{by actual interpretation of initialized symbolic semantics}}
-    \\
-    &=
-    \mathbb E_{
-      s\sim
-      \symbigsemstep{
-        \mathsf{init}_{\Float m}(e:\Float m)
-      }{n}
-    }
-    \left[
-      \mathbb E\!\left[
-        \left.
-          \mathsf{act}_{\Float m}(s)
-        \right|_{Val_{\Float m}}
-      \right]
-    \right]
-    \tag{\text{by the definition of monadic bind}}
-    \\
-    &=
-    \mathbb E_{
-      s\sim
-      \symbigsemstep{
-        \mathsf{init}_{\Float m}(e:\Float m)
-      }{n}
-    }
-    \left[
-      \mathbb E\!\left[
-        \left.
-          \mathsf{exp}_{\Float m}(s)
-        \right|_{Val_{\Float m}}
-      \right]
-    \right]
-    \tag{\text{by equality of the interpretations on values}}
-    \\
-    &=
-    \mathbb E\!\left[
-      \left.
-        \left(
-          \symbigsemstep{
-            \mathsf{init}_{\Float m}(e:\Float m)
-          }{n}
-          \monbind
-          \mathsf{exp}_{\Float m}
-        \right)
-      \right|_{Val_{\Float m}}
-    \right]
-    \tag{\text{by the definition of monadic bind}}
-    \\
-    &=
-    \mathbb E\!\left[
-      \left.
-        \bigsemstep{
-          \exptrans{e:\Float m}:\Float m
-        }{n}
-      \right|_{Val_{\Float m}}
+      \bigsem{\exptrans{e:\tau}:\tau}
     \right].
-    \tag{\text{by expected interpretation of initialized symbolic semantics}}
+    \tag{\text{by the definition of the big-step semantics}}
   \end{align}
 \end{proof}
