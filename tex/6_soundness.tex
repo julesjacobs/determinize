@@ -708,7 +708,7 @@ semantics.
 
 The actual interpretation turns a symbolic state back into a distribution over
 ordinary expressions by sampling the symbolic environment and substituting the
-sampled values for the symbolic variables.  
+sampled values for the symbolic variables in the residual expression.  
 
 
 Recall $\sym(a)$ embeds an affine expression $a$ into the
@@ -1462,40 +1462,42 @@ The following lemma states that taking one symbolic step and then actualizing th
 \subsubsection{Expected interpretation of symbolic semantics}
 
 The expected interpretation also starts from a symbolic state
-$(\sigma \mid \hat e : \tau) \in State_\tau$, but replaces the samples
-recorded in $\sigma$ with their means (replace in residual expression) rather than sampling them.
+$(\sigma \mid \hat e : \tau) \in State_\tau$, but replaces the symbolic variables in the residual expression $\hat e$ with the means of the samples recorded in $\sigma$, rather than sampling them.
 
-First, we define the following, replacing each symbolic variable in the sampling enviornment by the mean of its distribution. Distribution parameters are evaluated sequentially under the valuation induced by the preceding bindings:
+First, we consider the sampling environment alone and define the following, replacing each symbolic sample in the sampling environment by the mean of its distribution. Distribution parameters are evaluated sequentially under the valuation induced by the preceding bindings:
 
-\[
-\begin{aligned}
-\sem{\emptyset}_{\mathsf{means}}
-&=
-\delta_{()},\\
-\sem{\sigma,u\sim D(\vec a)}_{\mathsf{means}}
-&=
-\sem{\sigma}_{\mathsf{means}}
-\monbind
-\lambda\rho.\,
-\delta_{\rho\left[
-u\mapsto
-\mathbb{E}_{X\sim D(\vec r)}[X]
-\right]},
-\end{aligned}
-\]
+\begin{align*}
+  \sem{\emptyset}_{\mathsf{mean}}
+  &=
+  \delta_{()},\\
+  \sem{\sigma,u\sim D(\vec a)}_{\mathsf{mean}}
+  &=
+  \sem{\sigma}_{\mathsf{mean}}
+  \monbind
+  \lambda\rho.\,
+  \delta_{\rho\left[
+  u\mapsto
+  \mathbb{E}_{X\sim D(\vec r)}[X]
+  \right]},
+\end{align*}
 
-with \(\rho\vdash\vec a\Downarrow\vec r\). Note here that \(\sem{\sigma}_{\mathsf{means}}\) is a Dirac measure concentrated on a single valuation, where 
-\(\sem{\sigma}_{\mathsf{means}} \in \mathcal{D}(\mathbb{R}^n)\).
+with $\rho\vdash\vec a\Downarrow\vec r$. 
+
+Note $\sem{\sigma}_{\mathsf{mean}}$ is a Dirac measure concentrated on a single valuation, where 
+$\sem{\sigma}_{\mathsf{mean}} \in \mathcal{D}(\mathbb{R}^n)$.
 
 
 \begin{example}
-  \(\mathsf{means}
-\bigl(
-u_1\sim\uniform(1,2),\,
-u_2\sim\uniform(0,u_1)
-\bigr)
-=
-[u_1\mapsto1.5,\;u_2\mapsto0.75].\)
+  \[
+    \sem{
+      u_1\sim\uniform(1,2),\;
+      u_2\sim\uniform(0,u_1)
+    }_{\mathsf{mean}}
+    =
+    \delta_{
+      [u_1\mapsto 1.5,\;u_2\mapsto 0.75]
+    }.
+  \]
 \end{example}
 
 Now, we define a realization function.
