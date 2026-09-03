@@ -586,7 +586,7 @@ The typing rules from the ordinary expresisons lift to symbolic residual express
     {\Gamma \vdash \hat e_1 < \hat e_2 : \Bool}
 \end{mathpar}
 
-\paragraph{Lifting an ordinary expression to a symbolic residual expression}
+\paragraph{Lifting and initialization}
 We can define a symbolic lifting:
 \[
 \mathsf{lift} :
@@ -1043,7 +1043,9 @@ The following lemma states that taking one symbolic step and then actualizing th
     \symsem{s : \tau}
     \monbind
     \mathsf{act}_\tau
-    =
+    \quad 
+    = 
+    \quad
     \mathsf{act}_\tau(s)
     \monbind
     \lambda e'.\,\sem{e' : \tau}
@@ -1388,7 +1390,9 @@ The following lemma states that taking one symbolic step and then actualizing th
     \symbigsemstep{s : \tau}{n}
     \monbind
     \mathsf{act}_\tau
-    =
+    \quad 
+    = 
+    \quad
     \mathsf{act}_\tau(s)
     \monbind
     \lambda e.\,\bigsemstep{e : \tau}{n}.
@@ -1513,11 +1517,13 @@ The following lemma states that taking one symbolic step and then actualizing th
   Let $e:\tau$ be closed and well typed. Then, for every
   $n\in\mathbb N$,
   \[
+    \bigsemstep{e:\tau}{n}
+    \quad
+    =
+    \quad
     \symbigsemstep{\mathsf{init}_\tau(e:\tau)}{n}
     \monbind
-    \mathsf{act}_\tau
-    =
-    \bigsemstep{e:\tau}{n}.
+    \mathsf{act}_\tau.
   \]
 \end{theorem}
 
@@ -1551,7 +1557,8 @@ The following lemma states that taking one symbolic step and then actualizing th
 The expected interpretation also starts from a symbolic state
 $(\sigma \mid \hat e : \tau) \in State_\tau$, but replaces the symbolic variables in the residual expression $\hat e$ with the means of the samples recorded in $\sigma$, rather than sampling them.
 
-First, we consider the sampling environment alone and define the following, replacing each symbolic sample in the sampling environment by the mean of its distribution. Distribution parameters are evaluated sequentially under the valuation induced by the preceding bindings:
+\paragraph{Mean of symbolic sampling enviornment}
+First, we consider the sampling environment alone and define the following, replacing each symbolic sample in the sampling environment by the mean of its distribution:
 
 \begin{align*}
   \sem{\emptyset}_{\mathsf{mean}}
@@ -1794,7 +1801,7 @@ Strictly speaking, $\mathsf{erealize}_\rho$ acts on fully type-annotated symboli
     \mathsf{exp}_\tau
     (\sigma\mid\hat e:\tau)
     =
-    \sem{\sigma}_{\mathsf{means}} \monbind \lambda \rho. \delta_{
+    \sem{\sigma}_{\mathsf{mean}} \monbind \lambda \rho. \delta_{
       \mathsf{erealize}_{
         \rho
       }(\hat e):\tau
@@ -1893,7 +1900,9 @@ The following theorem states that taking one symbolic step and then applying the
     \symsem{s : \tau}
     \monbind
     \mathsf{exp}_\tau
-    =
+    \quad 
+    = 
+    \quad
     \mathsf{exp}_\tau(s)
     \monbind
     \lambda e'.\,\sem{e' : \tau}.
@@ -1913,7 +1922,9 @@ The following theorem states that taking one symbolic step and then applying the
     \symbigsemstep{s:\tau}{n}
     \monbind
     \mathsf{exp}_\tau
-    =
+    \quad 
+    = 
+    \quad
     \mathsf{exp}_\tau(s)
     \monbind
     \lambda e.\,
@@ -1930,16 +1941,39 @@ The following theorem states that taking one symbolic step and then applying the
   Let $e:\tau$ be closed and well typed. Then, for every
   $n\in\mathbb N$,
   \[
+    \bigsemstep{\exptrans{e:\tau} : \tau}{n}
+    \quad 
+    = 
+    \quad
     \symbigsemstep{\mathsf{init}_\tau(e:\tau)}{n}
     \monbind
-    \mathsf{exp}_\tau
-    =
-    \bigsemstep{\exptrans{e:\tau} : \tau}{n}.
+    \mathsf{exp}_\tau.
   \]
 \end{theorem}
 
 \begin{proof}
-  TODO.
+  \begin{align}
+    &\symbigsemstep{\mathsf{init}_\tau(e:\tau)}{n}
+    \monbind
+    \mathsf{exp}_\tau
+    \notag
+    \\
+    &=
+    \mathsf{exp}_\tau\bigl(\mathsf{init}_\tau(e:\tau)\bigr)
+    \monbind
+    \lambda e'.\,\bigsemstep{e':\tau}{n}
+    \tag{\text{by \Cref{thm:expected-symbolic-n-step}}}
+    \\
+    &=
+    \delta_{\exptrans{e:\tau}:\tau}
+    \monbind
+    \lambda e'.\,\bigsemstep{e':\tau}{n}
+    \tag{\text{by the initial expected interpretation lemma}}
+    \\
+    &=
+    \bigsemstep{\exptrans{e:\tau}:\tau}{n}.
+    \tag{\text{by monad left identity}}
+  \end{align}
 \end{proof}
 
 
@@ -1978,7 +2012,7 @@ An $n$-step distribution may still contain non-value expressions, so its expecta
 
 
 \begin{lemma}[Expectation of bind]\label{lem:expectation-of-bind}
-  Let $\mu\in\mathcal D(X)$ be a probability measure, and let $k:X\to\mathcal D(\mathbb R)$ be a probability kernel. Assuming finite expectation,
+  Let $\mu\in\mathcal D(X)$ be a probability measure, and let $k:X\to\mathcal D(\mathbb R)$ be a probability kernel. Then,
   \[
     \mathbb E[\mu\monbind k]
     =
@@ -1989,13 +2023,6 @@ An $n$-step distribution may still contain non-value expressions, so its expecta
 \end{lemma}
 
 \begin{proof}
-  By definition of monadic bind, for every measurable $A \subseteq \mathbb R$,
-  \[
-    (\mu \monbind k)(A)
-    =
-    \int_X k(x)(A)\,d\mu(x).
-  \]
-  Therefore, by the definition of expectation and Fubini's theorem,
   \begin{align}
     \mathbb E[\mu\monbind k]
     &=
@@ -2056,7 +2083,7 @@ An $n$-step distribution may still contain non-value expressions, so its expecta
     \tag{\text{by the actual interpretation theorem}}
     \\
     &=
-    \int
+    \int_{State_\tau}
       \mathbb E\!\left[
         \left.\mathsf{act}_\tau(s)\right|_{Val_\tau}
       \right]
@@ -2064,7 +2091,7 @@ An $n$-step distribution may still contain non-value expressions, so its expecta
     \tag{by~\Cref{lem:expectation-of-bind}}
     \\
     &=
-    \int
+    \int_{State_\tau}
       \mathbb E\!\left[
         \left.\mathsf{exp}_\tau(s)\right|_{Val_\tau}
       \right]
