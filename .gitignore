@@ -40,3 +40,7 @@ dist/
 
 # OS metadata
 .DS_Store
+
+# direnv / nix
+.direnv/
+result
