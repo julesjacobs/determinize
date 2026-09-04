@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(dune build *)",
+      "Bash(dune exec *)",
+      "Bash(dune test *)",
+      "Bash(dune clean)",
+      "Bash(dune printenv *)",
+      "Bash(./det.sh)",
+      "Bash(./run.sh *)",
+      "Bash(npm test *)",
+      "Bash(npm run build *)",
+      "Bash(npm ci)",
+      "Bash(node --test *)",
+      "Bash(latexmk *)",
+      "Bash(chktex *)",
+      "Bash(nix flake show *)",
+      "Bash(nix flake check *)",
+      "Bash(nix flake metadata *)",
+      "Bash(nix search *)",
+      "Bash(nix eval *)",
+      "Bash(nix fmt *)",
+      "Bash(direnv exec * dune *)",
+      "Bash(direnv exec * npm test *)",
+      "Bash(direnv exec * npm run build *)",
+      "Bash(direnv exec * node --test *)",
+      "Bash(direnv exec * latexmk *)",
+      "Bash(direnv exec * chktex *)",
+      "Bash(nix develop * --command dune *)",
+      "Bash(nix develop * --command npm test *)",
+      "Bash(nix develop * --command npm run build *)",
+      "Bash(nix develop * --command node --test *)",
+      "Bash(nix develop * --command latexmk *)",
+      "Bash(nix develop * --command chktex *)",
+      "Bash(.claude/scripts/check.sh *)",
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git show *)",
+      "Bash(git blame *)",
+      "Bash(git add -N *)",
+      "Bash(storm --version)",
+      "WebFetch(domain:code.claude.com)",
+      "WebFetch(domain:dune.readthedocs.io)",
+      "WebFetch(domain:ocaml.org)",
+      "WebFetch(domain:gallium.inria.fr)",
+      "WebFetch(domain:nix.dev)",
+      "WebFetch(domain:flake.parts)",
+      "WebFetch(domain:wiki.nixos.org)",
+      "WebFetch(domain:nodejs.org)",
+      "WebFetch(domain:esbuild.github.io)",
+      "WebFetch(domain:codemirror.net)",
+      "WebFetch(domain:www.stormchecker.org)",
+      "WebFetch(domain:ctan.org)",
+      "WebFetch(domain:mirrors.ctan.org)",
+      "WebFetch(domain:texdoc.org)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)"
+    ],
+    "ask": [
+      "Bash(git push *)",
+      "Bash(nix flake update *)"
+    ],
+    "deny": [
+      "Edit(sim/app.bundle.js)",
+      "Edit(sim/package-lock.json)",
+      "Edit(flake.lock)",
+      "Edit(tex/acmart.cls)",
+      "Edit(tex/ACM-Reference-Format.bst)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/session-start.sh",
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/protect-generated.sh",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/guard-bash.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/post-edit.sh",
+            "timeout": 120,
+            "statusMessage": "Building/linting the edited file..."
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/stop-check.sh",
+            "timeout": 300,
+            "statusMessage": "Verifying that changed code and TeX still build..."
+          },
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/notify.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "permission_prompt|idle_prompt",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/notify.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

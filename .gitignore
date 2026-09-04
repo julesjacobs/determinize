@@ -44,3 +44,7 @@ dist/
 # direnv / nix
 .direnv/
 result
+
+# Claude Code: personal, machine-local files
+.claude/settings.local.json
+CLAUDE.local.md
