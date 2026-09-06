@@ -2200,3 +2200,472 @@ Hence,
     \tag{\text{by the definition of the big-step semantics}}
   \end{align}
 \end{proof}
+
+We separate:
+\begin{enumerate}
+  \item one fixed $G$-trace, where expectations are finite.
+  \item integration over all $G$-traces, where expectations may be infinite or undefined.
+\end{enumerate}
+
+\subsubsection{Tracewise and global soundness}
+
+\paragraph{Well-defined expectations.}
+For $v\in\mathbb R$, define
+\[
+  v^+ := \max(v,0)
+  \qquad\text{and}\qquad
+  v^- := \max(-v,0).
+\]
+The expectation of a finite measure $\mu$ on $\mathbb R$ is
+well-defined in $[-\infty,\infty]$ whenever at least one of
+\[
+  \int_{\mathbb R} v^+\,\mu(dv)
+  \qquad\text{and}\qquad
+  \int_{\mathbb R} v^-\,\mu(dv)
+\]
+is finite. In that case, define
+\[
+  \mathbb E[\mu]
+  :=
+  \int_{\mathbb R} v^+\,\mu(dv)
+  -
+  \int_{\mathbb R} v^-\,\mu(dv).
+\]
+If both integrals are infinite, then $\mathbb E[\mu]$ is undefined.
+
+We define an integrability condition, which ensures that replacing $\E$-samples by their means produces finite real values.
+
+\begin{definition}[Integrable symbolic sampling environment]
+  Let
+  \[
+    \sigma
+    =
+    u_1\sim D_1(\vec a_1),\ldots,
+    u_k\sim D_k(\vec a_k).
+  \]
+  We say that $\sigma$ is integrable if
+  $\sem{\sigma}_{\mathsf{mean}}$ is well-defined and, for every
+  $i\in\{1,\ldots,k\}$,
+  \[
+    \int_{\mathbb R^k}
+      |\rho(u_i)|\,
+      \sem{\sigma}_{\mathsf{env}}(d\rho)
+    <
+    \infty.
+  \]
+\end{definition}
+
+Now, we say that a $\G$ mode execution trace is valid if resolving the general-mode sampling operations according to that trace does not cause an undefined arithmetic operation or an invalid distribution parameter.
+
+\begin{theorem}[Tracewise agreement of interpretations]
+  \label{thm:tracewise-agreement-of-interpretations}
+  Let $e:\tau$ be closed and well typed, where
+  $\tau=\Float{m}$ and $m=\G$ or $\E$.
+
+  Fix a valid execution of the general-mode sampling operations
+  arising during the symbolic evaluation of $e:\tau$, and let
+  \[
+    s=(\sigma\mid\hat v:\tau)\in State_\tau
+  \]
+  be the resulting terminal symbolic state.
+
+  If $\sigma$ is integrable, then
+  \[
+    \int_{Val_\tau}
+      |v|\,\mathsf{act}_\tau(s)(dv)
+    <
+    \infty
+  \]
+  and
+  \[
+    \int_{Val_\tau}
+      |v|\,\mathsf{exp}_\tau(s)(dv)
+    <
+    \infty.
+  \]
+  Moreover,
+  \[
+    \mathbb E\!\left[
+      \left.\mathsf{act}_\tau(s)\right|_{Val_\tau}
+    \right]
+    =
+    \mathbb E\!\left[
+      \left.\mathsf{exp}_\tau(s)\right|_{Val_\tau}
+    \right].
+  \]
+\end{theorem}
+
+\begin{lemma}[Regional Jensen inequality]
+  \label{lem:regional-jensen}
+  Under the assumptions of
+  \Cref{thm:tracewise-agreement-of-interpretations}, let
+  $\varphi:\mathbb R\to[0,\infty]$ be measurable and convex. Then
+  \[
+    \int_{Val_\tau}
+      \varphi(v)\,\mathsf{exp}_\tau(s)(dv)
+    \leq
+    \int_{Val_\tau}
+      \varphi(v)\,\mathsf{act}_\tau(s)(dv).
+  \]
+\end{lemma}
+
+\begin{corollary}[Regional moment bound]
+  \label{cor:regional-moment-bound}
+  Under the assumptions of
+  \Cref{thm:tracewise-agreement-of-interpretations}, for every
+  $p\geq1$,
+  \[
+    \int_{Val_\tau}
+      |v|^p\,\mathsf{exp}_\tau(s)(dv)
+    \leq
+    \int_{Val_\tau}
+      |v|^p\,\mathsf{act}_\tau(s)(dv).
+  \]
+  These nonnegative integrals are interpreted in $[0,\infty]$.
+\end{corollary}
+
+\begin{lemma}[Restriction of bind]
+  \label{lem:restriction-of-bind}
+  Let $\mu$ be a probability measure on $X$, let $k$ be a probability
+  kernel from $X$ to $Y$, and let $A\subseteq Y$ be measurable. Then
+  \[
+    \left.(\mu\monbind k)\right|_A
+    =
+    \mu\monbind
+    \lambda x.\,
+    \left.k(x)\right|_A.
+  \]
+\end{lemma}
+
+\begin{lemma}[Expectation of bind]
+  \label{lem:extended-expectation-of-bind}
+  Let $\mu$ be a probability measure on $X$, and let $k$ be a
+  subprobability kernel from $X$ to $\mathbb R$. Suppose at least one
+  of
+  \[
+    \int_X
+      \int_{\mathbb R}v^+\,k(x)(dv)\,\mu(dx)
+    \qquad\text{and}\qquad
+    \int_X
+      \int_{\mathbb R}v^-\,k(x)(dv)\,\mu(dx)
+  \]
+  is finite. Then $\mathbb E[\mu\monbind k]$ is well-defined and
+  \[
+    \mathbb E[\mu\monbind k]
+    =
+    \int_X
+      \mathbb E[k(x)]\,\mu(dx).
+  \]
+\end{lemma}
+
+\begin{theorem}[Global agreement of interpretations]
+  \label{thm:global-agreement-of-interpretations}
+  Let $\mu$ be a probability measure on $State_\tau$ supported on
+  symbolic states arising from valid general-mode traces whose
+  symbolic sampling environments are integrable.
+
+  Then, for every $p\geq1$,
+  \[
+    \int_{Val_\tau}
+      |v|^p\,
+      (\mu\monbind\mathsf{exp}_\tau)(dv)
+    \leq
+    \int_{Val_\tau}
+      |v|^p\,
+      (\mu\monbind\mathsf{act}_\tau)(dv).
+  \]
+
+  Moreover, if
+  \[
+    \mathbb E\!\left[
+      \left.
+        (\mu\monbind\mathsf{act}_\tau)
+      \right|_{Val_\tau}
+    \right]
+  \]
+  is well-defined in the extended reals, then so is
+  \[
+    \mathbb E\!\left[
+      \left.
+        (\mu\monbind\mathsf{exp}_\tau)
+      \right|_{Val_\tau}
+    \right],
+  \]
+  and
+  \[
+    \mathbb E\!\left[
+      \left.
+        (\mu\monbind\mathsf{act}_\tau)
+      \right|_{Val_\tau}
+    \right]
+    =
+    \mathbb E\!\left[
+      \left.
+        (\mu\monbind\mathsf{exp}_\tau)
+      \right|_{Val_\tau}
+    \right].
+  \]
+\end{theorem}
+
+\begin{definition}[Tracewise $n$-step semantics]
+  Fix a valid general-mode trace $\gamma$, and let
+  \[
+    s_n^\gamma
+    =
+    (\sigma_n^\gamma\mid\hat e_n^\gamma:\tau)
+  \]
+  be the symbolic state obtained after $n$ symbolic steps when the
+  general-mode samples are resolved according to $\gamma$.
+
+  Define
+  \[
+    \bigsemstep{e:\tau}{n,\gamma}
+    :=
+    \mathsf{act}_\tau(s_n^\gamma)
+  \]
+  and
+  \[
+    \bigsemstep{\exptrans{e:\tau}:\tau}{n,\gamma}
+    :=
+    \mathsf{exp}_\tau(s_n^\gamma).
+  \]
+\end{definition}
+
+\begin{theorem}[Tracewise soundness $n$-step]
+  \label{thm:tracewise-soundness-n-step}
+  Let $e:\tau$ be closed and well typed, where
+  $\tau=\Float{m}$ and $m=\G$ or $\E$. Fix $n\in\mathbb N$ and a valid
+  general-mode trace $\gamma$.
+
+  If $\sigma_n^\gamma$ is integrable, then
+  \[
+    \int_{Val_\tau}
+      |v|\,
+      \bigsemstep{e:\tau}{n,\gamma}(dv)
+    <
+    \infty
+  \]
+  and
+  \[
+    \int_{Val_\tau}
+      |v|\,
+      \bigsemstep{\exptrans{e:\tau}:\tau}{n,\gamma}(dv)
+    <
+    \infty.
+  \]
+  Moreover,
+  \[
+    \mathbb E\!\left[
+      \left.
+        \bigsemstep{e:\tau}{n,\gamma}
+      \right|_{Val_\tau}
+    \right]
+    =
+    \mathbb E\!\left[
+      \left.
+        \bigsemstep{\exptrans{e:\tau}:\tau}{n,\gamma}
+      \right|_{Val_\tau}
+    \right].
+  \]
+\end{theorem}
+
+\begin{theorem}[Global soundness $n$-step]
+  \label{thm:global-soundness-n-step}
+  Let $e:\tau$ be closed and well typed, where
+  $\tau=\Float{m}$ and $m=\G$ or $\E$. Let $n\in\mathbb N$.
+
+  Suppose that, for
+  \[
+    \symbigsemstep{\mathsf{init}_\tau(e:\tau)}{n}
+    \text{-almost every symbolic state }s,
+  \]
+  the corresponding general-mode trace is valid and its symbolic
+  sampling environment is integrable.
+
+  Then, for every measurable convex function
+  $\varphi:\mathbb R\to[0,\infty]$,
+  \[
+    \int_{Val_\tau}
+      \varphi(v)\,
+      \bigsemstep{\exptrans{e:\tau}:\tau}{n}(dv)
+    \leq
+    \int_{Val_\tau}
+      \varphi(v)\,
+      \bigsemstep{e:\tau}{n}(dv).
+  \]
+
+  Moreover, if
+  \[
+    \mathbb E\!\left[
+      \left.\bigsemstep{e:\tau}{n}\right|_{Val_\tau}
+    \right]
+  \]
+  is well-defined in the extended reals, then
+  \[
+    \mathbb E\!\left[
+      \left.
+        \bigsemstep{\exptrans{e:\tau}:\tau}{n}
+      \right|_{Val_\tau}
+    \right]
+  \]
+  is also well-defined, and
+  \[
+    \mathbb E\!\left[
+      \left.\bigsemstep{e:\tau}{n}\right|_{Val_\tau}
+    \right]
+    =
+    \mathbb E\!\left[
+      \left.
+        \bigsemstep{\exptrans{e:\tau}:\tau}{n}
+      \right|_{Val_\tau}
+    \right].
+  \]
+\end{theorem}
+
+\begin{corollary}
+  \label{cor:global-moment-bound-n-step}
+  Under the assumptions of \Cref{thm:global-soundness-n-step}, for
+  every $p\geq1$,
+  \[
+    \int_{Val_\tau}
+      |v|^p\,
+      \bigsemstep{\exptrans{e:\tau}:\tau}{n}(dv)
+    \leq
+    \int_{Val_\tau}
+      |v|^p\,
+      \bigsemstep{e:\tau}{n}(dv).
+  \]
+\end{corollary}
+
+\begin{lemma}[Integration over increasing limits]
+  \label{lem:extended-expectation-increasing-limits}
+  Let
+  \[
+    \mu_0\leq\mu_1\leq\mu_2\leq\cdots
+  \]
+  be an increasing sequence of subprobability measures on $\mathbb R$,
+  and let
+  \[
+    \mu=\lim_{n\to\infty}\mu_n
+  \]
+  setwise. Then, for every $p\geq1$,
+  \[
+    \int_{\mathbb R}|v|^p\,\mu(dv)
+    =
+    \lim_{n\to\infty}
+    \int_{\mathbb R}|v|^p\,\mu_n(dv).
+  \]
+
+  If $\mathbb E[\mu]$ is well-defined in the extended reals, then
+  every $\mathbb E[\mu_n]$ is well-defined and
+  \[
+    \mathbb E[\mu]
+    =
+    \lim_{n\to\infty}\mathbb E[\mu_n].
+  \]
+\end{lemma}
+
+\begin{definition}[Tracewise big-step semantics]
+  Fix a valid terminating general-mode trace $\gamma$, and let
+  \[
+    s^\gamma
+    =
+    (\sigma^\gamma\mid\hat v^\gamma:\tau)
+  \]
+  be the terminal symbolic state reached by that trace. Define
+  \[
+    \bigsem{e:\tau}^\gamma
+    :=
+    \mathsf{act}_\tau(s^\gamma)
+  \]
+  and
+  \[
+    \bigsem{\exptrans{e:\tau}:\tau}^\gamma
+    :=
+    \mathsf{exp}_\tau(s^\gamma).
+  \]
+\end{definition}
+
+\begin{theorem}[Tracewise soundness big step]
+  \label{thm:tracewise-soundness-big-step}
+  Let $e:\tau$ be closed and well typed, where
+  $\tau=\Float{m}$ and $m=\G$ or $\E$. Fix a valid terminating
+  general-mode trace $\gamma$, and let
+  \[
+    s^\gamma=(\sigma^\gamma\mid\hat v^\gamma:\tau)
+  \]
+  be the terminal symbolic state reached by that trace.
+
+  If $\sigma^\gamma$ is integrable, then
+  \[
+    \int_{Val_\tau}
+      |v|\,\bigsem{e:\tau}^\gamma(dv)
+    <
+    \infty
+  \]
+  and
+  \[
+    \int_{Val_\tau}
+      |v|\,
+      \bigsem{\exptrans{e:\tau}:\tau}^\gamma(dv)
+    <
+    \infty.
+  \]
+  Moreover,
+  \[
+    \mathbb E\!\left[\bigsem{e:\tau}^\gamma\right]
+    =
+    \mathbb E\!\left[
+      \bigsem{\exptrans{e:\tau}:\tau}^\gamma
+    \right].
+  \]
+\end{theorem}
+
+\begin{theorem}[Global soundness big step]
+  \label{thm:global-soundness-big-step}
+  Let $e:\tau$ be closed and well typed, where
+  $\tau=\Float{m}$ and $m=\G$ or $\E$.
+
+  Suppose that almost every terminating general-mode trace is valid
+  and has an integrable symbolic sampling environment. Then, for every
+  measurable convex function $\varphi:\mathbb R\to[0,\infty]$,
+  \[
+    \int_{Val_\tau}
+      \varphi(v)\,
+      \bigsem{\exptrans{e:\tau}:\tau}(dv)
+    \leq
+    \int_{Val_\tau}
+      \varphi(v)\,
+      \bigsem{e:\tau}(dv).
+  \]
+
+  Moreover, if
+  \[
+    \mathbb E[\bigsem{e:\tau}]
+  \]
+  is well-defined in the extended reals, then
+  \[
+    \mathbb E[\bigsem{\exptrans{e:\tau}:\tau}]
+  \]
+  is also well-defined, and
+  \[
+    \mathbb E[\bigsem{e:\tau}]
+    =
+    \mathbb E[\bigsem{\exptrans{e:\tau}:\tau}].
+  \]
+\end{theorem}
+
+\begin{corollary}
+  \label{cor:global-moment-bound-big-step}
+  Under the assumptions of \Cref{thm:global-soundness-big-step}, for
+  every $p\geq1$,
+  \[
+    \int_{Val_\tau}
+      |v|^p\,
+      \bigsem{\exptrans{e:\tau}:\tau}(dv)
+    \leq
+    \int_{Val_\tau}
+      |v|^p\,
+      \bigsem{e:\tau}(dv).
+  \]
+\end{corollary}
