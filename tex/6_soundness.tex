@@ -2257,73 +2257,6 @@ We define an integrability condition, which ensures that replacing $\E$-samples 
 
 Now, we say that a $\G$ mode execution trace is valid if resolving the general-mode sampling operations according to that trace does not cause an undefined arithmetic operation or an invalid distribution parameter.
 
-\begin{theorem}[Tracewise agreement of interpretations]
-  \label{thm:tracewise-agreement-of-interpretations}
-  Let $e:\tau$ be closed and well typed, where
-  $\tau=\Float{m}$ and $m=\G$ or $\E$.
-
-  Fix a valid execution of the general-mode sampling operations
-  arising during the symbolic evaluation of $e:\tau$, and let
-  \[
-    s=(\sigma\mid\hat v:\tau)\in State_\tau
-  \]
-  be the resulting terminal symbolic state.
-
-  If $\sigma$ is integrable, then
-  \[
-    \int_{Val_\tau}
-      |v|\,\mathsf{act}_\tau(s)(dv)
-    <
-    \infty
-  \]
-  and
-  \[
-    \int_{Val_\tau}
-      |v|\,\mathsf{exp}_\tau(s)(dv)
-    <
-    \infty.
-  \]
-  Moreover,
-  \[
-    \mathbb E\!\left[
-      \left.\mathsf{act}_\tau(s)\right|_{Val_\tau}
-    \right]
-    =
-    \mathbb E\!\left[
-      \left.\mathsf{exp}_\tau(s)\right|_{Val_\tau}
-    \right].
-  \]
-\end{theorem}
-
-\begin{lemma}[Regional Jensen inequality]
-  \label{lem:regional-jensen}
-  Under the assumptions of
-  \Cref{thm:tracewise-agreement-of-interpretations}, let
-  $\varphi:\mathbb R\to[0,\infty]$ be measurable and convex. Then
-  \[
-    \int_{Val_\tau}
-      \varphi(v)\,\mathsf{exp}_\tau(s)(dv)
-    \leq
-    \int_{Val_\tau}
-      \varphi(v)\,\mathsf{act}_\tau(s)(dv).
-  \]
-\end{lemma}
-
-\begin{corollary}[Regional moment bound]
-  \label{cor:regional-moment-bound}
-  Under the assumptions of
-  \Cref{thm:tracewise-agreement-of-interpretations}, for every
-  $p\geq1$,
-  \[
-    \int_{Val_\tau}
-      |v|^p\,\mathsf{exp}_\tau(s)(dv)
-    \leq
-    \int_{Val_\tau}
-      |v|^p\,\mathsf{act}_\tau(s)(dv).
-  \]
-  These nonnegative integrals are interpreted in $[0,\infty]$.
-\end{corollary}
-
 \begin{lemma}[Restriction of bind]
   \label{lem:restriction-of-bind}
   Let $\mu$ be a probability measure on $X$, let $k$ be a probability
@@ -2358,51 +2291,68 @@ Now, we say that a $\G$ mode execution trace is valid if resolving the general-m
   \]
 \end{lemma}
 
-\begin{theorem}[Global agreement of interpretations]
-  \label{thm:global-agreement-of-interpretations}
-  Let $\mu$ be a probability measure on $State_\tau$ supported on
-  symbolic states arising from valid general-mode traces whose
-  symbolic sampling environments are integrable.
-
-  Then, for every $p\geq1$,
+\begin{lemma}[Integration over increasing limits]
+  \label{lem:extended-expectation-increasing-limits}
+  Let
   \[
-    \int_{Val_\tau}
-      |v|^p\,
-      (\mu\monbind\mathsf{exp}_\tau)(dv)
-    \leq
-    \int_{Val_\tau}
-      |v|^p\,
-      (\mu\monbind\mathsf{act}_\tau)(dv).
+    \mu_0\leq\mu_1\leq\mu_2\leq\cdots
+  \]
+  be an increasing sequence of subprobability measures on $\mathbb R$,
+  and let
+  \[
+    \mu=\lim_{n\to\infty}\mu_n
+  \]
+  setwise. Then, for every $p\geq1$,
+  \[
+    \int_{\mathbb R}|v|^p\,\mu(dv)
+    =
+    \lim_{n\to\infty}
+    \int_{\mathbb R}|v|^p\,\mu_n(dv).
   \]
 
-  Moreover, if
+  If $\mathbb E[\mu]$ is well-defined in the extended reals, then
+  every $\mathbb E[\mu_n]$ is well-defined and
   \[
-    \mathbb E\!\left[
-      \left.
-        (\mu\monbind\mathsf{act}_\tau)
-      \right|_{Val_\tau}
-    \right]
+    \mathbb E[\mu]
+    =
+    \lim_{n\to\infty}\mathbb E[\mu_n].
   \]
-  is well-defined in the extended reals, then so is
+\end{lemma}
+
+\begin{theorem}[Tracewise agreement of interpretations]
+  \label{thm:tracewise-agreement-of-interpretations}
+  Let $e:\tau$ be closed and well typed, where
+  $\tau=\Float{m}$ and $m=\G$ or $\E$.
+
+  Fix a valid execution of the general-mode sampling operations
+  arising during the symbolic evaluation of $e:\tau$, and let
   \[
-    \mathbb E\!\left[
-      \left.
-        (\mu\monbind\mathsf{exp}_\tau)
-      \right|_{Val_\tau}
-    \right],
+    s=(\sigma\mid\hat v:\tau)\in State_\tau
+  \]
+  be the resulting terminal symbolic state.
+
+  If $\sigma$ is integrable, then
+  \[
+    \int_{Val_\tau}
+      |v|\,\mathsf{act}_\tau(s)(dv)
+    <
+    \infty
   \]
   and
   \[
+    \int_{Val_\tau}
+      |v|\,\mathsf{exp}_\tau(s)(dv)
+    <
+    \infty.
+  \]
+  Moreover,
+  \[
     \mathbb E\!\left[
-      \left.
-        (\mu\monbind\mathsf{act}_\tau)
-      \right|_{Val_\tau}
+      \left.\mathsf{act}_\tau(s)\right|_{Val_\tau}
     \right]
     =
     \mathbb E\!\left[
-      \left.
-        (\mu\monbind\mathsf{exp}_\tau)
-      \right|_{Val_\tau}
+      \left.\mathsf{exp}_\tau(s)\right|_{Val_\tau}
     \right].
   \]
 \end{theorem}
@@ -2469,102 +2419,6 @@ Now, we say that a $\G$ mode execution trace is valid if resolving the general-m
   \]
 \end{theorem}
 
-\begin{theorem}[Global soundness $n$-step]
-  \label{thm:global-soundness-n-step}
-  Let $e:\tau$ be closed and well typed, where
-  $\tau=\Float{m}$ and $m=\G$ or $\E$. Let $n\in\mathbb N$.
-
-  Suppose that, for
-  \[
-    \symbigsemstep{\mathsf{init}_\tau(e:\tau)}{n}
-    \text{-almost every symbolic state }s,
-  \]
-  the corresponding general-mode trace is valid and its symbolic
-  sampling environment is integrable.
-
-  Then, for every measurable convex function
-  $\varphi:\mathbb R\to[0,\infty]$,
-  \[
-    \int_{Val_\tau}
-      \varphi(v)\,
-      \bigsemstep{\exptrans{e:\tau}:\tau}{n}(dv)
-    \leq
-    \int_{Val_\tau}
-      \varphi(v)\,
-      \bigsemstep{e:\tau}{n}(dv).
-  \]
-
-  Moreover, if
-  \[
-    \mathbb E\!\left[
-      \left.\bigsemstep{e:\tau}{n}\right|_{Val_\tau}
-    \right]
-  \]
-  is well-defined in the extended reals, then
-  \[
-    \mathbb E\!\left[
-      \left.
-        \bigsemstep{\exptrans{e:\tau}:\tau}{n}
-      \right|_{Val_\tau}
-    \right]
-  \]
-  is also well-defined, and
-  \[
-    \mathbb E\!\left[
-      \left.\bigsemstep{e:\tau}{n}\right|_{Val_\tau}
-    \right]
-    =
-    \mathbb E\!\left[
-      \left.
-        \bigsemstep{\exptrans{e:\tau}:\tau}{n}
-      \right|_{Val_\tau}
-    \right].
-  \]
-\end{theorem}
-
-\begin{corollary}
-  \label{cor:global-moment-bound-n-step}
-  Under the assumptions of \Cref{thm:global-soundness-n-step}, for
-  every $p\geq1$,
-  \[
-    \int_{Val_\tau}
-      |v|^p\,
-      \bigsemstep{\exptrans{e:\tau}:\tau}{n}(dv)
-    \leq
-    \int_{Val_\tau}
-      |v|^p\,
-      \bigsemstep{e:\tau}{n}(dv).
-  \]
-\end{corollary}
-
-\begin{lemma}[Integration over increasing limits]
-  \label{lem:extended-expectation-increasing-limits}
-  Let
-  \[
-    \mu_0\leq\mu_1\leq\mu_2\leq\cdots
-  \]
-  be an increasing sequence of subprobability measures on $\mathbb R$,
-  and let
-  \[
-    \mu=\lim_{n\to\infty}\mu_n
-  \]
-  setwise. Then, for every $p\geq1$,
-  \[
-    \int_{\mathbb R}|v|^p\,\mu(dv)
-    =
-    \lim_{n\to\infty}
-    \int_{\mathbb R}|v|^p\,\mu_n(dv).
-  \]
-
-  If $\mathbb E[\mu]$ is well-defined in the extended reals, then
-  every $\mathbb E[\mu_n]$ is well-defined and
-  \[
-    \mathbb E[\mu]
-    =
-    \lim_{n\to\infty}\mathbb E[\mu_n].
-  \]
-\end{lemma}
-
 \begin{definition}[Tracewise big-step semantics]
   Fix a valid terminating general-mode trace $\gamma$, and let
   \[
@@ -2621,25 +2475,107 @@ Now, we say that a $\G$ mode execution trace is valid if resolving the general-m
   \]
 \end{theorem}
 
+\begin{theorem}[Tracewise Jensen inequality]
+  \label{thm:tracewise-jensen}
+  Under the assumptions of
+  \Cref{thm:tracewise-soundness-big-step}, let
+  $\varphi:\mathbb R\to[0,\infty]$ be measurable and convex. Then
+  \[
+    \int_{Val_\tau}
+      \varphi(v)\,
+      \bigsem{\exptrans{e:\tau}:\tau}^\gamma(dv)
+    \leq
+    \int_{Val_\tau}
+      \varphi(v)\,\bigsem{e:\tau}^\gamma(dv).
+  \]
+\end{theorem}
+
+\begin{theorem}[Global agreement of interpretations]
+  \label{thm:global-agreement-of-interpretations}
+  Let $\mu$ be a probability measure on $State_\tau$ supported on
+  symbolic states arising from valid general-mode traces whose
+  symbolic sampling environments are integrable.
+
+  If
+  \[
+    \mathbb E\!\left[
+      \left.
+        (\mu\monbind\mathsf{act}_\tau)
+      \right|_{Val_\tau}
+    \right]
+  \]
+  is well-defined in the extended reals, then so is
+  \[
+    \mathbb E\!\left[
+      \left.
+        (\mu\monbind\mathsf{exp}_\tau)
+      \right|_{Val_\tau}
+    \right],
+  \]
+  and
+  \[
+    \mathbb E\!\left[
+      \left.
+        (\mu\monbind\mathsf{act}_\tau)
+      \right|_{Val_\tau}
+    \right]
+    =
+    \mathbb E\!\left[
+      \left.
+        (\mu\monbind\mathsf{exp}_\tau)
+      \right|_{Val_\tau}
+    \right].
+  \]
+\end{theorem}
+
+\begin{theorem}[Global soundness $n$-step]
+  \label{thm:global-soundness-n-step}
+  Let $e:\tau$ be closed and well typed, where
+  $\tau=\Float{m}$ and $m=\G$ or $\E$. Let $n\in\mathbb N$.
+
+  Suppose that, for
+  \[
+    \symbigsemstep{\mathsf{init}_\tau(e:\tau)}{n}
+    \text{-almost every symbolic state }s,
+  \]
+  the corresponding general-mode trace is valid and its symbolic
+  sampling environment is integrable.
+
+  If
+  \[
+    \mathbb E\!\left[
+      \left.\bigsemstep{e:\tau}{n}\right|_{Val_\tau}
+    \right]
+  \]
+  is well-defined in the extended reals, then
+  \[
+    \mathbb E\!\left[
+      \left.
+        \bigsemstep{\exptrans{e:\tau}:\tau}{n}
+      \right|_{Val_\tau}
+    \right]
+  \]
+  is also well-defined, and
+  \[
+    \mathbb E\!\left[
+      \left.\bigsemstep{e:\tau}{n}\right|_{Val_\tau}
+    \right]
+    =
+    \mathbb E\!\left[
+      \left.
+        \bigsemstep{\exptrans{e:\tau}:\tau}{n}
+      \right|_{Val_\tau}
+    \right].
+  \]
+\end{theorem}
+
 \begin{theorem}[Global soundness big step]
   \label{thm:global-soundness-big-step}
   Let $e:\tau$ be closed and well typed, where
   $\tau=\Float{m}$ and $m=\G$ or $\E$.
 
   Suppose that almost every terminating general-mode trace is valid
-  and has an integrable symbolic sampling environment. Then, for every
-  measurable convex function $\varphi:\mathbb R\to[0,\infty]$,
-  \[
-    \int_{Val_\tau}
-      \varphi(v)\,
-      \bigsem{\exptrans{e:\tau}:\tau}(dv)
-    \leq
-    \int_{Val_\tau}
-      \varphi(v)\,
-      \bigsem{e:\tau}(dv).
-  \]
-
-  Moreover, if
+  and has an integrable symbolic sampling environment. If
   \[
     \mathbb E[\bigsem{e:\tau}]
   \]
@@ -2655,17 +2591,20 @@ Now, we say that a $\G$ mode execution trace is valid if resolving the general-m
   \]
 \end{theorem}
 
-\begin{corollary}
-  \label{cor:global-moment-bound-big-step}
-  Under the assumptions of \Cref{thm:global-soundness-big-step}, for
-  every $p\geq1$,
+\begin{theorem}[Global Jensen inequality]
+  \label{thm:global-jensen}
+  Let $e:\tau$ be closed and well typed, where
+  $\tau=\Float{m}$ and $m=\G$ or $\E$.
+
+  Suppose that almost every terminating general-mode trace is valid
+  and has an integrable symbolic sampling environment. Then, for every
+  measurable convex function $\varphi:\mathbb R\to[0,\infty]$,
   \[
     \int_{Val_\tau}
-      |v|^p\,
+      \varphi(v)\,
       \bigsem{\exptrans{e:\tau}:\tau}(dv)
     \leq
     \int_{Val_\tau}
-      |v|^p\,
-      \bigsem{e:\tau}(dv).
+      \varphi(v)\,\bigsem{e:\tau}(dv).
   \]
-\end{corollary}
+\end{theorem}
