@@ -1980,234 +1980,11 @@ The following theorem states that taking one symbolic step and then applying the
 
 \subsubsection{Relating original and determinized expressions}
 
-First, we formally define what an expectation is. For a float-valued distribution $\mu$ with finite expectation, let
-\[
-  \mathbb{E}[\mu]
-  :=
-  \int_{\mathbb{R}} r\,d\mu(r).
-\]
-
-
-An $n$-step distribution may still contain non-value expressions, so its expectation is not directly defined. Thus, we must restrict each $n$-step distribution to values.
-
-
-% Float types
-\begin{theorem}[Agreement of interpretations]\label{thm:agreement-of-interpretations}
-  Let $s=(\sigma\mid\hat e: \tau)\in State_{\tau}$. 
-  Then
-  \[
-    \mathbb E\!\left[
-      \left.\mathsf{act}_{\tau}(s)\right|_{Val_{\tau}}
-    \right]
-    =
-    \mathbb E\!\left[
-      \left.\mathsf{exp}_{\tau}(s)\right|_{Val_{\tau}}
-    \right].
-  \]
-\end{theorem}
-
-\begin{proof}
-  TODO.
-\end{proof}
-
-
-\begin{lemma}[Expectation of bind]\label{lem:expectation-of-bind}
-  Let $\mu\in\mathcal D(X)$ be a probability measure, and let $k:X\to\mathcal D(\mathbb R)$ be a probability kernel. Then,
-  \[
-    \mathbb E[\mu\monbind k]
-    =
-    \int_X
-      \mathbb E[k(x)]
-      \,d\mu(x).
-  \]
-\end{lemma}
-
-\begin{proof}
-  \begin{align}
-    \mathbb E[\mu\monbind k]
-    &=
-    \int_{\mathbb R} r\,d(\mu\monbind k)(r)
-    \tag{\text{by the definition of expectation}}
-    \\
-    &=
-    \int_X
-    \left(
-      \int_{\mathbb R} r\,dk(x)(r)
-    \right)
-    d\mu(x)
-    \tag{\text{by the definition of monadic bind and Fubini's theorem}}
-    \\
-    &=
-    \int_X \mathbb E[k(x)]\,d\mu(x)
-    \tag{\text{by the definition of expectation}}.
-  \end{align}
-\end{proof}
-
-
-\begin{theorem}[Soundness $n$-step]
-  \label{thm:soundness-n-step}
-  Let $e : \tau$ be a well-typed expression, where $\tau = \Float{m}$ and $m = \G$ or $\E$. Then, for every $n$, when restricted to values:
-  \[
-    \mathbb E\!\left[
-      \left.\bigsemstep{e : \tau}{n}\right|_{Val_\tau}
-    \right]
-    =
-    \mathbb E\!\left[
-      \left.\bigsemstep{\exptrans{e : \tau} : \tau}{n}\right|_{Val_\tau}
-    \right].
-  \]
-  % and in particular:
-  % \[
-  %   \bigsem{e : \Float{\G}}
-  %   =
-  %   \bigsem{\exptrans{e : \Float{\G}} : \Float{\G}}.
-  % \]
-\end{theorem}
-
-\begin{proof}
-  Let
-  \[
-    \mu_n
-    =
-    \symbigsemstep{\mathsf{init}_\tau(e:\tau)}{n}.
-  \]
-  Then
-  \begin{align}
-    \mathbb E\!\left[
-      \left.\bigsemstep{e:\tau}{n}\right|_{Val_\tau}
-    \right]
-    &=
-    \mathbb E\!\left[
-      \left.(\mu_n\monbind\mathsf{act}_\tau)\right|_{Val_\tau}
-    \right]
-    \tag{\text{by the actual interpretation theorem}}
-    \\
-    &=
-    \int_{State_\tau}
-      \mathbb E\!\left[
-        \left.\mathsf{act}_\tau(s)\right|_{Val_\tau}
-      \right]
-      \,d\mu_n(s)
-    \tag{by~\Cref{lem:expectation-of-bind}}
-    \\
-    &=
-    \int_{State_\tau}
-      \mathbb E\!\left[
-        \left.\mathsf{exp}_\tau(s)\right|_{Val_\tau}
-      \right]
-      \,d\mu_n(s)
-    \tag{by~\Cref{thm:agreement-of-interpretations}}
-    \\
-    &=
-    \mathbb E\!\left[
-      \left.(\mu_n\monbind\mathsf{exp}_\tau)\right|_{Val_\tau}
-    \right]
-    \tag{by~\Cref{lem:expectation-of-bind}}
-    \\
-    &=
-    \mathbb E\!\left[
-      \left.
-        \bigsemstep{\exptrans{e:\tau}:\tau}{n}
-      \right|_{Val_\tau}
-    \right].
-    \tag{\text{by the expected interpretation theorem}}
-  \end{align}
-\end{proof}
-
-
-\begin{lemma}[Expectation commutes with increasing limits]
-\label{lem:expectation-increasing-limits}
-Let $\mu_0 \leq \mu_1 \leq \mu_2 \leq \cdots$ be an increasing sequence of subprobability measures over $\mathbb{R}_{\geq 0}$, and suppose
-\[
-\mu = \lim_{n \to \infty} \mu_n,
-\]
-where the limit is taken setwise, i.e., $\mu(A) = \lim_{n \to \infty} \mu_n(A)$ for every measurable set $A$. Then
-\[
-\mathbb{E}[\mu] = \lim_{n \to \infty} \mathbb{E}[\mu_n].
-\]
-\end{lemma}
-
-\begin{proof}
-By definition,
-\[
-\mathbb{E}[\mu] = \int_{\mathbb{R}_{\geq 0}} x \, d\mu(x).
-\]
-Since $(\mu_n)_{n \in \mathbb{N}}$ is increasing and $\mu = \lim_{n \to \infty} \mu_n$, continuity of integration with respect to increasing limits of measures gives
-\[
-\int_{\mathbb{R}_{\geq 0}} x \, d\mu(x)
-=
-\lim_{n \to \infty}
-\int_{\mathbb{R}_{\geq 0}} x \, d\mu_n(x).
-\]
-Hence,
-\[
-\mathbb{E}[\mu] = \lim_{n \to \infty} \mathbb{E}[\mu_n].
-\]
-\end{proof}
-
-
-\begin{theorem}[Soundness big step]
-    Let $e : \tau$ be a well-typed expression, where $\tau = \Float{m}$ and $m = \G$ or $\E$. Then:
-  \[
-    \mathbb{E}[\bigsem{e : \tau}]
-    =
-    \mathbb{E}[\bigsem{\exptrans{e : \tau} : \tau}].
-  \]
-\end{theorem}
-
-\begin{proof}
-  For each $n\in\mathbb N$, let
-  \[
-    \mu_n
-    =
-    \left.
-      \bigsemstep{e:\tau}{n}
-    \right|_{Val_\tau}
-    \qquad\text{and}\qquad
-    \nu_n
-    =
-    \left.
-      \bigsemstep{\exptrans{e:\tau}:\tau}{n}
-    \right|_{Val_\tau}.
-  \]
-  Since values are absorbing, $(\mu_n)_{n\in\mathbb N}$ and
-  $(\nu_n)_{n\in\mathbb N}$ are increasing sequences of measures on
-  $Val_\tau$. 
-  \begin{align}
-    \mathbb E\!\left[\bigsem{e:\tau}\right]
-    &=
-    \mathbb E\!\left[\lim_{n\to\infty}\mu_n\right]
-    \tag{\text{by the definition of the big-step semantics}}
-    \\
-    &=
-    \lim_{n\to\infty}
-    \mathbb E\!\left[\mu_n\right]
-    \tag{\text{by \Cref{lem:expectation-increasing-limits}}}
-    \\
-    &=
-    \lim_{n\to\infty}
-    \mathbb E\!\left[\nu_n\right]
-    \tag{\text{by \Cref{thm:soundness-n-step}}}
-    \\
-    &=
-    \mathbb E\!\left[\lim_{n\to\infty}\nu_n\right]
-    \tag{\text{by \Cref{lem:expectation-increasing-limits}}}
-    \\
-    &=
-    \mathbb E\!\left[
-      \bigsem{\exptrans{e:\tau}:\tau}
-    \right].
-    \tag{\text{by the definition of the big-step semantics}}
-  \end{align}
-\end{proof}
-
-We separate:
+For soundness, we distinguish between the two:
 \begin{enumerate}
-  \item one fixed $G$-trace, where expectations are finite.
-  \item integration over all $G$-traces, where expectations may be infinite or undefined.
+  \item \emph{Tracewise:} One fixed $G$-trace, where expectations are finite. 
+  \item \emph{Global:} Integration over all $G$-traces, where expectations may be infinite or undefined. 
 \end{enumerate}
-
-\subsubsection{Tracewise and global soundness}
 
 \paragraph{Well-defined expectations.}
 For $v\in\mathbb R$, define
@@ -2232,6 +2009,10 @@ is finite. In that case, define
   \int_{\mathbb R} v^-\,\mu(dv).
 \]
 If both integrals are infinite, then $\mathbb E[\mu]$ is undefined.
+
+\begin{example}
+  TODO.
+\end{example}
 
 We define an integrability condition, which ensures that replacing $\E$-samples by their means produces finite real values.
 
@@ -2270,6 +2051,31 @@ Now, we say that a $\G$ mode execution trace is valid if resolving the general-m
   \]
 \end{lemma}
 
+\begin{proof}
+  It suffices to show that the two measures agree on every measurable
+  set $B\subseteq Y$. We have
+  \begin{align}
+    \left.(\mu\monbind k)\right|_A(B)
+    &=
+    (\mu\monbind k)(A\cap B)
+    \tag{\text{by the definition of restriction}}
+    \\
+    &=
+    \int_X k(x)(A\cap B)\,\mu(dx)
+    \tag{\text{by the definition of monadic bind}}
+    \\
+    &=
+    \int_X \left.k(x)\right|_A(B)\,\mu(dx)
+    \tag{\text{by the definition of restriction}}
+    \\
+    &=
+    \left(
+      \mu\monbind\lambda x.\,\left.k(x)\right|_A
+    \right)(B)
+    \tag{\text{by the definition of monadic bind}}.
+  \end{align}
+\end{proof}
+
 \begin{lemma}[Expectation of bind]
   \label{lem:extended-expectation-of-bind}
   Let $\mu$ be a probability measure on $X$, and let $k$ be a
@@ -2290,6 +2096,50 @@ Now, we say that a $\G$ mode execution trace is valid if resolving the general-m
       \mathbb E[k(x)]\,\mu(dx).
   \]
 \end{lemma}
+
+\begin{proof}
+  By the definition of monadic bind and Tonelli's theorem,
+  \begin{align}
+    \int_{\mathbb R}v^+\,(\mu\monbind k)(dv)
+    &=
+    \int_X
+      \left(
+        \int_{\mathbb R}v^+\,k(x)(dv)
+      \right)
+      \mu(dx),
+    \\
+    \int_{\mathbb R}v^-\,(\mu\monbind k)(dv)
+    &=
+    \int_X
+      \left(
+        \int_{\mathbb R}v^-\,k(x)(dv)
+      \right)
+      \mu(dx).
+  \end{align}
+  At least one of these quantities is finite by assumption. Hence,
+  \begin{align}
+    \mathbb E[\mu\monbind k]
+    &=
+    \int_{\mathbb R}v^+\,(\mu\monbind k)(dv)
+    -
+    \int_{\mathbb R}v^-\,(\mu\monbind k)(dv)
+    \tag{\text{by the definition of expectation}}
+    \\
+    &=
+    \int_X
+      \left(
+        \int_{\mathbb R}v^+\,k(x)(dv)
+        -
+        \int_{\mathbb R}v^-\,k(x)(dv)
+      \right)
+      \mu(dx)
+    \tag{\text{by the definition of monadic bind and Fubini's theorem}}
+    \\
+    &=
+    \int_X \mathbb E[k(x)]\,\mu(dx)
+    \tag{\text{by the definition of expectation}}.
+  \end{align}
+\end{proof}
 
 \begin{lemma}[Integration over increasing limits]
   \label{lem:extended-expectation-increasing-limits}
@@ -2319,6 +2169,51 @@ Now, we say that a $\G$ mode execution trace is valid if resolving the general-m
   \]
 \end{lemma}
 
+\begin{proof}
+  Since $(\mu_n)_{n\in\mathbb N}$ is increasing and
+  $\mu=\lim_{n\to\infty}\mu_n$, continuity of integration with
+  respect to increasing limits of measures gives
+  \[
+    \int_{\mathbb R}|v|^p\,\mu(dv)
+    =
+    \lim_{n\to\infty}
+    \int_{\mathbb R}|v|^p\,\mu_n(dv).
+  \]
+
+  The same argument applied separately to $v^+$ and $v^-$ gives
+  \[
+    \int_{\mathbb R}v^\pm\,\mu(dv)
+    =
+    \lim_{n\to\infty}
+    \int_{\mathbb R}v^\pm\,\mu_n(dv).
+  \]
+  If $\mathbb E[\mu]$ is well-defined, then at least one of these two
+  integrals is finite. The corresponding integral with respect to
+  every $\mu_n$ is therefore also finite. Hence every
+  $\mathbb E[\mu_n]$ is well-defined, and
+  \begin{align}
+    \mathbb E[\mu]
+    &=
+    \int_{\mathbb R}v^+\,\mu(dv)
+    -
+    \int_{\mathbb R}v^-\,\mu(dv)
+    \tag{\text{by the definition of expectation}}
+    \\
+    &=
+    \lim_{n\to\infty}
+    \left(
+      \int_{\mathbb R}v^+\,\mu_n(dv)
+      -
+      \int_{\mathbb R}v^-\,\mu_n(dv)
+    \right)
+    \tag{\text{by continuity of integration}}
+    \\
+    &=
+    \lim_{n\to\infty}\mathbb E[\mu_n]
+    \tag{\text{by the definition of expectation}}.
+  \end{align}
+\end{proof}
+
 \begin{theorem}[Tracewise agreement of interpretations]
   \label{thm:tracewise-agreement-of-interpretations}
   Let $e:\tau$ be closed and well typed, where
@@ -2327,9 +2222,9 @@ Now, we say that a $\G$ mode execution trace is valid if resolving the general-m
   Fix a valid execution of the general-mode sampling operations
   arising during the symbolic evaluation of $e:\tau$, and let
   \[
-    s=(\sigma\mid\hat v:\tau)\in State_\tau
+    s=(\sigma\mid\hat e:\tau)\in State_\tau
   \]
-  be the resulting terminal symbolic state.
+  be the resulting symbolic state.
 
   If $\sigma$ is integrable, then
   \[
@@ -2356,6 +2251,10 @@ Now, we say that a $\G$ mode execution trace is valid if resolving the general-m
     \right].
   \]
 \end{theorem}
+
+\begin{proof}
+  TODO.
+\end{proof}
 
 \begin{definition}[Tracewise $n$-step semantics]
   Fix a valid general-mode trace $\gamma$, and let
@@ -2419,6 +2318,47 @@ Now, we say that a $\G$ mode execution trace is valid if resolving the general-m
   \]
 \end{theorem}
 
+\begin{proof}
+  By the definition of the tracewise $n$-step semantics,
+  \[
+    \bigsemstep{e:\tau}{n,\gamma}
+    =
+    \mathsf{act}_\tau(s_n^\gamma)
+    \qquad\text{and}\qquad
+    \bigsemstep{\exptrans{e:\tau}:\tau}{n,\gamma}
+    =
+    \mathsf{exp}_\tau(s_n^\gamma).
+  \]
+  The two finite-first-moment statements therefore follow directly
+  from \Cref{thm:tracewise-agreement-of-interpretations}. Moreover,
+  \begin{align}
+    \mathbb E\!\left[
+      \left.
+        \bigsemstep{e:\tau}{n,\gamma}
+      \right|_{Val_\tau}
+    \right]
+    &=
+    \mathbb E\!\left[
+      \left.\mathsf{act}_\tau(s_n^\gamma)\right|_{Val_\tau}
+    \right]
+    \tag{\text{by the definition of the tracewise $n$-step semantics}}
+    \\
+    &=
+    \mathbb E\!\left[
+      \left.\mathsf{exp}_\tau(s_n^\gamma)\right|_{Val_\tau}
+    \right]
+    \tag{\text{by \Cref{thm:tracewise-agreement-of-interpretations}}}
+    \\
+    &=
+    \mathbb E\!\left[
+      \left.
+        \bigsemstep{\exptrans{e:\tau}:\tau}{n,\gamma}
+      \right|_{Val_\tau}
+    \right]
+    \tag{\text{by the definition of the tracewise $n$-step semantics}}.
+  \end{align}
+\end{proof}
+
 \begin{definition}[Tracewise big-step semantics]
   Fix a valid terminating general-mode trace $\gamma$, and let
   \[
@@ -2475,7 +2415,41 @@ Now, we say that a $\G$ mode execution trace is valid if resolving the general-m
   \]
 \end{theorem}
 
-\begin{theorem}[Tracewise Jensen inequality]
+\begin{proof}
+  By the definition of the tracewise big-step semantics,
+  \[
+    \bigsem{e:\tau}^\gamma
+    =
+    \mathsf{act}_\tau(s^\gamma)
+    \qquad\text{and}\qquad
+    \bigsem{\exptrans{e:\tau}:\tau}^\gamma
+    =
+    \mathsf{exp}_\tau(s^\gamma).
+  \]
+  The two finite-first-moment statements therefore follow directly
+  from \Cref{thm:tracewise-agreement-of-interpretations}. Since
+  $s^\gamma$ is terminal, both interpretations are supported on
+  $Val_\tau$, so restricting them to values does not change them.
+  Moreover,
+  \begin{align}
+    \mathbb E\!\left[\bigsem{e:\tau}^\gamma\right]
+    &=
+    \mathbb E\!\left[\mathsf{act}_\tau(s^\gamma)\right]
+    \tag{\text{by the definition of the tracewise big-step semantics}}
+    \\
+    &=
+    \mathbb E\!\left[\mathsf{exp}_\tau(s^\gamma)\right]
+    \tag{\text{by \Cref{thm:tracewise-agreement-of-interpretations}}}
+    \\
+    &=
+    \mathbb E\!\left[
+      \bigsem{\exptrans{e:\tau}:\tau}^\gamma
+    \right]
+    \tag{\text{by the definition of the tracewise big-step semantics}}.
+  \end{align}
+\end{proof}
+
+\begin{theorem}
   \label{thm:tracewise-jensen}
   Under the assumptions of
   \Cref{thm:tracewise-soundness-big-step}, let
@@ -2489,6 +2463,38 @@ Now, we say that a $\G$ mode execution trace is valid if resolving the general-m
       \varphi(v)\,\bigsem{e:\tau}^\gamma(dv).
   \]
 \end{theorem}
+
+\begin{proof}
+  Since $s^\gamma$ is terminal,
+  $\bigsem{\exptrans{e:\tau}:\tau}^\gamma$ is a Dirac measure. Let
+  $c^\gamma$ be the value at which it is concentrated. By
+  \Cref{thm:tracewise-soundness-big-step},
+  \[
+    c^\gamma
+    =
+    \mathbb E\!\left[\bigsem{e:\tau}^\gamma\right].
+  \]
+  Hence,
+  \begin{align}
+    \int_{Val_\tau}
+      \varphi(v)\,
+      \bigsem{\exptrans{e:\tau}:\tau}^\gamma(dv)
+    &=
+    \varphi(c^\gamma)
+    \tag{\text{since the expected interpretation is a Dirac measure}}
+    \\
+    &=
+    \varphi\!\left(
+      \mathbb E\!\left[\bigsem{e:\tau}^\gamma\right]
+    \right)
+    \tag{\text{by \Cref{thm:tracewise-soundness-big-step}}}
+    \\
+    &\leq
+    \int_{Val_\tau}
+      \varphi(v)\,\bigsem{e:\tau}^\gamma(dv)
+    \tag{\text{by Jensen's inequality}}.
+  \end{align}
+\end{proof}
 
 \begin{theorem}[Global agreement of interpretations]
   \label{thm:global-agreement-of-interpretations}
@@ -2527,6 +2533,57 @@ Now, we say that a $\G$ mode execution trace is valid if resolving the general-m
     \right].
   \]
 \end{theorem}
+
+\begin{proof}
+  By \Cref{lem:restriction-of-bind},
+  \[
+    \left.(\mu\monbind\mathsf{act}_\tau)\right|_{Val_\tau}
+    =
+    \mu\monbind
+    \lambda s.\,
+    \left.\mathsf{act}_\tau(s)\right|_{Val_\tau},
+  \]
+  and analogously for $\mathsf{exp}_\tau$.
+
+  The hypotheses of
+  \Cref{lem:extended-expectation-of-bind} hold for the actual
+  interpretation by the assumption that its expectation is
+  well-defined. They also hold for the expected interpretation: this
+  follows by applying Jensen's inequality pointwise to $v^+$ and
+  $v^-$ and then applying Tonelli's theorem. Thus,
+  \begin{align}
+    &\mathbb E\!\left[
+      \left.
+        (\mu\monbind\mathsf{act}_\tau)
+      \right|_{Val_\tau}
+    \right]
+    \notag
+    \\
+    &=
+    \int_{State_\tau}
+      \mathbb E\!\left[
+        \left.\mathsf{act}_\tau(s)\right|_{Val_\tau}
+      \right]
+      \,\mu(ds)
+    \tag{\text{by \Cref{lem:restriction-of-bind,lem:extended-expectation-of-bind}}}
+    \\
+    &=
+    \int_{State_\tau}
+      \mathbb E\!\left[
+        \left.\mathsf{exp}_\tau(s)\right|_{Val_\tau}
+      \right]
+      \,\mu(ds)
+    \tag{\text{by \Cref{thm:tracewise-agreement-of-interpretations}}}
+    \\
+    &=
+    \mathbb E\!\left[
+      \left.
+        (\mu\monbind\mathsf{exp}_\tau)
+      \right|_{Val_\tau}
+    \right]
+    \tag{\text{by \Cref{lem:restriction-of-bind,lem:extended-expectation-of-bind}}}.
+  \end{align}
+\end{proof}
 
 \begin{theorem}[Global soundness $n$-step]
   \label{thm:global-soundness-n-step}
@@ -2569,6 +2626,42 @@ Now, we say that a $\G$ mode execution trace is valid if resolving the general-m
   \]
 \end{theorem}
 
+\begin{proof}
+  Let
+  \[
+    \mu_n
+    =
+    \symbigsemstep{\mathsf{init}_\tau(e:\tau)}{n}.
+  \]
+  Then
+  \begin{align}
+    &\mathbb E\!\left[
+      \left.\bigsemstep{e:\tau}{n}\right|_{Val_\tau}
+    \right]
+    \notag
+    \\
+    &=
+    \mathbb E\!\left[
+      \left.(\mu_n\monbind\mathsf{act}_\tau)\right|_{Val_\tau}
+    \right]
+    \tag{\text{by the actual interpretation theorem}}
+    \\
+    &=
+    \mathbb E\!\left[
+      \left.(\mu_n\monbind\mathsf{exp}_\tau)\right|_{Val_\tau}
+    \right]
+    \tag{\text{by \Cref{thm:global-agreement-of-interpretations}}}
+    \\
+    &=
+    \mathbb E\!\left[
+      \left.
+        \bigsemstep{\exptrans{e:\tau}:\tau}{n}
+      \right|_{Val_\tau}
+    \right]
+    \tag{\text{by the expected interpretation theorem}}.
+  \end{align}
+\end{proof}
+
 \begin{theorem}[Global soundness big step]
   \label{thm:global-soundness-big-step}
   Let $e:\tau$ be closed and well typed, where
@@ -2591,7 +2684,75 @@ Now, we say that a $\G$ mode execution trace is valid if resolving the general-m
   \]
 \end{theorem}
 
-\begin{theorem}[Global Jensen inequality]
+\begin{proof}
+  For each $n\in\mathbb N$, let
+  \[
+    \mu_n
+    =
+    \left.
+      \bigsemstep{e:\tau}{n}
+    \right|_{Val_\tau}
+    \qquad\text{and}\qquad
+    \nu_n
+    =
+    \left.
+      \bigsemstep{\exptrans{e:\tau}:\tau}{n}
+    \right|_{Val_\tau}.
+  \]
+  Since values are absorbing, $(\mu_n)_{n\in\mathbb N}$ and
+  $(\nu_n)_{n\in\mathbb N}$ are increasing sequences of measures on
+  $Val_\tau$.
+
+  Applying the pointwise Jensen argument to $v^+$ and $v^-$ and
+  integrating over the general-mode traces gives
+  \begin{align*}
+    \int_{Val_\tau}v^+\,
+      \bigsem{\exptrans{e:\tau}:\tau}(dv)
+    &\leq
+    \int_{Val_\tau}v^+\,\bigsem{e:\tau}(dv),
+    \\
+    \int_{Val_\tau}v^-\,
+      \bigsem{\exptrans{e:\tau}:\tau}(dv)
+    &\leq
+    \int_{Val_\tau}v^-\,\bigsem{e:\tau}(dv).
+  \end{align*}
+  Since $\mathbb E[\bigsem{e:\tau}]$ is well-defined, at least one of
+  the integrals on the right is finite. The corresponding integral on
+  the left is therefore finite, so
+  $\mathbb E[\bigsem{\exptrans{e:\tau}:\tau}]$ is also well-defined.
+
+  By \Cref{lem:extended-expectation-increasing-limits}, every
+  $\mathbb E[\mu_n]$ is well-defined. Hence
+  \Cref{thm:global-soundness-n-step} applies at every $n$. We obtain
+  \begin{align}
+    \mathbb E\!\left[\bigsem{e:\tau}\right]
+    &=
+    \mathbb E\!\left[\lim_{n\to\infty}\mu_n\right]
+    \tag{\text{by the definition of the big-step semantics}}
+    \\
+    &=
+    \lim_{n\to\infty}
+    \mathbb E\!\left[\mu_n\right]
+    \tag{\text{by \Cref{lem:extended-expectation-increasing-limits}}}
+    \\
+    &=
+    \lim_{n\to\infty}
+    \mathbb E\!\left[\nu_n\right]
+    \tag{\text{by \Cref{thm:global-soundness-n-step}}}
+    \\
+    &=
+    \mathbb E\!\left[\lim_{n\to\infty}\nu_n\right]
+    \tag{\text{by \Cref{lem:extended-expectation-increasing-limits}}}
+    \\
+    &=
+    \mathbb E\!\left[
+      \bigsem{\exptrans{e:\tau}:\tau}
+    \right]
+    \tag{\text{by the definition of the big-step semantics}}.
+  \end{align}
+\end{proof}
+
+\begin{theorem}
   \label{thm:global-jensen}
   Let $e:\tau$ be closed and well typed, where
   $\tau=\Float{m}$ and $m=\G$ or $\E$.
@@ -2608,3 +2769,22 @@ Now, we say that a $\G$ mode execution trace is valid if resolving the general-m
       \varphi(v)\,\bigsem{e:\tau}(dv).
   \]
 \end{theorem}
+
+\begin{proof}
+  Integrating the tracewise inequality from
+  \Cref{thm:tracewise-jensen} over all terminating general-mode traces
+  gives
+  \begin{align}
+    &\int_{Val_\tau}
+      \varphi(v)\,
+      \bigsem{\exptrans{e:\tau}:\tau}(dv)
+    \notag
+    \\
+    &\leq
+    \int_{Val_\tau}
+      \varphi(v)\,\bigsem{e:\tau}(dv).
+    \tag{\text{by \Cref{thm:tracewise-jensen} and Tonelli's theorem}}
+  \end{align}
+  Tonelli's theorem applies because $\varphi$ is nonnegative, even if
+  either side is infinite.
+\end{proof}
