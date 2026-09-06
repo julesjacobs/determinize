@@ -2010,11 +2010,32 @@ is finite. In that case, define
 \]
 If both integrals are infinite, then $\mathbb E[\mu]$ is undefined.
 
+\paragraph{Absolute moments}
+For $p\geq1$, we say that $\mu$ has a finite $p$-th absolute moment if
+\[
+  \int_{\mathbb R}|v|^p\,\mu(dv)<\infty.
+\]
+In particular, $\mu$ has a \emph{finite first absolute moment} if
+\[
+  \int_{\mathbb R}|v|\,\mu(dv)<\infty.
+\]
+
 \begin{example}
-  TODO.
+  Let $U\sim\uniform(0,1)$, and let $\mu$ be the distribution of
+  $V=1/U$. Since $V>0$ almost surely,
+  \[
+    \int_{\mathbb R}v^-\,\mu(dv)=0,
+    \qquad
+    \int_{\mathbb R}v^+\,\mu(dv)
+    =
+    \int_0^1\frac{1}{u}\,du
+    =
+    +\infty.
+  \]
+  Thus, $\mathbb E[\mu]=+\infty$ is well-defined in the extended reals.
 \end{example}
 
-We define an integrability condition, which ensures that replacing $\E$-samples by their means produces finite real values.
+Next, we define an integrability condition for the symbolic sampling enviornment $\sigma$, which ensures that replacing samples in $\sigma$ by their means produces finite real values.
 
 \begin{definition}[Integrable symbolic sampling environment]
   Let
@@ -2024,6 +2045,17 @@ We define an integrability condition, which ensures that replacing $\E$-samples 
     u_1\sim D_1(\vec a_1),\ldots,
     u_k\sim D_k(\vec a_k).
   \]
+  We identify each tuple $(r_1,\ldots,r_k)\in\mathbb R^k$ with the
+  valuation
+  \[
+    \rho
+    =
+    [u_1\mapsto r_1,\ldots,u_k\mapsto r_k].
+  \]
+  Thus, $\rho(u_i)=r_i$ is the value assigned to the symbolic variable
+  $u_i$, and $\sem{\sigma}_{\mathsf{env}}$ is the joint distribution
+  over such valuations.
+
   We say that $\sigma$ is integrable if
   $\sem{\sigma}_{\mathsf{mean}}$ is well-defined and, for every
   $i\in\{1,\ldots,k\}$,
@@ -2034,9 +2066,29 @@ We define an integrability condition, which ensures that replacing $\E$-samples 
     <
     \infty.
   \]
+  Equivalently, every symbolic sample recorded in $\sigma$ has a
+  finite first absolute moment under the joint distribution
+  $\sem{\sigma}_{\mathsf{env}}$.
 \end{definition}
 
-Now, we say that a $\G$ mode execution trace is valid if resolving the general-mode sampling operations according to that trace does not cause an undefined arithmetic operation or an invalid distribution parameter.
+\begin{example}
+  Consider
+  \[
+    \sigma
+    =
+    \bigl(
+      u_1\sim\uniform(1,2),\;
+      u_2\sim\uniform(0,u_1)
+    \bigr).
+  \]
+  Both symbolic samples have finite first absolute moments. Moreover,
+  \[
+    \sem{\sigma}_{\mathsf{mean}}
+    =
+    \delta_{[u_1\mapsto 1.5,\;u_2\mapsto 0.75]}.
+  \]
+  Thus, $\sigma$ is an integrable symbolic sampling environment.
+\end{example}
 
 \begin{lemma}[Restriction of bind]
   \label{lem:restriction-of-bind}
@@ -2214,6 +2266,43 @@ Now, we say that a $\G$ mode execution trace is valid if resolving the general-m
   \end{align}
 \end{proof}
 
+\paragraph{Tracewise soundness}
+
+\begin{lemma}[Mean valuation correctness]
+  \label{lem:mean-valuation-agreement}
+
+  Let
+  \[
+    \sigma
+    =
+    u_1\sim D_1(\vec a_1),\ldots,
+    u_k\sim D_k(\vec a_k)
+  \]
+  be an integrable symbolic sampling environment, and suppose
+  \[
+    \sem{\sigma}_{\mathsf{mean}}=\delta_\rho.
+  \]
+  Suppose further that the mean of each distribution $D_i$ is an affine
+  function of its parameters. Then, for every $i\in\{1,\ldots,k\}$,
+  \[
+    \rho(u_i)
+    =
+    \int_{\mathbb R^k}
+      \rho'(u_i)\,
+      \sem{\sigma}_{\mathsf{env}}(d\rho').
+  \]
+
+  That is, the value assigned to each symbolic variable by
+  $\sem{\sigma}_{\mathsf{mean}}$ is its expectation under
+  $\sem{\sigma}_{\mathsf{env}}$.
+\end{lemma}
+
+\begin{proof}
+  TODO.
+\end{proof}
+
+We say that a $\G$ mode execution trace is valid if resolving the general-mode sampling operations according to that trace does not cause an undefined arithmetic operation or an invalid distribution parameter.
+
 \begin{theorem}[Tracewise agreement of interpretations]
   \label{thm:tracewise-agreement-of-interpretations}
   Let $e:\tau$ be closed and well typed, where
@@ -2240,7 +2329,7 @@ Now, we say that a $\G$ mode execution trace is valid if resolving the general-m
     <
     \infty.
   \]
-  Moreover,
+  In other words, both expectations are finite real numbers. Moreover,
   \[
     \mathbb E\!\left[
       \left.\mathsf{act}_\tau(s)\right|_{Val_\tau}
@@ -2253,7 +2342,229 @@ Now, we say that a $\G$ mode execution trace is valid if resolving the general-m
 \end{theorem}
 
 \begin{proof}
-  TODO.
+  If $\hat e$ is not a symbolic value, realization preserves its outer
+  syntactic form, so neither interpretation assigns any mass to
+  $Val_\tau$. Both restrictions are therefore the zero measure, and
+  the result is immediate.
+
+  Otherwise, since $\tau=\Float{m}$, we have $\hat e=\sym(a)$ for
+  some affine expression
+  \[
+    a=c_0+\sum_{i=1}^k c_i u_i.
+  \]
+  Let $\bar\rho$ be the unique valuation such that
+  \[
+    \sem{\sigma}_{\mathsf{mean}}=\delta_{\bar\rho}.
+  \]
+
+  We first prove that both expectations are finite real numbers, then prove
+  their equality.
+
+  \begin{enumerate}
+    \item
+    By the definition of $\mathsf{act}_\tau$,
+    \begin{align}
+      \int_{Val_\tau}
+        |v|\,\mathsf{act}_\tau(s)(dv)
+      &=
+      \int_{Val_\tau}
+        |v|\,
+        \left(
+          \sem{\sigma}_{\mathsf{env}}
+          \monbind
+          \lambda\rho.\,
+          \delta_{\mathsf{realize}_\rho(\sym(a)):\tau}
+        \right)(dv)
+      \tag{\text{by the definition of $\mathsf{act}_\tau$}}
+      \\
+      &=
+      \int_{\mathbb R^k}
+        \left(
+          \int_{Val_\tau}
+            |v|\,
+            \delta_{\mathsf{realize}_\rho(\sym(a)):\tau}(dv)
+        \right)
+        \sem{\sigma}_{\mathsf{env}}(d\rho)
+      \tag{\text{by the definition of monadic bind and Tonelli's theorem}}
+      \\
+      &=
+      \int_{\mathbb R^k}
+        \left|
+          c_0+\sum_{i=1}^k c_i\rho(u_i)
+        \right|
+        \sem{\sigma}_{\mathsf{env}}(d\rho)
+      \tag{\text{by the definitions of $\mathsf{realize}_\rho$ and a Dirac measure}}
+      \\
+      &\leq
+      |c_0|
+      +
+      \sum_{i=1}^k
+        |c_i|
+        \int_{\mathbb R^k}
+          |\rho(u_i)|\,
+          \sem{\sigma}_{\mathsf{env}}(d\rho)
+      \tag{\text{by the triangle inequality}}
+      \\
+      &<
+      \infty
+      \tag{\text{since $\sigma$ is integrable}}.
+    \end{align}
+
+    Similarly, by the definition of $\mathsf{exp}_\tau$,
+    \begin{align}
+      \int_{Val_\tau}
+        |v|\,\mathsf{exp}_\tau(s)(dv)
+      &=
+      \int_{Val_\tau}
+        |v|\,
+        \left(
+          \sem{\sigma}_{\mathsf{mean}}
+          \monbind
+          \lambda\rho.\,
+          \delta_{\mathsf{erealize}_\rho(\sym(a)):\tau}
+        \right)(dv)
+      \tag{\text{by the definition of $\mathsf{exp}_\tau$}}
+      \\
+      &=
+      \int_{\mathbb R^k}
+        \left(
+          \int_{Val_\tau}
+            |v|\,
+            \delta_{\mathsf{erealize}_\rho(\sym(a)):\tau}(dv)
+        \right)
+        \sem{\sigma}_{\mathsf{mean}}(d\rho)
+      \tag{\text{by the definition of monadic bind and Tonelli's theorem}}
+      \\
+      &=
+      \int_{\mathbb R^k}
+        \left|
+          c_0+\sum_{i=1}^k c_i\rho(u_i)
+        \right|
+        \sem{\sigma}_{\mathsf{mean}}(d\rho)
+      \tag{\text{by the definitions of $\mathsf{erealize}_\rho$ and a Dirac measure}}
+      \\
+      &=
+      \left|
+        c_0+\sum_{i=1}^k c_i\bar\rho(u_i)
+      \right|
+      \tag{\text{since $\sem{\sigma}_{\mathsf{mean}}=\delta_{\bar\rho}$}}
+      \\
+      &<
+      \infty
+      \tag{\text{since $\bar\rho$ is a real-valued valuation}}.
+    \end{align}
+
+    Hence both expectations are finite real numbers.
+
+    \item
+    For the actual interpretation,
+    \begin{align}
+      \mathbb E\!\left[
+        \left.\mathsf{act}_\tau(s)\right|_{Val_\tau}
+      \right]
+      &=
+      \int_{Val_\tau}
+        v\,
+        \left(
+          \sem{\sigma}_{\mathsf{env}}
+          \monbind
+          \lambda\rho.\,
+          \delta_{\mathsf{realize}_\rho(\sym(a)):\tau}
+        \right)(dv)
+      \tag{\text{by the definitions of expectation and $\mathsf{act}_\tau$}}
+      \\
+      &=
+      \int_{\mathbb R^k}
+        \left(
+          \int_{Val_\tau}
+            v\,
+            \delta_{\mathsf{realize}_\rho(\sym(a)):\tau}(dv)
+        \right)
+        \sem{\sigma}_{\mathsf{env}}(d\rho)
+      \tag{\text{by the definition of monadic bind and Fubini's theorem}}
+      \\
+      &=
+      \int_{\mathbb R^k}
+        \left(
+          c_0+\sum_{i=1}^k c_i\rho(u_i)
+        \right)
+        \sem{\sigma}_{\mathsf{env}}(d\rho)
+      \tag{\text{by the definitions of $\mathsf{realize}_\rho$ and a Dirac measure}}
+      \\
+      &=
+      c_0+
+      \sum_{i=1}^k
+        c_i
+        \int_{\mathbb R^k}
+          \rho(u_i)\,
+          \sem{\sigma}_{\mathsf{env}}(d\rho)
+      \tag{\text{by linearity of expectation}}.
+    \end{align}
+
+    For the expected interpretation,
+    \begin{align}
+      \mathbb E\!\left[
+        \left.\mathsf{exp}_\tau(s)\right|_{Val_\tau}
+      \right]
+      &=
+      \int_{Val_\tau}
+        v\,
+        \left(
+          \sem{\sigma}_{\mathsf{mean}}
+          \monbind
+          \lambda\rho.\,
+          \delta_{\mathsf{erealize}_\rho(\sym(a)):\tau}
+        \right)(dv)
+      \tag{\text{by the definitions of expectation and $\mathsf{exp}_\tau$}}
+      \\
+      &=
+      \int_{\mathbb R^k}
+        \left(
+          \int_{Val_\tau}
+            v\,
+            \delta_{\mathsf{erealize}_\rho(\sym(a)):\tau}(dv)
+        \right)
+        \sem{\sigma}_{\mathsf{mean}}(d\rho)
+      \tag{\text{by the definition of monadic bind and Fubini's theorem}}
+      \\
+      &=
+      \int_{\mathbb R^k}
+        \left(
+          c_0+\sum_{i=1}^k c_i\rho(u_i)
+        \right)
+        \sem{\sigma}_{\mathsf{mean}}(d\rho)
+      \tag{\text{by the definitions of $\mathsf{erealize}_\rho$ and a Dirac measure}}
+      \\
+      &=
+      c_0+
+      \sum_{i=1}^k
+        c_i
+        \int_{\mathbb R^k}
+          \rho(u_i)\,
+          \sem{\sigma}_{\mathsf{mean}}(d\rho)
+      \tag{\text{by linearity of expectation}}
+      \\
+      &=
+      c_0+
+      \sum_{i=1}^k
+        c_i
+        \int_{\mathbb R^k}
+          \rho(u_i)\,
+          \sem{\sigma}_{\mathsf{env}}(d\rho)
+      \tag{\text{by \Cref{lem:mean-valuation-agreement}}}.
+    \end{align}
+
+    Therefore,
+    \[
+      \mathbb E\!\left[
+        \left.\mathsf{act}_\tau(s)\right|_{Val_\tau}
+      \right]
+      =
+      \mathbb E\!\left[
+        \left.\mathsf{exp}_\tau(s)\right|_{Val_\tau}
+      \right].
+    \]
+  \end{enumerate}
 \end{proof}
 
 \begin{definition}[Tracewise $n$-step semantics]
@@ -2495,6 +2806,8 @@ Now, we say that a $\G$ mode execution trace is valid if resolving the general-m
     \tag{\text{by Jensen's inequality}}.
   \end{align}
 \end{proof}
+
+\paragraph{Global soundness}
 
 \begin{theorem}[Global agreement of interpretations]
   \label{thm:global-agreement-of-interpretations}
