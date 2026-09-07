@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Build/test runner shared by the Stop hook and the /check-all skill.
 #
-#   check.sh [--quiet] AREA...      AREA in: ocaml sim bundle tex det
+#   check.sh [--quiet] AREA...      AREA in: ocaml sim bundle tex lean det
 #   check.sh --changed              pick areas from `git status` (what the Stop hook does)
 #   check.sh --all                  everything except `det` (which rewrites golden files)
 #
@@ -18,14 +18,15 @@ quiet=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --quiet) quiet=1 ;;
-    --all) areas+=(ocaml sim bundle tex) ;;
+    --all) areas+=(ocaml sim bundle tex lean) ;;
     --changed)
       changed="$(git status --porcelain --untracked-files=all | cut -c4-)"
       grep -qE '^ocaml/' <<<"$changed" && areas+=(ocaml)
       grep -qE '^sim/(src|test)/|^sim/package(-lock)?\.json' <<<"$changed" && areas+=(sim bundle)
       grep -qE '^tex/.*\.(tex|bib|cls|bst|sty)$' <<<"$changed" && areas+=(tex)
+      grep -qE '^lean/.*\.lean$|^lean/(lakefile\.toml|lean-toolchain|lake-manifest\.json)$' <<<"$changed" && areas+=(lean)
       ;;
-    ocaml|sim|bundle|tex|det) areas+=("$1") ;;
+    ocaml|sim|bundle|tex|lean|det) areas+=("$1") ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
   shift
@@ -77,6 +78,18 @@ for area in "${areas[@]}"; do
         report tex "latexmk OK (overfull boxes: $overfull)"
       fi
       [[ -n "$multiply" ]] && report tex "warning: multiply-defined labels" "$multiply"
+      ;;
+    lean)
+      # Never let lake compile Mathlib from source (hours): require the downloaded cache first.
+      if [[ ! -d lean/.lake/packages/mathlib/.lake/build ]]; then
+        fail=1; report lean "Mathlib cache not fetched: run 'cd lean && lake exe cache get' (downloads prebuilt .olean files, once), then 'lake build'"
+      else
+        out="$(cd lean && in_shell lean lake build 2>&1)"
+        if [[ $? -eq 0 ]]; then
+          sorries="$(grep -cE "declaration uses .sorry." <<<"$out" || true)"
+          report lean "lake build OK (sorry warnings: $sorries)"
+        else fail=1; report lean "lake build FAILED" "$(grep -vE '^(✔|⚠) \[' <<<"$out" | tail_of)"; fi
+      fi
       ;;
     det)
       out="$(in_shell ocaml ./det.sh 2>&1)"

@@ -5,8 +5,8 @@ read_hook_input
 cd "$ROOT"
 
 have() { command -v "$1" >/dev/null 2>&1 && echo "$1 ✓" || echo "$1 ✗"; }
-echo "Toolchain on PATH right now: $(have dune) $(have node) $(have latexmk) $(have storm) $(have direnv) $(have nix)"
-echo "Missing tools are reachable via 'direnv exec <dir> CMD' or 'nix develop .#<ocaml|sim|tex> --command CMD' (see CLAUDE.md)."
+echo "Toolchain on PATH right now: $(have dune) $(have node) $(have latexmk) $(have lake) $(have storm) $(have direnv) $(have nix)"
+echo "Missing tools are reachable via 'direnv exec <dir> CMD' or 'nix develop .#<ocaml|sim|tex|lean> --command CMD' (see CLAUDE.md)."
 branch="$(git branch --show-current 2>/dev/null)"
 dirty="$(git status --porcelain 2>/dev/null | wc -l | tr -d ' ')"
 echo "git: branch $branch, $dirty uncommitted path(s); last commit: $(git log -1 --format='%h %s' 2>/dev/null)"
