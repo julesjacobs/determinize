@@ -1594,6 +1594,39 @@ $\sem{\sigma}_{\mathsf{mean}} \in \mathcal{D}(\mathbb{R}^n)$.
   \]
 \end{example}
 
+\begin{lemma}[Agreement of mean and sampling environments]
+  \label{lem:mean-valuation-agreement}
+
+  Let
+  \[
+    \sigma
+    =
+    u_1\sim D_1(\vec a_1),\ldots,
+    u_k\sim D_k(\vec a_k)
+  \]
+  be an integrable symbolic sampling environment, and suppose
+  \[
+    \sem{\sigma}_{\mathsf{mean}}=\delta_\rho.
+  \]
+  Suppose further that the mean of each distribution $D_i$ is an affine
+  function of its parameters. Then, for every $i\in\{1,\ldots,k\}$,
+  \[
+    \rho(u_i)
+    =
+    \int_{\mathbb R^k}
+      \rho'(u_i)\,
+      \sem{\sigma}_{\mathsf{env}}(d\rho').
+  \]
+
+  That is, the value assigned to each symbolic variable by
+  $\sem{\sigma}_{\mathsf{mean}}$ is its expectation under
+  $\sem{\sigma}_{\mathsf{env}}$.
+\end{lemma}
+
+\begin{proof}
+  TODO.
+\end{proof}
+
 Now, we define a realization function.
 
 \begin{definition}[Expected realization]
@@ -2010,16 +2043,6 @@ is finite. In that case, define
 \]
 If both integrals are infinite, then $\mathbb E[\mu]$ is undefined.
 
-\paragraph{Absolute moments}
-For $p\geq1$, we say that $\mu$ has a finite $p$-th absolute moment if
-\[
-  \int_{\mathbb R}|v|^p\,\mu(dv)<\infty.
-\]
-In particular, $\mu$ has a \emph{finite first absolute moment} if
-\[
-  \int_{\mathbb R}|v|\,\mu(dv)<\infty.
-\]
-
 \begin{example}
   Let $U\sim\uniform(0,1)$, and let $\mu$ be the distribution of
   $V=1/U$. Since $V>0$ almost surely,
@@ -2034,6 +2057,16 @@ In particular, $\mu$ has a \emph{finite first absolute moment} if
   \]
   Thus, $\mathbb E[\mu]=+\infty$ is well-defined in the extended reals.
 \end{example}
+
+\paragraph{Absolute moments}
+For $p\geq1$, we say that $\mu$ has a finite $p$-th absolute moment if
+\[
+  \int_{\mathbb R}|v|^p\,\mu(dv)<\infty.
+\]
+In particular, $\mu$ has a \emph{finite first absolute moment} if
+\[
+  \mathbb E[|\mu|] = \int_{\mathbb R}|v|\,\mu(dv)<\infty.
+\]
 
 Next, we define an integrability condition for the symbolic sampling enviornment $\sigma$, which ensures that replacing samples in $\sigma$ by their means produces finite real values.
 
@@ -2268,39 +2301,6 @@ Next, we define an integrability condition for the symbolic sampling enviornment
 
 \paragraph{Tracewise soundness}
 
-\begin{lemma}[Mean valuation correctness]
-  \label{lem:mean-valuation-agreement}
-
-  Let
-  \[
-    \sigma
-    =
-    u_1\sim D_1(\vec a_1),\ldots,
-    u_k\sim D_k(\vec a_k)
-  \]
-  be an integrable symbolic sampling environment, and suppose
-  \[
-    \sem{\sigma}_{\mathsf{mean}}=\delta_\rho.
-  \]
-  Suppose further that the mean of each distribution $D_i$ is an affine
-  function of its parameters. Then, for every $i\in\{1,\ldots,k\}$,
-  \[
-    \rho(u_i)
-    =
-    \int_{\mathbb R^k}
-      \rho'(u_i)\,
-      \sem{\sigma}_{\mathsf{env}}(d\rho').
-  \]
-
-  That is, the value assigned to each symbolic variable by
-  $\sem{\sigma}_{\mathsf{mean}}$ is its expectation under
-  $\sem{\sigma}_{\mathsf{env}}$.
-\end{lemma}
-
-\begin{proof}
-  TODO.
-\end{proof}
-
 We say that a $\G$ mode execution trace is valid if resolving the general-mode sampling operations according to that trace does not cause an undefined arithmetic operation or an invalid distribution parameter.
 
 \begin{theorem}[Tracewise agreement of interpretations]
@@ -2317,15 +2317,21 @@ We say that a $\G$ mode execution trace is valid if resolving the general-mode s
 
   If $\sigma$ is integrable, then
   \[
-    \int_{Val_\tau}
-      |v|\,\mathsf{act}_\tau(s)(dv)
+    \mathbb E\!\left[
+      \left|
+        \left.\mathsf{act}_\tau(s)\right|_{Val_\tau}
+      \right|
+    \right]
     <
     \infty
   \]
   and
   \[
-    \int_{Val_\tau}
-      |v|\,\mathsf{exp}_\tau(s)(dv)
+    \mathbb E\!\left[
+      \left|
+        \left.\mathsf{exp}_\tau(s)\right|_{Val_\tau}
+      \right|
+    \right]
     <
     \infty.
   \]
@@ -2364,26 +2370,33 @@ We say that a $\G$ mode execution trace is valid if resolving the general-mode s
     \item
     By the definition of $\mathsf{act}_\tau$,
     \begin{align}
-      \int_{Val_\tau}
-        |v|\,\mathsf{act}_\tau(s)(dv)
+      \mathbb E\!\left[
+        \left|
+          \left.\mathsf{act}_\tau(s)\right|_{Val_\tau}
+        \right|
+      \right]
       &=
-      \int_{Val_\tau}
-        |v|\,
-        \left(
-          \sem{\sigma}_{\mathsf{env}}
-          \monbind
-          \lambda\rho.\,
-          \delta_{\mathsf{realize}_\rho(\sym(a)):\tau}
-        \right)(dv)
+      \mathbb E\!\left[
+        \left|
+          \left.
+          \left(
+            \sem{\sigma}_{\mathsf{env}}
+            \monbind
+            \lambda\rho.\,
+            \delta_{\mathsf{realize}_\rho(\sym(a)):\tau}
+          \right)
+          \right|_{Val_\tau}
+        \right|
+      \right]
       \tag{\text{by the definition of $\mathsf{act}_\tau$}}
       \\
       &=
       \int_{\mathbb R^k}
-        \left(
-          \int_{Val_\tau}
-            |v|\,
-            \delta_{\mathsf{realize}_\rho(\sym(a)):\tau}(dv)
-        \right)
+        \mathbb E\!\left[
+          \left|
+            \delta_{\mathsf{realize}_\rho(\sym(a)):\tau}
+          \right|
+        \right]
         \sem{\sigma}_{\mathsf{env}}(d\rho)
       \tag{\text{by the definition of monadic bind and Tonelli's theorem}}
       \\
@@ -2412,26 +2425,33 @@ We say that a $\G$ mode execution trace is valid if resolving the general-mode s
 
     Similarly, by the definition of $\mathsf{exp}_\tau$,
     \begin{align}
-      \int_{Val_\tau}
-        |v|\,\mathsf{exp}_\tau(s)(dv)
+      \mathbb E\!\left[
+        \left|
+          \left.\mathsf{exp}_\tau(s)\right|_{Val_\tau}
+        \right|
+      \right]
       &=
-      \int_{Val_\tau}
-        |v|\,
-        \left(
-          \sem{\sigma}_{\mathsf{mean}}
-          \monbind
-          \lambda\rho.\,
-          \delta_{\mathsf{erealize}_\rho(\sym(a)):\tau}
-        \right)(dv)
+      \mathbb E\!\left[
+        \left|
+          \left.
+          \left(
+            \sem{\sigma}_{\mathsf{mean}}
+            \monbind
+            \lambda\rho.\,
+            \delta_{\mathsf{erealize}_\rho(\sym(a)):\tau}
+          \right)
+          \right|_{Val_\tau}
+        \right|
+      \right]
       \tag{\text{by the definition of $\mathsf{exp}_\tau$}}
       \\
       &=
       \int_{\mathbb R^k}
-        \left(
-          \int_{Val_\tau}
-            |v|\,
-            \delta_{\mathsf{erealize}_\rho(\sym(a)):\tau}(dv)
-        \right)
+        \mathbb E\!\left[
+          \left|
+            \delta_{\mathsf{erealize}_\rho(\sym(a)):\tau}
+          \right|
+        \right]
         \sem{\sigma}_{\mathsf{mean}}(d\rho)
       \tag{\text{by the definition of monadic bind and Tonelli's theorem}}
       \\
@@ -2613,17 +2633,23 @@ Note that fixing $\gamma$ removes the randomness from the $\G$-samples, which de
 
   If $\sigma_n^\gamma$ is integrable, then
   \[
-    \int_{Val_\tau}
-      |v|\,
-      \bigsemstep{e:\tau}{n,\gamma}(dv)
+    \mathbb E\!\left[
+      \left|
+        \left.\bigsemstep{e:\tau}{n,\gamma}\right|_{Val_\tau}
+      \right|
+    \right]
     <
     \infty
   \]
   and
   \[
-    \int_{Val_\tau}
-      |v|\,
-      \bigsemstep{\exptrans{e:\tau}:\tau}{n,\gamma}(dv)
+    \mathbb E\!\left[
+      \left|
+        \left.
+        \bigsemstep{\exptrans{e:\tau}:\tau}{n,\gamma}
+        \right|_{Val_\tau}
+      \right|
+    \right]
     <
     \infty.
   \]
@@ -2737,20 +2763,27 @@ Note that fixing $\gamma$ removes the randomness from the $\G$-samples, which de
   \begin{equation}
     \label{eq:tracewise-uniform-first-moment}
     \sup_{n\in\mathbb N}
-    \int_{Val_\tau}
-      |v|\,\bigsemstep{e:\tau}{n,\gamma}(dv)
+    \mathbb E\!\left[
+      \left|
+        \left.\bigsemstep{e:\tau}{n,\gamma}\right|_{Val_\tau}
+      \right|
+    \right]
     <
     \infty.
   \end{equation}
   Then
   \[
-    \int_{Val_\tau}|v|\,\bigsem{e:\tau}^\gamma(dv)<\infty
+    \mathbb E\!\left[\left|\bigsem{e:\tau}^\gamma\right|\right]
+    <
+    \infty
   \]
   and
   \[
-    \int_{Val_\tau}
-      |v|\,
-      \bigsem{\exptrans{e:\tau}:\tau}^\gamma(dv)
+    \mathbb E\!\left[
+      \left|
+        \bigsem{\exptrans{e:\tau}:\tau}^\gamma
+      \right|
+    \right]
     <
     \infty.
   \]
