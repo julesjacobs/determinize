@@ -12,16 +12,18 @@ Research project on *determinizing* probabilistic programs: a small language (`.
 | `ocaml/` | reference implementation + CLI `determinize_main` (lexer/parser -> `infer` -> `determinize` -> `interp` / `to_mc` Storm export) | `.#ocaml`: dune 3.23, menhir, ocamllex, ocaml-lsp (loaded by the root `.envrc`) |
 | `sim/` | browser simulator, a hand-written JS port of the compiler plus a coupled-trace runtime, CodeMirror UI | `.#sim`: node 24, esbuild, `node --test` (`sim/.envrc`) |
 | `tex/` | the paper (acmart, PACMPL style) | `.#tex`: texliveMedium + latexmk + chktex (`tex/.envrc`) |
+| `lean/` | Lean 4 formalization of the soundness theorems (Lake project on Mathlib): trusted statements in `Determinize/Statement` + `Determinize/Traces`, exported theorems with `#print axioms` in `Determinize/Theorems.lean`, complete sorry-free proofs in `Determinize/Proof` (layering and deviations from the paper in `lean/README.md`) | `.#lean`: elan (installs the Lean release pinned in `lean-toolchain`), git, curl (`lean/.envrc`) |
 | `det/`, `examples/` | `.det` programs with generated `.dout` golden outputs (and Storm `.tra/.lab/.state.rew`) | uses `ocaml/` via `./det.sh`, `./run.sh` |
 | `flake.nix`, `flake-modules/` | flake-parts, dendritic layout (every `.nix` under `flake-modules/` is auto-imported) | Nix 2.34, direnv + nix-direnv |
 
-Per-directory details, conventions, and pitfalls load automatically from `.claude/rules/{ocaml,sim,tex,nix}.md` when you touch those files. Language reference: the `det-lang` skill.
+Per-directory details, conventions, and pitfalls load automatically from `.claude/rules/{ocaml,sim,tex,lean,nix}.md` when you touch those files. Language reference: the `det-lang` skill.
 
 ## Environment: tools live in Nix devshells
-Only the `.#ocaml` shell is on PATH in a normal session (`dune` works; `node`, `npm`, `latexmk`, `chktex` do not). Run other toolchains through direnv's cached shells or `nix develop`:
+Only the `.#ocaml` shell is on PATH in a normal session (`dune` works; `node`, `npm`, `latexmk`, `chktex`, `lake` do not). Run other toolchains through direnv's cached shells or `nix develop`:
 ```
 cd sim && direnv exec . npm test          # or: nix develop .#sim --command npm test
 cd tex && direnv exec . latexmk -pdf main.tex   # or: nix develop .#tex --command latexmk -pdf main.tex
+cd lean && direnv exec . lake build       # or: nix develop .#lean --command lake build
 ```
 Nix only sees git-tracked files: `git add` (or `git add -N`) new files before any `nix`/`direnv reload`. `.envrc` files are ignored by the owner's global gitignore and need `git add -f`. Storm (model checker) is not in nixpkgs and may be absent; `./run.sh --storm` then fails only at the final `storm` call.
 
@@ -35,15 +37,16 @@ Nix only sees git-tracked files: `git add` (or `git add -N`) new files before an
 | Sim tests | `cd sim && direnv exec . npm test`; one file `node --test test/semantics.test.js`; one test `node --test --test-name-pattern="gamma"` |
 | Sim bundle | `cd sim && direnv exec . npm run build` (regenerates the committed `app.bundle.js`; bump `?v=` in `index.html`) |
 | Paper | `cd tex && direnv exec . latexmk -pdf -interaction=nonstopmode -file-line-error main.tex`; lint `chktex FILE.tex` (flags in `.claude/rules/tex.md`) |
+| Lean | `cd lean && direnv exec . lake exe cache get` once (Mathlib's prebuilt `.olean`s; never build Mathlib from source), then `lake build --wfail` (must stay warning-free; the axiom reports must list only `propext`, `Classical.choice`, `Quot.sound`); one file `lake env lean Determinize/FILE.lean`; a full rebuild of `Proof/` takes about ten minutes |
 | Everything | `/check-all` (= `.claude/scripts/check.sh --all`) |
 | Flake | `nix flake show`, `nix flake check` |
 
 ## Workflow rules
-- **Verification is automatic.** Editing an OCaml file runs `dune build`; editing `sim/src` or `sim/test` runs the sim tests; editing `.tex` runs chktex. A Stop hook re-runs the build/tests/latexmk for every area with uncommitted changes and blocks finishing on failure. Treat hook output as feedback to fix, not noise. Run `/check-all` before saying a task is done.
-- **Generated files are never hand-edited**: `*.dout`, `*.tra`, `*.lab`, `*.state.rew`, `sim/app.bundle.js`, lockfiles, `tex/acmart.cls`, `tex/ACM-Reference-Format.bst`. Regenerate them with the commands above (a hook blocks direct edits).
-- **Change semantics in three places.** A typing/mode/determinization change touches `ocaml/`, `sim/src/compiler`, and the paper. Use the `sync-sim` skill for the port and the `spec-impl-checker` subagent to confirm agreement; the `paper-reviewer` subagent for TeX-side review.
+- **Verification is automatic.** Editing an OCaml file runs `dune build`; editing `sim/src` or `sim/test` runs the sim tests; editing `.tex` runs chktex; editing `lean/**.lean` runs `lake build`. A Stop hook re-runs the build/tests/latexmk for every area with uncommitted changes and blocks finishing on failure. Treat hook output as feedback to fix, not noise. Run `/check-all` before saying a task is done.
+- **Generated files are never hand-edited**: `*.dout`, `*.tra`, `*.lab`, `*.state.rew`, `sim/app.bundle.js`, lockfiles (incl. `lean/lake-manifest.json`), `tex/acmart.cls`, `tex/ACM-Reference-Format.bst`. Regenerate them with the commands above (a hook blocks direct edits).
+- **Change semantics in four places.** A typing/mode/determinization change touches `ocaml/`, `sim/src/compiler`, the paper, and the `lean/Determinize/Statement` definitions (whose proofs in `lean/Determinize/Proof` then need repair). Use the `sync-sim` skill for the port and the `spec-impl-checker` subagent to confirm agreement; the `paper-reviewer` subagent for TeX-side review. Known disagreement (2026-09-07): the typing of `×` and `/` differs between paper+OCaml (literal-based rules) and sim+Lean (`left : m`, `right : G`, result `m`); see `lean/README.md`.
 - **Do not reformat.** The OCaml code is not ocamlformat-formatted and `sim/` has no formatter; match surrounding style. Whole-file reformatting is blocked by a hook.
-- **Outward-facing actions are the user's**: never run `sim/deploy-to-website.sh` (pushes to another repo); `git push` and `nix flake update` ask first; commit only when asked, with the regenerated artifacts included in the same commit.
+- **Outward-facing actions are the user's**: never run `sim/deploy-to-website.sh` (pushes to another repo); `git push`, `nix flake update` and `lake update` ask first; commit only when asked, with the regenerated artifacts included in the same commit.
 - **TODO.md** is the task list: mark items `[x]` when you complete them (AGENTS.md); do not add speculative items.
 - **Current, canonical, best practice only.** Whatever you do here, do it the way the tool's maintainers recommend today; when unsure, verify against primary sources (official docs, maintainers' repos) rather than memory. Third-party skills/plugins may be adopted when they help, but only after `/vet-skill` clears them for prompt-injection / poisoning, preferring Anthropic's official marketplace.
 - **New tool or dependency?** Run `/learn-tool <name>` first: it researches current best practices from primary sources and records them as a rule in `.claude/rules/`. The post-edit hook reminds you when `flake-modules/`, `package.json`, or `ocaml/dune` change.
@@ -56,3 +59,4 @@ Nix only sees git-tracked files: `git add` (or `git add -N`) new files before an
 - `sim/src/examples.js` is a hand-maintained copy of example programs; `sim/test/semantics.test.js` executes every entry.
 - `tex/8_old.tex` is dead; `tex/fig_symbolic_coupling.svg` is not included anywhere; `\nocite{*}` is still in `main.tex`.
 - `examples/baselines/*.sgcl` are reference encodings in another tool's input language; nothing here parses them.
+- `lean/` pins Lean and Mathlib together (`lean-toolchain`, `lakefile.toml` `rev`, `lake-manifest.json`); nixpkgs' `lean4` is older than Mathlib needs, hence `elan`. The formalization is complete: no `sorry`, no warnings, standard axioms only. Reviewers need `Statement/`, `Traces/` and `Theorems.lean`; `Statement`/`Traces` must never import `Proof`, and a module not reachable from `Determinize.lean` is not checked by the build.
