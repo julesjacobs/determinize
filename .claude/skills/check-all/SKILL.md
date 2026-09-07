@@ -9,7 +9,7 @@ Run the repository checks and act on the result.
 
 Command: `.claude/scripts/check.sh $ARGUMENTS` (use `--all` when no argument is given; `--changed` selects areas from `git status`).
 
-Areas: `ocaml` (dune build), `sim` (npm test), `bundle` (fails if `sim/src` changed but `sim/app.bundle.js` was not rebuilt), `tex` (latexmk; hard errors and undefined references fail, overfull boxes and multiply-defined labels are reported), `lean` (`lake build` in `lean/`; fails fast with a hint when the Mathlib cache has not been fetched with `lake exe cache get`; the count of `sorry` warnings is reported, they are expected in the skeleton), `det` (runs `./det.sh`, which rewrites every `det/*.det.dout`, then lists the golden files that changed; not part of `--all` because it modifies tracked files).
+Areas: `ocaml` (dune build), `sim` (npm test), `bundle` (fails if `sim/src` changed but `sim/app.bundle.js` was not rebuilt), `tex` (latexmk; hard errors and undefined references fail, overfull boxes and multiply-defined labels are reported), `lean` (`lake build --wfail` in `lean/`, so any warning or `sorry` fails, followed by a check that every `#print axioms` report lists only `propext`, `Classical.choice` and `Quot.sound`; fails fast with a hint when the Mathlib cache has not been fetched with `lake exe cache get`), `det` (runs `./det.sh`, which rewrites every `det/*.det.dout`, then lists the golden files that changed; not part of `--all` because it modifies tracked files).
 
 The script runs each tool inside its Nix devshell via direnv or `nix develop`, so it works from a bare shell.
 

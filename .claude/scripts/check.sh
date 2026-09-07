@@ -84,11 +84,20 @@ for area in "${areas[@]}"; do
       if [[ ! -d lean/.lake/packages/mathlib/.lake/build ]]; then
         fail=1; report lean "Mathlib cache not fetched: run 'cd lean && lake exe cache get' (downloads prebuilt .olean files, once), then 'lake build'"
       else
-        out="$(cd lean && in_shell lean lake build 2>&1)"
+        # The formalization is complete: any warning (a `sorry` included) fails the build, and every
+        # exported theorem must depend on the three standard axioms only (Theorems.lean prints them).
+        out="$(cd lean && in_shell lean lake build --wfail 2>&1)"
         if [[ $? -eq 0 ]]; then
-          sorries="$(grep -cE "declaration uses .sorry." <<<"$out" || true)"
-          report lean "lake build OK (sorry warnings: $sorries)"
-        else fail=1; report lean "lake build FAILED" "$(grep -vE '^(✔|⚠) \[' <<<"$out" | tail_of)"; fi
+          axioms="$(grep -E "depends on axioms" <<<"$out" || true)"
+          bad="$(grep -vE "depends on axioms: \[propext, Classical.choice, Quot.sound\]$" <<<"$axioms" || true)"
+          if [[ -z "$axioms" ]]; then
+            fail=1; report lean "lake build --wfail OK but no axiom report was printed (Theorems.lean must #print axioms)"
+          elif [[ -n "$bad" ]]; then
+            fail=1; report lean "theorems depend on non-standard axioms" "$bad"
+          else
+            report lean "lake build --wfail OK ($(wc -l <<<"$axioms") theorems on propext/Classical.choice/Quot.sound only)"
+          fi
+        else fail=1; report lean "lake build --wfail FAILED" "$(grep -vE '^(✔|⚠) \[' <<<"$out" | tail_of)"; fi
       fi
       ;;
     det)
