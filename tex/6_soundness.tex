@@ -2568,14 +2568,19 @@ We say that a $\G$ mode execution trace is valid if resolving the general-mode s
 \end{proof}
 
 \begin{definition}[Tracewise $n$-step semantics]
-  Fix a valid general-mode trace $\gamma$, and let
+  Fix a valid general-mode trace
+  \[
+    \gamma=(r_1,r_2,\ldots).
+  \]
+  Starting from $\mathsf{init}_\tau(e:\tau)$, perform $n$ symbolic
+  steps, consuming the next value in $\gamma$ whenever a general-mode
+  sampling operation is encountered. Let
   \[
     s_n^\gamma
     =
     (\sigma_n^\gamma\mid\hat e_n^\gamma:\tau)
   \]
-  be the symbolic state obtained after $n$ symbolic steps when the
-  general-mode samples are resolved according to $\gamma$.
+  be the resulting symbolic state.
 
   Define
   \[
@@ -2590,6 +2595,15 @@ We say that a $\G$ mode execution trace is valid if resolving the general-mode s
     \mathsf{exp}_\tau(s_n^\gamma).
   \]
 \end{definition}
+
+Note that fixing $\gamma$ removes the randomness from the $\G$-samples, which determines a \emph{single} symbolic state $s_n^\gamma
+=
+(\sigma_n^\gamma\mid\hat e_n^\gamma:\tau)$. However:
+
+\begin{itemize}
+  \item $\mathsf{act}_\tau(s_n^\gamma)$ still samples the $\E$-mode variables recorded in $\sigma_n^\gamma$, giving $\mathcal{D}(Expr_\tau)$.
+  \item $\mathsf{exp}_\tau(s_n^\gamma)$ replaces those variables by their means, giving $\mathcal{D}(Expr_\tau)$.
+\end{itemize}
 
 \begin{theorem}[Tracewise soundness $n$-step]
   \label{thm:tracewise-soundness-n-step}
@@ -2613,7 +2627,7 @@ We say that a $\G$ mode execution trace is valid if resolving the general-mode s
     <
     \infty.
   \]
-  Moreover,
+  In other words, both expectations are finite real numbers. Moreover,
   \[
     \mathbb E\!\left[
       \left.
@@ -2640,8 +2654,8 @@ We say that a $\G$ mode execution trace is valid if resolving the general-mode s
     =
     \mathsf{exp}_\tau(s_n^\gamma).
   \]
-  The two finite-first-moment statements therefore follow directly
-  from \Cref{thm:tracewise-agreement-of-interpretations}. Moreover,
+  Since $\sigma_n^\gamma$ is integrable,
+  \Cref{thm:tracewise-agreement-of-interpretations} therefore gives the finite expectation claim. Moreover,
   \begin{align}
     \mathbb E\!\left[
       \left.
@@ -2670,43 +2684,67 @@ We say that a $\G$ mode execution trace is valid if resolving the general-mode s
   \end{align}
 \end{proof}
 
-\begin{definition}[Tracewise big-step semantics]
-  Fix a valid terminating general-mode trace $\gamma$, and let
+\begin{lemma}[Tracewise monotone accumulation of mass]
+  \label{lem:tracewise-monotone-accumulation}
+  Fix a valid general-mode trace $\gamma$. For every $n\in\mathbb N$
+  and every measurable $A\subseteq Val_\tau$,
   \[
-    s^\gamma
-    =
-    (\sigma^\gamma\mid\hat v^\gamma:\tau)
-  \]
-  be the terminal symbolic state reached by that trace. Define
-  \[
-    \bigsem{e:\tau}^\gamma
-    :=
-    \mathsf{act}_\tau(s^\gamma)
+    \bigsemstep{e:\tau}{n,\gamma}(A)
+    \leq
+    \bigsemstep{e:\tau}{n+1,\gamma}(A)
   \]
   and
   \[
-    \bigsem{\exptrans{e:\tau}:\tau}^\gamma
-    :=
-    \mathsf{exp}_\tau(s^\gamma).
+    \bigsemstep{\exptrans{e:\tau}:\tau}{n,\gamma}(A)
+    \leq
+    \bigsemstep{\exptrans{e:\tau}:\tau}{n+1,\gamma}(A).
   \]
+\end{lemma}
+
+\begin{proof}
+  TODO.
+\end{proof}
+
+\begin{definition}[Tracewise big-step semantics]
+  Fix a valid general-mode trace $\gamma$. For every measurable
+  $A\subseteq Val_\tau$, define
+  \[
+    \bigsem{e:\tau}^{\gamma}(A)
+    :=
+    \lim_{n\to\infty}
+    \left.
+      \bigsemstep{e:\tau}{n,\gamma}
+    \right|_{Val_\tau}(A)
+  \]
+  and
+  \[
+    \bigsem{\exptrans{e:\tau}:\tau}^{\gamma}(A)
+    :=
+    \lim_{n\to\infty}
+    \left.
+      \bigsemstep{\exptrans{e:\tau}:\tau}{n,\gamma}
+    \right|_{Val_\tau}(A).
+  \]
+  The limits are taken pointwise on measurable subsets of $Val_\tau$.
 \end{definition}
 
 \begin{theorem}[Tracewise soundness big step]
   \label{thm:tracewise-soundness-big-step}
   Let $e:\tau$ be closed and well typed, where
-  $\tau=\Float{m}$ and $m=\G$ or $\E$. Fix a valid terminating
-  general-mode trace $\gamma$, and let
-  \[
-    s^\gamma=(\sigma^\gamma\mid\hat v^\gamma:\tau)
-  \]
-  be the terminal symbolic state reached by that trace.
-
-  If $\sigma^\gamma$ is integrable, then
-  \[
+  $\tau=\Float{m}$ and $m=\G$ or $\E$. Fix a valid general-mode trace
+  $\gamma$. Suppose that $\sigma_n^\gamma$ is integrable for every
+  $n\in\mathbb N$ and that
+  \begin{equation}
+    \label{eq:tracewise-uniform-first-moment}
+    \sup_{n\in\mathbb N}
     \int_{Val_\tau}
-      |v|\,\bigsem{e:\tau}^\gamma(dv)
+      |v|\,\bigsemstep{e:\tau}{n,\gamma}(dv)
     <
-    \infty
+    \infty.
+  \end{equation}
+  Then
+  \[
+    \int_{Val_\tau}|v|\,\bigsem{e:\tau}^\gamma(dv)<\infty
   \]
   and
   \[
@@ -2716,7 +2754,7 @@ We say that a $\G$ mode execution trace is valid if resolving the general-mode s
     <
     \infty.
   \]
-  Moreover,
+  In other words, both expectations are finite real numbers. Moreover,
   \[
     \mathbb E\!\left[\bigsem{e:\tau}^\gamma\right]
     =
@@ -2727,38 +2765,53 @@ We say that a $\G$ mode execution trace is valid if resolving the general-mode s
 \end{theorem}
 
 \begin{proof}
-  By the definition of the tracewise big-step semantics,
+  For each $n\in\mathbb N$, let
   \[
-    \bigsem{e:\tau}^\gamma
+    \mu_n
     =
-    \mathsf{act}_\tau(s^\gamma)
+    \left.
+      \bigsemstep{e:\tau}{n,\gamma}
+    \right|_{Val_\tau}
     \qquad\text{and}\qquad
-    \bigsem{\exptrans{e:\tau}:\tau}^\gamma
+    \nu_n
     =
-    \mathsf{exp}_\tau(s^\gamma).
+    \left.
+      \bigsemstep{\exptrans{e:\tau}:\tau}{n,\gamma}
+    \right|_{Val_\tau}.
   \]
-  The two finite-first-moment statements therefore follow directly
-  from \Cref{thm:tracewise-agreement-of-interpretations}. Since
-  $s^\gamma$ is terminal, both interpretations are supported on
-  $Val_\tau$, so restricting them to values does not change them.
-  Moreover,
+  By \Cref{lem:tracewise-monotone-accumulation},
+  $(\mu_n)_{n\in\mathbb N}$ and $(\nu_n)_{n\in\mathbb N}$ are
+  increasing sequences of measures. 
+
+  TODO prove that expectations are finite.
+
+  Thus both limiting expectations are finite. Moreover,
   \begin{align}
-    \mathbb E\!\left[\bigsem{e:\tau}^\gamma\right]
+    \mathbb E\!\left[\bigsem{e:\tau}^{\gamma}\right]
     &=
-    \mathbb E\!\left[\mathsf{act}_\tau(s^\gamma)\right]
+    \mathbb E\!\left[\lim_{n\to\infty}\mu_n\right]
     \tag{\text{by the definition of the tracewise big-step semantics}}
     \\
     &=
-    \mathbb E\!\left[\mathsf{exp}_\tau(s^\gamma)\right]
-    \tag{\text{by \Cref{thm:tracewise-agreement-of-interpretations}}}
+    \lim_{n\to\infty}\mathbb E[\mu_n]
+    \tag{\text{by \Cref{lem:extended-expectation-increasing-limits}}}
+    \\
+    &=
+    \lim_{n\to\infty}\mathbb E[\nu_n]
+    \tag{\text{by \Cref{thm:tracewise-soundness-n-step}}}
+    \\
+    &=
+    \mathbb E\!\left[\lim_{n\to\infty}\nu_n\right]
+    \tag{\text{by \Cref{lem:extended-expectation-increasing-limits}}}
     \\
     &=
     \mathbb E\!\left[
-      \bigsem{\exptrans{e:\tau}:\tau}^\gamma
+      \bigsem{\exptrans{e:\tau}:\tau}^{\gamma}
     \right]
     \tag{\text{by the definition of the tracewise big-step semantics}}.
   \end{align}
 \end{proof}
+
 
 \begin{theorem}
   \label{thm:tracewise-jensen}
@@ -2776,34 +2829,49 @@ We say that a $\G$ mode execution trace is valid if resolving the general-mode s
 \end{theorem}
 
 \begin{proof}
-  Since $s^\gamma$ is terminal,
-  $\bigsem{\exptrans{e:\tau}:\tau}^\gamma$ is a Dirac measure. Let
-  $c^\gamma$ be the value at which it is concentrated. By
-  \Cref{thm:tracewise-soundness-big-step},
+  For each $n\in\mathbb N$, let
   \[
-    c^\gamma
+    \mu_n
     =
-    \mathbb E\!\left[\bigsem{e:\tau}^\gamma\right].
+    \left.
+      \bigsemstep{e:\tau}{n,\gamma}
+    \right|_{Val_\tau}
+    \qquad\text{and}\qquad
+    \nu_n
+    =
+    \left.
+      \bigsemstep{\exptrans{e:\tau}:\tau}{n,\gamma}
+    \right|_{Val_\tau}.
   \]
-  Hence,
+  At every $n$, either both measures assign no mass to values, or
+  $\nu_n$ is the Dirac measure at the expectation of $\mu_n$. Therefore,
+  Jensen's inequality and
+  \Cref{thm:tracewise-soundness-n-step} give
+  \[
+    \int_{Val_\tau}\varphi(v)\,\nu_n(dv)
+    \leq
+    \int_{Val_\tau}\varphi(v)\,\mu_n(dv).
+  \]
+  Since $\varphi$ is nonnegative, continuity of integration over
+  increasing limits now gives
   \begin{align}
     \int_{Val_\tau}
       \varphi(v)\,
       \bigsem{\exptrans{e:\tau}:\tau}^\gamma(dv)
     &=
-    \varphi(c^\gamma)
-    \tag{\text{since the expected interpretation is a Dirac measure}}
-    \\
-    &=
-    \varphi\!\left(
-      \mathbb E\!\left[\bigsem{e:\tau}^\gamma\right]
-    \right)
-    \tag{\text{by \Cref{thm:tracewise-soundness-big-step}}}
+    \lim_{n\to\infty}
+      \int_{Val_\tau}\varphi(v)\,\nu_n(dv)
+    \tag{\text{by continuity of integration}}
     \\
     &\leq
+    \lim_{n\to\infty}
+      \int_{Val_\tau}\varphi(v)\,\mu_n(dv)
+    \tag{\text{by Jensen's inequality at every $n$}}
+    \\
+    &=
     \int_{Val_\tau}
       \varphi(v)\,\bigsem{e:\tau}^\gamma(dv)
-    \tag{\text{by Jensen's inequality}}.
+    \tag{\text{by continuity of integration}}.
   \end{align}
 \end{proof}
 
