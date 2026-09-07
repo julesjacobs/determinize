@@ -115,51 +115,6 @@ noncomputable def meanEnvironment (laws : Determinize.Proof.Paper.PrimitiveLaws)
 
 end SampleEnv
 
-/--
-An affine symbolic residual: its real coordinates are affine functions of the
-ordered sample environment and its real-free expression skeleton is fixed.
--/
-structure Residual (sampleCount : Nat) where
-  skeleton : Skeleton
-  coordinates : List (Affine sampleCount)
-  coordinate_count : coordinates.length = skeleton.realArity
-  general_independent : ∀ (index : Nat) (expression : Affine sampleCount),
-    skeleton.coordinateModes[index]? = some Determinize.Statement.Paper.Mode.G →
-      coordinates[index]? = some expression →
-        expression.2 = 0
-  realize : Env sampleCount → Expr
-  realize_measurable : Measurable realize
-  realize_skeleton : ∀ environment, (realize environment).skeleton = skeleton
-  realize_coordinates : ∀ environment,
-    (realize environment).realCoordinates = coordinates.map (Affine.eval · environment)
-
-structure State (laws : Determinize.Proof.Paper.PrimitiveLaws) where
-  sampleCount : Nat
-  samples : SampleEnv laws sampleCount
-  residual : Residual sampleCount
-
-/-- Sample every recorded E binding, then realize the affine residual. -/
-noncomputable def actualInterpretation (laws : Determinize.Proof.Paper.PrimitiveLaws)
-    (state : State laws) : Measure Expr :=
-  (state.samples.actualMeasure laws).map state.residual.realize
-
-/--
-Replace every recorded E binding sequentially by its conditional mean, then
-syntactically determinize every pending E sample in the realized residual.
--/
-noncomputable def expectedInterpretation (laws : Determinize.Proof.Paper.PrimitiveLaws)
-    (state : State laws) : Measure Expr :=
-  Measure.dirac (state.residual.realize (state.samples.meanEnvironment laws)).determinize
-
-/-- Terminal actual and expected output laws used by the paper proof. -/
-noncomputable def terminalActualLaw (laws : Determinize.Proof.Paper.PrimitiveLaws)
-    (state : State laws) : Measure ℝ :=
-  (actualInterpretation laws state).restrict terminalFloatSet |>.map terminalFloatValue
-
-noncomputable def terminalExpectedLaw (laws : Determinize.Proof.Paper.PrimitiveLaws)
-    (state : State laws) : Measure ℝ :=
-  (expectedInterpretation laws state).restrict terminalFloatSet |>.map terminalFloatValue
-
 end Symbolic
 
 /-- Measurability and subprobability laws for the specified pointwise reduction. -/

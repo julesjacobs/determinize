@@ -221,12 +221,6 @@ def Affine.fresh (n : Nat) : Affine (n + 1) :=
 def weakenSamples (expression : AffineExpr n) : AffineExpr (n + 1) :=
   expression.mapAffine Affine.weaken
 
-/-- Every G coordinate has zero E coefficient. -/
-def GZero (expression : AffineExpr sampleCount) : Prop :=
-  ∀ (index : Nat) (coordinate : Affine sampleCount),
-    expression.skeleton.coordinateModes[index]? = some Mode.G →
-    expression.coordinates[index]? = some coordinate → coordinate.2 = 0
-
 /-- Pending source E and G sites retain stochastic tags. -/
 def SourceTags : AffineExpr sampleCount → Prop
   | .sample mode op affine general =>
@@ -264,9 +258,6 @@ def GConstant : AffineExpr sampleCount → Prop
       scrutinee.GConstant ∧ nilCase.GConstant ∧ consCase.GConstant
   | .letE value body => value.GConstant ∧ body.GConstant
   | _ => True
-
-def Typed (context : List Ty) (expression : AffineExpr sampleCount) (ty : Ty) : Prop :=
-  ∀ environment, Determinize.Statement.Paper.Typed context (expression.realize environment) ty
 
 inductive WellTyped : List Ty → AffineExpr sampleCount → Ty → Prop
   | bvar : Determinize.Statement.Paper.HasVar context index ty → WellTyped context (.bvar index) ty
@@ -454,10 +445,6 @@ theorem WellTyped.weakenSamples (typed : WellTyped context expression ty) :
   funext index
   refine Fin.cases ?_ (fun tail => ?_) index <;> rfl
 
-theorem WellTyped.typed (typed : WellTyped context expression ty) :
-    Typed context expression ty :=
-  typed.realize_typed
-
 def shift (amount cutoff : Nat) : AffineExpr sampleCount → AffineExpr sampleCount
   | .bvar index => .bvar (if cutoff ≤ index then index + amount else index)
   | .unit => .unit
@@ -530,126 +517,6 @@ def substHead (body replacement : AffineExpr sampleCount) : AffineExpr sampleCou
 
 def substTwo (body argument function : AffineExpr sampleCount) : AffineExpr sampleCount :=
   substAt 0 argument (substAt 1 function body)
-
-set_option maxHeartbeats 800000 in
-theorem gconstant_shift (expression : AffineExpr n) (amount cutoff : Nat)
-    (constant : expression.GConstant) :
-    (expression.shift amount cutoff).GConstant := by
-  induction sizeEq : sizeOf expression using Nat.strong_induction_on
-      generalizing expression cutoff with
-  | h size ih =>
-    have recurse (child : AffineExpr n) (childCutoff : Nat)
-        (smaller : sizeOf child < sizeOf expression) (childConstant : child.GConstant) :
-        (child.shift amount childCutoff).GConstant :=
-      ih (sizeOf child) (by rwa [← sizeEq]) child childCutoff childConstant rfl
-    cases expression with
-    | sample mode op affine general =>
-        simp only [shift, GConstant, List.forall_mem_map] at constant ⊢
-        constructor
-        · intro child member
-          exact recurse child cutoff
-            (Nat.lt_trans (List.sizeOf_lt_of_mem member) (by simp_wf <;> omega))
-            (constant.1 child member)
-        · intro child member
-          exact recurse child cutoff
-            (Nat.lt_trans (List.sizeOf_lt_of_mem member) (by simp_wf <;> omega))
-            (constant.2 child member)
-    | _ =>
-        simp (disch := simp_wf) only [shift, GConstant, recurse] at constant ⊢
-        all_goals aesop (add safe apply recurse) <;> simp_wf <;> omega
-
-set_option maxHeartbeats 800000 in
-theorem gconstant_mapAffine (expression : AffineExpr n) (transform : Affine n → Affine m)
-    (preservesZero : ∀ affine, affine.2 = 0 → (transform affine).2 = 0)
-    (constant : expression.GConstant) :
-    (expression.mapAffine transform).GConstant := by
-  induction sizeEq : sizeOf expression using Nat.strong_induction_on generalizing expression with
-  | h size ih =>
-    have recurse (child : AffineExpr n) (smaller : sizeOf child < sizeOf expression)
-        (childConstant : child.GConstant) :
-        (child.mapAffine transform).GConstant :=
-      ih (sizeOf child) (by rwa [← sizeEq]) child childConstant rfl
-    cases expression with
-    | real mode affine =>
-        cases mode with
-        | E => simp [mapAffine, GConstant]
-        | G =>
-            rcases affine with ⟨constantTerm, coefficients⟩
-            simp only [GConstant] at constant
-            simp only [mapAffine]
-            have result := preservesZero (constantTerm, coefficients) constant
-            generalize transform (constantTerm, coefficients) = transformed at result ⊢
-            rcases transformed with ⟨newConstant, newCoefficients⟩
-            simpa only [GConstant] using result
-    | sample mode op affine general =>
-        simp only [mapAffine, GConstant, List.forall_mem_map] at constant ⊢
-        constructor
-        · intro child member
-          exact recurse child
-            (Nat.lt_trans (List.sizeOf_lt_of_mem member) (by simp_wf <;> omega))
-            (constant.1 child member)
-        · intro child member
-          exact recurse child
-            (Nat.lt_trans (List.sizeOf_lt_of_mem member) (by simp_wf <;> omega))
-            (constant.2 child member)
-    | _ =>
-        simp (disch := simp_wf) only [mapAffine, GConstant, recurse] at constant ⊢
-        all_goals aesop (add safe apply recurse) <;> simp_wf <;> omega
-
-theorem gconstant_weakenSamples (expression : AffineExpr n) (constant : expression.GConstant) :
-    expression.weakenSamples.GConstant := by
-  apply gconstant_mapAffine expression Affine.weaken
-  · intro affine zero
-    change (Fin.cases 0 affine.2 : Fin (n + 1) → ℝ) = 0
-    rw [zero]
-    funext index
-    refine Fin.cases ?_ (fun tail => ?_) index <;> rfl
-  · exact constant
-
-set_option maxHeartbeats 800000 in
-theorem gconstant_substAt (expression replacement : AffineExpr n) (depth : Nat)
-    (expressionConstant : expression.GConstant)
-    (replacementConstant : replacement.GConstant) :
-    (substAt depth replacement expression).GConstant := by
-  induction sizeEq : sizeOf expression using Nat.strong_induction_on
-      generalizing expression depth with
-  | h size ih =>
-    have recurse (child : AffineExpr n) (childDepth : Nat)
-        (smaller : sizeOf child < sizeOf expression) (childConstant : child.GConstant) :
-        (substAt childDepth replacement child).GConstant :=
-      ih (sizeOf child) (by rwa [← sizeEq]) child childDepth childConstant rfl
-    cases expression with
-    | bvar index =>
-        simp only [substAt]
-        split
-        · exact gconstant_shift replacement depth 0 replacementConstant
-        · simp [GConstant]
-    | sample mode op affine general =>
-        simp only [substAt, GConstant, List.forall_mem_map] at expressionConstant ⊢
-        constructor
-        · intro child member
-          exact recurse child depth
-            (Nat.lt_trans (List.sizeOf_lt_of_mem member) (by simp_wf <;> omega))
-            (expressionConstant.1 child member)
-        · intro child member
-          exact recurse child depth
-            (Nat.lt_trans (List.sizeOf_lt_of_mem member) (by simp_wf <;> omega))
-            (expressionConstant.2 child member)
-    | _ =>
-        simp (disch := simp_wf) only [substAt, GConstant, recurse] at expressionConstant ⊢
-        all_goals aesop (add safe apply recurse) <;> simp_wf <;> omega
-
-theorem gconstant_substHead (body replacement : AffineExpr n)
-    (bodyConstant : body.GConstant) (replacementConstant : replacement.GConstant) :
-    (body.substHead replacement).GConstant :=
-  gconstant_substAt body replacement 0 bodyConstant replacementConstant
-
-theorem gconstant_substTwo (body argument function : AffineExpr n)
-    (bodyConstant : body.GConstant) (argumentConstant : argument.GConstant)
-    (functionConstant : function.GConstant) :
-    (body.substTwo argument function).GConstant := by
-  exact gconstant_substHead _ _
-    (gconstant_substAt body function 1 bodyConstant functionConstant) argumentConstant
 
 theorem wellTyped_shift (h : WellTyped (before ++ suffix) expression ty) :
     WellTyped (before ++ inserted ++ suffix)
@@ -1184,11 +1051,6 @@ set_option maxHeartbeats 800000 in
         simp (disch := simp_wf) only [ofExpr, realize, recurse]
         all_goals repeat' first | rfl | rw [recurse _ (by simp_wf <;> omega)]
 
-theorem gzero_zero (expression : AffineExpr 0) : expression.GZero := by
-  intro index coordinate _ _
-  funext coefficient
-  exact Fin.elim0 coefficient
-
 def isValue : AffineExpr n → Bool
   | .unit | .bool _ | .real _ _ | .lam _ | .fix _ | .nil => true
   | .pair left right | .cons left right => left.isValue && right.isValue
@@ -1213,34 +1075,6 @@ def affineValue? : AffineExpr n → Option (Affine n)
 noncomputable def constantValue? : AffineExpr n → Option ℝ
   | .real _ (constant, coefficients) => if coefficients = 0 then some constant else none
   | _ => none
-
-theorem typed_real_value {sampleCount : Nat} {expression : AffineExpr sampleCount}
-    (typed : Typed [] expression (.float mode))
-    (value : expression.isValue = true) :
-    ∃ affine, expression = .real mode affine := by
-  let environment : Env sampleCount := fun _ => 0
-  have concreteValue : (expression.realize environment).isValue = true := by
-    rw [realize_isValue, value]
-  obtain ⟨coordinate, equality⟩ :=
-    Typing.typed_real_value (typed environment) concreteValue
-  cases expression <;> simp [realize] at equality
-  rename_i actualMode affine
-  cases equality.1
-  exact ⟨affine, rfl⟩
-
-theorem affineValue?_eq_some_of_typed (typed : Typed [] expression (.float mode))
-    (value : expression.isValue = true) :
-    ∃ affine, affineValue? expression = some affine := by
-  obtain ⟨affine, rfl⟩ := typed_real_value typed value
-  exact ⟨affine, rfl⟩
-
-theorem constantValue?_eq_some_of_typedG (typed : Typed [] expression (.float .G))
-    (value : expression.isValue = true) (constant : expression.GConstant) :
-    ∃ result, constantValue? expression = some result := by
-  obtain ⟨affine, rfl⟩ := typed_real_value typed value
-  rcases affine with ⟨constantTerm, coefficients⟩
-  simp only [GConstant] at constant
-  exact ⟨constantTerm, by simp [constantValue?, constant]⟩
 
 theorem wellTyped_arr_value (typed : WellTyped context expression (.arr argument result))
     (value : expression.isValue = true) :
@@ -1332,13 +1166,6 @@ theorem wellTyped_real_value (typed : WellTyped context expression (.float mode)
     (value : expression.isValue = true) :
     ∃ coordinate, expression = .real mode coordinate := by
   cases typed <;> simp_all [isValue]
-
-theorem affineValue?_eq_some_of_wellTyped
-    (typed : WellTyped context expression (.float mode))
-    (value : expression.isValue = true) :
-    ∃ affine, affineValue? expression = some affine := by
-  obtain ⟨affine, rfl⟩ := wellTyped_real_value typed value
-  exact ⟨affine, rfl⟩
 
 theorem constantValue?_eq_some_of_wellTypedG
     (typed : WellTyped context expression (.float .G))
@@ -1765,22 +1592,6 @@ theorem realize_wrap (action : SymbolicAction laws n) (environment : Env n)
         Function.comp_apply]
       funext value
       exact context_realize (continuation value)
-
-theorem gconstant_wrap (action : SymbolicAction laws n)
-    (constant : action.GConstant)
-    (context : AffineExpr n → AffineExpr n) (liftedContext : AffineExpr (n + 1) → AffineExpr (n + 1))
-    (contextConstant : ∀ expression, expression.GConstant →
-      (context expression).GConstant)
-    (liftedConstant : ∀ expression, expression.GConstant →
-      (liftedContext expression).GConstant) :
-    (action.wrap context liftedContext).GConstant := by
-  cases action with
-  | next expression => exact contextConstant expression constant
-  | sampleE op affine general continuation => exact liftedConstant continuation constant
-  | sampleG site fiber continuation =>
-      intro value
-      exact contextConstant (continuation value) (constant value)
-  | stuck => trivial
 
 inductive WellTyped (ty : Ty) : SymbolicAction laws n → Prop
   | next : AffineExpr.WellTyped [] expression ty → WellTyped ty (.next expression)
@@ -3240,100 +3051,6 @@ theorem symbolicReduce_wellTyped
     exact .next (.fix bodyTyped)
   case nil => simp only [symbolicReduce]; exact .next .nil
 
-private def CoordinateGRelation (mode : Mode) (coordinate : Affine sampleCount) : Prop :=
-  mode = .G → coordinate.2 = 0
-
-private theorem coordinateRelation_of_gconstant (expression : AffineExpr sampleCount)
-    (constant : expression.GConstant) :
-    List.Forall₂ CoordinateGRelation expression.skeleton.coordinateModes
-      expression.coordinates := by
-  induction sizeEq : sizeOf expression using Nat.strong_induction_on generalizing expression with
-  | h size ih =>
-    subst size
-    have recurse (child : AffineExpr sampleCount) (childConstant : child.GConstant)
-        (smaller : sizeOf child < sizeOf expression) :
-        List.Forall₂ CoordinateGRelation child.skeleton.coordinateModes child.coordinates :=
-      ih (sizeOf child) smaller child childConstant rfl
-    have listRecurse (children : List (AffineExpr sampleCount))
-        (childrenConstant : ∀ child ∈ children, child.GConstant)
-        (smaller : ∀ child ∈ children, sizeOf child < sizeOf expression) :
-        List.Forall₂ CoordinateGRelation
-          (children.flatMap (fun child => child.skeleton.coordinateModes))
-          (children.flatMap AffineExpr.coordinates) := by
-      induction children with
-      | nil => exact .nil
-      | cons child children ihChildren =>
-          simp only [List.flatMap_cons]
-          exact List.rel_append
-            (recurse child (childrenConstant child (by simp))
-              (smaller child (by simp)))
-            (ihChildren (fun next member => childrenConstant next (by simp [member]))
-              (fun next member => smaller next (by simp [member])))
-    cases expression with
-    | bvar | unit | bool | nil =>
-        simp only [skeleton, Expr.coordinateModes, coordinates]
-        exact .nil
-    | real mode value =>
-        simp only [skeleton, Expr.coordinateModes, coordinates]
-        cases mode
-        · exact .cons (fun no => by cases no) .nil
-        · unfold GConstant at constant
-          exact .cons (fun _ => constant) .nil
-    | lam body | fix body | fst body | snd body
-    | inl body | inr body | promote body | neg _ body =>
-        simp only [skeleton, Expr.coordinateModes, coordinates]
-        simp only [GConstant] at constant
-        exact recurse body constant (by simp_wf <;> omega)
-    | app left right | pair left right | cons left right
-    | add _ left right | mul _ left right | div _ left right | lt left right
-    | letE left right =>
-        simp only [skeleton, Expr.coordinateModes, coordinates]
-        simp only [GConstant] at constant
-        exact List.rel_append
-          (recurse left constant.1 (by simp_wf <;> omega))
-          (recurse right constant.2 (by simp_wf <;> omega))
-    | matchSum first second third | matchList first second third
-    | ite first second third =>
-        simp only [skeleton, Expr.coordinateModes, coordinates]
-        simp only [GConstant] at constant
-        exact List.rel_append
-          (List.rel_append
-            (recurse first constant.1 (by simp_wf <;> omega))
-            (recurse second constant.2.1 (by simp_wf <;> omega)))
-          (recurse third constant.2.2 (by simp_wf <;> omega))
-    | sample mode op affine general =>
-        simp only [GConstant] at constant
-        simpa only [skeleton, Expr.coordinateModes, coordinates,
-          List.flatMap_map, Function.comp_def] using List.rel_append
-            (listRecurse affine constant.1 (fun child member =>
-              Nat.lt_trans (List.sizeOf_lt_of_mem member) (by simp_wf <;> omega)))
-            (listRecurse general constant.2 (fun child member =>
-              Nat.lt_trans (List.sizeOf_lt_of_mem member) (by simp_wf <;> omega)))
-
-theorem gzero_of_gconstant {expression : AffineExpr sampleCount}
-    (constant : expression.GConstant) : expression.GZero := by
-  intro index coordinate modeAt coordinateAt
-  have related := coordinateRelation_of_gconstant expression constant
-  have retrieve : ∀ {modes : List Mode} {coordinates : List (Affine sampleCount)},
-      List.Forall₂ CoordinateGRelation modes coordinates →
-      ∀ (index : Nat) (coordinate : Affine sampleCount),
-        modes[index]? = some Mode.G →
-        coordinates[index]? = some coordinate → coordinate.2 = 0 := by
-    intro modes coordinates related
-    induction related with
-    | nil => intro index coordinate modeAt; simp at modeAt
-    | cons head tail ih =>
-        intro index coordinate modeAt coordinateAt
-        cases index with
-        | zero =>
-            simp only [List.getElem?_cons_zero, Option.some.injEq] at modeAt coordinateAt
-            subst coordinate
-            exact head modeAt
-        | succ index =>
-            simp only [List.getElem?_cons_succ] at modeAt coordinateAt
-            exact ih index coordinate modeAt coordinateAt
-  exact retrieve related index coordinate modeAt coordinateAt
-
 theorem wellTyped_ofExpr_of_typed {expression : Expr}
     (typed : Determinize.Statement.Paper.Typed context expression ty)
     (sourceTags : (AffineExpr.ofExpr expression).SourceTags) :
@@ -3424,17 +3141,6 @@ theorem realize_measurable (expression : AffineExpr sampleCount) :
     Measurable expression.realize :=
   expression.realizeFamily.measurable
 
-noncomputable def toResidual (expression : AffineExpr sampleCount) (gzero : expression.GZero) :
-    Symbolic.Residual sampleCount where
-  skeleton := expression.skeleton
-  coordinates := expression.coordinates
-  coordinate_count := expression.coordinate_count
-  general_independent := gzero
-  realize := expression.realize
-  realize_measurable := expression.realize_measurable
-  realize_skeleton := expression.realize_skeleton
-  realize_coordinates := expression.realize_coordinates
-
 theorem actualMeasure_snoc
     (history : Symbolic.SampleEnv laws n) (op : Determinize.Statement.Paper.Op)
     (affineArgs : Fin (Determinize.Statement.Paper.affineArity op) → Symbolic.Affine n)
@@ -3445,22 +3151,6 @@ theorem actualMeasure_snoc
           (fun i => Symbolic.Affine.eval (affineArgs i) environment, generalArgs)).map
             (fun value => Env.cons value environment) := by
   rfl
-
-theorem actualInterpretation_bind_stepKernel
-    (stepKernel : StepKernel) (state : Symbolic.State laws) :
-    (Symbolic.actualInterpretation laws state).bind stepKernel.kernel =
-      (Symbolic.SampleEnv.actualMeasure laws state.samples).bind fun environment =>
-        stepMeasure (state.residual.realize environment) := by
-  rw [Symbolic.actualInterpretation]
-  rw [← Measure.bind_dirac_eq_map _ state.residual.realize_measurable]
-  rw [Measure.bind_bind]
-  · apply Measure.bind_congr_right
-    filter_upwards [] with environment
-    rw [Measure.dirac_bind stepKernel.kernel.measurable]
-    exact stepKernel.kernel_eq_stepMeasure _
-  · exact (Measurable.comp Measure.measurable_dirac
-      state.residual.realize_measurable).aemeasurable
-  · exact stepKernel.kernel.aemeasurable
 
 end AffineExpr
 

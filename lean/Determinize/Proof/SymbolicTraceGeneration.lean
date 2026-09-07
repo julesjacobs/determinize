@@ -19,13 +19,6 @@ theorem sampleG_joint_measurable (expression : AffineExpr n) (typed : WellTyped 
   exact sampleContinuation_measurable.comp
     ((expression.realize_measurable.comp measurable_fst).prodMk measurable_snd)
 
-theorem sampleG_target_measurable (expression : AffineExpr n) (typed : WellTyped [] expression ty)
-    (actionEq : symbolicReduce primitiveLaws expression = .sampleG site fiber continuation) (env : Env n) :
-    Measurable (fun v => ((continuation v).realize env).determinize) := by
-  apply (MeasurableActionFamily.stepKernel primitiveLaws).sample_continuation_measurable (expression.realize env).determinize fiber
-  rw [← symbolicReduce_targetRealize primitiveLaws typed typed.gconstant, actionEq]
-  rfl
-
 def generatedSourceKernel (depth : Nat) (history : Symbolic.SampleEnv primitiveLaws n)
     (safe : history.DomainSafe primitiveLaws) (expression : AffineExpr n) (op : Op) :
     SFiniteKernel ℝ (Output) := by

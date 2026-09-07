@@ -3,6 +3,7 @@
 #   ocaml/*   -> dune build (type errors surface immediately)
 #   sim/*     -> node --test
 #   tex/*.tex -> chktex lint of that file
+#   lean/**.lean -> lake build (fails fast with a hint if the Mathlib cache is absent)
 #   toolchain files -> remind to run /learn-tool
 #   *.det     -> remind to regenerate .dout
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
@@ -30,7 +31,14 @@ case "$file" in
     lint="$(cd tex && in_shell tex chktex -q -n1 -n3 -n8 -n13 -n24 -n36 -n44 -n46 "${file#tex/}" 2>/dev/null | head -n 25)"
     [[ -n "$lint" ]] && emit_context PostToolUse "chktex on $file (style hints, not errors; fix the ones that are real):"$'\n'"$lint"
     ;;
-  flake.nix|flake-modules/*|sim/package.json|ocaml/dune|ocaml/dune-project|*.envrc)
+  lean/*.lean|lean/*/*.lean|lean/*/*/*.lean)
+    out="$("$ROOT/.claude/scripts/check.sh" --quiet lean 2>&1)" || {
+      echo "lake build failed after editing $file:" >&2
+      tail -n 40 <<<"$out" >&2
+      exit 2
+    }
+    ;;
+  flake.nix|flake-modules/*|sim/package.json|ocaml/dune|ocaml/dune-project|*.envrc|lean/lakefile.toml|lean/lean-toolchain)
     emit_context PostToolUse "Toolchain definition changed ($file). If this adds a new tool or dependency, run the learn-tool skill for it (/learn-tool <name>) so its best practices get captured in .claude/rules/ before you rely on it. New files must be 'git add'ed before Nix can see them."
     ;;
   det/*.det|examples/*.det|examples/*/*.det)

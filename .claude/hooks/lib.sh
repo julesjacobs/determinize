@@ -17,6 +17,7 @@ shell_dir() {
     ocaml) echo "$ROOT" ;;
     sim) echo "$ROOT/sim" ;;
     tex) echo "$ROOT/tex" ;;
+    lean) echo "$ROOT/lean" ;;
     *) echo "$ROOT" ;;
   esac
 }

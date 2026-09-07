@@ -1,5 +1,4 @@
 import Determinize.Proof.Symbolic
-import Mathlib.Analysis.Convex.Integral
 import Mathlib.Probability.Kernel.Composition.IntegralCompProd
 
 /-!
