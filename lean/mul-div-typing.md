@@ -48,6 +48,77 @@ single output is the identity
 that is, linearity of conditional expectation plus the rule "taking out what is
 known". Nothing here mentions independence.
 
+### The pre-sampled G-tape
+
+Conditioning on `𝒢` has an elementary reading that needs no σ-algebras. In program
+order the two kinds of draws are interleaved: an E draw, then a G draw whose
+parameters use earlier values, then another E draw, and so on, and the determinized
+program follows the same order, substituting at each E draw the mean computed from
+the values available at that point, G draws already made included. For the
+comparison, pretend instead that the entire G-trace was sampled up front and written
+on a tape, and that both programs read their G draws off that tape. Conditioning on
+`𝒢` then means: fix one tape and compare the two programs on it. For a fixed tape the
+determinized run is a single number, and the source run is a distribution over the E
+draws alone, whose mean must equal that number.
+
+Moving every G draw to the start is a genuine reordering of the sampling process,
+and fact 1 is what makes it legitimate. In general a draw cannot be moved earlier
+without changing the joint distribution, because a later draw's parameters may depend
+on earlier values. But no G draw depends on an E draw, so the G draws have the same
+joint law whether sampled in program order or all at once, and the E draws between
+them see the same G values either way. The G-trace is a self-contained random object
+that the E draws read from and never write to. This is also why fixing the *whole*
+tape, including G draws that occur later in program order, does not bias the E draws
+that precede them: a later G draw would carry information about an earlier E draw
+only if it had depended on it.
+
+Reversing the direction breaks the argument. With `y ~ Uniform(0, x)` at mode G and
+`x` at mode E, fixing `y` carries information about `x`, so the average of `x` over
+the runs with that `y` is not `E[x]`, and substituting the unconditional mean for `x`
+is wrong. The mode system forbids exactly this dependence.
+
+The artifacts implement the tape literally: the sim's coupled-trace runtime runs both
+programs on one shared stream of G draws, and the Lean's trace is the list of G draws
+only, with `Traces.soundnessThm` stating that for almost every such list the source's
+fiber over it is a probability measure whose mean is the determinized output.
+
+### Why no G draw depends on an E draw
+
+Fact 1 is a property of the typing rules, proved by induction on the typing
+derivation: no rule manufactures a `Float[G]` from anything that touches an E value.
+Walking through `Typed` in `Statement/Syntax.lean`:
+
+- The only mode change is `promote`, and it goes from G to E. Types are exact in the
+  core language, so a G position never silently accepts an E value.
+- Every rule with a `Float[G]` conclusion has only G float premises. Addition and
+  negation keep their mode. Multiplication and division at mode G need both operands
+  at G, since the non-G operand must match the result mode. A G draw is the `sample`
+  rule at mode G: its affine parameters are typed at the draw's mode, hence G, and its
+  general parameters are always G. So the parameters of a G draw are G values.
+- Control flow cannot leak an E value either. The only way to obtain a `bool` from a
+  float is `lt`, which demands two G operands; conditionals and matches branch on
+  booleans and sum or list tags, none of which can encode an E float. Which branch
+  runs, and therefore which G draw happens, is decided by G values.
+- Data structures and functions carry modes componentwise. A pair, list or closure
+  may contain E values, but projecting a `Float[G]` component yields a G value by the
+  pair's type, and a function of type `Float[E] → Float[G]` can only build its result
+  from G things. The E argument may sit in the closure but never reaches the G result
+  through data or control flow.
+
+In the Lean this is `WellTyped.gconstant` in `Proof/Symbolic.lean`. The symbolic
+language represents every float as an affine expression, a constant plus coefficients
+on the E draws made so far, and `GConstant` states that every G-moded float literal
+has zero coefficients. The typing rule for a G literal carries that as a side
+condition, and every other case follows by induction because no rule mixes an E
+premise into a G conclusion. The symbolic semantics preserves well-typedness, so the
+invariant holds at every step of every run, in particular when a G draw reads its
+parameters.
+
+This is exactly what the multiplication and comparison rules pay for. Allowing
+`E × E` or `E < c` would not merely break the affine invariant on the E side; it would
+let a G value or a branch depend on an E draw, and the pre-sampled tape argument would
+collapse.
+
 ## 3. Multiplication
 
 **E times G is sound.** Let `x = c₀ + Σ cᵢ uᵢ` be E-typed and `y` be G-typed, hence
