@@ -79,6 +79,10 @@ example : ¬ Typed [] (.mul .E (.real .E 1) (.real .E 1)) (.float .E) := by
   | mul _ right => cases right
   | mulLeftG left _ => cases left
 
+-- The general-mode factor of an expectation-mode product may stand on either side.
+example : Typed [] (.mul .E (.real .E 1) (.real .G 2)) (.float .E) := .mul .real .real
+example : Typed [] (.mul .E (.real .G 2) (.real .E 1)) (.float .E) := .mulLeftG .real .real
+
 private theorem safe_next {expression next : Expr}
     (reduction : reduce expression = .next next) (safe : DoesNotGetStuck next) :
     DoesNotGetStuck expression := by
@@ -141,6 +145,35 @@ theorem reciprocal_safe : DoesNotGetStuck reciprocal := by
 /-- This concrete trace result requires no global integrability premise. -/
 example : MeanOnTraces reciprocal reciprocal.determinize :=
   (Traces.soundness .E reciprocal reciprocal_typed reciprocal_source reciprocal_safe).2
+
+/-- A general-mode draw scales an expectation-mode draw from the left. -/
+def scaledSample : Expr := .letE (uniform .G) (.mul .E (.bvar 0) (uniform .E))
+
+theorem scaledSample_source : scaledSample.sourceForm = true := by
+  simp [scaledSample, uniform, Expr.sourceForm]
+
+theorem scaledSample_typed : Typed [] scaledSample (.float .E) :=
+  .letE (uniform_typed .G) (.mulLeftG (.bvar .head) (uniform_typed .E))
+
+theorem scaledSample_safe : DoesNotGetStuck scaledSample := by
+  apply safe_let_uniform .G
+  intro y
+  simp [Expr.substHead, Expr.substAt, Expr.shift, Expr.mapVars, uniform]
+  change DoesNotGetStuck (.mul .E (.real .G y) (uniform .E))
+  let μ := primitiveFiber (.stochastic .uniform) [0, 1] []
+  refine safe_sample (site := (.E, .stochastic .uniform)) (fiber := μ)
+    (continuation := fun value => .mul .E (.real .G y) (.real .E value)) ?_ ?_ ?_
+  · simp [uniform, reduce, Expr.isValue, firstNonValue, allRealValues?, Action.wrap,
+      Function.comp_def, μ]
+  · simp [μ, primitiveFiber, parseParams, affineArity, generalArity, paperMeasure,
+      uniformMeasure, Real.volume_Icc]
+  · intro value
+    apply safe_next (next := .real .E (y * value))
+    · simp [reduce, Expr.isValue, realValue?]
+    exact safe_real .E _
+
+example : MeanOnTraces scaledSample scaledSample.determinize :=
+  (Traces.soundness .E scaledSample scaledSample_typed scaledSample_source scaledSample_safe).2
 
 def loopFunction : Expr :=
   .fix
