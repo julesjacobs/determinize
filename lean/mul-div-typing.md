@@ -12,11 +12,11 @@ condition, and recommends how to reconcile the artifacts.
 | paper, `tex/3_typing.tex` | `Mul-G`: both operands G, any result mode; `Mul-ConstL`/`Mul-ConstR`: a literal on either side, both operands at most the result mode | `Div`: the denominator is a literal at most G, the numerator at most the result mode |
 | `ocaml/infer.ml` | as the paper | as the paper, plus non-literal `G / G` at any result mode |
 | `sim/src/compiler/infer.js` | left operand at the result mode `m`, right operand G, result `m` | same |
-| `lean/` (`Typed.mul`, `Typed.div`) | as the sim | as the sim |
+| `lean/` (`Typed.mul`, `Typed.mulLeftG`, `Typed.div`) | one operand G, the other at the result mode `m`, result `m` (the symmetric `[Mul]` of section 3, since 2026-09-08) | as the sim |
 
 So the sim and the Lean accept `x : E` times `y : G` at mode E, which the paper and the
 OCaml reject, while the paper and the OCaml accept a literal on the *left* of an E
-operand (`2 × x`), which the sim and the Lean only accept as `x × 2`.
+operand (`2 × x`), which the sim only accepts as `x × 2`; the Lean accepts both orders.
 
 ## 2. The invariant that makes determinization sound
 
@@ -133,14 +133,16 @@ fixed. This single principle reproduces every existing rule:
 
 ## 6. Where each artifact stands
 
-- Lean and sim implement the right-operand half of `[Mul]` and all of `[Div]`. Their
-  soundness is machine-checked (`Theorems.lean`, standard axioms only).
+- Lean implements all of `[Mul]` (`Typed.mul` with the G factor on the right and its
+  mirror image `Typed.mulLeftG`) and all of `[Div]`; its soundness is machine-checked
+  (`Theorems.lean`, standard axioms only). The sim implements the right-operand half of
+  `[Mul]` and all of `[Div]`.
 - Paper and OCaml implement the literal fragment of `[Mul]` and a literal-only `[Div]`
   (OCaml additionally allows `G / G`).
-- Neither side implements the full rule, and they differ in both directions: an
-  E value times a G expression is accepted only by Lean and sim; a literal on the left
-  of an E operand is accepted only by the paper and OCaml, where Lean and sim need the
-  literal commuted to the right and typed at G.
+- Paper, OCaml and sim differ in both directions: an E value times a G expression is
+  accepted only by Lean and sim; a literal on the left of an E operand is accepted by
+  the paper, OCaml and Lean, where the sim needs the literal commuted to the right and
+  typed at G.
 
 ## 7. Recommendation
 
@@ -156,18 +158,19 @@ fixed. This single principle reproduces every existing rule:
   factor; otherwise default the right operand to G, which is what the sim and the
   Lean do today. This keeps every currently accepted program accepted and adds
   `x:E × y:G`, `y:G × x:E` and non-literal denominators.
-- Lean: add the mirrored constructor `mul` with `left : Float[G]` and
-  `right : Float[m]` to `Statement/Syntax.lean`'s `Typed`, then extend every case
-  analysis on `Typed`: preservation in `Proof/Typing.lean`, `WellTyped` and
-  `wellTyped_ofExpr_of_typed` in `Proof/Symbolic.lean`, the `mul` case of
-  `symbolicReduce`, `typed_determinize` in `Proof/OrdinarySemantics.lean`, and the
-  corresponding cases in `Proof/SymbolicSoundness.lean`. The mathematics is the
-  mirror image of the existing case; the cost is proof engineering, on the order of a
-  few hundred lines and several ten-minute rebuilds.
+- Lean: done on 2026-09-08. `Typed.mulLeftG` (`left : Float[G]`, `right : Float[m]`)
+  mirrors `Typed.mul` in `Statement/Syntax.lean`, and the symbolic `WellTyped.mulGE`
+  mirrors `WellTyped.mulEG`. The symbolic reducer's `Affine.mul?` already accepted a
+  constant factor on either side, so the proof changes are the mirrored cases of every
+  induction over the two judgments (`Proof/Typing.lean`, `Proof/Symbolic.lean`,
+  `Proof/SymbolicSoundness.lean`, `Proof/OrdinarySemantics.lean`), about 180 lines.
+  `Proof/Examples.lean` checks `Traces.soundness` on `let y = Uniform_G(0, 1) in
+  y × Uniform_E(0, 1)`.
 
-**Option B, cheapest: adopt the Lean and sim rule in the paper and OCaml.** No proof
-work; the paper documents that a literal scaling factor goes on the right. It leaves
-the visible asymmetry in the paper's rule, which reviewers will ask about.
+**Option B, cheaper for the paper: adopt the sim rule in the paper and OCaml.** No
+proof work, since the Lean rule is a superset and the theorems cover every program the
+sim accepts; the paper documents that a literal scaling factor goes on the right. It
+leaves the visible asymmetry in the paper's rule, which reviewers will ask about.
 
 Either way this is a four-artifact change (see `CLAUDE.md`), so it should be one
 deliberate decision by the authors rather than a drift fix.
