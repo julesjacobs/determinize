@@ -127,6 +127,10 @@ theorem typed_shift (h : Typed (before ++ suffix) expression ty) :
       rw [Expr.shift, Expr.mapVars]
       exact .mul (ihl (before := before) (suffix := suffix) hcontext)
         (ihr (before := before) (suffix := suffix) hcontext)
+  | mulLeftG hl hr ihl ihr =>
+      rw [Expr.shift, Expr.mapVars]
+      exact .mulLeftG (ihl (before := before) (suffix := suffix) hcontext)
+        (ihr (before := before) (suffix := suffix) hcontext)
   | div hl hr ihl ihr =>
       rw [Expr.shift, Expr.mapVars]
       exact .div (ihl (before := before) (suffix := suffix) hcontext)
@@ -279,6 +283,10 @@ theorem typed_substAt (h : Typed (before ++ binder :: suffix) expression ty)
   | mul hl hr ihl ihr =>
       rw [Expr.substAt, Expr.mapVars]
       exact .mul (ihl replacementTyped (before := before) (suffix := suffix) hcontext)
+        (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
+  | mulLeftG hl hr ihl ihr =>
+      rw [Expr.substAt, Expr.mapVars]
+      exact .mulLeftG (ihl replacementTyped (before := before) (suffix := suffix) hcontext)
         (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
   | div hl hr ihl ihr =>
       rw [Expr.substAt, Expr.mapVars]
@@ -619,6 +627,21 @@ theorem reduce_typed_closed
           exact (ihr rfl).wrap fun next nextTyped => .mul leftTyped nextTyped
       · simp only [leftValue, ↓reduceIte]
         exact (ihl rfl).wrap fun next nextTyped => .mul nextTyped rightTyped
+  | mulLeftG leftTyped rightTyped ihl ihr =>
+      cases hcontext
+      rename_i left right mode
+      rw [MeasurableActionFamily.reduce_mul_eq]
+      by_cases leftValue : left.isValue = true
+      · simp only [leftValue, ↓reduceIte]
+        by_cases rightValue : right.isValue = true
+        · simp only [rightValue, ↓reduceIte]
+          rcases typed_real_value leftTyped leftValue with ⟨left, rfl⟩
+          rcases typed_real_value rightTyped rightValue with ⟨right, rfl⟩
+          exact .next .real
+        · simp only [rightValue, ↓reduceIte]
+          exact (ihr rfl).wrap fun next nextTyped => .mulLeftG leftTyped nextTyped
+      · simp only [leftValue, ↓reduceIte]
+        exact (ihl rfl).wrap fun next nextTyped => .mulLeftG nextTyped rightTyped
   | div leftTyped rightTyped ihl ihr =>
       cases hcontext
       rename_i left mode right

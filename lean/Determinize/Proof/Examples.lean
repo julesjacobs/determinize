@@ -77,6 +77,7 @@ example : ¬ Typed [] (.mul .E (.real .E 1) (.real .E 1)) (.float .E) := by
   intro typed
   cases typed with
   | mul _ right => cases right
+  | mulLeftG left _ => cases left
 
 private theorem safe_next {expression next : Expr}
     (reduction : reduce expression = .next next) (safe : DoesNotGetStuck next) :

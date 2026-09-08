@@ -1504,6 +1504,38 @@ theorem symbolicReduce_targetRealize
           (context_realize := by intros; simp only [realize, Expr.determinize])
           (lifted_realize := by intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
           ihl gconstant.1 environment]
+  | mulGE leftTyped rightTyped ihl ihr =>
+      rename_i context' left right
+      simp only [GConstant] at gconstant
+      rw [realize, Expr.determinize, MeasurableActionFamily.reduce_mul_eq, determinize_isValue, realize_isValue,
+        symbolicReduce.eq_def]
+      by_cases leftValue : left.isValue = true
+      · simp only [leftValue, ↓reduceIte]
+        by_cases rightValue : right.isValue = true
+        · simp only [rightValue, ↓reduceIte]
+          obtain ⟨x, rfl⟩ := wellTyped_real_value leftTyped leftValue
+          obtain ⟨y, rfl⟩ := wellTyped_real_value rightTyped rightValue
+          rcases x with ⟨x0, xc⟩
+          have leftZero : xc = 0 := by
+            simpa only [GConstant] using leftTyped.gconstant
+          obtain ⟨result, product⟩ :=
+            Affine.mul?_eq_some_of_left (left := (x0, xc)) (right := y) leftZero
+          simp [affineValue?, product, targetRealize, realize, Expr.determinize,
+            Expr.isValue, realValue?, Affine.eval_mul_of_eq_some product]
+        · simp only [rightValue, Bool.eq_false_of_not_eq_true rightValue,
+            Bool.false_eq_true, ↓reduceIte]
+          rw [targetRealize_wrap laws
+            (ExprContext := fun next => .mul .E ((left.realize environment).determinize) next)
+            (context_realize := by intros; simp only [realize, Expr.determinize])
+            (lifted_realize := by intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
+            ihr gconstant.2 environment, determinize_isValue, realize_isValue, if_neg rightValue]
+      · simp only [leftValue, Bool.eq_false_of_not_eq_true leftValue,
+          Bool.false_eq_true, ↓reduceIte]
+        rw [targetRealize_wrap laws
+          (ExprContext := fun next => .mul .E next ((right.realize environment).determinize))
+          (context_realize := by intros; simp only [realize, Expr.determinize])
+          (lifted_realize := by intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
+          ihl gconstant.1 environment]
   | mulGG leftTyped rightTyped ihl ihr =>
       rename_i context' left right
       simp only [GConstant] at gconstant
