@@ -4,9 +4,11 @@ import Mathlib.MeasureTheory.Constructions.Pi
 /-!
 # Expression coordinates for measurability proofs
 
-The proof uses countably many finite-dimensional real slices to establish
-measurability of the direct evaluators. This structure is absent from their
-definitions and the public theorem statements.
+An expression is encoded as a real-free skeleton together with the list of its
+real literals. The skeleton carries the discrete sigma-algebra; the real
+coordinates are measured through their length and their zero-padded entries,
+exactly like the trace layer measures a trace. This structure is absent from
+the direct evaluators and the public theorem statements.
 -/
 
 namespace Determinize.Statement.Paper
@@ -50,13 +52,17 @@ end Expr
 
 structure RealCoordinates where values : List ℝ
 
-def RealCoordinates.code (coordinates : RealCoordinates) : Σ n : Nat, Fin n → ℝ :=
-  ⟨coordinates.values.length, fun index => coordinates.values[index]⟩
+/-- Length and zero-padded coordinates, mirroring the measurable structure of traces
+in `Determinize.Traces`. The length is recorded because padding alone is not injective. -/
+def RealCoordinates.code (coordinates : RealCoordinates) : Nat × (Nat → ℝ) :=
+  (coordinates.values.length, fun index => coordinates.values.getD index 0)
 
 instance : MeasurableSpace RealCoordinates :=
   MeasurableSpace.comap RealCoordinates.code inferInstance
 
-/-- A countable disjoint union of finite-dimensional Euclidean slices. -/
+/-- A discrete skeleton paired with real coordinates. Every expression with a fixed
+skeleton has a fixed number of real literals, so under `code` its coordinates are that
+length together with zero-padded entries, measured as in the trace layer. -/
 abbrev Code := Skeleton × RealCoordinates
 
 def code (expression : Expr) : Code :=

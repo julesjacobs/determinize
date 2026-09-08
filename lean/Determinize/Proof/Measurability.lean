@@ -250,131 +250,31 @@ local instance : Countable Skeleton :=
 
 namespace RealCoordinates
 
-theorem measurable_sigmaMk_const {α : Type*} [MeasurableSpace α] (n : Nat)
-    (f : α → Fin n → ℝ) (hf : ∀ i, Measurable fun parameter => f parameter i) :
-    Measurable (fun parameter => (⟨n, f parameter⟩ : Σ n : Nat, Fin n → ℝ)) := by
-  have measurable_f : Measurable f := measurable_pi_lambda _ hf
+theorem measurable_code : Measurable RealCoordinates.code :=
+  comap_measurable _
+
+theorem measurable_length :
+    Measurable fun coordinates : RealCoordinates => coordinates.values.length :=
+  measurable_fst.comp measurable_code
+
+theorem measurable_getD (index : Nat) :
+    Measurable fun coordinates : RealCoordinates => coordinates.values.getD index 0 :=
+  (measurable_pi_apply index).comp (measurable_snd.comp measurable_code)
+
+/-- A map into real coordinates is measurable once its length and each of its
+zero-padded coordinates are. -/
+theorem measurable_of_length_getD {α : Type*} [MeasurableSpace α]
+    {coordinates : α → RealCoordinates}
+    (lengthMeasurable : Measurable fun parameter => (coordinates parameter).values.length)
+    (coordinateMeasurable : ∀ index : Nat,
+      Measurable fun parameter => (coordinates parameter).values.getD index 0) :
+    Measurable coordinates := by
   rw [measurable_iff_comap_le]
-  change MeasurableSpace.comap
-      (fun parameter => @Sigma.mk Nat (fun n => Fin n → ℝ) n (f parameter))
-      (⨅ i, MeasurableSpace.map
-        (@Sigma.mk Nat (fun n => Fin n → ℝ) i) inferInstance) ≤ _
-  calc
-    _ ≤ MeasurableSpace.comap
-        (fun parameter => @Sigma.mk Nat (fun n => Fin n → ℝ) n (f parameter))
-        (MeasurableSpace.map (@Sigma.mk Nat (fun n => Fin n → ℝ) n)
-          inferInstance) := MeasurableSpace.comap_mono (iInf_le _ n)
-    _ = MeasurableSpace.comap f
-        (MeasurableSpace.comap (@Sigma.mk Nat (fun n => Fin n → ℝ) n)
-          (MeasurableSpace.map (@Sigma.mk Nat (fun n => Fin n → ℝ) n)
-            inferInstance)) := by
-      rw [MeasurableSpace.comap_comp]
-      rfl
-    _ ≤ MeasurableSpace.comap f inferInstance :=
-      MeasurableSpace.comap_mono MeasurableSpace.comap_map_le
-    _ ≤ _ := measurable_f.comap_le
-
-theorem measurable_sigmaMk_nat {α : Type*} [MeasurableSpace α]
-    (length : α → Nat) (lengthMeasurable : Measurable length)
-    (coordinates : α → Nat → ℝ)
-    (coordinatesMeasurable : ∀ index, Measurable fun parameter =>
-      coordinates parameter index) :
-    Measurable fun parameter =>
-      (⟨length parameter, fun index => coordinates parameter index⟩ :
-        Σ n : Nat, Fin n → ℝ) := by
-  let candidate (n : Nat) (parameter : α) : Σ n : Nat, Fin n → ℝ :=
-    ⟨n, fun index => coordinates parameter index⟩
-  have candidateMeasurable (n : Nat) : Measurable (candidate n) := by
-    apply measurable_sigmaMk_const
-    intro index
-    exact coordinatesMeasurable index
-  let predicate (n : Nat) (parameter : α) : Prop := length parameter = n
-  have predicateMeasurable (n : Nat) : MeasurableSet {parameter | predicate n parameter} :=
-    measurableSet_eq_fun lengthMeasurable measurable_const
-  have existsPredicate (parameter : α) : ∃ n, predicate n parameter :=
-    ⟨length parameter, rfl⟩
-  have selected := Measurable.find candidateMeasurable predicateMeasurable existsPredicate
-  convert selected using 1
-  funext parameter
-  have found : Nat.find (existsPredicate parameter) = length parameter := by
-    exact (Nat.find_spec (existsPredicate parameter)).symm
-  simp only [candidate, found]
-
-theorem measurable_sigma_elim {γ : Type*} [MeasurableSpace γ]
-    (f : (n : Nat) → (Fin n → ℝ) → γ) (hf : ∀ n, Measurable (f n)) :
-    Measurable (fun code : Σ n : Nat, Fin n → ℝ => f code.1 code.2) := by
-  rw [measurable_iff_comap_le]
-  change MeasurableSpace.comap _ inferInstance ≤
-    ⨅ n, MeasurableSpace.map (@Sigma.mk Nat (fun n => Fin n → ℝ) n) inferInstance
-  refine le_iInf fun n => ?_
-  rw [← MeasurableSpace.comap_le_iff_le_map, MeasurableSpace.comap_comp]
-  exact (hf n).comap_le
-
-def sigmaGetD (code : Σ n : Nat, Fin n → ℝ) (index : Nat) : ℝ :=
-  if inBounds : index < code.1 then code.2 ⟨index, inBounds⟩ else 0
-
-theorem measurable_sigmaGetD :
-    Measurable fun pair : (Σ n : Nat, Fin n → ℝ) × Nat =>
-      sigmaGetD pair.1 pair.2 := by
-  apply measurable_from_prod_countable_left
-  intro index
-  change Measurable fun code : (Σ n : Nat, Fin n → ℝ) => sigmaGetD code index
-  refine measurable_sigma_elim (fun length coordinates =>
-    if inBounds : index < length then coordinates ⟨index, inBounds⟩ else 0) ?_
-  intro length
-  by_cases inBounds : index < length
-  · let coordinate : Fin length := ⟨index, inBounds⟩
-    simpa [sigmaGetD, inBounds, coordinate] using
-      (measurable_pi_apply coordinate :
-        Measurable fun coordinates : Fin length → ℝ => coordinates coordinate)
-  · simp [sigmaGetD, inBounds]
-
-def ofCode (code : Σ n : Nat, Fin n → ℝ) : RealCoordinates :=
-  ⟨List.ofFn code.2⟩
-
-@[simp] theorem ofCode_code (coordinates : RealCoordinates) :
-    ofCode (RealCoordinates.code coordinates) = coordinates := by
-  cases coordinates with
-  | mk values => simp [ofCode, RealCoordinates.code]
-
-theorem code_injective : Function.Injective RealCoordinates.code := by
-  intro left right equality
-  simpa only [ofCode_code] using congrArg ofCode equality
-
-theorem code_ofCode (code : Σ n : Nat, Fin n → ℝ) :
-    RealCoordinates.code (ofCode code) = code := by
-  rcases code with ⟨length, coordinates⟩
-  change (⟨(List.ofFn coordinates).length,
-    fun index => (List.ofFn coordinates)[index]⟩ : Σ n : Nat, Fin n → ℝ) =
-      ⟨length, coordinates⟩
-  congr
-  · exact List.length_ofFn
-  · apply (Fin.heq_fun_iff List.length_ofFn).2
-    intro index
-    simp
-
-theorem code_eq_sigmaGetD (values : List ℝ) (n : Nat) (length : values.length = n) :
-    RealCoordinates.code ⟨values⟩ =
-      (⟨n, fun index => values.getD index 0⟩ : Σ n : Nat, Fin n → ℝ) := by
-  subst n
-  unfold RealCoordinates.code
-  refine @Sigma.ext Nat (fun n => Fin n → ℝ) _ _ rfl ?_
-  apply heq_of_eq
-  funext index
-  simp [List.getD, index.isLt]
-
-theorem measurableSet_range_code :
-    MeasurableSet (Set.range RealCoordinates.code) := by
-  rw [show Set.range RealCoordinates.code = Set.univ by
-    ext code
-    simp only [Set.mem_range, Set.mem_univ, iff_true]
-    exact ⟨ofCode code, code_ofCode code⟩]
-  exact MeasurableSet.univ
-
-theorem code_measurableEmbedding :
-    MeasurableEmbedding RealCoordinates.code := by
-  rw [MeasurableEmbedding.iff_comap_eq]
-  exact ⟨code_injective, rfl, measurableSet_range_code⟩
+  change MeasurableSpace.comap coordinates
+    (MeasurableSpace.comap RealCoordinates.code
+      (inferInstance : MeasurableSpace (Nat × (Nat → ℝ)))) ≤ _
+  rw [MeasurableSpace.comap_comp]
+  exact (lengthMeasurable.prodMk (measurable_pi_lambda _ coordinateMeasurable)).comap_le
 
 end RealCoordinates
 
@@ -486,24 +386,15 @@ def congr {α : Type*} [MeasurableSpace α] {first second : α → Expr}
 theorem measurable_realCoordinates {α : Type*} [MeasurableSpace α]
     {expression : α → Expr} (family : MeasurableFamily α expression) :
     Measurable fun parameter => (⟨(expression parameter).realCoordinates⟩ : RealCoordinates) := by
-  rw [measurable_iff_comap_le]
-  change MeasurableSpace.comap _
-    (MeasurableSpace.comap RealCoordinates.code
-      (inferInstance : MeasurableSpace (Σ n : Nat, Fin n → ℝ))) ≤
-        (inferInstance : MeasurableSpace α)
-  rw [MeasurableSpace.comap_comp]
-  have codeMeasurable : Measurable fun parameter =>
-      RealCoordinates.code ⟨(expression parameter).realCoordinates⟩ := by
-    have encoded : Measurable fun parameter =>
-        (⟨family.skeleton.realArity, fun index =>
-          (expression parameter).realCoordinates.getD index 0⟩ :
-            Σ n : Nat, Fin n → ℝ) :=
-      RealCoordinates.measurable_sigmaMk_const _ _
-        (fun index => family.coordinate_measurable index)
-    convert encoded using 1
-    funext parameter
-    exact RealCoordinates.code_eq_sigmaGetD _ _ (family.coordinate_count parameter)
-  exact codeMeasurable.comap_le
+  apply RealCoordinates.measurable_of_length_getD
+  · have constantLength :
+        (fun parameter => (expression parameter).realCoordinates.length) =
+          fun _ => family.skeleton.realArity :=
+      funext family.coordinate_count
+    change Measurable fun parameter => (expression parameter).realCoordinates.length
+    rw [constantLength]
+    exact measurable_const
+  · exact family.coordinate_measurable
 
 theorem measurable {α : Type*} [MeasurableSpace α]
     {expression : α → Expr} (family : MeasurableFamily α expression) :
@@ -1146,21 +1037,16 @@ theorem measurable_realCoordinates {α : Type*} [MeasurableSpace α]
     {expressions : α → List Expr} (family : MeasurableExprListFamily α expressions) :
     Measurable fun parameter =>
       (⟨(expressions parameter).flatMap Expr.realCoordinates⟩ : RealCoordinates) := by
-  rw [measurable_iff_comap_le]
-  change MeasurableSpace.comap _
-    (MeasurableSpace.comap RealCoordinates.code
-      (inferInstance : MeasurableSpace (Σ n : Nat, Fin n → ℝ))) ≤ _
-  rw [MeasurableSpace.comap_comp]
-  apply Measurable.comap_le
-  have encoded : Measurable fun parameter =>
-      (⟨(family.skeletons.map Expr.realArity).sum, fun index =>
-        ((expressions parameter).flatMap Expr.realCoordinates).getD index 0⟩ :
-          Σ n : Nat, Fin n → ℝ) :=
-    RealCoordinates.measurable_sigmaMk_const _ _
-      (fun index => family.coordinate_measurable index)
-  convert encoded using 1
-  funext parameter
-  exact RealCoordinates.code_eq_sigmaGetD _ _ (family.coordinate_count parameter)
+  apply RealCoordinates.measurable_of_length_getD
+  · have constantLength :
+        (fun parameter => ((expressions parameter).flatMap Expr.realCoordinates).length) =
+          fun _ => (family.skeletons.map Expr.realArity).sum :=
+      funext family.coordinate_count
+    change Measurable fun parameter =>
+      ((expressions parameter).flatMap Expr.realCoordinates).length
+    rw [constantLength]
+    exact measurable_const
+  · exact family.coordinate_measurable
 
 def comp {α β : Type*} [MeasurableSpace α] [MeasurableSpace β]
     {expressions : α → List Expr} (family : MeasurableExprListFamily α expressions)
@@ -1684,35 +1570,18 @@ theorem measurable_realCoordinates :
   measurable_snd.comp measurable_code
 
 theorem measurable_realCoordinate (index : Nat) :
-    Measurable fun expression : Expr => expression.realCoordinates.getD index 0 := by
-  have encoded : Measurable fun expression : Expr =>
-      RealCoordinates.code ⟨expression.realCoordinates⟩ :=
-    RealCoordinates.code_measurableEmbedding.measurable.comp measurable_realCoordinates
-  have paired : Measurable fun expression : Expr =>
-      (RealCoordinates.code ⟨expression.realCoordinates⟩, index) :=
-    encoded.prodMk measurable_const
-  convert RealCoordinates.measurable_sigmaGetD.comp paired using 1
-  funext expression
-  by_cases inBounds : index < expression.realCoordinates.length
-  · simp [RealCoordinates.sigmaGetD, RealCoordinates.code, List.getD, inBounds]
-  · simp [RealCoordinates.sigmaGetD, RealCoordinates.code, List.getD, inBounds,
-      List.getElem?_eq_none (Nat.le_of_not_gt inBounds)]
+    Measurable fun expression : Expr => expression.realCoordinates.getD index 0 :=
+  (RealCoordinates.measurable_getD index).comp measurable_realCoordinates
 
 theorem measurable_realCoordinateAt {α : Type*} [MeasurableSpace α]
     (coordinates : α → RealCoordinates) (coordinatesMeasurable : Measurable coordinates)
     (index : α → Nat) (indexMeasurable : Measurable index) :
     Measurable fun parameter => (coordinates parameter).values.getD (index parameter) 0 := by
-  have encoded : Measurable fun parameter => RealCoordinates.code (coordinates parameter) :=
-    RealCoordinates.code_measurableEmbedding.measurable.comp coordinatesMeasurable
-  have paired : Measurable fun parameter =>
-      (RealCoordinates.code (coordinates parameter), index parameter) :=
-    Measurable.prod encoded indexMeasurable
-  convert RealCoordinates.measurable_sigmaGetD.comp paired using 1
-  funext parameter
-  by_cases inBounds : index parameter < (coordinates parameter).values.length
-  · simp [RealCoordinates.sigmaGetD, RealCoordinates.code, List.getD, inBounds]
-  · simp [RealCoordinates.sigmaGetD, RealCoordinates.code, List.getD, inBounds,
-      List.getElem?_eq_none (Nat.le_of_not_gt inBounds)]
+  have indexedGetD : Measurable fun pair : RealCoordinates × Nat =>
+      pair.1.values.getD pair.2 0 :=
+    measurable_from_prod_countable_left fun index =>
+      RealCoordinates.measurable_getD index
+  exact indexedGetD.comp (coordinatesMeasurable.prodMk indexMeasurable)
 
 def realCoordinatesAppend (left right : RealCoordinates) : RealCoordinates :=
   ⟨left.values ++ right.values⟩
@@ -1721,25 +1590,10 @@ theorem realCoordinatesAppend_measurable :
     Measurable fun pair : RealCoordinates × RealCoordinates =>
       realCoordinatesAppend pair.1 pair.2 := by
   classical
-  rw [measurable_iff_comap_le]
-  change MeasurableSpace.comap (fun pair : RealCoordinates × RealCoordinates =>
-      realCoordinatesAppend pair.1 pair.2)
-      (MeasurableSpace.comap RealCoordinates.code
-        (inferInstance : MeasurableSpace (Σ n : Nat, Fin n → ℝ))) ≤ _
-  rw [MeasurableSpace.comap_comp]
-  apply Measurable.comap_le
-  have leftEncoded : Measurable fun pair : RealCoordinates × RealCoordinates =>
-      RealCoordinates.code pair.1 :=
-    RealCoordinates.code_measurableEmbedding.measurable.comp measurable_fst
-  have rightEncoded : Measurable fun pair : RealCoordinates × RealCoordinates =>
-      RealCoordinates.code pair.2 :=
-    RealCoordinates.code_measurableEmbedding.measurable.comp measurable_snd
-  have sigmaLengthMeasurable : Measurable fun code : (Σ n : Nat, Fin n → ℝ) => code.1 :=
-    RealCoordinates.measurable_sigma_elim (fun n _ => n) (fun _ => measurable_const)
   have leftLength : Measurable fun pair : RealCoordinates × RealCoordinates =>
-      pair.1.values.length := sigmaLengthMeasurable.comp leftEncoded
+      pair.1.values.length := RealCoordinates.measurable_length.comp measurable_fst
   have rightLength : Measurable fun pair : RealCoordinates × RealCoordinates =>
-      pair.2.values.length := sigmaLengthMeasurable.comp rightEncoded
+      pair.2.values.length := RealCoordinates.measurable_length.comp measurable_snd
   have sumMeasurable : Measurable fun pair : RealCoordinates × RealCoordinates =>
       pair.1.values.length + pair.2.values.length := leftLength.add rightLength
   have appendLengthMeasurable : Measurable fun pair : RealCoordinates × RealCoordinates =>
@@ -1754,9 +1608,7 @@ theorem realCoordinatesAppend_measurable :
       exact leftLength measurableSet_Ioi
     have leftCoordinate : Measurable fun pair : RealCoordinates × RealCoordinates =>
         pair.1.values.getD index 0 :=
-      measurable_realCoordinateAt
-        (fun pair : RealCoordinates × RealCoordinates => pair.1) measurable_fst
-        (fun _ => index) measurable_const
+      (RealCoordinates.measurable_getD index).comp measurable_fst
     have rightCoordinate : Measurable fun pair : RealCoordinates × RealCoordinates =>
         pair.2.values.getD (index - pair.1.values.length) 0 :=
       measurable_realCoordinateAt
@@ -1776,15 +1628,7 @@ theorem realCoordinatesAppend_measurable :
       simp [region, Set.piecewise, member]
     · rw [if_neg member, ← List.getD_eq_getElem?_getD]
       simp [region, Set.piecewise, member]
-  have encoded := RealCoordinates.measurable_sigmaMk_nat
-    (fun pair : RealCoordinates × RealCoordinates =>
-      (realCoordinatesAppend pair.1 pair.2).values.length)
-    appendLengthMeasurable
-    (fun pair index => (realCoordinatesAppend pair.1 pair.2).values.getD index 0)
-    coordinatesMeasurable
-  convert encoded using 1
-  funext pair
-  exact RealCoordinates.code_eq_sigmaGetD _ _ rfl
+  exact RealCoordinates.measurable_of_length_getD appendLengthMeasurable coordinatesMeasurable
 
 theorem measurable_expr_of_parts {α : Type*} [MeasurableSpace α]
     (expression : α → Expr)
@@ -1892,22 +1736,13 @@ theorem measurable_realLiteral {α : Type*} [MeasurableSpace α] (mode : Mode)
       (measurable_const : Measurable fun _ : α => Skeleton.real mode)
   · have singletonCoordinates : Measurable fun parameter : α =>
         (⟨[value parameter]⟩ : RealCoordinates) := by
-      rw [measurable_iff_comap_le]
-      change MeasurableSpace.comap
-        (fun parameter => (⟨[(value parameter)]⟩ : RealCoordinates))
-        (MeasurableSpace.comap RealCoordinates.code
-          (inferInstance : MeasurableSpace (Σ n : Nat, Fin n → ℝ))) ≤ _
-      rw [MeasurableSpace.comap_comp]
-      apply Measurable.comap_le
-      have encoded : Measurable fun parameter =>
-          (⟨1, fun _index => value parameter⟩ : Σ n : Nat, Fin n → ℝ) := by
-        apply RealCoordinates.measurable_sigmaMk_const
-        intro _index
-        exact valueMeasurable
-      convert encoded using 1
-      funext parameter
-      simpa [List.getD] using
-        (RealCoordinates.code_eq_sigmaGetD [value parameter] 1 rfl)
+      apply RealCoordinates.measurable_of_length_getD
+      · exact measurable_const
+      · intro index
+        cases index with
+        | zero => simpa [List.getD] using valueMeasurable
+        | succ _ =>
+            simpa [List.getD] using (measurable_const : Measurable fun _ : α => (0 : ℝ))
     simpa [Expr.realCoordinates] using singletonCoordinates
 
 theorem measurable_app {α : Type*} [MeasurableSpace α] {function argument : α → Expr} (functionMeasurable : Measurable function)
