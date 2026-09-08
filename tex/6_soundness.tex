@@ -2301,14 +2301,22 @@ Next, we define an integrability condition for the symbolic sampling enviornment
 
 \paragraph{Tracewise soundness}
 
-We say that a $\G$ mode execution trace is valid if resolving the general-mode sampling operations according to that trace does not cause an undefined arithmetic operation or an invalid distribution parameter.
+\begin{definition}[General-mode trace]
+  A general ($\G$) mode trace is a finite or infinite sequence of sample values
+  \[
+    \gamma=(r_1,r_2,\ldots),
+  \]
+  consumed in order as general mode sampling operations are encountered in a program.
+\end{definition}
+
+We say that a $\G$-mode trace is valid if resolving the general-mode sampling operations according to that trace does not cause an undefined arithmetic operation or an invalid distribution parameter.
 
 \begin{theorem}[Tracewise agreement of interpretations]
   \label{thm:tracewise-agreement-of-interpretations}
   Let $e:\tau$ be closed and well typed, where
   $\tau=\Float{m}$ and $m=\G$ or $\E$.
 
-  Fix a valid execution of the general-mode sampling operations
+  Fix a valid $G$-mode trace $\gamma$ of the general-mode sampling operations
   arising during the symbolic evaluation of $e:\tau$, and let
   \[
     s=(\sigma\mid\hat e:\tau)\in State_\tau
