@@ -2412,14 +2412,24 @@ We say that a $\G$-mode trace is valid if resolving the general-mode sampling op
       \tag{\text{by the definition of $\mathsf{act}_\tau$}}
       \\
       &=
-      \int_{\mathbb R^k}
-        \mathbb E\!\left[
-          \left|
+      \int_{Val_\tau}
+        |v|\,
+        \left(
+          \int_{\mathbb R^k}
             \delta_{\mathsf{realize}_\rho(\sym(a)):\tau}
-          \right|
-        \right]
+            \,\sem{\sigma}_{\mathsf{env}}(d\rho)
+        \right)(dv)
+      \tag{\text{by the definitions of expectation and monadic bind}}
+      \\
+      &=
+      \int_{\mathbb R^k}
+        \left(
+          \int_{Val_\tau}
+            |v|\,
+            \delta_{\mathsf{realize}_\rho(\sym(a)):\tau}(dv)
+        \right)
         \sem{\sigma}_{\mathsf{env}}(d\rho)
-      \tag{\text{by the definition of monadic bind and Tonelli's theorem}}
+      \tag{\text{by Tonelli's theorem}}
       \\
       &=
       \int_{\mathbb R^k}
@@ -2467,14 +2477,24 @@ We say that a $\G$-mode trace is valid if resolving the general-mode sampling op
       \tag{\text{by the definition of $\mathsf{exp}_\tau$}}
       \\
       &=
-      \int_{\mathbb R^k}
-        \mathbb E\!\left[
-          \left|
+      \int_{Val_\tau}
+        |v|\,
+        \left(
+          \int_{\mathbb R^k}
             \delta_{\mathsf{erealize}_\rho(\sym(a)):\tau}
-          \right|
-        \right]
+            \,\sem{\sigma}_{\mathsf{mean}}(d\rho)
+        \right)(dv)
+      \tag{\text{by the definitions of expectation and monadic bind}}
+      \\
+      &=
+      \int_{\mathbb R^k}
+        \left(
+          \int_{Val_\tau}
+            |v|\,
+            \delta_{\mathsf{erealize}_\rho(\sym(a)):\tau}(dv)
+        \right)
         \sem{\sigma}_{\mathsf{mean}}(d\rho)
-      \tag{\text{by the definition of monadic bind and Tonelli's theorem}}
+      \tag{\text{by Tonelli's theorem}}
       \\
       &=
       \int_{\mathbb R^k}
@@ -2515,6 +2535,16 @@ We say that a $\G$-mode trace is valid if resolving the general-mode sampling op
       \tag{\text{by the definitions of expectation and $\mathsf{act}_\tau$}}
       \\
       &=
+      \int_{Val_\tau}
+        v\,
+        \left(
+          \int_{\mathbb R^k}
+            \delta_{\mathsf{realize}_\rho(\sym(a)):\tau}
+            \,\sem{\sigma}_{\mathsf{env}}(d\rho)
+        \right)(dv)
+      \tag{\text{by the definition of monadic bind}}
+      \\
+      &=
       \int_{\mathbb R^k}
         \left(
           \int_{Val_\tau}
@@ -2522,7 +2552,7 @@ We say that a $\G$-mode trace is valid if resolving the general-mode sampling op
             \delta_{\mathsf{realize}_\rho(\sym(a)):\tau}(dv)
         \right)
         \sem{\sigma}_{\mathsf{env}}(d\rho)
-      \tag{\text{by the definition of monadic bind and Fubini's theorem}}
+      \tag{\text{by Fubini's theorem}}
       \\
       &=
       \int_{\mathbb R^k}
@@ -2559,6 +2589,16 @@ We say that a $\G$-mode trace is valid if resolving the general-mode sampling op
       \tag{\text{by the definitions of expectation and $\mathsf{exp}_\tau$}}
       \\
       &=
+      \int_{Val_\tau}
+        v\,
+        \left(
+          \int_{\mathbb R^k}
+            \delta_{\mathsf{erealize}_\rho(\sym(a)):\tau}
+            \,\sem{\sigma}_{\mathsf{mean}}(d\rho)
+        \right)(dv)
+      \tag{\text{by the definition of monadic bind}}
+      \\
+      &=
       \int_{\mathbb R^k}
         \left(
           \int_{Val_\tau}
@@ -2566,7 +2606,7 @@ We say that a $\G$-mode trace is valid if resolving the general-mode sampling op
             \delta_{\mathsf{erealize}_\rho(\sym(a)):\tau}(dv)
         \right)
         \sem{\sigma}_{\mathsf{mean}}(d\rho)
-      \tag{\text{by the definition of monadic bind and Fubini's theorem}}
+      \tag{\text{by Fubini's theorem}}
       \\
       &=
       \int_{\mathbb R^k}
