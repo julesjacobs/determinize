@@ -43,9 +43,7 @@ namespace Determinize.Proof.Paper
 
 /-- The public expectation theorem follows from operational trace soundness. -/
 theorem finiteExpectationSoundness : Determinize.Statement.mainThm := by
-  intro mode program typed sourceForm
-  dsimp only
-  intro sourceSafe sourceIntegrable
+  intro mode program typed sourceForm sourceSafe sourceIntegrable
   rcases Determinize.Proof.Traces.soundness mode program typed sourceForm sourceSafe with ⟨targetSafe, traces⟩
   rcases traces.finite_expectation sourceIntegrable with ⟨targetIntegrable, expectation⟩
   exact ⟨targetSafe, targetIntegrable, expectation⟩

@@ -759,6 +759,81 @@ theorem primitiveDomainSafe_iff_doesNotGetStuck
   · intro safe fuel
     exact doesNotGetStuckAt_imp_primitiveDomainSafeAt (safe fuel)
 
+theorem doesNotGetStuckAt_of_value (fuel : Nat) (value : expression.isValue = true) :
+    DoesNotGetStuckAt fuel expression := by
+  cases fuel with
+  | zero => trivial
+  | succ fuel => rw [DoesNotGetStuckAt, if_pos value]; trivial
+
+/-- Promoting a well-typed float program cannot introduce stuckness: the promotion step
+only rewrites a real value. -/
+theorem doesNotGetStuckAt_promote (typed : Typed [] expression (.float mode))
+    (safe : DoesNotGetStuckAt fuel expression) :
+    DoesNotGetStuckAt fuel (.promote expression) := by
+  induction fuel generalizing expression with
+  | zero => trivial
+  | succ fuel ih =>
+      rw [DoesNotGetStuckAt, if_neg (by simp [Expr.isValue]),
+        MeasurableActionFamily.reduce_promote_eq]
+      by_cases value : expression.isValue = true
+      · rcases typed_real_value typed value with ⟨coordinate, rfl⟩
+        simp only [value, ↓reduceIte]
+        exact doesNotGetStuckAt_of_value fuel rfl
+      · have valueFalse := Bool.eq_false_of_not_eq_true value
+        rw [DoesNotGetStuckAt, valueFalse] at safe
+        rw [valueFalse]
+        simp only [Bool.false_eq_true, ↓reduceIte] at safe ⊢
+        have actionTyped := reduce_typed_closed typed
+        cases equation : reduce expression with
+        | next next =>
+            rw [equation] at safe actionTyped
+            simp only [Action.wrap] at safe ⊢
+            cases actionTyped with
+            | next nextTyped => exact ih nextTyped safe
+        | sample site fiber continuation =>
+            rw [equation] at safe actionTyped
+            simp only [Action.wrap, Function.comp_apply] at safe ⊢
+            cases actionTyped with
+            | sample continuationTyped =>
+                refine ⟨safe.1, ?_⟩
+                filter_upwards [safe.2] with coordinate coordinateSafe
+                exact ih (continuationTyped coordinate) coordinateSafe
+        | stuck =>
+            rw [equation] at safe
+            simp at safe
+
+/-- Conversely, a program whose promotion never gets stuck never gets stuck itself. -/
+theorem doesNotGetStuckAt_of_promote
+    (safe : DoesNotGetStuckAt fuel (.promote expression)) :
+    DoesNotGetStuckAt fuel expression := by
+  induction fuel generalizing expression with
+  | zero => trivial
+  | succ fuel ih =>
+      by_cases value : expression.isValue = true
+      · exact doesNotGetStuckAt_of_value _ value
+      · have valueFalse := Bool.eq_false_of_not_eq_true value
+        rw [DoesNotGetStuckAt, if_neg (by simp [Expr.isValue]),
+          MeasurableActionFamily.reduce_promote_eq, valueFalse] at safe
+        rw [DoesNotGetStuckAt, valueFalse]
+        simp only [Bool.false_eq_true, ↓reduceIte] at safe ⊢
+        cases equation : reduce expression with
+        | next next =>
+            rw [equation] at safe
+            simp only [Action.wrap] at safe ⊢
+            exact ih safe
+        | sample site fiber continuation =>
+            rw [equation] at safe
+            simp only [Action.wrap, Function.comp_apply] at safe ⊢
+            exact ⟨safe.1, safe.2.mono fun coordinate coordinateSafe => ih coordinateSafe⟩
+        | stuck =>
+            rw [equation] at safe
+            simp [Action.wrap] at safe
+
+theorem doesNotGetStuck_promote_iff (typed : Typed [] expression (.float mode)) :
+    DoesNotGetStuck (.promote expression) ↔ DoesNotGetStuck expression :=
+  ⟨fun safe fuel => doesNotGetStuckAt_of_promote (safe fuel),
+    fun safe fuel => doesNotGetStuckAt_promote typed (safe fuel)⟩
+
 end Typing
 
 end Determinize.Proof.Paper

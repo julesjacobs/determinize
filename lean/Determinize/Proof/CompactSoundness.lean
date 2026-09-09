@@ -82,6 +82,53 @@ theorem exact_succ_next (depth : Nat) (e next : Expr) (nv : e.isValue ≠ true)
     (h : reduce e = .next next) : exactMeasure (depth+1) e = exactMeasure depth next := by
   simp [exactMeasure, nv, h]
 
+/-- The promotion step is invisible to compact traces: it records no draw and produces no
+output of its own. -/
+theorem exact_succ_promote (depth : Nat) (e : Expr) :
+    exactMeasure (depth + 1) (.promote e) = exactMeasure depth e := by
+  induction depth generalizing e with
+  | zero =>
+      by_cases value : e.isValue = true
+      · conv_lhs => rw [exactMeasure]
+        rw [if_neg (by simp [Expr.isValue]), MeasurableActionFamily.reduce_promote_eq,
+          if_pos value]
+        cases e <;> simp [exactMeasure, Expr.isValue] at value ⊢
+      · have rhs : exactMeasure 0 e = 0 := by
+          cases e <;> simp_all [exactMeasure, Expr.isValue]
+        have valueFalse := Bool.eq_false_of_not_eq_true value
+        rw [rhs]
+        conv_lhs => rw [exactMeasure]
+        rw [if_neg (by simp [Expr.isValue]), MeasurableActionFamily.reduce_promote_eq,
+          valueFalse]
+        simp only [Bool.false_eq_true, ↓reduceIte]
+        cases reduce e <;>
+          simp [exactMeasure, Action.wrap, Measure.map_zero]
+  | succ depth ih =>
+      by_cases value : e.isValue = true
+      · have rhs : exactMeasure (depth + 1) e = 0 := by rw [exactMeasure, if_pos value]
+        rw [rhs]
+        conv_lhs => rw [exactMeasure]
+        rw [if_neg (by simp [Expr.isValue]), MeasurableActionFamily.reduce_promote_eq,
+          if_pos value]
+        cases e <;> simp [exactMeasure, Expr.isValue] at value ⊢
+      · have valueFalse := Bool.eq_false_of_not_eq_true value
+        conv_lhs => rw [exactMeasure]
+        conv_rhs => rw [exactMeasure]
+        rw [if_neg (by simp [Expr.isValue]), MeasurableActionFamily.reduce_promote_eq,
+          valueFalse]
+        simp only [Bool.false_eq_true, ↓reduceIte]
+        cases reduce e <;> simp [Action.wrap, ih]
+
+theorem jointMeasure_promote (e : Expr) : jointMeasure (.promote e) = jointMeasure e := by
+  ext s hs
+  simp only [jointMeasure, Measure.sum_apply _ hs]
+  rw [show (∑' depth, exactMeasure depth (Expr.promote e) s) =
+      exactMeasure 0 (Expr.promote e) s + ∑' depth, exactMeasure (depth + 1) (Expr.promote e) s
+    from tsum_eq_zero_add' ENNReal.summable]
+  simp only [exact_succ_promote]
+  have zero : exactMeasure 0 (.promote e) s = 0 := by simp [exactMeasure]
+  rw [zero, zero_add]
+
 def traceFiber (source : Expr) : SFiniteKernel Trace ℝ :=
   SFiniteKernel.pullback (StepTraces.traceFiber source) (decode source.determinize)
     (decode_measurable source.determinize)
@@ -108,22 +155,32 @@ theorem joint_fiberSound (source : Expr) (typed : Typed [] source (.float .E))
   rw [traceFiber_apply, hp]
 
 theorem soundness : Determinize.Traces.soundnessThm := by
-  intro mode program typed sourceForm
-  dsimp only
-  intro sourceSafe
-  let source := observeFloat mode program
-  have sourceTyped : Typed [] source (.float .E) := by
+  intro mode program typed sourceForm sourceSafe
+  -- A general-mode program is observed through an explicit promotion, which compact traces
+  -- do not see, so both modes reduce to the expectation-mode argument.
+  obtain ⟨source, sourceTyped, sourceHasSourceForm, sourceIsSafe, jointEq, jointTargetEq,
+      targetSafe⟩ : ∃ source : Expr, Typed [] source (.float .E) ∧ source.sourceForm = true ∧
+        DoesNotGetStuck source ∧ jointMeasure source = jointMeasure program ∧
+        jointMeasure source.determinize = jointMeasure program.determinize ∧
+        (DoesNotGetStuck source.determinize → DoesNotGetStuck program.determinize) := by
     cases mode with
-    | E => exact typed
-    | G => exact .promote typed
-  have sourceHasSourceForm : source.sourceForm = true := by
-    cases mode <;> simpa [source, observeFloat, Expr.sourceForm] using sourceForm
+    | E => exact ⟨program, typed, sourceForm, sourceSafe, rfl, rfl, id⟩
+    | G =>
+        have targetEq : (Expr.promote program).determinize = .promote program.determinize := by
+          simp only [Expr.determinize]
+        refine ⟨.promote program, .promote typed, by simpa [Expr.sourceForm] using sourceForm,
+          (Typing.doesNotGetStuck_promote_iff typed).2 sourceSafe, jointMeasure_promote program,
+          by rw [targetEq]; exact jointMeasure_promote program.determinize, fun safe fuel => ?_⟩
+        rw [targetEq] at safe
+        exact Typing.doesNotGetStuckAt_of_promote (safe fuel)
   have tags := sourceTags_of_sourceForm sourceHasSourceForm
-  have domainSafe := (Typing.primitiveDomainSafe_iff_doesNotGetStuck sourceTyped).2 sourceSafe
-  refine ⟨(StepTraces.soundness mode program typed sourceForm sourceSafe).1, ?_⟩
+  have domainSafe := (Typing.primitiveDomainSafe_iff_doesNotGetStuck sourceTyped).2 sourceIsSafe
+  refine ⟨targetSafe (StepTraces.soundness source sourceTyped sourceHasSourceForm sourceIsSafe).1, ?_⟩
   rcases (joint_fiberSound source sourceTyped tags domainSafe).factorization
     (joint_mass_le_one source.determinize) with ⟨ν, f, hm, hf, hs, ht, hmean⟩
-  have hν : traceLaw source = ν := by
+  rw [jointEq] at hs
+  rw [jointTargetEq] at ht
+  have hν : traceLaw program = ν := by
     let : IsFiniteMeasure ν := ⟨hm.trans_lt (by simp)⟩
     rw [traceLaw, hs]
     exact Measure.fst_compProd ν (traceFiber source).kernel

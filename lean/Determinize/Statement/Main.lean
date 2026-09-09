@@ -25,14 +25,12 @@ def mainThm : Prop :=
   ∀ (mode : Mode) (program : Expr),
     Typed [] program (.float mode) →
     program.sourceForm = true →
-    let source := observeFloat mode program
-    let target := source.determinize
-    DoesNotGetStuck source →
-    Integrable id (bigStepMeasure source) →
-    DoesNotGetStuck target ∧
-      Integrable id (bigStepMeasure target) ∧
-      (∫ value : ℝ, value ∂bigStepMeasure source) =
-        ∫ value : ℝ, value ∂bigStepMeasure target
+    DoesNotGetStuck program →
+    Integrable id (bigStepMeasure program) →
+    DoesNotGetStuck program.determinize ∧
+      Integrable id (bigStepMeasure program.determinize) ∧
+      (∫ value : ℝ, value ∂bigStepMeasure program) =
+        ∫ value : ℝ, value ∂bigStepMeasure program.determinize
 
 /-- The positive part `∫ v⁺ dμ` of the expectation of a real law. -/
 noncomputable def posPartIntegral (μ : Measure ℝ) : ℝ≥0∞ := ∫⁻ value, ENNReal.ofReal value ∂μ
@@ -55,12 +53,11 @@ def extendedExpectationThm : Prop :=
   ∀ (mode : Mode) (program : Expr),
     Typed [] program (.float mode) →
     program.sourceForm = true →
-    let source := observeFloat mode program
-    let target := source.determinize
-    DoesNotGetStuck source →
-    HasExpectation (bigStepMeasure source) →
-    HasExpectation (bigStepMeasure target) ∧
-      extendedExpectation (bigStepMeasure source) = extendedExpectation (bigStepMeasure target)
+    DoesNotGetStuck program →
+    HasExpectation (bigStepMeasure program) →
+    HasExpectation (bigStepMeasure program.determinize) ∧
+      extendedExpectation (bigStepMeasure program) =
+        extendedExpectation (bigStepMeasure program.determinize)
 
 /-- Jensen's inequality: every nonnegative convex function integrates to at most as much
 under the determinized output law as under the source output law. -/
@@ -68,11 +65,9 @@ def jensenThm : Prop :=
   ∀ (mode : Mode) (program : Expr),
     Typed [] program (.float mode) →
     program.sourceForm = true →
-    let source := observeFloat mode program
-    let target := source.determinize
-    DoesNotGetStuck source →
+    DoesNotGetStuck program →
     ∀ φ : ℝ → ℝ, ConvexOn ℝ Set.univ φ → (∀ value, 0 ≤ φ value) →
-      ∫⁻ value, ENNReal.ofReal (φ value) ∂bigStepMeasure target ≤
-        ∫⁻ value, ENNReal.ofReal (φ value) ∂bigStepMeasure source
+      ∫⁻ value, ENNReal.ofReal (φ value) ∂bigStepMeasure program.determinize ≤
+        ∫⁻ value, ENNReal.ofReal (φ value) ∂bigStepMeasure program
 
 end Determinize.Statement

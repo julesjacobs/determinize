@@ -201,9 +201,4 @@ inductive Typed : List Ty → Expr → Ty → Prop
       (∀ expression ∈ general, Typed context expression (.float .G)) →
       Typed context (.sample mode op affine general) (.float mode)
 
-/-- Observe a float result in expectation mode. -/
-def observeFloat : Mode → Expr → Expr
-  | .E, program => program
-  | .G, program => .promote program
-
 end Determinize.Statement.Paper

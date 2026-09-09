@@ -36,8 +36,7 @@ def generationEvent : Mode × Tag → ℝ → Event
 def prepend (entry : Event) (output : Output) : Output :=
   (entry :: output.1, output.2)
 
-/-- Joint trace/output law of executions first returning an expectation-mode real
-at exactly `depth`. Generation-mode results are observed through `observeFloat`. -/
+/-- Joint trace/output law of executions first returning a real at exactly `depth`. -/
 noncomputable def exactMeasure : Nat → Expr → Measure Output
   | 0, .real value => Measure.dirac ([], value)
   | 0, _ => 0
@@ -68,13 +67,13 @@ def MeanOnTraces (source target : Expr) : Prop :=
     ∀ᵐ trace ∂traces,
       Integrable id (fiber trace) ∧ output trace = ∫ value : ℝ, value ∂fiber trace
 
-/-- Trace soundness requires no global integrability assumption. -/
+/-- Trace soundness for expectation-mode programs on detailed traces, without a global
+integrability assumption. General-mode programs are handled by the compact layer, which
+promotes them. -/
 def soundnessThm : Prop :=
-  ∀ (mode : Mode) (program : Expr),
-    Typed [] program (.float mode) → program.sourceForm = true →
-    let source := observeFloat mode program
-    DoesNotGetStuck source →
-      DoesNotGetStuck source.determinize ∧ MeanOnTraces source source.determinize
+  ∀ program : Expr,
+    Typed [] program (.float .E) → program.sourceForm = true → DoesNotGetStuck program →
+      DoesNotGetStuck program.determinize ∧ MeanOnTraces program program.determinize
 
 
 end Determinize.Proof.StepTraces

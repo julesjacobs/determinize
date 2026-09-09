@@ -30,8 +30,7 @@ def MeanOnTraces (source target : Expr) : Prop :=
 def soundnessThm : Prop :=
   ∀ (mode : Mode) (program : Expr),
     Typed [] program (.float mode) → program.sourceForm = true →
-    let source := observeFloat mode program
-    DoesNotGetStuck source →
-      DoesNotGetStuck source.determinize ∧ MeanOnTraces source source.determinize
+    DoesNotGetStuck program →
+      DoesNotGetStuck program.determinize ∧ MeanOnTraces program program.determinize
 
 end Determinize.Traces

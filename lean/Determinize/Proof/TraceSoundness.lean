@@ -117,24 +117,15 @@ theorem meanOnTraces_of_fiberSound (source target : Expr) (fiber : SFiniteKernel
   exact ⟨ν,fiber.kernel,f,hm,inferInstance,hf,hs,ht,hmean⟩
 
 theorem soundness : Determinize.Proof.StepTraces.soundnessThm := by
-  intro mode program typed sourceForm
-  dsimp only
-  intro sourceSafe
-  let source := observeFloat mode program
-  have sourceTyped : Typed [] source (.float .E) := by
-    cases mode with
-    | E => exact typed
-    | G => exact .promote typed
-  have sourceHasSourceForm : source.sourceForm = true := by
-    cases mode <;> simpa [source, observeFloat, Expr.sourceForm] using sourceForm
-  have tags := sourceTags_of_sourceForm sourceHasSourceForm
-  have domainSafe := (Typing.primitiveDomainSafe_iff_doesNotGetStuck sourceTyped).2 sourceSafe
+  intro source typed sourceForm sourceSafe
+  have tags := sourceTags_of_sourceForm sourceForm
+  have domainSafe := (Typing.primitiveDomainSafe_iff_doesNotGetStuck typed).2 sourceSafe
   have targetSafe := determinize_primitiveDomainSafe_of_typed_source primitiveLaws
-    (MeasurableActionFamily.stepKernel primitiveLaws) source sourceTyped tags domainSafe
-  refine ⟨(Typing.primitiveDomainSafe_iff_doesNotGetStuck (typed_determinize sourceTyped)).1 targetSafe, ?_⟩
+    (MeasurableActionFamily.stepKernel primitiveLaws) source typed tags domainSafe
+  refine ⟨(Typing.primitiveDomainSafe_iff_doesNotGetStuck (typed_determinize typed)).1 targetSafe, ?_⟩
   let : IsMarkovKernel (traceFiber source).kernel := normalizedReplay_markov source
   exact meanOnTraces_of_fiberSound source source.determinize (traceFiber source)
-    (joint_fiberSound source sourceTyped tags domainSafe)
+    (joint_fiberSound source typed tags domainSafe)
 
 end
 end Determinize.Proof.StepTraces

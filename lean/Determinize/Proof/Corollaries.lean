@@ -216,17 +216,13 @@ namespace Determinize.Proof.Paper
 
 /-- Extended-real expectation preservation, from operational trace soundness. -/
 theorem extendedExpectationSoundness : Determinize.Statement.extendedExpectationThm := by
-  intro mode program typed sourceForm
-  dsimp only
-  intro sourceSafe defined
+  intro mode program typed sourceForm sourceSafe defined
   exact (Determinize.Proof.Traces.soundness mode program typed sourceForm
     sourceSafe).2.extended_expectation defined
 
 /-- Jensen's inequality between the two output laws, from operational trace soundness. -/
 theorem jensenSoundness : Determinize.Statement.jensenThm := by
-  intro mode program typed sourceForm
-  dsimp only
-  intro sourceSafe φ convex nonneg
+  intro mode program typed sourceForm sourceSafe φ convex nonneg
   exact (Determinize.Proof.Traces.soundness mode program typed sourceForm
     sourceSafe).2.lintegral_convex_le convex nonneg
 
