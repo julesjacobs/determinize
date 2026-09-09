@@ -107,7 +107,7 @@ theorem actualTraceLaw_next (depth : Nat) (history : Symbolic.SampleEnv primitiv
   filter_upwards [] with env
   apply exact_succ_next
   · simpa only [AffineExpr.realize_isValue] using notValue
-  · rw [← symbolicReduce_realize primitiveLaws typed typed.gconstant env, actionEq]
+  · rw [← symbolicReduce_realize primitiveLaws typed env, actionEq]
     rfl
 
 theorem targetTraceLaw_next (depth : Nat) (history : Symbolic.SampleEnv primitiveLaws n)
@@ -118,7 +118,7 @@ theorem targetTraceLaw_next (depth : Nat) (history : Symbolic.SampleEnv primitiv
       (targetTraceLaw depth history next).map (prepend none) := by
   apply exact_succ_next
   · simpa only [determinize_isValue, AffineExpr.realize_isValue] using notValue
-  · rw [← symbolicReduce_targetRealize primitiveLaws typed typed.gconstant, actionEq]
+  · rw [← symbolicReduce_targetRealize primitiveLaws typed, actionEq]
     rfl
 
 theorem historyReplay_next (depth : Nat) (history : Symbolic.SampleEnv primitiveLaws n)
@@ -133,7 +133,7 @@ theorem historyReplay_next (depth : Nat) (history : Symbolic.SampleEnv primitive
   apply replay_succ_next
   · simpa only [AffineExpr.realize_isValue] using notValue
   · rw [generationOp_realize, next_opNone typed actionEq]
-  · rw [← symbolicReduce_realize primitiveLaws typed typed.gconstant env, actionEq]
+  · rw [← symbolicReduce_realize primitiveLaws typed env, actionEq]
     rfl
 
 end

@@ -371,8 +371,8 @@ theorem typed_bool_value (typed : Typed [] expression .bool)
 
 theorem typed_real_value (typed : Typed [] expression (.float mode))
     (value : expression.isValue = true) :
-    ∃ result, expression = .real mode result := by
-  cases mode <;> cases typed <;> simp_all [Expr.isValue]
+    ∃ result, expression = .real result := by
+  cases typed <;> simp_all [Expr.isValue]
 
 theorem firstNonValue_eq_none_iff :
     firstNonValue expressions = none ↔

@@ -74,7 +74,6 @@ theorem symbolic_generationDraw (laws : PrimitiveLaws)
               have generalValues := (AffineExpr.firstNonValue_eq_none_iff _).mp foundGeneral
               obtain ⟨av, ha⟩ := allAffineValues_of_wellTyped_values affineTyped affineValues
               obtain ⟨gv, hg⟩ := allConstantValues_of_wellTypedG_values generalTyped generalValues
-                (fun child member => (generalTyped child member).gconstant)
               simp [ha, hg]
   | sampleG op affineLength generalLength affineTyped generalTyped iha ihg =>
       simp only [AffineExpr.skeleton, generationOp, List.map_map, Function.comp_def,
@@ -96,9 +95,7 @@ theorem symbolic_generationDraw (laws : PrimitiveLaws)
               have affineValues := (AffineExpr.firstNonValue_eq_none_iff _).mp found
               have generalValues := (AffineExpr.firstNonValue_eq_none_iff _).mp foundGeneral
               obtain ⟨av, ha⟩ := allConstantValues_of_wellTypedG_values affineTyped affineValues
-                (fun child member => (affineTyped child member).gconstant)
               obtain ⟨gv, hg⟩ := allConstantValues_of_wellTypedG_values generalTyped generalValues
-                (fun child member => (generalTyped child member).gconstant)
               simp [ha, hg]
   | _ =>
       simp only [AffineExpr.skeleton, generationOp, symbolic_skeleton_isValue]

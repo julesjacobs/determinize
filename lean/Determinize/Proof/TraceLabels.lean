@@ -17,10 +17,10 @@ def operandOp : List (Bool × Option Op) → Option (Option Op)
 /-- The active generation-mode sampling site, following call-by-value evaluation order. -/
 def generationOp : Skeleton → Option Op
   | .pair l r | .cons l r | .app l r
-  | .add _ l r | .mul _ l r | .div _ l r | .lt l r =>
+  | .add l r | .mul l r | .div l r | .lt l r =>
       if l.isValue then generationOp r else generationOp l
   | .fst x | .snd x | .inl x | .inr x
-  | .promote x | .neg _ x => generationOp x
+  | .promote x | .neg x => generationOp x
   | .matchSum x _ _ | .matchList x _ _ | .ite x _ _
   | .letE x _ => generationOp x
   | .sample mode tag affine general =>

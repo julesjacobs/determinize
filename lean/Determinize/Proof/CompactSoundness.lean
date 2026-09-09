@@ -24,9 +24,8 @@ theorem exact_eq_detailed (depth : Nat) (e : Expr) :
   induction depth generalizing e with
   | zero =>
       cases e <;> try simp [exactMeasure, StepTraces.exactMeasure]
-      case real mode r => cases mode <;>
-        simp [exactMeasure, StepTraces.exactMeasure, Measure.map_dirac' eraseOutput_measurable,
-          eraseOutput, mapTraceOutput, retain]
+      case real r =>
+        simp [Measure.map_dirac' eraseOutput_measurable, eraseOutput, mapTraceOutput, retain]
   | succ depth ih =>
       by_cases value : e.isValue = true
       · simp [exactMeasure, StepTraces.exactMeasure, value]

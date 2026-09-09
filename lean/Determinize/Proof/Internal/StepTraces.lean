@@ -39,7 +39,7 @@ def prepend (entry : Event) (output : Output) : Output :=
 /-- Joint trace/output law of executions first returning an expectation-mode real
 at exactly `depth`. Generation-mode results are observed through `observeFloat`. -/
 noncomputable def exactMeasure : Nat → Expr → Measure Output
-  | 0, .real .E value => Measure.dirac ([], value)
+  | 0, .real value => Measure.dirac ([], value)
   | 0, _ => 0
   | depth + 1, expression =>
       if expression.isValue then 0

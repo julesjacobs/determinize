@@ -5,8 +5,9 @@ import Mathlib.Tactic.DeriveCountable
 /-!
 # Reviewer-facing paper syntax
 
-Expressions carry mode labels and explicit promotion. Types are assigned
-separately by `Typed`; no expression constructor contains a type annotation.
+Only sample sites carry mode labels, and promotion is explicit; literals and arithmetic
+are mode-free, as in the paper's grammar, and a literal types at either mode. Types are
+assigned separately by `Typed`; no expression constructor contains a type annotation.
 `Expr.sourceForm` requires stochastic source samples; their operands may be
 arbitrary expressions.
 -/
@@ -21,10 +22,10 @@ deriving DecidableEq, Repr, Countable
 abbrev Tag.base : Tag → Op
   | .stochastic op | .mean op => op
 
-/-- Untyped paper expressions with explicit modes and de Bruijn variables. -/
+/-- Untyped paper expressions with de Bruijn variables; only sample sites carry a mode. -/
 inductive Expr (Literal : Type := ℝ) where
   | bvar (index : Nat)
-  | unit | bool (value : Bool) | real (mode : Mode) (value : Literal)
+  | unit | bool (value : Bool) | real (value : Literal)
   | lam (body : Expr Literal)
   | fix (body : Expr Literal)
   | app (function argument : Expr Literal)
@@ -36,26 +37,26 @@ inductive Expr (Literal : Type := ℝ) where
   | matchList (scrutinee nilCase consCase : Expr Literal)
   | ite (condition thenBranch elseBranch : Expr Literal)
   | letE (value body : Expr Literal)
-  | promote (body : Expr Literal) | neg (mode : Mode) (body : Expr Literal)
-  | add (mode : Mode) (left right : Expr Literal) | mul (mode : Mode) (left right : Expr Literal)
-  | div (mode : Mode) (left right : Expr Literal) | lt (left right : Expr Literal)
+  | promote (body : Expr Literal) | neg (body : Expr Literal)
+  | add (left right : Expr Literal) | mul (left right : Expr Literal)
+  | div (left right : Expr Literal) | lt (left right : Expr Literal)
   | sample (mode : Mode) (op : Tag) (affineArgs generalArgs : List (Expr Literal))
 
 namespace Expr
 
 def isValue {Literal : Type} : Expr Literal → Bool
-  | .unit | .bool _ | .real _ _ | .lam _ | .fix _ | .nil => true
+  | .unit | .bool _ | .real _ | .lam _ | .fix _ | .nil => true
   | .pair left right | .cons left right => left.isValue && right.isValue
   | .inl value | .inr value => value.isValue
   | _ => false
 
 /-- Source expressions contain only stochastic sampling tags. -/
 def sourceForm : Expr → Bool
-  | .bvar _ | .unit | .bool _ | .real _ _ | .nil => true
+  | .bvar _ | .unit | .bool _ | .real _ | .nil => true
   | .lam body | .fix body | .fst body | .snd body
-  | .inl body | .inr body | .promote body | .neg _ body => body.sourceForm
+  | .inl body | .inr body | .promote body | .neg body => body.sourceForm
   | .app left right | .pair left right | .cons left right
-  | .add _ left right | .mul _ left right | .div _ left right | .lt left right =>
+  | .add left right | .mul left right | .div left right | .lt left right =>
       left.sourceForm && right.sourceForm
   | .matchSum scrutinee left right | .ite scrutinee left right =>
       scrutinee.sourceForm && left.sourceForm && right.sourceForm
@@ -71,7 +72,7 @@ def mapVars (replace : Nat → Nat → Expr) (depth : Nat) : Expr → Expr
   | .bvar index => replace depth index
   | .unit => .unit
   | .bool value => .bool value
-  | .real mode value => .real mode value
+  | .real value => .real value
   | .lam body => .lam (body.mapVars replace (depth + 1))
   | .fix body => .fix (body.mapVars replace (depth + 2))
   | .app f x => .app (f.mapVars replace depth) (x.mapVars replace depth)
@@ -91,10 +92,10 @@ def mapVars (replace : Nat → Nat → Expr) (depth : Nat) : Expr → Expr
   | .letE x b => .letE (x.mapVars replace depth)
       (b.mapVars replace (depth + 1))
   | .promote x => .promote (x.mapVars replace depth)
-  | .neg m x => .neg m (x.mapVars replace depth)
-  | .add m l r => .add m (l.mapVars replace depth) (r.mapVars replace depth)
-  | .mul m l r => .mul m (l.mapVars replace depth) (r.mapVars replace depth)
-  | .div m l r => .div m (l.mapVars replace depth) (r.mapVars replace depth)
+  | .neg x => .neg (x.mapVars replace depth)
+  | .add l r => .add (l.mapVars replace depth) (r.mapVars replace depth)
+  | .mul l r => .mul (l.mapVars replace depth) (r.mapVars replace depth)
+  | .div l r => .div (l.mapVars replace depth) (r.mapVars replace depth)
   | .lt l r => .lt (l.mapVars replace depth) (r.mapVars replace depth)
   | .sample m op affine general => .sample m op
       (affine.map (mapVars replace depth)) (general.map (mapVars replace depth))
@@ -115,7 +116,7 @@ def determinize : Expr → Expr
   | .bvar index => .bvar index
   | .unit => .unit
   | .bool value => .bool value
-  | .real mode value => .real mode value
+  | .real value => .real value
   | .lam body => .lam body.determinize
   | .fix body => .fix body.determinize
   | .app function argument => .app function.determinize argument.determinize
@@ -134,10 +135,10 @@ def determinize : Expr → Expr
       .ite condition.determinize thenBranch.determinize elseBranch.determinize
   | .letE value body => .letE value.determinize body.determinize
   | .promote body => .promote body.determinize
-  | .neg mode body => .neg mode body.determinize
-  | .add mode left right => .add mode left.determinize right.determinize
-  | .mul mode left right => .mul mode left.determinize right.determinize
-  | .div mode left right => .div mode left.determinize right.determinize
+  | .neg body => .neg body.determinize
+  | .add left right => .add left.determinize right.determinize
+  | .mul left right => .mul left.determinize right.determinize
+  | .div left right => .div left.determinize right.determinize
   | .lt left right => .lt left.determinize right.determinize
   | .sample .E (.stochastic op) affine general =>
       .sample .E (.mean op) (affine.map determinize) (general.map determinize)
@@ -156,7 +157,7 @@ inductive Typed : List Ty → Expr → Ty → Prop
   | bvar : HasVar context index ty → Typed context (.bvar index) ty
   | unit : Typed context .unit .unit
   | bool : Typed context (.bool value) .bool
-  | real : Typed context (.real mode value) (.float mode)
+  | real : Typed context (.real value) (.float mode)
   | lam : Typed (argument :: context) body result →
       Typed context (.lam body) (.arr argument result)
   | fix : Typed (argument :: .arr argument result :: context) body result →
@@ -185,13 +186,13 @@ inductive Typed : List Ty → Expr → Ty → Prop
   | letE : Typed context value valueTy → Typed (valueTy :: context) body result →
       Typed context (.letE value body) result
   | promote : Typed context value (.float .G) → Typed context (.promote value) (.float .E)
-  | neg : Typed context value (.float mode) → Typed context (.neg mode value) (.float mode)
+  | neg : Typed context value (.float mode) → Typed context (.neg value) (.float mode)
   | add : Typed context left (.float mode) → Typed context right (.float mode) →
-      Typed context (.add mode left right) (.float mode)
+      Typed context (.add left right) (.float mode)
   | mul : Typed context left (.float .G) → Typed context right (.float mode) →
-      Typed context (.mul mode left right) (.float mode)
+      Typed context (.mul left right) (.float mode)
   | div : Typed context left (.float mode) → Typed context right (.float .G) →
-      Typed context (.div mode left right) (.float mode)
+      Typed context (.div left right) (.float mode)
   | lt : Typed context left (.float .G) → Typed context right (.float .G) →
       Typed context (.lt left right) .bool
   | sample (op : Tag) :

@@ -29,36 +29,21 @@ noncomputable def Action.measure : Action → Measure Expr
 noncomputable def stepMeasure (expression : Expr) : Measure Expr :=
   (reduce expression).measure
 
-@[match_pattern] abbrev Skeleton.real (mode : Mode) : Skeleton := Expr.real mode ()
+@[match_pattern] abbrev Skeleton.real : Skeleton := Expr.real ()
 
 namespace Expr
 
 def realArity {Literal : Type} : Expr Literal → Nat
-  | .real _ _ => 1
+  | .real _ => 1
   | .lam x | .fix x | .fst x | .snd x | .inl x
-  | .inr x | .promote x | .neg _ x => x.realArity
-  | .app l r | .pair l r | .cons l r | .add _ l r | .mul _ l r
-  | .div _ l r | .lt l r => l.realArity + r.realArity
+  | .inr x | .promote x | .neg x => x.realArity
+  | .app l r | .pair l r | .cons l r | .add l r | .mul l r
+  | .div l r | .lt l r => l.realArity + r.realArity
   | .matchSum x l r | .ite x l r => x.realArity + l.realArity + r.realArity
   | .matchList x n c => x.realArity + n.realArity + c.realArity
   | .letE x b => x.realArity + b.realArity
   | .sample _ _ affine general => (affine.map realArity).sum + (general.map realArity).sum
   | _ => 0
-
-/-- Modes of real coordinates in structural traversal order. -/
-def coordinateModes {Literal : Type} : Expr Literal → List Mode
-  | .real mode _ => [mode]
-  | .lam x | .fix x | .fst x | .snd x | .inl x
-  | .inr x | .promote x | .neg _ x => x.coordinateModes
-  | .app l r | .pair l r | .cons l r | .add _ l r | .mul _ l r
-  | .div _ l r | .lt l r => l.coordinateModes ++ r.coordinateModes
-  | .matchSum x l r | .ite x l r =>
-      x.coordinateModes ++ l.coordinateModes ++ r.coordinateModes
-  | .matchList x n c => x.coordinateModes ++ n.coordinateModes ++ c.coordinateModes
-  | .letE x b => x.coordinateModes ++ b.coordinateModes
-  | .sample _ _ affine general =>
-      affine.flatMap coordinateModes ++ general.flatMap coordinateModes
-  | _ => []
 
 end Expr
 
@@ -135,7 +120,7 @@ noncomputable def nStepMeasure (stepKernel : StepKernel) : Nat → Expr → Meas
 /-- Output that terminates for the first time at exactly this reduction depth. -/
 noncomputable def exactOutputMeasure (stepKernel : StepKernel) :
     Nat → Expr → Measure ℝ
-  | 0, .real .E value => Measure.dirac value
+  | 0, .real value => Measure.dirac value
   | 0, _ => 0
   | fuel + 1, expression =>
       if expression.isValue then 0

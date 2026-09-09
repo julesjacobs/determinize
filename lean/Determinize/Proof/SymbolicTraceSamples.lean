@@ -21,7 +21,7 @@ theorem concrete_sampleE (laws : PrimitiveLaws)
   rw [actionEq] at actionTyped
   rcases SymbolicAction.wellTyped_sampleE_iff.mp actionTyped with ⟨affineLength, generalLength, _⟩
 
-  rw [← symbolicReduce_realize laws typed typed.gconstant environment, actionEq]
+  rw [← symbolicReduce_realize laws typed environment, actionEq]
   simp only [Symbolic.AffineExpr.SymbolicAction.realize]
   congr 1
   classical
@@ -58,7 +58,7 @@ theorem concrete_target_sampleE (laws : PrimitiveLaws)
   rw [actionEq] at actionTyped
   rcases SymbolicAction.wellTyped_sampleE_iff.mp actionTyped with ⟨affineLength, generalLength, _⟩
 
-  rw [← symbolicReduce_targetRealize laws typed typed.gconstant mean, actionEq]
+  rw [← symbolicReduce_targetRealize laws typed mean, actionEq]
   simp only [targetRealize]
   congr 1
   classical

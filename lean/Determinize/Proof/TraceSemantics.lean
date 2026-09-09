@@ -210,7 +210,6 @@ theorem exactKernel_apply (depth : Nat) (expression : Expr) :
       rw [Kernel.piecewise_apply]
       cases expression <;> try simp [terminalFloatSet, exactMeasure,
         terminalFloatValue, Kernel.deterministic_apply]
-      case real mode value => cases mode <;> simp [exactMeasure]
   | succ depth ih =>
       unfold exactKernel SFiniteKernel.piecewise SFiniteKernel.zero
       rw [Kernel.piecewise_apply]
@@ -244,14 +243,11 @@ theorem exact_length (depth : Nat) (expression : Expr) :
   induction depth generalizing expression with
   | zero =>
       cases expression <;> try (solve | simp [exactMeasure])
-      case real mode value =>
-        cases mode with
-        | G => simp [exactMeasure]
-        | E =>
-            change ∀ᵐ point : Output ∂Measure.dirac ([], value), point.1.length = 0
-            have measurableLength : MeasurableSet {point : Output | point.1.length = 0} :=
-              measurableSet_eq_fun (trace_length_measurable.comp measurable_fst) measurable_const
-            exact (ae_dirac_iff measurableLength).2 rfl
+      case real value =>
+        change ∀ᵐ point : Output ∂Measure.dirac ([], value), point.1.length = 0
+        have measurableLength : MeasurableSet {point : Output | point.1.length = 0} :=
+          measurableSet_eq_fun (trace_length_measurable.comp measurable_fst) measurable_const
+        exact (ae_dirac_iff measurableLength).2 rfl
   | succ depth ih =>
       by_cases value : expression.isValue = true
       · simp [exactMeasure, value]
@@ -271,8 +267,7 @@ theorem exact_erasure (step : StepKernel) (depth : Nat) (expression : Expr) :
   induction depth generalizing expression with
   | zero =>
       cases expression <;> try simp [exactMeasure, exactOutputMeasure]
-      case real mode value =>
-        cases mode <;> simp [exactMeasure, exactOutputMeasure, Measure.map_dirac' measurable_snd]
+      case real value => simp [Measure.map_dirac' measurable_snd]
   | succ depth ih =>
       by_cases value : expression.isValue = true
       · simp [exactMeasure, exactOutputMeasure, value]

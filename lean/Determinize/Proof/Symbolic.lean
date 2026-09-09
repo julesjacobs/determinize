@@ -27,7 +27,7 @@ namespace Symbolic
 
 inductive AffineExpr (sampleCount : Nat) where
   | bvar (index : Nat) | unit | bool (value : Bool)
-  | real (mode : Mode) (value : Affine sampleCount)
+  | real (value : Affine sampleCount)
   | lam (body : AffineExpr sampleCount)
   | fix (body : AffineExpr sampleCount)
   | app (function argument : AffineExpr sampleCount)
@@ -42,10 +42,10 @@ inductive AffineExpr (sampleCount : Nat) where
   | ite (condition thenBranch elseBranch : AffineExpr sampleCount)
   | letE (value body : AffineExpr sampleCount)
   | promote (body : AffineExpr sampleCount)
-  | neg (mode : Mode) (body : AffineExpr sampleCount)
-  | add (mode : Mode) (left right : AffineExpr sampleCount)
-  | mul (mode : Mode) (left right : AffineExpr sampleCount)
-  | div (mode : Mode) (left right : AffineExpr sampleCount)
+  | neg (body : AffineExpr sampleCount)
+  | add (left right : AffineExpr sampleCount)
+  | mul (left right : AffineExpr sampleCount)
+  | div (left right : AffineExpr sampleCount)
   | lt (left right : AffineExpr sampleCount)
   | sample (mode : Mode) (op : Tag)
       (affineArgs generalArgs : List (AffineExpr sampleCount))
@@ -56,7 +56,7 @@ def realize (environment : Env sampleCount) : AffineExpr sampleCount → Expr
   | .bvar index => .bvar index
   | .unit => .unit
   | .bool value => .bool value
-  | .real mode value => .real mode (value.eval environment)
+  | .real value => .real (value.eval environment)
   | .lam body => .lam (body.realize environment)
   | .fix body =>
       .fix (body.realize environment)
@@ -82,13 +82,13 @@ def realize (environment : Env sampleCount) : AffineExpr sampleCount → Expr
   | .letE value body =>
       .letE (value.realize environment) (body.realize environment)
   | .promote body => .promote (body.realize environment)
-  | .neg mode body => .neg mode (body.realize environment)
-  | .add mode left right =>
-      .add mode (left.realize environment) (right.realize environment)
-  | .mul mode left right =>
-      .mul mode (left.realize environment) (right.realize environment)
-  | .div mode left right =>
-      .div mode (left.realize environment) (right.realize environment)
+  | .neg body => .neg (body.realize environment)
+  | .add left right =>
+      .add (left.realize environment) (right.realize environment)
+  | .mul left right =>
+      .mul (left.realize environment) (right.realize environment)
+  | .div left right =>
+      .div (left.realize environment) (right.realize environment)
   | .lt left right => .lt (left.realize environment) (right.realize environment)
   | .sample mode op affine general => .sample mode op
       (affine.map (realize environment)) (general.map (realize environment))
@@ -97,7 +97,7 @@ def skeleton : AffineExpr sampleCount → Skeleton
   | .bvar index => .bvar index
   | .unit => .unit
   | .bool value => .bool value
-  | .real mode _ => .real mode
+  | .real _ => .real
   | .lam body => .lam body.skeleton
   | .fix body => .fix body.skeleton
   | .app function argument => .app function.skeleton argument.skeleton
@@ -116,20 +116,20 @@ def skeleton : AffineExpr sampleCount → Skeleton
       .ite condition.skeleton thenBranch.skeleton elseBranch.skeleton
   | .letE value body => .letE value.skeleton body.skeleton
   | .promote body => .promote body.skeleton
-  | .neg mode body => .neg mode body.skeleton
-  | .add mode left right => .add mode left.skeleton right.skeleton
-  | .mul mode left right => .mul mode left.skeleton right.skeleton
-  | .div mode left right => .div mode left.skeleton right.skeleton
+  | .neg body => .neg body.skeleton
+  | .add left right => .add left.skeleton right.skeleton
+  | .mul left right => .mul left.skeleton right.skeleton
+  | .div left right => .div left.skeleton right.skeleton
   | .lt left right => .lt left.skeleton right.skeleton
   | .sample mode op affine general =>
       .sample mode op (affine.map skeleton) (general.map skeleton)
 
 def coordinates : AffineExpr sampleCount → List (Affine sampleCount)
-  | .real _ value => [value]
+  | .real value => [value]
   | .lam body | .fix body | .fst body | .snd body
-  | .inl body | .inr body | .promote body | .neg _ body => body.coordinates
+  | .inl body | .inr body | .promote body | .neg body => body.coordinates
   | .app left right | .pair left right | .cons left right
-  | .add _ left right | .mul _ left right | .div _ left right | .lt left right =>
+  | .add left right | .mul left right | .div left right | .lt left right =>
       left.coordinates ++ right.coordinates
   | .matchSum scrutinee left right | .ite scrutinee left right =>
       scrutinee.coordinates ++ left.coordinates ++ right.coordinates
@@ -144,7 +144,7 @@ def ofExpr : Expr → AffineExpr 0
   | .bvar index => .bvar index
   | .unit => .unit
   | .bool value => .bool value
-  | .real mode value => .real mode (value, Fin.elim0)
+  | .real value => .real (value, Fin.elim0)
   | .lam body => .lam (ofExpr body)
   | .fix body => .fix (ofExpr body)
   | .app function argument => .app (ofExpr function) (ofExpr argument)
@@ -163,10 +163,10 @@ def ofExpr : Expr → AffineExpr 0
       .ite (ofExpr condition) (ofExpr thenBranch) (ofExpr elseBranch)
   | .letE value body => .letE (ofExpr value) (ofExpr body)
   | .promote body => .promote (ofExpr body)
-  | .neg mode body => .neg mode (ofExpr body)
-  | .add mode left right => .add mode (ofExpr left) (ofExpr right)
-  | .mul mode left right => .mul mode (ofExpr left) (ofExpr right)
-  | .div mode left right => .div mode (ofExpr left) (ofExpr right)
+  | .neg body => .neg (ofExpr body)
+  | .add left right => .add (ofExpr left) (ofExpr right)
+  | .mul left right => .mul (ofExpr left) (ofExpr right)
+  | .div left right => .div (ofExpr left) (ofExpr right)
   | .lt left right => .lt (ofExpr left) (ofExpr right)
   | .sample mode op affine general =>
       .sample mode op (affine.map ofExpr) (general.map ofExpr)
@@ -175,7 +175,7 @@ def mapAffine (transform : Affine n → Affine m) : AffineExpr n → AffineExpr 
   | .bvar index => .bvar index
   | .unit => .unit
   | .bool value => .bool value
-  | .real mode value => .real mode (transform value)
+  | .real value => .real (transform value)
   | .lam body => .lam (body.mapAffine transform)
   | .fix body =>
       .fix (body.mapAffine transform)
@@ -201,13 +201,13 @@ def mapAffine (transform : Affine n → Affine m) : AffineExpr n → AffineExpr 
   | .letE value body =>
       .letE (value.mapAffine transform) (body.mapAffine transform)
   | .promote body => .promote (body.mapAffine transform)
-  | .neg mode body => .neg mode (body.mapAffine transform)
-  | .add mode left right =>
-      .add mode (left.mapAffine transform) (right.mapAffine transform)
-  | .mul mode left right =>
-      .mul mode (left.mapAffine transform) (right.mapAffine transform)
-  | .div mode left right =>
-      .div mode (left.mapAffine transform) (right.mapAffine transform)
+  | .neg body => .neg (body.mapAffine transform)
+  | .add left right =>
+      .add (left.mapAffine transform) (right.mapAffine transform)
+  | .mul left right =>
+      .mul (left.mapAffine transform) (right.mapAffine transform)
+  | .div left right =>
+      .div (left.mapAffine transform) (right.mapAffine transform)
   | .lt left right => .lt (left.mapAffine transform) (right.mapAffine transform)
   | .sample mode op affine general => .sample mode op
       (affine.map (mapAffine transform)) (general.map (mapAffine transform))
@@ -231,9 +231,9 @@ def SourceTags : AffineExpr sampleCount → Prop
       (∀ child ∈ affine, child.SourceTags) ∧
       ∀ child ∈ general, child.SourceTags
   | .lam body | .fix body | .fst body | .snd body
-  | .inl body | .inr body | .promote body | .neg _ body => body.SourceTags
+  | .inl body | .inr body | .promote body | .neg body => body.SourceTags
   | .app left right | .pair left right | .cons left right
-  | .add _ left right | .mul _ left right | .div _ left right | .lt left right =>
+  | .add left right | .mul left right | .div left right | .lt left right =>
       left.SourceTags ∧ right.SourceTags
   | .matchSum scrutinee left right | .ite scrutinee left right =>
       scrutinee.SourceTags ∧ left.SourceTags ∧ right.SourceTags
@@ -242,29 +242,12 @@ def SourceTags : AffineExpr sampleCount → Prop
   | .letE value body => value.SourceTags ∧ body.SourceTags
   | _ => True
 
-def GConstant : AffineExpr sampleCount → Prop
-  | .real .G (_, coefficients) => coefficients = 0
-  | .real .E _ => True
-  | .sample _ _ affine general =>
-      (∀ child ∈ affine, child.GConstant) ∧ ∀ child ∈ general, child.GConstant
-  | .lam body | .fix body | .fst body | .snd body
-  | .inl body | .inr body | .promote body | .neg _ body => body.GConstant
-  | .app left right | .pair left right | .cons left right
-  | .add _ left right | .mul _ left right | .div _ left right | .lt left right =>
-      left.GConstant ∧ right.GConstant
-  | .matchSum scrutinee left right | .ite scrutinee left right =>
-      scrutinee.GConstant ∧ left.GConstant ∧ right.GConstant
-  | .matchList scrutinee nilCase consCase =>
-      scrutinee.GConstant ∧ nilCase.GConstant ∧ consCase.GConstant
-  | .letE value body => value.GConstant ∧ body.GConstant
-  | _ => True
-
 inductive WellTyped : List Ty → AffineExpr sampleCount → Ty → Prop
   | bvar : Determinize.Statement.Paper.HasVar context index ty → WellTyped context (.bvar index) ty
   | unit : WellTyped context .unit .unit
   | bool : WellTyped context (.bool value) .bool
-  | realE : WellTyped context (.real .E value) (.float .E)
-  | realG : value.2 = 0 → WellTyped context (.real .G value) (.float .G)
+  | realE : WellTyped context (.real value) (.float .E)
+  | realG : value.2 = 0 → WellTyped context (.real value) (.float .G)
   | lam : WellTyped (argument :: context) body result →
       WellTyped context (.lam body) (.arr argument result)
   | fix : WellTyped (argument :: .arr argument result :: context) body result →
@@ -299,21 +282,21 @@ inductive WellTyped : List Ty → AffineExpr sampleCount → Ty → Prop
   | promote : WellTyped context value (.float .G) →
       WellTyped context (.promote value) (.float .E)
   | negE : WellTyped context value (.float .E) →
-      WellTyped context (.neg .E value) (.float .E)
+      WellTyped context (.neg value) (.float .E)
   | negG : WellTyped context value (.float .G) →
-      WellTyped context (.neg .G value) (.float .G)
+      WellTyped context (.neg value) (.float .G)
   | addE : WellTyped context left (.float .E) → WellTyped context right (.float .E) →
-      WellTyped context (.add .E left right) (.float .E)
+      WellTyped context (.add left right) (.float .E)
   | addG : WellTyped context left (.float .G) → WellTyped context right (.float .G) →
-      WellTyped context (.add .G left right) (.float .G)
+      WellTyped context (.add left right) (.float .G)
   | mulGE : WellTyped context left (.float .G) → WellTyped context right (.float .E) →
-      WellTyped context (.mul .E left right) (.float .E)
+      WellTyped context (.mul left right) (.float .E)
   | mulGG : WellTyped context left (.float .G) → WellTyped context right (.float .G) →
-      WellTyped context (.mul .G left right) (.float .G)
+      WellTyped context (.mul left right) (.float .G)
   | divEG : WellTyped context left (.float .E) → WellTyped context right (.float .G) →
-      WellTyped context (.div .E left right) (.float .E)
+      WellTyped context (.div left right) (.float .E)
   | divGG : WellTyped context left (.float .G) → WellTyped context right (.float .G) →
-      WellTyped context (.div .G left right) (.float .G)
+      WellTyped context (.div left right) (.float .G)
   | lt : WellTyped context left (.float .G) → WellTyped context right (.float .G) →
       WellTyped context (.lt left right) .bool
   | sampleE (op : Determinize.Statement.Paper.Op) :
@@ -394,16 +377,6 @@ theorem WellTyped.sourceTags (typed : WellTyped context expression ty) :
     expression.SourceTags := by
   induction typed <;> simp_all [SourceTags]
 
-theorem WellTyped.gconstant (typed : WellTyped context expression ty) :
-    expression.GConstant := by
-  induction typed
-  case realG =>
-    rename_i value _ zero
-    rcases value with ⟨constant, coefficients⟩
-    unfold GConstant
-    exact zero
-  all_goals try simp only [GConstant] at * <;> aesop
-
 theorem WellTyped.mapAffine {n m : Nat} {expression : AffineExpr n}
     (typed : WellTyped context expression ty)
     (transform : Affine n → Affine m)
@@ -449,7 +422,7 @@ def shift (amount cutoff : Nat) : AffineExpr sampleCount → AffineExpr sampleCo
   | .bvar index => .bvar (if cutoff ≤ index then index + amount else index)
   | .unit => .unit
   | .bool value => .bool value
-  | .real mode value => .real mode value
+  | .real value => .real value
   | .lam body => .lam (body.shift amount (cutoff + 1))
   | .fix body => .fix (body.shift amount (cutoff + 2))
   | .app f x => .app (f.shift amount cutoff) (x.shift amount cutoff)
@@ -469,10 +442,10 @@ def shift (amount cutoff : Nat) : AffineExpr sampleCount → AffineExpr sampleCo
   | .letE x b => .letE (x.shift amount cutoff)
       (b.shift amount (cutoff + 1))
   | .promote x => .promote (x.shift amount cutoff)
-  | .neg m x => .neg m (x.shift amount cutoff)
-  | .add m l r => .add m (l.shift amount cutoff) (r.shift amount cutoff)
-  | .mul m l r => .mul m (l.shift amount cutoff) (r.shift amount cutoff)
-  | .div m l r => .div m (l.shift amount cutoff) (r.shift amount cutoff)
+  | .neg x => .neg (x.shift amount cutoff)
+  | .add l r => .add (l.shift amount cutoff) (r.shift amount cutoff)
+  | .mul l r => .mul (l.shift amount cutoff) (r.shift amount cutoff)
+  | .div l r => .div (l.shift amount cutoff) (r.shift amount cutoff)
   | .lt l r => .lt (l.shift amount cutoff) (r.shift amount cutoff)
   | .sample m op affine general => .sample m op
       (affine.map (shift amount cutoff)) (general.map (shift amount cutoff))
@@ -483,7 +456,7 @@ def substAt (depth : Nat) (replacement : AffineExpr sampleCount)
       else .bvar (if depth < index then index - 1 else index)
   | .unit => .unit
   | .bool value => .bool value
-  | .real mode value => .real mode value
+  | .real value => .real value
   | .lam body => .lam (substAt (depth + 1) replacement body)
   | .fix body => .fix (substAt (depth + 2) replacement body)
   | .app f x => .app (substAt depth replacement f) (substAt depth replacement x)
@@ -503,10 +476,10 @@ def substAt (depth : Nat) (replacement : AffineExpr sampleCount)
   | .letE x b => .letE (substAt depth replacement x)
       (substAt (depth + 1) replacement b)
   | .promote x => .promote (substAt depth replacement x)
-  | .neg m x => .neg m (substAt depth replacement x)
-  | .add m l r => .add m (substAt depth replacement l) (substAt depth replacement r)
-  | .mul m l r => .mul m (substAt depth replacement l) (substAt depth replacement r)
-  | .div m l r => .div m (substAt depth replacement l) (substAt depth replacement r)
+  | .neg x => .neg (substAt depth replacement x)
+  | .add l r => .add (substAt depth replacement l) (substAt depth replacement r)
+  | .mul l r => .mul (substAt depth replacement l) (substAt depth replacement r)
+  | .div l r => .div (substAt depth replacement l) (substAt depth replacement r)
   | .lt l r => .lt (substAt depth replacement l) (substAt depth replacement r)
   | .sample m op affine general => .sample m op
       (affine.map (substAt depth replacement)) (general.map (substAt depth replacement))
@@ -1011,7 +984,7 @@ theorem realize_mapAffine (expression : AffineExpr n) (transform : Affine n → 
           intro child member
           apply recurse child
           exact Nat.lt_trans (List.sizeOf_lt_of_mem member) (by simp_wf <;> omega)
-    | real mode value => simp only [mapAffine, realize, eval_transform]
+    | real value => simp only [mapAffine, realize, eval_transform]
     | _ =>
         simp (disch := simp_wf) only [mapAffine, realize, recurse]
         all_goals repeat' first | rfl | rw [recurse _ (by simp_wf <;> omega)]
@@ -1045,14 +1018,14 @@ set_option maxHeartbeats 800000 in
           intro child member
           apply recurse child
           exact Nat.lt_trans (List.sizeOf_lt_of_mem member) (by simp_wf <;> omega)
-    | real mode value =>
+    | real value =>
         simp [ofExpr, realize, Symbolic.Affine.eval]
     | _ =>
         simp (disch := simp_wf) only [ofExpr, realize, recurse]
         all_goals repeat' first | rfl | rw [recurse _ (by simp_wf <;> omega)]
 
 def isValue : AffineExpr n → Bool
-  | .unit | .bool _ | .real _ _ | .lam _ | .fix _ | .nil => true
+  | .unit | .bool _ | .real _ | .lam _ | .fix _ | .nil => true
   | .pair left right | .cons left right => left.isValue && right.isValue
   | .inl value | .inr value => value.isValue
   | _ => false
@@ -1069,11 +1042,11 @@ def isValue : AffineExpr n → Bool
     all_goals repeat' first | rfl | rw [recurse _ (by simp_wf <;> omega)]
 
 def affineValue? : AffineExpr n → Option (Affine n)
-  | .real _ value => some value
+  | .real value => some value
   | _ => none
 
 noncomputable def constantValue? : AffineExpr n → Option ℝ
-  | .real _ (constant, coefficients) => if coefficients = 0 then some constant else none
+  | .real (constant, coefficients) => if coefficients = 0 then some constant else none
   | _ => none
 
 theorem wellTyped_arr_value (typed : WellTyped context expression (.arr argument result))
@@ -1164,16 +1137,22 @@ theorem wellTyped_bool_value (typed : WellTyped context expression .bool)
 
 theorem wellTyped_real_value (typed : WellTyped context expression (.float mode))
     (value : expression.isValue = true) :
-    ∃ coordinate, expression = .real mode coordinate := by
+    ∃ coordinate, expression = .real coordinate := by
   cases typed <;> simp_all [isValue]
+
+/-- A general-mode literal has no coefficients on the expectation-mode samples. -/
+theorem wellTyped_realG_coefficients
+    (typed : WellTyped context (.real value) (.float .G)) : value.2 = 0 := by
+  cases typed
+  assumption
 
 theorem constantValue?_eq_some_of_wellTypedG
     (typed : WellTyped context expression (.float .G))
-    (value : expression.isValue = true) (constant : expression.GConstant) :
+    (value : expression.isValue = true) :
     ∃ result, constantValue? expression = some result := by
   obtain ⟨affine, rfl⟩ := wellTyped_real_value typed value
   rcases affine with ⟨constantTerm, coefficients⟩
-  simp only [GConstant] at constant
+  have constant : coefficients = 0 := wellTyped_realG_coefficients typed
   exact ⟨constantTerm, by simp [constantValue?, constant]⟩
 
 def allAffineValues? (expressions : List (AffineExpr n)) : Option (List (Affine n)) :=
@@ -1246,7 +1225,7 @@ theorem allRealValues_realize_of_allAffineValues
                 simpa [allAffineValues?, hhead, htail] using found.symm
               subst values
               cases head <;> simp [affineValue?] at hhead
-              rename_i mode actual
+              rename_i actual
               cases hhead
               simp only [List.map_cons, realize, allRealValues?, Option.some.injEq,
                 List.cons.injEq, true_and]
@@ -1274,7 +1253,7 @@ theorem allRealValues_realize_of_allConstantValues
                 simpa [allConstantValues?, hhead, htail] using found.symm
               subst values
               cases head <;> simp [constantValue?] at hhead
-              rename_i mode actual
+              rename_i actual
               rcases actual with ⟨constant, coefficients⟩
               rcases hhead with ⟨zero, rfl⟩
               change coefficients = 0 at zero
@@ -1417,18 +1396,16 @@ theorem allConstantValues_of_wellTypedG_values
     {n : Nat} {expressions : List (AffineExpr n)} {context : List Ty}
     (typed : ∀ expression ∈ expressions,
       WellTyped context expression (.float .G))
-    (values : ∀ expression ∈ expressions, expression.isValue = true)
-    (constant : ∀ expression ∈ expressions, expression.GConstant) :
+    (values : ∀ expression ∈ expressions, expression.isValue = true) :
     ∃ coordinates, allConstantValues? expressions = some coordinates := by
   induction expressions with
   | nil => exact ⟨[], rfl⟩
   | cons head tail ih =>
       obtain ⟨coordinate, equation⟩ := constantValue?_eq_some_of_wellTypedG
-        (typed head (by simp)) (values head (by simp)) (constant head (by simp))
+        (typed head (by simp)) (values head (by simp))
       obtain ⟨coordinates, tailEquation⟩ := ih
         (fun expression member => typed expression (by simp [member]))
         (fun expression member => values expression (by simp [member]))
-        (fun expression member => constant expression (by simp [member]))
       change List.mapM constantValue? tail = some coordinates at tailEquation
       exact ⟨coordinate :: coordinates,
         by simp [allConstantValues?, equation, tailEquation]⟩
@@ -1552,12 +1529,6 @@ inductive SymbolicAction
 
 namespace SymbolicAction
 
-def GConstant : SymbolicAction laws n → Prop
-  | .next expression => expression.GConstant
-  | .sampleE _ _ _ continuation => continuation.GConstant
-  | .sampleG _ _ continuation => ∀ value, (continuation value).GConstant
-  | .stuck => True
-
 noncomputable def realize (environment : Env n) : SymbolicAction laws n → Action
   | .next expression => .next (expression.realize environment)
   | .sampleE op affine general continuation =>
@@ -1646,19 +1617,13 @@ theorem WellTyped.wrap (typed : WellTyped childTy action)
   | sampleE ha hg typed => exact .sampleE ha hg (liftedTyped _ typed)
   | sampleG typed => exact .sampleG fun value => contextTyped _ (typed value)
 
-theorem WellTyped.gconstant (typed : WellTyped ty action) : action.GConstant := by
-  cases typed with
-  | next typed => exact typed.gconstant
-  | sampleE ha hg typed => exact typed.gconstant
-  | sampleG typed => exact fun value => (typed value).gconstant
-
 end SymbolicAction
 
 noncomputable def symbolicReduce
     (laws : Determinize.Proof.Paper.PrimitiveLaws) :
     AffineExpr n → SymbolicAction laws n
   | expression@(.bvar _) => .stuck
-  | expression@(.unit) | expression@(.bool _) | expression@(.real _ _)
+  | expression@(.unit) | expression@(.bool _) | expression@(.real _)
   | expression@(.lam _) | expression@(.fix _) | expression@.nil =>
       .next expression
   | expression@(.pair left right) =>
@@ -1733,40 +1698,40 @@ noncomputable def symbolicReduce
         (fun next => .letE next body.weakenSamples)
   | .promote body =>
       if body.isValue then match body with
-        | .real .G value => .next (.real .E value) | _ => .stuck
+        | .real value => .next (.real value) | _ => .stuck
       else (symbolicReduce laws body).wrap .promote .promote
-  | .neg mode body =>
+  | .neg body =>
       if body.isValue then match body with
-        | .real _ value => .next (.real mode (Affine.neg value)) | _ => .stuck
-      else (symbolicReduce laws body).wrap (.neg mode) (.neg mode)
-  | .add mode left right =>
+        | .real value => .next (.real (Affine.neg value)) | _ => .stuck
+      else (symbolicReduce laws body).wrap .neg .neg
+  | .add left right =>
       if left.isValue then
         if right.isValue then match left.affineValue?, right.affineValue? with
-          | some x, some y => .next (.real mode (Affine.add x y)) | _, _ => .stuck
-        else (symbolicReduce laws right).wrap (.add mode left)
-          (.add mode left.weakenSamples)
-      else (symbolicReduce laws left).wrap (fun next => .add mode next right)
-        (fun next => .add mode next right.weakenSamples)
-  | .mul mode left right =>
+          | some x, some y => .next (.real (Affine.add x y)) | _, _ => .stuck
+        else (symbolicReduce laws right).wrap (.add left)
+          (.add left.weakenSamples)
+      else (symbolicReduce laws left).wrap (fun next => .add next right)
+        (fun next => .add next right.weakenSamples)
+  | .mul left right =>
       if left.isValue then
         if right.isValue then match left.affineValue?, right.affineValue? with
           | some x, some y => match Affine.mul? x y with
-            | some result => .next (.real mode result) | none => .stuck
+            | some result => .next (.real result) | none => .stuck
           | _, _ => .stuck
-        else (symbolicReduce laws right).wrap (.mul mode left)
-          (.mul mode left.weakenSamples)
-      else (symbolicReduce laws left).wrap (fun next => .mul mode next right)
-        (fun next => .mul mode next right.weakenSamples)
-  | .div mode left right =>
+        else (symbolicReduce laws right).wrap (.mul left)
+          (.mul left.weakenSamples)
+      else (symbolicReduce laws left).wrap (fun next => .mul next right)
+        (fun next => .mul next right.weakenSamples)
+  | .div left right =>
       if left.isValue then
         if right.isValue then match left.affineValue?, right.affineValue? with
           | some x, some y => match Affine.div? x y with
-            | some result => .next (.real mode result) | none => .stuck
+            | some result => .next (.real result) | none => .stuck
           | _, _ => .stuck
-        else (symbolicReduce laws right).wrap (.div mode left)
-          (.div mode left.weakenSamples)
-      else (symbolicReduce laws left).wrap (fun next => .div mode next right)
-        (fun next => .div mode next right.weakenSamples)
+        else (symbolicReduce laws right).wrap (.div left)
+          (.div left.weakenSamples)
+      else (symbolicReduce laws left).wrap (fun next => .div next right)
+        (fun next => .div next right.weakenSamples)
   | .lt left right =>
       if left.isValue then
         if right.isValue then match left.constantValue?, right.constantValue? with
@@ -1790,11 +1755,11 @@ noncomputable def symbolicReduce
                 (front.map weakenSamples ++ next :: suffix.map weakenSamples))
         | none => match mode, op, allAffineValues? affine, allConstantValues? general with
           | .E, .stochastic base, some affineValues, some generalValues =>
-              .sampleE base affineValues generalValues (.real .E (Affine.fresh n))
+              .sampleE base affineValues generalValues (.real (Affine.fresh n))
           | _, _, _, _ => match allConstantValues? affine, allConstantValues? general with
             | some affineValues, some generalValues =>
                 .sampleG (mode, op) (primitiveFiber op affineValues generalValues)
-                  (fun value => .real mode (value, 0))
+                  (fun value => .real (value, 0))
             | _, _ => .stuck
 termination_by expression => sizeOf expression
 decreasing_by
@@ -1876,7 +1841,7 @@ theorem symbolicReduce_ite_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
 theorem symbolicReduce_promote_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
     (body : AffineExpr n) : symbolicReduce laws (.promote body) =
     if body.isValue then match body with
-      | .real .G value => .next (.real .E value) | _ => .stuck
+      | .real value => .next (.real value) | _ => .stuck
     else (symbolicReduce laws body).wrap .promote .promote := by
   rw [symbolicReduce.eq_def]
 
@@ -1906,11 +1871,11 @@ theorem symbolicReduce_sample_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
                 (front.map weakenSamples ++ next :: suffix.map weakenSamples))
         | none => match mode, op, allAffineValues? affine, allConstantValues? general with
           | .E, .stochastic base, some affineValues, some generalValues =>
-              .sampleE base affineValues generalValues (.real .E (Affine.fresh n))
+              .sampleE base affineValues generalValues (.real (Affine.fresh n))
           | _, _, _, _ => match allConstantValues? affine, allConstantValues? general with
             | some affineValues, some generalValues =>
                 .sampleG (mode, op) (primitiveFiber op affineValues generalValues)
-                  (fun value => .real mode (value, 0))
+                  (fun value => .real (value, 0))
             | _, _ => .stuck := by
   rw [symbolicReduce.eq_def]
 
@@ -1918,7 +1883,6 @@ set_option maxHeartbeats 800000 in
 theorem symbolicReduce_realize
     (laws : Determinize.Proof.Paper.PrimitiveLaws)
     {expression : AffineExpr n} (typed : WellTyped context expression ty)
-    (gconstant : expression.GConstant)
     (environment : Env n) :
     (symbolicReduce laws expression).realize environment =
       reduce (expression.realize environment) := by
@@ -1933,7 +1897,6 @@ theorem symbolicReduce_realize
   | nil => simp [symbolicReduce, SymbolicAction.realize, realize, reduce]
   | pair leftTyped rightTyped ihl ihr =>
       rename_i context' left leftTy right rightTy
-      simp only [GConstant] at gconstant
       rw [symbolicReduce, realize, reduce, realize_isValue]
       by_cases leftValue : left.isValue = true
       · simp only [leftValue, Bool.true_eq, ↓reduceIte]
@@ -1946,7 +1909,7 @@ theorem symbolicReduce_realize
               (left.realize environment) next)
             (context_realize := by intros; simp only [realize])
             (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-            ihr gconstant.2 environment, realize_isValue,
+            ihr environment, realize_isValue,
             if_neg rightValue]
       · simp only [leftValue, Bool.eq_false_of_not_eq_true leftValue,
           Bool.false_eq_true, ↓reduceIte]
@@ -1955,10 +1918,9 @@ theorem symbolicReduce_realize
             next (right.realize environment))
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-          ihl gconstant.1 environment]
+          ihl environment]
   | inl valueTyped ih =>
       rename_i context' value leftTy rightTy
-      simp only [GConstant] at gconstant
       rw [symbolicReduce, realize, reduce, realize_isValue]
       by_cases valueIsValue : value.isValue = true
       · simp [valueIsValue, SymbolicAction.realize, realize]
@@ -1967,10 +1929,9 @@ theorem symbolicReduce_realize
         rw [SymbolicAction.realize_wrap
           (ExprContext := fun next => .inl next)
           (context_realize := by intros; simp only [realize])
-          (lifted_realize := by intros; simp only [realize]), ih gconstant environment]
+          (lifted_realize := by intros; simp only [realize]), ih environment]
   | inr valueTyped ih =>
       rename_i context' value rightTy leftTy
-      simp only [GConstant] at gconstant
       rw [symbolicReduce, realize, reduce, realize_isValue]
       by_cases valueIsValue : value.isValue = true
       · simp [valueIsValue, SymbolicAction.realize, realize]
@@ -1979,10 +1940,9 @@ theorem symbolicReduce_realize
         rw [SymbolicAction.realize_wrap
           (ExprContext := fun next => .inr next)
           (context_realize := by intros; simp only [realize])
-          (lifted_realize := by intros; simp only [realize]), ih gconstant environment]
+          (lifted_realize := by intros; simp only [realize]), ih environment]
   | cons headTyped tailTyped ihh iht =>
       rename_i context' head element tail
-      simp only [GConstant] at gconstant
       rw [symbolicReduce, realize, reduce, realize_isValue]
       by_cases headValue : head.isValue = true
       · simp only [headValue, Bool.true_eq, ↓reduceIte]
@@ -1994,7 +1954,7 @@ theorem symbolicReduce_realize
             (ExprContext := fun next => .cons (head.realize environment) next)
             (context_realize := by intros; simp only [realize])
             (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-            iht gconstant.2 environment, realize_isValue,
+            iht environment, realize_isValue,
             if_neg tailValue]
       · simp only [headValue, Bool.eq_false_of_not_eq_true headValue,
           Bool.false_eq_true, ↓reduceIte]
@@ -2002,10 +1962,9 @@ theorem symbolicReduce_realize
           (ExprContext := fun next => .cons next (tail.realize environment))
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-          ihh gconstant.1 environment]
+          ihh environment]
   | app functionTyped operandTyped ihf iho =>
       rename_i context' function argumentTy result operand
-      simp only [GConstant] at gconstant
       rw [realize, MeasurableActionFamily.reduce_app_eq, realize_isValue]
       by_cases functionValue : function.isValue = true
       · simp only [functionValue, ↓reduceIte]
@@ -2023,7 +1982,7 @@ theorem symbolicReduce_realize
             (ExprContext := fun next => .app (function.realize environment) next)
             (context_realize := by intros; simp only [realize])
             (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-            iho gconstant.2 environment, realize_isValue, if_neg operandValue]
+            iho environment, realize_isValue, if_neg operandValue]
           all_goals simp_all [isValue]
       · rw [symbolicReduce_app_eq]
         simp only [functionValue, Bool.eq_false_of_not_eq_true functionValue,
@@ -2032,11 +1991,10 @@ theorem symbolicReduce_realize
           (ExprContext := fun next => .app next (operand.realize environment))
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-          ihf gconstant.1 environment]
+          ihf environment]
         all_goals simp_all [isValue]
   | fst pairTyped ih =>
       rename_i context' pairValue leftTy rightTy
-      simp only [GConstant] at gconstant
       rw [realize, MeasurableActionFamily.reduce_fst_eq, realize_isValue]
       by_cases pairIsValue : pairValue.isValue = true
       · simp only [pairIsValue, ↓reduceIte]
@@ -2048,11 +2006,10 @@ theorem symbolicReduce_realize
         rw [SymbolicAction.realize_wrap
           (ExprContext := fun next => .fst next)
           (context_realize := by intros; simp only [realize])
-          (lifted_realize := by intros; simp only [realize]), ih gconstant environment]
+          (lifted_realize := by intros; simp only [realize]), ih environment]
         all_goals simp_all [isValue]
   | snd pairTyped ih =>
       rename_i context' pairValue leftTy rightTy
-      simp only [GConstant] at gconstant
       rw [realize, MeasurableActionFamily.reduce_snd_eq, realize_isValue]
       by_cases pairIsValue : pairValue.isValue = true
       · simp only [pairIsValue, ↓reduceIte]
@@ -2064,11 +2021,10 @@ theorem symbolicReduce_realize
         rw [SymbolicAction.realize_wrap
           (ExprContext := fun next => .snd next)
           (context_realize := by intros; simp only [realize])
-          (lifted_realize := by intros; simp only [realize]), ih gconstant environment]
+          (lifted_realize := by intros; simp only [realize]), ih environment]
         all_goals simp_all [isValue]
   | matchSum scrutineeTyped leftTyped rightTyped ihs ihl ihr =>
       rename_i context' scrutinee leftTy rightTy left result right
-      simp only [GConstant] at gconstant
       rw [realize, MeasurableActionFamily.reduce_matchSum_eq, realize_isValue]
       by_cases scrutineeValue : scrutinee.isValue = true
       · simp only [scrutineeValue, ↓reduceIte]
@@ -2086,11 +2042,10 @@ theorem symbolicReduce_realize
             (left.realize environment) (right.realize environment))
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-          ihs gconstant.1 environment]
+          ihs environment]
         all_goals simp_all [isValue]
   | matchList scrutineeTyped nilTyped consTyped ihs ihn ihc =>
       rename_i context' scrutinee element nilCase result consCase
-      simp only [GConstant] at gconstant
       rw [realize, MeasurableActionFamily.reduce_matchList_eq, realize_isValue]
       by_cases scrutineeValue : scrutinee.isValue = true
       · simp only [scrutineeValue, ↓reduceIte]
@@ -2109,11 +2064,10 @@ theorem symbolicReduce_realize
             (nilCase.realize environment) (consCase.realize environment))
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-          ihs gconstant.1 environment]
+          ihs environment]
         all_goals simp_all [isValue]
   | ite conditionTyped thenTyped elseTyped ihc iht ihe =>
       rename_i context' condition thenBranch result elseBranch
-      simp only [GConstant] at gconstant
       rw [realize, MeasurableActionFamily.reduce_ite_eq, realize_isValue]
       by_cases conditionValue : condition.isValue = true
       · simp only [conditionValue, ↓reduceIte]
@@ -2128,11 +2082,10 @@ theorem symbolicReduce_realize
             (thenBranch.realize environment) (elseBranch.realize environment))
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-          ihc gconstant.1 environment]
+          ihc environment]
         all_goals simp_all [isValue]
   | letE valueTyped bodyTyped ihv ihb =>
       rename_i context' value valueTy body result
-      simp only [GConstant] at gconstant
       rw [realize, MeasurableActionFamily.reduce_let_eq, realize_isValue]
       by_cases valueIsValue : value.isValue = true
       · simp [symbolicReduce, valueIsValue, SymbolicAction.realize, realize_substHead]
@@ -2143,11 +2096,10 @@ theorem symbolicReduce_realize
           (ExprContext := fun next => .letE next (body.realize environment))
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-          ihv gconstant.1 environment]
+          ihv environment]
         all_goals simp_all [isValue]
   | promote valueTyped ih =>
       rename_i context' value
-      simp only [GConstant] at gconstant
       rw [realize, MeasurableActionFamily.reduce_promote_eq, realize_isValue]
       by_cases valueIsValue : value.isValue = true
       · simp only [valueIsValue, ↓reduceIte]
@@ -2159,11 +2111,10 @@ theorem symbolicReduce_realize
         rw [SymbolicAction.realize_wrap
           (ExprContext := fun next => .promote next)
           (context_realize := by intros; simp only [realize])
-          (lifted_realize := by intros; simp only [realize]), ih gconstant environment]
+          (lifted_realize := by intros; simp only [realize]), ih environment]
         all_goals simp_all [isValue]
   | negE valueTyped ih =>
       rename_i context' value
-      simp only [GConstant] at gconstant
       rw [realize, MeasurableActionFamily.reduce_neg_eq, realize_isValue,
         symbolicReduce.eq_def]
       by_cases valueIsValue : value.isValue = true
@@ -2173,13 +2124,12 @@ theorem symbolicReduce_realize
       · simp only [valueIsValue, Bool.eq_false_of_not_eq_true valueIsValue,
           Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
-          (ExprContext := fun next => .neg .E next)
+          (ExprContext := fun next => .neg next)
           (context_realize := by intros; simp only [realize])
-          (lifted_realize := by intros; simp only [realize]), ih gconstant environment]
+          (lifted_realize := by intros; simp only [realize]), ih environment]
         all_goals simp_all [isValue]
   | negG valueTyped ih =>
       rename_i context' value
-      simp only [GConstant] at gconstant
       rw [realize, MeasurableActionFamily.reduce_neg_eq, realize_isValue,
         symbolicReduce.eq_def]
       by_cases valueIsValue : value.isValue = true
@@ -2189,13 +2139,12 @@ theorem symbolicReduce_realize
       · simp only [valueIsValue, Bool.eq_false_of_not_eq_true valueIsValue,
           Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
-          (ExprContext := fun next => .neg .G next)
+          (ExprContext := fun next => .neg next)
           (context_realize := by intros; simp only [realize])
-          (lifted_realize := by intros; simp only [realize]), ih gconstant environment]
+          (lifted_realize := by intros; simp only [realize]), ih environment]
         all_goals simp_all [isValue]
   | addE leftTyped rightTyped ihl ihr =>
       rename_i context' left right
-      simp only [GConstant] at gconstant
       rw [realize, MeasurableActionFamily.reduce_add_eq, realize_isValue,
         symbolicReduce.eq_def]
       by_cases leftValue : left.isValue = true
@@ -2209,20 +2158,19 @@ theorem symbolicReduce_realize
         · simp only [rightValue, Bool.eq_false_of_not_eq_true rightValue,
             Bool.false_eq_true, ↓reduceIte]
           rw [SymbolicAction.realize_wrap
-            (ExprContext := fun next => .add .E (left.realize environment) next)
+            (ExprContext := fun next => .add (left.realize environment) next)
             (context_realize := by intros; simp only [realize])
             (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-            ihr gconstant.2 environment, realize_isValue, if_neg rightValue]
+            ihr environment, realize_isValue, if_neg rightValue]
       · simp only [leftValue, Bool.eq_false_of_not_eq_true leftValue,
           Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
-          (ExprContext := fun next => .add .E next (right.realize environment))
+          (ExprContext := fun next => .add next (right.realize environment))
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-          ihl gconstant.1 environment]
+          ihl environment]
   | addG leftTyped rightTyped ihl ihr =>
       rename_i context' left right
-      simp only [GConstant] at gconstant
       rw [realize, MeasurableActionFamily.reduce_add_eq, realize_isValue,
         symbolicReduce.eq_def]
       by_cases leftValue : left.isValue = true
@@ -2236,20 +2184,19 @@ theorem symbolicReduce_realize
         · simp only [rightValue, Bool.eq_false_of_not_eq_true rightValue,
             Bool.false_eq_true, ↓reduceIte]
           rw [SymbolicAction.realize_wrap
-            (ExprContext := fun next => .add .G (left.realize environment) next)
+            (ExprContext := fun next => .add (left.realize environment) next)
             (context_realize := by intros; simp only [realize])
             (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-            ihr gconstant.2 environment, realize_isValue, if_neg rightValue]
+            ihr environment, realize_isValue, if_neg rightValue]
       · simp only [leftValue, Bool.eq_false_of_not_eq_true leftValue,
           Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
-          (ExprContext := fun next => .add .G next (right.realize environment))
+          (ExprContext := fun next => .add next (right.realize environment))
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-          ihl gconstant.1 environment]
+          ihl environment]
   | mulGE leftTyped rightTyped ihl ihr =>
       rename_i context' left right
-      simp only [GConstant] at gconstant
       rw [realize, MeasurableActionFamily.reduce_mul_eq, realize_isValue,
         symbolicReduce.eq_def]
       by_cases leftValue : left.isValue = true
@@ -2259,8 +2206,7 @@ theorem symbolicReduce_realize
           obtain ⟨x, rfl⟩ := wellTyped_real_value leftTyped leftValue
           obtain ⟨y, rfl⟩ := wellTyped_real_value rightTyped rightValue
           rcases x with ⟨x0, xc⟩
-          have leftZero : xc = 0 := by
-            simpa only [GConstant] using leftTyped.gconstant
+          have leftZero : xc = 0 := wellTyped_realG_coefficients leftTyped
           obtain ⟨result, product⟩ :=
             Affine.mul?_eq_some_of_left (left := (x0, xc)) (right := y) leftZero
           simp [affineValue?, product, SymbolicAction.realize, realize,
@@ -2268,20 +2214,19 @@ theorem symbolicReduce_realize
         · simp only [rightValue, Bool.eq_false_of_not_eq_true rightValue,
             Bool.false_eq_true, ↓reduceIte]
           rw [SymbolicAction.realize_wrap
-            (ExprContext := fun next => .mul .E (left.realize environment) next)
+            (ExprContext := fun next => .mul (left.realize environment) next)
             (context_realize := by intros; simp only [realize])
             (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-            ihr gconstant.2 environment, realize_isValue, if_neg rightValue]
+            ihr environment, realize_isValue, if_neg rightValue]
       · simp only [leftValue, Bool.eq_false_of_not_eq_true leftValue,
           Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
-          (ExprContext := fun next => .mul .E next (right.realize environment))
+          (ExprContext := fun next => .mul next (right.realize environment))
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-          ihl gconstant.1 environment]
+          ihl environment]
   | mulGG leftTyped rightTyped ihl ihr =>
       rename_i context' left right
-      simp only [GConstant] at gconstant
       rw [realize, MeasurableActionFamily.reduce_mul_eq, realize_isValue,
         symbolicReduce.eq_def]
       by_cases leftValue : left.isValue = true
@@ -2292,28 +2237,27 @@ theorem symbolicReduce_realize
           obtain ⟨y, rfl⟩ := wellTyped_real_value rightTyped rightValue
           rcases x with ⟨x0, xc⟩
           rcases y with ⟨y0, yc⟩
-          simp only [GConstant] at gconstant
-          rcases gconstant with ⟨rfl, rfl⟩
+          obtain rfl : xc = 0 := wellTyped_realG_coefficients leftTyped
+          obtain rfl : yc = 0 := wellTyped_realG_coefficients rightTyped
           simp [affineValue?, Affine.mul?, SymbolicAction.realize, realize,
             Expr.isValue, realValue?, Symbolic.Affine.eval, Finset.sum_const_zero]
           ring
         · simp only [rightValue, Bool.eq_false_of_not_eq_true rightValue,
             Bool.false_eq_true, ↓reduceIte]
           rw [SymbolicAction.realize_wrap
-            (ExprContext := fun next => .mul .G (left.realize environment) next)
+            (ExprContext := fun next => .mul (left.realize environment) next)
             (context_realize := by intros; simp only [realize])
             (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-            ihr gconstant.2 environment, realize_isValue, if_neg rightValue]
+            ihr environment, realize_isValue, if_neg rightValue]
       · simp only [leftValue, Bool.eq_false_of_not_eq_true leftValue,
           Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
-          (ExprContext := fun next => .mul .G next (right.realize environment))
+          (ExprContext := fun next => .mul next (right.realize environment))
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-          ihl gconstant.1 environment]
+          ihl environment]
   | divEG leftTyped rightTyped ihl ihr =>
       rename_i context' left right
-      simp only [GConstant] at gconstant
       rw [realize, MeasurableActionFamily.reduce_div_eq, realize_isValue,
         symbolicReduce.eq_def]
       by_cases leftValue : left.isValue = true
@@ -2323,8 +2267,7 @@ theorem symbolicReduce_realize
           obtain ⟨x, rfl⟩ := wellTyped_real_value leftTyped leftValue
           obtain ⟨y, rfl⟩ := wellTyped_real_value rightTyped rightValue
           rcases y with ⟨y0, yc⟩
-          simp only [GConstant] at gconstant
-          rw [gconstant.2]
+          obtain rfl : yc = 0 := wellTyped_realG_coefficients rightTyped
           simp [affineValue?, Affine.div?, SymbolicAction.realize, realize,
             Expr.isValue, realValue?, Symbolic.Affine.eval, Finset.sum_const_zero,
             div_eq_mul_inv]
@@ -2339,20 +2282,19 @@ theorem symbolicReduce_realize
         · simp only [rightValue, Bool.eq_false_of_not_eq_true rightValue,
             Bool.false_eq_true, ↓reduceIte]
           rw [SymbolicAction.realize_wrap
-            (ExprContext := fun next => .div .E (left.realize environment) next)
+            (ExprContext := fun next => .div (left.realize environment) next)
             (context_realize := by intros; simp only [realize])
             (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-            ihr gconstant.2 environment, realize_isValue, if_neg rightValue]
+            ihr environment, realize_isValue, if_neg rightValue]
       · simp only [leftValue, Bool.eq_false_of_not_eq_true leftValue,
           Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
-          (ExprContext := fun next => .div .E next (right.realize environment))
+          (ExprContext := fun next => .div next (right.realize environment))
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-          ihl gconstant.1 environment]
+          ihl environment]
   | divGG leftTyped rightTyped ihl ihr =>
       rename_i context' left right
-      simp only [GConstant] at gconstant
       rw [realize, MeasurableActionFamily.reduce_div_eq, realize_isValue,
         symbolicReduce.eq_def]
       by_cases leftValue : left.isValue = true
@@ -2363,8 +2305,8 @@ theorem symbolicReduce_realize
           obtain ⟨y, rfl⟩ := wellTyped_real_value rightTyped rightValue
           rcases x with ⟨x0, xc⟩
           rcases y with ⟨y0, yc⟩
-          simp only [GConstant] at gconstant
-          rcases gconstant with ⟨rfl, rfl⟩
+          obtain rfl : xc = 0 := wellTyped_realG_coefficients leftTyped
+          obtain rfl : yc = 0 := wellTyped_realG_coefficients rightTyped
           simp [affineValue?, Affine.div?, SymbolicAction.realize, realize,
             Expr.isValue, realValue?, Symbolic.Affine.eval, Finset.sum_const_zero,
             div_eq_mul_inv]
@@ -2372,20 +2314,19 @@ theorem symbolicReduce_realize
         · simp only [rightValue, Bool.eq_false_of_not_eq_true rightValue,
             Bool.false_eq_true, ↓reduceIte]
           rw [SymbolicAction.realize_wrap
-            (ExprContext := fun next => .div .G (left.realize environment) next)
+            (ExprContext := fun next => .div (left.realize environment) next)
             (context_realize := by intros; simp only [realize])
             (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-            ihr gconstant.2 environment, realize_isValue, if_neg rightValue]
+            ihr environment, realize_isValue, if_neg rightValue]
       · simp only [leftValue, Bool.eq_false_of_not_eq_true leftValue,
           Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
-          (ExprContext := fun next => .div .G next (right.realize environment))
+          (ExprContext := fun next => .div next (right.realize environment))
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-          ihl gconstant.1 environment]
+          ihl environment]
   | lt leftTyped rightTyped ihl ihr =>
       rename_i context' left right
-      simp only [GConstant] at gconstant
       rw [realize, MeasurableActionFamily.reduce_lt_eq, realize_isValue,
         symbolicReduce.eq_def]
       by_cases leftValue : left.isValue = true
@@ -2396,8 +2337,8 @@ theorem symbolicReduce_realize
           obtain ⟨y, rfl⟩ := wellTyped_real_value rightTyped rightValue
           rcases x with ⟨x0, xc⟩
           rcases y with ⟨y0, yc⟩
-          simp only [GConstant] at gconstant
-          rcases gconstant with ⟨rfl, rfl⟩
+          obtain rfl : xc = 0 := wellTyped_realG_coefficients leftTyped
+          obtain rfl : yc = 0 := wellTyped_realG_coefficients rightTyped
           simp [constantValue?, SymbolicAction.realize, realize, Expr.isValue,
             realValue?, Symbolic.Affine.eval, Finset.sum_const_zero]
         · simp only [rightValue, Bool.eq_false_of_not_eq_true rightValue,
@@ -2406,17 +2347,16 @@ theorem symbolicReduce_realize
             (ExprContext := fun next => .lt (left.realize environment) next)
             (context_realize := by intros; simp only [realize])
             (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-            ihr gconstant.2 environment, realize_isValue, if_neg rightValue]
+            ihr environment, realize_isValue, if_neg rightValue]
       · simp only [leftValue, Bool.eq_false_of_not_eq_true leftValue,
           Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
           (ExprContext := fun next => .lt next (right.realize environment))
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-          ihl gconstant.1 environment]
+          ihl environment]
   | sampleE op ha hg hAffine hGeneral ihAffine ihGeneral =>
       rename_i affine context' general
-      simp only [GConstant] at gconstant
       rw [realize, MeasurableActionFamily.reduce_sample_eq,
         firstNonValue_realize, symbolicReduce_sample_eq]
       split
@@ -2441,7 +2381,7 @@ theorem symbolicReduce_realize
               exact realize_weakenSamples expression value environment
             rw [mapRule front, mapRule suffix, mapRule general]),
           ihAffine current (firstNonValue_current_mem hA)
-            (gconstant.1 current (firstNonValue_current_mem hA)) environment]
+            environment]
       · split
         · rename_i hANone front current suffix hG
           simp only [hANone, Option.map_none, hG, Option.map_some]
@@ -2466,14 +2406,14 @@ theorem symbolicReduce_realize
                 exact realize_weakenSamples expression value environment
               rw [mapRule affine, mapRule front, mapRule suffix]),
             ihGeneral current (firstNonValue_current_mem hG)
-              (gconstant.2 current (firstNonValue_current_mem hG)) environment]
+              environment]
         · rename_i hANone hGNone
           have affineAreValues := (firstNonValue_eq_none_iff affine).mp hANone
           have generalAreValues := (firstNonValue_eq_none_iff general).mp hGNone
           obtain ⟨affineValues, affineFound⟩ :=
             allAffineValues_of_wellTyped_values hAffine affineAreValues
           obtain ⟨generalValues, generalFound⟩ :=
-            allConstantValues_of_wellTypedG_values hGeneral generalAreValues gconstant.2
+            allConstantValues_of_wellTypedG_values hGeneral generalAreValues
           have affineRealized := allRealValues_realize_of_allAffineValues
             affineFound environment
           have generalRealized := allRealValues_realize_of_allConstantValues
@@ -2486,7 +2426,6 @@ theorem symbolicReduce_realize
           simp [realize]
   | sampleG op ha hg hAffine hGeneral ihAffine ihGeneral =>
       rename_i affine context' general
-      simp only [GConstant] at gconstant
       rw [realize, MeasurableActionFamily.reduce_sample_eq,
         firstNonValue_realize, symbolicReduce_sample_eq]
       split
@@ -2511,7 +2450,7 @@ theorem symbolicReduce_realize
               exact realize_weakenSamples expression value environment
             rw [mapRule front, mapRule suffix, mapRule general]),
           ihAffine current (firstNonValue_current_mem hA)
-            (gconstant.1 current (firstNonValue_current_mem hA)) environment]
+            environment]
       · split
         · rename_i hANone front current suffix hG
           simp only [hANone, Option.map_none, hG, Option.map_some]
@@ -2536,14 +2475,14 @@ theorem symbolicReduce_realize
                 exact realize_weakenSamples expression value environment
               rw [mapRule affine, mapRule front, mapRule suffix]),
             ihGeneral current (firstNonValue_current_mem hG)
-              (gconstant.2 current (firstNonValue_current_mem hG)) environment]
+              environment]
         · rename_i hANone hGNone
           have affineAreValues := (firstNonValue_eq_none_iff affine).mp hANone
           have generalAreValues := (firstNonValue_eq_none_iff general).mp hGNone
           obtain ⟨affineValues, affineFound⟩ :=
-            allConstantValues_of_wellTypedG_values hAffine affineAreValues gconstant.1
+            allConstantValues_of_wellTypedG_values hAffine affineAreValues
           obtain ⟨generalValues, generalFound⟩ :=
-            allConstantValues_of_wellTypedG_values hGeneral generalAreValues gconstant.2
+            allConstantValues_of_wellTypedG_values hGeneral generalAreValues
           have affineRealized := allRealValues_realize_of_allConstantValues
             affineFound environment
           have generalRealized := allRealValues_realize_of_allConstantValues
@@ -2621,7 +2560,7 @@ theorem symbolicReduce_wellTyped
           have generalValues := (firstNonValue_eq_none_iff _).mp foundGeneral
           obtain ⟨av, ha⟩ := allAffineValues_of_wellTyped_values affineTyped affineValues
           obtain ⟨gv, hg⟩ := allConstantValues_of_wellTypedG_values generalTyped
-            generalValues (fun child member => (generalTyped child member).gconstant)
+            generalValues
           simp only [ha, hg]
           exact .sampleE ((allAffineValues_length ha).trans affineLength)
             ((allConstantValues_length hg).trans generalLength) (.realE)
@@ -2680,9 +2619,9 @@ theorem symbolicReduce_wellTyped
           have affineValues := (firstNonValue_eq_none_iff _).mp found
           have generalValues := (firstNonValue_eq_none_iff _).mp foundGeneral
           obtain ⟨av, ha⟩ := allConstantValues_of_wellTypedG_values affineTyped
-            affineValues (fun child member => (affineTyped child member).gconstant)
+            affineValues
           obtain ⟨gv, hg⟩ := allConstantValues_of_wellTypedG_values generalTyped
-            generalValues (fun child member => (generalTyped child member).gconstant)
+            generalValues
           simp only [ha, hg]
           exact .sampleG fun value => .realG rfl
   case app functionTyped argumentTyped ihf iha =>
@@ -2791,9 +2730,9 @@ theorem symbolicReduce_wellTyped
       by_cases rightValue : right.isValue = true
       · simp only [rightValue, ↓reduceIte]
         obtain ⟨leftConstant, leftEquation⟩ :=
-          constantValue?_eq_some_of_wellTypedG leftTyped leftValue leftTyped.gconstant
+          constantValue?_eq_some_of_wellTypedG leftTyped leftValue
         obtain ⟨rightConstant, rightEquation⟩ :=
-          constantValue?_eq_some_of_wellTypedG rightTyped rightValue rightTyped.gconstant
+          constantValue?_eq_some_of_wellTypedG rightTyped rightValue
         simp only [leftEquation, rightEquation]
         exact .next .bool
       · simp only [rightValue, ↓reduceIte]
@@ -2815,10 +2754,8 @@ theorem symbolicReduce_wellTyped
         obtain ⟨rightAffine, rfl⟩ := wellTyped_real_value rightTyped rightValue
         rcases leftAffine with ⟨leftConstant, leftCoefficients⟩
         rcases rightAffine with ⟨rightConstant, rightCoefficients⟩
-        have leftZero : leftCoefficients = 0 := by
-          simpa only [AffineExpr.GConstant] using leftTyped.gconstant
-        have rightZero : rightCoefficients = 0 := by
-          simpa only [AffineExpr.GConstant] using rightTyped.gconstant
+        have leftZero : leftCoefficients = 0 := wellTyped_realG_coefficients leftTyped
+        have rightZero : rightCoefficients = 0 := wellTyped_realG_coefficients rightTyped
         simp only [affineValue?, Affine.div?, rightZero, ↓reduceIte, Option.some.injEq]
         exact SymbolicAction.WellTyped.next (.realG (by simp [leftZero]))
       · simp only [rightValue, ↓reduceIte]
@@ -2839,8 +2776,7 @@ theorem symbolicReduce_wellTyped
         obtain ⟨leftAffine, rfl⟩ := wellTyped_real_value leftTyped leftValue
         obtain ⟨rightAffine, rfl⟩ := wellTyped_real_value rightTyped rightValue
         rcases rightAffine with ⟨rightConstant, rightCoefficients⟩
-        have rightZero : rightCoefficients = 0 := by
-          simpa only [AffineExpr.GConstant] using rightTyped.gconstant
+        have rightZero : rightCoefficients = 0 := wellTyped_realG_coefficients rightTyped
         simp only [affineValue?, Affine.div?, rightZero, ↓reduceIte, Option.some.injEq]
         exact SymbolicAction.WellTyped.next .realE
       · simp only [rightValue, ↓reduceIte]
@@ -2862,10 +2798,8 @@ theorem symbolicReduce_wellTyped
         obtain ⟨rightAffine, rfl⟩ := wellTyped_real_value rightTyped rightValue
         rcases leftAffine with ⟨leftConstant, leftCoefficients⟩
         rcases rightAffine with ⟨rightConstant, rightCoefficients⟩
-        have leftZero : leftCoefficients = 0 := by
-          simpa only [AffineExpr.GConstant] using leftTyped.gconstant
-        have rightZero : rightCoefficients = 0 := by
-          simpa only [AffineExpr.GConstant] using rightTyped.gconstant
+        have leftZero : leftCoefficients = 0 := wellTyped_realG_coefficients leftTyped
+        have rightZero : rightCoefficients = 0 := wellTyped_realG_coefficients rightTyped
         simp only [affineValue?, Affine.add]
         exact SymbolicAction.WellTyped.next (.realG (by
           rw [leftZero, rightZero]
@@ -2927,8 +2861,7 @@ theorem symbolicReduce_wellTyped
     · simp only [isValue, ↓reduceIte]
       obtain ⟨coordinate, rfl⟩ := wellTyped_real_value valueTyped isValue
       rcases coordinate with ⟨constant, coefficients⟩
-      have zero : coefficients = 0 := by
-        simpa only [AffineExpr.GConstant] using valueTyped.gconstant
+      have zero : coefficients = 0 := wellTyped_realG_coefficients valueTyped
       exact .next (.realG (by rw [zero]; funext index; simp [Affine.neg]))
     · simp only [isValue, ↓reduceIte]
       exact (ih rfl).wrap
@@ -2944,8 +2877,7 @@ theorem symbolicReduce_wellTyped
         obtain ⟨leftAffine, rfl⟩ := wellTyped_real_value leftTyped leftValue
         obtain ⟨rightAffine, rfl⟩ := wellTyped_real_value rightTyped rightValue
         rcases leftAffine with ⟨leftConstant, leftCoefficients⟩
-        have leftZero : leftCoefficients = 0 := by
-          simpa only [AffineExpr.GConstant] using leftTyped.gconstant
+        have leftZero : leftCoefficients = 0 := wellTyped_realG_coefficients leftTyped
         obtain ⟨result, product⟩ := Affine.mul?_eq_some_of_left
           (left := (leftConstant, leftCoefficients)) (right := rightAffine) leftZero
         simp only [affineValue?, product]
@@ -2969,10 +2901,8 @@ theorem symbolicReduce_wellTyped
         obtain ⟨rightAffine, rfl⟩ := wellTyped_real_value rightTyped rightValue
         rcases leftAffine with ⟨leftConstant, leftCoefficients⟩
         rcases rightAffine with ⟨rightConstant, rightCoefficients⟩
-        have leftZero : leftCoefficients = 0 := by
-          simpa only [AffineExpr.GConstant] using leftTyped.gconstant
-        have rightZero : rightCoefficients = 0 := by
-          simpa only [AffineExpr.GConstant] using rightTyped.gconstant
+        have leftZero : leftCoefficients = 0 := wellTyped_realG_coefficients leftTyped
+        have rightZero : rightCoefficients = 0 := wellTyped_realG_coefficients rightTyped
         simp only [affineValue?, Affine.mul?, rightZero, ↓reduceIte, Option.some.injEq]
         exact SymbolicAction.WellTyped.next (.realG (by simp [leftZero]))
       · simp only [rightValue, ↓reduceIte]

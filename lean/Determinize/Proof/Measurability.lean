@@ -79,7 +79,7 @@ end SFiniteKernel
 recursion that Lean's declaration-site `Countable` deriver cannot see. -/
 mutual
   inductive SkeletonCode where
-    | bvar (index : Nat) | unit | bool (value : Bool) | real (mode : Mode)
+    | bvar (index : Nat) | unit | bool (value : Bool) | real
     | lam (body : SkeletonCode)
     | fix (body : SkeletonCode)
     | app (function argument : SkeletonCode)
@@ -91,10 +91,10 @@ mutual
     | matchList (scrutinee nilCase consCase : SkeletonCode)
     | ite (condition thenBranch elseBranch : SkeletonCode)
     | letE (value body : SkeletonCode)
-    | promote (body : SkeletonCode) | neg (mode : Mode) (body : SkeletonCode)
-    | add (mode : Mode) (left right : SkeletonCode)
-    | mul (mode : Mode) (left right : SkeletonCode)
-    | div (mode : Mode) (left right : SkeletonCode) | lt (left right : SkeletonCode)
+    | promote (body : SkeletonCode) | neg (body : SkeletonCode)
+    | add (left right : SkeletonCode)
+    | mul (left right : SkeletonCode)
+    | div (left right : SkeletonCode) | lt (left right : SkeletonCode)
     | sample (mode : Mode) (op : Tag)
         (affineArgs generalArgs : SkeletonCodeList)
   deriving Countable
@@ -108,7 +108,7 @@ end
 mutual
   def SkeletonCode.decode : SkeletonCode → Skeleton
     | .bvar index => .bvar index | .unit => .unit | .bool value => .bool value
-    | .real mode => .real mode | .lam body => .lam body.decode
+    | .real => .real | .lam body => .lam body.decode
     | .fix body => .fix body.decode
     | .app function argument => .app function.decode argument.decode
     | .pair left right => .pair left.decode right.decode
@@ -123,10 +123,10 @@ mutual
     | .ite condition thenBranch elseBranch =>
         .ite condition.decode thenBranch.decode elseBranch.decode
     | .letE value body => .letE value.decode body.decode
-    | .promote body => .promote body.decode | .neg mode body => .neg mode body.decode
-    | .add mode left right => .add mode left.decode right.decode
-    | .mul mode left right => .mul mode left.decode right.decode
-    | .div mode left right => .div mode left.decode right.decode
+    | .promote body => .promote body.decode | .neg body => .neg body.decode
+    | .add left right => .add left.decode right.decode
+    | .mul left right => .mul left.decode right.decode
+    | .div left right => .div left.decode right.decode
     | .lt left right => .lt left.decode right.decode
     | .sample mode op affine general => .sample mode op affine.decode general.decode
 
@@ -138,7 +138,7 @@ end
 mutual
   def encodeSkeletonCode : Skeleton → SkeletonCode
     | .bvar index => .bvar index | .unit => .unit | .bool value => .bool value
-    | .real mode => .real mode | .lam body => .lam (encodeSkeletonCode body)
+    | .real => .real | .lam body => .lam (encodeSkeletonCode body)
     | .fix body => .fix (encodeSkeletonCode body)
     | .app function argument =>
         .app (encodeSkeletonCode function) (encodeSkeletonCode argument)
@@ -161,10 +161,10 @@ mutual
     | .letE value body =>
         .letE (encodeSkeletonCode value) (encodeSkeletonCode body)
     | .promote body => .promote (encodeSkeletonCode body)
-    | .neg mode body => .neg mode (encodeSkeletonCode body)
-    | .add mode left right => .add mode (encodeSkeletonCode left) (encodeSkeletonCode right)
-    | .mul mode left right => .mul mode (encodeSkeletonCode left) (encodeSkeletonCode right)
-    | .div mode left right => .div mode (encodeSkeletonCode left) (encodeSkeletonCode right)
+    | .neg body => .neg (encodeSkeletonCode body)
+    | .add left right => .add (encodeSkeletonCode left) (encodeSkeletonCode right)
+    | .mul left right => .mul (encodeSkeletonCode left) (encodeSkeletonCode right)
+    | .div left right => .div (encodeSkeletonCode left) (encodeSkeletonCode right)
     | .lt left right => .lt (encodeSkeletonCode left) (encodeSkeletonCode right)
     | .sample mode op affine general =>
         .sample mode op (encodeSkeletonCodeList affine) (encodeSkeletonCodeList general)
@@ -191,7 +191,7 @@ mutual
     | .bvar index => .bvar index
     | .unit => .unit
     | .bool value => .bool value
-    | .real mode => .real mode 0
+    | .real => .real 0
     | .lam body => .lam body.zeroFill
     | .fix body => .fix body.zeroFill
     | .app function argument => .app function.zeroFill argument.zeroFill
@@ -210,10 +210,10 @@ mutual
         .ite condition.zeroFill thenBranch.zeroFill elseBranch.zeroFill
     | .letE value body => .letE value.zeroFill body.zeroFill
     | .promote body => .promote body.zeroFill
-    | .neg mode body => .neg mode body.zeroFill
-    | .add mode left right => .add mode left.zeroFill right.zeroFill
-    | .mul mode left right => .mul mode left.zeroFill right.zeroFill
-    | .div mode left right => .div mode left.zeroFill right.zeroFill
+    | .neg body => .neg body.zeroFill
+    | .add left right => .add left.zeroFill right.zeroFill
+    | .mul left right => .mul left.zeroFill right.zeroFill
+    | .div left right => .div left.zeroFill right.zeroFill
     | .lt left right => .lt left.zeroFill right.zeroFill
     | .sample mode op affine general =>
         .sample mode op affine.zeroFill general.zeroFill
@@ -284,11 +284,11 @@ theorem realCoordinates_length (expression : Expr) :
   | bvar | unit | bool | real | nil =>
       simp [Expr.realCoordinates, Expr.skeleton, Expr.realArity]
   | lam body | fix body | fst body | snd body | inl body
-  | inr body | promote body | neg _ body =>
+  | inr body | promote body | neg body =>
       simpa [Expr.realCoordinates, Expr.skeleton, Expr.realArity] using
         realCoordinates_length body
-  | app left right | pair left right | cons left right | add _ left right
-  | mul _ left right | div _ left right | lt left right | letE left right =>
+  | app left right | pair left right | cons left right | add left right
+  | mul left right | div left right | lt left right | letE left right =>
       simpa [Expr.realCoordinates, Expr.skeleton, Expr.realArity] using congrArg₂ (· + ·)
           (realCoordinates_length left) (realCoordinates_length right)
   | matchSum first second third | matchList first second third
@@ -420,16 +420,16 @@ def constant {α : Type*} [MeasurableSpace α] (expression : Expr) :
   coordinate_count _ := realCoordinates_length expression
   coordinate_measurable _ := measurable_const
 
-def realLiteral (mode : Mode) :
-    MeasurableFamily ℝ (fun value => Expr.real mode value) where
-  skeleton := .real mode
+def realLiteral :
+    MeasurableFamily ℝ (fun value => Expr.real value) where
+  skeleton := .real
   skeleton_eq _ := by simp [Expr.skeleton]
   coordinate_count _ := by simp [Expr.realCoordinates, Expr.skeleton, Expr.realArity]
   coordinate_measurable index := by
     cases index with
     | zero =>
         have functionEq :
-            (fun value : ℝ => (Expr.real mode value).realCoordinates.getD 0 0) = id := by
+            (fun value : ℝ => (Expr.real value).realCoordinates.getD 0 0) = id := by
           funext value
           simp [Expr.realCoordinates, List.getD]
         rw [functionEq]
@@ -502,27 +502,27 @@ def cons {α : Type*} [MeasurableSpace α] {left right : α → Expr} (leftFamil
     (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates])
     (by intros; simp [Expr.realArity])
 
-def add {α : Type*} [MeasurableSpace α] (mode : Mode)
+def add {α : Type*} [MeasurableSpace α]
     {left right : α → Expr} (leftFamily : MeasurableFamily α left)
     (rightFamily : MeasurableFamily α right) :
-    MeasurableFamily α (fun parameter => .add mode (left parameter) (right parameter)) :=
-  combine leftFamily rightFamily (.add mode) (.add mode)
+    MeasurableFamily α (fun parameter => .add (left parameter) (right parameter)) :=
+  combine leftFamily rightFamily .add .add
     (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates])
     (by intros; simp [Expr.realArity])
 
-def mul {α : Type*} [MeasurableSpace α] (mode : Mode)
+def mul {α : Type*} [MeasurableSpace α]
     {left right : α → Expr} (leftFamily : MeasurableFamily α left)
     (rightFamily : MeasurableFamily α right) :
-    MeasurableFamily α (fun parameter => .mul mode (left parameter) (right parameter)) :=
-  combine leftFamily rightFamily (.mul mode) (.mul mode)
+    MeasurableFamily α (fun parameter => .mul (left parameter) (right parameter)) :=
+  combine leftFamily rightFamily .mul .mul
     (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates])
     (by intros; simp [Expr.realArity])
 
-def div {α : Type*} [MeasurableSpace α] (mode : Mode)
+def div {α : Type*} [MeasurableSpace α]
     {left right : α → Expr} (leftFamily : MeasurableFamily α left)
     (rightFamily : MeasurableFamily α right) :
-    MeasurableFamily α (fun parameter => .div mode (left parameter) (right parameter)) :=
-  combine leftFamily rightFamily (.div mode) (.div mode)
+    MeasurableFamily α (fun parameter => .div (left parameter) (right parameter)) :=
+  combine leftFamily rightFamily .div .div
     (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates])
     (by intros; simp [Expr.realArity])
 
@@ -593,10 +593,10 @@ def promote {α : Type*} [MeasurableSpace α] {body : α → Expr}
     (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates])
     (by intros; simp [Expr.realArity])
 
-def neg {α : Type*} [MeasurableSpace α] (mode : Mode) {body : α → Expr}
+def neg {α : Type*} [MeasurableSpace α] {body : α → Expr}
     (family : MeasurableFamily α body) :
-    MeasurableFamily α (fun parameter => .neg mode (body parameter)) :=
-  wrap family (.neg mode) (.neg mode)
+    MeasurableFamily α (fun parameter => .neg (body parameter)) :=
+  wrap family .neg .neg
     (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates])
     (by intros; simp [Expr.realArity])
 
@@ -673,16 +673,16 @@ namespace Expr
 fallback is unreachable once the enclosing skeleton constructor is fixed. -/
 def firstChild : Expr → Expr
   | .lam body | .fix body | .fst body | .snd body
-  | .inl body | .inr body | .promote body | .neg _ body => body
-  | .app left _ | .pair left _ | .cons left _ | .add _ left _
-  | .mul _ left _ | .div _ left _ | .lt left _ => left
+  | .inl body | .inr body | .promote body | .neg body => body
+  | .app left _ | .pair left _ | .cons left _ | .add left _
+  | .mul left _ | .div left _ | .lt left _ => left
   | .matchSum first _ _ | .matchList first _ _ | .ite first _ _ => first
   | .letE first _ => first
   | expression => expression
 
 def secondChild : Expr → Expr
-  | .app _ right | .pair _ right | .cons _ right | .add _ _ right
-  | .mul _ _ right | .div _ _ right | .lt _ right => right
+  | .app _ right | .pair _ right | .cons _ right | .add _ right
+  | .mul _ right | .div _ right | .lt _ right => right
   | .matchSum _ second _ | .matchList _ second _ | .ite _ second _ => second
   | .letE _ second => second
   | expression => expression
@@ -697,16 +697,16 @@ namespace Skeleton
 
 def firstChild : Skeleton → Skeleton
   | .lam body | .fix body | .fst body | .snd body
-  | .inl body | .inr body | .promote body | .neg _ body => body
-  | .app left _ | .pair left _ | .cons left _ | .add _ left _
-  | .mul _ left _ | .div _ left _ | .lt left _ => left
+  | .inl body | .inr body | .promote body | .neg body => body
+  | .app left _ | .pair left _ | .cons left _ | .add left _
+  | .mul left _ | .div left _ | .lt left _ => left
   | .matchSum first _ _ | .matchList first _ _ | .ite first _ _ => first
   | .letE first _ => first
   | skeleton => skeleton
 
 def secondChild : Skeleton → Skeleton
-  | .app _ right | .pair _ right | .cons _ right | .add _ _ right
-  | .mul _ _ right | .div _ _ right | .lt _ right => right
+  | .app _ right | .pair _ right | .cons _ right | .add _ right
+  | .mul _ right | .div _ right | .lt _ right => right
   | .matchSum _ second _ | .matchList _ second _ | .ite _ second _ => second
   | .letE _ second => second
   | skeleton => skeleton
@@ -716,8 +716,8 @@ def thirdChild : Skeleton → Skeleton
   | skeleton => skeleton
 
 def secondOffset : Skeleton → Nat
-  | .app first _ | .pair first _ | .cons first _ | .add _ first _
-  | .mul _ first _ | .div _ first _ | .lt first _ => first.realArity
+  | .app first _ | .pair first _ | .cons first _ | .add first _
+  | .mul first _ | .div first _ | .lt first _ => first.realArity
   | .matchSum first _ _ | .matchList first _ _ | .ite first _ _ => first.realArity
   | .letE first _ => first.realArity
   | _ => 0
@@ -1722,18 +1722,18 @@ theorem measurable_promote {α : Type*} [MeasurableSpace α]
   measurable_unaryConstructor bodyMeasurable Expr.promote Expr.promote
     (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates])
 
-theorem measurable_neg {α : Type*} [MeasurableSpace α] (mode : Mode)
+theorem measurable_neg {α : Type*} [MeasurableSpace α]
     {body : α → Expr} (bodyMeasurable : Measurable body) :
-    Measurable fun parameter => Expr.neg mode (body parameter) :=
-  measurable_unaryConstructor bodyMeasurable (.neg mode) (.neg mode)
+    Measurable fun parameter => Expr.neg (body parameter) :=
+  measurable_unaryConstructor bodyMeasurable .neg .neg
     (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates])
 
-theorem measurable_realLiteral {α : Type*} [MeasurableSpace α] (mode : Mode)
+theorem measurable_realLiteral {α : Type*} [MeasurableSpace α]
     {value : α → ℝ} (valueMeasurable : Measurable value) :
-    Measurable fun parameter => Expr.real mode (value parameter) := by
+    Measurable fun parameter => Expr.real (value parameter) := by
   apply measurable_expr_of_parts
   · simpa [Expr.skeleton] using
-      (measurable_const : Measurable fun _ : α => Skeleton.real mode)
+      (measurable_const : Measurable fun _ : α => Skeleton.real)
   · have singletonCoordinates : Measurable fun parameter : α =>
         (⟨[value parameter]⟩ : RealCoordinates) := by
       apply RealCoordinates.measurable_of_length_getD
@@ -1763,25 +1763,25 @@ theorem measurable_cons {α : Type*} [MeasurableSpace α] {head tail : α → Ex
   measurable_binaryConstructor headMeasurable tailMeasurable .cons .cons
     (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates])
 
-theorem measurable_add {α : Type*} [MeasurableSpace α] (mode : Mode)
+theorem measurable_add {α : Type*} [MeasurableSpace α]
     {left right : α → Expr} (leftMeasurable : Measurable left)
     (rightMeasurable : Measurable right) :
-    Measurable fun parameter => Expr.add mode (left parameter) (right parameter) :=
-  measurable_binaryConstructor leftMeasurable rightMeasurable (.add mode) (.add mode)
+    Measurable fun parameter => Expr.add (left parameter) (right parameter) :=
+  measurable_binaryConstructor leftMeasurable rightMeasurable .add .add
     (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates])
 
-theorem measurable_mul {α : Type*} [MeasurableSpace α] (mode : Mode)
+theorem measurable_mul {α : Type*} [MeasurableSpace α]
     {left right : α → Expr} (leftMeasurable : Measurable left)
     (rightMeasurable : Measurable right) :
-    Measurable fun parameter => Expr.mul mode (left parameter) (right parameter) :=
-  measurable_binaryConstructor leftMeasurable rightMeasurable (.mul mode) (.mul mode)
+    Measurable fun parameter => Expr.mul (left parameter) (right parameter) :=
+  measurable_binaryConstructor leftMeasurable rightMeasurable .mul .mul
     (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates])
 
-theorem measurable_div {α : Type*} [MeasurableSpace α] (mode : Mode)
+theorem measurable_div {α : Type*} [MeasurableSpace α]
     {left right : α → Expr} (leftMeasurable : Measurable left)
     (rightMeasurable : Measurable right) :
-    Measurable fun parameter => Expr.div mode (left parameter) (right parameter) :=
-  measurable_binaryConstructor leftMeasurable rightMeasurable (.div mode) (.div mode)
+    Measurable fun parameter => Expr.div (left parameter) (right parameter) :=
+  measurable_binaryConstructor leftMeasurable rightMeasurable .div .div
     (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates])
 
 theorem measurable_lt {α : Type*} [MeasurableSpace α]
@@ -1909,14 +1909,14 @@ theorem measurable_sampleReplaceGeneral {α : Type*} [MeasurableSpace α]
       replaceListElement_coordinates, List.append_assoc]
 
 theorem terminalFloatSet_eq :
-    terminalFloatSet = Expr.skeleton ⁻¹' {Skeleton.real .E} := by
+    terminalFloatSet = Expr.skeleton ⁻¹' {Skeleton.real} := by
   ext expression
   cases expression <;>
     simp [terminalFloatSet, Expr.skeleton]
 
 theorem terminalFloatSet_measurable : MeasurableSet terminalFloatSet := by
   rw [terminalFloatSet_eq]
-  have singletonMeasurable : MeasurableSet ({Skeleton.real .E} : Set Skeleton) := by
+  have singletonMeasurable : MeasurableSet ({Skeleton.real} : Set Skeleton) := by
     change True
     trivial
   exact measurable_skeleton singletonMeasurable
@@ -1928,9 +1928,6 @@ theorem terminalFloatValue_measurable : Measurable terminalFloatValue := by
         (fun expression => expression.realCoordinates.getD 0 0) (fun _ => 0) := by
     funext expression
     cases expression <;>
-      simp [Set.piecewise, terminalFloatValue, terminalFloatSet,
-        Expr.realCoordinates, List.getD]
-    case real mode value => cases mode <;>
       simp [Set.piecewise, terminalFloatValue, terminalFloatSet,
         Expr.realCoordinates, List.getD]
   rw [piecewiseEq]
@@ -1968,7 +1965,7 @@ def skeletonShift (amount cutoff : Nat) : Skeleton → Skeleton
   | .bvar index => .bvar (if cutoff ≤ index then index + amount else index)
   | .unit => .unit
   | .bool value => .bool value
-  | .real mode => .real mode
+  | .real => .real
   | .lam body => .lam (skeletonShift amount (cutoff + 1) body)
   | .fix body => .fix (skeletonShift amount (cutoff + 2) body)
   | .app function argument =>
@@ -1995,13 +1992,13 @@ def skeletonShift (amount cutoff : Nat) : Skeleton → Skeleton
       .letE (skeletonShift amount cutoff value)
         (skeletonShift amount (cutoff + 1) body)
   | .promote body => .promote (skeletonShift amount cutoff body)
-  | .neg mode body => .neg mode (skeletonShift amount cutoff body)
-  | .add mode left right =>
-      .add mode (skeletonShift amount cutoff left) (skeletonShift amount cutoff right)
-  | .mul mode left right =>
-      .mul mode (skeletonShift amount cutoff left) (skeletonShift amount cutoff right)
-  | .div mode left right =>
-      .div mode (skeletonShift amount cutoff left) (skeletonShift amount cutoff right)
+  | .neg body => .neg (skeletonShift amount cutoff body)
+  | .add left right =>
+      .add (skeletonShift amount cutoff left) (skeletonShift amount cutoff right)
+  | .mul left right =>
+      .mul (skeletonShift amount cutoff left) (skeletonShift amount cutoff right)
+  | .div left right =>
+      .div (skeletonShift amount cutoff left) (skeletonShift amount cutoff right)
   | .lt left right => .lt (skeletonShift amount cutoff left) (skeletonShift amount cutoff right)
   | .sample mode op affine general => .sample mode op
       (affine.map (skeletonShift amount cutoff)) (general.map (skeletonShift amount cutoff))
@@ -2034,7 +2031,7 @@ theorem shift_skeleton (amount cutoff : Nat) (expression : Expr) :
           simp only [Expr.shift, Expr.mapVars, Expr.skeleton, skeletonShift]
           rw [ih (sizeOf left) (by rw [← sizeEq]; simp_wf <;> omega) cutoff left rfl,
             ih (sizeOf right) (by rw [← sizeEq]; simp_wf <;> omega) cutoff right rfl]
-      | add mode left right | mul mode left right | div mode left right =>
+      | add left right | mul left right | div left right =>
           simp only [Expr.shift, Expr.mapVars, Expr.skeleton, skeletonShift]
           rw [ih (sizeOf left) (by rw [← sizeEq]; simp_wf <;> omega) cutoff left rfl,
             ih (sizeOf right) (by rw [← sizeEq]; simp_wf <;> omega) cutoff right rfl]
@@ -2079,10 +2076,10 @@ theorem shift_skeleton (amount cutoff : Nat) (expression : Expr) :
       | inl body | inr body =>
           simp only [Expr.shift, Expr.mapVars, Expr.skeleton, skeletonShift]
           rw [ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega) cutoff body rfl]
-      | neg mode body =>
+      | neg body =>
           simp only [Expr.shift, Expr.mapVars, Expr.skeleton, skeletonShift]
           rw [ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega) cutoff body rfl]
-      | bvar index | unit | bool flag | real mode index | nil =>
+      | bvar index | unit | bool flag | real index | nil =>
           simp [Expr.shift, Expr.mapVars, Expr.skeleton, skeletonShift]
 
 theorem shift_realCoordinates (amount cutoff : Nat) (expression : Expr) :
@@ -2113,7 +2110,7 @@ theorem shift_realCoordinates (amount cutoff : Nat) (expression : Expr) :
           simp only [Expr.shift, Expr.mapVars, Expr.realCoordinates]
           rw [ih (sizeOf left) (by rw [← sizeEq]; simp_wf <;> omega) cutoff left rfl,
             ih (sizeOf right) (by rw [← sizeEq]; simp_wf <;> omega) cutoff right rfl]
-      | add mode left right | mul mode left right | div mode left right =>
+      | add left right | mul left right | div left right =>
           simp only [Expr.shift, Expr.mapVars, Expr.realCoordinates]
           rw [ih (sizeOf left) (by rw [← sizeEq]; simp_wf <;> omega) cutoff left rfl,
             ih (sizeOf right) (by rw [← sizeEq]; simp_wf <;> omega) cutoff right rfl]
@@ -2158,10 +2155,10 @@ theorem shift_realCoordinates (amount cutoff : Nat) (expression : Expr) :
       | inl body | inr body =>
           simp only [Expr.shift, Expr.mapVars, Expr.realCoordinates]
           rw [ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega) cutoff body rfl]
-      | neg mode body =>
+      | neg body =>
           simp only [Expr.shift, Expr.mapVars, Expr.realCoordinates]
           rw [ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega) cutoff body rfl]
-      | bvar index | unit | bool flag | real mode index | nil =>
+      | bvar index | unit | bool flag | real index | nil =>
           simp [Expr.shift, Expr.mapVars, Expr.realCoordinates]
 
 def MeasurableFamily.shift {α : Type*} [MeasurableSpace α]
@@ -2187,7 +2184,7 @@ def skeletonSubstAt (depth : Nat) (replacement : Skeleton) : Skeleton → Skelet
       else .bvar (if depth < index then index - 1 else index)
   | .unit => .unit
   | .bool value => .bool value
-  | .real mode => .real mode
+  | .real => .real
   | .lam body => .lam (skeletonSubstAt (depth + 1) replacement body)
   | .fix body =>
       .fix (skeletonSubstAt (depth + 2) replacement body)
@@ -2219,12 +2216,12 @@ def skeletonSubstAt (depth : Nat) (replacement : Skeleton) : Skeleton → Skelet
       (skeletonSubstAt depth replacement value)
       (skeletonSubstAt (depth + 1) replacement body)
   | .promote body => .promote (skeletonSubstAt depth replacement body)
-  | .neg mode body => .neg mode (skeletonSubstAt depth replacement body)
-  | .add mode left right => .add mode
+  | .neg body => .neg (skeletonSubstAt depth replacement body)
+  | .add left right => .add
       (skeletonSubstAt depth replacement left) (skeletonSubstAt depth replacement right)
-  | .mul mode left right => .mul mode
+  | .mul left right => .mul
       (skeletonSubstAt depth replacement left) (skeletonSubstAt depth replacement right)
-  | .div mode left right => .div mode
+  | .div left right => .div
       (skeletonSubstAt depth replacement left) (skeletonSubstAt depth replacement right)
   | .lt left right => .lt
       (skeletonSubstAt depth replacement left) (skeletonSubstAt depth replacement right)
@@ -2261,7 +2258,7 @@ theorem substAt_skeleton (depth : Nat) (replacement expression : Expr) :
           simp only [Expr.substAt, Expr.mapVars, Expr.skeleton, skeletonSubstAt]
           rw [ih (sizeOf left) (by rw [← sizeEq]; simp_wf <;> omega) depth left rfl,
             ih (sizeOf right) (by rw [← sizeEq]; simp_wf <;> omega) depth right rfl]
-      | add mode left right | mul mode left right | div mode left right =>
+      | add left right | mul left right | div left right =>
           simp only [Expr.substAt, Expr.mapVars, Expr.skeleton, skeletonSubstAt]
           rw [ih (sizeOf left) (by rw [← sizeEq]; simp_wf <;> omega) depth left rfl,
             ih (sizeOf right) (by rw [← sizeEq]; simp_wf <;> omega) depth right rfl]
@@ -2306,7 +2303,7 @@ theorem substAt_skeleton (depth : Nat) (replacement expression : Expr) :
       | inl body | inr body =>
           simp only [Expr.substAt, Expr.mapVars, Expr.skeleton, skeletonSubstAt]
           rw [ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega) depth body rfl]
-      | neg mode body =>
+      | neg body =>
           simp only [Expr.substAt, Expr.mapVars, Expr.skeleton, skeletonSubstAt]
           rw [ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega) depth body rfl]
       | bvar index =>
@@ -2314,7 +2311,7 @@ theorem substAt_skeleton (depth : Nat) (replacement expression : Expr) :
           split
           · exact shift_skeleton depth 0 replacement
           · simp only [Expr.skeleton]
-      | unit | bool flag | real mode index | nil =>
+      | unit | bool flag | real index | nil =>
           simp [Expr.substAt, Expr.mapVars, Expr.skeleton, skeletonSubstAt]
 
 inductive CoordinateSelector where
@@ -2329,13 +2326,13 @@ def coordinatePlan (depth : Nat) (replacement : Skeleton) (bodyOffset : Nat) :
       if index = depth then
         (List.range replacement.realArity).map CoordinateSelector.replacement
       else []
-  | .real _ => [.body bodyOffset]
+  | .real => [.body bodyOffset]
   | .lam body => coordinatePlan (depth + 1) replacement bodyOffset body
   | .fix body => coordinatePlan (depth + 2) replacement bodyOffset body
   | .fst body | .snd body | .inl body | .inr body
-  | .promote body | .neg _ body => coordinatePlan depth replacement bodyOffset body
+  | .promote body | .neg body => coordinatePlan depth replacement bodyOffset body
   | .app left right | .pair left right | .cons left right
-  | .add _ left right | .mul _ left right | .div _ left right | .lt left right =>
+  | .add left right | .mul left right | .div left right | .lt left right =>
       coordinatePlan depth replacement bodyOffset left ++
         coordinatePlan depth replacement (bodyOffset + left.realArity) right
   | .matchSum scrutinee left right =>
@@ -2466,7 +2463,7 @@ theorem applyCoordinatePlan_coordinatePlan (depth : Nat) (replacement expression
               applyCoordinatePlan_replacementRange]
             exact shift_realCoordinates depth 0 replacement |>.symm
           · simp [applyCoordinatePlan, Expr.realCoordinates]
-      | real mode value =>
+      | real value =>
           simpa [coordinatePlan, Expr.substAt, Expr.mapVars, Expr.skeleton, Expr.realCoordinates] using
             applyCoordinatePlan_bodyAtPrefix before suffix value replacement.realCoordinates
       | pair left right | app left right | cons left right =>
@@ -2484,7 +2481,7 @@ theorem applyCoordinatePlan_coordinatePlan (depth : Nat) (replacement expression
               (before ++ left.realCoordinates).length := by
             rw [List.length_append, realCoordinates_length left]
           rw [offsetEquality, rightResult]
-      | add mode left right | mul mode left right | div mode left right =>
+      | add left right | mul left right | div left right =>
           simp only [coordinatePlan, Expr.skeleton, Expr.realCoordinates, Expr.substAt, Expr.mapVars,
             applyCoordinatePlan_append]
           have leftResult := ih (sizeOf left)
@@ -2619,7 +2616,7 @@ theorem applyCoordinatePlan_coordinatePlan (depth : Nat) (replacement expression
             ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega)
               (depth + 2) body before suffix rfl
       | fst body | snd body | inl body | inr body
-      | promote body | neg mode body =>
+      | promote body | neg body =>
           simpa only [coordinatePlan, Expr.skeleton, Expr.realCoordinates, Expr.substAt, Expr.mapVars] using
             ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega)
               depth body before suffix rfl
@@ -2746,10 +2743,10 @@ def MeasurableFamily.substTwo {α : Type*} [MeasurableSpace α]
 
 theorem isValue_eq_skeletonIsValue : ∀ expression : Expr,
     expression.isValue = Expr.isValue expression.skeleton
-  | .bvar _ | .unit | .bool _ | .real _ _ | .lam _ | .fix _
+  | .bvar _ | .unit | .bool _ | .real _ | .lam _ | .fix _
   | .app _ _ | .fst _ | .snd _ | .matchSum _ _ _ | .nil
   | .matchList _ _ _ | .ite _ _ _ | .letE _ _ | .promote _
-  | .neg _ _ | .add _ _ _ | .mul _ _ _ | .div _ _ _ | .lt _ _ => by
+  | .neg _ | .add _ _ | .mul _ _ | .div _ _ | .lt _ _ => by
       simp [Expr.isValue, Expr.skeleton, Expr.isValue]
   | .sample _ _ _ _ => by simp [Expr.isValue, Expr.skeleton, Expr.isValue]
   | .pair left right | .cons left right => by
@@ -2818,7 +2815,7 @@ theorem firstNonValue_eq_index {expressions : List Expr} {skeletons : List Skele
             simp [listElement]
 
 def skeletonIsReal : Skeleton → Bool
-  | .real _ => true
+  | .real => true
   | _ => false
 
 def allRealSkeletons (skeletons : List Skeleton) : Bool :=
@@ -3127,10 +3124,10 @@ def wrapSampleGeneral {α : Type*} [MeasurableSpace α]
       bodyMeasurable
 
 noncomputable def sampleZero {α : Type*} [MeasurableSpace α] (mode : Mode) (op : Tag) :
-    MeasurableActionFamily α (fun _ => Action.sample (mode, op) 0 (Expr.real mode)) := by
+    MeasurableActionFamily α (fun _ => Action.sample (mode, op) 0 (Expr.real)) := by
   let draw : SFiniteKernel α ℝ :=
     SFiniteKernel.zero
-  apply congr (.sample draw (measurable_realLiteral mode measurable_snd))
+  apply congr (.sample draw (measurable_realLiteral measurable_snd))
   funext parameter
   rfl
 
@@ -3144,7 +3141,7 @@ noncomputable def sampleAtomic {α : Type*} [MeasurableSpace α]
           (atomicParams op
             ((affine parameter).flatMap Expr.realCoordinates)
             ((general parameter).flatMap Expr.realCoordinates)))
-      (Expr.real mode)) := by
+      (Expr.real)) := by
   let atom := primitiveKernelPack laws op
   let parameters := fun parameter => atomicParams op
     ((affine parameter).flatMap Expr.realCoordinates)
@@ -3153,7 +3150,7 @@ noncomputable def sampleAtomic {α : Type*} [MeasurableSpace α]
     measurable_atomicParams op affineFamily generalFamily
   let draw := SFiniteKernel.pullback atom parameters
     parametersMeasurable
-  apply congr (.sample draw (measurable_realLiteral mode measurable_snd))
+  apply congr (.sample draw (measurable_realLiteral measurable_snd))
   funext parameter
   rw [pullback_apply]
 
@@ -3828,20 +3825,19 @@ noncomputable def reduceLet {α : Type*} [MeasurableSpace α]
 
 def realCoordinateResult {α : Type*} [MeasurableSpace α]
     {expression : α → Expr} (family : MeasurableFamily α expression)
-    (mode : Mode) (value : α → ℝ) (valueMeasurable : Measurable value) :
-    MeasurableFamily α (fun parameter => Expr.real mode (value parameter)) :=
-  (MeasurableFamily.realLiteral mode).comp value valueMeasurable
+    (value : α → ℝ) (valueMeasurable : Measurable value) :
+    MeasurableFamily α (fun parameter => Expr.real (value parameter)) :=
+  MeasurableFamily.realLiteral.comp value valueMeasurable
 
 theorem reduce_promote_eq
     (body : Expr) :
     reduce (.promote body) =
       if body.isValue then
         match body with
-        | .real .G value => .next (.real .E value)
+        | .real value => .next (.real value)
         | _ => .stuck
       else (reduce body).wrap .promote := by
   cases body <;> simp only [reduce, Determinize.Statement.Paper.reduce]
-  case real mode value => cases mode <;> simp only [reduce, Determinize.Statement.Paper.reduce]
 
 noncomputable def reducePromote {α : Type*} [MeasurableSpace α]
     (laws : Determinize.Proof.Paper.PrimitiveLaws)
@@ -3851,35 +3847,21 @@ noncomputable def reducePromote {α : Type*} [MeasurableSpace α]
   classical
   by_cases bodyValue : Expr.isValue bodyFamily.skeleton = true
   · cases bodySkeletonEq : bodyFamily.skeleton
-    case real mode unitValue =>
-      cases mode with
-      | E =>
-          apply congr stuck
-          funext parameter
-          have fixed := bodyFamily.skeleton_eq parameter
-          have actualBodyValue : (body parameter).isValue = true :=
-            (bodyFamily.isValue_eq parameter).trans bodyValue
-          rw [bodySkeletonEq] at fixed
-          cases actualEq : body parameter <;>
-            rw [actualEq] at actualBodyValue <;>
-            simp [actualEq, Expr.skeleton] at fixed <;>
-            rw [reduce_promote_eq, actualBodyValue] <;>
-            simp_all
-      | G =>
-          let resultFamily := realCoordinateResult bodyFamily .E
-            (fun parameter => (body parameter).realCoordinates.getD 0 0)
-            (bodyFamily.coordinate_measurable 0)
-          apply congr (nextFamily resultFamily)
-          funext parameter
-          have fixed := bodyFamily.skeleton_eq parameter
-          have actualBodyValue : (body parameter).isValue = true :=
-            (bodyFamily.isValue_eq parameter).trans bodyValue
-          rw [bodySkeletonEq] at fixed
-          cases actualEq : body parameter <;>
-            rw [actualEq] at actualBodyValue <;>
-            simp [actualEq, Expr.skeleton] at fixed <;>
-            rw [reduce_promote_eq, actualBodyValue] <;>
-            simp_all [resultFamily, Expr.realCoordinates, List.getD]
+    case real unitValue =>
+      let resultFamily := realCoordinateResult bodyFamily
+        (fun parameter => (body parameter).realCoordinates.getD 0 0)
+        (bodyFamily.coordinate_measurable 0)
+      apply congr (nextFamily resultFamily)
+      funext parameter
+      have fixed := bodyFamily.skeleton_eq parameter
+      have actualBodyValue : (body parameter).isValue = true :=
+        (bodyFamily.isValue_eq parameter).trans bodyValue
+      rw [bodySkeletonEq] at fixed
+      cases actualEq : body parameter <;>
+        rw [actualEq] at actualBodyValue <;>
+        simp [actualEq, Expr.skeleton] at fixed <;>
+        rw [reduce_promote_eq, actualBodyValue] <;>
+        simp_all [resultFamily, Expr.realCoordinates, List.getD]
     all_goals
       apply congr stuck
       funext parameter
@@ -3902,25 +3884,25 @@ noncomputable def reducePromote {α : Type*} [MeasurableSpace α]
     simp
 
 theorem reduce_neg_eq
-    (mode : Mode) (body : Expr) :
-    reduce (.neg mode body) =
+    (body : Expr) :
+    reduce (.neg body) =
       if body.isValue then
         match body with
-        | .real _ value => .next (.real mode (-value))
+        | .real value => .next (.real (-value))
         | _ => .stuck
-      else (reduce body).wrap (.neg mode) := by
+      else (reduce body).wrap .neg := by
   cases body <;> simp only [reduce, Determinize.Statement.Paper.reduce]
 
 noncomputable def reduceNeg {α : Type*} [MeasurableSpace α]
     (laws : Determinize.Proof.Paper.PrimitiveLaws)
-    (mode : Mode) {body : α → Expr} (bodyFamily : MeasurableFamily α body)
+    {body : α → Expr} (bodyFamily : MeasurableFamily α body)
     (bodyReduce : MeasurableActionFamily α (fun parameter => reduce (body parameter))) :
-    MeasurableActionFamily α (fun parameter => reduce (.neg mode (body parameter))) := by
+    MeasurableActionFamily α (fun parameter => reduce (.neg (body parameter))) := by
   classical
   by_cases bodyValue : Expr.isValue bodyFamily.skeleton = true
   · cases bodySkeletonEq : bodyFamily.skeleton
     case real =>
-      let resultFamily := realCoordinateResult bodyFamily mode
+      let resultFamily := realCoordinateResult bodyFamily
         (fun parameter => -((body parameter).realCoordinates.getD 0 0))
         (bodyFamily.coordinate_measurable 0).neg
       apply congr (nextFamily resultFamily)
@@ -3946,7 +3928,7 @@ noncomputable def reduceNeg {α : Type*} [MeasurableSpace α]
         simp [actualEq, Expr.skeleton] at fixed <;>
         rw [reduce_neg_eq, actualBodyValue] <;>
         simp
-  · apply congr (bodyReduce.wrapUnary (.neg mode) (.neg mode)
+  · apply congr (bodyReduce.wrapUnary .neg .neg
         (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates]))
     funext parameter
     have actualBodyValue : (body parameter).isValue = false := by
@@ -3956,25 +3938,25 @@ noncomputable def reduceNeg {α : Type*} [MeasurableSpace α]
     simp
 
 theorem reduce_add_eq
-    (mode : Mode) (left right : Expr) :
-    reduce (.add mode left right) =
+    (left right : Expr) :
+    reduce (.add left right) =
       if left.isValue then
         if right.isValue then
           match realValue? left, realValue? right with
-          | some x, some y => .next (.real mode (x + y))
+          | some x, some y => .next (.real (x + y))
           | _, _ => .stuck
-        else (reduce right).wrap (.add mode left)
-      else (reduce left).wrap (fun next => .add mode next right) := by
+        else (reduce right).wrap (.add left)
+      else (reduce left).wrap (fun next => .add next right) := by
   cases left <;> cases right <;> simp only [reduce, Determinize.Statement.Paper.reduce] <;> rfl
 
 noncomputable def reduceAdd {α : Type*} [MeasurableSpace α]
     (laws : Determinize.Proof.Paper.PrimitiveLaws)
-    (mode : Mode) {left right : α → Expr}
+    {left right : α → Expr}
     (leftFamily : MeasurableFamily α left) (rightFamily : MeasurableFamily α right)
     (leftReduce : MeasurableActionFamily α (fun parameter => reduce (left parameter)))
     (rightReduce : MeasurableActionFamily α (fun parameter => reduce (right parameter))) :
     MeasurableActionFamily α
-      (fun parameter => reduce (.add mode (left parameter) (right parameter))) := by
+      (fun parameter => reduce (.add (left parameter) (right parameter))) := by
   classical
   by_cases leftValue : Expr.isValue leftFamily.skeleton = true
   · by_cases rightValue : Expr.isValue rightFamily.skeleton = true
@@ -3982,7 +3964,7 @@ noncomputable def reduceAdd {α : Type*} [MeasurableSpace α]
       case real =>
         cases rightSkeletonEq : rightFamily.skeleton
         case real =>
-          let resultFamily := realCoordinateResult leftFamily mode
+          let resultFamily := realCoordinateResult leftFamily
             (fun parameter => (left parameter).realCoordinates.getD 0 0 +
               (right parameter).realCoordinates.getD 0 0)
             ((leftFamily.coordinate_measurable 0).add (rightFamily.coordinate_measurable 0))
@@ -4038,7 +4020,7 @@ noncomputable def reduceAdd {α : Type*} [MeasurableSpace α]
           rw [reduce_add_eq, actualLeftValue, actualRightValue] <;>
           simp [realValue?]
     · apply congr (rightReduce.wrapBinaryRight left leftFamily.measurable
-          (.add mode) (.add mode) (by intros; simp [Expr.skeleton])
+          .add .add (by intros; simp [Expr.skeleton])
           (by intros; simp [Expr.realCoordinates]))
       funext parameter
       have actualLeftValue : (left parameter).isValue = true :=
@@ -4049,7 +4031,7 @@ noncomputable def reduceAdd {α : Type*} [MeasurableSpace α]
       rw [reduce_add_eq, actualLeftValue, actualRightValue]
       simp
   · apply congr (leftReduce.wrapBinaryLeft right rightFamily.measurable
-        (.add mode) (.add mode) (by intros; simp [Expr.skeleton])
+        .add .add (by intros; simp [Expr.skeleton])
         (by intros; simp [Expr.realCoordinates]))
     funext parameter
     have actualLeftValue : (left parameter).isValue = false := by
@@ -4059,25 +4041,25 @@ noncomputable def reduceAdd {α : Type*} [MeasurableSpace α]
     simp
 
 theorem reduce_mul_eq
-    (mode : Mode) (left right : Expr) :
-    reduce (.mul mode left right) =
+    (left right : Expr) :
+    reduce (.mul left right) =
       if left.isValue then
         if right.isValue then
           match realValue? left, realValue? right with
-          | some x, some y => .next (.real mode (x * y))
+          | some x, some y => .next (.real (x * y))
           | _, _ => .stuck
-        else (reduce right).wrap (.mul mode left)
-      else (reduce left).wrap (fun next => .mul mode next right) := by
+        else (reduce right).wrap (.mul left)
+      else (reduce left).wrap (fun next => .mul next right) := by
   cases left <;> cases right <;> simp only [reduce, Determinize.Statement.Paper.reduce] <;> rfl
 
 noncomputable def reduceMul {α : Type*} [MeasurableSpace α]
     (laws : Determinize.Proof.Paper.PrimitiveLaws)
-    (mode : Mode) {left right : α → Expr}
+    {left right : α → Expr}
     (leftFamily : MeasurableFamily α left) (rightFamily : MeasurableFamily α right)
     (leftReduce : MeasurableActionFamily α (fun parameter => reduce (left parameter)))
     (rightReduce : MeasurableActionFamily α (fun parameter => reduce (right parameter))) :
     MeasurableActionFamily α
-      (fun parameter => reduce (.mul mode (left parameter) (right parameter))) := by
+      (fun parameter => reduce (.mul (left parameter) (right parameter))) := by
   classical
   by_cases leftValue : Expr.isValue leftFamily.skeleton = true
   · by_cases rightValue : Expr.isValue rightFamily.skeleton = true
@@ -4085,7 +4067,7 @@ noncomputable def reduceMul {α : Type*} [MeasurableSpace α]
       case real =>
         cases rightSkeletonEq : rightFamily.skeleton
         case real =>
-          let resultFamily := realCoordinateResult leftFamily mode
+          let resultFamily := realCoordinateResult leftFamily
             (fun parameter => (left parameter).realCoordinates.getD 0 0 *
               (right parameter).realCoordinates.getD 0 0)
             ((leftFamily.coordinate_measurable 0).mul (rightFamily.coordinate_measurable 0))
@@ -4141,7 +4123,7 @@ noncomputable def reduceMul {α : Type*} [MeasurableSpace α]
           rw [reduce_mul_eq, actualLeftValue, actualRightValue] <;>
           simp [realValue?]
     · apply congr (rightReduce.wrapBinaryRight left leftFamily.measurable
-          (.mul mode) (.mul mode) (by intros; simp [Expr.skeleton])
+          .mul .mul (by intros; simp [Expr.skeleton])
           (by intros; simp [Expr.realCoordinates]))
       funext parameter
       have actualLeftValue : (left parameter).isValue = true :=
@@ -4152,7 +4134,7 @@ noncomputable def reduceMul {α : Type*} [MeasurableSpace α]
       rw [reduce_mul_eq, actualLeftValue, actualRightValue]
       simp
   · apply congr (leftReduce.wrapBinaryLeft right rightFamily.measurable
-        (.mul mode) (.mul mode) (by intros; simp [Expr.skeleton])
+        .mul .mul (by intros; simp [Expr.skeleton])
         (by intros; simp [Expr.realCoordinates]))
     funext parameter
     have actualLeftValue : (left parameter).isValue = false := by
@@ -4162,25 +4144,25 @@ noncomputable def reduceMul {α : Type*} [MeasurableSpace α]
     simp
 
 theorem reduce_div_eq
-    (mode : Mode) (left right : Expr) :
-    reduce (.div mode left right) =
+    (left right : Expr) :
+    reduce (.div left right) =
       if left.isValue then
         if right.isValue then
           match realValue? left, realValue? right with
-          | some x, some y => .next (.real mode (x / y))
+          | some x, some y => .next (.real (x / y))
           | _, _ => .stuck
-        else (reduce right).wrap (.div mode left)
-      else (reduce left).wrap (fun next => .div mode next right) := by
+        else (reduce right).wrap (.div left)
+      else (reduce left).wrap (fun next => .div next right) := by
   cases left <;> cases right <;> simp only [reduce, Determinize.Statement.Paper.reduce] <;> rfl
 
 noncomputable def reduceDiv {α : Type*} [MeasurableSpace α]
     (laws : Determinize.Proof.Paper.PrimitiveLaws)
-    (mode : Mode) {left right : α → Expr}
+    {left right : α → Expr}
     (leftFamily : MeasurableFamily α left) (rightFamily : MeasurableFamily α right)
     (leftReduce : MeasurableActionFamily α (fun parameter => reduce (left parameter)))
     (rightReduce : MeasurableActionFamily α (fun parameter => reduce (right parameter))) :
     MeasurableActionFamily α
-      (fun parameter => reduce (.div mode (left parameter) (right parameter))) := by
+      (fun parameter => reduce (.div (left parameter) (right parameter))) := by
   classical
   by_cases leftValue : Expr.isValue leftFamily.skeleton = true
   · by_cases rightValue : Expr.isValue rightFamily.skeleton = true
@@ -4188,7 +4170,7 @@ noncomputable def reduceDiv {α : Type*} [MeasurableSpace α]
       case real =>
         cases rightSkeletonEq : rightFamily.skeleton
         case real =>
-          let resultFamily := realCoordinateResult leftFamily mode
+          let resultFamily := realCoordinateResult leftFamily
             (fun parameter => (left parameter).realCoordinates.getD 0 0 /
               (right parameter).realCoordinates.getD 0 0)
             ((leftFamily.coordinate_measurable 0).div (rightFamily.coordinate_measurable 0))
@@ -4244,7 +4226,7 @@ noncomputable def reduceDiv {α : Type*} [MeasurableSpace α]
           rw [reduce_div_eq, actualLeftValue, actualRightValue] <;>
           simp [realValue?]
     · apply congr (rightReduce.wrapBinaryRight left leftFamily.measurable
-          (.div mode) (.div mode) (by intros; simp [Expr.skeleton])
+          .div .div (by intros; simp [Expr.skeleton])
           (by intros; simp [Expr.realCoordinates]))
       funext parameter
       have actualLeftValue : (left parameter).isValue = true :=
@@ -4255,7 +4237,7 @@ noncomputable def reduceDiv {α : Type*} [MeasurableSpace α]
       rw [reduce_div_eq, actualLeftValue, actualRightValue]
       simp
   · apply congr (leftReduce.wrapBinaryLeft right rightFamily.measurable
-        (.div mode) (.div mode) (by intros; simp [Expr.skeleton])
+        .div .div (by intros; simp [Expr.skeleton])
         (by intros; simp [Expr.realCoordinates]))
     funext parameter
     have actualLeftValue : (left parameter).isValue = false := by
@@ -4389,7 +4371,7 @@ theorem reduce_sample_eq
               (fun next => .sample mode op affine (front ++ next :: suffix))
         | none => match allRealValues? affine, allRealValues? general with
           | some affineValues, some generalValues =>
-              .sample (mode, op) (primitiveFiber op affineValues generalValues) (.real mode)
+              .sample (mode, op) (primitiveFiber op affineValues generalValues) .real
           | _, _ => .stuck := by
   simp only [reduce, Determinize.Statement.Paper.reduce]
   cases affineFound : firstNonValue affine with
@@ -4467,7 +4449,7 @@ noncomputable def reduceSample {α : Type*} [MeasurableSpace α]
                   rw [affineFamily.skeleton_eq parameter, affineReal] at affineValues
                   rw [generalFamily.skeleton_eq parameter, generalReal] at generalValues
                   rw [affineValues, generalValues]
-                  apply congrArg (fun fiber => Action.sample (mode, op) fiber (Expr.real mode))
+                  apply congrArg (fun fiber => Action.sample (mode, op) fiber (Expr.real))
                   symm
                   apply primitiveFiber_eq_atomic
                   · rw [affineFamily.coordinate_count,
@@ -4484,7 +4466,7 @@ noncomputable def reduceSample {α : Type*} [MeasurableSpace α]
                   rw [affineFamily.skeleton_eq parameter, affineReal] at affineValues
                   rw [generalFamily.skeleton_eq parameter, generalReal] at generalValues
                   rw [affineValues, generalValues]
-                  apply congrArg (fun fiber => Action.sample (mode, op) fiber (Expr.real mode))
+                  apply congrArg (fun fiber => Action.sample (mode, op) fiber (Expr.real))
                   symm
                   apply primitiveFiber_eq_zero_of_general_length_ne
                   · rw [affineFamily.coordinate_count,
@@ -4502,7 +4484,7 @@ noncomputable def reduceSample {α : Type*} [MeasurableSpace α]
                 rw [affineFamily.skeleton_eq parameter, affineReal] at affineValues
                 rw [generalFamily.skeleton_eq parameter, generalReal] at generalValues
                 rw [affineValues, generalValues]
-                apply congrArg (fun fiber => Action.sample (mode, op) fiber (Expr.real mode))
+                apply congrArg (fun fiber => Action.sample (mode, op) fiber (Expr.real))
                 symm
                 apply primitiveFiber_eq_zero_of_affine_length_ne
                 rw [affineFamily.coordinate_count,
@@ -4795,19 +4777,19 @@ noncomputable def measurable_reduceAux
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
             simp_all [actualEq, Expr.skeleton, Expr.firstChild]
-      | neg mode bodySkeleton =>
+      | neg bodySkeleton =>
           have bodySmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
             simp_all [Skeleton.firstChild, Skeleton.secondChild]
             omega
-          apply congr (reduceNeg laws mode family.firstChild
+          apply congr (reduceNeg laws family.firstChild
             (childReduce family.firstChild bodySmaller))
           funext parameter
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
             simp_all [actualEq, Expr.skeleton, Expr.firstChild]
-      | add mode leftSkeleton rightSkeleton =>
+      | add leftSkeleton rightSkeleton =>
           have leftSmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
             simp_all [Skeleton.firstChild, Skeleton.secondChild]
@@ -4816,7 +4798,7 @@ noncomputable def measurable_reduceAux
             rw [← sizeEq, skeletonEq]
             simp_all [Skeleton.firstChild, Skeleton.secondChild]
             omega
-          apply congr (reduceAdd laws mode family.firstChild family.secondChild
+          apply congr (reduceAdd laws family.firstChild family.secondChild
             (childReduce family.firstChild leftSmaller)
             (childReduce family.secondChild rightSmaller))
           funext parameter
@@ -4824,7 +4806,7 @@ noncomputable def measurable_reduceAux
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
             simp_all [actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild]
-      | mul mode leftSkeleton rightSkeleton =>
+      | mul leftSkeleton rightSkeleton =>
           have leftSmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
             simp_all [Skeleton.firstChild, Skeleton.secondChild]
@@ -4833,7 +4815,7 @@ noncomputable def measurable_reduceAux
             rw [← sizeEq, skeletonEq]
             simp_all [Skeleton.firstChild, Skeleton.secondChild]
             omega
-          apply congr (reduceMul laws mode family.firstChild family.secondChild
+          apply congr (reduceMul laws family.firstChild family.secondChild
             (childReduce family.firstChild leftSmaller)
             (childReduce family.secondChild rightSmaller))
           funext parameter
@@ -4841,7 +4823,7 @@ noncomputable def measurable_reduceAux
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
             simp_all [actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild]
-      | div mode leftSkeleton rightSkeleton =>
+      | div leftSkeleton rightSkeleton =>
           have leftSmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
             simp_all [Skeleton.firstChild, Skeleton.secondChild]
@@ -4850,7 +4832,7 @@ noncomputable def measurable_reduceAux
             rw [← sizeEq, skeletonEq]
             simp_all [Skeleton.firstChild, Skeleton.secondChild]
             omega
-          apply congr (reduceDiv laws mode family.firstChild family.secondChild
+          apply congr (reduceDiv laws family.firstChild family.secondChild
             (childReduce family.firstChild leftSmaller)
             (childReduce family.secondChild rightSmaller))
           funext parameter
@@ -5183,7 +5165,7 @@ theorem reduce_sample_mass_le_one
       | bvar index => simp [reduce, Determinize.Statement.Paper.reduce] at equality
       | unit => simp [reduce, Determinize.Statement.Paper.reduce] at equality
       | bool value => simp [reduce, Determinize.Statement.Paper.reduce] at equality
-      | real mode value => simp [reduce, Determinize.Statement.Paper.reduce] at equality
+      | real value => simp [reduce, Determinize.Statement.Paper.reduce] at equality
       | lam body => simp [reduce, Determinize.Statement.Paper.reduce] at equality
       | fix body => simp [reduce, Determinize.Statement.Paper.reduce] at equality
       | nil => simp [reduce, Determinize.Statement.Paper.reduce] at equality
@@ -5253,26 +5235,26 @@ theorem reduce_sample_mass_le_one
           split at equality
           · split at equality <;> simp at equality
           · exact wrapped body (by rw [← sizeEq]; simp_wf <;> omega) _ equality
-      | neg mode body =>
+      | neg body =>
           rw [reduce_neg_eq] at equality
           split at equality
           · split at equality <;> simp at equality
           · exact wrapped body (by rw [← sizeEq]; simp_wf <;> omega) _ equality
-      | add mode left right =>
+      | add left right =>
           rw [reduce_add_eq] at equality
           split at equality
           · split at equality
             · split at equality <;> simp at equality
             · exact wrapped right (by rw [← sizeEq]; simp_wf <;> omega) _ equality
           · exact wrapped left (by rw [← sizeEq]; simp_wf <;> omega) _ equality
-      | mul mode left right =>
+      | mul left right =>
           rw [reduce_mul_eq] at equality
           split at equality
           · split at equality
             · split at equality <;> simp at equality
             · exact wrapped right (by rw [← sizeEq]; simp_wf <;> omega) _ equality
           · exact wrapped left (by rw [← sizeEq]; simp_wf <;> omega) _ equality
-      | div mode left right =>
+      | div left right =>
           rw [reduce_div_eq] at equality
           split at equality
           · split at equality
@@ -5392,9 +5374,6 @@ theorem exactOutputKernel_apply
       cases expression <;>
         try simp [exactOutputMeasure, terminalFloatSet,
           terminalFloatValue, Kernel.deterministic_apply]
-      case real mode value =>
-        cases mode <;> simp [exactOutputMeasure, terminalFloatSet,
-          terminalFloatValue, Kernel.deterministic_apply]
   | succ depth ih =>
       unfold exactOutputKernel exactOutputKernelPack
         SFiniteKernel.piecewise
@@ -5462,8 +5441,6 @@ theorem map_restrict_terminal_eq_bind_exactZero
     rw [exactOutputKernel_apply]
     cases expression <;> simp [exactOutputMeasure, terminalFloatSet,
       terminalFloatValue, Set.indicator]
-    case real mode value => cases mode <;>
-      simp [exactOutputMeasure, terminalFloatSet, terminalFloatValue, Set.indicator]
   rw [integrand, lintegral_indicator terminalFloatSet_measurable]
   simp_rw [Measure.dirac_apply' _ measurableSet]
   have indicatorEquality :

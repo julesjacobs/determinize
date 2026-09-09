@@ -26,12 +26,12 @@ def Action.wrap (context : Expr → Expr) : Action → Action
   | .stuck => .stuck
 
 def realValue? : Expr → Option ℝ
-  | .real _ value => some value
+  | .real value => some value
   | _ => none
 
 def allRealValues? : List Expr → Option (List ℝ)
   | [] => some []
-  | .real _ value :: tail => (value :: ·) <$> allRealValues? tail
+  | .real value :: tail => (value :: ·) <$> allRealValues? tail
   | _ => none
 
 def firstNonValue : List Expr → Option (List Expr × Expr × List Expr)
@@ -73,7 +73,7 @@ noncomputable def reduce : Expr → Action
   | .bvar _ => .stuck
   | .unit => .next .unit
   | expression@(.bool _) => .next expression
-  | expression@(.real _ _) => .next expression
+  | expression@(.real _) => .next expression
   | expression@(.lam _) => .next expression
   | expression@(.fix _) => .next expression
   | expression@.nil => .next expression
@@ -133,30 +133,30 @@ noncomputable def reduce : Expr → Action
       else (reduce value).wrap (fun next => .letE next body)
   | .promote body =>
       if body.isValue then match body with
-        | .real .G value => .next (.real .E value) | _ => .stuck
+        | .real value => .next (.real value) | _ => .stuck
       else (reduce body).wrap .promote
-  | .neg mode body =>
+  | .neg body =>
       if body.isValue then match body with
-        | .real _ value => .next (.real mode (-value)) | _ => .stuck
-      else (reduce body).wrap (.neg mode)
-  | .add mode left right =>
+        | .real value => .next (.real (-value)) | _ => .stuck
+      else (reduce body).wrap .neg
+  | .add left right =>
       if left.isValue then
         if right.isValue then match realValue? left, realValue? right with
-          | some x, some y => .next (.real mode (x + y)) | _, _ => .stuck
-        else (reduce right).wrap (.add mode left)
-      else (reduce left).wrap (fun next => .add mode next right)
-  | .mul mode left right =>
+          | some x, some y => .next (.real (x + y)) | _, _ => .stuck
+        else (reduce right).wrap (.add left)
+      else (reduce left).wrap (fun next => .add next right)
+  | .mul left right =>
       if left.isValue then
         if right.isValue then match realValue? left, realValue? right with
-          | some x, some y => .next (.real mode (x * y)) | _, _ => .stuck
-        else (reduce right).wrap (.mul mode left)
-      else (reduce left).wrap (fun next => .mul mode next right)
-  | .div mode left right =>
+          | some x, some y => .next (.real (x * y)) | _, _ => .stuck
+        else (reduce right).wrap (.mul left)
+      else (reduce left).wrap (fun next => .mul next right)
+  | .div left right =>
       if left.isValue then
         if right.isValue then match realValue? left, realValue? right with
-          | some x, some y => .next (.real mode (x / y)) | _, _ => .stuck
-        else (reduce right).wrap (.div mode left)
-      else (reduce left).wrap (fun next => .div mode next right)
+          | some x, some y => .next (.real (x / y)) | _, _ => .stuck
+        else (reduce right).wrap (.div left)
+      else (reduce left).wrap (fun next => .div next right)
   | .lt left right =>
       if left.isValue then
         if right.isValue then match realValue? left, realValue? right with
@@ -172,7 +172,7 @@ noncomputable def reduce : Expr → Action
             (reduce current).wrap (fun next => .sample mode op affine (front ++ next :: suffix))
         | none => match allRealValues? affine, allRealValues? general with
           | some affineValues, some generalValues =>
-              .sample (mode, op) (primitiveFiber op affineValues generalValues) (.real mode)
+              .sample (mode, op) (primitiveFiber op affineValues generalValues) .real
           | _, _ => .stuck
 termination_by expression => sizeOf expression
 decreasing_by
@@ -183,10 +183,10 @@ decreasing_by
       try simp_wf
       try omega
 
-/-- Real output accumulated through `fuel` reduction steps. Only terminal
-expectation-mode reals contribute output; other types may occur during evaluation. -/
+/-- Real output accumulated through `fuel` reduction steps. Only terminal reals
+contribute output; other types may occur during evaluation. -/
 noncomputable def cumulativeOutputMeasure : Nat → Expr → Measure ℝ
-  | 0, .real .E value => Measure.dirac value
+  | 0, .real value => Measure.dirac value
   | 0, _ => 0
   | fuel + 1, expression => match reduce expression with
       | .next next => cumulativeOutputMeasure fuel next

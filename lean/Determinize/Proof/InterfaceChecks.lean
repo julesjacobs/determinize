@@ -11,7 +11,7 @@ example : True := by
   trivial
 
 example (fuel : Nat) (value : ℝ) :
-    cumulativeOutputMeasure fuel (.real .E value) = Measure.dirac value := by
+    cumulativeOutputMeasure fuel (.real value) = Measure.dirac value := by
   induction fuel with
   | zero => rfl
   | succ fuel ih => simpa [cumulativeOutputMeasure, reduce] using ih
@@ -21,8 +21,8 @@ example (ty : Ty) : Typed [] (.lam (.bvar 0)) (.arr ty ty) :=
 
 def capturedSample : Expr :=
   .letE
-    (.sample .E (.stochastic .uniform) [.real .E 0, .real .E 1] [])
-    (.app (.lam (.add .E (.bvar 1) (.bvar 0))) (.real .E 2))
+    (.sample .E (.stochastic .uniform) [.real 0, .real 1] [])
+    (.app (.lam (.add (.bvar 1) (.bvar 0))) (.real 2))
 
 example : Typed [] capturedSample (.float .E) := by
   apply Typed.letE

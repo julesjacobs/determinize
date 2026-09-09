@@ -316,7 +316,7 @@ theorem target_decodeWithin (depth : Nat) (history : Symbolic.SampleEnv primitiv
         unfold targetTraceLaw
         generalize he : (expression.realize (history.meanEnvironment primitiveLaws)).determinize = e at nv ⊢
         cases e <;> try simp [exactMeasure]
-        case real mode r => cases mode <;> simp_all [Expr.isValue]
+        case real r => simp_all [Expr.isValue]
   | succ depth ih =>
       rcases safe with ⟨historySafe,typed,sourceSafe⟩
       by_cases value : expression.isValue = true
@@ -332,7 +332,7 @@ theorem target_decodeWithin (depth : Nat) (history : Symbolic.SampleEnv primitiv
                 PrimitiveDomainSafeAt depth (next.realize env) := by
               filter_upwards [sourceSafe] with env valid
               have reduction : reduce (expression.realize env) = .next (next.realize env) := by
-                rw [← symbolicReduce_realize primitiveLaws typed typed.gconstant env, actionEq]
+                rw [← symbolicReduce_realize primitiveLaws typed env, actionEq]
                 rfl
               have nv' : (expression.realize env).isValue ≠ true := by
                 simpa only [AffineExpr.realize_isValue] using value
@@ -340,7 +340,7 @@ theorem target_decodeWithin (depth : Nat) (history : Symbolic.SampleEnv primitiv
                 ↓reduceIte, reduction] using valid
             have reduction : reduce (expression.realize (history.meanEnvironment primitiveLaws)).determinize =
                 .next (next.realize (history.meanEnvironment primitiveLaws)).determinize := by
-              rw [← symbolicReduce_targetRealize primitiveLaws typed typed.gconstant, actionEq]
+              rw [← symbolicReduce_targetRealize primitiveLaws typed, actionEq]
               rfl
             rw [targetTraceLaw_next _ _ _ _ typed value actionEq,
               ae_map_iff (show Measurable (prepend none) from
@@ -374,7 +374,7 @@ theorem target_decodeWithin (depth : Nat) (history : Symbolic.SampleEnv primitiv
             obtain ⟨op,opEq⟩ := sampleG_opSome typed actionEq
             have reduction : reduce (expression.realize (history.meanEnvironment primitiveLaws)).determinize =
                 .sample site fiber (fun r => ((continuation r).realize (history.meanEnvironment primitiveLaws)).determinize) := by
-              rw [← symbolicReduce_targetRealize primitiveLaws typed typed.gconstant, actionEq]
+              rw [← symbolicReduce_targetRealize primitiveLaws typed, actionEq]
               rfl
             have siteEq : siteOp site = some op := by
               rw [← reduce_site reduction, generationOp_determinize, generationOp_realize, opEq]

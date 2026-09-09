@@ -13,7 +13,7 @@ theorem sampleG_joint_measurable (expression : AffineExpr n) (typed : WellTyped 
       fun pair => sampleContinuation (expression.realize pair.1) pair.2 := by
     funext pair
     unfold sampleContinuation
-    rw [← symbolicReduce_realize primitiveLaws typed typed.gconstant pair.1, actionEq]
+    rw [← symbolicReduce_realize primitiveLaws typed pair.1, actionEq]
     rfl
   rw [eq]
   exact sampleContinuation_measurable.comp
@@ -53,7 +53,7 @@ theorem generatedSourceKernel_apply (depth : Nat) (history : Symbolic.SampleEnv 
   filter_upwards [] with env
   rw [MeasurableActionFamily.pullback_apply, exactKernel_apply]
   unfold sampleContinuation
-  rw [← symbolicReduce_realize primitiveLaws typed typed.gconstant env, actionEq]
+  rw [← symbolicReduce_realize primitiveLaws typed env, actionEq]
   rfl
 
 theorem generatedTargetKernel_apply (depth : Nat) (history : Symbolic.SampleEnv primitiveLaws n)
@@ -63,7 +63,7 @@ theorem generatedTargetKernel_apply (depth : Nat) (history : Symbolic.SampleEnv 
       (targetTraceLaw depth history (continuation value)).map (prepend (entry (some op) value)) := by
   rw [generatedTargetKernel, sfiniteKernel_mapWithInput_apply, MeasurableActionFamily.pullback_apply, exactKernel_apply]
   unfold sampleContinuation
-  rw [← symbolicReduce_targetRealize primitiveLaws typed typed.gconstant, actionEq]
+  rw [← symbolicReduce_targetRealize primitiveLaws typed, actionEq]
   rfl
 
 theorem actualTraceLaw_sampleG (depth : Nat) (history : Symbolic.SampleEnv primitiveLaws n)
@@ -92,7 +92,7 @@ theorem actualTraceLaw_sampleG (depth : Nat) (history : Symbolic.SampleEnv primi
     apply Measure.bind_congr_right
     filter_upwards [] with env
     have reduction : reduce (expression.realize env) = .sample site fiber (fun v => (continuation v).realize env) := by
-      rw [← symbolicReduce_realize primitiveLaws typed typed.gconstant env, actionEq]
+      rw [← symbolicReduce_realize primitiveLaws typed env, actionEq]
       rfl
     rw [exact_succ_sample _ _ _ _ (by simpa only [AffineExpr.realize_isValue] using notValue) reduction,
       generationOp_realize, opEq]
@@ -116,7 +116,7 @@ theorem targetTraceLaw_sampleG (depth : Nat) (history : Symbolic.SampleEnv primi
       fiber.bind (generatedTargetKernel depth history expression op).kernel := by
   have reduction : reduce (expression.realize (history.meanEnvironment primitiveLaws)).determinize =
       .sample site fiber (fun v => ((continuation v).realize (history.meanEnvironment primitiveLaws)).determinize) := by
-    rw [← symbolicReduce_targetRealize primitiveLaws typed typed.gconstant, actionEq]
+    rw [← symbolicReduce_targetRealize primitiveLaws typed, actionEq]
     rfl
   rw [targetTraceLaw, exact_succ_sample _ _ _ _
     (by simpa only [determinize_isValue, AffineExpr.realize_isValue] using notValue) reduction,
@@ -138,7 +138,7 @@ theorem historyReplay_sampleG (depth : Nat) (history : Symbolic.SampleEnv primit
   apply replay_succ_sampleG depth (expression.realize env) fiber (fun v => (continuation v).realize env) tape op
   · simpa only [AffineExpr.realize_isValue] using notValue
   · rw [generationOp_realize, opEq]
-  · rw [← symbolicReduce_realize primitiveLaws typed typed.gconstant env, actionEq]
+  · rw [← symbolicReduce_realize primitiveLaws typed env, actionEq]
     rfl
 
 end

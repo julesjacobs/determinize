@@ -29,10 +29,10 @@ def record (site : Mode × Tag) (value : ℝ) (output : Output) : Output :=
   | (.G, .stochastic op) => ((op, value) :: output.1, output.2)
   | _ => output
 
-/-- Joint law of executions first returning an E-mode real at exactly `depth`
+/-- Joint law of executions first returning a real at exactly `depth`
 reduction steps. The recorded trace contains only the G draws among those steps. -/
 noncomputable def exactMeasure : Nat → Expr → Measure Output
-  | 0, .real .E value => Measure.dirac ([], value)
+  | 0, .real value => Measure.dirac ([], value)
   | 0, _ => 0
   | depth + 1, expression =>
       if expression.isValue then 0
@@ -42,7 +42,7 @@ noncomputable def exactMeasure : Nat → Expr → Measure Output
             (exactMeasure depth (continuation value)).map (record site value)
         | .stuck => 0
 
-/-- Joint law of terminating generation traces and returned E-mode reals. -/
+/-- Joint law of terminating generation traces and returned reals. -/
 noncomputable def jointMeasure (program : Expr) : Measure Output :=
   Measure.sum fun depth => exactMeasure depth program
 

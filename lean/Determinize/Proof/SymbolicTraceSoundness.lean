@@ -19,12 +19,12 @@ theorem exactZero_fiberSound (history : Symbolic.SampleEnv primitiveLaws n) (exp
     have mass : law Set.univ = 1 := SymbolicSoundness.SampleEnv.actualMeasure_univ_eq_one _ history safe.1
     let : IsProbabilityMeasure law := ⟨mass⟩
     have replayEq (tape : Trace) :
-        (historyReplay 0 history safe.1 (.real .E affine)).kernel tape = μ := by
+        (historyReplay 0 history safe.1 (.real affine)).kernel tape = μ := by
       rw [historyReplay_apply]
       simp only [AffineExpr.realize, replayMeasure, exactOutputMeasure]
       change law.bind (fun env => Measure.dirac (affine.eval env)) = μ
       exact Measure.bind_dirac_eq_map _ (affine_eval_measurable affine)
-    have sourceEq : actualTraceLaw 0 history (.real .E affine) =
+    have sourceEq : actualTraceLaw 0 history (.real affine) =
         μ.map (fun x => (([] : Trace), x)) := by
       rw [actualTraceLaw]
       simp only [AffineExpr.realize, exactMeasure]
@@ -35,7 +35,7 @@ theorem exactZero_fiberSound (history : Symbolic.SampleEnv primitiveLaws n) (exp
       rfl
     have integrable := SymbolicSoundness.SampleEnv.integrable_affine primitiveLaws primitiveMomentBounds history safe.1 affine
     have mean := SymbolicSoundness.SampleEnv.integral_affine primitiveLaws primitiveMomentBounds history safe.1 affine
-    have targetEq : targetTraceLaw 0 history (.real .E affine) = Measure.dirac (([] : Trace), affine.eval (history.meanEnvironment primitiveLaws)) := by
+    have targetEq : targetTraceLaw 0 history (.real affine) = Measure.dirac (([] : Trace), affine.eval (history.meanEnvironment primitiveLaws)) := by
       simp only [targetTraceLaw, AffineExpr.realize, Expr.determinize, exactMeasure]
     rw [sourceEq, ← replayEq [], targetEq]
     apply FiberSound.terminal
@@ -92,7 +92,7 @@ theorem exactDepth_fiberSound (depth : Nat) (history : Symbolic.SampleEnv primit
                 PrimitiveDomainSafeAt depth (next.realize env) := by
               filter_upwards [sourceSafe] with env valid
               have reduction : reduce (expression.realize env) = .next (next.realize env) := by
-                rw [← symbolicReduce_realize primitiveLaws typed typed.gconstant env, actionEq]
+                rw [← symbolicReduce_realize primitiveLaws typed env, actionEq]
                 rfl
               have nv : (expression.realize env).isValue ≠ true := by
                 simpa only [AffineExpr.realize_isValue] using value

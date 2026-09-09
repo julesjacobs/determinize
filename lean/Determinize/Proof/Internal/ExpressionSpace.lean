@@ -20,7 +20,7 @@ namespace Expr
 
 def skeleton : Expr → Skeleton
   | .bvar i => .bvar i | .unit => .unit | .bool b => .bool b
-  | .real m _ => .real m () | .lam b => .lam b.skeleton
+  | .real _ => .real () | .lam b => .lam b.skeleton
   | .fix b => .fix b.skeleton | .app f x => .app f.skeleton x.skeleton
   | .pair l r => .pair l.skeleton r.skeleton | .fst x => .fst x.skeleton
   | .snd x => .snd x.skeleton | .inl x => .inl x.skeleton
@@ -30,17 +30,17 @@ def skeleton : Expr → Skeleton
   | .matchList x n c => .matchList x.skeleton n.skeleton c.skeleton
   | .ite c t e => .ite c.skeleton t.skeleton e.skeleton
   | .letE x b => .letE x.skeleton b.skeleton
-  | .promote x => .promote x.skeleton | .neg m x => .neg m x.skeleton
-  | .add m l r => .add m l.skeleton r.skeleton | .mul m l r => .mul m l.skeleton r.skeleton
-  | .div m l r => .div m l.skeleton r.skeleton | .lt l r => .lt l.skeleton r.skeleton
+  | .promote x => .promote x.skeleton | .neg x => .neg x.skeleton
+  | .add l r => .add l.skeleton r.skeleton | .mul l r => .mul l.skeleton r.skeleton
+  | .div l r => .div l.skeleton r.skeleton | .lt l r => .lt l.skeleton r.skeleton
   | .sample m op a g => .sample m op (a.map skeleton) (g.map skeleton)
 
 def realCoordinates : Expr → List ℝ
-  | .real _ value => [value]
+  | .real value => [value]
   | .lam x | .fix x | .fst x | .snd x | .inl x
-  | .inr x | .promote x | .neg _ x => x.realCoordinates
-  | .app l r | .pair l r | .cons l r | .add _ l r | .mul _ l r
-  | .div _ l r | .lt l r => l.realCoordinates ++ r.realCoordinates
+  | .inr x | .promote x | .neg x => x.realCoordinates
+  | .app l r | .pair l r | .cons l r | .add l r | .mul l r
+  | .div l r | .lt l r => l.realCoordinates ++ r.realCoordinates
   | .matchSum x l r | .ite x l r =>
       x.realCoordinates ++ l.realCoordinates ++ r.realCoordinates
   | .matchList x n c => x.realCoordinates ++ n.realCoordinates ++ c.realCoordinates
@@ -71,10 +71,10 @@ def code (expression : Expr) : Code :=
 instance : MeasurableSpace Skeleton := ⊤
 instance : MeasurableSpace Expr := MeasurableSpace.comap code inferInstance
 
-def terminalFloatSet : Set Expr := {expression | ∃ value, expression = .real .E value}
+def terminalFloatSet : Set Expr := {expression | ∃ value, expression = .real value}
 
 def terminalFloatValue : Expr → ℝ
-  | .real .E value => value
+  | .real value => value
   | _ => 0
 
 end Determinize.Statement.Paper

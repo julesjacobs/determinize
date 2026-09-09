@@ -31,7 +31,6 @@ theorem cumulativeKernel_apply (fuel : Nat) (expression : Expr) :
       simp only [cumulativeKernel, MeasurableActionFamily.nStepKernelPack_zero_kernel,
         Kernel.comp_id, MeasurableActionFamily.exactOutputKernel_apply]
       cases expression <;> try rfl
-      case real mode value => cases mode <;> rfl
   | succ fuel ih =>
       rw [cumulativeKernel, MeasurableActionFamily.cumulativeKernel_succ,
         Kernel.comp_apply, paperStepKernel.kernel_eq_stepMeasure]
