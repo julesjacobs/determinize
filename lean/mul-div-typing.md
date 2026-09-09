@@ -12,11 +12,13 @@ condition, and recommends how to reconcile the artifacts.
 | paper, `tex/3_typing.tex` | `Mul-G`: both operands G, any result mode; `Mul-ConstL`/`Mul-ConstR`: a literal on either side, both operands at most the result mode | `Div`: the denominator is a literal at most G, the numerator at most the result mode |
 | `ocaml/infer.ml` | as the paper | as the paper, plus non-literal `G / G` at any result mode |
 | `sim/src/compiler/infer.js` | left operand at the result mode `m`, right operand G, result `m` | same |
-| `lean/` (`Typed.mul`, `Typed.mulLeftG`, `Typed.div`) | one operand G, the other at the result mode `m`, result `m` (the symmetric `[Mul]` of section 3, since 2026-09-08) | as the sim |
+| `lean/` (`Typed.mul`, `Typed.div`) | left operand G, right operand at the result mode `m`, result `m` (the left-G half of the symmetric `[Mul]` of section 3) | as the sim |
 
-So the sim and the Lean accept `x : E` times `y : G` at mode E, which the paper and the
-OCaml reject, while the paper and the OCaml accept a literal on the *left* of an E
-operand (`2 × x`), which the sim only accepts as `x × 2`; the Lean accepts both orders.
+So the sim and the Lean each accept an E operand next to an arbitrary G operand, which
+the paper and the OCaml reject unless the G operand is a literal, but on opposite sides:
+the sim types `x : E` times `y : G` at mode E, the Lean `y : G` times `x : E`. A literal
+on either side of an E operand (`2 × x`, `x × 2`) is accepted by the paper and the OCaml,
+by the sim only as `x × 2`, and by the Lean only as `2 × x`.
 
 ## 2. The invariant that makes determinization sound
 
@@ -204,16 +206,18 @@ fixed. This single principle reproduces every existing rule:
 
 ## 6. Where each artifact stands
 
-- Lean implements all of `[Mul]` (`Typed.mul` with the G factor on the right and its
-  mirror image `Typed.mulLeftG`) and all of `[Div]`; its soundness is machine-checked
-  (`Theorems.lean`, standard axioms only). The sim implements the right-operand half of
-  `[Mul]` and all of `[Div]`.
+- Lean implements the left-G half of `[Mul]` (`Typed.mul`: `left : Float[G]`,
+  `right : Float[m]`) and all of `[Div]`; its soundness is machine-checked
+  (`Theorems.lean`, standard axioms only). It had both halves on 2026-09-08
+  (`Typed.mulLeftG`); the second rule was dropped on 2026-09-09 so that `Typed` has one
+  rule per constructor and checking against a type is syntax-directed. The sim implements
+  the right-G half of `[Mul]` and all of `[Div]`.
 - Paper and OCaml implement the literal fragment of `[Mul]` and a literal-only `[Div]`
   (OCaml additionally allows `G / G`).
-- Paper, OCaml and sim differ in both directions: an E value times a G expression is
-  accepted only by Lean and sim; a literal on the left of an E operand is accepted by
-  the paper, OCaml and Lean, where the sim needs the literal commuted to the right and
-  typed at G.
+- The four artifacts differ pairwise: an E value times a G expression is accepted only by
+  the sim; a G expression times an E value only by the Lean; a literal on either side of
+  an E operand by the paper and the OCaml, where the sim needs the literal on the right
+  and the Lean on the left, typed at G.
 
 ## 7. Recommendation
 
@@ -226,22 +230,24 @@ fixed. This single principle reproduces every existing rule:
 - OCaml and sim: the typing rule is symmetric, but inference with mode metavariables
   needs a deterministic choice when neither operand's mode is known yet. A sound
   strategy is: if one operand is a literal or already known to be G, use it as the G
-  factor; otherwise default the right operand to G, which is what the sim and the
-  Lean do today. This keeps every currently accepted program accepted and adds
+  factor; otherwise default one fixed side to G (the sim defaults the right operand,
+  the Lean the left). This keeps every currently accepted program accepted and adds
   `x:E × y:G`, `y:G × x:E` and non-literal denominators.
-- Lean: done on 2026-09-08. `Typed.mulLeftG` (`left : Float[G]`, `right : Float[m]`)
-  mirrors `Typed.mul` in `Statement/Syntax.lean`, and the symbolic `WellTyped.mulGE`
-  mirrors `WellTyped.mulEG`. The symbolic reducer's `Affine.mul?` already accepted a
-  constant factor on either side, so the proof changes are the mirrored cases of every
-  induction over the two judgments (`Proof/Typing.lean`, `Proof/Symbolic.lean`,
-  `Proof/SymbolicSoundness.lean`, `Proof/OrdinarySemantics.lean`), about 180 lines.
-  `Proof/Examples.lean` checks `Traces.soundness` on `let y = Uniform_G(0, 1) in
-  y × Uniform_E(0, 1)`.
+- Lean: the symmetric rule was in place on 2026-09-08 (`Typed.mulLeftG` mirroring
+  `Typed.mul`, the symbolic `WellTyped.mulGE` mirroring `WellTyped.mulEG`, about 150
+  lines of mirrored induction cases in `Proof/Typing.lean`, `Proof/Symbolic.lean`,
+  `Proof/SymbolicSoundness.lean` and `Proof/OrdinarySemantics.lean`; commit f9cc30d)
+  and was reduced to the left-G half on 2026-09-09 to keep `Typed` syntax-directed.
+  Restoring it is that commit again; `Affine.mul?` accepts a constant factor on either
+  side, so no new proof idea is needed. `Proof/Examples.lean` checks `Traces.soundness`
+  on `let y = Uniform_G(0, 1) in y × Uniform_E(0, 1)`.
 
-**Option B, cheaper for the paper: adopt the sim rule in the paper and OCaml.** No
-proof work, since the Lean rule is a superset and the theorems cover every program the
-sim accepts; the paper documents that a literal scaling factor goes on the right. It
-leaves the visible asymmetry in the paper's rule, which reviewers will ask about.
+**Option B, cheaper for the paper: adopt one asymmetric rule everywhere.** The sim has
+`left : m, right : G`, the Lean `left : G, right : m`; the paper and the OCaml take one
+of the two, and the artifact on the other side flips (for the Lean that is the mirror
+commit above). No new proof idea is needed, and the paper documents that a scaling
+factor goes on one fixed side. It leaves the visible asymmetry in the paper's rule, which
+reviewers will ask about.
 
 Either way this is a four-artifact change (see `CLAUDE.md`), so it should be one
 deliberate decision by the authors rather than a drift fix.

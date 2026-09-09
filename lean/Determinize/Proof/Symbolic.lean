@@ -306,8 +306,6 @@ inductive WellTyped : List Ty → AffineExpr sampleCount → Ty → Prop
       WellTyped context (.add .E left right) (.float .E)
   | addG : WellTyped context left (.float .G) → WellTyped context right (.float .G) →
       WellTyped context (.add .G left right) (.float .G)
-  | mulEG : WellTyped context left (.float .E) → WellTyped context right (.float .G) →
-      WellTyped context (.mul .E left right) (.float .E)
   | mulGE : WellTyped context left (.float .G) → WellTyped context right (.float .E) →
       WellTyped context (.mul .E left right) (.float .E)
   | mulGG : WellTyped context left (.float .G) → WellTyped context right (.float .G) →
@@ -362,8 +360,7 @@ theorem WellTyped.realize_typed {sampleCount : Nat} {expression : AffineExpr sam
   case negG value => exact Determinize.Statement.Paper.Typed.neg value
   case addE left right => exact Determinize.Statement.Paper.Typed.add left right
   case addG left right => exact Determinize.Statement.Paper.Typed.add left right
-  case mulEG left right => exact Determinize.Statement.Paper.Typed.mul left right
-  case mulGE left right => exact Determinize.Statement.Paper.Typed.mulLeftG left right
+  case mulGE left right => exact Determinize.Statement.Paper.Typed.mul left right
   case mulGG left right => exact Determinize.Statement.Paper.Typed.mul left right
   case divEG left right => exact Determinize.Statement.Paper.Typed.div left right
   case divGG left right => exact Determinize.Statement.Paper.Typed.div left right
@@ -437,8 +434,6 @@ theorem WellTyped.mapAffine {n m : Nat} {expression : AffineExpr n}
         rw [List.mem_map] at member
         rcases member with ⟨original, originalMember, rfl⟩
         exact ihGeneral original originalMember)
-  case mulEG ihl ihr => exact .mulEG ihl ihr
-  case mulGE ihl ihr => exact .mulGE ihl ihr
   all_goals aesop (add safe constructors WellTyped) (add safe cases Tag)
 
 theorem WellTyped.weakenSamples (typed : WellTyped context expression ty) :
@@ -602,10 +597,6 @@ theorem wellTyped_shift (h : WellTyped (before ++ suffix) expression ty) :
   | addG hl hr ihl ihr =>
       rw [shift]
       exact .addG (ihl (before := before) (suffix := suffix) hcontext)
-        (ihr (before := before) (suffix := suffix) hcontext)
-  | mulEG hl hr ihl ihr =>
-      rw [shift]
-      exact .mulEG (ihl (before := before) (suffix := suffix) hcontext)
         (ihr (before := before) (suffix := suffix) hcontext)
   | mulGE hl hr ihl ihr =>
       rw [shift]
@@ -789,10 +780,6 @@ theorem wellTyped_substAt (h : WellTyped (before ++ binder :: suffix) expression
   | addG hl hr ihl ihr =>
       rw [substAt]
       exact .addG (ihl replacementTyped (before := before) (suffix := suffix) hcontext)
-        (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
-  | mulEG hl hr ihl ihr =>
-      rw [substAt]
-      exact .mulEG (ihl replacementTyped (before := before) (suffix := suffix) hcontext)
         (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
   | mulGE hl hr ihl ihr =>
       rw [substAt]
@@ -2260,44 +2247,6 @@ theorem symbolicReduce_realize
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
           ihl gconstant.1 environment]
-  | mulEG leftTyped rightTyped ihl ihr =>
-      rename_i context' left right
-      simp only [GConstant] at gconstant
-      rw [realize, MeasurableActionFamily.reduce_mul_eq, realize_isValue,
-        symbolicReduce.eq_def]
-      by_cases leftValue : left.isValue = true
-      · simp only [leftValue, ↓reduceIte]
-        by_cases rightValue : right.isValue = true
-        · simp only [rightValue, ↓reduceIte]
-          obtain ⟨x, rfl⟩ := wellTyped_real_value leftTyped leftValue
-          obtain ⟨y, rfl⟩ := wellTyped_real_value rightTyped rightValue
-          rcases y with ⟨y0, yc⟩
-          simp only [GConstant] at gconstant
-          rw [gconstant.2]
-          simp [affineValue?, Affine.mul?, SymbolicAction.realize, realize,
-            Expr.isValue, realValue?, Symbolic.Affine.eval, Finset.sum_const_zero]
-          have sumRule : (∑ i, y0 * x.2 i * environment i) =
-              y0 * ∑ i, x.2 i * environment i := by
-            rw [Finset.mul_sum]
-            apply Finset.sum_congr rfl
-            intro i _
-            ring
-          rw [sumRule]
-          ring
-        · simp only [rightValue, Bool.eq_false_of_not_eq_true rightValue,
-            Bool.false_eq_true, ↓reduceIte]
-          rw [SymbolicAction.realize_wrap
-            (ExprContext := fun next => .mul .E (left.realize environment) next)
-            (context_realize := by intros; simp only [realize])
-            (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-            ihr gconstant.2 environment, realize_isValue, if_neg rightValue]
-      · simp only [leftValue, Bool.eq_false_of_not_eq_true leftValue,
-          Bool.false_eq_true, ↓reduceIte]
-        rw [SymbolicAction.realize_wrap
-          (ExprContext := fun next => .mul .E next (right.realize environment))
-          (context_realize := by intros; simp only [realize])
-          (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-          ihl gconstant.1 environment]
   | mulGE leftTyped rightTyped ihl ihr =>
       rename_i context' left right
       simp only [GConstant] at gconstant
@@ -2902,28 +2851,6 @@ theorem symbolicReduce_wellTyped
       exact (ihLeft rfl).wrap
         (fun next nextTyped => .divEG nextTyped rightTyped)
         (fun next nextTyped => .divEG nextTyped rightTyped.weakenSamples)
-  case mulEG left right leftTyped rightTyped ihLeft ihRight =>
-    cases hcontext
-    simp only [symbolicReduce]
-    by_cases leftValue : left.isValue = true
-    · simp only [leftValue, ↓reduceIte]
-      by_cases rightValue : right.isValue = true
-      · simp only [rightValue, ↓reduceIte]
-        obtain ⟨leftAffine, rfl⟩ := wellTyped_real_value leftTyped leftValue
-        obtain ⟨rightAffine, rfl⟩ := wellTyped_real_value rightTyped rightValue
-        rcases rightAffine with ⟨rightConstant, rightCoefficients⟩
-        have rightZero : rightCoefficients = 0 := by
-          simpa only [AffineExpr.GConstant] using rightTyped.gconstant
-        simp only [affineValue?, Affine.mul?, rightZero, ↓reduceIte, Option.some.injEq]
-        exact SymbolicAction.WellTyped.next .realE
-      · simp only [rightValue, ↓reduceIte]
-        exact (ihRight rfl).wrap
-          (fun next nextTyped => .mulEG leftTyped nextTyped)
-          (fun next nextTyped => .mulEG leftTyped.weakenSamples nextTyped)
-    · simp only [leftValue, ↓reduceIte]
-      exact (ihLeft rfl).wrap
-        (fun next nextTyped => .mulEG nextTyped rightTyped)
-        (fun next nextTyped => .mulEG nextTyped rightTyped.weakenSamples)
   case addG left right leftTyped rightTyped ihLeft ihRight =>
     cases hcontext
     simp only [symbolicReduce]
@@ -3130,16 +3057,6 @@ theorem wellTyped_ofExpr_of_typed {expression : Expr}
     (sourceTags : (AffineExpr.ofExpr expression).SourceTags) :
     WellTyped context (AffineExpr.ofExpr expression) ty := by
   induction typed <;> simp only [ofExpr, SourceTags] at sourceTags ⊢
-  -- At mode E both multiplication constructors unify with the goal, which aesop's safe
-  -- `constructors` rule rejects, so these two cases come before the automation.
-  case mul leftTyped rightTyped ihl ihr =>
-    cases ‹Mode›
-    · exact .mulEG (ihl sourceTags.1) (ihr sourceTags.2)
-    · exact .mulGG (ihl sourceTags.1) (ihr sourceTags.2)
-  case mulLeftG leftTyped rightTyped ihl ihr =>
-    cases ‹Mode›
-    · exact .mulGE (ihl sourceTags.1) (ihr sourceTags.2)
-    · exact .mulGG (ihl sourceTags.1) (ihr sourceTags.2)
   all_goals try aesop (add safe constructors WellTyped)
   all_goals try (cases ‹Mode› <;> aesop (add safe constructors WellTyped))
   case sample =>

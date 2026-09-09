@@ -188,9 +188,7 @@ inductive Typed : List Ty → Expr → Ty → Prop
   | neg : Typed context value (.float mode) → Typed context (.neg mode value) (.float mode)
   | add : Typed context left (.float mode) → Typed context right (.float mode) →
       Typed context (.add mode left right) (.float mode)
-  | mul : Typed context left (.float mode) → Typed context right (.float .G) →
-      Typed context (.mul mode left right) (.float mode)
-  | mulLeftG : Typed context left (.float .G) → Typed context right (.float mode) →
+  | mul : Typed context left (.float .G) → Typed context right (.float mode) →
       Typed context (.mul mode left right) (.float mode)
   | div : Typed context left (.float mode) → Typed context right (.float .G) →
       Typed context (.div mode left right) (.float mode)

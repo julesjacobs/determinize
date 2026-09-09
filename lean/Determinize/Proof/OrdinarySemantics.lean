@@ -77,12 +77,6 @@ theorem typed_determinize
       cases mode <;> cases op <;>
         simp only [Expr.determinize] <;>
         constructor <;> simp_all [Tag.base]
-  | mul _ _ ihl ihr =>
-      simp only [Expr.determinize]
-      exact .mul ihl ihr
-  | mulLeftG _ _ ihl ihr =>
-      simp only [Expr.determinize]
-      exact .mulLeftG ihl ihr
   | _ =>
       simp only [Expr.determinize]
       aesop (add safe constructors Determinize.Statement.Paper.Typed)

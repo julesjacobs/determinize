@@ -76,12 +76,14 @@ example : (Expr.sample .E (.mean .uniform) [.real .E 0, .real .E 1] []).sourceFo
 example : ¬ Typed [] (.mul .E (.real .E 1) (.real .E 1)) (.float .E) := by
   intro typed
   cases typed with
-  | mul _ right => cases right
-  | mulLeftG left _ => cases left
+  | mul left _ => cases left
 
--- The general-mode factor of an expectation-mode product may stand on either side.
-example : Typed [] (.mul .E (.real .E 1) (.real .G 2)) (.float .E) := .mul .real .real
-example : Typed [] (.mul .E (.real .G 2) (.real .E 1)) (.float .E) := .mulLeftG .real .real
+-- The general-mode factor of an expectation-mode product stands on the left.
+example : Typed [] (.mul .E (.real .G 2) (.real .E 1)) (.float .E) := .mul .real .real
+example : ¬ Typed [] (.mul .E (.real .E 1) (.real .G 2)) (.float .E) := by
+  intro typed
+  cases typed with
+  | mul left _ => cases left
 
 private theorem safe_next {expression next : Expr}
     (reduction : reduce expression = .next next) (safe : DoesNotGetStuck next) :
@@ -153,7 +155,7 @@ theorem scaledSample_source : scaledSample.sourceForm = true := by
   simp [scaledSample, uniform, Expr.sourceForm]
 
 theorem scaledSample_typed : Typed [] scaledSample (.float .E) :=
-  .letE (uniform_typed .G) (.mulLeftG (.bvar .head) (uniform_typed .E))
+  .letE (uniform_typed .G) (.mul (.bvar .head) (uniform_typed .E))
 
 theorem scaledSample_safe : DoesNotGetStuck scaledSample := by
   apply safe_let_uniform .G
