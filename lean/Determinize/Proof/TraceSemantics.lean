@@ -11,10 +11,6 @@ open Classical
 
 noncomputable section
 
-local instance : Countable Skeleton :=
-  (show Function.Surjective SkeletonCode.decode from
-    fun skeleton => ⟨encodeSkeletonCode skeleton, SkeletonCode.decode_encode skeleton⟩).countable
-
 theorem trace_length_measurable : Measurable (List.length : Trace → Nat) :=
   measurable_fst.comp (comap_measurable _)
 

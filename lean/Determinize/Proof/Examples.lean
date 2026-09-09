@@ -3,18 +3,14 @@ import Determinize.Theorems
 namespace Determinize.Proof.Examples
 open MeasureTheory Determinize.Statement.Paper Determinize.Traces
 
-def uniform (mode : Mode) : Expr :=
-  .sample mode (.stochastic .uniform) [.real 0, .real 1] []
+def uniform (mode : Mode) : Expr := .uniform mode .stochastic (.real 0) (.real 1)
 
-theorem uniform_typed (mode : Mode) : Typed context (uniform mode) (.float mode) := by
-  cases mode <;> unfold uniform <;> constructor <;>
-    simp_all [affineArity, generalArity] <;> aesop (add safe constructors Typed)
+theorem uniform_typed (mode : Mode) : Typed context (uniform mode) (.float mode) :=
+  .uniform .real .real
 
-def nestedAffine : Expr :=
-  .sample .E (.stochastic .uniform) [uniform .E, .add (.real 2) (.real 3)] []
+def nestedAffine : Expr := .uniform .E .stochastic (uniform .E) (.add (.real 2) (.real 3))
 
-def nestedGeneral : Expr :=
-  .sample .E (.stochastic .gaussian) [.real 0] [uniform .G]
+def nestedGeneral : Expr := .gaussian .E .stochastic (.real 0) (uniform .G)
 
 def reciprocal : Expr :=
   .letE (uniform .E)
@@ -26,52 +22,32 @@ theorem nestedAffine_source : nestedAffine.sourceForm = true := by simp [nestedA
 example : nestedGeneral.sourceForm = true := by simp [nestedGeneral, uniform, Expr.sourceForm]
 theorem reciprocal_source : reciprocal.sourceForm = true := by simp [reciprocal, uniform, Expr.sourceForm]
 
-example : Typed [] nestedAffine (.float .E) := by
-  unfold nestedAffine
-  apply Typed.sample _ rfl rfl
-  · intro e member
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
-    rcases member with rfl | rfl
-    · exact uniform_typed .E
-    · exact .add .real .real
-  · simp
+example : Typed [] nestedAffine (.float .E) := .uniform (uniform_typed .E) (.add .real .real)
 
-example : Typed [] nestedGeneral (.float .E) := by
-  unfold nestedGeneral
-  apply Typed.sample _ rfl rfl
-  · intro e member
-    simp only [List.mem_singleton] at member
-    subst e
-    exact .real
-  · intro e member
-    simp only [List.mem_singleton] at member
-    subst e
-    exact uniform_typed .G
+example : Typed [] nestedGeneral (.float .E) := .gaussian .real (uniform_typed .G)
 
 theorem reciprocal_typed : Typed [] reciprocal (.float .E) :=
   .letE (uniform_typed .E) (.letE (uniform_typed .G)
     (.add (.bvar (.tail .head)) (.div .real (.bvar .head))))
 
 example : reduce nestedGeneral =
-    .sample (.G, .stochastic .uniform) (primitiveFiber (.stochastic .uniform) [0, 1] [])
-      (fun value => .sample .E (.stochastic .gaussian) [.real 0] [.real value]) := by
-  simp [nestedGeneral, uniform, reduce, Expr.isValue, firstNonValue, allRealValues?,
-    Action.wrap, Function.comp_def]
+    .sample (.G, .stochastic, .uniform) (uniformFiber .stochastic 0 1)
+      (fun value => .gaussian .E .stochastic (.real 0) (.real value)) := by
+  simp [nestedGeneral, uniform, reduce, Expr.isValue, realValue?, Action.wrap, Function.comp_def]
 
 example : reduce nestedGeneral.determinize =
-    .sample (.G, .stochastic .uniform) (primitiveFiber (.stochastic .uniform) [0, 1] [])
-      (fun value => .sample .E (.mean .gaussian) [.real 0] [.real value]) := by
-  simp [nestedGeneral, uniform, Expr.determinize, reduce, Expr.isValue, firstNonValue,
-    allRealValues?, Action.wrap, Function.comp_def]
+    .sample (.G, .stochastic, .uniform) (uniformFiber .stochastic 0 1)
+      (fun value => .gaussian .E .mean (.real 0) (.real value)) := by
+  simp [nestedGeneral, uniform, Expr.determinize, Expr.determinizeKind, reduce, Expr.isValue,
+    realValue?, Action.wrap, Function.comp_def]
 
 example : reduce nestedAffine =
-    .sample (.E, .stochastic .uniform) (primitiveFiber (.stochastic .uniform) [0, 1] [])
-      (fun value => .sample .E (.stochastic .uniform)
-        [.real value, .add (.real 2) (.real 3)] []) := by
-  simp [nestedAffine, uniform, reduce, Expr.isValue, firstNonValue, allRealValues?,
-    Action.wrap, Function.comp_def]
+    .sample (.E, .stochastic, .uniform) (uniformFiber .stochastic 0 1)
+      (fun value => .uniform .E .stochastic (.real value) (.add (.real 2) (.real 3))) := by
+  simp [nestedAffine, uniform, reduce, Expr.isValue, realValue?, Action.wrap, Function.comp_def]
 
-example : (Expr.sample .E (.mean .uniform) [.real 0, .real 1] []).sourceForm = false := by simp [Expr.sourceForm]
+example : (Expr.uniform .E .mean (.real 0) (.real 1)).sourceForm = false := by
+  simp [Expr.sourceForm, Kind.isStochastic]
 
 -- A literal takes either mode, so a product of literals types at both modes.
 example : Typed [] (.mul (.real 2) (.real 1)) (.float .E) := .mul .real .real
@@ -126,14 +102,13 @@ private theorem safe_real (value : ℝ) : DoesNotGetStuck (.real value) := by
 private theorem safe_let_uniform (mode : Mode) (body : Expr)
     (safe : ∀ value, DoesNotGetStuck (body.substHead (.real value))) :
     DoesNotGetStuck (.letE (uniform mode) body) := by
-  let μ := primitiveFiber (.stochastic .uniform) [0,1] []
+  let μ := uniformFiber .stochastic 0 1
   have reduction : reduce (.letE (uniform mode) body) =
-      .sample (mode, .stochastic .uniform) μ
+      .sample (mode, .stochastic, .uniform) μ
         (fun value => .letE (.real value) body) := by
-    simp [uniform, reduce, Expr.isValue, firstNonValue, allRealValues?, Action.wrap, Function.comp_def, μ]
+    simp [uniform, reduce, Expr.isValue, realValue?, Action.wrap, Function.comp_def, μ]
   apply safe_sample reduction
-  · simp [μ, primitiveFiber, parseParams, affineArity, generalArity, paperMeasure,
-      uniformMeasure, Real.volume_Icc]
+  · simp [μ, uniformFiber, uniformMeasure, Real.volume_Icc]
   · intro value
     exact safe_next (by simp [reduce, Expr.isValue]) (safe value)
 
@@ -170,13 +145,11 @@ theorem scaledSample_safe : DoesNotGetStuck scaledSample := by
   intro y
   simp [Expr.substHead, Expr.substAt, Expr.shift, Expr.mapVars, uniform]
   change DoesNotGetStuck (.mul (.real y) (uniform .E))
-  let μ := primitiveFiber (.stochastic .uniform) [0, 1] []
-  refine safe_sample (site := (.E, .stochastic .uniform)) (fiber := μ)
+  let μ := uniformFiber .stochastic 0 1
+  refine safe_sample (site := (.E, .stochastic, .uniform)) (fiber := μ)
     (continuation := fun value => .mul (.real y) (.real value)) ?_ ?_ ?_
-  · simp [uniform, reduce, Expr.isValue, firstNonValue, allRealValues?, Action.wrap,
-      Function.comp_def, μ]
-  · simp [μ, primitiveFiber, parseParams, affineArity, generalArity, paperMeasure,
-      uniformMeasure, Real.volume_Icc]
+  · simp [uniform, reduce, Expr.isValue, realValue?, Action.wrap, Function.comp_def, μ]
+  · simp [μ, uniformFiber, uniformMeasure, Real.volume_Icc]
   · intro value
     apply safe_next (next := .real (y * value))
     · simp [reduce, Expr.isValue, realValue?]

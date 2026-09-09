@@ -4,7 +4,7 @@ import Mathlib.MeasureTheory.Measure.GiryMonad
 /-!
 # Paper operational semantics
 
-The reducer uses the six canonical primitive measures directly. Arithmetic is
+The reducer evaluates the operands of a primitive left to right and then draws from its fiber. Arithmetic is
 Lean real arithmetic; in particular, division is total and `x / 0 = 0`. The
 output semantics integrates sampled reals directly, without measures on expressions.
 -/
@@ -17,56 +17,17 @@ open scoped ENNReal ProbabilityTheory
 /-- A pointwise reduction action. -/
 inductive Action where
   | next (expression : Expr)
-  | sample (modeTag : Mode × Tag) (fiber : Measure ℝ) (continuation : ℝ → Expr)
+  | sample (site : Mode × Kind × Op) (fiber : Measure ℝ) (continuation : ℝ → Expr)
   | stuck
 
 def Action.wrap (context : Expr → Expr) : Action → Action
   | .next expression => .next (context expression)
-  | .sample modeTag fiber continuation => .sample modeTag fiber (context ∘ continuation)
+  | .sample site fiber continuation => .sample site fiber (context ∘ continuation)
   | .stuck => .stuck
 
 def realValue? : Expr → Option ℝ
   | .real value => some value
   | _ => none
-
-def allRealValues? : List Expr → Option (List ℝ)
-  | [] => some []
-  | .real value :: tail => (value :: ·) <$> allRealValues? tail
-  | _ => none
-
-def firstNonValue : List Expr → Option (List Expr × Expr × List Expr)
-  | [] => none
-  | head :: tail =>
-      if head.isValue then
-        match firstNonValue tail with
-        | none => none
-        | some (front, current, suffix) => some (head :: front, current, suffix)
-      else some ([], head, tail)
-
-theorem firstNonValue_current_mem {arguments : List Expr} {front current suffix}
-    (found : firstNonValue arguments = some (front, current, suffix)) :
-    current ∈ arguments := by
-  induction arguments generalizing front current suffix with
-  | nil => simp [firstNonValue] at found
-  | cons head tail ih =>
-      simp only [firstNonValue] at found
-      split at found
-      · split at found <;> simp_all
-      · simp_all
-
-/-- The canonical stochastic or atomic-mean fiber at evaluated arguments. -/
-noncomputable def primitiveFiber (tag : Tag) (affine general : List ℝ) : Measure ℝ := by
-  classical
-  exact match tag with
-    | .stochastic op =>
-        match parseParams op affine general with
-        | none => 0
-        | some params => paperMeasure op params
-    | .mean op =>
-        match parseParams op affine general with
-        | none => 0
-        | some params =>
-            if domain op params then Measure.dirac (meanValue op params) else 0
 
 /-- Conventional left-to-right call-by-value reduction, with values absorbing. -/
 noncomputable def reduce : Expr → Action
@@ -163,25 +124,44 @@ noncomputable def reduce : Expr → Action
           | some x, some y => .next (.bool (x < y)) | _, _ => .stuck
         else (reduce right).wrap (.lt left)
       else (reduce left).wrap (fun next => .lt next right)
-  | .sample mode op affine general =>
-      match _hAffine : firstNonValue affine with
-      | some (front, current, suffix) =>
-          (reduce current).wrap (fun next => .sample mode op (front ++ next :: suffix) general)
-      | none => match _hGeneral : firstNonValue general with
-        | some (front, current, suffix) =>
-            (reduce current).wrap (fun next => .sample mode op affine (front ++ next :: suffix))
-        | none => match allRealValues? affine, allRealValues? general with
-          | some affineValues, some generalValues =>
-              .sample (mode, op) (primitiveFiber op affineValues generalValues) .real
+  | .uniform mode kind lower upper =>
+      if lower.isValue then
+        if upper.isValue then match realValue? lower, realValue? upper with
+          | some a, some b => .sample (mode, kind, .uniform) (uniformFiber kind a b) .real
           | _, _ => .stuck
-termination_by expression => sizeOf expression
-decreasing_by
-  all_goals
-    first
-    | decreasing_trivial
-    | apply Nat.lt_trans (List.sizeOf_lt_of_mem (firstNonValue_current_mem (by assumption)))
-      try simp_wf
-      try omega
+        else (reduce upper).wrap (.uniform mode kind lower)
+      else (reduce lower).wrap (fun next => .uniform mode kind next upper)
+  | .gaussian mode kind mean variance =>
+      if mean.isValue then
+        if variance.isValue then match realValue? mean, realValue? variance with
+          | some m, some v => .sample (mode, kind, .gaussian) (gaussianFiber kind m v) .real
+          | _, _ => .stuck
+        else (reduce variance).wrap (.gaussian mode kind mean)
+      else (reduce mean).wrap (fun next => .gaussian mode kind next variance)
+  | .poisson mode kind rate =>
+      if rate.isValue then match realValue? rate with
+        | some r => .sample (mode, kind, .poisson) (poissonFiber kind r) .real
+        | none => .stuck
+      else (reduce rate).wrap (.poisson mode kind)
+  | .exponential mode kind rate =>
+      if rate.isValue then match realValue? rate with
+        | some r => .sample (mode, kind, .exponential) (exponentialFiber kind r) .real
+        | none => .stuck
+      else (reduce rate).wrap (.exponential mode kind)
+  | .beta mode kind alpha beta =>
+      if alpha.isValue then
+        if beta.isValue then match realValue? alpha, realValue? beta with
+          | some a, some b => .sample (mode, kind, .beta) (betaFiber kind a b) .real
+          | _, _ => .stuck
+        else (reduce beta).wrap (.beta mode kind alpha)
+      else (reduce alpha).wrap (fun next => .beta mode kind next beta)
+  | .gamma mode kind shape rate =>
+      if shape.isValue then
+        if rate.isValue then match realValue? shape, realValue? rate with
+          | some k, some r => .sample (mode, kind, .gamma) (gammaFiber kind k r) .real
+          | _, _ => .stuck
+        else (reduce rate).wrap (.gamma mode kind shape)
+      else (reduce shape).wrap (fun next => .gamma mode kind next rate)
 
 /-- Real output accumulated through `fuel` reduction steps. Only terminal reals
 contribute output; other types may occur during evaluation. -/

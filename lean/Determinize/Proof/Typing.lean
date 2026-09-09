@@ -135,19 +135,23 @@ theorem typed_shift (h : Typed (before ++ suffix) expression ty) :
       rw [Expr.shift, Expr.mapVars]
       exact .lt (ihl (before := before) (suffix := suffix) hcontext)
         (ihr (before := before) (suffix := suffix) hcontext)
-  | sample op ha hg hta htg iha ihg =>
+  | uniform hl hr ihl ihr | gaussian hl hr ihl ihr | beta hl hr ihl ihr | gamma hl hr ihl ihr =>
       rw [Expr.shift, Expr.mapVars]
-      apply Typed.sample op
-      · simpa using ha
-      · simpa using hg
-      · intro child hchild
-        rw [List.mem_map] at hchild
-        rcases hchild with ⟨original, member, rfl⟩
-        exact iha original member (before := before) (suffix := suffix) hcontext
-      · intro child hchild
-        rw [List.mem_map] at hchild
-        rcases hchild with ⟨original, member, rfl⟩
-        exact ihg original member (before := before) (suffix := suffix) hcontext
+      first
+      | exact .uniform (ihl (before := before) (suffix := suffix) hcontext)
+          (ihr (before := before) (suffix := suffix) hcontext)
+      | exact .gaussian (ihl (before := before) (suffix := suffix) hcontext)
+          (ihr (before := before) (suffix := suffix) hcontext)
+      | exact .beta (ihl (before := before) (suffix := suffix) hcontext)
+          (ihr (before := before) (suffix := suffix) hcontext)
+      | exact .gamma (ihl (before := before) (suffix := suffix) hcontext)
+          (ihr (before := before) (suffix := suffix) hcontext)
+  | poisson hv ih | exponential hv ih =>
+      rw [Expr.shift, Expr.mapVars]
+      first
+      | exact .poisson (ih (before := before) (suffix := suffix) hcontext)
+      | exact .exponential (ih (before := before) (suffix := suffix) hcontext)
+
 theorem hasVar_subst (h : HasVar (before ++ binder :: suffix) index ty) :
     (index = before.length ∧ ty = binder) ∨
       (index ≠ before.length ∧ HasVar (before ++ suffix)
@@ -288,19 +292,22 @@ theorem typed_substAt (h : Typed (before ++ binder :: suffix) expression ty)
       rw [Expr.substAt, Expr.mapVars]
       exact .lt (ihl replacementTyped (before := before) (suffix := suffix) hcontext)
         (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
-  | sample op ha hg hta htg iha ihg =>
+  | uniform hl hr ihl ihr | gaussian hl hr ihl ihr | beta hl hr ihl ihr | gamma hl hr ihl ihr =>
       rw [Expr.substAt, Expr.mapVars]
-      apply Typed.sample op
-      · simpa using ha
-      · simpa using hg
-      · intro child hchild
-        rw [List.mem_map] at hchild
-        rcases hchild with ⟨original, member, rfl⟩
-        exact iha original member replacementTyped (before := before) (suffix := suffix) hcontext
-      · intro child hchild
-        rw [List.mem_map] at hchild
-        rcases hchild with ⟨original, member, rfl⟩
-        exact ihg original member replacementTyped (before := before) (suffix := suffix) hcontext
+      first
+      | exact .uniform (ihl replacementTyped (before := before) (suffix := suffix) hcontext)
+          (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
+      | exact .gaussian (ihl replacementTyped (before := before) (suffix := suffix) hcontext)
+          (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
+      | exact .beta (ihl replacementTyped (before := before) (suffix := suffix) hcontext)
+          (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
+      | exact .gamma (ihl replacementTyped (before := before) (suffix := suffix) hcontext)
+          (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
+  | poisson hv ih | exponential hv ih =>
+      rw [Expr.substAt, Expr.mapVars]
+      first
+      | exact .poisson (ih replacementTyped (before := before) (suffix := suffix) hcontext)
+      | exact .exponential (ih replacementTyped (before := before) (suffix := suffix) hcontext)
 theorem typed_substHead (bodyTyped : Typed (binder :: suffix) body ty)
     (replacementTyped : Typed suffix replacement binder) :
     Typed suffix (Expr.substHead body replacement) ty := by
@@ -373,67 +380,6 @@ theorem typed_real_value (typed : Typed [] expression (.float mode))
     (value : expression.isValue = true) :
     ∃ result, expression = .real result := by
   cases typed <;> simp_all [Expr.isValue]
-
-theorem firstNonValue_eq_none_iff :
-    firstNonValue expressions = none ↔
-      ∀ expression ∈ expressions, expression.isValue = true := by
-  induction expressions with
-  | nil => simp [firstNonValue]
-  | cons head tail ih =>
-      simp only [firstNonValue]
-      by_cases headValue : head.isValue = true
-      · simp only [headValue, ↓reduceIte, ih]
-        aesop
-      · have headFalse : head.isValue = false := Bool.eq_false_of_not_eq_true headValue
-        simp [headFalse]
-
-theorem firstNonValue_eq_some_append
-    (found : firstNonValue expressions = some (front, current, suffix)) :
-    expressions = front ++ current :: suffix := by
-  induction expressions generalizing front current suffix with
-  | nil => simp [firstNonValue] at found
-  | cons head tail ih =>
-      simp only [firstNonValue] at found
-      by_cases headValue : head.isValue = true
-      · simp only [headValue, ↓reduceIte] at found
-        split at found
-        · contradiction
-        · rename_i tailFront tailCurrent tailSuffix equation
-          simp only [Option.some.injEq, Prod.mk.injEq] at found
-          rcases found with ⟨rfl, rfl, rfl⟩
-          simp [ih equation]
-      · have headFalse : head.isValue = false := Bool.eq_false_of_not_eq_true headValue
-        simp only [headFalse, Bool.false_eq_true, ↓reduceIte, Option.some.injEq,
-          Prod.mk.injEq] at found
-        rcases found with ⟨rfl, rfl, rfl⟩
-        rfl
-
-theorem allRealValues_of_typed_values
-    (typed : ∀ expression ∈ expressions, Typed [] expression (.float mode))
-    (values : ∀ expression ∈ expressions, expression.isValue = true) :
-    ∃ coordinates, allRealValues? expressions = some coordinates := by
-  induction expressions with
-  | nil => exact ⟨[], rfl⟩
-  | cons head tail ih =>
-      have headTyped := typed head (by simp)
-      have headValue := values head (by simp)
-      rcases typed_real_value headTyped headValue with ⟨coordinate, rfl⟩
-      rcases ih (fun expression member => typed expression (by simp [member]))
-          (fun expression member => values expression (by simp [member])) with
-        ⟨coordinates, equation⟩
-      exact ⟨coordinate :: coordinates, by simp [allRealValues?, equation]⟩
-
-theorem typed_list_replace
-    (typed : ∀ expression ∈ front ++ current :: suffix,
-      Typed [] expression ty)
-    (nextTyped : Typed [] next ty) :
-    ∀ expression ∈ front ++ next :: suffix, Typed [] expression ty := by
-  intro expression member
-  simp only [List.mem_append, List.mem_cons] at member ⊢
-  rcases member with member | rfl | member
-  · exact typed expression (by simp [member])
-  · exact nextTyped
-  · exact typed expression (by simp [member])
 
 theorem reduce_typed_closed
     (typed : Typed [] expression ty) : ActionTyped ty (reduce expression) := by
@@ -649,48 +595,87 @@ theorem reduce_typed_closed
           exact (ihr rfl).wrap fun next nextTyped => .lt leftTyped nextTyped
       · simp only [leftValue, ↓reduceIte]
         exact (ihl rfl).wrap fun next nextTyped => .lt nextTyped rightTyped
-  | sample op affineLength generalLength affineTyped generalTyped iha ihg =>
+  | uniform leftTyped rightTyped ihl ihr =>
       cases hcontext
-      rename_i affine mode general
-      rw [MeasurableActionFamily.reduce_sample_eq]
-      generalize found : firstNonValue affine = result
-      cases result with
-      | some triple =>
-        rcases triple with ⟨front, current, suffix⟩
-        have currentMember := firstNonValue_current_mem found
-        have currentAction := iha current currentMember rfl
-        apply currentAction.wrap
-        intro next nextTyped
-        apply Typed.sample op
-        · rw [← affineLength, firstNonValue_eq_some_append found]
-          simp
-        · exact generalLength
-        · exact typed_list_replace
-            (by simpa [firstNonValue_eq_some_append found] using affineTyped) nextTyped
-        · exact generalTyped
-      | none =>
-        generalize foundGeneral : firstNonValue general = generalResult
-        cases generalResult with
-        | some triple =>
-          rcases triple with ⟨front, current, suffix⟩
-          have currentMember := firstNonValue_current_mem foundGeneral
-          have currentAction := ihg current currentMember rfl
-          apply currentAction.wrap
-          intro next nextTyped
-          apply Typed.sample op
-          · exact affineLength
-          · rw [← generalLength, firstNonValue_eq_some_append foundGeneral]
-            simp
-          · exact affineTyped
-          · exact typed_list_replace
-              (by simpa [firstNonValue_eq_some_append foundGeneral] using generalTyped) nextTyped
-        | none =>
-          have affineValues := firstNonValue_eq_none_iff.mp found
-          have generalValues := firstNonValue_eq_none_iff.mp foundGeneral
-          rcases allRealValues_of_typed_values affineTyped affineValues with ⟨av, ha⟩
-          rcases allRealValues_of_typed_values generalTyped generalValues with ⟨gv, hg⟩
-          simp only [ha, hg]
+      rename_i left mode right kind
+      rw [MeasurableActionFamily.reduce_uniform_eq]
+      by_cases leftValue : left.isValue = true
+      · simp only [leftValue, ↓reduceIte]
+        by_cases rightValue : right.isValue = true
+        · simp only [rightValue, ↓reduceIte]
+          rcases typed_real_value leftTyped leftValue with ⟨left, rfl⟩
+          rcases typed_real_value rightTyped rightValue with ⟨right, rfl⟩
           exact .sample fun value => .real
+        · simp only [rightValue, ↓reduceIte]
+          exact (ihr rfl).wrap fun next nextTyped => .uniform leftTyped nextTyped
+      · simp only [leftValue, ↓reduceIte]
+        exact (ihl rfl).wrap fun next nextTyped => .uniform nextTyped rightTyped
+  | gaussian leftTyped rightTyped ihl ihr =>
+      cases hcontext
+      rename_i left mode right kind
+      rw [MeasurableActionFamily.reduce_gaussian_eq]
+      by_cases leftValue : left.isValue = true
+      · simp only [leftValue, ↓reduceIte]
+        by_cases rightValue : right.isValue = true
+        · simp only [rightValue, ↓reduceIte]
+          rcases typed_real_value leftTyped leftValue with ⟨left, rfl⟩
+          rcases typed_real_value rightTyped rightValue with ⟨right, rfl⟩
+          exact .sample fun value => .real
+        · simp only [rightValue, ↓reduceIte]
+          exact (ihr rfl).wrap fun next nextTyped => .gaussian leftTyped nextTyped
+      · simp only [leftValue, ↓reduceIte]
+        exact (ihl rfl).wrap fun next nextTyped => .gaussian nextTyped rightTyped
+  | poisson valueTyped ih =>
+      cases hcontext
+      rename_i value mode kind
+      rw [MeasurableActionFamily.reduce_poisson_eq]
+      by_cases valueCondition : value.isValue = true
+      · simp only [valueCondition, ↓reduceIte]
+        rcases typed_real_value valueTyped valueCondition with ⟨coordinate, rfl⟩
+        exact .sample fun value => .real
+      · simp only [valueCondition, ↓reduceIte]
+        exact (ih rfl).wrap fun next nextTyped => .poisson nextTyped
+  | exponential valueTyped ih =>
+      cases hcontext
+      rename_i value mode kind
+      rw [MeasurableActionFamily.reduce_exponential_eq]
+      by_cases valueCondition : value.isValue = true
+      · simp only [valueCondition, ↓reduceIte]
+        rcases typed_real_value valueTyped valueCondition with ⟨coordinate, rfl⟩
+        exact .sample fun value => .real
+      · simp only [valueCondition, ↓reduceIte]
+        exact (ih rfl).wrap fun next nextTyped => .exponential nextTyped
+  | beta leftTyped rightTyped ihl ihr =>
+      cases hcontext
+      rename_i left right mode kind
+      rw [MeasurableActionFamily.reduce_beta_eq]
+      by_cases leftValue : left.isValue = true
+      · simp only [leftValue, ↓reduceIte]
+        by_cases rightValue : right.isValue = true
+        · simp only [rightValue, ↓reduceIte]
+          rcases typed_real_value leftTyped leftValue with ⟨left, rfl⟩
+          rcases typed_real_value rightTyped rightValue with ⟨right, rfl⟩
+          exact .sample fun value => .real
+        · simp only [rightValue, ↓reduceIte]
+          exact (ihr rfl).wrap fun next nextTyped => .beta leftTyped nextTyped
+      · simp only [leftValue, ↓reduceIte]
+        exact (ihl rfl).wrap fun next nextTyped => .beta nextTyped rightTyped
+  | gamma leftTyped rightTyped ihl ihr =>
+      cases hcontext
+      rename_i left mode right kind
+      rw [MeasurableActionFamily.reduce_gamma_eq]
+      by_cases leftValue : left.isValue = true
+      · simp only [leftValue, ↓reduceIte]
+        by_cases rightValue : right.isValue = true
+        · simp only [rightValue, ↓reduceIte]
+          rcases typed_real_value leftTyped leftValue with ⟨left, rfl⟩
+          rcases typed_real_value rightTyped rightValue with ⟨right, rfl⟩
+          exact .sample fun value => .real
+        · simp only [rightValue, ↓reduceIte]
+          exact (ihr rfl).wrap fun next nextTyped => .gamma leftTyped nextTyped
+      · simp only [leftValue, ↓reduceIte]
+        exact (ihl rfl).wrap fun next nextTyped => .gamma nextTyped rightTyped
+
 theorem doesNotGetStuckAt_imp_primitiveDomainSafeAt
     (safe : Determinize.Statement.Paper.DoesNotGetStuckAt fuel expression) :
     PrimitiveDomainSafeAt fuel expression := by

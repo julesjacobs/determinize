@@ -8,19 +8,12 @@ import Mathlib.Tactic.DeriveCountable
 Only sample sites carry mode labels, and promotion is explicit; literals and arithmetic
 are mode-free, as in the paper's grammar, and a literal types at either mode. Types are
 assigned separately by `Typed`; no expression constructor contains a type annotation.
-`Expr.sourceForm` requires stochastic source samples; their operands may be
-arbitrary expressions.
+Each primitive distribution is its own constructor with the paper's operands; a site
+carries its mode and whether it still samples or already returns the primitive's mean.
+`Expr.sourceForm` requires stochastic sites; their operands may be arbitrary expressions.
 -/
 
 namespace Determinize.Statement.Paper
-
-inductive Tag where
-  | stochastic (op : Op)
-  | mean (op : Op)
-deriving DecidableEq, Repr, Countable
-
-abbrev Tag.base : Tag → Op
-  | .stochastic op | .mean op => op
 
 /-- Untyped paper expressions with de Bruijn variables; only sample sites carry a mode. -/
 inductive Expr (Literal : Type := ℝ) where
@@ -40,7 +33,12 @@ inductive Expr (Literal : Type := ℝ) where
   | promote (body : Expr Literal) | neg (body : Expr Literal)
   | add (left right : Expr Literal) | mul (left right : Expr Literal)
   | div (left right : Expr Literal) | lt (left right : Expr Literal)
-  | sample (mode : Mode) (op : Tag) (affineArgs generalArgs : List (Expr Literal))
+  | uniform (mode : Mode) (kind : Kind) (lower upper : Expr Literal)
+  | gaussian (mode : Mode) (kind : Kind) (mean variance : Expr Literal)
+  | poisson (mode : Mode) (kind : Kind) (rate : Expr Literal)
+  | exponential (mode : Mode) (kind : Kind) (rate : Expr Literal)
+  | beta (mode : Mode) (kind : Kind) (alpha beta : Expr Literal)
+  | gamma (mode : Mode) (kind : Kind) (shape rate : Expr Literal)
 
 namespace Expr
 
@@ -50,7 +48,7 @@ def isValue {Literal : Type} : Expr Literal → Bool
   | .inl value | .inr value => value.isValue
   | _ => false
 
-/-- Source expressions contain only stochastic sampling tags. -/
+/-- Source expressions contain only stochastic sampling sites. -/
 def sourceForm : Expr → Bool
   | .bvar _ | .unit | .bool _ | .real _ | .nil => true
   | .lam body | .fix body | .fst body | .snd body
@@ -63,9 +61,12 @@ def sourceForm : Expr → Bool
   | .matchList scrutinee nilCase consCase =>
       scrutinee.sourceForm && nilCase.sourceForm && consCase.sourceForm
   | .letE value body => value.sourceForm && body.sourceForm
-  | .sample _ (.stochastic _) affine general =>
-      (affine.map sourceForm).all id && (general.map sourceForm).all id
-  | .sample _ (.mean _) _ _ => false
+  | .uniform _ kind lower upper => kind.isStochastic && lower.sourceForm && upper.sourceForm
+  | .gaussian _ kind mean variance =>
+      kind.isStochastic && mean.sourceForm && variance.sourceForm
+  | .poisson _ kind rate | .exponential _ kind rate => kind.isStochastic && rate.sourceForm
+  | .beta _ kind left right => kind.isStochastic && left.sourceForm && right.sourceForm
+  | .gamma _ kind shape rate => kind.isStochastic && shape.sourceForm && rate.sourceForm
 
 /-- Apply `replace depth index` to variables, increasing `depth` beneath binders. -/
 def mapVars (replace : Nat → Nat → Expr) (depth : Nat) : Expr → Expr
@@ -97,8 +98,12 @@ def mapVars (replace : Nat → Nat → Expr) (depth : Nat) : Expr → Expr
   | .mul l r => .mul (l.mapVars replace depth) (r.mapVars replace depth)
   | .div l r => .div (l.mapVars replace depth) (r.mapVars replace depth)
   | .lt l r => .lt (l.mapVars replace depth) (r.mapVars replace depth)
-  | .sample m op affine general => .sample m op
-      (affine.map (mapVars replace depth)) (general.map (mapVars replace depth))
+  | .uniform m k l r => .uniform m k (l.mapVars replace depth) (r.mapVars replace depth)
+  | .gaussian m k l r => .gaussian m k (l.mapVars replace depth) (r.mapVars replace depth)
+  | .poisson m k x => .poisson m k (x.mapVars replace depth)
+  | .exponential m k x => .exponential m k (x.mapVars replace depth)
+  | .beta m k l r => .beta m k (l.mapVars replace depth) (r.mapVars replace depth)
+  | .gamma m k l r => .gamma m k (l.mapVars replace depth) (r.mapVars replace depth)
 
 abbrev shift (amount cutoff : Nat) : Expr → Expr :=
   mapVars (fun cutoff index => .bvar (if cutoff ≤ index then index + amount else index)) cutoff
@@ -110,6 +115,12 @@ abbrev substAt (depth : Nat) (replacement : Expr) : Expr → Expr :=
 def substHead (body replacement : Expr) : Expr := substAt 0 replacement body
 def substTwo (body argument function : Expr) : Expr :=
   substAt 0 argument (substAt 1 function body)
+
+/-- An expectation-mode site returns its mean after determinization; a general-mode site
+keeps sampling. -/
+def determinizeKind : Mode → Kind → Kind
+  | .E, _ => .mean
+  | .G, kind => kind
 
 /-- Replace expectation-mode stochastic samples by their atomic means. -/
 def determinize : Expr → Expr
@@ -140,10 +151,17 @@ def determinize : Expr → Expr
   | .mul left right => .mul left.determinize right.determinize
   | .div left right => .div left.determinize right.determinize
   | .lt left right => .lt left.determinize right.determinize
-  | .sample .E (.stochastic op) affine general =>
-      .sample .E (.mean op) (affine.map determinize) (general.map determinize)
-  | .sample mode op affine general =>
-      .sample mode op (affine.map determinize) (general.map determinize)
+  | .uniform mode kind lower upper =>
+      .uniform mode (determinizeKind mode kind) lower.determinize upper.determinize
+  | .gaussian mode kind mean variance =>
+      .gaussian mode (determinizeKind mode kind) mean.determinize variance.determinize
+  | .poisson mode kind rate => .poisson mode (determinizeKind mode kind) rate.determinize
+  | .exponential mode kind rate =>
+      .exponential mode (determinizeKind mode kind) rate.determinize
+  | .beta mode kind left right =>
+      .beta mode (determinizeKind mode kind) left.determinize right.determinize
+  | .gamma mode kind shape rate =>
+      .gamma mode (determinizeKind mode kind) shape.determinize rate.determinize
 
 end Expr
 
@@ -195,10 +213,17 @@ inductive Typed : List Ty → Expr → Ty → Prop
       Typed context (.div left right) (.float mode)
   | lt : Typed context left (.float .G) → Typed context right (.float .G) →
       Typed context (.lt left right) .bool
-  | sample (op : Tag) :
-      affine.length = affineArity op.base → general.length = generalArity op.base →
-      (∀ expression ∈ affine, Typed context expression (.float mode)) →
-      (∀ expression ∈ general, Typed context expression (.float .G)) →
-      Typed context (.sample mode op affine general) (.float mode)
+  | uniform : Typed context lower (.float mode) → Typed context upper (.float mode) →
+      Typed context (.uniform mode kind lower upper) (.float mode)
+  | gaussian : Typed context mean (.float mode) → Typed context variance (.float .G) →
+      Typed context (.gaussian mode kind mean variance) (.float mode)
+  | poisson : Typed context rate (.float mode) →
+      Typed context (.poisson mode kind rate) (.float mode)
+  | exponential : Typed context rate (.float .G) →
+      Typed context (.exponential mode kind rate) (.float mode)
+  | beta : Typed context alpha (.float .G) → Typed context beta (.float .G) →
+      Typed context (.beta mode kind alpha beta) (.float mode)
+  | gamma : Typed context shape (.float mode) → Typed context rate (.float .G) →
+      Typed context (.gamma mode kind shape rate) (.float mode)
 
 end Determinize.Statement.Paper

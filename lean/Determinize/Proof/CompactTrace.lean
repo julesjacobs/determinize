@@ -194,9 +194,6 @@ theorem decodeAction_measurable {α : Type*} [MeasurableSpace α]
 theorem decodeStep_measurable (rec : Expr → DrawTrace → Decoded)
     (hr : Measurable (fun p : Expr × DrawTrace => rec p.1 p.2)) :
     Measurable (fun p : Expr × DrawTrace => decodeAction rec (reduce p.1) p.2) := by
-  let : Countable Skeleton :=
-    (show Function.Surjective SkeletonCode.decode from
-      fun s => ⟨encodeSkeletonCode s, SkeletonCode.decode_encode s⟩).countable
   have localMeasurable (s : Skeleton) :
       Measurable (fun p : SkeletonFiber s × DrawTrace => decodeAction rec (reduce p.1.val) p.2) :=
     decodeAction_measurable
@@ -215,9 +212,6 @@ theorem decodeStep_measurable (rec : Expr → DrawTrace → Decoded)
 theorem decodeWithin_measurable (n : Nat) :
     Measurable (fun p : Expr × DrawTrace => decodeWithin n p.1 p.2) := by
   classical
-  let : Countable Skeleton :=
-    (show Function.Surjective SkeletonCode.decode from
-      fun s => ⟨encodeSkeletonCode s, SkeletonCode.decode_encode s⟩).countable
   have hv : Measurable (fun e : Expr => e.isValue) := by
     rw [show (fun e : Expr => e.isValue) = Expr.isValue ∘ Expr.skeleton from
       funext isValue_eq_skeletonIsValue]

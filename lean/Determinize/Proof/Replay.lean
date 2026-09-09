@@ -41,9 +41,6 @@ theorem sampleContinuation_measurable :
     sampleContinuation (MeasurableActionFamily.toSkeletonFiber pair.1.skeleton pair.1).val pair.2
   have auxiliary : Measurable (fun pair : Skeleton × (Expr × ℝ) =>
       sampleContinuation (MeasurableActionFamily.toSkeletonFiber pair.1 pair.2.1).val pair.2.2) := by
-    let : Countable Skeleton :=
-      (show Function.Surjective SkeletonCode.decode from
-        fun s => ⟨encodeSkeletonCode s, SkeletonCode.decode_encode s⟩).countable
     apply measurable_from_prod_countable_right
     intro skeleton
     exact (localMeasurable skeleton).comp

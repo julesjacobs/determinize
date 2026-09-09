@@ -13,9 +13,9 @@ abbrev eraseOutput : StepTraces.Output → Output := mapTraceOutput retain
 theorem eraseOutput_measurable : Measurable eraseOutput :=
   mapTrace_measurable retain retain_measurable
 
-theorem record_measurable (site : Mode × Tag) (value : ℝ) : Measurable (record site value) := by
-  rcases site with ⟨mode, tag⟩
-  cases mode <;> cases tag <;> try exact measurable_id
+theorem record_measurable (site : Mode × Kind × Op) (value : ℝ) : Measurable (record site value) := by
+  rcases site with ⟨mode, kind, op⟩
+  cases mode <;> cases kind <;> try exact measurable_id
   exact (StepTraces.draw_cons_measurable.comp
     (measurable_const.prodMk measurable_fst)).prodMk measurable_snd
 
@@ -54,8 +54,8 @@ theorem exact_eq_detailed (depth : Nat) (e : Expr) :
                   StepTraces.prepend_measurable.comp (measurable_const.prodMk measurable_id))]
             congr 1
             funext p
-            rcases site with ⟨mode, tag⟩
-            cases mode <;> cases tag <;> rfl
+            rcases site with ⟨mode, kind, op⟩
+            cases mode <;> cases kind <;> rfl
 
 theorem joint_eq_detailed (e : Expr) :
     jointMeasure e = (StepTraces.jointMeasure e).map eraseOutput := by

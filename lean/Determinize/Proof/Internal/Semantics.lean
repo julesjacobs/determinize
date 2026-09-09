@@ -42,7 +42,9 @@ def realArity {Literal : Type} : Expr Literal → Nat
   | .matchSum x l r | .ite x l r => x.realArity + l.realArity + r.realArity
   | .matchList x n c => x.realArity + n.realArity + c.realArity
   | .letE x b => x.realArity + b.realArity
-  | .sample _ _ affine general => (affine.map realArity).sum + (general.map realArity).sum
+  | .uniform _ _ l r | .gaussian _ _ l r | .beta _ _ l r | .gamma _ _ l r =>
+      l.realArity + r.realArity
+  | .poisson _ _ x | .exponential _ _ x => x.realArity
   | _ => 0
 
 end Expr

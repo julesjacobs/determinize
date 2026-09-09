@@ -94,9 +94,10 @@ Walking through `Typed` in `Statement/Syntax.lean`:
   core language, so a G position never silently accepts an E value.
 - Every rule with a `Float[G]` conclusion has only G float premises. Addition and
   negation keep their mode. Multiplication and division at mode G need both operands
-  at G, since the non-G operand must match the result mode. A G draw is the `sample`
-  rule at mode G: its affine parameters are typed at the draw's mode, hence G, and its
-  general parameters are always G. So the parameters of a G draw are G values.
+  at G, since the non-G operand must match the result mode. A G draw is a primitive
+  rule at mode G: the parameters in which the mean is affine (the uniform bounds, the
+  Gaussian mean, the Poisson rate, the gamma shape) are typed at the draw's mode, hence G,
+  and the remaining parameters are always G. So the parameters of a G draw are G values.
 - Control flow cannot leak an E value either. The only way to obtain a `bool` from a
   float is `lt`, which demands two G operands; conditionals and matches branch on
   booleans and sum or list tags, none of which can encode an E float. Which branch

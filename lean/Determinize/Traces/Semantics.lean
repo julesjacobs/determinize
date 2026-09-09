@@ -24,9 +24,9 @@ instance : MeasurableSpace Trace :=
     (trace.length, fun index : Nat => trace.getD index (.uniform, 0))) inferInstance
 
 /-- Record a generation draw; all other actions preserve the suffix trace. -/
-def record (site : Mode × Tag) (value : ℝ) (output : Output) : Output :=
+def record (site : Mode × Kind × Op) (value : ℝ) (output : Output) : Output :=
   match site with
-  | (.G, .stochastic op) => ((op, value) :: output.1, output.2)
+  | (.G, .stochastic, op) => ((op, value) :: output.1, output.2)
   | _ => output
 
 /-- Joint law of executions first returning a real at exactly `depth`

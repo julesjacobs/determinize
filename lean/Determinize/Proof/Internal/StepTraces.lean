@@ -29,8 +29,8 @@ instance : MeasurableSpace Trace :=
   MeasurableSpace.comap (fun trace : Trace =>
     (trace.length, fun index : Nat => trace.getD index none)) inferInstance
 
-def generationEvent : Mode × Tag → ℝ → Event
-  | (.G, .stochastic op), value => some (op, value)
+def generationEvent : Mode × Kind × Op → ℝ → Event
+  | (.G, .stochastic, op), value => some (op, value)
   | _, _ => none
 
 def prepend (entry : Event) (output : Output) : Output :=

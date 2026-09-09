@@ -72,10 +72,6 @@ theorem typed_determinize
     (typed : Determinize.Statement.Paper.Typed context expression ty) :
     Determinize.Statement.Paper.Typed context expression.determinize ty := by
   induction typed with
-  | @sample affine context mode general op affineLength generalLength affineTyped generalTyped affineIH generalIH =>
-      cases mode <;> cases op <;>
-        simp only [Expr.determinize] <;>
-        constructor <;> simp_all [Tag.base]
   | _ =>
       simp only [Expr.determinize]
       aesop (add safe constructors Determinize.Statement.Paper.Typed)
@@ -86,7 +82,5 @@ theorem sourceTags_of_sourceForm {expression : Expr}
     (Symbolic.AffineExpr.ofExpr expression).SourceTags := by
   fun_induction Expr.sourceForm expression <;>
     simp_all [Symbolic.AffineExpr.ofExpr, Symbolic.AffineExpr.SourceTags]
-  rename_i mode op affine general _ _
-  cases mode <;> simp_all [Symbolic.AffineExpr.SourceTags]
 
 end Determinize.Proof.Paper

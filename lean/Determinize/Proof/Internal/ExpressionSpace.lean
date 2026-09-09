@@ -33,7 +33,12 @@ def skeleton : Expr → Skeleton
   | .promote x => .promote x.skeleton | .neg x => .neg x.skeleton
   | .add l r => .add l.skeleton r.skeleton | .mul l r => .mul l.skeleton r.skeleton
   | .div l r => .div l.skeleton r.skeleton | .lt l r => .lt l.skeleton r.skeleton
-  | .sample m op a g => .sample m op (a.map skeleton) (g.map skeleton)
+  | .uniform m k l r => .uniform m k l.skeleton r.skeleton
+  | .gaussian m k l r => .gaussian m k l.skeleton r.skeleton
+  | .poisson m k x => .poisson m k x.skeleton
+  | .exponential m k x => .exponential m k x.skeleton
+  | .beta m k l r => .beta m k l.skeleton r.skeleton
+  | .gamma m k l r => .gamma m k l.skeleton r.skeleton
 
 def realCoordinates : Expr → List ℝ
   | .real value => [value]
@@ -45,7 +50,9 @@ def realCoordinates : Expr → List ℝ
       x.realCoordinates ++ l.realCoordinates ++ r.realCoordinates
   | .matchList x n c => x.realCoordinates ++ n.realCoordinates ++ c.realCoordinates
   | .letE x b => x.realCoordinates ++ b.realCoordinates
-  | .sample _ _ a g => a.flatMap realCoordinates ++ g.flatMap realCoordinates
+  | .uniform _ _ l r | .gaussian _ _ l r | .beta _ _ l r | .gamma _ _ l r =>
+      l.realCoordinates ++ r.realCoordinates
+  | .poisson _ _ x | .exponential _ _ x => x.realCoordinates
   | _ => []
 
 end Expr

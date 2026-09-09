@@ -13,7 +13,7 @@ theorem concrete_sampleE (laws : PrimitiveLaws)
     (actionEq : symbolicReduce laws expression = .sampleE op affine general continuation)
     (environment : Env n) :
     reduce (expression.realize environment) =
-      .sample (.E, .stochastic op) (laws.kernel op
+      .sample (.E, .stochastic, op) (laws.kernel op
         (fun i => Symbolic.Affine.eval (affine.getD i.1 (0, fun _ => 0)) environment,
          fun i => general.getD i.1 0))
         (fun value => continuation.realize (Env.cons value environment)) := by
@@ -28,8 +28,8 @@ theorem concrete_sampleE (laws : PrimitiveLaws)
   unfold primitiveFiber
     Determinize.Statement.Paper.parseParams
   simp only
-  rw [dif_pos (by simpa [Tag.base] using affineLength),
-    dif_pos (by simpa [Tag.base] using generalLength)]
+  rw [dif_pos (by simpa using affineLength),
+    dif_pos generalLength]
   simp only
   rw [laws.kernel_eq_paperMeasure]
   congr 1
@@ -47,7 +47,7 @@ theorem concrete_target_sampleE (laws : PrimitiveLaws)
         (fun i => Symbolic.Affine.eval (affine.getD i.1 (0, fun _ => 0)) mean,
          fun i => general.getD i.1 0)) :
     reduce (expression.realize mean).determinize =
-      .sample (.E, .mean op) (Measure.dirac (meanValue op
+      .sample (.E, .mean, op) (Measure.dirac (meanValue op
         (fun i => Symbolic.Affine.eval (affine.getD i.1 (0, fun _ => 0)) mean,
          fun i => general.getD i.1 0)))
         (fun value => (continuation.realize (Env.cons value mean)).determinize) := by
@@ -65,8 +65,8 @@ theorem concrete_target_sampleE (laws : PrimitiveLaws)
   unfold primitiveFiber
     Determinize.Statement.Paper.parseParams
   simp only
-  rw [dif_pos (by simpa [Tag.base] using affineLength),
-    dif_pos (by simpa [Tag.base] using generalLength)]
+  rw [dif_pos (by simpa using affineLength),
+    dif_pos generalLength]
   simp only
   let evaluatedParams : Determinize.Statement.Paper.Params op :=
     (fun index => (affine.map (Symbolic.Affine.eval · mean))[index.1]'(by
