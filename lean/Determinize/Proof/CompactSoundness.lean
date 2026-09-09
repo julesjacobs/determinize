@@ -72,6 +72,13 @@ theorem joint_mass_le_one (e : Expr) : jointMeasure e Set.univ ≤ 1 := by
   rw [joint_eq_detailed, Measure.map_apply eraseOutput_measurable MeasurableSet.univ]
   exact StepTraces.joint_mass_le_one e
 
+theorem traceLaw_mass_le_one (e : Expr) : traceLaw e Set.univ ≤ 1 := by
+  rw [traceLaw, Measure.map_apply measurable_fst MeasurableSet.univ]
+  exact joint_mass_le_one e
+
+instance (e : Expr) : IsFiniteMeasure (traceLaw e) :=
+  ⟨(traceLaw_mass_le_one e).trans_lt (by simp)⟩
+
 theorem exact_succ_next (depth : Nat) (e next : Expr) (nv : e.isValue ≠ true)
     (h : reduce e = .next next) : exactMeasure (depth+1) e = exactMeasure depth next := by
   simp [exactMeasure, nv, h]
@@ -117,7 +124,12 @@ theorem soundness : Determinize.Traces.soundnessThm := by
   refine ⟨(StepTraces.soundness mode program typed sourceForm sourceSafe).1, ?_⟩
   rcases (joint_fiberSound source sourceTyped tags domainSafe).factorization
     (joint_mass_le_one source.determinize) with ⟨ν, f, hm, hf, hs, ht, hmean⟩
-  exact ⟨ν, (traceFiber source).kernel, f, hm, inferInstance, hf, hs, ht, hmean⟩
+  have hν : traceLaw source = ν := by
+    let : IsFiniteMeasure ν := ⟨hm.trans_lt (by simp)⟩
+    rw [traceLaw, hs]
+    exact Measure.fst_compProd ν (traceFiber source).kernel
+  subst hν
+  exact ⟨(traceFiber source).kernel, f, inferInstance, hf, hs, ht, hmean⟩
 
 end
 end Determinize.Proof.Traces

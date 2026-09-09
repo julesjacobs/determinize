@@ -26,12 +26,11 @@ theorem MeanOnTraces.output_laws {source target : Expr} (sound : MeanOnTraces so
       ∀ᵐ trace ∂traces,
         Integrable id (fiber trace) ∧ output trace = ∫ value : ℝ, value ∂fiber trace := by
   rcases sound with
-    ⟨ν, fiber, output, mass, markov, measurableOutput, sourceJoint, targetJoint, valid⟩
-  have : IsFiniteMeasure ν := ⟨mass.trans_lt (by simp)⟩
+    ⟨fiber, output, markov, measurableOutput, sourceJoint, targetJoint, valid⟩
   have := markov
-  refine ⟨ν, fiber, output, inferInstance, markov, measurableOutput, ?_, ?_, valid⟩
+  refine ⟨traceLaw source, fiber, output, inferInstance, markov, measurableOutput, ?_, ?_, valid⟩
   · rw [← Proof.Traces.correspondence source, sourceJoint]
-    exact Measure.snd_compProd ν fiber
+    exact Measure.snd_compProd (traceLaw source) fiber
   · rw [← Proof.Traces.correspondence target, targetJoint,
       Measure.map_map measurable_snd (show Measurable (fun trace => (trace, output trace)) from
         measurable_id.prodMk measurableOutput)]

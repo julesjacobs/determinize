@@ -10,15 +10,20 @@ open MeasureTheory ProbabilityTheory Determinize.Statement.Paper
 def correspondenceThm : Prop :=
   ∀ program : Expr, (jointMeasure program).map Prod.snd = bigStepMeasure program
 
-/-- The actual source and target joint laws factor over the same operational traces. -/
+/-- The law of a program's terminating generation traces: the trace marginal of its joint law. -/
+noncomputable def traceLaw (program : Expr) : Measure Trace :=
+  (jointMeasure program).map Prod.fst
+
+/-- The actual source and target joint laws factor over the source's own trace law: the
+source output is drawn from a Markov kernel indexed by the trace, the target output is a
+measurable function of the trace, and that function is almost surely the fiber's mean. -/
 def MeanOnTraces (source target : Expr) : Prop :=
-  ∃ (traces : Measure Trace) (fiber : Kernel Trace ℝ) (output : Trace → ℝ),
-    traces Set.univ ≤ 1 ∧
+  ∃ (fiber : Kernel Trace ℝ) (output : Trace → ℝ),
     IsMarkovKernel fiber ∧
     Measurable output ∧
-    jointMeasure source = traces ⊗ₘ fiber ∧
-    jointMeasure target = traces.map (fun trace => (trace, output trace)) ∧
-    ∀ᵐ trace ∂traces,
+    jointMeasure source = traceLaw source ⊗ₘ fiber ∧
+    jointMeasure target = (traceLaw source).map (fun trace => (trace, output trace)) ∧
+    ∀ᵐ trace ∂traceLaw source,
       Integrable id (fiber trace) ∧ output trace = ∫ value : ℝ, value ∂fiber trace
 
 /-- Trace soundness requires no global integrability assumption. -/
