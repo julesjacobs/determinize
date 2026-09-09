@@ -1,0 +1,82 @@
+\begin{table*}[t]
+  \centering
+  \small
+  \renewcommand{\arraystretch}{1.25}
+
+  \textbf{Tracewise: Fix $\gamma=(0.32)$.}
+
+  \medskip
+  \begin{adjustbox}{max width=\textwidth}
+  \begin{tabular}{@{}ccc@{}}
+    \toprule
+    \textbf{Original $e$} &
+    \textbf{Symbolic $s^\gamma$} &
+    \textbf{Determinized $\exptrans{e}$} \\
+    \midrule
+    $(\uniform(1,2):\Float{\E})/(\uniform(0,1):\Float{\G})$ &
+    $(\emptyset\mid \uniform[\E](1,2)/\uniform[\G](0,1))$ &
+    $\mathsf{mean}_{\mathsf{Uniform}}(1,2)/\uniform(0,1)$ \\[0.9em]
+    $c_1/\uniform(0,1)$ &
+    $(u_1\sim\uniform(1,2)\mid\sym(u_1)/\uniform[\G](0,1))$ &
+    $1.5/\uniform(0,1)$ \\[0.9em]
+    $c_1/0.32$ &
+    $(u_1\sim\uniform(1,2)\mid\sym(u_1)/\sym(0.32))$ &
+    $1.5/0.32$ \\[0.9em]
+    $v=(c_1/0.32)$ &
+    $(u_1\sim\uniform(1,2)\mid\sym(u_1/0.32))$ &
+    $4.6875$ \\
+    \bottomrule
+  \end{tabular}
+  \end{adjustbox}
+
+  \medskip
+  Both sides finite: $
+    \mathbb E[v\mid\gamma]
+    = \mathbb E[c_1]/0.32
+    = 1.5/0.32
+    = 4.6875 < \infty.
+  $
+
+  \bigskip
+  \textbf{Global}
+
+  \medskip
+  \begin{adjustbox}{max width=\textwidth}
+  \begin{tabular}{@{}ccc@{}}
+    \toprule
+    \textbf{Original $e$} &
+    \textbf{Symbolic $s$} &
+    \textbf{Determinized $\exptrans{e}$} \\
+    \midrule
+    $(\uniform(1,2):\Float{\E})/(\uniform(0,1):\Float{\G})$ &
+    $(\emptyset\mid \uniform[\E](1,2)/\uniform[\G](0,1))$ &
+    $\mathsf{mean}_{\mathsf{Uniform}}(1,2)/\uniform(0,1)$ \\[0.9em]
+    $c_1/\uniform(0,1)$ &
+    $(u_1\sim\uniform(1,2)\mid\sym(u_1)/\uniform[\G](0,1))$ &
+    $1.5/\uniform(0,1)$ \\[0.9em]
+    $c_1/c_2$ &
+    $(u_1\sim\uniform(1,2)\mid\sym(u_1)/\sym(c_2))$ &
+    $1.5/c_2$ \\[0.9em]
+    $v=(c_1/c_2)$ &
+    $(u_1\sim\uniform(1,2)\mid\sym(u_1/c_2))$ &
+    $v=(1.5/c_2)$ \\
+    \bottomrule
+  \end{tabular}
+  \end{adjustbox}
+
+  \medskip
+  Both sides infinite: $
+    \mathbb E[v]
+    = \int_0^1 \frac{1.5}{c_2}\,dc_2
+    = +\infty.
+  $
+
+  \caption{Let
+  $e =
+    (\uniform(1,2):\Float{\E})
+    \,/\,
+    (\uniform(0,1):\Float{\G})$. An example illustrating tracewise and global soundness. Fixing a valid general-mode trace
+  gives a finite conditional expectation, although integrating those conditional
+  expectations over all general-mode traces yields an infinite global expectation.}
+  \label{tab:tracewise-global-soundness}
+\end{table*}

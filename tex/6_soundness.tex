@@ -2299,6 +2299,8 @@ Next, we define an integrability condition for the symbolic sampling enviornment
   \end{align}
 \end{proof}
 
+\input{figures/soundness_trace.tex}
+
 \paragraph{Tracewise soundness}
 
 \begin{definition}[General-mode trace]
@@ -2314,7 +2316,7 @@ We say that a $\G$-mode trace is valid if resolving the general-mode sampling op
 **** NOTE: Skipping many steps here, but everything is essentially the same as the concrete semantics, e.g.
 
 \begin{itemize}
-  \item Measurable space / Markov kernel, tracewise small step, n step, big step semantics, and associated lemmas (e.g. limit exists via MCT)
+  \item Measurable space / Markov kernel, tracewise small step, n step, big step semantics (that carries some trace $\gamma$), and associated lemmas (e.g. limit exists via MCT)
   \item Tracewise symbolic small step, n step semantics
   \item Tracewise commuting lemmas 
   \item Tracewise soundness n step
@@ -2654,17 +2656,7 @@ Note that fixing $\gamma$ removes the randomness from the $\G$-samples, which de
 
 
 \begin{proof}
-  Want to say something like:
-  \[
-    \bigsem{e:\tau}^{\gamma}
-    =
-    \left.\mathsf{act}_\tau(s^\gamma)\right|_{Val_\tau}
-    \qquad\text{and}\qquad
-    \bigsem{\exptrans{e:\tau}:\tau}^{\gamma}
-    =
-    \left.\mathsf{exp}_\tau(s^\gamma)\right|_{Val_\tau}.
-  \]
-  The result follows from
+  Follows partly from
   \Cref{thm:tracewise-agreement-of-interpretations}.
 \end{proof}
 
