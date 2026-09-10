@@ -2,16 +2,16 @@
 raw:
 ( let sum =
     ( rec sum xs =>
-          ( match ( xs : [ float[?m2] ] ) with
-                | [] => ( 0 : float[?m2] )
-                | x :: xs => ( ( x : float[?m2] ) + ( ( sum : [ float[?m2] ] ->  float[?m2] ) ( xs : [ float[?m2] ] ) : float[?m2] ) :
-                      float[?m2] ) : float[?m2] ) : [ float[?m2] ] ->  float[?m2] )
+          ( match ( xs : [ float[?m1] ] ) with
+                | [] => ( 0 : float[?m1] )
+                | x :: xs => ( ( x : float[?m1] ) + ( ( sum : [ float[?m1] ] ->  float[?m1] ) ( xs : [ float[?m1] ] ) : float[?m1] ) :
+                      float[?m1] ) : float[?m1] ) : [ float[?m1] ] ->  float[?m1] )
     in
     ( let values =
-          ( ( 1 : float[?m3] ) :: ( ( 2 : float[?m4] ) :: ( ( 3 : float[?m5] ) :: ( [] : [ float[?m5] ] ) : [ float[?m5] ] ) : [ float[?m4]
-                      ] ) : [ float[?m3] ] )
+          ( ( 1 : float[?m2] ) :: ( ( 2 : float[?m3] ) :: ( ( 3 : float[?m4] ) :: ( [] : [ float[?m4] ] ) : [ float[?m4] ] ) : [ float[?m3]
+                      ] ) : [ float[?m2] ] )
           in
-          ( ( sum : [ float[?m2] ] ->  float[?m2] ) ( values : [ float[?m2] ] ) : float[?m2] ) : float[?m2] ) : float[?m2] )
+          ( ( sum : [ float[?m1] ] ->  float[?m1] ) ( values : [ float[?m1] ] ) : float[?m1] ) : float[?m1] ) : float[?m1] )
 defaulted:
 ( let sum =
     ( rec sum xs =>

@@ -1,6 +1,6 @@
 == Elaboration ==
 raw:
-( ( ( rec f x => ( x : float[?m2] ) : float[?m2] ->  float[?m2] ) ) ( 3 : float[?m2] ) : float[?m2] )
+( ( ( rec f x => ( x : float[?m1] ) : float[?m1] ->  float[?m1] ) ) ( 3 : float[?m1] ) : float[?m1] )
 defaulted:
 ( ( ( rec f x => ( x : float[E] ) : float[E] ->  float[E] ) ) ( 3 : float[E] ) : float[E] )
 

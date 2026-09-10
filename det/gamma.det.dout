@@ -1,10 +1,10 @@
 == Elaboration ==
 raw:
 ( let x =
-    ( gamma( ( 1 : float[?m2] ), ( 2 : float[G] ) ) : float[?m2] )
+    ( gamma( ( 1 : float[?m1] ), ( 2 : float[G] ) ) : float[?m1] )
     in
-    ( let y = ( gamma( ( x : float[?m4] ), ( 8 : float[G] ) ) : float[?m4] ) in ( ( y : float[?m1] ) + ( 1 : float[?m1] ) : float[?m1] ) :
-          float[?m1] ) : float[?m1] )
+    ( let y = ( gamma( ( x : float[?m3] ), ( 8 : float[G] ) ) : float[?m3] ) in ( ( y : float[?m5] ) + ( 1 : float[?m5] ) : float[?m5] ) :
+          float[?m5] ) : float[?m5] )
 defaulted:
 ( let x =
     ( gamma( ( 1 : float[E] ), ( 2 : float[G] ) ) : float[E] )
@@ -16,5 +16,5 @@ defaulted:
 let x = 1 / 2 in let y = x / 8 in y + 1
 
 == Evaluation (100 trials) ==
-program mean: 1.06916
+program mean: 1.05921
 determinized mean: 1.0625

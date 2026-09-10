@@ -1,7 +1,7 @@
 == Elaboration ==
 raw:
-( let x = ( 1 : float[?m2] ) in ( let y = ( 2 : float[?m3] ) in ( ( x : float[?m1] ) + ( y : float[?m1] ) : float[?m1] ) : float[?m1] ) :
-    float[?m1] )
+( let x = ( 1 : float[?m1] ) in ( let y = ( 2 : float[?m2] ) in ( ( x : float[?m3] ) + ( y : float[?m3] ) : float[?m3] ) : float[?m3] ) :
+    float[?m3] )
 defaulted:
 ( let x = ( 1 : float[E] ) in ( let y = ( 2 : float[E] ) in ( ( x : float[E] ) + ( y : float[E] ) : float[E] ) : float[E] ) : float[E] )
 

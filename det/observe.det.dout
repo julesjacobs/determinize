@@ -14,5 +14,5 @@ defaulted:
 let x = discrete( 0.1 : 0, 0.2 : 1, 0.7 : 2 ) in let _ = observe( x < 2 ) in x
 
 == Evaluation (100 trials) ==
-program mean: 0.68
-determinized mean: 0.68
+program mean: 0.566667
+determinized mean: 0.566667

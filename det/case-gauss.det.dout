@@ -1,6 +1,6 @@
 == Elaboration ==
 raw:
-( match ( inl ( gauss( ( 0 : float[?m2] ), ( 1 : float[G] ) ) : float[?m2] ) : float[?m2] + float[?m1] ) with
+( match ( inl ( gauss( ( 0 : float[?m1] ), ( 1 : float[G] ) ) : float[?m1] ) : float[?m1] + float[?m1] ) with
     | inl x => ( x : float[?m1] )
     | inr y => ( y : float[?m1] ) : float[?m1] )
 defaulted:
@@ -14,5 +14,5 @@ match inl 0 with
 | inr y => y
 
 == Evaluation (100 trials) ==
-program mean: 0.106226
+program mean: 0.000188754
 determinized mean: 0

@@ -3,7 +3,7 @@ raw:
 ( let x =
     ( exponential( ( 2 : float[G] ) ) : float[G] )
     in
-    ( let y = ( exponential( ( x : float[G] ) ) : float[?m4] ) in ( y : float[?m1] ) : float[?m1] ) : float[?m1] )
+    ( let y = ( exponential( ( x : float[G] ) ) : float[?m3] ) in ( y : float[?m3] ) : float[?m3] ) : float[?m3] )
 defaulted:
 ( let x =
     ( exponential( ( 2 : float[G] ) ) : float[G] )
@@ -14,5 +14,5 @@ defaulted:
 let x = exponential( 2 ) in let y = 1 / x in y
 
 == Evaluation (100 trials) ==
-program mean: 6.60726
-determinized mean: 12.717
+program mean: 9.59522
+determinized mean: 8.65512

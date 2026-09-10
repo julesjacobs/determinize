@@ -1,7 +1,7 @@
 == Elaboration ==
 raw:
-( let m = ( gauss( ( 0 : float[?m2] ), ( 1 : float[G] ) ) : float[?m2] ) in ( ( m : float[?m1] ) * ( 2 : float[?m1] ) : float[?m1] ) :
-    float[?m1] )
+( let m = ( gauss( ( 0 : float[?m1] ), ( 1 : float[G] ) ) : float[?m1] ) in ( ( m : float[?m3] ) * ( 2 : float[?m3] ) : float[?m3] ) :
+    float[?m3] )
 defaulted:
 ( let m = ( gauss( ( 0 : float[E] ), ( 1 : float[G] ) ) : float[E] ) in ( ( m : float[E] ) * ( 2 : float[E] ) : float[E] ) : float[E] )
 
@@ -9,5 +9,5 @@ defaulted:
 let m = 0 in m * 2
 
 == Evaluation (100 trials) ==
-program mean: 0.212452
+program mean: 0.000377508
 determinized mean: 0

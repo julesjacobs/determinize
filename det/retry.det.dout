@@ -42,5 +42,5 @@ in
 let noisy_inc = fun x => x + ( 0 + 1 ) * 0.5 in retry noisy_inc 5
 
 == Evaluation (100 trials) ==
-program mean: 5.5263
+program mean: 5.47046
 determinized mean: 5.5

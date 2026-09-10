@@ -63,5 +63,5 @@ let sum =
   let samples = ( 0 + 1 ) * 0.5 :: 1 :: 2.5 :: 0.5 :: [] in sum samples
 
 == Evaluation (100 trials) ==
-program mean: 0.640364
+program mean: 0.999826
 determinized mean: 0.84375
