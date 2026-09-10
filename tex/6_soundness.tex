@@ -2068,6 +2068,8 @@ In particular, $\mu$ has a \emph{finite first absolute moment} if
   \mathbb E[|\mu|] = \int_{\mathbb R}|v|\,\mu(dv)<\infty.
 \]
 
+Moreover, $\mathbb E[|\mu|] < \infty \iff \mathbb E[\mu] < \infty$. 
+
 Next, we define an integrability condition for the symbolic sampling enviornment $\sigma$, which ensures that replacing samples in $\sigma$ by their means produces finite real values.
 
 \begin{definition}[Integrable symbolic sampling environment]
@@ -2340,9 +2342,7 @@ We say that a $\G$-mode trace is valid if resolving the general-mode sampling op
   If $\sigma$ is integrable, then
   \[
     \mathbb E\!\left[
-      \left|
         \left.\mathsf{act}_\tau(s^\gamma)\right|_{Val_\tau}
-      \right|
     \right]
     <
     \infty
@@ -2350,9 +2350,7 @@ We say that a $\G$-mode trace is valid if resolving the general-mode sampling op
   and
   \[
     \mathbb E\!\left[
-      \left|
         \left.\mathsf{exp}_\tau(s^\gamma)\right|_{Val_\tau}
-      \right|
     \right]
     <
     \infty.
@@ -2389,7 +2387,7 @@ We say that a $\G$-mode trace is valid if resolving the general-mode sampling op
 
   \begin{enumerate}
     \item
-    By the definition of $\mathsf{act}_\tau$,
+    For the actual interpretation,
     \begin{align}
       \mathbb E\!\left[
         \left|
@@ -2397,19 +2395,15 @@ We say that a $\G$-mode trace is valid if resolving the general-mode sampling op
         \right|
       \right]
       &=
-      \mathbb E\!\left[
-        \left|
-          \left.
-          \left(
-            \sem{\sigma}_{\mathsf{env}}
-            \monbind
-            \lambda\rho.\,
-            \delta_{\mathsf{realize}_\rho(\sym(a)):\tau}
-          \right)
-          \right|_{Val_\tau}
-        \right|
-      \right]
-      \tag{\text{by the definition of $\mathsf{act}_\tau$}}
+      \int_{Val_\tau}
+        |v|\,
+        \left(
+          \sem{\sigma}_{\mathsf{env}}
+          \monbind
+          \lambda\rho.\,
+          \delta_{\mathsf{realize}_\rho(\sym(a)):\tau}
+        \right)(dv)
+      \tag{\text{by the definitions of expectation and $\mathsf{act}_\tau$}}
       \\
       &=
       \int_{Val_\tau}
@@ -2419,7 +2413,7 @@ We say that a $\G$-mode trace is valid if resolving the general-mode sampling op
             \delta_{\mathsf{realize}_\rho(\sym(a)):\tau}
             \,\sem{\sigma}_{\mathsf{env}}(d\rho)
         \right)(dv)
-      \tag{\text{by the definitions of expectation and monadic bind}}
+      \tag{\text{by the definition of monadic bind}}
       \\
       &=
       \int_{\mathbb R^k}
@@ -2454,7 +2448,7 @@ We say that a $\G$-mode trace is valid if resolving the general-mode sampling op
       \tag{\text{since $\sigma$ is integrable}}.
     \end{align}
 
-    Similarly, by the definition of $\mathsf{exp}_\tau$,
+    For the expected interpretation,
     \begin{align}
       \mathbb E\!\left[
         \left|
@@ -2462,19 +2456,15 @@ We say that a $\G$-mode trace is valid if resolving the general-mode sampling op
         \right|
       \right]
       &=
-      \mathbb E\!\left[
-        \left|
-          \left.
-          \left(
-            \sem{\sigma}_{\mathsf{mean}}
-            \monbind
-            \lambda\rho.\,
-            \delta_{\mathsf{erealize}_\rho(\sym(a)):\tau}
-          \right)
-          \right|_{Val_\tau}
-        \right|
-      \right]
-      \tag{\text{by the definition of $\mathsf{exp}_\tau$}}
+      \int_{Val_\tau}
+        |v|\,
+        \left(
+          \sem{\sigma}_{\mathsf{mean}}
+          \monbind
+          \lambda\rho.\,
+          \delta_{\mathsf{erealize}_\rho(\sym(a)):\tau}
+        \right)(dv)
+      \tag{\text{by the definitions of expectation and $\mathsf{exp}_\tau$}}
       \\
       &=
       \int_{Val_\tau}
@@ -2484,7 +2474,7 @@ We say that a $\G$-mode trace is valid if resolving the general-mode sampling op
             \delta_{\mathsf{erealize}_\rho(\sym(a)):\tau}
             \,\sem{\sigma}_{\mathsf{mean}}(d\rho)
         \right)(dv)
-      \tag{\text{by the definitions of expectation and monadic bind}}
+      \tag{\text{by the definition of monadic bind}}
       \\
       &=
       \int_{\mathbb R^k}
@@ -2667,7 +2657,7 @@ Note that fixing $\gamma$ removes the randomness from the $\G$-samples, which de
   Then
   \[
     \mathbb E\!\left[
-      \left|\bigsem{e:\tau}^{\gamma}\right|
+      \bigsem{e:\tau}^{\gamma}
     \right]
     <
     \infty
@@ -2675,9 +2665,7 @@ Note that fixing $\gamma$ removes the randomness from the $\G$-samples, which de
   and
   \[
     \mathbb E\!\left[
-      \left|
-        \bigsem{\exptrans{e:\tau}:\tau}^{\gamma}
-      \right|
+      \bigsem{\exptrans{e:\tau}:\tau}^{\gamma}
     \right]
     <
     \infty.
@@ -2703,13 +2691,206 @@ Note that fixing $\gamma$ removes the randomness from the $\G$-samples, which de
 
 \paragraph{Global soundness}
 
+\begin{theorem}
+  \label{thm:global-convex-domination}
+  Let $\tau=\Float{m}$, where $m=\G$ or $m=\E$, and let $\mu$ be a
+  probability measure on $State_\tau$.
+
+  Then, for every nonnegative measurable convex function
+  $\varphi:\mathbb R\to[0,\infty]$,
+  \[
+    \int_{Val_\tau}
+      \varphi(v)\,
+      \left.
+        (\mu\monbind\mathsf{exp}_\tau)
+      \right|_{Val_\tau}(dv)
+    \leq
+    \int_{Val_\tau}
+      \varphi(v)\,
+      \left.
+        (\mu\monbind\mathsf{act}_\tau)
+      \right|_{Val_\tau}(dv).
+  \]
+\end{theorem}
+
+\begin{proof}
+  Fix a symbolic state
+  \[
+    s=(\sigma\mid\hat e:\tau)\in State_\tau.
+  \]
+  If $\hat e$ is not a symbolic value, then neither interpretation assigns
+  any mass to $Val_\tau$. Hence both restricted measures are the zero
+  measure, and the required pointwise inequality is immediate.
+
+  Otherwise, since $\tau=\Float{m}$, we have $\hat e=\sym(a)$ for some
+  affine expression
+  \[
+    a=c_0+\sum_{i=1}^k c_i u_i.
+  \]
+  Let $\bar\rho$ be the unique valuation such that
+  \[
+    \sem{\sigma}_{\mathsf{mean}}=\delta_{\bar\rho}.
+  \]
+  Since $\sigma$ is integrable, the affine expression is integrable under
+  $\sem{\sigma}_{\mathsf{env}}$, so Jensen's inequality applies. For this
+  fixed state $s$, we have
+  \begin{align}
+    &\int_{Val_\tau}
+      \varphi(v)\,
+      \left.\mathsf{exp}_\tau(s)\right|_{Val_\tau}(dv)
+    \notag
+    \\
+    &=
+    \int_{Val_\tau}
+      \varphi(v)\,
+      \left.
+        \left(
+          \sem{\sigma}_{\mathsf{mean}}
+          \monbind
+          \lambda\rho.\,
+          \delta_{\mathsf{erealize}_\rho(\sym(a)):\tau}
+        \right)
+      \right|_{Val_\tau}(dv)
+    \tag{\text{by the definition of $\mathsf{exp}_\tau$}}
+    \\
+    &=
+    \int_{Val_\tau}
+      \varphi(v)\,
+      \delta_{\mathsf{erealize}_{\bar\rho}(\sym(a)):\tau}(dv)
+    \tag{\text{since $\sem{\sigma}_{\mathsf{mean}}=\delta_{\bar\rho}$ and by monad left identity}}
+    \\
+    &=
+    \int_{Val_\tau}
+      \varphi(v)\,
+      \delta_{c_0+\sum_{i=1}^k c_i\bar\rho(u_i)}(dv)
+    \tag{\text{by the definition of $\mathsf{erealize}_{\bar\rho}$}}
+    \\
+    &=
+    \varphi\!\left(
+      c_0+\sum_{i=1}^k c_i\bar\rho(u_i)
+    \right)
+    \tag{\text{by integration against a Dirac measure}}
+    \\
+    &=
+    \varphi\!\left(
+      c_0+
+      \sum_{i=1}^k c_i
+      \int_{\mathbb R^k}
+        \rho(u_i)\,
+        \sem{\sigma}_{\mathsf{env}}(d\rho)
+    \right)
+    \tag{\text{by \Cref{lem:mean-valuation-agreement}}}
+    \\
+    &=
+    \varphi\!\left(
+      \int_{\mathbb R^k}
+        \left(
+          c_0+\sum_{i=1}^k c_i\rho(u_i)
+        \right)
+        \sem{\sigma}_{\mathsf{env}}(d\rho)
+    \right)
+    \tag{\text{by linearity of integration}}
+    \\
+    &\leq
+    \int_{\mathbb R^k}
+      \varphi\!\left(
+        c_0+\sum_{i=1}^k c_i\rho(u_i)
+      \right)
+      \sem{\sigma}_{\mathsf{env}}(d\rho)
+    \tag{\text{by Jensen's inequality}}
+    \\
+    &=
+    \int_{Val_\tau}
+      \varphi(v)\,
+      \left.\mathsf{act}_\tau(s)\right|_{Val_\tau}(dv)
+    \tag{\text{by the definitions of $\mathsf{act}_\tau$ and $\mathsf{realize}_\rho$}}.
+  \end{align}
+
+  Now integrate this pointwise inequality over
+  $\mu$:
+  \begin{align}
+    &\int_{Val_\tau}
+      \varphi(v)\,
+      \left.
+        (\mu\monbind\mathsf{exp}_\tau)
+      \right|_{Val_\tau}(dv)
+    \notag
+    \\
+    &=
+    \int_{Val_\tau}
+      \varphi(v)\,
+      \left(
+        \mu\monbind
+        \lambda s.\,
+        \left.\mathsf{exp}_\tau(s)\right|_{Val_\tau}
+      \right)(dv)
+    \tag{\text{by \Cref{lem:restriction-of-bind}}}
+    \\
+    &=
+    \int_{Val_\tau}
+      \varphi(v)\,
+      \left(
+        \int_{State_\tau}
+          \left.\mathsf{exp}_\tau(s)\right|_{Val_\tau}
+          \,\mu(ds)
+      \right)(dv)
+    \tag{\text{by the definition of monadic bind}}
+    \\
+    &=
+    \int_{State_\tau}
+      \left(
+        \int_{Val_\tau}
+          \varphi(v)\,
+          \left.\mathsf{exp}_\tau(s)\right|_{Val_\tau}(dv)
+      \right)
+      \mu(ds)
+    \tag{\text{by Tonelli theorem}}
+    \\
+    &\leq
+    \int_{State_\tau}
+      \left(
+        \int_{Val_\tau}
+          \varphi(v)\,
+          \left.\mathsf{act}_\tau(s)\right|_{Val_\tau}(dv)
+      \right)
+      \mu(ds)
+    \tag{\text{by the pointwise inequality above and monotonicity of integration}}
+    \\
+    &=
+    \int_{Val_\tau}
+      \varphi(v)\,
+      \left(
+        \int_{State_\tau}
+          \left.\mathsf{act}_\tau(s)\right|_{Val_\tau}
+          \,\mu(ds)
+      \right)(dv)
+    \tag{\text{by Tonelli theorem}}
+    \\
+    &=
+    \int_{Val_\tau}
+      \varphi(v)\,
+      \left(
+        \mu\monbind
+        \lambda s.\,
+        \left.\mathsf{act}_\tau(s)\right|_{Val_\tau}
+      \right)(dv)
+    \tag{\text{by the definition of monadic bind}}
+    \\
+    &=
+    \int_{Val_\tau}
+      \varphi(v)\,
+      \left.
+        (\mu\monbind\mathsf{act}_\tau)
+      \right|_{Val_\tau}(dv)
+    \tag{\text{by \Cref{lem:restriction-of-bind}}}.
+  \end{align}
+\end{proof}
+
+
 \begin{theorem}[Global agreement of interpretations]
   \label{thm:global-agreement-of-interpretations}
-  Let $\mu$ be a probability measure on $State_\tau$ supported on
-  symbolic states arising from valid general-mode traces whose
-  symbolic sampling environments are integrable.
-
-  If
+  Let $\tau=\Float{m}$, where $m=\G$ or $m=\E$, and let $\mu$ be a
+  probability measure on $State_\tau$. If
   \[
     \mathbb E\!\left[
       \left.
@@ -2741,23 +2922,67 @@ Note that fixing $\gamma$ removes the randomness from the $\G$-samples, which de
   \]
 \end{theorem}
 
-\begin{proof}
-  By \Cref{lem:restriction-of-bind},
-  \[
-    \left.(\mu\monbind\mathsf{act}_\tau)\right|_{Val_\tau}
-    =
-    \mu\monbind
-    \lambda s.\,
-    \left.\mathsf{act}_\tau(s)\right|_{Val_\tau},
-  \]
-  and analogously for $\mathsf{exp}_\tau$.
 
-  The hypotheses of
-  \Cref{lem:extended-expectation-of-bind} hold for the actual
-  interpretation by the assumption that its expectation is
-  well-defined. They also hold for the expected interpretation: this
-  follows by applying Jensen's inequality pointwise to $v^+$ and
-  $v^-$ and then applying Tonelli's theorem. Thus,
+\begin{proof}
+
+  We first prove that the expected interpretation has a well-defined
+  expectation. The functions
+  \[
+    v^+=\max(v,0)
+    \qquad\text{and}\qquad
+    v^-=\max(-v,0)
+  \]
+  are nonnegative, measurable, and convex. Applying~\Cref{thm:global-convex-domination} to each function gives
+  \begin{align}
+    \int_{Val_\tau}
+      v^+\,
+      \left.
+        (\mu\monbind\mathsf{exp}_\tau)
+      \right|_{Val_\tau}(dv)
+    &\leq
+    \int_{Val_\tau}
+      v^+\,
+      \left.
+        (\mu\monbind\mathsf{act}_\tau)
+      \right|_{Val_\tau}(dv)
+    \tag{\text{by the convex inequality with $\varphi=v^+$}},
+    \\
+    \int_{Val_\tau}
+      v^-\,
+      \left.
+        (\mu\monbind\mathsf{exp}_\tau)
+      \right|_{Val_\tau}(dv)
+    &\leq
+    \int_{Val_\tau}
+      v^-\,
+      \left.
+        (\mu\monbind\mathsf{act}_\tau)
+      \right|_{Val_\tau}(dv)
+    \tag{\text{by the convex inequality with $\varphi=v^-$}}.
+  \end{align}
+
+  By assumption,
+  \[
+    \mathbb E\!\left[
+      \left.
+        (\mu\monbind\mathsf{act}_\tau)
+      \right|_{Val_\tau}
+    \right]
+  \]
+  is well-defined. Hence at least one of its positive and negative
+  integrals is finite. The corresponding inequality above shows that
+  the same integral is finite for the expected interpretation.
+  Therefore,
+  \[
+    \mathbb E\!\left[
+      \left.
+        (\mu\monbind\mathsf{exp}_\tau)
+      \right|_{Val_\tau}
+    \right]
+  \]
+  is also well-defined.
+
+  Finally, we prove equality of the expectations:
   \begin{align}
     &\mathbb E\!\left[
       \left.
@@ -2767,45 +2992,51 @@ Note that fixing $\gamma$ removes the randomness from the $\G$-samples, which de
     \notag
     \\
     &=
+    % \mathbb E\!\left[
+    %   \mu\monbind
+    %   \lambda s.\,
+    %   \left.\mathsf{act}_\tau(s)\right|_{Val_\tau}
+    % \right]
+    % \tag{\text{by \Cref{lem:restriction-of-bind}}}
+    % \\
+    % &=
     \int_{State_\tau}
       \mathbb E\!\left[
         \left.\mathsf{act}_\tau(s)\right|_{Val_\tau}
       \right]
-      \,\mu(ds)
-    \tag{\text{by \Cref{lem:restriction-of-bind,lem:extended-expectation-of-bind}}}
+      \mu(ds)
+    \tag{\text{by \Cref{lem:extended-expectation-of-bind}}}
     \\
     &=
     \int_{State_\tau}
       \mathbb E\!\left[
         \left.\mathsf{exp}_\tau(s)\right|_{Val_\tau}
       \right]
-      \,\mu(ds)
-    \tag{\text{by \Cref{thm:tracewise-agreement-of-interpretations}}}
+      \mu(ds)
+    \tag{\text{by \Cref{thm:pointwise-agreement-of-interpretations}}}
     \\
     &=
     \mathbb E\!\left[
-      \left.
-        (\mu\monbind\mathsf{exp}_\tau)
-      \right|_{Val_\tau}
+      \mu\monbind
+      \lambda s.\,
+      \left.\mathsf{exp}_\tau(s)\right|_{Val_\tau}
     \right]
-    \tag{\text{by \Cref{lem:restriction-of-bind,lem:extended-expectation-of-bind}}}.
+    \tag{\text{by \Cref{lem:extended-expectation-of-bind}}}
+    % \\
+    % &=
+    % \mathbb E\!\left[
+    %   \left.
+    %     (\mu\monbind\mathsf{exp}_\tau)
+    %   \right|_{Val_\tau}
+    % \right]
+    % \tag{\text{by \Cref{lem:restriction-of-bind}}}.
   \end{align}
 \end{proof}
 
 \begin{theorem}[Global soundness $n$-step]
   \label{thm:global-soundness-n-step}
   Let $e:\tau$ be closed and well typed, where
-  $\tau=\Float{m}$ and $m=\G$ or $\E$. Let $n\in\mathbb N$.
-
-  Suppose that, for
-  \[
-    \symbigsemstep{\mathsf{init}_\tau(e:\tau)}{n}
-    \text{-almost every symbolic state }s,
-  \]
-  the corresponding general-mode trace is valid and its symbolic
-  sampling environment is integrable.
-
-  If
+  $\tau=\Float{m}$ and $m=\G$ or $\E$. Let $n\in\mathbb N$. If
   \[
     \mathbb E\!\left[
       \left.\bigsemstep{e:\tau}{n}\right|_{Val_\tau}
@@ -2957,41 +3188,4 @@ Note that fixing $\gamma$ removes the randomness from the $\G$-samples, which de
     \right]
     \tag{\text{by the definition of the big-step semantics}}.
   \end{align}
-\end{proof}
-
-\begin{theorem}
-  \label{thm:global-jensen}
-  Let $e:\tau$ be closed and well typed, where
-  $\tau=\Float{m}$ and $m=\G$ or $\E$.
-
-  Suppose that almost every terminating general-mode trace is valid
-  and has an integrable symbolic sampling environment. Then, for every
-  measurable convex function $\varphi:\mathbb R\to[0,\infty]$,
-  \[
-    \int_{Val_\tau}
-      \varphi(v)\,
-      \bigsem{\exptrans{e:\tau}:\tau}(dv)
-    \leq
-    \int_{Val_\tau}
-      \varphi(v)\,\bigsem{e:\tau}(dv).
-  \]
-\end{theorem}
-
-\begin{proof}
-  Integrating the tracewise inequality from
-  \Cref{thm:tracewise-jensen} over all terminating general-mode traces
-  gives
-  \begin{align}
-    &\int_{Val_\tau}
-      \varphi(v)\,
-      \bigsem{\exptrans{e:\tau}:\tau}(dv)
-    \notag
-    \\
-    &\leq
-    \int_{Val_\tau}
-      \varphi(v)\,\bigsem{e:\tau}(dv).
-    \tag{\text{by \Cref{thm:tracewise-jensen} and Tonelli's theorem}}
-  \end{align}
-  Tonelli's theorem applies because $\varphi$ is nonnegative, even if
-  either side is infinite.
 \end{proof}
