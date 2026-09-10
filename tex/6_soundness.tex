@@ -2691,12 +2691,9 @@ Note that fixing $\gamma$ removes the randomness from the $\G$-samples, which de
 
 \paragraph{Global soundness}
 
-\begin{theorem}
+\begin{theorem}[Convex function inequality]
   \label{thm:global-convex-domination}
-  Let $\tau=\Float{m}$, where $m=\G$ or $m=\E$, and let $\mu$ be a
-  probability measure on $State_\tau$.
-
-  Then, for every nonnegative measurable convex function
+  Let $\tau=\Float{m}$, where $m=\G$ or $m=\E$, and let $\mu \in \mathcal{D}(State_\tau)$. Then, for every nonnegative measurable convex function
   $\varphi:\mathbb R\to[0,\infty]$,
   \[
     \int_{Val_\tau}
@@ -2820,16 +2817,6 @@ Note that fixing $\gamma$ removes the randomness from the $\G$-samples, which de
     \int_{Val_\tau}
       \varphi(v)\,
       \left(
-        \mu\monbind
-        \lambda s.\,
-        \left.\mathsf{exp}_\tau(s)\right|_{Val_\tau}
-      \right)(dv)
-    \tag{\text{by \Cref{lem:restriction-of-bind}}}
-    \\
-    &=
-    \int_{Val_\tau}
-      \varphi(v)\,
-      \left(
         \int_{State_\tau}
           \left.\mathsf{exp}_\tau(s)\right|_{Val_\tau}
           \,\mu(ds)
@@ -2854,7 +2841,7 @@ Note that fixing $\gamma$ removes the randomness from the $\G$-samples, which de
           \left.\mathsf{act}_\tau(s)\right|_{Val_\tau}(dv)
       \right)
       \mu(ds)
-    \tag{\text{by the pointwise inequality above and monotonicity of integration}}
+    \tag{\text{by the pointwise inequality above}}
     \\
     &=
     \int_{Val_\tau}
@@ -2869,28 +2856,36 @@ Note that fixing $\gamma$ removes the randomness from the $\G$-samples, which de
     &=
     \int_{Val_\tau}
       \varphi(v)\,
-      \left(
-        \mu\monbind
-        \lambda s.\,
-        \left.\mathsf{act}_\tau(s)\right|_{Val_\tau}
-      \right)(dv)
-    \tag{\text{by the definition of monadic bind}}
-    \\
-    &=
-    \int_{Val_\tau}
-      \varphi(v)\,
       \left.
         (\mu\monbind\mathsf{act}_\tau)
       \right|_{Val_\tau}(dv)
-    \tag{\text{by \Cref{lem:restriction-of-bind}}}.
+    \tag{by definition of monadic bind}.
   \end{align}
 \end{proof}
 
+The following also hold (both proofs are straightforward?):
+\begin{enumerate}
+  \item $\int_{Val_\tau}
+  \varphi(v)\,
+  \bigsemstep{\exptrans{e:\tau}:\tau}{n}(dv)
+  \leq
+  \int_{Val_\tau}
+  \varphi(v)\,
+  \bigsemstep{e:\tau}{n}(dv)$
 
-\begin{theorem}[Global agreement of interpretations]
+  \item $\int_{Val_\tau}
+  \varphi(v)\,
+  \bigsem{\exptrans{e:\tau}:\tau}(dv)
+  \leq
+  \int_{Val_\tau}
+  \varphi(v)\,
+  \bigsem{e:\tau}(dv)$
+\end{enumerate}
+
+
+\begin{theorem}[Agreement of interpretations]
   \label{thm:global-agreement-of-interpretations}
-  Let $\tau=\Float{m}$, where $m=\G$ or $m=\E$, and let $\mu$ be a
-  probability measure on $State_\tau$. If
+  Let $\tau=\Float{m}$, where $m=\G$ or $m=\E$, and let $\mu \in \mathcal{D}(State_\tau)$. If
   \[
     \mathbb E\!\left[
       \left.
@@ -3033,7 +3028,7 @@ Note that fixing $\gamma$ removes the randomness from the $\G$-samples, which de
   \end{align}
 \end{proof}
 
-\begin{theorem}[Global soundness $n$-step]
+\begin{theorem}[Soundness $n$-step]
   \label{thm:global-soundness-n-step}
   Let $e:\tau$ be closed and well typed, where
   $\tau=\Float{m}$ and $m=\G$ or $\E$. Let $n\in\mathbb N$. If
@@ -3065,6 +3060,8 @@ Note that fixing $\gamma$ removes the randomness from the $\G$-samples, which de
 \end{theorem}
 
 \begin{proof}
+  ** Proving the expectation has a well-defined expectation is the same. 
+
   Let
   \[
     \mu_n
@@ -3100,13 +3097,10 @@ Note that fixing $\gamma$ removes the randomness from the $\G$-samples, which de
   \end{align}
 \end{proof}
 
-\begin{theorem}[Global soundness big step]
+\begin{theorem}[Soundness big step]
   \label{thm:global-soundness-big-step}
   Let $e:\tau$ be closed and well typed, where
-  $\tau=\Float{m}$ and $m=\G$ or $\E$.
-
-  Suppose that almost every terminating general-mode trace is valid
-  and has an integrable symbolic sampling environment. If
+  $\tau=\Float{m}$ and $m=\G$ or $\E$. If
   \[
     \mathbb E[\bigsem{e:\tau}]
   \]
@@ -3123,6 +3117,8 @@ Note that fixing $\gamma$ removes the randomness from the $\G$-samples, which de
 \end{theorem}
 
 \begin{proof}
+  ** Proving the expectation has a well-defined expectation is the same. 
+
   For each $n\in\mathbb N$, let
   \[
     \mu_n
@@ -3139,29 +3135,7 @@ Note that fixing $\gamma$ removes the randomness from the $\G$-samples, which de
   \]
   Since values are absorbing, $(\mu_n)_{n\in\mathbb N}$ and
   $(\nu_n)_{n\in\mathbb N}$ are increasing sequences of measures on
-  $Val_\tau$.
-
-  Applying the pointwise Jensen argument to $v^+$ and $v^-$ and
-  integrating over the general-mode traces gives
-  \begin{align*}
-    \int_{Val_\tau}v^+\,
-      \bigsem{\exptrans{e:\tau}:\tau}(dv)
-    &\leq
-    \int_{Val_\tau}v^+\,\bigsem{e:\tau}(dv),
-    \\
-    \int_{Val_\tau}v^-\,
-      \bigsem{\exptrans{e:\tau}:\tau}(dv)
-    &\leq
-    \int_{Val_\tau}v^-\,\bigsem{e:\tau}(dv).
-  \end{align*}
-  Since $\mathbb E[\bigsem{e:\tau}]$ is well-defined, at least one of
-  the integrals on the right is finite. The corresponding integral on
-  the left is therefore finite, so
-  $\mathbb E[\bigsem{\exptrans{e:\tau}:\tau}]$ is also well-defined.
-
-  By \Cref{lem:extended-expectation-increasing-limits}, every
-  $\mathbb E[\mu_n]$ is well-defined. Hence
-  \Cref{thm:global-soundness-n-step} applies at every $n$. We obtain
+  $Val_\tau$. We obtain:
   \begin{align}
     \mathbb E\!\left[\bigsem{e:\tau}\right]
     &=
