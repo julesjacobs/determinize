@@ -28,11 +28,11 @@ module StdRng : RNG = struct
   
   (* Random samplers *)
   let uniform a b =
-    let lo = min a b in
-    let hi = max a b in
-    lo +. Random.float (hi -. lo)
+    if a > b then failwith "uniform: lower bound must be <= upper bound";
+    a +. Random.float (b -. a)
 
   let gaussian mean var =
+    if var < 0.0 then failwith "gaussian: variance must be >= 0";
     let u1 = Random.float 1.0 in
     let u2 = Random.float 1.0 in
     let z0 = sqrt (-2. *. log u1) *. cos (2. *. Float.pi *. u2) in
