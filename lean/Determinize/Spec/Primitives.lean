@@ -1,4 +1,4 @@
-import Determinize.Statement.FiniteDistributionMeasure
+import Determinize.Spec.FiniteDistributionMeasure
 import Mathlib.Probability.Distributions.Beta
 import Mathlib.Probability.Distributions.Exponential
 import Mathlib.Probability.Distributions.Gaussian.Real
@@ -14,7 +14,7 @@ determinization leaves behind. Both are the zero measure outside the parameter d
 which makes an off-domain call stuck.
 -/
 
-namespace Determinize.Statement.Paper
+namespace Determinize.Spec.Paper
 
 open MeasureTheory ProbabilityTheory
 
@@ -115,4 +115,4 @@ noncomputable def discreteFiber (kind : Kind) (distribution : FiniteDistribution
 
 end
 
-end Determinize.Statement.Paper
+end Determinize.Spec.Paper

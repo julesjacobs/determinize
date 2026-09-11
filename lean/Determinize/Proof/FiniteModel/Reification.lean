@@ -1,9 +1,9 @@
 import Determinize.Finite.Machine
 import Determinize.Proof.FiniteModel.Substitution
-import Determinize.Statement.FiniteModel.Certificates
+import Determinize.Spec.FiniteModel.Certificates
 
 namespace Determinize.Proof.FiniteModel
-open Statement.Paper Determinize.Finite Checking Binding
+open Spec.Paper Determinize.Finite Checking Binding
 
 noncomputable section
 

@@ -3,8 +3,8 @@ import Determinize.Proof.Checking.Typing
 import Determinize.Theorems
 
 namespace Determinize.Proof.Checking
-open Determinize.Checking Statement.Paper MeasureTheory
-open Determinize.Traces
+open Determinize.Checking Spec.Paper MeasureTheory
+open Determinize.Spec.Traces
 
 theorem interpret_determinize (e : Core) :
     interpret e.determinize = (interpret e).determinize := by

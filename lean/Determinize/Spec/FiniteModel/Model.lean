@@ -1,7 +1,7 @@
-import Determinize.Statement.Semantics
+import Determinize.Spec.Semantics
 import Mathlib.Algebra.BigOperators.Ring.Finset
 
-namespace Determinize.Statement.FiniteModel
+namespace Determinize.Spec.FiniteModel
 open MeasureTheory
 
 inductive StateKind where
@@ -28,16 +28,6 @@ def Model.survivalWithin (model : Model) : Nat → Fin model.size → Rat
         ∑ next, model.transition state next * model.survivalWithin steps next
       else 0
 
-/-- Expected reward returned within `steps` transitions; unfinished paths contribute zero. -/
-def Model.rewardWithin (model : Model) : Nat → Fin model.size → Rat
-  | 0, state => match model.kind state with
-      | .returned reward => reward
-      | _ => 0
-  | steps + 1, state => match model.kind state with
-      | .returned reward => reward
-      | .rejected => 0
-      | .transient => ∑ next, model.transition state next * model.rewardWithin steps next
-
 /-- Unnormalized real output accumulated within `steps` transitions. -/
 noncomputable def Model.outputWithin (model : Model) : Nat → Fin model.size → Measure ℝ
   | 0, state => match model.kind state with
@@ -63,4 +53,4 @@ accepted programs cannot get stuck. Rejection and divergence remain possible. -/
 def Model.Matches (model : Model) (program : Paper.Expr) : Prop :=
   Paper.DoesNotGetStuck program ∧ model.outputMeasure = Paper.bigStepMeasure program
 
-end Determinize.Statement.FiniteModel
+end Determinize.Spec.FiniteModel

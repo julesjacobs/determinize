@@ -8,7 +8,7 @@ proof obligations; they do not establish the paper's `Model.Matches` contract.
 -/
 
 namespace Determinize.Finite
-open Statement.Paper Statement.FiniteModel Checking
+open Spec.Paper Spec.FiniteModel Checking
 
 def Candidate.state (candidate : Candidate) (i : Fin candidate.states.size) : State :=
   candidate.states[i]

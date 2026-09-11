@@ -1,5 +1,5 @@
-import Determinize.Statement.Main
-import Determinize.Traces.Main
+import Determinize.Spec.Main
+import Determinize.Spec.Traces.Main
 import Determinize.Proof.Soundness
 import Determinize.Proof.Corollaries
 
@@ -7,31 +7,31 @@ import Determinize.Proof.Corollaries
 
 namespace Determinize.Theorems
 
-theorem expectationPreservation : Statement.mainThm :=
+theorem expectationPreservation : Spec.mainThm :=
   Proof.Paper.finiteExpectationSoundness
 
-theorem extendedExpectationPreservation : Statement.extendedExpectationThm :=
+theorem extendedExpectationPreservation : Spec.extendedExpectationThm :=
   Proof.Paper.extendedExpectationSoundness
 
-theorem jensenInequality : Statement.jensenThm :=
+theorem jensenInequality : Spec.jensenThm :=
   Proof.Paper.jensenSoundness
 
-theorem outputMassPreservation : Statement.outputMassThm :=
+theorem outputMassPreservation : Spec.outputMassThm :=
   Proof.Paper.outputMassSoundness
 
-theorem varianceNonIncrease : Statement.varianceThm :=
+theorem varianceNonIncrease : Spec.varianceThm :=
   Proof.Paper.varianceSoundness
 
-theorem conditionalExpectationPreservation : Statement.conditionalExpectationThm :=
+theorem conditionalExpectationPreservation : Spec.conditionalExpectationThm :=
   Proof.Paper.conditionalExpectationSoundness
 
-theorem traceErasure : Traces.correspondenceThm :=
+theorem traceErasure : Spec.Traces.correspondenceThm :=
   Proof.Traces.correspondence
 
-theorem traceSoundness : Traces.soundnessThm :=
+theorem traceSoundness : Spec.Traces.soundnessThm :=
   Proof.Traces.soundness
 
-theorem traceVarianceDecomposition : Traces.varianceThm :=
+theorem traceVarianceDecomposition : Spec.Traces.varianceThm :=
   Proof.Traces.varianceSoundness
 
 end Determinize.Theorems

@@ -2,7 +2,7 @@ import Mathlib.Tactic.DeriveCountable
 
 /-! # Paper modes and types -/
 
-namespace Determinize.Statement.Paper
+namespace Determinize.Spec.Paper
 
 inductive Mode where
   | E | G
@@ -27,4 +27,4 @@ inductive Ty.Sub : Ty → Ty → Prop where
   | list : Sub a b → Sub (.list a) (.list b)
   | arr : Sub c a → Sub b d → Sub (.arr a b) (.arr c d)
 
-end Determinize.Statement.Paper
+end Determinize.Spec.Paper

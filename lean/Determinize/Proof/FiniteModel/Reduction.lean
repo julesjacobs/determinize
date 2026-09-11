@@ -1,7 +1,7 @@
 import Determinize.Proof.FiniteModel.Contexts
 
 namespace Determinize.Proof.FiniteModel
-open Statement.Paper Determinize.Finite Checking Binding
+open Spec.Paper Determinize.Finite Checking Binding
 
 /-- A root continuation step and its corresponding paper reduction. -/
 def RootStep (before after : State) : Prop :=

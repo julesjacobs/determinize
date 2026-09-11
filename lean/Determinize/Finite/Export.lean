@@ -2,7 +2,7 @@ import Determinize.Finite.Solve
 import Determinize.Frontend.Pretty
 
 namespace Determinize.Finite
-open Statement.Paper Statement.FiniteModel
+open Spec.Paper Spec.FiniteModel
 
 private def rational (q : Rat) : String :=
   if q.den == 1 then toString q.num else s!"{q.num}/{q.den}"
@@ -60,7 +60,7 @@ private def rowText (row : Row) : String :=
 
 def candidateText (candidate : Candidate) : String :=
   "import Determinize.Finite.Explore\n\n" ++
-  "open Determinize.Finite Determinize.Statement.Paper Determinize.Statement.FiniteModel\n\n" ++
+  "open Determinize.Finite Determinize.Spec.Paper Determinize.Spec.FiniteModel\n\n" ++
   "set_option maxRecDepth 100000\nset_option maxHeartbeats 0\n\n" ++
   "def candidate : Candidate where\n" ++
   s!"  initial := {candidate.initial}\n" ++

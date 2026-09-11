@@ -1,7 +1,7 @@
 import Determinize.Proof.FiniteModel.Soundness
 
 namespace Determinize.Checking
-open Statement.FiniteModel Determinize.Finite
+open Spec.FiniteModel Determinize.Finite
 
 /-- Kernel-replayable evidence of graph validity. `replay_matches` transports
 this evidence to the paper semantics. -/

@@ -2,7 +2,7 @@ import Determinize.Proof.Measurability
 import Determinize.Proof.Internal.StepTraces
 
 namespace Determinize.Proof.StepTraces
-open MeasureTheory ProbabilityTheory Determinize.Statement.Paper Determinize.Proof.StepTraces
+open MeasureTheory ProbabilityTheory Determinize.Spec.Paper Determinize.Proof.StepTraces
 open Determinize.Proof.Paper
 noncomputable section
 

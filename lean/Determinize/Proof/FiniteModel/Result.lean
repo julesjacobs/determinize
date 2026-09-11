@@ -1,9 +1,9 @@
 import Determinize.Proof.FiniteModel.Model
-import Determinize.Statement.FiniteModel.Certificates
+import Determinize.Spec.FiniteModel.Certificates
 import Mathlib.Data.ENNReal.BigOperators
 
 namespace Determinize.Proof.FiniteModel
-open Statement.FiniteModel MeasureTheory
+open Spec.FiniteModel MeasureTheory
 
 private theorem monotone_measure_iSup_apply (μ : Nat → Measure ℝ) (mono : Monotone μ)
     (s : Set ℝ) (hs : MeasurableSet s) : (⨆ n, μ n) s = ⨆ n, μ n s := by

@@ -19,9 +19,9 @@ set_option linter.unusedVariables false
 namespace Determinize.Proof.Paper
 
 open MeasureTheory ProbabilityTheory
-open Determinize.Statement.Paper
+open Determinize.Spec.Paper
 
-attribute [local simp] Determinize.Statement.Paper.reduce
+attribute [local simp] Determinize.Spec.Paper.reduce
 
 namespace Symbolic
 
@@ -287,7 +287,7 @@ def SourceTags : AffineExpr sampleCount → Prop
   | _ => True
 
 inductive WellTyped : List Ty → AffineExpr sampleCount → Ty → Prop
-  | bvar : Determinize.Statement.Paper.HasVar context index ty → WellTyped context (.bvar index) ty
+  | bvar : Determinize.Spec.Paper.HasVar context index ty → WellTyped context (.bvar index) ty
   | reject : WellTyped context .reject ty
   | unit : WellTyped context .unit .unit
   | bool : WellTyped context (.bool value) .bool
@@ -362,48 +362,48 @@ inductive WellTyped : List Ty → AffineExpr sampleCount → Ty → Prop
 theorem WellTyped.realize_typed {sampleCount : Nat} {expression : AffineExpr sampleCount}
     (typed : WellTyped context expression ty)
     (environment : Env sampleCount) :
-    Determinize.Statement.Paper.Typed context (expression.realize environment) ty := by
+    Determinize.Spec.Paper.Typed context (expression.realize environment) ty := by
   induction typed <;> try simp only [realize]
-  case bvar hvar => exact Determinize.Statement.Paper.Typed.bvar hvar
-  case reject => exact Determinize.Statement.Paper.Typed.reject
-  case discrete => exact Determinize.Statement.Paper.Typed.discrete
-  case «unit» => exact Determinize.Statement.Paper.Typed.unit
-  case bool => exact Determinize.Statement.Paper.Typed.bool
-  case realE => exact Determinize.Statement.Paper.Typed.real
-  case realG => exact Determinize.Statement.Paper.Typed.real
-  case lam ih => exact Determinize.Statement.Paper.Typed.lam ih
-  case fix ih => exact Determinize.Statement.Paper.Typed.fix ih
-  case app function operand => exact Determinize.Statement.Paper.Typed.app function operand
-  case pair left right => exact Determinize.Statement.Paper.Typed.pair left right
-  case fst pairValue => exact Determinize.Statement.Paper.Typed.fst pairValue
-  case snd pairValue => exact Determinize.Statement.Paper.Typed.snd pairValue
-  case inl value => exact Determinize.Statement.Paper.Typed.inl value
-  case inr value => exact Determinize.Statement.Paper.Typed.inr value
-  case matchSum scrutinee left right => exact Determinize.Statement.Paper.Typed.matchSum scrutinee left right
-  case nil => exact Determinize.Statement.Paper.Typed.nil
-  case cons head tail => exact Determinize.Statement.Paper.Typed.cons head tail
+  case bvar hvar => exact Determinize.Spec.Paper.Typed.bvar hvar
+  case reject => exact Determinize.Spec.Paper.Typed.reject
+  case discrete => exact Determinize.Spec.Paper.Typed.discrete
+  case «unit» => exact Determinize.Spec.Paper.Typed.unit
+  case bool => exact Determinize.Spec.Paper.Typed.bool
+  case realE => exact Determinize.Spec.Paper.Typed.real
+  case realG => exact Determinize.Spec.Paper.Typed.real
+  case lam ih => exact Determinize.Spec.Paper.Typed.lam ih
+  case fix ih => exact Determinize.Spec.Paper.Typed.fix ih
+  case app function operand => exact Determinize.Spec.Paper.Typed.app function operand
+  case pair left right => exact Determinize.Spec.Paper.Typed.pair left right
+  case fst pairValue => exact Determinize.Spec.Paper.Typed.fst pairValue
+  case snd pairValue => exact Determinize.Spec.Paper.Typed.snd pairValue
+  case inl value => exact Determinize.Spec.Paper.Typed.inl value
+  case inr value => exact Determinize.Spec.Paper.Typed.inr value
+  case matchSum scrutinee left right => exact Determinize.Spec.Paper.Typed.matchSum scrutinee left right
+  case nil => exact Determinize.Spec.Paper.Typed.nil
+  case cons head tail => exact Determinize.Spec.Paper.Typed.cons head tail
   case matchList scrutinee nilCase consCase =>
-    exact Determinize.Statement.Paper.Typed.matchList scrutinee nilCase consCase
+    exact Determinize.Spec.Paper.Typed.matchList scrutinee nilCase consCase
   case ite condition thenBranch elseBranch =>
-    exact Determinize.Statement.Paper.Typed.ite condition thenBranch elseBranch
-  case letE value body => exact Determinize.Statement.Paper.Typed.letE value body
+    exact Determinize.Spec.Paper.Typed.ite condition thenBranch elseBranch
+  case letE value body => exact Determinize.Spec.Paper.Typed.letE value body
   case sub h ih => exact ih.sub h
-  case negE value => exact Determinize.Statement.Paper.Typed.neg value
-  case negG value => exact Determinize.Statement.Paper.Typed.neg value
-  case addE left right => exact Determinize.Statement.Paper.Typed.add left right
-  case addG left right => exact Determinize.Statement.Paper.Typed.add left right
-  case mulGE left right => exact Determinize.Statement.Paper.Typed.mul left right
-  case mulGG left right => exact Determinize.Statement.Paper.Typed.mul left right
-  case divEG left right => exact Determinize.Statement.Paper.Typed.div left right
-  case divGG left right => exact Determinize.Statement.Paper.Typed.div left right
-  case lt left right => exact Determinize.Statement.Paper.Typed.lt left right
-  case uniform lower upper => exact Determinize.Statement.Paper.Typed.uniform lower upper
-  case gaussian mean variance => exact Determinize.Statement.Paper.Typed.gaussian mean variance
-  case poisson rate => exact Determinize.Statement.Paper.Typed.poisson rate
-  case bernoulli probability => exact Determinize.Statement.Paper.Typed.bernoulli probability
-  case exponential rate => exact Determinize.Statement.Paper.Typed.exponential rate
-  case beta alpha betaTyped => exact Determinize.Statement.Paper.Typed.beta alpha betaTyped
-  case gamma shape rate => exact Determinize.Statement.Paper.Typed.gamma shape rate
+  case negE value => exact Determinize.Spec.Paper.Typed.neg value
+  case negG value => exact Determinize.Spec.Paper.Typed.neg value
+  case addE left right => exact Determinize.Spec.Paper.Typed.add left right
+  case addG left right => exact Determinize.Spec.Paper.Typed.add left right
+  case mulGE left right => exact Determinize.Spec.Paper.Typed.mul left right
+  case mulGG left right => exact Determinize.Spec.Paper.Typed.mul left right
+  case divEG left right => exact Determinize.Spec.Paper.Typed.div left right
+  case divGG left right => exact Determinize.Spec.Paper.Typed.div left right
+  case lt left right => exact Determinize.Spec.Paper.Typed.lt left right
+  case uniform lower upper => exact Determinize.Spec.Paper.Typed.uniform lower upper
+  case gaussian mean variance => exact Determinize.Spec.Paper.Typed.gaussian mean variance
+  case poisson rate => exact Determinize.Spec.Paper.Typed.poisson rate
+  case bernoulli probability => exact Determinize.Spec.Paper.Typed.bernoulli probability
+  case exponential rate => exact Determinize.Spec.Paper.Typed.exponential rate
+  case beta alpha betaTyped => exact Determinize.Spec.Paper.Typed.beta alpha betaTyped
+  case gamma shape rate => exact Determinize.Spec.Paper.Typed.gamma shape rate
 
 theorem WellTyped.sourceTags (typed : WellTyped context expression ty) :
     expression.SourceTags := by
@@ -647,9 +647,9 @@ theorem wellTyped_shift (h : WellTyped (before ++ suffix) expression ty) :
       rw [shift]
       exact .exponential (ih (before := before) (suffix := suffix) hcontext)
 
-theorem aexprHasVar_subst (h : Determinize.Statement.Paper.HasVar (before ++ binder :: suffix) index ty) :
+theorem aexprHasVar_subst (h : Determinize.Spec.Paper.HasVar (before ++ binder :: suffix) index ty) :
     (index = before.length ∧ ty = binder) ∨
-      (index ≠ before.length ∧ Determinize.Statement.Paper.HasVar (before ++ suffix)
+      (index ≠ before.length ∧ Determinize.Spec.Paper.HasVar (before ++ suffix)
         (if before.length < index then index - 1 else index) ty) := by
   induction before generalizing index with
   | nil =>
@@ -680,12 +680,12 @@ theorem aexprHasVar_subst (h : Determinize.Statement.Paper.HasVar (before ++ bin
             · simp only [condition, ↓reduceIte]
               have shifted := shifted
               simp only [condition, ↓reduceIte] at shifted
-              have shifted' := Determinize.Statement.Paper.HasVar.tail (head := head) shifted
+              have shifted' := Determinize.Spec.Paper.HasVar.tail (head := head) shifted
               convert shifted' using 1 <;> omega
             · simp only [condition, ↓reduceIte]
               have shifted := shifted
               simp only [condition, ↓reduceIte] at shifted
-              exact Determinize.Statement.Paper.HasVar.tail (head := head) shifted
+              exact Determinize.Spec.Paper.HasVar.tail (head := head) shifted
 
 theorem wellTyped_substAt (h : WellTyped (before ++ binder :: suffix) expression ty)
     (replacementTyped : WellTyped suffix replacement binder) :
@@ -1284,7 +1284,7 @@ theorem Affine.eval_div_of_eq_some {left right result : Affine n}
 inductive SymbolicAction
     (laws : Determinize.Proof.Paper.PrimitiveLaws) (sampleCount : Nat) where
   | next (expression : AffineExpr sampleCount)
-  | sampleE (op : Determinize.Statement.Paper.Op)
+  | sampleE (op : Determinize.Spec.Paper.Op)
       (affineArgs : List (Affine sampleCount))
       (generalArgs : List ℝ) (continuation : AffineExpr (sampleCount + 1))
   | sampleG (site : Mode × Kind × Op) (fiber : Measure ℝ)
@@ -1335,8 +1335,8 @@ theorem realize_wrap (action : SymbolicAction laws n) (environment : Env n)
 
 inductive WellTyped (ty : Ty) : SymbolicAction laws n → Prop
   | next : AffineExpr.WellTyped [] expression ty → WellTyped ty (.next expression)
-  | sampleE : affine.length = Determinize.Statement.Paper.affineArity op →
-      general.length = Determinize.Statement.Paper.generalArity op →
+  | sampleE : affine.length = Determinize.Spec.Paper.affineArity op →
+      general.length = Determinize.Spec.Paper.generalArity op →
       AffineExpr.WellTyped [] continuation ty →
       WellTyped ty (.sampleE op affine general continuation)
   | sampleG : (∀ value, AffineExpr.WellTyped [] (continuation value) ty) →
@@ -1357,8 +1357,8 @@ theorem WellTyped.sub (typed : WellTyped a action) (h : Ty.Sub a b) : WellTyped 
 
 @[simp] theorem wellTyped_sampleE_iff :
     WellTyped ty (.sampleE op affine general continuation : SymbolicAction laws n) ↔
-      affine.length = Determinize.Statement.Paper.affineArity op ∧
-      general.length = Determinize.Statement.Paper.generalArity op ∧
+      affine.length = Determinize.Spec.Paper.affineArity op ∧
+      general.length = Determinize.Spec.Paper.generalArity op ∧
       AffineExpr.WellTyped [] continuation ty := by
   constructor
   · intro typed; cases typed; exact ⟨by assumption, by assumption, by assumption⟩
@@ -3020,7 +3020,7 @@ theorem symbolicReduce_wellTyped
   case nil => simp only [symbolicReduce]; exact .next .nil
 
 theorem wellTyped_ofExpr_of_typed {expression : Expr}
-    (typed : Determinize.Statement.Paper.Typed context expression ty)
+    (typed : Determinize.Spec.Paper.Typed context expression ty)
     (sourceTags : (AffineExpr.ofExpr expression).SourceTags) :
     WellTyped context (AffineExpr.ofExpr expression) ty := by
   induction typed
@@ -3089,9 +3089,9 @@ theorem realize_measurable (expression : AffineExpr sampleCount) :
   expression.realizeFamily.measurable
 
 theorem actualMeasure_snoc
-    (history : Symbolic.SampleEnv laws n) (op : Determinize.Statement.Paper.Op)
-    (affineArgs : Fin (Determinize.Statement.Paper.affineArity op) → Symbolic.Affine n)
-    (generalArgs : Fin (Determinize.Statement.Paper.generalArity op) → ℝ) :
+    (history : Symbolic.SampleEnv laws n) (op : Determinize.Spec.Paper.Op)
+    (affineArgs : Fin (Determinize.Spec.Paper.affineArity op) → Symbolic.Affine n)
+    (generalArgs : Fin (Determinize.Spec.Paper.generalArity op) → ℝ) :
     Symbolic.SampleEnv.actualMeasure laws (.snoc history op affineArgs generalArgs) =
       (Symbolic.SampleEnv.actualMeasure laws history).bind fun environment =>
         (laws.kernel op

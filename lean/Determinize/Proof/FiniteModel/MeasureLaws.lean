@@ -2,7 +2,7 @@ import Determinize.Proof.FiniteModel.Sampling
 import Determinize.Proof.OrdinarySemantics
 
 namespace Determinize.Proof.FiniteModel
-open Statement.Paper MeasureTheory
+open Spec.Paper MeasureTheory
 
 noncomputable def weightedOutput {α : Type} (outcomes : List (Rat × α))
     (continuation : α → Measure ℝ) : Measure ℝ :=

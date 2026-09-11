@@ -1,4 +1,4 @@
-import Determinize.Statement.Syntax
+import Determinize.Spec.Syntax
 import Mathlib.MeasureTheory.Constructions.Pi
 
 /-!
@@ -11,7 +11,7 @@ exactly like the trace layer measures a trace. This structure is absent from
 the direct evaluators and the public theorem statements.
 -/
 
-namespace Determinize.Statement.Paper
+namespace Determinize.Spec.Paper
 
 /-- The same syntax with real values erased. -/
 abbrev Skeleton := Expr Unit
@@ -62,7 +62,7 @@ end Expr
 structure RealCoordinates where values : List ℝ
 
 /-- Length and zero-padded coordinates, mirroring the measurable structure of traces
-in `Determinize.Traces`. The length is recorded because padding alone is not injective. -/
+in `Determinize.Spec.Traces`. The length is recorded because padding alone is not injective. -/
 def RealCoordinates.code (coordinates : RealCoordinates) : Nat × (Nat → ℝ) :=
   (coordinates.values.length, fun index => coordinates.values.getD index 0)
 
@@ -86,4 +86,4 @@ def terminalFloatValue : Expr → ℝ
   | .real value => value
   | _ => 0
 
-end Determinize.Statement.Paper
+end Determinize.Spec.Paper

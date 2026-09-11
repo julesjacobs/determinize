@@ -14,7 +14,7 @@ set_option linter.unusedVariables false
 namespace Determinize.Proof.Paper
 
 open MeasureTheory ProbabilityTheory
-open Determinize.Statement.Paper
+open Determinize.Spec.Paper
 
 namespace Typing
 
@@ -726,7 +726,7 @@ theorem reduce_typed_closed
         exact (ihl rfl).wrap fun next nextTyped => .gamma nextTyped rightTyped
 
 theorem doesNotGetStuckAt_imp_primitiveDomainSafeAt
-    (safe : Determinize.Statement.Paper.DoesNotGetStuckAt fuel expression) :
+    (safe : Determinize.Spec.Paper.DoesNotGetStuckAt fuel expression) :
     PrimitiveDomainSafeAt fuel expression := by
   induction fuel generalizing expression with
   | zero => trivial
@@ -754,7 +754,7 @@ theorem doesNotGetStuckAt_imp_primitiveDomainSafeAt
 theorem primitiveDomainSafeAt_imp_doesNotGetStuckAt
     (typed : Typed [] expression ty)
     (safe : PrimitiveDomainSafeAt fuel expression) :
-    Determinize.Statement.Paper.DoesNotGetStuckAt fuel expression := by
+    Determinize.Spec.Paper.DoesNotGetStuckAt fuel expression := by
   induction fuel generalizing expression ty with
   | zero => trivial
   | succ fuel ih =>
@@ -786,7 +786,7 @@ theorem primitiveDomainSafeAt_imp_doesNotGetStuckAt
 
 theorem primitiveDomainSafe_iff_doesNotGetStuck
     (typed : Typed [] expression ty) :
-    PrimitiveDomainSafe expression ↔ Determinize.Statement.Paper.DoesNotGetStuck expression := by
+    PrimitiveDomainSafe expression ↔ Determinize.Spec.Paper.DoesNotGetStuck expression := by
   constructor
   · intro safe fuel
     exact primitiveDomainSafeAt_imp_doesNotGetStuckAt typed (safe fuel)

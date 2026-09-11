@@ -2,7 +2,7 @@ import Determinize.Proof.FiniteModel.Execution
 import Determinize.Proof.FiniteModel.Model
 
 namespace Determinize.Proof.FiniteModel
-open Statement.Paper Statement.FiniteModel Determinize.Finite MeasureTheory
+open Spec.Paper Spec.FiniteModel Determinize.Finite MeasureTheory
 
 def successorWeight {α : Type} [DecidableEq α] (outcomes : List (Rat × α)) (state : α) : Rat :=
   (outcomes.map fun entry => if entry.2 = state then entry.1 else 0).sum

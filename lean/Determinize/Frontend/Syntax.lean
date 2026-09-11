@@ -1,7 +1,7 @@
 import Determinize.Checking.Certificate
 
 namespace Determinize.Frontend
-open Statement.Paper Checking
+open Spec.Paper Checking
 
 inductive Surface where
   | var (name : String)

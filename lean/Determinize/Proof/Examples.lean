@@ -1,7 +1,7 @@
 import Determinize.Theorems
 
 namespace Determinize.Proof.Examples
-open MeasureTheory Determinize.Statement.Paper Determinize.Traces
+open MeasureTheory Determinize.Spec.Paper Determinize.Spec.Traces
 
 def uniform (mode : Mode) : Expr := .uniform mode .stochastic (.real 0) (.real 1)
 

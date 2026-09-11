@@ -2,7 +2,7 @@ import Determinize.Proof.FiniteModel.Execution
 import Determinize.Proof.FiniteModel.Administrative
 
 namespace Determinize.Proof.FiniteModel
-open Statement.Paper Determinize.Finite Checking Binding MeasureTheory
+open Spec.Paper Determinize.Finite Checking Binding MeasureTheory
 
 theorem sameObservations_of_eq (before after : State) (equal : stateExpr before = stateExpr after) :
     SameObservations before after := by

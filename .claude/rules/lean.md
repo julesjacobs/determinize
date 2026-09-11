@@ -20,17 +20,17 @@ guides (leanprover-community.github.io/contribute), elan README, nixpkgs `elan`/
 - Do not `require` batteries/aesop/Qq yourself; Mathlib pulls them.
 
 ## Layout: what is trusted and what is not
-- `Determinize/Statement/*.lean` (syntax, typing, primitives, semantics, the public `Prop`s `mainThm`,
-  `extendedExpectationThm`, `jensenThm`) and `Determinize/Traces/*.lean` (trace semantics, `correspondenceThm`,
+- `Determinize/Spec/*.lean` (syntax, typing, primitives, semantics, the public `Prop`s `mainThm`,
+  `extendedExpectationThm`, `jensenThm`) and `Determinize/Spec/Traces/*.lean` (trace semantics, `correspondenceThm`,
   `soundnessThm`) are the reviewable interface. They import only Mathlib and each other, never `Proof`;
   `Proof/InterfaceChecks.lean` asserts that they put no measurable structure on `Expr`. Keep it that way.
 - `Determinize/Theorems.lean` exports every public proposition as a theorem followed by `#print axioms`. A new public
-  result = a `def ... : Prop` in `Statement/Main.lean` or `Traces/Main.lean`, a proof in `Proof/`, an export + axiom
+  result = a `def ... : Prop` in `Spec/Main.lean` or `Spec/Traces/Main.lean`, a proof in `Proof/`, an export + axiom
   line in `Theorems.lean`, and a line in `lean/README.md`.
 - `Determinize/Proof/**` (about 17K lines) is complete: no `sorry`, no axioms beyond `propext`, `Classical.choice`,
   `Quot.sound`. `Determinize.lean` (the default target) imports `Theorems`, `Proof/Examples`, `Proof/InterfaceChecks`;
   a module not reachable from it is never checked, so wire new modules in.
-- `lean/README.md` lists the deviations from the paper (explicit `promote` instead of subsumption, the `×`/`/` typing
+- `lean/README.md` lists the deviations from the paper (silent structural subsumption, the `×`/`/` typing
   rules, domain-checked mean operators, the `DoesNotGetStuck` validity hypothesis). Update it when a statement changes.
 
 ## Build and check (inside `lean/`)
@@ -38,7 +38,7 @@ guides (leanprover-community.github.io/contribute), elan README, nixpkgs `elan`/
   for hours. `.claude/scripts/check.sh lean` refuses to build while `.lake/packages/mathlib/.lake/build` is missing.
 - `lake build --wfail` is the check (`check.sh lean` runs it and then verifies the axiom reports). The tree is
   warning-free; a `sorry` or a linter warning fails the build. Plain `lake build` only fails on errors.
-- Cost: a change to `Statement/` or `Proof/Internal/` rebuilds nearly everything (about ten minutes);
+- Cost: a change to `Spec/` or `Proof/Internal/` rebuilds nearly everything (about ten minutes);
   `Proof/Measurability.lean` (5.8K lines), `Proof/Symbolic.lean` and `Proof/SymbolicSoundness.lean` dominate.
   Edit a leaf file (`Proof/Corollaries.lean`, `Proof/Soundness.lean`, `Theorems.lean`) when you can.
 - One file: `lake env lean Determinize/Foo.lean` (exit 1 on error, no artifacts) checks the file against the *built*
@@ -55,7 +55,7 @@ guides (leanprover-community.github.io/contribute), elan README, nixpkgs `elan`/
 - `lakefile.toml` sets no `leanOptions`: `autoImplicit` is on (the existing statements rely on auto-bound implicits
   such as `context`, `ty`, `laws`) and no Mathlib linters run. Several `Proof/` files disable core linters at the top
   and raise `maxHeartbeats` for single theorems; match the surrounding style, but add no `set_option` to
-  `Statement/` or `Traces/`.
+  `Spec/` or `Spec/Traces/`.
 - Naming follows the existing files: descriptive lowerCamelCase hypothesis names (`typed`, `sourceForm`,
   `measurableOutput`), theorems in `snake_case` or lowerCamelCase as their neighbours, docstrings on public
   declarations, lines <= 100 chars.
@@ -70,7 +70,7 @@ guides (leanprover-community.github.io/contribute), elan README, nixpkgs `elan`/
   `Mathlib.Analysis.Convex.Continuous` (`ConvexOn.continuousOn`), `Mathlib.Data.EReal.Operations`.
   Old paths `Integral/Bochner.lean`, `Distributions/Gaussian.lean`, `Kernel/Composition/Basic.lean` no longer exist.
 - Traps: `ProbabilityTheory.uniformOn s` is the *counting* measure conditioned on `s` (finite sets only); the uniform
-  law on `[a,b]` is built by hand in `Statement/Primitives.lean` (`uniformMeasure`). `Measure.map`/`bind` of a
+  law on `[a,b]` is built by hand in `Spec/Primitives.lean` (`uniformMeasure`). `Measure.map`/`bind` of a
   non-measurable function is `0`, so measurability side conditions are load-bearing. Mathlib files use the
   `module`/`public import` system; ours do not need the `module` header.
 - Editor: VS Code Lean 4 extension needs `elan`/`lake` on PATH (launch from the direnv'd shell); after a dependency

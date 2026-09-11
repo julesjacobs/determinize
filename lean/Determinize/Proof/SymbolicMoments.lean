@@ -3,7 +3,7 @@ import Determinize.Proof.SymbolicSoundness
 
 namespace Determinize.Proof.Paper.SymbolicSoundness.SampleEnv
 
-open MeasureTheory ProbabilityTheory Determinize.Statement.Paper
+open MeasureTheory ProbabilityTheory Determinize.Spec.Paper
 open scoped ProbabilityTheory
 
 noncomputable section

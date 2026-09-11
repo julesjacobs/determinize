@@ -1,6 +1,6 @@
 import Determinize.Proof.Internal.PrimitiveLaws
 import Determinize.Proof.Internal.Environment
-import Determinize.Statement.Semantics
+import Determinize.Spec.Semantics
 import Determinize.Proof.Internal.ExpressionSpace
 import Mathlib.MeasureTheory.Constructions.Pi
 import Mathlib.Tactic.DeriveCountable
@@ -11,10 +11,10 @@ import Mathlib.Tactic.DeriveCountable
 This module defines the measurable skeleton representation, symbolic sample
 histories, certified one-step kernel, exact-depth output semantics, and the
 primitive-domain safety invariant. The operational reducer itself is the
-reviewer-facing definition in `Statement.Semantics`.
+reviewer-facing definition in `Spec.Semantics`.
 -/
 
-namespace Determinize.Statement.Paper
+namespace Determinize.Spec.Paper
 
 open MeasureTheory ProbabilityTheory
 open scoped ENNReal ProbabilityTheory
@@ -49,12 +49,12 @@ def realArity {Literal : Type} : Expr Literal → Nat
 
 end Expr
 
-end Determinize.Statement.Paper
+end Determinize.Spec.Paper
 
 namespace Determinize.Proof.Paper
 
 open MeasureTheory ProbabilityTheory
-open Determinize.Statement.Paper
+open Determinize.Spec.Paper
 open scoped ENNReal ProbabilityTheory
 
 namespace Symbolic
@@ -68,9 +68,9 @@ def Affine.eval (expression : Affine sampleCount) (environment : Env sampleCount
 /-- Ordered symbolic E-sample environment from the paper. -/
 inductive SampleEnv (laws : Determinize.Proof.Paper.PrimitiveLaws) : Nat → Type where
   | nil : SampleEnv laws 0
-  | snoc (history : SampleEnv laws n) (op : Determinize.Statement.Paper.Op)
-      (affineArgs : Fin (Determinize.Statement.Paper.affineArity op) → Affine n)
-      (generalArgs : Fin (Determinize.Statement.Paper.generalArity op) → ℝ) : SampleEnv laws (n + 1)
+  | snoc (history : SampleEnv laws n) (op : Determinize.Spec.Paper.Op)
+      (affineArgs : Fin (Determinize.Spec.Paper.affineArity op) → Affine n)
+      (generalArgs : Fin (Determinize.Spec.Paper.generalArity op) → ℝ) : SampleEnv laws (n + 1)
 
 namespace SampleEnv
 
@@ -90,7 +90,7 @@ noncomputable def DomainSafe (laws : Determinize.Proof.Paper.PrimitiveLaws) :
   | _ + 1, .snoc history op affineArgs generalArgs =>
       DomainSafe laws history ∧
         ∀ᵐ environment ∂actualMeasure laws history,
-          Determinize.Statement.Paper.domain op (fun i => (affineArgs i).eval environment, generalArgs)
+          Determinize.Spec.Paper.domain op (fun i => (affineArgs i).eval environment, generalArgs)
 
 noncomputable def meanEnvironment (laws : Determinize.Proof.Paper.PrimitiveLaws) :
     {n : Nat} → SampleEnv laws n → Env n
@@ -98,7 +98,7 @@ noncomputable def meanEnvironment (laws : Determinize.Proof.Paper.PrimitiveLaws)
   | _ + 1, .snoc history op affineArgs generalArgs =>
       let environment := meanEnvironment laws history
       let params := (fun i => (affineArgs i).eval environment, generalArgs)
-      Env.cons (Determinize.Statement.Paper.meanValue op params) environment
+      Env.cons (Determinize.Spec.Paper.meanValue op params) environment
 
 end SampleEnv
 

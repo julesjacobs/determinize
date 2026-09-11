@@ -1,7 +1,7 @@
 import Determinize.Proof.FiniteModel.Invariants
 
 namespace Determinize.Proof.FiniteModel
-open Statement.Paper Determinize.Finite Checking
+open Spec.Paper Determinize.Finite Checking
 
 def expressionWork : Core → Nat
   | .app a b | .pair a b | .cons a b | .add a b | .mul a b | .div a b | .lt a b =>

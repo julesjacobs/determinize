@@ -3,7 +3,7 @@ import Determinize.Proof.FiniteModel.Replay
 import Determinize.Proof.Checking.Elaboration
 
 namespace Determinize.Proof.FiniteModel
-open Statement.Paper Statement.FiniteModel Determinize.Finite Determinize.Checking Binding
+open Spec.Paper Spec.FiniteModel Determinize.Finite Determinize.Checking Binding
 
 theorem hasVar_scoped {context : List Ty} {index : Nat} {ty : Ty} (h : HasVar context index ty) :
     index < context.length := by

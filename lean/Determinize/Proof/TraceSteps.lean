@@ -2,7 +2,7 @@ import Determinize.Proof.Replay
 
 namespace Determinize.Proof.StepTraces
 
-open MeasureTheory ProbabilityTheory Determinize.Statement.Paper Determinize.Proof.StepTraces
+open MeasureTheory ProbabilityTheory Determinize.Spec.Paper Determinize.Proof.StepTraces
 open Determinize.Proof.Paper
 
 noncomputable section
@@ -25,7 +25,7 @@ theorem replay_succ_next (depth : Nat) (expression next : Expr) (tape : Trace)
     (notValue : expression.isValue â‰  true) (opNone : generationOp expression.skeleton = none)
     (reduction : reduce expression = .next next) :
     replayMeasure (depth + 1) expression tape = replayMeasure depth next (List.tail tape) := by
-  rw [replayMeasure, if_neg notValue, opNone, Determinize.Statement.Paper.stepMeasure, reduction]
+  rw [replayMeasure, if_neg notValue, opNone, Determinize.Spec.Paper.stepMeasure, reduction]
   change (Measure.dirac next).bind (fun e => replayMeasure depth e (List.tail tape)) = _
   have familyMeasurable : Measurable (fun e => replayMeasure depth e (List.tail tape)) := by
     have eq : (fun e => replayMeasure depth e (List.tail tape)) =
@@ -42,7 +42,7 @@ theorem replay_succ_sampleE (depth : Nat) (expression : Expr) (fiber : Measure â
     (reduction : reduce expression = .sample site fiber continuation) :
     replayMeasure (depth + 1) expression tape =
       fiber.bind fun value => replayMeasure depth (continuation value) (List.tail tape) := by
-  rw [replayMeasure, if_neg notValue, opNone, Determinize.Statement.Paper.stepMeasure, reduction]
+  rw [replayMeasure, if_neg notValue, opNone, Determinize.Spec.Paper.stepMeasure, reduction]
   change (fiber.map continuation).bind (fun e => replayMeasure depth e (List.tail tape)) = _
   let previous := SFiniteKernel.pullback (replayKernel depth) (fun e => (List.tail tape, e))
     (measurable_const.prodMk measurable_id)

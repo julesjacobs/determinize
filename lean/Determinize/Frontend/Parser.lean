@@ -1,7 +1,7 @@
 import Determinize.Frontend.Syntax
 
 namespace Determinize.Frontend
-open Statement.Paper
+open Spec.Paper
 
 private def identStart (c : Char) := c.isAlpha || c == '_'
 private def identRest (c : Char) := identStart c || c.isDigit || c == '\''

@@ -2,7 +2,7 @@ import Determinize.Proof.FiniteModel.Progress
 import Determinize.Proof.FiniteModel.MeasureLaws
 
 namespace Determinize.Proof.FiniteModel
-open Statement.Paper Determinize.Finite MeasureTheory
+open Spec.Paper Determinize.Finite MeasureTheory
 
 noncomputable def machineOutput : Nat → State → Measure ℝ
   | 0, state => match step state with

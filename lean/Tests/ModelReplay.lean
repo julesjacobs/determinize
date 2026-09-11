@@ -2,7 +2,7 @@ import Tests.Parsing
 import Determinize.Checking.FiniteModel
 
 namespace Determinize.Tests
-open Frontend Checking Statement.Paper Statement.FiniteModel Determinize.Finite
+open Frontend Checking Spec.Paper Spec.FiniteModel Determinize.Finite
 
 private def candidateFor (text : String) (subject : Subject := .source) : IO (Core × Candidate) := do
   let p ← IO.ofExcept (compile text)

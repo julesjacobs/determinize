@@ -3,7 +3,7 @@ import Determinize.Checking.FiniteDistribution
 import Determinize.Proof.Checking.Elaboration
 
 namespace Determinize.Tests
-open Checking Statement.Paper
+open Checking Spec.Paper
 
 private def floatE := Ty.float .E
 private def draw : Core := .uniform .E .stochastic (.real 0) (.real 1)

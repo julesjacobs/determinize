@@ -2,7 +2,7 @@ import Tests.Parsing
 import Determinize.Runtime.Eval
 
 namespace Determinize.Tests
-open Frontend Checking Statement.Paper
+open Frontend Checking Spec.Paper
 
 private def value (text : String) (target := true) : IO String := do
   let p ← IO.ofExcept (compile text)

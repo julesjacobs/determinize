@@ -1,7 +1,7 @@
 import Determinize.Proof.FiniteModel.Reduction
 
 namespace Determinize.Proof.FiniteModel
-open Statement.Paper Determinize.Finite Checking Binding
+open Spec.Paper Determinize.Finite Checking Binding
 
 /-- Machine bookkeeping may leave the represented paper expression unchanged. -/
 def AdministrativeStep (evidence : Evidence) (before after : State) : Prop :=

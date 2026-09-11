@@ -11,11 +11,11 @@ paths:
 
 | Lean | Simulator |
 |---|---|
-| `Statement/Syntax.lean`, `Statement/Types.lean` | `src/compiler/ast.js`, `types.js` |
+| `Spec/Syntax.lean`, `Spec/Types.lean` | `src/compiler/ast.js`, `types.js` |
 | `Frontend/Parser.lean`, `Elaborate.lean`, `Infer.lean` | `src/compiler/lexer.js`, `parser.js`, `infer.js` |
 | Core `Expr.determinize`, `Frontend/Pretty.lean` | `src/compiler/determinize.js`, `pretty.js` |
-| `Statement/Primitives.lean`, `Runtime/` | `src/runtime/distributions.js`, `semantics.js`, `rng.js` |
-| `Proof/Symbolic*.lean`, `Traces/` | `src/runtime/semantics.js`, `affine.js` |
+| `Spec/Primitives.lean`, `Runtime/` | `src/runtime/distributions.js`, `semantics.js`, `rng.js` |
+| `Proof/Symbolic*.lean`, `Spec/Traces/` | `src/runtime/semantics.js`, `affine.js` |
 | `Finite/`, `Checking/FiniteModel.lean`, `Checking/Result.lean` | No certified simulator counterpart |
 
 These are separate implementations. See `migration-audit.md` and

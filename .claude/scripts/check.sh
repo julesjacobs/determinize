@@ -81,12 +81,15 @@ for area in "${areas[@]}"; do
       if [[ ! -d lean/.lake/packages/mathlib/.lake/build ]]; then
         fail=1; report lean "Mathlib cache not fetched: run 'cd lean && lake exe cache get' (downloads prebuilt .olean files, once), then 'lake build'"
       else
-        # Every proposition declared as a statement (`def fooThm : Prop` in Statement/Main.lean or
-        # Traces/Main.lean) must be asserted with a proof in Theorems.lean: an unasserted one would
+        # Every proposition declared as a statement (`def fooThm : Prop` in Spec/Main.lean or
+        # Spec/Traces/Main.lean) must be asserted with a proof in Theorems.lean: an unasserted one would
         # sit in the trusted surface unproved without failing the build or the axiom check below.
         unasserted=""
-        for stmt in lean/Determinize/Statement/Main.lean lean/Determinize/Traces/Main.lean; do
-          ns="$(basename "$(dirname "$stmt")")"
+        for stmt in lean/Determinize/Spec/Main.lean lean/Determinize/Spec/Traces/Main.lean; do
+          case "$stmt" in
+            */Traces/*) ns="Spec.Traces" ;;
+            *) ns="Spec" ;;
+          esac
           while read -r name; do
             grep -qE "^theorem [A-Za-z0-9_]+ : ${ns}\.${name}( |$)" lean/Determinize/Theorems.lean \
               || unasserted+="${ns}.${name} (${stmt#lean/})"$'\n'

@@ -1,7 +1,7 @@
-import Determinize.Statement.Syntax
+import Determinize.Spec.Syntax
 
 namespace Determinize.Checking
-open Statement.Paper
+open Spec.Paper
 
 inductive Certificate where
   | node (ty : Ty) (children : List Certificate)

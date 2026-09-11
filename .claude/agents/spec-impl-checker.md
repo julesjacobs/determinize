@@ -9,7 +9,7 @@ maxTurns: 60
 Compare these artifacts:
 
 - Paper: `tex/3_typing.tex`, `4_inference.tex`, `5_determinization.tex`, `6_soundness.tex`.
-- Lean specification: `lean/Determinize/Statement/`, `Traces/`, and `Theorems.lean`.
+- Lean specification: `lean/Determinize/Spec/`, `Spec/Traces/`, and `Theorems.lean`.
 - Lean implementation/checking: `Frontend/`, `Checking/`, `Runtime/`, and `Finite/`.
 - Simulator: `sim/src/compiler/` and `sim/src/runtime/`.
 

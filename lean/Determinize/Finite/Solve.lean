@@ -1,7 +1,7 @@
 import Determinize.Checking.Result
 
 namespace Determinize.Finite
-open Statement.FiniteModel
+open Spec.FiniteModel
 
 /-- Resource limit for dense exact Gaussian elimination. -/
 structure SolveLimits where

@@ -1,7 +1,7 @@
 import Determinize.Frontend.Syntax
 
 namespace Determinize.Frontend
-open Statement.Paper Checking
+open Spec.Paper Checking
 
 private inductive UType where
   | var (id : Nat)

@@ -1,6 +1,6 @@
 # Finite models and certified expected terminal rewards
 
-The reviewed definitions are in `Determinize/Statement/FiniteModel/`. The exact
+The reviewed definitions are in `Determinize/Spec/FiniteModel/`. The exact
 explorer and model checker are implemented. `Proof/FiniteModel/Soundness.lean`
 proves that every accepted graph represents the selected paper program's complete
 output law and that the program does not get stuck. Result checking and Storm

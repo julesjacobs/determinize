@@ -4,7 +4,7 @@ import Determinize.Proof.OrdinarySemantics
 
 namespace Determinize.Proof.StepTraces
 
-open MeasureTheory ProbabilityTheory Determinize.Statement.Paper Determinize.Proof.StepTraces
+open MeasureTheory ProbabilityTheory Determinize.Spec.Paper Determinize.Proof.StepTraces
 open Determinize.Proof.Paper
 open scoped ProbabilityTheory
 open Classical
@@ -157,8 +157,8 @@ theorem tracedStepKernel_apply (expression : Expr) :
 
 theorem tracedStep_erasure (expression : Expr) :
     (record (reduce expression)).map Prod.snd =
-      Determinize.Statement.Paper.stepMeasure expression := by
-  unfold Determinize.Statement.Paper.stepMeasure
+      Determinize.Spec.Paper.stepMeasure expression := by
+  unfold Determinize.Spec.Paper.stepMeasure
   generalize reduction : reduce expression = action
   cases action with
   | next next => simp [record, Action.measure, Measure.map_dirac' measurable_snd]

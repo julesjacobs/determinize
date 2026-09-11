@@ -1,7 +1,7 @@
 import Determinize.Proof.PrimitiveMoments
 
 namespace Determinize.Tests
-open Statement.Paper Proof.Paper MeasureTheory
+open Spec.Paper Proof.Paper MeasureTheory
 
 example : Countable Op := inferInstance
 

@@ -1,4 +1,4 @@
-import Determinize.Statement.Semantics
+import Determinize.Spec.Semantics
 import Mathlib.MeasureTheory.Constructions.BorelSpace.Basic
 
 /-!
@@ -8,9 +8,9 @@ A trace records only stochastic generation-mode draws, in execution order.
 Reduction depth is used to define termination, but is not part of a trace.
 -/
 
-namespace Determinize.Traces
+namespace Determinize.Spec.Traces
 
-open MeasureTheory Determinize.Statement.Paper
+open MeasureTheory Determinize.Spec.Paper
 
 instance : MeasurableSpace Op := ⊤
 
@@ -74,4 +74,4 @@ program replayed along the trace, at whichever depth it returns. -/
 noncomputable def outputGivenTrace (program : Expr) (trace : Trace) : Measure ℝ :=
   Measure.sum fun depth => outputGivenTraceAt depth program trace
 
-end Determinize.Traces
+end Determinize.Spec.Traces

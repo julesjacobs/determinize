@@ -1,7 +1,7 @@
 import Determinize.Proof.FiniteModel.Local
 
 namespace Determinize.Proof.FiniteModel
-open Statement.Paper Determinize.Finite Checking Binding MeasureTheory
+open Spec.Paper Determinize.Finite Checking Binding MeasureTheory
 
 set_option maxHeartbeats 800000 in
 theorem eval_stepMeaning (expression : Core) (environment : List Value) (stack : List Frame)

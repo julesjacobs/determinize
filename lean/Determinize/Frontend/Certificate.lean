@@ -2,7 +2,7 @@ import Determinize.Frontend.Compile
 import Determinize.Frontend.Pretty
 
 namespace Determinize.Frontend
-open Checking Statement.Paper
+open Checking Spec.Paper
 
 /-- The exported file recomputes the checks in Lean's kernel using `decide +kernel`. -/
 def certificateText (text : String) : Except String String := do
@@ -25,7 +25,7 @@ def certificateText (text : String) : Except String String := do
       s!"  Determinize.Proof.Checking.certified_trace_soundness checked .{prettyMode m} (by decide +kernel) safe\n"
     | _ => ""
   return "import Determinize.Proof.Checking.Elaboration\n\n" ++
-    "open Determinize.Checking Determinize.Statement.Paper Determinize.Traces\n\n" ++
+    "open Determinize.Checking Determinize.Spec.Paper Determinize.Spec.Traces\n\n" ++
     "set_option maxRecDepth 100000\nset_option maxHeartbeats 0\n\n" ++
     s!"def original : Core :=\n  {leanExpression input.expression}\n\n" ++
     s!"def requested : List (Option Mode) :=\n  {reprStr input.modes}\n\n" ++

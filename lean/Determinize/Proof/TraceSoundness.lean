@@ -1,7 +1,7 @@
 import Determinize.Proof.SymbolicTraceSoundness
 
 namespace Determinize.Proof.StepTraces
-open MeasureTheory ProbabilityTheory Determinize.Statement.Paper Determinize.Proof.StepTraces
+open MeasureTheory ProbabilityTheory Determinize.Spec.Paper Determinize.Proof.StepTraces
 open Determinize.Proof.Paper Symbolic Symbolic.AffineExpr
 open SymbolicSoundness.TargetSafety
 open scoped ProbabilityTheory
@@ -87,7 +87,7 @@ theorem joint_fiberSound (source : Expr) (typed : Typed [] source (.float .E))
     Measure.map_id] using transported
 
 theorem output_mass_le_one (source : Expr) :
-    Determinize.Statement.Paper.bigStepMeasure source Set.univ ≤ 1 := by
+    Determinize.Spec.Paper.bigStepMeasure source Set.univ ≤ 1 := by
   let step := MeasurableActionFamily.stepKernel primitiveLaws
   rw [← Determinize.Proof.Paper.bigStepMeasure_eq,
     MeasurableActionFamily.exactDepthConstruction step source,

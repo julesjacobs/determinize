@@ -1,7 +1,7 @@
 import Determinize.Proof.SymbolicTraceLaws
 
 namespace Determinize.Proof.StepTraces
-open MeasureTheory ProbabilityTheory Determinize.Statement.Paper Determinize.Proof.StepTraces
+open MeasureTheory ProbabilityTheory Determinize.Spec.Paper Determinize.Proof.StepTraces
 open Determinize.Proof.Paper Symbolic Symbolic.AffineExpr
 open SymbolicSoundness.TargetSafety
 noncomputable section
@@ -26,7 +26,7 @@ theorem concrete_sampleE (laws : PrimitiveLaws)
   congr 1
   classical
   unfold primitiveFiber
-    Determinize.Statement.Paper.parseParams
+    Determinize.Spec.Paper.parseParams
   simp only
   rw [dif_pos (by simpa using affineLength),
     dif_pos generalLength]
@@ -63,12 +63,12 @@ theorem concrete_target_sampleE (laws : PrimitiveLaws)
   congr 1
   classical
   unfold primitiveFiber
-    Determinize.Statement.Paper.parseParams
+    Determinize.Spec.Paper.parseParams
   simp only
   rw [dif_pos (by simpa using affineLength),
     dif_pos generalLength]
   simp only
-  let evaluatedParams : Determinize.Statement.Paper.Params op :=
+  let evaluatedParams : Determinize.Spec.Paper.Params op :=
     (fun index => (affine.map (Symbolic.Affine.eval · mean))[index.1]'(by
         simp [affineLength]),
       fun index => general[index.1]'(by simp [generalLength]))
@@ -78,8 +78,8 @@ theorem concrete_target_sampleE (laws : PrimitiveLaws)
         affineLength]
     · simp [evaluatedParams, params, generalArgs, List.getD_eq_getElem?_getD,
         generalLength]
-  change (if Determinize.Statement.Paper.domain op evaluatedParams then
-    Measure.dirac (Determinize.Statement.Paper.meanValue op evaluatedParams) else 0) = _
+  change (if Determinize.Spec.Paper.domain op evaluatedParams then
+    Measure.dirac (Determinize.Spec.Paper.meanValue op evaluatedParams) else 0) = _
   rw [evaluatedParamsEq, if_pos paramsDomain]
 
 variable {β : Type*} [MeasurableSpace β]

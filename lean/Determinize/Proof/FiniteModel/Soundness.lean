@@ -3,7 +3,7 @@ import Determinize.Proof.FiniteModel.Graph
 import Determinize.Proof.FiniteModel.Initial
 
 namespace Determinize.Proof.FiniteModel
-open Statement.Paper Statement.FiniteModel Determinize.Finite
+open Spec.Paper Spec.FiniteModel Determinize.Finite
 
 theorem replay_matches (candidate : Candidate) {source : Checking.Core} {subject : Subject}
     (valid : candidate.ReplayValid source subject) :

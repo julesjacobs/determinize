@@ -1,7 +1,7 @@
 import Determinize.Checking.Certificate
 
 namespace Determinize.Runtime
-open Statement.Paper
+open Spec.Paper
 
 abbrev RandomM := StateT UInt64 (Except String)
 

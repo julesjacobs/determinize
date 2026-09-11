@@ -1,7 +1,7 @@
-import Determinize.Statement.Primitives
+import Determinize.Spec.Primitives
 
-namespace Determinize.Statement.FiniteModel
-open Paper
+namespace Determinize.Finite
+open Spec.Paper
 
 /-- Initial exporter's eligibility rule for an evaluated sampling call. This does
 not check arity or the parameter domain. All mean formulas are rational on rational
@@ -11,4 +11,4 @@ def supportedDraw : Kind → Op → Bool
   | .stochastic, .bernoulli | .stochastic, .discrete _ => true
   | .stochastic, _ => false
 
-end Determinize.Statement.FiniteModel
+end Determinize.Finite

@@ -14,7 +14,7 @@ private structure Options where
   exportPrefix : Option String := none
   certifyResult : Bool := false
   solveLimits : Finite.SolveLimits := {}
-  subject : Statement.FiniteModel.Subject := .determinized
+  subject : Spec.FiniteModel.Subject := .determinized
   limits : Finite.Limits := {}
 
 private def usage := "Usage: determinize [--check] [--samples N] [--seed N] [--fuel N] [--certificate FILE.lean] [--export PREFIX | --result PREFIX] [--max-result-states N] [--subject source|determinized] [--max-states N] [--max-edges N] [--max-state-bytes N] FILE.det"
@@ -31,7 +31,7 @@ private def options : List String → Options → Except String Options
   | "--export" :: outputPath :: rest, o => options rest {o with exportPrefix := some outputPath}
   | "--subject" :: subject :: rest, o => do
       let subject ← match subject with
-        | "source" => pure Statement.FiniteModel.Subject.source
+        | "source" => pure Spec.FiniteModel.Subject.source
         | "determinized" => pure .determinized
         | _ => throw "subject must be source or determinized"
       options rest {o with subject}

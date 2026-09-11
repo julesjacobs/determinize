@@ -15,8 +15,8 @@ alone: trace by trace, the target output is the mean of the source output fiber.
 
 namespace Determinize.Proof.Traces
 
-open MeasureTheory ProbabilityTheory Determinize.Statement Determinize.Statement.Paper
-open Determinize.Traces
+open MeasureTheory ProbabilityTheory Determinize.Spec Determinize.Spec.Paper
+open Determinize.Spec.Traces
 open scoped ENNReal ProbabilityTheory
 
 /-- The source output law under a trace factorization: the mixture of the fibers over the
@@ -399,32 +399,32 @@ end Determinize.Proof.Traces
 namespace Determinize.Proof.Paper
 
 /-- Extended-real expectation preservation, from operational trace soundness. -/
-theorem extendedExpectationSoundness : Determinize.Statement.extendedExpectationThm := by
+theorem extendedExpectationSoundness : Determinize.Spec.extendedExpectationThm := by
   intro program typed sourceForm sourceSafe defined
   exact (Determinize.Proof.Traces.meanOnTraces .E program typed sourceForm
     sourceSafe).2.extended_expectation defined
 
 /-- Jensen's inequality between the two output laws, from operational trace soundness. -/
-theorem jensenSoundness : Determinize.Statement.jensenThm := by
+theorem jensenSoundness : Determinize.Spec.jensenThm := by
   intro program typed sourceForm sourceSafe φ convex nonneg
   exact (Determinize.Proof.Traces.meanOnTraces .E program typed sourceForm
     sourceSafe).2.lintegral_convex_le convex nonneg
 
 /-- Output mass preservation, from operational trace soundness. -/
-theorem outputMassSoundness : Determinize.Statement.outputMassThm := by
+theorem outputMassSoundness : Determinize.Spec.outputMassThm := by
   intro program typed sourceForm sourceSafe
   exact (Determinize.Proof.Traces.meanOnTraces .E program typed sourceForm
     sourceSafe).2.output_mass
 
 /-- Variance non-increase, from operational trace soundness. -/
-theorem varianceSoundness : Determinize.Statement.varianceThm := by
+theorem varianceSoundness : Determinize.Spec.varianceThm := by
   intro program typed sourceForm sourceSafe memLp
   exact (Determinize.Proof.Traces.meanOnTraces .E program typed sourceForm
     sourceSafe).2.variance_le memLp
 
 /-- Preservation of the expectation conditioned on acceptance, from operational trace
 soundness. -/
-theorem conditionalExpectationSoundness : Determinize.Statement.conditionalExpectationThm := by
+theorem conditionalExpectationSoundness : Determinize.Spec.conditionalExpectationThm := by
   intro program typed sourceForm sourceSafe integrable
   exact (Determinize.Proof.Traces.meanOnTraces .E program typed sourceForm
     sourceSafe).2.conditional_expectation integrable
@@ -433,10 +433,10 @@ end Determinize.Proof.Paper
 
 namespace Determinize.Proof.Traces
 
-open MeasureTheory ProbabilityTheory Determinize.Traces
+open MeasureTheory ProbabilityTheory Determinize.Spec.Traces
 
-/-- The law of total variance along traces, with `Traces.outputGivenTrace` as the fiber. -/
-theorem varianceSoundness : Determinize.Traces.varianceThm := by
+/-- The law of total variance along traces, with `Spec.Traces.outputGivenTrace` as the fiber. -/
+theorem varianceSoundness : Determinize.Spec.Traces.varianceThm := by
   intro program typed sourceForm sourceSafe memLp
   obtain ⟨_, factor, massAe, _⟩ := soundnessData .E program typed sourceForm sourceSafe
   obtain ⟨integrable, decomposition⟩ := factor.variance_decomposition memLp

@@ -1,4 +1,4 @@
-import Determinize.Statement.Semantics
+import Determinize.Spec.Semantics
 import Mathlib.Analysis.Convex.Function
 import Mathlib.Data.EReal.Operations
 import Mathlib.Probability.Moments.Variance
@@ -19,7 +19,7 @@ the second moment or the variance of the output law. `conditionalExpectationThm`
 expectations conditioned on acceptance agree, which is what makes `observe` meaningful.
 -/
 
-namespace Determinize.Statement
+namespace Determinize.Spec
 
 open MeasureTheory ProbabilityTheory Paper
 open scoped ENNReal
@@ -104,7 +104,8 @@ def varianceThm : Prop :=
       variance id (bigStepMeasure program.determinize) ≤ variance id (bigStepMeasure program)
 
 /-- Determinization preserves the expectation conditioned on acceptance, which is what makes
-`observe` meaningful: rejection sampling on the determinized program is justified. The output
+`observe` meaningful: when output mass is positive, rejection sampling on the determinized
+program preserves the conditional expectation. The output
 laws are unnormalized; an observation that fails contributes no output mass, so the mass of an
 output law is the probability of terminating with a real value and every observation on the
 way succeeding. Because every Boolean is general-mode information, the same traces are rejected
@@ -121,4 +122,4 @@ def conditionalExpectationThm : Prop :=
         (bigStepMeasure program.determinize Set.univ).toReal =
       (∫ value : ℝ, value ∂bigStepMeasure program) / (bigStepMeasure program Set.univ).toReal
 
-end Determinize.Statement
+end Determinize.Spec

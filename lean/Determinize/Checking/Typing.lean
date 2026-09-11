@@ -1,7 +1,7 @@
 import Determinize.Checking.Certificate
 
 namespace Determinize.Checking
-open Statement.Paper
+open Spec.Paper
 
 private def checkVariable (Γ : List Ty) (i : Nat) (τ : Ty) : Option (PLift (HasVar Γ i τ)) :=
   match Γ, i with

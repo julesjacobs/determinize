@@ -2,7 +2,7 @@ import Determinize.Proof.Replay
 
 namespace Determinize.Proof.StepTraces
 
-open MeasureTheory ProbabilityTheory Determinize.Statement.Paper Determinize.Proof.StepTraces
+open MeasureTheory ProbabilityTheory Determinize.Spec.Paper Determinize.Proof.StepTraces
 open Determinize.Proof.Paper Symbolic Symbolic.AffineExpr
 
 noncomputable section

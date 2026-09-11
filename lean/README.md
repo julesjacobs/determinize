@@ -1,12 +1,12 @@
 Review these three entry points and the definitions they import:
 
-- `Determinize/Statement/Main.lean` defines the expectation-preservation propositions directly: `mainThm` (finite expectations), `extendedExpectationThm` (expectations in the extended reals, infinite values included), `jensenThm` (Jensen's inequality between the two output laws), `outputMassThm` (equal output mass), `varianceThm` (non-increasing second moment and variance) and `conditionalExpectationThm` (equal expectations conditioned on acceptance, the statement behind `observe`). `Statement` contains ordinary syntax, typing, primitive distributions and means, determinization, and semantics.
-- `Determinize/Traces/Main.lean` defines trace erasure (`correspondenceThm`), trace soundness (`soundnessThm`) and the law of total variance along traces (`Traces.varianceThm`). `Traces/Semantics.lean` defines the operational traces, the joint law `traceAndOutputLaw` of a program's trace and output, and `outputGivenTrace`, the program replayed along a trace.
+- `Determinize/Spec/Main.lean` defines the expectation-preservation propositions directly: `mainThm` (finite expectations), `extendedExpectationThm` (expectations in the extended reals, infinite values included), `jensenThm` (Jensen's inequality between the two output laws), `outputMassThm` (equal output mass), `varianceThm` (non-increasing second moment and variance) and `conditionalExpectationThm` (equal expectations conditioned on acceptance, the statement behind `observe`). `Spec` contains ordinary syntax, typing, primitive distributions and means, determinization, and semantics.
+- `Determinize/Spec/Traces/Main.lean` defines trace erasure (`correspondenceThm`), trace soundness (`soundnessThm`) and the law of total variance along traces (`Spec.Traces.varianceThm`). `Spec/Traces/Semantics.lean` defines the operational traces, the joint law `traceAndOutputLaw` of a program's trace and output, and `outputGivenTrace`, the program replayed along a trace.
 - `Determinize/Theorems.lean` proves all nine propositions without additional hypotheses and prints their axioms.
 
-Run `lake build --wfail` from this directory; the build is warning-free and contains no `sorry`. Check that all nine axiom reports contain only `propext`, `Classical.choice`, and `Quot.sound` (`.claude/scripts/check.sh lean` performs both checks). With Lean's kernel and these standard axioms trusted, reviewers can omit the proof bodies in `Proof`. `Statement` contains the specification; any proof imports there supply proof-irrelevant evidence. `Traces` imports no proof modules.
+Run `lake build --wfail` from this directory; the build is warning-free and contains no `sorry`. Check that all nine axiom reports contain only `propext`, `Classical.choice`, and `Quot.sound` (`.claude/scripts/check.sh lean` performs both checks). With Lean's kernel and these standard axioms trusted, reviewers can omit the proof bodies in `Proof`. `Spec` contains the specification; any proof imports there supply proof-irrelevant evidence. `Spec/Traces` imports no proof modules.
 
-Source expressions need not be in ANF. Each primitive distribution is its own constructor with the paper's operands (`uniform mode kind lower upper`, `gaussian mode kind mean variance`, and so on); a site carries its mode and whether it still samples or already returns the primitive's mean. Operands may contain nested sampling and are evaluated left to right; a mean site also evaluates every operand exactly once, including a Gaussian's variance. `Expr.sourceForm` excludes mean sites. `Statement/Primitives.lean` gives each primitive one fiber: its law at a stochastic site, the Dirac mass at its mean at a mean site, and the zero measure outside the parameter domain. Expressions have no type annotations; `Typed` assigns types separately. Expressions carry E/G labels only on sample sites; literals and arithmetic are mode-free and a literal types at either mode, as in the paper's `FloatLit`; subtyping is silent; variables are de Bruijn indices. `Typed` enforces the mode restrictions: E multiplication requires a G left operand, division a G denominator, and comparisons G operands. Arithmetic uses real numbers, with `x / 0 = 0`. The theorems quantify over closed float programs of either mode; the proof uses subsumption to assign an expectation-mode result type to the same program.
+Source expressions need not be in ANF. Each primitive distribution is its own constructor with the paper's operands (`uniform mode kind lower upper`, `gaussian mode kind mean variance`, and so on); a site carries its mode and whether it still samples or already returns the primitive's mean. Operands may contain nested sampling and are evaluated left to right; a mean site also evaluates every operand exactly once, including a Gaussian's variance. `Expr.sourceForm` excludes mean sites. `Spec/Primitives.lean` gives each primitive one fiber: its law at a stochastic site, the Dirac mass at its mean at a mean site, and the zero measure outside the parameter domain. Expressions have no type annotations; `Typed` assigns types separately. Expressions carry E/G labels only on sample sites; literals and arithmetic are mode-free and a literal types at either mode, as in the paper's `FloatLit`; subtyping is silent; variables are de Bruijn indices. `Typed` enforces the mode restrictions: E multiplication requires a G left operand, division a G denominator, and comparisons G operands. Arithmetic uses real numbers, with `x / 0 = 0`. The theorems quantify over closed float programs of either mode; the proof uses subsumption to assign an expectation-mode result type to the same program.
 
 Output laws are defined directly by recursion over reduction depth. Deterministic actions continue evaluation; sampling actions integrate the continuation over the primitive measure on reals. Expressions of every type may occur during evaluation, but only terminal reals contribute output. Neither evaluator requires a measurable structure on expressions. `Proof` introduces one internally to establish measurability of the evaluators.
 
@@ -59,7 +59,7 @@ The implementation is separated as follows:
 - `Tests/`: parsing, inference, certificate rejection, runtime, and kernel proof tests.
 - `Main.lean`: the CLI.
 
-`Statement`, `Traces`, and the existing soundness proofs do not import the front end
+`Spec`, `Spec/Traces`, and the existing soundness proofs do not import the front end
 or runtime. The CLI uses the formalization's syntax and determinization, generalized
 over literal types. Decimal input is parsed exactly as `Rat`; the mathematical
 interpretation embeds each rational into `ℝ`. A proved commuting equation connects
@@ -146,9 +146,9 @@ The OCaml implementation is retired; see [migration-audit.md](../migration-audit
 
 ### Discrete-distribution migration
 
-`Statement/FiniteDistribution.lean` defines checked rational probabilities and
-weighted expectation. `Statement/FiniteDistributionMeasure.lean` and
-`Statement/Primitives.lean` define the real finite law, Bernoulli fiber, and mean
+`Spec/FiniteDistribution.lean` defines checked rational probabilities and
+weighted expectation. `Spec/FiniteDistributionMeasure.lean` and
+`Spec/Primitives.lean` define the real finite law, Bernoulli fiber, and mean
 fibers. Their probability, integrability, expectation, and Bernoulli variance and
 measurability proofs are in the corresponding `Proof/` modules. The shared primitive kernels,
 affine-mean laws, moment bounds, and domain-convexity proofs cover both distributions.
@@ -160,7 +160,7 @@ certificates, and the numerical runtime. The runtime remains unverified.
 [finite-model-contract.md](finite-model-contract.md) specifies exact rational
 models, one-time terminal rewards, rejection, the initial primitive policy, and
 certificates with value equations and finite-step absorption bounds. Definitions
-live in `Statement/FiniteModel/`; proofs and theorems composing checker
+live in `Spec/FiniteModel/`; proofs and theorems composing checker
 correctness guarantees live in `Proof/FiniteModel/`. The unverified explorer is implemented in `Finite/`. The verified
 model checker is in `Checking/FiniteModel.lean`. `replay_matches` supplies the correspondence proof carried by each extracted `CheckedModel`.
 `Checking/Result.lean` proves result-checker soundness and the composed program

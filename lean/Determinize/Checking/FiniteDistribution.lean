@@ -1,7 +1,7 @@
-import Determinize.Statement.FiniteDistribution
+import Determinize.Spec.FiniteDistribution
 
 namespace Determinize.Checking
-open Statement.Paper
+open Spec.Paper
 
 /-- Check literal probabilities once, preserving their values and outcome indices. -/
 def finiteDistribution (weights : List Rat) : Except String FiniteDistribution := do

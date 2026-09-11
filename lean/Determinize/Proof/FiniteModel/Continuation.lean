@@ -1,7 +1,7 @@
 import Determinize.Proof.FiniteModel.Transition
 
 namespace Determinize.Proof.FiniteModel
-open Statement.Paper Determinize.Finite Checking Binding MeasureTheory
+open Spec.Paper Determinize.Finite Checking Binding MeasureTheory
 
 def pushStack (state : State) (stack : List Frame) : State :=
   match state with

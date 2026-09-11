@@ -1,7 +1,7 @@
 import Determinize.Proof.SymbolicTraceSamples
 
 namespace Determinize.Proof.StepTraces
-open MeasureTheory ProbabilityTheory Determinize.Statement.Paper Determinize.Proof.StepTraces
+open MeasureTheory ProbabilityTheory Determinize.Spec.Paper Determinize.Proof.StepTraces
 open Determinize.Proof.Paper Symbolic Symbolic.AffineExpr
 open SymbolicSoundness.TargetSafety
 noncomputable section

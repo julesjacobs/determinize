@@ -1,7 +1,7 @@
 import Determinize.Checking.Typing
 
 namespace Determinize.Checking
-open Statement.Paper
+open Spec.Paper
 
 /-- Forget sample modes, retaining all other syntax. -/
 def eraseAnnotations : Core → Core

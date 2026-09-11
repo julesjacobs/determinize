@@ -1,4 +1,4 @@
-import Determinize.Statement.Syntax
+import Determinize.Spec.Syntax
 import Mathlib.MeasureTheory.Measure.GiryMonad
 
 /-!
@@ -9,7 +9,7 @@ Lean real arithmetic; in particular, division is total and `x / 0 = 0`. The
 output semantics integrates sampled reals directly, without measures on expressions.
 -/
 
-namespace Determinize.Statement.Paper
+namespace Determinize.Spec.Paper
 
 open MeasureTheory ProbabilityTheory
 open scoped ENNReal ProbabilityTheory
@@ -195,4 +195,4 @@ def DoesNotGetStuckAt : Nat → Expr → Prop
 def DoesNotGetStuck (program : Expr) : Prop :=
   ∀ fuel, DoesNotGetStuckAt fuel program
 
-end Determinize.Statement.Paper
+end Determinize.Spec.Paper

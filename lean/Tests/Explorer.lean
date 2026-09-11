@@ -2,7 +2,7 @@ import Tests.Parsing
 import Determinize.Finite.Export
 
 namespace Determinize.Tests
-open Frontend Checking Statement.Paper Statement.FiniteModel Determinize.Finite
+open Frontend Checking Spec.Paper Spec.FiniteModel Determinize.Finite
 
 private def graph (text : String) (subject : Subject := .source) : IO Candidate := do
   let p ← IO.ofExcept (compile text)

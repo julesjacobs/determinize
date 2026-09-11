@@ -1,9 +1,9 @@
 import Determinize.Finite.Machine
-import Determinize.Statement.FiniteModel.Certificates
+import Determinize.Spec.FiniteModel.Certificates
 import Std.Data.HashMap
 
 namespace Determinize.Finite
-open Statement.Paper Statement.FiniteModel Checking
+open Spec.Paper Spec.FiniteModel Checking
 
 structure Edge where
   target : Nat

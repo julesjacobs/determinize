@@ -3,7 +3,7 @@ import Determinize.Theorems
 import Determinize.Checking.FiniteModel
 
 namespace Determinize.Checking
-open Statement.FiniteModel
+open Spec.FiniteModel
 
 /-- Materialize each horizon once during evaluation. -/
 def survivalVector (model : Model) : Nat → Vector Rat model.size
@@ -39,8 +39,8 @@ theorem checkResult_sound (model : Model) (certificate : ResultCertificate model
 theorem checked_expectedReward {source : Core} {subject : Subject}
     (checked : CheckedModel source subject) (certificate : ResultCertificate checked.model)
     (accepted : checkResult checked.model certificate = true) :
-    MeasureTheory.Integrable id (Statement.Paper.bigStepMeasure (subject.program source)) ∧
-      (∫ value : ℝ, value ∂Statement.Paper.bigStepMeasure (subject.program source)) =
+    MeasureTheory.Integrable id (Spec.Paper.bigStepMeasure (subject.program source)) ∧
+      (∫ value : ℝ, value ∂Spec.Paper.bigStepMeasure (subject.program source)) =
         (certificate.values checked.model.initial : ℝ) := by
   rw [← checked.correct.2]
   exact ⟨Proof.FiniteModel.outputMeasure_integrable checked.model,
@@ -50,13 +50,13 @@ theorem checked_expectedReward {source : Core} {subject : Subject}
 theorem checked_sourceExpectedReward {source : Core}
     (checked : CheckedModel source .determinized)
     (certificate : ResultCertificate checked.model)
-    (typed : Statement.Paper.Typed [] (Subject.source.program source) (.float .E))
+    (typed : Spec.Paper.Typed [] (Subject.source.program source) (.float .E))
     (sourceForm : (Subject.source.program source).sourceForm = true)
-    (safe : Statement.Paper.DoesNotGetStuck (Subject.source.program source))
+    (safe : Spec.Paper.DoesNotGetStuck (Subject.source.program source))
     (integrable : MeasureTheory.Integrable id
-      (Statement.Paper.bigStepMeasure (Subject.source.program source)))
+      (Spec.Paper.bigStepMeasure (Subject.source.program source)))
     (accepted : checkResult checked.model certificate = true) :
-    (∫ value : ℝ, value ∂Statement.Paper.bigStepMeasure (Subject.source.program source)) =
+    (∫ value : ℝ, value ∂Spec.Paper.bigStepMeasure (Subject.source.program source)) =
       (certificate.values checked.model.initial : ℝ) := by
   have preservation := Theorems.expectationPreservation (Subject.source.program source)
     typed sourceForm safe integrable

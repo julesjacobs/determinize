@@ -1,4 +1,4 @@
-import Determinize.Traces.Main
+import Determinize.Spec.Traces.Main
 import Mathlib.Probability.Kernel.MeasurableIntegral
 import Mathlib.Probability.Kernel.Composition.MeasureCompProd
 
@@ -7,13 +7,13 @@ import Mathlib.Probability.Kernel.Composition.MeasureCompProd
 
 The proof-internal form of trace soundness: the source and target joint laws factor over the
 source trace law through a Markov kernel and a measurable output function. The public
-`Traces.soundnessThm` instantiates the kernel with `Traces.outputGivenTrace`; the corollaries
+`Spec.Traces.soundnessThm` instantiates the kernel with `Spec.Traces.outputGivenTrace`; the corollaries
 in `Proof/Corollaries.lean` are proved for an arbitrary factorization.
 -/
 
 namespace Determinize.Proof.Traces
 
-open MeasureTheory ProbabilityTheory Determinize.Statement.Paper Determinize.Traces
+open MeasureTheory ProbabilityTheory Determinize.Spec.Paper Determinize.Spec.Traces
 open scoped ProbabilityTheory
 
 /-- The canonical real output of a trace-indexed kernel. -/

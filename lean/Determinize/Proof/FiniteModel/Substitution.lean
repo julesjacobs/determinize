@@ -1,7 +1,7 @@
-import Determinize.Statement.Syntax
+import Determinize.Spec.Syntax
 
 namespace Determinize.Proof.FiniteModel
-open Statement.Paper
+open Spec.Paper
 
 namespace Binding
 

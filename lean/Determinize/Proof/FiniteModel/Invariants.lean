@@ -2,7 +2,7 @@ import Determinize.Proof.FiniteModel.Sampling
 import Determinize.Proof.FiniteModel.Replay
 
 namespace Determinize.Proof.FiniteModel
-open Statement.Paper Statement.FiniteModel Determinize.Finite Checking
+open Spec.Paper Spec.FiniteModel Determinize.Finite Checking
 
 def StateShape : State → Prop
   | .eval _ _ stack | .deliver _ stack => ∀ frame ∈ stack, FrameShape frame

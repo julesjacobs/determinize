@@ -4,7 +4,7 @@ import Mathlib.Probability.Kernel.MeasurableIntegral
 
 namespace Determinize.Proof.StepTraces
 
-open MeasureTheory ProbabilityTheory Determinize.Statement.Paper Determinize.Proof.StepTraces
+open MeasureTheory ProbabilityTheory Determinize.Spec.Paper Determinize.Proof.StepTraces
 open Determinize.Proof.Paper
 open scoped ProbabilityTheory
 

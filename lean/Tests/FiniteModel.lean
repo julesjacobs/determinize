@@ -1,9 +1,9 @@
-import Determinize.Statement.FiniteModel.Certificates
-import Determinize.Statement.FiniteModel.Supported
+import Determinize.Spec.FiniteModel.Certificates
+import Determinize.Finite.Supported
 import Determinize.Proof.FiniteModel.Model
 
 namespace Determinize.Tests.FiniteModel
-open Statement.FiniteModel MeasureTheory
+open Spec.FiniteModel MeasureTheory Determinize.Finite
 
 example : supportedDraw .stochastic .uniform = false := rfl
 example : supportedDraw .mean .uniform = true := rfl

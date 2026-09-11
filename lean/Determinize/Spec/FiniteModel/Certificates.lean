@@ -1,6 +1,6 @@
-import Determinize.Statement.FiniteModel.Model
+import Determinize.Spec.FiniteModel.Model
 
-namespace Determinize.Statement.FiniteModel
+namespace Determinize.Spec.FiniteModel
 open MeasureTheory Paper
 
 /-- Selects the core program whose output law a model certificate must represent. -/
@@ -43,4 +43,4 @@ instance (model : Model) (certificate : ResultCertificate model) :
 instance (model : Model) (certificate : ResultCertificate model) :
     Decidable (certificate.Valid model) := inferInstanceAs (Decidable (_ ∧ _))
 
-end Determinize.Statement.FiniteModel
+end Determinize.Spec.FiniteModel

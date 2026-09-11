@@ -3,7 +3,7 @@ import Determinize.Proof.FiniteModel.Sampling
 import Determinize.Proof.FiniteModel.Initial
 
 namespace Determinize.Tests.SemanticBridge
-open Statement.Paper Statement.FiniteModel Determinize.Finite Determinize.Checking
+open Spec.Paper Spec.FiniteModel Determinize.Finite Determinize.Checking
 open Proof.FiniteModel Proof.FiniteModel.Binding
 
 example :

@@ -3,17 +3,17 @@ import Determinize.Proof.CompactTrace
 /-!
 # The compact replay as a measurable kernel
 
-`Traces.outputGivenTraceAt` replays a program along a compact trace of general-mode draws.
+`Spec.Traces.outputGivenTraceAt` replays a program along a compact trace of general-mode draws.
 This file packages it as an s-finite kernel in the trace and the expression, mirroring
 `replayKernel` for detailed traces, proves the one-step unfolding lemmas the lockstep
-arguments use, bounds the total mass of `Traces.outputGivenTrace` by one, and builds the
+arguments use, bounds the total mass of `Spec.Traces.outputGivenTrace` by one, and builds the
 Markov kernel that agrees with it wherever it has mass one.
 -/
 
 namespace Determinize.Proof.StepTraces
-open MeasureTheory ProbabilityTheory Determinize.Statement.Paper Determinize.Proof.StepTraces
+open MeasureTheory ProbabilityTheory Determinize.Spec.Paper Determinize.Proof.StepTraces
 open Determinize.Proof.Paper
-open Determinize.Traces (outputGivenTraceAt outputGivenTrace)
+open Determinize.Spec.Traces (outputGivenTraceAt outputGivenTrace)
 open scoped ProbabilityTheory ENNReal
 noncomputable section
 open Classical
@@ -197,7 +197,7 @@ def compactReplayStep : SFiniteKernel (DrawTrace × Expr) (DrawTrace × Expr) :=
 theorem compactReplayStep_apply (tape : DrawTrace) (expression : Expr) :
     compactReplayStep.kernel (tape, expression) =
       if generationOp expression.skeleton = none then
-        (Determinize.Statement.Paper.stepMeasure expression).map (fun next => (tape, next))
+        (Determinize.Spec.Paper.stepMeasure expression).map (fun next => (tape, next))
       else if matchesHead (tape, expression) then
         Measure.dirac (tape.tail, sampleContinuation expression (tape.getD 0 (.uniform, 0)).2)
       else 0 := by
@@ -266,7 +266,7 @@ theorem compactReplayKernel_apply (depth : Nat) (tape : DrawTrace) (expression :
         by_cases none : generationOp expression.skeleton = none
         · rw [if_pos none, bind_map _ (fun next : Expr => (tape, next))
             (measurable_const.prodMk measurable_id) (compactReplayKernel depth).kernel, previousFun]
-          unfold Determinize.Statement.Paper.stepMeasure
+          unfold Determinize.Spec.Paper.stepMeasure
           cases reduction : reduce expression with
           | next next =>
               rw [Action.measure, Measure.dirac_bind previous.kernel.measurable, previousEq,
@@ -335,7 +335,7 @@ theorem ogtAt_continuation_measurable (depth : Nat) {expression : Expr}
   exact (compactReplayKernel depth).kernel.measurable.comp
     (measurable_const.prodMk (continuation_measurable reduction))
 
-/-- The compact replay at every depth, summed: `Traces.outputGivenTrace` as a kernel. -/
+/-- The compact replay at every depth, summed: `Spec.Traces.outputGivenTrace` as a kernel. -/
 def outputGivenTraceKernel (program : Expr) : Kernel DrawTrace ℝ :=
   Kernel.sum fun depth =>
     (SFiniteKernel.pullback (compactReplayKernel depth) (fun tape : DrawTrace => (tape, program))
@@ -361,7 +361,7 @@ theorem sample_fiber_mass_le_one {expression : Expr} {site : Mode × Kind × Op}
     {fiber : Measure ℝ} {continuation : ℝ → Expr}
     (reduction : reduce expression = .sample site fiber continuation) : fiber Set.univ ≤ 1 := by
   have mass := (MeasurableActionFamily.stepKernel primitiveLaws).mass_le_one expression
-  rw [StepKernel.kernel_eq_stepMeasure, Determinize.Statement.Paper.stepMeasure, reduction,
+  rw [StepKernel.kernel_eq_stepMeasure, Determinize.Spec.Paper.stepMeasure, reduction,
     Action.measure] at mass
   rwa [Measure.map_apply (continuation_measurable reduction) MeasurableSet.univ,
     Set.preimage_univ] at mass
@@ -447,7 +447,7 @@ theorem outputGivenTrace_eq_ogtAt (depth : Nat) (program : Expr) (tape : DrawTra
 
 /-! ### A Markov version and a measurability lemma -/
 
-/-- `Traces.outputGivenTrace` where it has mass one, the Dirac mass at `0` elsewhere. -/
+/-- `Spec.Traces.outputGivenTrace` where it has mass one, the Dirac mass at `0` elsewhere. -/
 def normalizedOutputGivenTrace (program : Expr) : Kernel DrawTrace ℝ :=
   Kernel.piecewise
     (measurableSet_eq_fun ((outputGivenTraceKernel program).measurable_coe MeasurableSet.univ)

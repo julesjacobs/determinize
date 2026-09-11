@@ -1,7 +1,7 @@
 import Tests.Parsing
 
 namespace Determinize.Tests
-open Frontend Checking Statement.Paper
+open Frontend Checking Spec.Paper
 
 def inference : IO Unit := do
   let p ← IO.ofExcept (compile "uniform(0,1) + gauss(2,1)")

@@ -2,7 +2,7 @@ import Determinize.Proof.TraceSemantics
 
 namespace Determinize.Proof.StepTraces
 
-open MeasureTheory ProbabilityTheory Determinize.Statement.Paper Determinize.Proof.StepTraces
+open MeasureTheory ProbabilityTheory Determinize.Spec.Paper Determinize.Proof.StepTraces
 open Determinize.Proof.Paper
 open scoped ProbabilityTheory
 
@@ -60,7 +60,7 @@ def replayMeasure : (depth : Nat) → Expr → Trace → Measure ℝ
   | depth + 1, expression, tape =>
       if expression.isValue then 0
       else match generationOp expression.skeleton with
-        | none => (Determinize.Statement.Paper.stepMeasure expression).bind fun next => replayMeasure depth next (List.tail tape)
+        | none => (Determinize.Spec.Paper.stepMeasure expression).bind fun next => replayMeasure depth next (List.tail tape)
         | some _ => replayMeasure depth (sampleContinuation expression (eventValue (tape.headD none))) (List.tail tape)
 
 
@@ -86,7 +86,7 @@ def replayStep : SFiniteKernel (Trace × Expr) (Trace × Expr) := by
 theorem replayStep_apply (tape : Trace) (expression : Expr) :
     (replayStep).kernel (tape, expression) =
       if generationOp expression.skeleton = none then
-        (Determinize.Statement.Paper.stepMeasure expression).map (fun next => (List.tail tape, next))
+        (Determinize.Spec.Paper.stepMeasure expression).map (fun next => (List.tail tape, next))
       else Measure.dirac (List.tail tape, sampleContinuation expression (eventValue (tape.headD none))) := by
   classical
   unfold replayStep SFiniteKernel.piecewise
@@ -133,7 +133,7 @@ theorem replayKernel_apply (depth : Nat) (tape : Trace) (expression : Expr) :
               measurable_const.prodMk measurable_id
             rw [← Measure.bind_dirac_eq_map _ pairing,
               Measure.bind_bind (show AEMeasurable
-                (fun next : Expr => Measure.dirac (List.tail tape, next)) (Determinize.Statement.Paper.stepMeasure expression) from
+                (fun next : Expr => Measure.dirac (List.tail tape, next)) (Determinize.Spec.Paper.stepMeasure expression) from
                   (Measure.measurable_dirac.comp pairing).aemeasurable)
                 (replayKernel depth).kernel.aemeasurable]
             simp_rw [Measure.dirac_bind (replayKernel depth).kernel.measurable, ih]

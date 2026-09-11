@@ -1,16 +1,16 @@
-import Determinize.Statement.Semantics
+import Determinize.Spec.Semantics
 import Mathlib.Probability.Kernel.Basic
 
 /-!
 # Analytic laws of the paper primitives
 
 The proof indexes the primitives uniformly by `Op` and parameter tables; the
-reviewer-facing per-primitive fibers of `Statement/Primitives.lean` are recovered from
+reviewer-facing per-primitive fibers of `Spec/Primitives.lean` are recovered from
 these tables. The second part records the analytic facts required of the canonical
 primitive measures.
 -/
 
-namespace Determinize.Statement.Paper
+namespace Determinize.Spec.Paper
 
 open MeasureTheory ProbabilityTheory
 
@@ -19,7 +19,7 @@ noncomputable section
 /-! The proof indexes the primitives uniformly by `Op`: an affine parameter position
 is one in which the primitive's mean is affine (and which may therefore be typed at mode E),
 a general position must be typed at mode G. The reviewer-facing fibers in
-`Statement/Primitives.lean` are recovered from these tables below. -/
+`Spec/Primitives.lean` are recovered from these tables below. -/
 
 abbrev affineArity : Op → Nat
   | .uniform => 2
@@ -160,12 +160,12 @@ theorem discreteFiber_eq (kind : Kind) (d : FiniteDistribution) :
 
 end
 
-end Determinize.Statement.Paper
+end Determinize.Spec.Paper
 
 namespace Determinize.Proof.Paper
 
 open MeasureTheory ProbabilityTheory
-open Determinize.Statement.Paper
+open Determinize.Spec.Paper
 
 noncomputable section
 

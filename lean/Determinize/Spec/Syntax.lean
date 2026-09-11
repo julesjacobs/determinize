@@ -1,5 +1,5 @@
-import Determinize.Statement.Primitives
-import Determinize.Statement.Types
+import Determinize.Spec.Primitives
+import Determinize.Spec.Types
 import Mathlib.Tactic.DeriveCountable
 
 /-!
@@ -13,7 +13,7 @@ carries its mode and whether it still samples or already returns the primitive's
 `Expr.sourceForm` requires stochastic sites; their operands may be arbitrary expressions.
 -/
 
-namespace Determinize.Statement.Paper
+namespace Determinize.Spec.Paper
 
 /-- Untyped paper expressions with de Bruijn variables; only sample sites carry a mode. -/
 inductive Expr (Literal : Type := ℝ) where
@@ -279,4 +279,4 @@ inductive Typed : List Ty → Expr → Ty → Prop
   | gamma : Typed context shape (.float mode) → Typed context rate (.float .G) →
       Typed context (.gamma mode kind shape rate) (.float mode)
 
-end Determinize.Statement.Paper
+end Determinize.Spec.Paper

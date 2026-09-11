@@ -1,10 +1,10 @@
-import Determinize.Traces.Semantics
+import Determinize.Spec.Traces.Semantics
 import Mathlib.MeasureTheory.Integral.Bochner.Basic
 import Mathlib.Probability.Moments.Variance
 
-namespace Determinize.Traces
+namespace Determinize.Spec.Traces
 
-open MeasureTheory ProbabilityTheory Determinize.Statement.Paper
+open MeasureTheory ProbabilityTheory Determinize.Spec.Paper
 
 /-- Erasing terminating traces recovers the ordinary output semantics. -/
 def correspondenceThm : Prop :=
@@ -60,4 +60,4 @@ def varianceThm : Prop :=
         variance id (bigStepMeasure program.determinize) +
           ∫ trace, variance id (outputGivenTrace program trace) ∂traceLaw program
 
-end Determinize.Traces
+end Determinize.Spec.Traces

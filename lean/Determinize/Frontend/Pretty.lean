@@ -1,7 +1,7 @@
 import Determinize.Frontend.Syntax
 
 namespace Determinize.Frontend
-open Statement.Paper Checking
+open Spec.Paper Checking
 
 def prettyMode : Mode → String | .E => "E" | .G => "G"
 def prettyType : Ty → String

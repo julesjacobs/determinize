@@ -2,7 +2,7 @@ import Determinize.Frontend.Syntax
 import Determinize.Checking.FiniteDistribution
 
 namespace Determinize.Frontend
-open Statement.Paper Checking
+open Spec.Paper Checking
 
 private def pureInput (e : Core) : Input := ⟨e, []⟩
 private def unary (f : Core → Core) (a : Input) : Input := ⟨f a.expression, a.modes⟩

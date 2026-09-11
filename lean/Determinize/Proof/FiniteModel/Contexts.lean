@@ -1,7 +1,7 @@
 import Determinize.Proof.FiniteModel.Reification
 
 namespace Determinize.Proof.FiniteModel
-open Statement.Paper Determinize.Finite Checking Binding MeasureTheory
+open Spec.Paper Determinize.Finite Checking Binding MeasureTheory
 
 def primitiveArity : Op → Nat
   | .discrete _ => 0

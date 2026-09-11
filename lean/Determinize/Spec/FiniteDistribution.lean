@@ -3,7 +3,7 @@ import Mathlib.Data.Rat.Encodable
 import Mathlib.Logic.Equiv.List
 import Mathlib.Tactic.DeriveCountable
 
-namespace Determinize.Statement.Paper
+namespace Determinize.Spec.Paper
 
 /-- Probabilities for the outcomes `0, ..., probabilities.length - 1`.
 Zero-probability outcomes retain their indices. -/
@@ -20,4 +20,4 @@ def FiniteDistribution.expectation (d : FiniteDistribution) (value : Nat → Rat
 def FiniteDistribution.mean (d : FiniteDistribution) : Rat :=
   d.expectation (fun i => (i : Rat))
 
-end Determinize.Statement.Paper
+end Determinize.Spec.Paper

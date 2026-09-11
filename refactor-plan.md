@@ -10,7 +10,7 @@ Each retained step gets its own commit. For each step: inspect consumers, implem
 - [x] 6. Expose unconditional model integrability and simplify expected reward.
 - [x] 7. Derive absorption escape from the model and certificate horizon.
 - [x] 8. Consolidate unit-sum finite-distribution validation.
-- [ ] 9. Trim and organize the specification/proof boundary.
+- [x] 9. Trim and organize the specification/proof boundary.
 - [ ] 10. Evaluate deriving terminal rows instead of storing absorbing-row evidence.
 - [ ] 11. Replace Mode/Kind with Affinity and sample-affinity-or-mean syntax, using direct typing rules.
 - [ ] 12. Run complete regression checks and review the final stack.
@@ -50,3 +50,7 @@ Before: certificates carried an escape bound and required a positive horizon plu
 ### 8. Unit-sum distributions — KEEP
 
 Before: elaboration checked probabilities, then the checked constructor rechecked and normalized them. After: one constructor checks nonnegativity and sum one and preserves the exact list. Removed the unused normalization proof module and changed internal test fixtures to probabilities. `.det` acceptance requirements remain unchanged. Roughly 40 net lines removed. Warning-free build, all Lean tests, the fast corpus, and independent generated typing certificates passed.
+
+### 9. Specification boundary — KEEP
+
+Before: reviewer-facing material was split between `Statement/` and `Traces/`, with exporter policy, an import-only shim, and an auxiliary reward recurrence mixed in. After: 11 files under `Spec/` contain the mathematical surface; `Theorems.lean` exports it. Exporter policy moved to `Finite/`, reward recursion to its proof module, and the shim was removed. Generic checker plumbing was already eliminated in step 3. Imports, namespaces, certificate output, current docs, and theorem-coverage tooling were updated. The conditional-expectation documentation now qualifies its probabilistic interpretation by positive output mass. Full warning-free rebuild, Lean tests, independent generated result theorem, and the repository theorem/axiom check all passed. The larger rename diff buys one accurate review boundary without changing the claims.

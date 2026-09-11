@@ -1,7 +1,7 @@
 import Determinize.Checking.Typing
 
 namespace Determinize.Proof.Checking
-open Determinize.Checking Statement.Paper
+open Determinize.Checking Spec.Paper
 
 theorem check_sound {Γ e τ c} (h : (check Γ e τ c).isSome = true) :
     Typed Γ (interpret e) τ := by

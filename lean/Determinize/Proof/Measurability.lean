@@ -20,11 +20,11 @@ set_option linter.unusedVariables false
 namespace Determinize.Proof.Paper
 
 open MeasureTheory ProbabilityTheory
-open Determinize.Statement.Paper
+open Determinize.Spec.Paper
 
 noncomputable section
 
-attribute [local simp] Determinize.Statement.Paper.reduce
+attribute [local simp] Determinize.Spec.Paper.reduce
 
 /-- Extending a finite real environment is measurable. -/
 theorem measurable_envCons {n : Nat} :
@@ -1808,19 +1808,19 @@ theorem MeasurableFamily.isValue_eq {α : Type*} [MeasurableSpace α]
     (expression parameter).isValue = Expr.isValue family.skeleton := by
   rw [isValue_eq_skeletonIsValue, family.skeleton_eq]
 
-def paramsFromCoordinates (op : Determinize.Statement.Paper.Op)
-    (affine general : List ℝ) : Determinize.Statement.Paper.Params op :=
+def paramsFromCoordinates (op : Determinize.Spec.Paper.Op)
+    (affine general : List ℝ) : Determinize.Spec.Paper.Params op :=
   (fun index => affine.getD index.1 0, fun index => general.getD index.1 0)
 
-def atomicParams (op : Op) (affine general : List ℝ) : Determinize.Statement.Paper.Params op :=
+def atomicParams (op : Op) (affine general : List ℝ) : Determinize.Spec.Paper.Params op :=
   paramsFromCoordinates op affine general
 
 theorem paramsFromCoordinates_eq_getElem
-    (op : Determinize.Statement.Paper.Op) (affine general : List ℝ)
+    (op : Determinize.Spec.Paper.Op) (affine general : List ℝ)
     (affineArity : affine.length =
-      Determinize.Statement.Paper.affineArity op)
+      Determinize.Spec.Paper.affineArity op)
     (generalArity : general.length =
-      Determinize.Statement.Paper.generalArity op) :
+      Determinize.Spec.Paper.generalArity op) :
     paramsFromCoordinates op affine general =
       (fun index => affine[index.1]'(by simpa [affineArity] using index.2),
         fun index => general[index.1]'(by simpa [generalArity] using index.2)) := by
@@ -1832,29 +1832,29 @@ theorem paramsFromCoordinates_eq_getElem
     simp [paramsFromCoordinates, List.getD,
       show index.1 < general.length by simpa [generalArity] using index.2]
 
-theorem measurable_meanValue (op : Determinize.Statement.Paper.Op) :
-    Measurable (Determinize.Statement.Paper.meanValue op) := by
-  cases op <;> unfold Determinize.Statement.Paper.meanValue <;> fun_prop
+theorem measurable_meanValue (op : Determinize.Spec.Paper.Op) :
+    Measurable (Determinize.Spec.Paper.meanValue op) := by
+  cases op <;> unfold Determinize.Spec.Paper.meanValue <;> fun_prop
 
 /-- The kernel of a primitive site in its evaluated parameters: the primitive's law at a
 stochastic site, the Dirac mass at its mean on the parameter domain at a mean site. -/
 noncomputable def primitiveKernelPack
     (laws : Determinize.Proof.Paper.PrimitiveLaws) :
-    (kind : Kind) → (op : Op) → SFiniteKernel (Determinize.Statement.Paper.Params op) ℝ
+    (kind : Kind) → (op : Op) → SFiniteKernel (Determinize.Spec.Paper.Params op) ℝ
   | .stochastic, op => ⟨laws.kernel op, laws.kernel_sfinite op⟩
   | .mean, op => SFiniteKernel.piecewise
       (Determinize.Proof.Paper.measurableSet_domain op)
       (SFiniteKernel.deterministic
-        (Determinize.Statement.Paper.meanValue op) (measurable_meanValue op))
+        (Determinize.Spec.Paper.meanValue op) (measurable_meanValue op))
       SFiniteKernel.zero
 
 theorem primitiveFiber_eq_atomic
     (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : Kind) (op : Op)
     (affine general : List ℝ)
     (affineArity : affine.length =
-      Determinize.Statement.Paper.affineArity op)
+      Determinize.Spec.Paper.affineArity op)
     (generalArity : general.length =
-      Determinize.Statement.Paper.generalArity op) :
+      Determinize.Spec.Paper.generalArity op) :
     primitiveFiber kind op affine general =
       (primitiveKernelPack laws kind op).kernel (atomicParams op affine general) := by
   classical
@@ -1862,20 +1862,20 @@ theorem primitiveFiber_eq_atomic
   | stochastic =>
       simp only [atomicParams, primitiveKernelPack]
       unfold primitiveFiber
-        Determinize.Statement.Paper.parseParams
+        Determinize.Spec.Paper.parseParams
       simp only
       rw [dif_pos affineArity, dif_pos generalArity]
       rw [laws.kernel_eq_paperMeasure]
-      apply congrArg (Determinize.Statement.Paper.paperMeasure op)
+      apply congrArg (Determinize.Spec.Paper.paperMeasure op)
       exact (paramsFromCoordinates_eq_getElem op affine general
         affineArity generalArity).symm
   | mean =>
       simp only [atomicParams, primitiveKernelPack]
       unfold primitiveFiber
-        Determinize.Statement.Paper.parseParams
+        Determinize.Spec.Paper.parseParams
       simp only
       rw [dif_pos affineArity, dif_pos generalArity]
-      let actualParams : Determinize.Statement.Paper.Params op :=
+      let actualParams : Determinize.Spec.Paper.Params op :=
         (fun index => affine[index.1]'(by simpa [affineArity] using index.2),
           fun index => general[index.1]'(by simpa [generalArity] using index.2))
       have actualParamsEquality : actualParams =
@@ -1883,27 +1883,27 @@ theorem primitiveFiber_eq_atomic
         dsimp only [actualParams]
         exact (paramsFromCoordinates_eq_getElem op affine general
           affineArity generalArity).symm
-      change (if Determinize.Statement.Paper.domain op actualParams then
-          Measure.dirac (Determinize.Statement.Paper.meanValue op actualParams)
+      change (if Determinize.Spec.Paper.domain op actualParams then
+          Measure.dirac (Determinize.Spec.Paper.meanValue op actualParams)
         else 0) =
           (SFiniteKernel.piecewise
             (Determinize.Proof.Paper.measurableSet_domain op)
             (SFiniteKernel.deterministic
-              (Determinize.Statement.Paper.meanValue op)
+              (Determinize.Spec.Paper.meanValue op)
               (measurable_meanValue op))
             SFiniteKernel.zero).kernel (paramsFromCoordinates op affine general)
       unfold SFiniteKernel.piecewise SFiniteKernel.deterministic SFiniteKernel.zero
       rw [Kernel.piecewise_apply]
       simp only [Set.mem_ofPred_eq]
-      by_cases paramsDomain : Determinize.Statement.Paper.domain op
+      by_cases paramsDomain : Determinize.Spec.Paper.domain op
           (paramsFromCoordinates op affine general)
-      · have actualDomain : Determinize.Statement.Paper.domain op actualParams :=
+      · have actualDomain : Determinize.Spec.Paper.domain op actualParams :=
           actualParamsEquality.symm ▸ paramsDomain
         rw [if_pos paramsDomain, if_pos actualDomain, Kernel.deterministic_apply]
         exact congrArg Measure.dirac
-          (congrArg (Determinize.Statement.Paper.meanValue op)
+          (congrArg (Determinize.Spec.Paper.meanValue op)
             actualParamsEquality)
-      · have actualOutside : ¬ Determinize.Statement.Paper.domain op actualParams :=
+      · have actualOutside : ¬ Determinize.Spec.Paper.domain op actualParams :=
           fun actualDomain => paramsDomain (actualParamsEquality ▸ actualDomain)
         rw [if_neg paramsDomain, if_neg actualOutside]
         simp
@@ -2279,17 +2279,17 @@ noncomputable def reducePair {α : Type*} [MeasurableSpace α]
   · by_cases rightValue : Expr.isValue rightFamily.skeleton = true
     · apply congr (nextFamily (MeasurableFamily.pair leftFamily rightFamily))
       funext parameter
-      simp [reduce, Determinize.Statement.Paper.reduce, isValue_eq_skeletonIsValue, leftFamily.skeleton_eq parameter,
+      simp [reduce, Determinize.Spec.Paper.reduce, isValue_eq_skeletonIsValue, leftFamily.skeleton_eq parameter,
         rightFamily.skeleton_eq parameter, leftValue, rightValue]
     · apply congr (rightReduce.wrapBinaryRight left leftFamily.measurable .pair .pair
           (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates]))
       funext parameter
-      simp [reduce, Determinize.Statement.Paper.reduce, isValue_eq_skeletonIsValue, leftFamily.skeleton_eq parameter,
+      simp [reduce, Determinize.Spec.Paper.reduce, isValue_eq_skeletonIsValue, leftFamily.skeleton_eq parameter,
         rightFamily.skeleton_eq parameter, leftValue, rightValue]
   · apply congr (leftReduce.wrapBinaryLeft right rightFamily.measurable .pair .pair
         (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates]))
     funext parameter
-    simp [reduce, Determinize.Statement.Paper.reduce, isValue_eq_skeletonIsValue, leftFamily.skeleton_eq parameter, leftValue]
+    simp [reduce, Determinize.Spec.Paper.reduce, isValue_eq_skeletonIsValue, leftFamily.skeleton_eq parameter, leftValue]
 
 noncomputable def reduceCons {α : Type*} [MeasurableSpace α]
     (laws : Determinize.Proof.Paper.PrimitiveLaws)
@@ -2304,17 +2304,17 @@ noncomputable def reduceCons {α : Type*} [MeasurableSpace α]
   · by_cases tailValue : Expr.isValue tailFamily.skeleton = true
     · apply congr (nextFamily (MeasurableFamily.cons headFamily tailFamily))
       funext parameter
-      simp [reduce, Determinize.Statement.Paper.reduce, isValue_eq_skeletonIsValue, headFamily.skeleton_eq parameter,
+      simp [reduce, Determinize.Spec.Paper.reduce, isValue_eq_skeletonIsValue, headFamily.skeleton_eq parameter,
         tailFamily.skeleton_eq parameter, headValue, tailValue]
     · apply congr (tailReduce.wrapBinaryRight head headFamily.measurable .cons .cons
           (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates]))
       funext parameter
-      simp [reduce, Determinize.Statement.Paper.reduce, isValue_eq_skeletonIsValue, headFamily.skeleton_eq parameter,
+      simp [reduce, Determinize.Spec.Paper.reduce, isValue_eq_skeletonIsValue, headFamily.skeleton_eq parameter,
         tailFamily.skeleton_eq parameter, headValue, tailValue]
   · apply congr (headReduce.wrapBinaryLeft tail tailFamily.measurable .cons .cons
         (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates]))
     funext parameter
-    simp [reduce, Determinize.Statement.Paper.reduce, isValue_eq_skeletonIsValue, headFamily.skeleton_eq parameter, headValue]
+    simp [reduce, Determinize.Spec.Paper.reduce, isValue_eq_skeletonIsValue, headFamily.skeleton_eq parameter, headValue]
 
 noncomputable def reduceInl {α : Type*} [MeasurableSpace α]
     (laws : Determinize.Proof.Paper.PrimitiveLaws)
@@ -2327,11 +2327,11 @@ noncomputable def reduceInl {α : Type*} [MeasurableSpace α]
   by_cases isValue : Expr.isValue valueFamily.skeleton = true
   · apply congr (nextFamily (MeasurableFamily.inl valueFamily))
     funext parameter
-    simp [reduce, Determinize.Statement.Paper.reduce, isValue_eq_skeletonIsValue, valueFamily.skeleton_eq parameter, isValue]
+    simp [reduce, Determinize.Spec.Paper.reduce, isValue_eq_skeletonIsValue, valueFamily.skeleton_eq parameter, isValue]
   · apply congr (valueReduce.wrapUnary .inl .inl
         (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates]))
     funext parameter
-    simp [reduce, Determinize.Statement.Paper.reduce, isValue_eq_skeletonIsValue, valueFamily.skeleton_eq parameter, isValue]
+    simp [reduce, Determinize.Spec.Paper.reduce, isValue_eq_skeletonIsValue, valueFamily.skeleton_eq parameter, isValue]
 
 noncomputable def reduceInr {α : Type*} [MeasurableSpace α]
     (laws : Determinize.Proof.Paper.PrimitiveLaws)
@@ -2344,11 +2344,11 @@ noncomputable def reduceInr {α : Type*} [MeasurableSpace α]
   by_cases isValue : Expr.isValue valueFamily.skeleton = true
   · apply congr (nextFamily (MeasurableFamily.inr valueFamily))
     funext parameter
-    simp [reduce, Determinize.Statement.Paper.reduce, isValue_eq_skeletonIsValue, valueFamily.skeleton_eq parameter, isValue]
+    simp [reduce, Determinize.Spec.Paper.reduce, isValue_eq_skeletonIsValue, valueFamily.skeleton_eq parameter, isValue]
   · apply congr (valueReduce.wrapUnary .inr .inr
         (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates]))
     funext parameter
-    simp [reduce, Determinize.Statement.Paper.reduce, isValue_eq_skeletonIsValue, valueFamily.skeleton_eq parameter, isValue]
+    simp [reduce, Determinize.Spec.Paper.reduce, isValue_eq_skeletonIsValue, valueFamily.skeleton_eq parameter, isValue]
 
 theorem reduce_app_eq
     (function argument : Expr) :
@@ -2361,7 +2361,7 @@ theorem reduce_app_eq
           | _ => .stuck
         else (reduce argument).wrap (fun next => .app function next)
       else (reduce function).wrap (fun next => .app next argument) := by
-  cases function <;> simp only [reduce, Determinize.Statement.Paper.reduce]
+  cases function <;> simp only [reduce, Determinize.Spec.Paper.reduce]
 
 noncomputable def reduceApp {α : Type*} [MeasurableSpace α]
     (laws : Determinize.Proof.Paper.PrimitiveLaws)
@@ -2453,7 +2453,7 @@ theorem reduce_fst_eq
         | .pair left _ => .next left
         | _ => .stuck
       else (reduce pair).wrap .fst := by
-  cases pair <;> simp only [reduce, Determinize.Statement.Paper.reduce]
+  cases pair <;> simp only [reduce, Determinize.Spec.Paper.reduce]
 
 noncomputable def reduceFst {α : Type*} [MeasurableSpace α]
     (laws : Determinize.Proof.Paper.PrimitiveLaws)
@@ -2504,7 +2504,7 @@ theorem reduce_snd_eq
         | .pair _ right => .next right
         | _ => .stuck
       else (reduce pair).wrap .snd := by
-  cases pair <;> simp only [reduce, Determinize.Statement.Paper.reduce]
+  cases pair <;> simp only [reduce, Determinize.Spec.Paper.reduce]
 
 noncomputable def reduceSnd {α : Type*} [MeasurableSpace α]
     (laws : Determinize.Proof.Paper.PrimitiveLaws)
@@ -2557,7 +2557,7 @@ theorem reduce_matchSum_eq
         | _ => .stuck
       else (reduce scrutinee).wrap
         (fun next => .matchSum next left right) := by
-  cases scrutinee <;> simp only [reduce, Determinize.Statement.Paper.reduce]
+  cases scrutinee <;> simp only [reduce, Determinize.Spec.Paper.reduce]
 
 noncomputable def reduceMatchSum {α : Type*} [MeasurableSpace α]
     (laws : Determinize.Proof.Paper.PrimitiveLaws)
@@ -2627,7 +2627,7 @@ theorem reduce_matchList_eq
         | _ => .stuck
       else (reduce scrutinee).wrap
         (fun next => .matchList next nilCase consCase) := by
-  cases scrutinee <;> simp only [reduce, Determinize.Statement.Paper.reduce]
+  cases scrutinee <;> simp only [reduce, Determinize.Spec.Paper.reduce]
 
 noncomputable def reduceMatchList {α : Type*} [MeasurableSpace α]
     (laws : Determinize.Proof.Paper.PrimitiveLaws)
@@ -2699,8 +2699,8 @@ theorem reduce_ite_eq
         | _ => .stuck
       else (reduce condition).wrap
         (fun next => .ite next thenBranch elseBranch) := by
-  cases condition <;> simp only [reduce, Determinize.Statement.Paper.reduce]
-  case bool value => cases value <;> simp only [reduce, Determinize.Statement.Paper.reduce]
+  cases condition <;> simp only [reduce, Determinize.Spec.Paper.reduce]
+  case bool value => cases value <;> simp only [reduce, Determinize.Spec.Paper.reduce]
 
 noncomputable def reduceIte {α : Type*} [MeasurableSpace α]
     (laws : Determinize.Proof.Paper.PrimitiveLaws)
@@ -2769,7 +2769,7 @@ theorem reduce_let_eq
     reduce (.letE value body) =
       if value.isValue then .next (body.substHead value)
       else (reduce value).wrap (fun next => .letE next body) := by
-  cases value <;> simp only [reduce, Determinize.Statement.Paper.reduce]
+  cases value <;> simp only [reduce, Determinize.Spec.Paper.reduce]
 
 noncomputable def reduceLet {α : Type*} [MeasurableSpace α]
     (laws : Determinize.Proof.Paper.PrimitiveLaws)
@@ -2811,7 +2811,7 @@ theorem reduce_neg_eq
         | .real value => .next (.real (-value))
         | _ => .stuck
       else (reduce body).wrap .neg := by
-  cases body <;> simp only [reduce, Determinize.Statement.Paper.reduce]
+  cases body <;> simp only [reduce, Determinize.Spec.Paper.reduce]
 
 noncomputable def reduceNeg {α : Type*} [MeasurableSpace α]
     (laws : Determinize.Proof.Paper.PrimitiveLaws)
@@ -2867,7 +2867,7 @@ theorem reduce_add_eq
           | _, _ => .stuck
         else (reduce right).wrap (.add left)
       else (reduce left).wrap (fun next => .add next right) := by
-  cases left <;> cases right <;> simp only [reduce, Determinize.Statement.Paper.reduce] <;> rfl
+  cases left <;> cases right <;> simp only [reduce, Determinize.Spec.Paper.reduce] <;> rfl
 
 noncomputable def reduceAdd {α : Type*} [MeasurableSpace α]
     (laws : Determinize.Proof.Paper.PrimitiveLaws)
@@ -2970,7 +2970,7 @@ theorem reduce_mul_eq
           | _, _ => .stuck
         else (reduce right).wrap (.mul left)
       else (reduce left).wrap (fun next => .mul next right) := by
-  cases left <;> cases right <;> simp only [reduce, Determinize.Statement.Paper.reduce] <;> rfl
+  cases left <;> cases right <;> simp only [reduce, Determinize.Spec.Paper.reduce] <;> rfl
 
 noncomputable def reduceMul {α : Type*} [MeasurableSpace α]
     (laws : Determinize.Proof.Paper.PrimitiveLaws)
@@ -3073,7 +3073,7 @@ theorem reduce_div_eq
           | _, _ => .stuck
         else (reduce right).wrap (.div left)
       else (reduce left).wrap (fun next => .div next right) := by
-  cases left <;> cases right <;> simp only [reduce, Determinize.Statement.Paper.reduce] <;> rfl
+  cases left <;> cases right <;> simp only [reduce, Determinize.Spec.Paper.reduce] <;> rfl
 
 noncomputable def reduceDiv {α : Type*} [MeasurableSpace α]
     (laws : Determinize.Proof.Paper.PrimitiveLaws)
@@ -3176,7 +3176,7 @@ theorem reduce_lt_eq
           | _, _ => .stuck
         else (reduce right).wrap (.lt left)
       else (reduce left).wrap (fun next => .lt next right) := by
-  cases left <;> cases right <;> simp only [reduce, Determinize.Statement.Paper.reduce] <;> rfl
+  cases left <;> cases right <;> simp only [reduce, Determinize.Spec.Paper.reduce] <;> rfl
 
 noncomputable def reduceLt {α : Type*} [MeasurableSpace α]
     (laws : Determinize.Proof.Paper.PrimitiveLaws)
@@ -3286,7 +3286,7 @@ theorem reduce_uniform_eq (mode : Mode) (kind : Kind) (lower upper : Expr) :
           | _, _ => .stuck
         else (reduce upper).wrap (.uniform mode kind lower)
       else (reduce lower).wrap (fun next => .uniform mode kind next upper) := by
-  simp only [reduce, Determinize.Statement.Paper.reduce] <;> rfl
+  simp only [reduce, Determinize.Spec.Paper.reduce] <;> rfl
 
 theorem reduce_gaussian_eq (mode : Mode) (kind : Kind) (mean variance : Expr) :
     reduce (.gaussian mode kind mean variance) =
@@ -3296,7 +3296,7 @@ theorem reduce_gaussian_eq (mode : Mode) (kind : Kind) (mean variance : Expr) :
           | _, _ => .stuck
         else (reduce variance).wrap (.gaussian mode kind mean)
       else (reduce mean).wrap (fun next => .gaussian mode kind next variance) := by
-  simp only [reduce, Determinize.Statement.Paper.reduce] <;> rfl
+  simp only [reduce, Determinize.Spec.Paper.reduce] <;> rfl
 
 theorem reduce_poisson_eq (mode : Mode) (kind : Kind) (rate : Expr) :
     reduce (.poisson mode kind rate) =
@@ -3304,7 +3304,7 @@ theorem reduce_poisson_eq (mode : Mode) (kind : Kind) (rate : Expr) :
         | some r => .sample (mode, kind, .poisson) (poissonFiber kind r) .real
         | none => .stuck
       else (reduce rate).wrap (.poisson mode kind) := by
-  simp only [reduce, Determinize.Statement.Paper.reduce] <;> rfl
+  simp only [reduce, Determinize.Spec.Paper.reduce] <;> rfl
 
 theorem reduce_bernoulli_eq (mode : Mode) (kind : Kind) (probability : Expr) :
     reduce (.bernoulli mode kind probability) =
@@ -3312,7 +3312,7 @@ theorem reduce_bernoulli_eq (mode : Mode) (kind : Kind) (probability : Expr) :
         | some r => .sample (mode, kind, .bernoulli) (bernoulliFiber kind r) .real
         | none => .stuck
       else (reduce probability).wrap (.bernoulli mode kind) := by
-  simp only [reduce, Determinize.Statement.Paper.reduce] <;> rfl
+  simp only [reduce, Determinize.Spec.Paper.reduce] <;> rfl
 
 theorem reduce_exponential_eq (mode : Mode) (kind : Kind) (rate : Expr) :
     reduce (.exponential mode kind rate) =
@@ -3320,7 +3320,7 @@ theorem reduce_exponential_eq (mode : Mode) (kind : Kind) (rate : Expr) :
         | some r => .sample (mode, kind, .exponential) (exponentialFiber kind r) .real
         | none => .stuck
       else (reduce rate).wrap (.exponential mode kind) := by
-  simp only [reduce, Determinize.Statement.Paper.reduce] <;> rfl
+  simp only [reduce, Determinize.Spec.Paper.reduce] <;> rfl
 
 theorem reduce_beta_eq (mode : Mode) (kind : Kind) (alpha beta : Expr) :
     reduce (.beta mode kind alpha beta) =
@@ -3330,7 +3330,7 @@ theorem reduce_beta_eq (mode : Mode) (kind : Kind) (alpha beta : Expr) :
           | _, _ => .stuck
         else (reduce beta).wrap (.beta mode kind alpha)
       else (reduce alpha).wrap (fun next => .beta mode kind next beta) := by
-  simp only [reduce, Determinize.Statement.Paper.reduce] <;> rfl
+  simp only [reduce, Determinize.Spec.Paper.reduce] <;> rfl
 
 theorem reduce_gamma_eq (mode : Mode) (kind : Kind) (shape rate : Expr) :
     reduce (.gamma mode kind shape rate) =
@@ -3340,7 +3340,7 @@ theorem reduce_gamma_eq (mode : Mode) (kind : Kind) (shape rate : Expr) :
           | _, _ => .stuck
         else (reduce rate).wrap (.gamma mode kind shape)
       else (reduce shape).wrap (fun next => .gamma mode kind next rate) := by
-  simp only [reduce, Determinize.Statement.Paper.reduce] <;> rfl
+  simp only [reduce, Determinize.Spec.Paper.reduce] <;> rfl
 
 noncomputable def reduceUniform {α : Type*} [MeasurableSpace α]
     (laws : Determinize.Proof.Paper.PrimitiveLaws) (mode : Mode) (kind : Kind)
@@ -3913,7 +3913,7 @@ noncomputable def measurable_reduceAux
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Statement.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild]
+            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild]
       | cons headSkeleton tailSkeleton =>
           have headSmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
@@ -3930,7 +3930,7 @@ noncomputable def measurable_reduceAux
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Statement.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild]
+            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild]
       | inl valueSkeleton =>
           have valueSmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
@@ -3942,7 +3942,7 @@ noncomputable def measurable_reduceAux
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Statement.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild]
+            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild]
       | inr valueSkeleton =>
           have valueSmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
@@ -3954,7 +3954,7 @@ noncomputable def measurable_reduceAux
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Statement.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild]
+            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild]
       | app functionSkeleton argumentSkeleton =>
           have functionSmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
@@ -3971,7 +3971,7 @@ noncomputable def measurable_reduceAux
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Statement.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild]
+            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild]
       | fst pairSkeleton =>
           have pairSmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
@@ -3983,7 +3983,7 @@ noncomputable def measurable_reduceAux
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Statement.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild]
+            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild]
       | snd pairSkeleton =>
           have pairSmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
@@ -3995,7 +3995,7 @@ noncomputable def measurable_reduceAux
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Statement.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild]
+            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild]
       | matchSum scrutineeSkeleton leftSkeleton rightSkeleton =>
           have scrutineeSmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
@@ -4007,7 +4007,7 @@ noncomputable def measurable_reduceAux
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Statement.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild,
+            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild,
               Expr.thirdChild]
       | matchList scrutineeSkeleton nilSkeleton consSkeleton =>
           have scrutineeSmaller : sizeOf family.firstChild.skeleton < size := by
@@ -4021,7 +4021,7 @@ noncomputable def measurable_reduceAux
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Statement.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild,
+            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild,
               Expr.thirdChild]
       | ite conditionSkeleton thenSkeleton elseSkeleton =>
           have conditionSmaller : sizeOf family.firstChild.skeleton < size := by
@@ -4034,7 +4034,7 @@ noncomputable def measurable_reduceAux
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Statement.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild,
+            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild,
               Expr.thirdChild]
       | letE valueSkeleton bodySkeleton =>
           have valueSmaller : sizeOf family.firstChild.skeleton < size := by
@@ -4047,7 +4047,7 @@ noncomputable def measurable_reduceAux
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Statement.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild]
+            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild]
       | neg bodySkeleton =>
           have bodySmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
@@ -4059,7 +4059,7 @@ noncomputable def measurable_reduceAux
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Statement.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild]
+            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild]
       | add leftSkeleton rightSkeleton =>
           have leftSmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
@@ -4076,7 +4076,7 @@ noncomputable def measurable_reduceAux
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Statement.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild]
+            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild]
       | mul leftSkeleton rightSkeleton =>
           have leftSmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
@@ -4093,7 +4093,7 @@ noncomputable def measurable_reduceAux
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Statement.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild]
+            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild]
       | div leftSkeleton rightSkeleton =>
           have leftSmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
@@ -4110,7 +4110,7 @@ noncomputable def measurable_reduceAux
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Statement.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild]
+            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild]
       | lt leftSkeleton rightSkeleton =>
           have leftSmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
@@ -4127,7 +4127,7 @@ noncomputable def measurable_reduceAux
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Statement.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild]
+            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild]
       | uniform mode kind leftSkeleton rightSkeleton =>
           have leftSmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
@@ -4144,7 +4144,7 @@ noncomputable def measurable_reduceAux
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Statement.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild]
+            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild]
       | gaussian mode kind leftSkeleton rightSkeleton =>
           have leftSmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
@@ -4161,7 +4161,7 @@ noncomputable def measurable_reduceAux
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Statement.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild]
+            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild]
       | beta mode kind leftSkeleton rightSkeleton =>
           have leftSmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
@@ -4178,7 +4178,7 @@ noncomputable def measurable_reduceAux
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Statement.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild]
+            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild]
       | gamma mode kind leftSkeleton rightSkeleton =>
           have leftSmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
@@ -4195,7 +4195,7 @@ noncomputable def measurable_reduceAux
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Statement.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild]
+            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild]
       | poisson mode kind bodySkeleton =>
           have bodySmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
@@ -4207,7 +4207,7 @@ noncomputable def measurable_reduceAux
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Statement.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild]
+            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild]
       | bernoulli mode kind bodySkeleton =>
           have bodySmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
@@ -4219,7 +4219,7 @@ noncomputable def measurable_reduceAux
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Statement.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild]
+            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild]
       | exponential mode kind bodySkeleton =>
           have bodySmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
@@ -4231,7 +4231,7 @@ noncomputable def measurable_reduceAux
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Statement.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild]
+            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild]
 noncomputable def measurable_reduce {α : Type u} [MeasurableSpace α]
     (laws : Determinize.Proof.Paper.PrimitiveLaws)
     {expression : α → Expr} (family : MeasurableFamily α expression) :
@@ -4442,13 +4442,13 @@ theorem reduce_sample_continuation_measurable
   exact sample_continuation_measurable_of_family family () equality
 
 theorem meanKernel_mass_le_one
-    (op : Determinize.Statement.Paper.Op)
-    (params : Determinize.Statement.Paper.Params op) :
+    (op : Determinize.Spec.Paper.Op)
+    (params : Determinize.Spec.Paper.Params op) :
     (primitiveKernelPack laws .mean op).kernel params Set.univ ≤ 1 := by
   classical
   change (Kernel.piecewise
     (Determinize.Proof.Paper.measurableSet_domain op)
-    (Kernel.deterministic (Determinize.Statement.Paper.meanValue op)
+    (Kernel.deterministic (Determinize.Spec.Paper.meanValue op)
       (measurable_meanValue op)) 0 params) Set.univ ≤ 1
   rw [Kernel.piecewise_apply]
   split <;> simp [Kernel.deterministic_apply]
@@ -4456,8 +4456,8 @@ theorem meanKernel_mass_le_one
 theorem primitiveFiber_mass_le_one
     (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : Kind) (op : Op)
     (affine general : List ℝ)
-    (affineArity : affine.length = Determinize.Statement.Paper.affineArity op)
-    (generalArity : general.length = Determinize.Statement.Paper.generalArity op) :
+    (affineArity : affine.length = Determinize.Spec.Paper.affineArity op)
+    (generalArity : general.length = Determinize.Spec.Paper.generalArity op) :
     primitiveFiber kind op affine general Set.univ ≤ 1 := by
   rw [primitiveFiber_eq_atomic laws kind op affine general affineArity generalArity]
   cases kind with
@@ -4546,38 +4546,38 @@ theorem reduce_sample_mass_le_one
           ⟨inner, childEquality, _⟩
         exact recurse child smaller inner childEquality
       cases expression with
-      | bvar index => simp [reduce, Determinize.Statement.Paper.reduce] at equality
-      | reject => simp [reduce, Determinize.Statement.Paper.reduce] at equality
+      | bvar index => simp [reduce, Determinize.Spec.Paper.reduce] at equality
+      | reject => simp [reduce, Determinize.Spec.Paper.reduce] at equality
       | discrete mode kind d =>
-          simp only [reduce, Determinize.Statement.Paper.reduce] at equality
+          simp only [reduce, Determinize.Spec.Paper.reduce] at equality
           cases equality
           rw [discreteFiber_eq]
           exact primitiveFiber_mass_le_one laws kind (.discrete d) [] [] rfl rfl
-      | unit => simp [reduce, Determinize.Statement.Paper.reduce] at equality
-      | bool value => simp [reduce, Determinize.Statement.Paper.reduce] at equality
-      | real value => simp [reduce, Determinize.Statement.Paper.reduce] at equality
-      | lam body => simp [reduce, Determinize.Statement.Paper.reduce] at equality
-      | fix body => simp [reduce, Determinize.Statement.Paper.reduce] at equality
-      | nil => simp [reduce, Determinize.Statement.Paper.reduce] at equality
+      | unit => simp [reduce, Determinize.Spec.Paper.reduce] at equality
+      | bool value => simp [reduce, Determinize.Spec.Paper.reduce] at equality
+      | real value => simp [reduce, Determinize.Spec.Paper.reduce] at equality
+      | lam body => simp [reduce, Determinize.Spec.Paper.reduce] at equality
+      | fix body => simp [reduce, Determinize.Spec.Paper.reduce] at equality
+      | nil => simp [reduce, Determinize.Spec.Paper.reduce] at equality
       | pair left right =>
-          simp only [reduce, Determinize.Statement.Paper.reduce] at equality
+          simp only [reduce, Determinize.Spec.Paper.reduce] at equality
           split at equality
           · split at equality
             · simp at equality
             · exact wrapped right (by rw [← sizeEq]; simp_wf <;> omega) _ equality
           · exact wrapped left (by rw [← sizeEq]; simp_wf <;> omega) _ equality
       | inl value =>
-          simp only [reduce, Determinize.Statement.Paper.reduce] at equality
+          simp only [reduce, Determinize.Spec.Paper.reduce] at equality
           split at equality
           · simp at equality
           · exact wrapped value (by rw [← sizeEq]; simp_wf <;> omega) _ equality
       | inr value =>
-          simp only [reduce, Determinize.Statement.Paper.reduce] at equality
+          simp only [reduce, Determinize.Spec.Paper.reduce] at equality
           split at equality
           · simp at equality
           · exact wrapped value (by rw [← sizeEq]; simp_wf <;> omega) _ equality
       | cons head tail =>
-          simp only [reduce, Determinize.Statement.Paper.reduce] at equality
+          simp only [reduce, Determinize.Spec.Paper.reduce] at equality
           split at equality
           · split at equality
             · simp at equality
@@ -4729,12 +4729,12 @@ theorem stepMeasure_mass_le_one
     (expression : Expr) : stepMeasure expression Set.univ ≤ 1 := by
   unfold stepMeasure
   cases equality : reduce expression with
-  | next successor => simp [Determinize.Statement.Paper.Action.measure]
-  | stuck => simp [Determinize.Statement.Paper.Action.measure]
+  | next successor => simp [Determinize.Spec.Paper.Action.measure]
+  | stuck => simp [Determinize.Spec.Paper.Action.measure]
   | sample site fiber continuation =>
       have continuationMeasurable := reduce_sample_continuation_measurable laws
         expression fiber continuation equality
-      simp only [Determinize.Statement.Paper.Action.measure]
+      simp only [Determinize.Spec.Paper.Action.measure]
       rw [Measure.map_apply continuationMeasurable MeasurableSet.univ]
       simp only [Set.preimage_univ]
       exact reduce_sample_mass_le_one laws expression fiber continuation equality
@@ -4905,7 +4905,7 @@ theorem stepKernel_eq_dirac_of_value
   rw [stepKernel.kernel_eq_stepMeasure]
   unfold stepMeasure
   cases expression <;>
-    simp_all [Expr.isValue, reduce, Determinize.Statement.Paper.Action.measure,
+    simp_all [Expr.isValue, reduce, Determinize.Spec.Paper.Action.measure,
       Bool.and_eq_true]
 
 theorem nStepKernel_commutes

@@ -5,13 +5,13 @@ import Determinize.Proof.TraceFactorization
 # Compact trace soundness
 
 The detailed step-trace results are transported to compact traces of general-mode draws, with
-`Traces.outputGivenTrace` as the fiber: the Markov version `normalizedOutputGivenTrace` factors
+`Spec.Traces.outputGivenTrace` as the fiber: the Markov version `normalizedOutputGivenTrace` factors
 the joint laws, and almost surely it agrees with `outputGivenTrace` on the source, while on the
 target `outputGivenTrace` is the Dirac mass at the target output.
 -/
 
 namespace Determinize.Proof.Traces
-open MeasureTheory ProbabilityTheory Determinize.Statement.Paper Determinize.Traces
+open MeasureTheory ProbabilityTheory Determinize.Spec.Paper Determinize.Spec.Traces
 open Determinize.Proof.Paper
 open StepTraces (retain retain_measurable FiberSound mapTraceOutput mapTrace_measurable
   normalizedOutputGivenTrace normalizedOutputGivenTrace_eq outputGivenTraceKernel
@@ -74,7 +74,7 @@ theorem joint_eq_detailed (e : Expr) :
   rw [traceAndOutputLaw, StepTraces.jointMeasure, Measure.map_sum eraseOutput_measurable.aemeasurable]
   simp_rw [exact_eq_detailed]
 
-theorem correspondence : Determinize.Traces.correspondenceThm := by
+theorem correspondence : Determinize.Spec.Traces.correspondenceThm := by
   intro e
   rw [joint_eq_detailed, Measure.map_map measurable_snd eraseOutput_measurable]
   exact StepTraces.correspondence e
@@ -98,7 +98,7 @@ theorem exact_succ_next (depth : Nat) (e next : Expr) (nv : e.isValue ≠ true)
 
 /-! ### The compact replay as the fiber -/
 
-/-- `Traces.outputGivenTrace` normalized to a Markov kernel, as an s-finite kernel. -/
+/-- `Spec.Traces.outputGivenTrace` normalized to a Markov kernel, as an s-finite kernel. -/
 def normalizedKernel (source : Expr) : SFiniteKernel Trace ℝ :=
   ⟨normalizedOutputGivenTrace source, inferInstance⟩
 
@@ -289,7 +289,7 @@ theorem targetLaw (program : Expr) (typed : Typed [] program (.float .E))
   simp only [kernelMean, replayMean, same]
 
 /-- The public trace soundness theorem. -/
-theorem soundness : Determinize.Traces.soundnessThm := by
+theorem soundness : Determinize.Spec.Traces.soundnessThm := by
   intro program typed sourceForm safe
   let f := kernelMean (normalizedOutputGivenTrace program)
   obtain ⟨targetSafe, factor, massAe, diracAe⟩ :=

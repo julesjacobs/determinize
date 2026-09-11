@@ -20,9 +20,9 @@ set_option linter.unusedVariables false
 namespace Determinize.Proof.Paper.SymbolicSoundness
 
 open MeasureTheory ProbabilityTheory
-open Determinize.Statement.Paper
+open Determinize.Spec.Paper
 
-attribute [local simp] Determinize.Statement.Paper.reduce
+attribute [local simp] Determinize.Spec.Paper.reduce
 
 namespace SampleEnv
 
@@ -75,16 +75,16 @@ def smul (scalar : ℝ) (expression : Symbolic.Affine n) : Symbolic.Affine n :=
 def tail (expression : Symbolic.Affine (n + 1)) : Symbolic.Affine n :=
   (expression.1, fun i => expression.2 i.succ)
 
-noncomputable def primitiveMean (op : Determinize.Statement.Paper.Op)
-    (affineArgs : Fin (Determinize.Statement.Paper.affineArity op) → Symbolic.Affine n)
-    (generalArgs : Fin (Determinize.Statement.Paper.generalArity op) → ℝ) : Symbolic.Affine n :=
+noncomputable def primitiveMean (op : Determinize.Spec.Paper.Op)
+    (affineArgs : Fin (Determinize.Spec.Paper.affineArity op) → Symbolic.Affine n)
+    (generalArgs : Fin (Determinize.Spec.Paper.generalArity op) → ℝ) : Symbolic.Affine n :=
   (Determinize.Proof.Paper.meanConstant op generalArgs +
       ∑ i, Determinize.Proof.Paper.meanCoeff op generalArgs i * (affineArgs i).1,
     fun j => ∑ i, Determinize.Proof.Paper.meanCoeff op generalArgs i * (affineArgs i).2 j)
 
-noncomputable def substituteHeadMean (expression : Symbolic.Affine (n + 1)) (op : Determinize.Statement.Paper.Op)
-    (affineArgs : Fin (Determinize.Statement.Paper.affineArity op) → Symbolic.Affine n)
-    (generalArgs : Fin (Determinize.Statement.Paper.generalArity op) → ℝ) : Symbolic.Affine n :=
+noncomputable def substituteHeadMean (expression : Symbolic.Affine (n + 1)) (op : Determinize.Spec.Paper.Op)
+    (affineArgs : Fin (Determinize.Spec.Paper.affineArity op) → Symbolic.Affine n)
+    (generalArgs : Fin (Determinize.Spec.Paper.generalArity op) → ℝ) : Symbolic.Affine n :=
   add (tail expression) (smul (expression.2 0) (primitiveMean op affineArgs generalArgs))
 
 theorem eval_add (left right : Symbolic.Affine n) (environment : Env n) :
@@ -118,12 +118,12 @@ theorem eval_cons_convexCombination (expression : Symbolic.Affine (n + 1))
         b * (Symbolic.Affine.eval (tail expression) environment + expression.2 0 * right) := by
   linear_combination -(Symbolic.Affine.eval (tail expression) environment) * hSum
 
-theorem eval_primitiveMean (op : Determinize.Statement.Paper.Op)
-    (affineArgs : Fin (Determinize.Statement.Paper.affineArity op) → Symbolic.Affine n)
-    (generalArgs : Fin (Determinize.Statement.Paper.generalArity op) → ℝ)
+theorem eval_primitiveMean (op : Determinize.Spec.Paper.Op)
+    (affineArgs : Fin (Determinize.Spec.Paper.affineArity op) → Symbolic.Affine n)
+    (generalArgs : Fin (Determinize.Spec.Paper.generalArity op) → ℝ)
     (environment : Env n) :
     Symbolic.Affine.eval (primitiveMean op affineArgs generalArgs) environment =
-      Determinize.Statement.Paper.meanValue op
+      Determinize.Spec.Paper.meanValue op
         (fun i => Symbolic.Affine.eval (affineArgs i) environment, generalArgs) := by
   rw [meanValue_eq_affine]
   simp only [primitiveMean, Symbolic.Affine.eval]
@@ -134,23 +134,23 @@ theorem eval_primitiveMean (op : Determinize.Statement.Paper.Op)
   congr 1
   rw [Finset.sum_comm]
 
-theorem eval_substituteHeadMean (expression : Symbolic.Affine (n + 1)) (op : Determinize.Statement.Paper.Op)
-    (affineArgs : Fin (Determinize.Statement.Paper.affineArity op) → Symbolic.Affine n)
-    (generalArgs : Fin (Determinize.Statement.Paper.generalArity op) → ℝ)
+theorem eval_substituteHeadMean (expression : Symbolic.Affine (n + 1)) (op : Determinize.Spec.Paper.Op)
+    (affineArgs : Fin (Determinize.Spec.Paper.affineArity op) → Symbolic.Affine n)
+    (generalArgs : Fin (Determinize.Spec.Paper.generalArity op) → ℝ)
     (environment : Env n) :
     Symbolic.Affine.eval (substituteHeadMean expression op affineArgs generalArgs) environment =
       Symbolic.Affine.eval (tail expression) environment + expression.2 0 *
-        Determinize.Statement.Paper.meanValue op
+        Determinize.Spec.Paper.meanValue op
           (fun i => Symbolic.Affine.eval (affineArgs i) environment, generalArgs) := by
   rw [substituteHeadMean, eval_add, eval_smul, eval_primitiveMean]
 
 end Affine
 
-theorem domain_valueSet_convex (queryOp : Determinize.Statement.Paper.Op)
-    (queryAffineArgs : Fin (Determinize.Statement.Paper.affineArity queryOp) → Symbolic.Affine (n + 1))
-    (queryGeneralArgs : Fin (Determinize.Statement.Paper.generalArity queryOp) → ℝ)
+theorem domain_valueSet_convex (queryOp : Determinize.Spec.Paper.Op)
+    (queryAffineArgs : Fin (Determinize.Spec.Paper.affineArity queryOp) → Symbolic.Affine (n + 1))
+    (queryGeneralArgs : Fin (Determinize.Spec.Paper.generalArity queryOp) → ℝ)
     (environment : Env n) :
-    Convex ℝ {value : ℝ | Determinize.Statement.Paper.domain queryOp
+    Convex ℝ {value : ℝ | Determinize.Spec.Paper.domain queryOp
       (fun i => Symbolic.Affine.eval (queryAffineArgs i) (Env.cons value environment),
         queryGeneralArgs)} := by
   rw [convex_iff_add_mem]
@@ -159,7 +159,7 @@ theorem domain_valueSet_convex (queryOp : Determinize.Statement.Paper.Op)
   | uniform =>
       change Fin 2 → Symbolic.Affine (n + 1) at queryAffineArgs
       change Fin 0 → ℝ at queryGeneralArgs
-      simp only [Determinize.Statement.Paper.domain, Set.mem_ofPred_eq] at leftDomain rightDomain ⊢
+      simp only [Determinize.Spec.Paper.domain, Set.mem_ofPred_eq] at leftDomain rightDomain ⊢
       simp only [Affine.eval_cons, smul_eq_mul] at leftDomain rightDomain ⊢
       simp_rw [Affine.eval_cons_convexCombination _ environment left right a b hab]
       exact add_le_add (mul_le_mul_of_nonneg_left leftDomain ha)
@@ -168,7 +168,7 @@ theorem domain_valueSet_convex (queryOp : Determinize.Statement.Paper.Op)
   | poisson =>
       change Fin 1 → Symbolic.Affine (n + 1) at queryAffineArgs
       change Fin 0 → ℝ at queryGeneralArgs
-      simp only [Determinize.Statement.Paper.domain, Set.mem_ofPred_eq] at leftDomain rightDomain ⊢
+      simp only [Determinize.Spec.Paper.domain, Set.mem_ofPred_eq] at leftDomain rightDomain ⊢
       simp only [Affine.eval_cons, smul_eq_mul] at leftDomain rightDomain ⊢
       rw [Affine.eval_cons_convexCombination _ environment left right a b hab]
       exact add_nonneg (mul_nonneg ha leftDomain) (mul_nonneg hb rightDomain)
@@ -177,7 +177,7 @@ theorem domain_valueSet_convex (queryOp : Determinize.Statement.Paper.Op)
   | gamma =>
       change Fin 1 → Symbolic.Affine (n + 1) at queryAffineArgs
       change Fin 1 → ℝ at queryGeneralArgs
-      simp only [Determinize.Statement.Paper.domain, Set.mem_ofPred_eq] at leftDomain rightDomain ⊢
+      simp only [Determinize.Spec.Paper.domain, Set.mem_ofPred_eq] at leftDomain rightDomain ⊢
       constructor
       · simp only [Affine.eval_cons, smul_eq_mul] at leftDomain rightDomain ⊢
         rw [Affine.eval_cons_convexCombination _ environment left right a b hab]
@@ -191,7 +191,7 @@ theorem domain_valueSet_convex (queryOp : Determinize.Statement.Paper.Op)
   | bernoulli =>
       change Fin 1 → Symbolic.Affine (n + 1) at queryAffineArgs
       change Fin 0 → ℝ at queryGeneralArgs
-      simp only [Determinize.Statement.Paper.domain, Set.mem_ofPred_eq] at leftDomain rightDomain ⊢
+      simp only [Determinize.Spec.Paper.domain, Set.mem_ofPred_eq] at leftDomain rightDomain ⊢
       simp only [Affine.eval_cons, smul_eq_mul] at leftDomain rightDomain ⊢
       rw [Affine.eval_cons_convexCombination _ environment left right a b hab]
       constructor
@@ -201,11 +201,11 @@ theorem domain_valueSet_convex (queryOp : Determinize.Statement.Paper.Op)
         simpa [hab] using bound
   | discrete _ => trivial
 
-noncomputable def transitionPack (laws : Determinize.Proof.Paper.PrimitiveLaws) (op : Determinize.Statement.Paper.Op)
-    (affineArgs : Fin (Determinize.Statement.Paper.affineArity op) → Symbolic.Affine n)
-    (generalArgs : Fin (Determinize.Statement.Paper.generalArity op) → ℝ) :
+noncomputable def transitionPack (laws : Determinize.Proof.Paper.PrimitiveLaws) (op : Determinize.Spec.Paper.Op)
+    (affineArgs : Fin (Determinize.Spec.Paper.affineArity op) → Symbolic.Affine n)
+    (generalArgs : Fin (Determinize.Spec.Paper.generalArity op) → ℝ) :
     SFiniteKernel (Env n) (Env (n + 1)) := by
-  let draw : SFiniteKernel (Determinize.Statement.Paper.Params op) ℝ := ⟨laws.kernel op, laws.kernel_sfinite op⟩
+  let draw : SFiniteKernel (Determinize.Spec.Paper.Params op) ℝ := ⟨laws.kernel op, laws.kernel_sfinite op⟩
   let parameters := fun environment : Env n =>
     (fun i => Symbolic.Affine.eval (affineArgs i) environment, generalArgs)
   have parametersMeasurable : Measurable parameters := by
@@ -219,15 +219,15 @@ noncomputable def transitionPack (laws : Determinize.Proof.Paper.PrimitiveLaws) 
     (fun input => Env.cons input.2 input.1)
     (measurable_envCons.comp (measurable_snd.prodMk measurable_fst))
 
-theorem transitionPack_apply (laws : Determinize.Proof.Paper.PrimitiveLaws) (op : Determinize.Statement.Paper.Op)
-    (affineArgs : Fin (Determinize.Statement.Paper.affineArity op) → Symbolic.Affine n)
-    (generalArgs : Fin (Determinize.Statement.Paper.generalArity op) → ℝ)
+theorem transitionPack_apply (laws : Determinize.Proof.Paper.PrimitiveLaws) (op : Determinize.Spec.Paper.Op)
+    (affineArgs : Fin (Determinize.Spec.Paper.affineArity op) → Symbolic.Affine n)
+    (generalArgs : Fin (Determinize.Spec.Paper.generalArity op) → ℝ)
     (environment : Env n) :
     (transitionPack laws op affineArgs generalArgs).kernel environment =
       (laws.kernel op
         (fun i => Symbolic.Affine.eval (affineArgs i) environment, generalArgs)).map
           (fun value => Env.cons value environment) := by
-  let draw : SFiniteKernel (Determinize.Statement.Paper.Params op) ℝ := ⟨laws.kernel op, laws.kernel_sfinite op⟩
+  let draw : SFiniteKernel (Determinize.Spec.Paper.Params op) ℝ := ⟨laws.kernel op, laws.kernel_sfinite op⟩
   let parameters := fun environment : Env n =>
     (fun i => Symbolic.Affine.eval (affineArgs i) environment, generalArgs)
   have parametersMeasurable : Measurable parameters := by
@@ -304,9 +304,9 @@ theorem actualMeasure_univ_eq_one (laws : Determinize.Proof.Paper.PrimitiveLaws)
         _ = 1 := ih safe.1
 
 theorem actualMeasure_snoc_eq_comp (laws : Determinize.Proof.Paper.PrimitiveLaws)
-    (history : Symbolic.SampleEnv laws n) (op : Determinize.Statement.Paper.Op)
-    (affineArgs : Fin (Determinize.Statement.Paper.affineArity op) → Symbolic.Affine n)
-    (generalArgs : Fin (Determinize.Statement.Paper.generalArity op) → ℝ) :
+    (history : Symbolic.SampleEnv laws n) (op : Determinize.Spec.Paper.Op)
+    (affineArgs : Fin (Determinize.Spec.Paper.affineArity op) → Symbolic.Affine n)
+    (generalArgs : Fin (Determinize.Spec.Paper.generalArity op) → ℝ) :
     Symbolic.SampleEnv.actualMeasure laws
         (.snoc history op affineArgs generalArgs) =
       (transitionPack laws op affineArgs generalArgs).kernel ∘ₘ
@@ -317,11 +317,11 @@ theorem actualMeasure_snoc_eq_comp (laws : Determinize.Proof.Paper.PrimitiveLaws
   exact (transitionPack_apply laws op affineArgs generalArgs environment).symm
 
 theorem integrable_eval_transition (laws : Determinize.Proof.Paper.PrimitiveLaws)
-    (op : Determinize.Statement.Paper.Op)
-    (affineArgs : Fin (Determinize.Statement.Paper.affineArity op) → Symbolic.Affine n)
-    (generalArgs : Fin (Determinize.Statement.Paper.generalArity op) → ℝ)
+    (op : Determinize.Spec.Paper.Op)
+    (affineArgs : Fin (Determinize.Spec.Paper.affineArity op) → Symbolic.Affine n)
+    (generalArgs : Fin (Determinize.Spec.Paper.generalArity op) → ℝ)
     (expression : Symbolic.Affine (n + 1)) (environment : Env n)
-    (domain : Determinize.Statement.Paper.domain op
+    (domain : Determinize.Spec.Paper.domain op
       (fun i => Symbolic.Affine.eval (affineArgs i) environment, generalArgs)) :
     Integrable (fun nextEnvironment => Symbolic.Affine.eval expression nextEnvironment)
       ((transitionPack laws op affineArgs generalArgs).kernel environment) := by
@@ -331,7 +331,7 @@ theorem integrable_eval_transition (laws : Determinize.Proof.Paper.PrimitiveLaws
   rw [integrable_map_measure
     (Determinize.Proof.Paper.Symbolic.AffineExpr.affine_eval_measurable
       expression).aestronglyMeasurable sectionMeasurable.aemeasurable]
-  let params : Determinize.Statement.Paper.Params op :=
+  let params : Determinize.Spec.Paper.Params op :=
     (fun i => Symbolic.Affine.eval (affineArgs i) environment, generalArgs)
   have mass : laws.kernel op params Set.univ = 1 := laws.mass_one op params domain
   let _ : IsFiniteMeasure (laws.kernel op params) := ⟨by rw [mass]; simp⟩
@@ -349,11 +349,11 @@ theorem integrable_eval_transition (laws : Determinize.Proof.Paper.PrimitiveLaws
   rw [functionEq]
   exact affineIntegrable
 
-theorem integral_eval_transition (laws : Determinize.Proof.Paper.PrimitiveLaws) (op : Determinize.Statement.Paper.Op)
-    (affineArgs : Fin (Determinize.Statement.Paper.affineArity op) → Symbolic.Affine n)
-    (generalArgs : Fin (Determinize.Statement.Paper.generalArity op) → ℝ)
+theorem integral_eval_transition (laws : Determinize.Proof.Paper.PrimitiveLaws) (op : Determinize.Spec.Paper.Op)
+    (affineArgs : Fin (Determinize.Spec.Paper.affineArity op) → Symbolic.Affine n)
+    (generalArgs : Fin (Determinize.Spec.Paper.generalArity op) → ℝ)
     (expression : Symbolic.Affine (n + 1)) (environment : Env n)
-    (domain : Determinize.Statement.Paper.domain op
+    (domain : Determinize.Spec.Paper.domain op
       (fun i => Symbolic.Affine.eval (affineArgs i) environment, generalArgs)) :
     (∫ nextEnvironment, Symbolic.Affine.eval expression nextEnvironment
         ∂(transitionPack laws op affineArgs generalArgs).kernel environment) =
@@ -366,7 +366,7 @@ theorem integral_eval_transition (laws : Determinize.Proof.Paper.PrimitiveLaws) 
     (Determinize.Proof.Paper.Symbolic.AffineExpr.affine_eval_measurable
       expression).aestronglyMeasurable]
   simp_rw [Affine.eval_cons]
-  let params : Determinize.Statement.Paper.Params op :=
+  let params : Determinize.Spec.Paper.Params op :=
     (fun i => Symbolic.Affine.eval (affineArgs i) environment, generalArgs)
   have mass : laws.kernel op params Set.univ = 1 := laws.mass_one op params domain
   let _ : IsFiniteMeasure (laws.kernel op params) := ⟨by rw [mass]; simp⟩
@@ -389,12 +389,12 @@ theorem integral_eval_transition (laws : Determinize.Proof.Paper.PrimitiveLaws) 
 theorem domain_at_meanEnvironment (laws : Determinize.Proof.Paper.PrimitiveLaws)
     (history : Symbolic.SampleEnv laws n)
     (safe : Symbolic.SampleEnv.DomainSafe laws history)
-    (op : Determinize.Statement.Paper.Op) (affineArgs : Fin (Determinize.Statement.Paper.affineArity op) → Symbolic.Affine n)
-    (generalArgs : Fin (Determinize.Statement.Paper.generalArity op) → ℝ)
+    (op : Determinize.Spec.Paper.Op) (affineArgs : Fin (Determinize.Spec.Paper.affineArity op) → Symbolic.Affine n)
+    (generalArgs : Fin (Determinize.Spec.Paper.generalArity op) → ℝ)
     (domainAE : ∀ᵐ environment ∂Symbolic.SampleEnv.actualMeasure laws history,
-      Determinize.Statement.Paper.domain op
+      Determinize.Spec.Paper.domain op
         (fun i => Symbolic.Affine.eval (affineArgs i) environment, generalArgs)) :
-    Determinize.Statement.Paper.domain op
+    Determinize.Spec.Paper.domain op
       (fun i => Symbolic.Affine.eval (affineArgs i)
         (Symbolic.SampleEnv.meanEnvironment laws history), generalArgs) := by
   induction history generalizing op with
@@ -410,18 +410,18 @@ theorem domain_at_meanEnvironment (laws : Determinize.Proof.Paper.PrimitiveLaws)
         actualMeasure_snoc_eq_comp laws history sampledOp sampledAffineArgs sampledGeneralArgs
       have fiberDomain : ∀ᵐ environment ∂prior,
           ∀ᵐ nextEnvironment ∂transition environment,
-            Determinize.Statement.Paper.domain op
+            Determinize.Spec.Paper.domain op
               (fun i => Symbolic.Affine.eval (affineArgs i) nextEnvironment, generalArgs) := by
         rw [actualEq] at domainAE
         exact Measure.ae_ae_of_ae_bind transition.aemeasurable domainAE
-      let reducedArgs : Fin (Determinize.Statement.Paper.affineArity op) → Symbolic.Affine n := fun i =>
+      let reducedArgs : Fin (Determinize.Spec.Paper.affineArity op) → Symbolic.Affine n := fun i =>
         Affine.substituteHeadMean (affineArgs i) sampledOp
           sampledAffineArgs sampledGeneralArgs
       have reducedDomainAE : ∀ᵐ environment ∂prior,
-          Determinize.Statement.Paper.domain op
+          Determinize.Spec.Paper.domain op
             (fun i => Symbolic.Affine.eval (reducedArgs i) environment, generalArgs) := by
         filter_upwards [safe.2, fiberDomain] with environment sampledDomain queryDomain
-        let sampledParams : Determinize.Statement.Paper.Params sampledOp :=
+        let sampledParams : Determinize.Spec.Paper.Params sampledOp :=
           (fun i => Symbolic.Affine.eval (sampledAffineArgs i) environment,
             sampledGeneralArgs)
         have transitionApply : transition environment =
@@ -432,7 +432,7 @@ theorem domain_at_meanEnvironment (laws : Determinize.Proof.Paper.PrimitiveLaws)
         have sectionMeasurable : Measurable (fun value : ℝ => Env.cons value environment) :=
           measurable_envCons.comp (measurable_id.prodMk measurable_const)
         have drawDomain : ∀ᵐ value ∂laws.kernel sampledOp sampledParams,
-            Determinize.Statement.Paper.domain op
+            Determinize.Spec.Paper.domain op
               (fun i => Symbolic.Affine.eval (affineArgs i)
                 (Env.cons value environment), generalArgs) :=
           MeasureTheory.ae_of_ae_map sectionMeasurable.aemeasurable queryDomain
@@ -442,9 +442,9 @@ theorem domain_at_meanEnvironment (laws : Determinize.Proof.Paper.PrimitiveLaws)
           (domain_valueSet_convex op affineArgs generalArgs environment) drawDomain
           (laws.integrable_id sampledOp sampledParams sampledDomain)
         rw [laws.mean_law sampledOp sampledParams sampledDomain] at meanDomain
-        change Determinize.Statement.Paper.domain op
+        change Determinize.Spec.Paper.domain op
           (fun i => Symbolic.Affine.eval (affineArgs i)
-            (Env.cons (Determinize.Statement.Paper.meanValue sampledOp sampledParams) environment), generalArgs)
+            (Env.cons (Determinize.Spec.Paper.meanValue sampledOp sampledParams) environment), generalArgs)
           at meanDomain
         simpa only [reducedArgs, Affine.eval_substituteHeadMean, ← Affine.eval_cons]
           using meanDomain
@@ -467,8 +467,8 @@ def SafeConfigAt (laws : Determinize.Proof.Paper.PrimitiveLaws) (fuel : Nat)
       PrimitiveDomainSafeAt fuel (expression.realize environment)
 
 theorem stochastic_mass_one_imp_domain (laws : Determinize.Proof.Paper.PrimitiveLaws)
-    (op : Determinize.Statement.Paper.Op) (params : Determinize.Statement.Paper.Params op)
-    (mass : laws.kernel op params Set.univ = 1) : Determinize.Statement.Paper.domain op params := by
+    (op : Determinize.Spec.Paper.Op) (params : Determinize.Spec.Paper.Params op)
+    (mass : laws.kernel op params Set.univ = 1) : Determinize.Spec.Paper.domain op params := by
   by_contra outside
   rw [laws.kernel_zero_off_domain op params outside] at mass
   simp at mass
@@ -551,7 +551,7 @@ theorem nStepMeasure_succ_sample_univ
   rw [stepKernel.kernel_eq_stepMeasure]
   unfold stepMeasure
   rw [reduction]
-  simp only [Determinize.Statement.Paper.Action.measure]
+  simp only [Determinize.Spec.Paper.Action.measure]
   have continuationMeasurable := stepKernel.sample_continuation_measurable
     expression fiber continuation reduction
   rw [MeasureTheory.lintegral_map'
@@ -567,7 +567,7 @@ theorem nStepMeasure_succ_next_univ
   rw [nStepMeasure_succ_eq_firstStep stepKernel fuel expression, stepKernel.kernel_eq_stepMeasure]
   unfold stepMeasure
   rw [reduction]
-  simp only [Determinize.Statement.Paper.Action.measure]
+  simp only [Determinize.Spec.Paper.Action.measure]
   rw [show nStepMeasure stepKernel fuel =
       (Determinize.Proof.Paper.MeasurableActionFamily.nStepKernelPack
         stepKernel fuel).kernel from by
@@ -580,8 +580,8 @@ theorem nStepMeasure_succ_next_univ
 
 theorem doesNotGetStuckAt_iff_nStepMeasure_univ_eq_one
     (stepKernel : StepKernel) (fuel : Nat) (expression : Expr)
-    (typed : Determinize.Statement.Paper.Typed [] expression ty) :
-    Determinize.Statement.Paper.DoesNotGetStuckAt fuel expression ↔
+    (typed : Determinize.Spec.Paper.Typed [] expression ty) :
+    Determinize.Spec.Paper.DoesNotGetStuckAt fuel expression ↔
       nStepMeasure stepKernel fuel expression Set.univ = 1 := by
   induction fuel generalizing expression ty with
   | zero => simp [DoesNotGetStuckAt, nStepMeasure]
@@ -632,7 +632,7 @@ theorem doesNotGetStuckAt_iff_nStepMeasure_univ_eq_one
                     rw [stepKernel.kernel_eq_stepMeasure] at kernelLeOne
                     unfold stepMeasure at kernelLeOne
                     rw [reduction] at kernelLeOne
-                    simp only [Determinize.Statement.Paper.Action.measure] at kernelLeOne
+                    simp only [Determinize.Spec.Paper.Action.measure] at kernelLeOne
                     rw [Measure.map_apply
                       (stepKernel.sample_continuation_measurable expression fiber continuation
                         reduction) MeasurableSet.univ] at kernelLeOne
@@ -665,7 +665,7 @@ theorem doesNotGetStuckAt_iff_nStepMeasure_univ_eq_one
 
 theorem primitiveDomainSafeAt_iff_nStepMeasure_univ_eq_one
     (stepKernel : StepKernel) (fuel : Nat) (expression : Expr)
-    (typed : Determinize.Statement.Paper.Typed [] expression ty) :
+    (typed : Determinize.Spec.Paper.Typed [] expression ty) :
     PrimitiveDomainSafeAt fuel expression ↔
       nStepMeasure stepKernel fuel expression Set.univ = 1 := by
   rw [← doesNotGetStuckAt_iff_nStepMeasure_univ_eq_one stepKernel fuel expression typed]
@@ -880,13 +880,13 @@ theorem source_sampleE_safe_extension
     (typed : Symbolic.AffineExpr.WellTyped [] expression ty)
     (sourceSafe : ∀ᵐ environment ∂Symbolic.SampleEnv.actualMeasure laws history,
       PrimitiveDomainSafeAt (fuel + 1) (expression.realize environment))
-    (op : Determinize.Statement.Paper.Op) (affine : List (Symbolic.Affine n)) (general : List ℝ)
+    (op : Determinize.Spec.Paper.Op) (affine : List (Symbolic.Affine n)) (general : List ℝ)
     (continuation : Symbolic.AffineExpr (n + 1))
     (reduction : Symbolic.AffineExpr.symbolicReduce laws expression =
       Symbolic.AffineExpr.SymbolicAction.sampleE op affine general continuation) :
-    let affineArgs : Fin (Determinize.Statement.Paper.affineArity op) → Symbolic.Affine n :=
+    let affineArgs : Fin (Determinize.Spec.Paper.affineArity op) → Symbolic.Affine n :=
       fun index => affine.getD index.1 (0, fun _ => 0)
-    let generalArgs : Fin (Determinize.Statement.Paper.generalArity op) → ℝ :=
+    let generalArgs : Fin (Determinize.Spec.Paper.generalArity op) → ℝ :=
       fun index => general.getD index.1 0
     let extended := Symbolic.SampleEnv.snoc history op affineArgs generalArgs
     Symbolic.SampleEnv.DomainSafe laws extended ∧
@@ -897,9 +897,9 @@ theorem source_sampleE_safe_extension
   rw [reduction] at actionTyped
   rcases (Symbolic.AffineExpr.SymbolicAction.wellTyped_sampleE_iff.mp actionTyped) with
     ⟨affineLength, generalLength, continuationTyped⟩
-  let affineArgs : Fin (Determinize.Statement.Paper.affineArity op) → Symbolic.Affine n :=
+  let affineArgs : Fin (Determinize.Spec.Paper.affineArity op) → Symbolic.Affine n :=
     fun index => affine.getD index.1 (0, fun _ => 0)
-  let generalArgs : Fin (Determinize.Statement.Paper.generalArity op) → ℝ :=
+  let generalArgs : Fin (Determinize.Spec.Paper.generalArity op) → ℝ :=
     fun index => general.getD index.1 0
   let extended := Symbolic.SampleEnv.snoc history op affineArgs generalArgs
   have concreteReduction (environment : Env n) :
@@ -913,7 +913,7 @@ theorem source_sampleE_safe_extension
     congr 1
     classical
     unfold primitiveFiber
-      Determinize.Statement.Paper.parseParams
+      Determinize.Spec.Paper.parseParams
     simp only
     rw [dif_pos (by simpa using affineLength), dif_pos generalLength]
     simp only
@@ -942,7 +942,7 @@ theorem source_sampleE_safe_extension
       Bool.false_eq_true, ↓reduceIte, concreteReduction] at safe
     exact safe
   have domainAE : ∀ᵐ environment ∂Symbolic.SampleEnv.actualMeasure laws history,
-      Determinize.Statement.Paper.domain op
+      Determinize.Spec.Paper.domain op
         (fun index => Symbolic.Affine.eval (affineArgs index) environment, generalArgs) := by
     filter_upwards [sourceActionSafe] with environment safe
     exact stochastic_mass_one_imp_domain laws op _ safe.1
@@ -1826,9 +1826,9 @@ theorem safeConfigAt_target
                 ↓reduceIte, concreteStep] using environmentSafe
             exact ih history next ⟨historySafe, nextTyped, nextSafe⟩
         | sampleE op affine general continuation =>
-            let affineArgs : Fin (Determinize.Statement.Paper.affineArity op) → Symbolic.Affine n :=
+            let affineArgs : Fin (Determinize.Spec.Paper.affineArity op) → Symbolic.Affine n :=
               fun index => affine.getD index.1 (0, fun _ => 0)
-            let generalArgs : Fin (Determinize.Statement.Paper.generalArity op) → ℝ :=
+            let generalArgs : Fin (Determinize.Spec.Paper.generalArity op) → ℝ :=
               fun index => general.getD index.1 0
             let extended := Symbolic.SampleEnv.snoc history op affineArgs generalArgs
             have extendedSafe := source_sampleE_safe_extension stepKernel fuel history
@@ -1842,7 +1842,7 @@ theorem safeConfigAt_target
             have actionShape :=
               Symbolic.AffineExpr.SymbolicAction.wellTyped_sampleE_iff.mp actionTyped
             rcases actionShape with ⟨affineLength, generalLength, _⟩
-            have meanDomain : Determinize.Statement.Paper.domain op
+            have meanDomain : Determinize.Spec.Paper.domain op
                 (fun index => Symbolic.Affine.eval (affineArgs index) mean, generalArgs) :=
               SampleEnv.domain_at_meanEnvironment laws history historySafe op affineArgs
                 generalArgs extendedDomainSafe.2
@@ -1850,7 +1850,7 @@ theorem safeConfigAt_target
               ⟨extendedDomainSafe, continuationTyped, continuationSourceSafe⟩
             classical
             simp only [targetRealize]
-            let params : Determinize.Statement.Paper.Params op :=
+            let params : Determinize.Spec.Paper.Params op :=
               (fun index => (affine.map (Symbolic.Affine.eval · mean))[index.1]'(by
                   simpa [affineLength] using index.2),
                 fun index => general[index.1]'(by simpa [generalLength] using index.2))
@@ -1861,21 +1861,21 @@ theorem safeConfigAt_target
                   affineLength]
               · simp [params, generalArgs, List.getD_eq_getElem?_getD, index.isLt,
                   generalLength]
-            have paramsDomain : Determinize.Statement.Paper.domain op params := by
+            have paramsDomain : Determinize.Spec.Paper.domain op params := by
               simpa only [paramsEq] using meanDomain
             have fiberEq : primitiveFiber .mean op
                 (affine.map (Symbolic.Affine.eval · mean)) general =
-                Measure.dirac (Determinize.Statement.Paper.meanValue op params) := by
+                Measure.dirac (Determinize.Spec.Paper.meanValue op params) := by
               have affineMappedLength :
                   (affine.map (Symbolic.Affine.eval · mean)).length =
-                    Determinize.Statement.Paper.affineArity op := by simpa using affineLength
+                    Determinize.Spec.Paper.affineArity op := by simpa using affineLength
               unfold primitiveFiber
-                Determinize.Statement.Paper.parseParams
+                Determinize.Spec.Paper.parseParams
               simp only
               rw [dif_pos affineMappedLength, dif_pos generalLength]
               simp only
-              change (if Determinize.Statement.Paper.domain op params then
-                Measure.dirac (Determinize.Statement.Paper.meanValue op params) else 0) = _
+              change (if Determinize.Spec.Paper.domain op params then
+                Measure.dirac (Determinize.Spec.Paper.meanValue op params) else 0) = _
               rw [if_pos paramsDomain]
             rw [fiberEq]
             constructor
@@ -1883,9 +1883,9 @@ theorem safeConfigAt_target
             · rw [ae_dirac_eq]
               change PrimitiveDomainSafeAt fuel
                 ((continuation.realize
-                  (Env.cons (Determinize.Statement.Paper.meanValue op params) mean)).determinize)
+                  (Env.cons (Determinize.Spec.Paper.meanValue op params) mean)).determinize)
               have meanExtended : Symbolic.SampleEnv.meanEnvironment laws extended =
-                  Env.cons (Determinize.Statement.Paper.meanValue op
+                  Env.cons (Determinize.Spec.Paper.meanValue op
                     (fun index => Symbolic.Affine.eval (affineArgs index) mean,
                       generalArgs)) mean := by
                 rfl
@@ -1907,7 +1907,7 @@ theorem safeConfigAt_target
 
 theorem determinize_primitiveDomainSafe_of_typed_source
     (laws : Determinize.Proof.Paper.PrimitiveLaws) (stepKernel : StepKernel)
-    (program : Expr) (typed : Determinize.Statement.Paper.Typed [] program (.float .E))
+    (program : Expr) (typed : Determinize.Spec.Paper.Typed [] program (.float .E))
     (sourceTags : (AffineExpr.ofExpr program).SourceTags)
     (sourceSafe : PrimitiveDomainSafe program) :
     PrimitiveDomainSafe program.determinize := by

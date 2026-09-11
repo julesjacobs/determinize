@@ -3,7 +3,7 @@ import Mathlib.Probability.Kernel.Composition.IntegralCompProd
 
 namespace Determinize.Proof.Paper
 
-open MeasureTheory ProbabilityTheory Determinize.Statement.Paper
+open MeasureTheory ProbabilityTheory Determinize.Spec.Paper
 
 noncomputable section
 

@@ -1,7 +1,21 @@
-import Determinize.Statement.FiniteModel.Model
+import Determinize.Spec.FiniteModel.Model
+
+namespace Determinize.Spec.FiniteModel
+
+/-- Expected reward returned within `steps` transitions; unfinished paths contribute zero. -/
+def Model.rewardWithin (model : Model) : Nat → Fin model.size → Rat
+  | 0, state => match model.kind state with
+      | .returned reward => reward
+      | _ => 0
+  | steps + 1, state => match model.kind state with
+      | .returned reward => reward
+      | .rejected => 0
+      | .transient => ∑ next, model.transition state next * model.rewardWithin steps next
+
+end Determinize.Spec.FiniteModel
 
 namespace Determinize.Proof.FiniteModel
-open Statement.FiniteModel MeasureTheory
+open Spec.FiniteModel MeasureTheory
 
 /-- Increasing the exploration horizon only adds returned output mass. -/
 theorem outputWithin_mono (model : Model) (state : Fin model.size) :

@@ -2,7 +2,7 @@ import Determinize.Proof.FiniteModel.Contexts
 import Determinize.Proof.FiniteDistributionMeasure
 
 namespace Determinize.Proof.FiniteModel
-open Statement.Paper Statement.FiniteModel Determinize.Finite MeasureTheory
+open Spec.Paper Spec.FiniteModel Determinize.Finite MeasureTheory
 
 noncomputable def outcomeMeasure (outcomes : List (Rat × Rat)) : Measure ℝ :=
   (outcomes.map fun (p,x) => ENNReal.ofReal (p : ℝ) • Measure.dirac (x : ℝ)).sum
@@ -47,7 +47,7 @@ theorem bernoulli_stochastic_matches (p : Rat) (nonnegative : 0 ≤ p) (bounded 
   · intro mode
     simp [primitiveExpr, reduce, Expr.isValue, realValue?, bernoulliFiber, h0, h1, outcomeMeasure]
 
-theorem discrete_stochastic_matches (d : Statement.Paper.FiniteDistribution) :
+theorem discrete_stochastic_matches (d : Spec.Paper.FiniteDistribution) :
     FiniteLawMatches (.discrete d) .stochastic []
       (d.probabilities.zipIdx.map fun (p,i) => (p, (i : Rat))) := by
   refine ⟨?_, ?_, ?_⟩
@@ -56,7 +56,7 @@ theorem discrete_stochastic_matches (d : Statement.Paper.FiniteDistribution) :
     exact d.nonnegative _ (List.fst_mem_of_mem_zipIdx entryMember)
   · simpa [List.map_map, Function.comp_def, List.zipIdx_map_fst] using d.total
   · intro mode
-    simp [primitiveExpr, reduce, discreteFiber, Statement.Paper.FiniteDistribution.measure,
+    simp [primitiveExpr, reduce, discreteFiber, Spec.Paper.FiniteDistribution.measure,
       outcomeMeasure, List.map_map, Function.comp_def]
 
 theorem bernoulli_mean_matches (p : Rat) (nonnegative : 0 ≤ p) (bounded : p ≤ 1) :
@@ -67,7 +67,7 @@ theorem bernoulli_mean_matches (p : Rat) (nonnegative : 0 ≤ p) (bounded : p �
   intro mode
   simp [primitiveExpr, reduce, Expr.isValue, realValue?, bernoulliFiber, h0, h1]
 
-theorem discrete_mean_matches (d : Statement.Paper.FiniteDistribution) :
+theorem discrete_mean_matches (d : Spec.Paper.FiniteDistribution) :
     FiniteLawMatches (.discrete d) .mean [] [(1,d.mean)] := by
   apply singleton_matches
   intro mode

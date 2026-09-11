@@ -1,7 +1,7 @@
-import Determinize.Statement.Semantics
+import Determinize.Spec.Semantics
 
 namespace Determinize.Proof.Rejection
-open Statement.Paper MeasureTheory
+open Spec.Paper MeasureTheory
 
 /-- A rejection never contributes a returned float at any execution depth. -/
 theorem cumulative_reject (fuel : Nat) : cumulativeOutputMeasure fuel .reject = 0 := by

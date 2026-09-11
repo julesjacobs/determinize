@@ -1,10 +1,10 @@
-import Determinize.Statement.Main
-import Determinize.Traces.Main
+import Determinize.Spec.Main
+import Determinize.Spec.Traces.Main
 
 /-! These checks use only the public definitions, before expression measurability is available. -/
 
 namespace Determinize.Proof.InterfaceChecks
-open MeasureTheory Determinize.Statement.Paper
+open MeasureTheory Determinize.Spec.Paper
 
 example : True := by
   fail_if_success have := (inferInstance : MeasurableSpace Expr)
@@ -36,20 +36,20 @@ example : cumulativeOutputMeasure 4 capturedSample =
     Expr.substHead, Expr.substAt, Expr.shift, Expr.mapVars, realValue?]
   exact Measure.bind_dirac_eq_map _ (measurable_id.add_const 2)
 
-example (trace : Traces.Trace) (result value : ℝ) :
-    Traces.record (.E, .stochastic, .uniform) value (trace, result) = (trace, result) := rfl
+example (trace : Spec.Traces.Trace) (result value : ℝ) :
+    Spec.Traces.record (.E, .stochastic, .uniform) value (trace, result) = (trace, result) := rfl
 
-example (trace : Traces.Trace) (result value : ℝ) :
-    Traces.record (.G, .stochastic, .uniform) value (trace, result) =
+example (trace : Spec.Traces.Trace) (result value : ℝ) :
+    Spec.Traces.record (.G, .stochastic, .uniform) value (trace, result) =
       ((.uniform, value) :: trace, result) := rfl
 
-example (trace : Traces.Trace) (result value : ℝ) :
-    Traces.record (.G, .mean, .uniform) value (trace, result) = (trace, result) := rfl
+example (trace : Spec.Traces.Trace) (result value : ℝ) :
+    Spec.Traces.record (.G, .mean, .uniform) value (trace, result) = (trace, result) := rfl
 
-example : Traces.traceAndOutputLawAt 4 capturedSample =
+example : Spec.Traces.traceAndOutputLawAt 4 capturedSample =
     (uniformFiber .stochastic 0 1).map
       (fun value => ([], value + 2)) := by
-  simp [capturedSample, Traces.traceAndOutputLawAt, reduce, Expr.isValue,
+  simp [capturedSample, Spec.Traces.traceAndOutputLawAt, reduce, Expr.isValue,
     realValue?, Action.wrap, Function.comp_def,
     Expr.substHead, Expr.substAt, Expr.shift, Expr.mapVars, realValue?]
   change ((uniformFiber .stochastic 0 1).bind

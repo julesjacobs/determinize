@@ -3,17 +3,17 @@ import Determinize.Proof.CompactReplay
 /-!
 # Fiber soundness of the compact replay
 
-The lockstep argument of `SymbolicTraceSoundness` repeated for `Traces.outputGivenTraceAt`:
+The lockstep argument of `SymbolicTraceSoundness` repeated for `Spec.Traces.outputGivenTraceAt`:
 along the symbolic action of a well-typed source, the compact replay of its realizations,
 pulled back along `retain` to detailed traces, is a sound fiber of the detailed joint laws,
 and the compact replay of the target reproduces the target output on almost every trace.
 -/
 
 namespace Determinize.Proof.StepTraces
-open MeasureTheory ProbabilityTheory Determinize.Statement.Paper Determinize.Proof.StepTraces
+open MeasureTheory ProbabilityTheory Determinize.Spec.Paper Determinize.Proof.StepTraces
 open Determinize.Proof.Paper Symbolic Symbolic.AffineExpr
 open SymbolicSoundness.TargetSafety
-open Determinize.Traces (outputGivenTraceAt outputGivenTrace)
+open Determinize.Spec.Traces (outputGivenTraceAt outputGivenTrace)
 open scoped ProbabilityTheory
 noncomputable section
 

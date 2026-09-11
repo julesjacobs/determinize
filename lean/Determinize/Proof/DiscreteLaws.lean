@@ -1,9 +1,9 @@
-import Determinize.Statement.DiscreteLaws
+import Determinize.Spec.Primitives
 import Determinize.Proof.FiniteDistributionMeasure
 import Mathlib.MeasureTheory.Measure.GiryMonad
 
 namespace Determinize.Proof.DiscreteLaws
-open Statement.Paper MeasureTheory
+open Spec.Paper MeasureTheory
 
 theorem bernoulli_off_domain (kind : Kind) (p : ℝ) (h : ¬ (0 ≤ p ∧ p ≤ 1)) :
     bernoulliFiber kind p = 0 := by simp [bernoulliFiber, h]
@@ -67,17 +67,17 @@ theorem bernoulli_zero (kind : Kind) : bernoulliFiber kind 0 = Measure.dirac 0 :
 theorem bernoulli_one (kind : Kind) : bernoulliFiber kind 1 = Measure.dirac 1 := by
   cases kind <;> simp [bernoulliFiber]
 
-instance discrete_probability (kind : Kind) (d : Statement.Paper.FiniteDistribution) :
+instance discrete_probability (kind : Kind) (d : Spec.Paper.FiniteDistribution) :
     IsProbabilityMeasure (discreteFiber kind d) := by
   cases kind <;> unfold discreteFiber <;> infer_instance
 
-theorem discrete_integrable (kind : Kind) (d : Statement.Paper.FiniteDistribution) (f : ℝ → ℝ) :
+theorem discrete_integrable (kind : Kind) (d : Spec.Paper.FiniteDistribution) (f : ℝ → ℝ) :
     Integrable f (discreteFiber kind d) := by
   cases kind with
   | stochastic => exact FiniteDistribution.integrable d _ f
   | mean => exact integrable_dirac (by simp)
 
-theorem discrete_mean (kind : Kind) (d : Statement.Paper.FiniteDistribution) :
+theorem discrete_mean (kind : Kind) (d : Spec.Paper.FiniteDistribution) :
     (∫ x, x ∂discreteFiber kind d) = (d.mean : ℝ) := by
   cases kind with
   | stochastic => exact FiniteDistribution.mean d

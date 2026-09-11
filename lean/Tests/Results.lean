@@ -3,7 +3,7 @@ import Tests.Parsing
 import Determinize.Finite.Solve
 
 namespace Determinize.Tests
-open Statement.FiniteModel
+open Spec.FiniteModel
 
 example : Checking.checkResult FiniteModel.fork FiniteModel.forkCertificate = true := by decide +kernel
 example : FiniteModel.fork.expectedReward = ((3/2 : Rat) : ℝ) :=

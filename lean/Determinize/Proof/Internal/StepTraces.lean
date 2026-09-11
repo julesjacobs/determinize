@@ -1,4 +1,4 @@
-import Determinize.Traces.Semantics
+import Determinize.Spec.Traces.Semantics
 import Mathlib.MeasureTheory.Constructions.BorelSpace.Basic
 import Mathlib.Logic.Equiv.Option
 import Mathlib.Probability.Kernel.Composition.MeasureCompProd
@@ -14,7 +14,7 @@ length is the first termination depth. Expectation-mode sampled values are not r
 
 namespace Determinize.Proof.StepTraces
 
-open MeasureTheory ProbabilityTheory Determinize.Statement.Paper
+open MeasureTheory ProbabilityTheory Determinize.Spec.Paper
 
 abbrev Event := Option (Op × ℝ)
 

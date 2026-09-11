@@ -1,8 +1,8 @@
 import Determinize.Checking.Certificate
-import Determinize.Statement.FiniteModel.Supported
+import Determinize.Finite.Supported
 
 namespace Determinize.Finite
-open Statement.Paper Checking
+open Spec.Paper Checking
 
 inductive Value where
   | unit | bool (value : Bool) | number (value : Rat)
@@ -85,7 +85,7 @@ def finiteLaw (op : Op) (kind : Kind) (arguments : List Rat) :
         if 0 ≤ p && p ≤ 1 then pure p else throw (.invalid "bernoulli probability")
     | .discrete d, [] => pure d.mean
     | _, _ => throw (.invalid "primitive arity")
-  unless Statement.FiniteModel.supportedDraw kind op do
+  unless supportedDraw kind op do
     throw (.unsupported s!"stochastic {reprStr op}")
   if kind == .mean then return [(1, mean)]
   match op, arguments with
