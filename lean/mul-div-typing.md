@@ -7,10 +7,11 @@ condition, and recommends how to reconcile the artifacts.
 
 ## 1. The disagreement
 
-**Status (2026-09-11).** Multiplication is reconciled: the paper's single `Mul` rule,
-`ocaml/infer.ml` and `sim/src/compiler/infer.js` now all type `e₁ × e₂` at `Float[m]`
-when `e₁ : Float[G]` and `e₂ : Float[m]`, as the Lean does (section 7). Division still
-differs as described below. The table records the state on 2026-09-09.
+**Status (2026-09-11).** Resolved: the paper's `Mul` and `Div` rules, `ocaml/infer.ml`
+and `sim/src/compiler/infer.js` now all type `e₁ × e₂` at `Float[m]` when
+`e₁ : Float[G]` and `e₂ : Float[m]`, and `e₁ / e₂` at `Float[m]` when `e₁ : Float[m]`
+and `e₂ : Float[G]`, as the Lean does (section 7). The table records the state on
+2026-09-09.
 
 | Artifact | `e₁ × e₂` | `e₁ / e₂` |
 |---|---|---|
@@ -234,8 +235,9 @@ value on the right of `×` has to be promoted explicitly. The paper, the OCaml a
 are to adopt these two rules; the symmetric `[Mul]` of section 3 stays a remark. The
 multiplication rule was adopted by the paper, the OCaml and the sim on 2026-09-11 (the
 implementations check the right factor against the result type, so a G right factor is
-admitted by subtyping, which plays the role of the explicit promotion); the division rule
-is still open in the paper and the OCaml. The two options below are kept for the record.
+admitted by subtyping, which plays the role of the explicit promotion), and the division
+rule on the same day (the paper's literal `c` became an arbitrary `e₂ : Float[G]`, and the
+OCaml dropped its literal case and `G / G`). The two options below are kept for the record.
 
 **Option A: adopt the symmetric rules everywhere.**
 
