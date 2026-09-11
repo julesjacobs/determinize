@@ -81,6 +81,10 @@ private theorem outputAt_integrable (model : Model) (state : Fin model.size) :
     Integrable id (outputAt model state) :=
   (terminalBound_integrable model id).mono_measure (iSup_le (fun n => outputWithin_bound model n state))
 
+/-- Finite terminal rewards bound the output law, including for nonabsorbing models. -/
+theorem outputMeasure_integrable (model : Model) : Integrable id model.outputMeasure :=
+  outputAt_integrable model model.initial
+
 private theorem outputAt_transient (model : Model) (state : Fin model.size)
     (h : model.kind state = .transient) :
     outputAt model state = ∑ next, ENNReal.ofReal (model.transition state next : ℝ) •
@@ -171,8 +175,7 @@ private theorem outputAt_equations (model : Model) (state : Fin model.size) :
 /-- Absorption rules out spurious solutions of the value equations. -/
 theorem resultCertificate_sound (model : Model) (certificate : ResultCertificate model)
     (valid : certificate.Valid model) :
-    model.HasExpectedReward (certificate.values model.initial) := by
-  refine ⟨outputAt_integrable model model.initial, ?_⟩
+    model.expectedReward = (certificate.values model.initial : ℝ) := by
   have unique := homogeneous_unique model certificate valid.2
     (fun state => (∫ value : ℝ, value ∂outputAt model state) - (certificate.values state : ℝ))
   have zero := unique (by

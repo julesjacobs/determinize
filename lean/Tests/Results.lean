@@ -6,7 +6,7 @@ namespace Determinize.Tests
 open Statement.FiniteModel
 
 example : Checking.checkResult FiniteModel.fork FiniteModel.forkCertificate = true := by decide +kernel
-example : FiniteModel.fork.HasExpectedReward (3/2) :=
+example : FiniteModel.fork.expectedReward = ((3/2 : Rat) : ℝ) :=
   (Checking.checkResult_sound FiniteModel.fork FiniteModel.forkCertificate (by decide +kernel)).2
 example : Checking.checkResult FiniteModel.loop (FiniteModel.loopCertificate 7) = false := by
   decide +kernel
@@ -27,7 +27,7 @@ abbrev retry : Model where
   absorbing := by decide +kernel
 
 def retryResult : ResultCertificate retry := ⟨fun _ => -3, 1, 1/2⟩
-example : retry.HasExpectedReward (-3) :=
+example : retry.expectedReward = ((-3 : Rat) : ℝ) :=
   (Checking.checkResult_sound retry retryResult (by decide +kernel)).2
 example : Checking.checkResult retry {retryResult with escape := 1} = false := by decide +kernel
 
@@ -50,3 +50,8 @@ def results : IO Unit := do
 end Determinize.Tests
 
 #print axioms Determinize.Checking.checked_sourceExpectedReward
+
+example : MeasureTheory.Integrable id Determinize.Tests.FiniteModel.loop.outputMeasure :=
+  Determinize.Proof.FiniteModel.outputMeasure_integrable _
+
+#print axioms Determinize.Proof.FiniteModel.outputMeasure_integrable

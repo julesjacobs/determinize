@@ -33,7 +33,7 @@ theorem checkResult_valid (model : Model) (certificate : ResultCertificate model
 
 theorem checkResult_sound (model : Model) (certificate : ResultCertificate model)
     (accepted : checkResult model certificate = true) :
-    certificate.Valid model ∧ model.HasExpectedReward (certificate.values model.initial) := by
+    certificate.Valid model ∧ model.expectedReward = (certificate.values model.initial : ℝ) := by
   have valid := (checkResult_valid model certificate).mp accepted
   exact ⟨valid, Proof.FiniteModel.resultCertificate_sound model certificate valid⟩
 
@@ -45,7 +45,8 @@ theorem checked_expectedReward {source : Core} {subject : Subject}
       (∫ value : ℝ, value ∂Statement.Paper.bigStepMeasure (subject.program source)) =
         (certificate.values checked.model.initial : ℝ) := by
   rw [← checked.correct.2]
-  exact (checkResult_sound checked.model certificate accepted).2
+  exact ⟨Proof.FiniteModel.outputMeasure_integrable checked.model,
+    (checkResult_sound checked.model certificate accepted).2⟩
 
 /-- Transfer a checked determinized answer under the source theorem's premises. -/
 theorem checked_sourceExpectedReward {source : Core}

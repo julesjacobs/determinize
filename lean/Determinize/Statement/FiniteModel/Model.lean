@@ -53,11 +53,10 @@ noncomputable def Model.outputWithin (model : Model) : Nat → Fin model.size �
 noncomputable def Model.outputMeasure (model : Model) : Measure ℝ :=
   ⨆ steps, model.outputWithin steps model.initial
 
-/-- Integrability is explicit so Lean's default integral of a nonintegrable function
-cannot be mistaken for a certified answer. -/
-def Model.HasExpectedReward (model : Model) (answer : Rat) : Prop :=
-  Integrable id model.outputMeasure ∧
-    (∫ value : ℝ, value ∂model.outputMeasure) = (answer : ℝ)
+/-- The expected terminal reward. Every finite model has an integrable output law;
+`Proof.FiniteModel.outputMeasure_integrable` establishes this independently of certificates. -/
+noncomputable def Model.expectedReward (model : Model) : ℝ :=
+  ∫ value : ℝ, value ∂model.outputMeasure
 
 /-- The model represents the entire output law of this exact core program, and
 accepted programs cannot get stuck. Rejection and divergence remain possible. -/

@@ -57,10 +57,9 @@ theorem fork_output : fork.outputMeasure =
     | succ steps => rw [fork_outputWithin]
   · exact le_iSup_of_le 1 (by rw [fork_outputWithin])
 
-example : fork.HasExpectedReward (3/2) := by
-  unfold Model.HasExpectedReward
+example : fork.expectedReward = (3/2 : ℝ) := by
+  unfold Model.expectedReward
   rw [fork_output]
-  refine ⟨(integrable_dirac (by simp)).smul_measure (by simp), ?_⟩
   norm_num [integral_smul_measure]
 
 def terminal (reward : Rat) : Model where
@@ -78,10 +77,10 @@ def terminal (reward : Rat) : Model where
 example (steps : Nat) : (terminal (-3)).rewardWithin steps (terminal (-3)).initial = -3 := by
   cases steps <;> rfl
 
-example : (terminal (-3)).HasExpectedReward (-3) := by
-  unfold Model.HasExpectedReward
+example : (terminal (-3)).expectedReward = (-3 : ℝ) := by
+  unfold Model.expectedReward
   rw [Proof.FiniteModel.returned_output (terminal (-3)) (-3) rfl]
-  exact ⟨integrable_dirac (by simp), by simp⟩
+  simp
 
 abbrev loop : Model where
   size := 1
@@ -129,8 +128,8 @@ theorem loop_outputWithin (steps : Nat) (state : Fin loop.size) :
 example : loop.outputMeasure = 0 := by
   simp [Model.outputMeasure, loop_outputWithin]
 
-example : loop.HasExpectedReward 0 := by
-  simp [Model.HasExpectedReward, Model.outputMeasure, loop_outputWithin]
+example : loop.expectedReward = 0 := by
+  simp [Model.expectedReward, Model.outputMeasure, loop_outputWithin]
 
 
 end Determinize.Tests.FiniteModel

@@ -7,7 +7,7 @@ Each retained step gets its own commit. For each step: inspect consumers, implem
 - [x] 3. Use model extraction throughout the checker and end-to-end interface.
 - [x] 4. Remove reconstructed certificate evidence and duplicated request metadata.
 - [x] 5. Replace nested replay-validity conjunctions with named structures.
-- [ ] 6. Expose unconditional model integrability and simplify expected reward.
+- [x] 6. Expose unconditional model integrability and simplify expected reward.
 - [ ] 7. Derive absorption escape from the model and certificate horizon.
 - [ ] 8. Consolidate unit-sum finite-distribution validation.
 - [ ] 9. Trim and organize the specification/proof boundary.
@@ -38,3 +38,7 @@ Before: candidates stored the request and every recomputed step evidence tag. Af
 ### 5. Named replay invariants — KEEP
 
 Before: consumers selected matrix and alignment facts through positional conjunction projections. After: `ReplayValid`, `Aligned`, and `MatrixValid` are Prop structures with named obligations. This adds explicit decidability adapters but removes brittle positional dependencies from consumers; no assumptions or runtime candidate fields were added. Full warning-free build, Lean tests, and independent generated-certificate kernel replay passed with standard axioms.
+
+### 6. Finite-model expectation — KEEP
+
+Before: `HasExpectedReward` bundled integrability with answer equality, although integrability was already proved privately for every model. After: `Model.expectedReward` is the canonical integral, `outputMeasure_integrable` is public, and certificate soundness states direct equality. Source-program integrability premises remain unchanged. The nonabsorbing loop example explicitly uses the unconditional theorem. Warning-free build, Lean tests, and a generated result theorem checked independently by the kernel all passed with standard axioms.

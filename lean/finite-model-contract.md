@@ -24,9 +24,7 @@ contributes at depth zero. `outputMeasure` is its increasing supremum.
 with a proof connecting it to the real integral.
 
 Rewards may be negative. Rejection and divergence contribute no output mass.
-The answer is not conditioned on returning. `HasExpectedReward` explicitly
-requires integrability. Infinite-horizon integrability and certified answers
-remain obligations of the result checker.
+The answer is not conditioned on returning. `Model.expectedReward` is the integral of the output law. Finite terminal rewards ensure integrability for every model, including nonabsorbing models. The result checker certifies equality with the proposed answer.
 
 ## Exact execution boundary
 

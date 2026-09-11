@@ -154,8 +154,7 @@ def resultCertificateText (source : Checking.Core) (subject : Subject) (candidat
   "    MeasureTheory.Integrable id (bigStepMeasure (checkedSubject.program checkedSource)) ∧\n" ++
   "    (∫ value : ℝ, value ∂bigStepMeasure (checkedSubject.program checkedSource)) =\n" ++
   "      (result.values model.initial : ℝ) := by\n" ++
-  "  rw [← modelMatches.2]\n" ++
-  "  exact (Determinize.Checking.checkResult_sound model result resultAccepted).2\n" ++
+  "  exact Determinize.Checking.checked_expectedReward ⟨model, modelMatches⟩ result resultAccepted\n" ++
   "\n#print axioms resultAccepted\n#print axioms expectedReward\n"
 
 def writeResult (outputPath : System.FilePath) (source : Checking.Core) (subject : Subject)
