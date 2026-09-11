@@ -21,17 +21,9 @@ where $\alpha$ is a mode metavariable. In particular, $\alpha$ is an unknown mod
     {\Gamma \vdash e_1 : \Float{m_1} \mid C_1 \\ \Gamma \vdash e_2 : \Float{m_2} \mid C_2}
     {\Gamma \vdash e_1 + e_2 : \Float{\alpha} \mid C_1, C_2, m_1 \preceq \alpha, m_2 \preceq \alpha}
   \and
-  \inferrule[\textsc{Mul-G}]
+  \inferrule[\textsc{Mul}]
     {\Gamma \vdash e_1 : \Float{m_1} \mid C_1 \\ \Gamma \vdash e_2 : \Float{m_2} \mid C_2}
-    {\Gamma \vdash e_1 \times e_2 : \Float{\alpha}  \mid C_1, C_2, m_1 \preceq \G, m_2 \preceq \G}
-  \and
-  \inferrule[\textsc{Mul-ConstL}]
-    {\Gamma \vdash c : \Float{m_1} \mid C_1 \\ \Gamma \vdash e : \Float{m_2} \mid C_2}
-    {\Gamma \vdash c \times e : \Float{\alpha} \mid C_1, C_2, m_1 \preceq \alpha, m_2 \preceq \alpha}
-  \and
-  \inferrule[\textsc{Mul-ConstR}]
-    {\Gamma \vdash e : \Float{m_1} \mid C_1 \\ \Gamma \vdash c : \Float{m_2} \mid C_2}
-    {\Gamma \vdash e \times c : \Float{\alpha} \mid C_1, C_2, m_1 \preceq \alpha, m_2 \preceq \alpha}
+    {\Gamma \vdash e_1 \times e_2 : \Float{\alpha} \mid C_1, C_2, m_1 \preceq \G, m_2 \preceq \alpha}
   \and
   \inferrule[\textsc{Div}]
     {\Gamma \vdash e : \Float{m_1} \mid C_1 \\ \Gamma \vdash c : \Float{m_2} \mid C_2}

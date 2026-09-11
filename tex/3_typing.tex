@@ -87,17 +87,9 @@ Judgments have the form $\Gamma \vdash e : \tau$, where $\Gamma$ is a standard t
     {\Gamma \vdash e_1 : \Float{m_1} \\ \Gamma \vdash e_2 : \Float{m_2} \\ m_1 \preceq m \\ m_2 \preceq m}
     {\Gamma \vdash e_1 + e_2 : \Float{m}}
   \and
-  \inferrule[\textsc{Mul-G}]
-    {\Gamma \vdash e_1 : \Float{m_1} \\ \Gamma \vdash e_2 : \Float{m_2} \\ m_1 \preceq \G \\ m_2 \preceq \G}
+  \inferrule[\textsc{Mul}]
+    {\Gamma \vdash e_1 : \Float{m_1} \\ \Gamma \vdash e_2 : \Float{m_2} \\ m_1 \preceq \G \\ m_2 \preceq m}
     {\Gamma \vdash e_1 \times e_2 : \Float{m}}
-  \and
-  \inferrule[\textsc{Mul-ConstL}]
-    {\Gamma \vdash c : \Float{m_1} \\ \Gamma \vdash e : \Float{m_2} \\ m_1 \preceq m \\ m_2 \preceq m}
-    {\Gamma \vdash c \times e : \Float{m}}
-  \and
-  \inferrule[\textsc{Mul-ConstR}]
-    {\Gamma \vdash e : \Float{m_1} \\ \Gamma \vdash c : \Float{m_2} \\ m_1 \preceq m \\ m_2 \preceq m}
-    {\Gamma \vdash e \times c : \Float{m}}
   \and
   \inferrule[\textsc{Div}]
   {\Gamma \vdash e : \Float{m_1} \\ \Gamma \vdash c : \Float{m_2} \\ m_1 \preceq m \\ m_2 \preceq \G}
@@ -135,7 +127,7 @@ Judgments have the form $\Gamma \vdash e : \tau$, where $\Gamma$ is a standard t
     {\Gamma \vdash \gammafn(e_1,e_2) : \Float{m}}
 \end{mathpar}
 
-Multiplication is general-mode only unless one side is a (typed) literal, in which case it follows the literal's mode; addition is parametric in the mode; comparison is only allowed at general mode. Uniform sampling preserves the incoming mode; Gaussian sampling returns the incoming mode but requires a general-typed variance.
+Multiplication requires a general-mode left factor and takes the mode of its right factor; addition is parametric in the mode; comparison is only allowed at general mode. Uniform sampling preserves the incoming mode; Gaussian sampling returns the incoming mode but requires a general-typed variance.
 \paragraph{Modes and subtyping.}
 We relate modes with a preorder $m_1 \preceq m_2$:
 \begin{mathpar}
