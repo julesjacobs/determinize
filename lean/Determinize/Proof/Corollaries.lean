@@ -6,15 +6,38 @@ import Mathlib.Data.EReal.Operations
 /-!
 # Corollaries of trace soundness
 
-Jensen's inequality between the source and target output laws, and preservation of
-expectations in the extended reals. Both follow from `Traces.MeanOnTraces` alone: trace by
-trace, the target output is the mean of the source output fiber.
+Jensen's inequality between the source and target output laws, preservation of expectations
+in the extended reals, preservation of the output mass, and the law of total variance along
+traces with its consequence that determinization does not increase the variance. All follow
+from `Traces.TraceFactorization` alone: trace by trace, the target output is the mean of the
+source output fiber.
 -/
 
 namespace Determinize.Traces
 
 open MeasureTheory ProbabilityTheory Determinize.Statement Determinize.Statement.Paper
 open scoped ENNReal ProbabilityTheory
+
+/-- The source output law under a trace factorization: the mixture of the fibers over the
+trace law. -/
+theorem TraceFactorization.source_law {source target : Expr} {fiber : Kernel Trace ℝ}
+    {output : Trace → ℝ} (factor : TraceFactorization source target fiber output) :
+    bigStepMeasure source = fiber ∘ₘ traceLaw source := by
+  obtain ⟨markov, -, sourceJoint, -, -⟩ := factor
+  have := markov
+  rw [← Proof.Traces.correspondence source, sourceJoint]
+  exact Measure.snd_compProd (traceLaw source) fiber
+
+/-- The target output law under a trace factorization: the pushforward of the trace law along
+`output`. -/
+theorem TraceFactorization.target_law {source target : Expr} {fiber : Kernel Trace ℝ}
+    {output : Trace → ℝ} (factor : TraceFactorization source target fiber output) :
+    bigStepMeasure target = (traceLaw source).map output := by
+  obtain ⟨-, measurableOutput, -, targetJoint, -⟩ := factor
+  rw [← Proof.Traces.correspondence target, targetJoint,
+    Measure.map_map measurable_snd (show Measurable (fun trace => (trace, output trace)) from
+      measurable_id.prodMk measurableOutput)]
+  rfl
 
 /-- The two output laws behind `MeanOnTraces`: the source output is the mixture of the fibers
 over the trace law and the target output is the pushforward of the trace law along `output`. -/
@@ -25,16 +48,25 @@ theorem MeanOnTraces.output_laws {source target : Expr} (sound : MeanOnTraces so
       bigStepMeasure target = traces.map output ∧
       ∀ᵐ trace ∂traces,
         Integrable id (fiber trace) ∧ output trace = ∫ value : ℝ, value ∂fiber trace := by
-  rcases sound with
-    ⟨fiber, output, markov, measurableOutput, sourceJoint, targetJoint, valid⟩
-  have := markov
-  refine ⟨traceLaw source, fiber, output, inferInstance, markov, measurableOutput, ?_, ?_, valid⟩
-  · rw [← Proof.Traces.correspondence source, sourceJoint]
-    exact Measure.snd_compProd (traceLaw source) fiber
-  · rw [← Proof.Traces.correspondence target, targetJoint,
-      Measure.map_map measurable_snd (show Measurable (fun trace => (trace, output trace)) from
-        measurable_id.prodMk measurableOutput)]
-    rfl
+  obtain ⟨fiber, output, factor⟩ := sound
+  exact ⟨traceLaw source, fiber, output, inferInstance, factor.1, factor.2.1, factor.source_law,
+    factor.target_law, factor.2.2.2.2⟩
+
+/-- Under a trace factorization the two output laws have the same mass, the mass of the trace
+law: every fiber is a probability measure. -/
+theorem TraceFactorization.output_mass {source target : Expr} {fiber : Kernel Trace ℝ}
+    {output : Trace → ℝ} (factor : TraceFactorization source target fiber output) :
+    bigStepMeasure target Set.univ = bigStepMeasure source Set.univ := by
+  have := factor.1
+  rw [factor.source_law, factor.target_law, Measure.map_apply factor.2.1 MeasurableSet.univ,
+    Set.preimage_univ, Measure.bind_apply MeasurableSet.univ fiber.measurable.aemeasurable]
+  simp [measure_univ]
+
+/-- Output mass is preserved along the traces. -/
+theorem MeanOnTraces.output_mass {source target : Expr} (sound : MeanOnTraces source target) :
+    bigStepMeasure target Set.univ = bigStepMeasure source Set.univ := by
+  obtain ⟨fiber, output, factor⟩ := sound
+  exact factor.output_mass
 
 /-- Jensen's inequality along the traces. -/
 theorem MeanOnTraces.lintegral_convex_le {source target : Expr}
@@ -210,6 +242,135 @@ theorem MeanOnTraces.extended_expectation {source target : Expr}
     rw [posSource, negSource, posTarget, negTarget]
     exact ereal_sub_lintegral_eq ν ha hb ha0 hb0 defined
 
+/-- The second moment about `m` of a real law with a finite second moment, through its first
+two moments and its mass. -/
+theorem integral_sub_sq_eq_moments {μ : Measure ℝ} [IsFiniteMeasure μ] (memLp : MemLp id 2 μ)
+    (m : ℝ) :
+    ∫ value, (value - m) ^ 2 ∂μ =
+      ∫ value, value ^ 2 ∂μ - 2 * m * ∫ value, value ∂μ + μ.real Set.univ * m ^ 2 := by
+  have sq : Integrable (fun value : ℝ => value ^ 2) μ := memLp.integrable_sq
+  have lin : Integrable (fun value : ℝ => value) μ := memLp.integrable one_le_two
+  have scaled : Integrable (fun value : ℝ => 2 * m * value) μ := lin.const_mul _
+  have shifted : Integrable (fun value : ℝ => value ^ 2 - 2 * m * value) μ := sq.sub scaled
+  have expand : ∀ value : ℝ, (value - m) ^ 2 = (value ^ 2 - 2 * m * value) + m ^ 2 :=
+    fun value => by ring
+  simp only [expand]
+  rw [integral_add shifted (integrable_const _), integral_sub sq scaled, integral_const_mul,
+    integral_const, smul_eq_mul]
+
+/-- Mathlib's `variance` of a real law with a finite second moment, through its first two
+moments and its mass; the law need not be normalized. -/
+theorem variance_id_eq_moments {μ : Measure ℝ} [IsFiniteMeasure μ] (memLp : MemLp id 2 μ) :
+    variance id μ = ∫ value, value ^ 2 ∂μ - 2 * (∫ value, value ∂μ) ^ 2 +
+      μ.real Set.univ * (∫ value, value ∂μ) ^ 2 := by
+  rw [variance_eq_integral aemeasurable_id]
+  change ∫ value, (value - ∫ value, value ∂μ) ^ 2 ∂μ = _
+  rw [integral_sub_sq_eq_moments memLp]
+  ring
+
+/-- The law of total variance along a trace factorization, through the second moments: the
+target output law has a finite second moment, the fiber variances are integrable over the
+trace law, and the source second moment is the target second moment plus the mean fiber
+variance. -/
+theorem TraceFactorization.second_moment {source target : Expr} {fiber : Kernel Trace ℝ}
+    {output : Trace → ℝ} (factor : TraceFactorization source target fiber output)
+    (memLp : MemLp id 2 (bigStepMeasure source)) :
+    MemLp id 2 (bigStepMeasure target) ∧
+      Integrable (fun trace => variance id (fiber trace)) (traceLaw source) ∧
+      ∫ value, value ^ 2 ∂bigStepMeasure source =
+        ∫ value, value ^ 2 ∂bigStepMeasure target +
+          ∫ trace, variance id (fiber trace) ∂traceLaw source := by
+  have sourceEq := factor.source_law
+  have targetEq := factor.target_law
+  obtain ⟨markov, measurableOutput, -, -, valid⟩ := factor
+  have := markov
+  have sqMeasurable : Measurable fun value : ℝ => value ^ 2 := measurable_id.pow_const 2
+  -- the source second moment is the mixture of the fiber second moments
+  have sqSource : Integrable (fun value : ℝ => value ^ 2) (fiber ∘ₘ traceLaw source) := by
+    rw [← sourceEq]
+    exact memLp.integrable_sq
+  have fiberSq : ∀ᵐ trace ∂traceLaw source,
+      Integrable (fun value : ℝ => value ^ 2) (fiber trace) :=
+    Measure.ae_integrable_of_integrable_comp sqSource
+  have secondMoment :
+      Integrable (fun trace => ∫ value, value ^ 2 ∂fiber trace) (traceLaw source) := by
+    simpa only [norm_pow, Real.norm_eq_abs, sq_abs] using
+      Measure.integrable_integral_norm_of_integrable_comp sqSource
+  have sourceSecond : ∫ value, value ^ 2 ∂bigStepMeasure source =
+      ∫ trace, ∫ value, value ^ 2 ∂fiber trace ∂traceLaw source := by
+    have h := sqSource
+    rw [Measure.comp_eq_comp_const_apply] at h
+    rw [sourceEq, Measure.comp_eq_comp_const_apply, Kernel.integral_comp h]
+    simp only [Kernel.const_apply]
+  -- each fiber is a probability measure whose mean is the target output
+  have fiberVariance : ∀ᵐ trace ∂traceLaw source,
+      variance id (fiber trace) = ∫ value, value ^ 2 ∂fiber trace - output trace ^ 2 := by
+    filter_upwards [valid, fiberSq] with trace good sq
+    have memLpFiber : MemLp id 2 (fiber trace) :=
+      (memLp_two_iff_integrable_sq aestronglyMeasurable_id).2 sq
+    rw [variance_eq_sub memLpFiber, good.2]
+    rfl
+  -- the squared target output is dominated by the fiber second moment
+  have outputSq : Integrable (fun trace => output trace ^ 2) (traceLaw source) := by
+    refine secondMoment.mono' (measurableOutput.pow_const 2).aestronglyMeasurable ?_
+    filter_upwards [fiberVariance] with trace h
+    rw [Real.norm_eq_abs, abs_of_nonneg (sq_nonneg _)]
+    linarith [variance_nonneg id (fiber trace)]
+  have memLpTarget : MemLp id 2 (bigStepMeasure target) := by
+    rw [targetEq, memLp_map_measure_iff aestronglyMeasurable_id measurableOutput.aemeasurable]
+    exact (memLp_two_iff_integrable_sq measurableOutput.aestronglyMeasurable).2 outputSq
+  have targetSecond : ∫ value, value ^ 2 ∂bigStepMeasure target =
+      ∫ trace, output trace ^ 2 ∂traceLaw source := by
+    rw [targetEq, integral_map measurableOutput.aemeasurable sqMeasurable.aestronglyMeasurable]
+  refine ⟨memLpTarget, ?_, ?_⟩
+  · have sub : Integrable (fun trace => ∫ value, value ^ 2 ∂fiber trace - output trace ^ 2)
+        (traceLaw source) := secondMoment.sub outputSq
+    exact sub.congr (fiberVariance.mono fun trace h => h.symm)
+  · rw [sourceSecond, targetSecond, integral_congr_ae fiberVariance,
+      integral_sub secondMoment outputSq]
+    ring
+
+/-- The law of total variance along a trace factorization: the fiber variances are integrable
+over the trace law and the source output variance is the target output variance plus the mean
+fiber variance. Both output laws have the same mass and the same mean, so Mathlib's `variance`
+needs no normalization. -/
+theorem TraceFactorization.variance_decomposition {source target : Expr}
+    {fiber : Kernel Trace ℝ} {output : Trace → ℝ}
+    (factor : TraceFactorization source target fiber output)
+    (memLp : MemLp id 2 (bigStepMeasure source)) :
+    Integrable (fun trace => variance id (fiber trace)) (traceLaw source) ∧
+      variance id (bigStepMeasure source) =
+        variance id (bigStepMeasure target) +
+          ∫ trace, variance id (fiber trace) ∂traceLaw source := by
+  have := factor.1
+  obtain ⟨memLpTarget, integrable, second⟩ := factor.second_moment memLp
+  refine ⟨integrable, ?_⟩
+  have finiteSource : IsFiniteMeasure (bigStepMeasure source) := by
+    rw [factor.source_law]
+    infer_instance
+  have finiteTarget : IsFiniteMeasure (bigStepMeasure target) := by
+    rw [factor.target_law]
+    infer_instance
+  obtain ⟨-, mean⟩ :=
+    MeanOnTraces.finite_expectation ⟨fiber, output, factor⟩ (memLp.integrable one_le_two)
+  have mass : (bigStepMeasure target).real Set.univ = (bigStepMeasure source).real Set.univ := by
+    rw [measureReal_def, measureReal_def, factor.output_mass]
+  rw [variance_id_eq_moments memLp, variance_id_eq_moments memLpTarget, second, ← mean, mass]
+  ring
+
+/-- Determinization does not increase the second moment or the variance of the output law. -/
+theorem MeanOnTraces.variance_le {source target : Expr} (sound : MeanOnTraces source target)
+    (memLp : MemLp id 2 (bigStepMeasure source)) :
+    MemLp id 2 (bigStepMeasure target) ∧
+      (∫ value, value ^ 2 ∂bigStepMeasure target) ≤ ∫ value, value ^ 2 ∂bigStepMeasure source ∧
+      variance id (bigStepMeasure target) ≤ variance id (bigStepMeasure source) := by
+  obtain ⟨fiber, output, factor⟩ := sound
+  obtain ⟨memLpTarget, -, second⟩ := factor.second_moment memLp
+  obtain ⟨-, decomposition⟩ := factor.variance_decomposition memLp
+  have nonneg : 0 ≤ ∫ trace, variance id (fiber trace) ∂traceLaw source :=
+    integral_nonneg fun trace => variance_nonneg id (fiber trace)
+  exact ⟨memLpTarget, by linarith, by linarith⟩
+
 end Determinize.Traces
 
 namespace Determinize.Proof.Paper
@@ -226,4 +387,24 @@ theorem jensenSoundness : Determinize.Statement.jensenThm := by
   exact (Determinize.Proof.Traces.soundness mode program typed sourceForm
     sourceSafe).2.lintegral_convex_le convex nonneg
 
+/-- Output mass preservation, from operational trace soundness. -/
+theorem outputMassSoundness : Determinize.Statement.outputMassThm := by
+  intro mode program typed sourceForm sourceSafe
+  exact (Determinize.Proof.Traces.soundness mode program typed sourceForm
+    sourceSafe).2.output_mass
+
+/-- Variance non-increase, from operational trace soundness. -/
+theorem varianceSoundness : Determinize.Statement.varianceThm := by
+  intro mode program typed sourceForm sourceSafe memLp
+  exact (Determinize.Proof.Traces.soundness mode program typed sourceForm
+    sourceSafe).2.variance_le memLp
+
 end Determinize.Proof.Paper
+
+namespace Determinize.Proof.Traces
+
+/-- The law of total variance holds along every trace factorization of a source program. -/
+theorem varianceSoundness : Determinize.Traces.varianceThm :=
+  fun _ _ _ _ _ _ _ factor memLp => factor.variance_decomposition memLp
+
+end Determinize.Proof.Traces

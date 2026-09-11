@@ -131,6 +131,10 @@ theorem reciprocal_safe : DoesNotGetStuck reciprocal := by
 example : MeanOnTraces reciprocal reciprocal.determinize :=
   (Traces.soundness .E reciprocal reciprocal_typed reciprocal_source reciprocal_safe).2
 
+/-- The law of total variance along the traces of the same program. -/
+example : VarianceOnTraces reciprocal reciprocal.determinize :=
+  Traces.varianceSoundness .E reciprocal reciprocal_typed reciprocal_source reciprocal_safe
+
 /-- A general-mode draw scales an expectation-mode draw from the left. -/
 def scaledSample : Expr := .letE (uniform .G) (.mul (.bvar 0) (uniform .E))
 

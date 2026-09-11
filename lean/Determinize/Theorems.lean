@@ -16,16 +16,28 @@ theorem extendedExpectationPreservation : Statement.extendedExpectationThm :=
 theorem jensenInequality : Statement.jensenThm :=
   Proof.Paper.jensenSoundness
 
+theorem outputMassPreservation : Statement.outputMassThm :=
+  Proof.Paper.outputMassSoundness
+
+theorem varianceNonIncrease : Statement.varianceThm :=
+  Proof.Paper.varianceSoundness
+
 theorem traceErasure : Traces.correspondenceThm :=
   Proof.Traces.correspondence
 
 theorem traceSoundness : Traces.soundnessThm :=
   Proof.Traces.soundness
 
+theorem traceVarianceDecomposition : Traces.varianceThm :=
+  Proof.Traces.varianceSoundness
+
 end Determinize.Theorems
 
 #print axioms Determinize.Theorems.expectationPreservation
 #print axioms Determinize.Theorems.extendedExpectationPreservation
 #print axioms Determinize.Theorems.jensenInequality
+#print axioms Determinize.Theorems.outputMassPreservation
+#print axioms Determinize.Theorems.varianceNonIncrease
 #print axioms Determinize.Theorems.traceErasure
 #print axioms Determinize.Theorems.traceSoundness
+#print axioms Determinize.Theorems.traceVarianceDecomposition
