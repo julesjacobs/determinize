@@ -1,0 +1,2 @@
+let m = uniform(0, 1) in
+beta(uniform(m, 2), m)

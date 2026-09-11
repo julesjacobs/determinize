@@ -1,0 +1,24 @@
+== Elaboration ==
+raw:
+( let s =
+    ( uniform( ( 1 : float[G] ), ( 2 : float[G] ) ) : float[G] )
+    in
+    ( gauss( ( uniform( ( 0 : float[?m2] ), ( 1 : float[?m2] ) ) : float[?m2] ), ( let _ =
+                ( observe( ( ( s : float[G] ) < ( 1.5 : float[G] ) : bool ) ) : unit )
+                in
+                ( s : float[G] ) : float[G] ) ) : float[?m2] ) : float[?m2] )
+defaulted:
+( let s =
+    ( uniform( ( 1 : float[G] ), ( 2 : float[G] ) ) : float[G] )
+    in
+    ( gauss( ( uniform( ( 0 : float[E] ), ( 1 : float[E] ) ) : float[E] ), ( let _ =
+                ( observe( ( ( s : float[G] ) < ( 1.5 : float[G] ) : bool ) ) : unit )
+                in
+                ( s : float[G] ) : float[G] ) ) : float[E] ) : float[E] )
+
+== Determinized ==
+let s = uniform( 1, 2 ) in let m = ( 0 + 1 ) * 0.5 in let _ = let _ = observe( s < 1.5 ) in s in m
+
+== Evaluation (100 trials) ==
+program mean: 0.050526
+determinized mean: 0.5

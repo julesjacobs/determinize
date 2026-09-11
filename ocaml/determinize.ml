@@ -63,6 +63,16 @@ let default_modes (t : typed_expr) =
   in
   go t
 
+(* Expressions whose evaluation neither samples nor observes, so that
+   dropping or duplicating them does not change the program's distribution. *)
+let rec is_pure (e : Ast.expr) : bool =
+  match e with
+  | Var _ | Const _ | Bool _ | Unit | Nil -> true
+  | Neg e | Fst e | Snd e | Inl e | Inr e -> is_pure e
+  | Add (a, b) | Sub (a, b) | Mul (a, b) | Div (a, b)
+  | Lt (a, b) | Leq (a, b) | Pair (a, b) | Cons (a, b) -> is_pure a && is_pure b
+  | _ -> false
+
 let rec of_texpr (t : typed_expr) : Ast.expr =
   match t.expr, t.typ with
   | EVar x, _ -> Var x
@@ -98,7 +108,14 @@ let rec of_texpr (t : typed_expr) : Ast.expr =
        | _ -> Uniform (of_texpr a, of_texpr b))
   | EGauss (a,b), TFloat mvar ->
       (match mvar.mode with
-       | Some E -> of_texpr a
+       | Some E ->
+           (* mean_Gaussian(a, b) = a, but the variance is still evaluated
+              once for the samples and observations it may contain. *)
+           let a' = of_texpr a and b' = of_texpr b in
+           if is_pure b' then a'
+           else
+             let m = fresh_name (free_vars b') "m" in
+             Let (m, a', Let ("_", b', Var m))
        | _ -> Gauss (of_texpr a, of_texpr b))
   | EExponential e, TFloat mvar ->
       (match mvar.mode with
@@ -110,7 +127,13 @@ let rec of_texpr (t : typed_expr) : Ast.expr =
         | _ -> Gamma (of_texpr a, of_texpr b))
   | EBeta (a,b), TFloat mvar ->
       (match mvar.mode with
-        | Some E -> Div (of_texpr a, Add (of_texpr a, of_texpr b))
+        | Some E ->
+            (* mean_Beta(a, b) = a / (a + b), evaluating a only once *)
+            let a' = of_texpr a and b' = of_texpr b in
+            if is_pure a' then Div (a', Add (a', b'))
+            else
+              let x = fresh_name (free_vars b') "a" in
+              Let (x, a', Div (Var x, Add (Var x, b')))
         | _ -> Beta (of_texpr a, of_texpr b))
   | EFlip p, _ -> Flip (of_texpr p)
   | EBernoulli p, TFloat mvar ->

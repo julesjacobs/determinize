@@ -1,0 +1,2 @@
+let s = uniform(1, 2) in
+gauss(uniform(0, 1), let _ = observe(s < 1.5) in s)
