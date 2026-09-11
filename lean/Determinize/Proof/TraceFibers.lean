@@ -116,8 +116,9 @@ theorem FiberSound.factorization {α : Type*} [MeasurableSpace α]
     {source target : Measure (α × ℝ)} {fiber : SFiniteKernel α ℝ}
     [IsMarkovKernel fiber.kernel] (sound : FiberSound fiber source target)
     (massTarget : target Set.univ ≤ 1) :
-    ∃ (ν : Measure α) (output : α → ℝ),
-      ν Set.univ ≤ 1 ∧ Measurable output ∧
+    let ν := target.map Prod.fst
+    let output := fun trace => ∫ value : ℝ, value ∂fiber.kernel trace
+    ν Set.univ ≤ 1 ∧ Measurable output ∧
       source = ν ⊗ₘ fiber.kernel ∧ target = ν.map (fun t => (t, output t)) ∧
       ∀ᵐ t ∂ν, Integrable id (fiber.kernel t) ∧ output t = ∫ r : ℝ, r ∂fiber.kernel t := by
   let ν := (target).map Prod.fst
@@ -127,7 +128,7 @@ theorem FiberSound.factorization {α : Type*} [MeasurableSpace α]
     exact massTarget
   let : IsFiniteMeasure ν := ⟨mass.trans_lt (by simp)⟩
   have measurableOutput : Measurable output := (stronglyMeasurable_id.integral_kernel (κ := fiber.kernel)).measurable
-  refine ⟨ν, output, mass, measurableOutput, ?_, ?_, ?_⟩
+  refine ⟨mass, measurableOutput, ?_, ?_, ?_⟩
   · let paired := SFiniteKernel.mapWithInput fiber id measurable_id
     have pairedEq (trace : α) : paired.kernel trace =
         (fiber.kernel trace).map (fun value => (trace,value)) := by

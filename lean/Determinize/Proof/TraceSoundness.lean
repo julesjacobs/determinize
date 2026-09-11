@@ -113,8 +113,9 @@ theorem joint_mass_le_one (source : Expr) : jointMeasure source Set.univ ≤ 1 :
 theorem meanOnTraces_of_fiberSound (source target : Expr) (fiber : SFiniteKernel Trace ℝ)
     [IsMarkovKernel fiber.kernel] (sound : FiberSound fiber (jointMeasure source) (jointMeasure target)) :
     MeanOnTraces source target  := by
-  rcases sound.factorization (joint_mass_le_one target) with ⟨ν,f,hm,hf,hs,ht,hmean⟩
-  exact ⟨ν,fiber.kernel,f,hm,inferInstance,hf,hs,ht,hmean⟩
+  rcases sound.factorization (joint_mass_le_one target) with ⟨hm,hf,hs,ht,hmean⟩
+  exact ⟨(jointMeasure target).map Prod.fst, fiber.kernel,
+    (fun trace => ∫ value : ℝ, value ∂fiber.kernel trace), hm,inferInstance,hf,hs,ht,hmean⟩
 
 theorem soundness : Determinize.Proof.StepTraces.soundnessThm := by
   intro source typed sourceForm sourceSafe

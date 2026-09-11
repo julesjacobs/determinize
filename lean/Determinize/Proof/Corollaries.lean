@@ -43,14 +43,14 @@ theorem TraceFactorization.target_law {source target : Expr} {fiber : Kernel Tra
 /-- The two output laws behind `MeanOnTraces`: the source output is the mixture of the fibers
 over the trace law and the target output is the pushforward of the trace law along `output`. -/
 theorem MeanOnTraces.output_laws {source target : Expr} (sound : MeanOnTraces source target) :
-    ∃ (traces : Measure Trace) (fiber : Kernel Trace ℝ) (output : Trace → ℝ),
-      IsFiniteMeasure traces ∧ IsMarkovKernel fiber ∧ Measurable output ∧
-      bigStepMeasure source = fiber ∘ₘ traces ∧
-      bigStepMeasure target = traces.map output ∧
-      ∀ᵐ trace ∂traces,
-        Integrable id (fiber trace) ∧ output trace = ∫ value : ℝ, value ∂fiber trace := by
-  obtain ⟨fiber, output, factor⟩ := sound
-  exact ⟨traceLaw source, fiber, output, inferInstance, factor.1, factor.2.1, factor.source_law,
+    ∃ fiber : Kernel Trace ℝ,
+      IsMarkovKernel fiber ∧ Measurable (kernelMean fiber) ∧
+      bigStepMeasure source = fiber ∘ₘ traceLaw source ∧
+      bigStepMeasure target = (traceLaw source).map (kernelMean fiber) ∧
+      ∀ᵐ trace ∂traceLaw source,
+        Integrable id (fiber trace) ∧ kernelMean fiber trace = ∫ value : ℝ, value ∂fiber trace := by
+  obtain ⟨fiber, factor⟩ := sound
+  exact ⟨fiber, factor.1, factor.2.1, factor.source_law,
     factor.target_law, factor.2.2.2.2⟩
 
 /-- Under a trace factorization the two output laws have the same mass, the mass of the trace
@@ -66,7 +66,7 @@ theorem TraceFactorization.output_mass {source target : Expr} {fiber : Kernel Tr
 /-- Output mass is preserved along the traces. -/
 theorem MeanOnTraces.output_mass {source target : Expr} (sound : MeanOnTraces source target) :
     bigStepMeasure target Set.univ = bigStepMeasure source Set.univ := by
-  obtain ⟨fiber, output, factor⟩ := sound
+  obtain ⟨fiber, factor⟩ := sound
   exact factor.output_mass
 
 /-- The expectations conditioned on acceptance agree: the unnormalized mean and the output
@@ -83,8 +83,15 @@ theorem MeanOnTraces.lintegral_convex_le {source target : Expr}
     (nonneg : ∀ value, 0 ≤ φ value) :
     ∫⁻ value, ENNReal.ofReal (φ value) ∂bigStepMeasure target ≤
       ∫⁻ value, ENNReal.ofReal (φ value) ∂bigStepMeasure source := by
-  obtain ⟨ν, fiber, output, -, markov, measurableOutput, sourceEq, targetEq, valid⟩ :=
+  obtain ⟨fiber, markov, measurableOutput, sourceEq, targetEq, valid⟩ :=
     sound.output_laws
+  let ν := traceLaw source
+  let output := kernelMean fiber
+  change Measurable output at measurableOutput
+  change bigStepMeasure source = fiber ∘ₘ ν at sourceEq
+  change bigStepMeasure target = ν.map output at targetEq
+  change ∀ᵐ trace ∂ν, Integrable id (fiber trace) ∧
+    output trace = ∫ value : ℝ, value ∂fiber trace at valid
   have := markov
   have continuous : Continuous φ := continuousOn_univ.1 (convex.continuousOn isOpen_univ)
   have measurableφ : Measurable fun value => ENNReal.ofReal (φ value) :=
@@ -192,8 +199,15 @@ theorem MeanOnTraces.extended_expectation {source target : Expr}
     HasExpectation (bigStepMeasure target) ∧
       extendedExpectation (bigStepMeasure source) =
         extendedExpectation (bigStepMeasure target) := by
-  obtain ⟨ν, fiber, output, -, markov, measurableOutput, sourceEq, targetEq, valid⟩ :=
+  obtain ⟨fiber, markov, measurableOutput, sourceEq, targetEq, valid⟩ :=
     sound.output_laws
+  let ν := traceLaw source
+  let output := kernelMean fiber
+  change Measurable output at measurableOutput
+  change bigStepMeasure source = fiber ∘ₘ ν at sourceEq
+  change bigStepMeasure target = ν.map output at targetEq
+  change ∀ᵐ trace ∂ν, Integrable id (fiber trace) ∧
+    output trace = ∫ value : ℝ, value ∂fiber trace at valid
   have := markov
   -- the positive and negative parts of the fibers, as real functions of the trace
   let a : Trace → ℝ := fun trace => (∫⁻ value, ENNReal.ofReal value ∂fiber trace).toReal
@@ -361,7 +375,7 @@ theorem TraceFactorization.variance_decomposition {source target : Expr}
     rw [factor.target_law]
     infer_instance
   obtain ⟨-, mean⟩ :=
-    MeanOnTraces.finite_expectation ⟨fiber, output, factor⟩ (memLp.integrable one_le_two)
+    MeanOnTraces.finite_expectation ⟨fiber, factor.canonical⟩ (memLp.integrable one_le_two)
   have mass : (bigStepMeasure target).real Set.univ = (bigStepMeasure source).real Set.univ := by
     rw [measureReal_def, measureReal_def, factor.output_mass]
   rw [variance_id_eq_moments memLp, variance_id_eq_moments memLpTarget, second, ← mean, mass]
@@ -373,7 +387,7 @@ theorem MeanOnTraces.variance_le {source target : Expr} (sound : MeanOnTraces so
     MemLp id 2 (bigStepMeasure target) ∧
       (∫ value, value ^ 2 ∂bigStepMeasure target) ≤ ∫ value, value ^ 2 ∂bigStepMeasure source ∧
       variance id (bigStepMeasure target) ≤ variance id (bigStepMeasure source) := by
-  obtain ⟨fiber, output, factor⟩ := sound
+  obtain ⟨fiber, factor⟩ := sound
   obtain ⟨memLpTarget, -, second⟩ := factor.second_moment memLp
   obtain ⟨-, decomposition⟩ := factor.variance_decomposition memLp
   have nonneg : 0 ≤ ∫ trace, variance id (fiber trace) ∂traceLaw source :=
@@ -424,7 +438,7 @@ open MeasureTheory ProbabilityTheory Determinize.Traces
 /-- The law of total variance along traces, with `Traces.outputGivenTrace` as the fiber. -/
 theorem varianceSoundness : Determinize.Traces.varianceThm := by
   intro program typed sourceForm sourceSafe memLp
-  obtain ⟨_, output, factor, massAe, _⟩ := soundnessData .E program typed sourceForm sourceSafe
+  obtain ⟨_, factor, massAe, _⟩ := soundnessData .E program typed sourceForm sourceSafe
   obtain ⟨integrable, decomposition⟩ := factor.variance_decomposition memLp
   have congr : (fun trace => variance id (StepTraces.normalizedOutputGivenTrace program trace))
       =ᵐ[traceLaw program] fun trace => variance id (outputGivenTrace program trace) :=

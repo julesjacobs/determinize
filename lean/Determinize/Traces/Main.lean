@@ -19,6 +19,10 @@ noncomputable def traceThenOutput (traces : Measure Trace) (outputs : Trace → 
     Measure Output :=
   traces.bind fun trace => (outputs trace).map fun value => (trace, value)
 
+/-- The mean of the source replay law at a fixed generation trace. -/
+noncomputable def replayMean (program : Expr) (trace : Trace) : ℝ :=
+  ∫ value : ℝ, value ∂outputGivenTrace program trace
+
 /-- Trace soundness. Conditioned on its general-mode draws, the determinized program returns
 the conditional mean of the source: the joint trace/output law of the source is its trace law
 followed by `outputGivenTrace`, the joint law of the target is the same trace law followed by
@@ -36,7 +40,7 @@ def soundnessThm : Prop :=
       ∀ᵐ trace ∂traceLaw program,
         Integrable id (outputGivenTrace program trace) ∧
         outputGivenTrace program.determinize trace =
-          Measure.dirac (∫ value : ℝ, value ∂outputGivenTrace program trace)
+          Measure.dirac (replayMean program trace)
 
 /-- The law of total variance along traces. When the source output law has a finite second
 moment, the variances of the source's output laws given the traces are integrable over the

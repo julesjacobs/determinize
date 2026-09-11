@@ -10,7 +10,8 @@ theorem MeanOnTraces.finite_expectation {source target : Expr} (sound : MeanOnTr
     (integrable : Integrable id (bigStepMeasure source)) :
     Integrable id (bigStepMeasure target) ∧
       (∫ value : ℝ, value ∂bigStepMeasure source) = ∫ value : ℝ, value ∂bigStepMeasure target := by
-  rcases sound with ⟨fiber, output, markov, measurableOutput, sourceJoint, targetJoint, valid⟩
+  rcases sound with ⟨fiber, markov, measurableOutput, sourceJoint, targetJoint, valid⟩
+  let output := kernelMean fiber
   let := markov
   let ν := traceLaw source
   have sourceEq : bigStepMeasure source = fiber ∘ₘ ν := by

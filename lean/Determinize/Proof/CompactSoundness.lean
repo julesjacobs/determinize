@@ -203,25 +203,30 @@ at the target output. -/
 theorem soundnessDataE (source : Expr) (typed : Typed [] source (.float .E))
     (sourceForm : source.sourceForm = true) (safe : DoesNotGetStuck source) :
     DoesNotGetStuck source.determinize ∧
-    ∃ output : Trace → ℝ,
-      TraceFactorization source source.determinize (normalizedOutputGivenTrace source) output ∧
+      TraceFactorization source source.determinize (normalizedOutputGivenTrace source)
+        (kernelMean (normalizedOutputGivenTrace source)) ∧
       (∀ᵐ trace ∂traceLaw source,
         outputGivenTrace source trace = normalizedOutputGivenTrace source trace) ∧
       ∀ᵐ trace ∂traceLaw source,
-        outputGivenTrace source.determinize trace = Measure.dirac (output trace) := by
+        outputGivenTrace source.determinize trace = Measure.dirac (kernelMean (normalizedOutputGivenTrace source) trace) := by
   have tags := sourceTags_of_sourceForm sourceForm
   have domainSafe := (Typing.primitiveDomainSafe_iff_doesNotGetStuck typed).2 safe
   refine ⟨(StepTraces.soundness source typed sourceForm safe).1, ?_⟩
+  let ν := (traceAndOutputLaw source.determinize).map Prod.fst
+  let f := kernelMean (normalizedOutputGivenTrace source)
   rcases (compact_normalized_fiberSound source typed tags domainSafe).factorization
-    (joint_mass_le_one source.determinize) with ⟨ν, f, hm, hf, hs, ht, hmean⟩
+    (joint_mass_le_one source.determinize) with ⟨hm, hf, hs, ht, hmean⟩
   have hν : traceLaw source = ν := by
     let : IsFiniteMeasure ν := ⟨hm.trans_lt (by simp)⟩
     rw [traceLaw, hs]
     exact Measure.fst_compProd ν (normalizedKernel source).kernel
-  subst hν
+  change _ = ν ⊗ₘ _ at hs
+  change _ = ν.map (fun trace => (trace, f trace)) at ht
+  change ∀ᵐ trace ∂ν, _ at hmean
+  rw [← hν] at hs ht hmean
   have pairMeasurable : Measurable (fun trace : Trace => (trace, f trace)) :=
     measurable_id.prodMk hf
-  refine ⟨f, ⟨inferInstance, hf, hs, ht, hmean⟩, ?_, ?_⟩
+  refine ⟨⟨inferInstance, hf, hs, ht, hmean⟩, ?_, ?_⟩
   · have massOne := compact_source_massOne source typed tags domainSafe
     rw [ht] at massOne
     filter_upwards [ae_of_ae_map pairMeasurable.aemeasurable massOne] with trace mass
@@ -234,12 +239,12 @@ theorem soundnessDataE (source : Expr) (typed : Typed [] source (.float .E))
 theorem soundnessData (mode : Mode) (program : Expr) (typed : Typed [] program (.float mode))
     (sourceForm : program.sourceForm = true) (safe : DoesNotGetStuck program) :
     DoesNotGetStuck program.determinize ∧
-    ∃ output : Trace → ℝ,
-      TraceFactorization program program.determinize (normalizedOutputGivenTrace program) output ∧
+      TraceFactorization program program.determinize (normalizedOutputGivenTrace program)
+        (kernelMean (normalizedOutputGivenTrace program)) ∧
       (∀ᵐ trace ∂traceLaw program,
         outputGivenTrace program trace = normalizedOutputGivenTrace program trace) ∧
       ∀ᵐ trace ∂traceLaw program,
-        outputGivenTrace program.determinize trace = Measure.dirac (output trace) := by
+        outputGivenTrace program.determinize trace = Measure.dirac (kernelMean (normalizedOutputGivenTrace program) trace) := by
   cases mode with
   | E => exact soundnessDataE program typed sourceForm safe
   | G => exact soundnessDataE program (.sub typed .general) sourceForm safe
@@ -248,8 +253,8 @@ theorem soundnessData (mode : Mode) (program : Expr) (typed : Typed [] program (
 theorem meanOnTraces (mode : Mode) (program : Expr) (typed : Typed [] program (.float mode))
     (sourceForm : program.sourceForm = true) (safe : DoesNotGetStuck program) :
     DoesNotGetStuck program.determinize ∧ MeanOnTraces program program.determinize :=
-  let ⟨targetSafe, f, factor, _, _⟩ := soundnessData mode program typed sourceForm safe
-  ⟨targetSafe, _, f, factor⟩
+  let ⟨targetSafe, factor, _, _⟩ := soundnessData mode program typed sourceForm safe
+  ⟨targetSafe, _, factor⟩
 
 /-- A measure composed with a kernel is the bind that pairs each point with its draw. -/
 theorem compProd_eq_traceThenOutput (traces : Measure Trace) [SFinite traces]
@@ -273,10 +278,21 @@ theorem compProd_eq_traceThenOutput (traces : Measure Trace) [SFinite traces]
   rw [pairedEq, Measure.map_apply (show Measurable (fun value : ℝ => (trace, value)) from
     measurable_const.prodMk measurable_id) hs]
 
+/-- Determinization returns the canonical replay mean on each terminating trace. -/
+theorem targetLaw (program : Expr) (typed : Typed [] program (.float .E))
+    (sourceForm : program.sourceForm = true) (safe : DoesNotGetStuck program) :
+    traceAndOutputLaw program.determinize =
+      (traceLaw program).map (fun trace => (trace, replayMean program trace)) := by
+  obtain ⟨_, factor, sameFiber, _⟩ := soundnessDataE program typed sourceForm safe
+  refine factor.2.2.2.1.trans (Measure.map_congr ?_)
+  filter_upwards [sameFiber] with trace same
+  simp only [kernelMean, replayMean, same]
+
 /-- The public trace soundness theorem. -/
 theorem soundness : Determinize.Traces.soundnessThm := by
   intro program typed sourceForm safe
-  obtain ⟨targetSafe, f, factor, massAe, diracAe⟩ :=
+  let f := kernelMean (normalizedOutputGivenTrace program)
+  obtain ⟨targetSafe, factor, massAe, diracAe⟩ :=
     soundnessData .E program typed sourceForm safe
   obtain ⟨markov, hf, hs, ht, hmean⟩ := factor
   have := markov
@@ -290,7 +306,7 @@ theorem soundness : Determinize.Traces.soundnessThm := by
     rw [h, Measure.map_dirac' (show Measurable (fun value : ℝ => (trace, value)) from
       measurable_const.prodMk measurable_id)]
   · filter_upwards [hmean, massAe, diracAe] with trace mean mass dirac
-    rw [mass]
+    simp only [replayMean, mass]
     exact ⟨mean.1, by rw [dirac, mean.2]⟩
 
 end
