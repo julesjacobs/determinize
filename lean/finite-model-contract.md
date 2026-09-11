@@ -127,6 +127,55 @@ failure. Infinite recursion can produce a finite cyclic graph, while growing
 arguments, environments, or stacks can exhaust limits. Complete exploration does
 not imply absorption or finite expected execution time.
 
-## Result certificates
+## Result certificates and Storm
 
-The result contract is specified; result checking and Storm integration follow in the next change.
+A `ResultCertificate model` supplies rational state values `v`, a positive horizon
+`k`, and rational `δ` with `0 < δ ≤ 1`. Its validity conditions are:
+
+- Returned states satisfy `v(s) = reward(s)`; rejected states satisfy `v(s) = 0`.
+- Transient states satisfy `v(s) = Σ_t P(s,t) v(t)`.
+- Every state satisfies `survivalWithin k s ≤ 1 - δ`.
+
+`Proof/FiniteModel/Result.lean` proves `resultCertificate_sound`. Every output
+measure is dominated by a finite sum of terminal Dirac measures, so the output is
+integrable even with signed rewards. The unbounded measures satisfy the transition
+equations. The difference between any two equation solutions is bounded by its
+maximum absolute value times survival probability. The absorption bound forces
+that maximum to zero. A transient self-loop still admits spurious equation
+solutions and cannot pass the absorption check. Nonabsorbing result certification
+requires a later extension; model correspondence itself includes divergence.
+
+`Checking/Result.lean` implements `checkResult` and proves `checkResult_sound`.
+Its tabulated survival calculation is proved equal to `survivalWithin`.
+`checked_expectedReward` instantiates both checker soundness proofs, establishing
+integrability and the exact expected reward of the selected paper program.
+`sourceEndToEnd` additionally retains the source typing, source-form, safety, and
+integrability premises needed to transport a determinized answer to the source.
+A certificate for the determinized subject alone does not discharge those premises.
+
+`Finite/Solve.lean` uses unverified rational Gaussian elimination and searches
+horizons up to the number of states for a positive uniform escape probability.
+Every generated certificate passes `checkResult` against the original checked
+Lean model. Dense solving defaults to at most 256 states; rational arithmetic and
+independent kernel replay can be expensive. `--result PREFIX` writes the usual
+model files plus `.result.json` and a standalone `.result.lean` theorem. Run
+`lake env lean PREFIX.result.lean` to check its evidence independently.
+
+The Storm writer redirects returned and rejected states to a fresh zero-reward
+`done` sink, paying returned rewards once. Signed rewards use separate positive
+and negative reward files. `tools/storm.py` invokes Lean certificate generation,
+independently kernel-checks the certificate, runs Storm through `stormpy` on both
+reward files with `R=? [ F "done" ]`, and compares their difference with the exact
+answer. `.storm.json` records the version, engine, property, commands,
+logs, completion status, and failures/timeouts. The adapter reads rational explicit
+data into Storm’s exact sparse-matrix API because its default explicit-file reader
+does not accept fractional literals. Storm’s rational answer must match exactly;
+the independent Lean rational solver supplies the certificate evidence.
+
+Parsing/desugaring and the reviewed specification remain in the trust boundary.
+Certificates bind the theorem to the exported core source and subject, not to the
+bytes of the `.det` file. Inference, exploration, solving, Storm, and serialization
+are unverified; accepted model and result evidence is checked by Lean. The formal
+result does not rely on the correctness of the Storm file serialization or on
+agreement with Storm. The executable Float sampler remains
+outside this exact finite-model theorem.

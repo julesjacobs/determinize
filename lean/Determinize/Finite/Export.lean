@@ -1,4 +1,4 @@
-import Determinize.Checking.FiniteModel
+import Determinize.Finite.Solve
 import Determinize.Frontend.Pretty
 
 namespace Determinize.Finite
@@ -143,5 +143,42 @@ def write (outputPath : System.FilePath) (source : Checking.Core) (subject : Sub
       (".negative.state.rew", files.negativeRewards)] do
     IO.FS.writeFile (outputPath.toString ++ suffix) content
 
+
+/-- A standalone theorem about the selected paper program's expected output. -/
+def resultCertificateText (source : Checking.Core) (subject : Subject) (candidate : Candidate)
+    (model : Model) (certificate : ResultCertificate model) : String :=
+  let values := (List.ofFn certificate.values).map leanRat
+  (replayCertificateText source subject candidate).replace
+    "import Determinize.Checking.FiniteModel" "import Determinize.Checking.Result" ++
+  "\ndef result : ResultCertificate model where\n" ++
+  "  values := fun i => #[" ++ String.intercalate ", " values ++ "][i.val]!\n" ++
+  s!"  horizon := {certificate.horizon}\n  escape := {leanRat certificate.escape}\n" ++
+  "\ntheorem resultAccepted : Determinize.Checking.checkResult model result = true := by\n" ++
+  "  decide +kernel\n" ++
+  "\ntheorem expectedReward :\n" ++
+  "    MeasureTheory.Integrable id (bigStepMeasure (checkedSubject.program checkedSource)) ∧\n" ++
+  "    (∫ value : ℝ, value ∂bigStepMeasure (checkedSubject.program checkedSource)) =\n" ++
+  "      (result.values model.initial : ℝ) := by\n" ++
+  "  rw [← modelMatches.2]\n" ++
+  "  exact (Determinize.Checking.checkResult_sound model result resultAccepted).2\n" ++
+  "\n#print axioms resultAccepted\n#print axioms expectedReward\n"
+
+def writeResult (outputPath : System.FilePath) (source : Checking.Core) (subject : Subject)
+    (candidate : Candidate) (limits : SolveLimits := {}) : IO Rat := do
+  let some checked := Checking.checkModel source subject candidate
+    | throw (IO.userError "model candidate failed validation")
+  let certificate ← IO.ofExcept (solve checked.model limits)
+  let answer := certificate.values checked.model.initial
+  let metadata := Lean.Json.mkObj [
+    ("answer", Lean.toJson (rational answer)),
+    ("subject", Lean.toJson (if subject == .source then "source" else "determinized")),
+    ("states", Lean.toJson checked.model.size),
+    ("horizon", Lean.toJson certificate.horizon),
+    ("escape", Lean.toJson (rational certificate.escape))]
+  write outputPath source subject candidate
+  IO.FS.writeFile (outputPath.toString ++ ".result.lean")
+    (resultCertificateText source subject candidate checked.model certificate)
+  IO.FS.writeFile (outputPath.toString ++ ".result.json") (metadata.pretty ++ "\n")
+  return answer
 
 end Determinize.Finite

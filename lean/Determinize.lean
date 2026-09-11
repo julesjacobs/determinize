@@ -1,6 +1,7 @@
 import Determinize.Proof.FiniteModel.Progress
 import Determinize.Proof.FiniteModel.Sampling
 import Determinize.Proof.FiniteModel.Initial
+import Determinize.Checking.Result
 import Determinize.Checking.FiniteModel
 import Determinize.Proof.FiniteModel.Model
 import Determinize.Proof.FiniteModel.Contracts
