@@ -5,16 +5,12 @@ import Mathlib.Tactic.DeriveCountable
 /-!
 # Reviewer-facing paper syntax
 
-Only sample sites carry mode labels, and promotion is explicit; literals and arithmetic
+Only sample sites carry mode labels; subtyping is silent; literals and arithmetic
 are mode-free, as in the paper's grammar, and a literal types at either mode. Types are
 assigned separately by `Typed`; no expression constructor contains a type annotation.
 Each primitive distribution is its own constructor with the paper's operands; a site
 carries its mode and whether it still samples or already returns the primitive's mean.
 `Expr.sourceForm` requires stochastic sites; their operands may be arbitrary expressions.
-`Expr.flip` is sugar: a general-mode `bernoulli` draw compared with `0`. `discrete` carries
-literal weights only, as in the implementation's parser. `observe condition` rejects the
-execution when `condition` evaluates to `false`: a failed observation contributes no output
-mass, so output laws are unnormalized (see `Determinize.Statement.Paper.reduce`).
 -/
 
 namespace Determinize.Statement.Paper
@@ -22,6 +18,7 @@ namespace Determinize.Statement.Paper
 /-- Untyped paper expressions with de Bruijn variables; only sample sites carry a mode. -/
 inductive Expr (Literal : Type := ℝ) where
   | bvar (index : Nat)
+  | reject
   | unit | bool (value : Bool) | real (value : Literal)
   | lam (body : Expr Literal)
   | fix (body : Expr Literal)
@@ -34,19 +31,19 @@ inductive Expr (Literal : Type := ℝ) where
   | matchList (scrutinee nilCase consCase : Expr Literal)
   | ite (condition thenBranch elseBranch : Expr Literal)
   | letE (value body : Expr Literal)
-  /-- `observe condition`: continue with `unit` when `condition` holds, reject otherwise. -/
-  | observe (condition : Expr Literal)
-  | promote (body : Expr Literal) | neg (body : Expr Literal)
+  | neg (body : Expr Literal)
   | add (left right : Expr Literal) | mul (left right : Expr Literal)
   | div (left right : Expr Literal) | lt (left right : Expr Literal)
   | uniform (mode : Mode) (kind : Kind) (lower upper : Expr Literal)
   | gaussian (mode : Mode) (kind : Kind) (mean variance : Expr Literal)
   | poisson (mode : Mode) (kind : Kind) (rate : Expr Literal)
+  | discrete (mode : Mode) (kind : Kind) (distribution : FiniteDistribution)
+  | bernoulli (mode : Mode) (kind : Kind) (probability : Expr Literal)
   | exponential (mode : Mode) (kind : Kind) (rate : Expr Literal)
   | beta (mode : Mode) (kind : Kind) (alpha beta : Expr Literal)
   | gamma (mode : Mode) (kind : Kind) (shape rate : Expr Literal)
-  | bernoulli (mode : Mode) (kind : Kind) (probability : Expr Literal)
-  | discrete (mode : Mode) (kind : Kind) (weights : List Literal)
+
+deriving instance Repr, DecidableEq, Inhabited for Expr
 
 namespace Expr
 
@@ -57,10 +54,10 @@ def isValue {Literal : Type} : Expr Literal → Bool
   | _ => false
 
 /-- Source expressions contain only stochastic sampling sites. -/
-def sourceForm : Expr → Bool
-  | .bvar _ | .unit | .bool _ | .real _ | .nil => true
+def sourceForm {Literal : Type} : Expr Literal → Bool
+  | .bvar _ | .reject | .unit | .bool _ | .real _ | .nil => true
   | .lam body | .fix body | .fst body | .snd body
-  | .inl body | .inr body | .observe body | .promote body | .neg body => body.sourceForm
+  | .inl body | .inr body | .neg body => body.sourceForm
   | .app left right | .pair left right | .cons left right
   | .add left right | .mul left right | .div left right | .lt left right =>
       left.sourceForm && right.sourceForm
@@ -69,19 +66,21 @@ def sourceForm : Expr → Bool
   | .matchList scrutinee nilCase consCase =>
       scrutinee.sourceForm && nilCase.sourceForm && consCase.sourceForm
   | .letE value body => value.sourceForm && body.sourceForm
+  | .discrete _ kind _ => kind.isStochastic
   | .uniform _ kind lower upper => kind.isStochastic && lower.sourceForm && upper.sourceForm
   | .gaussian _ kind mean variance =>
       kind.isStochastic && mean.sourceForm && variance.sourceForm
-  | .poisson _ kind rate | .exponential _ kind rate | .bernoulli _ kind rate =>
-      kind.isStochastic && rate.sourceForm
-  | .discrete _ kind _ => kind.isStochastic
+  | .poisson _ kind rate | .bernoulli _ kind rate | .exponential _ kind rate => kind.isStochastic && rate.sourceForm
   | .beta _ kind left right => kind.isStochastic && left.sourceForm && right.sourceForm
   | .gamma _ kind shape rate => kind.isStochastic && shape.sourceForm && rate.sourceForm
 
 /-- Apply `replace depth index` to variables, increasing `depth` beneath binders. -/
-def mapVars (replace : Nat → Nat → Expr) (depth : Nat) : Expr → Expr
+def mapVars {Literal : Type} (replace : Nat → Nat → Expr Literal) (depth : Nat) :
+    Expr Literal → Expr Literal
   | .bvar index => replace depth index
   | .unit => .unit
+  | .reject => .reject
+  | .discrete mode kind d => .discrete mode kind d
   | .bool value => .bool value
   | .real value => .real value
   | .lam body => .lam (body.mapVars replace (depth + 1))
@@ -102,8 +101,6 @@ def mapVars (replace : Nat → Nat → Expr) (depth : Nat) : Expr → Expr
       (e.mapVars replace depth)
   | .letE x b => .letE (x.mapVars replace depth)
       (b.mapVars replace (depth + 1))
-  | .observe x => .observe (x.mapVars replace depth)
-  | .promote x => .promote (x.mapVars replace depth)
   | .neg x => .neg (x.mapVars replace depth)
   | .add l r => .add (l.mapVars replace depth) (r.mapVars replace depth)
   | .mul l r => .mul (l.mapVars replace depth) (r.mapVars replace depth)
@@ -112,21 +109,21 @@ def mapVars (replace : Nat → Nat → Expr) (depth : Nat) : Expr → Expr
   | .uniform m k l r => .uniform m k (l.mapVars replace depth) (r.mapVars replace depth)
   | .gaussian m k l r => .gaussian m k (l.mapVars replace depth) (r.mapVars replace depth)
   | .poisson m k x => .poisson m k (x.mapVars replace depth)
+  | .bernoulli m k x => .bernoulli m k (x.mapVars replace depth)
   | .exponential m k x => .exponential m k (x.mapVars replace depth)
   | .beta m k l r => .beta m k (l.mapVars replace depth) (r.mapVars replace depth)
   | .gamma m k l r => .gamma m k (l.mapVars replace depth) (r.mapVars replace depth)
-  | .bernoulli m k x => .bernoulli m k (x.mapVars replace depth)
-  | .discrete m k weights => .discrete m k weights
 
-abbrev shift (amount cutoff : Nat) : Expr → Expr :=
+abbrev shift {Literal : Type} (amount cutoff : Nat) : Expr Literal → Expr Literal :=
   mapVars (fun cutoff index => .bvar (if cutoff ≤ index then index + amount else index)) cutoff
 
-abbrev substAt (depth : Nat) (replacement : Expr) : Expr → Expr :=
+abbrev substAt {Literal : Type} (depth : Nat) (replacement : Expr Literal) : Expr Literal → Expr Literal :=
   mapVars (fun depth index => if index = depth then replacement.shift depth 0
     else .bvar (if depth < index then index - 1 else index)) depth
 
-def substHead (body replacement : Expr) : Expr := substAt 0 replacement body
-def substTwo (body argument function : Expr) : Expr :=
+def substHead {Literal : Type} (body replacement : Expr Literal) : Expr Literal :=
+  substAt 0 replacement body
+def substTwo {Literal : Type} (body argument function : Expr Literal) : Expr Literal :=
   substAt 0 argument (substAt 1 function body)
 
 /-- An expectation-mode site returns its mean after determinization; a general-mode site
@@ -136,9 +133,10 @@ def determinizeKind : Mode → Kind → Kind
   | .G, kind => kind
 
 /-- Replace expectation-mode stochastic samples by their atomic means. -/
-def determinize : Expr → Expr
+def determinize {Literal : Type} : Expr Literal → Expr Literal
   | .bvar index => .bvar index
   | .unit => .unit
+  | .reject => .reject
   | .bool value => .bool value
   | .real value => .real value
   | .lam body => .lam body.determinize
@@ -158,8 +156,6 @@ def determinize : Expr → Expr
   | .ite condition thenBranch elseBranch =>
       .ite condition.determinize thenBranch.determinize elseBranch.determinize
   | .letE value body => .letE value.determinize body.determinize
-  | .observe condition => .observe condition.determinize
-  | .promote body => .promote body.determinize
   | .neg body => .neg body.determinize
   | .add left right => .add left.determinize right.determinize
   | .mul left right => .mul left.determinize right.determinize
@@ -170,25 +166,51 @@ def determinize : Expr → Expr
   | .gaussian mode kind mean variance =>
       .gaussian mode (determinizeKind mode kind) mean.determinize variance.determinize
   | .poisson mode kind rate => .poisson mode (determinizeKind mode kind) rate.determinize
+  | .bernoulli mode kind probability => .bernoulli mode (determinizeKind mode kind) probability.determinize
+  | .discrete mode kind d => .discrete mode (determinizeKind mode kind) d
   | .exponential mode kind rate =>
       .exponential mode (determinizeKind mode kind) rate.determinize
   | .beta mode kind left right =>
       .beta mode (determinizeKind mode kind) left.determinize right.determinize
   | .gamma mode kind shape rate =>
       .gamma mode (determinizeKind mode kind) shape.determinize rate.determinize
-  | .bernoulli mode kind probability =>
-      .bernoulli mode (determinizeKind mode kind) probability.determinize
-  | .discrete mode kind weights => .discrete mode (determinizeKind mode kind) weights
 
-/-- `flip(p)`: a Boolean that is `true` with probability `p`, the paper's `flip`, as sugar for
-a general-mode `bernoulli` draw compared with `0`. A Boolean has no mean, so the draw is
-general mode: `flip` is never determinized and needs a general-mode probability
-(`Typed.flip`). -/
-def flip (probability : Expr) : Expr := .lt (.real 0) (.bernoulli .G .stochastic probability)
-
-/-- Determinization commutes with `flip`, whose draw always stays stochastic. -/
-theorem determinize_flip (probability : Expr) :
-    (flip probability).determinize = flip probability.determinize := rfl
+def mapLiteral {α β : Type} (f : α → β) : Expr α → Expr β
+  | .bvar index => .bvar index
+  | .unit => .unit
+  | .reject => .reject
+  | .discrete mode kind d => .discrete mode kind d
+  | .bool value => .bool value
+  | .real value => .real (f value)
+  | .lam body => .lam (body.mapLiteral f)
+  | .fix body => .fix (body.mapLiteral f)
+  | .app function argument => .app (function.mapLiteral f) (argument.mapLiteral f)
+  | .pair left right => .pair (left.mapLiteral f) (right.mapLiteral f)
+  | .fst pairValue => .fst (pairValue.mapLiteral f)
+  | .snd pairValue => .snd (pairValue.mapLiteral f)
+  | .inl value => .inl (value.mapLiteral f)
+  | .inr value => .inr (value.mapLiteral f)
+  | .matchSum scrutinee left right =>
+      .matchSum (scrutinee.mapLiteral f) (left.mapLiteral f) (right.mapLiteral f)
+  | .nil => .nil
+  | .cons head tail => .cons (head.mapLiteral f) (tail.mapLiteral f)
+  | .matchList scrutinee nilCase consCase =>
+      .matchList (scrutinee.mapLiteral f) (nilCase.mapLiteral f) (consCase.mapLiteral f)
+  | .ite condition thenBranch elseBranch =>
+      .ite (condition.mapLiteral f) (thenBranch.mapLiteral f) (elseBranch.mapLiteral f)
+  | .letE value body => .letE (value.mapLiteral f) (body.mapLiteral f)
+  | .neg body => .neg (body.mapLiteral f)
+  | .add left right => .add (left.mapLiteral f) (right.mapLiteral f)
+  | .mul left right => .mul (left.mapLiteral f) (right.mapLiteral f)
+  | .div left right => .div (left.mapLiteral f) (right.mapLiteral f)
+  | .lt left right => .lt (left.mapLiteral f) (right.mapLiteral f)
+  | .uniform mode kind lower upper => .uniform mode kind (lower.mapLiteral f) (upper.mapLiteral f)
+  | .gaussian mode kind mean variance => .gaussian mode kind (mean.mapLiteral f) (variance.mapLiteral f)
+  | .poisson mode kind rate => .poisson mode kind (rate.mapLiteral f)
+  | .bernoulli mode kind probability => .bernoulli mode kind (probability.mapLiteral f)
+  | .exponential mode kind rate => .exponential mode kind (rate.mapLiteral f)
+  | .beta mode kind alpha betaArg => .beta mode kind (alpha.mapLiteral f) (betaArg.mapLiteral f)
+  | .gamma mode kind shape rate => .gamma mode kind (shape.mapLiteral f) (rate.mapLiteral f)
 
 end Expr
 
@@ -197,9 +219,10 @@ inductive HasVar : List Ty → Nat → Ty → Prop
   | head : HasVar (ty :: context) 0 ty
   | tail : HasVar context index ty → HasVar (head :: context) (index + 1) ty
 
-/-- The explicitly mode- and coercion-annotated core typing judgment. -/
+/-- Core typing with mode-annotated sample sites and silent structural subtyping. -/
 inductive Typed : List Ty → Expr → Ty → Prop
   | bvar : HasVar context index ty → Typed context (.bvar index) ty
+  | reject : Typed context .reject ty
   | unit : Typed context .unit .unit
   | bool : Typed context (.bool value) .bool
   | real : Typed context (.real value) (.float mode)
@@ -230,12 +253,7 @@ inductive Typed : List Ty → Expr → Ty → Prop
       Typed context elseBranch result → Typed context (.ite condition thenBranch elseBranch) result
   | letE : Typed context value valueTy → Typed (valueTy :: context) body result →
       Typed context (.letE value body) result
-  /-- An observation takes a Boolean and returns `unit`. Every Boolean is general-mode
-  information (`lt` compares general-mode operands and `promote` only goes from `G` to `E`),
-  so the condition never depends on an expectation-mode draw and the same executions are
-  rejected before and after determinization. -/
-  | observe : Typed context condition .bool → Typed context (.observe condition) .unit
-  | promote : Typed context value (.float .G) → Typed context (.promote value) (.float .E)
+  | sub : Typed context value a → Ty.Sub a b → Typed context value b
   | neg : Typed context value (.float mode) → Typed context (.neg value) (.float mode)
   | add : Typed context left (.float mode) → Typed context right (.float mode) →
       Typed context (.add left right) (.float mode)
@@ -251,20 +269,14 @@ inductive Typed : List Ty → Expr → Ty → Prop
       Typed context (.gaussian mode kind mean variance) (.float mode)
   | poisson : Typed context rate (.float mode) →
       Typed context (.poisson mode kind rate) (.float mode)
+  | discrete : Typed context (.discrete mode kind d) (.float mode)
+  | bernoulli : Typed context probability (.float mode) →
+      Typed context (.bernoulli mode kind probability) (.float mode)
   | exponential : Typed context rate (.float .G) →
       Typed context (.exponential mode kind rate) (.float mode)
   | beta : Typed context alpha (.float .G) → Typed context beta (.float .G) →
       Typed context (.beta mode kind alpha beta) (.float mode)
   | gamma : Typed context shape (.float mode) → Typed context rate (.float .G) →
       Typed context (.gamma mode kind shape rate) (.float mode)
-  | bernoulli : Typed context probability (.float mode) →
-      Typed context (.bernoulli mode kind probability) (.float mode)
-  | discrete : Typed context (.discrete mode kind weights) (.float mode)
-
-/-- `flip` is a Boolean and needs a general-mode probability: `Typed.lt` compares general-mode
-operands only, so the `bernoulli` draw behind `flip` is general mode and never determinized. -/
-theorem Typed.flip (probabilityTyped : Typed context probability (.float .G)) :
-    Typed context (.flip probability) .bool :=
-  .lt .real (.bernoulli probabilityTyped)
 
 end Determinize.Statement.Paper

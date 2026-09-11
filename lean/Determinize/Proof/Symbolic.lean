@@ -26,6 +26,7 @@ attribute [local simp] Determinize.Statement.Paper.reduce
 namespace Symbolic
 
 inductive AffineExpr (sampleCount : Nat) where
+  | reject
   | bvar (index : Nat) | unit | bool (value : Bool)
   | real (value : Affine sampleCount)
   | lam (body : AffineExpr sampleCount)
@@ -41,8 +42,6 @@ inductive AffineExpr (sampleCount : Nat) where
   | matchList (scrutinee nilCase consCase : AffineExpr sampleCount)
   | ite (condition thenBranch elseBranch : AffineExpr sampleCount)
   | letE (value body : AffineExpr sampleCount)
-  | observe (condition : AffineExpr sampleCount)
-  | promote (body : AffineExpr sampleCount)
   | neg (body : AffineExpr sampleCount)
   | add (left right : AffineExpr sampleCount)
   | mul (left right : AffineExpr sampleCount)
@@ -51,17 +50,19 @@ inductive AffineExpr (sampleCount : Nat) where
   | uniform (mode : Mode) (kind : Kind) (lower upper : AffineExpr sampleCount)
   | gaussian (mode : Mode) (kind : Kind) (mean variance : AffineExpr sampleCount)
   | poisson (mode : Mode) (kind : Kind) (rate : AffineExpr sampleCount)
+  | discrete (mode : Mode) (kind : Kind) (distribution : FiniteDistribution)
+  | bernoulli (mode : Mode) (kind : Kind) (probability : AffineExpr sampleCount)
   | exponential (mode : Mode) (kind : Kind) (rate : AffineExpr sampleCount)
   | beta (mode : Mode) (kind : Kind) (alpha beta : AffineExpr sampleCount)
   | gamma (mode : Mode) (kind : Kind) (shape rate : AffineExpr sampleCount)
-  | bernoulli (mode : Mode) (kind : Kind) (probability : AffineExpr sampleCount)
-  | discrete (mode : Mode) (kind : Kind) (weights : List ℝ)
 
 namespace AffineExpr
 
 def realize (environment : Env sampleCount) : AffineExpr sampleCount → Expr
   | .bvar index => .bvar index
   | .unit => .unit
+  | .reject => .reject
+  | .discrete mode kind d => .discrete mode kind d
   | .bool value => .bool value
   | .real value => .real (value.eval environment)
   | .lam body => .lam (body.realize environment)
@@ -88,8 +89,6 @@ def realize (environment : Env sampleCount) : AffineExpr sampleCount → Expr
         (elseBranch.realize environment)
   | .letE value body =>
       .letE (value.realize environment) (body.realize environment)
-  | .observe condition => .observe (condition.realize environment)
-  | .promote body => .promote (body.realize environment)
   | .neg body => .neg (body.realize environment)
   | .add left right =>
       .add (left.realize environment) (right.realize environment)
@@ -103,17 +102,18 @@ def realize (environment : Env sampleCount) : AffineExpr sampleCount → Expr
   | .gaussian mode kind mean variance =>
       .gaussian mode kind (mean.realize environment) (variance.realize environment)
   | .poisson mode kind rate => .poisson mode kind (rate.realize environment)
+  | .bernoulli mode kind probability => .bernoulli mode kind (probability.realize environment)
   | .exponential mode kind rate => .exponential mode kind (rate.realize environment)
   | .beta mode kind left right =>
       .beta mode kind (left.realize environment) (right.realize environment)
   | .gamma mode kind shape rate =>
       .gamma mode kind (shape.realize environment) (rate.realize environment)
-  | .bernoulli mode kind probability => .bernoulli mode kind (probability.realize environment)
-  | .discrete mode kind weights => .discrete mode kind weights
 
 def skeleton : AffineExpr sampleCount → Skeleton
   | .bvar index => .bvar index
   | .unit => .unit
+  | .reject => .reject
+  | .discrete mode kind d => .discrete mode kind d
   | .bool value => .bool value
   | .real _ => .real
   | .lam body => .lam body.skeleton
@@ -133,8 +133,6 @@ def skeleton : AffineExpr sampleCount → Skeleton
   | .ite condition thenBranch elseBranch =>
       .ite condition.skeleton thenBranch.skeleton elseBranch.skeleton
   | .letE value body => .letE value.skeleton body.skeleton
-  | .observe condition => .observe condition.skeleton
-  | .promote body => .promote body.skeleton
   | .neg body => .neg body.skeleton
   | .add left right => .add left.skeleton right.skeleton
   | .mul left right => .mul left.skeleton right.skeleton
@@ -143,16 +141,15 @@ def skeleton : AffineExpr sampleCount → Skeleton
   | .uniform mode kind lower upper => .uniform mode kind lower.skeleton upper.skeleton
   | .gaussian mode kind mean variance => .gaussian mode kind mean.skeleton variance.skeleton
   | .poisson mode kind rate => .poisson mode kind rate.skeleton
+  | .bernoulli mode kind probability => .bernoulli mode kind probability.skeleton
   | .exponential mode kind rate => .exponential mode kind rate.skeleton
   | .beta mode kind left right => .beta mode kind left.skeleton right.skeleton
   | .gamma mode kind shape rate => .gamma mode kind shape.skeleton rate.skeleton
-  | .bernoulli mode kind probability => .bernoulli mode kind probability.skeleton
-  | .discrete mode kind weights => .discrete mode kind (weights.map fun _ => ())
 
 def coordinates : AffineExpr sampleCount → List (Affine sampleCount)
   | .real value => [value]
   | .lam body | .fix body | .fst body | .snd body
-  | .inl body | .inr body | .observe body | .promote body | .neg body => body.coordinates
+  | .inl body | .inr body | .neg body => body.coordinates
   | .app left right | .pair left right | .cons left right
   | .add left right | .mul left right | .div left right | .lt left right =>
       left.coordinates ++ right.coordinates
@@ -163,13 +160,14 @@ def coordinates : AffineExpr sampleCount → List (Affine sampleCount)
   | .letE value body => value.coordinates ++ body.coordinates
   | .uniform _ _ left right | .gaussian _ _ left right | .beta _ _ left right
   | .gamma _ _ left right => left.coordinates ++ right.coordinates
-  | .poisson _ _ body | .exponential _ _ body | .bernoulli _ _ body => body.coordinates
-  | .discrete _ _ weights => weights.map fun weight => (weight, 0)
+  | .poisson _ _ body | .bernoulli _ _ body | .exponential _ _ body => body.coordinates
   | _ => []
 
 def ofExpr : Expr → AffineExpr 0
   | .bvar index => .bvar index
   | .unit => .unit
+  | .reject => .reject
+  | .discrete mode kind d => .discrete mode kind d
   | .bool value => .bool value
   | .real value => .real (value, Fin.elim0)
   | .lam body => .lam (ofExpr body)
@@ -189,8 +187,6 @@ def ofExpr : Expr → AffineExpr 0
   | .ite condition thenBranch elseBranch =>
       .ite (ofExpr condition) (ofExpr thenBranch) (ofExpr elseBranch)
   | .letE value body => .letE (ofExpr value) (ofExpr body)
-  | .observe condition => .observe (ofExpr condition)
-  | .promote body => .promote (ofExpr body)
   | .neg body => .neg (ofExpr body)
   | .add left right => .add (ofExpr left) (ofExpr right)
   | .mul left right => .mul (ofExpr left) (ofExpr right)
@@ -199,15 +195,16 @@ def ofExpr : Expr → AffineExpr 0
   | .uniform mode kind lower upper => .uniform mode kind (ofExpr lower) (ofExpr upper)
   | .gaussian mode kind mean variance => .gaussian mode kind (ofExpr mean) (ofExpr variance)
   | .poisson mode kind rate => .poisson mode kind (ofExpr rate)
+  | .bernoulli mode kind probability => .bernoulli mode kind (ofExpr probability)
   | .exponential mode kind rate => .exponential mode kind (ofExpr rate)
   | .beta mode kind left right => .beta mode kind (ofExpr left) (ofExpr right)
   | .gamma mode kind shape rate => .gamma mode kind (ofExpr shape) (ofExpr rate)
-  | .bernoulli mode kind probability => .bernoulli mode kind (ofExpr probability)
-  | .discrete mode kind weights => .discrete mode kind weights
 
 def mapAffine (transform : Affine n → Affine m) : AffineExpr n → AffineExpr m
   | .bvar index => .bvar index
   | .unit => .unit
+  | .reject => .reject
+  | .discrete mode kind d => .discrete mode kind d
   | .bool value => .bool value
   | .real value => .real (transform value)
   | .lam body => .lam (body.mapAffine transform)
@@ -234,8 +231,6 @@ def mapAffine (transform : Affine n → Affine m) : AffineExpr n → AffineExpr 
         (elseBranch.mapAffine transform)
   | .letE value body =>
       .letE (value.mapAffine transform) (body.mapAffine transform)
-  | .observe condition => .observe (condition.mapAffine transform)
-  | .promote body => .promote (body.mapAffine transform)
   | .neg body => .neg (body.mapAffine transform)
   | .add left right =>
       .add (left.mapAffine transform) (right.mapAffine transform)
@@ -249,14 +244,12 @@ def mapAffine (transform : Affine n → Affine m) : AffineExpr n → AffineExpr 
   | .gaussian mode kind mean variance =>
       .gaussian mode kind (mean.mapAffine transform) (variance.mapAffine transform)
   | .poisson mode kind rate => .poisson mode kind (rate.mapAffine transform)
+  | .bernoulli mode kind probability => .bernoulli mode kind (probability.mapAffine transform)
   | .exponential mode kind rate => .exponential mode kind (rate.mapAffine transform)
   | .beta mode kind left right =>
       .beta mode kind (left.mapAffine transform) (right.mapAffine transform)
   | .gamma mode kind shape rate =>
       .gamma mode kind (shape.mapAffine transform) (rate.mapAffine transform)
-  | .bernoulli mode kind probability =>
-      .bernoulli mode kind (probability.mapAffine transform)
-  | .discrete mode kind weights => .discrete mode kind weights
 
 def Affine.weaken (expression : Affine n) : Affine (n + 1) :=
   (expression.1, Fin.cases 0 expression.2)
@@ -277,13 +270,12 @@ def weakenSamples (expression : AffineExpr n) : AffineExpr (n + 1) :=
 
 /-- Pending source E and G sites retain stochastic tags. -/
 def SourceTags : AffineExpr sampleCount → Prop
+  | .discrete _ kind _ => kind = .stochastic
   | .uniform _ kind left right | .gaussian _ kind left right | .beta _ kind left right
   | .gamma _ kind left right => kind = .stochastic ∧ left.SourceTags ∧ right.SourceTags
-  | .poisson _ kind body | .exponential _ kind body | .bernoulli _ kind body =>
-      kind = .stochastic ∧ body.SourceTags
-  | .discrete _ kind _ => kind = .stochastic
+  | .poisson _ kind body | .bernoulli _ kind body | .exponential _ kind body => kind = .stochastic ∧ body.SourceTags
   | .lam body | .fix body | .fst body | .snd body
-  | .inl body | .inr body | .observe body | .promote body | .neg body => body.SourceTags
+  | .inl body | .inr body | .neg body => body.SourceTags
   | .app left right | .pair left right | .cons left right
   | .add left right | .mul left right | .div left right | .lt left right =>
       left.SourceTags ∧ right.SourceTags
@@ -296,6 +288,7 @@ def SourceTags : AffineExpr sampleCount → Prop
 
 inductive WellTyped : List Ty → AffineExpr sampleCount → Ty → Prop
   | bvar : Determinize.Statement.Paper.HasVar context index ty → WellTyped context (.bvar index) ty
+  | reject : WellTyped context .reject ty
   | unit : WellTyped context .unit .unit
   | bool : WellTyped context (.bool value) .bool
   | realE : WellTyped context (.real value) (.float .E)
@@ -331,9 +324,7 @@ inductive WellTyped : List Ty → AffineExpr sampleCount → Ty → Prop
       WellTyped context (.ite condition thenBranch elseBranch) result
   | letE : WellTyped context value valueTy → WellTyped (valueTy :: context) body result →
       WellTyped context (.letE value body) result
-  | observe : WellTyped context condition .bool → WellTyped context (.observe condition) .unit
-  | promote : WellTyped context value (.float .G) →
-      WellTyped context (.promote value) (.float .E)
+  | sub : WellTyped context value a → Ty.Sub a b → WellTyped context value b
   | negE : WellTyped context value (.float .E) →
       WellTyped context (.neg value) (.float .E)
   | negG : WellTyped context value (.float .G) →
@@ -358,22 +349,24 @@ inductive WellTyped : List Ty → AffineExpr sampleCount → Ty → Prop
       WellTyped context (.gaussian mode .stochastic mean spread) (.float mode)
   | poisson : WellTyped context rate (.float mode) →
       WellTyped context (.poisson mode .stochastic rate) (.float mode)
+  | discrete : WellTyped context (.discrete mode .stochastic d) (.float mode)
+  | bernoulli : WellTyped context probability (.float mode) →
+      WellTyped context (.bernoulli mode .stochastic probability) (.float mode)
   | exponential : WellTyped context rate (.float .G) →
       WellTyped context (.exponential mode .stochastic rate) (.float mode)
   | beta : WellTyped context alpha (.float .G) → WellTyped context betaArg (.float .G) →
       WellTyped context (.beta mode .stochastic alpha betaArg) (.float mode)
   | gamma : WellTyped context shape (.float mode) → WellTyped context rate (.float .G) →
       WellTyped context (.gamma mode .stochastic shape rate) (.float mode)
-  | bernoulli : WellTyped context probability (.float mode) →
-      WellTyped context (.bernoulli mode .stochastic probability) (.float mode)
-  | discrete : WellTyped context (.discrete mode .stochastic weights) (.float mode)
 
 theorem WellTyped.realize_typed {sampleCount : Nat} {expression : AffineExpr sampleCount}
     (typed : WellTyped context expression ty)
     (environment : Env sampleCount) :
     Determinize.Statement.Paper.Typed context (expression.realize environment) ty := by
-  induction typed <;> simp only [realize]
+  induction typed <;> try simp only [realize]
   case bvar hvar => exact Determinize.Statement.Paper.Typed.bvar hvar
+  case reject => exact Determinize.Statement.Paper.Typed.reject
+  case discrete => exact Determinize.Statement.Paper.Typed.discrete
   case «unit» => exact Determinize.Statement.Paper.Typed.unit
   case bool => exact Determinize.Statement.Paper.Typed.bool
   case realE => exact Determinize.Statement.Paper.Typed.real
@@ -394,8 +387,7 @@ theorem WellTyped.realize_typed {sampleCount : Nat} {expression : AffineExpr sam
   case ite condition thenBranch elseBranch =>
     exact Determinize.Statement.Paper.Typed.ite condition thenBranch elseBranch
   case letE value body => exact Determinize.Statement.Paper.Typed.letE value body
-  case observe condition => exact Determinize.Statement.Paper.Typed.observe condition
-  case promote value => exact Determinize.Statement.Paper.Typed.promote value
+  case sub h ih => exact ih.sub h
   case negE value => exact Determinize.Statement.Paper.Typed.neg value
   case negG value => exact Determinize.Statement.Paper.Typed.neg value
   case addE left right => exact Determinize.Statement.Paper.Typed.add left right
@@ -408,11 +400,10 @@ theorem WellTyped.realize_typed {sampleCount : Nat} {expression : AffineExpr sam
   case uniform lower upper => exact Determinize.Statement.Paper.Typed.uniform lower upper
   case gaussian mean variance => exact Determinize.Statement.Paper.Typed.gaussian mean variance
   case poisson rate => exact Determinize.Statement.Paper.Typed.poisson rate
+  case bernoulli probability => exact Determinize.Statement.Paper.Typed.bernoulli probability
   case exponential rate => exact Determinize.Statement.Paper.Typed.exponential rate
   case beta alpha betaTyped => exact Determinize.Statement.Paper.Typed.beta alpha betaTyped
   case gamma shape rate => exact Determinize.Statement.Paper.Typed.gamma shape rate
-  case bernoulli probability => exact Determinize.Statement.Paper.Typed.bernoulli probability
-  case discrete => exact Determinize.Statement.Paper.Typed.discrete
 
 theorem WellTyped.sourceTags (typed : WellTyped context expression ty) :
     expression.SourceTags := by
@@ -424,11 +415,12 @@ theorem WellTyped.mapAffine {n m : Nat} {expression : AffineExpr n}
     (preservesZero : ∀ affine, affine.2 = 0 → (transform affine).2 = 0) :
     WellTyped context (expression.mapAffine transform) ty := by
   induction typed
+  case sub h ih => exact ih.sub h
   all_goals rw [AffineExpr.mapAffine]
   case realG =>
     rename_i value _ zero
     exact .realG (preservesZero value zero)
-  all_goals aesop (add safe constructors WellTyped)
+  all_goals aesop (add unsafe constructors WellTyped)
 
 theorem WellTyped.weakenSamples (typed : WellTyped context expression ty) :
     WellTyped context expression.weakenSamples ty := by
@@ -442,6 +434,8 @@ theorem WellTyped.weakenSamples (typed : WellTyped context expression ty) :
 def shift (amount cutoff : Nat) : AffineExpr sampleCount → AffineExpr sampleCount
   | .bvar index => .bvar (if cutoff ≤ index then index + amount else index)
   | .unit => .unit
+  | .reject => .reject
+  | .discrete mode kind d => .discrete mode kind d
   | .bool value => .bool value
   | .real value => .real value
   | .lam body => .lam (body.shift amount (cutoff + 1))
@@ -462,8 +456,6 @@ def shift (amount cutoff : Nat) : AffineExpr sampleCount → AffineExpr sampleCo
       (e.shift amount cutoff)
   | .letE x b => .letE (x.shift amount cutoff)
       (b.shift amount (cutoff + 1))
-  | .observe x => .observe (x.shift amount cutoff)
-  | .promote x => .promote (x.shift amount cutoff)
   | .neg x => .neg (x.shift amount cutoff)
   | .add l r => .add (l.shift amount cutoff) (r.shift amount cutoff)
   | .mul l r => .mul (l.shift amount cutoff) (r.shift amount cutoff)
@@ -473,17 +465,18 @@ def shift (amount cutoff : Nat) : AffineExpr sampleCount → AffineExpr sampleCo
   | .gaussian m k mean variance =>
       .gaussian m k (mean.shift amount cutoff) (variance.shift amount cutoff)
   | .poisson m k rate => .poisson m k (rate.shift amount cutoff)
+  | .bernoulli m k probability => .bernoulli m k (probability.shift amount cutoff)
   | .exponential m k rate => .exponential m k (rate.shift amount cutoff)
   | .beta m k left right => .beta m k (left.shift amount cutoff) (right.shift amount cutoff)
   | .gamma m k shape rate => .gamma m k (shape.shift amount cutoff) (rate.shift amount cutoff)
-  | .bernoulli m k probability => .bernoulli m k (probability.shift amount cutoff)
-  | .discrete m k weights => .discrete m k weights
 
 def substAt (depth : Nat) (replacement : AffineExpr sampleCount)
     (expression : AffineExpr sampleCount) : AffineExpr sampleCount := match expression with
   | .bvar index => if index = depth then replacement.shift depth 0
       else .bvar (if depth < index then index - 1 else index)
   | .unit => .unit
+  | .reject => .reject
+  | .discrete mode kind d => .discrete mode kind d
   | .bool value => .bool value
   | .real value => .real value
   | .lam body => .lam (substAt (depth + 1) replacement body)
@@ -504,8 +497,6 @@ def substAt (depth : Nat) (replacement : AffineExpr sampleCount)
       (substAt depth replacement t) (substAt depth replacement e)
   | .letE x b => .letE (substAt depth replacement x)
       (substAt (depth + 1) replacement b)
-  | .observe x => .observe (substAt depth replacement x)
-  | .promote x => .promote (substAt depth replacement x)
   | .neg x => .neg (substAt depth replacement x)
   | .add l r => .add (substAt depth replacement l) (substAt depth replacement r)
   | .mul l r => .mul (substAt depth replacement l) (substAt depth replacement r)
@@ -516,13 +507,12 @@ def substAt (depth : Nat) (replacement : AffineExpr sampleCount)
   | .gaussian m k mean variance =>
       .gaussian m k (substAt depth replacement mean) (substAt depth replacement variance)
   | .poisson m k rate => .poisson m k (substAt depth replacement rate)
+  | .bernoulli m k probability => .bernoulli m k (substAt depth replacement probability)
   | .exponential m k rate => .exponential m k (substAt depth replacement rate)
   | .beta m k left right =>
       .beta m k (substAt depth replacement left) (substAt depth replacement right)
   | .gamma m k shape rate =>
       .gamma m k (substAt depth replacement shape) (substAt depth replacement rate)
-  | .bernoulli m k probability => .bernoulli m k (substAt depth replacement probability)
-  | .discrete m k weights => .discrete m k weights
 
 def substHead (body replacement : AffineExpr sampleCount) : AffineExpr sampleCount :=
   substAt 0 replacement body
@@ -539,6 +529,8 @@ theorem wellTyped_shift (h : WellTyped (before ++ suffix) expression ty) :
       rw [← hcontext] at hvar
       rw [shift]
       exact .bvar (Typing.hasVar_shift hvar)
+  | reject => rw [shift]; exact .reject
+  | discrete => rw [shift]; exact .discrete
   | unit => rw [shift]; exact .unit
   | bool => rw [shift]; exact .bool
   | realE => rw [shift]; exact .realE
@@ -593,12 +585,8 @@ theorem wellTyped_shift (h : WellTyped (before ++ suffix) expression ty) :
       rw [shift]
       exact .letE (ihv (before := before) (suffix := suffix) hcontext)
         (ihb (before := _ :: before) (suffix := suffix) (by simpa using hcontext))
-  | observe hv ih =>
-      rw [shift]
-      exact .observe (ih (before := before) (suffix := suffix) hcontext)
-  | promote hv ih =>
-      rw [shift]
-      exact .promote (ih (before := before) (suffix := suffix) hcontext)
+  | sub hv h ih =>
+      exact .sub (ih (before := before) (suffix := suffix) hcontext) h
   | negE hv ih =>
       rw [shift]
       exact .negE (ih (before := before) (suffix := suffix) hcontext)
@@ -655,7 +643,6 @@ theorem wellTyped_shift (h : WellTyped (before ++ suffix) expression ty) :
   | bernoulli hv ih =>
       rw [shift]
       exact .bernoulli (ih (before := before) (suffix := suffix) hcontext)
-  | discrete => rw [shift]; exact .discrete
   | exponential hv ih =>
       rw [shift]
       exact .exponential (ih (before := before) (suffix := suffix) hcontext)
@@ -717,6 +704,8 @@ theorem wellTyped_substAt (h : WellTyped (before ++ binder :: suffix) expression
       · rcases shifted with ⟨notEqual, shifted⟩
         rw [substAt, if_neg notEqual]
         exact .bvar shifted
+  | reject => rw [substAt]; exact .reject
+  | discrete => rw [substAt]; exact .discrete
   | unit => rw [substAt]; exact .unit
   | bool => rw [substAt]; exact .bool
   | realE => rw [substAt]; exact .realE
@@ -779,12 +768,8 @@ theorem wellTyped_substAt (h : WellTyped (before ++ binder :: suffix) expression
       exact .letE (ihv replacementTyped (before := before) (suffix := suffix) hcontext)
         (ihb replacementTyped (before := _ :: before) (suffix := suffix)
           (by simpa using hcontext))
-  | observe hv ih =>
-      rw [substAt]
-      exact .observe (ih replacementTyped (before := before) (suffix := suffix) hcontext)
-  | promote hv ih =>
-      rw [substAt]
-      exact .promote (ih replacementTyped (before := before) (suffix := suffix) hcontext)
+  | sub hv h ih =>
+      exact .sub (ih replacementTyped (before := before) (suffix := suffix) hcontext) h
   | negE hv ih =>
       rw [substAt]
       exact .negE (ih replacementTyped (before := before) (suffix := suffix) hcontext)
@@ -841,7 +826,6 @@ theorem wellTyped_substAt (h : WellTyped (before ++ binder :: suffix) expression
   | bernoulli hv ih =>
       rw [substAt]
       exact .bernoulli (ih replacementTyped (before := before) (suffix := suffix) hcontext)
-  | discrete => rw [substAt]; exact .discrete
   | exponential hv ih =>
       rw [substAt]
       exact .exponential (ih replacementTyped (before := before) (suffix := suffix) hcontext)
@@ -888,8 +872,6 @@ theorem realize_coordinates (expression : AffineExpr sampleCount)
           child.coordinates.map (Symbolic.Affine.eval · environment) :=
       ih (sizeOf child) (by rwa [← sizeEq]) child rfl
     cases expression with
-    | discrete _ _ weights =>
-        simp [realize, coordinates, Expr.realCoordinates, Function.comp_def]
     | _ =>
         simp (disch := simp_wf) only [realize, coordinates, Expr.realCoordinates,
           List.map_append, List.map_nil, recurse]
@@ -1025,102 +1007,162 @@ noncomputable def constantValue? : AffineExpr n → Option ℝ
   | .real (constant, coefficients) => if coefficients = 0 then some constant else none
   | _ => none
 
-theorem wellTyped_arr_value (typed : WellTyped context expression (.arr argument result))
+theorem wellTyped_arr_value_typed (typed : WellTyped context expression (.arr argument result))
     (value : expression.isValue = true) :
-    (∃ body, expression = .lam body) ∨
-      ∃ body, expression = .fix body := by
-  cases typed <;> simp_all [isValue]
+    (∃ a r body, expression = .lam body ∧ Ty.Sub argument a ∧ Ty.Sub r result ∧
+      WellTyped (a :: context) body r) ∨
+    (∃ a r body, expression = .fix body ∧ Ty.Sub argument a ∧ Ty.Sub r result ∧
+      WellTyped (a :: .arr a r :: context) body r) := by
+  generalize ht : Ty.arr argument result = ty at typed
+  induction typed generalizing argument result
+  case sub h sub ih =>
+    cases sub <;> cases ht
+    rcases ih value rfl with ⟨a, r, body, he, ha, hr, hb⟩ | ⟨a, r, body, he, ha, hr, hb⟩
+    · exact Or.inl ⟨a, r, body, he, Ty.Sub.trans (by assumption) ha,
+        Ty.Sub.trans hr (by assumption), hb⟩
+    · exact Or.inr ⟨a, r, body, he, Ty.Sub.trans (by assumption) ha,
+        Ty.Sub.trans hr (by assumption), hb⟩
+  all_goals cases ht <;> simp_all [isValue]
+  all_goals exact ⟨_, Ty.Sub.refl _, _, Ty.Sub.refl _, by assumption⟩
 
-theorem wellTyped_arr_value_typed
-    (typed : WellTyped context expression (.arr argument result))
-    (value : expression.isValue = true) :
-    (∃ body, expression = .lam body ∧
-      WellTyped (argument :: context) body result) ∨
-    ∃ body, expression = .fix body ∧
-      WellTyped (argument :: .arr argument result :: context) body result := by
-  cases typed <;> simp_all [isValue]
-
-theorem wellTyped_prod_value_typed
-    (typed : WellTyped context expression (.prod leftTy rightTy))
+theorem wellTyped_prod_value_typed (typed : WellTyped context expression (.prod leftTy rightTy))
     (value : expression.isValue = true) :
     ∃ left right, expression = .pair left right ∧
       WellTyped context left leftTy ∧ WellTyped context right rightTy := by
-  cases typed <;> simp_all [isValue]
+  generalize ht : Ty.prod leftTy rightTy = ty at typed
+  induction typed generalizing leftTy rightTy
+  case sub h sub ih =>
+    cases sub <;> cases ht
+    obtain ⟨l, r, he, hl, hr⟩ := ih value rfl
+    exact ⟨l, r, he, hl.sub (by assumption), hr.sub (by assumption)⟩
+  all_goals cases ht <;> simp_all [isValue]
 
-theorem wellTyped_sum_value_typed
-    (typed : WellTyped context expression (.sum leftTy rightTy))
+theorem wellTyped_sum_value_typed (typed : WellTyped context expression (.sum leftTy rightTy))
     (value : expression.isValue = true) :
-    (∃ child, expression = .inl child ∧
-      WellTyped context child leftTy) ∨
-    ∃ child, expression = .inr child ∧
-      WellTyped context child rightTy := by
-  cases typed <;> simp_all [isValue]
+    (∃ body, expression = .inl body ∧ WellTyped context body leftTy) ∨
+    (∃ body, expression = .inr body ∧ WellTyped context body rightTy) := by
+  generalize ht : Ty.sum leftTy rightTy = ty at typed
+  induction typed generalizing leftTy rightTy
+  case sub h sub ih =>
+    cases sub <;> cases ht
+    rcases ih value rfl with ⟨b, he, hb⟩ | ⟨b, he, hb⟩
+    · exact Or.inl ⟨b, he, hb.sub (by assumption)⟩
+    · exact Or.inr ⟨b, he, hb.sub (by assumption)⟩
+  all_goals cases ht <;> simp_all [isValue]
 
-theorem wellTyped_list_value_typed
-    (typed : WellTyped context expression (.list element))
+theorem wellTyped_list_value_typed (typed : WellTyped context expression (.list element))
     (value : expression.isValue = true) :
-    expression = .nil ∨
-      ∃ head tail, expression = .cons head tail ∧
-        WellTyped context head element ∧ WellTyped context tail (.list element) := by
-  cases typed <;> simp_all [isValue]
+    expression = .nil ∨ ∃ head tail, expression = .cons head tail ∧
+      WellTyped context head element ∧ WellTyped context tail (.list element) := by
+  generalize ht : Ty.list element = ty at typed
+  induction typed generalizing element
+  case sub h sub ih =>
+    cases sub <;> cases ht
+    rcases ih value rfl with he | ⟨h, t, he, hh, ht⟩
+    · exact Or.inl he
+    · exact Or.inr ⟨h, t, he, hh.sub (by assumption), ht.sub (.list (by assumption))⟩
+  all_goals cases ht <;> simp_all [isValue]
+
+theorem wellTyped_bool_value (typed : WellTyped context expression .bool)
+    (value : expression.isValue = true) : ∃ result, expression = .bool result := by
+  generalize ht : Ty.bool = ty at typed
+  induction typed
+  case sub h sub ih =>
+    cases sub <;> cases ht
+    exact ih value rfl
+  all_goals cases ht <;> simp_all [isValue]
+
+theorem wellTyped_real_value (typed : WellTyped context expression (.float mode))
+    (value : expression.isValue = true) : ∃ result, expression = .real result := by
+  generalize ht : Ty.float mode = ty at typed
+  induction typed generalizing mode
+  case sub h sub ih =>
+    cases sub <;> cases ht <;> exact ih value rfl
+  all_goals cases ht <;> simp_all [isValue]
+
+theorem wellTyped_arr_value (typed : WellTyped context expression (.arr argument result))
+    (value : expression.isValue = true) : (∃ body, expression = .lam body) ∨ ∃ body, expression = .fix body := by
+  rcases wellTyped_arr_value_typed typed value with ⟨a, r, b, he, _⟩ | ⟨a, r, b, he, _⟩
+  · exact Or.inl ⟨b, he⟩
+  · exact Or.inr ⟨b, he⟩
+
+theorem wellTyped_prod_value (typed : WellTyped context expression (.prod leftTy rightTy))
+    (value : expression.isValue = true) : ∃ l r, expression = .pair l r := by
+  rcases wellTyped_prod_value_typed typed value with ⟨l, r, he, _⟩
+  · exact ⟨l, r, he⟩
+
+theorem wellTyped_sum_value (typed : WellTyped context expression (.sum leftTy rightTy))
+    (value : expression.isValue = true) : (∃ body, expression = .inl body) ∨ ∃ body, expression = .inr body := by
+  rcases wellTyped_sum_value_typed typed value with ⟨b, he, _⟩ | ⟨b, he, _⟩
+  · exact Or.inl ⟨b, he⟩
+  · exact Or.inr ⟨b, he⟩
+
+theorem wellTyped_list_value (typed : WellTyped context expression (.list element))
+    (value : expression.isValue = true) : expression = .nil ∨ ∃ h t, expression = .cons h t := by
+  rcases wellTyped_list_value_typed typed value with he | ⟨h, t, he, _⟩
+  · exact Or.inl he
+  · exact Or.inr ⟨h, t, he⟩
 
 theorem wellTyped_pair_inv
     (typed : WellTyped context (.pair left right)
       (.prod leftTy rightTy)) :
     WellTyped context left leftTy ∧ WellTyped context right rightTy := by
-  cases typed
-  exact ⟨by assumption, by assumption⟩
+  generalize he : AffineExpr.pair left right = expression at typed
+  generalize ht : Ty.prod leftTy rightTy = ty at typed
+  induction typed generalizing leftTy rightTy
+  case sub h sub ih =>
+    cases sub <;> cases ht
+    obtain ⟨hl, hr⟩ := ih he rfl
+    exact ⟨hl.sub (by assumption), hr.sub (by assumption)⟩
+  all_goals cases he <;> cases ht
+  all_goals first | exact ⟨by assumption, by assumption⟩ | assumption
 
 theorem wellTyped_inl_inv
     (typed : WellTyped context (.inl value)
       (.sum leftTy rightTy)) : WellTyped context value leftTy := by
-  cases typed
-  assumption
+  generalize he : AffineExpr.inl value = expression at typed
+  generalize ht : Ty.sum leftTy rightTy = ty at typed
+  induction typed generalizing leftTy rightTy
+  case sub h sub ih =>
+    cases sub <;> cases ht
+    exact (ih he rfl).sub (by assumption)
+  all_goals cases he <;> cases ht
+  all_goals first | exact ⟨by assumption, by assumption⟩ | assumption
 
 theorem wellTyped_inr_inv
     (typed : WellTyped context (.inr value)
       (.sum leftTy rightTy)) : WellTyped context value rightTy := by
-  cases typed
-  assumption
+  generalize he : AffineExpr.inr value = expression at typed
+  generalize ht : Ty.sum leftTy rightTy = ty at typed
+  induction typed generalizing leftTy rightTy
+  case sub h sub ih =>
+    cases sub <;> cases ht
+    exact (ih he rfl).sub (by assumption)
+  all_goals cases he <;> cases ht
+  all_goals first | exact ⟨by assumption, by assumption⟩ | assumption
 
 theorem wellTyped_cons_inv
     (typed : WellTyped context (.cons head tail) (.list element)) :
     WellTyped context head element ∧ WellTyped context tail (.list element) := by
-  cases typed
-  exact ⟨by assumption, by assumption⟩
+  generalize he : AffineExpr.cons head tail = expression at typed
+  generalize ht : Ty.list element = ty at typed
+  induction typed generalizing element
+  case sub h sub ih =>
+    cases sub <;> cases ht
+    obtain ⟨hl, hr⟩ := ih he rfl
+    exact ⟨hl.sub (by assumption), hr.sub (.list (by assumption))⟩
+  all_goals cases he <;> cases ht
+  all_goals first | exact ⟨by assumption, by assumption⟩ | assumption
 
-theorem wellTyped_prod_value (typed : WellTyped context expression (.prod leftTy rightTy))
-    (value : expression.isValue = true) :
-    ∃ left right, expression = .pair left right := by
-  cases typed <;> simp_all [isValue]
-
-theorem wellTyped_sum_value (typed : WellTyped context expression (.sum leftTy rightTy))
-    (value : expression.isValue = true) :
-    (∃ child, expression = .inl child) ∨
-      ∃ child, expression = .inr child := by
-  cases typed <;> simp_all [isValue]
-
-theorem wellTyped_list_value (typed : WellTyped context expression (.list element))
-    (value : expression.isValue = true) :
-    expression = .nil ∨
-      ∃ head tail, expression = .cons head tail := by
-  cases typed <;> simp_all [isValue]
-
-theorem wellTyped_bool_value (typed : WellTyped context expression .bool)
-    (value : expression.isValue = true) :
-    ∃ result, expression = .bool result := by
-  cases typed <;> simp_all [isValue]
-
-theorem wellTyped_real_value (typed : WellTyped context expression (.float mode))
-    (value : expression.isValue = true) :
-    ∃ coordinate, expression = .real coordinate := by
-  cases typed <;> simp_all [isValue]
-
-/-- A general-mode literal has no coefficients on the expectation-mode samples. -/
 theorem wellTyped_realG_coefficients
     (typed : WellTyped context (.real value) (.float .G)) : value.2 = 0 := by
-  cases typed
-  assumption
+  generalize he : AffineExpr.real value = expression at typed
+  generalize ht : Ty.float .G = ty at typed
+  induction typed
+  case sub h sub ih =>
+    cases sub <;> cases ht
+    exact ih he rfl
+  all_goals cases he <;> cases ht <;> assumption
 
 theorem constantValue?_eq_some_of_wellTypedG
     (typed : WellTyped context expression (.float .G))
@@ -1248,7 +1290,6 @@ inductive SymbolicAction
   | sampleG (site : Mode × Kind × Op) (fiber : Measure ℝ)
       (continuation : ℝ → AffineExpr sampleCount)
   | stuck
-  | reject
 
 namespace SymbolicAction
 
@@ -1261,7 +1302,6 @@ noncomputable def realize (environment : Env n) : SymbolicAction laws n → Acti
   | .sampleG site fiber continuation =>
       .sample site fiber (fun value => (continuation value).realize environment)
   | .stuck => .stuck
-  | .reject => .reject
 
 def wrap (context : AffineExpr n → AffineExpr n) (liftedContext : AffineExpr (n + 1) → AffineExpr (n + 1)) :
     SymbolicAction laws n → SymbolicAction laws n
@@ -1270,7 +1310,6 @@ def wrap (context : AffineExpr n → AffineExpr n) (liftedContext : AffineExpr (
       .sampleE op affine general (liftedContext continuation)
   | .sampleG site fiber continuation => .sampleG site fiber (context ∘ continuation)
   | .stuck => .stuck
-  | .reject => .reject
 
 theorem realize_wrap (action : SymbolicAction laws n) (environment : Env n)
     (context : AffineExpr n → AffineExpr n) (liftedContext : AffineExpr (n + 1) → AffineExpr (n + 1))
@@ -1284,7 +1323,6 @@ theorem realize_wrap (action : SymbolicAction laws n) (environment : Env n)
   cases action with
   | next expression => simp [wrap, realize, Action.wrap, context_realize]
   | stuck => rfl
-  | reject => rfl
   | sampleE op affine general continuation =>
       simp only [wrap, realize, Action.wrap, Action.sample.injEq, true_and]
       funext value
@@ -1303,9 +1341,12 @@ inductive WellTyped (ty : Ty) : SymbolicAction laws n → Prop
       WellTyped ty (.sampleE op affine general continuation)
   | sampleG : (∀ value, AffineExpr.WellTyped [] (continuation value) ty) →
       WellTyped ty (.sampleG site fiber continuation)
-  | reject : WellTyped ty .reject
 
-@[simp] theorem wellTyped_reject : WellTyped ty (.reject : SymbolicAction laws n) := .reject
+theorem WellTyped.sub (typed : WellTyped a action) (h : Ty.Sub a b) : WellTyped b action := by
+  cases typed with
+  | next ht => exact .next (ht.sub h)
+  | sampleE ha hg ht => exact .sampleE ha hg (ht.sub h)
+  | sampleG ht => exact .sampleG (fun v => (ht v).sub h)
 
 @[simp] theorem wellTyped_next_iff :
     WellTyped ty (.next expression : SymbolicAction laws n) ↔
@@ -1345,7 +1386,6 @@ theorem WellTyped.wrap (typed : WellTyped childTy action)
   | next typed => exact .next (contextTyped _ typed)
   | sampleE ha hg typed => exact .sampleE ha hg (liftedTyped _ typed)
   | sampleG typed => exact .sampleG fun value => contextTyped _ (typed value)
-  | reject => exact .reject
 
 end SymbolicAction
 
@@ -1353,7 +1393,7 @@ noncomputable def symbolicReduce
     (laws : Determinize.Proof.Paper.PrimitiveLaws) :
     AffineExpr n → SymbolicAction laws n
   | expression@(.bvar _) => .stuck
-  | expression@(.unit) | expression@(.bool _) | expression@(.real _)
+  | expression@(.reject) | expression@(.unit) | expression@(.bool _) | expression@(.real _)
   | expression@(.lam _) | expression@(.fix _) | expression@.nil =>
       .next expression
   | expression@(.pair left right) =>
@@ -1426,16 +1466,6 @@ noncomputable def symbolicReduce
       if value.isValue then .next (body.substHead value)
       else (symbolicReduce laws value).wrap (fun next => .letE next body)
         (fun next => .letE next body.weakenSamples)
-  | .observe condition =>
-      if condition.isValue then match condition with
-        | .bool true => .next .unit
-        | .bool false => .reject
-        | _ => .stuck
-      else (symbolicReduce laws condition).wrap .observe .observe
-  | .promote body =>
-      if body.isValue then match body with
-        | .real value => .next (.real value) | _ => .stuck
-      else (symbolicReduce laws body).wrap .promote .promote
   | .neg body =>
       if body.isValue then match body with
         | .real value => .next (.real (Affine.neg value)) | _ => .stuck
@@ -1516,6 +1546,11 @@ noncomputable def symbolicReduce
                 (fun value => .real (value, 0))
           | none => .stuck
       else (symbolicReduce laws rate).wrap (.poisson mode kind) (.poisson mode kind)
+  | .discrete mode kind d =>
+      match mode, kind with
+      | .E, .stochastic => .sampleE (.discrete d) [] [] (.real (Affine.fresh n))
+      | _, _ => .sampleG (mode, kind, .discrete d) (discreteFiber kind d)
+          (fun value => .real (value, 0))
   | .bernoulli mode kind probability =>
       if probability.isValue then match mode, kind with
         | .E, .stochastic => match probability.affineValue? with
@@ -1527,12 +1562,6 @@ noncomputable def symbolicReduce
                 (fun value => .real (value, 0))
           | none => .stuck
       else (symbolicReduce laws probability).wrap (.bernoulli mode kind) (.bernoulli mode kind)
-  | .discrete mode kind weights =>
-      match mode, kind with
-      | .E, .stochastic => .sampleE (.discrete weights.length) [] weights (.real (Affine.fresh n))
-      | _, _ =>
-          .sampleG (mode, kind, .discrete weights.length) (discreteFiber kind weights)
-            (fun value => .real (value, 0))
   | .exponential mode kind rate =>
       if rate.isValue then match mode, kind with
         | .E, .stochastic => match rate.constantValue? with
@@ -1638,29 +1667,12 @@ theorem symbolicReduce_ite_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
         (fun next => .ite next thenBranch.weakenSamples elseBranch.weakenSamples) := by
   rw [symbolicReduce.eq_def]
 
-theorem symbolicReduce_promote_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
-    (body : AffineExpr n) : symbolicReduce laws (.promote body) =
-    if body.isValue then match body with
-      | .real value => .next (.real value) | _ => .stuck
-    else (symbolicReduce laws body).wrap .promote .promote := by
-  rw [symbolicReduce.eq_def]
-
 theorem symbolicReduce_let_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
     (value body : AffineExpr n) :
     symbolicReduce laws (.letE value body) =
     if value.isValue then .next (body.substHead value)
     else (symbolicReduce laws value).wrap (fun next => .letE next body)
       (fun next => .letE next body.weakenSamples) := by
-  rw [symbolicReduce.eq_def]
-
-theorem symbolicReduce_observe_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
-    (condition : AffineExpr n) :
-    symbolicReduce laws (.observe condition) =
-      if condition.isValue then match condition with
-        | .bool true => .next .unit
-        | .bool false => .reject
-        | _ => .stuck
-      else (symbolicReduce laws condition).wrap .observe .observe := by
   rw [symbolicReduce.eq_def]
 
 theorem symbolicReduce_uniform_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
@@ -1728,18 +1740,7 @@ theorem symbolicReduce_bernoulli_eq (laws : Determinize.Proof.Paper.PrimitiveLaw
                   .sampleG (mode, kind, .bernoulli) (bernoulliFiber kind x)
                     (fun value => .real (value, 0))
               | none => .stuck
-          else (symbolicReduce laws probability).wrap (.bernoulli mode kind)
-            (.bernoulli mode kind) := by
-  rw [symbolicReduce.eq_def]
-
-theorem symbolicReduce_discrete_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
-    (mode : Mode) (kind : Kind) (weights : List ℝ) :
-    symbolicReduce laws (.discrete mode kind weights : AffineExpr n) =
-      match mode, kind with
-      | .E, .stochastic => .sampleE (.discrete weights.length) [] weights (.real (Affine.fresh n))
-      | _, _ =>
-          .sampleG (mode, kind, .discrete weights.length) (discreteFiber kind weights)
-            (fun value => .real (value, 0)) := by
+          else (symbolicReduce laws probability).wrap (.bernoulli mode kind) (.bernoulli mode kind) := by
   rw [symbolicReduce.eq_def]
 
 theorem symbolicReduce_exponential_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
@@ -1805,7 +1806,11 @@ theorem symbolicReduce_realize
       reduce (expression.realize environment) := by
   induction typed generalizing environment with
   | bvar hvar => simp [symbolicReduce, SymbolicAction.realize, realize, reduce]
-  | «unit» => simp [symbolicReduce, SymbolicAction.realize, realize, reduce]
+  | reject | «unit» => simp [symbolicReduce, SymbolicAction.realize, realize, reduce]
+  | discrete =>
+      rename_i context' mode d
+      cases mode <;> simp [symbolicReduce, SymbolicAction.realize, realize, reduce,
+        discreteFiber_eq, Affine.eval_fresh]
   | bool => simp [symbolicReduce, SymbolicAction.realize, realize, reduce]
   | realE => simp [symbolicReduce, SymbolicAction.realize, realize, reduce]
   | realG => simp [symbolicReduce, SymbolicAction.realize, realize, reduce]
@@ -2015,37 +2020,7 @@ theorem symbolicReduce_realize
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
           ihv environment]
         all_goals simp_all [isValue]
-  | observe conditionTyped ih =>
-      rename_i context' condition
-      rw [realize, MeasurableActionFamily.reduce_observe_eq, realize_isValue]
-      by_cases conditionValue : condition.isValue = true
-      · simp only [conditionValue, ↓reduceIte]
-        obtain ⟨answer, rfl⟩ := wellTyped_bool_value conditionTyped conditionValue
-        cases answer <;> simp [symbolicReduce, conditionValue, SymbolicAction.realize, realize]
-      · rw [symbolicReduce_observe_eq]
-        simp only [conditionValue,
-          Bool.eq_false_of_not_eq_true conditionValue,
-          Bool.false_eq_true, ↓reduceIte]
-        rw [SymbolicAction.realize_wrap
-          (ExprContext := fun next => .observe next)
-          (context_realize := by intros; simp only [realize])
-          (lifted_realize := by intros; simp only [realize]), ih environment]
-        all_goals simp_all [isValue]
-  | promote valueTyped ih =>
-      rename_i context' value
-      rw [realize, MeasurableActionFamily.reduce_promote_eq, realize_isValue]
-      by_cases valueIsValue : value.isValue = true
-      · simp only [valueIsValue, ↓reduceIte]
-        obtain ⟨coordinate, rfl⟩ := wellTyped_real_value valueTyped valueIsValue
-        simp [symbolicReduce, valueIsValue, SymbolicAction.realize, realize]
-      · rw [symbolicReduce_promote_eq]
-        simp only [valueIsValue, Bool.eq_false_of_not_eq_true valueIsValue,
-          Bool.false_eq_true, ↓reduceIte]
-        rw [SymbolicAction.realize_wrap
-          (ExprContext := fun next => .promote next)
-          (context_realize := by intros; simp only [realize])
-          (lifted_realize := by intros; simp only [realize]), ih environment]
-        all_goals simp_all [isValue]
+  | sub valueTyped h ih => exact ih environment
   | negE valueTyped ih =>
       rename_i context' value
       rw [realize, MeasurableActionFamily.reduce_neg_eq, realize_isValue,
@@ -2402,14 +2377,6 @@ theorem symbolicReduce_realize
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
           ih environment]
-  | discrete =>
-      rename_i context' mode weights
-      rw [realize, MeasurableActionFamily.reduce_discrete_eq, symbolicReduce_discrete_eq]
-      cases mode with
-      | E =>
-          simp [SymbolicAction.realize, realize, Expr.isValue, realValue?, discreteFiber_eq,
-            Affine.eval_fresh]
-      | G => simp [SymbolicAction.realize, realize]
   | exponential valueTyped ih =>
       rename_i context' value mode
       rw [realize, MeasurableActionFamily.reduce_exponential_eq, realize_isValue,
@@ -2613,12 +2580,6 @@ theorem symbolicReduce_wellTyped
       exact (ih rfl).wrap
         (fun next nextTyped => .bernoulli nextTyped)
         (fun next nextTyped => .bernoulli nextTyped)
-  case discrete mode weights =>
-    cases hcontext
-    rw [symbolicReduce_discrete_eq]
-    cases mode with
-    | E => exact .sampleE rfl rfl .realE
-    | G => exact .sampleG fun value => .realG rfl
   case exponential value mode valueTyped ih =>
     cases hcontext
     simp only [symbolicReduce]
@@ -2712,10 +2673,10 @@ theorem symbolicReduce_wellTyped
       by_cases argumentValue : operand.isValue = true
       · simp only [argumentValue, ↓reduceIte]
         rcases wellTyped_arr_value_typed functionTyped functionValue with function | function
-        · rcases function with ⟨body, rfl, bodyTyped⟩
-          exact .next (wellTyped_substHead bodyTyped argumentTyped)
-        · rcases function with ⟨body, rfl, bodyTyped⟩
-          exact .next (wellTyped_substTwo bodyTyped argumentTyped (.fix bodyTyped))
+        · rcases function with ⟨a, r, body, rfl, ha, hr, bodyTyped⟩
+          exact .next ((wellTyped_substHead bodyTyped (argumentTyped.sub ha)).sub hr)
+        · rcases function with ⟨a, r, body, rfl, ha, hr, bodyTyped⟩
+          exact .next ((wellTyped_substTwo bodyTyped (argumentTyped.sub ha) (.fix bodyTyped)).sub hr)
       · simp only [argumentValue, ↓reduceIte]
         exact (iha rfl).wrap
           (fun next nextTyped => .app functionTyped nextTyped)
@@ -2801,19 +2762,6 @@ theorem symbolicReduce_wellTyped
       exact (ih rfl).wrap
         (fun next nextTyped => .letE nextTyped bodyTyped)
         (fun next nextTyped => .letE nextTyped bodyTyped.weakenSamples)
-  case observe context condition conditionTyped ih =>
-    cases hcontext
-    rw [symbolicReduce_observe_eq]
-    by_cases value : condition.isValue = true
-    · simp only [value, ↓reduceIte]
-      obtain ⟨result, rfl⟩ := wellTyped_bool_value conditionTyped value
-      cases result <;> simp only
-      · exact .reject
-      · exact .next .unit
-    · simp only [value, ↓reduceIte]
-      exact (ih rfl).wrap
-        (fun next nextTyped => .observe nextTyped)
-        (fun next nextTyped => .observe nextTyped)
   case lt left right leftTyped rightTyped ihLeft ihRight =>
     cases hcontext
     simp only [symbolicReduce]
@@ -2924,17 +2872,9 @@ theorem symbolicReduce_wellTyped
       exact (ihLeft rfl).wrap
         (fun next nextTyped => .addE nextTyped rightTyped)
         (fun next nextTyped => .addE nextTyped rightTyped.weakenSamples)
-  case promote context value valueTyped ih =>
+  case sub context value a b valueTyped h ih =>
     cases hcontext
-    rw [symbolicReduce_promote_eq]
-    by_cases isValue : value.isValue = true
-    · simp only [isValue, ↓reduceIte]
-      obtain ⟨coordinate, rfl⟩ := wellTyped_real_value valueTyped isValue
-      exact .next .realE
-    · simp only [isValue, ↓reduceIte]
-      exact (ih rfl).wrap
-        (fun next nextTyped => .promote nextTyped)
-        (fun next nextTyped => .promote nextTyped)
+    exact (ih rfl).sub h
   case negE context value valueTyped ih =>
     cases hcontext
     rw [symbolicReduce.eq_def]
@@ -3060,6 +3000,11 @@ theorem symbolicReduce_wellTyped
       exact (ih rfl).wrap (fun next nextTyped => .inr nextTyped)
         (fun next nextTyped => .inr nextTyped)
   case bvar hvar => cases hcontext; cases hvar
+  case reject => simp only [symbolicReduce]; exact .next .reject
+  case discrete mode d =>
+    cases mode <;> simp only [symbolicReduce]
+    · exact .sampleE rfl rfl .realE
+    · exact .sampleG fun _ => .realG rfl
   case unit => simp only [symbolicReduce]; exact .next .unit
   case bool => simp only [symbolicReduce]; exact .next .bool
   case realE => simp only [symbolicReduce]; exact .next .realE
@@ -3078,7 +3023,9 @@ theorem wellTyped_ofExpr_of_typed {expression : Expr}
     (typed : Determinize.Statement.Paper.Typed context expression ty)
     (sourceTags : (AffineExpr.ofExpr expression).SourceTags) :
     WellTyped context (AffineExpr.ofExpr expression) ty := by
-  induction typed <;> simp only [ofExpr, SourceTags] at sourceTags ⊢
+  induction typed
+  case sub h sub ih => exact (ih sourceTags).sub sub
+  all_goals simp only [ofExpr, SourceTags] at sourceTags ⊢
   case uniform lowerTyped upperTyped ihl ihr =>
     obtain ⟨rfl, lowerTags, upperTags⟩ := sourceTags
     exact .uniform (ihl lowerTags) (ihr upperTags)
@@ -3091,9 +3038,6 @@ theorem wellTyped_ofExpr_of_typed {expression : Expr}
   case bernoulli probabilityTyped ih =>
     obtain ⟨rfl, probabilityTags⟩ := sourceTags
     exact .bernoulli (ih probabilityTags)
-  case discrete =>
-    obtain rfl := sourceTags
-    exact .discrete
   case exponential rateTyped ih =>
     obtain ⟨rfl, rateTags⟩ := sourceTags
     exact .exponential (ih rateTags)
@@ -3103,8 +3047,8 @@ theorem wellTyped_ofExpr_of_typed {expression : Expr}
   case gamma shapeTyped rateTyped ihl ihr =>
     obtain ⟨rfl, shapeTags, rateTags⟩ := sourceTags
     exact .gamma (ihl shapeTags) (ihr rateTags)
-  all_goals try aesop (add safe constructors WellTyped)
-  all_goals try (cases ‹Mode› <;> aesop (add safe constructors WellTyped))
+  all_goals try aesop (add unsafe constructors WellTyped)
+  all_goals try (cases ‹Mode› <;> aesop (add unsafe constructors WellTyped))
 
 theorem coordinate_count (expression : AffineExpr sampleCount) :
     expression.coordinates.length = expression.skeleton.realArity := by

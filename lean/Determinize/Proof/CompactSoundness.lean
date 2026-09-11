@@ -15,7 +15,7 @@ open MeasureTheory ProbabilityTheory Determinize.Statement.Paper Determinize.Tra
 open Determinize.Proof.Paper
 open StepTraces (retain retain_measurable FiberSound mapTraceOutput mapTrace_measurable
   normalizedOutputGivenTrace normalizedOutputGivenTrace_eq outputGivenTraceKernel
-  outputGivenTraceKernel_apply outputGivenTrace_eq_ogtAt outputGivenTrace_promote
+  outputGivenTraceKernel_apply outputGivenTrace_eq_ogtAt
   compactFiber_apply compactHistoryReplay_nil measurableSet_kernel_eq_dirac)
 open scoped ProbabilityTheory
 noncomputable section
@@ -44,7 +44,6 @@ theorem exact_eq_detailed (depth : Nat) (e : Expr) :
       · rw [traceAndOutputLawAt, StepTraces.exactMeasure, if_neg value, if_neg value]
         cases reduction : reduce e with
         | stuck => simp
-        | reject => simp
         | next next =>
             simp only [ih]
             rw [Measure.map_map eraseOutput_measurable
@@ -95,55 +94,7 @@ theorem exact_succ_next (depth : Nat) (e next : Expr) (nv : e.isValue ≠ true)
     (h : reduce e = .next next) : traceAndOutputLawAt (depth+1) e = traceAndOutputLawAt depth next := by
   simp [traceAndOutputLawAt, nv, h]
 
-/-- The promotion step is invisible to compact traces: it records no draw and produces no
-output of its own. -/
-theorem exact_succ_promote (depth : Nat) (e : Expr) :
-    traceAndOutputLawAt (depth + 1) (.promote e) = traceAndOutputLawAt depth e := by
-  induction depth generalizing e with
-  | zero =>
-      by_cases value : e.isValue = true
-      · conv_lhs => rw [traceAndOutputLawAt]
-        rw [if_neg (by simp [Expr.isValue]), MeasurableActionFamily.reduce_promote_eq,
-          if_pos value]
-        cases e <;> simp [traceAndOutputLawAt, Expr.isValue] at value ⊢
-      · have rhs : traceAndOutputLawAt 0 e = 0 := by
-          cases e <;> simp_all [traceAndOutputLawAt, Expr.isValue]
-        have valueFalse := Bool.eq_false_of_not_eq_true value
-        rw [rhs]
-        conv_lhs => rw [traceAndOutputLawAt]
-        rw [if_neg (by simp [Expr.isValue]), MeasurableActionFamily.reduce_promote_eq,
-          valueFalse]
-        simp only [Bool.false_eq_true, ↓reduceIte]
-        cases reduce e <;>
-          simp [traceAndOutputLawAt, Action.wrap, Measure.map_zero]
-  | succ depth ih =>
-      by_cases value : e.isValue = true
-      · have rhs : traceAndOutputLawAt (depth + 1) e = 0 := by rw [traceAndOutputLawAt, if_pos value]
-        rw [rhs]
-        conv_lhs => rw [traceAndOutputLawAt]
-        rw [if_neg (by simp [Expr.isValue]), MeasurableActionFamily.reduce_promote_eq,
-          if_pos value]
-        cases e <;> simp [traceAndOutputLawAt, Expr.isValue] at value ⊢
-      · have valueFalse := Bool.eq_false_of_not_eq_true value
-        conv_lhs => rw [traceAndOutputLawAt]
-        conv_rhs => rw [traceAndOutputLawAt]
-        rw [if_neg (by simp [Expr.isValue]), MeasurableActionFamily.reduce_promote_eq,
-          valueFalse]
-        simp only [Bool.false_eq_true, ↓reduceIte]
-        cases reduce e <;> simp [Action.wrap, ih]
 
-theorem traceAndOutputLaw_promote (e : Expr) : traceAndOutputLaw (.promote e) = traceAndOutputLaw e := by
-  ext s hs
-  simp only [traceAndOutputLaw, Measure.sum_apply _ hs]
-  rw [show (∑' depth, traceAndOutputLawAt depth (Expr.promote e) s) =
-      traceAndOutputLawAt 0 (Expr.promote e) s + ∑' depth, traceAndOutputLawAt (depth + 1) (Expr.promote e) s
-    from tsum_eq_zero_add' ENNReal.summable]
-  simp only [exact_succ_promote]
-  have zero : traceAndOutputLawAt 0 (.promote e) s = 0 := by simp [traceAndOutputLawAt]
-  rw [zero, zero_add]
-
-theorem traceLaw_promote (e : Expr) : traceLaw (.promote e) = traceLaw e := by
-  rw [traceLaw, traceLaw, traceAndOutputLaw_promote]
 
 /-! ### The compact replay as the fiber -/
 
@@ -157,17 +108,6 @@ instance normalizedKernel_markov (source : Expr) : IsMarkovKernel (normalizedKer
 /-- The normalized compact replay read through the retained draws of a detailed trace. -/
 def normalizedFiber (source : Expr) : SFiniteKernel StepTraces.Trace ℝ :=
   SFiniteKernel.pullback (normalizedKernel source) retain retain_measurable
-
-theorem outputGivenTraceKernel_promote (e : Expr) :
-    outputGivenTraceKernel (.promote e) = outputGivenTraceKernel e := by
-  ext trace s hs
-  rw [outputGivenTraceKernel_apply, outputGivenTraceKernel_apply, outputGivenTrace_promote]
-
-theorem normalizedOutputGivenTrace_promote (e : Expr) :
-    normalizedOutputGivenTrace (.promote e) = normalizedOutputGivenTrace e := by
-  ext trace s hs
-  simp only [normalizedOutputGivenTrace, Kernel.piecewise, Kernel.coe_mk, Set.mem_ofPred_eq,
-    outputGivenTraceKernel_apply, outputGivenTrace_promote]
 
 theorem selfReplay_compact_measurable (target : Expr) :
     MeasurableSet {q : Output | outputGivenTrace target q.1 = Measure.dirac q.2} := by
@@ -290,8 +230,7 @@ theorem soundnessDataE (source : Expr) (typed : Typed [] source (.float .E))
     rw [ht] at dirac
     exact ae_of_ae_map pairMeasurable.aemeasurable dirac
 
-/-- `soundnessDataE` for both modes: a general-mode program is observed through an explicit
-promotion, which neither compact traces nor the compact replay see. -/
+/-- Apply expectation-mode soundness using silent subtyping for general-mode programs. -/
 theorem soundnessData (mode : Mode) (program : Expr) (typed : Typed [] program (.float mode))
     (sourceForm : program.sourceForm = true) (safe : DoesNotGetStuck program) :
     DoesNotGetStuck program.determinize ∧
@@ -303,26 +242,7 @@ theorem soundnessData (mode : Mode) (program : Expr) (typed : Typed [] program (
         outputGivenTrace program.determinize trace = Measure.dirac (output trace) := by
   cases mode with
   | E => exact soundnessDataE program typed sourceForm safe
-  | G =>
-      have promoteSourceForm : (Expr.promote program).sourceForm = true := by
-        simpa [Expr.sourceForm] using sourceForm
-      have promoteSafe := (Typing.doesNotGetStuck_promote_iff typed).2 safe
-      obtain ⟨targetSafe, f, factor, massAe, diracAe⟩ :=
-        soundnessDataE (.promote program) (.promote typed) promoteSourceForm promoteSafe
-      have targetEq : (Expr.promote program).determinize = .promote program.determinize := by
-        simp only [Expr.determinize]
-      rw [targetEq] at targetSafe factor diracAe
-      obtain ⟨markov, hf, hs, ht, hmean⟩ := factor
-      rw [traceAndOutputLaw_promote, traceLaw_promote, normalizedOutputGivenTrace_promote] at hs
-      rw [traceAndOutputLaw_promote, traceLaw_promote] at ht
-      rw [traceLaw_promote, normalizedOutputGivenTrace_promote] at hmean
-      rw [normalizedOutputGivenTrace_promote] at markov
-      rw [traceLaw_promote, normalizedOutputGivenTrace_promote] at massAe
-      rw [traceLaw_promote] at diracAe
-      refine ⟨fun fuel => Typing.doesNotGetStuckAt_of_promote (targetSafe fuel), f,
-        ⟨markov, hf, hs, ht, hmean⟩, ?_, ?_⟩
-      · simpa only [outputGivenTrace_promote] using massAe
-      · simpa only [outputGivenTrace_promote] using diracAe
+  | G => exact soundnessDataE program (.sub typed .general) sourceForm safe
 
 /-- Some trace factorization exists: the input of the corollaries. -/
 theorem meanOnTraces (mode : Mode) (program : Expr) (typed : Typed [] program (.float mode))

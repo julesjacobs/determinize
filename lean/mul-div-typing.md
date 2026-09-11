@@ -16,7 +16,7 @@ and `e₂ : Float[G]`, as the Lean does (section 7). The table records the state
 | Artifact | `e₁ × e₂` | `e₁ / e₂` |
 |---|---|---|
 | paper, `tex/3_typing.tex` | `Mul-G`: both operands G, any result mode; `Mul-ConstL`/`Mul-ConstR`: a literal on either side, both operands at most the result mode | `Div`: the denominator is a literal at most G, the numerator at most the result mode |
-| `ocaml/infer.ml` | as the paper | as the paper, plus non-literal `G / G` at any result mode |
+| Historical OCaml inference (retired; see `migration-audit.md`) | as the paper | as the paper, plus non-literal `G / G` at any result mode |
 | `sim/src/compiler/infer.js` | left operand at the result mode `m`, right operand G, result `m` | same |
 | `lean/` (`Typed.mul`, `Typed.div`) | left operand G, right operand at the result mode `m`, result `m` (the left-G half of the symmetric `[Mul]` of section 3) | as the sim |
 
@@ -96,8 +96,8 @@ Fact 1 is a property of the typing rules, proved by induction on the typing
 derivation: no rule manufactures a `Float[G]` from anything that touches an E value.
 Walking through `Typed` in `Statement/Syntax.lean`:
 
-- The only mode change is `promote`, and it goes from G to E. Types are exact in the
-  core language, so a G position never silently accepts an E value.
+- Silent structural subtyping permits G to E, but never E to G. A subsumption
+  step concluding `Float[G]` must start from `Float[G]`.
 - Every rule with a `Float[G]` conclusion has only G float premises. Addition and
   negation keep their mode. Multiplication and division at mode G need both operands
   at G, since the non-G operand must match the result mode. A G draw is a primitive

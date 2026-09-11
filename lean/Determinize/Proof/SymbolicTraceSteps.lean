@@ -25,8 +25,6 @@ def generationDraw : SymbolicAction laws n → Bool
 @[simp] theorem generationDraw_next (expression : AffineExpr n) :
     generationDraw (.next expression : SymbolicAction laws n) = false := rfl
 @[simp] theorem generationDraw_stuck : generationDraw (.stuck : SymbolicAction laws n) = false := rfl
-@[simp] theorem generationDraw_reject :
-    generationDraw (.reject : SymbolicAction laws n) = false := rfl
 @[simp] theorem generationDraw_sampleE (op affine general continuation) :
     generationDraw (.sampleE op affine general continuation : SymbolicAction laws n) = false := rfl
 @[simp] theorem generationDraw_sampleG (fiber continuation) :
@@ -105,26 +103,24 @@ theorem symbolic_generationDraw (laws : PrimitiveLaws)
             simp [constantValue?, siteOp]
       · simp only [rateValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
         exact ih
-  | bernoulli rateTyped ih =>
-      rename_i context' rate mode
+  | discrete =>
+      rename_i context' mode d
+      cases mode <;> simp [AffineExpr.skeleton, generationOp, symbolicReduce, siteOp]
+  | bernoulli probabilityTyped ih =>
+      rename_i context' probability mode
       simp only [AffineExpr.skeleton, generationOp, symbolic_skeleton_isValue]
       rw [symbolicReduce_bernoulli_eq]
-      by_cases rateValue : rate.isValue = true
-      · simp only [rateValue, ↓reduceIte]
-        obtain ⟨x, rfl⟩ := wellTyped_real_value rateTyped rateValue
+      by_cases probabilityValue : probability.isValue = true
+      · simp only [probabilityValue, ↓reduceIte]
+        obtain ⟨x, rfl⟩ := wellTyped_real_value probabilityTyped probabilityValue
         cases mode with
         | E => simp [affineValue?, siteOp]
         | G =>
             rcases x with ⟨x0, xc⟩
-            obtain rfl : xc = 0 := wellTyped_realG_coefficients rateTyped
+            obtain rfl : xc = 0 := wellTyped_realG_coefficients probabilityTyped
             simp [constantValue?, siteOp]
-      · simp only [rateValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
+      · simp only [probabilityValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
         exact ih
-  | discrete =>
-      rename_i context' mode weights
-      simp only [AffineExpr.skeleton, generationOp, List.length_map]
-      rw [symbolicReduce_discrete_eq]
-      cases mode <;> simp [siteOp]
   | exponential rateTyped ih =>
       rename_i context' rate mode
       simp only [AffineExpr.skeleton, generationOp, symbolic_skeleton_isValue]
@@ -195,13 +191,14 @@ theorem symbolic_generationDraw (laws : PrimitiveLaws)
           exact ihr
       · simp only [lowerValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
         exact ihl
+  | sub _ _ ih => exact ih
   | _ =>
       simp only [AffineExpr.skeleton, generationOp, symbolic_skeleton_isValue]
       rw [symbolicReduce.eq_def]
       iterate 5
         all_goals try split
         all_goals try simp only [generationDraw_wrap, generationDraw_next,
-          generationDraw_stuck, generationDraw_reject, Option.isSome_none, ↓reduceIte] at *
+          generationDraw_stuck, Option.isSome_none, ↓reduceIte] at *
       all_goals try simp_all [generationOp_symbolic_value]
 
 set_option maxHeartbeats 800000 in

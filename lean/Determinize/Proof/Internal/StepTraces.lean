@@ -47,7 +47,6 @@ noncomputable def exactMeasure : Nat → Expr → Measure Output
         | .sample modeTag fiber continuation => fiber.bind fun value =>
             (exactMeasure depth (continuation value)).map (prepend (generationEvent modeTag value))
         | .stuck => 0
-        | .reject => 0
 
 /-- Joint operational law of terminating traces and returned expectation-mode reals. -/
 noncomputable def jointMeasure (program : Expr) : Measure (Trace × ℝ) :=

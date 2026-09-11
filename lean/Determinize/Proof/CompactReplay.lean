@@ -46,10 +46,6 @@ theorem ogtAt_succ_stuck (depth : Nat) {expression : Expr}
     (tape : DrawTrace) : outputGivenTraceAt (depth + 1) expression tape = 0 := by
   rw [outputGivenTraceAt, if_neg notValue, reduction]
 
-theorem ogtAt_succ_reject (depth : Nat) {expression : Expr}
-    (notValue : expression.isValue ≠ true) (reduction : reduce expression = .reject)
-    (tape : DrawTrace) : outputGivenTraceAt (depth + 1) expression tape = 0 := by
-  rw [outputGivenTraceAt, if_neg notValue, reduction]
 
 /-- An expectation-mode draw, or a mean site, is integrated and leaves the tape alone. -/
 theorem ogtAt_succ_sampleE (depth : Nat) {expression : Expr} {site : Mode × Kind × Op}
@@ -124,8 +120,7 @@ theorem generationOp_some_reduce {expression : Expr} {op : Op}
     (∃ fiber continuation, reduce expression = .sample (.G, .stochastic, op) fiber continuation) ∨
       reduce expression = .stuck := by
   cases expression <;> rw [reduce.eq_def]
-  all_goals simp only [Expr.skeleton, generationOp, ← isValue_eq_skeletonIsValue,
-    List.length_map] at active
+  all_goals simp only [Expr.skeleton, generationOp, ← isValue_eq_skeletonIsValue] at active
   all_goals try simp only [reduceCtorEq] at active
   all_goals dsimp only
   all_goals repeat' split
@@ -283,9 +278,6 @@ theorem compactReplayKernel_apply (depth : Nat) (tape : DrawTrace) (expression :
               simp_rw [previousEq]
           | stuck =>
               rw [Action.measure, Measure.bind_zero_left, ogtAt_succ_stuck depth value reduction]
-          | reject =>
-              rw [Action.measure, Measure.dirac_bind previous.kernel.measurable, previousEq,
-                ogtAt_unit, ogtAt_succ_reject depth value reduction]
         · rw [if_neg none]
           obtain ⟨op, active⟩ := Option.ne_none_iff_exists'.mp none
           rcases generationOp_some_reduce active with ⟨fiber, continuation, reduction⟩ | reduction
@@ -393,7 +385,6 @@ theorem ogtAt_partial_mass_le_one (n : Nat) (expression : Expr) (tape : DrawTrac
             simp only [ogtAt_succ_next _ value reduction]
             exact ih next tape
         | stuck => simp [ogtAt_succ_stuck _ value reduction]
-        | reject => simp [ogtAt_succ_reject _ value reduction]
         | sample site fiber continuation =>
             rcases site with ⟨mode, kind, op⟩
             by_cases generation : siteOp (mode, kind, op) = none
@@ -453,102 +444,6 @@ theorem outputGivenTrace_eq_ogtAt (depth : Nat) (program : Expr) (tape : DrawTra
   (Measure.eq_of_le_of_mass (ogtAt_le_outputGivenTrace depth program tape)
     (outputGivenTrace_mass_le_one program tape) mass).symm
 
-/-! ### Promotion is invisible to the replay -/
-
-theorem ogtAt_zero_promote (expression : Expr) (tape : DrawTrace) :
-    outputGivenTraceAt 0 (.promote expression) tape = 0 :=
-  ogtAt_zero_of_notReal (fun _ h => by cases h) tape
-
-theorem promote_notValue (expression : Expr) : (Expr.promote expression).isValue ≠ true := by
-  simp [Expr.isValue]
-
-/-- A promotion step records no draw and produces no output of its own. -/
-theorem ogtAt_succ_promote (depth : Nat) (expression : Expr) (tape : DrawTrace) :
-    outputGivenTraceAt (depth + 1) (.promote expression) tape =
-      outputGivenTraceAt depth expression tape := by
-  induction depth generalizing expression tape with
-  | zero =>
-      by_cases value : expression.isValue = true
-      · by_cases real : ∃ v, expression = .real v
-        · obtain ⟨v, rfl⟩ := real
-          rw [ogtAt_succ_next 0 (promote_notValue _) (by rw [MeasurableActionFamily.reduce_promote_eq]; rfl)]
-        · have notReal : ∀ v, expression ≠ .real v := fun v h => real ⟨v, h⟩
-          rw [ogtAt_succ_stuck 0 (promote_notValue _) (by
-            rw [MeasurableActionFamily.reduce_promote_eq, if_pos value]
-            cases expression <;> first | rfl | exact absurd rfl (notReal _))]
-          exact (ogtAt_zero_of_notReal notReal tape).symm
-      · rw [ogtAt_zero_of_notReal (fun v h => value (by subst h; rfl)) tape]
-        have reduction := MeasurableActionFamily.reduce_promote_eq expression
-        rw [if_neg value] at reduction
-        cases h : reduce expression <;> rw [h] at reduction <;> simp only [Action.wrap] at reduction
-        · rw [ogtAt_succ_next 0 (promote_notValue _) reduction]
-          exact ogtAt_zero_promote _ tape
-        · rename_i site fiber continuation
-          rcases site with ⟨mode, kind, op⟩
-          cases mode <;> cases kind
-          case G.stochastic =>
-            cases tape with
-            | nil => exact ogtAt_succ_sampleG_nil 0 (promote_notValue _) reduction
-            | cons head rest =>
-                obtain ⟨op', v⟩ := head
-                by_cases eq : op = op'
-                · subst eq
-                  rw [ogtAt_succ_sampleG 0 (promote_notValue _) reduction]
-                  exact ogtAt_zero_promote _ rest
-                · exact ogtAt_succ_sampleG_mismatch 0 (promote_notValue _) reduction eq v rest
-          all_goals
-            rw [ogtAt_succ_sampleE 0 (promote_notValue _) reduction rfl]
-            simp only [Function.comp_def, ogtAt_zero_promote, Measure.bind_zero_right']
-        · exact ogtAt_succ_stuck 0 (promote_notValue _) reduction tape
-        · exact ogtAt_succ_reject 0 (promote_notValue _) reduction tape
-  | succ depth ih =>
-      by_cases value : expression.isValue = true
-      · by_cases real : ∃ v, expression = .real v
-        · obtain ⟨v, rfl⟩ := real
-          rw [ogtAt_succ_next _ (promote_notValue _) (by rw [MeasurableActionFamily.reduce_promote_eq]; rfl)]
-        · have notReal : ∀ v, expression ≠ .real v := fun v h => real ⟨v, h⟩
-          rw [ogtAt_succ_stuck _ (promote_notValue _) (by
-            rw [MeasurableActionFamily.reduce_promote_eq, if_pos value]
-            cases expression <;> first | rfl | exact absurd rfl (notReal _)),
-            ogtAt_succ_value depth value]
-      · have reduction := MeasurableActionFamily.reduce_promote_eq expression
-        rw [if_neg value] at reduction
-        cases h : reduce expression <;> rw [h] at reduction <;> simp only [Action.wrap] at reduction
-        · rw [ogtAt_succ_next _ (promote_notValue _) reduction, ogtAt_succ_next depth value h]
-          exact ih _ tape
-        · rename_i site fiber continuation
-          rcases site with ⟨mode, kind, op⟩
-          cases mode <;> cases kind
-          case G.stochastic =>
-            cases tape with
-            | nil =>
-                rw [ogtAt_succ_sampleG_nil _ (promote_notValue _) reduction,
-                  ogtAt_succ_sampleG_nil depth value h]
-            | cons head rest =>
-                obtain ⟨op', v⟩ := head
-                by_cases eq : op = op'
-                · subst eq
-                  rw [ogtAt_succ_sampleG _ (promote_notValue _) reduction, ogtAt_succ_sampleG depth value h]
-                  exact ih _ rest
-                · rw [ogtAt_succ_sampleG_mismatch _ (promote_notValue _) reduction eq,
-                    ogtAt_succ_sampleG_mismatch depth value h eq]
-          all_goals
-            rw [ogtAt_succ_sampleE _ (promote_notValue _) reduction rfl, ogtAt_succ_sampleE depth value h rfl]
-            simp only [Function.comp_def, ih]
-        · rw [ogtAt_succ_stuck _ (promote_notValue _) reduction, ogtAt_succ_stuck depth value h]
-        · rw [ogtAt_succ_reject _ (promote_notValue _) reduction, ogtAt_succ_reject depth value h]
-
-theorem outputGivenTrace_promote (expression : Expr) (tape : DrawTrace) :
-    outputGivenTrace (.promote expression) tape = outputGivenTrace expression tape := by
-  ext s hs
-  simp only [outputGivenTrace, Measure.sum_apply _ hs]
-  rw [show (∑' depth, outputGivenTraceAt depth (Expr.promote expression) tape s) =
-      outputGivenTraceAt 0 (Expr.promote expression) tape s +
-        ∑' depth, outputGivenTraceAt (depth + 1) (Expr.promote expression) tape s
-    from tsum_eq_zero_add' ENNReal.summable]
-  simp only [ogtAt_succ_promote]
-  rw [ogtAt_zero_of_notReal (fun v h => by cases h)]
-  simp
 
 /-! ### A Markov version and a measurability lemma -/
 

@@ -1,0 +1,86 @@
+import Determinize.Statement.DiscreteLaws
+import Determinize.Proof.FiniteDistributionMeasure
+import Mathlib.MeasureTheory.Measure.GiryMonad
+
+namespace Determinize.Proof.DiscreteLaws
+open Statement.Paper MeasureTheory
+
+theorem bernoulli_off_domain (kind : Kind) (p : ℝ) (h : ¬ (0 ≤ p ∧ p ≤ 1)) :
+    bernoulliFiber kind p = 0 := by simp [bernoulliFiber, h]
+
+theorem bernoulli_measurable (kind : Kind) : Measurable (bernoulliFiber kind) := by
+  unfold bernoulliFiber
+  apply Measurable.ite
+    ((measurableSet_le measurable_const measurable_id).inter
+      (measurableSet_le measurable_id measurable_const))
+  · cases kind with
+    | stochastic =>
+        exact (((measurable_const.sub measurable_id).ennreal_ofReal).smul_measure _).add
+          (measurable_id.ennreal_ofReal.smul_measure _)
+    | mean => exact Measure.measurable_dirac
+  · exact measurable_const
+
+theorem bernoulli_integrable (kind : Kind) (p : ℝ) (f : ℝ → ℝ) :
+    Integrable f (bernoulliFiber kind p) := by
+  unfold bernoulliFiber
+  split
+  · cases kind with
+    | stochastic =>
+        exact ((integrable_dirac (by simp)).smul_measure (by simp)).add_measure
+          ((integrable_dirac (by simp)).smul_measure (by simp))
+    | mean => exact integrable_dirac (by simp)
+  · simp
+
+theorem bernoulli_probability (kind : Kind) (p : ℝ) (h : 0 ≤ p ∧ p ≤ 1) :
+    IsProbabilityMeasure (bernoulliFiber kind p) := by
+  constructor
+  cases kind with
+  | stochastic =>
+      simp only [bernoulliFiber, if_pos h, Measure.add_apply, Measure.smul_apply,
+        Measure.dirac_apply_of_mem (Set.mem_univ _), smul_eq_mul, mul_one]
+      rw [← ENNReal.ofReal_add (sub_nonneg.mpr h.2) h.1]
+      simp
+  | mean => simp [bernoulliFiber, h]
+
+theorem bernoulli_integral (p : ℝ) (h : 0 ≤ p ∧ p ≤ 1) (f : ℝ → ℝ) :
+    (∫ x, f x ∂bernoulliFiber .stochastic p) = (1 - p) * f 0 + p * f 1 := by
+  rw [bernoulliFiber, if_pos h]
+  rw [integral_add_measure
+    ((integrable_dirac (by simp)).smul_measure (by simp))
+    ((integrable_dirac (by simp)).smul_measure (by simp))]
+  simp [ENNReal.toReal_ofReal (sub_nonneg.mpr h.2), ENNReal.toReal_ofReal h.1]
+
+theorem bernoulli_mean (kind : Kind) (p : ℝ) (h : 0 ≤ p ∧ p ≤ 1) :
+    (∫ x, x ∂bernoulliFiber kind p) = p := by
+  cases kind with
+  | stochastic => simp [bernoulli_integral p h]
+  | mean => simp [bernoulliFiber, h]
+
+theorem bernoulli_variance (p : ℝ) (h : 0 ≤ p ∧ p ≤ 1) :
+    (∫ x, (x - p)^2 ∂bernoulliFiber .stochastic p) = p * (1 - p) := by
+  rw [bernoulli_integral p h]
+  ring
+
+theorem bernoulli_zero (kind : Kind) : bernoulliFiber kind 0 = Measure.dirac 0 := by
+  cases kind <;> simp [bernoulliFiber]
+
+theorem bernoulli_one (kind : Kind) : bernoulliFiber kind 1 = Measure.dirac 1 := by
+  cases kind <;> simp [bernoulliFiber]
+
+instance discrete_probability (kind : Kind) (d : Statement.Paper.FiniteDistribution) :
+    IsProbabilityMeasure (discreteFiber kind d) := by
+  cases kind <;> unfold discreteFiber <;> infer_instance
+
+theorem discrete_integrable (kind : Kind) (d : Statement.Paper.FiniteDistribution) (f : ℝ → ℝ) :
+    Integrable f (discreteFiber kind d) := by
+  cases kind with
+  | stochastic => exact FiniteDistribution.integrable d _ f
+  | mean => exact integrable_dirac (by simp)
+
+theorem discrete_mean (kind : Kind) (d : Statement.Paper.FiniteDistribution) :
+    (∫ x, x ∂discreteFiber kind d) = (d.mean : ℝ) := by
+  cases kind with
+  | stochastic => exact FiniteDistribution.mean d
+  | mean => simp [discreteFiber]
+
+end Determinize.Proof.DiscreteLaws

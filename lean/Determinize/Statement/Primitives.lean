@@ -1,3 +1,4 @@
+import Determinize.Statement.FiniteDistributionMeasure
 import Mathlib.Probability.Distributions.Beta
 import Mathlib.Probability.Distributions.Exponential
 import Mathlib.Probability.Distributions.Gaussian.Real
@@ -5,17 +6,12 @@ import Mathlib.Probability.Distributions.Poisson.Basic
 import Mathlib.Tactic.DeriveCountable
 
 /-!
-# The eight primitive distributions
+# Primitive distributions
 
 Each primitive has one fiber: at evaluated parameters it is the primitive's law at a
 stochastic site and the Dirac mass at the primitive's mean at a mean site, the form
 determinization leaves behind. Both are the zero measure outside the parameter domain,
-which makes an off-domain call stuck. Six primitives are the paper's continuous and
-count-valued laws; `bernoulli(p)` is the two-point law on `{0, 1}` with mean `p`, the
-paper's `bernoulli` and the draw behind `flip` (`Statement/Syntax.lean`), which compares it
-with `0`; `discrete(w₀, …, wₙ₋₁)` draws the index `i` with probability `wᵢ` and has the mean
-`∑ i, wᵢ · i`. Its name `Op.discrete n` records the number of weights, so that every primitive
-has a fixed number of parameters.
+which makes an off-domain call stuck.
 -/
 
 namespace Determinize.Statement.Paper
@@ -24,8 +20,7 @@ open MeasureTheory ProbabilityTheory
 
 noncomputable section
 
-/-- The primitive names; a trace records which primitive a general-mode draw came from.
-`discrete n` carries its number of weights. -/
+/-- The primitive names; a trace records which primitive a general-mode draw came from. -/
 inductive Op where
   | uniform
   | gaussian
@@ -34,7 +29,7 @@ inductive Op where
   | beta
   | gamma
   | bernoulli
-  | discrete (arity : Nat)
+  | discrete (distribution : FiniteDistribution)
 deriving DecidableEq, Repr, Countable
 
 /-- A sampling site draws from its primitive or, after determinization, returns its mean. -/
@@ -102,26 +97,21 @@ def gammaFiber (kind : Kind) (shape rate : ℝ) : Measure ℝ :=
     | .mean => Measure.dirac (shape / rate)
   else 0
 
-/-- `bernoulli(p)`: the two-point law with mass `p` at `1` and `1 - p` at `0`, or its mean `p`;
-the domain is `0 ≤ p ≤ 1`. -/
-def bernoulliFiber (kind : Kind) (probability : ℝ) : Measure ℝ :=
+/-- Bernoulli on numeric outcomes zero and one. Invalid probabilities have zero mass. -/
+noncomputable def bernoulliFiber (kind : Kind) (probability : ℝ) : Measure ℝ :=
   if 0 ≤ probability ∧ probability ≤ 1 then
     match kind with
-    | .stochastic =>
-        ENNReal.ofReal (1 - probability) • Measure.dirac 0 +
-          ENNReal.ofReal probability • Measure.dirac 1
+    | .stochastic => ENNReal.ofReal (1 - probability) • Measure.dirac 0 +
+        ENNReal.ofReal probability • Measure.dirac 1
     | .mean => Measure.dirac probability
   else 0
 
-/-- `discrete(w₀, …, wₙ₋₁)`: the index `i ∈ {0, …, n - 1}` with probability `wᵢ`, or the mean
-`∑ i, wᵢ · i`; the domain requires nonnegative weights that sum to one. -/
-def discreteFiber (kind : Kind) (weights : List ℝ) : Measure ℝ :=
-  if (∀ i : Fin weights.length, 0 ≤ weights[i]) ∧ ∑ i : Fin weights.length, weights[i] = 1 then
-    match kind with
-    | .stochastic =>
-        ∑ i : Fin weights.length, ENNReal.ofReal weights[i] • Measure.dirac ((i : ℕ) : ℝ)
-    | .mean => Measure.dirac (∑ i : Fin weights.length, weights[i] * ((i : ℕ) : ℝ))
-  else 0
+/-- Finite numeric law or its mean; weights are already checked and normalized. -/
+noncomputable def discreteFiber (kind : Kind) (distribution : FiniteDistribution) : Measure ℝ :=
+  match kind with
+  | .stochastic => distribution.measure (fun i => (i : ℝ))
+  | .mean => Measure.dirac (distribution.mean : ℝ)
+
 
 end
 

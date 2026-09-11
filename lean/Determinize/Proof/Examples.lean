@@ -1,7 +1,7 @@
 import Determinize.Theorems
 
 namespace Determinize.Proof.Examples
-open MeasureTheory ProbabilityTheory Determinize.Statement.Paper Determinize.Traces
+open MeasureTheory Determinize.Statement.Paper Determinize.Traces
 
 def uniform (mode : Mode) : Expr := .uniform mode .stochastic (.real 0) (.real 1)
 
@@ -56,18 +56,29 @@ example : Typed [] (.mul (.real 2) (.real 1)) (.float .G) := .mul .real .real
 -- The general-mode factor of an expectation-mode product stands on the left: an
 -- expectation-mode draw may be scaled from the left, not from the right, and not squared.
 example : Typed [] (.mul (.real 2) (uniform .E)) (.float .E) := .mul .real (uniform_typed .E)
-example : ¬ Typed [] (.mul (uniform .E) (.real 2)) (.float .E) := by
+private theorem uniformE_not_G : ¬ Typed context (uniform .E) (.float .G) := by
   intro typed
-  cases typed with
-  | mul left _ =>
-      unfold uniform at left
-      cases left
-example : ¬ Typed [] (.mul (uniform .E) (uniform .E)) (.float .E) := by
+  generalize he : uniform .E = expression at typed
+  generalize ht : Ty.float .G = ty at typed
+  induction typed
+  case sub h sub ih =>
+    cases sub <;> cases ht
+    exact ih he rfl
+  all_goals cases ht <;> simp [uniform] at he
+
+private theorem mul_uniformE_not_typed (right : Expr) :
+    ¬ Typed context (.mul (uniform .E) right) ty := by
   intro typed
-  cases typed with
-  | mul left _ =>
-      unfold uniform at left
-      cases left
+  generalize he : Expr.mul (uniform .E) right = expression at typed
+  induction typed
+  case sub h sub ih => exact ih he
+  case mul left right ihl ihr =>
+    cases he
+    exact uniformE_not_G left
+  all_goals cases he
+
+example : ¬ Typed [] (.mul (uniform .E) (.real 2)) (.float .E) := mul_uniformE_not_typed _
+example : ¬ Typed [] (.mul (uniform .E) (uniform .E)) (.float .E) := mul_uniformE_not_typed _
 
 private theorem safe_next {expression next : Expr}
     (reduction : reduce expression = .next next) (safe : DoesNotGetStuck next) :
@@ -127,21 +138,9 @@ theorem reciprocal_safe : DoesNotGetStuck reciprocal := by
   · simp [reduce, Expr.isValue, realValue?]
   exact safe_real _
 
-/-- This concrete trace result requires no global integrability premise: on almost every
-trace the source output law has a finite mean and the target replay is the Dirac mass at it. -/
-example : ∀ᵐ trace ∂traceLaw reciprocal,
-    Integrable id (outputGivenTrace reciprocal trace) ∧
-    outputGivenTrace reciprocal.determinize trace =
-      Measure.dirac (∫ value : ℝ, value ∂outputGivenTrace reciprocal trace) :=
-  (Traces.soundness .E reciprocal reciprocal_typed reciprocal_source reciprocal_safe).2.2.2
-
-/-- The law of total variance along the traces of the same program. -/
-example (memLp : MemLp id 2 (bigStepMeasure reciprocal)) :
-    variance id (bigStepMeasure reciprocal) =
-      variance id (bigStepMeasure reciprocal.determinize) +
-        ∫ trace, variance id (outputGivenTrace reciprocal trace) ∂traceLaw reciprocal :=
-  (Traces.varianceSoundness .E reciprocal reciprocal_typed reciprocal_source reciprocal_safe
-    memLp).2
+/-- This concrete trace result requires no global integrability premise. -/
+example : Determinize.Proof.Traces.MeanOnTraces reciprocal reciprocal.determinize :=
+  (Traces.meanOnTraces .E reciprocal reciprocal_typed reciprocal_source reciprocal_safe).2
 
 /-- A general-mode draw scales an expectation-mode draw from the left. -/
 def scaledSample : Expr := .letE (uniform .G) (.mul (.bvar 0) (uniform .E))
@@ -167,240 +166,8 @@ theorem scaledSample_safe : DoesNotGetStuck scaledSample := by
     · simp [reduce, Expr.isValue, realValue?]
     exact safe_real _
 
-example : traceAndOutputLaw scaledSample.determinize =
-    traceThenOutput (traceLaw scaledSample) (outputGivenTrace scaledSample.determinize) :=
-  (Traces.soundness .E scaledSample scaledSample_typed scaledSample_source scaledSample_safe).2.2.1
-
-/-- `bernoulli_E(1/3)`: an expectation-mode Bernoulli draw with a literal probability. -/
-noncomputable def bernoulliLiteral : Expr := .bernoulli .E .stochastic (.real (1 / 3))
-
-theorem bernoulliLiteral_typed : Typed [] bernoulliLiteral (.float .E) := .bernoulli .real
-
-theorem bernoulliLiteral_source : bernoulliLiteral.sourceForm = true := by
-  simp [bernoulliLiteral, Expr.sourceForm]
-
-/-- Determinization switches the Bernoulli site to its mean site. -/
-example : bernoulliLiteral.determinize = .bernoulli .E .mean (.real (1 / 3)) := rfl
-
-/-- A mean site of `bernoulli(p)` returns the probability `p` itself. -/
-example (probability : ℝ) (bounds : 0 ≤ probability ∧ probability ≤ 1) :
-    bernoulliFiber .mean probability = Measure.dirac probability := by
-  simp [bernoulliFiber, bounds]
-
-private theorem bernoulliFiber_stochastic_mass (probability : ℝ)
-    (bounds : 0 ≤ probability ∧ probability ≤ 1) :
-    bernoulliFiber .stochastic probability Set.univ = 1 := by
-  rw [bernoulliFiber, if_pos bounds]
-  simp only [Measure.add_apply, Measure.smul_apply, smul_eq_mul, measure_univ, mul_one]
-  rw [← ENNReal.ofReal_add (by linarith [bounds.2]) bounds.1, sub_add_cancel, ENNReal.ofReal_one]
-
-theorem bernoulliLiteral_safe : DoesNotGetStuck bernoulliLiteral := by
-  refine safe_sample (site := (.E, .stochastic, .bernoulli))
-    (fiber := bernoulliFiber .stochastic (1 / 3)) (continuation := .real) ?_ ?_ ?_
-  · simp [bernoulliLiteral, reduce, Expr.isValue, realValue?]
-  · exact bernoulliFiber_stochastic_mass _ (by norm_num)
-  · exact safe_real
-
-/-- The mean of `bernoulli_E(1/3)` is preserved along traces by its determinization `1/3`. -/
-example : traceAndOutputLaw bernoulliLiteral.determinize =
-    traceThenOutput (traceLaw bernoulliLiteral) (outputGivenTrace bernoulliLiteral.determinize) :=
-  (Traces.soundness .E bernoulliLiteral bernoulliLiteral_typed bernoulliLiteral_source
-    bernoulliLiteral_safe).2.2.1
-
-/-- `bernoulli_E(uniform_E(0, 1))`: the probability is itself an expectation-mode draw. -/
-def bernoulliNested : Expr := .bernoulli .E .stochastic (uniform .E)
-
-theorem bernoulliNested_typed : Typed [] bernoulliNested (.float .E) :=
-  .bernoulli (uniform_typed .E)
-
-example : bernoulliNested.sourceForm = true := by
-  simp [bernoulliNested, uniform, Expr.sourceForm]
-
-/-- Both sites become mean sites: the parameter evaluates to `1/2`, then so does the draw. -/
-example : bernoulliNested.determinize =
-    .bernoulli .E .mean (.uniform .E .mean (.real 0) (.real 1)) := rfl
-
-example : reduce bernoulliNested.determinize =
-    .sample (.E, .mean, .uniform) (uniformFiber .mean 0 1)
-      (fun value => .bernoulli .E .mean (.real value)) := by
-  simp [bernoulliNested, uniform, Expr.determinize, Expr.determinizeKind, reduce, Expr.isValue,
-    realValue?, Action.wrap, Function.comp_def]
-
-/-- `flip` draws a general-mode Bernoulli value and compares it with `0`. -/
-example : reduce (.flip (.real (1 / 2))) =
-    .sample (.G, .stochastic, .bernoulli) (bernoulliFiber .stochastic (1 / 2))
-      (fun value => .lt (.real 0) (.real value)) := by
-  simp [Expr.flip, reduce, Expr.isValue, realValue?, Action.wrap, Function.comp_def]
-
-/-- `if flip(1/2) then uniform_E(0, 1) else 0`: a Boolean draw chooses between expectation-mode
-values. -/
-noncomputable def flipBranch : Expr := .ite (.flip (.real (1 / 2))) (uniform .E) (.real 0)
-
-theorem flipBranch_typed : Typed [] flipBranch (.float .E) :=
-  .ite (.flip .real) (uniform_typed .E) .real
-
-example : flipBranch.sourceForm = true := by
-  simp [flipBranch, uniform, Expr.flip, Expr.sourceForm]
-
-/-- The `flip` is a general-mode site and stays stochastic; only `uniform_E` becomes a mean
-site. -/
-example : flipBranch.determinize =
-    .ite (.flip (.real (1 / 2))) (.uniform .E .mean (.real 0) (.real 1)) (.real 0) := rfl
-
-/-- `flip` needs a general-mode probability: an expectation-mode draw is rejected. -/
-example : ¬ Typed [] (.flip (uniform .E)) .bool := by
-  intro typed
-  unfold Expr.flip at typed
-  cases typed with
-  | lt _ right =>
-      cases right with
-      | bernoulli probability =>
-          unfold uniform at probability
-          cases probability
-
-/-- `discrete_E(1/2, 1/4, 1/4)`: the index `0`, `1` or `2` with the listed weights. -/
-noncomputable def discreteSample : Expr := .discrete .E .stochastic [1 / 2, 1 / 4, 1 / 4]
-
-theorem discreteSample_typed : Typed [] discreteSample (.float .E) := .discrete
-
-theorem discreteSample_source : discreteSample.sourceForm = true := by
-  simp [discreteSample, Expr.sourceForm, Kind.isStochastic]
-
-/-- Determinization switches the site to its mean site. -/
-example : discreteSample.determinize = .discrete .E .mean [1 / 2, 1 / 4, 1 / 4] := rfl
-
-/-- The mean site returns `∑ i, wᵢ · i = 1/4 + 2/4`. -/
-example : reduce discreteSample.determinize =
-    .sample (.E, .mean, .discrete 3) (Measure.dirac (3 / 4)) .real := by
-  simp [discreteSample, Expr.determinize, Expr.determinizeKind, reduce, discreteFiber,
-    Fin.sum_univ_three, Fin.forall_fin_succ]
-  norm_num
-
-private theorem discreteFiber_stochastic_mass (weights : List ℝ)
-    (bounds : (∀ i : Fin weights.length, 0 ≤ weights[i]) ∧
-      ∑ i : Fin weights.length, weights[i] = 1) :
-    discreteFiber .stochastic weights Set.univ = 1 := by
-  rw [discreteFiber, if_pos bounds]
-  simp only [Measure.finsetSum_apply, Measure.smul_apply, smul_eq_mul, measure_univ, mul_one]
-  rw [← ENNReal.ofReal_sum_of_nonneg fun i _ => bounds.1 i, bounds.2, ENNReal.ofReal_one]
-
-theorem discreteSample_safe : DoesNotGetStuck discreteSample := by
-  refine safe_sample (site := (.E, .stochastic, .discrete 3))
-    (fiber := discreteFiber .stochastic [1 / 2, 1 / 4, 1 / 4]) (continuation := .real) ?_ ?_ ?_
-  · simp [discreteSample, reduce]
-  · refine discreteFiber_stochastic_mass _ ⟨?_, ?_⟩
-    · intro i
-      fin_cases i <;> norm_num
-    · norm_num [Fin.sum_univ_three]
-  · exact safe_real
-
-/-- The mean of `discrete_E(1/2, 1/4, 1/4)` is preserved along traces by its determinization. -/
-example : traceAndOutputLaw discreteSample.determinize =
-    traceThenOutput (traceLaw discreteSample) (outputGivenTrace discreteSample.determinize) :=
-  (Traces.soundness .E discreteSample discreteSample_typed discreteSample_source
-    discreteSample_safe).2.2.1
-
-/-- `let x = uniform_G(0, 1) in let _ = observe(x < 1/2) in x + uniform_E(0, 1)`: a general-mode
-draw is observed before an expectation-mode draw is added to it (`x` is promoted explicitly, as
-the addition needs both operands at mode `E`). The condition is general-mode information, so
-the source and its determinization reject exactly the same draws of `x`. -/
-noncomputable def observedSum : Expr :=
-  .letE (uniform .G)
-    (.letE (.observe (.lt (.bvar 0) (.real (1 / 2))))
-      (.add (.promote (.bvar 1)) (uniform .E)))
-
-theorem observedSum_typed : Typed [] observedSum (.float .E) :=
-  .letE (uniform_typed .G)
-    (.letE (.observe (.lt (.bvar .head) .real))
-      (.add (.promote (.bvar (.tail .head))) (uniform_typed .E)))
-
-theorem observedSum_source : observedSum.sourceForm = true := by
-  simp [observedSum, uniform, Expr.sourceForm]
-
-/-- Determinization only switches the expectation-mode draw to its mean site; the observation
-and the general-mode draw it depends on are untouched. -/
-example : observedSum.determinize =
-    .letE (uniform .G)
-      (.letE (.observe (.lt (.bvar 0) (.real (1 / 2))))
-        (.add (.promote (.bvar 1)) (.uniform .E .mean (.real 0) (.real 1)))) := rfl
-
-/-- An observation needs general-mode information: comparing an expectation-mode draw is
-rejected by the type system. -/
-example : ¬ Typed [] (.observe (.lt (uniform .E) (.real 1))) .unit := by
-  intro typed
-  cases typed with
-  | observe condition =>
-      cases condition with
-      | lt left _ =>
-          unfold uniform at left
-          cases left
-
-/-- A failed observation rejects the execution. -/
-example : reduce (.observe (.bool false)) = .reject := by simp [reduce, Expr.isValue]
-
-/-- A successful observation continues with `unit`. -/
-example : reduce (.observe (.bool true)) = .next .unit := by simp [reduce, Expr.isValue]
-
-/-- A rejected execution contributes no output mass at any depth. -/
-example (fuel : Nat) : cumulativeOutputMeasure fuel (.observe (.bool false)) = 0 := by
-  cases fuel <;> simp [cumulativeOutputMeasure, reduce, Expr.isValue]
-
-/-- Nor any trace mass. -/
-example (depth : Nat) : traceAndOutputLawAt depth (.observe (.bool false)) = 0 := by
-  cases depth <;> simp [traceAndOutputLawAt, reduce, Expr.isValue]
-
-/-- Rejection is not stuckness: an expression that rejects never gets stuck. -/
-private theorem safe_reject {expression : Expr} (reduction : reduce expression = .reject) :
-    DoesNotGetStuck expression := by
-  intro fuel
-  cases fuel with
-  | zero => trivial
-  | succ fuel =>
-      rw [DoesNotGetStuckAt]
-      split
-      · trivial
-      · rw [reduction]
-        trivial
-
-example : DoesNotGetStuck (.observe (.bool false)) :=
-  safe_reject (by simp [reduce, Expr.isValue])
-
-theorem observedSum_safe : DoesNotGetStuck observedSum := by
-  apply safe_let_uniform .G
-  intro x
-  simp [Expr.substHead, Expr.substAt, Expr.shift, Expr.mapVars, uniform, -one_div]
-  change DoesNotGetStuck (.letE (.observe (.lt (.real x) (.real (1 / 2))))
-    (.add (.promote (.real x)) (uniform .E)))
-  apply safe_next (next := .letE (.observe (.bool (decide (x < 1 / 2))))
-    (.add (.promote (.real x)) (uniform .E)))
-  · simp [reduce, Expr.isValue, realValue?, Action.wrap, -one_div]
-  by_cases accepted : x < 1 / 2
-  · -- the observation succeeds and the expectation-mode draw is added
-    apply safe_next (next := .letE .unit (.add (.promote (.real x)) (uniform .E)))
-    · simp [reduce, Expr.isValue, Action.wrap, accepted, -one_div]
-    apply safe_next (next := .add (.promote (.real x)) (uniform .E))
-    · simp [reduce, Expr.isValue, Expr.substHead, Expr.substAt, Expr.shift, Expr.mapVars,
-        uniform]
-    apply safe_next (next := .add (.real x) (uniform .E))
-    · simp [reduce, Expr.isValue, Action.wrap, uniform]
-    let μ := uniformFiber .stochastic 0 1
-    refine safe_sample (site := (.E, .stochastic, .uniform)) (fiber := μ)
-      (continuation := fun value => .add (.real x) (.real value)) ?_ ?_ ?_
-    · simp [uniform, reduce, Expr.isValue, realValue?, Action.wrap, Function.comp_def, μ]
-    · simp [μ, uniformFiber, uniformMeasure, Real.volume_Icc]
-    · intro value
-      apply safe_next (next := .real (x + value))
-      · simp [reduce, Expr.isValue, realValue?]
-      exact safe_real _
-  · -- the observation fails: the execution is rejected, which is not stuckness
-    apply safe_reject
-    simp [reduce, Expr.isValue, Action.wrap, accepted, -one_div]
-
-/-- The mean of the accepted executions is preserved along traces; together with the equal
-acceptance mass this is the conditional expectation statement. -/
-example : traceAndOutputLaw observedSum.determinize =
-    traceThenOutput (traceLaw observedSum) (outputGivenTrace observedSum.determinize) :=
-  (Traces.soundness .E observedSum observedSum_typed observedSum_source observedSum_safe).2.2.1
+example : Determinize.Proof.Traces.MeanOnTraces scaledSample scaledSample.determinize :=
+  (Traces.meanOnTraces .E scaledSample scaledSample_typed scaledSample_source scaledSample_safe).2
 
 def loopFunction : Expr :=
   .fix

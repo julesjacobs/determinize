@@ -187,6 +187,7 @@ theorem domain_valueSet_convex (queryOp : Determinize.Statement.Paper.Op)
         · exact add_pos_of_pos_of_nonneg (mul_pos haPos leftDomain.1)
             (mul_nonneg hb rightDomain.1.le)
       · exact leftDomain.2
+
   | bernoulli =>
       change Fin 1 → Symbolic.Affine (n + 1) at queryAffineArgs
       change Fin 0 → ℝ at queryGeneralArgs
@@ -195,10 +196,10 @@ theorem domain_valueSet_convex (queryOp : Determinize.Statement.Paper.Op)
       rw [Affine.eval_cons_convexCombination _ environment left right a b hab]
       constructor
       · exact add_nonneg (mul_nonneg ha leftDomain.1) (mul_nonneg hb rightDomain.1)
-      · have upper := add_le_add (mul_le_mul_of_nonneg_left leftDomain.2 ha)
+      · have bound := add_le_add (mul_le_mul_of_nonneg_left leftDomain.2 ha)
           (mul_le_mul_of_nonneg_left rightDomain.2 hb)
-        linarith
-  | discrete => exact leftDomain
+        simpa [hab] using bound
+  | discrete _ => trivial
 
 noncomputable def transitionPack (laws : Determinize.Proof.Paper.PrimitiveLaws) (op : Determinize.Statement.Paper.Op)
     (affineArgs : Fin (Determinize.Statement.Paper.affineArity op) → Symbolic.Affine n)
@@ -577,25 +578,6 @@ theorem nStepMeasure_succ_next_univ
       (Determinize.Proof.Paper.MeasurableActionFamily.nStepKernelPack
         stepKernel fuel).kernel.measurable]
 
-theorem nStepMeasure_succ_reject_univ
-    (stepKernel : StepKernel) (fuel : Nat) (expression : Expr)
-    (reduction : reduce expression = .reject) :
-    nStepMeasure stepKernel (fuel + 1) expression Set.univ =
-      nStepMeasure stepKernel fuel .unit Set.univ := by
-  rw [nStepMeasure_succ_eq_firstStep stepKernel fuel expression, stepKernel.kernel_eq_stepMeasure]
-  unfold stepMeasure
-  rw [reduction]
-  simp only [Determinize.Statement.Paper.Action.measure]
-  rw [show nStepMeasure stepKernel fuel =
-      (Determinize.Proof.Paper.MeasurableActionFamily.nStepKernelPack
-        stepKernel fuel).kernel from by
-    funext successor
-    exact (Determinize.Proof.Paper.MeasurableActionFamily.nStepKernelPack_apply
-      stepKernel fuel successor).symm,
-    Measure.dirac_bind
-      (Determinize.Proof.Paper.MeasurableActionFamily.nStepKernelPack
-        stepKernel fuel).kernel.measurable]
-
 theorem doesNotGetStuckAt_iff_nStepMeasure_univ_eq_one
     (stepKernel : StepKernel) (fuel : Nat) (expression : Expr)
     (typed : Determinize.Statement.Paper.Typed [] expression ty) :
@@ -680,11 +662,6 @@ theorem doesNotGetStuckAt_iff_nStepMeasure_univ_eq_one
         | stuck =>
             rw [reduction] at actionTyped
             cases actionTyped
-        | reject =>
-            simp only
-            rw [nStepMeasure_succ_reject_univ stepKernel fuel expression reduction,
-              nStepMeasure_univ_eq_one_of_value stepKernel fuel .unit rfl]
-            simp
 
 theorem primitiveDomainSafeAt_iff_nStepMeasure_univ_eq_one
     (stepKernel : StepKernel) (fuel : Nat) (expression : Expr)
@@ -743,10 +720,6 @@ theorem exists_jointContinuation {α : Type*} [MeasurableSpace α]
         simp only [Action.sample.injEq] at equality
         exact congrFun equality.2.2 value⟩
   | stuck =>
-      exact ⟨fun _ => .unit, measurable_const, by
-        intro parameter fiber continuation equality
-        cases equality⟩
-  | reject =>
       exact ⟨fun _ => .unit, measurable_const, by
         intro parameter fiber continuation equality
         cases equality⟩
@@ -1030,7 +1003,6 @@ noncomputable def targetRealize (laws : Determinize.Proof.Paper.PrimitiveLaws)
   | .sampleG site fiber continuation =>
       .sample site fiber (fun value => ((continuation value).realize environment).determinize)
   | .stuck => .stuck
-  | .reject => .reject
 
 theorem determinize_shift (amount cutoff : Nat) (expression : Expr) :
     (expression.shift amount cutoff).determinize =
@@ -1094,7 +1066,6 @@ theorem targetRealize_wrap (laws : Determinize.Proof.Paper.PrimitiveLaws)
   | next expression => simp [Symbolic.AffineExpr.SymbolicAction.wrap,
       targetRealize, Action.wrap, context_realize]
   | stuck => rfl
-  | reject => rfl
   | sampleE op affine general continuation =>
       simp only [Symbolic.AffineExpr.SymbolicAction.wrap, targetRealize,
         Action.wrap, Action.sample.injEq, true_and]
@@ -1118,7 +1089,11 @@ theorem symbolicReduce_targetRealize
       reduce ((expression.realize environment).determinize) := by
   induction typed generalizing environment with
   | bvar hvar => simp [symbolicReduce, targetRealize, realize, Expr.determinize, Expr.determinize, reduce]
-  | «unit» => simp [symbolicReduce, targetRealize, realize, Expr.determinize, Expr.determinize, reduce]
+  | reject | «unit» => simp [symbolicReduce, targetRealize, realize, Expr.determinize, Expr.determinize, reduce]
+  | discrete =>
+      rename_i context' mode d
+      cases mode <;> simp [symbolicReduce, targetRealize, realize, Expr.determinize,
+        Expr.determinizeKind, reduce, discreteFiber_eq, Affine.eval_fresh]
   | bool => simp [symbolicReduce, targetRealize, realize, Expr.determinize, Expr.determinize, reduce]
   | realE => simp [symbolicReduce, targetRealize, realize, Expr.determinize, Expr.determinize, reduce]
   | realG => simp [symbolicReduce, targetRealize, realize, Expr.determinize, Expr.determinize, reduce]
@@ -1336,38 +1311,7 @@ theorem symbolicReduce_targetRealize
           (lifted_realize := by intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
           ihv environment]
         all_goals simp_all [isValue]
-  | observe conditionTyped ih =>
-      rename_i context' condition
-      rw [realize, Expr.determinize, MeasurableActionFamily.reduce_observe_eq, determinize_isValue,
-        realize_isValue]
-      by_cases conditionValue : condition.isValue = true
-      · simp only [conditionValue, ↓reduceIte]
-        obtain ⟨answer, rfl⟩ := wellTyped_bool_value conditionTyped conditionValue
-        cases answer <;> simp [symbolicReduce, conditionValue, targetRealize, realize, Expr.determinize]
-      · rw [symbolicReduce_observe_eq]
-        simp only [conditionValue,
-          Bool.eq_false_of_not_eq_true conditionValue,
-          Bool.false_eq_true, ↓reduceIte]
-        rw [targetRealize_wrap laws
-          (ExprContext := fun next => .observe next)
-          (context_realize := by intros; simp only [realize, Expr.determinize])
-          (lifted_realize := by intros; simp only [realize, Expr.determinize]), ih environment]
-        all_goals simp_all [isValue]
-  | promote valueTyped ih =>
-      rename_i context' value
-      rw [realize, Expr.determinize, MeasurableActionFamily.reduce_promote_eq, determinize_isValue, realize_isValue]
-      by_cases valueIsValue : value.isValue = true
-      · simp only [valueIsValue, ↓reduceIte]
-        obtain ⟨coordinate, rfl⟩ := wellTyped_real_value valueTyped valueIsValue
-        simp [symbolicReduce, valueIsValue, targetRealize, realize, Expr.determinize, Expr.determinize]
-      · rw [symbolicReduce_promote_eq]
-        simp only [valueIsValue, Bool.eq_false_of_not_eq_true valueIsValue,
-          Bool.false_eq_true, ↓reduceIte]
-        rw [targetRealize_wrap laws
-          (ExprContext := fun next => .promote next)
-          (context_realize := by intros; simp only [realize, Expr.determinize])
-          (lifted_realize := by intros; simp only [realize, Expr.determinize]), ih environment]
-        all_goals simp_all [isValue]
+  | sub valueTyped h ih => exact ih environment
   | negE valueTyped ih =>
       rename_i context' value
       rw [realize, Expr.determinize, MeasurableActionFamily.reduce_neg_eq, determinize_isValue, realize_isValue,
@@ -1711,8 +1655,8 @@ theorem symbolicReduce_targetRealize
           ih environment]
   | bernoulli valueTyped ih =>
       rename_i context' value mode
-      rw [realize, Expr.determinize, MeasurableActionFamily.reduce_bernoulli_eq,
-        determinize_isValue, realize_isValue, symbolicReduce.eq_def]
+      rw [realize, Expr.determinize, MeasurableActionFamily.reduce_bernoulli_eq, determinize_isValue,
+        realize_isValue, symbolicReduce.eq_def]
       by_cases valueIsValue : value.isValue = true
       · simp only [valueIsValue, ↓reduceIte]
         obtain ⟨x, rfl⟩ := wellTyped_real_value valueTyped valueIsValue
@@ -1728,20 +1672,10 @@ theorem symbolicReduce_targetRealize
       · simp only [valueIsValue, Bool.eq_false_of_not_eq_true valueIsValue,
           Bool.false_eq_true, ↓reduceIte]
         rw [targetRealize_wrap laws
-          (ExprContext := fun next =>
-            .bernoulli mode (Expr.determinizeKind mode .stochastic) next)
+          (ExprContext := fun next => .bernoulli mode (Expr.determinizeKind mode .stochastic) next)
           (context_realize := by intros; simp only [realize, Expr.determinize])
           (lifted_realize := by intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
           ih environment]
-  | discrete =>
-      rename_i context' mode weights
-      rw [realize, Expr.determinize, MeasurableActionFamily.reduce_discrete_eq,
-        symbolicReduce_discrete_eq]
-      cases mode with
-      | E =>
-          simp [targetRealize, realize, Expr.determinize, Expr.determinizeKind, discreteFiber_eq,
-            Affine.eval_fresh]
-      | G => simp [targetRealize, realize, Expr.determinize, Expr.determinizeKind]
   | exponential valueTyped ih =>
       rename_i context' value mode
       rw [realize, Expr.determinize, MeasurableActionFamily.reduce_exponential_eq, determinize_isValue,
@@ -1970,7 +1904,6 @@ theorem safeConfigAt_target
             exact ih history (continuation sampledValue)
               ⟨historySafe, continuationTyped sampledValue, sampledSafe⟩
         | stuck => exact (Symbolic.AffineExpr.SymbolicAction.not_wellTyped_stuck actionTyped).elim
-        | reject => simp [targetRealize]
 
 theorem determinize_primitiveDomainSafe_of_typed_source
     (laws : Determinize.Proof.Paper.PrimitiveLaws) (stepKernel : StepKernel)

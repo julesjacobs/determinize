@@ -1,3 +1,5 @@
+import Determinize.Proof.DiscreteLaws
+import Determinize.Proof.Rejection
 import Determinize.Theorems
 import Determinize.Proof.Examples
 import Determinize.Proof.InterfaceChecks

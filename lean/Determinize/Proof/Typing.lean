@@ -1,3 +1,4 @@
+import Determinize.Proof.Subtyping
 import Determinize.Proof.Measurability
 
 /-! # Type safety for the paper semantics -/
@@ -60,6 +61,8 @@ theorem typed_shift (h : Typed (before ++ suffix) expression ty) :
       rw [← hcontext] at hvar
       rw [Expr.shift, Expr.mapVars]
       exact .bvar (hasVar_shift hvar)
+  | reject => rw [Expr.shift, Expr.mapVars]; exact .reject
+  | discrete => rw [Expr.shift, Expr.mapVars]; exact .discrete
   | unit => rw [Expr.shift, Expr.mapVars]; exact .unit
   | bool => rw [Expr.shift, Expr.mapVars]; exact .bool
   | real => rw [Expr.shift, Expr.mapVars]; exact .real
@@ -113,12 +116,8 @@ theorem typed_shift (h : Typed (before ++ suffix) expression ty) :
       rw [Expr.shift, Expr.mapVars]
       exact .letE (ihv (before := before) (suffix := suffix) hcontext)
         (ihb (before := _ :: before) (suffix := suffix) (by simpa using hcontext))
-  | observe hv ih =>
-      rw [Expr.shift, Expr.mapVars]
-      exact .observe (ih (before := before) (suffix := suffix) hcontext)
-  | promote hv ih =>
-      rw [Expr.shift, Expr.mapVars]
-      exact .promote (ih (before := before) (suffix := suffix) hcontext)
+  | sub hv h ih =>
+      exact .sub (ih (before := before) (suffix := suffix) hcontext) h
   | neg hv ih =>
       rw [Expr.shift, Expr.mapVars]
       exact .neg (ih (before := before) (suffix := suffix) hcontext)
@@ -149,13 +148,12 @@ theorem typed_shift (h : Typed (before ++ suffix) expression ty) :
           (ihr (before := before) (suffix := suffix) hcontext)
       | exact .gamma (ihl (before := before) (suffix := suffix) hcontext)
           (ihr (before := before) (suffix := suffix) hcontext)
-  | poisson hv ih | exponential hv ih | bernoulli hv ih =>
+  | poisson hv ih | bernoulli hv ih | exponential hv ih =>
       rw [Expr.shift, Expr.mapVars]
       first
       | exact .poisson (ih (before := before) (suffix := suffix) hcontext)
-      | exact .exponential (ih (before := before) (suffix := suffix) hcontext)
       | exact .bernoulli (ih (before := before) (suffix := suffix) hcontext)
-  | discrete => rw [Expr.shift, Expr.mapVars]; exact .discrete
+      | exact .exponential (ih (before := before) (suffix := suffix) hcontext)
 
 theorem hasVar_subst (h : HasVar (before ++ binder :: suffix) index ty) :
     (index = before.length ∧ ty = binder) ∨
@@ -214,6 +212,8 @@ theorem typed_substAt (h : Typed (before ++ binder :: suffix) expression ty)
       · rcases shifted with ⟨notEqual, shifted⟩
         rw [Expr.substAt, Expr.mapVars, if_neg notEqual]
         exact .bvar shifted
+  | reject => rw [Expr.substAt, Expr.mapVars]; exact .reject
+  | discrete => rw [Expr.substAt, Expr.mapVars]; exact .discrete
   | unit => rw [Expr.substAt, Expr.mapVars]; exact .unit
   | bool => rw [Expr.substAt, Expr.mapVars]; exact .bool
   | real => rw [Expr.substAt, Expr.mapVars]; exact .real
@@ -275,12 +275,8 @@ theorem typed_substAt (h : Typed (before ++ binder :: suffix) expression ty)
       exact .letE (ihv replacementTyped (before := before) (suffix := suffix) hcontext)
         (ihb replacementTyped (before := _ :: before) (suffix := suffix)
           (by simpa using hcontext))
-  | observe hv ih =>
-      rw [Expr.substAt, Expr.mapVars]
-      exact .observe (ih replacementTyped (before := before) (suffix := suffix) hcontext)
-  | promote hv ih =>
-      rw [Expr.substAt, Expr.mapVars]
-      exact .promote (ih replacementTyped (before := before) (suffix := suffix) hcontext)
+  | sub hv h ih =>
+      exact .sub (ih replacementTyped (before := before) (suffix := suffix) hcontext) h
   | neg hv ih =>
       rw [Expr.substAt, Expr.mapVars]
       exact .neg (ih replacementTyped (before := before) (suffix := suffix) hcontext)
@@ -311,13 +307,12 @@ theorem typed_substAt (h : Typed (before ++ binder :: suffix) expression ty)
           (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
       | exact .gamma (ihl replacementTyped (before := before) (suffix := suffix) hcontext)
           (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
-  | poisson hv ih | exponential hv ih | bernoulli hv ih =>
+  | poisson hv ih | bernoulli hv ih | exponential hv ih =>
       rw [Expr.substAt, Expr.mapVars]
       first
       | exact .poisson (ih replacementTyped (before := before) (suffix := suffix) hcontext)
-      | exact .exponential (ih replacementTyped (before := before) (suffix := suffix) hcontext)
       | exact .bernoulli (ih replacementTyped (before := before) (suffix := suffix) hcontext)
-  | discrete => rw [Expr.substAt, Expr.mapVars]; exact .discrete
+      | exact .exponential (ih replacementTyped (before := before) (suffix := suffix) hcontext)
 theorem typed_substHead (bodyTyped : Typed (binder :: suffix) body ty)
     (replacementTyped : Typed suffix replacement binder) :
     Typed suffix (Expr.substHead body replacement) ty := by
@@ -334,13 +329,10 @@ theorem typed_substTwo
   · exact typed_substAt (before := [argumentTy]) bodyTyped functionTyped
   · exact argumentTyped
 
-/-- The actions a closed well-typed expression can take: a well-typed successor, a sample
-with well-typed continuations, or a rejection; never `stuck`. -/
 inductive ActionTyped (ty : Ty) : Action → Prop
   | next : Typed [] expression ty → ActionTyped ty (.next expression)
   | sample : (∀ value, Typed [] (continuation value) ty) →
       ActionTyped ty (.sample site fiber continuation)
-  | reject : ActionTyped ty .reject
 
 theorem ActionTyped.wrap (actionTyped : ActionTyped childTy action)
     (wrapTyped : ∀ expression, Typed [] expression childTy →
@@ -350,50 +342,88 @@ theorem ActionTyped.wrap (actionTyped : ActionTyped childTy action)
   | next typed => exact .next (wrapTyped _ typed)
   | sample typed =>
       exact .sample fun value => wrapTyped _ (typed value)
-  | reject => exact .reject
 
 @[simp] theorem noVar_nil : ¬ HasVar [] index ty := by
   intro h
   cases h
 
-theorem typed_arr_value (typed : Typed [] expression (.arr argument result))
-    (value : expression.isValue = true) :
-    (∃ body, expression = .lam body ∧
-      Typed [argument] body result) ∨
-    (∃ body, expression = .fix body ∧
-      Typed [argument, .arr argument result] body result) := by
-  cases typed <;> simp_all [Expr.isValue]
+theorem ActionTyped.sub (typed : ActionTyped a action) (h : Ty.Sub a b) : ActionTyped b action := by
+  cases typed with
+  | next ht => exact .next (ht.sub h)
+  | sample ht => exact .sample (fun v => (ht v).sub h)
 
-theorem typed_prod_value (typed : Typed [] expression (.prod leftTy rightTy))
+theorem typed_arr_value (typed : Typed context expression (.arr argument result))
+    (value : expression.isValue = true) :
+    (∃ a r body, expression = .lam body ∧ Ty.Sub argument a ∧ Ty.Sub r result ∧
+      Typed (a :: context) body r) ∨
+    (∃ a r body, expression = .fix body ∧ Ty.Sub argument a ∧ Ty.Sub r result ∧
+      Typed (a :: .arr a r :: context) body r) := by
+  generalize ht : Ty.arr argument result = ty at typed
+  induction typed generalizing argument result
+  case sub h sub ih =>
+    cases sub <;> cases ht
+    rcases ih value rfl with ⟨a, r, body, he, ha, hr, hb⟩ | ⟨a, r, body, he, ha, hr, hb⟩
+    · exact Or.inl ⟨a, r, body, he, Ty.Sub.trans (by assumption) ha,
+        Ty.Sub.trans hr (by assumption), hb⟩
+    · exact Or.inr ⟨a, r, body, he, Ty.Sub.trans (by assumption) ha,
+        Ty.Sub.trans hr (by assumption), hb⟩
+  all_goals cases ht <;> simp_all [Expr.isValue]
+  all_goals exact ⟨_, Ty.Sub.refl _, _, Ty.Sub.refl _, by assumption⟩
+
+theorem typed_prod_value (typed : Typed context expression (.prod leftTy rightTy))
     (value : expression.isValue = true) :
     ∃ left right, expression = .pair left right ∧
-      Typed [] left leftTy ∧ Typed [] right rightTy := by
-  cases typed <;> simp_all [Expr.isValue]
+      Typed context left leftTy ∧ Typed context right rightTy := by
+  generalize ht : Ty.prod leftTy rightTy = ty at typed
+  induction typed generalizing leftTy rightTy
+  case sub h sub ih =>
+    cases sub <;> cases ht
+    obtain ⟨l, r, he, hl, hr⟩ := ih value rfl
+    exact ⟨l, r, he, hl.sub (by assumption), hr.sub (by assumption)⟩
+  all_goals cases ht <;> simp_all [Expr.isValue]
 
-theorem typed_sum_value (typed : Typed [] expression (.sum leftTy rightTy))
+theorem typed_sum_value (typed : Typed context expression (.sum leftTy rightTy))
     (value : expression.isValue = true) :
-    (∃ body, expression = .inl body ∧
-      Typed [] body leftTy) ∨
-    (∃ body, expression = .inr body ∧
-      Typed [] body rightTy) := by
-  cases typed <;> simp_all [Expr.isValue]
+    (∃ body, expression = .inl body ∧ Typed context body leftTy) ∨
+    (∃ body, expression = .inr body ∧ Typed context body rightTy) := by
+  generalize ht : Ty.sum leftTy rightTy = ty at typed
+  induction typed generalizing leftTy rightTy
+  case sub h sub ih =>
+    cases sub <;> cases ht
+    rcases ih value rfl with ⟨b, he, hb⟩ | ⟨b, he, hb⟩
+    · exact Or.inl ⟨b, he, hb.sub (by assumption)⟩
+    · exact Or.inr ⟨b, he, hb.sub (by assumption)⟩
+  all_goals cases ht <;> simp_all [Expr.isValue]
 
-theorem typed_list_value (typed : Typed [] expression (.list element))
+theorem typed_list_value (typed : Typed context expression (.list element))
     (value : expression.isValue = true) :
-    expression = .nil ∨
-      ∃ head tail, expression = .cons head tail ∧
-        Typed [] head element ∧ Typed [] tail (.list element) := by
-  cases typed <;> simp_all [Expr.isValue]
+    expression = .nil ∨ ∃ head tail, expression = .cons head tail ∧
+      Typed context head element ∧ Typed context tail (.list element) := by
+  generalize ht : Ty.list element = ty at typed
+  induction typed generalizing element
+  case sub h sub ih =>
+    cases sub <;> cases ht
+    rcases ih value rfl with he | ⟨h, t, he, hh, ht⟩
+    · exact Or.inl he
+    · exact Or.inr ⟨h, t, he, hh.sub (by assumption), ht.sub (.list (by assumption))⟩
+  all_goals cases ht <;> simp_all [Expr.isValue]
 
-theorem typed_bool_value (typed : Typed [] expression .bool)
-    (value : expression.isValue = true) :
-    ∃ result, expression = .bool result := by
-  cases typed <;> simp_all [Expr.isValue]
+theorem typed_bool_value (typed : Typed context expression .bool)
+    (value : expression.isValue = true) : ∃ result, expression = .bool result := by
+  generalize ht : Ty.bool = ty at typed
+  induction typed
+  case sub h sub ih =>
+    cases sub <;> cases ht
+    exact ih value rfl
+  all_goals cases ht <;> simp_all [Expr.isValue]
 
-theorem typed_real_value (typed : Typed [] expression (.float mode))
-    (value : expression.isValue = true) :
-    ∃ result, expression = .real result := by
-  cases typed <;> simp_all [Expr.isValue]
+theorem typed_real_value (typed : Typed context expression (.float mode))
+    (value : expression.isValue = true) : ∃ result, expression = .real result := by
+  generalize ht : Ty.float mode = ty at typed
+  induction typed generalizing mode
+  case sub h sub ih =>
+    cases sub <;> cases ht <;> exact ih value rfl
+  all_goals cases ht <;> simp_all [Expr.isValue]
 
 theorem reduce_typed_closed
     (typed : Typed [] expression ty) : ActionTyped ty (reduce expression) := by
@@ -402,6 +432,8 @@ theorem reduce_typed_closed
   | bvar hvar =>
       rw [← hcontext] at hvar
       exact (noVar_nil hvar).elim
+  | reject => rw [reduce]; exact .next .reject
+  | discrete => rw [reduce]; exact .sample fun _ => .real
   | unit => rw [reduce]; exact .next .unit
   | bool => rw [reduce]; exact .next .bool
   | real => rw [reduce]; exact .next .real
@@ -422,11 +454,11 @@ theorem reduce_typed_closed
         by_cases argumentValue : operand.isValue = true
         · simp only [argumentValue, ↓reduceIte]
           rcases typed_arr_value functionTyped functionValue with function | function
-          · rcases function with ⟨body, rfl, bodyTyped⟩
-            simpa using ActionTyped.next (typed_substHead bodyTyped argumentTyped)
-          · rcases function with ⟨body, rfl, bodyTyped⟩
+          · rcases function with ⟨a, r, body, rfl, ha, hr, bodyTyped⟩
+            simpa using ActionTyped.next ((typed_substHead bodyTyped (argumentTyped.sub ha)).sub hr)
+          · rcases function with ⟨a, r, body, rfl, ha, hr, bodyTyped⟩
             simpa using ActionTyped.next
-              (typed_substTwo bodyTyped argumentTyped (.fix bodyTyped))
+              ((typed_substTwo bodyTyped (argumentTyped.sub ha) (.fix bodyTyped)).sub hr)
         · simp only [argumentValue, ↓reduceIte]
           exact (iha rfl).wrap fun next nextTyped => .app functionTyped nextTyped
       · simp only [functionValue, ↓reduceIte]
@@ -529,28 +561,9 @@ theorem reduce_typed_closed
         exact .next (typed_substHead bodyTyped valueTyped)
       · simp only [valueCondition, ↓reduceIte]
         exact (ihv rfl).wrap fun next nextTyped => .letE nextTyped bodyTyped
-  | observe conditionTyped ih =>
+  | sub valueTyped h ih =>
       cases hcontext
-      rename_i condition
-      rw [MeasurableActionFamily.reduce_observe_eq]
-      by_cases conditionValue : condition.isValue = true
-      · simp only [conditionValue, ↓reduceIte]
-        rcases typed_bool_value conditionTyped conditionValue with ⟨result, rfl⟩
-        cases result
-        · simpa using ActionTyped.reject (ty := .unit)
-        · simpa using ActionTyped.next (Typed.unit (context := []))
-      · simp only [conditionValue, ↓reduceIte]
-        exact (ih rfl).wrap fun next nextTyped => .observe nextTyped
-  | promote valueTyped ih =>
-      cases hcontext
-      rename_i value
-      rw [MeasurableActionFamily.reduce_promote_eq]
-      by_cases valueCondition : value.isValue = true
-      · simp only [valueCondition, ↓reduceIte]
-        rcases typed_real_value valueTyped valueCondition with ⟨coordinate, rfl⟩
-        simpa using ActionTyped.next (Typed.real (value := coordinate))
-      · simp only [valueCondition, ↓reduceIte]
-        exact (ih rfl).wrap fun next nextTyped => .promote nextTyped
+      exact (ih rfl).sub h
   | neg valueTyped ih =>
       cases hcontext
       rename_i value mode
@@ -661,16 +674,6 @@ theorem reduce_typed_closed
         exact .sample fun value => .real
       · simp only [valueCondition, ↓reduceIte]
         exact (ih rfl).wrap fun next nextTyped => .poisson nextTyped
-  | exponential valueTyped ih =>
-      cases hcontext
-      rename_i value mode kind
-      rw [MeasurableActionFamily.reduce_exponential_eq]
-      by_cases valueCondition : value.isValue = true
-      · simp only [valueCondition, ↓reduceIte]
-        rcases typed_real_value valueTyped valueCondition with ⟨coordinate, rfl⟩
-        exact .sample fun value => .real
-      · simp only [valueCondition, ↓reduceIte]
-        exact (ih rfl).wrap fun next nextTyped => .exponential nextTyped
   | bernoulli valueTyped ih =>
       cases hcontext
       rename_i value mode kind
@@ -681,9 +684,16 @@ theorem reduce_typed_closed
         exact .sample fun value => .real
       · simp only [valueCondition, ↓reduceIte]
         exact (ih rfl).wrap fun next nextTyped => .bernoulli nextTyped
-  | discrete =>
-      rw [MeasurableActionFamily.reduce_discrete_eq]
-      exact .sample fun value => .real
+  | exponential valueTyped ih =>
+      cases hcontext
+      rename_i value mode kind
+      rw [MeasurableActionFamily.reduce_exponential_eq]
+      by_cases valueCondition : value.isValue = true
+      · simp only [valueCondition, ↓reduceIte]
+        rcases typed_real_value valueTyped valueCondition with ⟨coordinate, rfl⟩
+        exact .sample fun value => .real
+      · simp only [valueCondition, ↓reduceIte]
+        exact (ih rfl).wrap fun next nextTyped => .exponential nextTyped
   | beta leftTyped rightTyped ihl ihr =>
       cases hcontext
       rename_i left right mode kind
@@ -740,7 +750,6 @@ theorem doesNotGetStuckAt_imp_primitiveDomainSafeAt
         | stuck =>
             rw [equation] at safe
             contradiction
-        | reject => trivial
 
 theorem primitiveDomainSafeAt_imp_doesNotGetStuckAt
     (typed : Typed [] expression ty)
@@ -774,7 +783,6 @@ theorem primitiveDomainSafeAt_imp_doesNotGetStuckAt
         | stuck =>
             rw [equation] at actionTyped
             cases actionTyped
-        | reject => trivial
 
 theorem primitiveDomainSafe_iff_doesNotGetStuck
     (typed : Typed [] expression ty) :
@@ -790,77 +798,6 @@ theorem doesNotGetStuckAt_of_value (fuel : Nat) (value : expression.isValue = tr
   cases fuel with
   | zero => trivial
   | succ fuel => rw [DoesNotGetStuckAt, if_pos value]; trivial
-
-/-- Promoting a well-typed float program cannot introduce stuckness: the promotion step
-only rewrites a real value. -/
-theorem doesNotGetStuckAt_promote (typed : Typed [] expression (.float mode))
-    (safe : DoesNotGetStuckAt fuel expression) :
-    DoesNotGetStuckAt fuel (.promote expression) := by
-  induction fuel generalizing expression with
-  | zero => trivial
-  | succ fuel ih =>
-      rw [DoesNotGetStuckAt, if_neg (by simp [Expr.isValue]),
-        MeasurableActionFamily.reduce_promote_eq]
-      by_cases value : expression.isValue = true
-      · rcases typed_real_value typed value with ⟨coordinate, rfl⟩
-        simp only [value, ↓reduceIte]
-        exact doesNotGetStuckAt_of_value fuel rfl
-      · have valueFalse := Bool.eq_false_of_not_eq_true value
-        rw [DoesNotGetStuckAt, valueFalse] at safe
-        rw [valueFalse]
-        simp only [Bool.false_eq_true, ↓reduceIte] at safe ⊢
-        have actionTyped := reduce_typed_closed typed
-        cases equation : reduce expression with
-        | next next =>
-            rw [equation] at safe actionTyped
-            simp only [Action.wrap] at safe ⊢
-            cases actionTyped with
-            | next nextTyped => exact ih nextTyped safe
-        | sample site fiber continuation =>
-            rw [equation] at safe actionTyped
-            simp only [Action.wrap, Function.comp_apply] at safe ⊢
-            cases actionTyped with
-            | sample continuationTyped =>
-                refine ⟨safe.1, ?_⟩
-                filter_upwards [safe.2] with coordinate coordinateSafe
-                exact ih (continuationTyped coordinate) coordinateSafe
-        | stuck =>
-            rw [equation] at safe
-            simp at safe
-        | reject => simp [Action.wrap]
-
-/-- Conversely, a program whose promotion never gets stuck never gets stuck itself. -/
-theorem doesNotGetStuckAt_of_promote
-    (safe : DoesNotGetStuckAt fuel (.promote expression)) :
-    DoesNotGetStuckAt fuel expression := by
-  induction fuel generalizing expression with
-  | zero => trivial
-  | succ fuel ih =>
-      by_cases value : expression.isValue = true
-      · exact doesNotGetStuckAt_of_value _ value
-      · have valueFalse := Bool.eq_false_of_not_eq_true value
-        rw [DoesNotGetStuckAt, if_neg (by simp [Expr.isValue]),
-          MeasurableActionFamily.reduce_promote_eq, valueFalse] at safe
-        rw [DoesNotGetStuckAt, valueFalse]
-        simp only [Bool.false_eq_true, ↓reduceIte] at safe ⊢
-        cases equation : reduce expression with
-        | next next =>
-            rw [equation] at safe
-            simp only [Action.wrap] at safe ⊢
-            exact ih safe
-        | sample site fiber continuation =>
-            rw [equation] at safe
-            simp only [Action.wrap, Function.comp_apply] at safe ⊢
-            exact ⟨safe.1, safe.2.mono fun coordinate coordinateSafe => ih coordinateSafe⟩
-        | stuck =>
-            rw [equation] at safe
-            simp [Action.wrap] at safe
-        | reject => trivial
-
-theorem doesNotGetStuck_promote_iff (typed : Typed [] expression (.float mode)) :
-    DoesNotGetStuck (.promote expression) ↔ DoesNotGetStuck expression :=
-  ⟨fun safe fuel => doesNotGetStuckAt_of_promote (safe fuel),
-    fun safe fuel => doesNotGetStuckAt_promote typed (safe fuel)⟩
 
 end Typing
 

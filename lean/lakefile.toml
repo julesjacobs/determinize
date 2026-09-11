@@ -1,6 +1,6 @@
 name = "determinize"
 version = "0.1.0"
-defaultTargets = ["Determinize"]
+defaultTargets = ["Determinize", "determinize", "det-tests"]
 
 [[require]]
 name = "mathlib"
@@ -9,3 +9,14 @@ rev = "v4.33.1"
 
 [[lean_lib]]
 name = "Determinize"
+
+[[lean_exe]]
+name = "determinize"
+root = "Main"
+
+[[lean_lib]]
+name = "Tests"
+
+[[lean_exe]]
+name = "det-tests"
+root = "Tests.Main"

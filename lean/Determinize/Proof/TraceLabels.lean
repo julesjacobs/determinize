@@ -24,7 +24,7 @@ def generationOp : Skeleton → Option Op
   | .add l r | .mul l r | .div l r | .lt l r =>
       if l.isValue then generationOp r else generationOp l
   | .fst x | .snd x | .inl x | .inr x
-  | .observe x | .promote x | .neg x => generationOp x
+  | .neg x => generationOp x
   | .matchSum x _ _ | .matchList x _ _ | .ite x _ _
   | .letE x _ => generationOp x
   | .uniform mode kind l r =>
@@ -34,9 +34,8 @@ def generationOp : Skeleton → Option Op
       if l.isValue then if r.isValue then siteOp (mode, kind, .gaussian) else generationOp r
       else generationOp l
   | .poisson mode kind x => if x.isValue then siteOp (mode, kind, .poisson) else generationOp x
-  | .bernoulli mode kind x =>
-      if x.isValue then siteOp (mode, kind, .bernoulli) else generationOp x
-  | .discrete mode kind weights => siteOp (mode, kind, .discrete weights.length)
+  | .discrete mode kind d => siteOp (mode, kind, .discrete d)
+  | .bernoulli mode kind x => if x.isValue then siteOp (mode, kind, .bernoulli) else generationOp x
   | .exponential mode kind x =>
       if x.isValue then siteOp (mode, kind, .exponential) else generationOp x
   | .beta mode kind l r =>
@@ -94,7 +93,7 @@ theorem reduce_site {expression : Expr} {site : Mode × Kind × Op} {fiber : Mea
   cases expression <;> rw [reduce.eq_def] at reduction
   all_goals dsimp only at reduction
   all_goals repeat' first | contradiction | split at reduction
-  all_goals simp_all only [Expr.skeleton, generationOp, List.length_map,
+  all_goals simp_all only [Expr.skeleton, generationOp,
     ← isValue_eq_skeletonIsValue, Bool.true_eq, ↓reduceIte]
   all_goals first
     | (cases reduction; rfl)

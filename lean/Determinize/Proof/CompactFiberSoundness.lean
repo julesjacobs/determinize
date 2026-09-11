@@ -269,11 +269,6 @@ theorem compact_exactDepth_fiberSound (depth : Nat) (history : Symbolic.SampleEn
                 exact compactHistoryReplay_sampleG depth history historySafe expression typed
                   value fiber continuation actionEq op opEq v _)
         | stuck => exact (SymbolicAction.not_wellTyped_stuck actionTyped).elim
-        | reject =>
-            rw [actualTraceLaw_reject _ _ _ typed value actionEq,
-              targetTraceLaw_reject _ _ _ typed value actionEq]
-            exact FiberSound.zero _
-
 /-! ### The target replays itself -/
 
 theorem selfReplay_measurable (depth : Nat) (target : Expr) :
@@ -398,10 +393,6 @@ theorem target_selfReplay (depth : Nat) (history : Symbolic.SampleEnv primitiveL
             simpa only [prepend, entry, Option.map_some, retain_cons_some,
               ogtAt_succ_sampleG depth nv reduction] using hp
         | stuck => exact (SymbolicAction.not_wellTyped_stuck actionTyped).elim
-        | reject =>
-            rw [targetTraceLaw_reject _ _ _ typed value actionEq]
-            simp
-
 /-! ### Specialization to a concrete source -/
 
 theorem compactHistoryReplay_nil (depth : Nat) (source : Expr) (tape : DrawTrace) :

@@ -16,18 +16,11 @@ namespace Determinize.Statement.Paper
 /-- The same syntax with real values erased. -/
 abbrev Skeleton := Expr Unit
 
-/-- A list of units is determined by its length; the skeleton of a `discrete` site keeps only
-the number of its weights. -/
-@[simp] theorem replicate_unit_eq_self (values : List Unit) :
-    List.replicate values.length () = values := by
-  induction values with
-  | nil => rfl
-  | cons head tail ih => simp [List.replicate_succ, ih]
-
 namespace Expr
 
 def skeleton : Expr → Skeleton
-  | .bvar i => .bvar i | .unit => .unit | .bool b => .bool b
+  | .discrete mode kind d => .discrete mode kind d
+  | .bvar i => .bvar i | .reject => .reject | .unit => .unit | .bool b => .bool b
   | .real _ => .real () | .lam b => .lam b.skeleton
   | .fix b => .fix b.skeleton | .app f x => .app f.skeleton x.skeleton
   | .pair l r => .pair l.skeleton r.skeleton | .fst x => .fst x.skeleton
@@ -38,23 +31,21 @@ def skeleton : Expr → Skeleton
   | .matchList x n c => .matchList x.skeleton n.skeleton c.skeleton
   | .ite c t e => .ite c.skeleton t.skeleton e.skeleton
   | .letE x b => .letE x.skeleton b.skeleton
-  | .observe x => .observe x.skeleton
-  | .promote x => .promote x.skeleton | .neg x => .neg x.skeleton
+  | .neg x => .neg x.skeleton
   | .add l r => .add l.skeleton r.skeleton | .mul l r => .mul l.skeleton r.skeleton
   | .div l r => .div l.skeleton r.skeleton | .lt l r => .lt l.skeleton r.skeleton
   | .uniform m k l r => .uniform m k l.skeleton r.skeleton
   | .gaussian m k l r => .gaussian m k l.skeleton r.skeleton
   | .poisson m k x => .poisson m k x.skeleton
+  | .bernoulli m k x => .bernoulli m k x.skeleton
   | .exponential m k x => .exponential m k x.skeleton
   | .beta m k l r => .beta m k l.skeleton r.skeleton
   | .gamma m k l r => .gamma m k l.skeleton r.skeleton
-  | .bernoulli m k x => .bernoulli m k x.skeleton
-  | .discrete m k weights => .discrete m k (weights.map fun _ => ())
 
 def realCoordinates : Expr → List ℝ
   | .real value => [value]
   | .lam x | .fix x | .fst x | .snd x | .inl x
-  | .inr x | .observe x | .promote x | .neg x => x.realCoordinates
+  | .inr x | .neg x => x.realCoordinates
   | .app l r | .pair l r | .cons l r | .add l r | .mul l r
   | .div l r | .lt l r => l.realCoordinates ++ r.realCoordinates
   | .matchSum x l r | .ite x l r =>
@@ -63,8 +54,7 @@ def realCoordinates : Expr → List ℝ
   | .letE x b => x.realCoordinates ++ b.realCoordinates
   | .uniform _ _ l r | .gaussian _ _ l r | .beta _ _ l r | .gamma _ _ l r =>
       l.realCoordinates ++ r.realCoordinates
-  | .poisson _ _ x | .exponential _ _ x | .bernoulli _ _ x => x.realCoordinates
-  | .discrete _ _ weights => weights
+  | .poisson _ _ x | .bernoulli _ _ x | .exponential _ _ x => x.realCoordinates
   | _ => []
 
 end Expr

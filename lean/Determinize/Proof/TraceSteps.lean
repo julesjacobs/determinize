@@ -12,12 +12,6 @@ theorem exact_succ_next (depth : Nat) (expression next : Expr)
     exactMeasure (depth + 1) expression = (exactMeasure depth next).map (prepend none) := by
   simp [exactMeasure, notValue, reduction]
 
-/-- A rejected execution has no output at any depth. -/
-theorem exact_succ_reject (depth : Nat) (expression : Expr)
-    (notValue : expression.isValue ≠ true) (reduction : reduce expression = .reject) :
-    exactMeasure (depth + 1) expression = 0 := by
-  simp [exactMeasure, notValue, reduction]
-
 theorem exact_succ_sample (depth : Nat) (expression : Expr) (fiber : Measure ℝ)
     (continuation : ℝ → Expr) (notValue : expression.isValue ≠ true)
     (reduction : reduce expression = .sample site fiber continuation) :

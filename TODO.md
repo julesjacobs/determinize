@@ -43,3 +43,10 @@ Misc:
 [] Add support for other distributions, i.e. exponential, gamma, beta, etc.
 [] Subtraction, division not yet supported?
 [] Fix the discrete(...) branching
+
+Lean implementation:
+[x] Add executable core operations and a proof-producing typing certificate checker.
+[x] Add .det parsing, elaboration, type/mode inference, and pretty printing in Lean.
+[x] Check that inference preserves the elaborated input and apply the existing determinization theorem.
+[x] Add a numerical runtime and CLI using the Lean determinization transform.
+[x] Test language coverage, rejected certificates, theorem boundaries, and builds.

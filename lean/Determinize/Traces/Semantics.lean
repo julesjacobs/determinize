@@ -42,7 +42,6 @@ noncomputable def traceAndOutputLawAt : Nat → Expr → Measure Output
         | .sample site fiber continuation => fiber.bind fun value =>
             (traceAndOutputLawAt depth (continuation value)).map (record site value)
         | .stuck => 0
-        | .reject => 0
 
 /-- Joint law of terminating generation traces and returned reals. -/
 noncomputable def traceAndOutputLaw (program : Expr) : Measure Output :=
@@ -69,7 +68,6 @@ noncomputable def outputGivenTraceAt : Nat → Expr → Trace → Measure ℝ
                 | [] => 0
             | _ => fiber.bind fun value => outputGivenTraceAt depth (continuation value) trace
         | .stuck => 0
-        | .reject => 0
 
 /-- The law of the output of `program` given that its general-mode draws were `trace`: the
 program replayed along the trace, at whichever depth it returns. -/
