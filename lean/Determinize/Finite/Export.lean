@@ -51,24 +51,19 @@ private def stateText : State → String
   | .eval expression environment stack =>
       s!"(.eval {Frontend.leanExpression expression} {listText valueText environment} {listText frameText stack})"
   | .deliver value stack => s!"(.deliver {valueText value} {listText frameText stack})"
-private def evidenceText : Evidence → String
-  | .evaluate => ".evaluate" | .continue => ".continue"
-  | .returned => ".returned" | .rejected => ".rejected"
-  | .sample site arguments => s!"(.sample {siteText site} {listText leanRat arguments})"
 private def kindText : StateKind → String
   | .transient => ".transient" | .rejected => ".rejected"
   | .returned reward => s!"(.returned {leanRat reward})"
 private def rowText (row : Row) : String :=
   let edges := row.edges.toList.map fun e => s!"⟨{e.target}, {leanRat e.probability}⟩"
-  s!"⟨{kindText row.kind}, {evidenceText row.evidence}, #[{String.intercalate ", " edges}]⟩"
+  s!"⟨{kindText row.kind}, #[{String.intercalate ", " edges}]⟩"
 
 def candidateText (candidate : Candidate) : String :=
   "import Determinize.Finite.Explore\n\n" ++
   "open Determinize.Finite Determinize.Statement.Paper Determinize.Statement.FiniteModel\n\n" ++
   "set_option maxRecDepth 100000\nset_option maxHeartbeats 0\n\n" ++
   "def candidate : Candidate where\n" ++
-  s!"  source := {Frontend.leanExpression candidate.source}\n" ++
-  s!"  subject := {reprStr candidate.subject}\n  initial := {candidate.initial}\n" ++
+  s!"  initial := {candidate.initial}\n" ++
   "  states := #[\n    " ++ String.intercalate ",\n    " (candidate.states.toList.map stateText) ++ "\n  ]\n" ++
   "  rows := #[\n    " ++ String.intercalate ",\n    " (candidate.rows.toList.map rowText) ++ "\n  ]\n"
 
@@ -102,7 +97,7 @@ def render (candidate : Candidate) : Except String Files := do
   let mut positiveRewards := ""
   let mut negativeRewards := ""
   for i in [:size] do
-    let row := candidate.rows[i]?.getD ⟨.rejected, .rejected, #[]⟩
+    let row := candidate.rows[i]?.getD ⟨.rejected, #[]⟩
     let mut mass := (0 : Rat)
     let mut targets : List Nat := []
     for edge in row.edges do

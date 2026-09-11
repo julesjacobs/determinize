@@ -59,7 +59,7 @@ a rational model and a proof of `Model.Matches (subject.program source)`.
 The result theorem consumes this extracted model and its correctness proof directly.
 
 The source and `Subject.source`/`Subject.determinized` selection are supplied
-independently of the candidate. Determinized selection uses the existing Lean
+independently of the candidate; the candidate stores neither request metadata nor step evidence tags. Determinized selection uses the existing Lean
 transform. A certificate for the determinized program does not automatically
 certify the source's safety or integrability.
 
@@ -67,7 +67,7 @@ Replay validation checks:
 
 - Dimensions, the actual initial state, source scope (including unused bodies),
   and uniqueness of stored machine states.
-- Every stored state's actual `Finite.step` result, evidence tag, and terminal kind.
+- Every stored state's actual `Finite.step` result and terminal kind.
 - Coverage of every positive-probability successor; zero-weight successors may be absent.
 - Exact transition weights, valid distinct edge indices, and positive sparse weights.
 - Nonnegative normalized matrix rows and absorbing terminal rows.

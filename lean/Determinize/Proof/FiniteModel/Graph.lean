@@ -65,7 +65,7 @@ theorem replay_machineOutput (candidate : Candidate) {source : Checking.Core} {s
       | error failure => simp [Candidate.RowReplays, action] at row
       | ok result =>
           cases result <;> simp only [Candidate.RowReplays, action] at row
-          all_goals simp [Model.outputWithin, Candidate.toModel, row.1, machineOutput, action]
+          all_goals simp_all [Model.outputWithin, Candidate.toModel, machineOutput]
   | succ fuel ih =>
       have row := (valid.2.2.2 i).2
       cases action : step (candidate.state i) with
@@ -74,10 +74,10 @@ theorem replay_machineOutput (candidate : Candidate) {source : Checking.Core} {s
           cases result with
           | returned reward =>
               simp only [Candidate.RowReplays, action] at row
-              simp [Model.outputWithin, Candidate.toModel, row.1, machineOutput, action]
+              simp [Model.outputWithin, Candidate.toModel, row, machineOutput, action]
           | rejected =>
               simp only [Candidate.RowReplays, action] at row
-              simp [Model.outputWithin, Candidate.toModel, row.1, machineOutput, action]
+              simp [Model.outputWithin, Candidate.toModel, row, machineOutput, action]
           | next evidence successors =>
               simp only [Candidate.RowReplays, action] at row
               rw [Model.outputWithin.eq_2 (candidate.toModel valid) i fuel]
@@ -86,9 +86,9 @@ theorem replay_machineOutput (candidate : Candidate) {source : Checking.Core} {s
               change (∑ j : Fin candidate.states.size,
                 ENNReal.ofReal (candidate.weight i j : ℝ) • (candidate.toModel valid).outputWithin fuel j) = _
               simp only [machineOutput, action]
-              simp_rw [ih, row.2.2.2.2]
-              exact (weightedOutput_group candidate.state valid.2.1.2.2.2.2 successors
-                row.2.2.1 row.2.2.2.1 (machineOutput fuel)).symm
+              simp_rw [ih, row.2.2.2]
+              exact (weightedOutput_group candidate.state valid.2.1.2.2 successors
+                row.2.1 row.2.2.1 (machineOutput fuel)).symm
 
 theorem replay_machineOutputMeasure (candidate : Candidate) {source : Checking.Core} {subject : Subject}
     (valid : candidate.ReplayValid source subject) :

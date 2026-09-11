@@ -12,14 +12,11 @@ deriving Repr, BEq
 
 structure Row where
   kind : StateKind
-  evidence : Evidence
   edges : Array Edge
 deriving Repr
 
 /-- Complete exploration data awaiting the independent model checker. -/
 structure Candidate where
-  source : Core
-  subject : Subject
   initial : Nat := 0
   states : Array State
   rows : Array Row
@@ -72,10 +69,10 @@ def explore (source : Core) (subject : Subject := .determinized) (limits : Limit
     let action := step state
     if let .error failure := action then return .failed cursor failure
     let .ok action := action | unreachable!
-    let (kind, evidence, successors) := match action with
-      | .returned reward => (StateKind.returned reward, Evidence.returned, [(1,state)])
-      | .rejected => (.rejected, .rejected, [(1,state)])
-      | .next evidence successors => (.transient, evidence, successors)
+    let (kind, successors) := match action with
+      | .returned reward => (StateKind.returned reward, [(1,state)])
+      | .rejected => (.rejected, [(1,state)])
+      | .next _ successors => (.transient, successors)
     if successors.any (fun (p,_) => p < 0) then
       return .failed cursor (.invalid "negative transition probability")
     let successors := aggregate successors
@@ -96,8 +93,8 @@ def explore (source : Core) (subject : Subject := .determinized) (limits : Limit
           indices := indices.insert next target
       edges := edges.push ⟨target,probability⟩
       edgeCount := edgeCount + 1
-    rows := rows.push ⟨kind,evidence,edges⟩
+    rows := rows.push ⟨kind,edges⟩
     cursor := cursor + 1
-  return .complete ⟨source,subject,0,states,rows⟩
+  return .complete ⟨0,states,rows⟩
 
 end Determinize.Finite

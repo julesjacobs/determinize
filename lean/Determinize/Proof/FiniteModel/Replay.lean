@@ -14,7 +14,7 @@ def Candidate.state (candidate : Candidate) (i : Fin candidate.states.size) : St
   candidate.states[i]
 
 def Candidate.row (candidate : Candidate) (i : Fin candidate.states.size) : Row :=
-  candidate.rows[i.val]?.getD ⟨.rejected, .rejected, #[]⟩
+  candidate.rows[i.val]?.getD ⟨.rejected, #[]⟩
 
 def Candidate.weight (candidate : Candidate) (i j : Fin candidate.states.size) : Rat :=
   ((candidate.row i).edges.toList.map fun edge =>
@@ -26,12 +26,11 @@ def Candidate.RowReplays (candidate : Candidate) (i : Fin candidate.states.size)
   match step (candidate.state i) with
   | .error _ => False
   | .ok (.returned reward) =>
-      (candidate.row i).kind = .returned reward ∧ (candidate.row i).evidence = .returned
+      (candidate.row i).kind = .returned reward
   | .ok .rejected =>
-      (candidate.row i).kind = .rejected ∧ (candidate.row i).evidence = .rejected
-  | .ok (.next evidence successors) =>
+      (candidate.row i).kind = .rejected
+  | .ok (.next _ successors) =>
       (candidate.row i).kind = .transient ∧
-      (candidate.row i).evidence = evidence ∧
       (∀ outcome ∈ successors, 0 ≤ outcome.1) ∧
       (∀ outcome ∈ successors, 0 < outcome.1 →
         ∃ j : Fin candidate.states.size, candidate.state j = outcome.2) ∧
@@ -71,13 +70,12 @@ def initialState (source : Core) (subject : Subject) : State :=
   .eval (match subject with | .source => source | .determinized => source.determinize) [] []
 
 def Candidate.Aligned (candidate : Candidate) (source : Core) (subject : Subject) : Prop :=
-  candidate.source = source ∧ candidate.subject = subject ∧
-    candidate.states[candidate.initial]? = some (initialState source subject) ∧
+  candidate.states[candidate.initial]? = some (initialState source subject) ∧
     Determinize.Proof.FiniteModel.Binding.Scoped 0 source ∧
     Function.Injective candidate.state
 
 instance (candidate : Candidate) (source : Core) (subject : Subject) :
-    Decidable (candidate.Aligned source subject) := inferInstanceAs (Decidable (_ ∧ _ ∧ _ ∧ _ ∧ ∀ _ _, _))
+    Decidable (candidate.Aligned source subject) := inferInstanceAs (Decidable (_ ∧ _ ∧ ∀ _ _, _))
 
 def Candidate.ReplayValid (candidate : Candidate) (source : Core) (subject : Subject) : Prop :=
   (candidate.rows.size = candidate.states.size ∧ candidate.initial < candidate.states.size) ∧
@@ -107,7 +105,7 @@ theorem replay_successor_covered (candidate : Candidate) {source : Core} {subjec
     ∃ j : Fin candidate.states.size, candidate.state j = outcome.2 := by
   have localValid := (valid.2.2.2 i).2
   simp only [Candidate.RowReplays, action] at localValid
-  exact localValid.2.2.2.1 outcome member positive
+  exact localValid.2.2.1 outcome member positive
 
 theorem replay_transition_weight (candidate : Candidate) {source : Core} {subject : Subject}
     (valid : candidate.ReplayValid source subject) (i j : Fin candidate.states.size)
@@ -118,7 +116,7 @@ theorem replay_transition_weight (candidate : Candidate) {source : Core} {subjec
         if outcome.2 = candidate.state j then outcome.1 else 0).sum := by
   have localValid := (valid.2.2.2 i).2
   simp only [Candidate.RowReplays, action] at localValid
-  exact localValid.2.2.2.2 j
+  exact localValid.2.2.2 j
 
 /-- Reachability along positive-probability transitions of the executable machine. -/
 inductive MachineReachable (initial : State) : State → Prop where
@@ -133,7 +131,7 @@ inductive MachineReachable (initial : State) : State → Prop where
 theorem replay_initial (candidate : Candidate) {source : Core} {subject : Subject}
     (valid : candidate.ReplayValid source subject) :
     candidate.state (candidate.toModel valid).initial = initialState source subject := by
-  have aligned := valid.2.1.2.2.1
+  have aligned := valid.2.1.1
   simpa [valid.1.2, Candidate.state, Candidate.toModel] using aligned
 
 /-- Coverage holds for paths of arbitrary length, not just the explorer's horizon. -/

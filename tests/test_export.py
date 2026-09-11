@@ -75,11 +75,11 @@ class ExportTests(unittest.TestCase):
             with self.subTest(program=program), tempfile.TemporaryDirectory() as tmp:
                 result, output = self.run_export(Path(tmp), program, "--subject", "source")
                 self.assertEqual(result.returncode, 0, result.stderr)
-                candidate = Path(str(output) + ".candidate.lean")
+                candidate = Path(str(output) + ".replay.lean")
                 with candidate.open("a") as stream:
                     stream.write("""
 def checkRoundTrip : IO Unit := do
-  match explore candidate.source candidate.subject with
+  match explore checkedSource checkedSubject with
   | .complete replay =>
       unless replay.states == candidate.states &&
           reprStr replay.rows == reprStr candidate.rows &&

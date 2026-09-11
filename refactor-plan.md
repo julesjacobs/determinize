@@ -5,7 +5,7 @@ Each retained step gets its own commit. For each step: inspect consumers, implem
 - [x] 1. Remove redundant result-affinity parameters from public theorem statements.
 - [x] 2. Replace concrete existential trace outputs with canonical functions.
 - [x] 3. Use model extraction throughout the checker and end-to-end interface.
-- [ ] 4. Remove reconstructed certificate evidence and duplicated request metadata.
+- [x] 4. Remove reconstructed certificate evidence and duplicated request metadata.
 - [ ] 5. Replace nested replay-validity conjunctions with named structures.
 - [ ] 6. Expose unconditional model integrability and simplify expected reward.
 - [ ] 7. Derive absorption escape from the model and certificate horizon.
@@ -30,3 +30,7 @@ Before: concrete soundness and `MeanOnTraces` existentially packaged the output,
 ### 3. Extracting checker — KEEP
 
 Before: a candidate and a separately supplied model were replayed and compared, with generic Boolean checker contracts and a model equality module. After: `checked_expectedReward` consumes `CheckedModel source subject`; `checked_sourceExpectedReward` retains all source premises. Removed the equality checker, equality module, and unused abstract contract composition. About 90 net lines removed; the actual certified pipeline is easier to state. The full warning-free build, standard axiom reports, and Lean tests passed.
+
+### 4. Candidate data — KEEP
+
+Before: candidates stored the request and every recomputed step evidence tag. After: candidates contain initial index, states, and rows (kind/edges); the request is supplied separately. Replay still checks initial-state alignment, source scope, injectivity, successor coverage, exact weights, and outcomes. Removing the duplicate metadata reduces certificate size and makes authority explicit. The warning-free build and Lean mutation tests passed. Python export ground-truth, independent kernel replay, and rejection tests passed; the round-trip test was updated to the explicit request and passed on rerun. Step 3’s Python result suite also passed (optional Storm skipped).

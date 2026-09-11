@@ -73,8 +73,8 @@ def explorer : IO Unit := do
     | _ => throw (IO.userError s!"expected export failure: {text}")
   let state := State.deliver (.number 1) []
   assert (aggregate [(0,state),(1/3,state),(2/3,state)] == [(1,state)]) "duplicate successors"
-  let terminal : Candidate := ⟨.real (-3), .source, 0, #[state],
-    #[⟨.returned (-3), .returned, #[⟨0,1⟩]⟩]⟩
+  let terminal : Candidate := ⟨0, #[state],
+    #[⟨.returned (-3), #[⟨0,1⟩]⟩]⟩
   let files ← IO.ofExcept (render terminal)
   assert (files.transitions == "dtmc\n0 1 1\n1 1 1\n") "once-only terminal reward sink"
   assert (files.positiveRewards == "" && files.negativeRewards == "0 3\n") "signed rewards"
@@ -82,9 +82,9 @@ def explorer : IO Unit := do
   for bad in [
       {terminal with rows := #[]},
       {terminal with initial := 1},
-      {terminal with rows := #[⟨.transient,.evaluate,#[⟨0,1/2⟩]⟩]},
-      {terminal with rows := #[⟨.transient,.evaluate,#[⟨0,1/2⟩,⟨0,1/2⟩]⟩]},
-      {terminal with rows := #[⟨.returned 3,.returned,#[⟨1,1⟩]⟩]}] do
+      {terminal with rows := #[⟨.transient,#[⟨0,1/2⟩]⟩]},
+      {terminal with rows := #[⟨.transient,#[⟨0,1/2⟩,⟨0,1/2⟩]⟩]},
+      {terminal with rows := #[⟨.returned 3,#[⟨1,1⟩]⟩]}] do
     assert (match render bad with | .error _ => true | .ok _ => false) "malformed export rejected"
 
 end Determinize.Tests
