@@ -56,8 +56,7 @@ result rather than a model certificate.
 `Checking.checkModel source subject candidate` returns a `CheckedModel` containing
 a rational model and a proof of `Model.Matches (subject.program source)`.
 `checkModelReplay` exposes the underlying `Candidate.ReplayValid` evidence.
-`checkModelCertificate` also checks equality with a separately supplied model;
-`checkModelCertificate_sound` proves the existing `ModelCheckerSound` contract.
+The result theorem consumes this extracted model and its correctness proof directly.
 
 The source and `Subject.source`/`Subject.determinized` selection are supplied
 independently of the candidate. Determinized selection uses the existing Lean
@@ -147,9 +146,9 @@ requires a later extension; model correspondence itself includes divergence.
 
 `Checking/Result.lean` implements `checkResult` and proves `checkResult_sound`.
 Its tabulated survival calculation is proved equal to `survivalWithin`.
-`checked_expectedReward` instantiates both checker soundness proofs, establishing
+`checked_expectedReward` combines the extracted model with a checked result, establishing
 integrability and the exact expected reward of the selected paper program.
-`sourceEndToEnd` additionally retains the source typing, source-form, safety, and
+`checked_sourceExpectedReward` additionally retains the source typing, source-form, safety, and
 integrability premises needed to transport a determinized answer to the source.
 A certificate for the determinized subject alone does not discharge those premises.
 

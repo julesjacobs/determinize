@@ -48,3 +48,5 @@ def results : IO Unit := do
 #print axioms Checking.checked_expectedReward
 
 end Determinize.Tests
+
+#print axioms Determinize.Checking.checked_sourceExpectedReward

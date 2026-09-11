@@ -30,14 +30,18 @@ def modelReplay : IO Unit := do
   let seven ← candidateFor "7"
   let some checkedThree := checkModel three.source three.subject three
     | throw (IO.userError "expected checked model")
-  assert (checkModelCertificate three.source three.subject checkedThree.model three) "matching model data"
-  assert (!checkModelCertificate seven.source seven.subject checkedThree.model seven) "different model rewards"
+  let some checkedSeven := checkModel seven.source seven.subject seven
+    | throw (IO.userError "expected checked model for seven")
+  assert (decide (∃ state, checkedThree.model.kind state = .returned 3)) "extracted reward three"
+  assert (decide (∃ state, checkedSeven.model.kind state = .returned 7)) "extracted reward seven"
   let target ← candidateFor "uniform[E](0,3)" .determinized
   assert (accepted target) "determinized mean replay"
   assert (!(checkModelReplay target.source .source target).isSome) "wrong subject"
   assert (!(checkModelReplay (.real 7) target.subject target).isSome) "wrong source"
   let coin ← candidateFor "bernoulli[G](0.25)"
-  assert (!checkModelCertificate coin.source coin.subject checkedThree.model coin) "different model dimensions"
+  let some checkedCoin := checkModel coin.source coin.subject coin
+    | throw (IO.userError "expected checked coin model")
+  assert (checkedCoin.model.size == coin.states.size) "extracted model dimensions"
   let extra := coin.states.size
   let oneExtra : Candidate :=
     { coin with
@@ -88,7 +92,7 @@ def modelReplay : IO Unit := do
   assert (!accepted broken) "stuck machine cannot be labeled rejected"
 
 #print axioms Proof.FiniteModel.replay_matches
-#print axioms checkModelCertificate_sound
+#print axioms checkModel
 #print axioms replay_reachable_covered
 #print axioms replay_reachable_no_failure
 #print axioms replay_successor_covered

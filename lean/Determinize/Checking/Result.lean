@@ -1,5 +1,5 @@
 import Determinize.Proof.FiniteModel.Result
-import Determinize.Proof.FiniteModel.Contracts
+import Determinize.Theorems
 import Determinize.Checking.FiniteModel
 
 namespace Determinize.Checking
@@ -31,21 +31,36 @@ theorem checkResult_valid (model : Model) (certificate : ResultCertificate model
     survivalVector_correct, ResultCertificate.Valid, ResultCertificate.Absorption]
   tauto
 
-theorem checkResult_sound : ResultCheckerSound checkResult := by
-  intro model certificate accepted
+theorem checkResult_sound (model : Model) (certificate : ResultCertificate model)
+    (accepted : checkResult model certificate = true) :
+    certificate.Valid model ∧ model.HasExpectedReward (certificate.values model.initial) := by
   have valid := (checkResult_valid model certificate).mp accepted
   exact ⟨valid, Proof.FiniteModel.resultCertificate_sound model certificate valid⟩
 
-/-- Both model replay and result checking are instantiated by proved checkers. -/
-theorem checked_expectedReward (source : Core) (subject : Subject) (model : Model)
-    (candidate : Finite.Candidate) (certificate : ResultCertificate model)
-    (modelAccepted : checkModelCertificate source subject model candidate = true)
-    (resultAccepted : checkResult model certificate = true) :
+/-- The extracted model and checked result certify the caller-selected program law. -/
+theorem checked_expectedReward {source : Core} {subject : Subject}
+    (checked : CheckedModel source subject) (certificate : ResultCertificate checked.model)
+    (accepted : checkResult checked.model certificate = true) :
     MeasureTheory.Integrable id (Statement.Paper.bigStepMeasure (subject.program source)) ∧
       (∫ value : ℝ, value ∂Statement.Paper.bigStepMeasure (subject.program source)) =
-        (certificate.values model.initial : ℝ) :=
-  Proof.FiniteModel.endToEnd checkModelCertificate checkResult
-    checkModelCertificate_sound checkResult_sound source subject model candidate certificate
-    modelAccepted resultAccepted
+        (certificate.values checked.model.initial : ℝ) := by
+  rw [← checked.correct.2]
+  exact (checkResult_sound checked.model certificate accepted).2
+
+/-- Transfer a checked determinized answer under the source theorem's premises. -/
+theorem checked_sourceExpectedReward {source : Core}
+    (checked : CheckedModel source .determinized)
+    (certificate : ResultCertificate checked.model)
+    (typed : Statement.Paper.Typed [] (Subject.source.program source) (.float .E))
+    (sourceForm : (Subject.source.program source).sourceForm = true)
+    (safe : Statement.Paper.DoesNotGetStuck (Subject.source.program source))
+    (integrable : MeasureTheory.Integrable id
+      (Statement.Paper.bigStepMeasure (Subject.source.program source)))
+    (accepted : checkResult checked.model certificate = true) :
+    (∫ value : ℝ, value ∂Statement.Paper.bigStepMeasure (Subject.source.program source)) =
+      (certificate.values checked.model.initial : ℝ) := by
+  have preservation := Theorems.expectationPreservation (Subject.source.program source)
+    typed sourceForm safe integrable
+  exact preservation.2.2.trans (checked_expectedReward checked certificate accepted).2
 
 end Determinize.Checking

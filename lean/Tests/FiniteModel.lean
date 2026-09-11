@@ -1,6 +1,6 @@
+import Determinize.Statement.FiniteModel.Certificates
 import Determinize.Statement.FiniteModel.Supported
 import Determinize.Proof.FiniteModel.Model
-import Determinize.Proof.FiniteModel.Contracts
 
 namespace Determinize.Tests.FiniteModel
 open Statement.FiniteModel MeasureTheory
@@ -132,7 +132,5 @@ example : loop.outputMeasure = 0 := by
 example : loop.HasExpectedReward 0 := by
   simp [Model.HasExpectedReward, Model.outputMeasure, loop_outputWithin]
 
-#print axioms Proof.FiniteModel.endToEnd
-#print axioms Proof.FiniteModel.sourceEndToEnd
 
 end Determinize.Tests.FiniteModel

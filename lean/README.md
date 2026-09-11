@@ -162,8 +162,7 @@ models, one-time terminal rewards, rejection, the initial primitive policy, and
 certificates with value equations and finite-step absorption bounds. Definitions
 live in `Statement/FiniteModel/`; proofs and theorems composing checker
 correctness guarantees live in `Proof/FiniteModel/`. The unverified explorer is implemented in `Finite/`. The verified
-model checker is in `Checking/FiniteModel.lean`. `replay_matches` and
-`checkModelCertificate_sound` establish correspondence to the paper semantics.
+model checker is in `Checking/FiniteModel.lean`. `replay_matches` supplies the correspondence proof carried by each extracted `CheckedModel`.
 `Checking/Result.lean` proves result-checker soundness and the composed program
 expected-reward theorem. `Tests/Results.lean` checks signed rewards, absorption,
 and a nonterminating model with spurious equation solutions.
@@ -229,7 +228,7 @@ an accepted replay certificate. These results are exercised in
 `Tests/SemanticBridge.lean`. Sampling correspondence, reachable continuation
 invariants, and a bookkeeping bound feed into the unbounded execution proof.
 `Graph.lean` connects the graph to machine output, and `Soundness.lean` establishes
-`Model.Matches`. The Boolean checker also satisfies `ModelCheckerSound`.
+`Model.Matches`, which is carried by the extracting checker’s result.
 
 ### Certified expected rewards and Storm
 
