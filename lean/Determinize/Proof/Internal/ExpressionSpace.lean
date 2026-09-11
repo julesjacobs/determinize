@@ -38,6 +38,7 @@ def skeleton : Expr → Skeleton
   | .matchList x n c => .matchList x.skeleton n.skeleton c.skeleton
   | .ite c t e => .ite c.skeleton t.skeleton e.skeleton
   | .letE x b => .letE x.skeleton b.skeleton
+  | .observe x => .observe x.skeleton
   | .promote x => .promote x.skeleton | .neg x => .neg x.skeleton
   | .add l r => .add l.skeleton r.skeleton | .mul l r => .mul l.skeleton r.skeleton
   | .div l r => .div l.skeleton r.skeleton | .lt l r => .lt l.skeleton r.skeleton
@@ -53,7 +54,7 @@ def skeleton : Expr → Skeleton
 def realCoordinates : Expr → List ℝ
   | .real value => [value]
   | .lam x | .fix x | .fst x | .snd x | .inl x
-  | .inr x | .promote x | .neg x => x.realCoordinates
+  | .inr x | .observe x | .promote x | .neg x => x.realCoordinates
   | .app l r | .pair l r | .cons l r | .add l r | .mul l r
   | .div l r | .lt l r => l.realCoordinates ++ r.realCoordinates
   | .matchSum x l r | .ite x l r =>

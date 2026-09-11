@@ -12,7 +12,9 @@ Each primitive distribution is its own constructor with the paper's operands; a 
 carries its mode and whether it still samples or already returns the primitive's mean.
 `Expr.sourceForm` requires stochastic sites; their operands may be arbitrary expressions.
 `Expr.flip` is sugar: a general-mode `bernoulli` draw compared with `0`. `discrete` carries
-literal weights only, as in the implementation's parser.
+literal weights only, as in the implementation's parser. `observe condition` rejects the
+execution when `condition` evaluates to `false`: a failed observation contributes no output
+mass, so output laws are unnormalized (see `Determinize.Statement.Paper.reduce`).
 -/
 
 namespace Determinize.Statement.Paper
@@ -32,6 +34,8 @@ inductive Expr (Literal : Type := ℝ) where
   | matchList (scrutinee nilCase consCase : Expr Literal)
   | ite (condition thenBranch elseBranch : Expr Literal)
   | letE (value body : Expr Literal)
+  /-- `observe condition`: continue with `unit` when `condition` holds, reject otherwise. -/
+  | observe (condition : Expr Literal)
   | promote (body : Expr Literal) | neg (body : Expr Literal)
   | add (left right : Expr Literal) | mul (left right : Expr Literal)
   | div (left right : Expr Literal) | lt (left right : Expr Literal)
@@ -56,7 +60,7 @@ def isValue {Literal : Type} : Expr Literal → Bool
 def sourceForm : Expr → Bool
   | .bvar _ | .unit | .bool _ | .real _ | .nil => true
   | .lam body | .fix body | .fst body | .snd body
-  | .inl body | .inr body | .promote body | .neg body => body.sourceForm
+  | .inl body | .inr body | .observe body | .promote body | .neg body => body.sourceForm
   | .app left right | .pair left right | .cons left right
   | .add left right | .mul left right | .div left right | .lt left right =>
       left.sourceForm && right.sourceForm
@@ -98,6 +102,7 @@ def mapVars (replace : Nat → Nat → Expr) (depth : Nat) : Expr → Expr
       (e.mapVars replace depth)
   | .letE x b => .letE (x.mapVars replace depth)
       (b.mapVars replace (depth + 1))
+  | .observe x => .observe (x.mapVars replace depth)
   | .promote x => .promote (x.mapVars replace depth)
   | .neg x => .neg (x.mapVars replace depth)
   | .add l r => .add (l.mapVars replace depth) (r.mapVars replace depth)
@@ -153,6 +158,7 @@ def determinize : Expr → Expr
   | .ite condition thenBranch elseBranch =>
       .ite condition.determinize thenBranch.determinize elseBranch.determinize
   | .letE value body => .letE value.determinize body.determinize
+  | .observe condition => .observe condition.determinize
   | .promote body => .promote body.determinize
   | .neg body => .neg body.determinize
   | .add left right => .add left.determinize right.determinize
@@ -224,6 +230,11 @@ inductive Typed : List Ty → Expr → Ty → Prop
       Typed context elseBranch result → Typed context (.ite condition thenBranch elseBranch) result
   | letE : Typed context value valueTy → Typed (valueTy :: context) body result →
       Typed context (.letE value body) result
+  /-- An observation takes a Boolean and returns `unit`. Every Boolean is general-mode
+  information (`lt` compares general-mode operands and `promote` only goes from `G` to `E`),
+  so the condition never depends on an expectation-mode draw and the same executions are
+  rejected before and after determinization. -/
+  | observe : Typed context condition .bool → Typed context (.observe condition) .unit
   | promote : Typed context value (.float .G) → Typed context (.promote value) (.float .E)
   | neg : Typed context value (.float mode) → Typed context (.neg value) (.float mode)
   | add : Typed context left (.float mode) → Typed context right (.float mode) →

@@ -7,10 +7,10 @@ import Mathlib.Data.EReal.Operations
 # Corollaries of trace soundness
 
 Jensen's inequality between the source and target output laws, preservation of expectations
-in the extended reals, preservation of the output mass, and the law of total variance along
-traces with its consequence that determinization does not increase the variance. All follow
-from `Traces.TraceFactorization` alone: trace by trace, the target output is the mean of the
-source output fiber.
+in the extended reals, preservation of the output mass and hence of the expectation conditioned
+on acceptance, and the law of total variance along traces with its consequence that
+determinization does not increase the variance. All follow from `Traces.TraceFactorization`
+alone: trace by trace, the target output is the mean of the source output fiber.
 -/
 
 namespace Determinize.Traces
@@ -67,6 +67,14 @@ theorem MeanOnTraces.output_mass {source target : Expr} (sound : MeanOnTraces so
     bigStepMeasure target Set.univ = bigStepMeasure source Set.univ := by
   obtain ⟨fiber, output, factor⟩ := sound
   exact factor.output_mass
+
+/-- The expectations conditioned on acceptance agree: the unnormalized mean and the output
+mass are both preserved, so their quotient is. -/
+theorem MeanOnTraces.conditional_expectation {source target : Expr}
+    (sound : MeanOnTraces source target) (integrable : Integrable id (bigStepMeasure source)) :
+    (∫ value : ℝ, value ∂bigStepMeasure target) / (bigStepMeasure target Set.univ).toReal =
+      (∫ value : ℝ, value ∂bigStepMeasure source) / (bigStepMeasure source Set.univ).toReal := by
+  rw [(sound.finite_expectation integrable).2, sound.output_mass]
 
 /-- Jensen's inequality along the traces. -/
 theorem MeanOnTraces.lintegral_convex_le {source target : Expr}
@@ -398,6 +406,13 @@ theorem varianceSoundness : Determinize.Statement.varianceThm := by
   intro mode program typed sourceForm sourceSafe memLp
   exact (Determinize.Proof.Traces.soundness mode program typed sourceForm
     sourceSafe).2.variance_le memLp
+
+/-- Preservation of the expectation conditioned on acceptance, from operational trace
+soundness. -/
+theorem conditionalExpectationSoundness : Determinize.Statement.conditionalExpectationThm := by
+  intro mode program typed sourceForm sourceSafe integrable
+  exact (Determinize.Proof.Traces.soundness mode program typed sourceForm
+    sourceSafe).2.conditional_expectation integrable
 
 end Determinize.Proof.Paper
 

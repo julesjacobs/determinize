@@ -113,6 +113,9 @@ theorem typed_shift (h : Typed (before ++ suffix) expression ty) :
       rw [Expr.shift, Expr.mapVars]
       exact .letE (ihv (before := before) (suffix := suffix) hcontext)
         (ihb (before := _ :: before) (suffix := suffix) (by simpa using hcontext))
+  | observe hv ih =>
+      rw [Expr.shift, Expr.mapVars]
+      exact .observe (ih (before := before) (suffix := suffix) hcontext)
   | promote hv ih =>
       rw [Expr.shift, Expr.mapVars]
       exact .promote (ih (before := before) (suffix := suffix) hcontext)
@@ -272,6 +275,9 @@ theorem typed_substAt (h : Typed (before ++ binder :: suffix) expression ty)
       exact .letE (ihv replacementTyped (before := before) (suffix := suffix) hcontext)
         (ihb replacementTyped (before := _ :: before) (suffix := suffix)
           (by simpa using hcontext))
+  | observe hv ih =>
+      rw [Expr.substAt, Expr.mapVars]
+      exact .observe (ih replacementTyped (before := before) (suffix := suffix) hcontext)
   | promote hv ih =>
       rw [Expr.substAt, Expr.mapVars]
       exact .promote (ih replacementTyped (before := before) (suffix := suffix) hcontext)
@@ -328,10 +334,13 @@ theorem typed_substTwo
   · exact typed_substAt (before := [argumentTy]) bodyTyped functionTyped
   · exact argumentTyped
 
+/-- The actions a closed well-typed expression can take: a well-typed successor, a sample
+with well-typed continuations, or a rejection; never `stuck`. -/
 inductive ActionTyped (ty : Ty) : Action → Prop
   | next : Typed [] expression ty → ActionTyped ty (.next expression)
   | sample : (∀ value, Typed [] (continuation value) ty) →
       ActionTyped ty (.sample site fiber continuation)
+  | reject : ActionTyped ty .reject
 
 theorem ActionTyped.wrap (actionTyped : ActionTyped childTy action)
     (wrapTyped : ∀ expression, Typed [] expression childTy →
@@ -341,6 +350,7 @@ theorem ActionTyped.wrap (actionTyped : ActionTyped childTy action)
   | next typed => exact .next (wrapTyped _ typed)
   | sample typed =>
       exact .sample fun value => wrapTyped _ (typed value)
+  | reject => exact .reject
 
 @[simp] theorem noVar_nil : ¬ HasVar [] index ty := by
   intro h
@@ -519,6 +529,18 @@ theorem reduce_typed_closed
         exact .next (typed_substHead bodyTyped valueTyped)
       · simp only [valueCondition, ↓reduceIte]
         exact (ihv rfl).wrap fun next nextTyped => .letE nextTyped bodyTyped
+  | observe conditionTyped ih =>
+      cases hcontext
+      rename_i condition
+      rw [MeasurableActionFamily.reduce_observe_eq]
+      by_cases conditionValue : condition.isValue = true
+      · simp only [conditionValue, ↓reduceIte]
+        rcases typed_bool_value conditionTyped conditionValue with ⟨result, rfl⟩
+        cases result
+        · simpa using ActionTyped.reject (ty := .unit)
+        · simpa using ActionTyped.next (Typed.unit (context := []))
+      · simp only [conditionValue, ↓reduceIte]
+        exact (ih rfl).wrap fun next nextTyped => .observe nextTyped
   | promote valueTyped ih =>
       cases hcontext
       rename_i value
@@ -718,6 +740,7 @@ theorem doesNotGetStuckAt_imp_primitiveDomainSafeAt
         | stuck =>
             rw [equation] at safe
             contradiction
+        | reject => trivial
 
 theorem primitiveDomainSafeAt_imp_doesNotGetStuckAt
     (typed : Typed [] expression ty)
@@ -751,6 +774,7 @@ theorem primitiveDomainSafeAt_imp_doesNotGetStuckAt
         | stuck =>
             rw [equation] at actionTyped
             cases actionTyped
+        | reject => trivial
 
 theorem primitiveDomainSafe_iff_doesNotGetStuck
     (typed : Typed [] expression ty) :
@@ -803,6 +827,7 @@ theorem doesNotGetStuckAt_promote (typed : Typed [] expression (.float mode))
         | stuck =>
             rw [equation] at safe
             simp at safe
+        | reject => simp [Action.wrap]
 
 /-- Conversely, a program whose promotion never gets stuck never gets stuck itself. -/
 theorem doesNotGetStuckAt_of_promote
@@ -830,6 +855,7 @@ theorem doesNotGetStuckAt_of_promote
         | stuck =>
             rw [equation] at safe
             simp [Action.wrap] at safe
+        | reject => trivial
 
 theorem doesNotGetStuck_promote_iff (typed : Typed [] expression (.float mode)) :
     DoesNotGetStuck (.promote expression) ↔ DoesNotGetStuck expression :=

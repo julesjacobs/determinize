@@ -100,6 +100,7 @@ def zeroFill : Skeleton → Expr
   | .ite condition thenBranch elseBranch =>
       .ite (zeroFill condition) (zeroFill thenBranch) (zeroFill elseBranch)
   | .letE value body => .letE (zeroFill value) (zeroFill body)
+  | .observe condition => .observe (zeroFill condition)
   | .promote body => .promote (zeroFill body)
   | .neg body => .neg (zeroFill body)
   | .add left right => .add (zeroFill left) (zeroFill right)
@@ -155,8 +156,8 @@ theorem realCoordinates_length (expression : Expr) :
   | bvar | unit | bool | real | nil | discrete =>
       simp [Expr.realCoordinates, Expr.skeleton, Expr.realArity]
   | lam body | fix body | fst body | snd body | inl body
-  | inr body | promote body | neg body | poisson _ _ body | exponential _ _ body
-  | bernoulli _ _ body =>
+  | inr body | observe body | promote body | neg body | poisson _ _ body
+  | exponential _ _ body | bernoulli _ _ body =>
       simpa [Expr.realCoordinates, Expr.skeleton, Expr.realArity] using
         realCoordinates_length body
   | app left right | pair left right | cons left right | add left right
@@ -527,7 +528,7 @@ namespace Expr
 fallback is unreachable once the enclosing skeleton constructor is fixed. -/
 def firstChild : Expr → Expr
   | .lam body | .fix body | .fst body | .snd body
-  | .inl body | .inr body | .promote body | .neg body => body
+  | .inl body | .inr body | .observe body | .promote body | .neg body => body
   | .app left _ | .pair left _ | .cons left _ | .add left _
   | .mul left _ | .div left _ | .lt left _ => left
   | .uniform _ _ left _ | .gaussian _ _ left _ | .beta _ _ left _ | .gamma _ _ left _ => left
@@ -554,7 +555,7 @@ namespace Skeleton
 
 def firstChild : Skeleton → Skeleton
   | .lam body | .fix body | .fst body | .snd body
-  | .inl body | .inr body | .promote body | .neg body => body
+  | .inl body | .inr body | .observe body | .promote body | .neg body => body
   | .app left _ | .pair left _ | .cons left _ | .add left _
   | .mul left _ | .div left _ | .lt left _ => left
   | .uniform _ _ left _ | .gaussian _ _ left _ | .beta _ _ left _ | .gamma _ _ left _ => left
@@ -796,6 +797,7 @@ theorem Action.wrap_eq_sample {context : Expr → Expr} {action : Action}
   cases action with
   | next expression => simp [Action.wrap] at equality
   | stuck => simp [Action.wrap] at equality
+  | reject => simp [Action.wrap] at equality
   | sample actualSite actualFiber inner =>
       simp only [Action.wrap, Action.sample.injEq] at equality
       rcases equality with ⟨rfl, rfl, continuationEq⟩
@@ -1118,6 +1120,7 @@ def skeletonShift (amount cutoff : Nat) : Skeleton → Skeleton
   | .letE value body =>
       .letE (skeletonShift amount cutoff value)
         (skeletonShift amount (cutoff + 1) body)
+  | .observe condition => .observe (skeletonShift amount cutoff condition)
   | .promote body => .promote (skeletonShift amount cutoff body)
   | .neg body => .neg (skeletonShift amount cutoff body)
   | .add left right =>
@@ -1199,7 +1202,7 @@ theorem shift_skeleton (amount cutoff : Nat) (expression : Expr) :
           simp only [Expr.shift, Expr.mapVars, Expr.skeleton, skeletonShift]
           rw [ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega)
             (cutoff + 2) body rfl]
-      | inl body | inr body =>
+      | inl body | inr body | observe body =>
           simp only [Expr.shift, Expr.mapVars, Expr.skeleton, skeletonShift]
           rw [ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega) cutoff body rfl]
       | neg body =>
@@ -1267,7 +1270,7 @@ theorem shift_realCoordinates (amount cutoff : Nat) (expression : Expr) :
           simp only [Expr.shift, Expr.mapVars, Expr.realCoordinates]
           rw [ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega)
             (cutoff + 2) body rfl]
-      | inl body | inr body =>
+      | inl body | inr body | observe body =>
           simp only [Expr.shift, Expr.mapVars, Expr.realCoordinates]
           rw [ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega) cutoff body rfl]
       | neg body =>
@@ -1330,6 +1333,7 @@ def skeletonSubstAt (depth : Nat) (replacement : Skeleton) : Skeleton → Skelet
   | .letE value body => .letE
       (skeletonSubstAt depth replacement value)
       (skeletonSubstAt (depth + 1) replacement body)
+  | .observe condition => .observe (skeletonSubstAt depth replacement condition)
   | .promote body => .promote (skeletonSubstAt depth replacement body)
   | .neg body => .neg (skeletonSubstAt depth replacement body)
   | .add left right => .add
@@ -1413,7 +1417,7 @@ theorem substAt_skeleton (depth : Nat) (replacement expression : Expr) :
           simp only [Expr.substAt, Expr.mapVars, Expr.skeleton, skeletonSubstAt]
           rw [ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega)
             (depth + 2) body rfl]
-      | inl body | inr body =>
+      | inl body | inr body | observe body =>
           simp only [Expr.substAt, Expr.mapVars, Expr.skeleton, skeletonSubstAt]
           rw [ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega) depth body rfl]
       | neg body =>
@@ -1441,7 +1445,7 @@ def coordinatePlan (depth : Nat) (replacement : Skeleton) (bodyOffset : Nat) :
   | .lam body => coordinatePlan (depth + 1) replacement bodyOffset body
   | .fix body => coordinatePlan (depth + 2) replacement bodyOffset body
   | .fst body | .snd body | .inl body | .inr body
-  | .promote body | .neg body => coordinatePlan depth replacement bodyOffset body
+  | .observe body | .promote body | .neg body => coordinatePlan depth replacement bodyOffset body
   | .app left right | .pair left right | .cons left right
   | .add left right | .mul left right | .div left right | .lt left right =>
       coordinatePlan depth replacement bodyOffset left ++
@@ -1700,7 +1704,7 @@ theorem applyCoordinatePlan_coordinatePlan (depth : Nat) (replacement expression
             ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega)
               (depth + 2) body before suffix rfl
       | fst body | snd body | inl body | inr body
-      | promote body | neg body =>
+      | observe body | promote body | neg body =>
           simpa only [coordinatePlan, Expr.skeleton, Expr.realCoordinates, Expr.substAt, Expr.mapVars] using
             ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega)
               depth body before suffix rfl
@@ -1825,7 +1829,7 @@ theorem isValue_eq_skeletonIsValue : ∀ expression : Expr,
     expression.isValue = Expr.isValue expression.skeleton
   | .bvar _ | .unit | .bool _ | .real _ | .lam _ | .fix _
   | .app _ _ | .fst _ | .snd _ | .matchSum _ _ _ | .nil
-  | .matchList _ _ _ | .ite _ _ _ | .letE _ _ | .promote _
+  | .matchList _ _ _ | .ite _ _ _ | .letE _ _ | .observe _ | .promote _
   | .neg _ | .add _ _ | .mul _ _ | .div _ _ | .lt _ _ => by
       simp [Expr.isValue, Expr.skeleton, Expr.isValue]
   | .uniform _ _ _ _ | .gaussian _ _ _ _ | .poisson _ _ _ | .exponential _ _ _
@@ -1959,6 +1963,7 @@ inductive MeasurableActionFamily (α : Type u) [MeasurableSpace α] :
       MeasurableActionFamily α (fun parameter =>
         .sample site (draw.kernel parameter) (fun value => continuation (parameter, value)))
   | stuck : MeasurableActionFamily α (fun _ => .stuck)
+  | reject : MeasurableActionFamily α (fun _ => .reject)
   | piecewise {region : Set α} [DecidablePred (· ∈ region)]
       (measurableRegion : MeasurableSet region)
       {whenTrue whenFalse : α → Action}
@@ -2002,6 +2007,7 @@ def comp {α β : Type*} [MeasurableSpace α] [MeasurableSpace β]
       rw [pullback_apply]
       rfl
   | stuck => exact .stuck
+  | reject => exact .reject
   | @piecewise region _ measurableRegion whenTrue whenFalse trueFamily falseFamily
       trueResult falseResult =>
       classical
@@ -2026,6 +2032,7 @@ def map {α : Type*} [MeasurableSpace α] {action : α → Action}
   | sample draw continuationIsMeasurable =>
       exact .sample draw (sampleMeasurable continuationIsMeasurable)
   | stuck => exact .stuck
+  | reject => exact .reject
   | @piecewise region _ measurableRegion whenTrue whenFalse trueFamily falseFamily
       trueResult falseResult =>
       classical
@@ -2897,6 +2904,77 @@ noncomputable def reducePromote {α : Type*} [MeasurableSpace α]
       rw [bodyFamily.isValue_eq parameter]
       exact Bool.eq_false_of_not_eq_true bodyValue
     rw [reduce_promote_eq, actualBodyValue]
+    simp
+
+theorem reduce_observe_eq
+    (condition : Expr) :
+    reduce (.observe condition) =
+      if condition.isValue then
+        match condition with
+        | .bool true => .next .unit
+        | .bool false => .reject
+        | _ => .stuck
+      else (reduce condition).wrap .observe := by
+  cases condition <;> simp only [reduce, Determinize.Statement.Paper.reduce]
+  case bool value => cases value <;> simp only [reduce, Determinize.Statement.Paper.reduce]
+
+/-- The reducer of `observe` on a fixed-skeleton fiber: a Boolean skeleton decides between
+continuing with `unit` and rejecting, and a non-value condition is reduced under `observe`. -/
+noncomputable def reduceObserve {α : Type*} [MeasurableSpace α]
+    (laws : Determinize.Proof.Paper.PrimitiveLaws)
+    {condition : α → Expr} (conditionFamily : MeasurableFamily α condition)
+    (conditionReduce : MeasurableActionFamily α
+      (fun parameter => reduce (condition parameter))) :
+    MeasurableActionFamily α (fun parameter => reduce (.observe (condition parameter))) := by
+  classical
+  by_cases conditionValue : Expr.isValue conditionFamily.skeleton = true
+  · cases conditionSkeletonEq : conditionFamily.skeleton
+    case bool value =>
+      cases value with
+      | false =>
+          apply congr reject
+          funext parameter
+          have fixed := conditionFamily.skeleton_eq parameter
+          have actualConditionValue : (condition parameter).isValue = true :=
+            (conditionFamily.isValue_eq parameter).trans conditionValue
+          rw [conditionSkeletonEq] at fixed
+          cases actualEq : condition parameter <;>
+            rw [actualEq] at actualConditionValue <;>
+            simp [actualEq, Expr.skeleton] at fixed <;>
+            rw [reduce_observe_eq, actualConditionValue] <;>
+            simp_all
+      | true =>
+          apply congr (MeasurableActionFamily.next (successor := fun _ => Expr.unit)
+            measurable_const)
+          funext parameter
+          have fixed := conditionFamily.skeleton_eq parameter
+          have actualConditionValue : (condition parameter).isValue = true :=
+            (conditionFamily.isValue_eq parameter).trans conditionValue
+          rw [conditionSkeletonEq] at fixed
+          cases actualEq : condition parameter <;>
+            rw [actualEq] at actualConditionValue <;>
+            simp [actualEq, Expr.skeleton] at fixed <;>
+            rw [reduce_observe_eq, actualConditionValue] <;>
+            simp_all
+    all_goals
+      apply congr stuck
+      funext parameter
+      have fixed := conditionFamily.skeleton_eq parameter
+      have actualConditionValue : (condition parameter).isValue = true :=
+        (conditionFamily.isValue_eq parameter).trans conditionValue
+      rw [conditionSkeletonEq] at fixed
+      cases actualEq : condition parameter <;>
+        rw [actualEq] at actualConditionValue <;>
+        simp [actualEq, Expr.skeleton] at fixed <;>
+        rw [reduce_observe_eq, actualConditionValue] <;>
+        simp
+  · apply congr (conditionReduce.wrapUnary .observe .observe
+        (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates]))
+    funext parameter
+    have actualConditionValue : (condition parameter).isValue = false := by
+      rw [conditionFamily.isValue_eq parameter]
+      exact Bool.eq_false_of_not_eq_true conditionValue
+    rw [reduce_observe_eq, actualConditionValue]
     simp
 
 theorem reduce_neg_eq
@@ -4181,6 +4259,18 @@ noncomputable def measurable_reduceAux
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
             simp_all [-Determinize.Statement.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild]
+      | observe conditionSkeleton =>
+          have conditionSmaller : sizeOf family.firstChild.skeleton < size := by
+            rw [← sizeEq, skeletonEq]
+            simp_all [Skeleton.firstChild, Skeleton.secondChild]
+            omega
+          apply congr (reduceObserve laws family.firstChild
+            (childReduce family.firstChild conditionSmaller))
+          funext parameter
+          have fixed := family.skeleton_eq parameter
+          rw [skeletonEq] at fixed
+          cases actualEq : expression parameter <;>
+            simp_all [-Determinize.Statement.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild]
       | neg bodySkeleton =>
           have bodySmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
@@ -4384,6 +4474,7 @@ noncomputable def kernel {α : Type*} [MeasurableSpace α] {action : α → Acti
       exact SFiniteKernel.mapWithInput draw _
         continuationMeasurable
   | stuck => exact SFiniteKernel.zero
+  | reject => exact SFiniteKernel.deterministic (fun _ => Expr.unit) measurable_const
   | @piecewise region _ measurableRegion whenTrue whenFalse trueFamily falseFamily
       trueKernel falseKernel =>
       exact SFiniteKernel.piecewise
@@ -4395,9 +4486,13 @@ theorem kernel_apply {α : Type*} [MeasurableSpace α] {action : α → Action}
       match action parameter with
       | .next successor => Measure.dirac successor
       | .sample site fiber continuation => fiber.map continuation
-      | .stuck => 0 := by
+      | .stuck => 0
+      | .reject => Measure.dirac .unit := by
   induction family with
   | @next successor successorMeasurable =>
+      simp only [kernel, SFiniteKernel.deterministic,
+        Kernel.deterministic_apply]
+  | reject =>
       simp only [kernel, SFiniteKernel.deterministic,
         Kernel.deterministic_apply]
   | @sample site draw continuation hContinuation =>
@@ -4558,6 +4653,7 @@ theorem sample_continuation_measurable_of_family
       rw [← equality.2.2]
       exact innerMeasurable.comp (measurable_const.prodMk measurable_id)
   | stuck => simp at equality
+  | reject => simp at equality
   | @piecewise region _ measurableRegion whenTrue whenFalse trueFamily falseFamily
       trueResult falseResult =>
       classical
@@ -4648,6 +4744,10 @@ theorem sampleMassLE_next (successor : Expr) :
   simp at equality
 
 theorem sampleMassLE_stuck : SampleMassLE .stuck := by
+  intro site fiber continuation equality
+  simp at equality
+
+theorem sampleMassLE_reject : SampleMassLE .reject := by
   intro site fiber continuation equality
   simp at equality
 
@@ -4759,6 +4859,11 @@ theorem reduce_sample_mass_le_one
           split at equality
           · split at equality <;> simp at equality
           · exact wrapped body (by rw [← sizeEq]; simp_wf <;> omega) _ equality
+      | observe condition =>
+          rw [reduce_observe_eq] at equality
+          split at equality
+          · split at equality <;> simp at equality
+          · exact wrapped condition (by rw [← sizeEq]; simp_wf <;> omega) _ equality
       | neg body =>
           rw [reduce_neg_eq] at equality
           split at equality
@@ -4875,6 +4980,7 @@ theorem stepMeasure_mass_le_one
   cases equality : reduce expression with
   | next successor => simp [Determinize.Statement.Paper.Action.measure]
   | stuck => simp [Determinize.Statement.Paper.Action.measure]
+  | reject => simp [Determinize.Statement.Paper.Action.measure]
   | sample site fiber continuation =>
       have continuationMeasurable := reduce_sample_continuation_measurable laws
         expression fiber continuation equality

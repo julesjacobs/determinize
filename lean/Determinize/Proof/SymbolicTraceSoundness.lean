@@ -128,6 +128,10 @@ theorem exactDepth_fiberSound (depth : Nat) (history : Symbolic.SampleEnv primit
             exact FiberSound.mapTrace _ _ _ _ sound (fun tape : Trace => (List.cons (entry (some op) v) tape : Trace)) (trace_cons_measurable.comp (measurable_const.prodMk measurable_id))
               (fun tape => by simpa [entry, eventValue] using historyReplay_sampleG depth history historySafe expression typed value fiber continuation actionEq op opEq (List.cons (entry (some op) v) tape))
         | stuck => exact (SymbolicAction.not_wellTyped_stuck actionTyped).elim
+        | reject =>
+            rw [actualTraceLaw_reject _ _ _ typed value actionEq,
+              targetTraceLaw_reject _ _ _ typed value actionEq]
+            exact FiberSound.zero _
 
 end
 end Determinize.Proof.StepTraces

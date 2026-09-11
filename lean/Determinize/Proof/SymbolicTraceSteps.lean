@@ -25,6 +25,8 @@ def generationDraw : SymbolicAction laws n → Bool
 @[simp] theorem generationDraw_next (expression : AffineExpr n) :
     generationDraw (.next expression : SymbolicAction laws n) = false := rfl
 @[simp] theorem generationDraw_stuck : generationDraw (.stuck : SymbolicAction laws n) = false := rfl
+@[simp] theorem generationDraw_reject :
+    generationDraw (.reject : SymbolicAction laws n) = false := rfl
 @[simp] theorem generationDraw_sampleE (op affine general continuation) :
     generationDraw (.sampleE op affine general continuation : SymbolicAction laws n) = false := rfl
 @[simp] theorem generationDraw_sampleG (fiber continuation) :
@@ -199,7 +201,7 @@ theorem symbolic_generationDraw (laws : PrimitiveLaws)
       iterate 5
         all_goals try split
         all_goals try simp only [generationDraw_wrap, generationDraw_next,
-          generationDraw_stuck, Option.isSome_none, ↓reduceIte] at *
+          generationDraw_stuck, generationDraw_reject, Option.isSome_none, ↓reduceIte] at *
       all_goals try simp_all [generationOp_symbolic_value]
 
 set_option maxHeartbeats 800000 in

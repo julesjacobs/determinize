@@ -19,11 +19,16 @@ namespace Determinize.Statement.Paper
 open MeasureTheory ProbabilityTheory
 open scoped ENNReal ProbabilityTheory
 
-/-- Interpret one reduction action as a measure of successor expressions. -/
+/-- Interpret one reduction action as a measure of successor expressions. A rejected
+execution steps to the value `unit`, a sink that never produces a real output: this keeps the
+one-step kernel of an execution that is not stuck a probability kernel, so that a program is
+`DoesNotGetStuck` exactly when no mass is lost, while the output laws of `Statement` and the
+trace laws see the same zero contribution as from `reject` itself. -/
 noncomputable def Action.measure : Action → Measure Expr
   | .next expression => Measure.dirac expression
   | .sample _ fiber continuation => fiber.map continuation
   | .stuck => 0
+  | .reject => Measure.dirac .unit
 
 /-- The measurable transition used by the proof's expression kernels. -/
 noncomputable def stepMeasure (expression : Expr) : Measure Expr :=
@@ -36,7 +41,7 @@ namespace Expr
 def realArity {Literal : Type} : Expr Literal → Nat
   | .real _ => 1
   | .lam x | .fix x | .fst x | .snd x | .inl x
-  | .inr x | .promote x | .neg x => x.realArity
+  | .inr x | .observe x | .promote x | .neg x => x.realArity
   | .app l r | .pair l r | .cons l r | .add l r | .mul l r
   | .div l r | .lt l r => l.realArity + r.realArity
   | .matchSum x l r | .ite x l r => x.realArity + l.realArity + r.realArity
@@ -154,6 +159,7 @@ def PrimitiveDomainSafeAt : Nat → Expr → Prop
           fiber Set.univ = 1 ∧
             ∀ᵐ value ∂fiber, PrimitiveDomainSafeAt fuel (continuation value)
       | .stuck => True
+      | .reject => True
 
 /-- Every primitive call reached at a finite depth has valid parameters almost surely. -/
 def PrimitiveDomainSafe (program : Expr) : Prop :=

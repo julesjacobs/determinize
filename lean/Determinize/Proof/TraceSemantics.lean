@@ -69,12 +69,18 @@ theorem bind_map {α β γ : Type*} [MeasurableSpace α] [MeasurableSpace β]
       (Measure.measurable_dirac.comp hf).aemeasurable) kernel.aemeasurable]
   simp_rw [Measure.dirac_bind kernel.measurable]
 
-/-- A one-step expression kernel used to prove measurability of the direct trace evaluator. -/
+/-- The value `unit` has no output at any depth; it is the sink of a rejected execution. -/
+theorem exactMeasure_unit (depth : Nat) : exactMeasure depth (.unit : Expr) = 0 := by
+  cases depth <;> simp [exactMeasure, Expr.isValue]
+
+/-- A one-step expression kernel used to prove measurability of the direct trace evaluator.
+A rejection steps to the sink `unit` without recording a draw, as in `Action.measure`. -/
 def record : Action → Measure (Event × Expr)
   | .next expression => Measure.dirac (none, expression)
   | .sample modeTag fiber continuation =>
       fiber.map fun value => (generationEvent modeTag value, continuation value)
   | .stuck => 0
+  | .reject => Measure.dirac (none, .unit)
 
 def recordKernel {α : Type*} [MeasurableSpace α] {action : α → Action}
     (family : MeasurableActionFamily α action) : SFiniteKernel α (Event × Expr) := by
@@ -87,6 +93,8 @@ def recordKernel {α : Type*} [MeasurableSpace α] {action : α → Action}
         (fun pair => (generationEvent site pair.2, continuation pair))
         (((generationEvent_measurable site).comp measurable_snd).prodMk measurable)
   | stuck => exact SFiniteKernel.zero
+  | reject =>
+      exact SFiniteKernel.deterministic (fun _ => ((none : Event), Expr.unit)) measurable_const
   | piecewise measurableRegion _ _ ihTrue ihFalse =>
       exact SFiniteKernel.piecewise measurableRegion ihTrue ihFalse
 
@@ -99,6 +107,7 @@ theorem recordKernel_apply {α : Type*} [MeasurableSpace α] {action : α → Ac
   | sample draw measurable =>
       exact SymbolicSoundness.TargetSafety.sfiniteKernel_mapWithInput_apply _ _ _ _
   | stuck => rfl
+  | reject => rfl
   | @piecewise region _ measurableRegion whenTrue whenFalse trueFamily falseFamily ihTrue ihFalse =>
       calc
         _ = @ite _ (parameter ∈ region) (Classical.propDecidable _)
@@ -163,6 +172,7 @@ theorem tracedStep_erasure (expression : Expr) :
   cases action with
   | next next => simp [record, Action.measure, Measure.map_dirac' measurable_snd]
   | stuck => simp [record, Action.measure]
+  | reject => simp [record, Action.measure, Measure.map_dirac' measurable_snd]
   | sample site fiber continuation =>
       have measurable := (MeasurableActionFamily.stepKernel primitiveLaws).sample_continuation_measurable
         expression fiber continuation reduction
@@ -225,6 +235,10 @@ theorem exactKernel_apply (depth : Nat) (expression : Expr) :
             filter_upwards [] with value
             rw [successorKernel_apply, ih]
         | stuck => simp [record]
+        | reject =>
+            rw [record, Measure.dirac_bind (successorKernel (exactKernel depth)).kernel.measurable,
+              successorKernel_apply, ih, exactMeasure_unit]
+            simp
 
 theorem exact_succ_kernel (depth : Nat) (expression : Expr)
     (notValue : expression.isValue ≠ true) :

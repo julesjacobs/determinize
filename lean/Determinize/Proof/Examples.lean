@@ -289,6 +289,107 @@ example : MeanOnTraces discreteSample discreteSample.determinize :=
   (Traces.soundness .E discreteSample discreteSample_typed discreteSample_source
     discreteSample_safe).2
 
+/-- `let x = uniform_G(0, 1) in let _ = observe(x < 1/2) in x + uniform_E(0, 1)`: a general-mode
+draw is observed before an expectation-mode draw is added to it (`x` is promoted explicitly, as
+the addition needs both operands at mode `E`). The condition is general-mode information, so
+the source and its determinization reject exactly the same draws of `x`. -/
+noncomputable def observedSum : Expr :=
+  .letE (uniform .G)
+    (.letE (.observe (.lt (.bvar 0) (.real (1 / 2))))
+      (.add (.promote (.bvar 1)) (uniform .E)))
+
+theorem observedSum_typed : Typed [] observedSum (.float .E) :=
+  .letE (uniform_typed .G)
+    (.letE (.observe (.lt (.bvar .head) .real))
+      (.add (.promote (.bvar (.tail .head))) (uniform_typed .E)))
+
+theorem observedSum_source : observedSum.sourceForm = true := by
+  simp [observedSum, uniform, Expr.sourceForm]
+
+/-- Determinization only switches the expectation-mode draw to its mean site; the observation
+and the general-mode draw it depends on are untouched. -/
+example : observedSum.determinize =
+    .letE (uniform .G)
+      (.letE (.observe (.lt (.bvar 0) (.real (1 / 2))))
+        (.add (.promote (.bvar 1)) (.uniform .E .mean (.real 0) (.real 1)))) := rfl
+
+/-- An observation needs general-mode information: comparing an expectation-mode draw is
+rejected by the type system. -/
+example : ¬ Typed [] (.observe (.lt (uniform .E) (.real 1))) .unit := by
+  intro typed
+  cases typed with
+  | observe condition =>
+      cases condition with
+      | lt left _ =>
+          unfold uniform at left
+          cases left
+
+/-- A failed observation rejects the execution. -/
+example : reduce (.observe (.bool false)) = .reject := by simp [reduce, Expr.isValue]
+
+/-- A successful observation continues with `unit`. -/
+example : reduce (.observe (.bool true)) = .next .unit := by simp [reduce, Expr.isValue]
+
+/-- A rejected execution contributes no output mass at any depth. -/
+example (fuel : Nat) : cumulativeOutputMeasure fuel (.observe (.bool false)) = 0 := by
+  cases fuel <;> simp [cumulativeOutputMeasure, reduce, Expr.isValue]
+
+/-- Nor any trace mass. -/
+example (depth : Nat) : exactMeasure depth (.observe (.bool false)) = 0 := by
+  cases depth <;> simp [exactMeasure, reduce, Expr.isValue]
+
+/-- Rejection is not stuckness: an expression that rejects never gets stuck. -/
+private theorem safe_reject {expression : Expr} (reduction : reduce expression = .reject) :
+    DoesNotGetStuck expression := by
+  intro fuel
+  cases fuel with
+  | zero => trivial
+  | succ fuel =>
+      rw [DoesNotGetStuckAt]
+      split
+      · trivial
+      · rw [reduction]
+        trivial
+
+example : DoesNotGetStuck (.observe (.bool false)) :=
+  safe_reject (by simp [reduce, Expr.isValue])
+
+theorem observedSum_safe : DoesNotGetStuck observedSum := by
+  apply safe_let_uniform .G
+  intro x
+  simp [Expr.substHead, Expr.substAt, Expr.shift, Expr.mapVars, uniform, -one_div]
+  change DoesNotGetStuck (.letE (.observe (.lt (.real x) (.real (1 / 2))))
+    (.add (.promote (.real x)) (uniform .E)))
+  apply safe_next (next := .letE (.observe (.bool (decide (x < 1 / 2))))
+    (.add (.promote (.real x)) (uniform .E)))
+  · simp [reduce, Expr.isValue, realValue?, Action.wrap, -one_div]
+  by_cases accepted : x < 1 / 2
+  · -- the observation succeeds and the expectation-mode draw is added
+    apply safe_next (next := .letE .unit (.add (.promote (.real x)) (uniform .E)))
+    · simp [reduce, Expr.isValue, Action.wrap, accepted, -one_div]
+    apply safe_next (next := .add (.promote (.real x)) (uniform .E))
+    · simp [reduce, Expr.isValue, Expr.substHead, Expr.substAt, Expr.shift, Expr.mapVars,
+        uniform]
+    apply safe_next (next := .add (.real x) (uniform .E))
+    · simp [reduce, Expr.isValue, Action.wrap, uniform]
+    let μ := uniformFiber .stochastic 0 1
+    refine safe_sample (site := (.E, .stochastic, .uniform)) (fiber := μ)
+      (continuation := fun value => .add (.real x) (.real value)) ?_ ?_ ?_
+    · simp [uniform, reduce, Expr.isValue, realValue?, Action.wrap, Function.comp_def, μ]
+    · simp [μ, uniformFiber, uniformMeasure, Real.volume_Icc]
+    · intro value
+      apply safe_next (next := .real (x + value))
+      · simp [reduce, Expr.isValue, realValue?]
+      exact safe_real _
+  · -- the observation fails: the execution is rejected, which is not stuckness
+    apply safe_reject
+    simp [reduce, Expr.isValue, Action.wrap, accepted, -one_div]
+
+/-- The mean of the accepted executions is preserved along traces; together with the equal
+acceptance mass this is the conditional expectation statement. -/
+example : MeanOnTraces observedSum observedSum.determinize :=
+  (Traces.soundness .E observedSum observedSum_typed observedSum_source observedSum_safe).2
+
 def loopFunction : Expr :=
   .fix
     (.app (.bvar 1) (.bvar 0))

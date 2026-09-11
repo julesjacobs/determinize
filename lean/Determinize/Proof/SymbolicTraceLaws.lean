@@ -121,6 +121,33 @@ theorem targetTraceLaw_next (depth : Nat) (history : Symbolic.SampleEnv primitiv
   · rw [← symbolicReduce_targetRealize primitiveLaws typed, actionEq]
     rfl
 
+/-- A symbolic rejection rejects every realization: the source trace law vanishes. -/
+theorem actualTraceLaw_reject (depth : Nat) (history : Symbolic.SampleEnv primitiveLaws n)
+    (expression : AffineExpr n) (typed : WellTyped [] expression ty)
+    (notValue : expression.isValue ≠ true)
+    (actionEq : symbolicReduce primitiveLaws expression = .reject) :
+    actualTraceLaw (depth+1) history expression = 0 := by
+  rw [actualTraceLaw, ← Measure.bind_zero_right (history.actualMeasure primitiveLaws)]
+  apply Measure.bind_congr_right
+  filter_upwards [] with env
+  rw [Pi.zero_apply]
+  apply exact_succ_reject
+  · simpa only [AffineExpr.realize_isValue] using notValue
+  · rw [← symbolicReduce_realize primitiveLaws typed env, actionEq]
+    rfl
+
+/-- A symbolic rejection also rejects the determinized program: the target trace law
+vanishes on the same step. -/
+theorem targetTraceLaw_reject (depth : Nat) (history : Symbolic.SampleEnv primitiveLaws n)
+    (expression : AffineExpr n) (typed : WellTyped [] expression ty)
+    (notValue : expression.isValue ≠ true)
+    (actionEq : symbolicReduce primitiveLaws expression = .reject) :
+    targetTraceLaw (depth+1) history expression = 0 := by
+  apply exact_succ_reject
+  · simpa only [determinize_isValue, AffineExpr.realize_isValue] using notValue
+  · rw [← symbolicReduce_targetRealize primitiveLaws typed, actionEq]
+    rfl
+
 theorem historyReplay_next (depth : Nat) (history : Symbolic.SampleEnv primitiveLaws n)
     (safe : history.DomainSafe primitiveLaws) (expression next : AffineExpr n)
     (typed : WellTyped [] expression ty) (notValue : expression.isValue ≠ true)

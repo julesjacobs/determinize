@@ -22,6 +22,9 @@ theorem outputMassPreservation : Statement.outputMassThm :=
 theorem varianceNonIncrease : Statement.varianceThm :=
   Proof.Paper.varianceSoundness
 
+theorem conditionalExpectationPreservation : Statement.conditionalExpectationThm :=
+  Proof.Paper.conditionalExpectationSoundness
+
 theorem traceErasure : Traces.correspondenceThm :=
   Proof.Traces.correspondence
 
@@ -38,6 +41,7 @@ end Determinize.Theorems
 #print axioms Determinize.Theorems.jensenInequality
 #print axioms Determinize.Theorems.outputMassPreservation
 #print axioms Determinize.Theorems.varianceNonIncrease
+#print axioms Determinize.Theorems.conditionalExpectationPreservation
 #print axioms Determinize.Theorems.traceErasure
 #print axioms Determinize.Theorems.traceSoundness
 #print axioms Determinize.Theorems.traceVarianceDecomposition

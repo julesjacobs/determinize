@@ -21,6 +21,13 @@ private noncomputable abbrev cumulativeKernel (fuel : Nat) :=
   (MeasurableActionFamily.exactOutputKernel paperStepKernel 0) ∘ₖ
     (MeasurableActionFamily.nStepKernelPack paperStepKernel fuel).kernel
 
+/-- The value `unit` never produces a real output; it is the sink of a rejected execution. -/
+theorem cumulativeOutputMeasure_unit (fuel : Nat) :
+    Determinize.Statement.Paper.cumulativeOutputMeasure fuel .unit = 0 := by
+  induction fuel with
+  | zero => rfl
+  | succ fuel ih => simpa [Determinize.Statement.Paper.cumulativeOutputMeasure, reduce] using ih
+
 /-- The direct evaluator is represented by a measurable kernel in its expression input. -/
 theorem cumulativeKernel_apply (fuel : Nat) (expression : Expr) :
     cumulativeKernel fuel expression =
@@ -53,6 +60,10 @@ theorem cumulativeKernel_apply (fuel : Nat) (expression : Expr) :
             lintegral_map ((cumulativeKernel fuel).measurable_coe hs) measurable]
           rfl
       | stuck => simp [Determinize.Statement.Paper.cumulativeOutputMeasure, reduction, Action.measure]
+      | reject =>
+          simp only [Determinize.Statement.Paper.cumulativeOutputMeasure, reduction,
+            Action.measure, Measure.dirac_bind (cumulativeKernel fuel).measurable]
+          rw [← ih .unit, cumulativeOutputMeasure_unit]
 
 theorem cumulativeOutputMeasure_eq (fuel : Nat) (expression : Expr) :
     Determinize.Proof.Paper.cumulativeOutputMeasure paperStepKernel fuel expression =

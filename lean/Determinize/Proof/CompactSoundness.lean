@@ -32,6 +32,7 @@ theorem exact_eq_detailed (depth : Nat) (e : Expr) :
       · rw [exactMeasure, StepTraces.exactMeasure, if_neg value, if_neg value]
         cases reduction : reduce e with
         | stuck => simp
+        | reject => simp
         | next next =>
             simp only [ih]
             rw [Measure.map_map eraseOutput_measurable

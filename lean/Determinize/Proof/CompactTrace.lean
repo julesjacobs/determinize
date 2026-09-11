@@ -147,6 +147,7 @@ def decodeAction (recurse : Expr → DrawTrace → Decoded) : Action → DrawTra
           let value := (tape.getD 0 (.uniform, 0)).2
           prependDecoded (some (op,value)) (recurse (continuation value) tape.tail)
   | .stuck, _ => (false, [])
+  | .reject, _ => (false, [])
 
 def decodeWithin : Nat → Expr → DrawTrace → Decoded
   | 0, e, _ => (e.isValue, [])
@@ -185,6 +186,7 @@ theorem decodeAction_measurable {α : Type*} [MeasurableSpace α]
               (hr.comp ((hc.comp (measurable_fst.prodMk hv)).prodMk
                 (draw_tail_measurable.comp measurable_snd))))
   | stuck => exact measurable_const
+  | reject => exact measurable_const
   | @piecewise region _ hm yes no hy hn ihy ihn =>
       convert ihy.piecewise (hm.preimage measurable_fst) ihn using 1
       funext p
@@ -243,6 +245,7 @@ theorem decodeWithin_stable (n m : Nat) (e : Expr) (tape : DrawTrace)
                 simp only [h, decodeAction, prependDecoded] at done ⊢
                 rw [ih m next tape le' done]
             | stuck => simp [h, decodeAction] at done
+            | reject => simp [h, decodeAction] at done
             | sample site fiber cont =>
                 simp only [h, decodeAction] at done ⊢
                 cases ev : generationEvent site 0 with
@@ -387,6 +390,9 @@ theorem target_decodeWithin (depth : Nat) (history : Symbolic.SampleEnv primitiv
             simpa [decodeWithin, nv, reduction, decodeAction, eventEq, prepend, retain, entry,
               prependDecoded] using congrArg (prependDecoded (some (op,r))) hp
         | stuck => exact (SymbolicAction.not_wellTyped_stuck actionTyped).elim
+        | reject =>
+            rw [targetTraceLaw_reject _ _ _ typed value actionEq]
+            simp
 
 theorem target_decode (source : Expr) (typed : Typed [] source (.float .E))
     (tags : (AffineExpr.ofExpr source).SourceTags) (safe : PrimitiveDomainSafe source) :

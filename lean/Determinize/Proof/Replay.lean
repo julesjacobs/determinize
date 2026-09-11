@@ -23,6 +23,7 @@ theorem actionContinuation_measurable {α : Type*} [MeasurableSpace α]
   | next => exact measurable_const
   | sample draw measurable => exact measurable
   | stuck => exact measurable_const
+  | reject => exact measurable_const
   | @piecewise region _ measurableRegion whenTrue whenFalse trueFamily falseFamily ihTrue ihFalse =>
       classical
       convert ihTrue.piecewise (measurableRegion.preimage measurable_fst) ihFalse using 1

@@ -24,7 +24,7 @@ def generationOp : Skeleton → Option Op
   | .add l r | .mul l r | .div l r | .lt l r =>
       if l.isValue then generationOp r else generationOp l
   | .fst x | .snd x | .inl x | .inr x
-  | .promote x | .neg x => generationOp x
+  | .observe x | .promote x | .neg x => generationOp x
   | .matchSum x _ _ | .matchList x _ _ | .ite x _ _
   | .letE x _ => generationOp x
   | .uniform mode kind l r =>

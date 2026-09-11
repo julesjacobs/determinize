@@ -30,7 +30,8 @@ def record (site : Mode × Kind × Op) (value : ℝ) (output : Output) : Output 
   | _ => output
 
 /-- Joint law of executions first returning a real at exactly `depth`
-reduction steps. The recorded trace contains only the G draws among those steps. -/
+reduction steps. The recorded trace contains only the G draws among those steps. A rejected
+execution has no output, so it contributes no trace either. -/
 noncomputable def exactMeasure : Nat → Expr → Measure Output
   | 0, .real value => Measure.dirac ([], value)
   | 0, _ => 0
@@ -41,6 +42,7 @@ noncomputable def exactMeasure : Nat → Expr → Measure Output
         | .sample site fiber continuation => fiber.bind fun value =>
             (exactMeasure depth (continuation value)).map (record site value)
         | .stuck => 0
+        | .reject => 0
 
 /-- Joint law of terminating generation traces and returned reals. -/
 noncomputable def jointMeasure (program : Expr) : Measure Output :=

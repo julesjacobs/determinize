@@ -41,6 +41,7 @@ inductive AffineExpr (sampleCount : Nat) where
   | matchList (scrutinee nilCase consCase : AffineExpr sampleCount)
   | ite (condition thenBranch elseBranch : AffineExpr sampleCount)
   | letE (value body : AffineExpr sampleCount)
+  | observe (condition : AffineExpr sampleCount)
   | promote (body : AffineExpr sampleCount)
   | neg (body : AffineExpr sampleCount)
   | add (left right : AffineExpr sampleCount)
@@ -87,6 +88,7 @@ def realize (environment : Env sampleCount) : AffineExpr sampleCount → Expr
         (elseBranch.realize environment)
   | .letE value body =>
       .letE (value.realize environment) (body.realize environment)
+  | .observe condition => .observe (condition.realize environment)
   | .promote body => .promote (body.realize environment)
   | .neg body => .neg (body.realize environment)
   | .add left right =>
@@ -131,6 +133,7 @@ def skeleton : AffineExpr sampleCount → Skeleton
   | .ite condition thenBranch elseBranch =>
       .ite condition.skeleton thenBranch.skeleton elseBranch.skeleton
   | .letE value body => .letE value.skeleton body.skeleton
+  | .observe condition => .observe condition.skeleton
   | .promote body => .promote body.skeleton
   | .neg body => .neg body.skeleton
   | .add left right => .add left.skeleton right.skeleton
@@ -149,7 +152,7 @@ def skeleton : AffineExpr sampleCount → Skeleton
 def coordinates : AffineExpr sampleCount → List (Affine sampleCount)
   | .real value => [value]
   | .lam body | .fix body | .fst body | .snd body
-  | .inl body | .inr body | .promote body | .neg body => body.coordinates
+  | .inl body | .inr body | .observe body | .promote body | .neg body => body.coordinates
   | .app left right | .pair left right | .cons left right
   | .add left right | .mul left right | .div left right | .lt left right =>
       left.coordinates ++ right.coordinates
@@ -186,6 +189,7 @@ def ofExpr : Expr → AffineExpr 0
   | .ite condition thenBranch elseBranch =>
       .ite (ofExpr condition) (ofExpr thenBranch) (ofExpr elseBranch)
   | .letE value body => .letE (ofExpr value) (ofExpr body)
+  | .observe condition => .observe (ofExpr condition)
   | .promote body => .promote (ofExpr body)
   | .neg body => .neg (ofExpr body)
   | .add left right => .add (ofExpr left) (ofExpr right)
@@ -230,6 +234,7 @@ def mapAffine (transform : Affine n → Affine m) : AffineExpr n → AffineExpr 
         (elseBranch.mapAffine transform)
   | .letE value body =>
       .letE (value.mapAffine transform) (body.mapAffine transform)
+  | .observe condition => .observe (condition.mapAffine transform)
   | .promote body => .promote (body.mapAffine transform)
   | .neg body => .neg (body.mapAffine transform)
   | .add left right =>
@@ -278,7 +283,7 @@ def SourceTags : AffineExpr sampleCount → Prop
       kind = .stochastic ∧ body.SourceTags
   | .discrete _ kind _ => kind = .stochastic
   | .lam body | .fix body | .fst body | .snd body
-  | .inl body | .inr body | .promote body | .neg body => body.SourceTags
+  | .inl body | .inr body | .observe body | .promote body | .neg body => body.SourceTags
   | .app left right | .pair left right | .cons left right
   | .add left right | .mul left right | .div left right | .lt left right =>
       left.SourceTags ∧ right.SourceTags
@@ -326,6 +331,7 @@ inductive WellTyped : List Ty → AffineExpr sampleCount → Ty → Prop
       WellTyped context (.ite condition thenBranch elseBranch) result
   | letE : WellTyped context value valueTy → WellTyped (valueTy :: context) body result →
       WellTyped context (.letE value body) result
+  | observe : WellTyped context condition .bool → WellTyped context (.observe condition) .unit
   | promote : WellTyped context value (.float .G) →
       WellTyped context (.promote value) (.float .E)
   | negE : WellTyped context value (.float .E) →
@@ -388,6 +394,7 @@ theorem WellTyped.realize_typed {sampleCount : Nat} {expression : AffineExpr sam
   case ite condition thenBranch elseBranch =>
     exact Determinize.Statement.Paper.Typed.ite condition thenBranch elseBranch
   case letE value body => exact Determinize.Statement.Paper.Typed.letE value body
+  case observe condition => exact Determinize.Statement.Paper.Typed.observe condition
   case promote value => exact Determinize.Statement.Paper.Typed.promote value
   case negE value => exact Determinize.Statement.Paper.Typed.neg value
   case negG value => exact Determinize.Statement.Paper.Typed.neg value
@@ -455,6 +462,7 @@ def shift (amount cutoff : Nat) : AffineExpr sampleCount → AffineExpr sampleCo
       (e.shift amount cutoff)
   | .letE x b => .letE (x.shift amount cutoff)
       (b.shift amount (cutoff + 1))
+  | .observe x => .observe (x.shift amount cutoff)
   | .promote x => .promote (x.shift amount cutoff)
   | .neg x => .neg (x.shift amount cutoff)
   | .add l r => .add (l.shift amount cutoff) (r.shift amount cutoff)
@@ -496,6 +504,7 @@ def substAt (depth : Nat) (replacement : AffineExpr sampleCount)
       (substAt depth replacement t) (substAt depth replacement e)
   | .letE x b => .letE (substAt depth replacement x)
       (substAt (depth + 1) replacement b)
+  | .observe x => .observe (substAt depth replacement x)
   | .promote x => .promote (substAt depth replacement x)
   | .neg x => .neg (substAt depth replacement x)
   | .add l r => .add (substAt depth replacement l) (substAt depth replacement r)
@@ -584,6 +593,9 @@ theorem wellTyped_shift (h : WellTyped (before ++ suffix) expression ty) :
       rw [shift]
       exact .letE (ihv (before := before) (suffix := suffix) hcontext)
         (ihb (before := _ :: before) (suffix := suffix) (by simpa using hcontext))
+  | observe hv ih =>
+      rw [shift]
+      exact .observe (ih (before := before) (suffix := suffix) hcontext)
   | promote hv ih =>
       rw [shift]
       exact .promote (ih (before := before) (suffix := suffix) hcontext)
@@ -767,6 +779,9 @@ theorem wellTyped_substAt (h : WellTyped (before ++ binder :: suffix) expression
       exact .letE (ihv replacementTyped (before := before) (suffix := suffix) hcontext)
         (ihb replacementTyped (before := _ :: before) (suffix := suffix)
           (by simpa using hcontext))
+  | observe hv ih =>
+      rw [substAt]
+      exact .observe (ih replacementTyped (before := before) (suffix := suffix) hcontext)
   | promote hv ih =>
       rw [substAt]
       exact .promote (ih replacementTyped (before := before) (suffix := suffix) hcontext)
@@ -1233,6 +1248,7 @@ inductive SymbolicAction
   | sampleG (site : Mode × Kind × Op) (fiber : Measure ℝ)
       (continuation : ℝ → AffineExpr sampleCount)
   | stuck
+  | reject
 
 namespace SymbolicAction
 
@@ -1245,6 +1261,7 @@ noncomputable def realize (environment : Env n) : SymbolicAction laws n → Acti
   | .sampleG site fiber continuation =>
       .sample site fiber (fun value => (continuation value).realize environment)
   | .stuck => .stuck
+  | .reject => .reject
 
 def wrap (context : AffineExpr n → AffineExpr n) (liftedContext : AffineExpr (n + 1) → AffineExpr (n + 1)) :
     SymbolicAction laws n → SymbolicAction laws n
@@ -1253,6 +1270,7 @@ def wrap (context : AffineExpr n → AffineExpr n) (liftedContext : AffineExpr (
       .sampleE op affine general (liftedContext continuation)
   | .sampleG site fiber continuation => .sampleG site fiber (context ∘ continuation)
   | .stuck => .stuck
+  | .reject => .reject
 
 theorem realize_wrap (action : SymbolicAction laws n) (environment : Env n)
     (context : AffineExpr n → AffineExpr n) (liftedContext : AffineExpr (n + 1) → AffineExpr (n + 1))
@@ -1266,6 +1284,7 @@ theorem realize_wrap (action : SymbolicAction laws n) (environment : Env n)
   cases action with
   | next expression => simp [wrap, realize, Action.wrap, context_realize]
   | stuck => rfl
+  | reject => rfl
   | sampleE op affine general continuation =>
       simp only [wrap, realize, Action.wrap, Action.sample.injEq, true_and]
       funext value
@@ -1284,6 +1303,9 @@ inductive WellTyped (ty : Ty) : SymbolicAction laws n → Prop
       WellTyped ty (.sampleE op affine general continuation)
   | sampleG : (∀ value, AffineExpr.WellTyped [] (continuation value) ty) →
       WellTyped ty (.sampleG site fiber continuation)
+  | reject : WellTyped ty .reject
+
+@[simp] theorem wellTyped_reject : WellTyped ty (.reject : SymbolicAction laws n) := .reject
 
 @[simp] theorem wellTyped_next_iff :
     WellTyped ty (.next expression : SymbolicAction laws n) ↔
@@ -1323,6 +1345,7 @@ theorem WellTyped.wrap (typed : WellTyped childTy action)
   | next typed => exact .next (contextTyped _ typed)
   | sampleE ha hg typed => exact .sampleE ha hg (liftedTyped _ typed)
   | sampleG typed => exact .sampleG fun value => contextTyped _ (typed value)
+  | reject => exact .reject
 
 end SymbolicAction
 
@@ -1403,6 +1426,12 @@ noncomputable def symbolicReduce
       if value.isValue then .next (body.substHead value)
       else (symbolicReduce laws value).wrap (fun next => .letE next body)
         (fun next => .letE next body.weakenSamples)
+  | .observe condition =>
+      if condition.isValue then match condition with
+        | .bool true => .next .unit
+        | .bool false => .reject
+        | _ => .stuck
+      else (symbolicReduce laws condition).wrap .observe .observe
   | .promote body =>
       if body.isValue then match body with
         | .real value => .next (.real value) | _ => .stuck
@@ -1622,6 +1651,16 @@ theorem symbolicReduce_let_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
     if value.isValue then .next (body.substHead value)
     else (symbolicReduce laws value).wrap (fun next => .letE next body)
       (fun next => .letE next body.weakenSamples) := by
+  rw [symbolicReduce.eq_def]
+
+theorem symbolicReduce_observe_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
+    (condition : AffineExpr n) :
+    symbolicReduce laws (.observe condition) =
+      if condition.isValue then match condition with
+        | .bool true => .next .unit
+        | .bool false => .reject
+        | _ => .stuck
+      else (symbolicReduce laws condition).wrap .observe .observe := by
   rw [symbolicReduce.eq_def]
 
 theorem symbolicReduce_uniform_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
@@ -1975,6 +2014,22 @@ theorem symbolicReduce_realize
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
           ihv environment]
+        all_goals simp_all [isValue]
+  | observe conditionTyped ih =>
+      rename_i context' condition
+      rw [realize, MeasurableActionFamily.reduce_observe_eq, realize_isValue]
+      by_cases conditionValue : condition.isValue = true
+      · simp only [conditionValue, ↓reduceIte]
+        obtain ⟨answer, rfl⟩ := wellTyped_bool_value conditionTyped conditionValue
+        cases answer <;> simp [symbolicReduce, conditionValue, SymbolicAction.realize, realize]
+      · rw [symbolicReduce_observe_eq]
+        simp only [conditionValue,
+          Bool.eq_false_of_not_eq_true conditionValue,
+          Bool.false_eq_true, ↓reduceIte]
+        rw [SymbolicAction.realize_wrap
+          (ExprContext := fun next => .observe next)
+          (context_realize := by intros; simp only [realize])
+          (lifted_realize := by intros; simp only [realize]), ih environment]
         all_goals simp_all [isValue]
   | promote valueTyped ih =>
       rename_i context' value
@@ -2746,6 +2801,19 @@ theorem symbolicReduce_wellTyped
       exact (ih rfl).wrap
         (fun next nextTyped => .letE nextTyped bodyTyped)
         (fun next nextTyped => .letE nextTyped bodyTyped.weakenSamples)
+  case observe context condition conditionTyped ih =>
+    cases hcontext
+    rw [symbolicReduce_observe_eq]
+    by_cases value : condition.isValue = true
+    · simp only [value, ↓reduceIte]
+      obtain ⟨result, rfl⟩ := wellTyped_bool_value conditionTyped value
+      cases result <;> simp only
+      · exact .reject
+      · exact .next .unit
+    · simp only [value, ↓reduceIte]
+      exact (ih rfl).wrap
+        (fun next nextTyped => .observe nextTyped)
+        (fun next nextTyped => .observe nextTyped)
   case lt left right leftTyped rightTyped ihLeft ihRight =>
     cases hcontext
     simp only [symbolicReduce]

@@ -15,7 +15,8 @@ is well-defined as soon as one of its positive and negative parts is finite; it 
 programs such as `1 / uniform(0, 1)` whose expectation is `+∞`. `jensenThm` compares the
 two output laws against every nonnegative convex function. `outputMassThm` states that both
 output laws have the same total mass, and `varianceThm` that determinization does not increase
-the second moment or the variance of the output law.
+the second moment or the variance of the output law. `conditionalExpectationThm` states that the
+expectations conditioned on acceptance agree, which is what makes `observe` meaningful.
 -/
 
 namespace Determinize.Statement
@@ -101,5 +102,23 @@ def varianceThm : Prop :=
       (∫ value : ℝ, value ^ 2 ∂bigStepMeasure program.determinize) ≤
         ∫ value : ℝ, value ^ 2 ∂bigStepMeasure program ∧
       variance id (bigStepMeasure program.determinize) ≤ variance id (bigStepMeasure program)
+
+/-- Determinization preserves the expectation conditioned on acceptance, which is what makes
+`observe` meaningful: rejection sampling on the determinized program is justified. The output
+laws are unnormalized; an observation that fails contributes no output mass, so the mass of an
+output law is the probability of terminating with a real value and every observation on the
+way succeeding. Because every Boolean is general-mode information, the same traces are rejected
+in the source and in the target, and both the unnormalized mean (`mainThm`) and the mass
+(`outputMassThm`) are preserved; hence so is their quotient, the expectation of the law
+normalized by its mass (`0` for a program that is always rejected, as `0 / 0 = 0`). -/
+def conditionalExpectationThm : Prop :=
+  ∀ (mode : Mode) (program : Expr),
+    Typed [] program (.float mode) →
+    program.sourceForm = true →
+    DoesNotGetStuck program →
+    Integrable id (bigStepMeasure program) →
+    (∫ value : ℝ, value ∂bigStepMeasure program.determinize) /
+        (bigStepMeasure program.determinize Set.univ).toReal =
+      (∫ value : ℝ, value ∂bigStepMeasure program) / (bigStepMeasure program Set.univ).toReal
 
 end Determinize.Statement
