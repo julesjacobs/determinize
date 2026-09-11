@@ -89,4 +89,4 @@ Development/specification review:
 [x] Compare sampling representations against the statement surface and specify affinity-free mean syntax with direct typing rules (development-review.md).
 
 Full refactor (per-step checks and decisions in refactor-plan.md):
-[ ] Complete the specification and implementation refactor, with one reviewed commit per retained step.
+[x] Complete the specification and implementation refactor, with one reviewed commit per retained step.

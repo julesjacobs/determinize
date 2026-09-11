@@ -13,7 +13,7 @@ Each retained step gets its own commit. For each step: inspect consumers, implem
 - [x] 9. Trim and organize the specification/proof boundary.
 - [x] 10. Evaluate deriving terminal rows instead of storing absorbing-row evidence.
 - [x] 11. Replace Mode/Kind with Affinity and sample-affinity-or-mean syntax, using direct typing rules.
-- [ ] 12. Run complete regression checks and review the final stack.
+- [x] 12. Run complete regression checks and review the final stack.
 
 ## Before/after decisions
 
@@ -68,3 +68,19 @@ Before: every primitive stored an independent `Mode × Kind`, including two mean
 The runtime, inference metadata, checked elaboration, finite machine, generated certificates, and symbolic/trace proofs use the new representation. Determinization changes only E sampling actions to means and still transforms every operand. Mean execution evaluates and validates every operand, including Gaussian variance, without consuming a random draw itself. Pretty-printed means omit the obsolete E/G label. Source-only symbolic typing needs no mean constructors; shared reduction-preservation cases avoid duplicating proof bodies.
 
 The additional eight public rules and checker branches are a worthwhile cost for removing meaningless syntax. The full warning-free Lean build and Lean tests passed. Kernel tests cover E/G mean typing, rejected E-to-G use, Gaussian variance affinity, and sample-only affinity metadata; runtime regressions check invalid parameters in both source and determinized programs. Complete corpus and certificate checks are recorded under step 12.
+
+### 12. Final regression and stack review — COMPLETE
+
+Reviewed the retained interfaces against the baseline and the per-step decisions. Source-form, source-safety, and source-integrability premises remain explicit. Checked models remain indexed by the caller's source and subject. Gaussian means still evaluate and validate variance. Rejection remains distinct from returning zero. Canonical output functions replace avoidable witnesses; useful generic factorizations remain. The intended changes to raw domains are documented above: means have no syntactic affinity restriction, terminal matrix rows are ignored, and terminal models may use horizon zero. Existing exported Lean certificates must be regenerated for the renamed namespaces and revised data structures.
+
+Final checks on `540ab43`:
+
+- `lake build --wfail`: passed.
+- Lean frontend/runtime/checker tests: passed.
+- `python3 tests/run.py --all`: all 117 cases passed, including statistical checks and independent generated typing-certificate checks.
+- Python suites: 17 tests completed successfully; the optional real-Storm integration test was skipped. Exact result checks, generated model/result theorems, and mutation rejection tests passed.
+- Repository theorem coverage/axiom audit: passed; 41 reported declarations use only `propext`, `Classical.choice`, and `Quot.sound`. No `sorry`, added axioms, or native proof shortcuts.
+- Simulator: all 51 tests passed. Paper: built, retaining three overfull boxes and the existing duplicate `fig:determinization` labels.
+- Whitespace/diff checks: passed. Each of the eleven retained refactors has its own commit; the terminal-row representation experiment was discarded. Nothing was pushed.
+
+The independent Pro audit remains separately pending in `pro-spec-review.md`; these conclusions are from local review and verification.
