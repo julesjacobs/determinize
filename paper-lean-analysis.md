@@ -1,13 +1,35 @@
 # Paper plan review and pending changes across the repository
 
-Date: 2026-09-10. Supersedes the earlier paper-vs-Lean comparison (git history has it).
+Date: 2026-09-10, updated 2026-09-11 after the authors took decisions D1 to D7 (Part 3) and
+the Lean side was changed accordingly (Part 0). Supersedes the earlier paper-vs-Lean
+comparison (git history has it).
 Inputs: `tex/`, `lean/` (statements, proofs, `README.md`, `mul-div-typing.md`), `ocaml/`,
-`sim/`, `det/`, `examples/`, `run.sh`, `det.sh`, `.claude/skills/{det-lang,storm}`, `TODO.md`.
+`sim/`, `det/`, `examples/`, `run.sh`, `det.sh`, `.claude/skills/{det-lang,storm}`, `TODO.md`,
+and `pipeline-in-lean-analysis.md` (the D7 study).
 
-Part 1 checks the intended paper structure section by section and says what each section
-must contain and what already exists for it. Part 2 lists, per component, every change that
-is still pending for the repository to match the plan. Part 3 lists the cross-cutting
-decisions that block several of those changes. Part 4 is a suggested order of work.
+Part 0 records the decisions and what has been done for them. Part 1 checks the intended
+paper structure section by section and says what each section must contain and what already
+exists for it. Part 2 lists, per component, every change that is still pending for the
+repository to match the plan. Part 3 restates the cross-cutting decisions with their outcome.
+Part 4 is a suggested order of work.
+
+---
+
+## 0. Decisions of 2026-09-11 and what changed
+
+The Lean formalization is authoritative for the language and the theorems. Nothing in `tex/`,
+`ocaml/` or `sim/` was changed on 2026-09-11; their pending alignment is listed in Part 2.
+
+| Decision | Outcome | Lean change |
+|---|---|---|
+| D1 multiplication, division | Lean rules: `e₁ × e₂ : Float[m]` iff `e₁ : Float[G]`, `e₂ : Float[m]`; `e₁ / e₂ : Float[m]` iff `e₁ : Float[m]`, `e₂ : Float[G]`; no implicit `G → E` cast | none; decision recorded in `lean/mul-div-typing.md` §7 |
+| D2 subsumption | explicit `promote`; the paper remarks that it could be made implicit by elaboration | none |
+| D3 mode labels | on sample sites only; determinization is a function on untyped terms | none |
+| D4 validity, degenerate cases | as in Lean (`DoesNotGetStuck`, zero measure off-domain, `uniform(a,a) = δ_a`, `x/0 = 0`) | none |
+| D5 discrete primitives | added: `bernoulli` (probability at the site's mode, determinized to `p`), `discrete` over literal weights (determinized to `∑ i·pᵢ`), `flip` as the sugar `0 < bernoulli_G(p)` (Boolean, never determinized, G probability) | commit 72ea1d1 |
+| D6 `observe` | added as a constructor; `observe false` rejects with zero output and trace mass and is not stuckness; every Boolean is general-mode information, so source and target reject the same traces; new `conditionalExpectationThm` (mass-normalized expectations agree) | see Part 3 D6 |
+| Variance | new `outputMassThm`, `varianceThm` (second moment and Mathlib `variance` do not increase) and `Traces.varianceThm` (law of total variance along traces: source variance = target variance + mean fiber variance) | commit 04963c0 |
+| D7 pipeline in Lean | analysis only: `pipeline-in-lean-analysis.md` recommends the Lean+OCaml certificate split now (leaf-only `Certificate.lean` with a decidable typing checker, then an OCaml emitter into one generated file checked by `lake build`), staged so that it can grow into an all-Lean pipeline; Rocq is not recommended | none |
 
 Priorities used below: **P0** = blocks writing the section or is a correctness problem;
 **P1** = needed for a complete and consistent paper; **P2** = polish.
@@ -56,8 +78,9 @@ determinization preserves typing (mechanized: `typed_determinize`); inference co
 valid and greatest annotation (not mechanized, to be proved on paper).
 Verdict: the plan has no explicit home for *determinization* or for *inference*. Both must
 precede Section 5 (the theorem is about `E(e)`), so put them here as subsections 4.3 and 4.4,
-or make determinization its own short section. The section must also settle, in one place,
-the rules that currently differ between artifacts (see Part 3, D1 and D2).
+or make determinization its own short section. The section states the Lean rules for `×`
+and `/` and the explicit `promote` (Part 3, D1 and D2), which the OCaml and the sim still
+have to adopt.
 Exists: `tex/3_typing.tex`, `tex/4_inference.tex` (with two placeholder examples),
 `tex/5_determinization.tex` (two figures sharing one label; Poisson rows use `m_3` for `m_2`).
 
@@ -132,9 +155,10 @@ fixed 100 trials, seed 0, `observe` by rejection), the browser simulator with th
 G-tape runtime (`sim/`). Exists: all three, undocumented in the paper; no variance-reduced
 or stratified estimators beyond plain sampling.
 
-Verdict: fine. Say explicitly which parts are covered by the theorem (the core language
-without `flip`/`bernoulli`/`discrete`/`observe`/`-`/`<=`) and which are implementation
-extensions.
+Verdict: fine. Say explicitly which parts are covered by the theorem (since 2026-09-11 the
+core language including `bernoulli`, `discrete` over literal weights, `flip` as sugar and
+`observe`; `-` and `<=` are sugar not yet stated as lemmas) and which are implementation
+extensions (Monte Carlo evaluation, the Storm export, floating point).
 
 ### 8 Evaluation / benchmarking
 Content: research questions (how often does inference find E sites; how much variance does
@@ -198,12 +222,25 @@ rest in Lean docstrings.
   along the Lean layers; write "stronger implies weaker" with its three one-paragraph proofs;
   retire the global-first route (or move it to the appendix). Add trace erasure and the
   same-trace-law / same-termination-probability remarks.
-- **P0 Section 4: align the typing rules with the decision in Part 3 D1** (`Mul`, `Div`),
-  present `promote` vs subsumption per D2, put mode labels on sample sites per D3, complete
-  the grammar (all six primitives, `/`, unit), and fix the known errors: duplicate
+- **P0 Section 4: adopt the Lean typing rules (D1)**: `Mul` with `e₁ : Float[G]`,
+  `e₂ : Float[m]`, `Div` with a `Float[G]` denominator, replacing `Mul-G`, `Mul-ConstL`,
+  `Mul-ConstR` and the literal `Div`; explicit `promote` with a sentence saying that the cast
+  could be made implicit by an elaboration pass (D2); mode labels on sample sites (D3);
+  complete the grammar (the eight primitives including `bernoulli` and `discrete` over literal
+  weights, `flip` as sugar, `observe`, `/`, unit), and fix the known errors: duplicate
   `\label{fig:determinization}`, `m_3` vs `m_2` in the Poisson rows, dangling
   `\Cref{thm:pointwise-agreement-of-interpretations}`, `Sym` rule missing the G-constancy
   side condition, the stray binary `−` in the symbolic grammar.
+- **P0 Sections 5 and 6: state the new theorems.** Section 5 gets `outputMassThm` (equal
+  output mass, hence equal termination and acceptance probability), `varianceThm` (second
+  moment and variance do not increase) and, once `observe` is in the grammar, the
+  conditional-expectation corollary that justifies rejection sampling on the determinized
+  program. Section 6 gets the law of total variance along traces (`Traces.varianceThm`:
+  source variance = target variance + mean fiber variance, so determinization discards
+  exactly the fiber variance, trace by trace), stated for every trace factorization. Section 5
+  must also say that output laws are unnormalized, that `observe(false)` contributes no mass,
+  and that the variance statements are read on the mass-normalized laws (same mass and same
+  mean make the two readings agree).
 - **P1 Complete the inference examples** ("With lists", `exponential(uniform*uniform)` are
   empty) and add the inference soundness/greatest-solution theorem with a proof.
 - **P1 Reuse one primitive table** (E-allowed parameters, mean, domain) in Sections 4, 5, 7.
@@ -215,37 +252,36 @@ rest in Lean docstrings.
 
 ### 2.2 Lean (`lean/`)
 
-- **P0 Decide and implement the multiplication rule (D1).** If the symmetric rule is
-  adopted, restore the mirrored `Typed.mulLeftG`/`WellTyped.mulGE` cases (commit `f9cc30d`
-  had them) or add a general `[Mul]` with a mode side condition; the note says
-  `Affine.mul?` already accepts a constant factor on either side. If an asymmetric rule is
-  adopted, no change.
-- **P1 Certificate interface for the OCaml emitter.** Add a small public module (say
-  `Determinize/Certificate.lean`) with: a `decide`-able `sourceForm` lemma helper; tactic
-  or lemma library for `DoesNotGetStuck` on programs whose primitive parameters are
-  literals in-domain or otherwise syntactically safe (the private `safe_next`,
-  `safe_sample`, `safe_real`, `safe_let_uniform` helpers in `Proof/Examples.lean` are the
-  seed; they must become public and cover all six primitives, `let`, `if`, application);
-  a wrapper theorem taking `(p : Expr) (typed : Typed [] p (.float m)) (src : p.sourceForm
-  = true) (safe : DoesNotGetStuck p)` and returning the three expectation statements and
-  `MeanOnTraces`, so that a certificate is one `example` per program.
-- **P1 Decidable typing.** A `Typed` derivation is currently built by hand
-  (`Proof/Examples.lean`). Either make `Typed` decidable for closed terms (a checker
-  function with a soundness lemma, `decide`/`native_decide`), or have the OCaml emitter
-  print the derivation term. The checker is the smaller certificate and the better
-  engineering; it also gives the paper's "inference produces a valid typing" a checkable
-  form.
+- **Done 2026-09-11.** D1 to D4 needed no Lean change. Variance and mass theorems
+  (`outputMassThm`, `varianceThm`, `Traces.varianceThm`, commit 04963c0), the discrete
+  primitives `bernoulli`, `discrete`, `flip` (commit 72ea1d1) and `observe` with
+  `conditionalExpectationThm` (Part 3 D6) are in the trusted surface, exported in
+  `Theorems.lean` with standard axioms only, and described in `lean/README.md`. `MeanOnTraces`
+  is now `∃ fiber output, TraceFactorization …`, so the variance decomposition can quantify
+  over every factorization.
+- **P1 Certificate interface for the OCaml emitter** (stage 1 of
+  `pipeline-in-lean-analysis.md` §6, about one week, leaf-only, no `Statement/` change):
+  `Determinize/Certificate.lean` with a Bool typing checker `check : List Ty → Expr → Ty →
+  Bool` and its soundness lemma (so `Typed` is discharged by `decide`; `native_decide` is
+  excluded because it adds an axiom), a `decide`-able `sourceForm`, the public `safe_*`
+  lemma library for `DoesNotGetStuck` (the private helpers in `Proof/Examples.lean` are the
+  seed; they must cover all eight primitives, `let`, `if`, application, `observe`), and a
+  wrapper theorem `certify (p q) (typed) (src) (det : p.determinize = q) : DoesNotGetStuck p →
+  (mainThm, extendedExpectationThm, jensenThm, varianceThm conclusions and MeanOnTraces p q)`,
+  so that a certificate is one `example` per program. `p.determinize = q` closes by `rfl`
+  today; `decide` would need a decidable literal type (`Rat` or mantissa/exponent).
 - **P1 Extended-real Jensen** is stated for real-valued `φ`; the paper draft has
   `φ : ℝ → [0,∞]`. Either generalize the Lean or state the real-valued version in the paper
   (recommended: paper follows Lean).
-- **P2 Discrete primitives** (`flip`, `bernoulli`, `discrete`) if D5 says they enter the
-  theory: new `Op` constructors with Bernoulli/finite-support laws, means `p` and
-  `Σ pᵢ·i`, `affineArity` positions for `p`, plus the moment bounds. `observe` would need a
-  different theorem (conditioning) and is out of scope unless D6 says otherwise.
 - **P2 Subtraction and `<=`** as syntactic sugar lemmas (`a − b = a + (−b)`, `a ≤ b = ¬(b < a)`)
-  so that the implementation's operators are covered without new rules.
-- **P2** `lake build --wfail` and the axiom check are green today; keep the CI gate
-  (`.claude/scripts/check.sh lean`) and add the certificate check to it once it exists.
+  so that the implementation's operators are covered without new rules, the way `flip` is.
+- **P2 `discrete` over case expressions.** The OCaml AST allows `discrete` over arbitrary
+  expressions (`(float * expr) list`); the parser only produces the index form, which is what
+  the Lean formalizes. A mixture of E-typed expressions is sound by linearity but is not an
+  affine function of the E draws, so it would need a new symbolic rule; keep it out unless
+  the surface syntax grows.
+- **P2** `lake build --wfail` and the axiom check are green today (nine theorems); keep the CI
+  gate (`.claude/scripts/check.sh lean`) and add the certificate check to it once it exists.
 
 ### 2.3 OCaml (`ocaml/`)
 
@@ -256,18 +292,31 @@ rest in Lean docstrings.
   `ObserveFailure`) and report the stuck fraction in the `.dout`; this is what makes
   `det/funny.det` a validity failure instead of a silent wrong answer.
 - **P0 Typing rules per D1/D2.** `infer.ml` currently has the literal-based `Mul-*`, literal
-  `Div` plus non-literal `G/G`; align with the decision. Add an elaboration output with
-  explicit `promote` (D2) so that the certificate can be emitted.
+  `Div` plus non-literal `G/G`; replace them by the Lean rules (`Mul`: left operand G, right
+  operand at the result mode; `Div`: denominator G), with the deterministic inference choice
+  that the left factor is the G one. Add an elaboration output with explicit `promote` (D2)
+  so that the certificate can be emitted. Two further mismatches found while formalizing D5:
+  `infer.ml` types the probability of `flip` at a fresh mode variable (the Lean requires G,
+  since a Boolean feeds control flow; an E probability would be replaced by its mean inside a
+  `flip`, which is unsound), and `discrete`'s weights are normalized by their total in
+  `interp.ml` but summed unnormalized in `determinize.ml` (the Lean requires the weights to
+  sum to one; either reject other weight lists or normalize in both places).
+- **P1 `observe` semantics.** The interpreter's rejection sampling is the mass-normalized
+  reading of the Lean semantics (`observe(false)` contributes no mass) and is now justified
+  by `conditionalExpectationThm`; report the rejection fraction in the `.dout` and make the
+  Storm export treat rejection as an absorbing zero-reward state so that both sides agree.
 - **P1 Certificate emitter (`--certificate`).** New module (e.g. `to_lean.ml`): convert the
   elaborated typed AST to the Lean `Expr` (de Bruijn indices, `promote` at every G-to-E
   coercion, mode label and `Kind.stochastic` on every sample site, reject or desugar
-  `Sub`/`Leq`, reject `Flip`/`Bernoulli`/`Discrete`/`Observe` until D5/D6), print the
-  typing derivation or rely on the Lean checker, print the `sourceForm` and
+  `Sub`/`Leq`, map `flip` to `Expr.flip` and `bernoulli`/`discrete`/`observe` to their
+  constructors), rely on the Lean checker for typing, print the `sourceForm` and
   `DoesNotGetStuck` obligations, and the final `example : MeanOnTraces p p.determinize`.
   Also emit the determinized program as a Lean term and check `p.determinize = q` by
-  `rfl`/`decide`, so the certificate ties the OCaml output to the Lean transformation.
-  Add a `./certify.sh FILE.det` that runs the emitter and `lake env lean` on the result,
-  and a golden test in `det/`.
+  `rfl`, so the certificate ties the OCaml output to the Lean transformation. Per the D7
+  study, emit all programs into one generated `lean/Determinize/Generated/Certificates.lean`
+  listed in `Determinize.lean` (stage 2 of `pipeline-in-lean-analysis.md` §6, about 1.5
+  weeks), checked by `check.sh lean`; a per-program `lake env lean` check costs about 4 s
+  warm and is an acceptable `./certify.sh FILE.det` for interactive use.
 - **P1 Evaluation controls for Section 8.** `--trials N`, `--seed S`, per-trial values (or
   mean, standard error, and a confidence interval) in the `.dout`, wall-clock timing,
   stuck/rejected counts, and a machine-readable output (CSV or JSON) next to the report.
@@ -284,16 +333,18 @@ rest in Lean docstrings.
 
 ### 2.4 Simulator (`sim/`)
 
-- **P0 Typing rule per D1.** `sim/src/compiler/infer.js` has `left : m, right : G`; align.
-  Run `sync-sim` and `spec-impl-checker` after the OCaml change; rebuild `app.bundle.js`,
-  bump `?v=`.
+- **P0 Typing rule per D1.** `sim/src/compiler/infer.js` has `left : m, right : G`; the
+  Lean rule is the mirror image (`left : G, right : m`), so the sim's G factor moves to the
+  left, and the division rule (`right : G`) is already the Lean's. Run `sync-sim` and
+  `spec-impl-checker` after the OCaml change; rebuild `app.bundle.js`, bump `?v=`.
 - **P1 Off-domain draws** in `sim/src/runtime/distributions.js` must match the OCaml/Lean
-  convention (stuck, reported), same as 2.3.
+  convention (stuck, reported), same as 2.3; `observe(false)` is a rejected trial, and
+  `flip`'s probability must be forced to G as in the Lean.
 - **P1 Section 7.3 material:** a short description of the coupled G-tape runtime
   (`runtime/semantics.js`, `affine.js`) and one screenshot or trace rendering
   (`traceRender.js`) for the paper; make sure `examples.js` contains the Section 3 examples.
-- **P2** If discrete primitives enter the theory (D5), the sim already runs them; nothing
-  to do beyond the rule alignment.
+- **P2** The discrete primitives are now in the theory (D5); the sim already runs them, so
+  nothing to do beyond the rule alignment and the `discrete` weight normalization of 2.3.
 
 ### 2.5 Example programs (`det/`, `examples/`)
 
@@ -304,8 +355,9 @@ rest in Lean docstrings.
 - **P1 Section 3 examples as files:** the negative examples (`x·x`, `1/x`, `x < c`,
   `uniform_G(0, x)`) should exist as `.det` files whose `.dout` shows the type error; the
   tracewise/global example `uniform(1,2)/uniform(0,1)` as a file; `examples/paper/ex1..6`
-  need `.dout` outputs (none are checked in) and their header comments must match the final
-  typing rules (they currently annotate literal-based multiplication).
+  need `.dout` outputs (none are checked in) and their header comments must match the Lean
+  typing rules of D1 (they currently annotate literal-based multiplication); add one
+  `observe` example and one `bernoulli_E`/`discrete_E` example that the theory now covers.
 - **P1 Benchmark set for Section 8:** `.det` translations of `examples/baselines/*.sgcl`
   (`clickGraph.det` exists, `clinicalTrial` does not), expected values where known, a
   manifest (`examples/benchmarks.txt` or JSON) listing program, category, reference value,
@@ -331,57 +383,79 @@ rest in Lean docstrings.
 - **P1** `lean/README.md`: keep as the source of Section 7.1; add the certificate
   interface once it exists.
 - **P1** `CLAUDE.md` "Change semantics in four places" and the known-disagreement note must
-  be updated when D1 is implemented; the `det-lang` skill's "Constructs that force G" line
-  must follow the new multiplication rule.
+  be updated when the OCaml and the sim adopt the Lean rules (D1); the `det-lang` skill's
+  "Constructs that force G" line must then say: the left factor of `*`, the denominator of
+  `/`, comparison operands, `flip`'s probability, `gauss` variance, `exponential` rate,
+  `gamma` rate, `beta` parameters; and its transform line must list `observe` as kept.
 - **P2** A top-level `README.md` (none exists) describing the artifact layout for reviewers
   (paper artifact evaluation will need it).
 
 ---
 
-## 3. Cross-cutting decisions (each blocks items above)
+## 3. Cross-cutting decisions (taken 2026-09-11)
 
-- **D1 Multiplication and division rules.** Paper/OCaml: literal-based `Mul-ConstL/R`,
-  literal `Div`; sim: `left : m, right : G`; Lean: `left : G, right : m`, G denominator.
-  `lean/mul-div-typing.md` derives that the maximal sound rule is symmetric (one G factor,
-  any G denominator) and recommends adopting it in all four artifacts (Option A), with a
-  deterministic tie-break in inference. Blocks 2.1, 2.2, 2.3, 2.4, 2.5, 2.7.
-- **D2 Subsumption vs explicit `promote`.** Recommended: core calculus with `promote` (as
-  mechanized) in Sections 4 to 6, surface subtyping as an elaboration performed by
-  inference and described in Section 4/appendix, stated as not mechanized. Blocks the
-  certificate emitter and the Section 4 rules.
-- **D3 Where mode annotations live.** Recommended: on sample sites only (Lean), which is
-  what inference outputs; the determinization table then reads as a definition on annotated
-  terms. Blocks Section 4 and the emitter.
-- **D4 Validity and degenerate cases.** Adopt `DoesNotGetStuck` (E draws included), zero
-  measure off-domain for stochastic and mean sites, `uniform(a,a) = δ_a`, `x/0 = 0`, in the
-  paper and in both interpreters. Blocks 2.3 P0, 2.4 P1, 2.5.
-- **D5 Discrete primitives in the theory.** `flip`/`bernoulli`/`discrete` are cheap to add
-  to the Lean (finite-support laws, affine means) and would let Storm-checked programs be
-  certified; without them Section 7.3's Storm export only applies to programs the theorem
-  does not cover once continuous E draws are determinized away. Recommended: add
-  `bernoulli` (float-valued, mean `p`, `p` may be E) and `flip` (boolean, `p` must be G);
-  `discrete` with literal probabilities is a finite mixture and also fits.
-- **D6 `observe`.** Out of the theorem; the interpreter's rejection sampling on the
-  determinized program is *not* justified by the theory (conditioning does not commute
-  with replacing draws by means). Either exclude `observe` from the evaluation and say so,
-  or make it future work with a precise statement of what breaks.
-- **D7 Certificate granularity.** Per-program Lean file checked by `lake env lean`
-  (simple, slow: Mathlib import per check) vs a single generated `Certificates.lean`
-  built with the project (fast, one `lake build`). Recommended: one generated file under
-  `lean/Determinize/Generated/`, listed in `Determinize.lean`, so `lake build --wfail`
-  checks all certificates and the axiom report covers them.
+- **D1 Multiplication and division rules.** Decided: the Lean rules. `e₁ × e₂ : Float[m]`
+  requires `e₁ : Float[G]` and `e₂ : Float[m]`; `e₁ / e₂ : Float[m]` requires `e₁ : Float[m]`
+  and `e₂ : Float[G]`. There is no implicit `G → E` cast, so a general-mode factor on the
+  right of `×` has to be promoted explicitly. The symmetric rule of `lean/mul-div-typing.md`
+  §3 stays a remark (the paper may mention it as a possible extension); `<=` stays outside
+  the core language. Still to do: paper (2.1), OCaml (2.3), sim (2.4), examples (2.5),
+  docs (2.7). Lean: nothing.
+- **D2 Subsumption vs explicit `promote`.** Decided: explicit `promote` as mechanized; the
+  paper adds a sentence that the coercion could be made implicit by an elaboration pass
+  inserting `promote` at every `G`-to-`E` position. Lean: nothing.
+- **D3 Where mode annotations live.** Decided: on sample sites only; determinization is a
+  function on untyped annotated terms, as in the Lean. Lean: nothing.
+- **D4 Validity and degenerate cases.** Decided: as in the Lean (`DoesNotGetStuck` with E
+  draws included, zero measure off-domain at stochastic and mean sites, `uniform(a,a) = δ_a`,
+  `x/0 = 0`). Lean: nothing; both interpreters still have to follow (2.3 P0, 2.4 P1).
+- **D5 Discrete primitives in the theory.** Decided: add them. Done in Lean (commit
+  72ea1d1): `bernoulli mode kind p` with the probability at the site's mode, `discrete mode
+  kind weights` over literal weights (the parser's only form), `flip p` as the sugar
+  `0 < bernoulli_G(p)`. Answer to "do they get determinized": `bernoulli_E(p)` becomes its
+  mean `p` and `discrete_E(p₁…pₙ)` becomes `∑ i·pᵢ`, both covered by every theorem;
+  `flip` is Boolean, has no mean, feeds control flow, and is therefore never determinized
+  and needs a general-mode probability (`ocaml/infer.ml` currently types it at a fresh mode
+  variable, which is unsound and must change). A mixture over case expressions (the OCaml
+  AST's general `discrete`) is not formalized.
+- **D6 `observe`.** Decided: add it so that the theorems keep working. Done in Lean (see
+  Part 0): no sub-distribution machinery was needed, because the output laws were already
+  unnormalized sub-probability measures and `MeanOnTraces` already says that the target has
+  the same trace law and therefore the same mass. `observe(c)` needs `c : bool`, and every
+  Boolean is general-mode information (comparisons take G operands, `promote` only goes
+  `G → E`), so source and target reject exactly the same G traces; `observe(false)`
+  contributes no output and no trace mass and is not stuckness. The new
+  `conditionalExpectationThm` says that the mass-normalized expectations agree, which is what
+  justifies rejection sampling on the determinized program. What would break: an `observe`
+  on an E-dependent condition (conditioning does not commute with replacing a draw by its
+  mean), which the type system rules out. Proof-internal detail worth knowing for the
+  paper's appendix: the one-step kernel of `Proof/Internal/Semantics.lean` sends a rejection
+  to the sink value `unit`, which never yields a real output, so that the kernel of a valid
+  program stays a probability kernel and the existing "not stuck iff no mass lost"
+  characterization survives; the public definitions send `reject` to the zero measure.
+- **D7 Certificate granularity and a pipeline in Lean.** Decided: study only. The study
+  (`pipeline-in-lean-analysis.md`) recommends the Lean+OCaml split now, staged: (1) a
+  leaf-only `Certificate.lean` with a decidable typing checker and a wrapper theorem; (2) an
+  OCaml emitter writing all benchmarks into one generated `Certificates.lean` checked by
+  `lake build --wfail` (already a real certificate, conditional on validity, enough for the
+  paper's Section 7); (3) validity automation; (4) optionally a Mathlib-free literal-polymorphic
+  core and a `lake exe determinize` so the OCaml emitter leaves the trust base. Rocq with
+  certified extraction is not recommended (library gaps, no reuse of the 16K-line proof,
+  12 to 24 person-months). `native_decide` must not be used in certificates (it adds an axiom).
 
 ---
 
 ## 4. Suggested order of work
 
-1. Take decisions D1 to D7 (one meeting; record them in `TODO.md` and `CLAUDE.md`).
-2. Lean: implement D1 and the certificate interface (2.2 P0/P1); keep `lake build --wfail`
-   green.
-3. OCaml: interpreter validity (2.3 P0), typing alignment, elaboration with `promote`,
-   then the emitter and `certify.sh`; regenerate `det/` outputs; sync the sim (2.4).
-4. Examples: fix `funny.det`, add the Section 3 files, build the benchmark manifest (2.5).
-5. Harness and reference values (2.3 P1, 2.6); produce the tables for Section 8.
-6. Paper: restructure files, write Sections 4 to 6 from the Lean statements first (they are
-   stable), then 2, 3, 7, 8, then 1, 9, 10; run `paper-reviewer` and `spec-impl-checker`
-   before each round.
+1. Lean: the certificate interface (2.2 P1, D7 stage 1); keep `lake build --wfail` green.
+2. OCaml: interpreter validity (2.3 P0), typing alignment with the Lean rules including
+   `flip` and `discrete` (2.3 P0), elaboration with `promote`, then the emitter and the
+   generated certificate file (D7 stage 2); regenerate `det/` outputs; sync the sim (2.4).
+3. Examples: fix `funny.det`, add the Section 3 files and the `observe`/`bernoulli`/`discrete`
+   examples, build the benchmark manifest (2.5).
+4. Harness and reference values (2.3 P1, 2.6); produce the tables for Section 8.
+5. Paper: restructure files, write Sections 4 to 6 from the Lean statements first (they are
+   stable and now include mass, variance, total variance and conditional expectation), then
+   2, 3, 7, 8, then 1, 9, 10; run `paper-reviewer` and `spec-impl-checker` before each round.
+6. Record the open items of Part 2 in `TODO.md` (2.6 P2) and update `CLAUDE.md` when the
+   OCaml and the sim have adopted D1 (2.7).

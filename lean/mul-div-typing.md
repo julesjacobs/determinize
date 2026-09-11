@@ -222,7 +222,14 @@ fixed. This single principle reproduces every existing rule:
 
 ## 7. Recommendation
 
-**Option A, recommended: adopt the symmetric rules everywhere.**
+**Decision (authors, 2026-09-11): the Lean rules are authoritative.** `e₁ × e₂` types at
+`Float[m]` exactly when `e₁ : Float[G]` and `e₂ : Float[m]`, and `e₁ / e₂` exactly when
+`e₁ : Float[m]` and `e₂ : Float[G]`; there is no implicit `G → E` cast, so a general-mode
+value on the right of `×` has to be promoted explicitly. The paper, the OCaml and the sim
+are to adopt these two rules; the symmetric `[Mul]` of section 3 stays a remark. The two
+options below are kept for the record.
+
+**Option A: adopt the symmetric rules everywhere.**
 
 - Paper: replace `Mul-G`, `Mul-ConstL` and `Mul-ConstR` by `[Mul]`, and the literal
   `c` in `Div` by an arbitrary `e₂ : Float[m₂]` with `m₂ ≼ G`. The soundness proof
