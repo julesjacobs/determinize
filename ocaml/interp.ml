@@ -50,9 +50,9 @@ module StdRng : RNG = struct
     match ps with
     | [] -> failwith "discrete: empty probability list"
     | _ ->
+        List.iter (fun p -> if p < 0.0 || p > 1.0 then failwith "discrete: probability not in [0,1]") ps;
         let total = List.fold_left ( +. ) 0.0 ps in
-        if total <= 0.0 then failwith "discrete: total probability <= 0";
-        (* check this? *)
+        if Float.abs (total -. 1.0) > 1e-9 then failwith "discrete: probabilities must sum to 1";
         let r = Random.float total in
         let rec pick i acc = function
           | [] -> max 0 (i - 1)  (* numeric drift fallback *)
