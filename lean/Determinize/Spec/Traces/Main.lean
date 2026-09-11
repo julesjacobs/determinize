@@ -23,7 +23,7 @@ noncomputable def traceThenOutput (traces : Measure Trace) (outputs : Trace → 
 noncomputable def replayMean (program : Expr) (trace : Trace) : ℝ :=
   ∫ value : ℝ, value ∂outputGivenTrace program trace
 
-/-- Trace soundness. Conditioned on its general-mode draws, the determinized program returns
+/-- Trace soundness. Conditioned on its G draws, the determinized program returns
 the conditional mean of the source: the joint trace/output law of the source is its trace law
 followed by `outputGivenTrace`, the joint law of the target is the same trace law followed by
 the target's `outputGivenTrace`, and for almost every trace the source's output law given the

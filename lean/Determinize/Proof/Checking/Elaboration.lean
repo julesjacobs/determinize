@@ -14,11 +14,11 @@ theorem interpret_sourceForm (e : Core) :
     (interpret e).sourceForm = e.sourceForm := by
   induction e <;> simp_all [interpret, Expr.mapLiteral, Expr.sourceForm]
 
-theorem certified_alignment {input modes} (p : Certified input modes) :
+theorem certified_alignment {input affinities} (p : Certified input affinities) :
     eraseAnnotations p.source = eraseAnnotations input := p.aligned
 
-theorem certified_trace_soundness {input modes} (p : Certified input modes)
-    (m : Mode) (hTy : p.ty = .float m)
+theorem certified_trace_soundness {input affinities} (p : Certified input affinities)
+    (m : Affinity) (hTy : p.ty = .float m)
     (safe : DoesNotGetStuck (interpret p.source)) :
     DoesNotGetStuck (interpret p.source.determinize) ∧
       traceAndOutputLaw (interpret p.source) =
@@ -39,8 +39,8 @@ theorem certified_trace_soundness {input modes} (p : Certified input modes)
   exact Determinize.Theorems.traceSoundness (interpret p.source)
     typed ((interpret_sourceForm _).trans p.sourceOnly) safe
 
-theorem certified_expectation {input modes} (p : Certified input modes)
-    (m : Mode) (hTy : p.ty = .float m)
+theorem certified_expectation {input affinities} (p : Certified input affinities)
+    (m : Affinity) (hTy : p.ty = .float m)
     (safe : DoesNotGetStuck (interpret p.source))
     (integrable : Integrable id (bigStepMeasure (interpret p.source))) :
     DoesNotGetStuck (interpret p.source.determinize) ∧

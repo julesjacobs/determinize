@@ -14,8 +14,8 @@ private def distributionText (d : FiniteDistribution) : String :=
 private def opText : Op → String
   | .discrete d => s!"(.discrete {distributionText d})"
   | op => reprStr op
-private def siteText (site : Mode × Kind × Op) : String :=
-  s!"({reprStr site.1}, {reprStr site.2.1}, {opText site.2.2})"
+private def siteText (site : DistributionAction × Op) : String :=
+  s!"({reprStr site.1}, {opText site.2})"
 
 private partial def valueText : Value → String
   | .unit => ".unit" | .nil => ".nil"

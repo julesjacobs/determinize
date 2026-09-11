@@ -5,13 +5,13 @@ open Frontend Checking Spec.Paper
 
 def inference : IO Unit := do
   let p ← IO.ofExcept (compile "uniform(0,1) + gauss(2,1)")
-  assert (sampleModes p.checked.source == [.E,.E]) "unconstrained draws should use E"
+  assert (sampleAffinities p.checked.source == [.E,.E]) "unconstrained draws should use E"
   let p ← IO.ofExcept (compile "let x = uniform(0,1) in if x < 0.5 then x else 0")
-  assert (sampleModes p.checked.source == [.G]) "branching must force G"
+  assert (sampleAffinities p.checked.source == [.G]) "branching must force G"
   let p ← IO.ofExcept (compile "uniform[G](1,2) * uniform[E](0,1)")
-  assert (sampleModes p.checked.source == [.G,.E]) "general left multiplication"
+  assert (sampleAffinities p.checked.source == [.G,.E]) "general left multiplication"
   let p ← IO.ofExcept (compile "uniform[E](0,1) / uniform[G](1,2)")
-  assert (sampleModes p.checked.source == [.E,.G]) "general denominator"
+  assert (sampleAffinities p.checked.source == [.E,.G]) "general denominator"
   for text in ["let x = uniform[E](0,1) in x*x",
       "uniform[E](0,1) < 0.5", "uniform[G](0,uniform[E](0,1))", "fun x => x x",
       "true + 1", "missing", "flip(uniform[E](0,1))",
@@ -30,7 +30,7 @@ def inference : IO Unit := do
       "let f = if true then (fun x => uniform[G](0,1)) else (fun x => uniform[E](0,1)) in f 0",
       "let f = if true then (rec f x => if x < 0 then f (x+1) else uniform[G](0,1)) else (fun x => uniform[E](0,1)) in f 0"] do
     let p ← IO.ofExcept (compile text)
-    assert ((sampleModes p.checked.source).contains .G && (sampleModes p.checked.source).contains .E)
-      s!"structural subtyping changed requested modes: {text}"
+    assert ((sampleAffinities p.checked.source).contains .G && (sampleAffinities p.checked.source).contains .E)
+      s!"structural subtyping changed requested affinities: {text}"
 
 end Determinize.Tests

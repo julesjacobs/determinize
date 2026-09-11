@@ -20,10 +20,10 @@ example (d : FiniteDistribution) :
       (d.mean : ℝ) :=
   primitiveLaws.mean_law (.discrete d) _ trivial
 
-example (kind : Kind) : primitiveFiber kind .bernoulli [] [] = 0 := by
+example (kind : DistributionAction) : primitiveFiber kind .bernoulli [] [] = 0 := by
   cases kind <;> simp [primitiveFiber, parseParams]
 
-example (kind : Kind) (d : FiniteDistribution) :
+example (kind : DistributionAction) (d : FiniteDistribution) :
     primitiveFiber kind (.discrete d) [1] [] = 0 := by
   cases kind <;> simp [primitiveFiber, parseParams]
 

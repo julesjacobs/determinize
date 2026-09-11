@@ -125,12 +125,12 @@ private partial def expr (minPrec : Nat := 0) : P Surface := do
     | "true" | "false" => pure (node t [])
     | _ => do
       if primitives.contains t then
-        let mut mode := none
+        let mut affinity := none
         if (← peek) == "[" then
           expect "["
-          mode ← match (← take) with
-            | "E" => pure (some Mode.E)
-            | "G" => pure (some Mode.G)
+          affinity ← match (← take) with
+            | "E" => pure (some Affinity.E)
+            | "G" => pure (some Affinity.G)
             | x => throw s!"expected E or G, got {x}"
           expect "]"
         expect "("
@@ -139,7 +139,7 @@ private partial def expr (minPrec : Nat := 0) : P Surface := do
           args := [← expr]
           while (← peek) == "," do expect ","; args := args ++ [← expr]
         expect ")"
-        pure (.node t [] mode args)
+        pure (.node t [] affinity args)
       else if t.toList.head?.any Char.isDigit then
         pure (.number (← decimal t))
       else if t.toList.head?.any identStart then pure (.var t)

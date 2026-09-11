@@ -63,6 +63,7 @@ theorem typed_shift (h : Typed (before ++ suffix) expression ty) :
       exact .bvar (hasVar_shift hvar)
   | reject => rw [Expr.shift, Expr.mapVars]; exact .reject
   | discrete => rw [Expr.shift, Expr.mapVars]; exact .discrete
+  | discreteMean => rw [Expr.shift, Expr.mapVars]; exact .discreteMean
   | unit => rw [Expr.shift, Expr.mapVars]; exact .unit
   | bool => rw [Expr.shift, Expr.mapVars]; exact .bool
   | real => rw [Expr.shift, Expr.mapVars]; exact .real
@@ -148,12 +149,30 @@ theorem typed_shift (h : Typed (before ++ suffix) expression ty) :
           (ihr (before := before) (suffix := suffix) hcontext)
       | exact .gamma (ihl (before := before) (suffix := suffix) hcontext)
           (ihr (before := before) (suffix := suffix) hcontext)
+  | uniformMean hl hr ihl ihr | gaussianMean hl hr ihl ihr | betaMean hl hr ihl ihr | gammaMean hl hr ihl ihr =>
+      rw [Expr.shift, Expr.mapVars]
+      first
+      | exact .uniformMean (ihl (before := before) (suffix := suffix) hcontext)
+          (ihr (before := before) (suffix := suffix) hcontext)
+      | exact .gaussianMean (ihl (before := before) (suffix := suffix) hcontext)
+          (ihr (before := before) (suffix := suffix) hcontext)
+      | exact .betaMean (ihl (before := before) (suffix := suffix) hcontext)
+          (ihr (before := before) (suffix := suffix) hcontext)
+      | exact .gammaMean (ihl (before := before) (suffix := suffix) hcontext)
+          (ihr (before := before) (suffix := suffix) hcontext)
   | poisson hv ih | bernoulli hv ih | exponential hv ih =>
       rw [Expr.shift, Expr.mapVars]
       first
       | exact .poisson (ih (before := before) (suffix := suffix) hcontext)
       | exact .bernoulli (ih (before := before) (suffix := suffix) hcontext)
       | exact .exponential (ih (before := before) (suffix := suffix) hcontext)
+
+  | poissonMean hv ih | bernoulliMean hv ih | exponentialMean hv ih =>
+      rw [Expr.shift, Expr.mapVars]
+      first
+      | exact .poissonMean (ih (before := before) (suffix := suffix) hcontext)
+      | exact .bernoulliMean (ih (before := before) (suffix := suffix) hcontext)
+      | exact .exponentialMean (ih (before := before) (suffix := suffix) hcontext)
 
 theorem hasVar_subst (h : HasVar (before ++ binder :: suffix) index ty) :
     (index = before.length ∧ ty = binder) ∨
@@ -214,6 +233,7 @@ theorem typed_substAt (h : Typed (before ++ binder :: suffix) expression ty)
         exact .bvar shifted
   | reject => rw [Expr.substAt, Expr.mapVars]; exact .reject
   | discrete => rw [Expr.substAt, Expr.mapVars]; exact .discrete
+  | discreteMean => rw [Expr.substAt, Expr.mapVars]; exact .discreteMean
   | unit => rw [Expr.substAt, Expr.mapVars]; exact .unit
   | bool => rw [Expr.substAt, Expr.mapVars]; exact .bool
   | real => rw [Expr.substAt, Expr.mapVars]; exact .real
@@ -307,12 +327,29 @@ theorem typed_substAt (h : Typed (before ++ binder :: suffix) expression ty)
           (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
       | exact .gamma (ihl replacementTyped (before := before) (suffix := suffix) hcontext)
           (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
+  | uniformMean hl hr ihl ihr | gaussianMean hl hr ihl ihr | betaMean hl hr ihl ihr | gammaMean hl hr ihl ihr =>
+      rw [Expr.substAt, Expr.mapVars]
+      first
+      | exact .uniformMean (ihl replacementTyped (before := before) (suffix := suffix) hcontext)
+          (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
+      | exact .gaussianMean (ihl replacementTyped (before := before) (suffix := suffix) hcontext)
+          (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
+      | exact .betaMean (ihl replacementTyped (before := before) (suffix := suffix) hcontext)
+          (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
+      | exact .gammaMean (ihl replacementTyped (before := before) (suffix := suffix) hcontext)
+          (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
   | poisson hv ih | bernoulli hv ih | exponential hv ih =>
       rw [Expr.substAt, Expr.mapVars]
       first
       | exact .poisson (ih replacementTyped (before := before) (suffix := suffix) hcontext)
       | exact .bernoulli (ih replacementTyped (before := before) (suffix := suffix) hcontext)
       | exact .exponential (ih replacementTyped (before := before) (suffix := suffix) hcontext)
+  | poissonMean hv ih | bernoulliMean hv ih | exponentialMean hv ih =>
+      rw [Expr.substAt, Expr.mapVars]
+      first
+      | exact .poissonMean (ih replacementTyped (before := before) (suffix := suffix) hcontext)
+      | exact .bernoulliMean (ih replacementTyped (before := before) (suffix := suffix) hcontext)
+      | exact .exponentialMean (ih replacementTyped (before := before) (suffix := suffix) hcontext)
 theorem typed_substHead (bodyTyped : Typed (binder :: suffix) body ty)
     (replacementTyped : Typed suffix replacement binder) :
     Typed suffix (Expr.substHead body replacement) ty := by
@@ -417,10 +454,10 @@ theorem typed_bool_value (typed : Typed context expression .bool)
     exact ih value rfl
   all_goals cases ht <;> simp_all [Expr.isValue]
 
-theorem typed_real_value (typed : Typed context expression (.float mode))
+theorem typed_real_value (typed : Typed context expression (.float affinity))
     (value : expression.isValue = true) : ∃ result, expression = .real result := by
-  generalize ht : Ty.float mode = ty at typed
-  induction typed generalizing mode
+  generalize ht : Ty.float affinity = ty at typed
+  induction typed generalizing affinity
   case sub h sub ih =>
     cases sub <;> cases ht <;> exact ih value rfl
   all_goals cases ht <;> simp_all [Expr.isValue]
@@ -434,6 +471,7 @@ theorem reduce_typed_closed
       exact (noVar_nil hvar).elim
   | reject => rw [reduce]; exact .next .reject
   | discrete => rw [reduce]; exact .sample fun _ => .real
+  | discreteMean => rw [reduce]; exact .sample fun _ => .real
   | unit => rw [reduce]; exact .next .unit
   | bool => rw [reduce]; exact .next .bool
   | real => rw [reduce]; exact .next .real
@@ -566,7 +604,7 @@ theorem reduce_typed_closed
       exact (ih rfl).sub h
   | neg valueTyped ih =>
       cases hcontext
-      rename_i value mode
+      rename_i value affinity
       rw [MeasurableActionFamily.reduce_neg_eq]
       by_cases valueCondition : value.isValue = true
       · simp only [valueCondition, ↓reduceIte]
@@ -576,7 +614,7 @@ theorem reduce_typed_closed
         exact (ih rfl).wrap fun next nextTyped => .neg nextTyped
   | add leftTyped rightTyped ihl ihr =>
       cases hcontext
-      rename_i left mode right
+      rename_i left affinity right
       rw [MeasurableActionFamily.reduce_add_eq]
       by_cases leftValue : left.isValue = true
       · simp only [leftValue, ↓reduceIte]
@@ -591,7 +629,7 @@ theorem reduce_typed_closed
         exact (ihl rfl).wrap fun next nextTyped => .add nextTyped rightTyped
   | mul leftTyped rightTyped ihl ihr =>
       cases hcontext
-      rename_i left right mode
+      rename_i left right affinity
       rw [MeasurableActionFamily.reduce_mul_eq]
       by_cases leftValue : left.isValue = true
       · simp only [leftValue, ↓reduceIte]
@@ -606,7 +644,7 @@ theorem reduce_typed_closed
         exact (ihl rfl).wrap fun next nextTyped => .mul nextTyped rightTyped
   | div leftTyped rightTyped ihl ihr =>
       cases hcontext
-      rename_i left mode right
+      rename_i left affinity right
       rw [MeasurableActionFamily.reduce_div_eq]
       by_cases leftValue : left.isValue = true
       · simp only [leftValue, ↓reduceIte]
@@ -634,9 +672,9 @@ theorem reduce_typed_closed
           exact (ihr rfl).wrap fun next nextTyped => .lt leftTyped nextTyped
       · simp only [leftValue, ↓reduceIte]
         exact (ihl rfl).wrap fun next nextTyped => .lt nextTyped rightTyped
-  | uniform leftTyped rightTyped ihl ihr =>
+  | uniform leftTyped rightTyped ihl ihr | uniformMean leftTyped rightTyped ihl ihr =>
       cases hcontext
-      rename_i left mode right kind
+      rename_i left affinity right
       rw [MeasurableActionFamily.reduce_uniform_eq]
       by_cases leftValue : left.isValue = true
       · simp only [leftValue, ↓reduceIte]
@@ -646,12 +684,16 @@ theorem reduce_typed_closed
           rcases typed_real_value rightTyped rightValue with ⟨right, rfl⟩
           exact .sample fun value => .real
         · simp only [rightValue, ↓reduceIte]
-          exact (ihr rfl).wrap fun next nextTyped => .uniform leftTyped nextTyped
+          first
+          | exact (ihr rfl).wrap fun next nextTyped => .uniform leftTyped nextTyped
+          | exact (ihr rfl).wrap fun next nextTyped => .uniformMean leftTyped nextTyped
       · simp only [leftValue, ↓reduceIte]
-        exact (ihl rfl).wrap fun next nextTyped => .uniform nextTyped rightTyped
-  | gaussian leftTyped rightTyped ihl ihr =>
+        first
+        | exact (ihl rfl).wrap fun next nextTyped => .uniform nextTyped rightTyped
+        | exact (ihl rfl).wrap fun next nextTyped => .uniformMean nextTyped rightTyped
+  | gaussian leftTyped rightTyped ihl ihr | gaussianMean leftTyped rightTyped ihl ihr =>
       cases hcontext
-      rename_i left mode right kind
+      rename_i left affinity right
       rw [MeasurableActionFamily.reduce_gaussian_eq]
       by_cases leftValue : left.isValue = true
       · simp only [leftValue, ↓reduceIte]
@@ -661,42 +703,52 @@ theorem reduce_typed_closed
           rcases typed_real_value rightTyped rightValue with ⟨right, rfl⟩
           exact .sample fun value => .real
         · simp only [rightValue, ↓reduceIte]
-          exact (ihr rfl).wrap fun next nextTyped => .gaussian leftTyped nextTyped
+          first
+          | exact (ihr rfl).wrap fun next nextTyped => .gaussian leftTyped nextTyped
+          | exact (ihr rfl).wrap fun next nextTyped => .gaussianMean leftTyped nextTyped
       · simp only [leftValue, ↓reduceIte]
-        exact (ihl rfl).wrap fun next nextTyped => .gaussian nextTyped rightTyped
-  | poisson valueTyped ih =>
+        first
+        | exact (ihl rfl).wrap fun next nextTyped => .gaussian nextTyped rightTyped
+        | exact (ihl rfl).wrap fun next nextTyped => .gaussianMean nextTyped rightTyped
+  | poisson valueTyped ih | poissonMean valueTyped ih =>
       cases hcontext
-      rename_i value mode kind
+      rename_i value affinity
       rw [MeasurableActionFamily.reduce_poisson_eq]
       by_cases valueCondition : value.isValue = true
       · simp only [valueCondition, ↓reduceIte]
         rcases typed_real_value valueTyped valueCondition with ⟨coordinate, rfl⟩
         exact .sample fun value => .real
       · simp only [valueCondition, ↓reduceIte]
-        exact (ih rfl).wrap fun next nextTyped => .poisson nextTyped
-  | bernoulli valueTyped ih =>
+        first
+        | exact (ih rfl).wrap fun next nextTyped => .poisson nextTyped
+        | exact (ih rfl).wrap fun next nextTyped => .poissonMean nextTyped
+  | bernoulli valueTyped ih | bernoulliMean valueTyped ih =>
       cases hcontext
-      rename_i value mode kind
+      rename_i value affinity
       rw [MeasurableActionFamily.reduce_bernoulli_eq]
       by_cases valueCondition : value.isValue = true
       · simp only [valueCondition, ↓reduceIte]
         rcases typed_real_value valueTyped valueCondition with ⟨coordinate, rfl⟩
         exact .sample fun value => .real
       · simp only [valueCondition, ↓reduceIte]
-        exact (ih rfl).wrap fun next nextTyped => .bernoulli nextTyped
-  | exponential valueTyped ih =>
+        first
+        | exact (ih rfl).wrap fun next nextTyped => .bernoulli nextTyped
+        | exact (ih rfl).wrap fun next nextTyped => .bernoulliMean nextTyped
+  | exponential valueTyped ih | exponentialMean valueTyped ih =>
       cases hcontext
-      rename_i value mode kind
+      rename_i value affinity
       rw [MeasurableActionFamily.reduce_exponential_eq]
       by_cases valueCondition : value.isValue = true
       · simp only [valueCondition, ↓reduceIte]
         rcases typed_real_value valueTyped valueCondition with ⟨coordinate, rfl⟩
         exact .sample fun value => .real
       · simp only [valueCondition, ↓reduceIte]
-        exact (ih rfl).wrap fun next nextTyped => .exponential nextTyped
-  | beta leftTyped rightTyped ihl ihr =>
+        first
+        | exact (ih rfl).wrap fun next nextTyped => .exponential nextTyped
+        | exact (ih rfl).wrap fun next nextTyped => .exponentialMean nextTyped
+  | beta leftTyped rightTyped ihl ihr | betaMean leftTyped rightTyped ihl ihr =>
       cases hcontext
-      rename_i left right mode kind
+      rename_i left right affinity
       rw [MeasurableActionFamily.reduce_beta_eq]
       by_cases leftValue : left.isValue = true
       · simp only [leftValue, ↓reduceIte]
@@ -706,12 +758,16 @@ theorem reduce_typed_closed
           rcases typed_real_value rightTyped rightValue with ⟨right, rfl⟩
           exact .sample fun value => .real
         · simp only [rightValue, ↓reduceIte]
-          exact (ihr rfl).wrap fun next nextTyped => .beta leftTyped nextTyped
+          first
+          | exact (ihr rfl).wrap fun next nextTyped => .beta leftTyped nextTyped
+          | exact (ihr rfl).wrap fun next nextTyped => .betaMean leftTyped nextTyped
       · simp only [leftValue, ↓reduceIte]
-        exact (ihl rfl).wrap fun next nextTyped => .beta nextTyped rightTyped
-  | gamma leftTyped rightTyped ihl ihr =>
+        first
+        | exact (ihl rfl).wrap fun next nextTyped => .beta nextTyped rightTyped
+        | exact (ihl rfl).wrap fun next nextTyped => .betaMean nextTyped rightTyped
+  | gamma leftTyped rightTyped ihl ihr | gammaMean leftTyped rightTyped ihl ihr =>
       cases hcontext
-      rename_i left mode right kind
+      rename_i left affinity right
       rw [MeasurableActionFamily.reduce_gamma_eq]
       by_cases leftValue : left.isValue = true
       · simp only [leftValue, ↓reduceIte]
@@ -721,9 +777,13 @@ theorem reduce_typed_closed
           rcases typed_real_value rightTyped rightValue with ⟨right, rfl⟩
           exact .sample fun value => .real
         · simp only [rightValue, ↓reduceIte]
-          exact (ihr rfl).wrap fun next nextTyped => .gamma leftTyped nextTyped
+          first
+          | exact (ihr rfl).wrap fun next nextTyped => .gamma leftTyped nextTyped
+          | exact (ihr rfl).wrap fun next nextTyped => .gammaMean leftTyped nextTyped
       · simp only [leftValue, ↓reduceIte]
-        exact (ihl rfl).wrap fun next nextTyped => .gamma nextTyped rightTyped
+        first
+        | exact (ihl rfl).wrap fun next nextTyped => .gamma nextTyped rightTyped
+        | exact (ihl rfl).wrap fun next nextTyped => .gammaMean nextTyped rightTyped
 
 theorem doesNotGetStuckAt_imp_primitiveDomainSafeAt
     (safe : Determinize.Spec.Paper.DoesNotGetStuckAt fuel expression) :

@@ -19,7 +19,7 @@ abbrev Skeleton := Expr Unit
 namespace Expr
 
 def skeleton : Expr → Skeleton
-  | .discrete mode kind d => .discrete mode kind d
+  | .discrete kind d => .discrete kind d
   | .bvar i => .bvar i | .reject => .reject | .unit => .unit | .bool b => .bool b
   | .real _ => .real () | .lam b => .lam b.skeleton
   | .fix b => .fix b.skeleton | .app f x => .app f.skeleton x.skeleton
@@ -34,13 +34,13 @@ def skeleton : Expr → Skeleton
   | .neg x => .neg x.skeleton
   | .add l r => .add l.skeleton r.skeleton | .mul l r => .mul l.skeleton r.skeleton
   | .div l r => .div l.skeleton r.skeleton | .lt l r => .lt l.skeleton r.skeleton
-  | .uniform m k l r => .uniform m k l.skeleton r.skeleton
-  | .gaussian m k l r => .gaussian m k l.skeleton r.skeleton
-  | .poisson m k x => .poisson m k x.skeleton
-  | .bernoulli m k x => .bernoulli m k x.skeleton
-  | .exponential m k x => .exponential m k x.skeleton
-  | .beta m k l r => .beta m k l.skeleton r.skeleton
-  | .gamma m k l r => .gamma m k l.skeleton r.skeleton
+  | .uniform k l r => .uniform k l.skeleton r.skeleton
+  | .gaussian k l r => .gaussian k l.skeleton r.skeleton
+  | .poisson k x => .poisson k x.skeleton
+  | .bernoulli k x => .bernoulli k x.skeleton
+  | .exponential k x => .exponential k x.skeleton
+  | .beta k l r => .beta k l.skeleton r.skeleton
+  | .gamma k l r => .gamma k l.skeleton r.skeleton
 
 def realCoordinates : Expr → List ℝ
   | .real value => [value]
@@ -52,9 +52,9 @@ def realCoordinates : Expr → List ℝ
       x.realCoordinates ++ l.realCoordinates ++ r.realCoordinates
   | .matchList x n c => x.realCoordinates ++ n.realCoordinates ++ c.realCoordinates
   | .letE x b => x.realCoordinates ++ b.realCoordinates
-  | .uniform _ _ l r | .gaussian _ _ l r | .beta _ _ l r | .gamma _ _ l r =>
+  | .uniform _ l r | .gaussian _ l r | .beta _ l r | .gamma _ l r =>
       l.realCoordinates ++ r.realCoordinates
-  | .poisson _ _ x | .bernoulli _ _ x | .exponential _ _ x => x.realCoordinates
+  | .poisson _ x | .bernoulli _ x | .exponential _ x => x.realCoordinates
   | _ => []
 
 end Expr

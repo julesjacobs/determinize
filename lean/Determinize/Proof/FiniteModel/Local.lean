@@ -18,9 +18,9 @@ theorem paperStep_next (before after : State) (notValue : (stateExpr before).isV
   · intro fuel
     simp [DoesNotGetStuckAt, notValue, reduction]
 
-theorem paperStep_sample (before : State) (site : Mode × Kind × Op) (arguments : List Rat)
+theorem paperStep_sample (before : State) (site : DistributionAction × Op) (arguments : List Rat)
     (outcomes : List (Rat × Rat)) (stack : List Frame)
-    (success : finiteLaw site.2.2 site.2.1 arguments = .ok outcomes)
+    (success : finiteLaw site.2 site.1 arguments = .ok outcomes)
     (notValue : (stateExpr before).isValue = false)
     (reduction : reduce (stateExpr before) =
       .sample site (outcomeMeasure outcomes) (fun x => stackExpr stack (.real x))) :

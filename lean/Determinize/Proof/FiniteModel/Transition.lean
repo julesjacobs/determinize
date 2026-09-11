@@ -43,14 +43,14 @@ theorem eval_stepMeaning (expression : Core) (environment : List Value) (stack :
       | exact (bool_setup _ _ _ ).2
       | exact (unit_setup _ _ ).2
       | exact (nil_setup _ _ ).2
-      | exact (uniform_setup _ _ _ _ _ _ ).2
-      | exact (gaussian_setup _ _ _ _ _ _ ).2
-      | exact (beta_setup _ _ _ _ _ _ ).2
-      | exact (gamma_setup _ _ _ _ _ _ ).2
-      | exact (poisson_setup _ _ _ _ _ ).2
-      | exact (bernoulli_setup _ _ _ _ _ ).2
-      | exact (exponential_setup _ _ _ _ _ ).2
-  case discrete mode kind d =>
+      | exact (uniform_setup _ _ _ _ _ ).2
+      | exact (gaussian_setup _ _ _ _ _ ).2
+      | exact (beta_setup _ _ _ _ _ ).2
+      | exact (gamma_setup _ _ _ _ _ ).2
+      | exact (poisson_setup _ _ _ _ ).2
+      | exact (bernoulli_setup _ _ _ _ ).2
+      | exact (exponential_setup _ _ _ _ ).2
+  case discrete kind d =>
     unfold draw at action
     cases law : finiteLaw (.discrete d) kind [] with
     | error failure => simp [law, bind, Except.bind] at action
@@ -58,10 +58,10 @@ theorem eval_stepMeaning (expression : Core) (environment : List Value) (stack :
         simp only [law, bind, Except.bind, pure, Except.pure] at action
         obtain rfl := Except.ok.inj action
         apply Or.inr
-        apply paperStep_sample _ (mode,kind,.discrete d) [] outcomes stack law
+        apply paperStep_sample _ (kind, .discrete d) [] outcomes stack law
         · simpa [stateExpr, close, interpret, Expr.mapLiteral, Expr.mapVars, primitiveExpr] using
-            (stack_context stack shape (primitiveExpr (mode,kind,.discrete d) [])
+            (stack_context stack shape (primitiveExpr (kind, .discrete d) [])
               (primitiveExpr_notValue _ _)).1
-        · exact discrete_correspondence mode kind d environment stack outcomes law shape
+        · exact discrete_correspondence kind d environment stack outcomes law shape
 
 end Determinize.Proof.FiniteModel

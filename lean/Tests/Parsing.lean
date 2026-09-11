@@ -10,20 +10,20 @@ def assert (b : Bool) (message : String) : IO Unit :=
 def parsing : IO Unit := do
   let input ← IO.ofExcept (elaborate (← IO.ofExcept (parse "(* outer (* inner *) *) 1.25e-2")))
   assert (input.expression == .real (1/80)) "decimal literals must remain exact"
-  assert (parse "uniform[E](0,1)" |>.isOk) "explicit E mode"
-  assert (parse "uniform[Q](0,1)" |> fun r => !r.isOk) "invalid mode accepted"
+  assert (parse "uniform[E](0,1)" |>.isOk) "explicit E affinity"
+  assert (parse "uniform[Q](0,1)" |> fun r => !r.isOk) "invalid affinity accepted"
   assert (parse "1 garbage )" |> fun r => !r.isOk) "trailing input accepted"
   assert (parse "(* unfinished" |> fun r => !r.isOk) "unterminated comment accepted"
   let coin ← IO.ofExcept (compile "bernoulli[E](0.25)")
-  assert (coin.checked.source == .bernoulli .E .stochastic (.real (1/4)))
+  assert (coin.checked.source == .bernoulli (.sample .E) (.real (1/4)))
     "elaboration replaced a Bernoulli source draw"
-  assert (coin.checked.source.determinize == .bernoulli .E .mean (.real (1/4)))
+  assert (coin.checked.source.determinize == .bernoulli .mean (.real (1/4)))
     "Bernoulli determinization did not retain its parameter"
   let categorical ← IO.ofExcept (compile "discrete[E](0.25,0.25,0.5)")
   match categorical.checked.source with
-  | .discrete .E .stochastic d =>
+  | .discrete (.sample .E) d =>
       assert (d.probabilities == [1/4, 1/4, 1/2]) "discrete weights changed"
-      assert (categorical.checked.source.determinize == .discrete .E .mean d)
+      assert (categorical.checked.source.determinize == .discrete .mean d)
         "discrete determinization changed its weights"
   | _ => throw (IO.userError "elaboration replaced a discrete source draw")
   let program ← IO.ofExcept (compile "let x = 2 in let y = 3 in x <= y")

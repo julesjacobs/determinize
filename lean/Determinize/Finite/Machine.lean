@@ -28,7 +28,7 @@ inductive Frame where
   | letBody (body : Core) (environment : List Value)
   | matchSum (left right : Core) (environment : List Value)
   | matchList (nilCase consCase : Core) (environment : List Value)
-  | draw (site : Mode × Kind × Op) (pending : List Core)
+  | draw (site : DistributionAction × Op) (pending : List Core)
       (environment : List Value) (arguments : List Rat)
 deriving Repr, BEq
 
@@ -54,7 +54,7 @@ not proofs. The source state and successor row must also be checked. -/
 inductive Evidence where
   | evaluate
   | continue
-  | sample (site : Mode × Kind × Op) (arguments : List Rat)
+  | sample (site : DistributionAction × Op) (arguments : List Rat)
   | returned
   | rejected
 deriving Repr, BEq
@@ -66,7 +66,7 @@ inductive Step where
 deriving Repr
 
 /-- Exact finite laws. Operands have already been evaluated, left to right. -/
-def finiteLaw (op : Op) (kind : Kind) (arguments : List Rat) :
+def finiteLaw (op : Op) (kind : DistributionAction) (arguments : List Rat) :
     Except Failure (List (Rat × Rat)) := do
   let mean ← match op, arguments with
     | .uniform, [a,b] =>
@@ -93,9 +93,9 @@ def finiteLaw (op : Op) (kind : Kind) (arguments : List Rat) :
   | .discrete d, [] => return d.probabilities.zipIdx.map fun (p,i) => (p, (i : Rat))
   | _, _ => throw (.unsupported s!"stochastic {reprStr op}")
 
-def draw (site : Mode × Kind × Op) (arguments : List Rat) (stack : List Frame) :
+def draw (site : DistributionAction × Op) (arguments : List Rat) (stack : List Frame) :
     Except Failure Step := do
-  let outcomes ← finiteLaw site.2.2 site.2.1 arguments
+  let outcomes ← finiteLaw site.2 site.1 arguments
   return .next (.sample site arguments) (outcomes.map fun (p,x) => (p, .deliver (.number x) stack))
 
 def binary (op : Binary) (left right : Value) (stack : List Frame) : Except Failure State :=
@@ -150,15 +150,15 @@ def step : State → Except Failure Step
       | .matchSum value left right => pure (.eval value environment (.matchSum left right environment :: stack))
       | .matchList value nilCase consCase =>
           pure (.eval value environment (.matchList nilCase consCase environment :: stack))
-      | .uniform m k a b | .gaussian m k a b | .beta m k a b | .gamma m k a b =>
+      | .uniform k a b | .gaussian k a b | .beta k a b | .gamma k a b =>
           let op := match expression with
             | .uniform .. => Op.uniform | .gaussian .. => .gaussian | .beta .. => .beta | _ => .gamma
-          pure (.eval a environment (.draw (m,k,op) [b] environment [] :: stack))
-      | .poisson m k a | .exponential m k a | .bernoulli m k a =>
+          pure (.eval a environment (.draw (k, op) [b] environment [] :: stack))
+      | .poisson k a | .exponential k a | .bernoulli k a =>
           let op := match expression with
             | .poisson .. => Op.poisson | .exponential .. => .exponential | _ => .bernoulli
-          pure (.eval a environment (.draw (m,k,op) [] environment [] :: stack))
-      | .discrete m k d => return ← draw (m,k,.discrete d) [] stack
+          pure (.eval a environment (.draw (k, op) [] environment [] :: stack))
+      | .discrete k d => return ← draw (k, .discrete d) [] stack
       return .next .evaluate [(1,state)]
   | .deliver value [] => match value with
       | .number reward => .ok (.returned reward)

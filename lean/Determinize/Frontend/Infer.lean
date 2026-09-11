@@ -5,7 +5,7 @@ open Spec.Paper Checking
 
 private inductive UType where
   | var (id : Nat)
-  | unit | bool | float (mode : Nat)
+  | unit | bool | float (affinity : Nat)
   | prod (a b : UType) | sum (a b : UType) | list (a : UType) | arr (a b : UType)
 deriving Repr, Inhabited
 
@@ -17,26 +17,26 @@ private def Draft.ty : Draft → UType
 
 private structure InferState where
   types : Array (Option UType) := #[]
-  modes : Array (Option Mode) := #[]
+  affinities : Array (Option Affinity) := #[]
   constraints : List (Nat × Nat) := []
-  requested : List (Option Mode) := []
+  requested : List (Option Affinity) := []
 private abbrev M := StateT InferState (Except String)
 
 private def fresh : M UType := do
   let i := (← get).types.size
   modify fun s => {s with types := s.types.push none}
   return .var i
-private def freshMode : M Nat := do
-  let i := (← get).modes.size
-  modify fun s => {s with modes := s.modes.push none}
+private def freshAffinity : M Nat := do
+  let i := (← get).affinities.size
+  modify fun s => {s with affinities := s.affinities.push none}
   return i
-private def float : M UType := return .float (← freshMode)
-private def force (i : Nat) (m : Mode) : M Unit := do
-  match ((← get).modes[i]?).getD none with
+private def float : M UType := return .float (← freshAffinity)
+private def force (i : Nat) (m : Affinity) : M Unit := do
+  match ((← get).affinities[i]?).getD none with
   | some n => unless n == m do throw "inconsistent E/G requirements"
-  | none => modify fun s => {s with modes := s.modes.set! i (some m)}
+  | none => modify fun s => {s with affinities := s.affinities.set! i (some m)}
 private def general : M UType := do
-  let i ← freshMode; force i .G; return .float i
+  let i ← freshAffinity; force i .G; return .float i
 private partial def resolve : UType → M UType
   | .var i => do
     match ((← get).types[i]?).getD none with
@@ -52,16 +52,16 @@ private partial def occurs (i : Nat) (t : UType) : M Bool := do
 private def bindType (i : Nat) (t : UType) : M Unit := do
   if (← occurs i t) then throw "infinite type (occurs check)"
   modify fun s => {s with types := s.types.set! i (some t)}
-private def leMode (a b : Nat) : M Unit :=
+private def leAffinity (a b : Nat) : M Unit :=
   modify fun s => {s with constraints := (a,b) :: s.constraints}
 
-private partial def freshModes (t : UType) : M UType := do
+private partial def freshAffinities (t : UType) : M UType := do
   match ← resolve t with
   | .float _ => float
-  | .prod a b => return .prod (← freshModes a) (← freshModes b)
-  | .sum a b => return .sum (← freshModes a) (← freshModes b)
-  | .list a => return .list (← freshModes a)
-  | .arr a b => return .arr (← freshModes a) (← freshModes b)
+  | .prod a b => return .prod (← freshAffinities a) (← freshAffinities b)
+  | .sum a b => return .sum (← freshAffinities a) (← freshAffinities b)
+  | .list a => return .list (← freshAffinities a)
+  | .arr a b => return .arr (← freshAffinities a) (← freshAffinities b)
   | t => return t
 
 /-- Structural subtyping constraints, with contravariant function arguments. -/
@@ -70,15 +70,15 @@ private partial def relate (a b : UType) : M Unit := do
   match a,b with
   | .var i, .var j => if i != j then bindType i b
   | .var i, _ =>
-      let shape ← freshModes b
+      let shape ← freshAffinities b
       bindType i shape
       relate shape b
   | _, .var i =>
-      let shape ← freshModes a
+      let shape ← freshAffinities a
       bindType i shape
       relate a shape
   | .unit,.unit | .bool,.bool => pure ()
-  | .float a,.float b => leMode a b
+  | .float a,.float b => leAffinity a b
   | .prod a b,.prod c d | .sum a b,.sum c d => relate a c; relate b d
   | .arr a b,.arr c d => relate c a; relate b d
   | .list a,.list b => relate a b
@@ -87,10 +87,10 @@ private def require (d : Draft) (t : UType) : M Draft := do
   relate d.ty t
   return .cast d t
 
-private def siteMode : M Nat := do
-  let i ← freshMode
+private def siteAffinity : M Nat := do
+  let i ← freshAffinity
   match (← get).requested with
-  | [] => throw "missing sampling-mode metadata"
+  | [] => throw "missing sampling-affinity metadata"
   | m :: ms =>
     modify fun s => {s with requested := ms}
     if let some m := m then force i m
@@ -165,37 +165,37 @@ private partial def inferExpr (Γ : List UType) (e : Core) : M Draft := do
     let a ← require (← inferExpr Γ a) ta
     let b ← require (← inferExpr Γ b) tb
     return node (match e with | .lt .. => .bool | _ => t) [a,b]
-  | .uniform _ _ a b | .gaussian _ _ a b | .beta _ _ a b | .gamma _ _ a b =>
-    let i ← siteMode; let t := UType.float i; let g ← general
+  | .uniform _ a b | .gaussian _ a b | .beta _ a b | .gamma _ a b =>
+    let i ← siteAffinity; let t := UType.float i; let g ← general
     let ta := match e with | .beta .. => g | _ => t
     let tb := match e with | .uniform .. => t | _ => g
     let a ← require (← inferExpr Γ a) ta
     let b ← require (← inferExpr Γ b) tb
     return node t [a,b]
   | .discrete .. => do
-    let i ← siteMode
+    let i ← siteAffinity
     return node (.float i) []
-  | .poisson _ _ a | .bernoulli _ _ a | .exponential _ _ a =>
-    let i ← siteMode; let t := UType.float i; let g ← general
+  | .poisson _ a | .bernoulli _ a | .exponential _ a =>
+    let i ← siteAffinity; let t := UType.float i; let g ← general
     let ta := match e with | .poisson .. | .bernoulli .. => t | _ => g
     return node t [← require (← inferExpr Γ a) ta]
 
 private def solve : M Unit := do
-  for _ in [:((← get).modes.size + 1)] do
+  for _ in [:((← get).affinities.size + 1)] do
     for (a,b) in (← get).constraints do
-      if ((← get).modes[a]?).getD none == some .E then force b .E
-      if ((← get).modes[b]?).getD none == some .G then force a .G
-  for i in [:((← get).modes.size)] do
-    if ((← get).modes[i]?).getD none == none then force i .E
+      if ((← get).affinities[a]?).getD none == some .E then force b .E
+      if ((← get).affinities[b]?).getD none == some .G then force a .G
+  for i in [:((← get).affinities.size)] do
+    if ((← get).affinities[i]?).getD none == none then force i .E
   for (a,b) in (← get).constraints do
-    if ((← get).modes[a]?).getD none == some .E && ((← get).modes[b]?).getD none == some .G then
+    if ((← get).affinities[a]?).getD none == some .E && ((← get).affinities[b]?).getD none == some .G then
       throw "inconsistent E/G constraints"
 private partial def finalType (t : UType) : M Ty := do
   match (← resolve t) with
   | .var _ => return .unit
   | .unit => return .unit
   | .bool => return .bool
-  | .float i => return .float (((← get).modes[i]?).getD none |>.getD .E)
+  | .float i => return .float (((← get).affinities[i]?).getD none |>.getD .E)
   | .prod a b => return .prod (← finalType a) (← finalType b)
   | .sum a b => return .sum (← finalType a) (← finalType b)
   | .arr a b => return .arr (← finalType a) (← finalType b)
@@ -236,23 +236,23 @@ private partial def finish : Draft → M (Core × Certificate)
       | .mul ..,[a,b] => pure (.mul a b)
       | .div ..,[a,b] => pure (.div a b)
       | .lt ..,[a,b] => pure (.lt a b)
-      | .uniform _ k ..,[a,b] => pure (.uniform m k a b)
-      | .gaussian _ k ..,[a,b] => pure (.gaussian m k a b)
-      | .poisson _ k ..,[a] => pure (.poisson m k a)
-      | .discrete _ k d,[] => pure (.discrete m k d)
-      | .bernoulli _ k ..,[a] => pure (.bernoulli m k a)
-      | .exponential _ k ..,[a] => pure (.exponential m k a)
-      | .beta _ k ..,[a,b] => pure (.beta m k a b)
-      | .gamma _ k ..,[a,b] => pure (.gamma m k a b)
+      | .uniform k ..,[a,b] => pure (.uniform (setAffinity k m) a b)
+      | .gaussian k ..,[a,b] => pure (.gaussian (setAffinity k m) a b)
+      | .poisson k ..,[a] => pure (.poisson (setAffinity k m) a)
+      | .discrete k d,[] => pure (.discrete (setAffinity k m) d)
+      | .bernoulli k ..,[a] => pure (.bernoulli (setAffinity k m) a)
+      | .exponential k ..,[a] => pure (.exponential (setAffinity k m) a)
+      | .beta k ..,[a,b] => pure (.beta (setAffinity k m) a b)
+      | .gamma k ..,[a,b] => pure (.gamma (setAffinity k m) a b)
       | _,_ => throw "internal annotation shape mismatch"
     return (e,.node t cs)
 
 def infer (input : Input) : Except String (Core × Certificate) := do
   let (result, _) ← (do
     let draft ← inferExpr [] input.expression
-    unless (← get).requested.isEmpty do throw "excess sampling-mode metadata"
+    unless (← get).requested.isEmpty do throw "excess sampling-affinity metadata"
     solve
-    finish draft).run { requested := input.modes }
+    finish draft).run { requested := input.affinities }
   return result
 
 end Determinize.Frontend

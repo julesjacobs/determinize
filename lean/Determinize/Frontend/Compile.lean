@@ -8,12 +8,12 @@ open Checking
 
 structure Program where
   input : Input
-  checked : Certified input.expression input.modes
+  checked : Certified input.expression input.affinities
 
 def compile (text : String) : Except String Program := do
   let input ← elaborate (← parse text)
   let (source, certificate) ← infer input
-  let some checked := certify input.expression source input.modes certificate
+  let some checked := certify input.expression source input.affinities certificate
     | throw "inference produced an invalid typing or elaboration certificate"
   return ⟨input, checked⟩
 

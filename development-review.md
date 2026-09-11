@@ -1,6 +1,6 @@
 # Development review
 
-Snapshot: `a4199193b529ddc15fbf1eca2c8a026dc0d995b6`. Review only; no production Lean changes. Pro's independent full-surface review is tracked in [pro-spec-review.md](pro-spec-review.md).
+Baseline snapshot: `a4199193b529ddc15fbf1eca2c8a026dc0d995b6`. This document preserves the pre-refactor review; completed changes and before/after decisions are recorded in [refactor-plan.md](refactor-plan.md). Pro's independent full-surface review is tracked in [pro-spec-review.md](pro-spec-review.md).
 
 ## Recommended order
 

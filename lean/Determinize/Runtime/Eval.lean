@@ -50,13 +50,18 @@ private def bool : Value → EvalM Bool
 private def checkedNumber (x : Float) : EvalM Value := do
   if x.isNaN || x.isInf then throw (EvalError.failure "nonfinite arithmetic result")
   return .number x
-private def draw (op : Op) (m : Mode) (k : Kind) (args : List Float) : EvalM Value := do
+private def draw (op : Op) (action : DistributionAction) (args : List Float) : EvalM Value := do
   let s ← get
-  let seed := if m == .G then s.gSeed else s.eSeed
-  let (value, next) ← (sample op k args |>.run seed).mapError EvalError.failure
-  if m == .G then set {s with gSeed := next, draws := s.draws + (if k == Kind.stochastic then 1 else 0)}
-  else set {s with eSeed := next, draws := s.draws + (if k == Kind.stochastic then 1 else 0)}
-  return .number value
+  match action with
+  | .mean =>
+      let (value, _) ← (sample op action args |>.run s.eSeed).mapError EvalError.failure
+      return .number value
+  | .sample affinity =>
+      let seed := if affinity == .G then s.gSeed else s.eSeed
+      let (value, next) ← (sample op action args |>.run seed).mapError EvalError.failure
+      if affinity == .G then set {s with gSeed := next, draws := s.draws + 1}
+      else set {s with eSeed := next, draws := s.draws + 1}
+      return .number value
 
 private partial def eval (env : List Value) (e : Expr Float) : EvalM Value := do
   tick
@@ -105,18 +110,18 @@ private partial def eval (env : List Value) (e : Expr Float) : EvalM Value := do
     | .mul .. => checkedNumber (a * b)
     | .div .. => checkedNumber (if b == 0 then 0 else a / b)
     | _ => return .bool (a < b)
-  | .uniform m k a b | .gaussian m k a b | .beta m k a b | .gamma m k a b =>
+  | .uniform k a b | .gaussian k a b | .beta k a b | .gamma k a b =>
     let a ← number (← eval env a); let b ← number (← eval env b)
     let op := match e with
       | .uniform .. => Op.uniform | .gaussian .. => .gaussian | .beta .. => .beta | _ => .gamma
-    draw op m k [a,b]
-  | .discrete m k d => draw (.discrete d) m k []
-  | .bernoulli m k a =>
+    draw op k [a,b]
+  | .discrete k d => draw (.discrete d) k []
+  | .bernoulli k a =>
     let a ← number (← eval env a)
-    draw .bernoulli m k [a]
-  | .poisson m k a | .exponential m k a =>
+    draw .bernoulli k [a]
+  | .poisson k a | .exponential k a =>
     let a ← number (← eval env a)
-    draw (match e with | .poisson .. => .poisson | _ => .exponential) m k [a]
+    draw (match e with | .poisson .. => .poisson | _ => .exponential) k [a]
 
 /-- Observation rejection is separate from invalid operations and exhausted fuel. -/
 def runOutcome (e : Core) (seed : UInt64 := 0) (fuel : Nat := 100000) : Except String Outcome :=

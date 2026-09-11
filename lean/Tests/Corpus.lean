@@ -30,7 +30,7 @@ structure CorpusCase where
   outcome : String
   stage : String := ""
   expected_type : Option String := none
-  modes : Option (List String) := none
+  affinities : Option (List String) := none
   source : Option Observation := none
   target : Option Observation := none
   samples : Nat := 20000
@@ -87,7 +87,7 @@ private def compileStage (text : String) : Except (String × String) Program := 
   let ast ← (parse text).mapError ("parse", ·)
   let input ← (elaborate ast).mapError ("elaboration", ·)
   let (source, cert) ← (infer input).mapError ("inference", ·)
-  let some checked := certify input.expression source input.modes cert
+  let some checked := certify input.expression source input.affinities cert
     | throw ("certificate", "inference produced an invalid certificate")
   return ⟨input, checked⟩
 
@@ -104,9 +104,9 @@ private def runCase (c : CorpusCase) (withStatistics : Bool) : IO Unit := do
     let p ← IO.ofExcept (compile text)
     if let some ty := c.expected_type then
       assert (prettyType p.checked.ty == ty) s!"expected type {ty}, got {prettyType p.checked.ty}"
-    if let some modes := c.modes then
-      let actual := (sampleModes p.checked.source).map prettyMode
-      assert (actual == modes) s!"expected modes {modes}, got {actual}"
+    if let some affinities := c.affinities then
+      let actual := (sampleAffinities p.checked.source).map prettyAffinity
+      assert (actual == affinities) s!"expected affinities {affinities}, got {actual}"
     for (label, e, expectation) in [("source", p.checked.source, c.source),
         ("target", p.checked.source.determinize, c.target)] do
       if let some o := expectation then

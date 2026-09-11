@@ -17,8 +17,8 @@ open MeasureTheory ProbabilityTheory
 noncomputable section
 
 /-! The proof indexes the primitives uniformly by `Op`: an affine parameter position
-is one in which the primitive's mean is affine (and which may therefore be typed at mode E),
-a general position must be typed at mode G. The reviewer-facing fibers in
+is one in which the primitive's mean is affine (and which may therefore be typed at affinity E),
+a general position must be typed at affinity G. The reviewer-facing fibers in
 `Spec/Primitives.lean` are recovered from these tables below. -/
 
 abbrev affineArity : Op → Nat
@@ -101,59 +101,59 @@ def paperMeasure : (op : Op) → Params op → Measure ℝ
       let rate := params.2 0
       if 0 < shape ∧ 0 < rate then gammaMeasure shape rate else 0
 
-  | .bernoulli, params => bernoulliFiber .stochastic (params.1 0)
-  | .discrete d, _ => discreteFiber .stochastic d
+  | .bernoulli, params => bernoulliFiber (.sample .G) (params.1 0)
+  | .discrete d, _ => discreteFiber (.sample .G) d
 
 /-- The stochastic or mean fiber of a primitive at evaluated operand lists. -/
-def primitiveFiber (kind : Kind) (op : Op) (affine general : List ℝ) : Measure ℝ := by
+def primitiveFiber (kind : DistributionAction) (op : Op) (affine general : List ℝ) : Measure ℝ := by
   classical
   exact match parseParams op affine general with
     | none => 0
     | some params =>
         match kind with
-        | .stochastic => paperMeasure op params
+        | .sample _ => paperMeasure op params
         | .mean => if domain op params then Measure.dirac (meanValue op params) else 0
 
 /-! The reviewer-facing fibers are the generic one at the primitive's operand lists. -/
 
-theorem uniformFiber_eq (kind : Kind) (lower upper : ℝ) :
+theorem uniformFiber_eq (kind : DistributionAction) (lower upper : ℝ) :
     uniformFiber kind lower upper = primitiveFiber kind .uniform [lower, upper] [] := by
   cases kind <;> by_cases h : lower ≤ upper <;>
     simp [uniformFiber, primitiveFiber, parseParams, paperMeasure, domain, meanValue,
       uniformMeasure, h]
 
-theorem gaussianFiber_eq (kind : Kind) (mean variance : ℝ) :
+theorem gaussianFiber_eq (kind : DistributionAction) (mean variance : ℝ) :
     gaussianFiber kind mean variance = primitiveFiber kind .gaussian [mean] [variance] := by
   cases kind <;> by_cases h : 0 ≤ variance <;>
     simp [gaussianFiber, primitiveFiber, parseParams, paperMeasure, domain, meanValue, h]
 
-theorem poissonFiber_eq (kind : Kind) (rate : ℝ) :
+theorem poissonFiber_eq (kind : DistributionAction) (rate : ℝ) :
     poissonFiber kind rate = primitiveFiber kind .poisson [rate] [] := by
   cases kind <;> by_cases h : 0 ≤ rate <;>
     simp [poissonFiber, primitiveFiber, parseParams, paperMeasure, domain, meanValue, h]
 
-theorem exponentialFiber_eq (kind : Kind) (rate : ℝ) :
+theorem exponentialFiber_eq (kind : DistributionAction) (rate : ℝ) :
     exponentialFiber kind rate = primitiveFiber kind .exponential [] [rate] := by
   cases kind <;> by_cases h : 0 < rate <;>
     simp [exponentialFiber, primitiveFiber, parseParams, paperMeasure, domain, meanValue, h]
 
-theorem betaFiber_eq (kind : Kind) (alpha beta : ℝ) :
+theorem betaFiber_eq (kind : DistributionAction) (alpha beta : ℝ) :
     betaFiber kind alpha beta = primitiveFiber kind .beta [] [alpha, beta] := by
   cases kind <;> by_cases h : 0 < alpha ∧ 0 < beta <;>
     simp [betaFiber, primitiveFiber, parseParams, paperMeasure, domain, meanValue, h]
 
-theorem gammaFiber_eq (kind : Kind) (shape rate : ℝ) :
+theorem gammaFiber_eq (kind : DistributionAction) (shape rate : ℝ) :
     gammaFiber kind shape rate = primitiveFiber kind .gamma [shape] [rate] := by
   cases kind <;> by_cases h : 0 < shape ∧ 0 < rate <;>
     simp [gammaFiber, primitiveFiber, parseParams, paperMeasure, domain, meanValue, h]
 
 
-theorem bernoulliFiber_eq (kind : Kind) (p : ℝ) :
+theorem bernoulliFiber_eq (kind : DistributionAction) (p : ℝ) :
     bernoulliFiber kind p = primitiveFiber kind .bernoulli [p] [] := by
   cases kind <;> by_cases h : 0 ≤ p ∧ p ≤ 1 <;>
     simp [bernoulliFiber, primitiveFiber, parseParams, paperMeasure, domain, meanValue, h]
 
-theorem discreteFiber_eq (kind : Kind) (d : FiniteDistribution) :
+theorem discreteFiber_eq (kind : DistributionAction) (d : FiniteDistribution) :
     discreteFiber kind d = primitiveFiber kind (.discrete d) [] [] := by
   cases kind <;>
     simp [discreteFiber, primitiveFiber, parseParams, paperMeasure, domain, meanValue]

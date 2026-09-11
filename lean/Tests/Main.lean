@@ -1,5 +1,6 @@
 import Tests.Inference
 import Tests.Checking
+import Tests.MeanTyping
 import Tests.Runtime
 import Tests.Corpus
 import Tests.FiniteDistribution
@@ -24,9 +25,9 @@ def main (args : List String) : IO UInt32 := do
     Tests.finiteDistributions
     match args with
     | [] => pure ()
-    | ["--corpus", path, mode] =>
-        Tests.assert (mode == "fast" || mode == "statistical") "invalid corpus mode"
-        Tests.corpus path (mode == "statistical")
+    | ["--corpus", path, affinity] =>
+        Tests.assert (affinity == "fast" || affinity == "statistical") "invalid corpus affinity"
+        Tests.corpus path (affinity == "statistical")
     | _ => throw (IO.userError "usage: det-tests [--corpus manifest.json fast|statistical]")
     IO.println "All Lean front-end tests passed."
     return 0

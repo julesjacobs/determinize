@@ -12,7 +12,7 @@ Each retained step gets its own commit. For each step: inspect consumers, implem
 - [x] 8. Consolidate unit-sum finite-distribution validation.
 - [x] 9. Trim and organize the specification/proof boundary.
 - [x] 10. Evaluate deriving terminal rows instead of storing absorbing-row evidence.
-- [ ] 11. Replace Mode/Kind with Affinity and sample-affinity-or-mean syntax, using direct typing rules.
+- [x] 11. Replace Mode/Kind with Affinity and sample-affinity-or-mean syntax, using direct typing rules.
 - [ ] 12. Run complete regression checks and review the final stack.
 
 ## Before/after decisions
@@ -60,3 +60,11 @@ Before: reviewer-facing material was split between `Statement/` and `Traces/`, w
 Built and tested a representation storing only transient rows, with terminal self-loops derived by an accessor. Discarded it: it added dependent proof arguments, an extra kind branch per matrix lookup, and 18 lines of generic matrix-property proofs to remove one field. The patch is not part of the stack.
 
 The retained alternative keeps the uniform matrix representation and removes `Model.absorbing`, which no output-law proof needed. Terminal behavior is already fixed by `outputWithin`; the specification now says terminal rows are ignored. This broadens admissible raw models without changing any prior model’s output law. A terminal-row-to-divergence example proves the intended stopping behavior. Sparse export validation still checks its explicit terminal self-loops as a file-format policy. Both experimental and retained versions passed the full warning-free build and Lean tests; the retained version also passed independent generated-result kernel replay with standard axioms.
+
+### 11. Sampling actions and affinity — KEEP
+
+Before: every primitive stored an independent `Mode × Kind`, including two mean forms with identical execution and trace behavior. After: `Affinity` is E/G and `DistributionAction` is `sample affinity | mean`. Explicit primitive operands remain; there is no recursive distribution descriptor or compatibility predicate. Eight direct mean typing rules replace the syntactic mean-affinity restriction. Means with G operands can type G or, by subsumption, E; E operands still cannot be used as G. Source sampling rules and parameter restrictions are unchanged.
+
+The runtime, inference metadata, checked elaboration, finite machine, generated certificates, and symbolic/trace proofs use the new representation. Determinization changes only E sampling actions to means and still transforms every operand. Mean execution evaluates and validates every operand, including Gaussian variance, without consuming a random draw itself. Pretty-printed means omit the obsolete E/G label. Source-only symbolic typing needs no mean constructors; shared reduction-preservation cases avoid duplicating proof bodies.
+
+The additional eight public rules and checker branches are a worthwhile cost for removing meaningless syntax. The full warning-free Lean build and Lean tests passed. Kernel tests cover E/G mean typing, rejected E-to-G use, Gaussian variance affinity, and sample-only affinity metadata; runtime regressions check invalid parameters in both source and determinized programs. Complete corpus and certificate checks are recorded under step 12.

@@ -495,10 +495,10 @@ private theorem paperMeasure_mass_one (op : Determinize.Spec.Paper.Op) (params :
       exact measure_univ
 
   | bernoulli =>
-      letI := DiscreteLaws.bernoulli_probability .stochastic (params.1 0) hDomain
-      exact measure_univ (μ := Determinize.Spec.Paper.bernoulliFiber .stochastic (params.1 0))
+      letI := DiscreteLaws.bernoulli_probability (.sample .G) (params.1 0) hDomain
+      exact measure_univ (μ := Determinize.Spec.Paper.bernoulliFiber (.sample .G) (params.1 0))
   | discrete d =>
-      exact measure_univ (μ := Determinize.Spec.Paper.discreteFiber .stochastic d)
+      exact measure_univ (μ := Determinize.Spec.Paper.discreteFiber (.sample .G) d)
 
 private theorem paperMeasure_zero_off_domain (op : Determinize.Spec.Paper.Op) (params : Determinize.Spec.Paper.Params op)
     (hDomain : ¬ Determinize.Spec.Paper.domain op params) : Determinize.Spec.Paper.paperMeasure op params = 0 := by
@@ -533,7 +533,7 @@ private theorem paperMeasure_zero_off_domain (op : Determinize.Spec.Paper.Op) (p
           (params.2 0) else 0) = 0
       rw [if_neg (by simpa only [Determinize.Spec.Paper.domain] using hDomain)]
 
-  | bernoulli => exact DiscreteLaws.bernoulli_off_domain .stochastic (params.1 0) hDomain
+  | bernoulli => exact DiscreteLaws.bernoulli_off_domain (.sample .G) (params.1 0) hDomain
   | discrete _ => exact False.elim (hDomain trivial)
 
 private theorem paperMeasure_mass_le_one (op : Determinize.Spec.Paper.Op) (params : Determinize.Spec.Paper.Params op) :
@@ -1043,7 +1043,7 @@ noncomputable def primitiveKernel :
   | .beta => betaKernel
   | .gamma => gammaKernel
   | .bernoulli => ⟨Determinize.Spec.Paper.paperMeasure .bernoulli,
-      DiscreteLaws.bernoulli_measurable .stochastic |>.comp
+      DiscreteLaws.bernoulli_measurable (.sample .G) |>.comp
         (show Measurable (fun params : Determinize.Spec.Paper.Params .bernoulli =>
           params.1 0) by fun_prop)⟩
   | .discrete d => ⟨Determinize.Spec.Paper.paperMeasure (.discrete d), measurable_const⟩
@@ -1097,8 +1097,8 @@ noncomputable def primitiveLaws : Determinize.Proof.Paper.PrimitiveLaws where
     | exponential => exact exponential_integrable_id params hDomain
     | beta => exact beta_integrable_id params hDomain
     | gamma => exact gamma_integrable_id params hDomain
-    | bernoulli => exact DiscreteLaws.bernoulli_integrable .stochastic (params.1 0) _
-    | discrete d => exact DiscreteLaws.discrete_integrable .stochastic d _
+    | bernoulli => exact DiscreteLaws.bernoulli_integrable (.sample .G) (params.1 0) _
+    | discrete d => exact DiscreteLaws.discrete_integrable (.sample .G) d _
   mean_law := by
     intro op params hDomain
     rw [primitiveKernel_apply]
@@ -1109,7 +1109,7 @@ noncomputable def primitiveLaws : Determinize.Proof.Paper.PrimitiveLaws where
     | exponential => exact exponential_mean params hDomain
     | beta => exact beta_mean params hDomain
     | gamma => exact gamma_mean params hDomain
-    | bernoulli => exact DiscreteLaws.bernoulli_mean .stochastic (params.1 0) hDomain
-    | discrete d => exact DiscreteLaws.discrete_mean .stochastic d
+    | bernoulli => exact DiscreteLaws.bernoulli_mean (.sample .G) (params.1 0) hDomain
+    | discrete d => exact DiscreteLaws.discrete_mean (.sample .G) d
 
 end Determinize.Proof.Paper

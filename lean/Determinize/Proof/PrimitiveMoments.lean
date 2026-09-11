@@ -149,7 +149,7 @@ theorem primitiveMomentBounds : PrimitiveMomentBounds primitiveLaws := by
       refine ⟨1, zero_le_one, ?_⟩
       intro affine valid
       rw [primitiveLaws.kernel_eq_paperMeasure]
-      change (∫ x : ℝ, |x| ∂bernoulliFiber .stochastic (affine 0)) ≤
+      change (∫ x : ℝ, |x| ∂bernoulliFiber (.sample .G) (affine 0)) ≤
         1 * (1 + ∑ i : Fin 1, |affine i|)
       rw [DiscreteLaws.bernoulli_integral (affine 0) valid]
       simp only [abs_zero, abs_one, mul_zero, mul_one, zero_add, one_mul,

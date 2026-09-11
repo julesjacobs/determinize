@@ -82,7 +82,7 @@ def zeroFill : Skeleton → Expr
   | .bvar index => .bvar index
   | .unit => .unit
   | .reject => .reject
-  | .discrete mode kind d => .discrete mode kind d
+  | .discrete kind d => .discrete kind d
   | .bool value => .bool value
   | .real => .real 0
   | .lam body => .lam (zeroFill body)
@@ -107,13 +107,13 @@ def zeroFill : Skeleton → Expr
   | .mul left right => .mul (zeroFill left) (zeroFill right)
   | .div left right => .div (zeroFill left) (zeroFill right)
   | .lt left right => .lt (zeroFill left) (zeroFill right)
-  | .uniform mode kind lower upper => .uniform mode kind (zeroFill lower) (zeroFill upper)
-  | .gaussian mode kind mean variance => .gaussian mode kind (zeroFill mean) (zeroFill variance)
-  | .poisson mode kind rate => .poisson mode kind (zeroFill rate)
-  | .bernoulli mode kind probability => .bernoulli mode kind (zeroFill probability)
-  | .exponential mode kind rate => .exponential mode kind (zeroFill rate)
-  | .beta mode kind left right => .beta mode kind (zeroFill left) (zeroFill right)
-  | .gamma mode kind shape rate => .gamma mode kind (zeroFill shape) (zeroFill rate)
+  | .uniform kind lower upper => .uniform kind (zeroFill lower) (zeroFill upper)
+  | .gaussian kind mean variance => .gaussian kind (zeroFill mean) (zeroFill variance)
+  | .poisson kind rate => .poisson kind (zeroFill rate)
+  | .bernoulli kind probability => .bernoulli kind (zeroFill probability)
+  | .exponential kind rate => .exponential kind (zeroFill rate)
+  | .beta kind left right => .beta kind (zeroFill left) (zeroFill right)
+  | .gamma kind shape rate => .gamma kind (zeroFill shape) (zeroFill rate)
 
 @[simp] theorem zeroFill_skeleton (skeleton : Skeleton) :
     (zeroFill skeleton).skeleton = skeleton := by
@@ -155,13 +155,13 @@ theorem realCoordinates_length (expression : Expr) :
   | bvar | reject | unit | bool | real | nil | discrete =>
       simp [Expr.realCoordinates, Expr.skeleton, Expr.realArity]
   | lam body | fix body | fst body | snd body | inl body
-  | inr body | neg body | poisson _ _ body | bernoulli _ _ body | exponential _ _ body =>
+  | inr body | neg body | poisson _ body | bernoulli _ body | exponential _ body =>
       simpa [Expr.realCoordinates, Expr.skeleton, Expr.realArity] using
         realCoordinates_length body
   | app left right | pair left right | cons left right | add left right
   | mul left right | div left right | lt left right | letE left right
-  | uniform _ _ left right | gaussian _ _ left right | beta _ _ left right
-  | gamma _ _ left right =>
+  | uniform _ left right | gaussian _ left right | beta _ left right
+  | gamma _ left right =>
       simpa [Expr.realCoordinates, Expr.skeleton, Expr.realArity] using congrArg₂ (· + ·)
           (realCoordinates_length left) (realCoordinates_length right)
   | matchSum first second third | matchList first second third
@@ -522,8 +522,8 @@ def firstChild : Expr → Expr
   | .inl body | .inr body | .neg body => body
   | .app left _ | .pair left _ | .cons left _ | .add left _
   | .mul left _ | .div left _ | .lt left _ => left
-  | .uniform _ _ left _ | .gaussian _ _ left _ | .beta _ _ left _ | .gamma _ _ left _ => left
-  | .poisson _ _ body | .bernoulli _ _ body | .exponential _ _ body => body
+  | .uniform _ left _ | .gaussian _ left _ | .beta _ left _ | .gamma _ left _ => left
+  | .poisson _ body | .bernoulli _ body | .exponential _ body => body
   | .matchSum first _ _ | .matchList first _ _ | .ite first _ _ => first
   | .letE first _ => first
   | expression => expression
@@ -531,7 +531,7 @@ def firstChild : Expr → Expr
 def secondChild : Expr → Expr
   | .app _ right | .pair _ right | .cons _ right | .add _ right
   | .mul _ right | .div _ right | .lt _ right => right
-  | .uniform _ _ _ right | .gaussian _ _ _ right | .beta _ _ _ right | .gamma _ _ _ right => right
+  | .uniform _ _ right | .gaussian _ _ right | .beta _ _ right | .gamma _ _ right => right
   | .matchSum _ second _ | .matchList _ second _ | .ite _ second _ => second
   | .letE _ second => second
   | expression => expression
@@ -549,8 +549,8 @@ def firstChild : Skeleton → Skeleton
   | .inl body | .inr body | .neg body => body
   | .app left _ | .pair left _ | .cons left _ | .add left _
   | .mul left _ | .div left _ | .lt left _ => left
-  | .uniform _ _ left _ | .gaussian _ _ left _ | .beta _ _ left _ | .gamma _ _ left _ => left
-  | .poisson _ _ body | .bernoulli _ _ body | .exponential _ _ body => body
+  | .uniform _ left _ | .gaussian _ left _ | .beta _ left _ | .gamma _ left _ => left
+  | .poisson _ body | .bernoulli _ body | .exponential _ body => body
   | .matchSum first _ _ | .matchList first _ _ | .ite first _ _ => first
   | .letE first _ => first
   | skeleton => skeleton
@@ -558,7 +558,7 @@ def firstChild : Skeleton → Skeleton
 def secondChild : Skeleton → Skeleton
   | .app _ right | .pair _ right | .cons _ right | .add _ right
   | .mul _ right | .div _ right | .lt _ right => right
-  | .uniform _ _ _ right | .gaussian _ _ _ right | .beta _ _ _ right | .gamma _ _ _ right => right
+  | .uniform _ _ right | .gaussian _ _ right | .beta _ _ right | .gamma _ _ right => right
   | .matchSum _ second _ | .matchList _ second _ | .ite _ second _ => second
   | .letE _ second => second
   | skeleton => skeleton
@@ -570,7 +570,7 @@ def thirdChild : Skeleton → Skeleton
 def secondOffset : Skeleton → Nat
   | .app first _ | .pair first _ | .cons first _ | .add first _
   | .mul first _ | .div first _ | .lt first _ => first.realArity
-  | .uniform _ _ first _ | .gaussian _ _ first _ | .beta _ _ first _ | .gamma _ _ first _ =>
+  | .uniform _ first _ | .gaussian _ first _ | .beta _ first _ | .gamma _ first _ =>
       first.realArity
   | .matchSum first _ _ | .matchList first _ _ | .ite first _ _ => first.realArity
   | .letE first _ => first.realArity
@@ -638,8 +638,8 @@ theorem secondChild_coordinates_decompose (expression : Expr) :
     simp [Expr.secondChild, Expr.skeleton, Expr.realCoordinates, Skeleton.secondOffset]
   case app function argument | pair function argument | cons function argument |
       add function argument | mul function argument | div function argument |
-      lt function argument | uniform _ _ function argument | gaussian _ _ function argument |
-      beta _ _ function argument | gamma _ _ function argument =>
+      lt function argument | uniform _ function argument | gaussian _ function argument |
+      beta _ function argument | gamma _ function argument =>
     exact ⟨function.realCoordinates, ⟨[], by simp⟩, realCoordinates_length function⟩
   case matchSum scrutinee left right | matchList scrutinee left right |
       ite scrutinee left right =>
@@ -1078,7 +1078,7 @@ def skeletonShift (amount cutoff : Nat) : Skeleton → Skeleton
   | .bvar index => .bvar (if cutoff ≤ index then index + amount else index)
   | .unit => .unit
   | .reject => .reject
-  | .discrete mode kind d => .discrete mode kind d
+  | .discrete kind d => .discrete kind d
   | .bool value => .bool value
   | .real => .real
   | .lam body => .lam (skeletonShift amount (cutoff + 1) body)
@@ -1114,29 +1114,29 @@ def skeletonShift (amount cutoff : Nat) : Skeleton → Skeleton
   | .div left right =>
       .div (skeletonShift amount cutoff left) (skeletonShift amount cutoff right)
   | .lt left right => .lt (skeletonShift amount cutoff left) (skeletonShift amount cutoff right)
-  | .uniform mode kind left right =>
-      .uniform mode kind (skeletonShift amount cutoff left) (skeletonShift amount cutoff right)
-  | .gaussian mode kind left right =>
-      .gaussian mode kind (skeletonShift amount cutoff left) (skeletonShift amount cutoff right)
-  | .poisson mode kind body => .poisson mode kind (skeletonShift amount cutoff body)
-  | .bernoulli mode kind body => .bernoulli mode kind (skeletonShift amount cutoff body)
-  | .exponential mode kind body => .exponential mode kind (skeletonShift amount cutoff body)
-  | .beta mode kind left right =>
-      .beta mode kind (skeletonShift amount cutoff left) (skeletonShift amount cutoff right)
-  | .gamma mode kind left right =>
-      .gamma mode kind (skeletonShift amount cutoff left) (skeletonShift amount cutoff right)
+  | .uniform kind left right =>
+      .uniform kind (skeletonShift amount cutoff left) (skeletonShift amount cutoff right)
+  | .gaussian kind left right =>
+      .gaussian kind (skeletonShift amount cutoff left) (skeletonShift amount cutoff right)
+  | .poisson kind body => .poisson kind (skeletonShift amount cutoff body)
+  | .bernoulli kind body => .bernoulli kind (skeletonShift amount cutoff body)
+  | .exponential kind body => .exponential kind (skeletonShift amount cutoff body)
+  | .beta kind left right =>
+      .beta kind (skeletonShift amount cutoff left) (skeletonShift amount cutoff right)
+  | .gamma kind left right =>
+      .gamma kind (skeletonShift amount cutoff left) (skeletonShift amount cutoff right)
 
 theorem shift_skeleton (amount cutoff : Nat) (expression : Expr) :
     (expression.shift amount cutoff).skeleton = skeletonShift amount cutoff expression.skeleton := by
   induction sizeEq : sizeOf expression using Nat.strong_induction_on generalizing expression cutoff with
   | h size ih =>
       cases expression with
-      | uniform _ _ left right | gaussian _ _ left right | beta _ _ left right
-      | gamma _ _ left right =>
+      | uniform _ left right | gaussian _ left right | beta _ left right
+      | gamma _ left right =>
           simp only [Expr.shift, Expr.mapVars, Expr.skeleton, skeletonShift]
           rw [ih (sizeOf left) (by rw [← sizeEq]; simp_wf <;> omega) cutoff left rfl,
             ih (sizeOf right) (by rw [← sizeEq]; simp_wf <;> omega) cutoff right rfl]
-      | poisson _ _ body | bernoulli _ _ body | exponential _ _ body =>
+      | poisson _ body | bernoulli _ body | exponential _ body =>
           simp only [Expr.shift, Expr.mapVars, Expr.skeleton, skeletonShift]
           rw [ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega) cutoff body rfl]
       | pair left right | app left right | cons left right =>
@@ -1191,7 +1191,7 @@ theorem shift_skeleton (amount cutoff : Nat) (expression : Expr) :
       | neg body =>
           simp only [Expr.shift, Expr.mapVars, Expr.skeleton, skeletonShift]
           rw [ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega) cutoff body rfl]
-      | bvar index | reject | unit | bool flag | real index | nil | discrete _ _ _ =>
+      | bvar index | reject | unit | bool flag | real index | nil | discrete _ _ =>
           simp [Expr.shift, Expr.mapVars, Expr.skeleton, skeletonShift]
 
 theorem shift_realCoordinates (amount cutoff : Nat) (expression : Expr) :
@@ -1199,12 +1199,12 @@ theorem shift_realCoordinates (amount cutoff : Nat) (expression : Expr) :
   induction sizeEq : sizeOf expression using Nat.strong_induction_on generalizing expression cutoff with
   | h size ih =>
       cases expression with
-      | uniform _ _ left right | gaussian _ _ left right | beta _ _ left right
-      | gamma _ _ left right =>
+      | uniform _ left right | gaussian _ left right | beta _ left right
+      | gamma _ left right =>
           simp only [Expr.shift, Expr.mapVars, Expr.realCoordinates]
           rw [ih (sizeOf left) (by rw [← sizeEq]; simp_wf <;> omega) cutoff left rfl,
             ih (sizeOf right) (by rw [← sizeEq]; simp_wf <;> omega) cutoff right rfl]
-      | poisson _ _ body | bernoulli _ _ body | exponential _ _ body =>
+      | poisson _ body | bernoulli _ body | exponential _ body =>
           simp only [Expr.shift, Expr.mapVars, Expr.realCoordinates]
           rw [ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega) cutoff body rfl]
       | pair left right | app left right | cons left right =>
@@ -1259,7 +1259,7 @@ theorem shift_realCoordinates (amount cutoff : Nat) (expression : Expr) :
       | neg body =>
           simp only [Expr.shift, Expr.mapVars, Expr.realCoordinates]
           rw [ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega) cutoff body rfl]
-      | bvar index | reject | unit | bool flag | real index | nil | discrete _ _ _ =>
+      | bvar index | reject | unit | bool flag | real index | nil | discrete _ _ =>
           simp [Expr.shift, Expr.mapVars, Expr.realCoordinates]
 
 def MeasurableFamily.shift {α : Type*} [MeasurableSpace α]
@@ -1285,7 +1285,7 @@ def skeletonSubstAt (depth : Nat) (replacement : Skeleton) : Skeleton → Skelet
       else .bvar (if depth < index then index - 1 else index)
   | .unit => .unit
   | .reject => .reject
-  | .discrete mode kind d => .discrete mode kind d
+  | .discrete kind d => .discrete kind d
   | .bool value => .bool value
   | .real => .real
   | .lam body => .lam (skeletonSubstAt (depth + 1) replacement body)
@@ -1327,17 +1327,17 @@ def skeletonSubstAt (depth : Nat) (replacement : Skeleton) : Skeleton → Skelet
       (skeletonSubstAt depth replacement left) (skeletonSubstAt depth replacement right)
   | .lt left right => .lt
       (skeletonSubstAt depth replacement left) (skeletonSubstAt depth replacement right)
-  | .uniform mode kind left right =>
-      .uniform mode kind (skeletonSubstAt depth replacement left) (skeletonSubstAt depth replacement right)
-  | .gaussian mode kind left right =>
-      .gaussian mode kind (skeletonSubstAt depth replacement left) (skeletonSubstAt depth replacement right)
-  | .poisson mode kind body => .poisson mode kind (skeletonSubstAt depth replacement body)
-  | .bernoulli mode kind body => .bernoulli mode kind (skeletonSubstAt depth replacement body)
-  | .exponential mode kind body => .exponential mode kind (skeletonSubstAt depth replacement body)
-  | .beta mode kind left right =>
-      .beta mode kind (skeletonSubstAt depth replacement left) (skeletonSubstAt depth replacement right)
-  | .gamma mode kind left right =>
-      .gamma mode kind (skeletonSubstAt depth replacement left) (skeletonSubstAt depth replacement right)
+  | .uniform kind left right =>
+      .uniform kind (skeletonSubstAt depth replacement left) (skeletonSubstAt depth replacement right)
+  | .gaussian kind left right =>
+      .gaussian kind (skeletonSubstAt depth replacement left) (skeletonSubstAt depth replacement right)
+  | .poisson kind body => .poisson kind (skeletonSubstAt depth replacement body)
+  | .bernoulli kind body => .bernoulli kind (skeletonSubstAt depth replacement body)
+  | .exponential kind body => .exponential kind (skeletonSubstAt depth replacement body)
+  | .beta kind left right =>
+      .beta kind (skeletonSubstAt depth replacement left) (skeletonSubstAt depth replacement right)
+  | .gamma kind left right =>
+      .gamma kind (skeletonSubstAt depth replacement left) (skeletonSubstAt depth replacement right)
 
 theorem substAt_skeleton (depth : Nat) (replacement expression : Expr) :
     (Expr.substAt depth replacement expression).skeleton =
@@ -1345,12 +1345,12 @@ theorem substAt_skeleton (depth : Nat) (replacement expression : Expr) :
   induction sizeEq : sizeOf expression using Nat.strong_induction_on generalizing expression depth with
   | h size ih =>
       cases expression with
-      | uniform _ _ left right | gaussian _ _ left right | beta _ _ left right
-      | gamma _ _ left right =>
+      | uniform _ left right | gaussian _ left right | beta _ left right
+      | gamma _ left right =>
           simp only [Expr.substAt, Expr.mapVars, Expr.skeleton, skeletonSubstAt]
           rw [ih (sizeOf left) (by rw [← sizeEq]; simp_wf <;> omega) depth left rfl,
             ih (sizeOf right) (by rw [← sizeEq]; simp_wf <;> omega) depth right rfl]
-      | poisson _ _ body | bernoulli _ _ body | exponential _ _ body =>
+      | poisson _ body | bernoulli _ body | exponential _ body =>
           simp only [Expr.substAt, Expr.mapVars, Expr.skeleton, skeletonSubstAt]
           rw [ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega) depth body rfl]
       | pair left right | app left right | cons left right =>
@@ -1410,7 +1410,7 @@ theorem substAt_skeleton (depth : Nat) (replacement expression : Expr) :
           split
           · exact shift_skeleton depth 0 replacement
           · simp only [Expr.skeleton]
-      | reject | unit | bool flag | real index | nil | discrete _ _ _ =>
+      | reject | unit | bool flag | real index | nil | discrete _ _ =>
           simp [Expr.substAt, Expr.mapVars, Expr.skeleton, skeletonSubstAt]
 
 inductive CoordinateSelector where
@@ -1454,11 +1454,11 @@ def coordinatePlan (depth : Nat) (replacement : Skeleton) (bodyOffset : Nat) :
       coordinatePlan depth replacement bodyOffset value ++
         coordinatePlan (depth + 1) replacement
           (bodyOffset + value.realArity) body
-  | .uniform _ _ left right | .gaussian _ _ left right | .beta _ _ left right
-  | .gamma _ _ left right =>
+  | .uniform _ left right | .gaussian _ left right | .beta _ left right
+  | .gamma _ left right =>
       coordinatePlan depth replacement bodyOffset left ++
         coordinatePlan depth replacement (bodyOffset + left.realArity) right
-  | .poisson _ _ body | .bernoulli _ _ body | .exponential _ _ body => coordinatePlan depth replacement bodyOffset body
+  | .poisson _ body | .bernoulli _ body | .exponential _ body => coordinatePlan depth replacement bodyOffset body
   | _ => []
 
 def CoordinateSelector.eval (body replacement : List ℝ) : CoordinateSelector → ℝ
@@ -1674,8 +1674,8 @@ theorem applyCoordinatePlan_coordinatePlan (depth : Nat) (replacement expression
           simpa only [coordinatePlan, Expr.skeleton, Expr.realCoordinates, Expr.substAt, Expr.mapVars] using
             ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega)
               depth body before suffix rfl
-      | uniform _ _ left right | gaussian _ _ left right | beta _ _ left right
-      | gamma _ _ left right =>
+      | uniform _ left right | gaussian _ left right | beta _ left right
+      | gamma _ left right =>
           simp only [coordinatePlan, Expr.skeleton, Expr.realCoordinates, Expr.substAt, Expr.mapVars,
             applyCoordinatePlan_append]
           have leftResult := ih (sizeOf left)
@@ -1690,11 +1690,11 @@ theorem applyCoordinatePlan_coordinatePlan (depth : Nat) (replacement expression
               (before ++ left.realCoordinates).length := by
             rw [List.length_append, realCoordinates_length left]
           rw [offsetEquality, rightResult]
-      | poisson _ _ body | bernoulli _ _ body | exponential _ _ body =>
+      | poisson _ body | bernoulli _ body | exponential _ body =>
           simpa only [coordinatePlan, Expr.skeleton, Expr.realCoordinates, Expr.substAt, Expr.mapVars] using
             ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega)
               depth body before suffix rfl
-      | reject | unit | bool flag | nil | discrete _ _ _ =>
+      | reject | unit | bool flag | nil | discrete _ _ =>
           simp [coordinatePlan, Expr.skeleton, Expr.realCoordinates, Expr.substAt, Expr.mapVars,
             applyCoordinatePlan]
 
@@ -1789,13 +1789,13 @@ def MeasurableFamily.substTwo {α : Type*} [MeasurableSpace α]
 
 theorem isValue_eq_skeletonIsValue : ∀ expression : Expr,
     expression.isValue = Expr.isValue expression.skeleton
-  | .bvar _ | .reject | .discrete _ _ _ | .unit | .bool _ | .real _ | .lam _ | .fix _
+  | .bvar _ | .reject | .discrete _ _ | .unit | .bool _ | .real _ | .lam _ | .fix _
   | .app _ _ | .fst _ | .snd _ | .matchSum _ _ _ | .nil
   | .matchList _ _ _ | .ite _ _ _ | .letE _ _
   | .neg _ | .add _ _ | .mul _ _ | .div _ _ | .lt _ _ => by
       simp [Expr.isValue, Expr.skeleton, Expr.isValue]
-  | .uniform _ _ _ _ | .gaussian _ _ _ _ | .poisson _ _ _ | .bernoulli _ _ _ | .exponential _ _ _
-  | .beta _ _ _ _ | .gamma _ _ _ _ => by simp [Expr.isValue, Expr.skeleton, Expr.isValue]
+  | .uniform _ _ _ | .gaussian _ _ _ | .poisson _ _ | .bernoulli _ _ | .exponential _ _
+  | .beta _ _ _ | .gamma _ _ _ => by simp [Expr.isValue, Expr.skeleton, Expr.isValue]
   | .pair left right | .cons left right => by
       simp only [Expr.isValue, Expr.skeleton, Expr.isValue]
       rw [isValue_eq_skeletonIsValue left, isValue_eq_skeletonIsValue right]
@@ -1840,8 +1840,8 @@ theorem measurable_meanValue (op : Determinize.Spec.Paper.Op) :
 stochastic site, the Dirac mass at its mean on the parameter domain at a mean site. -/
 noncomputable def primitiveKernelPack
     (laws : Determinize.Proof.Paper.PrimitiveLaws) :
-    (kind : Kind) → (op : Op) → SFiniteKernel (Determinize.Spec.Paper.Params op) ℝ
-  | .stochastic, op => ⟨laws.kernel op, laws.kernel_sfinite op⟩
+    (kind : DistributionAction) → (op : Op) → SFiniteKernel (Determinize.Spec.Paper.Params op) ℝ
+  | .sample _, op => ⟨laws.kernel op, laws.kernel_sfinite op⟩
   | .mean, op => SFiniteKernel.piecewise
       (Determinize.Proof.Paper.measurableSet_domain op)
       (SFiniteKernel.deterministic
@@ -1849,7 +1849,7 @@ noncomputable def primitiveKernelPack
       SFiniteKernel.zero
 
 theorem primitiveFiber_eq_atomic
-    (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : Kind) (op : Op)
+    (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction) (op : Op)
     (affine general : List ℝ)
     (affineArity : affine.length =
       Determinize.Spec.Paper.affineArity op)
@@ -1859,7 +1859,7 @@ theorem primitiveFiber_eq_atomic
       (primitiveKernelPack laws kind op).kernel (atomicParams op affine general) := by
   classical
   cases kind with
-  | stochastic =>
+  | sample affinity =>
       simp only [atomicParams, primitiveKernelPack]
       unfold primitiveFiber
         Determinize.Spec.Paper.parseParams
@@ -1918,7 +1918,7 @@ inductive MeasurableActionFamily (α : Type u) [MeasurableSpace α] :
     (α → Action) → Type (u + 1)
   | next {successor : α → Expr} (measurable : Measurable successor) :
       MeasurableActionFamily α (fun parameter => .next (successor parameter))
-  | sample {site : Mode × Kind × Op} (draw : SFiniteKernel α ℝ)
+  | sample {site : DistributionAction × Op} (draw : SFiniteKernel α ℝ)
       {continuation : α × ℝ → Expr}
       (measurable : Measurable continuation) :
       MeasurableActionFamily α (fun parameter =>
@@ -2020,109 +2020,109 @@ theorem measurable_getD_nil {α : Type*} [MeasurableSpace α] (index : Nat) :
   simp [List.getD]
 
 /-- The kernel of `uniform` in its evaluated operands. -/
-noncomputable def uniformDraw (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : Kind) :
+noncomputable def uniformDraw (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction) :
     SFiniteKernel (ℝ × ℝ) ℝ :=
   SFiniteKernel.pullback (primitiveKernelPack laws kind .uniform)
     (fun p => paramsFromCoordinates .uniform [p.1, p.2] [])
     (Measurable.prod (measurable_pi_lambda _ fun index => measurable_getD_pair index.1)
       (measurable_pi_lambda _ fun index => measurable_getD_nil index.1))
 
-theorem uniformDraw_apply (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : Kind) (lower upper : ℝ) :
+theorem uniformDraw_apply (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction) (lower upper : ℝ) :
     (uniformDraw laws kind).kernel (lower, upper) = uniformFiber kind lower upper := by
   rw [uniformDraw, pullback_apply, uniformFiber_eq,
     primitiveFiber_eq_atomic laws kind .uniform [lower, upper] [] rfl rfl]
   rfl
 
 /-- The kernel of `gaussian` in its evaluated operands. -/
-noncomputable def gaussianDraw (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : Kind) :
+noncomputable def gaussianDraw (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction) :
     SFiniteKernel (ℝ × ℝ) ℝ :=
   SFiniteKernel.pullback (primitiveKernelPack laws kind .gaussian)
     (fun p => paramsFromCoordinates .gaussian [p.1] [p.2])
     (Measurable.prod (measurable_pi_lambda _ fun index => measurable_getD_first index.1)
       (measurable_pi_lambda _ fun index => measurable_getD_second index.1))
 
-theorem gaussianDraw_apply (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : Kind) (mean variance : ℝ) :
+theorem gaussianDraw_apply (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction) (mean variance : ℝ) :
     (gaussianDraw laws kind).kernel (mean, variance) = gaussianFiber kind mean variance := by
   rw [gaussianDraw, pullback_apply, gaussianFiber_eq,
     primitiveFiber_eq_atomic laws kind .gaussian [mean] [variance] rfl rfl]
   rfl
 
 /-- The kernel of `beta` in its evaluated operands. -/
-noncomputable def betaDraw (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : Kind) :
+noncomputable def betaDraw (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction) :
     SFiniteKernel (ℝ × ℝ) ℝ :=
   SFiniteKernel.pullback (primitiveKernelPack laws kind .beta)
     (fun p => paramsFromCoordinates .beta [] [p.1, p.2])
     (Measurable.prod (measurable_pi_lambda _ fun index => measurable_getD_nil index.1)
       (measurable_pi_lambda _ fun index => measurable_getD_pair index.1))
 
-theorem betaDraw_apply (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : Kind) (alpha beta : ℝ) :
+theorem betaDraw_apply (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction) (alpha beta : ℝ) :
     (betaDraw laws kind).kernel (alpha, beta) = betaFiber kind alpha beta := by
   rw [betaDraw, pullback_apply, betaFiber_eq,
     primitiveFiber_eq_atomic laws kind .beta [] [alpha, beta] rfl rfl]
   rfl
 
 /-- The kernel of `gamma` in its evaluated operands. -/
-noncomputable def gammaDraw (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : Kind) :
+noncomputable def gammaDraw (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction) :
     SFiniteKernel (ℝ × ℝ) ℝ :=
   SFiniteKernel.pullback (primitiveKernelPack laws kind .gamma)
     (fun p => paramsFromCoordinates .gamma [p.1] [p.2])
     (Measurable.prod (measurable_pi_lambda _ fun index => measurable_getD_first index.1)
       (measurable_pi_lambda _ fun index => measurable_getD_second index.1))
 
-theorem gammaDraw_apply (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : Kind) (shape rate : ℝ) :
+theorem gammaDraw_apply (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction) (shape rate : ℝ) :
     (gammaDraw laws kind).kernel (shape, rate) = gammaFiber kind shape rate := by
   rw [gammaDraw, pullback_apply, gammaFiber_eq,
     primitiveFiber_eq_atomic laws kind .gamma [shape] [rate] rfl rfl]
   rfl
 
 /-- The kernel of `poisson` in its evaluated operands. -/
-noncomputable def poissonDraw (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : Kind) :
+noncomputable def poissonDraw (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction) :
     SFiniteKernel ℝ ℝ :=
   SFiniteKernel.pullback (primitiveKernelPack laws kind .poisson)
     (fun p => paramsFromCoordinates .poisson [p] [])
     (Measurable.prod (measurable_pi_lambda _ fun index => measurable_getD_single index.1)
       (measurable_pi_lambda _ fun index => measurable_getD_nil index.1))
 
-noncomputable def discreteDraw (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : Kind)
+noncomputable def discreteDraw (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction)
     (d : FiniteDistribution) : SFiniteKernel Unit ℝ :=
   SFiniteKernel.pullback (primitiveKernelPack laws kind (.discrete d))
     (fun _ => paramsFromCoordinates (.discrete d) [] []) measurable_const
 
-theorem discreteDraw_apply (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : Kind)
+theorem discreteDraw_apply (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction)
     (d : FiniteDistribution) :
     (discreteDraw laws kind d).kernel () = discreteFiber kind d := by
   rw [discreteDraw, pullback_apply, discreteFiber_eq,
     primitiveFiber_eq_atomic laws kind (.discrete d) [] [] rfl rfl]
   rfl
 
-noncomputable def bernoulliDraw (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : Kind) :
+noncomputable def bernoulliDraw (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction) :
     SFiniteKernel ℝ ℝ :=
   SFiniteKernel.pullback (primitiveKernelPack laws kind .bernoulli)
     (fun p => paramsFromCoordinates .bernoulli [p] [])
     (Measurable.prod (measurable_pi_lambda _ fun index => measurable_getD_single index.1)
       (measurable_pi_lambda _ fun index => measurable_getD_nil index.1))
 
-theorem poissonDraw_apply (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : Kind) (rate : ℝ) :
+theorem poissonDraw_apply (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction) (rate : ℝ) :
     (poissonDraw laws kind).kernel rate = poissonFiber kind rate := by
   rw [poissonDraw, pullback_apply, poissonFiber_eq,
     primitiveFiber_eq_atomic laws kind .poisson [rate] [] rfl rfl]
   rfl
 
-theorem bernoulliDraw_apply (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : Kind) (probability : ℝ) :
+theorem bernoulliDraw_apply (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction) (probability : ℝ) :
     (bernoulliDraw laws kind).kernel probability = bernoulliFiber kind probability := by
   rw [bernoulliDraw, pullback_apply, bernoulliFiber_eq,
     primitiveFiber_eq_atomic laws kind .bernoulli [probability] [] rfl rfl]
   rfl
 
 /-- The kernel of `exponential` in its evaluated operands. -/
-noncomputable def exponentialDraw (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : Kind) :
+noncomputable def exponentialDraw (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction) :
     SFiniteKernel ℝ ℝ :=
   SFiniteKernel.pullback (primitiveKernelPack laws kind .exponential)
     (fun p => paramsFromCoordinates .exponential [] [p])
     (Measurable.prod (measurable_pi_lambda _ fun index => measurable_getD_nil index.1)
       (measurable_pi_lambda _ fun index => measurable_getD_single index.1))
 
-theorem exponentialDraw_apply (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : Kind) (rate : ℝ) :
+theorem exponentialDraw_apply (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction) (rate : ℝ) :
     (exponentialDraw laws kind).kernel rate = exponentialFiber kind rate := by
   rw [exponentialDraw, pullback_apply, exponentialFiber_eq,
     primitiveFiber_eq_atomic laws kind .exponential [] [rate] rfl rfl]
@@ -3278,78 +3278,78 @@ noncomputable def reduceLt {α : Type*} [MeasurableSpace α]
     rw [reduce_lt_eq, actualLeftValue]
     simp
 
-theorem reduce_uniform_eq (mode : Mode) (kind : Kind) (lower upper : Expr) :
-    reduce (.uniform mode kind lower upper) =
+theorem reduce_uniform_eq (kind : DistributionAction) (lower upper : Expr) :
+    reduce (.uniform kind lower upper) =
       if lower.isValue then
         if upper.isValue then match realValue? lower, realValue? upper with
-          | some a, some b => .sample (mode, kind, .uniform) (uniformFiber kind a b) .real
+          | some a, some b => .sample (kind, .uniform) (uniformFiber kind a b) .real
           | _, _ => .stuck
-        else (reduce upper).wrap (.uniform mode kind lower)
-      else (reduce lower).wrap (fun next => .uniform mode kind next upper) := by
+        else (reduce upper).wrap (.uniform kind lower)
+      else (reduce lower).wrap (fun next => .uniform kind next upper) := by
   simp only [reduce, Determinize.Spec.Paper.reduce] <;> rfl
 
-theorem reduce_gaussian_eq (mode : Mode) (kind : Kind) (mean variance : Expr) :
-    reduce (.gaussian mode kind mean variance) =
+theorem reduce_gaussian_eq (kind : DistributionAction) (mean variance : Expr) :
+    reduce (.gaussian kind mean variance) =
       if mean.isValue then
         if variance.isValue then match realValue? mean, realValue? variance with
-          | some m, some v => .sample (mode, kind, .gaussian) (gaussianFiber kind m v) .real
+          | some m, some v => .sample (kind, .gaussian) (gaussianFiber kind m v) .real
           | _, _ => .stuck
-        else (reduce variance).wrap (.gaussian mode kind mean)
-      else (reduce mean).wrap (fun next => .gaussian mode kind next variance) := by
+        else (reduce variance).wrap (.gaussian kind mean)
+      else (reduce mean).wrap (fun next => .gaussian kind next variance) := by
   simp only [reduce, Determinize.Spec.Paper.reduce] <;> rfl
 
-theorem reduce_poisson_eq (mode : Mode) (kind : Kind) (rate : Expr) :
-    reduce (.poisson mode kind rate) =
+theorem reduce_poisson_eq (kind : DistributionAction) (rate : Expr) :
+    reduce (.poisson kind rate) =
       if rate.isValue then match realValue? rate with
-        | some r => .sample (mode, kind, .poisson) (poissonFiber kind r) .real
+        | some r => .sample (kind, .poisson) (poissonFiber kind r) .real
         | none => .stuck
-      else (reduce rate).wrap (.poisson mode kind) := by
+      else (reduce rate).wrap (.poisson kind) := by
   simp only [reduce, Determinize.Spec.Paper.reduce] <;> rfl
 
-theorem reduce_bernoulli_eq (mode : Mode) (kind : Kind) (probability : Expr) :
-    reduce (.bernoulli mode kind probability) =
+theorem reduce_bernoulli_eq (kind : DistributionAction) (probability : Expr) :
+    reduce (.bernoulli kind probability) =
       if probability.isValue then match realValue? probability with
-        | some r => .sample (mode, kind, .bernoulli) (bernoulliFiber kind r) .real
+        | some r => .sample (kind, .bernoulli) (bernoulliFiber kind r) .real
         | none => .stuck
-      else (reduce probability).wrap (.bernoulli mode kind) := by
+      else (reduce probability).wrap (.bernoulli kind) := by
   simp only [reduce, Determinize.Spec.Paper.reduce] <;> rfl
 
-theorem reduce_exponential_eq (mode : Mode) (kind : Kind) (rate : Expr) :
-    reduce (.exponential mode kind rate) =
+theorem reduce_exponential_eq (kind : DistributionAction) (rate : Expr) :
+    reduce (.exponential kind rate) =
       if rate.isValue then match realValue? rate with
-        | some r => .sample (mode, kind, .exponential) (exponentialFiber kind r) .real
+        | some r => .sample (kind, .exponential) (exponentialFiber kind r) .real
         | none => .stuck
-      else (reduce rate).wrap (.exponential mode kind) := by
+      else (reduce rate).wrap (.exponential kind) := by
   simp only [reduce, Determinize.Spec.Paper.reduce] <;> rfl
 
-theorem reduce_beta_eq (mode : Mode) (kind : Kind) (alpha beta : Expr) :
-    reduce (.beta mode kind alpha beta) =
+theorem reduce_beta_eq (kind : DistributionAction) (alpha beta : Expr) :
+    reduce (.beta kind alpha beta) =
       if alpha.isValue then
         if beta.isValue then match realValue? alpha, realValue? beta with
-          | some a, some b => .sample (mode, kind, .beta) (betaFiber kind a b) .real
+          | some a, some b => .sample (kind, .beta) (betaFiber kind a b) .real
           | _, _ => .stuck
-        else (reduce beta).wrap (.beta mode kind alpha)
-      else (reduce alpha).wrap (fun next => .beta mode kind next beta) := by
+        else (reduce beta).wrap (.beta kind alpha)
+      else (reduce alpha).wrap (fun next => .beta kind next beta) := by
   simp only [reduce, Determinize.Spec.Paper.reduce] <;> rfl
 
-theorem reduce_gamma_eq (mode : Mode) (kind : Kind) (shape rate : Expr) :
-    reduce (.gamma mode kind shape rate) =
+theorem reduce_gamma_eq (kind : DistributionAction) (shape rate : Expr) :
+    reduce (.gamma kind shape rate) =
       if shape.isValue then
         if rate.isValue then match realValue? shape, realValue? rate with
-          | some k, some r => .sample (mode, kind, .gamma) (gammaFiber kind k r) .real
+          | some k, some r => .sample (kind, .gamma) (gammaFiber kind k r) .real
           | _, _ => .stuck
-        else (reduce rate).wrap (.gamma mode kind shape)
-      else (reduce shape).wrap (fun next => .gamma mode kind next rate) := by
+        else (reduce rate).wrap (.gamma kind shape)
+      else (reduce shape).wrap (fun next => .gamma kind next rate) := by
   simp only [reduce, Determinize.Spec.Paper.reduce] <;> rfl
 
 noncomputable def reduceUniform {α : Type*} [MeasurableSpace α]
-    (laws : Determinize.Proof.Paper.PrimitiveLaws) (mode : Mode) (kind : Kind)
+    (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction)
     {left right : α → Expr}
     (leftFamily : MeasurableFamily α left) (rightFamily : MeasurableFamily α right)
     (leftReduce : MeasurableActionFamily α (fun parameter => reduce (left parameter)))
     (rightReduce : MeasurableActionFamily α (fun parameter => reduce (right parameter))) :
     MeasurableActionFamily α
-      (fun parameter => reduce (.uniform mode kind (left parameter) (right parameter))) := by
+      (fun parameter => reduce (.uniform kind (left parameter) (right parameter))) := by
   classical
   by_cases leftValue : Expr.isValue leftFamily.skeleton = true
   · by_cases rightValue : Expr.isValue rightFamily.skeleton = true
@@ -3361,7 +3361,7 @@ noncomputable def reduceUniform {α : Type*} [MeasurableSpace α]
             ((left parameter).realCoordinates.getD 0 0, (right parameter).realCoordinates.getD 0 0)
           have parametersMeasurable : Measurable parameters :=
             (leftFamily.coordinate_measurable 0).prodMk (rightFamily.coordinate_measurable 0)
-          apply congr (.sample (site := (mode, kind, .uniform)) (SFiniteKernel.pullback (uniformDraw laws kind) parameters
+          apply congr (.sample (site := (kind, .uniform)) (SFiniteKernel.pullback (uniformDraw laws kind) parameters
             parametersMeasurable) (measurable_realLiteral measurable_snd))
           funext parameter
           have leftFixed := leftFamily.skeleton_eq parameter
@@ -3415,7 +3415,7 @@ noncomputable def reduceUniform {α : Type*} [MeasurableSpace α]
           rw [reduce_uniform_eq, actualLeftValue, actualRightValue] <;>
           simp [realValue?]
     · apply congr (rightReduce.wrapBinaryRight left leftFamily.measurable
-          (.uniform mode kind) (.uniform mode kind) (by intros; simp [Expr.skeleton])
+          (.uniform kind) (.uniform kind) (by intros; simp [Expr.skeleton])
           (by intros; simp [Expr.realCoordinates]))
       funext parameter
       have actualLeftValue : (left parameter).isValue = true :=
@@ -3426,7 +3426,7 @@ noncomputable def reduceUniform {α : Type*} [MeasurableSpace α]
       rw [reduce_uniform_eq, actualLeftValue, actualRightValue]
       simp
   · apply congr (leftReduce.wrapBinaryLeft right rightFamily.measurable
-        (.uniform mode kind) (.uniform mode kind) (by intros; simp [Expr.skeleton])
+        (.uniform kind) (.uniform kind) (by intros; simp [Expr.skeleton])
         (by intros; simp [Expr.realCoordinates]))
     funext parameter
     have actualLeftValue : (left parameter).isValue = false := by
@@ -3436,13 +3436,13 @@ noncomputable def reduceUniform {α : Type*} [MeasurableSpace α]
     simp
 
 noncomputable def reduceGaussian {α : Type*} [MeasurableSpace α]
-    (laws : Determinize.Proof.Paper.PrimitiveLaws) (mode : Mode) (kind : Kind)
+    (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction)
     {left right : α → Expr}
     (leftFamily : MeasurableFamily α left) (rightFamily : MeasurableFamily α right)
     (leftReduce : MeasurableActionFamily α (fun parameter => reduce (left parameter)))
     (rightReduce : MeasurableActionFamily α (fun parameter => reduce (right parameter))) :
     MeasurableActionFamily α
-      (fun parameter => reduce (.gaussian mode kind (left parameter) (right parameter))) := by
+      (fun parameter => reduce (.gaussian kind (left parameter) (right parameter))) := by
   classical
   by_cases leftValue : Expr.isValue leftFamily.skeleton = true
   · by_cases rightValue : Expr.isValue rightFamily.skeleton = true
@@ -3454,7 +3454,7 @@ noncomputable def reduceGaussian {α : Type*} [MeasurableSpace α]
             ((left parameter).realCoordinates.getD 0 0, (right parameter).realCoordinates.getD 0 0)
           have parametersMeasurable : Measurable parameters :=
             (leftFamily.coordinate_measurable 0).prodMk (rightFamily.coordinate_measurable 0)
-          apply congr (.sample (site := (mode, kind, .gaussian)) (SFiniteKernel.pullback (gaussianDraw laws kind) parameters
+          apply congr (.sample (site := (kind, .gaussian)) (SFiniteKernel.pullback (gaussianDraw laws kind) parameters
             parametersMeasurable) (measurable_realLiteral measurable_snd))
           funext parameter
           have leftFixed := leftFamily.skeleton_eq parameter
@@ -3508,7 +3508,7 @@ noncomputable def reduceGaussian {α : Type*} [MeasurableSpace α]
           rw [reduce_gaussian_eq, actualLeftValue, actualRightValue] <;>
           simp [realValue?]
     · apply congr (rightReduce.wrapBinaryRight left leftFamily.measurable
-          (.gaussian mode kind) (.gaussian mode kind) (by intros; simp [Expr.skeleton])
+          (.gaussian kind) (.gaussian kind) (by intros; simp [Expr.skeleton])
           (by intros; simp [Expr.realCoordinates]))
       funext parameter
       have actualLeftValue : (left parameter).isValue = true :=
@@ -3519,7 +3519,7 @@ noncomputable def reduceGaussian {α : Type*} [MeasurableSpace α]
       rw [reduce_gaussian_eq, actualLeftValue, actualRightValue]
       simp
   · apply congr (leftReduce.wrapBinaryLeft right rightFamily.measurable
-        (.gaussian mode kind) (.gaussian mode kind) (by intros; simp [Expr.skeleton])
+        (.gaussian kind) (.gaussian kind) (by intros; simp [Expr.skeleton])
         (by intros; simp [Expr.realCoordinates]))
     funext parameter
     have actualLeftValue : (left parameter).isValue = false := by
@@ -3529,13 +3529,13 @@ noncomputable def reduceGaussian {α : Type*} [MeasurableSpace α]
     simp
 
 noncomputable def reduceBeta {α : Type*} [MeasurableSpace α]
-    (laws : Determinize.Proof.Paper.PrimitiveLaws) (mode : Mode) (kind : Kind)
+    (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction)
     {left right : α → Expr}
     (leftFamily : MeasurableFamily α left) (rightFamily : MeasurableFamily α right)
     (leftReduce : MeasurableActionFamily α (fun parameter => reduce (left parameter)))
     (rightReduce : MeasurableActionFamily α (fun parameter => reduce (right parameter))) :
     MeasurableActionFamily α
-      (fun parameter => reduce (.beta mode kind (left parameter) (right parameter))) := by
+      (fun parameter => reduce (.beta kind (left parameter) (right parameter))) := by
   classical
   by_cases leftValue : Expr.isValue leftFamily.skeleton = true
   · by_cases rightValue : Expr.isValue rightFamily.skeleton = true
@@ -3547,7 +3547,7 @@ noncomputable def reduceBeta {α : Type*} [MeasurableSpace α]
             ((left parameter).realCoordinates.getD 0 0, (right parameter).realCoordinates.getD 0 0)
           have parametersMeasurable : Measurable parameters :=
             (leftFamily.coordinate_measurable 0).prodMk (rightFamily.coordinate_measurable 0)
-          apply congr (.sample (site := (mode, kind, .beta)) (SFiniteKernel.pullback (betaDraw laws kind) parameters
+          apply congr (.sample (site := (kind, .beta)) (SFiniteKernel.pullback (betaDraw laws kind) parameters
             parametersMeasurable) (measurable_realLiteral measurable_snd))
           funext parameter
           have leftFixed := leftFamily.skeleton_eq parameter
@@ -3601,7 +3601,7 @@ noncomputable def reduceBeta {α : Type*} [MeasurableSpace α]
           rw [reduce_beta_eq, actualLeftValue, actualRightValue] <;>
           simp [realValue?]
     · apply congr (rightReduce.wrapBinaryRight left leftFamily.measurable
-          (.beta mode kind) (.beta mode kind) (by intros; simp [Expr.skeleton])
+          (.beta kind) (.beta kind) (by intros; simp [Expr.skeleton])
           (by intros; simp [Expr.realCoordinates]))
       funext parameter
       have actualLeftValue : (left parameter).isValue = true :=
@@ -3612,7 +3612,7 @@ noncomputable def reduceBeta {α : Type*} [MeasurableSpace α]
       rw [reduce_beta_eq, actualLeftValue, actualRightValue]
       simp
   · apply congr (leftReduce.wrapBinaryLeft right rightFamily.measurable
-        (.beta mode kind) (.beta mode kind) (by intros; simp [Expr.skeleton])
+        (.beta kind) (.beta kind) (by intros; simp [Expr.skeleton])
         (by intros; simp [Expr.realCoordinates]))
     funext parameter
     have actualLeftValue : (left parameter).isValue = false := by
@@ -3622,13 +3622,13 @@ noncomputable def reduceBeta {α : Type*} [MeasurableSpace α]
     simp
 
 noncomputable def reduceGamma {α : Type*} [MeasurableSpace α]
-    (laws : Determinize.Proof.Paper.PrimitiveLaws) (mode : Mode) (kind : Kind)
+    (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction)
     {left right : α → Expr}
     (leftFamily : MeasurableFamily α left) (rightFamily : MeasurableFamily α right)
     (leftReduce : MeasurableActionFamily α (fun parameter => reduce (left parameter)))
     (rightReduce : MeasurableActionFamily α (fun parameter => reduce (right parameter))) :
     MeasurableActionFamily α
-      (fun parameter => reduce (.gamma mode kind (left parameter) (right parameter))) := by
+      (fun parameter => reduce (.gamma kind (left parameter) (right parameter))) := by
   classical
   by_cases leftValue : Expr.isValue leftFamily.skeleton = true
   · by_cases rightValue : Expr.isValue rightFamily.skeleton = true
@@ -3640,7 +3640,7 @@ noncomputable def reduceGamma {α : Type*} [MeasurableSpace α]
             ((left parameter).realCoordinates.getD 0 0, (right parameter).realCoordinates.getD 0 0)
           have parametersMeasurable : Measurable parameters :=
             (leftFamily.coordinate_measurable 0).prodMk (rightFamily.coordinate_measurable 0)
-          apply congr (.sample (site := (mode, kind, .gamma)) (SFiniteKernel.pullback (gammaDraw laws kind) parameters
+          apply congr (.sample (site := (kind, .gamma)) (SFiniteKernel.pullback (gammaDraw laws kind) parameters
             parametersMeasurable) (measurable_realLiteral measurable_snd))
           funext parameter
           have leftFixed := leftFamily.skeleton_eq parameter
@@ -3694,7 +3694,7 @@ noncomputable def reduceGamma {α : Type*} [MeasurableSpace α]
           rw [reduce_gamma_eq, actualLeftValue, actualRightValue] <;>
           simp [realValue?]
     · apply congr (rightReduce.wrapBinaryRight left leftFamily.measurable
-          (.gamma mode kind) (.gamma mode kind) (by intros; simp [Expr.skeleton])
+          (.gamma kind) (.gamma kind) (by intros; simp [Expr.skeleton])
           (by intros; simp [Expr.realCoordinates]))
       funext parameter
       have actualLeftValue : (left parameter).isValue = true :=
@@ -3705,7 +3705,7 @@ noncomputable def reduceGamma {α : Type*} [MeasurableSpace α]
       rw [reduce_gamma_eq, actualLeftValue, actualRightValue]
       simp
   · apply congr (leftReduce.wrapBinaryLeft right rightFamily.measurable
-        (.gamma mode kind) (.gamma mode kind) (by intros; simp [Expr.skeleton])
+        (.gamma kind) (.gamma kind) (by intros; simp [Expr.skeleton])
         (by intros; simp [Expr.realCoordinates]))
     funext parameter
     have actualLeftValue : (left parameter).isValue = false := by
@@ -3715,17 +3715,17 @@ noncomputable def reduceGamma {α : Type*} [MeasurableSpace α]
     simp
 
 noncomputable def reducePoisson {α : Type*} [MeasurableSpace α]
-    (laws : Determinize.Proof.Paper.PrimitiveLaws) (mode : Mode) (kind : Kind)
+    (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction)
     {body : α → Expr} (bodyFamily : MeasurableFamily α body)
     (bodyReduce : MeasurableActionFamily α (fun parameter => reduce (body parameter))) :
-    MeasurableActionFamily α (fun parameter => reduce (.poisson mode kind (body parameter))) := by
+    MeasurableActionFamily α (fun parameter => reduce (.poisson kind (body parameter))) := by
   classical
   by_cases bodyValue : Expr.isValue bodyFamily.skeleton = true
   · cases bodySkeletonEq : bodyFamily.skeleton
     case real =>
       let parameters := fun parameter => (body parameter).realCoordinates.getD 0 0
       have parametersMeasurable : Measurable parameters := bodyFamily.coordinate_measurable 0
-      apply congr (.sample (site := (mode, kind, .poisson)) (SFiniteKernel.pullback (poissonDraw laws kind) parameters
+      apply congr (.sample (site := (kind, .poisson)) (SFiniteKernel.pullback (poissonDraw laws kind) parameters
         parametersMeasurable) (measurable_realLiteral measurable_snd))
       funext parameter
       have fixed := bodyFamily.skeleton_eq parameter
@@ -3750,7 +3750,7 @@ noncomputable def reducePoisson {α : Type*} [MeasurableSpace α]
         simp [actualEq, Expr.skeleton] at fixed <;>
         rw [reduce_poisson_eq, actualBodyValue] <;>
         simp [realValue?]
-  · apply congr (bodyReduce.wrapUnary (.poisson mode kind) (.poisson mode kind)
+  · apply congr (bodyReduce.wrapUnary (.poisson kind) (.poisson kind)
         (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates]))
     funext parameter
     have actualBodyValue : (body parameter).isValue = false := by
@@ -3760,17 +3760,17 @@ noncomputable def reducePoisson {α : Type*} [MeasurableSpace α]
     simp
 
 noncomputable def reduceBernoulli {α : Type*} [MeasurableSpace α]
-    (laws : Determinize.Proof.Paper.PrimitiveLaws) (mode : Mode) (kind : Kind)
+    (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction)
     {body : α → Expr} (bodyFamily : MeasurableFamily α body)
     (bodyReduce : MeasurableActionFamily α (fun parameter => reduce (body parameter))) :
-    MeasurableActionFamily α (fun parameter => reduce (.bernoulli mode kind (body parameter))) := by
+    MeasurableActionFamily α (fun parameter => reduce (.bernoulli kind (body parameter))) := by
   classical
   by_cases bodyValue : Expr.isValue bodyFamily.skeleton = true
   · cases bodySkeletonEq : bodyFamily.skeleton
     case real =>
       let parameters := fun parameter => (body parameter).realCoordinates.getD 0 0
       have parametersMeasurable : Measurable parameters := bodyFamily.coordinate_measurable 0
-      apply congr (.sample (site := (mode, kind, .bernoulli)) (SFiniteKernel.pullback (bernoulliDraw laws kind) parameters
+      apply congr (.sample (site := (kind, .bernoulli)) (SFiniteKernel.pullback (bernoulliDraw laws kind) parameters
         parametersMeasurable) (measurable_realLiteral measurable_snd))
       funext parameter
       have fixed := bodyFamily.skeleton_eq parameter
@@ -3795,7 +3795,7 @@ noncomputable def reduceBernoulli {α : Type*} [MeasurableSpace α]
         simp [actualEq, Expr.skeleton] at fixed <;>
         rw [reduce_bernoulli_eq, actualBodyValue] <;>
         simp [realValue?]
-  · apply congr (bodyReduce.wrapUnary (.bernoulli mode kind) (.bernoulli mode kind)
+  · apply congr (bodyReduce.wrapUnary (.bernoulli kind) (.bernoulli kind)
         (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates]))
     funext parameter
     have actualBodyValue : (body parameter).isValue = false := by
@@ -3805,17 +3805,17 @@ noncomputable def reduceBernoulli {α : Type*} [MeasurableSpace α]
     simp
 
 noncomputable def reduceExponential {α : Type*} [MeasurableSpace α]
-    (laws : Determinize.Proof.Paper.PrimitiveLaws) (mode : Mode) (kind : Kind)
+    (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction)
     {body : α → Expr} (bodyFamily : MeasurableFamily α body)
     (bodyReduce : MeasurableActionFamily α (fun parameter => reduce (body parameter))) :
-    MeasurableActionFamily α (fun parameter => reduce (.exponential mode kind (body parameter))) := by
+    MeasurableActionFamily α (fun parameter => reduce (.exponential kind (body parameter))) := by
   classical
   by_cases bodyValue : Expr.isValue bodyFamily.skeleton = true
   · cases bodySkeletonEq : bodyFamily.skeleton
     case real =>
       let parameters := fun parameter => (body parameter).realCoordinates.getD 0 0
       have parametersMeasurable : Measurable parameters := bodyFamily.coordinate_measurable 0
-      apply congr (.sample (site := (mode, kind, .exponential)) (SFiniteKernel.pullback (exponentialDraw laws kind) parameters
+      apply congr (.sample (site := (kind, .exponential)) (SFiniteKernel.pullback (exponentialDraw laws kind) parameters
         parametersMeasurable) (measurable_realLiteral measurable_snd))
       funext parameter
       have fixed := bodyFamily.skeleton_eq parameter
@@ -3840,7 +3840,7 @@ noncomputable def reduceExponential {α : Type*} [MeasurableSpace α]
         simp [actualEq, Expr.skeleton] at fixed <;>
         rw [reduce_exponential_eq, actualBodyValue] <;>
         simp [realValue?]
-  · apply congr (bodyReduce.wrapUnary (.exponential mode kind) (.exponential mode kind)
+  · apply congr (bodyReduce.wrapUnary (.exponential kind) (.exponential kind)
         (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates]))
     funext parameter
     have actualBodyValue : (body parameter).isValue = false := by
@@ -3881,8 +3881,8 @@ noncomputable def measurable_reduceAux
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
             simp [actualEq, Expr.skeleton, reduce] at fixed ⊢
-      | discrete mode kind d =>
-          apply congr (.sample (site := (mode, kind, .discrete d))
+      | discrete kind d =>
+          apply congr (.sample (site := (kind, .discrete d))
             (SFiniteKernel.pullback (discreteDraw laws kind d) (fun _ => ()) measurable_const)
             (measurable_realLiteral measurable_snd))
           funext parameter
@@ -4128,7 +4128,7 @@ noncomputable def measurable_reduceAux
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
             simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild]
-      | uniform mode kind leftSkeleton rightSkeleton =>
+      | uniform kind leftSkeleton rightSkeleton =>
           have leftSmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
             simp_all [Skeleton.firstChild, Skeleton.secondChild]
@@ -4137,7 +4137,7 @@ noncomputable def measurable_reduceAux
             rw [← sizeEq, skeletonEq]
             simp_all [Skeleton.firstChild, Skeleton.secondChild]
             omega
-          apply congr (reduceUniform laws mode kind family.firstChild family.secondChild
+          apply congr (reduceUniform laws kind family.firstChild family.secondChild
             (childReduce family.firstChild leftSmaller)
             (childReduce family.secondChild rightSmaller))
           funext parameter
@@ -4145,7 +4145,7 @@ noncomputable def measurable_reduceAux
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
             simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild]
-      | gaussian mode kind leftSkeleton rightSkeleton =>
+      | gaussian kind leftSkeleton rightSkeleton =>
           have leftSmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
             simp_all [Skeleton.firstChild, Skeleton.secondChild]
@@ -4154,7 +4154,7 @@ noncomputable def measurable_reduceAux
             rw [← sizeEq, skeletonEq]
             simp_all [Skeleton.firstChild, Skeleton.secondChild]
             omega
-          apply congr (reduceGaussian laws mode kind family.firstChild family.secondChild
+          apply congr (reduceGaussian laws kind family.firstChild family.secondChild
             (childReduce family.firstChild leftSmaller)
             (childReduce family.secondChild rightSmaller))
           funext parameter
@@ -4162,7 +4162,7 @@ noncomputable def measurable_reduceAux
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
             simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild]
-      | beta mode kind leftSkeleton rightSkeleton =>
+      | beta kind leftSkeleton rightSkeleton =>
           have leftSmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
             simp_all [Skeleton.firstChild, Skeleton.secondChild]
@@ -4171,7 +4171,7 @@ noncomputable def measurable_reduceAux
             rw [← sizeEq, skeletonEq]
             simp_all [Skeleton.firstChild, Skeleton.secondChild]
             omega
-          apply congr (reduceBeta laws mode kind family.firstChild family.secondChild
+          apply congr (reduceBeta laws kind family.firstChild family.secondChild
             (childReduce family.firstChild leftSmaller)
             (childReduce family.secondChild rightSmaller))
           funext parameter
@@ -4179,7 +4179,7 @@ noncomputable def measurable_reduceAux
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
             simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild]
-      | gamma mode kind leftSkeleton rightSkeleton =>
+      | gamma kind leftSkeleton rightSkeleton =>
           have leftSmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
             simp_all [Skeleton.firstChild, Skeleton.secondChild]
@@ -4188,7 +4188,7 @@ noncomputable def measurable_reduceAux
             rw [← sizeEq, skeletonEq]
             simp_all [Skeleton.firstChild, Skeleton.secondChild]
             omega
-          apply congr (reduceGamma laws mode kind family.firstChild family.secondChild
+          apply congr (reduceGamma laws kind family.firstChild family.secondChild
             (childReduce family.firstChild leftSmaller)
             (childReduce family.secondChild rightSmaller))
           funext parameter
@@ -4196,36 +4196,36 @@ noncomputable def measurable_reduceAux
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
             simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild]
-      | poisson mode kind bodySkeleton =>
+      | poisson kind bodySkeleton =>
           have bodySmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
             simp_all [Skeleton.firstChild, Skeleton.secondChild]
             omega
-          apply congr (reducePoisson laws mode kind family.firstChild
+          apply congr (reducePoisson laws kind family.firstChild
             (childReduce family.firstChild bodySmaller))
           funext parameter
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
             simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild]
-      | bernoulli mode kind bodySkeleton =>
+      | bernoulli kind bodySkeleton =>
           have bodySmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
             simp_all [Skeleton.firstChild, Skeleton.secondChild]
             omega
-          apply congr (reduceBernoulli laws mode kind family.firstChild
+          apply congr (reduceBernoulli laws kind family.firstChild
             (childReduce family.firstChild bodySmaller))
           funext parameter
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
             simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild]
-      | exponential mode kind bodySkeleton =>
+      | exponential kind bodySkeleton =>
           have bodySmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
             simp_all [Skeleton.firstChild, Skeleton.secondChild]
             omega
-          apply congr (reduceExponential laws mode kind family.firstChild
+          apply congr (reduceExponential laws kind family.firstChild
             (childReduce family.firstChild bodySmaller))
           funext parameter
           have fixed := family.skeleton_eq parameter
@@ -4434,7 +4434,7 @@ theorem sample_continuation_measurable_of_family
 
 theorem reduce_sample_continuation_measurable
     (laws : Determinize.Proof.Paper.PrimitiveLaws)
-    (expression : Expr) {site : Mode × Kind × Op} (fiber : Measure ℝ) (continuation : ℝ → Expr)
+    (expression : Expr) {site : DistributionAction × Op} (fiber : Measure ℝ) (continuation : ℝ → Expr)
     (equality : reduce expression = .sample site fiber continuation) :
     Measurable continuation := by
   let family := measurable_reduce laws
@@ -4454,47 +4454,47 @@ theorem meanKernel_mass_le_one
   split <;> simp [Kernel.deterministic_apply]
 
 theorem primitiveFiber_mass_le_one
-    (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : Kind) (op : Op)
+    (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction) (op : Op)
     (affine general : List ℝ)
     (affineArity : affine.length = Determinize.Spec.Paper.affineArity op)
     (generalArity : general.length = Determinize.Spec.Paper.generalArity op) :
     primitiveFiber kind op affine general Set.univ ≤ 1 := by
   rw [primitiveFiber_eq_atomic laws kind op affine general affineArity generalArity]
   cases kind with
-  | stochastic => exact laws.mass_le_one op _
+  | sample affinity => exact laws.mass_le_one op _
   | mean => exact meanKernel_mass_le_one op _
 
-theorem uniformFiber_mass_le_one (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : Kind)
+theorem uniformFiber_mass_le_one (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction)
     (lower upper : ℝ) : uniformFiber kind lower upper Set.univ ≤ 1 := by
   rw [uniformFiber_eq]
   exact primitiveFiber_mass_le_one laws kind .uniform [lower, upper] [] rfl rfl
 
-theorem gaussianFiber_mass_le_one (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : Kind)
+theorem gaussianFiber_mass_le_one (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction)
     (mean variance : ℝ) : gaussianFiber kind mean variance Set.univ ≤ 1 := by
   rw [gaussianFiber_eq]
   exact primitiveFiber_mass_le_one laws kind .gaussian [mean] [variance] rfl rfl
 
-theorem poissonFiber_mass_le_one (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : Kind)
+theorem poissonFiber_mass_le_one (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction)
     (rate : ℝ) : poissonFiber kind rate Set.univ ≤ 1 := by
   rw [poissonFiber_eq]
   exact primitiveFiber_mass_le_one laws kind .poisson [rate] [] rfl rfl
 
-theorem bernoulliFiber_mass_le_one (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : Kind)
+theorem bernoulliFiber_mass_le_one (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction)
     (probability : ℝ) : bernoulliFiber kind probability Set.univ ≤ 1 := by
   rw [bernoulliFiber_eq]
   exact primitiveFiber_mass_le_one laws kind .bernoulli [probability] [] rfl rfl
 
-theorem exponentialFiber_mass_le_one (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : Kind)
+theorem exponentialFiber_mass_le_one (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction)
     (rate : ℝ) : exponentialFiber kind rate Set.univ ≤ 1 := by
   rw [exponentialFiber_eq]
   exact primitiveFiber_mass_le_one laws kind .exponential [] [rate] rfl rfl
 
-theorem betaFiber_mass_le_one (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : Kind)
+theorem betaFiber_mass_le_one (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction)
     (alpha beta : ℝ) : betaFiber kind alpha beta Set.univ ≤ 1 := by
   rw [betaFiber_eq]
   exact primitiveFiber_mass_le_one laws kind .beta [] [alpha, beta] rfl rfl
 
-theorem gammaFiber_mass_le_one (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : Kind)
+theorem gammaFiber_mass_le_one (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction)
     (shape rate : ℝ) : gammaFiber kind shape rate Set.univ ≤ 1 := by
   rw [gammaFiber_eq]
   exact primitiveFiber_mass_le_one laws kind .gamma [shape] [rate] rfl rfl
@@ -4548,7 +4548,7 @@ theorem reduce_sample_mass_le_one
       cases expression with
       | bvar index => simp [reduce, Determinize.Spec.Paper.reduce] at equality
       | reject => simp [reduce, Determinize.Spec.Paper.reduce] at equality
-      | discrete mode kind d =>
+      | discrete kind d =>
           simp only [reduce, Determinize.Spec.Paper.reduce] at equality
           cases equality
           rw [discreteFiber_eq]
@@ -4653,7 +4653,7 @@ theorem reduce_sample_mass_le_one
             · split at equality <;> simp at equality
             · exact wrapped right (by rw [← sizeEq]; simp_wf <;> omega) _ equality
           · exact wrapped left (by rw [← sizeEq]; simp_wf <;> omega) _ equality
-      | uniform mode kind left right =>
+      | uniform kind left right =>
           rw [reduce_uniform_eq] at equality
           split at equality
           · split at equality
@@ -4664,7 +4664,7 @@ theorem reduce_sample_mass_le_one
               · simp at equality
             · exact wrapped right (by rw [← sizeEq]; simp_wf <;> omega) _ equality
           · exact wrapped left (by rw [← sizeEq]; simp_wf <;> omega) _ equality
-      | gaussian mode kind left right =>
+      | gaussian kind left right =>
           rw [reduce_gaussian_eq] at equality
           split at equality
           · split at equality
@@ -4675,7 +4675,7 @@ theorem reduce_sample_mass_le_one
               · simp at equality
             · exact wrapped right (by rw [← sizeEq]; simp_wf <;> omega) _ equality
           · exact wrapped left (by rw [← sizeEq]; simp_wf <;> omega) _ equality
-      | beta mode kind left right =>
+      | beta kind left right =>
           rw [reduce_beta_eq] at equality
           split at equality
           · split at equality
@@ -4686,7 +4686,7 @@ theorem reduce_sample_mass_le_one
               · simp at equality
             · exact wrapped right (by rw [← sizeEq]; simp_wf <;> omega) _ equality
           · exact wrapped left (by rw [← sizeEq]; simp_wf <;> omega) _ equality
-      | gamma mode kind left right =>
+      | gamma kind left right =>
           rw [reduce_gamma_eq] at equality
           split at equality
           · split at equality
@@ -4697,7 +4697,7 @@ theorem reduce_sample_mass_le_one
               · simp at equality
             · exact wrapped right (by rw [← sizeEq]; simp_wf <;> omega) _ equality
           · exact wrapped left (by rw [← sizeEq]; simp_wf <;> omega) _ equality
-      | poisson mode kind body =>
+      | poisson kind body =>
           rw [reduce_poisson_eq] at equality
           split at equality
           · split at equality
@@ -4706,7 +4706,7 @@ theorem reduce_sample_mass_le_one
               exact poissonFiber_mass_le_one laws kind _
             · simp at equality
           · exact wrapped body (by rw [← sizeEq]; simp_wf <;> omega) _ equality
-      | bernoulli mode kind body =>
+      | bernoulli kind body =>
           rw [reduce_bernoulli_eq] at equality
           split at equality
           · split at equality
@@ -4715,7 +4715,7 @@ theorem reduce_sample_mass_le_one
               exact bernoulliFiber_mass_le_one laws kind _
             · simp at equality
           · exact wrapped body (by rw [← sizeEq]; simp_wf <;> omega) _ equality
-      | exponential mode kind body =>
+      | exponential kind body =>
           rw [reduce_exponential_eq] at equality
           split at equality
           · split at equality

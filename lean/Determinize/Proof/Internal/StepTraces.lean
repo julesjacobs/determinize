@@ -7,9 +7,9 @@ import Mathlib.MeasureTheory.Integral.Bochner.Basic
 /-!
 # Internal traces with one entry per reduction step
 
-A trace records one entry per reduction step: a generation-mode primitive and
-its sampled value, or `none` for a step without a generation-mode draw. Its
-length is the first termination depth. Expectation-mode sampled values are not recorded.
+A trace records one entry per reduction step: a generation-affinity primitive and
+its sampled value, or `none` for a step without a generation-affinity draw. Its
+length is the first termination depth. Expectation-affinity sampled values are not recorded.
 -/
 
 namespace Determinize.Proof.StepTraces
@@ -29,8 +29,8 @@ instance : MeasurableSpace Trace :=
   MeasurableSpace.comap (fun trace : Trace =>
     (trace.length, fun index : Nat => trace.getD index none)) inferInstance
 
-def generationEvent : Mode × Kind × Op → ℝ → Event
-  | (.G, .stochastic, op), value => some (op, value)
+def generationEvent : DistributionAction × Op → ℝ → Event
+  | (.sample .G, op), value => some (op, value)
   | _, _ => none
 
 def prepend (entry : Event) (output : Output) : Output :=
@@ -48,7 +48,7 @@ noncomputable def exactMeasure : Nat → Expr → Measure Output
             (exactMeasure depth (continuation value)).map (prepend (generationEvent modeTag value))
         | .stuck => 0
 
-/-- Joint operational law of terminating traces and returned expectation-mode reals. -/
+/-- Joint operational law of terminating traces and returned expectation-affinity reals. -/
 noncomputable def jointMeasure (program : Expr) : Measure (Trace × ℝ) :=
   Measure.sum fun depth => exactMeasure depth program
 
@@ -67,8 +67,8 @@ def MeanOnTraces (source target : Expr) : Prop :=
     ∀ᵐ trace ∂traces,
       Integrable id (fiber trace) ∧ output trace = ∫ value : ℝ, value ∂fiber trace
 
-/-- Trace soundness for expectation-mode programs on detailed traces, without a global
-integrability assumption. General-mode programs are handled by the compact layer, which
+/-- Trace soundness for expectation-affinity programs on detailed traces, without a global
+integrability assumption. General-affinity programs are handled by the compact layer, which
 promotes them. -/
 def soundnessThm : Prop :=
   ∀ program : Expr,

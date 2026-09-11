@@ -4,7 +4,7 @@ import Determinize.Proof.TraceFactorization
 /-!
 # Compact trace soundness
 
-The detailed step-trace results are transported to compact traces of general-mode draws, with
+The detailed step-trace results are transported to compact traces of general-affinity draws, with
 `Spec.Traces.outputGivenTrace` as the fiber: the Markov version `normalizedOutputGivenTrace` factors
 the joint laws, and almost surely it agrees with `outputGivenTrace` on the source, while on the
 target `outputGivenTrace` is the Dirac mass at the target output.
@@ -25,11 +25,15 @@ abbrev eraseOutput : StepTraces.Output → Output := mapTraceOutput retain
 theorem eraseOutput_measurable : Measurable eraseOutput :=
   mapTrace_measurable retain retain_measurable
 
-theorem record_measurable (site : Mode × Kind × Op) (value : ℝ) : Measurable (record site value) := by
-  rcases site with ⟨mode, kind, op⟩
-  cases mode <;> cases kind <;> try exact measurable_id
-  exact (StepTraces.draw_cons_measurable.comp
-    (measurable_const.prodMk measurable_fst)).prodMk measurable_snd
+theorem record_measurable (site : DistributionAction × Op) (value : ℝ) : Measurable (record site value) := by
+  rcases site with ⟨kind, op⟩
+  cases kind with
+  | sample affinity =>
+      cases affinity with
+      | E => exact measurable_id
+      | G => exact (StepTraces.draw_cons_measurable.comp
+          (measurable_const.prodMk measurable_fst)).prodMk measurable_snd
+  | mean => exact measurable_id
 
 theorem exact_eq_detailed (depth : Nat) (e : Expr) :
     traceAndOutputLawAt depth e = (StepTraces.exactMeasure depth e).map eraseOutput := by
@@ -66,8 +70,10 @@ theorem exact_eq_detailed (depth : Nat) (e : Expr) :
                   StepTraces.prepend_measurable.comp (measurable_const.prodMk measurable_id))]
             congr 1
             funext p
-            rcases site with ⟨mode, kind, op⟩
-            cases mode <;> cases kind <;> rfl
+            rcases site with ⟨kind, op⟩
+            cases kind with
+            | sample affinity => cases affinity <;> rfl
+            | mean => rfl
 
 theorem joint_eq_detailed (e : Expr) :
     traceAndOutputLaw e = (StepTraces.jointMeasure e).map eraseOutput := by
@@ -196,7 +202,7 @@ theorem compact_target_selfReplay (source : Expr) (typed : Typed [] source (.flo
 
 /-! ### The factorization with its almost-sure identifications -/
 
-/-- Trace soundness for an expectation-mode source, as a factorization by the normalized
+/-- Trace soundness for an expectation-affinity source, as a factorization by the normalized
 compact replay together with the identifications that give the public statement: almost
 surely the source fiber is `outputGivenTrace` itself, and the target replay is the Dirac mass
 at the target output. -/
@@ -235,8 +241,8 @@ theorem soundnessDataE (source : Expr) (typed : Typed [] source (.float .E))
     rw [ht] at dirac
     exact ae_of_ae_map pairMeasurable.aemeasurable dirac
 
-/-- Apply expectation-mode soundness using silent subtyping for general-mode programs. -/
-theorem soundnessData (mode : Mode) (program : Expr) (typed : Typed [] program (.float mode))
+/-- Apply expectation-affinity soundness using silent subtyping for general-affinity programs. -/
+theorem soundnessData (affinity : Affinity) (program : Expr) (typed : Typed [] program (.float affinity))
     (sourceForm : program.sourceForm = true) (safe : DoesNotGetStuck program) :
     DoesNotGetStuck program.determinize ∧
       TraceFactorization program program.determinize (normalizedOutputGivenTrace program)
@@ -245,15 +251,15 @@ theorem soundnessData (mode : Mode) (program : Expr) (typed : Typed [] program (
         outputGivenTrace program trace = normalizedOutputGivenTrace program trace) ∧
       ∀ᵐ trace ∂traceLaw program,
         outputGivenTrace program.determinize trace = Measure.dirac (kernelMean (normalizedOutputGivenTrace program) trace) := by
-  cases mode with
+  cases affinity with
   | E => exact soundnessDataE program typed sourceForm safe
   | G => exact soundnessDataE program (.sub typed .general) sourceForm safe
 
 /-- Some trace factorization exists: the input of the corollaries. -/
-theorem meanOnTraces (mode : Mode) (program : Expr) (typed : Typed [] program (.float mode))
+theorem meanOnTraces (affinity : Affinity) (program : Expr) (typed : Typed [] program (.float affinity))
     (sourceForm : program.sourceForm = true) (safe : DoesNotGetStuck program) :
     DoesNotGetStuck program.determinize ∧ MeanOnTraces program program.determinize :=
-  let ⟨targetSafe, factor, _, _⟩ := soundnessData mode program typed sourceForm safe
+  let ⟨targetSafe, factor, _, _⟩ := soundnessData affinity program typed sourceForm safe
   ⟨targetSafe, _, factor⟩
 
 /-- A measure composed with a kernel is the bind that pairs each point with its draw. -/

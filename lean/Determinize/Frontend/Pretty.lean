@@ -3,11 +3,11 @@ import Determinize.Frontend.Syntax
 namespace Determinize.Frontend
 open Spec.Paper Checking
 
-def prettyMode : Mode → String | .E => "E" | .G => "G"
+def prettyAffinity : Affinity → String | .E => "E" | .G => "G"
 def prettyType : Ty → String
   | .unit => "unit"
   | .bool => "bool"
-  | .float m => s!"float[{prettyMode m}]"
+  | .float m => s!"float[{prettyAffinity m}]"
   | .prod a b => s!"({prettyType a} * {prettyType b})"
   | .sum a b => s!"({prettyType a} + {prettyType b})"
   | .list a => s!"[{prettyType a}]"
@@ -28,9 +28,15 @@ private def literal (q : Rat) : String :=
       let fraction := toString (numerator % scale)
       let padding := String.ofList (List.replicate (places - fraction.length) '0')
       s!"{if q.num < 0 then "-" else ""}{numerator / scale}.{padding}{fraction}"
-private def primitive (name : String) (m : Mode) (k : Kind) (args : List String) : String :=
-  let name := if k == .mean then "mean_" ++ name else name
-  s!"{name}[{prettyMode m}]({String.intercalate ", " args})"
+def leanAction : DistributionAction → String
+  | .sample affinity => s!"(.sample .{prettyAffinity affinity})"
+  | .mean => ".mean"
+
+private def primitive (name : String) (action : DistributionAction) (args : List String) : String :=
+  let head := match action with
+    | .sample affinity => s!"{name}[{prettyAffinity affinity}]"
+    | .mean => "mean_" ++ name
+  s!"{head}({String.intercalate ", " args})"
 
 private def render (env : List String) (depth : Nat) : Core → String
   | .bvar i => (env[i]?).getD s!"unbound_{i}"
@@ -62,15 +68,15 @@ private def render (env : List String) (depth : Nat) : Core → String
   | .mul a b => s!"({render env depth a} * {render env depth b})"
   | .div a b => s!"({render env depth a} / {render env depth b})"
   | .lt a b => s!"({render env depth a} < {render env depth b})"
-  | .uniform m k a b => primitive "uniform" m k [render env depth a, render env depth b]
-  | .gaussian m k a b => primitive "gauss" m k [render env depth a, render env depth b]
-  | .poisson m k a => primitive "poisson" m k [render env depth a]
-  | .discrete m k d =>
-      primitive "discrete" m k (d.probabilities.map literal)
-  | .bernoulli m k a => primitive "bernoulli" m k [render env depth a]
-  | .exponential m k a => primitive "exponential" m k [render env depth a]
-  | .beta m k a b => primitive "beta" m k [render env depth a, render env depth b]
-  | .gamma m k a b => primitive "gamma" m k [render env depth a, render env depth b]
+  | .uniform k a b => primitive "uniform" k [render env depth a, render env depth b]
+  | .gaussian k a b => primitive "gauss" k [render env depth a, render env depth b]
+  | .poisson k a => primitive "poisson" k [render env depth a]
+  | .discrete k d =>
+      primitive "discrete" k (d.probabilities.map literal)
+  | .bernoulli k a => primitive "bernoulli" k [render env depth a]
+  | .exponential k a => primitive "exponential" k [render env depth a]
+  | .beta k a b => primitive "beta" k [render env depth a, render env depth b]
+  | .gamma k a b => primitive "gamma" k [render env depth a, render env depth b]
 
 def pretty (e : Core) : String := render [] 0 e
 
@@ -100,15 +106,15 @@ def leanExpression : Core → String
   | .mul left right => s!"(.mul {leanExpression left} {leanExpression right})"
   | .div left right => s!"(.div {leanExpression left} {leanExpression right})"
   | .lt left right => s!"(.lt {leanExpression left} {leanExpression right})"
-  | .uniform mode kind lower upper => s!"(.uniform .{prettyMode mode} {if kind == .mean then ".mean" else ".stochastic"} {leanExpression lower} {leanExpression upper})"
-  | .gaussian mode kind mean variance => s!"(.gaussian .{prettyMode mode} {if kind == .mean then ".mean" else ".stochastic"} {leanExpression mean} {leanExpression variance})"
-  | .poisson mode kind rate => s!"(.poisson .{prettyMode mode} {if kind == .mean then ".mean" else ".stochastic"} {leanExpression rate})"
-  | .discrete mode kind d =>
+  | .uniform action lower upper => s!"(.uniform {leanAction action} {leanExpression lower} {leanExpression upper})"
+  | .gaussian action mean variance => s!"(.gaussian {leanAction action} {leanExpression mean} {leanExpression variance})"
+  | .poisson action rate => s!"(.poisson {leanAction action} {leanExpression rate})"
+  | .discrete action d =>
       let ps := String.intercalate ", " (d.probabilities.map fun p => s!"({p.num} / {p.den} : Rat)")
-      s!"(.discrete .{prettyMode mode} {if kind == .mean then ".mean" else ".stochastic"} ⟨[{ps}], by decide +kernel, by decide +kernel⟩)"
-  | .bernoulli mode kind probability => s!"(.bernoulli .{prettyMode mode} {if kind == .mean then ".mean" else ".stochastic"} {leanExpression probability})"
-  | .exponential mode kind rate => s!"(.exponential .{prettyMode mode} {if kind == .mean then ".mean" else ".stochastic"} {leanExpression rate})"
-  | .beta mode kind alpha betaArg => s!"(.beta .{prettyMode mode} {if kind == .mean then ".mean" else ".stochastic"} {leanExpression alpha} {leanExpression betaArg})"
-  | .gamma mode kind shape rate => s!"(.gamma .{prettyMode mode} {if kind == .mean then ".mean" else ".stochastic"} {leanExpression shape} {leanExpression rate})"
+      s!"(.discrete {leanAction action} ⟨[{ps}], by decide +kernel, by decide +kernel⟩)"
+  | .bernoulli action probability => s!"(.bernoulli {leanAction action} {leanExpression probability})"
+  | .exponential action rate => s!"(.exponential {leanAction action} {leanExpression rate})"
+  | .beta action alpha betaArg => s!"(.beta {leanAction action} {leanExpression alpha} {leanExpression betaArg})"
+  | .gamma action shape rate => s!"(.gamma {leanAction action} {leanExpression shape} {leanExpression rate})"
 
 end Determinize.Frontend

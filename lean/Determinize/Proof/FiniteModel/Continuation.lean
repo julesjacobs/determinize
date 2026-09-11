@@ -50,7 +50,7 @@ theorem deliver_stepMeaning (value : Value) (stack : List Frame)
           | nil =>
               change draw site (arguments ++ [x]) stack = .ok result at action
               unfold draw at action
-              cases law : finiteLaw site.2.2 site.2.1 (arguments ++ [x]) with
+              cases law : finiteLaw site.2 site.1 (arguments ++ [x]) with
               | error failure => simp [law, bind, Except.bind] at action
               | ok outcomes =>
                   simp only [law, bind, Except.bind, pure, Except.pure] at action

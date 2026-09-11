@@ -17,7 +17,7 @@ open scoped ENNReal ProbabilityTheory
 /-- A pointwise reduction action. -/
 inductive Action where
   | next (expression : Expr)
-  | sample (site : Mode × Kind × Op) (fiber : Measure ℝ) (continuation : ℝ → Expr)
+  | sample (site : DistributionAction × Op) (fiber : Measure ℝ) (continuation : ℝ → Expr)
   | stuck
 
 def Action.wrap (context : Expr → Expr) : Action → Action
@@ -121,50 +121,50 @@ noncomputable def reduce : Expr → Action
           | some x, some y => .next (.bool (x < y)) | _, _ => .stuck
         else (reduce right).wrap (.lt left)
       else (reduce left).wrap (fun next => .lt next right)
-  | .uniform mode kind lower upper =>
+  | .uniform action lower upper =>
       if lower.isValue then
         if upper.isValue then match realValue? lower, realValue? upper with
-          | some a, some b => .sample (mode, kind, .uniform) (uniformFiber kind a b) .real
+          | some a, some b => .sample (action, .uniform) (uniformFiber action a b) .real
           | _, _ => .stuck
-        else (reduce upper).wrap (.uniform mode kind lower)
-      else (reduce lower).wrap (fun next => .uniform mode kind next upper)
-  | .gaussian mode kind mean variance =>
+        else (reduce upper).wrap (.uniform action lower)
+      else (reduce lower).wrap (fun next => .uniform action next upper)
+  | .gaussian action mean variance =>
       if mean.isValue then
         if variance.isValue then match realValue? mean, realValue? variance with
-          | some m, some v => .sample (mode, kind, .gaussian) (gaussianFiber kind m v) .real
+          | some m, some v => .sample (action, .gaussian) (gaussianFiber action m v) .real
           | _, _ => .stuck
-        else (reduce variance).wrap (.gaussian mode kind mean)
-      else (reduce mean).wrap (fun next => .gaussian mode kind next variance)
-  | .poisson mode kind rate =>
+        else (reduce variance).wrap (.gaussian action mean)
+      else (reduce mean).wrap (fun next => .gaussian action next variance)
+  | .poisson action rate =>
       if rate.isValue then match realValue? rate with
-        | some r => .sample (mode, kind, .poisson) (poissonFiber kind r) .real
+        | some r => .sample (action, .poisson) (poissonFiber action r) .real
         | none => .stuck
-      else (reduce rate).wrap (.poisson mode kind)
-  | .discrete mode kind d => .sample (mode, kind, .discrete d) (discreteFiber kind d) .real
-  | .bernoulli mode kind probability =>
+      else (reduce rate).wrap (.poisson action)
+  | .discrete action d => .sample (action, .discrete d) (discreteFiber action d) .real
+  | .bernoulli action probability =>
       if probability.isValue then match realValue? probability with
-        | some r => .sample (mode, kind, .bernoulli) (bernoulliFiber kind r) .real
+        | some r => .sample (action, .bernoulli) (bernoulliFiber action r) .real
         | none => .stuck
-      else (reduce probability).wrap (.bernoulli mode kind)
-  | .exponential mode kind rate =>
+      else (reduce probability).wrap (.bernoulli action)
+  | .exponential action rate =>
       if rate.isValue then match realValue? rate with
-        | some r => .sample (mode, kind, .exponential) (exponentialFiber kind r) .real
+        | some r => .sample (action, .exponential) (exponentialFiber action r) .real
         | none => .stuck
-      else (reduce rate).wrap (.exponential mode kind)
-  | .beta mode kind alpha beta =>
+      else (reduce rate).wrap (.exponential action)
+  | .beta action alpha beta =>
       if alpha.isValue then
         if beta.isValue then match realValue? alpha, realValue? beta with
-          | some a, some b => .sample (mode, kind, .beta) (betaFiber kind a b) .real
+          | some a, some b => .sample (action, .beta) (betaFiber action a b) .real
           | _, _ => .stuck
-        else (reduce beta).wrap (.beta mode kind alpha)
-      else (reduce alpha).wrap (fun next => .beta mode kind next beta)
-  | .gamma mode kind shape rate =>
+        else (reduce beta).wrap (.beta action alpha)
+      else (reduce alpha).wrap (fun next => .beta action next beta)
+  | .gamma action shape rate =>
       if shape.isValue then
         if rate.isValue then match realValue? shape, realValue? rate with
-          | some k, some r => .sample (mode, kind, .gamma) (gammaFiber kind k r) .real
+          | some k, some r => .sample (action, .gamma) (gammaFiber action k r) .real
           | _, _ => .stuck
-        else (reduce rate).wrap (.gamma mode kind shape)
-      else (reduce shape).wrap (fun next => .gamma mode kind next rate)
+        else (reduce rate).wrap (.gamma action shape)
+      else (reduce shape).wrap (fun next => .gamma action next rate)
 
 /-- Real output accumulated through `fuel` reduction steps. Only terminal reals
 contribute output; other types may occur during evaluation. -/

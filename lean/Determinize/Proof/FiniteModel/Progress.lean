@@ -8,9 +8,9 @@ def expressionWork : Core → Nat
       expressionWork a + expressionWork b + 3
   | .fst a | .snd a | .inl a | .inr a | .neg a => expressionWork a + 2
   | .letE a _ | .ite a _ _ | .matchSum a _ _ | .matchList a _ _ => expressionWork a + 2
-  | .uniform _ _ a b | .gaussian _ _ a b | .beta _ _ a b | .gamma _ _ a b =>
+  | .uniform _ a b | .gaussian _ a b | .beta _ a b | .gamma _ a b =>
       expressionWork a + expressionWork b + 3
-  | .poisson _ _ a | .bernoulli _ _ a | .exponential _ _ a => expressionWork a + 2
+  | .poisson _ a | .bernoulli _ a | .exponential _ a => expressionWork a + 2
   | _ => 1
 
 def frameWork : Frame → Nat

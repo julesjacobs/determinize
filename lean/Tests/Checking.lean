@@ -6,7 +6,7 @@ namespace Determinize.Tests
 open Checking Spec.Paper
 
 private def floatE := Ty.float .E
-private def draw : Core := .uniform .E .stochastic (.real 0) (.real 1)
+private def draw : Core := .uniform (.sample .E) (.real 0) (.real 1)
 private def evidence : Certificate := .node floatE [.node floatE [], .node floatE []]
 
 example : Typed [] (interpret draw) floatE :=
@@ -20,30 +20,30 @@ def checking : IO Unit := do
   assert (!(check [] (.bvar 0) floatE (.node floatE [])).isSome) "unbound variable certificate accepted"
   assert (!(check [] draw floatE (.node floatE [.node .bool [], .node floatE []])).isSome)
     "false child type accepted"
-  assert (!(certify draw (.uniform .E .stochastic (.real 0) (.real 2)) [none] evidence).isSome)
+  assert (!(certify draw (.uniform (.sample .E) (.real 0) (.real 2)) [none] evidence).isSome)
     "changed literal accepted"
-  assert (!(certify draw draw [some .G] evidence).isSome) "explicit sampling mode changed"
+  assert (!(certify draw draw [some .G] evidence).isSome) "explicit sampling affinity changed"
   assert (!(certify draw draw.determinize [none] evidence).isSome) "target accepted as source"
-  let coin : Core := .bernoulli .E .stochastic (.real (1/4))
+  let coin : Core := .bernoulli (.sample .E) (.real (1/4))
   let coinEvidence : Certificate := .node floatE [.node floatE []]
   assert ((certify coin coin [some .E] coinEvidence).isSome) "Bernoulli certificate rejected"
-  assert (!(certify coin (.bernoulli .E .stochastic (.real (1/2))) [some .E]
+  assert (!(certify coin (.bernoulli (.sample .E) (.real (1/2))) [some .E]
     coinEvidence).isSome) "changed Bernoulli probability accepted"
   assert (!(certify coin coin.determinize [some .E] coinEvidence).isSome)
     "Bernoulli mean accepted as a source draw"
   assert (!(check [] coin floatE (.node floatE [])).isSome) "omitted probability evidence accepted"
   let d ← IO.ofExcept (finiteDistribution [1/6,1/3,1/2])
   let changed ← IO.ofExcept (finiteDistribution [1/2,1/3,1/6])
-  let categorical : Core := .discrete .E .stochastic d
+  let categorical : Core := .discrete (.sample .E) d
   let categoricalEvidence : Certificate := .node floatE []
   assert ((certify categorical categorical [some .E] categoricalEvidence).isSome)
     "discrete certificate rejected"
-  assert (!(certify categorical (.discrete .E .stochastic changed) [some .E]
+  assert (!(certify categorical (.discrete (.sample .E) changed) [some .E]
     categoricalEvidence).isSome) "changed discrete weights accepted"
   assert (!(certify categorical categorical.determinize [some .E] categoricalEvidence).isSome)
     "discrete mean accepted as a source draw"
   assert (!(certify categorical categorical [some .G] categoricalEvidence).isSome)
-    "discrete sampling mode changed"
+    "discrete sampling affinity changed"
   let g := Ty.float .G
   let e := Ty.float .E
   for (a,b) in [(g,e), (.prod g g,.prod e e), (.sum g g,.sum e e),

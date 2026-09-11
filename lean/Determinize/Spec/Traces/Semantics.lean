@@ -4,7 +4,7 @@ import Mathlib.MeasureTheory.Constructions.BorelSpace.Basic
 /-!
 # Generation traces
 
-A trace records only stochastic generation-mode draws, in execution order.
+A trace records only stochastic G draws, in execution order.
 Reduction depth is used to define termination, but is not part of a trace.
 -/
 
@@ -24,9 +24,9 @@ instance : MeasurableSpace Trace :=
     (trace.length, fun index : Nat => trace.getD index (.uniform, 0))) inferInstance
 
 /-- Record a generation draw; all other actions preserve the suffix trace. -/
-def record (site : Mode × Kind × Op) (value : ℝ) (output : Output) : Output :=
+def record (site : DistributionAction × Op) (value : ℝ) (output : Output) : Output :=
   match site with
-  | (.G, .stochastic, op) => ((op, value) :: output.1, output.2)
+  | (.sample .G, op) => ((op, value) :: output.1, output.2)
   | _ => output
 
 /-- Joint law of executions first returning a real at exactly `depth`
@@ -47,10 +47,10 @@ noncomputable def traceAndOutputLawAt : Nat → Expr → Measure Output
 noncomputable def traceAndOutputLaw (program : Expr) : Measure Output :=
   Measure.sum fun depth => traceAndOutputLawAt depth program
 
-/-- Replay `program` for `depth` reduction steps with its general-mode draws read from `trace`
-instead of sampled, still integrating every expectation-mode draw: the law of the real the
+/-- Replay `program` for `depth` reduction steps with its G draws read from `trace`
+instead of sampled, still integrating every E draw: the law of the real the
 replay returns exactly at `depth`. The result is the zero measure when the trace does not fit
-the program: a general-mode site that finds no entry or an entry of another primitive, or an
+the program: a G site that finds no entry or an entry of another primitive, or an
 entry left over when the program returns. -/
 noncomputable def outputGivenTraceAt : Nat → Expr → Trace → Measure ℝ
   | 0, .real value, [] => Measure.dirac value
@@ -61,7 +61,7 @@ noncomputable def outputGivenTraceAt : Nat → Expr → Trace → Measure ℝ
         | .next next => outputGivenTraceAt depth next trace
         | .sample site fiber continuation =>
             match site with
-            | (.G, .stochastic, op) =>
+            | (.sample .G, op) =>
                 match trace with
                 | (op', value) :: rest =>
                     if op = op' then outputGivenTraceAt depth (continuation value) rest else 0
@@ -69,7 +69,7 @@ noncomputable def outputGivenTraceAt : Nat → Expr → Trace → Measure ℝ
             | _ => fiber.bind fun value => outputGivenTraceAt depth (continuation value) trace
         | .stuck => 0
 
-/-- The law of the output of `program` given that its general-mode draws were `trace`: the
+/-- The law of the output of `program` given that its G draws were `trace`: the
 program replayed along the trace, at whichever depth it returns. -/
 noncomputable def outputGivenTrace (program : Expr) (trace : Trace) : Measure ℝ :=
   Measure.sum fun depth => outputGivenTraceAt depth program trace

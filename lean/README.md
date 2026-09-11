@@ -6,7 +6,7 @@ Review these three entry points and the definitions they import:
 
 Run `lake build --wfail` from this directory; the build is warning-free and contains no `sorry`. Check that all nine axiom reports contain only `propext`, `Classical.choice`, and `Quot.sound` (`.claude/scripts/check.sh lean` performs both checks). With Lean's kernel and these standard axioms trusted, reviewers can omit the proof bodies in `Proof`. `Spec` contains the specification; any proof imports there supply proof-irrelevant evidence. `Spec/Traces` imports no proof modules.
 
-Source expressions need not be in ANF. Each primitive distribution is its own constructor with the paper's operands (`uniform mode kind lower upper`, `gaussian mode kind mean variance`, and so on); a site carries its mode and whether it still samples or already returns the primitive's mean. Operands may contain nested sampling and are evaluated left to right; a mean site also evaluates every operand exactly once, including a Gaussian's variance. `Expr.sourceForm` excludes mean sites. `Spec/Primitives.lean` gives each primitive one fiber: its law at a stochastic site, the Dirac mass at its mean at a mean site, and the zero measure outside the parameter domain. Expressions have no type annotations; `Typed` assigns types separately. Expressions carry E/G labels only on sample sites; literals and arithmetic are mode-free and a literal types at either mode, as in the paper's `FloatLit`; subtyping is silent; variables are de Bruijn indices. `Typed` enforces the mode restrictions: E multiplication requires a G left operand, division a G denominator, and comparisons G operands. Arithmetic uses real numbers, with `x / 0 = 0`. The theorems quantify over closed float programs of either mode; the proof uses subsumption to assign an expectation-mode result type to the same program.
+Source expressions need not be in ANF. Each primitive distribution is its own constructor with the paper's operands (`uniform action lower upper`, `gaussian action mean variance`, and so on). `DistributionAction` is either `sample affinity` or `mean`, where `Affinity` is E or G. Mean expressions carry no affinity annotation; their result affinity follows the operand typing rules. Operands may contain nested sampling and are evaluated left to right; a mean site also evaluates every operand exactly once, including a Gaussian's variance. `Expr.sourceForm` excludes mean sites. `Spec/Primitives.lean` gives each primitive one fiber: its law at a stochastic site, the Dirac mass at its mean at a mean site, and the zero measure outside the parameter domain. Expressions have no type annotations; `Typed` assigns types separately. Expressions carry E/G labels only on sample sites; literals and arithmetic are unannotated and a literal types at either affinity, as in the paper's `FloatLit`; subtyping is silent; variables are de Bruijn indices. `Typed` enforces the affinity restrictions: E multiplication requires a G left operand, division a G denominator, and comparisons G operands. Arithmetic uses real numbers, with `x / 0 = 0`. The theorems quantify over closed float programs of either affinity; the proof uses subsumption to assign an E result type to the same program.
 
 Output laws are defined directly by recursion over reduction depth. Deterministic actions continue evaluation; sampling actions integrate the continuation over the primitive measure on reals. Expressions of every type may occur during evaluation, but only terminal reals contribute output. Neither evaluator requires a measurable structure on expressions. `Proof` introduces one internally to establish measurability of the evaluators.
 
@@ -14,13 +14,13 @@ A trace is a list of `(primitive, value)` pairs recording only stochastic G draw
 
 The output-mass theorem preserves acceptance/termination mass; dividing the preserved integral by that mass gives the conditional-expectation theorem. The variance theorems bound the target variance and decompose source variance along replay traces. The finite expectation theorem adds source integrability and proves target integrability and equal integrals. The extended-real theorem only assumes that one of `∫ v⁺` and `∫ v⁻` under the source output law is finite, and concludes the same for the target and equal extended-real expectations. Jensen's inequality bounds `∫ φ` under the target output law by `∫ φ` under the source output law for every nonnegative convex `φ : ℝ → ℝ`. Both corollaries are derived from trace soundness in `Proof/Corollaries.lean`. Output measures are unnormalized: divergence contributes no output mass, and expectations are not conditioned on termination.
 
-The default build checks nested sampling, the `x + 1/y` example, a general-mode draw scaling an expectation-mode draw from the left, and a sampled value captured by a function. `Proof/InterfaceChecks.lean` checks the direct evaluator using only public imports and verifies that these imports provide no measurable structure on expressions.
+The default build checks nested sampling, the `x + 1/y` example, a G draw scaling an E draw from the left, and a sampled value captured by a function. `Proof/InterfaceChecks.lean` checks the direct evaluator using only public imports and verifies that these imports provide no measurable structure on expressions.
 
 ## Deviations from the paper
 
 The statements follow the paper's theorems, not its letter. Reviewers comparing against `tex/` should know:
 
-- **Mode labels on sample sites.** The paper's transformation `⟦e : τ⟧` is type-directed; here `Expr.determinize` is a function on terms, so every sample site carries its mode and that label decides whether the site is switched to its mean (`determinizeKind`). Literals and arithmetic carry no labels.
+- **Affinity labels on sample sites.** The paper's transformation `⟦e : τ⟧` is type-directed; here `Expr.determinize` is a function on terms, so every sample site carries its affinity and that label decides whether the site is switched to its mean (`DistributionAction.determinize`). Literals and arithmetic carry no labels.
 - **Multiplication and division.** Lean, the paper, and the simulator use a G left operand for multiplication and a G denominator for division. Lean allows silent structural subtyping; the frontend also puts a literal scaling factor on the left. See `mul-div-typing.md` for the rule and its history.
 
 - **Primitive domains.** Sampling outside a primitive's parameter domain (`uniform(a, b)` with `a > b`, a negative Gaussian variance, and so on) yields the zero measure and counts as stuck, and so does a mean site outside the same domain; the paper's mean table is unconditional. `uniform(a, a)` is the Dirac measure at `a`; the paper's table has no such row.
@@ -40,7 +40,7 @@ lake env lean /tmp/Certificate.lean
 ```
 
 The CLI reads the existing `.det` grammar, with optional `[E]` or `[G]` after a
-sampling primitive. Unannotated sites are inferred; explicit modes are constraints.
+sampling primitive. Unannotated sites are inferred; explicit affinities are constraints.
 It prints the annotated source and the result of the existing `Expr.determinize`.
 `mean_uniform`, `mean_gauss`, etc. in the output denote atomic mean operations:
 they evaluate every operand exactly once and check the primitive domain. They are
@@ -52,7 +52,7 @@ The implementation is separated as follows:
 - `Frontend/`: unverified parsing, desugaring/name resolution, constraint inference,
   pretty printing, orchestration, and certificate export.
 - `Checking/`: certificate data, a total proof-producing typing checker, and checks
-  that inference preserves the elaborated expression and explicit sampling modes.
+  that inference preserves the elaborated expression and explicit sampling affinities.
 - `Proof/Checking/`: checker soundness, rational/real determinization correspondence,
   and application of the existing trace and finite-expectation theorems.
 - `Runtime/`: an unverified floating-point interpreter and seeded numerical samplers.
@@ -71,8 +71,8 @@ The inference algorithm produces an expression and a tree of proposed types.
 `check` verifies every node against the existing `Typed` constructors and returns
 an actual proof in `PLift`. It does not use `unsafe`, `sorry`, or inference as an
 oracle. `certify` additionally requires stochastic source form, identical syntax
-after erasing sampling modes, and preservation of every
-explicit sampling mode. Thus inference cannot silently change literals, operators,
+after erasing sampling affinities, and preservation of every
+explicit sampling affinity. Thus inference cannot silently change literals, operators,
 binders, or distribution kinds. The parser and initial desugaring remain unverified;
 the certificate identifies the **elaborated core expression**, not the source bytes.
 
@@ -93,17 +93,17 @@ rule. These transformations belong to the unverified desugaring stage.
 
 `bernoulli[E](p)` and `bernoulli[G](p)` are core numeric draws with outcomes 0 and 1.
 The probability is evaluated once and must be in `[0,1]`; an invalid probability
-has zero mass in the formal semantics and raises a runtime error. E-mode
-probabilities may depend affinely on E values; G-mode probabilities must have G
+has zero mass in the formal semantics and raises a runtime error. E-affinity
+probabilities may depend affinely on E values; G-affinity probabilities must have G
 type. Typing does not establish domain safety. Determinization changes an E draw
-to a mean site with the same probability expression. `flip(p)` lowers to a G-mode
+to a mean site with the same probability expression. `flip(p)` lowers to a G-affinity
 Bernoulli comparison and therefore returns a Boolean; `flip[E]` is rejected.
 
 `discrete[E](w0,...,wn)` and `discrete[G](w0,...,wn)` require nonnegative literal
 rational probabilities whose exact sum is one, matching the domain on `main`. Core terms store the checked probabilities
 for numeric outcomes `0,...,n`, including zero-weight positions. Determinization
 changes an E draw to a mean site with the same distribution. Its result is the
-weighted outcome index. Omitted modes use ordinary mode inference. Pretty printing
+weighted outcome index. Omitted affinities use ordinary affinity inference. Pretty printing
 prints probabilities directly, preserving the unit-sum domain when reparsed.
 
 `observe(c)` lowers to `if c then () else reject`. The explicit core rejection term
@@ -115,7 +115,7 @@ observations separately from execution failures. No conditioning theorem is clai
 empirical means use returned values and differ from unnormalized expectations.
 
 Inference is monomorphic, uses an occurs check and structural subtyping constraints,
-and defaults unconstrained modes to E and unused type variables to `unit`.
+and defaults unconstrained affinities to E and unused type variables to `unit`.
 Products, sums, and lists are covariant; function arguments are contravariant and
 results covariant. Subsumption appears in certificates, never in the expression.
 The checker validates every subsumption step against `Ty.Sub`. Inference
@@ -187,7 +187,7 @@ Successful exploration is checked against the executable machine before writing
 `.negative.state.rew`. The replay checker takes the requested source and subject
 separately from the candidate and checks their alignment, exact transitions,
 complete positive successor coverage, rewards, and absorbing terminal states.
-Acceptance constructs a `CheckedModel` with a `Statement.FiniteModel.Model` and
+Acceptance constructs a `CheckedModel` with a `Spec.FiniteModel.Model` and
 a proof of paper safety and complete output-law equality. Stored states must be unique.
 
 The `.candidate.lean` file contains raw data. The `.replay.lean` file additionally

@@ -3,7 +3,7 @@ import Determinize.Proof.Typing
 /-!
 # Symbolic language and reduction
 
-Expressions carry affine functions of earlier expectation-mode samples. The
+Expressions carry affine functions of earlier expectation-affinity samples. The
 symbolic reducer records those samples while preserving a fixed residual shape.
 -/
 
@@ -47,14 +47,14 @@ inductive AffineExpr (sampleCount : Nat) where
   | mul (left right : AffineExpr sampleCount)
   | div (left right : AffineExpr sampleCount)
   | lt (left right : AffineExpr sampleCount)
-  | uniform (mode : Mode) (kind : Kind) (lower upper : AffineExpr sampleCount)
-  | gaussian (mode : Mode) (kind : Kind) (mean variance : AffineExpr sampleCount)
-  | poisson (mode : Mode) (kind : Kind) (rate : AffineExpr sampleCount)
-  | discrete (mode : Mode) (kind : Kind) (distribution : FiniteDistribution)
-  | bernoulli (mode : Mode) (kind : Kind) (probability : AffineExpr sampleCount)
-  | exponential (mode : Mode) (kind : Kind) (rate : AffineExpr sampleCount)
-  | beta (mode : Mode) (kind : Kind) (alpha beta : AffineExpr sampleCount)
-  | gamma (mode : Mode) (kind : Kind) (shape rate : AffineExpr sampleCount)
+  | uniform (kind : DistributionAction) (lower upper : AffineExpr sampleCount)
+  | gaussian (kind : DistributionAction) (mean variance : AffineExpr sampleCount)
+  | poisson (kind : DistributionAction) (rate : AffineExpr sampleCount)
+  | discrete (kind : DistributionAction) (distribution : FiniteDistribution)
+  | bernoulli (kind : DistributionAction) (probability : AffineExpr sampleCount)
+  | exponential (kind : DistributionAction) (rate : AffineExpr sampleCount)
+  | beta (kind : DistributionAction) (alpha beta : AffineExpr sampleCount)
+  | gamma (kind : DistributionAction) (shape rate : AffineExpr sampleCount)
 
 namespace AffineExpr
 
@@ -62,7 +62,7 @@ def realize (environment : Env sampleCount) : AffineExpr sampleCount → Expr
   | .bvar index => .bvar index
   | .unit => .unit
   | .reject => .reject
-  | .discrete mode kind d => .discrete mode kind d
+  | .discrete kind d => .discrete kind d
   | .bool value => .bool value
   | .real value => .real (value.eval environment)
   | .lam body => .lam (body.realize environment)
@@ -97,23 +97,23 @@ def realize (environment : Env sampleCount) : AffineExpr sampleCount → Expr
   | .div left right =>
       .div (left.realize environment) (right.realize environment)
   | .lt left right => .lt (left.realize environment) (right.realize environment)
-  | .uniform mode kind lower upper =>
-      .uniform mode kind (lower.realize environment) (upper.realize environment)
-  | .gaussian mode kind mean variance =>
-      .gaussian mode kind (mean.realize environment) (variance.realize environment)
-  | .poisson mode kind rate => .poisson mode kind (rate.realize environment)
-  | .bernoulli mode kind probability => .bernoulli mode kind (probability.realize environment)
-  | .exponential mode kind rate => .exponential mode kind (rate.realize environment)
-  | .beta mode kind left right =>
-      .beta mode kind (left.realize environment) (right.realize environment)
-  | .gamma mode kind shape rate =>
-      .gamma mode kind (shape.realize environment) (rate.realize environment)
+  | .uniform kind lower upper =>
+      .uniform kind (lower.realize environment) (upper.realize environment)
+  | .gaussian kind mean variance =>
+      .gaussian kind (mean.realize environment) (variance.realize environment)
+  | .poisson kind rate => .poisson kind (rate.realize environment)
+  | .bernoulli kind probability => .bernoulli kind (probability.realize environment)
+  | .exponential kind rate => .exponential kind (rate.realize environment)
+  | .beta kind left right =>
+      .beta kind (left.realize environment) (right.realize environment)
+  | .gamma kind shape rate =>
+      .gamma kind (shape.realize environment) (rate.realize environment)
 
 def skeleton : AffineExpr sampleCount → Skeleton
   | .bvar index => .bvar index
   | .unit => .unit
   | .reject => .reject
-  | .discrete mode kind d => .discrete mode kind d
+  | .discrete kind d => .discrete kind d
   | .bool value => .bool value
   | .real _ => .real
   | .lam body => .lam body.skeleton
@@ -138,13 +138,13 @@ def skeleton : AffineExpr sampleCount → Skeleton
   | .mul left right => .mul left.skeleton right.skeleton
   | .div left right => .div left.skeleton right.skeleton
   | .lt left right => .lt left.skeleton right.skeleton
-  | .uniform mode kind lower upper => .uniform mode kind lower.skeleton upper.skeleton
-  | .gaussian mode kind mean variance => .gaussian mode kind mean.skeleton variance.skeleton
-  | .poisson mode kind rate => .poisson mode kind rate.skeleton
-  | .bernoulli mode kind probability => .bernoulli mode kind probability.skeleton
-  | .exponential mode kind rate => .exponential mode kind rate.skeleton
-  | .beta mode kind left right => .beta mode kind left.skeleton right.skeleton
-  | .gamma mode kind shape rate => .gamma mode kind shape.skeleton rate.skeleton
+  | .uniform kind lower upper => .uniform kind lower.skeleton upper.skeleton
+  | .gaussian kind mean variance => .gaussian kind mean.skeleton variance.skeleton
+  | .poisson kind rate => .poisson kind rate.skeleton
+  | .bernoulli kind probability => .bernoulli kind probability.skeleton
+  | .exponential kind rate => .exponential kind rate.skeleton
+  | .beta kind left right => .beta kind left.skeleton right.skeleton
+  | .gamma kind shape rate => .gamma kind shape.skeleton rate.skeleton
 
 def coordinates : AffineExpr sampleCount → List (Affine sampleCount)
   | .real value => [value]
@@ -158,16 +158,16 @@ def coordinates : AffineExpr sampleCount → List (Affine sampleCount)
   | .matchList scrutinee nilCase consCase =>
       scrutinee.coordinates ++ nilCase.coordinates ++ consCase.coordinates
   | .letE value body => value.coordinates ++ body.coordinates
-  | .uniform _ _ left right | .gaussian _ _ left right | .beta _ _ left right
-  | .gamma _ _ left right => left.coordinates ++ right.coordinates
-  | .poisson _ _ body | .bernoulli _ _ body | .exponential _ _ body => body.coordinates
+  | .uniform _ left right | .gaussian _ left right | .beta _ left right
+  | .gamma _ left right => left.coordinates ++ right.coordinates
+  | .poisson _ body | .bernoulli _ body | .exponential _ body => body.coordinates
   | _ => []
 
 def ofExpr : Expr → AffineExpr 0
   | .bvar index => .bvar index
   | .unit => .unit
   | .reject => .reject
-  | .discrete mode kind d => .discrete mode kind d
+  | .discrete kind d => .discrete kind d
   | .bool value => .bool value
   | .real value => .real (value, Fin.elim0)
   | .lam body => .lam (ofExpr body)
@@ -192,19 +192,19 @@ def ofExpr : Expr → AffineExpr 0
   | .mul left right => .mul (ofExpr left) (ofExpr right)
   | .div left right => .div (ofExpr left) (ofExpr right)
   | .lt left right => .lt (ofExpr left) (ofExpr right)
-  | .uniform mode kind lower upper => .uniform mode kind (ofExpr lower) (ofExpr upper)
-  | .gaussian mode kind mean variance => .gaussian mode kind (ofExpr mean) (ofExpr variance)
-  | .poisson mode kind rate => .poisson mode kind (ofExpr rate)
-  | .bernoulli mode kind probability => .bernoulli mode kind (ofExpr probability)
-  | .exponential mode kind rate => .exponential mode kind (ofExpr rate)
-  | .beta mode kind left right => .beta mode kind (ofExpr left) (ofExpr right)
-  | .gamma mode kind shape rate => .gamma mode kind (ofExpr shape) (ofExpr rate)
+  | .uniform kind lower upper => .uniform kind (ofExpr lower) (ofExpr upper)
+  | .gaussian kind mean variance => .gaussian kind (ofExpr mean) (ofExpr variance)
+  | .poisson kind rate => .poisson kind (ofExpr rate)
+  | .bernoulli kind probability => .bernoulli kind (ofExpr probability)
+  | .exponential kind rate => .exponential kind (ofExpr rate)
+  | .beta kind left right => .beta kind (ofExpr left) (ofExpr right)
+  | .gamma kind shape rate => .gamma kind (ofExpr shape) (ofExpr rate)
 
 def mapAffine (transform : Affine n → Affine m) : AffineExpr n → AffineExpr m
   | .bvar index => .bvar index
   | .unit => .unit
   | .reject => .reject
-  | .discrete mode kind d => .discrete mode kind d
+  | .discrete kind d => .discrete kind d
   | .bool value => .bool value
   | .real value => .real (transform value)
   | .lam body => .lam (body.mapAffine transform)
@@ -239,17 +239,17 @@ def mapAffine (transform : Affine n → Affine m) : AffineExpr n → AffineExpr 
   | .div left right =>
       .div (left.mapAffine transform) (right.mapAffine transform)
   | .lt left right => .lt (left.mapAffine transform) (right.mapAffine transform)
-  | .uniform mode kind lower upper =>
-      .uniform mode kind (lower.mapAffine transform) (upper.mapAffine transform)
-  | .gaussian mode kind mean variance =>
-      .gaussian mode kind (mean.mapAffine transform) (variance.mapAffine transform)
-  | .poisson mode kind rate => .poisson mode kind (rate.mapAffine transform)
-  | .bernoulli mode kind probability => .bernoulli mode kind (probability.mapAffine transform)
-  | .exponential mode kind rate => .exponential mode kind (rate.mapAffine transform)
-  | .beta mode kind left right =>
-      .beta mode kind (left.mapAffine transform) (right.mapAffine transform)
-  | .gamma mode kind shape rate =>
-      .gamma mode kind (shape.mapAffine transform) (rate.mapAffine transform)
+  | .uniform kind lower upper =>
+      .uniform kind (lower.mapAffine transform) (upper.mapAffine transform)
+  | .gaussian kind mean variance =>
+      .gaussian kind (mean.mapAffine transform) (variance.mapAffine transform)
+  | .poisson kind rate => .poisson kind (rate.mapAffine transform)
+  | .bernoulli kind probability => .bernoulli kind (probability.mapAffine transform)
+  | .exponential kind rate => .exponential kind (rate.mapAffine transform)
+  | .beta kind left right =>
+      .beta kind (left.mapAffine transform) (right.mapAffine transform)
+  | .gamma kind shape rate =>
+      .gamma kind (shape.mapAffine transform) (rate.mapAffine transform)
 
 def Affine.weaken (expression : Affine n) : Affine (n + 1) :=
   (expression.1, Fin.cases 0 expression.2)
@@ -264,16 +264,12 @@ def Affine.fresh (n : Nat) : Affine (n + 1) :=
 def weakenSamples (expression : AffineExpr n) : AffineExpr (n + 1) :=
   expression.mapAffine Affine.weaken
 
-@[simp] theorem kind_isStochastic_iff (kind : Kind) :
-    kind.isStochastic = true ↔ kind = .stochastic := by
-  cases kind <;> simp [Kind.isStochastic]
-
 /-- Pending source E and G sites retain stochastic tags. -/
 def SourceTags : AffineExpr sampleCount → Prop
-  | .discrete _ kind _ => kind = .stochastic
-  | .uniform _ kind left right | .gaussian _ kind left right | .beta _ kind left right
-  | .gamma _ kind left right => kind = .stochastic ∧ left.SourceTags ∧ right.SourceTags
-  | .poisson _ kind body | .bernoulli _ kind body | .exponential _ kind body => kind = .stochastic ∧ body.SourceTags
+  | .discrete kind _ => kind.isSample = true
+  | .uniform kind left right | .gaussian kind left right | .beta kind left right
+  | .gamma kind left right => kind.isSample = true ∧ left.SourceTags ∧ right.SourceTags
+  | .poisson kind body | .bernoulli kind body | .exponential kind body => kind.isSample = true ∧ body.SourceTags
   | .lam body | .fix body | .fst body | .snd body
   | .inl body | .inr body | .neg body => body.SourceTags
   | .app left right | .pair left right | .cons left right
@@ -343,21 +339,21 @@ inductive WellTyped : List Ty → AffineExpr sampleCount → Ty → Prop
       WellTyped context (.div left right) (.float .G)
   | lt : WellTyped context left (.float .G) → WellTyped context right (.float .G) →
       WellTyped context (.lt left right) .bool
-  | uniform : WellTyped context lower (.float mode) → WellTyped context upper (.float mode) →
-      WellTyped context (.uniform mode .stochastic lower upper) (.float mode)
-  | gaussian : WellTyped context mean (.float mode) → WellTyped context spread (.float .G) →
-      WellTyped context (.gaussian mode .stochastic mean spread) (.float mode)
-  | poisson : WellTyped context rate (.float mode) →
-      WellTyped context (.poisson mode .stochastic rate) (.float mode)
-  | discrete : WellTyped context (.discrete mode .stochastic d) (.float mode)
-  | bernoulli : WellTyped context probability (.float mode) →
-      WellTyped context (.bernoulli mode .stochastic probability) (.float mode)
+  | uniform : WellTyped context lower (.float affinity) → WellTyped context upper (.float affinity) →
+      WellTyped context (.uniform (.sample affinity) lower upper) (.float affinity)
+  | gaussian : WellTyped context mean (.float affinity) → WellTyped context spread (.float .G) →
+      WellTyped context (.gaussian (.sample affinity) mean spread) (.float affinity)
+  | poisson : WellTyped context rate (.float affinity) →
+      WellTyped context (.poisson (.sample affinity) rate) (.float affinity)
+  | discrete : WellTyped context (.discrete (.sample affinity) d) (.float affinity)
+  | bernoulli : WellTyped context probability (.float affinity) →
+      WellTyped context (.bernoulli (.sample affinity) probability) (.float affinity)
   | exponential : WellTyped context rate (.float .G) →
-      WellTyped context (.exponential mode .stochastic rate) (.float mode)
+      WellTyped context (.exponential (.sample affinity) rate) (.float affinity)
   | beta : WellTyped context alpha (.float .G) → WellTyped context betaArg (.float .G) →
-      WellTyped context (.beta mode .stochastic alpha betaArg) (.float mode)
-  | gamma : WellTyped context shape (.float mode) → WellTyped context rate (.float .G) →
-      WellTyped context (.gamma mode .stochastic shape rate) (.float mode)
+      WellTyped context (.beta (.sample affinity) alpha betaArg) (.float affinity)
+  | gamma : WellTyped context shape (.float affinity) → WellTyped context rate (.float .G) →
+      WellTyped context (.gamma (.sample affinity) shape rate) (.float affinity)
 
 theorem WellTyped.realize_typed {sampleCount : Nat} {expression : AffineExpr sampleCount}
     (typed : WellTyped context expression ty)
@@ -407,7 +403,7 @@ theorem WellTyped.realize_typed {sampleCount : Nat} {expression : AffineExpr sam
 
 theorem WellTyped.sourceTags (typed : WellTyped context expression ty) :
     expression.SourceTags := by
-  induction typed <;> simp_all [SourceTags]
+  induction typed <;> simp_all [SourceTags, DistributionAction.isSample]
 
 theorem WellTyped.mapAffine {n m : Nat} {expression : AffineExpr n}
     (typed : WellTyped context expression ty)
@@ -435,7 +431,7 @@ def shift (amount cutoff : Nat) : AffineExpr sampleCount → AffineExpr sampleCo
   | .bvar index => .bvar (if cutoff ≤ index then index + amount else index)
   | .unit => .unit
   | .reject => .reject
-  | .discrete mode kind d => .discrete mode kind d
+  | .discrete kind d => .discrete kind d
   | .bool value => .bool value
   | .real value => .real value
   | .lam body => .lam (body.shift amount (cutoff + 1))
@@ -461,14 +457,14 @@ def shift (amount cutoff : Nat) : AffineExpr sampleCount → AffineExpr sampleCo
   | .mul l r => .mul (l.shift amount cutoff) (r.shift amount cutoff)
   | .div l r => .div (l.shift amount cutoff) (r.shift amount cutoff)
   | .lt l r => .lt (l.shift amount cutoff) (r.shift amount cutoff)
-  | .uniform m k lower upper => .uniform m k (lower.shift amount cutoff) (upper.shift amount cutoff)
-  | .gaussian m k mean variance =>
-      .gaussian m k (mean.shift amount cutoff) (variance.shift amount cutoff)
-  | .poisson m k rate => .poisson m k (rate.shift amount cutoff)
-  | .bernoulli m k probability => .bernoulli m k (probability.shift amount cutoff)
-  | .exponential m k rate => .exponential m k (rate.shift amount cutoff)
-  | .beta m k left right => .beta m k (left.shift amount cutoff) (right.shift amount cutoff)
-  | .gamma m k shape rate => .gamma m k (shape.shift amount cutoff) (rate.shift amount cutoff)
+  | .uniform k lower upper => .uniform k (lower.shift amount cutoff) (upper.shift amount cutoff)
+  | .gaussian k mean variance =>
+      .gaussian k (mean.shift amount cutoff) (variance.shift amount cutoff)
+  | .poisson k rate => .poisson k (rate.shift amount cutoff)
+  | .bernoulli k probability => .bernoulli k (probability.shift amount cutoff)
+  | .exponential k rate => .exponential k (rate.shift amount cutoff)
+  | .beta k left right => .beta k (left.shift amount cutoff) (right.shift amount cutoff)
+  | .gamma k shape rate => .gamma k (shape.shift amount cutoff) (rate.shift amount cutoff)
 
 def substAt (depth : Nat) (replacement : AffineExpr sampleCount)
     (expression : AffineExpr sampleCount) : AffineExpr sampleCount := match expression with
@@ -476,7 +472,7 @@ def substAt (depth : Nat) (replacement : AffineExpr sampleCount)
       else .bvar (if depth < index then index - 1 else index)
   | .unit => .unit
   | .reject => .reject
-  | .discrete mode kind d => .discrete mode kind d
+  | .discrete kind d => .discrete kind d
   | .bool value => .bool value
   | .real value => .real value
   | .lam body => .lam (substAt (depth + 1) replacement body)
@@ -502,17 +498,17 @@ def substAt (depth : Nat) (replacement : AffineExpr sampleCount)
   | .mul l r => .mul (substAt depth replacement l) (substAt depth replacement r)
   | .div l r => .div (substAt depth replacement l) (substAt depth replacement r)
   | .lt l r => .lt (substAt depth replacement l) (substAt depth replacement r)
-  | .uniform m k lower upper =>
-      .uniform m k (substAt depth replacement lower) (substAt depth replacement upper)
-  | .gaussian m k mean variance =>
-      .gaussian m k (substAt depth replacement mean) (substAt depth replacement variance)
-  | .poisson m k rate => .poisson m k (substAt depth replacement rate)
-  | .bernoulli m k probability => .bernoulli m k (substAt depth replacement probability)
-  | .exponential m k rate => .exponential m k (substAt depth replacement rate)
-  | .beta m k left right =>
-      .beta m k (substAt depth replacement left) (substAt depth replacement right)
-  | .gamma m k shape rate =>
-      .gamma m k (substAt depth replacement shape) (substAt depth replacement rate)
+  | .uniform k lower upper =>
+      .uniform k (substAt depth replacement lower) (substAt depth replacement upper)
+  | .gaussian k mean variance =>
+      .gaussian k (substAt depth replacement mean) (substAt depth replacement variance)
+  | .poisson k rate => .poisson k (substAt depth replacement rate)
+  | .bernoulli k probability => .bernoulli k (substAt depth replacement probability)
+  | .exponential k rate => .exponential k (substAt depth replacement rate)
+  | .beta k left right =>
+      .beta k (substAt depth replacement left) (substAt depth replacement right)
+  | .gamma k shape rate =>
+      .gamma k (substAt depth replacement shape) (substAt depth replacement rate)
 
 def substHead (body replacement : AffineExpr sampleCount) : AffineExpr sampleCount :=
   substAt 0 replacement body
@@ -1072,10 +1068,10 @@ theorem wellTyped_bool_value (typed : WellTyped context expression .bool)
     exact ih value rfl
   all_goals cases ht <;> simp_all [isValue]
 
-theorem wellTyped_real_value (typed : WellTyped context expression (.float mode))
+theorem wellTyped_real_value (typed : WellTyped context expression (.float affinity))
     (value : expression.isValue = true) : ∃ result, expression = .real result := by
-  generalize ht : Ty.float mode = ty at typed
-  induction typed generalizing mode
+  generalize ht : Ty.float affinity = ty at typed
+  induction typed generalizing affinity
   case sub h sub ih =>
     cases sub <;> cases ht <;> exact ih value rfl
   all_goals cases ht <;> simp_all [isValue]
@@ -1287,7 +1283,7 @@ inductive SymbolicAction
   | sampleE (op : Determinize.Spec.Paper.Op)
       (affineArgs : List (Affine sampleCount))
       (generalArgs : List ℝ) (continuation : AffineExpr (sampleCount + 1))
-  | sampleG (site : Mode × Kind × Op) (fiber : Measure ℝ)
+  | sampleG (site : DistributionAction × Op) (fiber : Measure ℝ)
       (continuation : ℝ → AffineExpr sampleCount)
   | stuck
 
@@ -1296,7 +1292,7 @@ namespace SymbolicAction
 noncomputable def realize (environment : Env n) : SymbolicAction laws n → Action
   | .next expression => .next (expression.realize environment)
   | .sampleE op affine general continuation =>
-      .sample (.E, .stochastic, op) (primitiveFiber .stochastic op
+      .sample (.sample .E, op) (primitiveFiber (.sample .E) op
         (affine.map (Symbolic.Affine.eval · environment)) general)
         (fun value => continuation.realize (Env.cons value environment))
   | .sampleG site fiber continuation =>
@@ -1505,102 +1501,102 @@ noncomputable def symbolicReduce
         else (symbolicReduce laws right).wrap (.lt left) (.lt left.weakenSamples)
       else (symbolicReduce laws left).wrap (fun next => .lt next right)
         (fun next => .lt next right.weakenSamples)
-  | .uniform mode kind lower upper =>
+  | .uniform kind lower upper =>
       if lower.isValue then
-        if upper.isValue then match mode, kind with
-          | .E, .stochastic => match lower.affineValue?, upper.affineValue? with
+        if upper.isValue then match kind with
+          | .sample .E => match lower.affineValue?, upper.affineValue? with
             | some x, some y => .sampleE .uniform [x, y] [] (.real (Affine.fresh n))
             | _, _ => .stuck
-          | _, _ => match lower.constantValue?, upper.constantValue? with
+          | _ => match lower.constantValue?, upper.constantValue? with
             | some x, some y =>
-                .sampleG (mode, kind, .uniform) (uniformFiber kind x y)
+                .sampleG (kind, .uniform) (uniformFiber kind x y)
                   (fun value => .real (value, 0))
             | _, _ => .stuck
-        else (symbolicReduce laws upper).wrap (.uniform mode kind lower)
-          (.uniform mode kind lower.weakenSamples)
-      else (symbolicReduce laws lower).wrap (fun next => .uniform mode kind next upper)
-        (fun next => .uniform mode kind next upper.weakenSamples)
-  | .gaussian mode kind mean variance =>
+        else (symbolicReduce laws upper).wrap (.uniform kind lower)
+          (.uniform kind lower.weakenSamples)
+      else (symbolicReduce laws lower).wrap (fun next => .uniform kind next upper)
+        (fun next => .uniform kind next upper.weakenSamples)
+  | .gaussian kind mean variance =>
       if mean.isValue then
-        if variance.isValue then match mode, kind with
-          | .E, .stochastic => match mean.affineValue?, variance.constantValue? with
+        if variance.isValue then match kind with
+          | .sample .E => match mean.affineValue?, variance.constantValue? with
             | some x, some y => .sampleE .gaussian [x] [y] (.real (Affine.fresh n))
             | _, _ => .stuck
-          | _, _ => match mean.constantValue?, variance.constantValue? with
+          | _ => match mean.constantValue?, variance.constantValue? with
             | some x, some y =>
-                .sampleG (mode, kind, .gaussian) (gaussianFiber kind x y)
+                .sampleG (kind, .gaussian) (gaussianFiber kind x y)
                   (fun value => .real (value, 0))
             | _, _ => .stuck
-        else (symbolicReduce laws variance).wrap (.gaussian mode kind mean)
-          (.gaussian mode kind mean.weakenSamples)
-      else (symbolicReduce laws mean).wrap (fun next => .gaussian mode kind next variance)
-        (fun next => .gaussian mode kind next variance.weakenSamples)
-  | .poisson mode kind rate =>
-      if rate.isValue then match mode, kind with
-        | .E, .stochastic => match rate.affineValue? with
+        else (symbolicReduce laws variance).wrap (.gaussian kind mean)
+          (.gaussian kind mean.weakenSamples)
+      else (symbolicReduce laws mean).wrap (fun next => .gaussian kind next variance)
+        (fun next => .gaussian kind next variance.weakenSamples)
+  | .poisson kind rate =>
+      if rate.isValue then match kind with
+        | .sample .E => match rate.affineValue? with
           | some x => .sampleE .poisson [x] [] (.real (Affine.fresh n))
           | none => .stuck
-        | _, _ => match rate.constantValue? with
+        | _ => match rate.constantValue? with
           | some x =>
-              .sampleG (mode, kind, .poisson) (poissonFiber kind x)
+              .sampleG (kind, .poisson) (poissonFiber kind x)
                 (fun value => .real (value, 0))
           | none => .stuck
-      else (symbolicReduce laws rate).wrap (.poisson mode kind) (.poisson mode kind)
-  | .discrete mode kind d =>
-      match mode, kind with
-      | .E, .stochastic => .sampleE (.discrete d) [] [] (.real (Affine.fresh n))
-      | _, _ => .sampleG (mode, kind, .discrete d) (discreteFiber kind d)
+      else (symbolicReduce laws rate).wrap (.poisson kind) (.poisson kind)
+  | .discrete kind d =>
+      match kind with
+      | .sample .E => .sampleE (.discrete d) [] [] (.real (Affine.fresh n))
+      | _ => .sampleG (kind, .discrete d) (discreteFiber kind d)
           (fun value => .real (value, 0))
-  | .bernoulli mode kind probability =>
-      if probability.isValue then match mode, kind with
-        | .E, .stochastic => match probability.affineValue? with
+  | .bernoulli kind probability =>
+      if probability.isValue then match kind with
+        | .sample .E => match probability.affineValue? with
           | some x => .sampleE .bernoulli [x] [] (.real (Affine.fresh n))
           | none => .stuck
-        | _, _ => match probability.constantValue? with
+        | _ => match probability.constantValue? with
           | some x =>
-              .sampleG (mode, kind, .bernoulli) (bernoulliFiber kind x)
+              .sampleG (kind, .bernoulli) (bernoulliFiber kind x)
                 (fun value => .real (value, 0))
           | none => .stuck
-      else (symbolicReduce laws probability).wrap (.bernoulli mode kind) (.bernoulli mode kind)
-  | .exponential mode kind rate =>
-      if rate.isValue then match mode, kind with
-        | .E, .stochastic => match rate.constantValue? with
+      else (symbolicReduce laws probability).wrap (.bernoulli kind) (.bernoulli kind)
+  | .exponential kind rate =>
+      if rate.isValue then match kind with
+        | .sample .E => match rate.constantValue? with
           | some x => .sampleE .exponential [] [x] (.real (Affine.fresh n))
           | none => .stuck
-        | _, _ => match rate.constantValue? with
+        | _ => match rate.constantValue? with
           | some x =>
-              .sampleG (mode, kind, .exponential) (exponentialFiber kind x)
+              .sampleG (kind, .exponential) (exponentialFiber kind x)
                 (fun value => .real (value, 0))
           | none => .stuck
-      else (symbolicReduce laws rate).wrap (.exponential mode kind) (.exponential mode kind)
-  | .beta mode kind alpha betaParam =>
+      else (symbolicReduce laws rate).wrap (.exponential kind) (.exponential kind)
+  | .beta kind alpha betaParam =>
       if alpha.isValue then
-        if betaParam.isValue then match mode, kind with
-          | .E, .stochastic => match alpha.constantValue?, betaParam.constantValue? with
+        if betaParam.isValue then match kind with
+          | .sample .E => match alpha.constantValue?, betaParam.constantValue? with
             | some x, some y => .sampleE .beta [] [x, y] (.real (Affine.fresh n))
             | _, _ => .stuck
-          | _, _ => match alpha.constantValue?, betaParam.constantValue? with
+          | _ => match alpha.constantValue?, betaParam.constantValue? with
             | some x, some y =>
-                .sampleG (mode, kind, .beta) (betaFiber kind x y) (fun value => .real (value, 0))
+                .sampleG (kind, .beta) (betaFiber kind x y) (fun value => .real (value, 0))
             | _, _ => .stuck
-        else (symbolicReduce laws betaParam).wrap (.beta mode kind alpha)
-          (.beta mode kind alpha.weakenSamples)
-      else (symbolicReduce laws alpha).wrap (fun next => .beta mode kind next betaParam)
-        (fun next => .beta mode kind next betaParam.weakenSamples)
-  | .gamma mode kind shape rate =>
+        else (symbolicReduce laws betaParam).wrap (.beta kind alpha)
+          (.beta kind alpha.weakenSamples)
+      else (symbolicReduce laws alpha).wrap (fun next => .beta kind next betaParam)
+        (fun next => .beta kind next betaParam.weakenSamples)
+  | .gamma kind shape rate =>
       if shape.isValue then
-        if rate.isValue then match mode, kind with
-          | .E, .stochastic => match shape.affineValue?, rate.constantValue? with
+        if rate.isValue then match kind with
+          | .sample .E => match shape.affineValue?, rate.constantValue? with
             | some x, some y => .sampleE .gamma [x] [y] (.real (Affine.fresh n))
             | _, _ => .stuck
-          | _, _ => match shape.constantValue?, rate.constantValue? with
+          | _ => match shape.constantValue?, rate.constantValue? with
             | some x, some y =>
-                .sampleG (mode, kind, .gamma) (gammaFiber kind x y) (fun value => .real (value, 0))
+                .sampleG (kind, .gamma) (gammaFiber kind x y) (fun value => .real (value, 0))
             | _, _ => .stuck
-        else (symbolicReduce laws rate).wrap (.gamma mode kind shape)
-          (.gamma mode kind shape.weakenSamples)
-      else (symbolicReduce laws shape).wrap (fun next => .gamma mode kind next rate)
-        (fun next => .gamma mode kind next rate.weakenSamples)
+        else (symbolicReduce laws rate).wrap (.gamma kind shape)
+          (.gamma kind shape.weakenSamples)
+      else (symbolicReduce laws shape).wrap (fun next => .gamma kind next rate)
+        (fun next => .gamma kind next rate.weakenSamples)
 
 theorem symbolicReduce_app_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
     (function operand : AffineExpr n) : symbolicReduce laws (.app function operand) =
@@ -1676,125 +1672,125 @@ theorem symbolicReduce_let_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
   rw [symbolicReduce.eq_def]
 
 theorem symbolicReduce_uniform_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
-    (mode : Mode) (kind : Kind) (lower upper : AffineExpr n) :
-    symbolicReduce laws (.uniform mode kind lower upper) =
+    (kind : DistributionAction) (lower upper : AffineExpr n) :
+    symbolicReduce laws (.uniform kind lower upper) =
           if lower.isValue then
-            if upper.isValue then match mode, kind with
-              | .E, .stochastic => match lower.affineValue?, upper.affineValue? with
+            if upper.isValue then match kind with
+              | .sample .E => match lower.affineValue?, upper.affineValue? with
                 | some x, some y => .sampleE .uniform [x, y] [] (.real (Affine.fresh n))
                 | _, _ => .stuck
-              | _, _ => match lower.constantValue?, upper.constantValue? with
+              | _ => match lower.constantValue?, upper.constantValue? with
                 | some x, some y =>
-                    .sampleG (mode, kind, .uniform) (uniformFiber kind x y)
+                    .sampleG (kind, .uniform) (uniformFiber kind x y)
                       (fun value => .real (value, 0))
                 | _, _ => .stuck
-            else (symbolicReduce laws upper).wrap (.uniform mode kind lower)
-              (.uniform mode kind lower.weakenSamples)
-          else (symbolicReduce laws lower).wrap (fun next => .uniform mode kind next upper)
-            (fun next => .uniform mode kind next upper.weakenSamples) := by
+            else (symbolicReduce laws upper).wrap (.uniform kind lower)
+              (.uniform kind lower.weakenSamples)
+          else (symbolicReduce laws lower).wrap (fun next => .uniform kind next upper)
+            (fun next => .uniform kind next upper.weakenSamples) := by
   rw [symbolicReduce.eq_def]
 
 theorem symbolicReduce_gaussian_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
-    (mode : Mode) (kind : Kind) (mean variance : AffineExpr n) :
-    symbolicReduce laws (.gaussian mode kind mean variance) =
+    (kind : DistributionAction) (mean variance : AffineExpr n) :
+    symbolicReduce laws (.gaussian kind mean variance) =
           if mean.isValue then
-            if variance.isValue then match mode, kind with
-              | .E, .stochastic => match mean.affineValue?, variance.constantValue? with
+            if variance.isValue then match kind with
+              | .sample .E => match mean.affineValue?, variance.constantValue? with
                 | some x, some y => .sampleE .gaussian [x] [y] (.real (Affine.fresh n))
                 | _, _ => .stuck
-              | _, _ => match mean.constantValue?, variance.constantValue? with
+              | _ => match mean.constantValue?, variance.constantValue? with
                 | some x, some y =>
-                    .sampleG (mode, kind, .gaussian) (gaussianFiber kind x y)
+                    .sampleG (kind, .gaussian) (gaussianFiber kind x y)
                       (fun value => .real (value, 0))
                 | _, _ => .stuck
-            else (symbolicReduce laws variance).wrap (.gaussian mode kind mean)
-              (.gaussian mode kind mean.weakenSamples)
-          else (symbolicReduce laws mean).wrap (fun next => .gaussian mode kind next variance)
-            (fun next => .gaussian mode kind next variance.weakenSamples) := by
+            else (symbolicReduce laws variance).wrap (.gaussian kind mean)
+              (.gaussian kind mean.weakenSamples)
+          else (symbolicReduce laws mean).wrap (fun next => .gaussian kind next variance)
+            (fun next => .gaussian kind next variance.weakenSamples) := by
   rw [symbolicReduce.eq_def]
 
 theorem symbolicReduce_poisson_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
-    (mode : Mode) (kind : Kind) (rate : AffineExpr n) :
-    symbolicReduce laws (.poisson mode kind rate) =
-          if rate.isValue then match mode, kind with
-            | .E, .stochastic => match rate.affineValue? with
+    (kind : DistributionAction) (rate : AffineExpr n) :
+    symbolicReduce laws (.poisson kind rate) =
+          if rate.isValue then match kind with
+            | .sample .E => match rate.affineValue? with
               | some x => .sampleE .poisson [x] [] (.real (Affine.fresh n))
               | none => .stuck
-            | _, _ => match rate.constantValue? with
+            | _ => match rate.constantValue? with
               | some x =>
-                  .sampleG (mode, kind, .poisson) (poissonFiber kind x)
+                  .sampleG (kind, .poisson) (poissonFiber kind x)
                     (fun value => .real (value, 0))
               | none => .stuck
-          else (symbolicReduce laws rate).wrap (.poisson mode kind) (.poisson mode kind) := by
+          else (symbolicReduce laws rate).wrap (.poisson kind) (.poisson kind) := by
   rw [symbolicReduce.eq_def]
 
 theorem symbolicReduce_bernoulli_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
-    (mode : Mode) (kind : Kind) (probability : AffineExpr n) :
-    symbolicReduce laws (.bernoulli mode kind probability) =
-          if probability.isValue then match mode, kind with
-            | .E, .stochastic => match probability.affineValue? with
+    (kind : DistributionAction) (probability : AffineExpr n) :
+    symbolicReduce laws (.bernoulli kind probability) =
+          if probability.isValue then match kind with
+            | .sample .E => match probability.affineValue? with
               | some x => .sampleE .bernoulli [x] [] (.real (Affine.fresh n))
               | none => .stuck
-            | _, _ => match probability.constantValue? with
+            | _ => match probability.constantValue? with
               | some x =>
-                  .sampleG (mode, kind, .bernoulli) (bernoulliFiber kind x)
+                  .sampleG (kind, .bernoulli) (bernoulliFiber kind x)
                     (fun value => .real (value, 0))
               | none => .stuck
-          else (symbolicReduce laws probability).wrap (.bernoulli mode kind) (.bernoulli mode kind) := by
+          else (symbolicReduce laws probability).wrap (.bernoulli kind) (.bernoulli kind) := by
   rw [symbolicReduce.eq_def]
 
 theorem symbolicReduce_exponential_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
-    (mode : Mode) (kind : Kind) (rate : AffineExpr n) :
-    symbolicReduce laws (.exponential mode kind rate) =
-          if rate.isValue then match mode, kind with
-            | .E, .stochastic => match rate.constantValue? with
+    (kind : DistributionAction) (rate : AffineExpr n) :
+    symbolicReduce laws (.exponential kind rate) =
+          if rate.isValue then match kind with
+            | .sample .E => match rate.constantValue? with
               | some x => .sampleE .exponential [] [x] (.real (Affine.fresh n))
               | none => .stuck
-            | _, _ => match rate.constantValue? with
+            | _ => match rate.constantValue? with
               | some x =>
-                  .sampleG (mode, kind, .exponential) (exponentialFiber kind x)
+                  .sampleG (kind, .exponential) (exponentialFiber kind x)
                     (fun value => .real (value, 0))
               | none => .stuck
-          else (symbolicReduce laws rate).wrap (.exponential mode kind)
-            (.exponential mode kind) := by
+          else (symbolicReduce laws rate).wrap (.exponential kind)
+            (.exponential kind) := by
   rw [symbolicReduce.eq_def]
 
 theorem symbolicReduce_beta_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
-    (mode : Mode) (kind : Kind) (alpha betaParam : AffineExpr n) :
-    symbolicReduce laws (.beta mode kind alpha betaParam) =
+    (kind : DistributionAction) (alpha betaParam : AffineExpr n) :
+    symbolicReduce laws (.beta kind alpha betaParam) =
           if alpha.isValue then
-            if betaParam.isValue then match mode, kind with
-              | .E, .stochastic => match alpha.constantValue?, betaParam.constantValue? with
+            if betaParam.isValue then match kind with
+              | .sample .E => match alpha.constantValue?, betaParam.constantValue? with
                 | some x, some y => .sampleE .beta [] [x, y] (.real (Affine.fresh n))
                 | _, _ => .stuck
-              | _, _ => match alpha.constantValue?, betaParam.constantValue? with
+              | _ => match alpha.constantValue?, betaParam.constantValue? with
                 | some x, some y =>
-                    .sampleG (mode, kind, .beta) (betaFiber kind x y)
+                    .sampleG (kind, .beta) (betaFiber kind x y)
                       (fun value => .real (value, 0))
                 | _, _ => .stuck
-            else (symbolicReduce laws betaParam).wrap (.beta mode kind alpha)
-              (.beta mode kind alpha.weakenSamples)
-          else (symbolicReduce laws alpha).wrap (fun next => .beta mode kind next betaParam)
-            (fun next => .beta mode kind next betaParam.weakenSamples) := by
+            else (symbolicReduce laws betaParam).wrap (.beta kind alpha)
+              (.beta kind alpha.weakenSamples)
+          else (symbolicReduce laws alpha).wrap (fun next => .beta kind next betaParam)
+            (fun next => .beta kind next betaParam.weakenSamples) := by
   rw [symbolicReduce.eq_def]
 
 theorem symbolicReduce_gamma_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
-    (mode : Mode) (kind : Kind) (shape rate : AffineExpr n) :
-    symbolicReduce laws (.gamma mode kind shape rate) =
+    (kind : DistributionAction) (shape rate : AffineExpr n) :
+    symbolicReduce laws (.gamma kind shape rate) =
           if shape.isValue then
-            if rate.isValue then match mode, kind with
-              | .E, .stochastic => match shape.affineValue?, rate.constantValue? with
+            if rate.isValue then match kind with
+              | .sample .E => match shape.affineValue?, rate.constantValue? with
                 | some x, some y => .sampleE .gamma [x] [y] (.real (Affine.fresh n))
                 | _, _ => .stuck
-              | _, _ => match shape.constantValue?, rate.constantValue? with
+              | _ => match shape.constantValue?, rate.constantValue? with
                 | some x, some y =>
-                    .sampleG (mode, kind, .gamma) (gammaFiber kind x y)
+                    .sampleG (kind, .gamma) (gammaFiber kind x y)
                       (fun value => .real (value, 0))
                 | _, _ => .stuck
-            else (symbolicReduce laws rate).wrap (.gamma mode kind shape)
-              (.gamma mode kind shape.weakenSamples)
-          else (symbolicReduce laws shape).wrap (fun next => .gamma mode kind next rate)
-            (fun next => .gamma mode kind next rate.weakenSamples) := by
+            else (symbolicReduce laws rate).wrap (.gamma kind shape)
+              (.gamma kind shape.weakenSamples)
+          else (symbolicReduce laws shape).wrap (fun next => .gamma kind next rate)
+            (fun next => .gamma kind next rate.weakenSamples) := by
   rw [symbolicReduce.eq_def]
 
 set_option maxHeartbeats 800000 in
@@ -1808,8 +1804,8 @@ theorem symbolicReduce_realize
   | bvar hvar => simp [symbolicReduce, SymbolicAction.realize, realize, reduce]
   | reject | «unit» => simp [symbolicReduce, SymbolicAction.realize, realize, reduce]
   | discrete =>
-      rename_i context' mode d
-      cases mode <;> simp [symbolicReduce, SymbolicAction.realize, realize, reduce,
+      rename_i context' affinity d
+      cases affinity <;> simp [symbolicReduce, SymbolicAction.realize, realize, reduce,
         discreteFiber_eq, Affine.eval_fresh]
   | bool => simp [symbolicReduce, SymbolicAction.realize, realize, reduce]
   | realE => simp [symbolicReduce, SymbolicAction.realize, realize, reduce]
@@ -2264,7 +2260,7 @@ theorem symbolicReduce_realize
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
           ihl environment]
   | uniform leftTyped rightTyped ihl ihr =>
-      rename_i context' left mode right
+      rename_i context' left affinity right
       rw [realize, MeasurableActionFamily.reduce_uniform_eq, realize_isValue,
         symbolicReduce.eq_def]
       by_cases leftValue : left.isValue = true
@@ -2273,7 +2269,7 @@ theorem symbolicReduce_realize
         · simp only [rightValue, ↓reduceIte]
           obtain ⟨x, rfl⟩ := wellTyped_real_value leftTyped leftValue
           obtain ⟨y, rfl⟩ := wellTyped_real_value rightTyped rightValue
-          cases mode with
+          cases affinity with
           | E =>
               simp [affineValue?, SymbolicAction.realize, realize, Expr.isValue,
                 realValue?, uniformFiber_eq, Affine.eval_fresh]
@@ -2286,19 +2282,19 @@ theorem symbolicReduce_realize
         · simp only [rightValue, Bool.eq_false_of_not_eq_true rightValue,
             Bool.false_eq_true, ↓reduceIte]
           rw [SymbolicAction.realize_wrap
-            (ExprContext := fun next => .uniform mode .stochastic (left.realize environment) next)
+            (ExprContext := fun next => .uniform (.sample affinity) (left.realize environment) next)
             (context_realize := by intros; simp only [realize])
             (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
             ihr environment, realize_isValue, if_neg rightValue]
       · simp only [leftValue, Bool.eq_false_of_not_eq_true leftValue,
           Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
-          (ExprContext := fun next => .uniform mode .stochastic next (right.realize environment))
+          (ExprContext := fun next => .uniform (.sample affinity) next (right.realize environment))
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
           ihl environment]
   | gaussian leftTyped rightTyped ihl ihr =>
-      rename_i context' left mode right
+      rename_i context' left affinity right
       rw [realize, MeasurableActionFamily.reduce_gaussian_eq, realize_isValue,
         symbolicReduce.eq_def]
       by_cases leftValue : left.isValue = true
@@ -2307,7 +2303,7 @@ theorem symbolicReduce_realize
         · simp only [rightValue, ↓reduceIte]
           obtain ⟨x, rfl⟩ := wellTyped_real_value leftTyped leftValue
           obtain ⟨y, rfl⟩ := wellTyped_real_value rightTyped rightValue
-          cases mode with
+          cases affinity with
           | E =>
               rcases y with ⟨y0, yc⟩
               obtain rfl : yc = 0 := wellTyped_realG_coefficients rightTyped
@@ -2322,25 +2318,25 @@ theorem symbolicReduce_realize
         · simp only [rightValue, Bool.eq_false_of_not_eq_true rightValue,
             Bool.false_eq_true, ↓reduceIte]
           rw [SymbolicAction.realize_wrap
-            (ExprContext := fun next => .gaussian mode .stochastic (left.realize environment) next)
+            (ExprContext := fun next => .gaussian (.sample affinity) (left.realize environment) next)
             (context_realize := by intros; simp only [realize])
             (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
             ihr environment, realize_isValue, if_neg rightValue]
       · simp only [leftValue, Bool.eq_false_of_not_eq_true leftValue,
           Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
-          (ExprContext := fun next => .gaussian mode .stochastic next (right.realize environment))
+          (ExprContext := fun next => .gaussian (.sample affinity) next (right.realize environment))
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
           ihl environment]
   | poisson valueTyped ih =>
-      rename_i context' value mode
+      rename_i context' value affinity
       rw [realize, MeasurableActionFamily.reduce_poisson_eq, realize_isValue,
         symbolicReduce.eq_def]
       by_cases valueIsValue : value.isValue = true
       · simp only [valueIsValue, ↓reduceIte]
         obtain ⟨x, rfl⟩ := wellTyped_real_value valueTyped valueIsValue
-        cases mode with
+        cases affinity with
         | E =>
               simp [affineValue?, SymbolicAction.realize, realize, Expr.isValue,
                 realValue?, poissonFiber_eq, Affine.eval_fresh]
@@ -2351,18 +2347,18 @@ theorem symbolicReduce_realize
       · simp only [valueIsValue, Bool.eq_false_of_not_eq_true valueIsValue,
           Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
-          (ExprContext := fun next => .poisson mode .stochastic next)
+          (ExprContext := fun next => .poisson (.sample affinity) next)
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
           ih environment]
   | bernoulli valueTyped ih =>
-      rename_i context' value mode
+      rename_i context' value affinity
       rw [realize, MeasurableActionFamily.reduce_bernoulli_eq, realize_isValue,
         symbolicReduce.eq_def]
       by_cases valueIsValue : value.isValue = true
       · simp only [valueIsValue, ↓reduceIte]
         obtain ⟨x, rfl⟩ := wellTyped_real_value valueTyped valueIsValue
-        cases mode with
+        cases affinity with
         | E =>
               simp [affineValue?, SymbolicAction.realize, realize, Expr.isValue,
                 realValue?, bernoulliFiber_eq, Affine.eval_fresh]
@@ -2373,18 +2369,18 @@ theorem symbolicReduce_realize
       · simp only [valueIsValue, Bool.eq_false_of_not_eq_true valueIsValue,
           Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
-          (ExprContext := fun next => .bernoulli mode .stochastic next)
+          (ExprContext := fun next => .bernoulli (.sample affinity) next)
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
           ih environment]
   | exponential valueTyped ih =>
-      rename_i context' value mode
+      rename_i context' value affinity
       rw [realize, MeasurableActionFamily.reduce_exponential_eq, realize_isValue,
         symbolicReduce.eq_def]
       by_cases valueIsValue : value.isValue = true
       · simp only [valueIsValue, ↓reduceIte]
         obtain ⟨x, rfl⟩ := wellTyped_real_value valueTyped valueIsValue
-        cases mode with
+        cases affinity with
         | E =>
               rcases x with ⟨x0, xc⟩
               obtain rfl : xc = 0 := wellTyped_realG_coefficients valueTyped
@@ -2397,12 +2393,12 @@ theorem symbolicReduce_realize
       · simp only [valueIsValue, Bool.eq_false_of_not_eq_true valueIsValue,
           Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
-          (ExprContext := fun next => .exponential mode .stochastic next)
+          (ExprContext := fun next => .exponential (.sample affinity) next)
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
           ih environment]
   | beta leftTyped rightTyped ihl ihr =>
-      rename_i context' left right mode
+      rename_i context' left right affinity
       rw [realize, MeasurableActionFamily.reduce_beta_eq, realize_isValue,
         symbolicReduce.eq_def]
       by_cases leftValue : left.isValue = true
@@ -2411,7 +2407,7 @@ theorem symbolicReduce_realize
         · simp only [rightValue, ↓reduceIte]
           obtain ⟨x, rfl⟩ := wellTyped_real_value leftTyped leftValue
           obtain ⟨y, rfl⟩ := wellTyped_real_value rightTyped rightValue
-          cases mode with
+          cases affinity with
           | E =>
               rcases x with ⟨x0, xc⟩
               rcases y with ⟨y0, yc⟩
@@ -2428,19 +2424,19 @@ theorem symbolicReduce_realize
         · simp only [rightValue, Bool.eq_false_of_not_eq_true rightValue,
             Bool.false_eq_true, ↓reduceIte]
           rw [SymbolicAction.realize_wrap
-            (ExprContext := fun next => .beta mode .stochastic (left.realize environment) next)
+            (ExprContext := fun next => .beta (.sample affinity) (left.realize environment) next)
             (context_realize := by intros; simp only [realize])
             (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
             ihr environment, realize_isValue, if_neg rightValue]
       · simp only [leftValue, Bool.eq_false_of_not_eq_true leftValue,
           Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
-          (ExprContext := fun next => .beta mode .stochastic next (right.realize environment))
+          (ExprContext := fun next => .beta (.sample affinity) next (right.realize environment))
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
           ihl environment]
   | gamma leftTyped rightTyped ihl ihr =>
-      rename_i context' left mode right
+      rename_i context' left affinity right
       rw [realize, MeasurableActionFamily.reduce_gamma_eq, realize_isValue,
         symbolicReduce.eq_def]
       by_cases leftValue : left.isValue = true
@@ -2449,7 +2445,7 @@ theorem symbolicReduce_realize
         · simp only [rightValue, ↓reduceIte]
           obtain ⟨x, rfl⟩ := wellTyped_real_value leftTyped leftValue
           obtain ⟨y, rfl⟩ := wellTyped_real_value rightTyped rightValue
-          cases mode with
+          cases affinity with
           | E =>
               rcases y with ⟨y0, yc⟩
               obtain rfl : yc = 0 := wellTyped_realG_coefficients rightTyped
@@ -2464,14 +2460,14 @@ theorem symbolicReduce_realize
         · simp only [rightValue, Bool.eq_false_of_not_eq_true rightValue,
             Bool.false_eq_true, ↓reduceIte]
           rw [SymbolicAction.realize_wrap
-            (ExprContext := fun next => .gamma mode .stochastic (left.realize environment) next)
+            (ExprContext := fun next => .gamma (.sample affinity) (left.realize environment) next)
             (context_realize := by intros; simp only [realize])
             (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
             ihr environment, realize_isValue, if_neg rightValue]
       · simp only [leftValue, Bool.eq_false_of_not_eq_true leftValue,
           Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
-          (ExprContext := fun next => .gamma mode .stochastic next (right.realize environment))
+          (ExprContext := fun next => .gamma (.sample affinity) next (right.realize environment))
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
           ihl environment]
@@ -2484,7 +2480,7 @@ theorem symbolicReduce_wellTyped
     SymbolicAction.WellTyped ty (symbolicReduce laws expression) := by
   generalize hcontext : ([] : List Ty) = context at typed
   induction typed
-  case uniform left mode right leftTyped rightTyped ihLeft ihRight =>
+  case uniform left affinity right leftTyped rightTyped ihLeft ihRight =>
     cases hcontext
     simp only [symbolicReduce]
     by_cases leftValue : left.isValue = true
@@ -2493,7 +2489,7 @@ theorem symbolicReduce_wellTyped
       · simp only [rightValue, ↓reduceIte]
         obtain ⟨x, rfl⟩ := wellTyped_real_value leftTyped leftValue
         obtain ⟨y, rfl⟩ := wellTyped_real_value rightTyped rightValue
-        cases mode with
+        cases affinity with
         | E =>
               simp only [affineValue?]
               exact .sampleE rfl rfl .realE
@@ -2512,7 +2508,7 @@ theorem symbolicReduce_wellTyped
       exact (ihLeft rfl).wrap
         (fun next nextTyped => .uniform nextTyped rightTyped)
         (fun next nextTyped => .uniform nextTyped rightTyped.weakenSamples)
-  case gaussian left mode right leftTyped rightTyped ihLeft ihRight =>
+  case gaussian left affinity right leftTyped rightTyped ihLeft ihRight =>
     cases hcontext
     simp only [symbolicReduce]
     by_cases leftValue : left.isValue = true
@@ -2521,7 +2517,7 @@ theorem symbolicReduce_wellTyped
       · simp only [rightValue, ↓reduceIte]
         obtain ⟨x, rfl⟩ := wellTyped_real_value leftTyped leftValue
         obtain ⟨y, rfl⟩ := wellTyped_real_value rightTyped rightValue
-        cases mode with
+        cases affinity with
         | E =>
               rcases y with ⟨y0, yc⟩
               obtain rfl : yc = 0 := wellTyped_realG_coefficients rightTyped
@@ -2542,13 +2538,13 @@ theorem symbolicReduce_wellTyped
       exact (ihLeft rfl).wrap
         (fun next nextTyped => .gaussian nextTyped rightTyped)
         (fun next nextTyped => .gaussian nextTyped rightTyped.weakenSamples)
-  case poisson value mode valueTyped ih =>
+  case poisson value affinity valueTyped ih =>
     cases hcontext
     simp only [symbolicReduce]
     by_cases isValue : value.isValue = true
     · simp only [isValue, ↓reduceIte]
       obtain ⟨x, rfl⟩ := wellTyped_real_value valueTyped isValue
-      cases mode with
+      cases affinity with
       | E =>
             simp only [affineValue?]
             exact .sampleE rfl rfl .realE
@@ -2561,13 +2557,13 @@ theorem symbolicReduce_wellTyped
       exact (ih rfl).wrap
         (fun next nextTyped => .poisson nextTyped)
         (fun next nextTyped => .poisson nextTyped)
-  case bernoulli value mode valueTyped ih =>
+  case bernoulli value affinity valueTyped ih =>
     cases hcontext
     simp only [symbolicReduce]
     by_cases isValue : value.isValue = true
     · simp only [isValue, ↓reduceIte]
       obtain ⟨x, rfl⟩ := wellTyped_real_value valueTyped isValue
-      cases mode with
+      cases affinity with
       | E =>
             simp only [affineValue?]
             exact .sampleE rfl rfl .realE
@@ -2580,13 +2576,13 @@ theorem symbolicReduce_wellTyped
       exact (ih rfl).wrap
         (fun next nextTyped => .bernoulli nextTyped)
         (fun next nextTyped => .bernoulli nextTyped)
-  case exponential value mode valueTyped ih =>
+  case exponential value affinity valueTyped ih =>
     cases hcontext
     simp only [symbolicReduce]
     by_cases isValue : value.isValue = true
     · simp only [isValue, ↓reduceIte]
       obtain ⟨x, rfl⟩ := wellTyped_real_value valueTyped isValue
-      cases mode with
+      cases affinity with
       | E =>
             rcases x with ⟨x0, xc⟩
             obtain rfl : xc = 0 := wellTyped_realG_coefficients valueTyped
@@ -2601,7 +2597,7 @@ theorem symbolicReduce_wellTyped
       exact (ih rfl).wrap
         (fun next nextTyped => .exponential nextTyped)
         (fun next nextTyped => .exponential nextTyped)
-  case beta left right mode leftTyped rightTyped ihLeft ihRight =>
+  case beta left right affinity leftTyped rightTyped ihLeft ihRight =>
     cases hcontext
     simp only [symbolicReduce]
     by_cases leftValue : left.isValue = true
@@ -2610,7 +2606,7 @@ theorem symbolicReduce_wellTyped
       · simp only [rightValue, ↓reduceIte]
         obtain ⟨x, rfl⟩ := wellTyped_real_value leftTyped leftValue
         obtain ⟨y, rfl⟩ := wellTyped_real_value rightTyped rightValue
-        cases mode with
+        cases affinity with
         | E =>
               rcases x with ⟨x0, xc⟩
               rcases y with ⟨y0, yc⟩
@@ -2633,7 +2629,7 @@ theorem symbolicReduce_wellTyped
       exact (ihLeft rfl).wrap
         (fun next nextTyped => .beta nextTyped rightTyped)
         (fun next nextTyped => .beta nextTyped rightTyped.weakenSamples)
-  case gamma left mode right leftTyped rightTyped ihLeft ihRight =>
+  case gamma left affinity right leftTyped rightTyped ihLeft ihRight =>
     cases hcontext
     simp only [symbolicReduce]
     by_cases leftValue : left.isValue = true
@@ -2642,7 +2638,7 @@ theorem symbolicReduce_wellTyped
       · simp only [rightValue, ↓reduceIte]
         obtain ⟨x, rfl⟩ := wellTyped_real_value leftTyped leftValue
         obtain ⟨y, rfl⟩ := wellTyped_real_value rightTyped rightValue
-        cases mode with
+        cases affinity with
         | E =>
               rcases y with ⟨y0, yc⟩
               obtain rfl : yc = 0 := wellTyped_realG_coefficients rightTyped
@@ -3001,8 +2997,8 @@ theorem symbolicReduce_wellTyped
         (fun next nextTyped => .inr nextTyped)
   case bvar hvar => cases hcontext; cases hvar
   case reject => simp only [symbolicReduce]; exact .next .reject
-  case discrete mode d =>
-    cases mode <;> simp only [symbolicReduce]
+  case discrete affinity d =>
+    cases affinity <;> simp only [symbolicReduce]
     · exact .sampleE rfl rfl .realE
     · exact .sampleG fun _ => .realG rfl
   case unit => simp only [symbolicReduce]; exact .next .unit
@@ -3025,30 +3021,31 @@ theorem wellTyped_ofExpr_of_typed {expression : Expr}
     WellTyped context (AffineExpr.ofExpr expression) ty := by
   induction typed
   case sub h sub ih => exact (ih sourceTags).sub sub
-  all_goals simp only [ofExpr, SourceTags] at sourceTags ⊢
+  all_goals simp only [ofExpr, SourceTags, DistributionAction.isSample, Bool.false_eq_true, false_and] at sourceTags ⊢
+  all_goals try contradiction
   case uniform lowerTyped upperTyped ihl ihr =>
-    obtain ⟨rfl, lowerTags, upperTags⟩ := sourceTags
+    obtain ⟨_, lowerTags, upperTags⟩ := sourceTags
     exact .uniform (ihl lowerTags) (ihr upperTags)
   case gaussian meanTyped varianceTyped ihl ihr =>
-    obtain ⟨rfl, meanTags, varianceTags⟩ := sourceTags
+    obtain ⟨_, meanTags, varianceTags⟩ := sourceTags
     exact .gaussian (ihl meanTags) (ihr varianceTags)
   case poisson rateTyped ih =>
-    obtain ⟨rfl, rateTags⟩ := sourceTags
+    obtain ⟨_, rateTags⟩ := sourceTags
     exact .poisson (ih rateTags)
   case bernoulli probabilityTyped ih =>
-    obtain ⟨rfl, probabilityTags⟩ := sourceTags
+    obtain ⟨_, probabilityTags⟩ := sourceTags
     exact .bernoulli (ih probabilityTags)
   case exponential rateTyped ih =>
-    obtain ⟨rfl, rateTags⟩ := sourceTags
+    obtain ⟨_, rateTags⟩ := sourceTags
     exact .exponential (ih rateTags)
   case beta alphaTyped betaTyped ihl ihr =>
-    obtain ⟨rfl, alphaTags, betaTags⟩ := sourceTags
+    obtain ⟨_, alphaTags, betaTags⟩ := sourceTags
     exact .beta (ihl alphaTags) (ihr betaTags)
   case gamma shapeTyped rateTyped ihl ihr =>
-    obtain ⟨rfl, shapeTags, rateTags⟩ := sourceTags
+    obtain ⟨_, shapeTags, rateTags⟩ := sourceTags
     exact .gamma (ihl shapeTags) (ihr rateTags)
   all_goals try aesop (add unsafe constructors WellTyped)
-  all_goals try (cases ‹Mode› <;> aesop (add unsafe constructors WellTyped))
+  all_goals try (cases ‹Affinity› <;> aesop (add unsafe constructors WellTyped))
 
 theorem coordinate_count (expression : AffineExpr sampleCount) :
     expression.coordinates.length = expression.skeleton.realArity := by

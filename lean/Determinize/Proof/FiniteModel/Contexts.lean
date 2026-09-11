@@ -10,7 +10,7 @@ def primitiveArity : Op → Nat
 
 def FrameShape : Frame → Prop
   | .draw site pending _ arguments =>
-      arguments.length + 1 + pending.length = primitiveArity site.2.2
+      arguments.length + 1 + pending.length = primitiveArity site.2
   | _ => True
 
 theorem frame_context (frame : Frame) (shape : FrameShape frame) (hole : Expr)
@@ -29,7 +29,7 @@ theorem frame_context (frame : Frame) (shape : FrameShape frame) (hole : Expr)
       simp [frameExpr, Expr.isValue, reduce, notValue]
       rfl
   | draw site pending environment arguments =>
-      rcases site with ⟨mode,kind,op⟩
+      rcases site with ⟨kind,op⟩
       rcases arguments with _ | ⟨a, _ | ⟨b, arguments⟩⟩ <;>
         rcases pending with _ | ⟨p, _ | ⟨q, pending⟩⟩ <;>
         cases op <;> simp_all [FrameShape, primitiveArity, frameExpr, primitiveExpr,
@@ -74,7 +74,7 @@ theorem frame_absorbing (frame : Frame) (hole : Expr)
   | matchSum left right environment | matchList nilCase consCase environment =>
       simp [frameExpr, Expr.isValue, reduce, notValue, absorbing, Action.wrap]
   | draw site pending environment arguments =>
-      rcases site with ⟨mode,kind,op⟩
+      rcases site with ⟨kind,op⟩
       rcases arguments with _ | ⟨a, _ | ⟨b, arguments⟩⟩ <;>
         rcases pending with _ | ⟨p, _ | ⟨q, pending⟩⟩ <;>
         cases op <;> simp [frameExpr, primitiveExpr, Expr.isValue, reduce,

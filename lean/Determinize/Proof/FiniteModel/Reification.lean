@@ -67,16 +67,16 @@ def binaryExpr {α : Type} : Binary → Expr α → Expr α → Expr α
   | .app => .app | .pair => .pair | .cons => .cons
   | .add => .add | .mul => .mul | .div => .div | .lt => .lt
 
-def primitiveExpr {α : Type} (site : Mode × Kind × Op) (arguments : List (Expr α)) : Expr α :=
-  match site.2.2, arguments with
-  | .uniform, [a,b] => .uniform site.1 site.2.1 a b
-  | .gaussian, [a,b] => .gaussian site.1 site.2.1 a b
-  | .poisson, [a] => .poisson site.1 site.2.1 a
-  | .bernoulli, [a] => .bernoulli site.1 site.2.1 a
-  | .exponential, [a] => .exponential site.1 site.2.1 a
-  | .beta, [a,b] => .beta site.1 site.2.1 a b
-  | .gamma, [a,b] => .gamma site.1 site.2.1 a b
-  | .discrete d, [] => .discrete site.1 site.2.1 d
+def primitiveExpr {α : Type} (site : DistributionAction × Op) (arguments : List (Expr α)) : Expr α :=
+  match site.2, arguments with
+  | .uniform, [a,b] => .uniform site.1 a b
+  | .gaussian, [a,b] => .gaussian site.1 a b
+  | .poisson, [a] => .poisson site.1 a
+  | .bernoulli, [a] => .bernoulli site.1 a
+  | .exponential, [a] => .exponential site.1 a
+  | .beta, [a,b] => .beta site.1 a b
+  | .gamma, [a,b] => .gamma site.1 a b
+  | .discrete d, [] => .discrete site.1 d
   | _, _ => .reject
 
 def frameExpr (frame : Frame) (hole : Expr) : Expr :=

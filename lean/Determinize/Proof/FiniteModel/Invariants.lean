@@ -17,14 +17,14 @@ private theorem singleton_shape (state : State) (shape : StateShape state)
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (List.mem_singleton.mp member)
   exact shape
 
-private theorem draw_shape (site : Mode × Kind × Op) (arguments : List Rat)
+private theorem draw_shape (site : DistributionAction × Op) (arguments : List Rat)
     (stack : List Frame) (shape : ∀ frame ∈ stack, FrameShape frame)
     (evidence : Evidence) (successors : List (Rat × State))
     (action : draw site arguments stack = .ok (.next evidence successors))
     (probability : Rat) (after : State) (member : (probability, after) ∈ successors) :
     StateShape after := by
   unfold draw at action
-  cases law : finiteLaw site.2.2 site.2.1 arguments with
+  cases law : finiteLaw site.2 site.1 arguments with
   | error failure => simp [law, bind, Except.bind] at action
   | ok outcomes =>
       simp only [law, bind, Except.bind, pure, Except.pure] at action
@@ -94,11 +94,11 @@ theorem program_reachable_shape (source : Core) (subject : Subject) (state : Sta
   reachable_shape _ (initial_shape source subject) state reachable
 
 theorem reachable_draw_correspondence (source : Core) (subject : Subject)
-    (site : Mode × Kind × Op) (arguments : List Rat) (x : Rat)
+    (site : DistributionAction × Op) (arguments : List Rat) (x : Rat)
     (environment : List Value) (stack : List Frame) (outcomes : List (Rat × Rat))
     (reachable : MachineReachable (initialState source subject)
       (.deliver (.number x) (.draw site [] environment arguments :: stack)))
-    (success : finiteLaw site.2.2 site.2.1 (arguments ++ [x]) = .ok outcomes) :
+    (success : finiteLaw site.2 site.1 (arguments ++ [x]) = .ok outcomes) :
     reduce (stateExpr (.deliver (.number x) (.draw site [] environment arguments :: stack))) =
       .sample site (outcomeMeasure outcomes) (fun y => stackExpr stack (.real y)) := by
   apply draw_correspondence site arguments x environment stack outcomes success
@@ -106,15 +106,15 @@ theorem reachable_draw_correspondence (source : Core) (subject : Subject)
   exact fun frame member => shape frame (by simp [member])
 
 theorem reachable_discrete_correspondence (source : Core) (subject : Subject)
-    (mode : Mode) (kind : Kind) (d : FiniteDistribution)
+    (kind : DistributionAction) (d : FiniteDistribution)
     (environment : List Value) (stack : List Frame) (outcomes : List (Rat × Rat))
     (reachable : MachineReachable (initialState source subject)
-      (.eval (.discrete mode kind d) environment stack))
+      (.eval (.discrete kind d) environment stack))
     (success : finiteLaw (.discrete d) kind [] = .ok outcomes) :
-    reduce (stateExpr (.eval (.discrete mode kind d) environment stack)) =
-      .sample (mode,kind,.discrete d) (outcomeMeasure outcomes)
+    reduce (stateExpr (.eval (.discrete kind d) environment stack)) =
+      .sample (kind, .discrete d) (outcomeMeasure outcomes)
         (fun y => stackExpr stack (.real y)) :=
-  discrete_correspondence mode kind d environment stack outcomes success
+  discrete_correspondence kind d environment stack outcomes success
     (program_reachable_shape source subject _ reachable)
 
 end Determinize.Proof.FiniteModel

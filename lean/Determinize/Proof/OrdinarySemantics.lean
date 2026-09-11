@@ -76,7 +76,7 @@ theorem measurable_direct_cumulative (fuel : Nat) :
   exact (cumulativeKernel fuel).measurable
 
 theorem measurable_sample_cumulative (fuel : Nat) (expression : Expr)
-    (site : Mode × Kind × Op) (fiber : Measure ℝ) (continuation : ℝ → Expr)
+    (site : DistributionAction × Op) (fiber : Measure ℝ) (continuation : ℝ → Expr)
     (action : reduce expression = .sample site fiber continuation) :
     Measurable (fun x => Determinize.Spec.Paper.cumulativeOutputMeasure fuel (continuation x)) :=
   (measurable_direct_cumulative fuel).comp
@@ -98,8 +98,9 @@ theorem typed_determinize
   induction typed with
   | sub _ h ih => exact ih.sub h
   | _ =>
-      simp only [Expr.determinize]
-      aesop (add unsafe constructors Determinize.Spec.Paper.Typed)
+      simp only [Expr.determinize, DistributionAction.determinize]
+      try cases ‹Affinity›
+      all_goals aesop (add unsafe constructors Determinize.Spec.Paper.Typed)
 
 set_option maxHeartbeats 800000 in
 theorem sourceTags_of_sourceForm {expression : Expr}

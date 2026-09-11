@@ -58,9 +58,9 @@ private def poissonDraw (rate : Float) : RandomM Float := do
 
 private def finite (x : Float) : Bool := !x.isNaN && !x.isInf
 
-def sample (op : Op) (kind : Kind) (args : List Float) : RandomM Float := do
+def sample (op : Op) (action : DistributionAction) (args : List Float) : RandomM Float := do
   unless args.all finite do throw "nonfinite distribution parameter"
-  let mean := kind == .mean
+  let mean := action == .mean
   let result ← match op,args with
     | .uniform,[a,b] =>
       if a > b then throw "uniform requires lower ≤ upper"

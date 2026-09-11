@@ -33,20 +33,20 @@ example :
   simp [stateExpr, stackExpr, valueExpr]
 
 example :
-    bigStepMeasure (.letE (.gaussian .G .stochastic (.real 2) .reject) (.real 7)) = 0 := by
+    bigStepMeasure (.letE (.gaussian (.sample .G) (.real 2) .reject) (.real 7)) = 0 := by
   simpa [stackExpr, frameExpr, primitiveExpr, environmentExpr, close, interpret,
     Expr.mapLiteral, Expr.mapVars] using
-    stack_reject_zero [.draw (.G,.stochastic,.gaussian) [] [] [2], .letBody (.real 7) []]
+    stack_reject_zero [.draw (.sample .G, .gaussian) [] [] [2], .letBody (.real 7) []]
 
 example :
-    DoesNotGetStuck (.letE (.gaussian .G .stochastic (.real 2) .reject) (.real 7)) := by
+    DoesNotGetStuck (.letE (.gaussian (.sample .G) (.real 2) .reject) (.real 7)) := by
   simpa [stackExpr, frameExpr, primitiveExpr, environmentExpr, close, interpret,
     Expr.mapLiteral, Expr.mapVars] using
-    stack_reject_safe [.draw (.G,.stochastic,.gaussian) [] [] [2], .letBody (.real 7) []]
+    stack_reject_safe [.draw (.sample .G, .gaussian) [] [] [2], .letBody (.real 7) []]
 
 example : ¬Scoped 0 (.lam (.bvar 1) : Expr) := by simp [Scoped]
 
-private def source : Core := .app (.lam (.bvar 0)) (.uniform .E .stochastic (.real 0) (.real 2))
+private def source : Core := .app (.lam (.bvar 0)) (.uniform (.sample .E) (.real 0) (.real 2))
 
 private theorem typed_source : Typed [] (interpret source) (.float .E) :=
   .app (.lam (.bvar .head)) (.uniform .real .real)
@@ -55,9 +55,9 @@ example : stateExpr (initialState source .source) = Subject.source.program sourc
   typed_initial_reification source .source _ typed_source
 
 example : stateExpr (initialState source .determinized) =
-    .app (.lam (.bvar 0)) (.uniform .E .mean (.real 0) (.real 2)) := by
+    .app (.lam (.bvar 0)) (.uniform .mean (.real 0) (.real 2)) := by
   simpa [Subject.program, source, interpret, Expr.mapLiteral, Expr.determinize,
-    Expr.determinizeKind] using typed_initial_reification source .determinized _ typed_source
+    DistributionAction.determinize] using typed_initial_reification source .determinized _ typed_source
 
 example : outcomeMeasure [(1,0),(0,1)] = MeasureTheory.Measure.dirac (0 : ℝ) := by
   simp [outcomeMeasure]
@@ -65,29 +65,29 @@ example : outcomeMeasure [(1,0),(0,1)] = MeasureTheory.Measure.dirac (0 : ℝ) :
 example : outcomeMeasure [(0,0),(1,1)] = MeasureTheory.Measure.dirac (1 : ℝ) := by
   simp [outcomeMeasure]
 
-example : FiniteLawMatches .bernoulli .stochastic [0] [(1,0),(0,1)] :=
+example : FiniteLawMatches .bernoulli (.sample .G) [0] [(1,0),(0,1)] :=
   finiteLaw_sound _ _ _ _ (by decide +kernel)
 
-example : FiniteLawMatches .bernoulli .stochastic [1] [(0,0),(1,1)] :=
+example : FiniteLawMatches .bernoulli (.sample .G) [1] [(0,0),(1,1)] :=
   finiteLaw_sound _ _ _ _ (by decide +kernel)
 
 example : FiniteLawMatches .gamma .mean [3,2] [(1,3/2)] :=
   finiteLaw_sound _ _ _ _ (by decide +kernel)
 
-example : ∀ outcomes, finiteLaw .bernoulli .stochastic [2] ≠ .ok outcomes := by
+example : ∀ outcomes, finiteLaw .bernoulli (.sample .G) [2] ≠ .ok outcomes := by
   intro outcomes
   simp [finiteLaw, bind, Except.bind, pure, Except.pure, throw]
 
-example : ∀ outcomes, finiteLaw .uniform .stochastic [0,0] ≠ .ok outcomes := by
+example : ∀ outcomes, finiteLaw .uniform (.sample .G) [0,0] ≠ .ok outcomes := by
   intro outcomes
   simp [finiteLaw, supportedDraw, bind, Except.bind, pure, Except.pure, throw]
 
 example : reduce (stateExpr (.deliver (.number (1/3))
-    [.draw (.G,.stochastic,.bernoulli) [] [] [], .letBody .reject []])) =
-      .sample (.G,.stochastic,.bernoulli) (outcomeMeasure [(2/3,0),(1/3,1)])
+    [.draw (.sample .G, .bernoulli) [] [] [], .letBody .reject []])) =
+      .sample (.sample .G, .bernoulli) (outcomeMeasure [(2/3,0),(1/3,1)])
         (fun y => .letE (.real y) .reject) := by
   simpa [stackExpr, frameExpr, Binding.close, interpret, Expr.mapLiteral, Expr.mapVars] using
-    draw_correspondence (.G,.stochastic,.bernoulli) [] (1/3) [] [.letBody .reject []]
+    draw_correspondence (.sample .G, .bernoulli) [] (1/3) [] [.letBody .reject []]
       [(2/3,0),(1/3,1)] (by decide +kernel) (by simp [FrameShape])
 
 example (initial state : State) (shape : StateShape initial)
@@ -95,20 +95,20 @@ example (initial state : State) (shape : StateShape initial)
   reachable_shape initial shape state reachable
 
 example : ¬StateShape (.deliver (.number 1)
-    [.draw (.G,.stochastic,.bernoulli) [.real 2] [] []]) := by
+    [.draw (.sample .G, .bernoulli) [.real 2] [] []]) := by
   simp [StateShape, FrameShape, primitiveArity]
 
 example : StateShape (.eval (.real 2) []
-    [.draw (.G,.mean,.uniform) [] [] [1]]) := by
+    [.draw (.mean, .uniform) [] [] [1]]) := by
   simp [StateShape, FrameShape, primitiveArity]
 
 example : bookkeepingRank (.deliver (.number 1)
-    [.draw (.G,.mean,.uniform) [.add (.real 2) (.real 3)] [] []]) = 7 := by
+    [.draw (.mean, .uniform) [.add (.real 2) (.real 3)] [] []]) = 7 := by
   decide +kernel
 
 example : BookkeepingTransition
-    (.deliver (.number 1) [.draw (.G,.mean,.uniform) [.add (.real 2) (.real 3)] [] []])
-    (.eval (.add (.real 2) (.real 3)) [] [.draw (.G,.mean,.uniform) [] [] [1]]) := by
+    (.deliver (.number 1) [.draw (.mean, .uniform) [.add (.real 2) (.real 3)] [] []])
+    (.eval (.add (.real 2) (.real 3)) [] [.draw (.mean, .uniform) [] [] [1]]) := by
   refine ⟨trivial, .continue, _, 1, rfl, ?_⟩
   simp
 
@@ -118,7 +118,7 @@ example (path : Nat → State) (steps : ∀ i < 4, BookkeepingTransition (path i
   omega
 
 example : ¬Bookkeeping (.deliver (.number 1)
-    [.draw (.G,.stochastic,.bernoulli) [] [] []]) := by
+    [.draw (.sample .G, .bernoulli) [] [] []]) := by
   simp [Bookkeeping]
 
 example : ¬Bookkeeping (.deliver .unit

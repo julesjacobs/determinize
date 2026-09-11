@@ -9,16 +9,18 @@ noncomputable section
 instance : MeasurableSpace (Option Op) := ⊤
 instance : MeasurableSingletonClass (Option Op) := ⟨fun _ => trivial⟩
 
-/-- The primitive a site records: a general-mode stochastic draw and nothing else. -/
-def siteOp : Mode × Kind × Op → Option Op
-  | (.G, .stochastic, op) => some op
+/-- The primitive a site records: a general-affinity stochastic draw and nothing else. -/
+def siteOp : DistributionAction × Op → Option Op
+  | (.sample .G, op) => some op
   | _ => none
 
-@[simp] theorem siteOp_determinizeKind (mode : Mode) (kind : Kind) (op : Op) :
-    siteOp (mode, Expr.determinizeKind mode kind, op) = siteOp (mode, kind, op) := by
-  cases mode <;> cases kind <;> rfl
+@[simp] theorem siteOp_determinize (kind : DistributionAction) (op : Op) :
+    siteOp (kind.determinize, op) = siteOp (kind, op) := by
+  cases kind with
+  | sample affinity => cases affinity <;> rfl
+  | mean => rfl
 
-/-- The active generation-mode sampling site, following call-by-value evaluation order. -/
+/-- The active generation-affinity sampling site, following call-by-value evaluation order. -/
 def generationOp : Skeleton → Option Op
   | .pair l r | .cons l r | .app l r
   | .add l r | .mul l r | .div l r | .lt l r =>
@@ -27,31 +29,33 @@ def generationOp : Skeleton → Option Op
   | .neg x => generationOp x
   | .matchSum x _ _ | .matchList x _ _ | .ite x _ _
   | .letE x _ => generationOp x
-  | .uniform mode kind l r =>
-      if l.isValue then if r.isValue then siteOp (mode, kind, .uniform) else generationOp r
+  | .uniform kind l r =>
+      if l.isValue then if r.isValue then siteOp (kind, .uniform) else generationOp r
       else generationOp l
-  | .gaussian mode kind l r =>
-      if l.isValue then if r.isValue then siteOp (mode, kind, .gaussian) else generationOp r
+  | .gaussian kind l r =>
+      if l.isValue then if r.isValue then siteOp (kind, .gaussian) else generationOp r
       else generationOp l
-  | .poisson mode kind x => if x.isValue then siteOp (mode, kind, .poisson) else generationOp x
-  | .discrete mode kind d => siteOp (mode, kind, .discrete d)
-  | .bernoulli mode kind x => if x.isValue then siteOp (mode, kind, .bernoulli) else generationOp x
-  | .exponential mode kind x =>
-      if x.isValue then siteOp (mode, kind, .exponential) else generationOp x
-  | .beta mode kind l r =>
-      if l.isValue then if r.isValue then siteOp (mode, kind, .beta) else generationOp r
+  | .poisson kind x => if x.isValue then siteOp (kind, .poisson) else generationOp x
+  | .discrete kind d => siteOp (kind, .discrete d)
+  | .bernoulli kind x => if x.isValue then siteOp (kind, .bernoulli) else generationOp x
+  | .exponential kind x =>
+      if x.isValue then siteOp (kind, .exponential) else generationOp x
+  | .beta kind l r =>
+      if l.isValue then if r.isValue then siteOp (kind, .beta) else generationOp r
       else generationOp l
-  | .gamma mode kind l r =>
-      if l.isValue then if r.isValue then siteOp (mode, kind, .gamma) else generationOp r
+  | .gamma kind l r =>
+      if l.isValue then if r.isValue then siteOp (kind, .gamma) else generationOp r
       else generationOp l
   | _ => none
 
 def entry (op : Option Op) (value : ℝ) : Event := op.map (fun op => (op, value))
 
-theorem generationEvent_eq_entry (site : Mode × Kind × Op) (value : ℝ) :
+theorem generationEvent_eq_entry (site : DistributionAction × Op) (value : ℝ) :
     generationEvent site value = entry (siteOp site) value := by
-  rcases site with ⟨mode, kind, op⟩
-  cases mode <;> cases kind <;> rfl
+  rcases site with ⟨kind, op⟩
+  cases kind with
+  | sample affinity => cases affinity <;> rfl
+  | mean => rfl
 
 theorem event_some_measurable : Measurable (some : Op × ℝ → Event) := by
   apply measurable_comap_iff.mpr
@@ -76,7 +80,7 @@ theorem entry_measurable : Measurable (fun pair : Option Op × ℝ => entry pair
   | none => exact measurable_const
   | some op => exact event_some_measurable.comp (measurable_const.prodMk measurable_id)
 
-theorem generationEvent_measurable (site : Mode × Kind × Op) : Measurable (generationEvent site) := by
+theorem generationEvent_measurable (site : DistributionAction × Op) : Measurable (generationEvent site) := by
   have eq : generationEvent site = entry (siteOp site) := funext (generationEvent_eq_entry site)
   rw [eq]
   exact entry_measurable.comp (measurable_const.prodMk measurable_id)
@@ -87,7 +91,7 @@ theorem generationOp_value {skeleton : Skeleton} (value : skeleton.isValue = tru
 
 set_option linter.unusedSimpArgs false in
 set_option maxHeartbeats 800000 in
-theorem reduce_site {expression : Expr} {site : Mode × Kind × Op} {fiber : Measure ℝ}
+theorem reduce_site {expression : Expr} {site : DistributionAction × Op} {fiber : Measure ℝ}
     {continuation : ℝ → Expr} (reduction : reduce expression = .sample site fiber continuation) :
     generationOp expression.skeleton = siteOp site := by
   cases expression <;> rw [reduce.eq_def] at reduction

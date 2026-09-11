@@ -92,11 +92,13 @@ theorem compactHistoryReplay_sampleG (depth : Nat) (history : Symbolic.SampleEnv
       .sample site fiber (fun v => (continuation v).realize env) := by
     rw [← symbolicReduce_realize primitiveLaws typed env, actionEq]
     rfl
-  have siteEq : site = (.G, .stochastic, op) := by
+  have siteEq : site = (.sample .G, op) := by
     have h := reduce_site reduction
     rw [generationOp_realize, opEq] at h
-    rcases site with ⟨mode, kind, op'⟩
-    cases mode <;> cases kind <;> simp_all [siteOp]
+    rcases site with ⟨kind, op'⟩
+    cases kind with
+    | sample affinity => cases affinity <;> simp_all [siteOp]
+    | mean => simp_all [siteOp]
   subst siteEq
   exact ogtAt_succ_sampleG depth (by simpa only [AffineExpr.realize_isValue] using notValue)
     reduction value tape
@@ -375,11 +377,13 @@ theorem target_selfReplay (depth : Nat) (history : Symbolic.SampleEnv primitiveL
                     ((continuation r).realize (history.meanEnvironment primitiveLaws)).determinize) := by
               rw [← symbolicReduce_targetRealize primitiveLaws typed, actionEq]
               rfl
-            have siteEq : site = (.G, .stochastic, op) := by
+            have siteEq : site = (.sample .G, op) := by
               have h := reduce_site reduction
               rw [generationOp_determinize, generationOp_realize, opEq] at h
-              rcases site with ⟨mode, kind, op'⟩
-              cases mode <;> cases kind <;> simp_all [siteOp]
+              rcases site with ⟨kind, op'⟩
+              cases kind with
+              | sample affinity => cases affinity <;> simp_all [siteOp]
+              | mean => simp_all [siteOp]
             subst siteEq
             rw [targetTraceLaw_sampleG _ _ _ typed value _ _ actionEq op opEq,
               Measure.ae_comp_iff (selfReplay_measurable _ _)]

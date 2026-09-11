@@ -42,7 +42,7 @@ theorem symbolic_generationDraw (laws : PrimitiveLaws)
     (generationOp expression.skeleton).isSome = generationDraw (symbolicReduce laws expression) := by
   induction typed with
   | uniform lowerTyped upperTyped ihl ihr =>
-      rename_i context' lower mode upper
+      rename_i context' lower affinity upper
       simp only [AffineExpr.skeleton, generationOp, symbolic_skeleton_isValue]
       rw [symbolicReduce_uniform_eq]
       by_cases lowerValue : lower.isValue = true
@@ -51,7 +51,7 @@ theorem symbolic_generationDraw (laws : PrimitiveLaws)
         · simp only [upperValue, ↓reduceIte]
           obtain ⟨x, rfl⟩ := wellTyped_real_value lowerTyped lowerValue
           obtain ⟨y, rfl⟩ := wellTyped_real_value upperTyped upperValue
-          cases mode with
+          cases affinity with
           | E => simp [affineValue?, siteOp]
           | G =>
               rcases x with ⟨x0, xc⟩
@@ -64,7 +64,7 @@ theorem symbolic_generationDraw (laws : PrimitiveLaws)
       · simp only [lowerValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
         exact ihl
   | gaussian lowerTyped upperTyped ihl ihr =>
-      rename_i context' lower mode upper
+      rename_i context' lower affinity upper
       simp only [AffineExpr.skeleton, generationOp, symbolic_skeleton_isValue]
       rw [symbolicReduce_gaussian_eq]
       by_cases lowerValue : lower.isValue = true
@@ -73,7 +73,7 @@ theorem symbolic_generationDraw (laws : PrimitiveLaws)
         · simp only [upperValue, ↓reduceIte]
           obtain ⟨x, rfl⟩ := wellTyped_real_value lowerTyped lowerValue
           obtain ⟨y, rfl⟩ := wellTyped_real_value upperTyped upperValue
-          cases mode with
+          cases affinity with
           | E =>
               rcases y with ⟨y0, yc⟩
               obtain rfl : yc = 0 := wellTyped_realG_coefficients upperTyped
@@ -89,13 +89,13 @@ theorem symbolic_generationDraw (laws : PrimitiveLaws)
       · simp only [lowerValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
         exact ihl
   | poisson rateTyped ih =>
-      rename_i context' rate mode
+      rename_i context' rate affinity
       simp only [AffineExpr.skeleton, generationOp, symbolic_skeleton_isValue]
       rw [symbolicReduce_poisson_eq]
       by_cases rateValue : rate.isValue = true
       · simp only [rateValue, ↓reduceIte]
         obtain ⟨x, rfl⟩ := wellTyped_real_value rateTyped rateValue
-        cases mode with
+        cases affinity with
         | E => simp [affineValue?, siteOp]
         | G =>
             rcases x with ⟨x0, xc⟩
@@ -104,16 +104,16 @@ theorem symbolic_generationDraw (laws : PrimitiveLaws)
       · simp only [rateValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
         exact ih
   | discrete =>
-      rename_i context' mode d
-      cases mode <;> simp [AffineExpr.skeleton, generationOp, symbolicReduce, siteOp]
+      rename_i context' affinity d
+      cases affinity <;> simp [AffineExpr.skeleton, generationOp, symbolicReduce, siteOp]
   | bernoulli probabilityTyped ih =>
-      rename_i context' probability mode
+      rename_i context' probability affinity
       simp only [AffineExpr.skeleton, generationOp, symbolic_skeleton_isValue]
       rw [symbolicReduce_bernoulli_eq]
       by_cases probabilityValue : probability.isValue = true
       · simp only [probabilityValue, ↓reduceIte]
         obtain ⟨x, rfl⟩ := wellTyped_real_value probabilityTyped probabilityValue
-        cases mode with
+        cases affinity with
         | E => simp [affineValue?, siteOp]
         | G =>
             rcases x with ⟨x0, xc⟩
@@ -122,13 +122,13 @@ theorem symbolic_generationDraw (laws : PrimitiveLaws)
       · simp only [probabilityValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
         exact ih
   | exponential rateTyped ih =>
-      rename_i context' rate mode
+      rename_i context' rate affinity
       simp only [AffineExpr.skeleton, generationOp, symbolic_skeleton_isValue]
       rw [symbolicReduce_exponential_eq]
       by_cases rateValue : rate.isValue = true
       · simp only [rateValue, ↓reduceIte]
         obtain ⟨x, rfl⟩ := wellTyped_real_value rateTyped rateValue
-        cases mode with
+        cases affinity with
         | E =>
             rcases x with ⟨x0, xc⟩
             obtain rfl : xc = 0 := wellTyped_realG_coefficients rateTyped
@@ -140,7 +140,7 @@ theorem symbolic_generationDraw (laws : PrimitiveLaws)
       · simp only [rateValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
         exact ih
   | beta lowerTyped upperTyped ihl ihr =>
-      rename_i context' lower upper mode
+      rename_i context' lower upper affinity
       simp only [AffineExpr.skeleton, generationOp, symbolic_skeleton_isValue]
       rw [symbolicReduce_beta_eq]
       by_cases lowerValue : lower.isValue = true
@@ -149,7 +149,7 @@ theorem symbolic_generationDraw (laws : PrimitiveLaws)
         · simp only [upperValue, ↓reduceIte]
           obtain ⟨x, rfl⟩ := wellTyped_real_value lowerTyped lowerValue
           obtain ⟨y, rfl⟩ := wellTyped_real_value upperTyped upperValue
-          cases mode with
+          cases affinity with
           | E =>
               rcases x with ⟨x0, xc⟩
               rcases y with ⟨y0, yc⟩
@@ -167,7 +167,7 @@ theorem symbolic_generationDraw (laws : PrimitiveLaws)
       · simp only [lowerValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
         exact ihl
   | gamma lowerTyped upperTyped ihl ihr =>
-      rename_i context' lower mode upper
+      rename_i context' lower affinity upper
       simp only [AffineExpr.skeleton, generationOp, symbolic_skeleton_isValue]
       rw [symbolicReduce_gamma_eq]
       by_cases lowerValue : lower.isValue = true
@@ -176,7 +176,7 @@ theorem symbolic_generationDraw (laws : PrimitiveLaws)
         · simp only [upperValue, ↓reduceIte]
           obtain ⟨x, rfl⟩ := wellTyped_real_value lowerTyped lowerValue
           obtain ⟨y, rfl⟩ := wellTyped_real_value upperTyped upperValue
-          cases mode with
+          cases affinity with
           | E =>
               rcases y with ⟨y0, yc⟩
               obtain rfl : yc = 0 := wellTyped_realG_coefficients upperTyped

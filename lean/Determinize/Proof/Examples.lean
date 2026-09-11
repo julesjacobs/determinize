@@ -3,14 +3,14 @@ import Determinize.Theorems
 namespace Determinize.Proof.Examples
 open MeasureTheory Determinize.Spec.Paper Determinize.Spec.Traces
 
-def uniform (mode : Mode) : Expr := .uniform mode .stochastic (.real 0) (.real 1)
+def uniform (affinity : Affinity) : Expr := .uniform (.sample affinity) (.real 0) (.real 1)
 
-theorem uniform_typed (mode : Mode) : Typed context (uniform mode) (.float mode) :=
+theorem uniform_typed (affinity : Affinity) : Typed context (uniform affinity) (.float affinity) :=
   .uniform .real .real
 
-def nestedAffine : Expr := .uniform .E .stochastic (uniform .E) (.add (.real 2) (.real 3))
+def nestedAffine : Expr := .uniform (.sample .E) (uniform .E) (.add (.real 2) (.real 3))
 
-def nestedGeneral : Expr := .gaussian .E .stochastic (.real 0) (uniform .G)
+def nestedGeneral : Expr := .gaussian (.sample .E) (.real 0) (uniform .G)
 
 def reciprocal : Expr :=
   .letE (uniform .E)
@@ -18,9 +18,9 @@ def reciprocal : Expr :=
       (.add (.bvar 1)
         (.div (.real 1) (.bvar 0))))
 
-theorem nestedAffine_source : nestedAffine.sourceForm = true := by simp [nestedAffine, uniform, Expr.sourceForm]
-example : nestedGeneral.sourceForm = true := by simp [nestedGeneral, uniform, Expr.sourceForm]
-theorem reciprocal_source : reciprocal.sourceForm = true := by simp [reciprocal, uniform, Expr.sourceForm]
+theorem nestedAffine_source : nestedAffine.sourceForm = true := by simp [nestedAffine, uniform, Expr.sourceForm, DistributionAction.isSample]
+example : nestedGeneral.sourceForm = true := by simp [nestedGeneral, uniform, Expr.sourceForm, DistributionAction.isSample]
+theorem reciprocal_source : reciprocal.sourceForm = true := by simp [reciprocal, uniform, Expr.sourceForm, DistributionAction.isSample]
 
 example : Typed [] nestedAffine (.float .E) := .uniform (uniform_typed .E) (.add .real .real)
 
@@ -31,30 +31,30 @@ theorem reciprocal_typed : Typed [] reciprocal (.float .E) :=
     (.add (.bvar (.tail .head)) (.div .real (.bvar .head))))
 
 example : reduce nestedGeneral =
-    .sample (.G, .stochastic, .uniform) (uniformFiber .stochastic 0 1)
-      (fun value => .gaussian .E .stochastic (.real 0) (.real value)) := by
+    .sample (.sample .G, .uniform) (uniformFiber (.sample .G) 0 1)
+      (fun value => .gaussian (.sample .E) (.real 0) (.real value)) := by
   simp [nestedGeneral, uniform, reduce, Expr.isValue, realValue?, Action.wrap, Function.comp_def]
 
 example : reduce nestedGeneral.determinize =
-    .sample (.G, .stochastic, .uniform) (uniformFiber .stochastic 0 1)
-      (fun value => .gaussian .E .mean (.real 0) (.real value)) := by
-  simp [nestedGeneral, uniform, Expr.determinize, Expr.determinizeKind, reduce, Expr.isValue,
+    .sample (.sample .G, .uniform) (uniformFiber (.sample .G) 0 1)
+      (fun value => .gaussian .mean (.real 0) (.real value)) := by
+  simp [nestedGeneral, uniform, Expr.determinize, DistributionAction.determinize, reduce, Expr.isValue,
     realValue?, Action.wrap, Function.comp_def]
 
 example : reduce nestedAffine =
-    .sample (.E, .stochastic, .uniform) (uniformFiber .stochastic 0 1)
-      (fun value => .uniform .E .stochastic (.real value) (.add (.real 2) (.real 3))) := by
+    .sample (.sample .E, .uniform) (uniformFiber (.sample .E) 0 1)
+      (fun value => .uniform (.sample .E) (.real value) (.add (.real 2) (.real 3))) := by
   simp [nestedAffine, uniform, reduce, Expr.isValue, realValue?, Action.wrap, Function.comp_def]
 
-example : (Expr.uniform .E .mean (.real 0) (.real 1)).sourceForm = false := by
-  simp [Expr.sourceForm, Kind.isStochastic]
+example : (Expr.uniform .mean (.real 0) (.real 1)).sourceForm = false := by
+  simp [Expr.sourceForm, DistributionAction.isSample]
 
--- A literal takes either mode, so a product of literals types at both modes.
+-- A literal takes either affinity, so a product of literals types at both affinities.
 example : Typed [] (.mul (.real 2) (.real 1)) (.float .E) := .mul .real .real
 example : Typed [] (.mul (.real 2) (.real 1)) (.float .G) := .mul .real .real
 
--- The general-mode factor of an expectation-mode product stands on the left: an
--- expectation-mode draw may be scaled from the left, not from the right, and not squared.
+-- The general-affinity factor of an expectation-affinity product stands on the left: an
+-- expectation-affinity draw may be scaled from the left, not from the right, and not squared.
 example : Typed [] (.mul (.real 2) (uniform .E)) (.float .E) := .mul .real (uniform_typed .E)
 private theorem uniformE_not_G : ¬ Typed context (uniform .E) (.float .G) := by
   intro typed
@@ -110,12 +110,12 @@ private theorem safe_real (value : ℝ) : DoesNotGetStuck (.real value) := by
   intro fuel
   cases fuel <;> simp [DoesNotGetStuckAt, Expr.isValue]
 
-private theorem safe_let_uniform (mode : Mode) (body : Expr)
+private theorem safe_let_uniform (affinity : Affinity) (body : Expr)
     (safe : ∀ value, DoesNotGetStuck (body.substHead (.real value))) :
-    DoesNotGetStuck (.letE (uniform mode) body) := by
-  let μ := uniformFiber .stochastic 0 1
-  have reduction : reduce (.letE (uniform mode) body) =
-      .sample (mode, .stochastic, .uniform) μ
+    DoesNotGetStuck (.letE (uniform affinity) body) := by
+  let μ := uniformFiber (.sample affinity) 0 1
+  have reduction : reduce (.letE (uniform affinity) body) =
+      .sample (.sample affinity, .uniform) μ
         (fun value => .letE (.real value) body) := by
     simp [uniform, reduce, Expr.isValue, realValue?, Action.wrap, Function.comp_def, μ]
   apply safe_sample reduction
@@ -142,11 +142,11 @@ theorem reciprocal_safe : DoesNotGetStuck reciprocal := by
 example : Determinize.Proof.Traces.MeanOnTraces reciprocal reciprocal.determinize :=
   (Traces.meanOnTraces .E reciprocal reciprocal_typed reciprocal_source reciprocal_safe).2
 
-/-- A general-mode draw scales an expectation-mode draw from the left. -/
+/-- A general-affinity draw scales an expectation-affinity draw from the left. -/
 def scaledSample : Expr := .letE (uniform .G) (.mul (.bvar 0) (uniform .E))
 
 theorem scaledSample_source : scaledSample.sourceForm = true := by
-  simp [scaledSample, uniform, Expr.sourceForm]
+  simp [scaledSample, uniform, Expr.sourceForm, DistributionAction.isSample]
 
 theorem scaledSample_typed : Typed [] scaledSample (.float .E) :=
   .letE (uniform_typed .G) (.mul (.bvar .head) (uniform_typed .E))
@@ -156,8 +156,8 @@ theorem scaledSample_safe : DoesNotGetStuck scaledSample := by
   intro y
   simp [Expr.substHead, Expr.substAt, Expr.shift, Expr.mapVars, uniform]
   change DoesNotGetStuck (.mul (.real y) (uniform .E))
-  let μ := uniformFiber .stochastic 0 1
-  refine safe_sample (site := (.E, .stochastic, .uniform)) (fiber := μ)
+  let μ := uniformFiber (.sample .E) 0 1
+  refine safe_sample (site := (.sample .E, .uniform)) (fiber := μ)
     (continuation := fun value => .mul (.real y) (.real value)) ?_ ?_ ?_
   · simp [uniform, reduce, Expr.isValue, realValue?, Action.wrap, Function.comp_def, μ]
   · simp [μ, uniformFiber, uniformMeasure, Real.volume_Icc]

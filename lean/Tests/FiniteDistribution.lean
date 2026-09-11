@@ -15,8 +15,8 @@ example : (bernoulliDistribution (1/4)).map (·.mean) = .ok (1/4) := by
   decide +kernel
 
 example (p : ℝ) (h : 0 ≤ p ∧ p ≤ 1) :
-    (∫ x, x ∂Spec.Paper.bernoulliFiber .stochastic p) = p :=
-  Proof.DiscreteLaws.bernoulli_mean .stochastic p h
+    (∫ x, x ∂Spec.Paper.bernoulliFiber (.sample .G) p) = p :=
+  Proof.DiscreteLaws.bernoulli_mean (.sample .G) p h
 
 #print axioms Proof.DiscreteLaws.discrete_mean
 #print axioms Proof.DiscreteLaws.bernoulli_mean

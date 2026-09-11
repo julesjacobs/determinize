@@ -1,15 +1,29 @@
 import Mathlib.Tactic.DeriveCountable
 
-/-! # Paper modes and types -/
+/-! # Paper affinities and types -/
 
 namespace Determinize.Spec.Paper
 
-inductive Mode where
+inductive Affinity where
   | E | G
 deriving DecidableEq, Repr, Countable
 
+/-- Sampling retains its E/G annotation; computing a mean needs none. -/
+inductive DistributionAction where
+  | sample (affinity : Affinity)
+  | mean
+deriving DecidableEq, Repr, Countable
+
+def DistributionAction.isSample : DistributionAction → Bool
+  | .sample _ => true
+  | .mean => false
+
+def DistributionAction.determinize : DistributionAction → DistributionAction
+  | .sample .E => .mean
+  | action => action
+
 inductive Ty where
-  | unit | bool | float (mode : Mode)
+  | unit | bool | float (affinity : Affinity)
   | prod (left right : Ty)
   | sum (left right : Ty)
   | list (element : Ty)
@@ -20,7 +34,7 @@ deriving DecidableEq, Repr, Countable
 inductive Ty.Sub : Ty → Ty → Prop where
   | unit : Sub .unit .unit
   | bool : Sub .bool .bool
-  | float (mode) : Sub (.float mode) (.float mode)
+  | float (affinity) : Sub (.float affinity) (.float affinity)
   | general : Sub (.float .G) (.float .E)
   | prod : Sub a c → Sub b d → Sub (.prod a b) (.prod c d)
   | sum : Sub a c → Sub b d → Sub (.sum a b) (.sum c d)

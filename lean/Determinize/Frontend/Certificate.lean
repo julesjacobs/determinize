@@ -8,7 +8,7 @@ open Checking Spec.Paper
 def certificateText (text : String) : Except String String := do
   let input ← elaborate (← parse text)
   let (source, certificate) ← infer input
-  let some _ := certify input.expression source input.modes certificate
+  let some _ := certify input.expression source input.affinities certificate
     | throw "invalid certificate"
   let theoremText := match certificate.ty with
     | .float m =>
@@ -22,13 +22,13 @@ def certificateText (text : String) : Except String String := do
       "        MeasureTheory.Integrable id (outputGivenTrace (interpret checked.source) trace) ∧\n" ++
       "        outputGivenTrace (interpret target) trace =\n" ++
       "          MeasureTheory.Measure.dirac (∫ value : ℝ, value ∂outputGivenTrace (interpret checked.source) trace) :=\n" ++
-      s!"  Determinize.Proof.Checking.certified_trace_soundness checked .{prettyMode m} (by decide +kernel) safe\n"
+      s!"  Determinize.Proof.Checking.certified_trace_soundness checked .{prettyAffinity m} (by decide +kernel) safe\n"
     | _ => ""
   return "import Determinize.Proof.Checking.Elaboration\n\n" ++
     "open Determinize.Checking Determinize.Spec.Paper Determinize.Spec.Traces\n\n" ++
     "set_option maxRecDepth 100000\nset_option maxHeartbeats 0\n\n" ++
     s!"def original : Core :=\n  {leanExpression input.expression}\n\n" ++
-    s!"def requested : List (Option Mode) :=\n  {reprStr input.modes}\n\n" ++
+    s!"def requested : List (Option Affinity) :=\n  {reprStr input.affinities}\n\n" ++
     s!"def annotated : Core :=\n  {leanExpression source}\n\n" ++
     s!"def certificate : Certificate :=\n  {reprStr certificate}\n\n" ++
     "def checked : Certified original requested :=\n" ++

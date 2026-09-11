@@ -76,7 +76,7 @@ theorem list_setup (value nilCase consCase : Core) (environment : List Value) (s
   refine ⟨rfl, ?_⟩
   simp [stateExpr, stackExpr, frameExpr, close, interpret, Expr.mapLiteral, Expr.mapVars]
 
-theorem draw_argument_step (site : Mode × Kind × Op) (next : Core) (rest : List Core)
+theorem draw_argument_step (site : DistributionAction × Op) (next : Core) (rest : List Core)
     (arguments : List Rat) (value : Rat) (environment : List Value) (stack : List Frame) :
     AdministrativeStep .continue
       (.deliver (.number value) (.draw site (next :: rest) environment arguments :: stack))
@@ -104,52 +104,52 @@ theorem nil_setup  (environment : List Value) (stack : List Frame) :
   refine ⟨rfl, ?_⟩
   simp [stateExpr, valueExpr, close, interpret, Expr.mapLiteral, Expr.mapVars]
 
-theorem uniform_setup (mode : Mode) (kind : Kind) (left right : Core)
+theorem uniform_setup (kind : DistributionAction) (left right : Core)
     (environment : List Value) (stack : List Frame) :
-    AdministrativeStep .evaluate (.eval (.uniform mode kind left right) environment stack)
-      (.eval left environment (.draw (mode,kind,.uniform) [right] environment [] :: stack)) := by
+    AdministrativeStep .evaluate (.eval (.uniform kind left right) environment stack)
+      (.eval left environment (.draw (kind, .uniform) [right] environment [] :: stack)) := by
   refine ⟨rfl, ?_⟩
   simp [stateExpr, stackExpr, frameExpr, primitiveExpr, close, interpret, Expr.mapLiteral, Expr.mapVars]
 
-theorem gaussian_setup (mode : Mode) (kind : Kind) (left right : Core)
+theorem gaussian_setup (kind : DistributionAction) (left right : Core)
     (environment : List Value) (stack : List Frame) :
-    AdministrativeStep .evaluate (.eval (.gaussian mode kind left right) environment stack)
-      (.eval left environment (.draw (mode,kind,.gaussian) [right] environment [] :: stack)) := by
+    AdministrativeStep .evaluate (.eval (.gaussian kind left right) environment stack)
+      (.eval left environment (.draw (kind, .gaussian) [right] environment [] :: stack)) := by
   refine ⟨rfl, ?_⟩
   simp [stateExpr, stackExpr, frameExpr, primitiveExpr, close, interpret, Expr.mapLiteral, Expr.mapVars]
 
-theorem beta_setup (mode : Mode) (kind : Kind) (left right : Core)
+theorem beta_setup (kind : DistributionAction) (left right : Core)
     (environment : List Value) (stack : List Frame) :
-    AdministrativeStep .evaluate (.eval (.beta mode kind left right) environment stack)
-      (.eval left environment (.draw (mode,kind,.beta) [right] environment [] :: stack)) := by
+    AdministrativeStep .evaluate (.eval (.beta kind left right) environment stack)
+      (.eval left environment (.draw (kind, .beta) [right] environment [] :: stack)) := by
   refine ⟨rfl, ?_⟩
   simp [stateExpr, stackExpr, frameExpr, primitiveExpr, close, interpret, Expr.mapLiteral, Expr.mapVars]
 
-theorem gamma_setup (mode : Mode) (kind : Kind) (left right : Core)
+theorem gamma_setup (kind : DistributionAction) (left right : Core)
     (environment : List Value) (stack : List Frame) :
-    AdministrativeStep .evaluate (.eval (.gamma mode kind left right) environment stack)
-      (.eval left environment (.draw (mode,kind,.gamma) [right] environment [] :: stack)) := by
+    AdministrativeStep .evaluate (.eval (.gamma kind left right) environment stack)
+      (.eval left environment (.draw (kind, .gamma) [right] environment [] :: stack)) := by
   refine ⟨rfl, ?_⟩
   simp [stateExpr, stackExpr, frameExpr, primitiveExpr, close, interpret, Expr.mapLiteral, Expr.mapVars]
 
-theorem poisson_setup (mode : Mode) (kind : Kind) (argument : Core)
+theorem poisson_setup (kind : DistributionAction) (argument : Core)
     (environment : List Value) (stack : List Frame) :
-    AdministrativeStep .evaluate (.eval (.poisson mode kind argument) environment stack)
-      (.eval argument environment (.draw (mode,kind,.poisson) [] environment [] :: stack)) := by
+    AdministrativeStep .evaluate (.eval (.poisson kind argument) environment stack)
+      (.eval argument environment (.draw (kind, .poisson) [] environment [] :: stack)) := by
   refine ⟨rfl, ?_⟩
   simp [stateExpr, stackExpr, frameExpr, primitiveExpr, close, interpret, Expr.mapLiteral, Expr.mapVars]
 
-theorem bernoulli_setup (mode : Mode) (kind : Kind) (argument : Core)
+theorem bernoulli_setup (kind : DistributionAction) (argument : Core)
     (environment : List Value) (stack : List Frame) :
-    AdministrativeStep .evaluate (.eval (.bernoulli mode kind argument) environment stack)
-      (.eval argument environment (.draw (mode,kind,.bernoulli) [] environment [] :: stack)) := by
+    AdministrativeStep .evaluate (.eval (.bernoulli kind argument) environment stack)
+      (.eval argument environment (.draw (kind, .bernoulli) [] environment [] :: stack)) := by
   refine ⟨rfl, ?_⟩
   simp [stateExpr, stackExpr, frameExpr, primitiveExpr, close, interpret, Expr.mapLiteral, Expr.mapVars]
 
-theorem exponential_setup (mode : Mode) (kind : Kind) (argument : Core)
+theorem exponential_setup (kind : DistributionAction) (argument : Core)
     (environment : List Value) (stack : List Frame) :
-    AdministrativeStep .evaluate (.eval (.exponential mode kind argument) environment stack)
-      (.eval argument environment (.draw (mode,kind,.exponential) [] environment [] :: stack)) := by
+    AdministrativeStep .evaluate (.eval (.exponential kind argument) environment stack)
+      (.eval argument environment (.draw (kind, .exponential) [] environment [] :: stack)) := by
   refine ⟨rfl, ?_⟩
   simp [stateExpr, stackExpr, frameExpr, primitiveExpr, close, interpret, Expr.mapLiteral, Expr.mapVars]
 

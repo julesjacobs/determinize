@@ -12,9 +12,9 @@ def Scoped {α : Type} (depth : Nat) : Expr α → Prop
   | .lam body => Scoped (depth+1) body
   | .fix body => Scoped (depth+2) body
   | .fst body | .snd body | .inl body | .inr body | .neg body
-  | .poisson _ _ body | .bernoulli _ _ body | .exponential _ _ body => Scoped depth body
+  | .poisson _ body | .bernoulli _ body | .exponential _ body => Scoped depth body
   | .app a b | .pair a b | .cons a b | .add a b | .mul a b | .div a b | .lt a b
-  | .uniform _ _ a b | .gaussian _ _ a b | .beta _ _ a b | .gamma _ _ a b =>
+  | .uniform _ a b | .gaussian _ a b | .beta _ a b | .gamma _ a b =>
       Scoped depth a ∧ Scoped depth b
   | .letE a b => Scoped depth a ∧ Scoped (depth+1) b
   | .ite c a b => Scoped depth c ∧ Scoped depth a ∧ Scoped depth b
@@ -29,7 +29,7 @@ def scopedDecision {α : Type} (depth : Nat) (expression : Expr α) : Decidable 
   | bool v => exact isTrue True.intro
   | real v => exact isTrue True.intro
   | nil  => exact isTrue True.intro
-  | discrete m k d => exact isTrue True.intro
+  | discrete k d => exact isTrue True.intro
   | lam body => exact scopedDecision (depth+1) body
   | fix body => exact scopedDecision (depth+2) body
   | fst body => exact scopedDecision depth body
@@ -37,9 +37,9 @@ def scopedDecision {α : Type} (depth : Nat) (expression : Expr α) : Decidable 
   | inl body => exact scopedDecision depth body
   | inr body => exact scopedDecision depth body
   | neg body => exact scopedDecision depth body
-  | poisson m k body => exact scopedDecision depth body
-  | bernoulli m k body => exact scopedDecision depth body
-  | exponential m k body => exact scopedDecision depth body
+  | poisson k body => exact scopedDecision depth body
+  | bernoulli k body => exact scopedDecision depth body
+  | exponential k body => exact scopedDecision depth body
   | app left right =>
       letI := scopedDecision depth left
       letI := scopedDecision depth right
@@ -68,19 +68,19 @@ def scopedDecision {α : Type} (depth : Nat) (expression : Expr α) : Decidable 
       letI := scopedDecision depth left
       letI := scopedDecision depth right
       exact inferInstanceAs (Decidable (_ ∧ _))
-  | uniform m k left right =>
+  | uniform k left right =>
       letI := scopedDecision depth left
       letI := scopedDecision depth right
       exact inferInstanceAs (Decidable (_ ∧ _))
-  | gaussian m k left right =>
+  | gaussian k left right =>
       letI := scopedDecision depth left
       letI := scopedDecision depth right
       exact inferInstanceAs (Decidable (_ ∧ _))
-  | beta m k left right =>
+  | beta k left right =>
       letI := scopedDecision depth left
       letI := scopedDecision depth right
       exact inferInstanceAs (Decidable (_ ∧ _))
-  | gamma m k left right =>
+  | gamma k left right =>
       letI := scopedDecision depth left
       letI := scopedDecision depth right
       exact inferInstanceAs (Decidable (_ ∧ _))
@@ -127,7 +127,7 @@ theorem scoped_mono {α : Type} (expression : Expr α) {a b : Nat}
   | bool v => trivial
   | real v => trivial
   | nil  => trivial
-  | discrete m k d => trivial
+  | discrete k d => trivial
   | lam body ih => exact ih bounded (Nat.add_le_add_right le 1)
   | fix body ih => exact ih bounded (Nat.add_le_add_right le 2)
   | fst body ih => exact ih bounded le
@@ -135,9 +135,9 @@ theorem scoped_mono {α : Type} (expression : Expr α) {a b : Nat}
   | inl body ih => exact ih bounded le
   | inr body ih => exact ih bounded le
   | neg body ih => exact ih bounded le
-  | poisson m k body ih => exact ih bounded le
-  | bernoulli m k body ih => exact ih bounded le
-  | exponential m k body ih => exact ih bounded le
+  | poisson k body ih => exact ih bounded le
+  | bernoulli k body ih => exact ih bounded le
+  | exponential k body ih => exact ih bounded le
   | app left right ihl ihr => exact ⟨ihl bounded.1 le, ihr bounded.2 le⟩
   | pair left right ihl ihr => exact ⟨ihl bounded.1 le, ihr bounded.2 le⟩
   | cons left right ihl ihr => exact ⟨ihl bounded.1 le, ihr bounded.2 le⟩
@@ -145,10 +145,10 @@ theorem scoped_mono {α : Type} (expression : Expr α) {a b : Nat}
   | mul left right ihl ihr => exact ⟨ihl bounded.1 le, ihr bounded.2 le⟩
   | div left right ihl ihr => exact ⟨ihl bounded.1 le, ihr bounded.2 le⟩
   | lt left right ihl ihr => exact ⟨ihl bounded.1 le, ihr bounded.2 le⟩
-  | uniform m k left right ihl ihr => exact ⟨ihl bounded.1 le, ihr bounded.2 le⟩
-  | gaussian m k left right ihl ihr => exact ⟨ihl bounded.1 le, ihr bounded.2 le⟩
-  | beta m k left right ihl ihr => exact ⟨ihl bounded.1 le, ihr bounded.2 le⟩
-  | gamma m k left right ihl ihr => exact ⟨ihl bounded.1 le, ihr bounded.2 le⟩
+  | uniform k left right ihl ihr => exact ⟨ihl bounded.1 le, ihr bounded.2 le⟩
+  | gaussian k left right ihl ihr => exact ⟨ihl bounded.1 le, ihr bounded.2 le⟩
+  | beta k left right ihl ihr => exact ⟨ihl bounded.1 le, ihr bounded.2 le⟩
+  | gamma k left right ihl ihr => exact ⟨ihl bounded.1 le, ihr bounded.2 le⟩
   | letE value body ihv ihb => exact ⟨ihv bounded.1 le, ihb bounded.2 (Nat.add_le_add_right le 1)⟩
   | ite c x y ihc ihx ihy => exact ⟨ihc bounded.1 le, ihx bounded.2.1 le, ihy bounded.2.2 le⟩
   | matchSum c x y ihc ihx ihy => exact ⟨ihc bounded.1 le, ihx bounded.2.1 (Nat.add_le_add_right le 1), ihy bounded.2.2 (Nat.add_le_add_right le 1)⟩

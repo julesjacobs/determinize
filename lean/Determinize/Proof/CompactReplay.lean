@@ -3,7 +3,7 @@ import Determinize.Proof.CompactTrace
 /-!
 # The compact replay as a measurable kernel
 
-`Spec.Traces.outputGivenTraceAt` replays a program along a compact trace of general-mode draws.
+`Spec.Traces.outputGivenTraceAt` replays a program along a compact trace of general-affinity draws.
 This file packages it as an s-finite kernel in the trace and the expression, mirroring
 `replayKernel` for detailed traces, proves the one-step unfolding lemmas the lockstep
 arguments use, bounds the total mass of `Spec.Traces.outputGivenTrace` by one, and builds the
@@ -47,8 +47,8 @@ theorem ogtAt_succ_stuck (depth : Nat) {expression : Expr}
   rw [outputGivenTraceAt, if_neg notValue, reduction]
 
 
-/-- An expectation-mode draw, or a mean site, is integrated and leaves the tape alone. -/
-theorem ogtAt_succ_sampleE (depth : Nat) {expression : Expr} {site : Mode × Kind × Op}
+/-- An expectation-affinity draw, or a mean site, is integrated and leaves the tape alone. -/
+theorem ogtAt_succ_sampleE (depth : Nat) {expression : Expr} {site : DistributionAction × Op}
     {fiber : Measure ℝ} {continuation : ℝ → Expr}
     (notValue : expression.isValue ≠ true)
     (reduction : reduce expression = .sample site fiber continuation)
@@ -56,14 +56,16 @@ theorem ogtAt_succ_sampleE (depth : Nat) {expression : Expr} {site : Mode × Kin
     outputGivenTraceAt (depth + 1) expression tape =
       fiber.bind fun value => outputGivenTraceAt depth (continuation value) tape := by
   rw [outputGivenTraceAt, if_neg notValue, reduction]
-  rcases site with ⟨mode, kind, op⟩
-  cases mode <;> cases kind <;> simp_all [siteOp]
+  rcases site with ⟨kind, op⟩
+  cases kind with
+  | sample affinity => cases affinity <;> simp_all [siteOp]
+  | mean => simp_all [siteOp]
 
-/-- A general-mode draw is read from the tape when the primitive fits. -/
+/-- A general-affinity draw is read from the tape when the primitive fits. -/
 theorem ogtAt_succ_sampleG (depth : Nat) {expression : Expr} {op : Op}
     {fiber : Measure ℝ} {continuation : ℝ → Expr}
     (notValue : expression.isValue ≠ true)
-    (reduction : reduce expression = .sample (.G, .stochastic, op) fiber continuation)
+    (reduction : reduce expression = .sample (.sample .G, op) fiber continuation)
     (value : ℝ) (tape : DrawTrace) :
     outputGivenTraceAt (depth + 1) expression ((op, value) :: tape) =
       outputGivenTraceAt depth (continuation value) tape := by
@@ -73,14 +75,14 @@ theorem ogtAt_succ_sampleG (depth : Nat) {expression : Expr} {op : Op}
 theorem ogtAt_succ_sampleG_nil (depth : Nat) {expression : Expr} {op : Op}
     {fiber : Measure ℝ} {continuation : ℝ → Expr}
     (notValue : expression.isValue ≠ true)
-    (reduction : reduce expression = .sample (.G, .stochastic, op) fiber continuation) :
+    (reduction : reduce expression = .sample (.sample .G, op) fiber continuation) :
     outputGivenTraceAt (depth + 1) expression [] = 0 := by
   rw [outputGivenTraceAt, if_neg notValue, reduction]
 
 theorem ogtAt_succ_sampleG_mismatch (depth : Nat) {expression : Expr} {op op' : Op}
     {fiber : Measure ℝ} {continuation : ℝ → Expr}
     (notValue : expression.isValue ≠ true)
-    (reduction : reduce expression = .sample (.G, .stochastic, op) fiber continuation)
+    (reduction : reduce expression = .sample (.sample .G, op) fiber continuation)
     (mismatch : op ≠ op') (value : ℝ) (tape : DrawTrace) :
     outputGivenTraceAt (depth + 1) expression ((op', value) :: tape) = 0 := by
   rw [outputGivenTraceAt, if_neg notValue, reduction]
@@ -96,9 +98,9 @@ theorem ogtAt_unit (depth : Nat) (tape : DrawTrace) :
 /-! ### The active generation site determines the reduction -/
 
 theorem Action.wrap_sample_or_stuck {context : Expr → Expr} {action : Action} {op : Op}
-    (h : (∃ fiber continuation, action = .sample (.G, .stochastic, op) fiber continuation) ∨
+    (h : (∃ fiber continuation, action = .sample (.sample .G, op) fiber continuation) ∨
       action = .stuck) :
-    (∃ fiber continuation, action.wrap context = .sample (.G, .stochastic, op) fiber continuation) ∨
+    (∃ fiber continuation, action.wrap context = .sample (.sample .G, op) fiber continuation) ∨
       action.wrap context = .stuck := by
   rcases h with ⟨fiber, continuation, rfl⟩ | rfl
   · exact Or.inl ⟨fiber, context ∘ continuation, rfl⟩
@@ -113,11 +115,11 @@ theorem not_isValue_of_generationOp_some {expression : Expr} {op : Op}
   fun value => by simp [generationOp_of_isValue value] at active
 
 set_option maxHeartbeats 1600000 in
-/-- When the skeleton names an active general-mode site, reduction samples at it with that
+/-- When the skeleton names an active general-affinity site, reduction samples at it with that
 primitive, or is stuck on operands that are values but not reals. -/
 theorem generationOp_some_reduce {expression : Expr} {op : Op}
     (active : generationOp expression.skeleton = some op) :
-    (∃ fiber continuation, reduce expression = .sample (.G, .stochastic, op) fiber continuation) ∨
+    (∃ fiber continuation, reduce expression = .sample (.sample .G, op) fiber continuation) ∨
       reduce expression = .stuck := by
   cases expression <;> rw [reduce.eq_def]
   all_goals simp only [Expr.skeleton, generationOp, ← isValue_eq_skeletonIsValue] at active
@@ -131,7 +133,7 @@ theorem generationOp_some_reduce {expression : Expr} {op : Op}
     | exact Or.inr rfl
     | exact Action.wrap_sample_or_stuck (generationOp_some_reduce active)
     | exact absurd ‹_› (not_isValue_of_generationOp_some active)
-    | (cases ‹Mode› <;> cases ‹Kind› <;> simp_all)
+    | (cases ‹DistributionAction› <;> (try cases ‹Affinity›) <;> simp_all)
 termination_by sizeOf expression
 decreasing_by
   all_goals subst_vars
@@ -140,14 +142,14 @@ decreasing_by
 
 /-! ### The compact replay kernel -/
 
-theorem continuation_measurable {expression : Expr} {site : Mode × Kind × Op}
+theorem continuation_measurable {expression : Expr} {site : DistributionAction × Op}
     {fiber : Measure ℝ} {continuation : ℝ → Expr}
     (reduction : reduce expression = .sample site fiber continuation) :
     Measurable continuation :=
   StepKernel.sample_continuation_measurable (MeasurableActionFamily.stepKernel primitiveLaws)
     expression fiber continuation reduction
 
-/-- The active general-mode site of the expression fits the head of the tape. -/
+/-- The active general-affinity site of the expression fits the head of the tape. -/
 def matchesHead (pair : DrawTrace × Expr) : Prop :=
   pair.1 ≠ [] ∧ generationOp pair.2.skeleton = some (pair.1.getD 0 (.uniform, 0)).1
 
@@ -172,8 +174,8 @@ theorem matchesHead_measurable : MeasurableSet {pair : DrawTrace × Expr | match
   · exact (measurable_of_countable some).comp
       (measurable_fst.comp ((draw_event_measurable 0).comp measurable_fst))
 
-/-- One replay step: a deterministic step or an expectation-mode draw leaves the tape alone;
-a general-mode draw consumes the head of the tape when its primitive fits, and stops
+/-- One replay step: a deterministic step or an expectation-affinity draw leaves the tape alone;
+a general-affinity draw consumes the head of the tape when its primitive fits, and stops
 otherwise. -/
 def compactReplayStep : SFiniteKernel (DrawTrace × Expr) (DrawTrace × Expr) := by
   let step := MeasurableActionFamily.stepKernel primitiveLaws
@@ -324,7 +326,7 @@ theorem ogtAt_expression_measurable (depth : Nat) (tape : DrawTrace) :
   exact (compactReplayKernel depth).kernel.measurable.comp (measurable_const.prodMk measurable_id)
 
 theorem ogtAt_continuation_measurable (depth : Nat) {expression : Expr}
-    {site : Mode × Kind × Op} {fiber : Measure ℝ} {continuation : ℝ → Expr}
+    {site : DistributionAction × Op} {fiber : Measure ℝ} {continuation : ℝ → Expr}
     (reduction : reduce expression = .sample site fiber continuation) (tape : DrawTrace) :
     Measurable (fun value : ℝ => outputGivenTraceAt depth (continuation value) tape) := by
   have eq : (fun value : ℝ => outputGivenTraceAt depth (continuation value) tape) =
@@ -357,7 +359,7 @@ instance outputGivenTraceKernel_sfinite (program : Expr) :
 
 /-! ### Total mass -/
 
-theorem sample_fiber_mass_le_one {expression : Expr} {site : Mode × Kind × Op}
+theorem sample_fiber_mass_le_one {expression : Expr} {site : DistributionAction × Op}
     {fiber : Measure ℝ} {continuation : ℝ → Expr}
     (reduction : reduce expression = .sample site fiber continuation) : fiber Set.univ ≤ 1 := by
   have mass := (MeasurableActionFamily.stepKernel primitiveLaws).mass_le_one expression
@@ -386,8 +388,8 @@ theorem ogtAt_partial_mass_le_one (n : Nat) (expression : Expr) (tape : DrawTrac
             exact ih next tape
         | stuck => simp [ogtAt_succ_stuck _ value reduction]
         | sample site fiber continuation =>
-            rcases site with ⟨mode, kind, op⟩
-            by_cases generation : siteOp (mode, kind, op) = none
+            rcases site with ⟨kind, op⟩
+            by_cases generation : siteOp (kind, op) = none
             · simp only [ogtAt_succ_sampleE _ value reduction generation]
               simp_rw [Measure.bind_apply MeasurableSet.univ
                 (ogtAt_continuation_measurable _ reduction tape).aemeasurable]
@@ -401,9 +403,11 @@ theorem ogtAt_partial_mass_le_one (n : Nat) (expression : Expr) (tape : DrawTrac
                   ≤ ∫⁻ _, 1 ∂fiber := lintegral_mono fun v => ih (continuation v) tape
                 _ = fiber Set.univ := by simp
                 _ ≤ 1 := sample_fiber_mass_le_one reduction
-            · have general : mode = .G ∧ kind = .stochastic := by
-                cases mode <;> cases kind <;> simp_all [siteOp]
-              obtain ⟨rfl, rfl⟩ := general
+            · have general : kind = .sample .G := by
+                cases kind with
+                | sample affinity => cases affinity <;> simp_all [siteOp]
+                | mean => simp_all [siteOp]
+              subst kind
               cases tape with
               | nil => simp [ogtAt_succ_sampleG_nil _ value reduction]
               | cons head rest =>

@@ -13,7 +13,7 @@ theorem concrete_sampleE (laws : PrimitiveLaws)
     (actionEq : symbolicReduce laws expression = .sampleE op affine general continuation)
     (environment : Env n) :
     reduce (expression.realize environment) =
-      .sample (.E, .stochastic, op) (laws.kernel op
+      .sample (.sample .E, op) (laws.kernel op
         (fun i => Symbolic.Affine.eval (affine.getD i.1 (0, fun _ => 0)) environment,
          fun i => general.getD i.1 0))
         (fun value => continuation.realize (Env.cons value environment)) := by
@@ -47,7 +47,7 @@ theorem concrete_target_sampleE (laws : PrimitiveLaws)
         (fun i => Symbolic.Affine.eval (affine.getD i.1 (0, fun _ => 0)) mean,
          fun i => general.getD i.1 0)) :
     reduce (expression.realize mean).determinize =
-      .sample (.E, .mean, op) (Measure.dirac (meanValue op
+      .sample (.mean, op) (Measure.dirac (meanValue op
         (fun i => Symbolic.Affine.eval (affine.getD i.1 (0, fun _ => 0)) mean,
          fun i => general.getD i.1 0)))
         (fun value => (continuation.realize (Env.cons value mean)).determinize) := by

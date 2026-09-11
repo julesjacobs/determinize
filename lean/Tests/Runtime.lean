@@ -35,7 +35,8 @@ def runtime : IO Unit := do
       "exponential(0)", "gamma(1,0)", "flip(2)", "observe(false)",
       "(rec f x => f x) ()"] do
     let p ← IO.ofExcept (compile text)
-    assert (Runtime.run p.checked.source 0 100 |> fun r => !r.isOk) s!"bad run returned a value: {text}"
+    for expression in [p.checked.source, p.checked.source.determinize] do
+      assert (Runtime.run expression 0 100 |> fun r => !r.isOk) s!"bad run returned a value: {text}"
   let p ← IO.ofExcept (compile "gauss[E](1,uniform[G](1,2))")
   let (_, stats) ← IO.ofExcept (Runtime.run p.checked.source.determinize)
   assert (stats.draws == 1) "atomic mean skipped a sampled variance operand"

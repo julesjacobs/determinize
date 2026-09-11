@@ -3,12 +3,16 @@ import Determinize.Checking.Typing
 namespace Determinize.Checking
 open Spec.Paper
 
-/-- Forget sample modes, retaining all other syntax. -/
+private def actionAffinities : DistributionAction → List Affinity
+  | .sample affinity => [affinity]
+  | .mean => []
+
+/-- Forget sample affinities, retaining all other syntax. -/
 def eraseAnnotations : Core → Core
   | .bvar index => .bvar index
   | .unit => .unit
   | .reject => .reject
-  | .discrete _ kind d => .discrete .G kind d
+  | .discrete action d => .discrete (setAffinity action .G) d
   | .bool value => .bool value
   | .real value => .real value
   | .lam body => .lam ((eraseAnnotations body))
@@ -30,69 +34,69 @@ def eraseAnnotations : Core → Core
   | .mul left right => .mul ((eraseAnnotations left)) ((eraseAnnotations right))
   | .div left right => .div ((eraseAnnotations left)) ((eraseAnnotations right))
   | .lt left right => .lt ((eraseAnnotations left)) ((eraseAnnotations right))
-  | .uniform _mode kind lower upper => .uniform .G kind ((eraseAnnotations lower)) ((eraseAnnotations upper))
-  | .gaussian _mode kind mean variance => .gaussian .G kind ((eraseAnnotations mean)) ((eraseAnnotations variance))
-  | .poisson _mode kind rate => .poisson .G kind ((eraseAnnotations rate))
-  | .bernoulli _mode kind probability => .bernoulli .G kind ((eraseAnnotations probability))
-  | .exponential _mode kind rate => .exponential .G kind ((eraseAnnotations rate))
-  | .beta _mode kind alpha betaArg => .beta .G kind ((eraseAnnotations alpha)) ((eraseAnnotations betaArg))
-  | .gamma _mode kind shape rate => .gamma .G kind ((eraseAnnotations shape)) ((eraseAnnotations rate))
+  | .uniform action lower upper => .uniform (setAffinity action .G) ((eraseAnnotations lower)) ((eraseAnnotations upper))
+  | .gaussian action mean variance => .gaussian (setAffinity action .G) ((eraseAnnotations mean)) ((eraseAnnotations variance))
+  | .poisson action rate => .poisson (setAffinity action .G) ((eraseAnnotations rate))
+  | .bernoulli action probability => .bernoulli (setAffinity action .G) ((eraseAnnotations probability))
+  | .exponential action rate => .exponential (setAffinity action .G) ((eraseAnnotations rate))
+  | .beta action alpha betaArg => .beta (setAffinity action .G) ((eraseAnnotations alpha)) ((eraseAnnotations betaArg))
+  | .gamma action shape rate => .gamma (setAffinity action .G) ((eraseAnnotations shape)) ((eraseAnnotations rate))
 
-def sampleModes : Core → List Mode
+def sampleAffinities : Core → List Affinity
   | .bvar _ => []
   | .reject => []
   | .unit => []
   | .bool _ => []
   | .real _ => []
-  | .lam body => (sampleModes body)
-  | .fix body => (sampleModes body)
-  | .app fn arg => (sampleModes fn) ++ (sampleModes arg)
-  | .pair left right => (sampleModes left) ++ (sampleModes right)
-  | .fst pairValue => (sampleModes pairValue)
-  | .snd pairValue => (sampleModes pairValue)
-  | .inl value => (sampleModes value)
-  | .inr value => (sampleModes value)
-  | .matchSum scrutinee left right => (sampleModes scrutinee) ++ (sampleModes left) ++ (sampleModes right)
+  | .lam body => (sampleAffinities body)
+  | .fix body => (sampleAffinities body)
+  | .app fn arg => (sampleAffinities fn) ++ (sampleAffinities arg)
+  | .pair left right => (sampleAffinities left) ++ (sampleAffinities right)
+  | .fst pairValue => (sampleAffinities pairValue)
+  | .snd pairValue => (sampleAffinities pairValue)
+  | .inl value => (sampleAffinities value)
+  | .inr value => (sampleAffinities value)
+  | .matchSum scrutinee left right => (sampleAffinities scrutinee) ++ (sampleAffinities left) ++ (sampleAffinities right)
   | .nil => []
-  | .cons head tail => (sampleModes head) ++ (sampleModes tail)
-  | .matchList scrutinee nilCase consCase => (sampleModes scrutinee) ++ (sampleModes nilCase) ++ (sampleModes consCase)
-  | .ite condition thenBranch elseBranch => (sampleModes condition) ++ (sampleModes thenBranch) ++ (sampleModes elseBranch)
-  | .letE value body => (sampleModes value) ++ (sampleModes body)
-  | .neg body => (sampleModes body)
-  | .add left right => (sampleModes left) ++ (sampleModes right)
-  | .mul left right => (sampleModes left) ++ (sampleModes right)
-  | .div left right => (sampleModes left) ++ (sampleModes right)
-  | .lt left right => (sampleModes left) ++ (sampleModes right)
-  | .uniform mode _ lower upper => mode :: ((sampleModes lower) ++ (sampleModes upper))
-  | .gaussian mode _ mean variance => mode :: ((sampleModes mean) ++ (sampleModes variance))
-  | .poisson mode _ rate => mode :: ((sampleModes rate))
-  | .discrete mode _ _ => [mode]
-  | .bernoulli mode _ probability => mode :: ((sampleModes probability))
-  | .exponential mode _ rate => mode :: ((sampleModes rate))
-  | .beta mode _ alpha betaArg => mode :: ((sampleModes alpha) ++ (sampleModes betaArg))
-  | .gamma mode _ shape rate => mode :: ((sampleModes shape) ++ (sampleModes rate))
+  | .cons head tail => (sampleAffinities head) ++ (sampleAffinities tail)
+  | .matchList scrutinee nilCase consCase => (sampleAffinities scrutinee) ++ (sampleAffinities nilCase) ++ (sampleAffinities consCase)
+  | .ite condition thenBranch elseBranch => (sampleAffinities condition) ++ (sampleAffinities thenBranch) ++ (sampleAffinities elseBranch)
+  | .letE value body => (sampleAffinities value) ++ (sampleAffinities body)
+  | .neg body => (sampleAffinities body)
+  | .add left right => (sampleAffinities left) ++ (sampleAffinities right)
+  | .mul left right => (sampleAffinities left) ++ (sampleAffinities right)
+  | .div left right => (sampleAffinities left) ++ (sampleAffinities right)
+  | .lt left right => (sampleAffinities left) ++ (sampleAffinities right)
+  | .uniform action lower upper => actionAffinities action ++ ((sampleAffinities lower) ++ (sampleAffinities upper))
+  | .gaussian action mean variance => actionAffinities action ++ ((sampleAffinities mean) ++ (sampleAffinities variance))
+  | .poisson action rate => actionAffinities action ++ ((sampleAffinities rate))
+  | .discrete action _ => actionAffinities action
+  | .bernoulli action probability => actionAffinities action ++ ((sampleAffinities probability))
+  | .exponential action rate => actionAffinities action ++ ((sampleAffinities rate))
+  | .beta action alpha betaArg => actionAffinities action ++ ((sampleAffinities alpha) ++ (sampleAffinities betaArg))
+  | .gamma action shape rate => actionAffinities action ++ ((sampleAffinities shape) ++ (sampleAffinities rate))
 
-def respectsModes : List (Option Mode) → List Mode → Bool
+def respectsAffinities : List (Option Affinity) → List Affinity → Bool
   | [], [] => true
   | requested :: rs, actual :: ms =>
-      (requested.isNone || requested == some actual) && respectsModes rs ms
+      (requested.isNone || requested == some actual) && respectsAffinities rs ms
   | _, _ => false
 
-structure Certified (original : Core) (requested : List (Option Mode)) where
+structure Certified (original : Core) (requested : List (Option Affinity)) where
   source : Core
   ty : Ty
   typed : Typed [] (interpret source) ty
   sourceOnly : source.sourceForm = true
   aligned : eraseAnnotations source = eraseAnnotations original
-  modesRespected : respectsModes requested (sampleModes source) = true
+  affinitiesRespected : respectsAffinities requested (sampleAffinities source) = true
 
-def certify (original candidate : Core) (requested : List (Option Mode)) (c : Certificate) :
+def certify (original candidate : Core) (requested : List (Option Affinity)) (c : Certificate) :
     Option (Certified original requested) := do
   if hSource : candidate.sourceForm = true then
     if hAlign : eraseAnnotations candidate = eraseAnnotations original then
-      if hModes : respectsModes requested (sampleModes candidate) = true then
+      if hAffinities : respectsAffinities requested (sampleAffinities candidate) = true then
         let h ← check [] candidate c.ty c
-        return ⟨candidate, c.ty, h.down, hSource, hAlign, hModes⟩
+        return ⟨candidate, c.ty, h.down, hSource, hAlign, hAffinities⟩
       else none
     else none
   else none

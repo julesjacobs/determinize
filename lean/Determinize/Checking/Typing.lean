@@ -126,49 +126,76 @@ def check (Γ : List Ty) (e : Core) (τ : Ty) (c : Certificate) :
       let ha ← check Γ a (.float .G) ca
       let hb ← check Γ b (.float .G) cb
       return ⟨Typed.lt ha.down hb.down⟩
-  | .uniform site k a b, .float m, .node _ [ca, cb] => do
+  | .uniform (.sample site) a b, .float m, .node _ [ca, cb] => do
       if h : site = m then
         let ha ← check Γ a (.float m) ca
         let hb ← check Γ b (.float m) cb
         return ⟨by subst site; exact Typed.uniform ha.down hb.down⟩
       else none
-  | .gaussian site k a b, .float m, .node _ [ca, cb] => do
+  | .uniform .mean a b, .float m, .node _ [ca, cb] => do
+      let ha ← check Γ a (.float m) ca
+      let hb ← check Γ b (.float m) cb
+      return ⟨Typed.uniformMean ha.down hb.down⟩
+  | .gaussian (.sample site) a b, .float m, .node _ [ca, cb] => do
       if h : site = m then
         let ha ← check Γ a (.float m) ca
         let hb ← check Γ b (.float .G) cb
         return ⟨by subst site; exact Typed.gaussian ha.down hb.down⟩
       else none
-  | .poisson site k a, .float m, .node _ [ca] => do
+  | .gaussian .mean a b, .float m, .node _ [ca, cb] => do
+      let ha ← check Γ a (.float m) ca
+      let hb ← check Γ b (.float .G) cb
+      return ⟨Typed.gaussianMean ha.down hb.down⟩
+  | .poisson (.sample site) a, .float m, .node _ [ca] => do
       if h : site = m then
         let ha ← check Γ a (.float m) ca
         return ⟨by subst site; exact Typed.poisson ha.down⟩
       else none
-  | .discrete site k d, .float m, .node _ [] => do
+  | .poisson .mean a, .float m, .node _ [ca] => do
+      let ha ← check Γ a (.float m) ca
+      return ⟨Typed.poissonMean ha.down⟩
+  | .discrete (.sample site) d, .float m, .node _ [] => do
       if h : site = m then
         return ⟨by subst site; exact Typed.discrete⟩
       else none
-  | .bernoulli site k a, .float m, .node _ [ca] => do
+  | .discrete .mean d, .float m, .node _ [] => do
+      return ⟨Typed.discreteMean⟩
+  | .bernoulli (.sample site) a, .float m, .node _ [ca] => do
       if h : site = m then
         let ha ← check Γ a (.float m) ca
         return ⟨by subst site; exact Typed.bernoulli ha.down⟩
       else none
-  | .exponential site k a, .float m, .node _ [ca] => do
+  | .bernoulli .mean a, .float m, .node _ [ca] => do
+      let ha ← check Γ a (.float m) ca
+      return ⟨Typed.bernoulliMean ha.down⟩
+  | .exponential (.sample site) a, .float m, .node _ [ca] => do
       if h : site = m then
         let ha ← check Γ a (.float .G) ca
         return ⟨by subst site; exact Typed.exponential ha.down⟩
       else none
-  | .beta site k a b, .float m, .node _ [ca, cb] => do
+  | .exponential .mean a, .float m, .node _ [ca] => do
+      let ha ← check Γ a (.float .G) ca
+      return ⟨Typed.exponentialMean ha.down⟩
+  | .beta (.sample site) a b, .float m, .node _ [ca, cb] => do
       if h : site = m then
         let ha ← check Γ a (.float .G) ca
         let hb ← check Γ b (.float .G) cb
         return ⟨by subst site; exact Typed.beta ha.down hb.down⟩
       else none
-  | .gamma site k a b, .float m, .node _ [ca, cb] => do
+  | .beta .mean a b, .float m, .node _ [ca, cb] => do
+      let ha ← check Γ a (.float .G) ca
+      let hb ← check Γ b (.float .G) cb
+      return ⟨Typed.betaMean ha.down hb.down⟩
+  | .gamma (.sample site) a b, .float m, .node _ [ca, cb] => do
       if h : site = m then
         let ha ← check Γ a (.float m) ca
         let hb ← check Γ b (.float .G) cb
         return ⟨by subst site; exact Typed.gamma ha.down hb.down⟩
       else none
+  | .gamma .mean a b, .float m, .node _ [ca, cb] => do
+      let ha ← check Γ a (.float m) ca
+      let hb ← check Γ b (.float .G) cb
+      return ⟨Typed.gammaMean ha.down hb.down⟩
   | _, _, _ => none
 
 termination_by sizeOf c

@@ -5,10 +5,10 @@ import Determinize.Proof.FiniteModel.Model
 namespace Determinize.Tests.FiniteModel
 open Spec.FiniteModel MeasureTheory Determinize.Finite
 
-example : supportedDraw .stochastic .uniform = false := rfl
+example : supportedDraw (.sample .G) .uniform = false := rfl
 example : supportedDraw .mean .uniform = true := rfl
-example : supportedDraw .stochastic .poisson = false := rfl
-example : supportedDraw .stochastic .bernoulli = true := rfl
+example : supportedDraw (.sample .G) .poisson = false := rfl
+example : supportedDraw (.sample .G) .bernoulli = true := rfl
 
 abbrev fork : Model where
   size := 3

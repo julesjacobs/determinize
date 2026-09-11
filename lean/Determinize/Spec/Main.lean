@@ -108,7 +108,7 @@ def varianceThm : Prop :=
 program preserves the conditional expectation. The output
 laws are unnormalized; an observation that fails contributes no output mass, so the mass of an
 output law is the probability of terminating with a real value and every observation on the
-way succeeding. Because every Boolean is general-mode information, the same traces are rejected
+way succeeding. Because every Boolean is G information, the same traces are rejected
 in the source and in the target, and both the unnormalized mean (`mainThm`) and the mass
 (`outputMassThm`) are preserved; hence so is their quotient, the expectation of the law
 normalized by its mass (`0` for a program that is always rejected, as `0 / 0 = 0`). -/
