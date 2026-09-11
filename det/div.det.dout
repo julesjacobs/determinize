@@ -1,0 +1,15 @@
+== Elaboration ==
+raw:
+( ( ( uniform( ( 0 : float[?m1] ), ( 1 : float[?m1] ) ) : float[?m1] ) / ( uniform( ( 1 : float[G] ), ( 2 : float[G] ) ) : float[G] ) :
+          float[?m1] ) + ( ( uniform( ( 2 : float[?m1] ), ( 3 : float[?m1] ) ) : float[?m1] ) / ( 3 : float[G] ) : float[?m1] ) : float[?m1]
+)
+defaulted:
+( ( ( uniform( ( 0 : float[E] ), ( 1 : float[E] ) ) : float[E] ) / ( uniform( ( 1 : float[G] ), ( 2 : float[G] ) ) : float[G] ) : float[E] )
+      + ( ( uniform( ( 2 : float[E] ), ( 3 : float[E] ) ) : float[E] ) / ( 3 : float[G] ) : float[E] ) : float[E] )
+
+== Determinized ==
+( 0 + 1 ) * 0.5 / uniform( 1, 2 ) + ( 2 + 3 ) * 0.5 / 3
+
+== Evaluation (100 trials) ==
+program mean: 1.17194
+determinized mean: 1.18271

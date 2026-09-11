@@ -152,19 +152,15 @@ let rec infer (env : env) (exp : Ast.expr) (expected : typ) : typed_expr =
       let a_t = infer env a (TFloat g_mode) in
       let b_t = infer env b ty in
       { expr = EMul (a_t, b_t); typ = ty }
-    | Div (a, b) ->
-        let is_scaling = match (a,b) with (_, Const _) -> true | _ -> false in
-        let a_ty, b_ty =
-            if is_scaling then expected, expected
-            else
-            let g_mode = fresh_mode_meta () in
-            set_mode g_mode G;
-            (TFloat g_mode, TFloat g_mode)
-        in
-        let res_ty = ensure_float expected in
-        let a_t = infer env a a_ty in
-        let b_t = infer env b b_ty in
-        { expr = EDiv (a_t, b_t); typ = res_ty }
+  | Div (a, b) ->
+      (* [Div]: the numerator carries the result mode, the denominator is
+         general mode. *)
+      let ty = ensure_float expected in
+      let g_mode = fresh_mode_meta () in
+      set_mode g_mode G;
+      let a_t = infer env a ty in
+      let b_t = infer env b (TFloat g_mode) in
+      { expr = EDiv (a_t, b_t); typ = ty }
   | Lt (a, b) ->
       let float_g = TFloat (fresh_mode_meta ()) in
       set_mode (match float_g with TFloat m -> m | _ -> assert false) G;
