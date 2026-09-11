@@ -6,7 +6,7 @@ Each retained step gets its own commit. For each step: inspect consumers, implem
 - [x] 2. Replace concrete existential trace outputs with canonical functions.
 - [x] 3. Use model extraction throughout the checker and end-to-end interface.
 - [x] 4. Remove reconstructed certificate evidence and duplicated request metadata.
-- [ ] 5. Replace nested replay-validity conjunctions with named structures.
+- [x] 5. Replace nested replay-validity conjunctions with named structures.
 - [ ] 6. Expose unconditional model integrability and simplify expected reward.
 - [ ] 7. Derive absorption escape from the model and certificate horizon.
 - [ ] 8. Consolidate unit-sum finite-distribution validation.
@@ -34,3 +34,7 @@ Before: a candidate and a separately supplied model were replayed and compared, 
 ### 4. Candidate data — KEEP
 
 Before: candidates stored the request and every recomputed step evidence tag. After: candidates contain initial index, states, and rows (kind/edges); the request is supplied separately. Replay still checks initial-state alignment, source scope, injectivity, successor coverage, exact weights, and outcomes. Removing the duplicate metadata reduces certificate size and makes authority explicit. The warning-free build and Lean mutation tests passed. Python export ground-truth, independent kernel replay, and rejection tests passed; the round-trip test was updated to the explicit request and passed on rerun. Step 3’s Python result suite also passed (optional Storm skipped).
+
+### 5. Named replay invariants — KEEP
+
+Before: consumers selected matrix and alignment facts through positional conjunction projections. After: `ReplayValid`, `Aligned`, and `MatrixValid` are Prop structures with named obligations. This adds explicit decidability adapters but removes brittle positional dependencies from consumers; no assumptions or runtime candidate fields were added. Full warning-free build, Lean tests, and independent generated-certificate kernel replay passed with standard axioms.

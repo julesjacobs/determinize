@@ -40,6 +40,6 @@ theorem replay_initial_reification (source : Core) (subject : Subject) (candidat
     stateExpr (candidate.state (candidate.toModel valid).initial) = subject.program source := by
   rw [replay_initial candidate valid]
   apply initial_reification source subject
-  exact (scoped_mapLiteral source (fun q : Rat => (q : ℝ)) 0).mpr valid.2.1.2.1
+  exact (scoped_mapLiteral source (fun q : Rat => (q : ℝ)) 0).mpr valid.aligned.source_scoped
 
 end Determinize.Proof.FiniteModel

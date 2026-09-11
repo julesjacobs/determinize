@@ -60,14 +60,14 @@ theorem replay_machineOutput (candidate : Candidate) {source : Checking.Core} {s
     (candidate.toModel valid).outputWithin fuel i = machineOutput fuel (candidate.state i) := by
   induction fuel generalizing i with
   | zero =>
-      have row := (valid.2.2.2 i).2
+      have row := valid.replays i
       cases action : step (candidate.state i) with
       | error failure => simp [Candidate.RowReplays, action] at row
       | ok result =>
           cases result <;> simp only [Candidate.RowReplays, action] at row
           all_goals simp_all [Model.outputWithin, Candidate.toModel, machineOutput]
   | succ fuel ih =>
-      have row := (valid.2.2.2 i).2
+      have row := valid.replays i
       cases action : step (candidate.state i) with
       | error failure => simp [Candidate.RowReplays, action] at row
       | ok result =>
@@ -87,7 +87,7 @@ theorem replay_machineOutput (candidate : Candidate) {source : Checking.Core} {s
                 ENNReal.ofReal (candidate.weight i j : ℝ) • (candidate.toModel valid).outputWithin fuel j) = _
               simp only [machineOutput, action]
               simp_rw [ih, row.2.2.2]
-              exact (weightedOutput_group candidate.state valid.2.1.2.2 successors
+              exact (weightedOutput_group candidate.state valid.aligned.injective successors
                 row.2.1 row.2.2.1 (machineOutput fuel)).symm
 
 theorem replay_machineOutputMeasure (candidate : Candidate) {source : Checking.Core} {subject : Subject}

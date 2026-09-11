@@ -47,14 +47,19 @@ instance (candidate : Candidate) (i : Fin candidate.states.size) :
   · infer_instance
   · infer_instance
 
-def Candidate.MatrixValid (candidate : Candidate) : Prop :=
-  (∀ i j, 0 ≤ candidate.weight i j) ∧
-  (∀ i, ∑ j, candidate.weight i j = 1) ∧
-  (∀ i, (candidate.row i).kind ≠ .transient →
-    ∀ j, candidate.weight i j = if i = j then 1 else 0)
+structure Candidate.MatrixValid (candidate : Candidate) : Prop where
+  nonnegative : ∀ i j, 0 ≤ candidate.weight i j
+  normalized : ∀ i, ∑ j, candidate.weight i j = 1
+  absorbing : ∀ i, (candidate.row i).kind ≠ .transient →
+    ∀ j, candidate.weight i j = if i = j then 1 else 0
 
 instance (candidate : Candidate) : Decidable candidate.MatrixValid :=
-  inferInstanceAs (Decidable (_ ∧ _ ∧ _))
+  decidable_of_iff
+    ((∀ i j, 0 ≤ candidate.weight i j) ∧
+      (∀ i, ∑ j, candidate.weight i j = 1) ∧
+      (∀ i, (candidate.row i).kind ≠ .transient →
+        ∀ j, candidate.weight i j = if i = j then 1 else 0))
+    ⟨fun ⟨a, b, c⟩ => ⟨a, b, c⟩, fun ⟨a, b, c⟩ => ⟨a, b, c⟩⟩
 
 /-- Sparse representation checks additionally reject out-of-range, duplicate,
 and nonpositive edges, even when they cancel in the induced matrix. -/
@@ -69,33 +74,45 @@ instance (candidate : Candidate) (i : Fin candidate.states.size) :
 def initialState (source : Core) (subject : Subject) : State :=
   .eval (match subject with | .source => source | .determinized => source.determinize) [] []
 
-def Candidate.Aligned (candidate : Candidate) (source : Core) (subject : Subject) : Prop :=
-  candidate.states[candidate.initial]? = some (initialState source subject) ∧
-    Determinize.Proof.FiniteModel.Binding.Scoped 0 source ∧
-    Function.Injective candidate.state
+structure Candidate.Aligned (candidate : Candidate) (source : Core) (subject : Subject) : Prop where
+  initial : candidate.states[candidate.initial]? = some (initialState source subject)
+  source_scoped : Determinize.Proof.FiniteModel.Binding.Scoped 0 source
+  injective : Function.Injective candidate.state
 
 instance (candidate : Candidate) (source : Core) (subject : Subject) :
-    Decidable (candidate.Aligned source subject) := inferInstanceAs (Decidable (_ ∧ _ ∧ ∀ _ _, _))
+    Decidable (candidate.Aligned source subject) :=
+  decidable_of_iff
+    (candidate.states[candidate.initial]? = some (initialState source subject) ∧
+      Determinize.Proof.FiniteModel.Binding.Scoped 0 source ∧ Function.Injective candidate.state)
+    ⟨fun ⟨a, b, c⟩ => ⟨a, b, c⟩, fun ⟨a, b, c⟩ => ⟨a, b, c⟩⟩
 
-def Candidate.ReplayValid (candidate : Candidate) (source : Core) (subject : Subject) : Prop :=
-  (candidate.rows.size = candidate.states.size ∧ candidate.initial < candidate.states.size) ∧
-  candidate.Aligned source subject ∧ candidate.MatrixValid ∧
-  ∀ i, candidate.EdgesValid i ∧ candidate.RowReplays i
+structure Candidate.ReplayValid (candidate : Candidate) (source : Core) (subject : Subject) : Prop where
+  rows_size : candidate.rows.size = candidate.states.size
+  initial_lt : candidate.initial < candidate.states.size
+  aligned : candidate.Aligned source subject
+  matrix : candidate.MatrixValid
+  edges : ∀ i, candidate.EdgesValid i
+  replays : ∀ i, candidate.RowReplays i
 
 instance (candidate : Candidate) (source : Core) (subject : Subject) :
     Decidable (candidate.ReplayValid source subject) :=
-  inferInstanceAs (Decidable (_ ∧ _ ∧ _ ∧ _))
+  decidable_of_iff
+    (candidate.rows.size = candidate.states.size ∧ candidate.initial < candidate.states.size ∧
+      candidate.Aligned source subject ∧ candidate.MatrixValid ∧
+      (∀ i, candidate.EdgesValid i) ∧ (∀ i, candidate.RowReplays i))
+    ⟨fun ⟨a, b, c, d, e, f⟩ => ⟨a, b, c, d, e, f⟩,
+      fun ⟨a, b, c, d, e, f⟩ => ⟨a, b, c, d, e, f⟩⟩
 
 /-- This constructs a finite rational model, but supplies no `Matches` proof. -/
 def Candidate.toModel (candidate : Candidate) {source : Core} {subject : Subject}
     (valid : candidate.ReplayValid source subject) : Model where
   size := candidate.states.size
-  initial := ⟨candidate.initial, valid.1.2⟩
+  initial := ⟨candidate.initial, valid.initial_lt⟩
   kind := fun i => (candidate.row i).kind
   transition := candidate.weight
-  nonnegative := valid.2.2.1.1
-  normalized := valid.2.2.1.2.1
-  absorbing := valid.2.2.1.2.2
+  nonnegative := valid.matrix.nonnegative
+  normalized := valid.matrix.normalized
+  absorbing := valid.matrix.absorbing
 
 theorem replay_successor_covered (candidate : Candidate) {source : Core} {subject : Subject}
     (valid : candidate.ReplayValid source subject) (i : Fin candidate.states.size)
@@ -103,7 +120,7 @@ theorem replay_successor_covered (candidate : Candidate) {source : Core} {subjec
     (action : step (candidate.state i) = .ok (.next evidence successors))
     (outcome : Rat × State) (member : outcome ∈ successors) (positive : 0 < outcome.1) :
     ∃ j : Fin candidate.states.size, candidate.state j = outcome.2 := by
-  have localValid := (valid.2.2.2 i).2
+  have localValid := valid.replays i
   simp only [Candidate.RowReplays, action] at localValid
   exact localValid.2.2.1 outcome member positive
 
@@ -114,7 +131,7 @@ theorem replay_transition_weight (candidate : Candidate) {source : Core} {subjec
     (candidate.toModel valid).transition i j =
       (successors.map fun outcome =>
         if outcome.2 = candidate.state j then outcome.1 else 0).sum := by
-  have localValid := (valid.2.2.2 i).2
+  have localValid := valid.replays i
   simp only [Candidate.RowReplays, action] at localValid
   exact localValid.2.2.2 j
 
@@ -131,8 +148,8 @@ inductive MachineReachable (initial : State) : State → Prop where
 theorem replay_initial (candidate : Candidate) {source : Core} {subject : Subject}
     (valid : candidate.ReplayValid source subject) :
     candidate.state (candidate.toModel valid).initial = initialState source subject := by
-  have aligned := valid.2.1.1
-  simpa [valid.1.2, Candidate.state, Candidate.toModel] using aligned
+  have aligned := valid.aligned.initial
+  simpa [valid.initial_lt, Candidate.state, Candidate.toModel] using aligned
 
 /-- Coverage holds for paths of arbitrary length, not just the explorer's horizon. -/
 theorem replay_reachable_covered (candidate : Candidate) {source : Core} {subject : Subject}
@@ -149,7 +166,7 @@ theorem replay_no_failure (candidate : Candidate) {source : Core} {subject : Sub
     (valid : candidate.ReplayValid source subject) (i : Fin candidate.states.size)
     (failure : Failure) : step (candidate.state i) ≠ .error failure := by
   intro action
-  have localValid := (valid.2.2.2 i).2
+  have localValid := valid.replays i
   simp [Candidate.RowReplays, action] at localValid
 
 theorem replay_reachable_no_failure (candidate : Candidate) {source : Core} {subject : Subject}
