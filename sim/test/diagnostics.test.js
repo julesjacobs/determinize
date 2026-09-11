@@ -105,8 +105,8 @@ const cases = [
     name: "incompatible explicit modes",
     source: "uniform[E](0, 1) * uniform[E](0, 1)",
     message: "mode mismatch: expected G-mode sample, found E-mode sample",
-    from: 19,
-    to: 35,
+    from: 0,
+    to: 16,
     highlight: "uniform[E](0, 1)",
   },
   {

@@ -18,7 +18,7 @@ test("symbolic semantics stores E samples in sigma", () => {
 });
 
 test("symbolic arithmetic on E samples is affine", () => {
-  const { expr } = prepareRuntime("let u = uniform[E](0, 1) in\nlet y = uniform[E](u, 2) in\nu * 2 + y - 1");
+  const { expr } = prepareRuntime("let u = uniform[E](0, 1) in\nlet y = uniform[E](u, 2) in\n2 * u + y - 1");
   const result = runSymbolic(expr, makeStreams(11));
   assert.equal(result.sigma.length, 2);
   assert.equal(prettyExpr(result.value), "-1 + 2*v1 + v2");
@@ -33,7 +33,7 @@ test("G samples are sampled during symbolic stepping", () => {
 });
 
 test("sampled projection equals ordinary expression semantics with split streams", () => {
-  const source = "let u = uniform[E](0, 1) in\nlet b = beta[G](3, 2) in\nlet g = gamma[E](u, b) in\ng * 2 + 1";
+  const source = "let u = uniform[E](0, 1) in\nlet b = beta[G](3, 2) in\nlet g = gamma[E](u, b) in\n2 * g + 1";
   for (const seed of [1, 2, 3, 99]) {
     const result = checkEquivalences(source, seed);
     assert.equal(result.sampledEquivalent, true, `seed ${seed}`);
@@ -41,7 +41,7 @@ test("sampled projection equals ordinary expression semantics with split streams
 });
 
 test("mean projection equals determinized semantics under shared G randomness", () => {
-  const source = "let u = uniform[E](0, 1) in\nlet b = beta[G](3, 2) in\nlet g = gamma[E](u, b) in\ng * 2 + 1";
+  const source = "let u = uniform[E](0, 1) in\nlet b = beta[G](3, 2) in\nlet g = gamma[E](u, b) in\n2 * g + 1";
   for (const seed of [4, 5, 6, 100]) {
     const result = checkEquivalences(source, seed);
     assert.equal(result.meanEquivalent, true, `seed ${seed}`);
@@ -175,7 +175,7 @@ test("observe failure rejects the trace rather than throwing", () => {
 });
 
 test("coupled trace checks sampled and mean projections at every symbolic step", () => {
-  const source = "let u = uniform[E](0, 1) in\nlet b = beta[G](3, 2) in\nlet g = gamma[E](u, b) in\ng * 2 + 1";
+  const source = "let u = uniform[E](0, 1) in\nlet b = beta[G](3, 2) in\nlet g = gamma[E](u, b) in\n2 * g + 1";
   for (const seed of [1, 17, 2026]) {
     const trace = runCoupledTrace(source, seed);
     assert.equal(trace.ok, true, `seed ${seed}`);
@@ -204,7 +204,7 @@ test("coupled trace treats shared observe rejection as a checked terminal outcom
 });
 
 test("coupled trace handles affine symbolic residuals at every step", () => {
-  const source = "let u = uniform[E](0, 1) in\nlet y = uniform[E](u, 2) in\nu * 2 + y - 1";
+  const source = "let u = uniform[E](0, 1) in\nlet y = uniform[E](u, 2) in\n2 * u + y - 1";
   const trace = runCoupledTrace(source, 42);
   assert.equal(trace.ok, true);
   assert.match(prettyExpr(trace.frames.at(-1).symbolic), /v1/);

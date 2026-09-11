@@ -4,23 +4,23 @@ raw:
     ( rec fact n =>
           ( if ( ( n : float[G] ) < ( 1 : float[G] ) : bool )
                 then
-                ( 1 : float[G] )
+                ( 1 : float[?m2] )
                 else
-                ( ( n : float[G] ) * ( ( fact : float[G] ->  float[G] ) ( ( ( n : float[G] ) - ( 1 : float[G] ) : float[G] ) ) : float[G] )
-                      : float[G] ) : float[G] ) : float[G] ->  float[G] )
+                ( ( n : float[G] ) * ( ( fact : float[G] ->  float[?m2] ) ( ( ( n : float[G] ) - ( 1 : float[G] ) : float[G] ) ) :
+                            float[?m2] ) : float[?m2] ) : float[?m2] ) : float[G] ->  float[?m2] )
     in
-    ( ( fact : float[G] ->  float[G] ) ( 4 : float[G] ) : float[G] ) : float[G] )
+    ( ( fact : float[G] ->  float[?m2] ) ( 4 : float[G] ) : float[?m2] ) : float[?m2] )
 defaulted:
 ( let fact =
     ( rec fact n =>
           ( if ( ( n : float[G] ) < ( 1 : float[G] ) : bool )
                 then
-                ( 1 : float[G] )
+                ( 1 : float[E] )
                 else
-                ( ( n : float[G] ) * ( ( fact : float[G] ->  float[G] ) ( ( ( n : float[G] ) - ( 1 : float[G] ) : float[G] ) ) : float[G] )
-                      : float[G] ) : float[G] ) : float[G] ->  float[G] )
+                ( ( n : float[G] ) * ( ( fact : float[G] ->  float[E] ) ( ( ( n : float[G] ) - ( 1 : float[G] ) : float[G] ) ) : float[E] )
+                      : float[E] ) : float[E] ) : float[G] ->  float[E] )
     in
-    ( ( fact : float[G] ->  float[G] ) ( 4 : float[G] ) : float[G] ) : float[G] )
+    ( ( fact : float[G] ->  float[E] ) ( 4 : float[G] ) : float[E] ) : float[E] )
 
 == Determinized ==
 let fact = rec fact n => if n < 1 then 1 else n * fact ( n - 1 ) in fact 4

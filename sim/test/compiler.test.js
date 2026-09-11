@@ -42,13 +42,13 @@ test("multiplication keeps one sample symbolic and samples the other operand", (
   assert.equal(result.ok, true);
   assert.match(result.pretty.elaboratedDefaulted, /uniform\[E\]/);
   assert.match(result.pretty.elaboratedDefaulted, /uniform\[G\]/);
-  assert.match(result.pretty.determinized, /mean_uniform\(0, 1\) \* uniform\(1, 2\)/);
+  assert.match(result.pretty.determinized, /uniform\(0, 1\) \* mean_uniform\(1, 2\)/);
 });
 
-test("multiplication is asymmetric, so users commute to keep the symbolic operand on the left", () => {
-  const result = analyze("uniform[E](1, 2) * uniform[G](0, 1)");
+test("multiplication is asymmetric, so users commute to keep the symbolic operand on the right", () => {
+  const result = analyze("uniform[G](0, 1) * uniform[E](1, 2)");
   assert.equal(result.ok, true);
-  assert.match(result.pretty.determinized, /mean_uniform\(1, 2\) \* uniform\(0, 1\)/);
+  assert.match(result.pretty.determinized, /uniform\(0, 1\) \* mean_uniform\(1, 2\)/);
 });
 
 test("nonlinear variable use forces operand G but not result G", () => {

@@ -144,20 +144,14 @@ let rec infer (env : env) (exp : Ast.expr) (expected : typ) : typed_expr =
       let b_t = infer env b ty in
       { expr = ESub (a_t, b_t); typ = ty }
   | Mul (a, b) ->
-      let is_scaling = match (a, b) with (Const _, _) | (_, Const _) -> true | _ -> false in
-      if is_scaling then
-        let ty = ensure_float expected in
-        let a_t = infer env a ty in
-        let b_t = infer env b ty in
-        { expr = EMul (a_t, b_t); typ = ty }
-      else
-        let g_mode = fresh_mode_meta () in
-        set_mode g_mode G;
-        let g_ty = TFloat g_mode in
-        let a_t = infer env a g_ty in
-        let b_t = infer env b g_ty in
-        assert_subtype g_ty expected;
-        { expr = EMul (a_t, b_t); typ = g_ty }
+      (* [Mul]: the left factor is general mode, the right factor carries the
+         result mode (a G right factor is admitted by subtyping). *)
+      let ty = ensure_float expected in
+      let g_mode = fresh_mode_meta () in
+      set_mode g_mode G;
+      let a_t = infer env a (TFloat g_mode) in
+      let b_t = infer env b ty in
+      { expr = EMul (a_t, b_t); typ = ty }
     | Div (a, b) ->
         let is_scaling = match (a,b) with (_, Const _) -> true | _ -> false in
         let a_ty, b_ty =

@@ -19110,8 +19110,8 @@ var DeterminizeSim = (() => {
       }
       case "Mul": {
         const resTy = ensureFloat(expected, expr);
-        const left = infer(env, expr.left, resTy);
-        const right = infer(env, expr.right, floatG());
+        const left = infer(env, expr.left, floatG());
+        const right = infer(env, expr.right, resTy);
         return typed(expr, resTy, { left, right });
       }
       case "Div": {
@@ -20088,7 +20088,7 @@ ${indent(elseBranch)}`;
     },
     {
       name: "Symbolic affine samples",
-      source: "let u = uniform(0, 1) in\nlet v = uniform(u, 2) in\nu * 2 + v - 1"
+      source: "let u = uniform(0, 1) in\nlet v = uniform(u, 2) in\n2 * u + v - 1"
     },
     {
       name: "Nonlinear use",
@@ -20096,7 +20096,7 @@ ${indent(elseBranch)}`;
     },
     {
       name: "Mixed residual randomness",
-      source: "let u = uniform(0, 1) in\nlet b = beta(9, 1) in\nlet g = gamma(u, b) in\ng * 2 + 1"
+      source: "let u = uniform(0, 1) in\nlet b = beta(9, 1) in\nlet g = gamma(u, b) in\n2 * g + 1"
     },
     {
       name: "Pairs",

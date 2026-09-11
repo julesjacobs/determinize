@@ -202,9 +202,10 @@ export function infer(env, expr, expected) {
       return typed(expr, ty, { left, right });
     }
     case "Mul": {
+      // [Mul]: general-mode left factor, the right factor carries the result mode.
       const resTy = ensureFloat(expected, expr);
-      const left = infer(env, expr.left, resTy);
-      const right = infer(env, expr.right, floatG());
+      const left = infer(env, expr.left, floatG());
+      const right = infer(env, expr.right, resTy);
       return typed(expr, resTy, { left, right });
     }
     case "Div": {
