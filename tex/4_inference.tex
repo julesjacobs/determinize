@@ -124,7 +124,7 @@ where $\alpha$ is a mode metavariable. In particular, $\alpha$ is an unknown mod
   \begin{align*}
       \alpha_1 \preceq \alpha_3 &, \alpha_2 \preceq \alpha_3 \\
       \alpha_3 \preceq \alpha_5 &, \alpha_4 \preceq \G \\
-      \alpha_6 \preceq \alpha_{10} &, \alpha_9 \preceq \alpha_{10} \\
+      \alpha_6 \preceq \G &, \alpha_9 \preceq \alpha_{10} \\
       \alpha_7 \preceq \G &, \alpha_8 \preceq \G \\
       \Float{\alpha_5} <: \Float{\alpha_{11}} &, \Float{\alpha_{10}} <: \Float{\alpha_{11}}
   \end{align*}
@@ -149,7 +149,7 @@ Constraint solving then finds a substitution mapping each metavariable $\alpha$ 
   For the generated constraints above, the greatest solution is:
   \begin{align*}
     \theta = [&\alpha_1 \mapsto \E,\ \alpha_2 \mapsto \E,\ \alpha_3 \mapsto \E,\ \alpha_4 \mapsto \G,\ \alpha_5 \mapsto \E, \\
-              &\alpha_6 \mapsto \E,\ \alpha_7 \mapsto \G,\ \alpha_8 \mapsto \G,\ \alpha_9 \mapsto \E,\ \alpha_{10} \mapsto \E,\ \alpha_{11} \mapsto \E ].
+              &\alpha_6 \mapsto \G,\ \alpha_7 \mapsto \G,\ \alpha_8 \mapsto \G,\ \alpha_9 \mapsto \E,\ \alpha_{10} \mapsto \E,\ \alpha_{11} \mapsto \E ].
   \end{align*}
   In particular, the program is assigned type $\Float{\E}$.
 \end{example}
