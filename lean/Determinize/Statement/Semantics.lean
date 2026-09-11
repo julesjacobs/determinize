@@ -48,10 +48,10 @@ noncomputable def reduce : Expr → Action
         if right.isValue then .next expression
         else (reduce right).wrap (fun next => .pair left next)
       else (reduce left).wrap (fun next => .pair next right)
-  | expression@(.inl value) =>
-      if value.isValue then .next expression else (reduce value).wrap .inl
-  | expression@(.inr value) =>
-      if value.isValue then .next expression else (reduce value).wrap .inr
+  | expression@(.inl operand) =>
+      if operand.isValue then .next expression else (reduce operand).wrap .inl
+  | expression@(.inr operand) =>
+      if operand.isValue then .next expression else (reduce operand).wrap .inr
   | expression@(.cons head tail) =>
       if head.isValue then
         if tail.isValue then .next expression
@@ -103,6 +103,8 @@ noncomputable def reduce : Expr → Action
         | .bool false => .reject
         | _ => .stuck
       else (reduce condition).wrap .observe
+  -- The `isValue` test is the call-by-value evaluation order, not a syntactic restriction:
+  -- `promote` takes any operand and reduces it to a real before returning it.
   | .promote body =>
       if body.isValue then match body with
         | .real value => .next (.real value) | _ => .stuck

@@ -52,7 +52,9 @@ noncomputable def traceAndOutputLaw (program : Expr) : Measure Output :=
 instead of sampled, still integrating every expectation-mode draw: the law of the real the
 replay returns exactly at `depth`. The result is the zero measure when the trace does not fit
 the program: a general-mode site that finds no entry or an entry of another primitive, or an
-entry left over when the program returns. -/
+entry left over when the program returns. The comparison `op = op'` is the only arity check
+for `discrete`: `reduce` stamps the number of weights into the site name
+`Op.discrete weights.length`, so an entry recorded by a `discrete` of another arity never fits. -/
 noncomputable def outputGivenTraceAt : Nat → Expr → Trace → Measure ℝ
   | 0, .real value, [] => Measure.dirac value
   | 0, _, _ => 0
