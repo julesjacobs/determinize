@@ -21,11 +21,11 @@ theorem sourceEndToEnd {Certificate : Type}
     (checkModel : Statement.Paper.Expr Rat → Subject → Model → Certificate → Bool)
     (checkResult : (model : Model) → ResultCertificate model → Bool) :
     SourceEndToEnd checkModel checkResult := by
-  intro modelSound resultSound mode source model modelCertificate resultCertificate
+  intro modelSound resultSound source model modelCertificate resultCertificate
     typed sourceForm safe integrable modelAccepted resultAccepted
   have target := endToEnd checkModel checkResult modelSound resultSound source .determinized
     model modelCertificate resultCertificate modelAccepted resultAccepted
-  have preservation := Theorems.expectationPreservation mode (Subject.source.program source)
+  have preservation := Theorems.expectationPreservation (Subject.source.program source)
     typed sourceForm safe integrable
   exact preservation.2.2.trans target.2
 

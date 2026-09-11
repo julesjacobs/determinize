@@ -79,8 +79,8 @@ def SourceEndToEnd {Certificate : Type}
     (checkModel : Expr Rat → Subject → Model → Certificate → Bool)
     (checkResult : (model : Model) → ResultCertificate model → Bool) : Prop :=
   ModelCheckerSound checkModel → ResultCheckerSound checkResult →
-  ∀ mode source model modelCertificate resultCertificate,
-    Typed [] (Subject.source.program source) (.float mode) →
+  ∀ source model modelCertificate resultCertificate,
+    Typed [] (Subject.source.program source) (.float .E) →
     (Subject.source.program source).sourceForm = true →
     DoesNotGetStuck (Subject.source.program source) →
     Integrable id (bigStepMeasure (Subject.source.program source)) →

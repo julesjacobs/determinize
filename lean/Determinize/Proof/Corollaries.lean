@@ -386,33 +386,33 @@ namespace Determinize.Proof.Paper
 
 /-- Extended-real expectation preservation, from operational trace soundness. -/
 theorem extendedExpectationSoundness : Determinize.Statement.extendedExpectationThm := by
-  intro mode program typed sourceForm sourceSafe defined
-  exact (Determinize.Proof.Traces.meanOnTraces mode program typed sourceForm
+  intro program typed sourceForm sourceSafe defined
+  exact (Determinize.Proof.Traces.meanOnTraces .E program typed sourceForm
     sourceSafe).2.extended_expectation defined
 
 /-- Jensen's inequality between the two output laws, from operational trace soundness. -/
 theorem jensenSoundness : Determinize.Statement.jensenThm := by
-  intro mode program typed sourceForm sourceSafe φ convex nonneg
-  exact (Determinize.Proof.Traces.meanOnTraces mode program typed sourceForm
+  intro program typed sourceForm sourceSafe φ convex nonneg
+  exact (Determinize.Proof.Traces.meanOnTraces .E program typed sourceForm
     sourceSafe).2.lintegral_convex_le convex nonneg
 
 /-- Output mass preservation, from operational trace soundness. -/
 theorem outputMassSoundness : Determinize.Statement.outputMassThm := by
-  intro mode program typed sourceForm sourceSafe
-  exact (Determinize.Proof.Traces.meanOnTraces mode program typed sourceForm
+  intro program typed sourceForm sourceSafe
+  exact (Determinize.Proof.Traces.meanOnTraces .E program typed sourceForm
     sourceSafe).2.output_mass
 
 /-- Variance non-increase, from operational trace soundness. -/
 theorem varianceSoundness : Determinize.Statement.varianceThm := by
-  intro mode program typed sourceForm sourceSafe memLp
-  exact (Determinize.Proof.Traces.meanOnTraces mode program typed sourceForm
+  intro program typed sourceForm sourceSafe memLp
+  exact (Determinize.Proof.Traces.meanOnTraces .E program typed sourceForm
     sourceSafe).2.variance_le memLp
 
 /-- Preservation of the expectation conditioned on acceptance, from operational trace
 soundness. -/
 theorem conditionalExpectationSoundness : Determinize.Statement.conditionalExpectationThm := by
-  intro mode program typed sourceForm sourceSafe integrable
-  exact (Determinize.Proof.Traces.meanOnTraces mode program typed sourceForm
+  intro program typed sourceForm sourceSafe integrable
+  exact (Determinize.Proof.Traces.meanOnTraces .E program typed sourceForm
     sourceSafe).2.conditional_expectation integrable
 
 end Determinize.Proof.Paper
@@ -423,8 +423,8 @@ open MeasureTheory ProbabilityTheory Determinize.Traces
 
 /-- The law of total variance along traces, with `Traces.outputGivenTrace` as the fiber. -/
 theorem varianceSoundness : Determinize.Traces.varianceThm := by
-  intro mode program typed sourceForm sourceSafe memLp
-  obtain ⟨_, output, factor, massAe, _⟩ := soundnessData mode program typed sourceForm sourceSafe
+  intro program typed sourceForm sourceSafe memLp
+  obtain ⟨_, output, factor, massAe, _⟩ := soundnessData .E program typed sourceForm sourceSafe
   obtain ⟨integrable, decomposition⟩ := factor.variance_decomposition memLp
   have congr : (fun trace => variance id (StepTraces.normalizedOutputGivenTrace program trace))
       =ᵐ[traceLaw program] fun trace => variance id (outputGivenTrace program trace) :=

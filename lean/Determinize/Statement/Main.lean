@@ -26,8 +26,8 @@ open scoped ENNReal
 
 /-- Determinization preserves finite expectations and cannot introduce stuckness. -/
 def mainThm : Prop :=
-  ∀ (mode : Mode) (program : Expr),
-    Typed [] program (.float mode) →
+  ∀ (program : Expr),
+    Typed [] program (.float .E) →
     program.sourceForm = true →
     DoesNotGetStuck program →
     Integrable id (bigStepMeasure program) →
@@ -54,8 +54,8 @@ noncomputable def extendedExpectation (μ : Measure ℝ) : EReal :=
 /-- Determinization preserves expectations in the extended reals: whenever the source
 expectation is well-defined, possibly infinite, so is the target's, and they agree. -/
 def extendedExpectationThm : Prop :=
-  ∀ (mode : Mode) (program : Expr),
-    Typed [] program (.float mode) →
+  ∀ (program : Expr),
+    Typed [] program (.float .E) →
     program.sourceForm = true →
     DoesNotGetStuck program →
     HasExpectation (bigStepMeasure program) →
@@ -66,8 +66,8 @@ def extendedExpectationThm : Prop :=
 /-- Jensen's inequality: every nonnegative convex function integrates to at most as much
 under the determinized output law as under the source output law. -/
 def jensenThm : Prop :=
-  ∀ (mode : Mode) (program : Expr),
-    Typed [] program (.float mode) →
+  ∀ (program : Expr),
+    Typed [] program (.float .E) →
     program.sourceForm = true →
     DoesNotGetStuck program →
     ∀ φ : ℝ → ℝ, ConvexOn ℝ Set.univ φ → (∀ value, 0 ≤ φ value) →
@@ -79,8 +79,8 @@ mass is the probability of terminating with a real value (and, once observation 
 being accepted). The source and target output laws have the same mass, so together with
 `mainThm` the expectations conditioned on termination agree as well. -/
 def outputMassThm : Prop :=
-  ∀ (mode : Mode) (program : Expr),
-    Typed [] program (.float mode) →
+  ∀ (program : Expr),
+    Typed [] program (.float .E) →
     program.sourceForm = true →
     DoesNotGetStuck program →
     bigStepMeasure program.determinize Set.univ = bigStepMeasure program Set.univ
@@ -93,8 +93,8 @@ variance increases. The output laws are unnormalized, but they have equal mass
 mass: in both readings the difference of the variances is the difference of the second
 moments, up to the common mass. -/
 def varianceThm : Prop :=
-  ∀ (mode : Mode) (program : Expr),
-    Typed [] program (.float mode) →
+  ∀ (program : Expr),
+    Typed [] program (.float .E) →
     program.sourceForm = true →
     DoesNotGetStuck program →
     MemLp id 2 (bigStepMeasure program) →
@@ -112,8 +112,8 @@ in the source and in the target, and both the unnormalized mean (`mainThm`) and 
 (`outputMassThm`) are preserved; hence so is their quotient, the expectation of the law
 normalized by its mass (`0` for a program that is always rejected, as `0 / 0 = 0`). -/
 def conditionalExpectationThm : Prop :=
-  ∀ (mode : Mode) (program : Expr),
-    Typed [] program (.float mode) →
+  ∀ (program : Expr),
+    Typed [] program (.float .E) →
     program.sourceForm = true →
     DoesNotGetStuck program →
     Integrable id (bigStepMeasure program) →

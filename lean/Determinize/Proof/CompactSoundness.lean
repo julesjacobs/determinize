@@ -275,9 +275,9 @@ theorem compProd_eq_traceThenOutput (traces : Measure Trace) [SFinite traces]
 
 /-- The public trace soundness theorem. -/
 theorem soundness : Determinize.Traces.soundnessThm := by
-  intro mode program typed sourceForm safe
+  intro program typed sourceForm safe
   obtain ⟨targetSafe, f, factor, massAe, diracAe⟩ :=
-    soundnessData mode program typed sourceForm safe
+    soundnessData .E program typed sourceForm safe
   obtain ⟨markov, hf, hs, ht, hmean⟩ := factor
   have := markov
   refine ⟨targetSafe, ?_, ?_, ?_⟩

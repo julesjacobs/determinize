@@ -26,8 +26,8 @@ the target's `outputGivenTrace`, and for almost every trace the source's output 
 trace has a finite mean and the target's output law given the trace is the Dirac mass at that
 mean. No global integrability assumption is required. -/
 def soundnessThm : Prop :=
-  ∀ (mode : Mode) (program : Expr),
-    Typed [] program (.float mode) → program.sourceForm = true →
+  ∀ (program : Expr),
+    Typed [] program (.float .E) → program.sourceForm = true →
     DoesNotGetStuck program →
       DoesNotGetStuck program.determinize ∧
       traceAndOutputLaw program = traceThenOutput (traceLaw program) (outputGivenTrace program) ∧
@@ -47,8 +47,8 @@ so the identity holds for Mathlib's `variance` (`∫ (v - ∫ v)²`) without nor
 both output laws and the trace law by their common mass gives the same identity for the laws
 conditioned on termination. -/
 def varianceThm : Prop :=
-  ∀ (mode : Mode) (program : Expr),
-    Typed [] program (.float mode) → program.sourceForm = true →
+  ∀ (program : Expr),
+    Typed [] program (.float .E) → program.sourceForm = true →
     DoesNotGetStuck program →
     MemLp id 2 (bigStepMeasure program) →
       Integrable (fun trace => variance id (outputGivenTrace program trace)) (traceLaw program) ∧

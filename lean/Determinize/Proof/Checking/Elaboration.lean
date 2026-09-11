@@ -31,8 +31,13 @@ theorem certified_trace_soundness {input modes} (p : Certified input modes)
         outputGivenTrace (interpret p.source.determinize) trace =
           Measure.dirac (∫ value : ℝ, value ∂outputGivenTrace (interpret p.source) trace) := by
   rw [interpret_determinize]
-  exact Determinize.Theorems.traceSoundness m (interpret p.source)
-    (hTy ▸ p.typed) ((interpret_sourceForm _).trans p.sourceOnly) safe
+  have typed : Typed [] (interpret p.source) (.float .E) := by
+    have h : Typed [] (interpret p.source) (.float m) := hTy ▸ p.typed
+    cases m with
+    | E => exact h
+    | G => exact .sub h .general
+  exact Determinize.Theorems.traceSoundness (interpret p.source)
+    typed ((interpret_sourceForm _).trans p.sourceOnly) safe
 
 theorem certified_expectation {input modes} (p : Certified input modes)
     (m : Mode) (hTy : p.ty = .float m)
@@ -43,7 +48,12 @@ theorem certified_expectation {input modes} (p : Certified input modes)
       (∫ value : ℝ, value ∂bigStepMeasure (interpret p.source)) =
         ∫ value : ℝ, value ∂bigStepMeasure (interpret p.source.determinize) := by
   rw [interpret_determinize]
-  exact Determinize.Theorems.expectationPreservation m (interpret p.source)
-    (hTy ▸ p.typed) ((interpret_sourceForm _).trans p.sourceOnly) safe integrable
+  have typed : Typed [] (interpret p.source) (.float .E) := by
+    have h : Typed [] (interpret p.source) (.float m) := hTy ▸ p.typed
+    cases m with
+    | E => exact h
+    | G => exact .sub h .general
+  exact Determinize.Theorems.expectationPreservation (interpret p.source)
+    typed ((interpret_sourceForm _).trans p.sourceOnly) safe integrable
 
 end Determinize.Proof.Checking
