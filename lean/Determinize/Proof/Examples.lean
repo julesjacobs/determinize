@@ -112,6 +112,44 @@ private theorem safe_let_uniform (mode : Mode) (body : Expr)
   · intro value
     exact safe_next (by simp [reduce, Expr.isValue]) (safe value)
 
+/-- `safe_sample` for a continuation that is safe only for almost every drawn value. -/
+private theorem safe_sample_ae {expression : Expr} {fiber : Measure ℝ} {continuation : ℝ → Expr}
+    (reduction : reduce expression = .sample site fiber continuation) (mass : fiber Set.univ = 1)
+    (safe : ∀ᵐ value ∂fiber, DoesNotGetStuck (continuation value)) :
+    DoesNotGetStuck expression := by
+  intro fuel
+  cases fuel with
+  | zero => trivial
+  | succ fuel =>
+      rw [DoesNotGetStuckAt]
+      split
+      · trivial
+      · rw [reduction]
+        exact ⟨mass, safe.mono fun value valueSafe => valueSafe fuel⟩
+
+/-- A draw from `uniform(0, 1)` lies in `[0, 1]` almost surely. -/
+private theorem uniform_ae_mem_Icc :
+    ∀ᵐ value ∂uniformFiber .stochastic 0 1, value ∈ Set.Icc (0 : ℝ) 1 := by
+  have restricted : ∀ᵐ value ∂volume.restrict (Set.Icc (0 : ℝ) 1), value ∈ Set.Icc (0 : ℝ) 1 :=
+    ae_restrict_mem measurableSet_Icc
+  simpa [uniformFiber, uniformMeasure] using
+    Measure.ae_smul_measure restricted (ENNReal.ofReal (1 - 0))⁻¹
+
+/-- `safe_let_uniform` for a body that is safe only for almost every draw. -/
+private theorem safe_let_uniform_ae (mode : Mode) (body : Expr)
+    (safe : ∀ᵐ value ∂uniformFiber .stochastic 0 1,
+      DoesNotGetStuck (body.substHead (.real value))) :
+    DoesNotGetStuck (.letE (uniform mode) body) := by
+  let μ := uniformFiber .stochastic 0 1
+  have reduction : reduce (.letE (uniform mode) body) =
+      .sample (mode, .stochastic, .uniform) μ
+        (fun value => .letE (.real value) body) := by
+    simp [uniform, reduce, Expr.isValue, realValue?, Action.wrap, Function.comp_def, μ]
+  apply safe_sample_ae reduction
+  · simp [μ, uniformFiber, uniformMeasure, Real.volume_Icc]
+  · filter_upwards [safe] with value valueSafe
+    exact safe_next (by simp [reduce, Expr.isValue]) valueSafe
+
 theorem reciprocal_safe : DoesNotGetStuck reciprocal := by
   apply safe_let_uniform .E
   intro x
@@ -258,22 +296,28 @@ example : ¬ Typed [] (.flip (uniform .E)) .bool := by
           unfold uniform at probability
           cases probability
 
-/-- `discrete_E(1/2, 1/4, 1/4)`: the index `0`, `1` or `2` with the listed weights. -/
-noncomputable def discreteSample : Expr := .discrete .E .stochastic [1 / 2, 1 / 4, 1 / 4]
+/-- `discrete_E(1/2, 1/4, 1/4)`: the index `0`, `1` or `2` with the listed weights, the parser's
+literal form, which embeds as the list `[1/2, 1/4, 1/4]` of literals. -/
+noncomputable def discreteSample : Expr :=
+  .discrete .E .stochastic
+    (.cons (.real (1 / 2)) (.cons (.real (1 / 4)) (.cons (.real (1 / 4)) .nil)))
 
-theorem discreteSample_typed : Typed [] discreteSample (.float .E) := .discrete
+theorem discreteSample_typed : Typed [] discreteSample (.float .E) :=
+  .discrete (.cons .real (.cons .real (.cons .real .nil)))
 
 theorem discreteSample_source : discreteSample.sourceForm = true := by
   simp [discreteSample, Expr.sourceForm, Kind.isStochastic]
 
-/-- Determinization switches the site to its mean site. -/
-example : discreteSample.determinize = .discrete .E .mean [1 / 2, 1 / 4, 1 / 4] := rfl
+/-- Determinization switches the site to its mean site; the weights are already values. -/
+example : discreteSample.determinize =
+    .discrete .E .mean
+      (.cons (.real (1 / 2)) (.cons (.real (1 / 4)) (.cons (.real (1 / 4)) .nil))) := rfl
 
-/-- The mean site returns `∑ i, wᵢ · i = 1/4 + 2/4`. -/
+/-- The mean site reads the three weights and returns `∑ i, wᵢ · i = 1/4 + 2/4`. -/
 example : reduce discreteSample.determinize =
     .sample (.E, .mean, .discrete 3) (Measure.dirac (3 / 4)) .real := by
-  simp [discreteSample, Expr.determinize, Expr.determinizeKind, reduce, discreteFiber,
-    Fin.sum_univ_three, Fin.forall_fin_succ]
+  simp [discreteSample, Expr.determinize, Expr.determinizeKind, reduce, Expr.isValue,
+    realListValue?, realValue?, discreteFiber, Fin.sum_univ_three, Fin.forall_fin_succ]
   norm_num
 
 private theorem discreteFiber_stochastic_mass (weights : List ℝ)
@@ -287,7 +331,7 @@ private theorem discreteFiber_stochastic_mass (weights : List ℝ)
 theorem discreteSample_safe : DoesNotGetStuck discreteSample := by
   refine safe_sample (site := (.E, .stochastic, .discrete 3))
     (fiber := discreteFiber .stochastic [1 / 2, 1 / 4, 1 / 4]) (continuation := .real) ?_ ?_ ?_
-  · simp [discreteSample, reduce]
+  · simp [discreteSample, reduce, Expr.isValue, realListValue?, realValue?]
   · refine discreteFiber_stochastic_mass _ ⟨?_, ?_⟩
     · intro i
       fin_cases i <;> norm_num
@@ -299,6 +343,72 @@ example : traceAndOutputLaw discreteSample.determinize =
     traceThenOutput (traceLaw discreteSample) (outputGivenTrace discreteSample.determinize) :=
   (Traces.soundness .E discreteSample discreteSample_typed discreteSample_source
     discreteSample_safe).2.2.1
+
+/-- `let p = uniform_E(0, 1) in discrete_E(p, 1 - p)`: the weights are expressions in an
+expectation-mode draw (`1 - p` is written `1 + (-p)`), typed at mode `E` like the site. -/
+noncomputable def discreteNested : Expr :=
+  .letE (uniform .E)
+    (.discrete .E .stochastic (.cons (.bvar 0) (.cons (.add (.real 1) (.neg (.bvar 0))) .nil)))
+
+theorem discreteNested_typed : Typed [] discreteNested (.float .E) :=
+  .letE (uniform_typed .E)
+    (.discrete (.cons (.bvar .head) (.cons (.add .real (.neg (.bvar .head))) .nil)))
+
+theorem discreteNested_source : discreteNested.sourceForm = true := by
+  simp [discreteNested, uniform, Expr.sourceForm]
+
+/-- Both sites become mean sites: determinization descends into the weights. -/
+example : discreteNested.determinize =
+    .letE (.uniform .E .mean (.real 0) (.real 1))
+      (.discrete .E .mean (.cons (.bvar 0) (.cons (.add (.real 1) (.neg (.bvar 0))) .nil))) :=
+  rfl
+
+/-- The target first returns the mean `1/2` of `p` and substitutes it into the weights. -/
+example : reduce discreteNested.determinize =
+    .sample (.E, .mean, .uniform) (uniformFiber .mean 0 1)
+      (fun value => .letE (.real value)
+        (.discrete .E .mean
+          (.cons (.bvar 0) (.cons (.add (.real 1) (.neg (.bvar 0))) .nil)))) := by
+  simp [discreteNested, uniform, Expr.determinize, Expr.determinizeKind, reduce, Expr.isValue,
+    realValue?, Action.wrap, Function.comp_def]
+
+/-- With `p = 1/2` the weights evaluate to `[1/2, 1/2]` and the mean site returns their mean
+`0 · 1/2 + 1 · 1/2 = 1/2`, which is `E[1 - p]`, the mean of the source: the determinized
+program returns the mean of the weights' means. -/
+example : cumulativeOutputMeasure 4
+    (.discrete .E .mean
+      (.cons (.real (1 / 2)) (.cons (.add (.real 1) (.neg (.real (1 / 2)))) .nil))) =
+    Measure.dirac (1 / 2) := by
+  simp [cumulativeOutputMeasure, reduce, Expr.isValue, realValue?, realListValue?, Action.wrap,
+    discreteFiber, Fin.sum_univ_two, Fin.forall_fin_succ, Measure.bind_dirac]
+  norm_num
+
+/-- The source is safe: for almost every draw `p ∈ [0, 1]`, the weights `[p, 1 - p]` lie in the
+domain of `discrete`. -/
+theorem discreteNested_safe : DoesNotGetStuck discreteNested := by
+  apply safe_let_uniform_ae .E
+  filter_upwards [uniform_ae_mem_Icc] with p pMem
+  simp [Expr.substHead, Expr.substAt, Expr.shift, Expr.mapVars]
+  apply safe_next
+    (next := .discrete .E .stochastic (.cons (.real p) (.cons (.add (.real 1) (.real (-p))) .nil)))
+  · simp [reduce, Expr.isValue, Action.wrap]
+  apply safe_next
+    (next := .discrete .E .stochastic (.cons (.real p) (.cons (.real (1 + -p)) .nil)))
+  · simp [reduce, Expr.isValue, realValue?, Action.wrap]
+  refine safe_sample (site := (.E, .stochastic, .discrete 2))
+    (fiber := discreteFiber .stochastic [p, 1 + -p]) (continuation := .real) ?_ ?_ ?_
+  · simp [reduce, Expr.isValue, realListValue?, realValue?]
+  · refine discreteFiber_stochastic_mass _ ⟨?_, ?_⟩
+    · intro i
+      fin_cases i <;> simp <;> linarith [pMem.1, pMem.2]
+    · norm_num [Fin.sum_univ_two]
+  · exact safe_real
+
+/-- The mean of `discrete_E(p, 1 - p)` is preserved along traces by its determinization. -/
+example : traceAndOutputLaw discreteNested.determinize =
+    traceThenOutput (traceLaw discreteNested) (outputGivenTrace discreteNested.determinize) :=
+  (Traces.soundness .E discreteNested discreteNested_typed discreteNested_source
+    discreteNested_safe).2.2.1
 
 /-- `let x = uniform_G(0, 1) in let _ = observe(x < 1/2) in x + uniform_E(0, 1)`: a general-mode
 draw is observed before an expectation-mode draw is added to it (`x` is promoted explicitly, as

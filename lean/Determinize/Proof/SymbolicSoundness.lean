@@ -198,7 +198,18 @@ theorem domain_valueSet_convex (queryOp : Determinize.Statement.Paper.Op)
       · have upper := add_le_add (mul_le_mul_of_nonneg_left leftDomain.2 ha)
           (mul_le_mul_of_nonneg_left rightDomain.2 hb)
         linarith
-  | discrete => exact leftDomain
+  | discrete arity =>
+      -- the simplex of weights is convex: nonnegativity and the unit sum are both preserved
+      change Fin arity → Symbolic.Affine (n + 1) at queryAffineArgs
+      change Fin 0 → ℝ at queryGeneralArgs
+      simp only [Determinize.Statement.Paper.domain, Set.mem_ofPred_eq] at leftDomain rightDomain ⊢
+      simp only [Affine.eval_cons, smul_eq_mul] at leftDomain rightDomain ⊢
+      simp_rw [Affine.eval_cons_convexCombination _ environment left right a b hab]
+      refine ⟨fun i => add_nonneg (mul_nonneg ha (leftDomain.1 i))
+        (mul_nonneg hb (rightDomain.1 i)), ?_⟩
+      rw [Finset.sum_add_distrib, ← Finset.mul_sum, ← Finset.mul_sum, leftDomain.2,
+        rightDomain.2]
+      linarith
 
 noncomputable def transitionPack (laws : Determinize.Proof.Paper.PrimitiveLaws) (op : Determinize.Statement.Paper.Op)
     (affineArgs : Fin (Determinize.Statement.Paper.affineArity op) → Symbolic.Affine n)
@@ -1733,15 +1744,31 @@ theorem symbolicReduce_targetRealize
           (context_realize := by intros; simp only [realize, Expr.determinize])
           (lifted_realize := by intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
           ih environment]
-  | discrete =>
-      rename_i context' mode weights
+  | discrete weightsTyped ih =>
+      rename_i context' weights mode
       rw [realize, Expr.determinize, MeasurableActionFamily.reduce_discrete_eq,
-        symbolicReduce_discrete_eq]
-      cases mode with
-      | E =>
-          simp [targetRealize, realize, Expr.determinize, Expr.determinizeKind, discreteFiber_eq,
-            Affine.eval_fresh]
-      | G => simp [targetRealize, realize, Expr.determinize, Expr.determinizeKind]
+        determinize_isValue, realize_isValue, symbolicReduce.eq_def]
+      by_cases weightsValue : weights.isValue = true
+      · simp only [weightsValue, ↓reduceIte]
+        cases mode with
+        | E =>
+            obtain ⟨coordinates, affineEq⟩ :=
+              wellTyped_list_value_affine weightsTyped weightsValue
+            simp [affineEq, realListValue?_determinize, realListValue?_realize, targetRealize,
+              realize, Expr.determinize, Expr.determinizeKind, discreteFiber_eq, Affine.eval_fresh]
+        | G =>
+            obtain ⟨constants, constantEq, affineEq⟩ :=
+              wellTyped_list_value_constant weightsTyped weightsValue
+            simp [constantEq, affineEq, realListValue?_determinize, realListValue?_realize,
+              targetRealize, realize, Expr.determinize, Expr.determinizeKind, Function.comp_def]
+      · simp only [weightsValue, Bool.eq_false_of_not_eq_true weightsValue,
+          Bool.false_eq_true, ↓reduceIte]
+        rw [targetRealize_wrap laws
+          (ExprContext := fun next =>
+            .discrete mode (Expr.determinizeKind mode .stochastic) next)
+          (context_realize := by intros; simp only [realize, Expr.determinize])
+          (lifted_realize := by intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
+          ih environment]
   | exponential valueTyped ih =>
       rename_i context' value mode
       rw [realize, Expr.determinize, MeasurableActionFamily.reduce_exponential_eq, determinize_isValue,

@@ -125,12 +125,12 @@ theorem generationOp_some_reduce {expression : Expr} {op : Op}
       reduce expression = .stuck := by
   cases expression <;> rw [reduce.eq_def]
   all_goals simp only [Expr.skeleton, generationOp, ← isValue_eq_skeletonIsValue,
-    List.length_map] at active
+    Expr.literalListArity?_skeleton, ← realListValue?_map_length] at active
   all_goals try simp only [reduceCtorEq] at active
   all_goals dsimp only
   all_goals repeat' split
   all_goals simp_all only [↓reduceIte, Bool.not_eq_true, Bool.false_eq_true, siteOp,
-    reduceCtorEq]
+    reduceCtorEq, Option.map_some]
   all_goals first
     | exact Or.inl ⟨_, _, rfl⟩
     | exact Or.inr rfl

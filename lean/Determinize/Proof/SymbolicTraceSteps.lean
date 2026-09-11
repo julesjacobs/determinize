@@ -120,11 +120,24 @@ theorem symbolic_generationDraw (laws : PrimitiveLaws)
             simp [constantValue?, siteOp]
       · simp only [rateValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
         exact ih
-  | discrete =>
-      rename_i context' mode weights
-      simp only [AffineExpr.skeleton, generationOp, List.length_map]
+  | discrete weightsTyped ih =>
+      rename_i context' weights mode
+      simp only [AffineExpr.skeleton, generationOp, symbolic_skeleton_isValue,
+        skeleton_literalListArity?]
       rw [symbolicReduce_discrete_eq]
-      cases mode <;> simp [siteOp]
+      by_cases weightsValue : weights.isValue = true
+      · simp only [weightsValue, ↓reduceIte]
+        cases mode with
+        | E =>
+            obtain ⟨coordinates, affineEq⟩ :=
+              wellTyped_list_value_affine weightsTyped weightsValue
+            simp [affineEq, siteOp]
+        | G =>
+            obtain ⟨constants, constantEq, affineEq⟩ :=
+              wellTyped_list_value_constant weightsTyped weightsValue
+            simp [constantEq, affineEq, siteOp]
+      · simp only [weightsValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
+        exact ih
   | exponential rateTyped ih =>
       rename_i context' rate mode
       simp only [AffineExpr.skeleton, generationOp, symbolic_skeleton_isValue]
@@ -204,12 +217,19 @@ theorem symbolic_generationDraw (laws : PrimitiveLaws)
           generationDraw_stuck, generationDraw_reject, Option.isSome_none, ↓reduceIte] at *
       all_goals try simp_all [generationOp_symbolic_value]
 
+/-- Determinization does not change the arity a `discrete` site reads off its weights. -/
+theorem literalListArity?_determinize_skeleton (expression : Expr) :
+    expression.determinize.skeleton.literalListArity? =
+      expression.skeleton.literalListArity? := by
+  rw [Expr.literalListArity?_skeleton, Expr.literalListArity?_skeleton,
+    ← realListValue?_map_length, ← realListValue?_map_length, realListValue?_determinize]
+
 set_option maxHeartbeats 800000 in
 theorem generationOp_determinize (expression : Expr) :
     generationOp expression.determinize.skeleton = generationOp expression.skeleton := by
   fun_induction Expr.determinize expression <;>
     simp_all [Expr.skeleton, generationOp, ← isValue_eq_skeletonIsValue,
-      SymbolicSoundness.TargetSafety.determinize_isValue]
+      SymbolicSoundness.TargetSafety.determinize_isValue, literalListArity?_determinize_skeleton]
 
 end
 end Determinize.Proof.StepTraces

@@ -29,7 +29,7 @@ abbrev affineArity : Op → Nat
   | .beta => 0
   | .gamma => 1
   | .bernoulli => 1
-  | .discrete _ => 0
+  | .discrete arity => arity
 
 abbrev generalArity : Op → Nat
   | .uniform => 0
@@ -39,7 +39,7 @@ abbrev generalArity : Op → Nat
   | .beta => 2
   | .gamma => 1
   | .bernoulli => 0
-  | .discrete arity => arity
+  | .discrete _ => 0
 
 /-- Evaluated parameters, indexed by the primitive's two arities. -/
 abbrev Params (op : Op) :=
@@ -63,7 +63,7 @@ def domain : (op : Op) → Params op → Prop
   | .beta, (_, g) => 0 < g 0 ∧ 0 < g 1
   | .gamma, (a, g) => 0 < a 0 ∧ 0 < g 0
   | .bernoulli, (a, _) => 0 ≤ a 0 ∧ a 0 ≤ 1
-  | .discrete _, (_, g) => (∀ i, 0 ≤ g i) ∧ ∑ i, g i = 1
+  | .discrete _, (a, _) => (∀ i, 0 ≤ a i) ∧ ∑ i, a i = 1
 
 /-- The eight primitive means on evaluated parameters. -/
 def meanValue : (op : Op) → Params op → ℝ
@@ -74,7 +74,7 @@ def meanValue : (op : Op) → Params op → ℝ
   | .beta, (_, g) => g 0 / (g 0 + g 1)
   | .gamma, (a, g) => a 0 / g 0
   | .bernoulli, (a, _) => a 0
-  | .discrete arity, (_, g) => ∑ i : Fin arity, g i * ((i : ℕ) : ℝ)
+  | .discrete arity, (a, _) => ∑ i : Fin arity, a i * ((i : ℕ) : ℝ)
 
 /-- Canonical primitive measure; an off-domain call has zero measure. -/
 def paperMeasure : (op : Op) → Params op → Measure ℝ
@@ -107,7 +107,7 @@ def paperMeasure : (op : Op) → Params op → Measure ℝ
           ENNReal.ofReal probability • Measure.dirac 1
       else 0
   | .discrete arity, params =>
-      let weights := params.2
+      let weights := params.1
       if (∀ i, 0 ≤ weights i) ∧ ∑ i, weights i = 1 then
         ∑ i : Fin arity, ENNReal.ofReal (weights i) • Measure.dirac ((i : ℕ) : ℝ)
       else 0
@@ -161,7 +161,7 @@ theorem bernoulliFiber_eq (kind : Kind) (probability : ℝ) :
     simp [bernoulliFiber, primitiveFiber, parseParams, paperMeasure, domain, meanValue, h]
 
 theorem discreteFiber_eq (kind : Kind) (weights : List ℝ) :
-    discreteFiber kind weights = primitiveFiber kind (.discrete weights.length) [] weights := by
+    discreteFiber kind weights = primitiveFiber kind (.discrete weights.length) weights [] := by
   cases kind <;> simp [discreteFiber, primitiveFiber, parseParams, paperMeasure, domain, meanValue]
 
 end
@@ -188,7 +188,7 @@ def meanConstant : (op : Op) → (Fin (generalArity op) → ℝ) → ℝ
           general 1)
   | .gamma, _ => 0
   | .bernoulli, _ => 0
-  | .discrete arity, general => ∑ i : Fin arity, general i * ((i : ℕ) : ℝ)
+  | .discrete _, _ => 0
 
 /-- Coefficient of an affine-position parameter in a primitive mean. -/
 def meanCoeff : (op : Op) →
@@ -201,13 +201,13 @@ def meanCoeff : (op : Op) →
   | .gamma, general, _ => 1 / general
       0
   | .bernoulli, _, _ => 1
-  | .discrete _, _, index => Fin.elim0 index
+  | .discrete _, _, index => ((index : ℕ) : ℝ)
 
 theorem meanValue_eq_affine (op : Op) (params : Params op) :
     meanValue op params = meanConstant op params.2 +
       ∑ i, meanCoeff op params.2 i * params.1 i := by
   cases op <;> simp [meanValue, meanConstant, meanCoeff, affineArity,
-    Fin.sum_univ_two] <;> ring
+    Fin.sum_univ_two, mul_comm] <;> ring
 
 theorem measurableSet_domain (op : Op) :
     MeasurableSet {params | domain op params} := by
@@ -237,13 +237,13 @@ theorem measurableSet_domain (op : Op) :
         measurableSet_Iic)
   · rename_i arity
     change MeasurableSet {params : Params (.discrete arity) |
-      (∀ i, 0 ≤ params.2 i) ∧ ∑ i, params.2 i = 1}
+      (∀ i, 0 ≤ params.1 i) ∧ ∑ i, params.1 i = 1}
     have nonnegative :
-        MeasurableSet {params : Params (.discrete arity) | ∀ i, 0 ≤ params.2 i} := by
+        MeasurableSet {params : Params (.discrete arity) | ∀ i, 0 ≤ params.1 i} := by
       rw [Set.ofPred_forall]
       exact MeasurableSet.iInter fun i => measurableSet_le measurable_const (by fun_prop)
     have normalized :
-        MeasurableSet {params : Params (.discrete arity) | ∑ i, params.2 i = 1} :=
+        MeasurableSet {params : Params (.discrete arity) | ∑ i, params.1 i = 1} :=
       measurableSet_eq_fun (by fun_prop) measurable_const
     exact nonnegative.inter normalized
 

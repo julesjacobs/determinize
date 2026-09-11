@@ -16,14 +16,6 @@ namespace Determinize.Statement.Paper
 /-- The same syntax with real values erased. -/
 abbrev Skeleton := Expr Unit
 
-/-- A list of units is determined by its length; the skeleton of a `discrete` site keeps only
-the number of its weights. -/
-@[simp] theorem replicate_unit_eq_self (values : List Unit) :
-    List.replicate values.length () = values := by
-  induction values with
-  | nil => rfl
-  | cons head tail ih => simp [List.replicate_succ, ih]
-
 namespace Expr
 
 def skeleton : Expr → Skeleton
@@ -49,7 +41,7 @@ def skeleton : Expr → Skeleton
   | .beta m k l r => .beta m k l.skeleton r.skeleton
   | .gamma m k l r => .gamma m k l.skeleton r.skeleton
   | .bernoulli m k x => .bernoulli m k x.skeleton
-  | .discrete m k weights => .discrete m k (weights.map fun _ => ())
+  | .discrete m k x => .discrete m k x.skeleton
 
 def realCoordinates : Expr → List ℝ
   | .real value => [value]
@@ -63,9 +55,24 @@ def realCoordinates : Expr → List ℝ
   | .letE x b => x.realCoordinates ++ b.realCoordinates
   | .uniform _ _ l r | .gaussian _ _ l r | .beta _ _ l r | .gamma _ _ l r =>
       l.realCoordinates ++ r.realCoordinates
-  | .poisson _ _ x | .exponential _ _ x | .bernoulli _ _ x => x.realCoordinates
-  | .discrete _ _ weights => weights
+  | .poisson _ _ x | .exponential _ _ x | .bernoulli _ _ x | .discrete _ _ x =>
+      x.realCoordinates
   | _ => []
+
+/-- The number of literals in a list value of literals, a cons-chain of literals ending in
+`nil`, read off the syntax alone; `none` for any other expression. On an `Expr` this is the
+length of the list `realListValue?` returns, and it only depends on the skeleton, so the arity
+of a `discrete` site is a function of the skeleton of its evaluated weights. -/
+def literalListArity? {Literal : Type} : Expr Literal → Option Nat
+  | .nil => some 0
+  | .cons (.real _) tail => (literalListArity? tail).map (· + 1)
+  | _ => none
+
+theorem literalListArity?_skeleton (expression : Expr) :
+    expression.skeleton.literalListArity? = expression.literalListArity? := by
+  induction expression with
+  | cons head tail _ ih => cases head <;> simp [literalListArity?, skeleton, ih]
+  | _ => simp [literalListArity?, skeleton]
 
 end Expr
 
