@@ -53,6 +53,8 @@ inductive AffineExpr (sampleCount : Nat) where
   | exponential (mode : Mode) (kind : Kind) (rate : AffineExpr sampleCount)
   | beta (mode : Mode) (kind : Kind) (alpha beta : AffineExpr sampleCount)
   | gamma (mode : Mode) (kind : Kind) (shape rate : AffineExpr sampleCount)
+  | bernoulli (mode : Mode) (kind : Kind) (probability : AffineExpr sampleCount)
+  | discrete (mode : Mode) (kind : Kind) (weights : List ℝ)
 
 namespace AffineExpr
 
@@ -104,6 +106,8 @@ def realize (environment : Env sampleCount) : AffineExpr sampleCount → Expr
       .beta mode kind (left.realize environment) (right.realize environment)
   | .gamma mode kind shape rate =>
       .gamma mode kind (shape.realize environment) (rate.realize environment)
+  | .bernoulli mode kind probability => .bernoulli mode kind (probability.realize environment)
+  | .discrete mode kind weights => .discrete mode kind weights
 
 def skeleton : AffineExpr sampleCount → Skeleton
   | .bvar index => .bvar index
@@ -139,6 +143,8 @@ def skeleton : AffineExpr sampleCount → Skeleton
   | .exponential mode kind rate => .exponential mode kind rate.skeleton
   | .beta mode kind left right => .beta mode kind left.skeleton right.skeleton
   | .gamma mode kind shape rate => .gamma mode kind shape.skeleton rate.skeleton
+  | .bernoulli mode kind probability => .bernoulli mode kind probability.skeleton
+  | .discrete mode kind weights => .discrete mode kind (weights.map fun _ => ())
 
 def coordinates : AffineExpr sampleCount → List (Affine sampleCount)
   | .real value => [value]
@@ -154,7 +160,8 @@ def coordinates : AffineExpr sampleCount → List (Affine sampleCount)
   | .letE value body => value.coordinates ++ body.coordinates
   | .uniform _ _ left right | .gaussian _ _ left right | .beta _ _ left right
   | .gamma _ _ left right => left.coordinates ++ right.coordinates
-  | .poisson _ _ body | .exponential _ _ body => body.coordinates
+  | .poisson _ _ body | .exponential _ _ body | .bernoulli _ _ body => body.coordinates
+  | .discrete _ _ weights => weights.map fun weight => (weight, 0)
   | _ => []
 
 def ofExpr : Expr → AffineExpr 0
@@ -191,6 +198,8 @@ def ofExpr : Expr → AffineExpr 0
   | .exponential mode kind rate => .exponential mode kind (ofExpr rate)
   | .beta mode kind left right => .beta mode kind (ofExpr left) (ofExpr right)
   | .gamma mode kind shape rate => .gamma mode kind (ofExpr shape) (ofExpr rate)
+  | .bernoulli mode kind probability => .bernoulli mode kind (ofExpr probability)
+  | .discrete mode kind weights => .discrete mode kind weights
 
 def mapAffine (transform : Affine n → Affine m) : AffineExpr n → AffineExpr m
   | .bvar index => .bvar index
@@ -240,6 +249,9 @@ def mapAffine (transform : Affine n → Affine m) : AffineExpr n → AffineExpr 
       .beta mode kind (left.mapAffine transform) (right.mapAffine transform)
   | .gamma mode kind shape rate =>
       .gamma mode kind (shape.mapAffine transform) (rate.mapAffine transform)
+  | .bernoulli mode kind probability =>
+      .bernoulli mode kind (probability.mapAffine transform)
+  | .discrete mode kind weights => .discrete mode kind weights
 
 def Affine.weaken (expression : Affine n) : Affine (n + 1) :=
   (expression.1, Fin.cases 0 expression.2)
@@ -262,7 +274,9 @@ def weakenSamples (expression : AffineExpr n) : AffineExpr (n + 1) :=
 def SourceTags : AffineExpr sampleCount → Prop
   | .uniform _ kind left right | .gaussian _ kind left right | .beta _ kind left right
   | .gamma _ kind left right => kind = .stochastic ∧ left.SourceTags ∧ right.SourceTags
-  | .poisson _ kind body | .exponential _ kind body => kind = .stochastic ∧ body.SourceTags
+  | .poisson _ kind body | .exponential _ kind body | .bernoulli _ kind body =>
+      kind = .stochastic ∧ body.SourceTags
+  | .discrete _ kind _ => kind = .stochastic
   | .lam body | .fix body | .fst body | .snd body
   | .inl body | .inr body | .promote body | .neg body => body.SourceTags
   | .app left right | .pair left right | .cons left right
@@ -344,6 +358,9 @@ inductive WellTyped : List Ty → AffineExpr sampleCount → Ty → Prop
       WellTyped context (.beta mode .stochastic alpha betaArg) (.float mode)
   | gamma : WellTyped context shape (.float mode) → WellTyped context rate (.float .G) →
       WellTyped context (.gamma mode .stochastic shape rate) (.float mode)
+  | bernoulli : WellTyped context probability (.float mode) →
+      WellTyped context (.bernoulli mode .stochastic probability) (.float mode)
+  | discrete : WellTyped context (.discrete mode .stochastic weights) (.float mode)
 
 theorem WellTyped.realize_typed {sampleCount : Nat} {expression : AffineExpr sampleCount}
     (typed : WellTyped context expression ty)
@@ -387,6 +404,8 @@ theorem WellTyped.realize_typed {sampleCount : Nat} {expression : AffineExpr sam
   case exponential rate => exact Determinize.Statement.Paper.Typed.exponential rate
   case beta alpha betaTyped => exact Determinize.Statement.Paper.Typed.beta alpha betaTyped
   case gamma shape rate => exact Determinize.Statement.Paper.Typed.gamma shape rate
+  case bernoulli probability => exact Determinize.Statement.Paper.Typed.bernoulli probability
+  case discrete => exact Determinize.Statement.Paper.Typed.discrete
 
 theorem WellTyped.sourceTags (typed : WellTyped context expression ty) :
     expression.SourceTags := by
@@ -449,6 +468,8 @@ def shift (amount cutoff : Nat) : AffineExpr sampleCount → AffineExpr sampleCo
   | .exponential m k rate => .exponential m k (rate.shift amount cutoff)
   | .beta m k left right => .beta m k (left.shift amount cutoff) (right.shift amount cutoff)
   | .gamma m k shape rate => .gamma m k (shape.shift amount cutoff) (rate.shift amount cutoff)
+  | .bernoulli m k probability => .bernoulli m k (probability.shift amount cutoff)
+  | .discrete m k weights => .discrete m k weights
 
 def substAt (depth : Nat) (replacement : AffineExpr sampleCount)
     (expression : AffineExpr sampleCount) : AffineExpr sampleCount := match expression with
@@ -491,6 +512,8 @@ def substAt (depth : Nat) (replacement : AffineExpr sampleCount)
       .beta m k (substAt depth replacement left) (substAt depth replacement right)
   | .gamma m k shape rate =>
       .gamma m k (substAt depth replacement shape) (substAt depth replacement rate)
+  | .bernoulli m k probability => .bernoulli m k (substAt depth replacement probability)
+  | .discrete m k weights => .discrete m k weights
 
 def substHead (body replacement : AffineExpr sampleCount) : AffineExpr sampleCount :=
   substAt 0 replacement body
@@ -617,6 +640,10 @@ theorem wellTyped_shift (h : WellTyped (before ++ suffix) expression ty) :
   | poisson hv ih =>
       rw [shift]
       exact .poisson (ih (before := before) (suffix := suffix) hcontext)
+  | bernoulli hv ih =>
+      rw [shift]
+      exact .bernoulli (ih (before := before) (suffix := suffix) hcontext)
+  | discrete => rw [shift]; exact .discrete
   | exponential hv ih =>
       rw [shift]
       exact .exponential (ih (before := before) (suffix := suffix) hcontext)
@@ -796,6 +823,10 @@ theorem wellTyped_substAt (h : WellTyped (before ++ binder :: suffix) expression
   | poisson hv ih =>
       rw [substAt]
       exact .poisson (ih replacementTyped (before := before) (suffix := suffix) hcontext)
+  | bernoulli hv ih =>
+      rw [substAt]
+      exact .bernoulli (ih replacementTyped (before := before) (suffix := suffix) hcontext)
+  | discrete => rw [substAt]; exact .discrete
   | exponential hv ih =>
       rw [substAt]
       exact .exponential (ih replacementTyped (before := before) (suffix := suffix) hcontext)
@@ -842,6 +873,8 @@ theorem realize_coordinates (expression : AffineExpr sampleCount)
           child.coordinates.map (Symbolic.Affine.eval · environment) :=
       ih (sizeOf child) (by rwa [← sizeEq]) child rfl
     cases expression with
+    | discrete _ _ weights =>
+        simp [realize, coordinates, Expr.realCoordinates, Function.comp_def]
     | _ =>
         simp (disch := simp_wf) only [realize, coordinates, Expr.realCoordinates,
           List.map_append, List.map_nil, recurse]
@@ -1454,6 +1487,23 @@ noncomputable def symbolicReduce
                 (fun value => .real (value, 0))
           | none => .stuck
       else (symbolicReduce laws rate).wrap (.poisson mode kind) (.poisson mode kind)
+  | .bernoulli mode kind probability =>
+      if probability.isValue then match mode, kind with
+        | .E, .stochastic => match probability.affineValue? with
+          | some x => .sampleE .bernoulli [x] [] (.real (Affine.fresh n))
+          | none => .stuck
+        | _, _ => match probability.constantValue? with
+          | some x =>
+              .sampleG (mode, kind, .bernoulli) (bernoulliFiber kind x)
+                (fun value => .real (value, 0))
+          | none => .stuck
+      else (symbolicReduce laws probability).wrap (.bernoulli mode kind) (.bernoulli mode kind)
+  | .discrete mode kind weights =>
+      match mode, kind with
+      | .E, .stochastic => .sampleE (.discrete weights.length) [] weights (.real (Affine.fresh n))
+      | _, _ =>
+          .sampleG (mode, kind, .discrete weights.length) (discreteFiber kind weights)
+            (fun value => .real (value, 0))
   | .exponential mode kind rate =>
       if rate.isValue then match mode, kind with
         | .E, .stochastic => match rate.constantValue? with
@@ -1625,6 +1675,32 @@ theorem symbolicReduce_poisson_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
                     (fun value => .real (value, 0))
               | none => .stuck
           else (symbolicReduce laws rate).wrap (.poisson mode kind) (.poisson mode kind) := by
+  rw [symbolicReduce.eq_def]
+
+theorem symbolicReduce_bernoulli_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
+    (mode : Mode) (kind : Kind) (probability : AffineExpr n) :
+    symbolicReduce laws (.bernoulli mode kind probability) =
+          if probability.isValue then match mode, kind with
+            | .E, .stochastic => match probability.affineValue? with
+              | some x => .sampleE .bernoulli [x] [] (.real (Affine.fresh n))
+              | none => .stuck
+            | _, _ => match probability.constantValue? with
+              | some x =>
+                  .sampleG (mode, kind, .bernoulli) (bernoulliFiber kind x)
+                    (fun value => .real (value, 0))
+              | none => .stuck
+          else (symbolicReduce laws probability).wrap (.bernoulli mode kind)
+            (.bernoulli mode kind) := by
+  rw [symbolicReduce.eq_def]
+
+theorem symbolicReduce_discrete_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
+    (mode : Mode) (kind : Kind) (weights : List ℝ) :
+    symbolicReduce laws (.discrete mode kind weights : AffineExpr n) =
+      match mode, kind with
+      | .E, .stochastic => .sampleE (.discrete weights.length) [] weights (.real (Affine.fresh n))
+      | _, _ =>
+          .sampleG (mode, kind, .discrete weights.length) (discreteFiber kind weights)
+            (fun value => .real (value, 0)) := by
   rw [symbolicReduce.eq_def]
 
 theorem symbolicReduce_exponential_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
@@ -2249,6 +2325,36 @@ theorem symbolicReduce_realize
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
           ih environment]
+  | bernoulli valueTyped ih =>
+      rename_i context' value mode
+      rw [realize, MeasurableActionFamily.reduce_bernoulli_eq, realize_isValue,
+        symbolicReduce.eq_def]
+      by_cases valueIsValue : value.isValue = true
+      · simp only [valueIsValue, ↓reduceIte]
+        obtain ⟨x, rfl⟩ := wellTyped_real_value valueTyped valueIsValue
+        cases mode with
+        | E =>
+              simp [affineValue?, SymbolicAction.realize, realize, Expr.isValue,
+                realValue?, bernoulliFiber_eq, Affine.eval_fresh]
+        | G =>
+            rcases x with ⟨x0, xc⟩
+            obtain rfl : xc = 0 := wellTyped_realG_coefficients valueTyped
+            simp [constantValue?, SymbolicAction.realize, realize, Expr.isValue, realValue?]
+      · simp only [valueIsValue, Bool.eq_false_of_not_eq_true valueIsValue,
+          Bool.false_eq_true, ↓reduceIte]
+        rw [SymbolicAction.realize_wrap
+          (ExprContext := fun next => .bernoulli mode .stochastic next)
+          (context_realize := by intros; simp only [realize])
+          (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
+          ih environment]
+  | discrete =>
+      rename_i context' mode weights
+      rw [realize, MeasurableActionFamily.reduce_discrete_eq, symbolicReduce_discrete_eq]
+      cases mode with
+      | E =>
+          simp [SymbolicAction.realize, realize, Expr.isValue, realValue?, discreteFiber_eq,
+            Affine.eval_fresh]
+      | G => simp [SymbolicAction.realize, realize]
   | exponential valueTyped ih =>
       rename_i context' value mode
       rw [realize, MeasurableActionFamily.reduce_exponential_eq, realize_isValue,
@@ -2433,6 +2539,31 @@ theorem symbolicReduce_wellTyped
       exact (ih rfl).wrap
         (fun next nextTyped => .poisson nextTyped)
         (fun next nextTyped => .poisson nextTyped)
+  case bernoulli value mode valueTyped ih =>
+    cases hcontext
+    simp only [symbolicReduce]
+    by_cases isValue : value.isValue = true
+    · simp only [isValue, ↓reduceIte]
+      obtain ⟨x, rfl⟩ := wellTyped_real_value valueTyped isValue
+      cases mode with
+      | E =>
+            simp only [affineValue?]
+            exact .sampleE rfl rfl .realE
+      | G =>
+          rcases x with ⟨x0, xc⟩
+          obtain rfl : xc = 0 := wellTyped_realG_coefficients valueTyped
+          simp only [constantValue?, eq_self_iff_true, ↓reduceIte]
+          exact .sampleG fun value => .realG rfl
+    · simp only [isValue, ↓reduceIte]
+      exact (ih rfl).wrap
+        (fun next nextTyped => .bernoulli nextTyped)
+        (fun next nextTyped => .bernoulli nextTyped)
+  case discrete mode weights =>
+    cases hcontext
+    rw [symbolicReduce_discrete_eq]
+    cases mode with
+    | E => exact .sampleE rfl rfl .realE
+    | G => exact .sampleG fun value => .realG rfl
   case exponential value mode valueTyped ih =>
     cases hcontext
     simp only [symbolicReduce]
@@ -2889,6 +3020,12 @@ theorem wellTyped_ofExpr_of_typed {expression : Expr}
   case poisson rateTyped ih =>
     obtain ⟨rfl, rateTags⟩ := sourceTags
     exact .poisson (ih rateTags)
+  case bernoulli probabilityTyped ih =>
+    obtain ⟨rfl, probabilityTags⟩ := sourceTags
+    exact .bernoulli (ih probabilityTags)
+  case discrete =>
+    obtain rfl := sourceTags
+    exact .discrete
   case exponential rateTyped ih =>
     obtain ⟨rfl, rateTags⟩ := sourceTags
     exact .exponential (ih rateTags)

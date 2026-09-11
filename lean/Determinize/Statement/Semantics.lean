@@ -162,6 +162,13 @@ noncomputable def reduce : Expr → Action
           | _, _ => .stuck
         else (reduce rate).wrap (.gamma mode kind shape)
       else (reduce shape).wrap (fun next => .gamma mode kind next rate)
+  | .bernoulli mode kind probability =>
+      if probability.isValue then match realValue? probability with
+        | some p => .sample (mode, kind, .bernoulli) (bernoulliFiber kind p) .real
+        | none => .stuck
+      else (reduce probability).wrap (.bernoulli mode kind)
+  | .discrete mode kind weights =>
+      .sample (mode, kind, .discrete weights.length) (discreteFiber kind weights) .real
 
 /-- Real output accumulated through `fuel` reduction steps. Only terminal reals
 contribute output; other types may occur during evaluation. -/

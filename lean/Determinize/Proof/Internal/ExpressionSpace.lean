@@ -16,6 +16,14 @@ namespace Determinize.Statement.Paper
 /-- The same syntax with real values erased. -/
 abbrev Skeleton := Expr Unit
 
+/-- A list of units is determined by its length; the skeleton of a `discrete` site keeps only
+the number of its weights. -/
+@[simp] theorem replicate_unit_eq_self (values : List Unit) :
+    List.replicate values.length () = values := by
+  induction values with
+  | nil => rfl
+  | cons head tail ih => simp [List.replicate_succ, ih]
+
 namespace Expr
 
 def skeleton : Expr → Skeleton
@@ -39,6 +47,8 @@ def skeleton : Expr → Skeleton
   | .exponential m k x => .exponential m k x.skeleton
   | .beta m k l r => .beta m k l.skeleton r.skeleton
   | .gamma m k l r => .gamma m k l.skeleton r.skeleton
+  | .bernoulli m k x => .bernoulli m k x.skeleton
+  | .discrete m k weights => .discrete m k (weights.map fun _ => ())
 
 def realCoordinates : Expr → List ℝ
   | .real value => [value]
@@ -52,7 +62,8 @@ def realCoordinates : Expr → List ℝ
   | .letE x b => x.realCoordinates ++ b.realCoordinates
   | .uniform _ _ l r | .gaussian _ _ l r | .beta _ _ l r | .gamma _ _ l r =>
       l.realCoordinates ++ r.realCoordinates
-  | .poisson _ _ x | .exponential _ _ x => x.realCoordinates
+  | .poisson _ _ x | .exponential _ _ x | .bernoulli _ _ x => x.realCoordinates
+  | .discrete _ _ weights => weights
   | _ => []
 
 end Expr

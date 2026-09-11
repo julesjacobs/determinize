@@ -34,6 +34,9 @@ def generationOp : Skeleton → Option Op
       if l.isValue then if r.isValue then siteOp (mode, kind, .gaussian) else generationOp r
       else generationOp l
   | .poisson mode kind x => if x.isValue then siteOp (mode, kind, .poisson) else generationOp x
+  | .bernoulli mode kind x =>
+      if x.isValue then siteOp (mode, kind, .bernoulli) else generationOp x
+  | .discrete mode kind weights => siteOp (mode, kind, .discrete weights.length)
   | .exponential mode kind x =>
       if x.isValue then siteOp (mode, kind, .exponential) else generationOp x
   | .beta mode kind l r =>
@@ -91,7 +94,7 @@ theorem reduce_site {expression : Expr} {site : Mode × Kind × Op} {fiber : Mea
   cases expression <;> rw [reduce.eq_def] at reduction
   all_goals dsimp only at reduction
   all_goals repeat' first | contradiction | split at reduction
-  all_goals simp_all only [Expr.skeleton, generationOp,
+  all_goals simp_all only [Expr.skeleton, generationOp, List.length_map,
     ← isValue_eq_skeletonIsValue, Bool.true_eq, ↓reduceIte]
   all_goals first
     | (cases reduction; rfl)

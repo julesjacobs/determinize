@@ -417,6 +417,56 @@ private theorem poissonKernel_apply (params : Determinize.Statement.Paper.Params
         (fun value : Nat => (value : ℝ)) else 0
     rw [dif_neg (by simpa only [Determinize.Statement.Paper.domain] using hDomain)]
 
+private theorem measurable_paperMeasure_bernoulli :
+    Measurable (Determinize.Statement.Paper.paperMeasure .bernoulli) := by
+  apply Measure.measurable_of_measurable_coe
+  intro set _
+  have hProbability : Measurable (fun params : Determinize.Statement.Paper.Params .bernoulli =>
+      params.1 0) := by fun_prop
+  have hEq : (fun params : Determinize.Statement.Paper.Params .bernoulli =>
+      Determinize.Statement.Paper.paperMeasure .bernoulli params set) =
+      fun params => if 0 ≤ params.1 0 ∧ params.1 0 ≤ 1 then
+        ENNReal.ofReal (1 - params.1 0) * Measure.dirac (0 : ℝ) set +
+          ENNReal.ofReal (params.1 0) * Measure.dirac (1 : ℝ) set else 0 := by
+    funext params
+    change (if 0 ≤ params.1 0 ∧ params.1 0 ≤ 1 then
+      ENNReal.ofReal (1 - params.1 0) • Measure.dirac (0 : ℝ) +
+        ENNReal.ofReal (params.1 0) • Measure.dirac (1 : ℝ) else 0) set = _
+    split_ifs <;> simp [Measure.add_apply, Measure.smul_apply, smul_eq_mul]
+  rw [hEq]
+  refine Measurable.ite (Determinize.Proof.Paper.measurableSet_domain .bernoulli) ?_
+    measurable_const
+  exact ((measurable_const.sub hProbability).ennreal_ofReal.mul measurable_const).add
+    (hProbability.ennreal_ofReal.mul measurable_const)
+
+private noncomputable def bernoulliKernel :
+    ProbabilityTheory.Kernel (Determinize.Statement.Paper.Params .bernoulli) ℝ :=
+  ⟨Determinize.Statement.Paper.paperMeasure .bernoulli, measurable_paperMeasure_bernoulli⟩
+
+private theorem measurable_paperMeasure_discrete (arity : Nat) :
+    Measurable (Determinize.Statement.Paper.paperMeasure (.discrete arity)) := by
+  apply Measure.measurable_of_measurable_coe
+  intro set _
+  have hEq : (fun params : Determinize.Statement.Paper.Params (.discrete arity) =>
+      Determinize.Statement.Paper.paperMeasure (.discrete arity) params set) =
+      fun params => if (∀ i, 0 ≤ params.2 i) ∧ ∑ i, params.2 i = 1 then
+        ∑ i : Fin arity, ENNReal.ofReal (params.2 i) * Measure.dirac ((i : ℕ) : ℝ) set
+      else 0 := by
+    funext params
+    change (if (∀ i, 0 ≤ params.2 i) ∧ ∑ i, params.2 i = 1 then
+      ∑ i : Fin arity, ENNReal.ofReal (params.2 i) • Measure.dirac ((i : ℕ) : ℝ) else 0) set = _
+    split_ifs <;> simp [Measure.finsetSum_apply, Measure.smul_apply, smul_eq_mul]
+  rw [hEq]
+  refine Measurable.ite (Determinize.Proof.Paper.measurableSet_domain (.discrete arity)) ?_
+    measurable_const
+  exact Finset.measurable_sum _ fun i _ =>
+    ((measurable_pi_apply i).comp measurable_snd).ennreal_ofReal.mul measurable_const
+
+private noncomputable def discreteKernel (arity : Nat) :
+    ProbabilityTheory.Kernel (Determinize.Statement.Paper.Params (.discrete arity)) ℝ :=
+  ⟨Determinize.Statement.Paper.paperMeasure (.discrete arity),
+    measurable_paperMeasure_discrete arity⟩
+
 private theorem paperMeasure_mass_one (op : Determinize.Statement.Paper.Op) (params : Determinize.Statement.Paper.Params op)
     (hDomain : Determinize.Statement.Paper.domain op params) : Determinize.Statement.Paper.paperMeasure op params Set.univ = 1 := by
   cases op with
@@ -492,6 +542,26 @@ private theorem paperMeasure_mass_one (op : Determinize.Statement.Paper.Op) (par
       rw [if_pos hd]
       letI := ProbabilityTheory.isProbabilityMeasure_gammaMeasure hd.1 hd.2
       exact measure_univ
+  | bernoulli =>
+      change (if 0 ≤ params.1 0 ∧ params.1 0 ≤ 1 then
+        ENNReal.ofReal (1 - params.1 0) • Measure.dirac (0 : ℝ) +
+          ENNReal.ofReal (params.1 0) • Measure.dirac (1 : ℝ) else 0) Set.univ = 1
+      have hd : 0 ≤ params.1 0 ∧ params.1 0 ≤ 1 := by
+        simpa only [Determinize.Statement.Paper.domain] using hDomain
+      rw [if_pos hd]
+      have hSum : ENNReal.ofReal (1 - params.1 0) + ENNReal.ofReal (params.1 0) = 1 := by
+        rw [← ENNReal.ofReal_add (by linarith [hd.2]) hd.1, sub_add_cancel, ENNReal.ofReal_one]
+      simp only [Measure.add_apply, Measure.smul_apply, smul_eq_mul, measure_univ, mul_one]
+      exact hSum
+  | discrete arity =>
+      change (if (∀ i, 0 ≤ params.2 i) ∧ ∑ i, params.2 i = 1 then
+        ∑ i : Fin arity, ENNReal.ofReal (params.2 i) • Measure.dirac ((i : ℕ) : ℝ) else 0)
+          Set.univ = 1
+      have hd : (∀ i, 0 ≤ params.2 i) ∧ ∑ i, params.2 i = 1 := by
+        simpa only [Determinize.Statement.Paper.domain] using hDomain
+      rw [if_pos hd]
+      simp only [Measure.finsetSum_apply, Measure.smul_apply, smul_eq_mul, measure_univ, mul_one]
+      rw [← ENNReal.ofReal_sum_of_nonneg fun i _ => hd.1 i, hd.2, ENNReal.ofReal_one]
 
 private theorem paperMeasure_zero_off_domain (op : Determinize.Statement.Paper.Op) (params : Determinize.Statement.Paper.Params op)
     (hDomain : ¬ Determinize.Statement.Paper.domain op params) : Determinize.Statement.Paper.paperMeasure op params = 0 := by
@@ -524,6 +594,15 @@ private theorem paperMeasure_zero_off_domain (op : Determinize.Statement.Paper.O
       change (if 0 < params.1 0 ∧ 0 < params.2 0 then
         ProbabilityTheory.gammaMeasure (params.1 0)
           (params.2 0) else 0) = 0
+      rw [if_neg (by simpa only [Determinize.Statement.Paper.domain] using hDomain)]
+  | bernoulli =>
+      change (if 0 ≤ params.1 0 ∧ params.1 0 ≤ 1 then
+        ENNReal.ofReal (1 - params.1 0) • Measure.dirac (0 : ℝ) +
+          ENNReal.ofReal (params.1 0) • Measure.dirac (1 : ℝ) else 0) = 0
+      rw [if_neg (by simpa only [Determinize.Statement.Paper.domain] using hDomain)]
+  | discrete arity =>
+      change (if (∀ i, 0 ≤ params.2 i) ∧ ∑ i, params.2 i = 1 then
+        ∑ i : Fin arity, ENNReal.ofReal (params.2 i) • Measure.dirac ((i : ℕ) : ℝ) else 0) = 0
       rw [if_neg (by simpa only [Determinize.Statement.Paper.domain] using hDomain)]
 
 private theorem paperMeasure_mass_le_one (op : Determinize.Statement.Paper.Op) (params : Determinize.Statement.Paper.Params op) :
@@ -1020,6 +1099,61 @@ private theorem beta_mean (params : Determinize.Statement.Paper.Params .beta)
     exact Fin.elim0 index
   rw [hSum, add_zero]
 
+private theorem bernoulli_integrable_id (params : Determinize.Statement.Paper.Params .bernoulli)
+    (hDomain : Determinize.Statement.Paper.domain .bernoulli params) :
+    Integrable id (Determinize.Statement.Paper.paperMeasure .bernoulli params) := by
+  have hd : 0 ≤ params.1 0 ∧ params.1 0 ≤ 1 := by
+    simpa only [Determinize.Statement.Paper.domain] using hDomain
+  change Integrable id (if 0 ≤ params.1 0 ∧ params.1 0 ≤ 1 then
+    ENNReal.ofReal (1 - params.1 0) • Measure.dirac (0 : ℝ) +
+      ENNReal.ofReal (params.1 0) • Measure.dirac (1 : ℝ) else 0)
+  rw [if_pos hd]
+  exact ((integrable_dirac enorm_lt_top).smul_measure ENNReal.ofReal_ne_top).add_measure
+    ((integrable_dirac enorm_lt_top).smul_measure ENNReal.ofReal_ne_top)
+
+private theorem bernoulli_mean (params : Determinize.Statement.Paper.Params .bernoulli)
+    (hDomain : Determinize.Statement.Paper.domain .bernoulli params) :
+    (∫ value : ℝ, value ∂Determinize.Statement.Paper.paperMeasure .bernoulli params) =
+      Determinize.Statement.Paper.meanValue .bernoulli params := by
+  have hd : 0 ≤ params.1 0 ∧ params.1 0 ≤ 1 := by
+    simpa only [Determinize.Statement.Paper.domain] using hDomain
+  change (∫ value : ℝ, value ∂if 0 ≤ params.1 0 ∧ params.1 0 ≤ 1 then
+    ENNReal.ofReal (1 - params.1 0) • Measure.dirac (0 : ℝ) +
+      ENNReal.ofReal (params.1 0) • Measure.dirac (1 : ℝ) else 0) = params.1 0
+  rw [if_pos hd, integral_add_measure
+      ((integrable_dirac enorm_lt_top).smul_measure ENNReal.ofReal_ne_top)
+      ((integrable_dirac enorm_lt_top).smul_measure ENNReal.ofReal_ne_top),
+    integral_smul_measure, integral_smul_measure, integral_dirac, integral_dirac,
+    ENNReal.toReal_ofReal hd.1]
+  simp
+
+private theorem discrete_integrable_id (arity : Nat)
+    (params : Determinize.Statement.Paper.Params (.discrete arity))
+    (hDomain : Determinize.Statement.Paper.domain (.discrete arity) params) :
+    Integrable id (Determinize.Statement.Paper.paperMeasure (.discrete arity) params) := by
+  have hd : (∀ i, 0 ≤ params.2 i) ∧ ∑ i, params.2 i = 1 := by
+    simpa only [Determinize.Statement.Paper.domain] using hDomain
+  change Integrable id (if (∀ i, 0 ≤ params.2 i) ∧ ∑ i, params.2 i = 1 then
+    ∑ i : Fin arity, ENNReal.ofReal (params.2 i) • Measure.dirac ((i : ℕ) : ℝ) else 0)
+  rw [if_pos hd]
+  exact integrable_finsetSum_measure.2 fun _ _ =>
+    (integrable_dirac enorm_lt_top).smul_measure ENNReal.ofReal_ne_top
+
+private theorem discrete_mean (arity : Nat)
+    (params : Determinize.Statement.Paper.Params (.discrete arity))
+    (hDomain : Determinize.Statement.Paper.domain (.discrete arity) params) :
+    (∫ value : ℝ, value ∂Determinize.Statement.Paper.paperMeasure (.discrete arity) params) =
+      Determinize.Statement.Paper.meanValue (.discrete arity) params := by
+  have hd : (∀ i, 0 ≤ params.2 i) ∧ ∑ i, params.2 i = 1 := by
+    simpa only [Determinize.Statement.Paper.domain] using hDomain
+  change (∫ value : ℝ, value ∂if (∀ i, 0 ≤ params.2 i) ∧ ∑ i, params.2 i = 1 then
+    ∑ i : Fin arity, ENNReal.ofReal (params.2 i) • Measure.dirac ((i : ℕ) : ℝ) else 0) =
+      ∑ i : Fin arity, params.2 i * ((i : ℕ) : ℝ)
+  rw [if_pos hd, integral_finsetSum_measure fun _ _ =>
+    (integrable_dirac enorm_lt_top).smul_measure ENNReal.ofReal_ne_top]
+  refine Finset.sum_congr rfl fun i _ => ?_
+  rw [integral_smul_measure, integral_dirac, ENNReal.toReal_ofReal (hd.1 i), smul_eq_mul]
+
 private noncomputable def gaussianKernel :
     ProbabilityTheory.Kernel (Determinize.Statement.Paper.Params .gaussian) ℝ :=
   ⟨Determinize.Statement.Paper.paperMeasure .gaussian, measurable_paperMeasure_gaussian⟩
@@ -1032,6 +1166,8 @@ noncomputable def primitiveKernel :
   | .exponential => exponentialKernel
   | .beta => betaKernel
   | .gamma => gammaKernel
+  | .bernoulli => bernoulliKernel
+  | .discrete arity => discreteKernel arity
 
 theorem primitiveKernel_apply (op : Determinize.Statement.Paper.Op) (params : Determinize.Statement.Paper.Params op) :
     primitiveKernel op params = Determinize.Statement.Paper.paperMeasure op params := by
@@ -1042,6 +1178,8 @@ theorem primitiveKernel_apply (op : Determinize.Statement.Paper.Op) (params : De
   | exponential => exact exponentialKernel_apply params
   | beta => exact betaKernel_apply params
   | gamma => exact gammaKernel_apply params
+  | bernoulli => rfl
+  | discrete => rfl
 
 theorem primitiveKernel_finite (op : Determinize.Statement.Paper.Op) :
     ProbabilityTheory.IsFiniteKernel (primitiveKernel op) := by
@@ -1080,6 +1218,8 @@ noncomputable def primitiveLaws : Determinize.Proof.Paper.PrimitiveLaws where
     | exponential => exact exponential_integrable_id params hDomain
     | beta => exact beta_integrable_id params hDomain
     | gamma => exact gamma_integrable_id params hDomain
+    | bernoulli => exact bernoulli_integrable_id params hDomain
+    | discrete arity => exact discrete_integrable_id arity params hDomain
   mean_law := by
     intro op params hDomain
     rw [primitiveKernel_apply]
@@ -1090,5 +1230,7 @@ noncomputable def primitiveLaws : Determinize.Proof.Paper.PrimitiveLaws where
     | exponential => exact exponential_mean params hDomain
     | beta => exact beta_mean params hDomain
     | gamma => exact gamma_mean params hDomain
+    | bernoulli => exact bernoulli_mean params hDomain
+    | discrete arity => exact discrete_mean arity params hDomain
 
 end Determinize.Proof.Paper

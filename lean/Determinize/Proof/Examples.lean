@@ -162,6 +162,133 @@ theorem scaledSample_safe : DoesNotGetStuck scaledSample := by
 example : MeanOnTraces scaledSample scaledSample.determinize :=
   (Traces.soundness .E scaledSample scaledSample_typed scaledSample_source scaledSample_safe).2
 
+/-- `bernoulli_E(1/3)`: an expectation-mode Bernoulli draw with a literal probability. -/
+noncomputable def bernoulliLiteral : Expr := .bernoulli .E .stochastic (.real (1 / 3))
+
+theorem bernoulliLiteral_typed : Typed [] bernoulliLiteral (.float .E) := .bernoulli .real
+
+theorem bernoulliLiteral_source : bernoulliLiteral.sourceForm = true := by
+  simp [bernoulliLiteral, Expr.sourceForm]
+
+/-- Determinization switches the Bernoulli site to its mean site. -/
+example : bernoulliLiteral.determinize = .bernoulli .E .mean (.real (1 / 3)) := rfl
+
+/-- A mean site of `bernoulli(p)` returns the probability `p` itself. -/
+example (probability : ℝ) (bounds : 0 ≤ probability ∧ probability ≤ 1) :
+    bernoulliFiber .mean probability = Measure.dirac probability := by
+  simp [bernoulliFiber, bounds]
+
+private theorem bernoulliFiber_stochastic_mass (probability : ℝ)
+    (bounds : 0 ≤ probability ∧ probability ≤ 1) :
+    bernoulliFiber .stochastic probability Set.univ = 1 := by
+  rw [bernoulliFiber, if_pos bounds]
+  simp only [Measure.add_apply, Measure.smul_apply, smul_eq_mul, measure_univ, mul_one]
+  rw [← ENNReal.ofReal_add (by linarith [bounds.2]) bounds.1, sub_add_cancel, ENNReal.ofReal_one]
+
+theorem bernoulliLiteral_safe : DoesNotGetStuck bernoulliLiteral := by
+  refine safe_sample (site := (.E, .stochastic, .bernoulli))
+    (fiber := bernoulliFiber .stochastic (1 / 3)) (continuation := .real) ?_ ?_ ?_
+  · simp [bernoulliLiteral, reduce, Expr.isValue, realValue?]
+  · exact bernoulliFiber_stochastic_mass _ (by norm_num)
+  · exact safe_real
+
+/-- The mean of `bernoulli_E(1/3)` is preserved along traces by its determinization `1/3`. -/
+example : MeanOnTraces bernoulliLiteral bernoulliLiteral.determinize :=
+  (Traces.soundness .E bernoulliLiteral bernoulliLiteral_typed bernoulliLiteral_source
+    bernoulliLiteral_safe).2
+
+/-- `bernoulli_E(uniform_E(0, 1))`: the probability is itself an expectation-mode draw. -/
+def bernoulliNested : Expr := .bernoulli .E .stochastic (uniform .E)
+
+theorem bernoulliNested_typed : Typed [] bernoulliNested (.float .E) :=
+  .bernoulli (uniform_typed .E)
+
+example : bernoulliNested.sourceForm = true := by
+  simp [bernoulliNested, uniform, Expr.sourceForm]
+
+/-- Both sites become mean sites: the parameter evaluates to `1/2`, then so does the draw. -/
+example : bernoulliNested.determinize =
+    .bernoulli .E .mean (.uniform .E .mean (.real 0) (.real 1)) := rfl
+
+example : reduce bernoulliNested.determinize =
+    .sample (.E, .mean, .uniform) (uniformFiber .mean 0 1)
+      (fun value => .bernoulli .E .mean (.real value)) := by
+  simp [bernoulliNested, uniform, Expr.determinize, Expr.determinizeKind, reduce, Expr.isValue,
+    realValue?, Action.wrap, Function.comp_def]
+
+/-- `flip` draws a general-mode Bernoulli value and compares it with `0`. -/
+example : reduce (.flip (.real (1 / 2))) =
+    .sample (.G, .stochastic, .bernoulli) (bernoulliFiber .stochastic (1 / 2))
+      (fun value => .lt (.real 0) (.real value)) := by
+  simp [Expr.flip, reduce, Expr.isValue, realValue?, Action.wrap, Function.comp_def]
+
+/-- `if flip(1/2) then uniform_E(0, 1) else 0`: a Boolean draw chooses between expectation-mode
+values. -/
+noncomputable def flipBranch : Expr := .ite (.flip (.real (1 / 2))) (uniform .E) (.real 0)
+
+theorem flipBranch_typed : Typed [] flipBranch (.float .E) :=
+  .ite (.flip .real) (uniform_typed .E) .real
+
+example : flipBranch.sourceForm = true := by
+  simp [flipBranch, uniform, Expr.flip, Expr.sourceForm]
+
+/-- The `flip` is a general-mode site and stays stochastic; only `uniform_E` becomes a mean
+site. -/
+example : flipBranch.determinize =
+    .ite (.flip (.real (1 / 2))) (.uniform .E .mean (.real 0) (.real 1)) (.real 0) := rfl
+
+/-- `flip` needs a general-mode probability: an expectation-mode draw is rejected. -/
+example : ¬ Typed [] (.flip (uniform .E)) .bool := by
+  intro typed
+  unfold Expr.flip at typed
+  cases typed with
+  | lt _ right =>
+      cases right with
+      | bernoulli probability =>
+          unfold uniform at probability
+          cases probability
+
+/-- `discrete_E(1/2, 1/4, 1/4)`: the index `0`, `1` or `2` with the listed weights. -/
+noncomputable def discreteSample : Expr := .discrete .E .stochastic [1 / 2, 1 / 4, 1 / 4]
+
+theorem discreteSample_typed : Typed [] discreteSample (.float .E) := .discrete
+
+theorem discreteSample_source : discreteSample.sourceForm = true := by
+  simp [discreteSample, Expr.sourceForm, Kind.isStochastic]
+
+/-- Determinization switches the site to its mean site. -/
+example : discreteSample.determinize = .discrete .E .mean [1 / 2, 1 / 4, 1 / 4] := rfl
+
+/-- The mean site returns `∑ i, wᵢ · i = 1/4 + 2/4`. -/
+example : reduce discreteSample.determinize =
+    .sample (.E, .mean, .discrete 3) (Measure.dirac (3 / 4)) .real := by
+  simp [discreteSample, Expr.determinize, Expr.determinizeKind, reduce, discreteFiber,
+    Fin.sum_univ_three, Fin.forall_fin_succ]
+  norm_num
+
+private theorem discreteFiber_stochastic_mass (weights : List ℝ)
+    (bounds : (∀ i : Fin weights.length, 0 ≤ weights[i]) ∧
+      ∑ i : Fin weights.length, weights[i] = 1) :
+    discreteFiber .stochastic weights Set.univ = 1 := by
+  rw [discreteFiber, if_pos bounds]
+  simp only [Measure.finsetSum_apply, Measure.smul_apply, smul_eq_mul, measure_univ, mul_one]
+  rw [← ENNReal.ofReal_sum_of_nonneg fun i _ => bounds.1 i, bounds.2, ENNReal.ofReal_one]
+
+theorem discreteSample_safe : DoesNotGetStuck discreteSample := by
+  refine safe_sample (site := (.E, .stochastic, .discrete 3))
+    (fiber := discreteFiber .stochastic [1 / 2, 1 / 4, 1 / 4]) (continuation := .real) ?_ ?_ ?_
+  · simp [discreteSample, reduce]
+  · refine discreteFiber_stochastic_mass _ ⟨?_, ?_⟩
+    · intro i
+      fin_cases i <;> norm_num
+    · norm_num [Fin.sum_univ_three]
+  · exact safe_real
+
+/-- The mean of `discrete_E(1/2, 1/4, 1/4)` is preserved along traces by its determinization. -/
+example : MeanOnTraces discreteSample discreteSample.determinize :=
+  (Traces.soundness .E discreteSample discreteSample_typed discreteSample_source
+    discreteSample_safe).2
+
 def loopFunction : Expr :=
   .fix
     (.app (.bvar 1) (.bvar 0))

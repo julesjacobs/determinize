@@ -103,6 +103,26 @@ theorem symbolic_generationDraw (laws : PrimitiveLaws)
             simp [constantValue?, siteOp]
       · simp only [rateValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
         exact ih
+  | bernoulli rateTyped ih =>
+      rename_i context' rate mode
+      simp only [AffineExpr.skeleton, generationOp, symbolic_skeleton_isValue]
+      rw [symbolicReduce_bernoulli_eq]
+      by_cases rateValue : rate.isValue = true
+      · simp only [rateValue, ↓reduceIte]
+        obtain ⟨x, rfl⟩ := wellTyped_real_value rateTyped rateValue
+        cases mode with
+        | E => simp [affineValue?, siteOp]
+        | G =>
+            rcases x with ⟨x0, xc⟩
+            obtain rfl : xc = 0 := wellTyped_realG_coefficients rateTyped
+            simp [constantValue?, siteOp]
+      · simp only [rateValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
+        exact ih
+  | discrete =>
+      rename_i context' mode weights
+      simp only [AffineExpr.skeleton, generationOp, List.length_map]
+      rw [symbolicReduce_discrete_eq]
+      cases mode <;> simp [siteOp]
   | exponential rateTyped ih =>
       rename_i context' rate mode
       simp only [AffineExpr.skeleton, generationOp, symbolic_skeleton_isValue]

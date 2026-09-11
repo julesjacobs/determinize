@@ -146,11 +146,13 @@ theorem typed_shift (h : Typed (before ++ suffix) expression ty) :
           (ihr (before := before) (suffix := suffix) hcontext)
       | exact .gamma (ihl (before := before) (suffix := suffix) hcontext)
           (ihr (before := before) (suffix := suffix) hcontext)
-  | poisson hv ih | exponential hv ih =>
+  | poisson hv ih | exponential hv ih | bernoulli hv ih =>
       rw [Expr.shift, Expr.mapVars]
       first
       | exact .poisson (ih (before := before) (suffix := suffix) hcontext)
       | exact .exponential (ih (before := before) (suffix := suffix) hcontext)
+      | exact .bernoulli (ih (before := before) (suffix := suffix) hcontext)
+  | discrete => rw [Expr.shift, Expr.mapVars]; exact .discrete
 
 theorem hasVar_subst (h : HasVar (before ++ binder :: suffix) index ty) :
     (index = before.length ∧ ty = binder) ∨
@@ -303,11 +305,13 @@ theorem typed_substAt (h : Typed (before ++ binder :: suffix) expression ty)
           (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
       | exact .gamma (ihl replacementTyped (before := before) (suffix := suffix) hcontext)
           (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
-  | poisson hv ih | exponential hv ih =>
+  | poisson hv ih | exponential hv ih | bernoulli hv ih =>
       rw [Expr.substAt, Expr.mapVars]
       first
       | exact .poisson (ih replacementTyped (before := before) (suffix := suffix) hcontext)
       | exact .exponential (ih replacementTyped (before := before) (suffix := suffix) hcontext)
+      | exact .bernoulli (ih replacementTyped (before := before) (suffix := suffix) hcontext)
+  | discrete => rw [Expr.substAt, Expr.mapVars]; exact .discrete
 theorem typed_substHead (bodyTyped : Typed (binder :: suffix) body ty)
     (replacementTyped : Typed suffix replacement binder) :
     Typed suffix (Expr.substHead body replacement) ty := by
@@ -645,6 +649,19 @@ theorem reduce_typed_closed
         exact .sample fun value => .real
       · simp only [valueCondition, ↓reduceIte]
         exact (ih rfl).wrap fun next nextTyped => .exponential nextTyped
+  | bernoulli valueTyped ih =>
+      cases hcontext
+      rename_i value mode kind
+      rw [MeasurableActionFamily.reduce_bernoulli_eq]
+      by_cases valueCondition : value.isValue = true
+      · simp only [valueCondition, ↓reduceIte]
+        rcases typed_real_value valueTyped valueCondition with ⟨coordinate, rfl⟩
+        exact .sample fun value => .real
+      · simp only [valueCondition, ↓reduceIte]
+        exact (ih rfl).wrap fun next nextTyped => .bernoulli nextTyped
+  | discrete =>
+      rw [MeasurableActionFamily.reduce_discrete_eq]
+      exact .sample fun value => .real
   | beta leftTyped rightTyped ihl ihr =>
       cases hcontext
       rename_i left right mode kind

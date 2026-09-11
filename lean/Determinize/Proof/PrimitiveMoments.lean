@@ -122,6 +122,29 @@ theorem primitiveMomentBounds : PrimitiveMomentBounds primitiveLaws := by
       rw [integral_congr_ae (nonnegative.mono fun value h => abs_of_nonneg h),
         primitiveLaws.mean_law .poisson (affine, general) valid, meanEq, sumEq, one_mul]
       linarith [le_abs_self (affine 0)]
+  | bernoulli =>
+      refine ⟨1, zero_le_one, ?_⟩
+      intro affine valid
+      have nonnegative : ∀ᵐ value ∂primitiveLaws.kernel .bernoulli (affine, general), 0 ≤ value := by
+        rw [primitiveLaws.kernel_eq_paperMeasure]
+        change ∀ᵐ value ∂(if 0 ≤ affine 0 ∧ affine 0 ≤ 1 then
+          ENNReal.ofReal (1 - affine 0) • Measure.dirac (0 : ℝ) +
+            ENNReal.ofReal (affine 0) • Measure.dirac (1 : ℝ) else 0), 0 ≤ value
+        rw [if_pos (show 0 ≤ affine 0 ∧ affine 0 ≤ 1 from valid), ae_add_measure_iff]
+        constructor <;> apply Measure.ae_smul_measure <;> simp [ae_dirac_eq]
+      have meanEq : meanValue .bernoulli (affine, general) = affine 0 := rfl
+      have sumEq : (∑ i, |affine i|) = |affine 0| := Fin.sum_univ_one _
+      rw [integral_congr_ae (nonnegative.mono fun value h => abs_of_nonneg h),
+        primitiveLaws.mean_law .bernoulli (affine, general) valid, meanEq, sumEq, one_mul]
+      linarith [le_abs_self (affine 0)]
+  | discrete arity =>
+      let affine : Fin (affineArity (.discrete arity)) → ℝ := Fin.elim0
+      refine ⟨(∫ x : ℝ, |x| ∂primitiveLaws.kernel (.discrete arity) (affine, general)),
+        nonnegMoment affine, ?_⟩
+      intro actual _
+      have eq : actual = affine := by funext i; exact Fin.elim0 i
+      rw [eq]
+      simp
   | gamma =>
       refine ⟨|1 / general 0| + 1, by positivity, ?_⟩
       intro affine valid

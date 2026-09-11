@@ -187,6 +187,18 @@ theorem domain_valueSet_convex (queryOp : Determinize.Statement.Paper.Op)
         · exact add_pos_of_pos_of_nonneg (mul_pos haPos leftDomain.1)
             (mul_nonneg hb rightDomain.1.le)
       · exact leftDomain.2
+  | bernoulli =>
+      change Fin 1 → Symbolic.Affine (n + 1) at queryAffineArgs
+      change Fin 0 → ℝ at queryGeneralArgs
+      simp only [Determinize.Statement.Paper.domain, Set.mem_ofPred_eq] at leftDomain rightDomain ⊢
+      simp only [Affine.eval_cons, smul_eq_mul] at leftDomain rightDomain ⊢
+      rw [Affine.eval_cons_convexCombination _ environment left right a b hab]
+      constructor
+      · exact add_nonneg (mul_nonneg ha leftDomain.1) (mul_nonneg hb rightDomain.1)
+      · have upper := add_le_add (mul_le_mul_of_nonneg_left leftDomain.2 ha)
+          (mul_le_mul_of_nonneg_left rightDomain.2 hb)
+        linarith
+  | discrete => exact leftDomain
 
 noncomputable def transitionPack (laws : Determinize.Proof.Paper.PrimitiveLaws) (op : Determinize.Statement.Paper.Op)
     (affineArgs : Fin (Determinize.Statement.Paper.affineArity op) → Symbolic.Affine n)
@@ -1650,6 +1662,39 @@ theorem symbolicReduce_targetRealize
           (context_realize := by intros; simp only [realize, Expr.determinize])
           (lifted_realize := by intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
           ih environment]
+  | bernoulli valueTyped ih =>
+      rename_i context' value mode
+      rw [realize, Expr.determinize, MeasurableActionFamily.reduce_bernoulli_eq,
+        determinize_isValue, realize_isValue, symbolicReduce.eq_def]
+      by_cases valueIsValue : value.isValue = true
+      · simp only [valueIsValue, ↓reduceIte]
+        obtain ⟨x, rfl⟩ := wellTyped_real_value valueTyped valueIsValue
+        cases mode with
+        | E =>
+            simp [affineValue?, targetRealize, realize, Expr.determinize, Expr.determinizeKind,
+              Expr.isValue, realValue?, bernoulliFiber_eq, Affine.eval_fresh]
+        | G =>
+            rcases x with ⟨x0, xc⟩
+            obtain rfl : xc = 0 := wellTyped_realG_coefficients valueTyped
+            simp [constantValue?, targetRealize, realize, Expr.determinize, Expr.determinizeKind,
+              Expr.isValue, realValue?]
+      · simp only [valueIsValue, Bool.eq_false_of_not_eq_true valueIsValue,
+          Bool.false_eq_true, ↓reduceIte]
+        rw [targetRealize_wrap laws
+          (ExprContext := fun next =>
+            .bernoulli mode (Expr.determinizeKind mode .stochastic) next)
+          (context_realize := by intros; simp only [realize, Expr.determinize])
+          (lifted_realize := by intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
+          ih environment]
+  | discrete =>
+      rename_i context' mode weights
+      rw [realize, Expr.determinize, MeasurableActionFamily.reduce_discrete_eq,
+        symbolicReduce_discrete_eq]
+      cases mode with
+      | E =>
+          simp [targetRealize, realize, Expr.determinize, Expr.determinizeKind, discreteFiber_eq,
+            Affine.eval_fresh]
+      | G => simp [targetRealize, realize, Expr.determinize, Expr.determinizeKind]
   | exponential valueTyped ih =>
       rename_i context' value mode
       rw [realize, Expr.determinize, MeasurableActionFamily.reduce_exponential_eq, determinize_isValue,

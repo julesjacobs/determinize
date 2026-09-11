@@ -11,6 +11,8 @@ assigned separately by `Typed`; no expression constructor contains a type annota
 Each primitive distribution is its own constructor with the paper's operands; a site
 carries its mode and whether it still samples or already returns the primitive's mean.
 `Expr.sourceForm` requires stochastic sites; their operands may be arbitrary expressions.
+`Expr.flip` is sugar: a general-mode `bernoulli` draw compared with `0`. `discrete` carries
+literal weights only, as in the implementation's parser.
 -/
 
 namespace Determinize.Statement.Paper
@@ -39,6 +41,8 @@ inductive Expr (Literal : Type := ℝ) where
   | exponential (mode : Mode) (kind : Kind) (rate : Expr Literal)
   | beta (mode : Mode) (kind : Kind) (alpha beta : Expr Literal)
   | gamma (mode : Mode) (kind : Kind) (shape rate : Expr Literal)
+  | bernoulli (mode : Mode) (kind : Kind) (probability : Expr Literal)
+  | discrete (mode : Mode) (kind : Kind) (weights : List Literal)
 
 namespace Expr
 
@@ -64,7 +68,9 @@ def sourceForm : Expr → Bool
   | .uniform _ kind lower upper => kind.isStochastic && lower.sourceForm && upper.sourceForm
   | .gaussian _ kind mean variance =>
       kind.isStochastic && mean.sourceForm && variance.sourceForm
-  | .poisson _ kind rate | .exponential _ kind rate => kind.isStochastic && rate.sourceForm
+  | .poisson _ kind rate | .exponential _ kind rate | .bernoulli _ kind rate =>
+      kind.isStochastic && rate.sourceForm
+  | .discrete _ kind _ => kind.isStochastic
   | .beta _ kind left right => kind.isStochastic && left.sourceForm && right.sourceForm
   | .gamma _ kind shape rate => kind.isStochastic && shape.sourceForm && rate.sourceForm
 
@@ -104,6 +110,8 @@ def mapVars (replace : Nat → Nat → Expr) (depth : Nat) : Expr → Expr
   | .exponential m k x => .exponential m k (x.mapVars replace depth)
   | .beta m k l r => .beta m k (l.mapVars replace depth) (r.mapVars replace depth)
   | .gamma m k l r => .gamma m k (l.mapVars replace depth) (r.mapVars replace depth)
+  | .bernoulli m k x => .bernoulli m k (x.mapVars replace depth)
+  | .discrete m k weights => .discrete m k weights
 
 abbrev shift (amount cutoff : Nat) : Expr → Expr :=
   mapVars (fun cutoff index => .bvar (if cutoff ≤ index then index + amount else index)) cutoff
@@ -162,6 +170,19 @@ def determinize : Expr → Expr
       .beta mode (determinizeKind mode kind) left.determinize right.determinize
   | .gamma mode kind shape rate =>
       .gamma mode (determinizeKind mode kind) shape.determinize rate.determinize
+  | .bernoulli mode kind probability =>
+      .bernoulli mode (determinizeKind mode kind) probability.determinize
+  | .discrete mode kind weights => .discrete mode (determinizeKind mode kind) weights
+
+/-- `flip(p)`: a Boolean that is `true` with probability `p`, the paper's `flip`, as sugar for
+a general-mode `bernoulli` draw compared with `0`. A Boolean has no mean, so the draw is
+general mode: `flip` is never determinized and needs a general-mode probability
+(`Typed.flip`). -/
+def flip (probability : Expr) : Expr := .lt (.real 0) (.bernoulli .G .stochastic probability)
+
+/-- Determinization commutes with `flip`, whose draw always stays stochastic. -/
+theorem determinize_flip (probability : Expr) :
+    (flip probability).determinize = flip probability.determinize := rfl
 
 end Expr
 
@@ -225,5 +246,14 @@ inductive Typed : List Ty → Expr → Ty → Prop
       Typed context (.beta mode kind alpha beta) (.float mode)
   | gamma : Typed context shape (.float mode) → Typed context rate (.float .G) →
       Typed context (.gamma mode kind shape rate) (.float mode)
+  | bernoulli : Typed context probability (.float mode) →
+      Typed context (.bernoulli mode kind probability) (.float mode)
+  | discrete : Typed context (.discrete mode kind weights) (.float mode)
+
+/-- `flip` is a Boolean and needs a general-mode probability: `Typed.lt` compares general-mode
+operands only, so the `bernoulli` draw behind `flip` is general mode and never determinized. -/
+theorem Typed.flip (probabilityTyped : Typed context probability (.float .G)) :
+    Typed context (.flip probability) .bool :=
+  .lt .real (.bernoulli probabilityTyped)
 
 end Determinize.Statement.Paper
