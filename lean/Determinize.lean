@@ -1,3 +1,6 @@
+import Determinize.Finite.Explore
+import Determinize.Proof.FiniteModel.Model
+import Determinize.Proof.FiniteModel.Contracts
 import Determinize.Proof.DiscreteLaws
 import Determinize.Proof.Rejection
 import Determinize.Theorems

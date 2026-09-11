@@ -1,3 +1,4 @@
+import Tests.FiniteModel
 import Tests.Inference
 import Tests.Checking
 import Tests.Runtime
