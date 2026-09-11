@@ -1,4 +1,7 @@
-import Determinize.Finite.Explore
+import Determinize.Proof.FiniteModel.Progress
+import Determinize.Proof.FiniteModel.Sampling
+import Determinize.Proof.FiniteModel.Initial
+import Determinize.Checking.FiniteModel
 import Determinize.Proof.FiniteModel.Model
 import Determinize.Proof.FiniteModel.Contracts
 import Determinize.Proof.DiscreteLaws

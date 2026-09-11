@@ -1,5 +1,6 @@
 import Determinize.Frontend.Certificate
 import Determinize.Runtime.Eval
+import Determinize.Finite.Export
 
 open Determinize Determinize.Frontend Determinize.Checking
 
@@ -10,14 +11,30 @@ private structure Options where
   fuel : Nat := 100000
   certificate : Option String := none
   checkOnly : Bool := false
+  exportPrefix : Option String := none
+  subject : Statement.FiniteModel.Subject := .determinized
+  limits : Finite.Limits := {}
 
-private def usage := "Usage: determinize [--check] [--samples N] [--seed N] [--fuel N] [--certificate FILE.lean] FILE.det"
+private def usage := "Usage: determinize [--check] [--samples N] [--seed N] [--fuel N] [--certificate FILE.lean] [--export PREFIX] [--subject source|determinized] [--max-states N] [--max-edges N] [--max-state-bytes N] FILE.det"
 private def natural (s : String) : Except String Nat :=
   match s.toNat? with
   | some n => .ok n
   | none => .error s!"expected a nonnegative integer, got '{s}'"
 private def options : List String → Options → Except String Options
   | [], o => if o.file.isEmpty then .error usage else .ok o
+  | "--export" :: outputPath :: rest, o => options rest {o with exportPrefix := some outputPath}
+  | "--subject" :: subject :: rest, o => do
+      let subject ← match subject with
+        | "source" => pure Statement.FiniteModel.Subject.source
+        | "determinized" => pure .determinized
+        | _ => throw "subject must be source or determinized"
+      options rest {o with subject}
+  | "--max-states" :: n :: rest, o => do
+      options rest {o with limits.maxStates := ← natural n}
+  | "--max-edges" :: n :: rest, o => do
+      options rest {o with limits.maxEdges := ← natural n}
+  | "--max-state-bytes" :: n :: rest, o => do
+      options rest {o with limits.maxStateBytes := ← natural n}
   | "--check" :: rest, o => options rest {o with checkOnly := true}
   | "--samples" :: n :: rest, o => do options rest {o with samples := ← natural n}
   | "--seed" :: n :: rest, o => do
@@ -70,6 +87,15 @@ def main (args : List String) : IO UInt32 := do
     if let some path := o.certificate then
       IO.FS.writeFile path (← IO.ofExcept (certificateText text))
       IO.println s!"Wrote kernel-checkable certificate: {path}"
+    if let some outputPath := o.exportPrefix then
+      match Finite.explore p.checked.source o.subject o.limits with
+      | .complete candidate =>
+          Finite.write outputPath p.checked.source o.subject candidate
+          IO.println s!"Wrote {reprStr o.subject} model (paper correspondence checked): {outputPath} ({candidate.states.size} states)"
+      | .incomplete limit discovered expanded edges =>
+          throw (IO.userError s!"Incomplete exploration ({reprStr limit}): {discovered} discovered, {expanded} expanded, {edges} edges. No export written.")
+      | .failed state failure =>
+          throw (IO.userError s!"Exploration failed at state {state}: {failure.message}. No export written.")
     if o.samples > 0 then
       IO.println "Numerical estimates; domain safety and integrability are not established by typing."
       summarize "Source" p.checked.source o

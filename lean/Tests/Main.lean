@@ -1,10 +1,13 @@
-import Tests.FiniteModel
 import Tests.Inference
 import Tests.Checking
 import Tests.Runtime
 import Tests.Corpus
 import Tests.FiniteDistribution
 import Tests.PrimitiveLaws
+import Tests.FiniteModel
+import Tests.Explorer
+import Tests.ModelReplay
+import Tests.SemanticBridge
 
 open Determinize
 
@@ -14,6 +17,8 @@ def main (args : List String) : IO UInt32 := do
     Tests.inference
     Tests.checking
     Tests.runtime
+    Tests.modelReplay
+    Tests.explorer
     Tests.finiteDistributions
     match args with
     | [] => pure ()
