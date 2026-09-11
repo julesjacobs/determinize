@@ -108,16 +108,13 @@ structure Certified (input : Input) where
   source : Core
   ty : Ty
   typed : Typed [] (interpret source) ty
-  sourceOnly : source.sourceForm = true
   aligned : input.matches source = true
 
 def certify (input : Input) (candidate : Core) (c : Certificate) :
     Option (Certified input) := do
-  if hSource : candidate.sourceForm = true then
-    if hAlign : input.matches candidate = true then
-      let h ← check [] candidate c.ty c
-      return ⟨candidate, c.ty, h.down, hSource, hAlign⟩
-    else none
+  if hAlign : input.matches candidate = true then
+    let h ← check [] candidate c.ty c
+    return ⟨candidate, c.ty, h.down, hAlign⟩
   else none
 
 end Determinize.Checking

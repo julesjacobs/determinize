@@ -1,4 +1,4 @@
-import Determinize.Proof.Symbolic
+import Determinize.Proof.SymbolicMean
 import Mathlib.Probability.Kernel.Composition.IntegralCompProd
 import Mathlib.Probability.Kernel.Composition.MeasureComp
 
@@ -59,14 +59,7 @@ theorem convex_integral_mem_real {α : Type*} [MeasurableSpace α]
 
 namespace Affine
 
-open Symbolic.Affine (add smul tail)
-
-noncomputable def primitiveMean (op : Determinize.Spec.Paper.Op)
-    (affineArgs : Fin (Determinize.Spec.Paper.affineArity op) → Symbolic.Affine n)
-    (generalArgs : Fin (Determinize.Spec.Paper.generalArity op) → ℝ) : Symbolic.Affine n :=
-  (Determinize.Proof.Paper.meanConstant op generalArgs +
-      ∑ i, Determinize.Proof.Paper.meanCoeff op generalArgs i * (affineArgs i).1,
-    fun j => ∑ i, Determinize.Proof.Paper.meanCoeff op generalArgs i * (affineArgs i).2 j)
+open Symbolic.Affine (add smul tail primitiveMean eval_primitiveMean)
 
 noncomputable def substituteHeadMean (expression : Symbolic.Affine (n + 1)) (op : Determinize.Spec.Paper.Op)
     (affineArgs : Fin (Determinize.Spec.Paper.affineArity op) → Symbolic.Affine n)
@@ -88,22 +81,6 @@ theorem eval_cons_convexCombination (expression : Symbolic.Affine (n + 1))
       a * (Symbolic.Affine.eval (tail expression) environment + expression.2 0 * left) +
         b * (Symbolic.Affine.eval (tail expression) environment + expression.2 0 * right) := by
   linear_combination -(Symbolic.Affine.eval (tail expression) environment) * hSum
-
-theorem eval_primitiveMean (op : Determinize.Spec.Paper.Op)
-    (affineArgs : Fin (Determinize.Spec.Paper.affineArity op) → Symbolic.Affine n)
-    (generalArgs : Fin (Determinize.Spec.Paper.generalArity op) → ℝ)
-    (environment : Env n) :
-    Symbolic.Affine.eval (primitiveMean op affineArgs generalArgs) environment =
-      Determinize.Spec.Paper.meanValue op
-        (fun i => Symbolic.Affine.eval (affineArgs i) environment, generalArgs) := by
-  rw [meanValue_eq_affine]
-  simp only [primitiveMean, Symbolic.Affine.eval]
-  simp_rw [mul_add]
-  rw [Finset.sum_add_distrib]
-  simp_rw [Finset.mul_sum, Finset.sum_mul]
-  ring_nf
-  congr 1
-  rw [Finset.sum_comm]
 
 theorem eval_substituteHeadMean (expression : Symbolic.Affine (n + 1)) (op : Determinize.Spec.Paper.Op)
     (affineArgs : Fin (Determinize.Spec.Paper.affineArity op) → Symbolic.Affine n)
@@ -913,6 +890,10 @@ noncomputable def targetRealize (environment : Env n) :
       .sample (.mean, op) (primitiveFiber .mean op
         (affine.map (Symbolic.Affine.eval · environment)) general)
         (fun value => (continuation.realize (Env.cons value environment)).determinize)
+  | .mean op affine general continuation =>
+      .sample (.mean, op) (primitiveFiber .mean op
+        (affine.map (Symbolic.Affine.eval · environment)) general)
+        (fun value => ((continuation (value, 0)).realize environment).determinize)
   | .sampleG site fiber continuation =>
       .sample site fiber (fun value => ((continuation value).realize environment).determinize)
   | .stuck => .stuck
@@ -984,6 +965,11 @@ theorem targetRealize_wrap
         Action.wrap, Action.sample.injEq, true_and]
       funext value
       exact lifted_realize continuation value
+  | mean op affine general continuation =>
+      simp only [Symbolic.AffineExpr.SymbolicAction.wrap, targetRealize,
+        Action.wrap, Action.sample.injEq, true_and, Function.comp_apply]
+      funext value
+      exact context_realize (continuation (value, 0))
   | sampleG site fiber continuation =>
       simp only [Symbolic.AffineExpr.SymbolicAction.wrap, targetRealize,
         Action.wrap, Action.sample.injEq, true_and, Function.comp_apply]
@@ -1006,6 +992,8 @@ theorem symbolicReduce_targetRealize
       rename_i context' affinity d
       cases affinity <;> simp [symbolicReduce, targetRealize, realize, Expr.determinize,
         DistributionAction.determinize, reduce, discreteFiber_eq, Affine.eval_fresh]
+  | discreteMean =>
+      simp [symbolicReduce, targetRealize, realize, Expr.determinize, DistributionAction.determinize, discreteFiber_eq]
   | bool => simp [symbolicReduce, targetRealize, realize, Expr.determinize, Expr.determinize, reduce]
   | realE => simp [symbolicReduce, targetRealize, realize, Expr.determinize, Expr.determinize, reduce]
   | realG => simp [symbolicReduce, targetRealize, realize, Expr.determinize, Expr.determinize, reduce]
@@ -1461,6 +1449,34 @@ theorem symbolicReduce_targetRealize
           (context_realize := by intros; simp only [realize, Expr.determinize])
           (lifted_realize := by intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
           ihl environment]
+  | uniformMean leftTyped rightTyped ihl ihr =>
+      rename_i context' left affinity right
+      rw [realize, Expr.determinize]
+      simp only [DistributionAction.determinize]
+      rw [MeasurableActionFamily.reduce_uniform_eq, determinize_isValue,
+        realize_isValue, symbolicReduce.eq_def]
+      by_cases leftValue : left.isValue = true
+      · simp only [leftValue, ↓reduceIte]
+        by_cases rightValue : right.isValue = true
+        · simp only [rightValue, ↓reduceIte]
+          obtain ⟨x, rfl⟩ := wellTyped_real_value leftTyped leftValue
+          obtain ⟨y, rfl⟩ := wellTyped_real_value rightTyped rightValue
+          simp [affineValue?, targetRealize, realize, Expr.determinize,
+            Expr.isValue, realValue?, uniformFiber_eq]
+        · simp only [rightValue, Bool.false_eq_true, ↓reduceIte]
+          rw [targetRealize_wrap
+            (ExprContext := fun next => .uniform .mean
+              ((left.realize environment).determinize) next)
+            (context_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize])
+            (lifted_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize, realize_weakenSamples]),
+            ihr environment, determinize_isValue, realize_isValue, if_neg rightValue]
+      · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
+        rw [targetRealize_wrap
+          (ExprContext := fun next => .uniform .mean next
+            ((right.realize environment).determinize))
+          (context_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize])
+          (lifted_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize, realize_weakenSamples]),
+          ihl environment]
   | gaussian leftTyped rightTyped ihl ihr =>
       rename_i context' left affinity right
       rw [realize, Expr.determinize, MeasurableActionFamily.reduce_gaussian_eq, determinize_isValue,
@@ -1498,6 +1514,36 @@ theorem symbolicReduce_targetRealize
           (context_realize := by intros; simp only [realize, Expr.determinize])
           (lifted_realize := by intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
           ihl environment]
+  | gaussianMean leftTyped rightTyped ihl ihr =>
+      rename_i context' left affinity right
+      rw [realize, Expr.determinize]
+      simp only [DistributionAction.determinize]
+      rw [MeasurableActionFamily.reduce_gaussian_eq, determinize_isValue,
+        realize_isValue, symbolicReduce.eq_def]
+      by_cases leftValue : left.isValue = true
+      · simp only [leftValue, ↓reduceIte]
+        by_cases rightValue : right.isValue = true
+        · simp only [rightValue, ↓reduceIte]
+          obtain ⟨x, rfl⟩ := wellTyped_real_value leftTyped leftValue
+          obtain ⟨y, rfl⟩ := wellTyped_real_value rightTyped rightValue
+          rcases y with ⟨y0, yc⟩
+          obtain rfl : yc = 0 := wellTyped_realG_coefficients rightTyped
+          simp [affineValue?, constantValue?, targetRealize, realize, Expr.determinize,
+            Expr.isValue, realValue?, gaussianFiber_eq]
+        · simp only [rightValue, Bool.false_eq_true, ↓reduceIte]
+          rw [targetRealize_wrap
+            (ExprContext := fun next => .gaussian .mean
+              ((left.realize environment).determinize) next)
+            (context_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize])
+            (lifted_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize, realize_weakenSamples]),
+            ihr environment, determinize_isValue, realize_isValue, if_neg rightValue]
+      · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
+        rw [targetRealize_wrap
+          (ExprContext := fun next => .gaussian .mean next
+            ((right.realize environment).determinize))
+          (context_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize])
+          (lifted_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize, realize_weakenSamples]),
+          ihl environment]
   | poisson valueTyped ih =>
       rename_i context' value affinity
       rw [realize, Expr.determinize, MeasurableActionFamily.reduce_poisson_eq, determinize_isValue,
@@ -1520,6 +1566,23 @@ theorem symbolicReduce_targetRealize
           (ExprContext := fun next => .poisson (DistributionAction.determinize (.sample affinity)) next)
           (context_realize := by intros; simp only [realize, Expr.determinize])
           (lifted_realize := by intros; simp only [realize, Expr.determinize]), ih environment]
+  | poissonMean valueTyped ih =>
+      rename_i context' value affinity
+      rw [realize, Expr.determinize]
+      simp only [DistributionAction.determinize]
+      rw [MeasurableActionFamily.reduce_poisson_eq, determinize_isValue,
+        realize_isValue, symbolicReduce.eq_def]
+      by_cases valueIsValue : value.isValue = true
+      · simp only [valueIsValue, ↓reduceIte]
+        obtain ⟨x, rfl⟩ := wellTyped_real_value valueTyped valueIsValue
+        simp [affineValue?, targetRealize, realize, Expr.determinize,
+          realValue?, poissonFiber_eq]
+      · simp only [valueIsValue,
+          Bool.false_eq_true, ↓reduceIte]
+        rw [targetRealize_wrap
+          (ExprContext := fun next => .poisson .mean next)
+          (context_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize])
+          (lifted_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize]), ih environment]
   | bernoulli valueTyped ih =>
       rename_i context' value affinity
       rw [realize, Expr.determinize, MeasurableActionFamily.reduce_bernoulli_eq, determinize_isValue,
@@ -1542,6 +1605,23 @@ theorem symbolicReduce_targetRealize
           (ExprContext := fun next => .bernoulli (DistributionAction.determinize (.sample affinity)) next)
           (context_realize := by intros; simp only [realize, Expr.determinize])
           (lifted_realize := by intros; simp only [realize, Expr.determinize]), ih environment]
+  | bernoulliMean valueTyped ih =>
+      rename_i context' value affinity
+      rw [realize, Expr.determinize]
+      simp only [DistributionAction.determinize]
+      rw [MeasurableActionFamily.reduce_bernoulli_eq, determinize_isValue,
+        realize_isValue, symbolicReduce.eq_def]
+      by_cases valueIsValue : value.isValue = true
+      · simp only [valueIsValue, ↓reduceIte]
+        obtain ⟨x, rfl⟩ := wellTyped_real_value valueTyped valueIsValue
+        simp [affineValue?, targetRealize, realize, Expr.determinize,
+          realValue?, bernoulliFiber_eq]
+      · simp only [valueIsValue,
+          Bool.false_eq_true, ↓reduceIte]
+        rw [targetRealize_wrap
+          (ExprContext := fun next => .bernoulli .mean next)
+          (context_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize])
+          (lifted_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize]), ih environment]
   | exponential valueTyped ih =>
       rename_i context' value affinity
       rw [realize, Expr.determinize, MeasurableActionFamily.reduce_exponential_eq, determinize_isValue,
@@ -1566,6 +1646,25 @@ theorem symbolicReduce_targetRealize
           (ExprContext := fun next => .exponential (DistributionAction.determinize (.sample affinity)) next)
           (context_realize := by intros; simp only [realize, Expr.determinize])
           (lifted_realize := by intros; simp only [realize, Expr.determinize]), ih environment]
+  | exponentialMean valueTyped ih =>
+      rename_i context' value affinity
+      rw [realize, Expr.determinize]
+      simp only [DistributionAction.determinize]
+      rw [MeasurableActionFamily.reduce_exponential_eq, determinize_isValue,
+        realize_isValue, symbolicReduce.eq_def]
+      by_cases valueIsValue : value.isValue = true
+      · simp only [valueIsValue, ↓reduceIte]
+        obtain ⟨x, rfl⟩ := wellTyped_real_value valueTyped valueIsValue
+        rcases x with ⟨x0, xc⟩
+        obtain rfl : xc = 0 := wellTyped_realG_coefficients valueTyped
+        simp [constantValue?, targetRealize, realize, Expr.determinize,
+          realValue?, exponentialFiber_eq]
+      · simp only [valueIsValue,
+          Bool.false_eq_true, ↓reduceIte]
+        rw [targetRealize_wrap
+          (ExprContext := fun next => .exponential .mean next)
+          (context_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize])
+          (lifted_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize]), ih environment]
   | beta leftTyped rightTyped ihl ihr =>
       rename_i context' left right affinity
       rw [realize, Expr.determinize, MeasurableActionFamily.reduce_beta_eq, determinize_isValue,
@@ -1605,6 +1704,38 @@ theorem symbolicReduce_targetRealize
           (context_realize := by intros; simp only [realize, Expr.determinize])
           (lifted_realize := by intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
           ihl environment]
+  | betaMean leftTyped rightTyped ihl ihr =>
+      rename_i context' left right affinity
+      rw [realize, Expr.determinize]
+      simp only [DistributionAction.determinize]
+      rw [MeasurableActionFamily.reduce_beta_eq, determinize_isValue,
+        realize_isValue, symbolicReduce.eq_def]
+      by_cases leftValue : left.isValue = true
+      · simp only [leftValue, ↓reduceIte]
+        by_cases rightValue : right.isValue = true
+        · simp only [rightValue, ↓reduceIte]
+          obtain ⟨x, rfl⟩ := wellTyped_real_value leftTyped leftValue
+          obtain ⟨y, rfl⟩ := wellTyped_real_value rightTyped rightValue
+          rcases y with ⟨y0, yc⟩
+          obtain rfl : yc = 0 := wellTyped_realG_coefficients rightTyped
+          rcases x with ⟨x0, xc⟩
+          obtain rfl : xc = 0 := wellTyped_realG_coefficients leftTyped
+          simp [constantValue?, targetRealize, realize, Expr.determinize,
+            Expr.isValue, realValue?, betaFiber_eq]
+        · simp only [rightValue, Bool.false_eq_true, ↓reduceIte]
+          rw [targetRealize_wrap
+            (ExprContext := fun next => .beta .mean
+              ((left.realize environment).determinize) next)
+            (context_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize])
+            (lifted_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize, realize_weakenSamples]),
+            ihr environment, determinize_isValue, realize_isValue, if_neg rightValue]
+      · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
+        rw [targetRealize_wrap
+          (ExprContext := fun next => .beta .mean next
+            ((right.realize environment).determinize))
+          (context_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize])
+          (lifted_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize, realize_weakenSamples]),
+          ihl environment]
   | gamma leftTyped rightTyped ihl ihr =>
       rename_i context' left affinity right
       rw [realize, Expr.determinize, MeasurableActionFamily.reduce_gamma_eq, determinize_isValue,
@@ -1642,6 +1773,64 @@ theorem symbolicReduce_targetRealize
           (context_realize := by intros; simp only [realize, Expr.determinize])
           (lifted_realize := by intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
           ihl environment]
+
+  | gammaMean leftTyped rightTyped ihl ihr =>
+      rename_i context' left affinity right
+      rw [realize, Expr.determinize]
+      simp only [DistributionAction.determinize]
+      rw [MeasurableActionFamily.reduce_gamma_eq, determinize_isValue,
+        realize_isValue, symbolicReduce.eq_def]
+      by_cases leftValue : left.isValue = true
+      · simp only [leftValue, ↓reduceIte]
+        by_cases rightValue : right.isValue = true
+        · simp only [rightValue, ↓reduceIte]
+          obtain ⟨x, rfl⟩ := wellTyped_real_value leftTyped leftValue
+          obtain ⟨y, rfl⟩ := wellTyped_real_value rightTyped rightValue
+          rcases y with ⟨y0, yc⟩
+          obtain rfl : yc = 0 := wellTyped_realG_coefficients rightTyped
+          simp [affineValue?, constantValue?, targetRealize, realize, Expr.determinize,
+            Expr.isValue, realValue?, gammaFiber_eq]
+        · simp only [rightValue, Bool.false_eq_true, ↓reduceIte]
+          rw [targetRealize_wrap
+            (ExprContext := fun next => .gamma .mean
+              ((left.realize environment).determinize) next)
+            (context_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize])
+            (lifted_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize, realize_weakenSamples]),
+            ihr environment, determinize_isValue, realize_isValue, if_neg rightValue]
+      · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
+        rw [targetRealize_wrap
+          (ExprContext := fun next => .gamma .mean next
+            ((right.realize environment).determinize))
+          (context_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize])
+          (lifted_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize, realize_weakenSamples]),
+          ihl environment]
+
+/-- A valid mean call takes one deterministic step, using no additional sample coordinate. -/
+theorem source_mean_safe_step
+    (expression : AffineExpr n) (typed : WellTyped [] expression ty)
+    (actionEq : symbolicReduce expression = .mean op affine general continuation)
+    (environment : Env n)
+    (safe : PrimitiveDomainSafeAt (fuel + 1) (expression.realize environment)) :
+    domain op (meanParams op affine general environment) ∧
+      PrimitiveDomainSafeAt fuel ((continuation (meanAffine op affine general)).realize environment) := by
+  have actionTyped := symbolicReduce_wellTyped typed
+  rw [actionEq] at actionTyped
+  obtain ⟨ha, hg, nextTyped, natural⟩ := SymbolicAction.wellTyped_mean_iff.mp actionTyped
+  have reduction : reduce (expression.realize environment) =
+      .sample (.mean, op)
+        (primitiveFiber .mean op (affine.map (Symbolic.Affine.eval · environment)) general)
+        (fun value => (continuation (value, 0)).realize environment) := by
+    rw [← symbolicReduce_realize typed environment, actionEq]
+    rfl
+  have nv := not_value_of_reduce_sample _ _ _ reduction
+  rw [PrimitiveDomainSafeAt, if_neg nv, reduction] at safe
+  dsimp only at safe
+  have valid := (primitiveFiber_mean_mass op affine general ha hg environment).mp safe.1
+  refine ⟨valid, ?_⟩
+  rw [primitiveFiber_mean_formula op affine general ha hg environment, if_pos valid,
+    ae_dirac_eq] at safe
+  rw [natural]
+  exact safe.2
 
 set_option maxHeartbeats 1600000 in
 theorem safeConfigAt_target
@@ -1686,6 +1875,21 @@ theorem safeConfigAt_target
                 Bool.eq_false_of_not_eq_true sourceNotValue, Bool.false_eq_true,
                 ↓reduceIte, concreteStep] using environmentSafe
             exact ih history next ⟨historySafe, nextTyped, nextSafe⟩
+        | mean op affine general continuation =>
+            obtain ⟨ha, hg, nextTyped, natural⟩ := SymbolicAction.wellTyped_mean_iff.mp actionTyped
+            have stepSafe := sourceSafe.mono (fun env safe =>
+              source_mean_safe_step expression typed actionEq env safe)
+            have valid := SampleEnv.domain_at_meanEnvironment laws history historySafe op
+              (fun i => affine.getD i.1 0) (fun i => general.getD i.1 0)
+              (stepSafe.mono fun _ h => h.1)
+            change domain op (meanParams op affine general mean) at valid
+            have nextSafe := ih history (continuation (meanAffine op affine general))
+              ⟨historySafe, nextTyped, stepSafe.mono fun _ h => h.2⟩
+            simp only [targetRealize]
+            rw [primitiveFiber_mean_formula op affine general ha hg mean, if_pos valid]
+            refine ⟨by simp, ?_⟩
+            rw [ae_dirac_eq, Filter.eventually_pure, ← natural]
+            exact nextSafe
         | sampleE op affine general continuation =>
             let affineArgs : Fin (Determinize.Spec.Paper.affineArity op) → Symbolic.Affine n :=
               fun index => affine.getD index.1 (0, fun _ => 0)
@@ -1767,12 +1971,11 @@ theorem safeConfigAt_target
 theorem determinize_primitiveDomainSafe_of_typed_source
     (laws : Determinize.Proof.Paper.PrimitiveLaws) (stepKernel : StepKernel)
     (program : Expr) (typed : Determinize.Spec.Paper.Typed [] program (.float .E))
-    (sourceTags : (AffineExpr.ofExpr program).SourceTags)
     (sourceSafe : PrimitiveDomainSafe program) :
     PrimitiveDomainSafe program.determinize := by
   let symbolic := AffineExpr.ofExpr program
   have symbolicTyped : WellTyped [] symbolic (.float .E) :=
-    AffineExpr.wellTyped_ofExpr_of_typed typed sourceTags
+    AffineExpr.wellTyped_ofExpr_of_typed typed
   intro fuel
   have symbolicSafe : SafeConfigAt laws fuel (.nil : Symbolic.SampleEnv laws 0) symbolic := by
     refine ⟨trivial, symbolicTyped, ?_⟩

@@ -26,8 +26,7 @@ distributions of the joint laws over their trace marginals, unique up to null se
 No global integrability assumption is required. -/
 def conditionalLawThm : Prop :=
   ∀ (program : Expr),
-    Typed [] program (.float .E) → program.sourceForm = true →
-    PrimitiveDomainSafe program →
+    Typed [] program (.float .E) → PrimitiveDomainSafe program →
       PrimitiveDomainSafe program.determinize ∧
       traceLaw program.determinize = traceLaw program ∧
       ∀ᵐ trace ∂traceLaw program,
@@ -45,8 +44,7 @@ both output laws and the trace law by their common mass gives the same identity 
 conditioned on termination. -/
 def varianceThm : Prop :=
   ∀ (program : Expr),
-    Typed [] program (.float .E) → program.sourceForm = true →
-    PrimitiveDomainSafe program →
+    Typed [] program (.float .E) → PrimitiveDomainSafe program →
     MemLp id 2 (bigStepMeasure program) →
       Integrable (fun trace => variance id ((traceAndOutputLaw program).condKernel trace))
         (traceLaw program) ∧

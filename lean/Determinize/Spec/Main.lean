@@ -28,7 +28,6 @@ open scoped ENNReal
 def mainThm : Prop :=
   ∀ (program : Expr),
     Typed [] program (.float .E) →
-    program.sourceForm = true →
     PrimitiveDomainSafe program →
     Integrable id (bigStepMeasure program) →
     PrimitiveDomainSafe program.determinize ∧
@@ -56,7 +55,6 @@ expectation is well-defined, possibly infinite, so is the target's, and they agr
 def extendedExpectationThm : Prop :=
   ∀ (program : Expr),
     Typed [] program (.float .E) →
-    program.sourceForm = true →
     PrimitiveDomainSafe program →
     HasExpectation (bigStepMeasure program) →
     HasExpectation (bigStepMeasure program.determinize) ∧
@@ -68,7 +66,6 @@ under the determinized output law as under the source output law. -/
 def jensenThm : Prop :=
   ∀ (program : Expr),
     Typed [] program (.float .E) →
-    program.sourceForm = true →
     PrimitiveDomainSafe program →
     ∀ φ : ℝ → ℝ, ConvexOn ℝ Set.univ φ → (∀ value, 0 ≤ φ value) →
       ∫⁻ value, ENNReal.ofReal (φ value) ∂bigStepMeasure program.determinize ≤
@@ -81,7 +78,6 @@ being accepted). The source and target output laws have the same mass, so togeth
 def outputMassThm : Prop :=
   ∀ (program : Expr),
     Typed [] program (.float .E) →
-    program.sourceForm = true →
     PrimitiveDomainSafe program →
     bigStepMeasure program.determinize Set.univ = bigStepMeasure program Set.univ
 
@@ -97,7 +93,6 @@ inequalities hold for the laws normalized by their common mass. -/
 def varianceThm : Prop :=
   ∀ (program : Expr),
     Typed [] program (.float .E) →
-    program.sourceForm = true →
     PrimitiveDomainSafe program →
     MemLp id 2 (bigStepMeasure program) →
     MemLp id 2 (bigStepMeasure program.determinize) ∧
@@ -117,7 +112,6 @@ normalized by its mass (`0` for a program that is always rejected, as `0 / 0 = 0
 def conditionalExpectationThm : Prop :=
   ∀ (program : Expr),
     Typed [] program (.float .E) →
-    program.sourceForm = true →
     PrimitiveDomainSafe program →
     Integrable id (bigStepMeasure program) →
     (∫ value : ℝ, value ∂bigStepMeasure program.determinize) /

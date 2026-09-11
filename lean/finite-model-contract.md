@@ -145,7 +145,7 @@ requires a later extension; model correspondence itself includes divergence.
 Its tabulated survival calculation is proved equal to `survivalWithin`.
 `checked_expectedReward` combines the extracted model with a checked result, establishing
 integrability and the exact expected reward of the selected paper program.
-`checked_sourceExpectedReward` additionally retains the source typing, source-form, safety, and
+`checked_sourceExpectedReward` additionally retains the source typing, safety, and
 integrability premises needed to transport a determinized answer to the source.
 A certificate for the determinized subject alone does not discharge those premises.
 

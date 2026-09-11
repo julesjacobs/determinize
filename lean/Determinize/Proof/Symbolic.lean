@@ -49,6 +49,33 @@ inductive AffineExpr (sampleCount : Nat) where
   | beta (kind : DistributionAction) (alpha beta : AffineExpr sampleCount)
   | gamma (kind : DistributionAction) (shape rate : AffineExpr sampleCount)
 
+namespace Affine
+
+noncomputable def primitiveMean (op : Determinize.Spec.Paper.Op)
+    (affineArgs : Fin (Determinize.Spec.Paper.affineArity op) → Symbolic.Affine n)
+    (generalArgs : Fin (Determinize.Spec.Paper.generalArity op) → ℝ) : Symbolic.Affine n :=
+  (Determinize.Proof.Paper.meanConstant op generalArgs +
+      ∑ i, Determinize.Proof.Paper.meanCoeff op generalArgs i * (affineArgs i).1,
+    fun j => ∑ i, Determinize.Proof.Paper.meanCoeff op generalArgs i * (affineArgs i).2 j)
+
+theorem eval_primitiveMean (op : Determinize.Spec.Paper.Op)
+    (affineArgs : Fin (Determinize.Spec.Paper.affineArity op) → Symbolic.Affine n)
+    (generalArgs : Fin (Determinize.Spec.Paper.generalArity op) → ℝ)
+    (environment : Env n) :
+    Symbolic.Affine.eval (primitiveMean op affineArgs generalArgs) environment =
+      Determinize.Spec.Paper.meanValue op
+        (fun i => Symbolic.Affine.eval (affineArgs i) environment, generalArgs) := by
+  rw [meanValue_eq_affine]
+  simp only [primitiveMean, Symbolic.Affine.eval]
+  simp_rw [mul_add]
+  rw [Finset.sum_add_distrib]
+  simp_rw [Finset.mul_sum, Finset.sum_mul]
+  ring_nf
+  congr 1
+  rw [Finset.sum_comm]
+
+end Affine
+
 namespace AffineExpr
 
 /-- Evaluate every affine literal at `environment`, giving a concrete expression. -/
@@ -259,23 +286,9 @@ def mapAffine (transform : Affine n → Affine m) : AffineExpr n → AffineExpr 
 def weakenSamples (expression : AffineExpr n) : AffineExpr (n + 1) :=
   expression.mapAffine Affine.weaken
 
-/-- Pending source E and G sites retain stochastic tags. -/
-def SourceTags : AffineExpr sampleCount → Prop
-  | .discrete kind _ => kind.isSample = true
-  | .uniform kind left right | .gaussian kind left right | .beta kind left right
-  | .gamma kind left right => kind.isSample = true ∧ left.SourceTags ∧ right.SourceTags
-  | .poisson kind body | .bernoulli kind body | .exponential kind body => kind.isSample = true ∧ body.SourceTags
-  | .lam body | .fix body | .fst body | .snd body
-  | .inl body | .inr body | .neg body => body.SourceTags
-  | .app left right | .pair left right | .cons left right
-  | .add left right | .mul left right | .div left right | .lt left right =>
-      left.SourceTags ∧ right.SourceTags
-  | .matchSum scrutinee left right | .ite scrutinee left right =>
-      scrutinee.SourceTags ∧ left.SourceTags ∧ right.SourceTags
-  | .matchList scrutinee nilCase consCase =>
-      scrutinee.SourceTags ∧ nilCase.SourceTags ∧ consCase.SourceTags
-  | .letE value body => value.SourceTags ∧ body.SourceTags
-  | _ => True
+/-- Evaluate a primitive mean as an affine formula in the existing E samples. -/
+noncomputable def meanAffine (op : Op) (affine : List (Affine n)) (general : List ℝ) : Affine n :=
+  Affine.primitiveMean op (fun i => affine.getD i.1 0) (fun i => general.getD i.1 0)
 
 inductive WellTyped : List Ty → AffineExpr sampleCount → Ty → Prop
   | bvar : Determinize.Spec.Paper.HasVar context index ty → WellTyped context (.bvar index) ty
@@ -349,6 +362,21 @@ inductive WellTyped : List Ty → AffineExpr sampleCount → Ty → Prop
       WellTyped context (.beta (.sample affinity) alpha betaArg) (.float affinity)
   | gamma : WellTyped context shape (.float affinity) → WellTyped context rate (.float .G) →
       WellTyped context (.gamma (.sample affinity) shape rate) (.float affinity)
+  | uniformMean : WellTyped context lower (.float affinity) → WellTyped context upper (.float affinity) →
+      WellTyped context (.uniform .mean lower upper) (.float affinity)
+  | gaussianMean : WellTyped context mean (.float affinity) → WellTyped context spread (.float .G) →
+      WellTyped context (.gaussian .mean mean spread) (.float affinity)
+  | poissonMean : WellTyped context rate (.float affinity) →
+      WellTyped context (.poisson .mean rate) (.float affinity)
+  | discreteMean : WellTyped context (.discrete .mean d) (.float affinity)
+  | bernoulliMean : WellTyped context probability (.float affinity) →
+      WellTyped context (.bernoulli .mean probability) (.float affinity)
+  | exponentialMean : WellTyped context rate (.float .G) →
+      WellTyped context (.exponential .mean rate) (.float affinity)
+  | betaMean : WellTyped context alpha (.float .G) → WellTyped context betaArg (.float .G) →
+      WellTyped context (.beta .mean alpha betaArg) (.float affinity)
+  | gammaMean : WellTyped context shape (.float affinity) → WellTyped context rate (.float .G) →
+      WellTyped context (.gamma .mean shape rate) (.float affinity)
 
 theorem WellTyped.realize_typed {sampleCount : Nat} {expression : AffineExpr sampleCount}
     (typed : WellTyped context expression ty)
@@ -358,6 +386,7 @@ theorem WellTyped.realize_typed {sampleCount : Nat} {expression : AffineExpr sam
   case bvar hvar => exact Determinize.Spec.Paper.Typed.bvar hvar
   case reject => exact Determinize.Spec.Paper.Typed.reject
   case discrete => exact Determinize.Spec.Paper.Typed.discrete
+  case discreteMean => exact Determinize.Spec.Paper.Typed.discreteMean
   case «unit» => exact Determinize.Spec.Paper.Typed.unit
   case bool => exact Determinize.Spec.Paper.Typed.bool
   case realE => exact Determinize.Spec.Paper.Typed.real
@@ -389,16 +418,20 @@ theorem WellTyped.realize_typed {sampleCount : Nat} {expression : AffineExpr sam
   case divGG left right => exact Determinize.Spec.Paper.Typed.div left right
   case lt left right => exact Determinize.Spec.Paper.Typed.lt left right
   case uniform lower upper => exact Determinize.Spec.Paper.Typed.uniform lower upper
+  case uniformMean lower upper => exact Determinize.Spec.Paper.Typed.uniformMean lower upper
   case gaussian mean variance => exact Determinize.Spec.Paper.Typed.gaussian mean variance
+  case gaussianMean mean variance => exact Determinize.Spec.Paper.Typed.gaussianMean mean variance
   case poisson rate => exact Determinize.Spec.Paper.Typed.poisson rate
+  case poissonMean rate => exact Determinize.Spec.Paper.Typed.poissonMean rate
   case bernoulli probability => exact Determinize.Spec.Paper.Typed.bernoulli probability
+  case bernoulliMean probability => exact Determinize.Spec.Paper.Typed.bernoulliMean probability
   case exponential rate => exact Determinize.Spec.Paper.Typed.exponential rate
+  case exponentialMean rate => exact Determinize.Spec.Paper.Typed.exponentialMean rate
   case beta alpha betaTyped => exact Determinize.Spec.Paper.Typed.beta alpha betaTyped
+  case betaMean alpha betaTyped => exact Determinize.Spec.Paper.Typed.betaMean alpha betaTyped
   case gamma shape rate => exact Determinize.Spec.Paper.Typed.gamma shape rate
 
-theorem WellTyped.sourceTags (typed : WellTyped context expression ty) :
-    expression.SourceTags := by
-  induction typed <;> simp_all [SourceTags, DistributionAction.isSample]
+  case gammaMean shape rate => exact Determinize.Spec.Paper.Typed.gammaMean shape rate
 
 theorem WellTyped.mapAffine {n m : Nat} {expression : AffineExpr n}
     (typed : WellTyped context expression ty)
@@ -522,6 +555,7 @@ theorem wellTyped_shift (h : WellTyped (before ++ suffix) expression ty) :
       exact .bvar (Typing.hasVar_shift hvar)
   | reject => rw [shift]; exact .reject
   | discrete => rw [shift]; exact .discrete
+  | discreteMean => rw [shift]; exact .discreteMean
   | unit => rw [shift]; exact .unit
   | bool => rw [shift]; exact .bool
   | realE => rw [shift]; exact .realE
@@ -616,27 +650,53 @@ theorem wellTyped_shift (h : WellTyped (before ++ suffix) expression ty) :
       rw [shift]
       exact .uniform (ihl (before := before) (suffix := suffix) hcontext)
         (ihr (before := before) (suffix := suffix) hcontext)
+  | uniformMean hl hr ihl ihr =>
+      rw [shift]
+      exact .uniformMean (ihl (before := before) (suffix := suffix) hcontext)
+        (ihr (before := before) (suffix := suffix) hcontext)
   | gaussian hl hr ihl ihr =>
       rw [shift]
       exact .gaussian (ihl (before := before) (suffix := suffix) hcontext)
+        (ihr (before := before) (suffix := suffix) hcontext)
+  | gaussianMean hl hr ihl ihr =>
+      rw [shift]
+      exact .gaussianMean (ihl (before := before) (suffix := suffix) hcontext)
         (ihr (before := before) (suffix := suffix) hcontext)
   | beta hl hr ihl ihr =>
       rw [shift]
       exact .beta (ihl (before := before) (suffix := suffix) hcontext)
         (ihr (before := before) (suffix := suffix) hcontext)
+  | betaMean hl hr ihl ihr =>
+      rw [shift]
+      exact .betaMean (ihl (before := before) (suffix := suffix) hcontext)
+        (ihr (before := before) (suffix := suffix) hcontext)
   | gamma hl hr ihl ihr =>
       rw [shift]
       exact .gamma (ihl (before := before) (suffix := suffix) hcontext)
         (ihr (before := before) (suffix := suffix) hcontext)
+  | gammaMean hl hr ihl ihr =>
+      rw [shift]
+      exact .gammaMean (ihl (before := before) (suffix := suffix) hcontext)
+        (ihr (before := before) (suffix := suffix) hcontext)
   | poisson hv ih =>
       rw [shift]
       exact .poisson (ih (before := before) (suffix := suffix) hcontext)
+  | poissonMean hv ih =>
+      rw [shift]
+      exact .poissonMean (ih (before := before) (suffix := suffix) hcontext)
   | bernoulli hv ih =>
       rw [shift]
       exact .bernoulli (ih (before := before) (suffix := suffix) hcontext)
+  | bernoulliMean hv ih =>
+      rw [shift]
+      exact .bernoulliMean (ih (before := before) (suffix := suffix) hcontext)
   | exponential hv ih =>
       rw [shift]
       exact .exponential (ih (before := before) (suffix := suffix) hcontext)
+
+  | exponentialMean hv ih =>
+      rw [shift]
+      exact .exponentialMean (ih (before := before) (suffix := suffix) hcontext)
 
 theorem wellTyped_substAt (h : WellTyped (before ++ binder :: suffix) expression ty)
     (replacementTyped : WellTyped suffix replacement binder) :
@@ -657,6 +717,7 @@ theorem wellTyped_substAt (h : WellTyped (before ++ binder :: suffix) expression
         exact .bvar shifted
   | reject => rw [substAt]; exact .reject
   | discrete => rw [substAt]; exact .discrete
+  | discreteMean => rw [substAt]; exact .discreteMean
   | unit => rw [substAt]; exact .unit
   | bool => rw [substAt]; exact .bool
   | realE => rw [substAt]; exact .realE
@@ -759,27 +820,53 @@ theorem wellTyped_substAt (h : WellTyped (before ++ binder :: suffix) expression
       rw [substAt]
       exact .uniform (ihl replacementTyped (before := before) (suffix := suffix) hcontext)
         (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
+  | uniformMean hl hr ihl ihr =>
+      rw [substAt]
+      exact .uniformMean (ihl replacementTyped (before := before) (suffix := suffix) hcontext)
+        (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
   | gaussian hl hr ihl ihr =>
       rw [substAt]
       exact .gaussian (ihl replacementTyped (before := before) (suffix := suffix) hcontext)
+        (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
+  | gaussianMean hl hr ihl ihr =>
+      rw [substAt]
+      exact .gaussianMean (ihl replacementTyped (before := before) (suffix := suffix) hcontext)
         (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
   | beta hl hr ihl ihr =>
       rw [substAt]
       exact .beta (ihl replacementTyped (before := before) (suffix := suffix) hcontext)
         (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
+  | betaMean hl hr ihl ihr =>
+      rw [substAt]
+      exact .betaMean (ihl replacementTyped (before := before) (suffix := suffix) hcontext)
+        (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
   | gamma hl hr ihl ihr =>
       rw [substAt]
       exact .gamma (ihl replacementTyped (before := before) (suffix := suffix) hcontext)
         (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
+  | gammaMean hl hr ihl ihr =>
+      rw [substAt]
+      exact .gammaMean (ihl replacementTyped (before := before) (suffix := suffix) hcontext)
+        (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
   | poisson hv ih =>
       rw [substAt]
       exact .poisson (ih replacementTyped (before := before) (suffix := suffix) hcontext)
+  | poissonMean hv ih =>
+      rw [substAt]
+      exact .poissonMean (ih replacementTyped (before := before) (suffix := suffix) hcontext)
   | bernoulli hv ih =>
       rw [substAt]
       exact .bernoulli (ih replacementTyped (before := before) (suffix := suffix) hcontext)
+  | bernoulliMean hv ih =>
+      rw [substAt]
+      exact .bernoulliMean (ih replacementTyped (before := before) (suffix := suffix) hcontext)
   | exponential hv ih =>
       rw [substAt]
       exact .exponential (ih replacementTyped (before := before) (suffix := suffix) hcontext)
+
+  | exponentialMean hv ih =>
+      rw [substAt]
+      exact .exponentialMean (ih replacementTyped (before := before) (suffix := suffix) hcontext)
 
 theorem wellTyped_substHead (bodyTyped : WellTyped (binder :: suffix) body ty)
     (replacementTyped : WellTyped suffix replacement binder) :
@@ -1136,6 +1223,8 @@ inductive SymbolicAction (sampleCount : Nat) where
   | sampleE (op : Determinize.Spec.Paper.Op)
       (affineArgs : List (Affine sampleCount))
       (generalArgs : List ℝ) (continuation : AffineExpr (sampleCount + 1))
+  | mean (op : Op) (affineArgs : List (Affine sampleCount))
+      (generalArgs : List ℝ) (continuation : Affine sampleCount → AffineExpr sampleCount)
   | sampleG (site : DistributionAction × Op) (fiber : Measure ℝ)
       (continuation : ℝ → AffineExpr sampleCount)
   | stuck
@@ -1150,6 +1239,10 @@ noncomputable def realize (environment : Env n) : SymbolicAction n → Action
       .sample (.sample .E, op) (primitiveFiber (.sample .E) op
         (affine.map (Symbolic.Affine.eval · environment)) general)
         (fun value => continuation.realize (Env.cons value environment))
+  | .mean op affine general continuation =>
+      .sample (.mean, op) (primitiveFiber .mean op
+        (affine.map (Symbolic.Affine.eval · environment)) general)
+        (fun value => (continuation (value, 0)).realize environment)
   | .sampleG site fiber continuation =>
       .sample site fiber (fun value => (continuation value).realize environment)
   | .stuck => .stuck
@@ -1162,6 +1255,7 @@ def wrap (context : AffineExpr n → AffineExpr n)
   | .next expression => .next (context expression)
   | .sampleE op affine general continuation =>
       .sampleE op affine general (liftedContext continuation)
+  | .mean op affine general continuation => .mean op affine general (context ∘ continuation)
   | .sampleG site fiber continuation => .sampleG site fiber (context ∘ continuation)
   | .stuck => .stuck
 
@@ -1181,6 +1275,10 @@ theorem realize_wrap (action : SymbolicAction n) (environment : Env n)
       simp only [wrap, realize, Action.wrap, Action.sample.injEq, true_and]
       funext value
       exact lifted_realize continuation value
+  | mean op affine general continuation =>
+      simp only [wrap, realize, Action.wrap, Action.sample.injEq, true_and, Function.comp_apply]
+      funext value
+      exact context_realize (continuation (value, 0))
   | sampleG site fiber continuation =>
       simp only [wrap, realize, Action.wrap, Action.sample.injEq, true_and,
         Function.comp_apply]
@@ -1196,6 +1294,12 @@ inductive WellTyped (ty : Ty) : SymbolicAction n → Prop
       general.length = Determinize.Spec.Paper.generalArity op →
       AffineExpr.WellTyped [] continuation ty →
       WellTyped ty (.sampleE op affine general continuation)
+  | mean {continuation : Affine n → AffineExpr n} : affine.length = Determinize.Spec.Paper.affineArity op →
+      general.length = Determinize.Spec.Paper.generalArity op →
+      AffineExpr.WellTyped [] (continuation (meanAffine op affine general)) ty →
+      (∀ value environment, (continuation value).realize environment =
+        (continuation (value.eval environment, 0)).realize environment) →
+      WellTyped ty (.mean op affine general continuation)
   | sampleG : (∀ value, AffineExpr.WellTyped [] (continuation value) ty) →
       WellTyped ty (.sampleG site fiber continuation)
 
@@ -1203,6 +1307,7 @@ theorem WellTyped.sub (typed : WellTyped a action) (h : Ty.Sub a b) : WellTyped 
   cases typed with
   | next ht => exact .next (ht.sub h)
   | sampleE ha hg ht => exact .sampleE ha hg (ht.sub h)
+  | mean ha hg ht natural => exact .mean ha hg (ht.sub h) natural
   | sampleG ht => exact .sampleG (fun v => (ht v).sub h)
 
 @[simp] theorem wellTyped_next_iff :
@@ -1221,6 +1326,17 @@ theorem WellTyped.sub (typed : WellTyped a action) (h : Ty.Sub a b) : WellTyped 
   · intro typed; cases typed; exact ⟨by assumption, by assumption, by assumption⟩
   · rintro ⟨ha, hg, typed⟩; exact .sampleE ha hg typed
 
+@[simp] theorem wellTyped_mean_iff :
+    WellTyped ty (.mean op affine general continuation : SymbolicAction n) ↔
+      affine.length = Determinize.Spec.Paper.affineArity op ∧
+      general.length = Determinize.Spec.Paper.generalArity op ∧
+      AffineExpr.WellTyped [] (continuation (meanAffine op affine general)) ty ∧
+      (∀ value environment, (continuation value).realize environment =
+        (continuation (value.eval environment, 0)).realize environment) := by
+  constructor
+  · intro typed; cases typed; exact ⟨by assumption, by assumption, by assumption, by assumption⟩
+  · rintro ⟨ha, hg, typed, natural⟩; exact .mean ha hg typed natural
+
 @[simp] theorem wellTyped_sampleG_iff :
     WellTyped ty (.sampleG site fiber continuation : SymbolicAction n) ↔
       ∀ value, AffineExpr.WellTyped [] (continuation value) ty := by
@@ -1233,15 +1349,22 @@ theorem WellTyped.sub (typed : WellTyped a action) (h : Ty.Sub a b) : WellTyped 
   intro typed
   cases typed
 
-theorem WellTyped.wrap (typed : WellTyped childTy action)
+theorem WellTyped.wrap {action : SymbolicAction n} (typed : WellTyped childTy action)
     (contextTyped : ∀ expression, AffineExpr.WellTyped [] expression childTy →
       AffineExpr.WellTyped [] (context expression) resultTy)
     (liftedTyped : ∀ expression, AffineExpr.WellTyped [] expression childTy →
-      AffineExpr.WellTyped [] (liftedContext expression) resultTy) :
+      AffineExpr.WellTyped [] (liftedContext expression) resultTy)
+    (context_congr : ∀ (left right : AffineExpr n) (environment : Env n),
+      left.realize environment = right.realize environment →
+      (context left).realize environment = (context right).realize environment := by
+        intros; simp_all only [AffineExpr.realize]) :
     WellTyped resultTy (SymbolicAction.wrap context liftedContext action) := by
   cases typed with
   | next typed => exact .next (contextTyped _ typed)
   | sampleE ha hg typed => exact .sampleE ha hg (liftedTyped _ typed)
+  | mean ha hg typed natural =>
+      exact .mean ha hg (contextTyped _ typed) (fun value environment =>
+        context_congr _ _ environment (natural value environment))
   | sampleG typed => exact .sampleG fun value => contextTyped _ (typed value)
 
 end SymbolicAction
@@ -1369,6 +1492,9 @@ noncomputable def symbolicReduce : AffineExpr n → SymbolicAction n
           | .sample .E => match lower.affineValue?, upper.affineValue? with
             | some x, some y => .sampleE .uniform [x, y] [] (.real (Affine.fresh n))
             | _, _ => .stuck
+          | .mean => match lower.affineValue?, upper.affineValue? with
+            | some x, some y => .mean .uniform [x, y] [] .real
+            | _, _ => .stuck
           | _ => match lower.constantValue?, upper.constantValue? with
             | some x, some y =>
                 .sampleG (kind, .uniform) (uniformFiber kind x y)
@@ -1384,6 +1510,9 @@ noncomputable def symbolicReduce : AffineExpr n → SymbolicAction n
           | .sample .E => match mean.affineValue?, variance.constantValue? with
             | some x, some y => .sampleE .gaussian [x] [y] (.real (Affine.fresh n))
             | _, _ => .stuck
+          | .mean => match mean.affineValue?, variance.constantValue? with
+            | some x, some y => .mean .gaussian [x] [y] .real
+            | _, _ => .stuck
           | _ => match mean.constantValue?, variance.constantValue? with
             | some x, some y =>
                 .sampleG (kind, .gaussian) (gaussianFiber kind x y)
@@ -1398,6 +1527,9 @@ noncomputable def symbolicReduce : AffineExpr n → SymbolicAction n
         | .sample .E => match rate.affineValue? with
           | some x => .sampleE .poisson [x] [] (.real (Affine.fresh n))
           | none => .stuck
+        | .mean => match rate.affineValue? with
+          | some x => .mean .poisson [x] [] .real
+          | none => .stuck
         | _ => match rate.constantValue? with
           | some x =>
               .sampleG (kind, .poisson) (poissonFiber kind x)
@@ -1407,12 +1539,16 @@ noncomputable def symbolicReduce : AffineExpr n → SymbolicAction n
   | .discrete kind d =>
       match kind with
       | .sample .E => .sampleE (.discrete d) [] [] (.real (Affine.fresh n))
+      | .mean => .mean (.discrete d) [] [] .real
       | _ => .sampleG (kind, .discrete d) (discreteFiber kind d)
           (fun value => .real (value, 0))
   | .bernoulli kind probability =>
       if probability.isValue then match kind with
         | .sample .E => match probability.affineValue? with
           | some x => .sampleE .bernoulli [x] [] (.real (Affine.fresh n))
+          | none => .stuck
+        | .mean => match probability.affineValue? with
+          | some x => .mean .bernoulli [x] [] .real
           | none => .stuck
         | _ => match probability.constantValue? with
           | some x =>
@@ -1425,6 +1561,9 @@ noncomputable def symbolicReduce : AffineExpr n → SymbolicAction n
         | .sample .E => match rate.constantValue? with
           | some x => .sampleE .exponential [] [x] (.real (Affine.fresh n))
           | none => .stuck
+        | .mean => match rate.constantValue? with
+          | some x => .mean .exponential [] [x] .real
+          | none => .stuck
         | _ => match rate.constantValue? with
           | some x =>
               .sampleG (kind, .exponential) (exponentialFiber kind x)
@@ -1436,6 +1575,9 @@ noncomputable def symbolicReduce : AffineExpr n → SymbolicAction n
         if betaParam.isValue then match kind with
           | .sample .E => match alpha.constantValue?, betaParam.constantValue? with
             | some x, some y => .sampleE .beta [] [x, y] (.real (Affine.fresh n))
+            | _, _ => .stuck
+          | .mean => match alpha.constantValue?, betaParam.constantValue? with
+            | some x, some y => .mean .beta [] [x, y] .real
             | _, _ => .stuck
           | _ => match alpha.constantValue?, betaParam.constantValue? with
             | some x, some y =>
@@ -1450,6 +1592,9 @@ noncomputable def symbolicReduce : AffineExpr n → SymbolicAction n
         if rate.isValue then match kind with
           | .sample .E => match shape.affineValue?, rate.constantValue? with
             | some x, some y => .sampleE .gamma [x] [y] (.real (Affine.fresh n))
+            | _, _ => .stuck
+          | .mean => match shape.affineValue?, rate.constantValue? with
+            | some x, some y => .mean .gamma [x] [y] .real
             | _, _ => .stuck
           | _ => match shape.constantValue?, rate.constantValue? with
             | some x, some y =>
@@ -1541,6 +1686,9 @@ theorem symbolicReduce_uniform_eq
               | .sample .E => match lower.affineValue?, upper.affineValue? with
                 | some x, some y => .sampleE .uniform [x, y] [] (.real (Affine.fresh n))
                 | _, _ => .stuck
+              | .mean => match lower.affineValue?, upper.affineValue? with
+                | some x, some y => .mean .uniform [x, y] [] .real
+                | _, _ => .stuck
               | _ => match lower.constantValue?, upper.constantValue? with
                 | some x, some y =>
                     .sampleG (kind, .uniform) (uniformFiber kind x y)
@@ -1560,6 +1708,9 @@ theorem symbolicReduce_gaussian_eq
               | .sample .E => match mean.affineValue?, variance.constantValue? with
                 | some x, some y => .sampleE .gaussian [x] [y] (.real (Affine.fresh n))
                 | _, _ => .stuck
+              | .mean => match mean.affineValue?, variance.constantValue? with
+                | some x, some y => .mean .gaussian [x] [y] .real
+                | _, _ => .stuck
               | _ => match mean.constantValue?, variance.constantValue? with
                 | some x, some y =>
                     .sampleG (kind, .gaussian) (gaussianFiber kind x y)
@@ -1578,6 +1729,9 @@ theorem symbolicReduce_poisson_eq
             | .sample .E => match rate.affineValue? with
               | some x => .sampleE .poisson [x] [] (.real (Affine.fresh n))
               | none => .stuck
+            | .mean => match rate.affineValue? with
+              | some x => .mean .poisson [x] [] .real
+              | none => .stuck
             | _ => match rate.constantValue? with
               | some x =>
                   .sampleG (kind, .poisson) (poissonFiber kind x)
@@ -1593,6 +1747,9 @@ theorem symbolicReduce_bernoulli_eq
             | .sample .E => match probability.affineValue? with
               | some x => .sampleE .bernoulli [x] [] (.real (Affine.fresh n))
               | none => .stuck
+            | .mean => match probability.affineValue? with
+              | some x => .mean .bernoulli [x] [] .real
+              | none => .stuck
             | _ => match probability.constantValue? with
               | some x =>
                   .sampleG (kind, .bernoulli) (bernoulliFiber kind x)
@@ -1607,6 +1764,9 @@ theorem symbolicReduce_exponential_eq
           if rate.isValue then match kind with
             | .sample .E => match rate.constantValue? with
               | some x => .sampleE .exponential [] [x] (.real (Affine.fresh n))
+              | none => .stuck
+            | .mean => match rate.constantValue? with
+              | some x => .mean .exponential [] [x] .real
               | none => .stuck
             | _ => match rate.constantValue? with
               | some x =>
@@ -1624,6 +1784,9 @@ theorem symbolicReduce_beta_eq
             if betaParam.isValue then match kind with
               | .sample .E => match alpha.constantValue?, betaParam.constantValue? with
                 | some x, some y => .sampleE .beta [] [x, y] (.real (Affine.fresh n))
+                | _, _ => .stuck
+              | .mean => match alpha.constantValue?, betaParam.constantValue? with
+                | some x, some y => .mean .beta [] [x, y] .real
                 | _, _ => .stuck
               | _ => match alpha.constantValue?, betaParam.constantValue? with
                 | some x, some y =>
@@ -1643,6 +1806,9 @@ theorem symbolicReduce_gamma_eq
             if rate.isValue then match kind with
               | .sample .E => match shape.affineValue?, rate.constantValue? with
                 | some x, some y => .sampleE .gamma [x] [y] (.real (Affine.fresh n))
+                | _, _ => .stuck
+              | .mean => match shape.affineValue?, rate.constantValue? with
+                | some x, some y => .mean .gamma [x] [y] .real
                 | _, _ => .stuck
               | _ => match shape.constantValue?, rate.constantValue? with
                 | some x, some y =>
@@ -1668,6 +1834,8 @@ theorem symbolicReduce_realize
       rename_i context' affinity d
       cases affinity <;> simp [symbolicReduce, SymbolicAction.realize, realize, reduce,
         discreteFiber_eq, Affine.eval_fresh]
+  | discreteMean =>
+      simp [symbolicReduce, SymbolicAction.realize, realize, discreteFiber_eq]
   | bool => simp [symbolicReduce, SymbolicAction.realize, realize, reduce]
   | realE => simp [symbolicReduce, SymbolicAction.realize, realize, reduce]
   | realG => simp [symbolicReduce, SymbolicAction.realize, realize, reduce]
@@ -2112,6 +2280,30 @@ theorem symbolicReduce_realize
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
           ihl environment]
+  | uniformMean leftTyped rightTyped ihl ihr =>
+      rename_i context' left affinity right
+      rw [realize, MeasurableActionFamily.reduce_uniform_eq, realize_isValue,
+        symbolicReduce.eq_def]
+      by_cases leftValue : left.isValue = true
+      · simp only [leftValue, ↓reduceIte]
+        by_cases rightValue : right.isValue = true
+        · simp only [rightValue, ↓reduceIte]
+          obtain ⟨x, rfl⟩ := wellTyped_real_value leftTyped leftValue
+          obtain ⟨y, rfl⟩ := wellTyped_real_value rightTyped rightValue
+          simp [affineValue?, SymbolicAction.realize, realize,
+            Expr.isValue, realValue?, uniformFiber_eq]
+        · simp only [rightValue, Bool.false_eq_true, ↓reduceIte]
+          rw [SymbolicAction.realize_wrap
+            (ExprContext := fun next => .uniform .mean (left.realize environment) next)
+            (context_realize := by intros; simp only [realize])
+            (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
+            ihr environment, realize_isValue, if_neg rightValue]
+      · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
+        rw [SymbolicAction.realize_wrap
+          (ExprContext := fun next => .uniform .mean next (right.realize environment))
+          (context_realize := by intros; simp only [realize])
+          (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
+          ihl environment]
   | gaussian leftTyped rightTyped ihl ihr =>
       rename_i context' left affinity right
       rw [realize, MeasurableActionFamily.reduce_gaussian_eq, realize_isValue,
@@ -2146,6 +2338,32 @@ theorem symbolicReduce_realize
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
           ihl environment]
+  | gaussianMean leftTyped rightTyped ihl ihr =>
+      rename_i context' left affinity right
+      rw [realize, MeasurableActionFamily.reduce_gaussian_eq, realize_isValue,
+        symbolicReduce.eq_def]
+      by_cases leftValue : left.isValue = true
+      · simp only [leftValue, ↓reduceIte]
+        by_cases rightValue : right.isValue = true
+        · simp only [rightValue, ↓reduceIte]
+          obtain ⟨x, rfl⟩ := wellTyped_real_value leftTyped leftValue
+          obtain ⟨y, rfl⟩ := wellTyped_real_value rightTyped rightValue
+          rcases y with ⟨y0, yc⟩
+          obtain rfl : yc = 0 := wellTyped_realG_coefficients rightTyped
+          simp [affineValue?, constantValue?, SymbolicAction.realize, realize,
+            Expr.isValue, realValue?, gaussianFiber_eq]
+        · simp only [rightValue, Bool.false_eq_true, ↓reduceIte]
+          rw [SymbolicAction.realize_wrap
+            (ExprContext := fun next => .gaussian .mean (left.realize environment) next)
+            (context_realize := by intros; simp only [realize])
+            (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
+            ihr environment, realize_isValue, if_neg rightValue]
+      · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
+        rw [SymbolicAction.realize_wrap
+          (ExprContext := fun next => .gaussian .mean next (right.realize environment))
+          (context_realize := by intros; simp only [realize])
+          (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
+          ihl environment]
   | poisson valueTyped ih =>
       rename_i context' value affinity
       rw [realize, MeasurableActionFamily.reduce_poisson_eq, realize_isValue,
@@ -2164,6 +2382,20 @@ theorem symbolicReduce_realize
       · simp only [valueIsValue, Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
           (ExprContext := fun next => .poisson (.sample affinity) next)
+          (context_realize := by intros; simp only [realize])
+          (lifted_realize := by intros; simp only [realize]), ih environment]
+  | poissonMean valueTyped ih =>
+      rename_i context' value affinity
+      rw [realize, MeasurableActionFamily.reduce_poisson_eq, realize_isValue,
+        symbolicReduce.eq_def]
+      by_cases valueIsValue : value.isValue = true
+      · simp only [valueIsValue, ↓reduceIte]
+        obtain ⟨x, rfl⟩ := wellTyped_real_value valueTyped valueIsValue
+        simp [affineValue?, SymbolicAction.realize, realize,
+          realValue?, poissonFiber_eq]
+      · simp only [valueIsValue, Bool.false_eq_true, ↓reduceIte]
+        rw [SymbolicAction.realize_wrap
+          (ExprContext := fun next => .poisson .mean next)
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize]), ih environment]
   | bernoulli valueTyped ih =>
@@ -2186,6 +2418,20 @@ theorem symbolicReduce_realize
           (ExprContext := fun next => .bernoulli (.sample affinity) next)
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize]), ih environment]
+  | bernoulliMean valueTyped ih =>
+      rename_i context' value affinity
+      rw [realize, MeasurableActionFamily.reduce_bernoulli_eq, realize_isValue,
+        symbolicReduce.eq_def]
+      by_cases valueIsValue : value.isValue = true
+      · simp only [valueIsValue, ↓reduceIte]
+        obtain ⟨x, rfl⟩ := wellTyped_real_value valueTyped valueIsValue
+        simp [affineValue?, SymbolicAction.realize, realize,
+          realValue?, bernoulliFiber_eq]
+      · simp only [valueIsValue, Bool.false_eq_true, ↓reduceIte]
+        rw [SymbolicAction.realize_wrap
+          (ExprContext := fun next => .bernoulli .mean next)
+          (context_realize := by intros; simp only [realize])
+          (lifted_realize := by intros; simp only [realize]), ih environment]
   | exponential valueTyped ih =>
       rename_i context' value affinity
       rw [realize, MeasurableActionFamily.reduce_exponential_eq, realize_isValue,
@@ -2206,6 +2452,22 @@ theorem symbolicReduce_realize
       · simp only [valueIsValue, Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
           (ExprContext := fun next => .exponential (.sample affinity) next)
+          (context_realize := by intros; simp only [realize])
+          (lifted_realize := by intros; simp only [realize]), ih environment]
+  | exponentialMean valueTyped ih =>
+      rename_i context' value affinity
+      rw [realize, MeasurableActionFamily.reduce_exponential_eq, realize_isValue,
+        symbolicReduce.eq_def]
+      by_cases valueIsValue : value.isValue = true
+      · simp only [valueIsValue, ↓reduceIte]
+        obtain ⟨x, rfl⟩ := wellTyped_real_value valueTyped valueIsValue
+        rcases x with ⟨x0, xc⟩
+        obtain rfl : xc = 0 := wellTyped_realG_coefficients valueTyped
+        simp [constantValue?, SymbolicAction.realize, realize,
+          realValue?, exponentialFiber_eq]
+      · simp only [valueIsValue, Bool.false_eq_true, ↓reduceIte]
+        rw [SymbolicAction.realize_wrap
+          (ExprContext := fun next => .exponential .mean next)
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize]), ih environment]
   | beta leftTyped rightTyped ihl ihr =>
@@ -2244,6 +2506,34 @@ theorem symbolicReduce_realize
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
           ihl environment]
+  | betaMean leftTyped rightTyped ihl ihr =>
+      rename_i context' left right affinity
+      rw [realize, MeasurableActionFamily.reduce_beta_eq, realize_isValue,
+        symbolicReduce.eq_def]
+      by_cases leftValue : left.isValue = true
+      · simp only [leftValue, ↓reduceIte]
+        by_cases rightValue : right.isValue = true
+        · simp only [rightValue, ↓reduceIte]
+          obtain ⟨x, rfl⟩ := wellTyped_real_value leftTyped leftValue
+          obtain ⟨y, rfl⟩ := wellTyped_real_value rightTyped rightValue
+          rcases y with ⟨y0, yc⟩
+          obtain rfl : yc = 0 := wellTyped_realG_coefficients rightTyped
+          rcases x with ⟨x0, xc⟩
+          obtain rfl : xc = 0 := wellTyped_realG_coefficients leftTyped
+          simp [constantValue?, SymbolicAction.realize, realize,
+            Expr.isValue, realValue?, betaFiber_eq]
+        · simp only [rightValue, Bool.false_eq_true, ↓reduceIte]
+          rw [SymbolicAction.realize_wrap
+            (ExprContext := fun next => .beta .mean (left.realize environment) next)
+            (context_realize := by intros; simp only [realize])
+            (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
+            ihr environment, realize_isValue, if_neg rightValue]
+      · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
+        rw [SymbolicAction.realize_wrap
+          (ExprContext := fun next => .beta .mean next (right.realize environment))
+          (context_realize := by intros; simp only [realize])
+          (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
+          ihl environment]
   | gamma leftTyped rightTyped ihl ihr =>
       rename_i context' left affinity right
       rw [realize, MeasurableActionFamily.reduce_gamma_eq, realize_isValue,
@@ -2275,6 +2565,33 @@ theorem symbolicReduce_realize
       · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
           (ExprContext := fun next => .gamma (.sample affinity) next (right.realize environment))
+          (context_realize := by intros; simp only [realize])
+          (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
+          ihl environment]
+
+  | gammaMean leftTyped rightTyped ihl ihr =>
+      rename_i context' left affinity right
+      rw [realize, MeasurableActionFamily.reduce_gamma_eq, realize_isValue,
+        symbolicReduce.eq_def]
+      by_cases leftValue : left.isValue = true
+      · simp only [leftValue, ↓reduceIte]
+        by_cases rightValue : right.isValue = true
+        · simp only [rightValue, ↓reduceIte]
+          obtain ⟨x, rfl⟩ := wellTyped_real_value leftTyped leftValue
+          obtain ⟨y, rfl⟩ := wellTyped_real_value rightTyped rightValue
+          rcases y with ⟨y0, yc⟩
+          obtain rfl : yc = 0 := wellTyped_realG_coefficients rightTyped
+          simp [affineValue?, constantValue?, SymbolicAction.realize, realize,
+            Expr.isValue, realValue?, gammaFiber_eq]
+        · simp only [rightValue, Bool.false_eq_true, ↓reduceIte]
+          rw [SymbolicAction.realize_wrap
+            (ExprContext := fun next => .gamma .mean (left.realize environment) next)
+            (context_realize := by intros; simp only [realize])
+            (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
+            ihr environment, realize_isValue, if_neg rightValue]
+      · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
+        rw [SymbolicAction.realize_wrap
+          (ExprContext := fun next => .gamma .mean next (right.realize environment))
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
           ihl environment]
@@ -2314,6 +2631,33 @@ theorem symbolicReduce_wellTyped
       exact (ihLeft rfl).wrap
         (fun next nextTyped => .uniform nextTyped rightTyped)
         (fun next nextTyped => .uniform nextTyped rightTyped.weakenSamples)
+  case uniformMean left affinity right leftTyped rightTyped ihLeft ihRight =>
+    cases hcontext
+    simp only [symbolicReduce]
+    by_cases leftValue : left.isValue = true
+    · simp only [leftValue, ↓reduceIte]
+      by_cases rightValue : right.isValue = true
+      · simp only [rightValue, ↓reduceIte]
+        obtain ⟨x, rfl⟩ := wellTyped_real_value leftTyped leftValue
+        obtain ⟨y, rfl⟩ := wellTyped_real_value rightTyped rightValue
+        simp only [affineValue?]
+        refine .mean rfl rfl ?_ (by intros; simp [realize])
+        cases affinity with
+        | E => exact .realE
+        | G =>
+            have hx := wellTyped_realG_coefficients leftTyped
+            have hy := wellTyped_realG_coefficients rightTyped
+            apply AffineExpr.WellTyped.realG
+            simp_all [meanAffine, Affine.primitiveMean, meanConstant, meanCoeff, affineArity,
+              Fin.sum_univ_two, Pi.zero_def]
+      · simp only [rightValue]
+        exact (ihRight rfl).wrap
+          (fun next nextTyped => .uniformMean leftTyped nextTyped)
+          (fun next nextTyped => .uniformMean leftTyped.weakenSamples nextTyped)
+    · simp only [leftValue]
+      exact (ihLeft rfl).wrap
+        (fun next nextTyped => .uniformMean nextTyped rightTyped)
+        (fun next nextTyped => .uniformMean nextTyped rightTyped.weakenSamples)
   case gaussian left affinity right leftTyped rightTyped ihLeft ihRight =>
     cases hcontext
     simp only [symbolicReduce]
@@ -2344,6 +2688,34 @@ theorem symbolicReduce_wellTyped
       exact (ihLeft rfl).wrap
         (fun next nextTyped => .gaussian nextTyped rightTyped)
         (fun next nextTyped => .gaussian nextTyped rightTyped.weakenSamples)
+  case gaussianMean left affinity right leftTyped rightTyped ihLeft ihRight =>
+    cases hcontext
+    simp only [symbolicReduce]
+    by_cases leftValue : left.isValue = true
+    · simp only [leftValue, ↓reduceIte]
+      by_cases rightValue : right.isValue = true
+      · simp only [rightValue, ↓reduceIte]
+        obtain ⟨x, rfl⟩ := wellTyped_real_value leftTyped leftValue
+        obtain ⟨y, rfl⟩ := wellTyped_real_value rightTyped rightValue
+        rcases y with ⟨y0, yc⟩
+        obtain rfl : yc = 0 := wellTyped_realG_coefficients rightTyped
+        simp only [affineValue?, constantValue?, ↓reduceIte]
+        refine .mean rfl rfl ?_ (by intros; simp [realize])
+        cases affinity with
+        | E => exact .realE
+        | G =>
+            have hx := wellTyped_realG_coefficients leftTyped
+            apply AffineExpr.WellTyped.realG
+            simp_all [meanAffine, Affine.primitiveMean, meanConstant, meanCoeff, affineArity,
+              Pi.zero_def]
+      · simp only [rightValue]
+        exact (ihRight rfl).wrap
+          (fun next nextTyped => .gaussianMean leftTyped nextTyped)
+          (fun next nextTyped => .gaussianMean leftTyped.weakenSamples nextTyped)
+    · simp only [leftValue]
+      exact (ihLeft rfl).wrap
+        (fun next nextTyped => .gaussianMean nextTyped rightTyped)
+        (fun next nextTyped => .gaussianMean nextTyped rightTyped.weakenSamples)
   case poisson value affinity valueTyped ih =>
     cases hcontext
     simp only [symbolicReduce]
@@ -2363,6 +2735,25 @@ theorem symbolicReduce_wellTyped
       exact (ih rfl).wrap
         (fun next nextTyped => .poisson nextTyped)
         (fun next nextTyped => .poisson nextTyped)
+  case poissonMean value affinity valueTyped ih =>
+    cases hcontext
+    simp only [symbolicReduce]
+    by_cases isValue : value.isValue = true
+    · simp only [isValue, ↓reduceIte]
+      obtain ⟨x, rfl⟩ := wellTyped_real_value valueTyped isValue
+      simp only [affineValue?]
+      refine .mean rfl rfl ?_ (by intros; simp [realize])
+      cases affinity with
+      | E => exact .realE
+      | G =>
+          have hx := wellTyped_realG_coefficients valueTyped
+          apply AffineExpr.WellTyped.realG
+          simp_all [meanAffine, Affine.primitiveMean, meanConstant, meanCoeff, affineArity,
+              Pi.zero_def]
+    · simp only [isValue]
+      exact (ih rfl).wrap
+        (fun next nextTyped => .poissonMean nextTyped)
+        (fun next nextTyped => .poissonMean nextTyped)
   case bernoulli value affinity valueTyped ih =>
     cases hcontext
     simp only [symbolicReduce]
@@ -2382,6 +2773,25 @@ theorem symbolicReduce_wellTyped
       exact (ih rfl).wrap
         (fun next nextTyped => .bernoulli nextTyped)
         (fun next nextTyped => .bernoulli nextTyped)
+  case bernoulliMean value affinity valueTyped ih =>
+    cases hcontext
+    simp only [symbolicReduce]
+    by_cases isValue : value.isValue = true
+    · simp only [isValue, ↓reduceIte]
+      obtain ⟨x, rfl⟩ := wellTyped_real_value valueTyped isValue
+      simp only [affineValue?]
+      refine .mean rfl rfl ?_ (by intros; simp [realize])
+      cases affinity with
+      | E => exact .realE
+      | G =>
+          have hx := wellTyped_realG_coefficients valueTyped
+          apply AffineExpr.WellTyped.realG
+          simp_all [meanAffine, Affine.primitiveMean, meanConstant, meanCoeff, affineArity,
+              Pi.zero_def]
+    · simp only [isValue]
+      exact (ih rfl).wrap
+        (fun next nextTyped => .bernoulliMean nextTyped)
+        (fun next nextTyped => .bernoulliMean nextTyped)
   case exponential value affinity valueTyped ih =>
     cases hcontext
     simp only [symbolicReduce]
@@ -2403,6 +2813,26 @@ theorem symbolicReduce_wellTyped
       exact (ih rfl).wrap
         (fun next nextTyped => .exponential nextTyped)
         (fun next nextTyped => .exponential nextTyped)
+  case exponentialMean value affinity valueTyped ih =>
+    cases hcontext
+    simp only [symbolicReduce]
+    by_cases isValue : value.isValue = true
+    · simp only [isValue, ↓reduceIte]
+      obtain ⟨x, rfl⟩ := wellTyped_real_value valueTyped isValue
+      rcases x with ⟨x0, xc⟩
+      obtain rfl : xc = 0 := wellTyped_realG_coefficients valueTyped
+      simp only [constantValue?, ↓reduceIte]
+      refine .mean rfl rfl ?_ (by intros; simp [realize])
+      cases affinity with
+      | E => exact .realE
+      | G =>
+          apply AffineExpr.WellTyped.realG
+          simp_all [meanAffine, Affine.primitiveMean, meanConstant, meanCoeff, affineArity,
+              Pi.zero_def]
+    · simp only [isValue]
+      exact (ih rfl).wrap
+        (fun next nextTyped => .exponentialMean nextTyped)
+        (fun next nextTyped => .exponentialMean nextTyped)
   case beta left right affinity leftTyped rightTyped ihLeft ihRight =>
     cases hcontext
     simp only [symbolicReduce]
@@ -2435,6 +2865,35 @@ theorem symbolicReduce_wellTyped
       exact (ihLeft rfl).wrap
         (fun next nextTyped => .beta nextTyped rightTyped)
         (fun next nextTyped => .beta nextTyped rightTyped.weakenSamples)
+  case betaMean left right affinity leftTyped rightTyped ihLeft ihRight =>
+    cases hcontext
+    simp only [symbolicReduce]
+    by_cases leftValue : left.isValue = true
+    · simp only [leftValue, ↓reduceIte]
+      by_cases rightValue : right.isValue = true
+      · simp only [rightValue, ↓reduceIte]
+        obtain ⟨x, rfl⟩ := wellTyped_real_value leftTyped leftValue
+        obtain ⟨y, rfl⟩ := wellTyped_real_value rightTyped rightValue
+        rcases y with ⟨y0, yc⟩
+        obtain rfl : yc = 0 := wellTyped_realG_coefficients rightTyped
+        rcases x with ⟨x0, xc⟩
+        obtain rfl : xc = 0 := wellTyped_realG_coefficients leftTyped
+        simp only [constantValue?, ↓reduceIte]
+        refine .mean rfl rfl ?_ (by intros; simp [realize])
+        cases affinity with
+        | E => exact .realE
+        | G =>
+            apply AffineExpr.WellTyped.realG
+            simp_all [meanAffine, Affine.primitiveMean, meanConstant, meanCoeff, affineArity,
+              Pi.zero_def]
+      · simp only [rightValue]
+        exact (ihRight rfl).wrap
+          (fun next nextTyped => .betaMean leftTyped nextTyped)
+          (fun next nextTyped => .betaMean leftTyped.weakenSamples nextTyped)
+    · simp only [leftValue]
+      exact (ihLeft rfl).wrap
+        (fun next nextTyped => .betaMean nextTyped rightTyped)
+        (fun next nextTyped => .betaMean nextTyped rightTyped.weakenSamples)
   case gamma left affinity right leftTyped rightTyped ihLeft ihRight =>
     cases hcontext
     simp only [symbolicReduce]
@@ -2465,6 +2924,35 @@ theorem symbolicReduce_wellTyped
       exact (ihLeft rfl).wrap
         (fun next nextTyped => .gamma nextTyped rightTyped)
         (fun next nextTyped => .gamma nextTyped rightTyped.weakenSamples)
+
+  case gammaMean left affinity right leftTyped rightTyped ihLeft ihRight =>
+    cases hcontext
+    simp only [symbolicReduce]
+    by_cases leftValue : left.isValue = true
+    · simp only [leftValue, ↓reduceIte]
+      by_cases rightValue : right.isValue = true
+      · simp only [rightValue, ↓reduceIte]
+        obtain ⟨x, rfl⟩ := wellTyped_real_value leftTyped leftValue
+        obtain ⟨y, rfl⟩ := wellTyped_real_value rightTyped rightValue
+        rcases y with ⟨y0, yc⟩
+        obtain rfl : yc = 0 := wellTyped_realG_coefficients rightTyped
+        simp only [affineValue?, constantValue?, ↓reduceIte]
+        refine .mean rfl rfl ?_ (by intros; simp [realize])
+        cases affinity with
+        | E => exact .realE
+        | G =>
+            have hx := wellTyped_realG_coefficients leftTyped
+            apply AffineExpr.WellTyped.realG
+            simp_all [meanAffine, Affine.primitiveMean, meanConstant, meanCoeff, affineArity,
+              Pi.zero_def]
+      · simp only [rightValue]
+        exact (ihRight rfl).wrap
+          (fun next nextTyped => .gammaMean leftTyped nextTyped)
+          (fun next nextTyped => .gammaMean leftTyped.weakenSamples nextTyped)
+    · simp only [leftValue]
+      exact (ihLeft rfl).wrap
+        (fun next nextTyped => .gammaMean nextTyped rightTyped)
+        (fun next nextTyped => .gammaMean nextTyped rightTyped.weakenSamples)
 
   case app functionTyped argumentTyped ihf iha =>
     cases hcontext
@@ -2807,6 +3295,13 @@ theorem symbolicReduce_wellTyped
     cases affinity <;> simp only [symbolicReduce]
     · exact .sampleE rfl rfl .realE
     · exact .sampleG fun _ => .realG rfl
+  case discreteMean d affinity =>
+    simp only [symbolicReduce]
+    refine .mean rfl rfl ?_ (by intros; simp [realize])
+    cases affinity
+    · exact .realE
+    · apply AffineExpr.WellTyped.realG
+      simp [meanAffine, Affine.primitiveMean, affineArity, Pi.zero_def]
   case unit => simp only [symbolicReduce]; exact .next .unit
   case bool => simp only [symbolicReduce]; exact .next .bool
   case realE => simp only [symbolicReduce]; exact .next .realE
@@ -2822,33 +3317,11 @@ theorem symbolicReduce_wellTyped
   case nil => simp only [symbolicReduce]; exact .next .nil
 
 theorem wellTyped_ofExpr_of_typed {expression : Expr}
-    (typed : Determinize.Spec.Paper.Typed context expression ty)
-    (sourceTags : (AffineExpr.ofExpr expression).SourceTags) :
+    (typed : Determinize.Spec.Paper.Typed context expression ty) :
     WellTyped context (AffineExpr.ofExpr expression) ty := by
   induction typed
-  case sub h sub ih => exact (ih sourceTags).sub sub
-  all_goals simp only [ofExpr, SourceTags, DistributionAction.isSample, Bool.false_eq_true, false_and] at sourceTags ⊢
-  case uniform lowerTyped upperTyped ihl ihr =>
-    obtain ⟨_, lowerTags, upperTags⟩ := sourceTags
-    exact .uniform (ihl lowerTags) (ihr upperTags)
-  case gaussian meanTyped varianceTyped ihl ihr =>
-    obtain ⟨_, meanTags, varianceTags⟩ := sourceTags
-    exact .gaussian (ihl meanTags) (ihr varianceTags)
-  case poisson rateTyped ih =>
-    obtain ⟨_, rateTags⟩ := sourceTags
-    exact .poisson (ih rateTags)
-  case bernoulli probabilityTyped ih =>
-    obtain ⟨_, probabilityTags⟩ := sourceTags
-    exact .bernoulli (ih probabilityTags)
-  case exponential rateTyped ih =>
-    obtain ⟨_, rateTags⟩ := sourceTags
-    exact .exponential (ih rateTags)
-  case beta alphaTyped betaTyped ihl ihr =>
-    obtain ⟨_, alphaTags, betaTags⟩ := sourceTags
-    exact .beta (ihl alphaTags) (ihr betaTags)
-  case gamma shapeTyped rateTyped ihl ihr =>
-    obtain ⟨_, shapeTags, rateTags⟩ := sourceTags
-    exact .gamma (ihl shapeTags) (ihr rateTags)
+  case sub h sub ih => exact ih.sub sub
+  all_goals simp only [ofExpr]
   all_goals try cases ‹Affinity›
   all_goals aesop (add unsafe constructors WellTyped)
 
