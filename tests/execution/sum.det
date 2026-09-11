@@ -1,0 +1,1 @@
+match inr 7 with inl x => 0 | inr y => y

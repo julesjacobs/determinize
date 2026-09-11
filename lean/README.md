@@ -33,8 +33,8 @@ From `lean/`:
 
 ```sh
 lake build --wfail
-.lake/build/bin/determinize --samples 1000 ../det/foldr.det
-.lake/build/bin/determinize --certificate /tmp/Certificate.lean ../det/foldr.det
+.lake/build/bin/determinize --samples 1000 ../tests/execution/legacy/foldr.det
+.lake/build/bin/determinize --certificate /tmp/Certificate.lean ../tests/execution/legacy/foldr.det
 lake env lean /tmp/Certificate.lean
 ./test.sh
 ```

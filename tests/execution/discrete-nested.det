@@ -1,0 +1,1 @@
+let f = fun x => x + discrete[E](0,1,0) in f (bernoulli[E](0.5))

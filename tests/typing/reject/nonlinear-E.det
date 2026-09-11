@@ -1,0 +1,1 @@
+let x = uniform[E](0,1) in x*x

@@ -1,0 +1,1 @@
+uniform[E](2,2) + gauss[E](3,0) + poisson[E](0)

@@ -1,0 +1,828 @@
+version = 1
+
+[[exclude]]
+file = "examples/loops/example.det"
+reason = "Informal sketches containing multiple programs and unsupported syntax."
+
+[[case]]
+file = "tests/execution/legacy/apply.det"
+suite = "execution"
+outcome = "accept"
+source = { number = 5 }
+target = { number = 5 }
+
+[[case]]
+file = "tests/execution/legacy/arith.det"
+suite = "execution"
+outcome = "accept"
+source = { number = 7 }
+target = { number = 7 }
+
+[[case]]
+file = "tests/typing/accept/legacy/beta.det"
+suite = "typing"
+outcome = "accept"
+
+[[case]]
+file = "tests/execution/legacy/case-gauss.det"
+suite = "execution"
+outcome = "accept"
+target = { number = 0 }
+
+[[case]]
+file = "tests/typing/accept/legacy/exponential.det"
+suite = "typing"
+outcome = "accept"
+
+[[case]]
+file = "tests/execution/legacy/factorial.det"
+suite = "execution"
+outcome = "accept"
+kernel = true
+source = { number = 24 }
+target = { number = 24 }
+
+[[case]]
+file = "tests/execution/legacy/foldr.det"
+suite = "execution"
+outcome = "accept"
+kernel = true
+target = { number = 4.5 }
+
+[[case]]
+file = "tests/typing/accept/legacy/funny.det"
+suite = "typing"
+outcome = "accept"
+
+[[case]]
+file = "tests/execution/legacy/gamma.det"
+suite = "execution"
+outcome = "accept"
+target = { number = 1.0625 }
+
+[[case]]
+file = "tests/typing/accept/legacy/gauss.det"
+suite = "typing"
+outcome = "accept"
+
+[[case]]
+file = "tests/execution/legacy/if.det"
+suite = "execution"
+outcome = "accept"
+source = { number = 1 }
+target = { number = 1 }
+
+[[case]]
+file = "tests/execution/legacy/lambda.det"
+suite = "execution"
+outcome = "accept"
+kernel = true
+source = { number = 6 }
+target = { number = 6 }
+
+[[case]]
+file = "tests/execution/legacy/let.det"
+suite = "execution"
+outcome = "accept"
+source = { number = 3 }
+target = { number = 3 }
+
+[[case]]
+file = "tests/execution/legacy/lists.det"
+suite = "execution"
+outcome = "accept"
+source = { number = 6 }
+target = { number = 6 }
+
+[[case]]
+file = "tests/typing/accept/legacy/mult.det"
+suite = "typing"
+outcome = "accept"
+
+[[case]]
+file = "tests/typing/accept/legacy/observe.det"
+suite = "typing"
+outcome = "accept"
+kernel = true
+
+[[case]]
+file = "tests/execution/legacy/pairs.det"
+suite = "execution"
+outcome = "accept"
+source = { number = 3 }
+target = { number = 3 }
+
+[[case]]
+file = "tests/execution/legacy/partial.det"
+suite = "execution"
+outcome = "accept"
+source = { number = 10 }
+target = { number = 10 }
+
+[[case]]
+file = "tests/execution/legacy/rec.det"
+suite = "execution"
+outcome = "accept"
+source = { number = 3 }
+target = { number = 3 }
+
+[[case]]
+file = "tests/typing/accept/legacy/retry.det"
+suite = "typing"
+outcome = "accept"
+
+[[case]]
+file = "tests/execution/legacy/sums.det"
+suite = "execution"
+outcome = "accept"
+source = { number = 4 }
+target = { number = 4 }
+
+[[case]]
+file = "tests/execution/legacy/uniform.det"
+suite = "execution"
+outcome = "accept"
+target = { number = 2.5 }
+
+[[case]]
+file = "examples/baselines/clickGraph.det"
+suite = "typing"
+outcome = "accept"
+
+[[case]]
+file = "examples/ex.det"
+suite = "typing"
+outcome = "accept"
+
+[[case]]
+file = "examples/infinite.det"
+suite = "typing"
+outcome = "accept"
+
+[[case]]
+file = "examples/loops/irwin_hall.det"
+suite = "typing"
+outcome = "accept"
+
+[[case]]
+file = "examples/loops/irwin_hall_observe.det"
+suite = "typing"
+outcome = "accept"
+
+[[case]]
+file = "examples/loops/poisson_packet_arrival.det"
+suite = "typing"
+outcome = "accept"
+
+[[case]]
+file = "examples/loops/random_walk.det"
+suite = "typing"
+outcome = "accept"
+
+[[case]]
+file = "examples/loops/tortoise_hare.det"
+suite = "typing"
+outcome = "accept"
+
+[[case]]
+file = "examples/paper/ex1.det"
+suite = "typing"
+outcome = "accept"
+
+[[case]]
+file = "examples/paper/ex2.det"
+suite = "typing"
+outcome = "accept"
+
+[[case]]
+file = "examples/paper/ex3.det"
+suite = "typing"
+outcome = "accept"
+
+[[case]]
+file = "examples/paper/ex4.det"
+suite = "typing"
+outcome = "accept"
+
+[[case]]
+file = "examples/paper/ex5.det"
+suite = "typing"
+outcome = "accept"
+
+[[case]]
+file = "examples/paper/ex6.det"
+suite = "typing"
+outcome = "accept"
+
+[[case]]
+file = "examples/symbolic/symbolic_example.det"
+suite = "typing"
+outcome = "accept"
+
+[[case]]
+file = "examples/symbolic/symbolic_mixed.det"
+suite = "typing"
+outcome = "accept"
+
+[[case]]
+file = "examples/symbolic/symbolic_pairs.det"
+suite = "typing"
+outcome = "accept"
+
+[[case]]
+file = "examples/symbolic/symbolic_rec_list_sum.det"
+suite = "typing"
+outcome = "accept"
+
+[[case]]
+file = "examples/symbolic/symbolic_sum_distributions.det"
+suite = "typing"
+outcome = "accept"
+
+[[case]]
+file = "examples/uniform_sum.det"
+suite = "typing"
+outcome = "accept"
+
+[[case]]
+file = "examples/while.det"
+suite = "typing"
+outcome = "accept"
+
+[[case]]
+file = "tests/typing/accept/primitives.det"
+suite = "typing"
+outcome = "accept"
+kernel = true
+
+[[case]]
+file = "tests/typing/accept/subtyping.det"
+suite = "typing"
+outcome = "accept"
+kernel = true
+
+[[case]]
+file = "tests/typing/accept/identity.det"
+suite = "typing"
+outcome = "accept"
+kernel = true
+
+[[case]]
+file = "tests/execution/pair.det"
+suite = "execution"
+outcome = "accept"
+source = { value = "(1.000000, true)" }
+target = { value = "(1.000000, true)" }
+
+[[case]]
+file = "tests/execution/list.det"
+suite = "execution"
+outcome = "accept"
+source = { value = "1.000000 :: 2.000000 :: []" }
+target = { value = "1.000000 :: 2.000000 :: []" }
+
+[[case]]
+file = "tests/execution/sum.det"
+suite = "execution"
+outcome = "accept"
+source = { number = 7 }
+target = { number = 7 }
+
+[[case]]
+file = "tests/execution/closure.det"
+suite = "execution"
+outcome = "accept"
+source = { number = 5 }
+target = { number = 5 }
+
+[[case]]
+file = "tests/execution/division-zero.det"
+suite = "execution"
+outcome = "accept"
+source = { number = 0 }
+target = { number = 0 }
+
+[[case]]
+file = "tests/execution/boolean.det"
+suite = "execution"
+outcome = "accept"
+source = { value = "true" }
+target = { value = "true" }
+
+[[case]]
+file = "tests/execution/unit.det"
+suite = "execution"
+outcome = "accept"
+source = { value = "()" }
+target = { value = "()" }
+
+[[case]]
+file = "tests/execution/invalid-uniform.det"
+suite = "execution"
+outcome = "accept"
+fuel = 100
+source = { error = "uniform requires lower" }
+target = { error = "uniform requires lower" }
+
+[[case]]
+file = "tests/execution/invalid-gaussian.det"
+suite = "execution"
+outcome = "accept"
+fuel = 100
+source = { error = "gaussian requires variance" }
+target = { error = "gaussian requires variance" }
+
+[[case]]
+file = "tests/execution/invalid-poisson.det"
+suite = "execution"
+outcome = "accept"
+fuel = 100
+source = { error = "poisson requires rate" }
+target = { error = "poisson requires rate" }
+
+[[case]]
+file = "tests/execution/invalid-gamma.det"
+suite = "execution"
+outcome = "accept"
+fuel = 100
+source = { error = "gamma requires positive" }
+target = { error = "gamma requires positive" }
+
+[[case]]
+file = "tests/execution/invalid-beta.det"
+suite = "execution"
+outcome = "accept"
+fuel = 100
+source = { error = "beta requires positive" }
+target = { error = "beta requires positive" }
+
+[[case]]
+file = "tests/execution/invalid-exponential.det"
+suite = "execution"
+outcome = "accept"
+fuel = 100
+source = { error = "exponential requires rate" }
+target = { error = "exponential requires rate" }
+
+[[case]]
+file = "tests/execution/divergence.det"
+suite = "execution"
+outcome = "accept"
+fuel = 100
+source = { error = "step limit reached" }
+target = { error = "step limit reached" }
+
+[[case]]
+file = "tests/execution/rejected-observation.det"
+suite = "execution"
+outcome = "accept"
+fuel = 100
+source = { error = "observation rejected" }
+target = { error = "observation rejected" }
+
+[[case]]
+file = "tests/execution/variance-operand.det"
+suite = "execution"
+outcome = "accept"
+expected_type = "float[E]"
+modes = ["E", "G"]
+target = { number = 1, draws = 1 }
+
+[[case]]
+file = "tests/typing/reject/nonlinear-E.det"
+suite = "typing"
+outcome = "reject"
+stage = "inference"
+
+[[case]]
+file = "tests/typing/reject/compare-E.det"
+suite = "typing"
+outcome = "reject"
+stage = "inference"
+
+[[case]]
+file = "tests/typing/reject/infinite-type.det"
+suite = "typing"
+outcome = "reject"
+stage = "inference"
+
+[[case]]
+file = "tests/typing/reject/wrong-type.det"
+suite = "typing"
+outcome = "reject"
+stage = "inference"
+
+[[case]]
+file = "tests/typing/reject/unbound.det"
+suite = "typing"
+outcome = "reject"
+stage = "elaboration"
+
+[[case]]
+file = "tests/typing/reject/bad-mode.det"
+suite = "typing"
+outcome = "reject"
+stage = "parse"
+
+[[case]]
+file = "tests/typing/reject/trailing-input.det"
+suite = "typing"
+outcome = "reject"
+stage = "parse"
+
+[[case]]
+file = "tests/typing/accept/mixed-list.det"
+suite = "typing"
+outcome = "accept"
+modes = ["G", "E"]
+
+[[case]]
+file = "tests/typing/accept/mixed-pair.det"
+suite = "typing"
+outcome = "accept"
+modes = ["G", "E"]
+
+[[case]]
+file = "tests/typing/accept/mixed-sum.det"
+suite = "typing"
+outcome = "accept"
+modes = ["G", "E"]
+
+[[case]]
+file = "tests/statistical/uniform.det"
+suite = "statistical"
+outcome = "accept"
+samples = 20000
+seed = 20260911
+source = { moments = { mean = 1, variance = 1.3333333333333333, mean_tolerance = 0.05715476066494082, variance_tolerance = 0.059032872382926344, lower = -1, upper = 3 } }
+target = { number = 1, moments = { mean = 1, variance = 0, mean_tolerance = 1e-10, variance_tolerance = 1e-10 } }
+derivation = "uniform"
+
+[[case]]
+file = "tests/statistical/gaussian.det"
+suite = "statistical"
+outcome = "accept"
+samples = 20000
+seed = 20260911
+source = { moments = { mean = 3, variance = 4, mean_tolerance = 0.09899494936611665, variance_tolerance = 0.2800070002625109 } }
+target = { number = 3, moments = { mean = 3, variance = 0, mean_tolerance = 1e-10, variance_tolerance = 1e-10 } }
+derivation = "gaussian"
+
+[[case]]
+file = "tests/statistical/poisson.det"
+suite = "statistical"
+outcome = "accept"
+samples = 20000
+seed = 20260911
+source = { moments = { mean = 4, variance = 4, mean_tolerance = 0.09899494936611665, variance_tolerance = 0.2969914480183054, lower = 0, integer = true } }
+target = { number = 4, moments = { mean = 4, variance = 0, mean_tolerance = 1e-10, variance_tolerance = 1e-10 } }
+derivation = "poisson"
+
+[[case]]
+file = "tests/statistical/poisson-large.det"
+suite = "statistical"
+outcome = "accept"
+samples = 20000
+seed = 20260911
+source = { moments = { mean = 45, variance = 45, mean_tolerance = 0.33203915431767983, variance_tolerance = 3.16752997614979, lower = 0, integer = true } }
+target = { number = 45, moments = { mean = 45, variance = 0, mean_tolerance = 1e-10, variance_tolerance = 1e-10 } }
+derivation = "poisson-large"
+
+[[case]]
+file = "tests/statistical/exponential.det"
+suite = "statistical"
+outcome = "accept"
+samples = 20000
+seed = 20260911
+source = { moments = { mean = 0.5, variance = 0.25, mean_tolerance = 0.024748737341529162, variance_tolerance = 0.03500021876025439, lower = 0 } }
+target = { number = 0.5, moments = { mean = 0.5, variance = 0, mean_tolerance = 1e-10, variance_tolerance = 1e-10 } }
+derivation = "exponential"
+
+[[case]]
+file = "tests/statistical/gamma.det"
+suite = "statistical"
+outcome = "accept"
+samples = 20000
+seed = 20260911
+source = { moments = { mean = 1.5, variance = 0.75, mean_tolerance = 0.04286607049870561, variance_tolerance = 0.07424714014284302, lower = 0 } }
+target = { number = 1.5, moments = { mean = 1.5, variance = 0, mean_tolerance = 1e-10, variance_tolerance = 1e-10 } }
+derivation = "gamma"
+
+[[case]]
+file = "tests/statistical/gamma-small.det"
+suite = "statistical"
+outcome = "accept"
+samples = 20000
+seed = 20260911
+source = { moments = { mean = 0.25, variance = 0.125, mean_tolerance = 0.0175, variance_tolerance = 0.023150406655530174, lower = 0 } }
+target = { number = 0.25, moments = { mean = 0.25, variance = 0, mean_tolerance = 1e-10, variance_tolerance = 1e-10 } }
+derivation = "gamma-small"
+
+[[case]]
+file = "tests/statistical/beta.det"
+suite = "statistical"
+outcome = "accept"
+samples = 20000
+seed = 20260911
+source = { moments = { mean = 0.4, variance = 0.04, mean_tolerance = 0.009899494936611665, variance_tolerance = 0.0023065974983947635, lower = 0, upper = 1 } }
+target = { number = 0.4, moments = { mean = 0.4, variance = 0, mean_tolerance = 1e-10, variance_tolerance = 1e-10 } }
+derivation = "beta"
+
+[[case]]
+file = "tests/statistical/affine.det"
+suite = "statistical"
+outcome = "accept"
+samples = 20000
+seed = 20260911
+source = { moments = { mean = 4, variance = 0.3333333333333333, mean_tolerance = 0.02857738033247041, variance_tolerance = 0.014758218095731586 } }
+target = { number = 4, moments = { mean = 4, variance = 0, mean_tolerance = 1e-10, variance_tolerance = 1e-10 } }
+derivation = "affine"
+
+[[case]]
+file = "tests/statistical/nested.det"
+suite = "statistical"
+outcome = "accept"
+samples = 20000
+seed = 20260911
+source = { moments = { mean = 1.75, variance = 0.3819444444444444, mean_tolerance = 0.03059025807162942, variance_tolerance = 0.1208918861889349 } }
+target = { number = 1.75, moments = { mean = 1.75, variance = 0, mean_tolerance = 1e-10, variance_tolerance = 1e-10 } }
+derivation = "nested"
+
+[[case]]
+file = "tests/statistical/mixed.det"
+suite = "statistical"
+outcome = "accept"
+samples = 20000
+seed = 20260911
+source = { moments = { mean = 1, variance = 0.16666666666666666, mean_tolerance = 0.0202072594216369, variance_tolerance = 0.009761382262447677 } }
+target = { moments = { mean = 1, variance = 0.08333333333333333, mean_tolerance = 0.014288690166235204, variance_tolerance = 0.0036895545239328965 } }
+derivation = "mixed"
+
+[[case]]
+file = "tests/statistical/branch.det"
+suite = "statistical"
+outcome = "accept"
+samples = 20000
+seed = 20260911
+source = { moments = { mean = 0.625, variance = 0.19270833333333334, mean_tolerance = 0.021728677287554038, variance_tolerance = 0.048569791739767616 } }
+target = { moments = { mean = 0.625, variance = 0.046875, mean_tolerance = 0.010716517624676403, variance_tolerance = 0.0026792298766615706 } }
+derivation = "branch"
+
+[[case]]
+file = "tests/statistical/degenerate.det"
+suite = "statistical"
+outcome = "accept"
+samples = 20000
+seed = 20260911
+source = { moments = { mean = 5, variance = 0, mean_tolerance = 1e-10, variance_tolerance = 1e-10 } }
+target = { number = 5, moments = { mean = 5, variance = 0, mean_tolerance = 1e-10, variance_tolerance = 1e-10 } }
+derivation = "degenerate"
+
+[[case]]
+file = "tests/statistical/bernoulli.det"
+suite = "statistical"
+outcome = "accept"
+samples = 20000
+seed = 20260911
+source = { moments = { mean = 0.3, variance = 0.21, mean_tolerance = 0.02268259244442751, variance_tolerance = 0.009073632406057235, lower = 0, upper = 1, integer = true } }
+target = { moments = { mean = 0.3, variance = 0.21, mean_tolerance = 0.02268259244442751, variance_tolerance = 0.009073632406057235 } }
+derivation = "bernoulli"
+
+[[case]]
+file = "tests/statistical/discrete.det"
+suite = "statistical"
+outcome = "accept"
+samples = 20000
+seed = 20260911
+source = { moments = { mean = 1.25, variance = 0.6875, mean_tolerance = 0.04104113789845501, variance_tolerance = 0.026971458184005898, lower = 0, upper = 2, integer = true } }
+target = { moments = { mean = 1.25, variance = 0.6875, mean_tolerance = 0.04104113789845501, variance_tolerance = 0.026971458184005898 } }
+derivation = "discrete"
+
+[[case]]
+file = "tests/execution/rejection-short-circuit.det"
+suite = "execution"
+outcome = "accept"
+fuel = 20
+kernel = true
+source = { error = "observation rejected" }
+target = { error = "observation rejected" }
+
+[[case]]
+file = "tests/execution/observation-once.det"
+suite = "execution"
+outcome = "accept"
+source = { value = "()", draws = 1 }
+target = { value = "()", draws = 1 }
+
+[[case]]
+file = "tests/execution/bernoulli-zero.det"
+suite = "execution"
+outcome = "accept"
+kernel = true
+source = { number = 0, draws = 1 }
+target = { number = 0, draws = 0 }
+
+[[case]]
+file = "tests/execution/bernoulli-one.det"
+suite = "execution"
+outcome = "accept"
+kernel = true
+source = { number = 1, draws = 1 }
+target = { number = 1, draws = 0 }
+
+[[case]]
+file = "tests/execution/bernoulli-negative.det"
+suite = "execution"
+outcome = "accept"
+source = { error = "bernoulli requires probability in [0,1]" }
+target = { error = "bernoulli requires probability in [0,1]" }
+
+[[case]]
+file = "tests/execution/bernoulli-above-one.det"
+suite = "execution"
+outcome = "accept"
+source = { error = "bernoulli requires probability in [0,1]" }
+target = { error = "bernoulli requires probability in [0,1]" }
+
+[[case]]
+file = "tests/typing/reject/bernoulli-general-parameter.det"
+suite = "typing"
+outcome = "reject"
+stage = "inference"
+
+[[case]]
+file = "tests/typing/reject/bernoulli-branch.det"
+suite = "typing"
+outcome = "reject"
+stage = "inference"
+
+[[case]]
+file = "tests/typing/reject/flip-expectation.det"
+suite = "typing"
+outcome = "reject"
+stage = "elaboration"
+
+[[case]]
+file = "tests/statistical/bernoulli-e.det"
+suite = "statistical"
+outcome = "accept"
+kernel = true
+samples = 20000
+seed = 20260911
+source = { moments = { mean = 0.3, variance = 0.21, mean_tolerance = 0.02268259244442751, variance_tolerance = 0.009073632406057235, lower = 0, upper = 1, integer = true } }
+target = { number = 0.3, draws = 0, moments = { mean = 0.3, variance = 0, mean_tolerance = 1e-10, variance_tolerance = 1e-10 } }
+derivation = "bernoulli-e"
+
+[[case]]
+file = "tests/statistical/bernoulli-nested.det"
+suite = "statistical"
+outcome = "accept"
+kernel = true
+samples = 20000
+seed = 20260911
+source = { moments = { mean = 0.5, variance = 0.25, mean_tolerance = 0.024748737341529162, variance_tolerance = 0.00012374678041580844, lower = 0, upper = 1, integer = true } }
+target = { number = 0.5, draws = 0, moments = { mean = 0.5, variance = 0, mean_tolerance = 1e-10, variance_tolerance = 1e-10 } }
+derivation = "bernoulli-nested"
+
+[[case]]
+file = "tests/execution/bernoulli-general-operand.det"
+suite = "execution"
+outcome = "accept"
+source = { draws = 2 }
+target = { number = 0.25, draws = 1 }
+
+[[case]]
+file = "tests/execution/discrete-zero-weights.det"
+suite = "execution"
+outcome = "accept"
+kernel = true
+source = { number = 1, draws = 1 }
+target = { number = 1, draws = 0 }
+
+[[case]]
+file = "tests/execution/discrete-singleton.det"
+suite = "execution"
+outcome = "accept"
+kernel = true
+source = { number = 0, draws = 1 }
+target = { number = 0, draws = 0 }
+
+[[case]]
+file = "tests/execution/discrete-last-nonzero.det"
+suite = "execution"
+outcome = "accept"
+kernel = true
+source = { number = 2, draws = 1 }
+target = { number = 2, draws = 1 }
+
+[[case]]
+file = "tests/typing/reject/discrete-empty.det"
+suite = "typing"
+outcome = "reject"
+stage = "elaboration"
+
+[[case]]
+file = "tests/typing/reject/discrete-all-zero.det"
+suite = "typing"
+outcome = "reject"
+stage = "elaboration"
+
+[[case]]
+file = "tests/typing/reject/discrete-negative.det"
+suite = "typing"
+outcome = "reject"
+stage = "elaboration"
+
+[[case]]
+file = "tests/typing/reject/discrete-nonliteral.det"
+suite = "typing"
+outcome = "reject"
+stage = "elaboration"
+
+[[case]]
+file = "tests/typing/reject/discrete-branch.det"
+suite = "typing"
+outcome = "reject"
+stage = "inference"
+
+[[case]]
+file = "tests/statistical/discrete-e.det"
+suite = "statistical"
+outcome = "accept"
+kernel = true
+samples = 20000
+seed = 20260911
+source = { moments = { mean = 1.25, variance = 0.6875, mean_tolerance = 0.04104113789845501, variance_tolerance = 0.026971458184005898, lower = 0, upper = 2, integer = true } }
+target = { number = 1.25, draws = 0, moments = { mean = 1.25, variance = 0, mean_tolerance = 1e-10, variance_tolerance = 1e-10 } }
+derivation = "discrete-e"
+
+[[case]]
+file = "tests/execution/discrete-nested.det"
+suite = "execution"
+outcome = "accept"
+kernel = true
+source = { draws = 2 }
+target = { number = 1.5, draws = 0 }
+
+[[case]]
+file = "tests/statistical/bernoulli-mixed.det"
+suite = "statistical"
+outcome = "accept"
+kernel = true
+samples = 20000
+seed = 20260911
+source = { draws = 2, moments = { mean = 0.5, variance = 0.25, mean_tolerance = 0.024748737341529162, variance_tolerance = 0.00012374678041580844, lower = 0, upper = 1, integer = true } }
+target = { draws = 1, moments = { mean = 0.5, variance = 0.08333333333333333, mean_tolerance = 0.014288690166235204, variance_tolerance = 0.0036895545239328965, lower = 0, upper = 1 } }
+derivation = "bernoulli-mixed"
+
+[[case]]
+file = "tests/statistical/coupling-branch.det"
+suite = "statistical"
+outcome = "accept"
+kernel = true
+samples = 20000
+seed = 20260911
+derivation = "coupling-branch"
+source = { moments = { mean = 1.75, variance = 1.7708333333333333, mean_tolerance = 0.06586760711204459, variance_tolerance = 0.05783466246938199 } }
+target = { moments = { mean = 1.75, variance = 1.5625, mean_tolerance = 0.06187184335382291, variance_tolerance = 0.0007734173775989254 } }
+
+[[case]]
+file = "tests/statistical/coupling-mixed.det"
+suite = "statistical"
+outcome = "accept"
+kernel = true
+samples = 20000
+seed = 20260911
+derivation = "coupling-mixed"
+source = { moments = { mean = 1.75, variance = 0.3819444444444444, mean_tolerance = 0.03059025807162942, variance_tolerance = 0.1208918861889349 } }
+target = { moments = { mean = 1.75, variance = 0.1875, mean_tolerance = 0.021433035249352805, variance_tolerance = 0.008301497678849015 } }
+
+[[case]]
+file = "tests/execution/legacy/beta-shape.det"
+suite = "typing"
+outcome = "accept"
+kernel = true
+
+[[case]]
+file = "tests/execution/legacy/div.det"
+suite = "typing"
+outcome = "accept"
+kernel = true
+
+[[case]]
+file = "tests/execution/legacy/flip-prob.det"
+suite = "typing"
+outcome = "accept"
+kernel = true
+
+[[case]]
+file = "tests/execution/legacy/gauss-variance.det"
+suite = "typing"
+outcome = "accept"
+kernel = true
+
+[[case]]
+file = "tests/typing/reject/discrete-nonunit.det"
+suite = "typing"
+outcome = "reject"
+stage = "elaboration"

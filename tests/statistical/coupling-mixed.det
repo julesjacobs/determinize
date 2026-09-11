@@ -1,0 +1,2 @@
+let g = uniform[G](0,1) in
+let x = uniform[E](g,2) in g + x

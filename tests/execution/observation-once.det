@@ -1,0 +1,1 @@
+observe(uniform[G](0,1) < 2)

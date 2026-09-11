@@ -1,0 +1,1 @@
+if true then inl uniform[G](0,1) else inl uniform[E](0,1)

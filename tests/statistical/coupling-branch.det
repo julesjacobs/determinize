@@ -1,0 +1,2 @@
+let b = flip(0.5) in
+if b then uniform[E](0,1) else uniform[E](2,4)
