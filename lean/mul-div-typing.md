@@ -7,6 +7,11 @@ condition, and recommends how to reconcile the artifacts.
 
 ## 1. The disagreement
 
+**Status (2026-09-11).** Multiplication is reconciled: the paper's single `Mul` rule,
+`ocaml/infer.ml` and `sim/src/compiler/infer.js` now all type `e₁ × e₂` at `Float[m]`
+when `e₁ : Float[G]` and `e₂ : Float[m]`, as the Lean does (section 7). Division still
+differs as described below. The table records the state on 2026-09-09.
+
 | Artifact | `e₁ × e₂` | `e₁ / e₂` |
 |---|---|---|
 | paper, `tex/3_typing.tex` | `Mul-G`: both operands G, any result mode; `Mul-ConstL`/`Mul-ConstR`: a literal on either side, both operands at most the result mode | `Div`: the denominator is a literal at most G, the numerator at most the result mode |
@@ -226,8 +231,11 @@ fixed. This single principle reproduces every existing rule:
 `Float[m]` exactly when `e₁ : Float[G]` and `e₂ : Float[m]`, and `e₁ / e₂` exactly when
 `e₁ : Float[m]` and `e₂ : Float[G]`; there is no implicit `G → E` cast, so a general-mode
 value on the right of `×` has to be promoted explicitly. The paper, the OCaml and the sim
-are to adopt these two rules; the symmetric `[Mul]` of section 3 stays a remark. The two
-options below are kept for the record.
+are to adopt these two rules; the symmetric `[Mul]` of section 3 stays a remark. The
+multiplication rule was adopted by the paper, the OCaml and the sim on 2026-09-11 (the
+implementations check the right factor against the result type, so a G right factor is
+admitted by subtyping, which plays the role of the explicit promotion); the division rule
+is still open in the paper and the OCaml. The two options below are kept for the record.
 
 **Option A: adopt the symmetric rules everywhere.**
 
