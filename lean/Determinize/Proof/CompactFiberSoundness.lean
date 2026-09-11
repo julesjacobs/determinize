@@ -303,8 +303,11 @@ theorem target_selfReplay (depth : Nat) (history : Symbolic.SampleEnv primitiveL
   | zero =>
       by_cases value : expression.isValue = true
       · obtain ⟨a, rfl⟩ := wellTyped_real_value safe.2.1 value
-        simp [targetTraceLaw, AffineExpr.realize, Expr.determinize, exactMeasure, retain,
-          outputGivenTraceAt]
+        have eq : targetTraceLaw 0 history (.real a) =
+            Measure.dirac (([] : Trace), a.eval (history.meanEnvironment primitiveLaws)) := by
+          simp only [targetTraceLaw, AffineExpr.realize, Expr.determinize, exactMeasure]
+        rw [eq, ae_dirac_iff (selfReplay_measurable _ _)]
+        rfl
       · have nv : (expression.realize (history.meanEnvironment primitiveLaws)).determinize.isValue
             ≠ true := by
           simpa only [determinize_isValue, AffineExpr.realize_isValue] using value
