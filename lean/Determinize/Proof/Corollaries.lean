@@ -9,13 +9,14 @@ import Mathlib.Data.EReal.Operations
 Jensen's inequality between the source and target output laws, preservation of expectations
 in the extended reals, preservation of the output mass and hence of the expectation conditioned
 on acceptance, and the law of total variance along traces with its consequence that
-determinization does not increase the variance. All follow from `Traces.TraceFactorization`
+determinization does not increase the variance. All follow from a `TraceFactorization`
 alone: trace by trace, the target output is the mean of the source output fiber.
 -/
 
-namespace Determinize.Traces
+namespace Determinize.Proof.Traces
 
 open MeasureTheory ProbabilityTheory Determinize.Statement Determinize.Statement.Paper
+open Determinize.Traces
 open scoped ENNReal ProbabilityTheory
 
 /-- The source output law under a trace factorization: the mixture of the fibers over the
@@ -379,47 +380,55 @@ theorem MeanOnTraces.variance_le {source target : Expr} (sound : MeanOnTraces so
     integral_nonneg fun trace => variance_nonneg id (fiber trace)
   exact ⟨memLpTarget, by linarith, by linarith⟩
 
-end Determinize.Traces
+end Determinize.Proof.Traces
 
 namespace Determinize.Proof.Paper
 
 /-- Extended-real expectation preservation, from operational trace soundness. -/
 theorem extendedExpectationSoundness : Determinize.Statement.extendedExpectationThm := by
   intro mode program typed sourceForm sourceSafe defined
-  exact (Determinize.Proof.Traces.soundness mode program typed sourceForm
+  exact (Determinize.Proof.Traces.meanOnTraces mode program typed sourceForm
     sourceSafe).2.extended_expectation defined
 
 /-- Jensen's inequality between the two output laws, from operational trace soundness. -/
 theorem jensenSoundness : Determinize.Statement.jensenThm := by
   intro mode program typed sourceForm sourceSafe φ convex nonneg
-  exact (Determinize.Proof.Traces.soundness mode program typed sourceForm
+  exact (Determinize.Proof.Traces.meanOnTraces mode program typed sourceForm
     sourceSafe).2.lintegral_convex_le convex nonneg
 
 /-- Output mass preservation, from operational trace soundness. -/
 theorem outputMassSoundness : Determinize.Statement.outputMassThm := by
   intro mode program typed sourceForm sourceSafe
-  exact (Determinize.Proof.Traces.soundness mode program typed sourceForm
+  exact (Determinize.Proof.Traces.meanOnTraces mode program typed sourceForm
     sourceSafe).2.output_mass
 
 /-- Variance non-increase, from operational trace soundness. -/
 theorem varianceSoundness : Determinize.Statement.varianceThm := by
   intro mode program typed sourceForm sourceSafe memLp
-  exact (Determinize.Proof.Traces.soundness mode program typed sourceForm
+  exact (Determinize.Proof.Traces.meanOnTraces mode program typed sourceForm
     sourceSafe).2.variance_le memLp
 
 /-- Preservation of the expectation conditioned on acceptance, from operational trace
 soundness. -/
 theorem conditionalExpectationSoundness : Determinize.Statement.conditionalExpectationThm := by
   intro mode program typed sourceForm sourceSafe integrable
-  exact (Determinize.Proof.Traces.soundness mode program typed sourceForm
+  exact (Determinize.Proof.Traces.meanOnTraces mode program typed sourceForm
     sourceSafe).2.conditional_expectation integrable
 
 end Determinize.Proof.Paper
 
 namespace Determinize.Proof.Traces
 
-/-- The law of total variance holds along every trace factorization of a source program. -/
-theorem varianceSoundness : Determinize.Traces.varianceThm :=
-  fun _ _ _ _ _ _ _ factor memLp => factor.variance_decomposition memLp
+open MeasureTheory ProbabilityTheory Determinize.Traces
+
+/-- The law of total variance along traces, with `Traces.outputGivenTrace` as the fiber. -/
+theorem varianceSoundness : Determinize.Traces.varianceThm := by
+  intro mode program typed sourceForm sourceSafe memLp
+  obtain ⟨_, output, factor, massAe, _⟩ := soundnessData mode program typed sourceForm sourceSafe
+  obtain ⟨integrable, decomposition⟩ := factor.variance_decomposition memLp
+  have congr : (fun trace => variance id (StepTraces.normalizedOutputGivenTrace program trace))
+      =ᵐ[traceLaw program] fun trace => variance id (outputGivenTrace program trace) :=
+    massAe.mono fun trace h => by simp only [h]
+  exact ⟨integrable.congr congr, by rw [decomposition, integral_congr_ae congr]⟩
 
 end Determinize.Proof.Traces

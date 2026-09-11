@@ -1,7 +1,7 @@
 import Determinize.Theorems
 
 namespace Determinize.Proof.Examples
-open MeasureTheory Determinize.Statement.Paper Determinize.Traces
+open MeasureTheory ProbabilityTheory Determinize.Statement.Paper Determinize.Traces
 
 def uniform (mode : Mode) : Expr := .uniform mode .stochastic (.real 0) (.real 1)
 
@@ -127,13 +127,21 @@ theorem reciprocal_safe : DoesNotGetStuck reciprocal := by
   · simp [reduce, Expr.isValue, realValue?]
   exact safe_real _
 
-/-- This concrete trace result requires no global integrability premise. -/
-example : MeanOnTraces reciprocal reciprocal.determinize :=
-  (Traces.soundness .E reciprocal reciprocal_typed reciprocal_source reciprocal_safe).2
+/-- This concrete trace result requires no global integrability premise: on almost every
+trace the source output law has a finite mean and the target replay is the Dirac mass at it. -/
+example : ∀ᵐ trace ∂traceLaw reciprocal,
+    Integrable id (outputGivenTrace reciprocal trace) ∧
+    outputGivenTrace reciprocal.determinize trace =
+      Measure.dirac (∫ value : ℝ, value ∂outputGivenTrace reciprocal trace) :=
+  (Traces.soundness .E reciprocal reciprocal_typed reciprocal_source reciprocal_safe).2.2.2
 
 /-- The law of total variance along the traces of the same program. -/
-example : VarianceOnTraces reciprocal reciprocal.determinize :=
-  Traces.varianceSoundness .E reciprocal reciprocal_typed reciprocal_source reciprocal_safe
+example (memLp : MemLp id 2 (bigStepMeasure reciprocal)) :
+    variance id (bigStepMeasure reciprocal) =
+      variance id (bigStepMeasure reciprocal.determinize) +
+        ∫ trace, variance id (outputGivenTrace reciprocal trace) ∂traceLaw reciprocal :=
+  (Traces.varianceSoundness .E reciprocal reciprocal_typed reciprocal_source reciprocal_safe
+    memLp).2
 
 /-- A general-mode draw scales an expectation-mode draw from the left. -/
 def scaledSample : Expr := .letE (uniform .G) (.mul (.bvar 0) (uniform .E))
@@ -159,8 +167,9 @@ theorem scaledSample_safe : DoesNotGetStuck scaledSample := by
     · simp [reduce, Expr.isValue, realValue?]
     exact safe_real _
 
-example : MeanOnTraces scaledSample scaledSample.determinize :=
-  (Traces.soundness .E scaledSample scaledSample_typed scaledSample_source scaledSample_safe).2
+example : traceAndOutputLaw scaledSample.determinize =
+    traceThenOutput (traceLaw scaledSample) (outputGivenTrace scaledSample.determinize) :=
+  (Traces.soundness .E scaledSample scaledSample_typed scaledSample_source scaledSample_safe).2.2.1
 
 /-- `bernoulli_E(1/3)`: an expectation-mode Bernoulli draw with a literal probability. -/
 noncomputable def bernoulliLiteral : Expr := .bernoulli .E .stochastic (.real (1 / 3))
@@ -193,9 +202,10 @@ theorem bernoulliLiteral_safe : DoesNotGetStuck bernoulliLiteral := by
   · exact safe_real
 
 /-- The mean of `bernoulli_E(1/3)` is preserved along traces by its determinization `1/3`. -/
-example : MeanOnTraces bernoulliLiteral bernoulliLiteral.determinize :=
+example : traceAndOutputLaw bernoulliLiteral.determinize =
+    traceThenOutput (traceLaw bernoulliLiteral) (outputGivenTrace bernoulliLiteral.determinize) :=
   (Traces.soundness .E bernoulliLiteral bernoulliLiteral_typed bernoulliLiteral_source
-    bernoulliLiteral_safe).2
+    bernoulliLiteral_safe).2.2.1
 
 /-- `bernoulli_E(uniform_E(0, 1))`: the probability is itself an expectation-mode draw. -/
 def bernoulliNested : Expr := .bernoulli .E .stochastic (uniform .E)
@@ -285,9 +295,10 @@ theorem discreteSample_safe : DoesNotGetStuck discreteSample := by
   · exact safe_real
 
 /-- The mean of `discrete_E(1/2, 1/4, 1/4)` is preserved along traces by its determinization. -/
-example : MeanOnTraces discreteSample discreteSample.determinize :=
+example : traceAndOutputLaw discreteSample.determinize =
+    traceThenOutput (traceLaw discreteSample) (outputGivenTrace discreteSample.determinize) :=
   (Traces.soundness .E discreteSample discreteSample_typed discreteSample_source
-    discreteSample_safe).2
+    discreteSample_safe).2.2.1
 
 /-- `let x = uniform_G(0, 1) in let _ = observe(x < 1/2) in x + uniform_E(0, 1)`: a general-mode
 draw is observed before an expectation-mode draw is added to it (`x` is promoted explicitly, as
@@ -335,8 +346,8 @@ example (fuel : Nat) : cumulativeOutputMeasure fuel (.observe (.bool false)) = 0
   cases fuel <;> simp [cumulativeOutputMeasure, reduce, Expr.isValue]
 
 /-- Nor any trace mass. -/
-example (depth : Nat) : exactMeasure depth (.observe (.bool false)) = 0 := by
-  cases depth <;> simp [exactMeasure, reduce, Expr.isValue]
+example (depth : Nat) : traceAndOutputLawAt depth (.observe (.bool false)) = 0 := by
+  cases depth <;> simp [traceAndOutputLawAt, reduce, Expr.isValue]
 
 /-- Rejection is not stuckness: an expression that rejects never gets stuck. -/
 private theorem safe_reject {expression : Expr} (reduction : reduce expression = .reject) :
@@ -387,8 +398,9 @@ theorem observedSum_safe : DoesNotGetStuck observedSum := by
 
 /-- The mean of the accepted executions is preserved along traces; together with the equal
 acceptance mass this is the conditional expectation statement. -/
-example : MeanOnTraces observedSum observedSum.determinize :=
-  (Traces.soundness .E observedSum observedSum_typed observedSum_source observedSum_safe).2
+example : traceAndOutputLaw observedSum.determinize =
+    traceThenOutput (traceLaw observedSum) (outputGivenTrace observedSum.determinize) :=
+  (Traces.soundness .E observedSum observedSum_typed observedSum_source observedSum_safe).2.2.1
 
 def loopFunction : Expr :=
   .fix
@@ -412,12 +424,12 @@ example : DoesNotGetStuck loop := by
       rw [DoesNotGetStuckAt, if_neg (by simp [loop, Expr.isValue]), loop_reduction]
       exact ih
 
-example : jointMeasure loop = 0 := by
-  have h (depth : Nat) : exactMeasure depth loop = 0 := by
+example : traceAndOutputLaw loop = 0 := by
+  have h (depth : Nat) : traceAndOutputLawAt depth loop = 0 := by
     induction depth with
-    | zero => simp [loop, exactMeasure]
+    | zero => simp [loop, traceAndOutputLawAt]
     | succ depth ih =>
         rw [Traces.exact_succ_next depth loop loop (by simp [loop, Expr.isValue]) loop_reduction, ih]
-  simp [jointMeasure, h]
+  simp [traceAndOutputLaw, h]
 
 end Determinize.Proof.Examples

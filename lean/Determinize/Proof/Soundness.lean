@@ -1,8 +1,8 @@
 import Determinize.Proof.CompactSoundness
 import Determinize.Statement.Main
 
-namespace Determinize.Traces
-open MeasureTheory ProbabilityTheory Determinize.Statement.Paper
+namespace Determinize.Proof.Traces
+open MeasureTheory ProbabilityTheory Determinize.Statement.Paper Determinize.Traces
 open scoped ProbabilityTheory
 
 /-- Integrating the trace fibers preserves finite expectation. -/
@@ -37,14 +37,14 @@ theorem MeanOnTraces.finite_expectation {source target : Expr} (sound : MeanOnTr
   simp only [Kernel.const_apply]
   exact integral_congr_ae (valid.mono fun _ good => good.2.symm)
 
-end Determinize.Traces
+end Determinize.Proof.Traces
 
 namespace Determinize.Proof.Paper
 
 /-- The public expectation theorem follows from operational trace soundness. -/
 theorem finiteExpectationSoundness : Determinize.Statement.mainThm := by
   intro mode program typed sourceForm sourceSafe sourceIntegrable
-  rcases Determinize.Proof.Traces.soundness mode program typed sourceForm sourceSafe with ⟨targetSafe, traces⟩
+  rcases Determinize.Proof.Traces.meanOnTraces mode program typed sourceForm sourceSafe with ⟨targetSafe, traces⟩
   rcases traces.finite_expectation sourceIntegrable with ⟨targetIntegrable, expectation⟩
   exact ⟨targetSafe, targetIntegrable, expectation⟩
 

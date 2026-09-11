@@ -1,5 +1,4 @@
 import Determinize.Traces.Semantics
-import Mathlib.Probability.Kernel.Composition.MeasureCompProd
 import Mathlib.MeasureTheory.Integral.Bochner.Basic
 import Mathlib.Probability.Moments.Variance
 
@@ -9,62 +8,52 @@ open MeasureTheory ProbabilityTheory Determinize.Statement.Paper
 
 /-- Erasing terminating traces recovers the ordinary output semantics. -/
 def correspondenceThm : Prop :=
-  ∀ program : Expr, (jointMeasure program).map Prod.snd = bigStepMeasure program
+  ∀ program : Expr, (traceAndOutputLaw program).map Prod.snd = bigStepMeasure program
 
 /-- The law of a program's terminating generation traces: the trace marginal of its joint law. -/
 noncomputable def traceLaw (program : Expr) : Measure Trace :=
-  (jointMeasure program).map Prod.fst
+  (traceAndOutputLaw program).map Prod.fst
 
-/-- A factorization of the actual source and target joint laws over the source's own trace
-law: the source output is drawn from the Markov kernel `fiber` indexed by the trace, the target
-output is the measurable function `output` of the trace, and for almost every trace the fiber
-is integrable and `output` is its mean. -/
-def TraceFactorization (source target : Expr) (fiber : Kernel Trace ℝ) (output : Trace → ℝ) :
-    Prop :=
-  IsMarkovKernel fiber ∧
-  Measurable output ∧
-  jointMeasure source = traceLaw source ⊗ₘ fiber ∧
-  jointMeasure target = (traceLaw source).map (fun trace => (trace, output trace)) ∧
-  ∀ᵐ trace ∂traceLaw source,
-    Integrable id (fiber trace) ∧ output trace = ∫ value : ℝ, value ∂fiber trace
+/-- Draw a trace from `traces`, then an output from `outputs trace`: the joint law of the pair. -/
+noncomputable def traceThenOutput (traces : Measure Trace) (outputs : Trace → Measure ℝ) :
+    Measure Output :=
+  traces.bind fun trace => (outputs trace).map fun value => (trace, value)
 
-/-- The actual source and target joint laws factor over the source's own trace law: the
-source output is drawn from a Markov kernel indexed by the trace, the target output is a
-measurable function of the trace, and that function is almost surely the fiber's mean. -/
-def MeanOnTraces (source target : Expr) : Prop :=
-  ∃ (fiber : Kernel Trace ℝ) (output : Trace → ℝ), TraceFactorization source target fiber output
-
-/-- Trace soundness requires no global integrability assumption. -/
+/-- Trace soundness. Conditioned on its general-mode draws, the determinized program returns
+the conditional mean of the source: the joint trace/output law of the source is its trace law
+followed by `outputGivenTrace`, the joint law of the target is the same trace law followed by
+the target's `outputGivenTrace`, and for almost every trace the source's output law given the
+trace has a finite mean and the target's output law given the trace is the Dirac mass at that
+mean. No global integrability assumption is required. -/
 def soundnessThm : Prop :=
   ∀ (mode : Mode) (program : Expr),
     Typed [] program (.float mode) → program.sourceForm = true →
     DoesNotGetStuck program →
-      DoesNotGetStuck program.determinize ∧ MeanOnTraces program program.determinize
+      DoesNotGetStuck program.determinize ∧
+      traceAndOutputLaw program = traceThenOutput (traceLaw program) (outputGivenTrace program) ∧
+      traceAndOutputLaw program.determinize =
+        traceThenOutput (traceLaw program) (outputGivenTrace program.determinize) ∧
+      ∀ᵐ trace ∂traceLaw program,
+        Integrable id (outputGivenTrace program trace) ∧
+        outputGivenTrace program.determinize trace =
+          Measure.dirac (∫ value : ℝ, value ∂outputGivenTrace program trace)
 
-/-- The law of total variance along traces. For every trace factorization of a source whose
-output law has a finite second moment, the fiber variances are integrable over the trace law
-and the source output variance is the target output variance plus the mean fiber variance:
-trace by trace, determinization discards exactly the variance of the fiber. The output laws
-are unnormalized, but a factorization gives them the same mass (every fiber is a probability
-measure) and, by the almost-sure mean identity, the same mean `∫ output ∂traceLaw source`, so
-the identity holds for Mathlib's `variance` (`∫ (v - ∫ v)²`) without normalization; dividing
+/-- The law of total variance along traces. When the source output law has a finite second
+moment, the variances of the source's output laws given the traces are integrable over the
+trace law and the source output variance is the target output variance plus their mean: trace
+by trace, determinization discards exactly the variance of the output given the trace. The
+output laws are unnormalized, but they have the same mass and, by `soundnessThm`, the same mean,
+so the identity holds for Mathlib's `variance` (`∫ (v - ∫ v)²`) without normalization; dividing
 both output laws and the trace law by their common mass gives the same identity for the laws
 conditioned on termination. -/
-def VarianceOnTraces (source target : Expr) : Prop :=
-  ∀ (fiber : Kernel Trace ℝ) (output : Trace → ℝ),
-    TraceFactorization source target fiber output →
-    MemLp id 2 (bigStepMeasure source) →
-    Integrable (fun trace => variance id (fiber trace)) (traceLaw source) ∧
-      variance id (bigStepMeasure source) =
-        variance id (bigStepMeasure target) +
-          ∫ trace, variance id (fiber trace) ∂traceLaw source
-
-/-- Every trace factorization of a source program decomposes its output variance;
-`soundnessThm` supplies such a factorization. -/
 def varianceThm : Prop :=
   ∀ (mode : Mode) (program : Expr),
     Typed [] program (.float mode) → program.sourceForm = true →
     DoesNotGetStuck program →
-      VarianceOnTraces program program.determinize
+    MemLp id 2 (bigStepMeasure program) →
+      Integrable (fun trace => variance id (outputGivenTrace program trace)) (traceLaw program) ∧
+      variance id (bigStepMeasure program) =
+        variance id (bigStepMeasure program.determinize) +
+          ∫ trace, variance id (outputGivenTrace program trace) ∂traceLaw program
 
 end Determinize.Traces
