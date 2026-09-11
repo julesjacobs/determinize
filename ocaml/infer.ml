@@ -212,8 +212,10 @@ let rec infer (env : env) (exp : Ast.expr) (expected : typ) : typed_expr =
         let b_t = infer env b param_ty in
         { expr = EBeta (a_t, b_t); typ = ty }
   | Flip p ->
-      let p_ty = fresh_float () in
-      let p_t = infer env p p_ty in
+      (* A Boolean drives control flow, so the probability is general mode. *)
+      let g_mode = fresh_mode_meta () in
+      set_mode g_mode G;
+      let p_t = infer env p (TFloat g_mode) in
       assert_subtype TBool expected;
       { expr = EFlip p_t; typ = TBool }
   | Bernoulli p ->

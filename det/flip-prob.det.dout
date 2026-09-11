@@ -1,0 +1,18 @@
+== Elaboration ==
+raw:
+( let u =
+    ( uniform( ( 0 : float[G] ), ( 1 : float[G] ) ) : float[G] )
+    in
+    ( if ( flip( ( u : float[G] ) ) : bool ) then ( u : float[G] ) else ( 0 : float[G] ) : float[G] ) : float[G] )
+defaulted:
+( let u =
+    ( uniform( ( 0 : float[G] ), ( 1 : float[G] ) ) : float[G] )
+    in
+    ( if ( flip( ( u : float[G] ) ) : bool ) then ( u : float[G] ) else ( 0 : float[G] ) : float[G] ) : float[G] )
+
+== Determinized ==
+let u = uniform( 0, 1 ) in if flip( u ) then u else 0
+
+== Evaluation (100 trials) ==
+program mean: 0.370407
+determinized mean: 0.370407

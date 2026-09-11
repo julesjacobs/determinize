@@ -1,0 +1,2 @@
+let u = uniform(0, 1) in
+if flip(u) then u else 0

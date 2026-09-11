@@ -3,7 +3,7 @@ raw:
 ( let retry =
     ( rec retry f =>
           ( fun x =>
-                ( if ( flip( ( 0.7 : float[?m1] ) ) : bool )
+                ( if ( flip( ( 0.7 : float[G] ) ) : bool )
                       then
                       ( ( f : float[?m2] ->  float[?m2] ) ( x : float[?m2] ) : float[?m2] )
                       else
@@ -21,7 +21,7 @@ defaulted:
 ( let retry =
     ( rec retry f =>
           ( fun x =>
-                ( if ( flip( ( 0.7 : float[E] ) ) : bool )
+                ( if ( flip( ( 0.7 : float[G] ) ) : bool )
                       then
                       ( ( f : float[E] ->  float[E] ) ( x : float[E] ) : float[E] )
                       else
