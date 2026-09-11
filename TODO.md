@@ -82,3 +82,11 @@ Complete Lean migration (details in migration-plan.md):
 [x] Organize the completed work into reviewable local commits.
 
 [x] Integrate the migration onto current main and verify each commit boundary.
+
+Development/specification review:
+[x] Review redundant representations and theorem witnesses; kernel-check result-mode and canonical trace-output simplifications (development-review.md).
+[ ] Complete the independent Pro full-surface audit and incorporate assessed findings (pro-spec-review.md; monitor active).
+[x] Compare sampling representations against the statement surface and specify affinity-free mean syntax with direct typing rules (development-review.md).
+
+Full refactor (per-step checks and decisions in refactor-plan.md):
+[ ] Complete the specification and implementation refactor, with one reviewed commit per retained step.
