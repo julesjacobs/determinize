@@ -16,62 +16,10 @@ type mc = {
   expr_of : (int, A.expr) Hashtbl.t;  (* map: state id -> expression *)
 }
 
-(* ---------- Utilities: sets of identifiers ---------- *)
-
-module StringSet = Set.Make (String)
-
-let rec free_vars (e : A.expr) : StringSet.t =
-  match e with
-  | A.Var x -> StringSet.singleton x
-  | A.Lam (x, body) -> StringSet.remove x (free_vars body)
-  | A.Rec (f, x, body) -> free_vars body |> StringSet.remove f |> StringSet.remove x
-  | A.App (e1, e2)
-  | A.Pair (e1, e2)
-  | A.Cons (e1, e2)
-  | A.Add (e1, e2)
-  | A.Mul (e1, e2)
-  | A.Sub (e1, e2)
-  | A.Div (e1, e2)
-  | A.Lt (e1, e2) -> StringSet.union (free_vars e1) (free_vars e2)
-  | A.Leq (e1, e2) -> StringSet.union (free_vars e1) (free_vars e2)
-  | A.Fst e
-  | A.Snd e
-  | A.Inl e
-  | A.Inr e
-  | A.Neg e
-  | A.Flip e
-  | A.Observe e -> free_vars e
-  | A.Bernoulli p -> free_vars p
-  | A.If (c, t, f) ->
-      StringSet.union (free_vars c) (StringSet.union (free_vars t) (free_vars f))
-  | A.Let (x, e1, e2) ->
-      StringSet.union (free_vars e1) (StringSet.remove x (free_vars e2))
-  | A.Case (e, (x, e1), (y, e2)) ->
-      StringSet.union (free_vars e)
-        (StringSet.union
-           (StringSet.remove x (free_vars e1))
-           (StringSet.remove y (free_vars e2)))
-  | A.MatchList (e, nil_br, (x, xs, cons_br)) ->
-      StringSet.union (free_vars e)
-        (StringSet.union (free_vars nil_br)
-           (free_vars cons_br |> StringSet.remove x |> StringSet.remove xs))
-  | A.Discrete cases ->
-      List.fold_left
-        (fun acc (_p, ei) -> StringSet.union acc (free_vars ei))
-        StringSet.empty cases
-  | A.Unit | A.Nil | A.Bool _ | A.Const _ -> StringSet.empty
-  | A.Uniform _ | A.Gauss _ | A.Exponential _ | A.Gamma _ | A.Beta _ | A.Poisson _ ->
-      (* should not appear after determinization for MC generation: Storm cannot support *)
-      StringSet.empty
-
-let fresh_name (avoid : StringSet.t) (base : string) : string =
-  if not (StringSet.mem base avoid) then base
-  else
-    let rec go i =
-      let cand = base ^ "'" ^ string_of_int i in
-      if StringSet.mem cand avoid then go (i + 1) else cand
-    in
-    go 0
+(* ---------- Utilities: sets of identifiers (see Ast) ---------- *)
+module StringSet = A.StringSet
+let free_vars = A.free_vars
+let fresh_name = A.fresh_name
 
 (* Capture-avoiding renaming: replace bound var [x] with [x'] in [body]. *)
 let rec rename (x : string) (x' : string) (e : A.expr) : A.expr =
