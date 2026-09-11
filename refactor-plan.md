@@ -11,7 +11,7 @@ Each retained step gets its own commit. For each step: inspect consumers, implem
 - [x] 7. Derive absorption escape from the model and certificate horizon.
 - [x] 8. Consolidate unit-sum finite-distribution validation.
 - [x] 9. Trim and organize the specification/proof boundary.
-- [ ] 10. Evaluate deriving terminal rows instead of storing absorbing-row evidence.
+- [x] 10. Evaluate deriving terminal rows instead of storing absorbing-row evidence.
 - [ ] 11. Replace Mode/Kind with Affinity and sample-affinity-or-mean syntax, using direct typing rules.
 - [ ] 12. Run complete regression checks and review the final stack.
 
@@ -54,3 +54,9 @@ Before: elaboration checked probabilities, then the checked constructor rechecke
 ### 9. Specification boundary — KEEP
 
 Before: reviewer-facing material was split between `Statement/` and `Traces/`, with exporter policy, an import-only shim, and an auxiliary reward recurrence mixed in. After: 11 files under `Spec/` contain the mathematical surface; `Theorems.lean` exports it. Exporter policy moved to `Finite/`, reward recursion to its proof module, and the shim was removed. Generic checker plumbing was already eliminated in step 3. Imports, namespaces, certificate output, current docs, and theorem-coverage tooling were updated. The conditional-expectation documentation now qualifies its probabilistic interpretation by positive output mass. Full warning-free rebuild, Lean tests, independent generated result theorem, and the repository theorem/axiom check all passed. The larger rename diff buys one accurate review boundary without changing the claims.
+
+### 10. Terminal rows — REVISE AND KEEP
+
+Built and tested a representation storing only transient rows, with terminal self-loops derived by an accessor. Discarded it: it added dependent proof arguments, an extra kind branch per matrix lookup, and 18 lines of generic matrix-property proofs to remove one field. The patch is not part of the stack.
+
+The retained alternative keeps the uniform matrix representation and removes `Model.absorbing`, which no output-law proof needed. Terminal behavior is already fixed by `outputWithin`; the specification now says terminal rows are ignored. This broadens admissible raw models without changing any prior model’s output law. A terminal-row-to-divergence example proves the intended stopping behavior. Sparse export validation still checks its explicit terminal self-loops as a file-format policy. Both experimental and retained versions passed the full warning-free build and Lean tests; the retained version also passed independent generated-result kernel replay with standard axioms.

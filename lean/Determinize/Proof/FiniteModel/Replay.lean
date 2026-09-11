@@ -112,7 +112,6 @@ def Candidate.toModel (candidate : Candidate) {source : Core} {subject : Subject
   transition := candidate.weight
   nonnegative := valid.matrix.nonnegative
   normalized := valid.matrix.normalized
-  absorbing := valid.matrix.absorbing
 
 theorem replay_successor_covered (candidate : Candidate) {source : Core} {subject : Subject}
     (valid : candidate.ReplayValid source subject) (i : Fin candidate.states.size)

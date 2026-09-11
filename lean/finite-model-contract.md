@@ -3,9 +3,9 @@
 The reviewed definitions are in `Determinize/Spec/FiniteModel/`. The exact
 explorer and model checker are implemented. `Proof/FiniteModel/Soundness.lean`
 proves that every accepted graph represents the selected paper program's complete
-output law and that the program does not get stuck. Result checking and Storm
-invocation remain unfinished: valid linear equations and absorption bounds have
-not yet been connected to the infinite-horizon expectation.
+output law and that the program does not get stuck. Result certificates connect
+checked linear equations and absorption to the actual expected reward. Optional
+Storm comparisons are implemented separately.
 
 ## Model and quantity
 
@@ -16,8 +16,8 @@ transition probabilities, and a `StateKind` for each state:
 - `returned r`: evaluation returned rational reward `r`.
 - `rejected`: an observation failed.
 
-Rows are nonnegative and sum to one. Terminal states have absorbing self-loops.
-Returned rewards are paid once. `outputWithin n s` records the unnormalized real
+Rows are nonnegative and sum to one.
+Returned rewards are paid once. Evaluation stops at returned or rejected states, so terminal matrix rows do not affect the model output law. `outputWithin n s` records the unnormalized real
 output law reached within `n` transitions from `s`; a returned initial state
 contributes at depth zero. `outputMeasure` is its increasing supremum.
 `rewardWithin` computes the finite-horizon expectation in rational arithmetic,

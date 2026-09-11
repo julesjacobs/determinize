@@ -10,7 +10,8 @@ inductive StateKind where
   | rejected
 deriving DecidableEq, Repr
 
-/-- Terminal states are absorbing. Rewards are paid once, on return. -/
+/-- Evaluation stops at terminal states and rewards are paid once, on return.
+Transition rows at terminal states are ignored by the output semantics. -/
 structure Model where
   size : Nat
   initial : Fin size
@@ -18,7 +19,6 @@ structure Model where
   transition : Fin size → Fin size → Rat
   nonnegative : ∀ i j, 0 ≤ transition i j
   normalized : ∀ i, ∑ j, transition i j = 1
-  absorbing : ∀ i, kind i ≠ .transient → ∀ j, transition i j = if i = j then 1 else 0
 
 /-- Probability that evaluation is still transient after at most `steps` transitions. -/
 def Model.survivalWithin (model : Model) : Nat → Fin model.size → Rat

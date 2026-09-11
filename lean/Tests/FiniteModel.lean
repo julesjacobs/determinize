@@ -18,7 +18,6 @@ abbrev fork : Model where
     else if i = j then 1 else 0
   nonnegative := by decide +kernel
   normalized := by decide +kernel
-  absorbing := by decide +kernel
 
 def forkCertificate : ResultCertificate fork where
   values := fun i => if i.val = 0 then 3/2 else if i.val = 1 then 3 else 0
@@ -66,10 +65,6 @@ def terminal (reward : Rat) : Model where
   transition := fun _ _ => 1
   nonnegative := by decide +kernel
   normalized := by decide +kernel
-  absorbing := by
-    intro i _ j
-    have same : i = j := Subsingleton.elim _ _
-    simp [same]
 
 example (steps : Nat) : (terminal (-3)).rewardWithin steps (terminal (-3)).initial = -3 := by
   cases steps <;> rfl
@@ -79,6 +74,19 @@ example : (terminal (-3)).expectedReward = (-3 : ℝ) := by
   rw [Proof.FiniteModel.returned_output (terminal (-3)) (-3) rfl]
   simp
 
+abbrev terminalWithUnusedRow : Model where
+  size := 2
+  initial := 0
+  kind := fun i => if i = 0 then .returned 3 else .transient
+  transition := fun _ j => if j = 1 then 1 else 0
+  nonnegative := by decide +kernel
+  normalized := by decide +kernel
+
+example : terminalWithUnusedRow.expectedReward = 3 := by
+  unfold Model.expectedReward
+  rw [Proof.FiniteModel.returned_output terminalWithUnusedRow 3 rfl]
+  simp
+
 abbrev loop : Model where
   size := 1
   initial := 0
@@ -86,7 +94,6 @@ abbrev loop : Model where
   transition := fun _ _ => 1
   nonnegative := by decide +kernel
   normalized := by decide +kernel
-  absorbing := by decide +kernel
 
 def loopCertificate (answer : Rat) : ResultCertificate loop where
   values := fun _ => answer

@@ -22,7 +22,6 @@ abbrev retry : Model where
   transition := fun i j => if i = 0 then 1/2 else if i = j then 1 else 0
   nonnegative := by decide +kernel
   normalized := by decide +kernel
-  absorbing := by decide +kernel
 
 def retryResult : ResultCertificate retry := ⟨fun _ => -3, 1⟩
 example : retry.expectedReward = ((-3 : Rat) : ℝ) :=
