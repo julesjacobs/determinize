@@ -126,12 +126,11 @@ not imply absorption or finite expected execution time.
 
 ## Result certificates and Storm
 
-A `ResultCertificate model` supplies rational state values `v`, a positive horizon
-`k`, and rational `δ` with `0 < δ ≤ 1`. Its validity conditions are:
+A `ResultCertificate model` supplies rational state values `v` and a horizon `k`. Its validity conditions are:
 
 - Returned states satisfy `v(s) = reward(s)`; rejected states satisfy `v(s) = 0`.
 - Transient states satisfy `v(s) = Σ_t P(s,t) v(t)`.
-- Every state satisfies `survivalWithin k s ≤ 1 - δ`.
+- Every state satisfies `survivalWithin k s < 1`. Horizon zero is sufficient for an all-terminal model.
 
 `Proof/FiniteModel/Result.lean` proves `resultCertificate_sound`. Every output
 measure is dominated by a finite sum of terminal Dirac measures, so the output is
@@ -151,7 +150,7 @@ integrability premises needed to transport a determinized answer to the source.
 A certificate for the determinized subject alone does not discharge those premises.
 
 `Finite/Solve.lean` uses unverified rational Gaussian elimination and searches
-horizons up to the number of states for a positive uniform escape probability.
+horizons up to the number of states for survival probabilities below one. The JSON summary derives a uniform escape bound from the checked horizon; it is not a certificate field.
 Every generated certificate passes `checkResult` against the original checked
 Lean model. Dense solving defaults to at most 256 states; rational arithmetic and
 independent kernel replay can be expensive. `--result PREFIX` writes the usual

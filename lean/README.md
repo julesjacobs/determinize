@@ -262,5 +262,5 @@ Storm is not trusted by the theorem. Each subprocess has a
 120-second timeout, adjustable with `--timeout`.
 
 `lean/test.sh` includes exact ground truth and independent result-certificate
-replay with tampered values and escape bounds. Set `STORM_PYTHON` to an interpreter
+replay with tampered values and horizons. Set `STORM_PYTHON` to an interpreter
 with the pinned `stormpy` dependency to include real Storm integration tests.

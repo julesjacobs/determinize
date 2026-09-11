@@ -48,7 +48,7 @@ def solve (model : Model) (limits : SolveLimits := {}) : Except String (ResultCe
     let maximum := survival.toArray.foldl max 0
     if maximum < 1 then
       let certificate : ResultCertificate model :=
-        ⟨fun state => values[state.val]!, horizon, 1 - maximum⟩
+        ⟨fun state => values[state.val]!, horizon⟩
       if Checking.checkResult model certificate then return certificate
       throw "generated result certificate failed validation"
   throw "no uniform absorption bound: some state cannot reach a terminal state"

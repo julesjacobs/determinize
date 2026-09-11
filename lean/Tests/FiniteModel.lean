@@ -23,7 +23,6 @@ abbrev fork : Model where
 def forkCertificate : ResultCertificate fork where
   values := fun i => if i.val = 0 then 3/2 else if i.val = 1 then 3 else 0
   horizon := 1
-  escape := 1
 
 example : forkCertificate.Valid fork := by decide +kernel
 example : fork.rewardWithin 0 fork.initial = 0 := by decide +kernel
@@ -31,8 +30,6 @@ example : fork.rewardWithin 1 fork.initial = 3/2 := by decide +kernel
 example : fork.rewardWithin 20 fork.initial = 3/2 := by decide +kernel
 example : fork.survivalWithin 1 fork.initial = 0 := by decide +kernel
 example : ¬ ({forkCertificate with values := fun _ => 3} : ResultCertificate fork).Valid fork := by
-  decide +kernel
-example : ¬ ({forkCertificate with escape := 0} : ResultCertificate fork).Valid fork := by
   decide +kernel
 example : ¬ ({forkCertificate with horizon := 0} : ResultCertificate fork).Valid fork := by
   decide +kernel
@@ -94,7 +91,6 @@ abbrev loop : Model where
 def loopCertificate (answer : Rat) : ResultCertificate loop where
   values := fun _ => answer
   horizon := 1
-  escape := 1/2
 
 example (answer : Rat) : (loopCertificate answer).Equations loop := by
   intro state
@@ -112,7 +108,7 @@ theorem loop_survival (steps : Nat) (state : Fin loop.size) :
       simp
 
 example (certificate : ResultCertificate loop) : ¬ certificate.Valid loop := by
-  rintro ⟨_, _, positive, _, bound⟩
+  rintro ⟨_, bound⟩
   have h := bound loop.initial
   rw [loop_survival] at h
   linarith

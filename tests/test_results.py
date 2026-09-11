@@ -67,9 +67,9 @@ class ResultTests(unittest.TestCase):
                 end = text.index("\n", start)
                 certificate.write_text(text[:start] + "  values := fun _ => 12345" + text[end:])
                 self.assertNotEqual(kernel(certificate).returncode, 0)
-                start = text.index("  escape :=", text.index("def result :"))
+                start = text.index("  horizon :=", text.index("def result :"))
                 end = text.index("\n", start)
-                certificate.write_text(text[:start] + "  escape := 0" + text[end:])
+                certificate.write_text(text[:start] + "  horizon := 0" + text[end:])
                 self.assertNotEqual(kernel(certificate).returncode, 0)
 
     def test_failure_preserves_outputs(self):

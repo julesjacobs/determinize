@@ -21,15 +21,13 @@ theorem survivalVector_correct (model : Model) (n : Nat) (state : Fin model.size
 
 def checkResult (model : Model) (certificate : ResultCertificate model) : Bool :=
   decide (certificate.Equations model) &&
-  decide (0 < certificate.horizon ∧ 0 < certificate.escape ∧ certificate.escape ≤ 1) &&
   let survival := survivalVector model certificate.horizon
-  decide (∀ state : Fin model.size, survival[state] ≤ 1 - certificate.escape)
+  decide (∀ state : Fin model.size, survival[state] < 1)
 
 theorem checkResult_valid (model : Model) (certificate : ResultCertificate model) :
     checkResult model certificate = true ↔ certificate.Valid model := by
   simp only [checkResult, Bool.and_eq_true, decide_eq_true_eq,
     survivalVector_correct, ResultCertificate.Valid, ResultCertificate.Absorption]
-  tauto
 
 theorem checkResult_sound (model : Model) (certificate : ResultCertificate model)
     (accepted : checkResult model certificate = true) :

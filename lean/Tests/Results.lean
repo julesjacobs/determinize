@@ -13,8 +13,6 @@ example : Checking.checkResult FiniteModel.loop (FiniteModel.loopCertificate 7) 
 example : Checking.checkResult FiniteModel.fork
     {FiniteModel.forkCertificate with values := fun _ => 0} = false := by decide +kernel
 example : Checking.checkResult FiniteModel.fork
-    {FiniteModel.forkCertificate with escape := 2} = false := by decide +kernel
-example : Checking.checkResult FiniteModel.fork
     {FiniteModel.forkCertificate with horizon := 0} = false := by decide +kernel
 
 abbrev retry : Model where
@@ -26,10 +24,13 @@ abbrev retry : Model where
   normalized := by decide +kernel
   absorbing := by decide +kernel
 
-def retryResult : ResultCertificate retry := ⟨fun _ => -3, 1, 1/2⟩
+def retryResult : ResultCertificate retry := ⟨fun _ => -3, 1⟩
 example : retry.expectedReward = ((-3 : Rat) : ℝ) :=
   (Checking.checkResult_sound retry retryResult (by decide +kernel)).2
-example : Checking.checkResult retry {retryResult with escape := 1} = false := by decide +kernel
+example : Checking.checkResult retry {retryResult with horizon := 0} = false := by decide +kernel
+
+example : Checking.checkResult (FiniteModel.terminal 3) ⟨fun _ => 3, 0⟩ = true := by
+  decide +kernel
 
 private def expectAnswer (model : Model) (expected : Rat) : IO Unit := do
   let result ← IO.ofExcept (Finite.solve model)

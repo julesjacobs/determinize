@@ -147,7 +147,7 @@ def resultCertificateText (source : Checking.Core) (subject : Subject) (candidat
     "import Determinize.Checking.FiniteModel" "import Determinize.Checking.Result" ++
   "\ndef result : ResultCertificate model where\n" ++
   "  values := fun i => #[" ++ String.intercalate ", " values ++ "][i.val]!\n" ++
-  s!"  horizon := {certificate.horizon}\n  escape := {leanRat certificate.escape}\n" ++
+  s!"  horizon := {certificate.horizon}\n" ++
   "\ntheorem resultAccepted : Determinize.Checking.checkResult model result = true := by\n" ++
   "  decide +kernel\n" ++
   "\ntheorem expectedReward :\n" ++
@@ -163,12 +163,14 @@ def writeResult (outputPath : System.FilePath) (source : Checking.Core) (subject
     | throw (IO.userError "model candidate failed validation")
   let certificate ← IO.ofExcept (solve checked.model limits)
   let answer := certificate.values checked.model.initial
+  let survival := Checking.survivalVector checked.model certificate.horizon
+  let escape := 1 - survival.toArray.foldl max 0
   let metadata := Lean.Json.mkObj [
     ("answer", Lean.toJson (rational answer)),
     ("subject", Lean.toJson (if subject == .source then "source" else "determinized")),
     ("states", Lean.toJson checked.model.size),
     ("horizon", Lean.toJson certificate.horizon),
-    ("escape", Lean.toJson (rational certificate.escape))]
+    ("escape", Lean.toJson (rational escape))]
   write outputPath source subject candidate
   IO.FS.writeFile (outputPath.toString ++ ".result.lean")
     (resultCertificateText source subject candidate checked.model certificate)

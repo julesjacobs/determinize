@@ -8,7 +8,7 @@ Each retained step gets its own commit. For each step: inspect consumers, implem
 - [x] 4. Remove reconstructed certificate evidence and duplicated request metadata.
 - [x] 5. Replace nested replay-validity conjunctions with named structures.
 - [x] 6. Expose unconditional model integrability and simplify expected reward.
-- [ ] 7. Derive absorption escape from the model and certificate horizon.
+- [x] 7. Derive absorption escape from the model and certificate horizon.
 - [ ] 8. Consolidate unit-sum finite-distribution validation.
 - [ ] 9. Trim and organize the specification/proof boundary.
 - [ ] 10. Evaluate deriving terminal rows instead of storing absorbing-row evidence.
@@ -42,3 +42,7 @@ Before: consumers selected matrix and alignment facts through positional conjunc
 ### 6. Finite-model expectation — KEEP
 
 Before: `HasExpectedReward` bundled integrability with answer equality, although integrability was already proved privately for every model. After: `Model.expectedReward` is the canonical integral, `outputMeasure_integrable` is public, and certificate soundness states direct equality. Source-program integrability premises remain unchanged. The nonabsorbing loop example explicitly uses the unconditional theorem. Warning-free build, Lean tests, and a generated result theorem checked independently by the kernel all passed with standard axioms.
+
+### 7. Absorption certificate — KEEP
+
+Before: certificates carried an escape bound and required a positive horizon plus several inequalities. After: they carry values and a horizon, and check survival below one at every state. The uniqueness proof uses this inequality directly at the maximum-error state, so no maximum-survival proof or stored bound is needed. Horizon zero now works for terminal models; loops still fail. JSON escape diagnostics are derived. Warning-free build, Lean tests (including both boundary cases), and Python generated-result/mutation tests passed; optional Storm skipped.

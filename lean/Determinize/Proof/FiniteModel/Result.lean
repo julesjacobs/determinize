@@ -142,11 +142,9 @@ private theorem homogeneous_unique (model : Model) (certificate : ResultCertific
     (fun state => |d state|) ⟨model.initial, Finset.mem_univ _⟩
   have bound := homogeneous_bound model d eqs |d largest|
     (fun state => largest_bound state (Finset.mem_univ _)) certificate.horizon largest
-  have escape : (0 : ℝ) < certificate.escape := by exact_mod_cast absorption.2.1
-  have survival : (model.survivalWithin certificate.horizon largest : ℝ) ≤
-      1 - (certificate.escape : ℝ) := by exact_mod_cast absorption.2.2.2 largest
+  have survival : (model.survivalWithin certificate.horizon largest : ℝ) < 1 := by
+    exact_mod_cast absorption largest
   have zero : |d largest| = 0 := by
-    have := mul_le_mul_of_nonneg_left survival (abs_nonneg (d largest))
     nlinarith [abs_nonneg (d largest)]
   intro state
   apply abs_eq_zero.mp
