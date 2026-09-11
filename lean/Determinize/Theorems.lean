@@ -2,6 +2,7 @@ import Determinize.Spec.Main
 import Determinize.Spec.Traces.Main
 import Determinize.Proof.Soundness
 import Determinize.Proof.Corollaries
+import Determinize.Proof.ConditionalLaw
 
 /-! The public propositions, proved with no additional hypotheses. -/
 
@@ -31,6 +32,9 @@ theorem traceErasure : Spec.Traces.correspondenceThm :=
 theorem traceSoundness : Spec.Traces.soundnessThm :=
   Proof.Traces.soundness
 
+theorem traceConditionalLaw : Spec.Traces.conditionalLawThm :=
+  Proof.Traces.conditionalLaw
+
 theorem traceVarianceDecomposition : Spec.Traces.varianceThm :=
   Proof.Traces.varianceSoundness
 
@@ -44,4 +48,5 @@ end Determinize.Theorems
 #print axioms Determinize.Theorems.conditionalExpectationPreservation
 #print axioms Determinize.Theorems.traceErasure
 #print axioms Determinize.Theorems.traceSoundness
+#print axioms Determinize.Theorems.traceConditionalLaw
 #print axioms Determinize.Theorems.traceVarianceDecomposition

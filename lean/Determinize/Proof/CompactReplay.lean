@@ -359,15 +359,6 @@ instance outputGivenTraceKernel_sfinite (program : Expr) :
 
 /-! ### Total mass -/
 
-theorem sample_fiber_mass_le_one {expression : Expr} {site : DistributionAction × Op}
-    {fiber : Measure ℝ} {continuation : ℝ → Expr}
-    (reduction : reduce expression = .sample site fiber continuation) : fiber Set.univ ≤ 1 := by
-  have mass := (MeasurableActionFamily.stepKernel primitiveLaws).mass_le_one expression
-  rw [StepKernel.kernel_eq_stepMeasure, Determinize.Spec.Paper.stepMeasure, reduction,
-    Action.measure] at mass
-  rwa [Measure.map_apply (continuation_measurable reduction) MeasurableSet.univ,
-    Set.preimage_univ] at mass
-
 theorem ogtAt_partial_mass_le_one (n : Nat) (expression : Expr) (tape : DrawTrace) :
     ∑ depth ∈ Finset.range n, outputGivenTraceAt depth expression tape Set.univ ≤ 1 := by
   induction n generalizing expression tape with
@@ -402,7 +393,7 @@ theorem ogtAt_partial_mass_le_one (n : Nat) (expression : Expr) (tape : DrawTrac
                     outputGivenTraceAt depth (continuation v) tape Set.univ ∂fiber
                   ≤ ∫⁻ _, 1 ∂fiber := lintegral_mono fun v => ih (continuation v) tape
                 _ = fiber Set.univ := by simp
-                _ ≤ 1 := sample_fiber_mass_le_one reduction
+                _ ≤ 1 := reduce_sample_mass_le_one reduction
             · have general : kind = .sample .G := by
                 cases kind with
                 | sample affinity => cases affinity <;> simp_all [siteOp]

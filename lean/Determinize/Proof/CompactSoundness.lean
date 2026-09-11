@@ -85,17 +85,6 @@ theorem correspondence : Determinize.Spec.Traces.correspondenceThm := by
   rw [joint_eq_detailed, Measure.map_map measurable_snd eraseOutput_measurable]
   exact StepTraces.correspondence e
 
-theorem joint_mass_le_one (e : Expr) : traceAndOutputLaw e Set.univ ≤ 1 := by
-  rw [joint_eq_detailed, Measure.map_apply eraseOutput_measurable MeasurableSet.univ]
-  exact StepTraces.joint_mass_le_one e
-
-theorem traceLaw_mass_le_one (e : Expr) : traceLaw e Set.univ ≤ 1 := by
-  rw [traceLaw, Measure.map_apply measurable_fst MeasurableSet.univ]
-  exact joint_mass_le_one e
-
-instance (e : Expr) : IsFiniteMeasure (traceLaw e) :=
-  ⟨(traceLaw_mass_le_one e).trans_lt (by simp)⟩
-
 theorem exact_succ_next (depth : Nat) (e next : Expr) (nv : e.isValue ≠ true)
     (h : reduce e = .next next) : traceAndOutputLawAt (depth+1) e = traceAndOutputLawAt depth next := by
   simp [traceAndOutputLawAt, nv, h]
@@ -221,7 +210,7 @@ theorem soundnessDataE (source : Expr) (typed : Typed [] source (.float .E))
   let ν := (traceAndOutputLaw source.determinize).map Prod.fst
   let f := kernelMean (normalizedOutputGivenTrace source)
   rcases (compact_normalized_fiberSound source typed tags domainSafe).factorization
-    (joint_mass_le_one source.determinize) with ⟨hm, hf, hs, ht, hmean⟩
+    (traceAndOutputLaw_mass_le_one source.determinize) with ⟨hm, hf, hs, ht, hmean⟩
   have hν : traceLaw source = ν := by
     let : IsFiniteMeasure ν := ⟨hm.trans_lt (by simp)⟩
     rw [traceLaw, hs]

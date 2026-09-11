@@ -1,4 +1,6 @@
 import Determinize.Spec.Traces.Semantics
+import Determinize.Proof.TraceMass
+import Mathlib.Probability.Kernel.Disintegration.StandardBorel
 import Mathlib.MeasureTheory.Integral.Bochner.Basic
 import Mathlib.Probability.Moments.Variance
 
@@ -13,6 +15,9 @@ def correspondenceThm : Prop :=
 /-- The law of a program's terminating generation traces: the trace marginal of its joint law. -/
 noncomputable def traceLaw (program : Expr) : Measure Trace :=
   (traceAndOutputLaw program).map Prod.fst
+
+instance isFiniteMeasure_traceLaw (program : Expr) : IsFiniteMeasure (traceLaw program) :=
+  inferInstanceAs (IsFiniteMeasure ((traceAndOutputLaw program).map Prod.fst))
 
 /-- Draw a trace from `traces`, then an output from `outputs trace`: the joint law of the pair. -/
 noncomputable def traceThenOutput (traces : Measure Trace) (outputs : Trace → Measure ℝ) :
@@ -41,6 +46,27 @@ def soundnessThm : Prop :=
         Integrable id (outputGivenTrace program trace) ∧
         outputGivenTrace program.determinize trace =
           Measure.dirac (replayMean program trace)
+
+/-- Trace soundness in the language of regular conditional distributions. The joint law of a
+program's trace and output is a finite measure on `Trace × ℝ`, so Mathlib disintegrates it over
+its trace marginal: `(traceAndOutputLaw program).condKernel` is the regular conditional
+distribution of the output given the trace, unique up to a null set of traces. The replay
+`outputGivenTrace program` is a version of it, for the source and for the target (both stated
+over the source's trace law, which the target shares), and in these terms trace soundness says
+that for almost every trace the source's conditional law is integrable and the target's
+conditional law is the Dirac mass at its mean: the determinized program returns the conditional
+expectation of the source's output given the σ-algebra of the general-mode trace. -/
+def conditionalLawThm : Prop :=
+  ∀ (program : Expr),
+    Typed [] program (.float .E) →
+    program.sourceForm = true → PrimitiveDomainSafe program →
+      outputGivenTrace program =ᵐ[traceLaw program] (traceAndOutputLaw program).condKernel ∧
+      outputGivenTrace program.determinize =ᵐ[traceLaw program]
+        (traceAndOutputLaw program.determinize).condKernel ∧
+      ∀ᵐ trace ∂traceLaw program,
+        Integrable id ((traceAndOutputLaw program).condKernel trace) ∧
+        (traceAndOutputLaw program.determinize).condKernel trace =
+          Measure.dirac (∫ value : ℝ, value ∂(traceAndOutputLaw program).condKernel trace)
 
 /-- The law of total variance along traces. When the source output law has a finite second
 moment, the variances of the source's output laws given the traces are integrable over the
