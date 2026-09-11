@@ -1,5 +1,7 @@
 # Paper plan review and pending changes across the repository
 
+Historical design record; see `migration-audit.md` and `migration-plan.md` for the integrated implementation.
+
 Date: 2026-09-10, updated 2026-09-11 after the authors took decisions D1 to D7 (Part 3) and
 the Lean side was changed accordingly (Part 0). Supersedes the earlier paper-vs-Lean
 comparison (git history has it).

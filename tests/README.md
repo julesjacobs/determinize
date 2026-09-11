@@ -124,3 +124,23 @@ branch bound follows from bounded support and is also conservative. Distribution
 formulas use central fourth moments: Poisson `λ + 3λ²`, gamma `3a(a+2)/b⁴`, and
 beta `(3 + excess-kurtosis) × variance²`.
 
+## CLI, model, and result integration
+
+`test_workflows.py` checks the public `run.sh` entry points and relative paths.
+`test_export.py` checks exact model exports and independent paper-correspondence
+certificates. `test_results.py` checks exact expected rewards, malformed certificates,
+nonabsorption, resource limits, and failure reports. Set `STORM_PYTHON` to an
+interpreter with `tools/storm-requirements.txt` installed for real Storm comparisons.
+
+`./det.sh` delegates to the Lean suite. OCaml and its generated baselines have
+been retired; their recovery location and intentional behavioral differences are
+in [migration-audit.md](../migration-audit.md).
+
+The coupling prototype's motivating examples use `nested`, `coupling-branch`, and
+`coupling-mixed`. Simulator projection/trace tests read these same files.
+For `coupling-branch`, the source is an equal mixture of U(0,1) and U(2,4): mean
+7/4, variance 85/48, fourth central moment 5761/1280. The target is an equal mixture
+of 1/2 and 3: variance 25/16, fourth central moment 625/256.
+For `coupling-mixed`, the source moments are those of `nested`, and the target is
+1 + (3/2)U(0,1): mean 7/4, variance 3/16, fourth central moment 81/1280.
+The same analytical tolerance formula above applies.

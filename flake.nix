@@ -1,5 +1,5 @@
 {
-  description = "Determinize: OCaml implementation, paper (LaTeX) and browser simulator";
+  description = "Determinize: Lean implementation and checked certificates, paper (LaTeX) and browser simulator";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";

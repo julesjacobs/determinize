@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 # PostToolUse (Edit|Write): fast feedback for the file that was just changed.
-#   ocaml/*   -> dune build (type errors surface immediately)
 #   sim/*     -> node --test
 #   tex/*.tex -> chktex lint of that file
 #   lean/**.lean -> lake build (fails fast with a hint if the Mathlib cache is absent)
 #   toolchain files -> remind to run /learn-tool
-#   *.det     -> remind to regenerate .dout
+#   *.det     -> remind to update corpus expectations
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 read_hook_input
 file="$(rel_path "$(jfield tool_input.file_path)")"
@@ -13,13 +12,6 @@ file="$(rel_path "$(jfield tool_input.file_path)")"
 cd "$ROOT"
 
 case "$file" in
-  ocaml/*.ml|ocaml/*.mli|ocaml/*.mll|ocaml/*.mly|ocaml/dune|ocaml/dune-project)
-    out="$(cd ocaml && in_shell ocaml dune build 2>&1)" || {
-      echo "dune build failed after editing $file:" >&2
-      tail -n 40 <<<"$out" >&2
-      exit 2
-    }
-    ;;
   sim/src/*|sim/test/*)
     out="$(cd sim && in_shell sim node --test 2>&1)" || {
       echo "node --test failed after editing $file:" >&2
@@ -38,11 +30,11 @@ case "$file" in
       exit 2
     }
     ;;
-  flake.nix|flake-modules/*|sim/package.json|ocaml/dune|ocaml/dune-project|*.envrc|lean/lakefile.toml|lean/lean-toolchain)
+  flake.nix|flake-modules/*|sim/package.json|*.envrc|lean/lakefile.toml|lean/lean-toolchain)
     emit_context PostToolUse "Toolchain definition changed ($file). If this adds a new tool or dependency, run the learn-tool skill for it (/learn-tool <name>) so its best practices get captured in .claude/rules/ before you rely on it. New files must be 'git add'ed before Nix can see them."
     ;;
-  det/*.det|examples/*.det|examples/*/*.det)
-    emit_context PostToolUse "$file changed: regenerate its golden output with './run.sh $file' (or ./det.sh for all of det/) and review the .dout diff before finishing."
+  tests/*.det|tests/*/*.det|tests/*/*/*.det|tests/*/*/*/*.det|examples/*.det|examples/*/*.det)
+    emit_context PostToolUse "$file changed: register its expectations in tests/cases.toml and run ./lean/test.sh (or --all for statistical cases)."
     ;;
 esac
 exit 0

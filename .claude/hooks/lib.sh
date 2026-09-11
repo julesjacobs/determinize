@@ -2,7 +2,7 @@
 # Shared helpers for Claude Code hooks in this repo. Source, don't execute.
 #
 # Design: hooks run in whatever environment Claude Code was launched from,
-# which usually has only the root devshell (.#ocaml) loaded via direnv.
+# which may have the root Lean devshell loaded via direnv.
 # `in_shell NAME CMD...` runs CMD with the toolchain of flake devShell NAME:
 #   1. if the command is already on PATH, run it directly (fast path);
 #   2. else if direnv is installed, `direnv exec <dir>` (uses nix-direnv cache, ~0.2s);
@@ -14,7 +14,6 @@ ROOT="${CLAUDE_PROJECT_DIR:-$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse 
 # Directory whose .envrc loads a given devshell.
 shell_dir() {
   case "$1" in
-    ocaml) echo "$ROOT" ;;
     sim) echo "$ROOT/sim" ;;
     tex) echo "$ROOT/tex" ;;
     lean) echo "$ROOT/lean" ;;

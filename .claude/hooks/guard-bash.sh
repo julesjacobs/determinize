@@ -32,9 +32,6 @@ def ask(reason):
 if re.search(r"deploy-to-website", cmd):
     deny("sim/deploy-to-website.sh commits and pushes to an external website repository. "
          "Only the user runs it; tell them the bundle is ready instead.")
-if re.search(r"\bdune\s+fmt\b|@fmt\b.*--auto-promote|ocamlformat\s+(-i\b|--inplace)", cmd):
-    deny("The OCaml sources are not ocamlformat-formatted; a whole-file reformat would bury the real diff. "
-         "Match the surrounding style by hand (see .claude/rules/ocaml.md).")
 if re.search(r"\bgit\s+push\b.*(--force|-f\b|\+)", cmd):
     deny("Force-pushing a shared branch is not allowed.")
 if re.search(r"\bnix\s+flake\s+(update|lock)\b", cmd):

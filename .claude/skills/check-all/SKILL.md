@@ -1,19 +1,21 @@
 ---
 name: check-all
-description: Run the full verification for this repo (dune build, sim tests, bundle freshness, LaTeX build with error/undefined-reference triage, Lean/Mathlib lake build, optionally regenerate det/ golden outputs) and summarize failures. Use before declaring a task done, after touching several areas, or when asked to "run everything" / "check that it still builds". Also invoked as /check-all [areas].
-argument-hint: "[ocaml|sim|bundle|tex|lean|det ...] (default: --all)"
+description: Run Lean proofs, corpus and certificate tests, optional real Storm comparisons, simulator checks, bundle freshness, and the paper build.
+argument-hint: "[sim|bundle|tex|lean|det ...] (default: --all)"
 allowed-tools: Bash, Read, Grep
 ---
 
-Run the repository checks and act on the result.
+Run `.claude/scripts/check.sh --all`, or pass selected areas. `--changed` selects
+areas from Git status. Checks run sequentially; never run competing Lake builds.
 
-Command: `.claude/scripts/check.sh $ARGUMENTS` (use `--all` when no argument is given; `--changed` selects areas from `git status`).
+- `lean`: warning-free Lake build and standard-axiom reports.
+- `det`: `./det.sh --all`, covering unit/corpus/statistical/certificate/workflow tests.
+  Set `STORM_PYTHON` to the pinned stormpy environment to include real Storm runs.
+- `sim`: Node tests.
+- `bundle`: checks whether changed simulator sources have a rebuilt bundle.
+- `tex`: latexmk; errors and undefined references fail, layout warnings are reported.
 
-Areas: `ocaml` (dune build), `sim` (npm test), `bundle` (fails if `sim/src` changed but `sim/app.bundle.js` was not rebuilt), `tex` (latexmk; hard errors and undefined references fail, overfull boxes and multiply-defined labels are reported), `lean` (`lake build --wfail` in `lean/`, so any warning or `sorry` fails, followed by a check that every `#print axioms` report lists only `propext`, `Classical.choice` and `Quot.sound`; fails fast with a hint when the Mathlib cache has not been fetched with `lake exe cache get`), `det` (runs `./det.sh`, which rewrites every `det/*.det.dout`, then lists the golden files that changed; not part of `--all` because it modifies tracked files).
-
-The script runs each tool inside its Nix devshell via direnv or `nix develop`, so it works from a bare shell.
-
-Afterwards:
-- If something failed, fix the root cause and rerun the failing area only. Never silence a warning-as-error, skip a test, or build with a different profile to get green.
-- If `det` reports changed golden outputs, inspect `git diff det/` and decide whether each change is intended (a semantics change) or a regression; say which in your summary.
-- Report the final status per area in one line each, quoting exact error lines for anything still failing.
+Use installed tools or the corresponding Nix devshell. Fetch the Mathlib cache
+with `lake exe cache get` before the first build. Fix failures without weakening
+expectations; rerun affected checks. State explicitly when real Storm was skipped
+or a required toolchain was unavailable. Local checks must not deploy or push.

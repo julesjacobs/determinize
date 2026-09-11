@@ -8,7 +8,6 @@
         name = "determinize";
 
         inputsFrom = [
-          config.devShells.ocaml
           config.devShells.tex
           config.devShells.sim
           config.devShells.lean

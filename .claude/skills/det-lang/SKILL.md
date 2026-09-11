@@ -1,32 +1,35 @@
 ---
 name: det-lang
-description: Reference for the .det probabilistic language implemented in this repo (syntax, mode system G/E, determinization rules, CLI output format) and the procedure for adding or changing example programs in det/ and examples/. Use when writing, reading, or debugging .det programs, interpreting .dout output, adding a distribution or construct, or explaining what "determinize" computes.
+description: Reference for the Lean .det language, sampling modes, checked determinization, execution, and shared corpus.
 paths:
-  - "det/**"
+  - "tests/**"
   - "examples/**"
   - "**/*.det"
-  - "**/*.dout"
 ---
 
-## The language (as accepted by `ocaml/parser.mly`)
-- Functions: `fun x => e`, `rec f x => e`, application by juxtaposition; `let x = e in e`; `if c then e else e`.
-- Data: floats, `true`/`false`, pairs `(a, b)` with `fst`/`snd`, sums `inl e`/`inr e` with `match e with inl x => e | inr y => e`, lists `[]`, `x :: xs`, `match e with [] => e | x::xs => e`.
-- Operators: `+ - * /`, unary `-`, `<`, `<=`. Comments `(* ... *)`. `\`/`lambda` are synonyms for `fun`.
-- Effects: `observe(e)` (conditioning; rejected trials are skipped in evaluation), distributions `uniform(a,b)`, `gauss(mu,var)`, `exponential(r)`, `gamma(a,b)`, `beta(a,b)`, `flip(p)`, `bernoulli(p)`, `poisson(l)`, `discrete(p1,...,pn)` (literal probabilities only; values are `0..n-1`).
-- Not supported / open (see `TODO.md`): a principled expectation rule for subtraction and division, the `discrete` branching.
+The maintained parser is `lean/Determinize/Frontend/Parser.lean`. Syntax includes
+functions/recursion, let/if, pairs, sums, lists/matches, arithmetic/comparisons,
+observations, and primitive distributions. See `lean/README.md` and parser tests
+for accepted aliases and precedence.
 
-## Modes and determinization
-- Every float has a mode: `float[G]` (a genuine sample must be drawn) or `float[E]` (the value may be replaced by its expectation). `G <= E` is the submode order; subtyping is contravariant on arrows. Unresolved mode metas print as `float[?mN]` and default to `E`.
-- Constructs that force `G`: comparison operands (`<`, `<=`), both operands of a non-scaling `*`/`/` (multiplying by a literal constant is "scaling" and keeps the context mode), `gauss` variance, `exponential` rate, `gamma` rate, `beta` parameters.
-- The transform replaces E-moded draws by their means: `uniform(a,b) -> (a+b)*0.5`, `gauss(m,v) -> m`, `exponential(r) -> 1/r`, `gamma(a,b) -> a/b`, `beta(a,b) -> a/(a+b)`, `bernoulli(p)/poisson(p) -> p`, `discrete -> sum p_i * i`. `flip` is never determinized.
+Draws carry E/G annotations; inference supplies omitted annotations. Subtyping is
+silent and structural. The transform replaces E draws by mean sites, preserving
+evaluation of every operand. Means are rational functions of rational parameters:
+uniform `(a+b)/2`, Gaussian `mu`, exponential `1/r`, gamma `a/r`, beta `a/(a+b)`,
+Poisson/Bernoulli `p`, and discrete `sum p_i*i`. Discrete literal weights are
+normalized. `flip` returns a Boolean and retains G sampling.
 
-## Running
-- One file: `./run.sh det/FILE.det` (from the repo root; builds first). All: `./det.sh`. Storm model checking: `./run.sh --storm [--limit N] FILE.det`, see the `storm` skill.
-- Output `FILE.det.dout` (also on stdout) has three sections: `== Elaboration ==` (typed AST before and after mode defaulting), `== Determinized ==`, `== Evaluation (100 trials) ==` with `program mean` vs `determinized mean`. Runs are reproducible (`Random.init 0`). The two means should agree up to sampling noise when the analysis is sound; a large gap on a new example is a finding worth reporting.
-- `.dout` is a report, not re-parseable input (pairs print as `<a, b>`, typed output carries `x : T` ascriptions).
+Comparison operands must be G; multiplication uses a G left operand in the core,
+and division a G denominator. Frontend elaboration handles eligible product
+reordering. See `lean/mul-div-typing.md`; do not copy simulator rules blindly.
+`observe(false)` rejects with zero output mass. Exact expected rewards are not
+conditional on acceptance. Lean's total arithmetic defines division by zero as zero.
 
-## Adding an example
-1. Write `det/NAME.det` (keep it small and focused on one feature); run `./run.sh det/NAME.det` and read the `.dout`.
-2. Commit the `.det` together with its `.dout` (generated, never hand-edited; the protect hook blocks edits).
-3. If it should appear in the browser simulator, add it to `sim/src/examples.js` (the sim test suite executes every entry) and rebuild the bundle.
-4. `examples/` holds larger benchmark programs (`loops/`, `paper/ex1-6` are the paper's running examples, `symbolic/`, `baselines/*.sgcl` are reference encodings in another tool's language and are not parsed by anything here).
+- `./run.sh FILE.det`: checked annotation and determinization output.
+- `./run.sh --samples N --seed S FILE.det`: numerical estimates and explicit rejections/failures.
+- `./run.sh --result PREFIX --subject source FILE.det`: exact finite-model theorem.
+- `./det.sh --all`: corpus, statistical, and certificate tests.
+
+Add programs under tests/examples and register expectations in `tests/cases.toml`.
+Use analytical ground truth, not generated random-output reports. If a program is
+added to the browser examples, run simulator tests and regenerate its bundle.

@@ -29,19 +29,239 @@ The statements follow the paper's theorems, not its letter. Reviewers comparing 
 
 ## Lean command-line implementation
 
-From `lean/`:
+Build with `lake build --wfail`, then run from `lean/`:
 
 ```sh
-lake build --wfail
-.lake/build/bin/determinize --samples 1000 ../tests/execution/legacy/foldr.det
-.lake/build/bin/determinize --certificate /tmp/Certificate.lean ../tests/execution/legacy/foldr.det
+.lake/build/bin/determinize ../tests/execution/legacy/foldr.det
+.lake/build/bin/determinize --samples 1000 --seed 42 ../tests/execution/legacy/foldr.det
+.lake/build/bin/determinize --check --certificate /tmp/Certificate.lean ../tests/execution/legacy/foldr.det
 lake env lean /tmp/Certificate.lean
 ./test.sh
 ```
 
-The frontend infers sampling modes and supplies a typing certificate checked in Lean.
-Determinization uses the formal core transform. Numerical execution uses floating-point
-arithmetic and a pseudorandom generator and is outside the semantic proof.
+The CLI reads the existing `.det` grammar, with optional `[E]` or `[G]` after a
+sampling primitive. Unannotated sites are inferred; explicit modes are constraints.
+It prints the annotated source and the result of the existing `Expr.determinize`.
+`mean_uniform`, `mean_gauss`, etc. in the output denote atomic mean operations:
+they evaluate every operand exactly once and check the primitive domain. They are
+output notation, not additional source primitives. `--fuel` bounds each numerical
+run; `--samples` defaults to zero, so compilation does not execute the program.
 
-Discrete probabilities are nonnegative literals with exact sum one. Observation
-lowers to `if condition then () else reject`, with zero output mass on rejection.
+The implementation is separated as follows:
+
+- `Frontend/`: unverified parsing, desugaring/name resolution, constraint inference,
+  pretty printing, orchestration, and certificate export.
+- `Checking/`: certificate data, a total proof-producing typing checker, and checks
+  that inference preserves the elaborated expression and explicit sampling modes.
+- `Proof/Checking/`: checker soundness, rational/real determinization correspondence,
+  and application of the existing trace and finite-expectation theorems.
+- `Runtime/`: an unverified floating-point interpreter and seeded numerical samplers.
+- `Tests/`: parsing, inference, certificate rejection, runtime, and kernel proof tests.
+- `Main.lean`: the CLI.
+
+`Statement`, `Traces`, and the existing soundness proofs do not import the front end
+or runtime. The CLI uses the formalization's syntax and determinization, generalized
+over literal types. Decimal input is parsed exactly as `Rat`; the mathematical
+interpretation embeds each rational into `ℝ`. A proved commuting equation connects
+rational determinization to the existing real-literal theorem.
+
+### What is checked
+
+The inference algorithm produces an expression and a tree of proposed types.
+`check` verifies every node against the existing `Typed` constructors and returns
+an actual proof in `PLift`. It does not use `unsafe`, `sorry`, or inference as an
+oracle. `certify` additionally requires stochastic source form, identical syntax
+after erasing sampling modes, and preservation of every
+explicit sampling mode. Thus inference cannot silently change literals, operators,
+binders, or distribution kinds. The parser and initial desugaring remain unverified;
+the certificate identifies the **elaborated core expression**, not the source bytes.
+
+The executable runs the verified checker as compiled Lean code. An exported
+`.lean` certificate independently reconstructs the checks using kernel reduction
+(`by decide +kernel`, not `native_decide`); it does not import the inference algorithm.
+For a float-valued program it includes `traceGuarantee`, conditional on
+`DoesNotGetStuck`. The generic `certified_expectation` theorem additionally requires
+integrability. Typing alone proves neither hypothesis. Non-float programs receive
+typing and input-preservation certificates without a float-output theorem.
+
+### Surface extensions and inference limits
+
+Subtraction lowers to addition and negation. `<=` evaluates both operands once,
+in source order, and negates the reversed strict comparison. Multiplication by a
+right-hand numeric literal is rearranged to use the core's left-G multiplication
+rule. These transformations belong to the unverified desugaring stage.
+
+`bernoulli[E](p)` and `bernoulli[G](p)` are core numeric draws with outcomes 0 and 1.
+The probability is evaluated once and must be in `[0,1]`; an invalid probability
+has zero mass in the formal semantics and raises a runtime error. E-mode
+probabilities may depend affinely on E values; G-mode probabilities must have G
+type. Typing does not establish domain safety. Determinization changes an E draw
+to a mean site with the same probability expression. `flip(p)` lowers to a G-mode
+Bernoulli comparison and therefore returns a Boolean; `flip[E]` is rejected.
+
+`discrete[E](w0,...,wn)` and `discrete[G](w0,...,wn)` require nonnegative literal
+rational probabilities whose exact sum is one, matching the domain on `main`. Core terms store the checked probabilities
+for numeric outcomes `0,...,n`, including zero-weight positions. Determinization
+changes an E draw to a mean site with the same distribution. Its result is the
+weighted outcome index. Omitted modes use ordinary mode inference. Pretty printing
+prints probabilities directly, preserving the unit-sum domain when reparsed.
+
+`observe(c)` lowers to `if c then () else reject`. The explicit core rejection term
+has zero output mass: formally it is an absorbing non-value, as proved in
+`Proof/Rejection.lean`. The numerical runtime returns a distinct rejection outcome
+immediately; ordinary divergence still exhausts fuel. Conditions are evaluated once,
+and rejected executions do not evaluate their continuation. The CLI reports rejected
+observations separately from execution failures. No conditioning theorem is claimed;
+empirical means use returned values and differ from unnormalized expectations.
+
+Inference is monomorphic, uses an occurs check and structural subtyping constraints,
+and defaults unconstrained modes to E and unused type variables to `unit`.
+Products, sums, and lists are covariant; function arguments are contravariant and
+results covariant. Subsumption appears in certificates, never in the expression.
+The checker validates every subsumption step against `Ty.Sub`. Inference
+completeness and optimality are not claimed.
+
+The shared corpus and analytical expectations live in [`../tests/`](../tests/README.md).
+Run `./test.sh` for unit tests, all corpus compilation/typing checks, exact execution
+checks, and exported kernel certificates. Run `./test.sh --statistical` for sampled
+source/target moment checks, or `./test.sh --all` for both. Python 3.11+ reads TOML;
+the compiled Lean test runner performs all language evaluation and assertions.
+
+### Numerical runtime
+
+The runtime evaluates the checked core, with closures, recursive functions, sums,
+lists, and left-to-right evaluation. It uses SplitMix64 with separate E/G streams,
+Box–Muller Gaussian draws, Marsaglia–Tsang gamma draws, gamma-ratio beta draws,
+inverse-CDF exponential draws, and sums of bounded-rate Poisson draws. Identical seeds
+replay identical runs. These algorithms, Lean's compiler, floating-point rounding,
+and the PRNG are not covered by the measure-theoretic soundness proof.
+
+Primitive domains follow the formalization: reversed uniform bounds fail instead of
+being swapped; zero-variance Gaussians and point uniforms are allowed; division by
+zero yields zero. Nonfinite arithmetic and sampling results fail explicitly. Gamma
+rejection and Poisson iterations are bounded, and Poisson rates above 1,000,000 are
+rejected by this numerical runtime. Failed and exhausted runs are reported.
+
+The OCaml implementation is retired; see [migration-audit.md](../migration-audit.md).
+
+### Discrete-distribution migration
+
+`Statement/FiniteDistribution.lean` defines checked rational probabilities and
+weighted expectation. `Statement/FiniteDistributionMeasure.lean` and
+`Statement/Primitives.lean` define the real finite law, Bernoulli fiber, and mean
+fibers. Their probability, integrability, expectation, and Bernoulli variance and
+measurability proofs are in the corresponding `Proof/` modules. The shared primitive kernels,
+affine-mean laws, moment bounds, and domain-convexity proofs cover both distributions.
+Both primitives pass through core typing, symbolic and trace semantics, checked
+certificates, and the numerical runtime. The runtime remains unverified.
+
+### Finite-model contract
+
+[finite-model-contract.md](finite-model-contract.md) specifies exact rational
+models, one-time terminal rewards, rejection, the initial primitive policy, and
+certificates with value equations and finite-step absorption bounds. Definitions
+live in `Statement/FiniteModel/`; proofs and theorems composing checker
+correctness guarantees live in `Proof/FiniteModel/`. The unverified explorer is implemented in `Finite/`. The verified
+model checker is in `Checking/FiniteModel.lean`. `replay_matches` and
+`checkModelCertificate_sound` establish correspondence to the paper semantics.
+`Checking/Result.lean` proves result-checker soundness and the composed program
+expected-reward theorem. `Tests/Results.lean` checks signed rewards, absorption,
+and a nonterminating model with spurious equation solutions.
+
+
+### Exact finite-state export
+
+From `lean/`:
+
+```sh
+lake exe determinize --check --export /tmp/model --subject source ../tests/statistical/discrete.det
+```
+
+The default subject is `determinized`. Exploration uses exact rational arithmetic
+and structural machine states, including closures and continuation stacks.
+Stochastic Bernoulli and discrete draws have finite successors; mean draws of
+all supported primitives are rational. Residual stochastic continuous and
+Poisson draws are rejected. Terminal results must be numeric.
+
+Successful exploration is checked against the executable machine before writing
+`.candidate.lean`, `.replay.lean`, `.tra`, `.lab`, `.positive.state.rew`, and
+`.negative.state.rew`. The replay checker takes the requested source and subject
+separately from the candidate and checks their alignment, exact transitions,
+complete positive successor coverage, rewards, and absorbing terminal states.
+Acceptance constructs a `CheckedModel` with a `Statement.FiniteModel.Model` and
+a proof of paper safety and complete output-law equality. Stored states must be unique.
+
+The `.candidate.lean` file contains raw data. The `.replay.lean` file additionally
+contains `machineReplay`, proved by `decide +kernel`, the resulting `model`, and
+`modelMatches`, which certifies the selected paper program.
+Check it independently with:
+
+```sh
+lake env lean /tmp/model.replay.lean
+```
+
+These are program-level model certificates: they cover unbounded execution,
+rejection, and divergence. Expected-reward certificates additionally require a
+uniform absorption bound. The replay checker checks the full transition matrix;
+checking large graphs can cost substantially more than exploration.
+
+Limits default to `--max-states 10000 --max-edges 100000
+--max-state-bytes 1000000`. A limit or execution failure exits unsuccessfully
+without writing exports; existing files at the same path are left untouched.
+The byte limit measures each serialized machine state after construction, not
+process memory. Structural exploration can find finite cycles, but does not
+abstract infinite state spaces. Full captured environments may distinguish
+states with equivalent future behavior.
+
+`Tests/Explorer.lean` checks exact rewards, recursion, cycles, limits, and errors.
+`tests/test_export.py` independently solves the emitted rational transition
+equations for known answers, recompiles generated data, and kernel-checks
+replay certificates (including rejection of changed initial states).
+Both run through `./test.sh`.
+
+
+The semantic bridge in `Proof/FiniteModel/` now reifies closures and continuation
+stacks into paper expressions. It proves the binding equations, deterministic
+root reductions, bookkeeping equalities, and contextual rejection laws.
+The replay checker also requires a closed source (all variables bound), so
+`replay_initial_reification` identifies the initial paper program directly from
+an accepted replay certificate. These results are exercised in
+`Tests/SemanticBridge.lean`. Sampling correspondence, reachable continuation
+invariants, and a bookkeeping bound feed into the unbounded execution proof.
+`Graph.lean` connects the graph to machine output, and `Soundness.lean` establishes
+`Model.Matches`. The Boolean checker also satisfies `ModelCheckerSound`.
+
+### Certified expected rewards and Storm
+
+From `lean/`:
+
+```sh
+lake exe determinize --result /tmp/model --subject source ../tests/statistical/discrete.det
+lake env lean /tmp/model.result.lean
+```
+
+`--result` exports the model and an exact expected-reward certificate. It checks
+all terminal/transient equations and a positive finite-step absorption bound.
+The exported `expectedReward` theorem establishes integrability and the exact
+answer for the selected core program. Rejected paths contribute zero; the answer
+is unnormalized. Nonabsorbing models are rejected by this initial result checker.
+The dense exact solver defaults to `--max-result-states 256`.
+
+For Storm comparison, from the repository root:
+
+```sh
+python3 -m venv /tmp/determinize-storm
+/tmp/determinize-storm/bin/pip install -r tools/storm-requirements.txt
+/tmp/determinize-storm/bin/python tools/storm.py tests/statistical/discrete.det --prefix /tmp/model --subject source
+```
+
+The wrapper independently kernel-checks the certificate and runs Storm on the
+positive and negative reward files. It records version/options/status in
+`/tmp/model.storm.json`. The adapter loads rational explicit data into Storm's
+exact sparse-matrix API and requires exact agreement with the Lean-checked answer.
+Storm is not trusted by the theorem. Each subprocess has a
+120-second timeout, adjustable with `--timeout`.
+
+`lean/test.sh` includes exact ground truth and independent result-certificate
+replay with tampered values and escape bounds. Set `STORM_PYTHON` to an interpreter
+with the pinned `stormpy` dependency to include real Storm integration tests.

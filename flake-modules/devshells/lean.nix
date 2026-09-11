@@ -15,6 +15,8 @@
           pkgs.elan
           pkgs.git
           pkgs.curl
+          pkgs.python3
+          pkgs.uv
         ];
       };
     };

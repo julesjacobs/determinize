@@ -30,7 +30,7 @@
 
 ## Implementation
 
-- Describes OCaml + Lean setup.
+- Describes the Lean implementation, verified checkers, and formalization.
 - Storm, sampling, MCMC.
 
 ## Evaluation

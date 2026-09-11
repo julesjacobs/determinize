@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Build/test runner shared by the Stop hook and the /check-all skill.
 #
-#   check.sh [--quiet] AREA...      AREA in: ocaml sim bundle tex lean det
+#   check.sh [--quiet] AREA...      AREA in: sim bundle tex lean det
 #   check.sh --changed              pick areas from `git status` (what the Stop hook does)
-#   check.sh --all                  everything except `det` (which rewrites golden files)
+#   check.sh --all                  builds, full corpus/certificates, simulator, bundle and paper
 #
 # Exit 0 = all selected checks passed, 1 = at least one failed. A human-readable
 # summary goes to stdout; the last ~40 lines of any failing tool go there too.
@@ -18,22 +18,24 @@ quiet=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --quiet) quiet=1 ;;
-    --all) areas+=(ocaml sim bundle tex lean) ;;
+    --all) areas+=(lean det sim bundle tex) ;;
     --changed)
       changed="$(git status --porcelain --untracked-files=all | cut -c4-)"
-      grep -qE '^ocaml/' <<<"$changed" && areas+=(ocaml)
       grep -qE '^sim/(src|test)/|^sim/package(-lock)?\.json' <<<"$changed" && areas+=(sim bundle)
       grep -qE '^tex/.*\.(tex|bib|cls|bst|sty)$' <<<"$changed" && areas+=(tex)
       grep -qE '^lean/.*\.lean$|^lean/(lakefile\.toml|lean-toolchain|lake-manifest\.json)$' <<<"$changed" && areas+=(lean)
+      grep -qE '^tests/|^tools/|^(det|run)\.sh$' <<<"$changed" && areas+=(det)
       ;;
-    ocaml|sim|bundle|tex|lean|det) areas+=("$1") ;;
+    sim|bundle|tex|lean|det) areas+=("$1") ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
   shift
 done
 [[ ${#areas[@]} -eq 0 ]] && exit 0
 # de-duplicate, keep order
-mapfile -t areas < <(printf '%s\n' "${areas[@]}" | awk '!seen[$0]++')
+unique_areas=()
+while IFS= read -r area; do unique_areas+=("$area"); done < <(printf '%s\n' "${areas[@]}" | awk '!seen[$0]++')
+areas=("${unique_areas[@]}")
 
 fail=0
 report() { # name status detail
@@ -44,11 +46,6 @@ tail_of() { tail -n 40; }
 
 for area in "${areas[@]}"; do
   case "$area" in
-    ocaml)
-      out="$(cd ocaml && in_shell ocaml dune build 2>&1)"
-      if [[ $? -eq 0 ]]; then report ocaml "dune build OK"
-      else fail=1; report ocaml "dune build FAILED" "$(tail_of <<<"$out")"; fi
-      ;;
     sim)
       out="$(cd sim && in_shell sim npm test 2>&1)"
       if [[ $? -eq 0 ]]; then report sim "npm test OK ($(grep -oE 'pass [0-9]+' <<<"$out" | head -1))"
@@ -115,12 +112,14 @@ for area in "${areas[@]}"; do
       fi
       ;;
     det)
-      out="$(in_shell ocaml ./det.sh 2>&1)"
+      out="$(in_shell lean ./det.sh --all 2>&1)"
       if [[ $? -ne 0 ]]; then fail=1; report det "det.sh FAILED" "$(tail_of <<<"$out")"
       else
-        diff="$(git status --porcelain -- det/ | grep -E '\.dout$' || true)"
-        if [[ -n "$diff" ]]; then report det "golden outputs changed (review with git diff det/)" "$diff"
-        else report det "all det/*.det.dout unchanged"; fi
+        if [[ -n "${STORM_PYTHON:-}" ]]; then
+          report det "Lean corpus and certificate tests passed, including real Storm comparisons"
+        else
+          report det "Lean corpus and certificate tests passed; real Storm skipped (set STORM_PYTHON)"
+        fi
       fi
       ;;
   esac

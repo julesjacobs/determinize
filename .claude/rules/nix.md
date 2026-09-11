@@ -12,9 +12,9 @@ Sources: nix.dev manual, flake.parts, github.com/mightyiam/dendritic, github.com
 ## Layout rules (dendritic pattern)
 - `flake.nix` is a one-liner: every `*.nix` under `flake-modules/` is a flake-parts module, auto-imported by `import-tree`. To add a feature, create `flake-modules/<feature>.nix` (or `devshells/<name>.nix`) containing `{ perSystem = { pkgs, config, ... }: { ... }; }`. No registration step.
 - Paths containing a `_`-prefixed segment are ignored (private helpers to `import` manually). `systems.nix` sets the systems list.
-- `devShells.default` (`devshells/all.nix`) is the union of `ocaml`, `sim`, `tex` via `inputsFrom`; `inputsFrom` merges packages and shellHooks but not plain env attributes.
-- In a devshell use `packages = [ ... ]` for tools (compilers, LSPs, formatters); `nativeBuildInputs` is equivalent; `buildInputs` is for libraries (no `$PATH` effect). `pkgs.mkShell` (OCaml needs a C compiler).
-- Storm is NOT in nixpkgs (`pkgs.storm` is Apache Storm). Do not add it; see the `storm` skill for Docker/Homebrew options.
+- `devShells.default` (`devshells/all.nix`) is the union of `lean`, `sim`, `tex` via `inputsFrom`; `inputsFrom` merges packages and shellHooks but not plain env attributes.
+- In a devshell use `packages = [ ... ]` for tools (compilers, LSPs, formatters); `nativeBuildInputs` is equivalent; `buildInputs` is for libraries (no `$PATH` effect). Use `pkgs.mkShell`.
+- Storm is NOT in nixpkgs (`pkgs.storm` is Apache Storm). Do not add it; use pinned stormpy in a separate Python environment; see the `storm` skill.
 
 ## Git is part of the build
 - Flakes see only git-tracked files: a new `.nix` file (or any new file a shell needs) is invisible until `git add` / `git add -N`. "No such file or directory" under `/nix/store/...-source/` means exactly this.
@@ -24,8 +24,8 @@ Sources: nix.dev manual, flake.parts, github.com/mightyiam/dendritic, github.com
 ## Commands
 - `nix flake show`, `nix flake check` (evaluates all devShells; builds `checks.*`, none defined yet), `nix flake metadata`.
 - `nix flake update` (all) or `nix flake update nixpkgs` (one input). `nix flake lock --update-input` is deprecated. Touching `flake.lock` changes everyone's toolchain: the guard hook asks first.
-- Non-interactive: `nix develop .#ocaml --command dune build`; ad-hoc tool: `nix shell nixpkgs#foo --command foo`.
-- Package lookup: `nix eval --raw nixpkgs#foo.name` (fast existence check), `nix search nixpkgs foo`, or search.nixos.org. Verified names: `ocamlPackages.ocamlformat`, `prettier` (top-level; `nodePackages.*` is gone), `texlive.pkgs.latexindent`, `nixfmt` (= RFC-166 style; `nixfmt-classic` removed).
+- Non-interactive: `nix develop .#lean --command bash -c 'cd lean && lake build --wfail'`; ad-hoc tool: `nix shell nixpkgs#foo --command foo`.
+- Package lookup: `nix eval --raw nixpkgs#foo.name` (fast existence check), `nix search nixpkgs foo`, or search.nixos.org. Verified names: `prettier` (top-level; `nodePackages.*` is gone), `texlive.pkgs.latexindent`, `nixfmt` (= RFC-166 style; `nixfmt-classic` removed).
 - direnv: after editing an `.envrc` run `direnv allow`; nix-direnv watches `.envrc`, `flake.nix`, `flake.lock` only, so after changing `flake-modules/*.nix` run `direnv reload` (or add `watch_dir flake-modules` before `use flake`). `direnv exec DIR CMD` runs CMD in DIR's cached shell (fast).
 - No `formatter` output exists yet. If one is added: `perSystem.formatter = pkgs.nixfmt-tree;` in `flake-modules/formatter.nix`; treefmt-nix is overkill for this repo.
 

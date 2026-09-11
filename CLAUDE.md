@@ -1,62 +1,73 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
 @AGENTS.md
 
-## What this repo is
-Research project on *determinizing* probabilistic programs: a small language (`.det`) with a mode system that marks each float `G` (keep sampling) or `E` (replace by its expectation), a transformation that rewrites `E`-moded draws to their means, and a soundness argument. Three artifacts must stay in sync:
+## Project
 
-| Directory | Artifact | Toolchain (Nix devshell) |
+Determinize is a probabilistic `.det` language with E/G sampling modes, a Lean
+implementation and formalization, a browser simulator, and a paper.
+
+| Directory | Artifact | Nix devshell |
 |---|---|---|
-| `ocaml/` | reference implementation + CLI `determinize_main` (lexer/parser -> `infer` -> `determinize` -> `interp` / `to_mc` Storm export) | `.#ocaml`: dune 3.23, menhir, ocamllex, ocaml-lsp (loaded by the root `.envrc`) |
-| `sim/` | browser simulator, a hand-written JS port of the compiler plus a coupled-trace runtime, CodeMirror UI | `.#sim`: node 24, esbuild, `node --test` (`sim/.envrc`) |
-| `tex/` | the paper (acmart, PACMPL style) | `.#tex`: texliveMedium + latexmk + chktex (`tex/.envrc`) |
-| `lean/` | Lean 4 formalization of the soundness theorems (Lake project on Mathlib): trusted statements in `Determinize/Statement` + `Determinize/Traces`, exported theorems with `#print axioms` in `Determinize/Theorems.lean`, complete sorry-free proofs in `Determinize/Proof` (layering and deviations from the paper in `lean/README.md`) | `.#lean`: elan (installs the Lean release pinned in `lean-toolchain`), git, curl (`lean/.envrc`) |
-| `det/`, `examples/` | `.det` programs with generated `.dout` golden outputs (and Storm `.tra/.lab/.state.rew`) | uses `ocaml/` via `./det.sh`, `./run.sh` |
-| `flake.nix`, `flake-modules/` | flake-parts, dendritic layout (every `.nix` under `flake-modules/` is auto-imported) | Nix 2.34, direnv + nix-direnv |
+| `lean/` | Frontend, checked typing, determinization, runtime, exact models and certificates; specifications in `Statement/` and `Traces/`, proofs in `Proof/` | `.#lean` (also root `.envrc`) |
+| `tests/`, `examples/` | Shared corpus and analytical expectations in `tests/cases.toml` | `.#lean` |
+| `tools/` | Exact Storm comparison through pinned stormpy | `.#lean` plus a separate Python environment |
+| `sim/` | Unverified JavaScript compiler and coupled-trace visualization | `.#sim` |
+| `tex/` | Paper | `.#tex` |
+| `flake-modules/` | Automatically imported flake-parts modules | Default shell combines Lean, sim, and tex |
 
-Per-directory details, conventions, and pitfalls load automatically from `.claude/rules/{ocaml,sim,tex,lean,nix}.md` when you touch those files. Language reference: the `det-lang` skill.
-
-## Environment: tools live in Nix devshells
-Only the `.#ocaml` shell is on PATH in a normal session (`dune` works; `node`, `npm`, `latexmk`, `chktex`, `lake` do not). Run other toolchains through direnv's cached shells or `nix develop`:
-```
-cd sim && direnv exec . npm test          # or: nix develop .#sim --command npm test
-cd tex && direnv exec . latexmk -pdf main.tex   # or: nix develop .#tex --command latexmk -pdf main.tex
-cd lean && direnv exec . lake build       # or: nix develop .#lean --command lake build
-```
-Nix only sees git-tracked files: `git add` (or `git add -N`) new files before any `nix`/`direnv reload`. `.envrc` files are ignored by the owner's global gitignore and need `git add -f`. Storm (model checker) is not in nixpkgs and may be absent; `./run.sh --storm` then fails only at the final `storm` call.
+OCaml is retired. `migration-audit.md` records coverage, intentional differences,
+and recovery from Git history. The simulator is not a certified implementation
+and is not identical to Lean; see the audit and `lean/mul-div-typing.md`.
 
 ## Commands
-| Task | Command |
-|---|---|
-| Build OCaml | `cd ocaml && dune build` (dev profile: warnings are errors; fix them, never silence) |
-| Run one program | `./run.sh det/FILE.det` (writes `det/FILE.det.dout`); all: `./det.sh` |
-| Golden test | `./det.sh && git diff det/` (an unexpected `.dout` diff is a regression) |
-| Model check | `./run.sh --storm [--limit N] FILE.det` |
-| Sim tests | `cd sim && direnv exec . npm test`; one file `node --test test/semantics.test.js`; one test `node --test --test-name-pattern="gamma"` |
-| Sim bundle | `cd sim && direnv exec . npm run build` (regenerates the committed `app.bundle.js`; bump `?v=` in `index.html`) |
-| Paper | `cd tex && direnv exec . latexmk -pdf -interaction=nonstopmode -file-line-error main.tex`; lint `chktex FILE.tex` (flags in `.claude/rules/tex.md`) |
-| Lean | `cd lean && direnv exec . lake exe cache get` once (Mathlib's prebuilt `.olean`s; never build Mathlib from source), then `lake build --wfail` (must stay warning-free; the axiom reports must list only `propext`, `Classical.choice`, `Quot.sound`); one file `lake env lean Determinize/FILE.lean`; a full rebuild of `Proof/` takes about ten minutes |
-| Everything | `/check-all` (= `.claude/scripts/check.sh --all`) |
-| Flake | `nix flake show`, `nix flake check` |
 
-## Workflow rules
-- **Verification is automatic.** Editing an OCaml file runs `dune build`; editing `sim/src` or `sim/test` runs the sim tests; editing `.tex` runs chktex; editing `lean/**.lean` runs `lake build`. A Stop hook re-runs the build/tests/latexmk for every area with uncommitted changes and blocks finishing on failure. Treat hook output as feedback to fix, not noise. Run `/check-all` before saying a task is done.
-- **Generated files are never hand-edited**: `*.dout`, `*.tra`, `*.lab`, `*.state.rew`, `sim/app.bundle.js`, lockfiles (incl. `lean/lake-manifest.json`), `tex/acmart.cls`, `tex/ACM-Reference-Format.bst`. Regenerate them with the commands above (a hook blocks direct edits).
-- **Change semantics in four places.** A typing/mode/determinization change touches `ocaml/`, `sim/src/compiler`, the paper, and the `lean/Determinize/Statement` definitions (whose proofs in `lean/Determinize/Proof` then need repair). Use the `sync-sim` skill for the port and the `spec-impl-checker` subagent to confirm agreement; the `paper-reviewer` subagent for TeX-side review. Since 2026-09-11 all four agree on `×` (`left : G`, `right : m`, result `m`; commute `x * 2` to `2 * x` for an E-moded `x`) and on `/` (`left : m`, `right : G`, result `m`); the history is in `lean/README.md` and `lean/mul-div-typing.md`.
-- **Do not reformat.** The OCaml code is not ocamlformat-formatted and `sim/` has no formatter; match surrounding style. Whole-file reformatting is blocked by a hook.
-- **Outward-facing actions are the user's**: never run `sim/deploy-to-website.sh` (pushes to another repo); `git push`, `nix flake update` and `lake update` ask first; commit only when asked, with the regenerated artifacts included in the same commit.
-- **TODO.md** is the task list: mark items `[x]` when you complete them (AGENTS.md); do not add speculative items.
-- **Current, canonical, best practice only.** Whatever you do here, do it the way the tool's maintainers recommend today; when unsure, verify against primary sources (official docs, maintainers' repos) rather than memory. Third-party skills/plugins may be adopted when they help, but only after `/vet-skill` clears them for prompt-injection / poisoning, preferring Anthropic's official marketplace.
-- **New tool or dependency?** Run `/learn-tool <name>` first: it researches current best practices from primary sources and records them as a rule in `.claude/rules/`. The post-edit hook reminds you when `flake-modules/`, `package.json`, or `ocaml/dune` change.
-- **Notifications**: the Stop/Notification hooks handle the audible alert AGENTS.md asks for (macOS `say`, Linux `notify-send`, else a bell). Do not call `say` yourself.
+- `./run.sh [LEAN OPTIONS] FILE.det`: build and run Lean. `--samples N --seed S` samples both programs.
+- `./run.sh --result PREFIX --subject source FILE.det`: exact expected-reward certificate.
+- `(cd lean && lake env lean PREFIX.result.lean)`: independently check the exported theorem.
+- `STORM_PYTHON=/path/to/python ./run.sh --storm FILE.det --prefix PREFIX`: exact Storm comparison; install `tools/storm-requirements.txt` into that Python environment first.
+- `./det.sh --all`: full Lean/corpus/certificate tests. Set `STORM_PYTHON` to include real Storm tests.
+- `(cd sim && npm ci && npm test && npm run build)`: simulator checks and committed bundle.
+- `(cd tex && latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex)`: paper build.
+- `.claude/scripts/check.sh --all`: run all areas sequentially. `--changed` selects affected areas.
+- `(cd lean && lake exe cache get)`: fetch Mathlib's prebuilt cache once; do not build Mathlib from source.
+- `nix flake show`, `nix flake check`: evaluate the shells when Nix is installed.
 
-## Non-obvious facts worth knowing up front
-- `ocaml/symbolic_coupling.ml` is deliberately outside the dune `(modules ...)` list: it is a standalone prototype that dune never compiles.
-- `.dout` files are reports, not re-parseable programs (pairs print as `<a, b>`, typed output has `x : T` ascriptions). Evaluation uses 100 trials with `Random.init 0`, so outputs are deterministic.
-- `to_mc.ml` handles only discrete programs (`flip`, `bernoulli`, `discrete`); `uniform`/`gauss` raise. Determinize first.
-- `sim/src/examples.js` is a hand-maintained copy of example programs; `sim/test/semantics.test.js` executes every entry.
-- `tex/8_old.tex` is dead; `tex/fig_symbolic_coupling.svg` is not included anywhere; `\nocite{*}` is still in `main.tex`.
-- `examples/baselines/*.sgcl` are reference encodings in another tool's input language; nothing here parses them.
-- `lean/` pins Lean and Mathlib together (`lean-toolchain`, `lakefile.toml` `rev`, `lake-manifest.json`); nixpkgs' `lean4` is older than Mathlib needs, hence `elan`. The formalization is complete: no `sorry`, no warnings, standard axioms only. Reviewers need `Statement/`, `Traces/` and `Theorems.lean`; `Statement`/`Traces` must never import `Proof`, and a module not reachable from `Determinize.lean` is not checked by the build.
+Use installed tools directly, or `direnv exec lean`, `direnv exec sim`,
+`direnv exec tex`, or `nix develop .#NAME --command ...` when needed. Do not assume
+a particular tool is on PATH. The Lean shell includes Python 3 and uv.
+
+## Workflow
+
+- Keep Lean warning-free, without `sorry`, and with only standard axioms. Run
+  `lake build --wfail`; `check.sh lean` audits the printed theorem axiom reports.
+- After semantic changes, compare Lean, the paper, and simulator. Record actual
+  differences rather than claiming automatic parity. See the `sync-sim` skill.
+- Preserve the reviewed specification and theorem premises; inference, exploration,
+  and solving supply evidence to proved checkers.
+- Register every new `.det` file under tests/examples in `tests/cases.toml`.
+  Use analytical expectations, not regenerated random-output baselines.
+- Do not hand-edit generated certificates/model files, `sim/app.bundle.js`,
+  lockfiles, or vendored ACM files. Rebuild the simulator bundle after source edits
+  and bump its cache-buster in `sim/index.html` when the bundle changes.
+- Match surrounding code style; avoid unrelated formatting.
+- Do not run `sim/deploy-to-website.sh` during local checks. Commit or push only
+  when authorized; this migration is organized into local commits awaiting review.
+- Preserve pinned dependencies. New dependencies need documented setup and checks.
+- Update `TODO.md` and `migration-plan.md` as work completes.
+- Hooks run fast checks after edits and check changed areas at Stop. Their output
+  is feedback to investigate, not permission to weaken checks.
+
+## Boundaries
+
+A model certificate covers unbounded execution, including rejection and divergence.
+A result certificate additionally checks absorption and proves an exact unnormalized
+expected terminal reward. The default subject is determinized; a source claim
+requires either a source model or the determinization theorem's premises.
+The Float sampler and simulator are unverified. `.result.lean` is the independent
+kernel-checkable artifact; `.result.json` and Storm logs are reports.
+
+The simulator's examples are copied strings in `sim/src/examples.js`; tests run
+all of them. The coupling migration tests additionally read shared corpus files.
+`examples/baselines/*.sgcl` belong to another tool, and
+`examples/loops/example.det` is an explicitly excluded informal sketch.

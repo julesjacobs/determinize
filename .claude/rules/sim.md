@@ -4,7 +4,7 @@ paths:
 ---
 # sim/ (browser simulator: ES modules, esbuild, CodeMirror 6, node --test)
 
-Toolchain comes from the `.#sim` devshell (`sim/.envrc`); `node`/`npm` are NOT on the bare PATH.
+Toolchain comes from the `.#sim` devshell (`sim/.envrc`); use installed Node/npm directly when available.
 Run commands as `cd sim && direnv exec . npm test` or `nix develop .#sim --command npm test`. Sources: nodejs.org/api/test,
 esbuild.github.io/api, codemirror.net/docs, docs.npmjs.com, verified 2026-09.
 
@@ -17,11 +17,13 @@ esbuild.github.io/api, codemirror.net/docs, docs.npmjs.com, verified 2026-09.
 `app.bundle.js` is tracked and copied verbatim to the website by `deploy-to-website.sh`. After ANY change under `src/`: run `npm run build` and include the regenerated bundle in the same commit. The Stop hook flags a stale bundle; the `protect-generated` hook blocks hand edits to it. Never run the deploy script yourself (it pushes to another repository).
 After changing `src/`, also bump the `?v=` cache-buster on the `<script>` tag in `index.html`.
 
-## `src/compiler/*` is a hand port of `../ocaml`
-`ast.js/types.js/infer.js/determinize.js/pretty.js/lexer.js/parser.js` mirror `ast.ml/types.ml/infer.ml/determinize.ml/pretty.ml/lexer.mll/parser.mly`
-name-for-name (`fresh_mode_meta` -> `freshModeMeta`, etc.). There is no generator and no cross-check: a typing/mode/determinization change on one side must be
-ported to the other. Use the `sync-sim` skill for the checklist. `src/runtime/semantics.js` plays the role of `interp.ml` (plus symbolic coupling); `to_mc.ml` has no JS counterpart.
-`src/examples.js` holds copies of example programs as string literals (not imports of `../det`); `test/semantics.test.js` runs every entry, so a new example must analyze and run.
+## Relationship to Lean
+`src/compiler/` and `src/runtime/` are a separate, unverified implementation.
+Compare changes with `lean/Determinize/{Frontend,Checking,Statement,Runtime}` and
+record differences using the `sync-sim` checklist. See `migration-audit.md` and
+`lean/mul-div-typing.md`; the simulator is not automatically identical to Lean.
+`src/examples.js` contains copied program strings. Tests execute every example;
+`test/coupling-migration.test.js` also reads shared `.det` fixtures.
 
 ## Conventions
 - ESM everywhere (`"type": "module"`); relative imports carry the `.js` extension.
