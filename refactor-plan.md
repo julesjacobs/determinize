@@ -9,7 +9,7 @@ Each retained step gets its own commit. For each step: inspect consumers, implem
 - [x] 5. Replace nested replay-validity conjunctions with named structures.
 - [x] 6. Expose unconditional model integrability and simplify expected reward.
 - [x] 7. Derive absorption escape from the model and certificate horizon.
-- [ ] 8. Consolidate unit-sum finite-distribution validation.
+- [x] 8. Consolidate unit-sum finite-distribution validation.
 - [ ] 9. Trim and organize the specification/proof boundary.
 - [ ] 10. Evaluate deriving terminal rows instead of storing absorbing-row evidence.
 - [ ] 11. Replace Mode/Kind with Affinity and sample-affinity-or-mean syntax, using direct typing rules.
@@ -46,3 +46,7 @@ Before: `HasExpectedReward` bundled integrability with answer equality, although
 ### 7. Absorption certificate — KEEP
 
 Before: certificates carried an escape bound and required a positive horizon plus several inequalities. After: they carry values and a horizon, and check survival below one at every state. The uniqueness proof uses this inequality directly at the maximum-error state, so no maximum-survival proof or stored bound is needed. Horizon zero now works for terminal models; loops still fail. JSON escape diagnostics are derived. Warning-free build, Lean tests (including both boundary cases), and Python generated-result/mutation tests passed; optional Storm skipped.
+
+### 8. Unit-sum distributions — KEEP
+
+Before: elaboration checked probabilities, then the checked constructor rechecked and normalized them. After: one constructor checks nonnegativity and sum one and preserves the exact list. Removed the unused normalization proof module and changed internal test fixtures to probabilities. `.det` acceptance requirements remain unchanged. Roughly 40 net lines removed. Warning-free build, all Lean tests, the fast corpus, and independent generated typing certificates passed.

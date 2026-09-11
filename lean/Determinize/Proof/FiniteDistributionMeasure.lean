@@ -1,5 +1,5 @@
 import Determinize.Statement.FiniteDistributionMeasure
-import Determinize.Proof.FiniteDistribution
+import Mathlib.Tactic
 
 namespace Determinize.Proof.FiniteDistribution
 open Statement.Paper MeasureTheory

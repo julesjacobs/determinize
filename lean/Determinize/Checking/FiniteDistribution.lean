@@ -1,16 +1,14 @@
-import Determinize.Proof.FiniteDistribution
+import Determinize.Statement.FiniteDistribution
 
 namespace Determinize.Checking
 open Statement.Paper
 
-/-- Normalize literal weights using exact arithmetic and carry normalization proofs. -/
+/-- Check literal probabilities once, preserving their values and outcome indices. -/
 def finiteDistribution (weights : List Rat) : Except String FiniteDistribution := do
   if hn : ∀ w ∈ weights, 0 ≤ w then
-    if hp : 0 < weights.sum then
-      return ⟨weights.map (· / weights.sum),
-        Proof.FiniteDistribution.normalized_nonnegative weights hn hp,
-        Proof.FiniteDistribution.normalized_total weights hp⟩
-    else throw "discrete weights must have positive total"
+    if total : weights.sum = 1 then
+      return ⟨weights, hn, total⟩
+    else throw "discrete weights must sum to one"
   else throw "negative discrete weight"
 
 /-- Rational Bernoulli law on outcomes zero and one, including endpoints. -/

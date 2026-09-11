@@ -42,9 +42,8 @@ private partial def lower (env : List String) : Surface → Except String Input
     | "ite", _, [c,a,b] => return ternary .ite (← lower env c) (← lower env a) (← lower env b)
     | "discrete", _, _ =>
       let weights ← args.mapM fun a => match a with
-        | .number q => if q < 0 then throw "negative discrete weight" else pure q
+        | .number q => pure q
         | _ => throw "discrete expects nonnegative literal weights"
-      if weights.sum != 1 then throw "discrete weights must sum to one"
       let distribution ← finiteDistribution weights
       return ⟨.discrete (mode.getD .G) .stochastic distribution, [mode]⟩
     | _, _, [a] =>

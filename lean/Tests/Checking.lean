@@ -32,8 +32,8 @@ def checking : IO Unit := do
   assert (!(certify coin coin.determinize [some .E] coinEvidence).isSome)
     "Bernoulli mean accepted as a source draw"
   assert (!(check [] coin floatE (.node floatE [])).isSome) "omitted probability evidence accepted"
-  let d ← IO.ofExcept (finiteDistribution [1,2,3])
-  let changed ← IO.ofExcept (finiteDistribution [3,2,1])
+  let d ← IO.ofExcept (finiteDistribution [1/6,1/3,1/2])
+  let changed ← IO.ofExcept (finiteDistribution [1/2,1/3,1/6])
   let categorical : Core := .discrete .E .stochastic d
   let categoricalEvidence : Certificate := .node floatE []
   assert ((certify categorical categorical [some .E] categoricalEvidence).isSome)
