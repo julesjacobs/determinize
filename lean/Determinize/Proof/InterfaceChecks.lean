@@ -46,10 +46,10 @@ example (trace : Traces.Trace) (result value : ℝ) :
 example (trace : Traces.Trace) (result value : ℝ) :
     Traces.record (.G, .mean, .uniform) value (trace, result) = (trace, result) := rfl
 
-example : Traces.exactMeasure 4 capturedSample =
+example : Traces.traceAndOutputLawAt 4 capturedSample =
     (uniformFiber .stochastic 0 1).map
       (fun value => ([], value + 2)) := by
-  simp [capturedSample, Traces.exactMeasure, reduce, Expr.isValue,
+  simp [capturedSample, Traces.traceAndOutputLawAt, reduce, Expr.isValue,
     realValue?, Action.wrap, Function.comp_def,
     Expr.substHead, Expr.substAt, Expr.shift, Expr.mapVars, realValue?]
   change ((uniformFiber .stochastic 0 1).bind
