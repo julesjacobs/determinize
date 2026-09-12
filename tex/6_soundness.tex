@@ -2381,32 +2381,84 @@ Finally, the tracewise big-step semantics is
 \]
 
 \paragraph{Tracewise symbolic semantics}
+The tracewise symbolic semantics augments a symbolic state with the unused suffix of its $\G$-mode trace. We write
+\[
+  \symsem{s:\tau}^{\gamma}
+  \in
+  \mathcal D(Trace\times State_\tau)
+\]for the resulting small-step semantics. Each rule of
+\Cref{tab:symbolic-small-step-semantics} is lifted by threading the trace
+through the transition.
+
+The only essential change is that a $\G$-mode sample consumes the next trace
+entry instead of sampling probabilistically. For example,
+\[
+\symsem{
+  (\sigma\mid
+    \uniform[\G](\sym(c_1),\sym(c_2)):\Float{\G})
+}^{r::\gamma}
+=
+\delta_{
+  \left(
+    \gamma,\,
+    (\sigma\mid\sym(r):\Float{\G})
+  \right)
+}.
+\]In contrast, an $\E$-mode sample extends the symbolic environment without
+consuming the trace:
+\[
+\symsem{
+  (\sigma\mid
+    \uniform[\E](\sym(a_1),\sym(a_2)):\Float{\E})
+}^{\gamma}
+=
+\delta_{
+  \left(
+    \gamma,\,
+    (\sigma,u\sim\uniform[\E](a_1,a_2)
+      \mid\sym(u):\Float{\E})
+  \right)
+}.
+\]If a $\G$-mode sample is encountered with an empty trace, the semantics
+returns the zero measure.
+
+The tracewise symbolic $n$-step semantics is obtained by iterating:
+
+\begin{align*}
+  \symbigsemstep{s:\tau}{n}^{\gamma}
+  =
+  \begin{cases}
+    \delta_{(\gamma,s:\tau)}
+      & \text{if } n=0, \\[2pt]
+    \symbigsemstep{s:\tau}{n-1}^{\gamma}
+    \monbind
+    \lambda(\gamma',s').\,
+    \symsem{s':\tau}^{\gamma'}
+      & \text{if } n>0.
+  \end{cases}
+\end{align*}
+where
+\[
+  \symbigsemstep{s:\tau}{n}^{\gamma}
+  \in
+  \mathcal D(Trace\times State_\tau).
+\]
+
+\paragraph{Tracewise commuting lemmas} Same as the commuting lemmas for the concrete semantics.
 
 
-
-**** NOTE: Skipping many steps here, but everything is essentially the same as the concrete semantics, e.g.
-
-\begin{itemize}
-  \item Measurable space / Markov kernel, tracewise small step, n step, big step semantics (that carries some trace $\gamma$), and associated lemmas (e.g. limit exists via MCT)
-  \item Tracewise symbolic small step, n step semantics
-  \item Tracewise commuting lemmas 
-  \item Tracewise soundness n step
-\end{itemize}
-
-
+\paragraph{Tracewise soundness theorems}
 \begin{theorem}[Tracewise agreement of interpretations]
   \label{thm:tracewise-agreement-of-interpretations}
   Let $e:\tau$ be closed and well typed, where
-  $\tau=\Float{m}$ and $m=\G$ or $\E$.
-
-  Fix a valid $\G$-mode trace $\gamma$, and consider the symbolic evaluation of $e:\tau$ in which successive $G$-mode samples are resolved according to $\gamma$. At any step of this evaluation, let
+  $\tau=\Float{m}$ and $m=\G$ or $\E$. Let $\gamma$ be a valid $\G$-mode trace, and let 
   \[
     s^\gamma
     =
-    (\sigma\mid\hat e:\tau)
+    (\sigma\mid\hat e:\tau)^\gamma
     \in State_\tau
   \]
-  denote the symbolic state.
+  be a symbolic state reached by evaluating $e : \tau$ according to $\gamma$.
 
   If $\sigma$ is integrable, then
   \[
@@ -2717,12 +2769,45 @@ Note that fixing $\gamma$ removes the randomness from the $\G$-samples, which de
 \end{itemize}
 
 
-\begin{theorem}[Tracewise soundness]
-  \label{thm:tracewise-soundness}
-
+\begin{theorem}[Tracewise $n$-step soundness]
+  \label{thm:tracewise-n-step-soundness}
   Let $e:\tau$ be closed and well typed, where
-  $\tau=\Float{m}$ and $m=\G$ or $\E$. Fix a valid 
-  general-mode trace $\gamma$.
+  $\tau=\Float{m}$ and $m\in\{\G,\E\}$, and let $\gamma$ be a valid
+  $\G$-mode trace. Then, for every $n\in\mathbb N$, 
+  \[
+    \mathbb E\!\left[
+      \left.\bigsemstep{e:\tau}{n}^{\gamma}\right|_{Val_\tau}
+    \right] < \infty
+  \]
+  and
+  \[
+    \mathbb E\!\left[
+      \left.
+        \bigsemstep{\exptrans{e:\tau}:\tau}{n}^{\gamma}
+      \right|_{Val_\tau}
+    \right] < \infty.
+  \]
+  Moreover,
+  \[
+    \mathbb E\!\left[
+      \bigsemstep{e:\tau}{n}^{\gamma}
+    \right]
+    =
+    \mathbb E\!\left[
+      \bigsemstep{\exptrans{e:\tau}:\tau}{n}^{\gamma}
+    \right].
+  \]
+\end{theorem}
+
+\begin{proof}
+  TODO.
+\end{proof}
+
+\begin{theorem}[Tracewise big-step soundness]
+  \label{thm:tracewise-big-step-soundness}
+  Let $e:\tau$ be closed and well typed, where
+  $\tau=\Float{m}$ and $m\in\{\G,\E\}$, and let $\gamma$ be a valid
+  $\G$-mode trace.
   Then
   \[
     \mathbb E\!\left[
@@ -2753,8 +2838,7 @@ Note that fixing $\gamma$ removes the randomness from the $\G$-samples, which de
 
 
 \begin{proof}
-  Follows partly from
-  \Cref{thm:tracewise-agreement-of-interpretations}.
+  TODO.
 \end{proof}
 
 
@@ -3232,3 +3316,304 @@ The following also hold (both proofs are straightforward?):
     \tag{\text{by the definition of the big-step semantics}}.
   \end{align}
 \end{proof}
+
+
+\todo[inline]{A tracewise small-step semantics on \(Trace\times Expr_\tau\), carrying the unused suffix of \(\gamma\).
+Its \(n\)-step iteration.
+A tracewise big-step semantics obtained by restricting to values and taking the limit, as with your ordinary semantics.}
+
+
+Trace decomposition separates a program’s randomness into:
+1. The randomness from the \(\G\)-mode samples—the trace \(\gamma\).
+2. The remaining randomness from the \(\E\)-mode samples after \(\gamma\) is fixed.
+Let \(\eta_e\) be the distribution of \(G\)-mode traces generated by \(e\). For a fixed trace \(\gamma\),
+\[
+\bigsem{e:\tau}^{\gamma}
+\]is the conditional output distribution obtained by fixing the \(G\)-samples according to \(\gamma\), while still sampling the \(E\)-variables.
+Trace decomposition says that mixing these conditional distributions using the actual probabilities of the traces reconstructs the original global semantics:
+\[
+\bigsem{e:\tau}
+=
+\eta_e
+\monbind
+\lambda\gamma.\,
+\bigsem{e:\tau}^{\gamma}.
+\]Equivalently, for every measurable \(A\subseteq Val_\tau\),
+\[
+\bigsem{e:\tau}(A)
+=
+\int
+  \bigsem{e:\tau}^{\gamma}(A)
+\,\eta_e(d\gamma).
+\]This is the measure-theoretic law of total probability:
+\[
+\Pr(\text{output}\in A)
+=
+\int
+\Pr(\text{output}\in A\mid\gamma)
+\,\eta_e(d\gamma).
+\]
+
+
+\begin{proof}
+  Let $\eta_e$ be the $\G$-mode trace measure induced by $e:\tau$.
+  By \Cref{lem:trace-measure-preservation}, this is also the trace
+  measure induced by $\exptrans{e:\tau}:\tau$.
+
+  By \Cref{lem:tracewise-conditioning} and the disintegration theorem,
+  for every nonnegative measurable function
+  $f:Val_\tau\to[0,\infty]$,
+  \[
+    \int_{Val_\tau}
+      f(v)\,
+      \bigsem{e:\tau}(dv)
+    =
+    \int
+      \left(
+        \int_{Val_\tau}
+          f(v)\,
+          \bigsem{e:\tau}^{\gamma}(dv)
+      \right)
+      \eta_e(d\gamma).
+  \]
+
+  Applying the same result to $\exptrans{e:\tau}:\tau$, and using
+  \Cref{lem:trace-measure-preservation}, gives
+  \[
+    \int_{Val_\tau}
+      f(v)\,
+      \bigsem{\exptrans{e:\tau}:\tau}(dv)
+    =
+    \int
+      \left(
+        \int_{Val_\tau}
+          f(v)\,
+          \bigsem{\exptrans{e:\tau}:\tau}^{\gamma}(dv)
+      \right)
+      \eta_e(d\gamma).
+  \]
+\end{proof}
+
+\begin{theorem}[Trace decomposition]
+  \label{thm:trace-decomposition}
+  Let $e:\tau$ be closed and well typed, where
+  $\tau=\Float{m}$ and $m=\G$ or $\E$.
+  There exists a finite measure $\eta_e$ on valid $\G$-mode traces such
+  that, for every nonnegative measurable function
+  $f:Val_\tau\to[0,\infty]$,
+  \[
+    \int_{Val_\tau}
+      f(v)\,
+      \bigsem{e:\tau}(dv)
+    =
+    \int
+      \left(
+        \int_{Val_\tau}
+          f(v)\,
+          \bigsem{e:\tau}^{\gamma}(dv)
+      \right)
+      \eta_e(d\gamma),
+  \]
+  and
+  \[
+    \int_{Val_\tau}
+      f(v)\,
+      \bigsem{\exptrans{e:\tau}:\tau}(dv)
+    =
+    \int
+      \left(
+        \int_{Val_\tau}
+          f(v)\,
+          \bigsem{\exptrans{e:\tau}:\tau}^{\gamma}(dv)
+      \right)
+      \eta_e(d\gamma).
+  \]
+\end{theorem}
+
+
+\begin{proof}
+  Let $\eta_e$ be the finite trace measure given by
+  \Cref{lem:joint-trace-factorization}.
+
+  For the original expression,
+  \begin{align}
+    &\int_{Val_\tau}
+      f(v)\,
+      \bigsem{e:\tau}(dv)
+    \notag
+    \\
+    &=
+    \int_{Trace\times Val_\tau}
+      f(v)\,
+      \bigsem{e:\tau}_{\mathsf{tr}}(d\gamma,dv)
+    \tag{\text{by \Cref{lem:trace-erasure}}}
+    \\
+    &=
+    \int_{Trace}
+      \left(
+        \int_{Val_\tau}
+          f(v)\,
+          \bigsem{e:\tau}^{\gamma}(dv)
+      \right)
+      \eta_e(d\gamma)
+    \tag{\text{by \Cref{lem:joint-trace-factorization}}}.
+  \end{align}
+
+  Likewise, for the determinized expression,
+  \begin{align}
+    &\int_{Val_\tau}
+      f(v)\,
+      \bigsem{\exptrans{e:\tau}:\tau}(dv)
+    \notag
+    \\
+    &=
+    \int_{Trace\times Val_\tau}
+      f(v)\,
+      \bigsem{\exptrans{e:\tau}:\tau}_{\mathsf{tr}}(d\gamma,dv)
+    \tag{\text{by \Cref{lem:trace-erasure}}}
+    \\
+    &=
+    \int_{Trace}
+      \left(
+        \int_{Val_\tau}
+          f(v)\,
+          \bigsem{\exptrans{e:\tau}:\tau}^{\gamma}(dv)
+      \right)
+      \eta_e(d\gamma)
+    \tag{\text{by \Cref{lem:joint-trace-factorization}}}.
+  \end{align}
+\end{proof}
+
+
+
+\begin{proof}[Proof outline]
+  First prove the corresponding decomposition for the tracewise
+  $n$-step semantics. Pass to the big-step semantics by summing over
+  terminating evaluation depths. Finally, erase the trace component;
+  this recovers the ordinary big-step semantics.
+\end{proof}
+
+
+
+
+
+
+
+\begin{theorem}[Global convex-function inequality]
+  \label{thm:global-convex-domination}
+  Let $e:\tau$ be closed and well typed, where
+  $\tau=\Float{m}$ and $m=\G$ or $\E$.
+  Then, for every nonnegative measurable convex function
+  $\varphi:\mathbb R\to[0,\infty]$,
+  \[
+    \int_{Val_\tau}
+      \varphi(v)\,
+      \bigsem{\exptrans{e:\tau}:\tau}(dv)
+    \leq
+    \int_{Val_\tau}
+      \varphi(v)\,
+      \bigsem{e:\tau}(dv).
+  \]
+\end{theorem}
+
+\begin{proof}
+  Let $\eta_e$ be the measure given by
+  \Cref{thm:trace-decomposition}. Then
+  \begin{align}
+    &\int_{Val_\tau}
+      \varphi(v)\,
+      \bigsem{\exptrans{e:\tau}:\tau}(dv)
+    \notag
+    \\
+    &=
+    \int
+      \varphi\!\left(
+        \mathbb E\!\left[
+          \bigsem{e:\tau}^{\gamma}
+        \right]
+      \right)
+      \eta_e(d\gamma)
+    \tag{\text{by trace decomposition and
+    \Cref{lem:tracewise-mean-form}}}
+    \\
+    &\leq
+    \int
+      \left(
+        \int_{Val_\tau}
+          \varphi(v)\,
+          \bigsem{e:\tau}^{\gamma}(dv)
+      \right)
+      \eta_e(d\gamma)
+    \tag{\text{by Jensen's inequality for each $\gamma$}}
+    \\
+    &=
+    \int_{Val_\tau}
+      \varphi(v)\,
+      \bigsem{e:\tau}(dv)
+    \tag{\text{by trace decomposition}}.
+  \end{align}
+\end{proof}
+
+
+
+
+
+\begin{theorem}[Soundness big step]
+  \label{thm:global-soundness-big-step}
+  Let $e:\tau$ be closed and well typed, where
+  $\tau=\Float{m}$ and $m=\G$ or $\E$.
+  If
+  \[
+    \mathbb E[\bigsem{e:\tau}]
+  \]
+  is well-defined in the extended reals, then
+  \[
+    \mathbb E[\bigsem{\exptrans{e:\tau}:\tau}]
+  \]
+  is also well-defined, and
+  \[
+    \mathbb E[\bigsem{e:\tau}]
+    =
+    \mathbb E[\bigsem{\exptrans{e:\tau}:\tau}].
+  \]
+\end{theorem}
+
+\begin{proof}[Proof outline]
+  Apply \Cref{thm:global-convex-domination} with
+  \[
+    v^+=\max(v,0)
+    \qquad\text{and}\qquad
+    v^-=\max(-v,0).
+  \]
+  Since the source expectation is well-defined, at least one of its
+  positive and negative parts is finite. The corresponding inequality
+  shows that the same part is finite for the determinized semantics.
+  Hence its expectation is also well-defined.
+
+  Let $\eta_e$ be given by \Cref{thm:trace-decomposition}. Then
+  \begin{align}
+    \mathbb E[\bigsem{e:\tau}]
+    &=
+    \int
+      \mathbb E\!\left[
+        \bigsem{e:\tau}^{\gamma}
+      \right]
+      \eta_e(d\gamma)
+    \tag{\text{by trace decomposition}}
+    \\
+    &=
+    \int
+      \mathbb E\!\left[
+        \bigsem{\exptrans{e:\tau}:\tau}^{\gamma}
+      \right]
+      \eta_e(d\gamma)
+    \tag{\text{by \Cref{thm:tracewise-soundness}}}
+    \\
+    &=
+    \mathbb E[
+      \bigsem{\exptrans{e:\tau}:\tau}
+    ]
+    \tag{\text{by trace decomposition}}.
+  \end{align}
+\end{proof}
+
