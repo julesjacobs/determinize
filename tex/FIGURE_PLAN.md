@@ -3,7 +3,8 @@
 Use the mathematics and examples to explain the idea. Keep assumptions that
 affect the results; leave routine formal details to Lean.
 
-- [ ] Syntax, primitive laws, domains, and means.
+- [x] Language grammar.
+- [ ] Primitive laws, domains, and means.
 - [ ] Output semantics and determinization.
 - [ ] Selected typing rules.
 - [ ] Domain validity and global guarantees.

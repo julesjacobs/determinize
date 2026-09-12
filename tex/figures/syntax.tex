@@ -1,0 +1,22 @@
+% !TeX root = ../main.tex
+\begin{figure}[H]
+\centering
+\small
+\begin{align*}
+ e &::= x\mid r\;(r\in\Real)\mid ()\mid\kw{true}\mid\kw{false}\mid\kw{reject}\\
+   &\quad\mid \lambda x.e\mid\recfn f x e\mid e\,e
+       \mid\letin x e e\\
+   &\quad\mid \ite e e e\mid -e\mid e+e\mid e\cdot e\mid e/e\mid e<e\\
+   &\quad\mid \langle e,e\rangle\mid\kw{fst}\,e\mid\kw{snd}\,e\\
+   &\quad\mid \kw{inl}\,e\mid\kw{inr}\,e\mid\scase e x{e_1}y{e_2}\\
+   &\quad\mid []\mid e::e\mid\lcase e{e_0}x{xs}{e_1}\\
+   &\quad\mid \draw{uniform}\alpha{e,e}\mid\draw{gaussian}\alpha{e,e}\\
+   &\quad\mid \draw{poisson}\alpha e\mid\draw{exponential}\alpha e\\
+   &\quad\mid \draw{bernoulli}\alpha e\mid\draw{discrete}\alpha e\\
+   &\quad\mid \draw{beta}\alpha{e,e}\mid\draw{gamma}\alpha{e,e}.\\[2pt]
+ \alpha &::= \G\mid\E\mid\M
+\end{align*}
+\caption{Language grammar. $\G$ and $\E$ denote sampling; $\M$ denotes mean evaluation.}
+\label{fig:syntax}
+\Description{Expressions include literals, functions and recursion, arithmetic, conditionals, products, sums, lists, rejection, and eight distribution primitives. The G, E, and M annotations are listed below the expressions.}
+\end{figure}
