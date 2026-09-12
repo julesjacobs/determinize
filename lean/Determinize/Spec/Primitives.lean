@@ -21,9 +21,8 @@ open MeasureTheory ProbabilityTheory
 
 noncomputable section
 
-/-- The primitive names; a trace records which primitive a G draw came from.
-`discrete` carries its checked distribution, including all probabilities and their length.
-Replay compares primitive names, so a discrete trace entry must match the whole distribution. -/
+/-- Primitive names recorded at G draws. A discrete label records the number of
+supplied probabilities; there is one additional outcome with the remaining probability. -/
 inductive Op where
   | uniform
   | gaussian
@@ -32,7 +31,7 @@ inductive Op where
   | beta
   | gamma
   | bernoulli
-  | discrete (distribution : FiniteDistribution)
+  | discrete (arity : Nat)
 deriving DecidableEq, Repr, Countable
 
 /-- Uniform probability measure on a closed interval, including a point interval. -/
@@ -99,12 +98,21 @@ noncomputable def bernoulliFiber (action : DistributionAction) (probability : �
     | .mean => Measure.dirac probability
   else 0
 
-/-- Finite numeric law or its mean; weights are already checked and normalized. -/
-noncomputable def discreteFiber (action : DistributionAction) (distribution : FiniteDistribution) : Measure ℝ :=
-  match action with
-  | .sample _ => distribution.measure (fun i => (i : ℝ))
-  | .mean => Measure.dirac (distribution.mean : ℝ)
-
+/-- `discrete(p₀, …, pₙ₋₁, *)` has outcomes `0, …, n`. The last probability is
+`1 - ∑ i, pᵢ`; supplied probabilities must be nonnegative and sum to at most one.
+The same domain applies at mean sites. -/
+noncomputable def discreteFiber (action : DistributionAction) (probabilities : List ℝ) : Measure ℝ :=
+  if (∀ i : Fin probabilities.length, 0 ≤ probabilities[i]) ∧
+      ∑ i : Fin probabilities.length, probabilities[i] ≤ 1 then
+    match action with
+    | .sample _ =>
+        (∑ i : Fin probabilities.length,
+          ENNReal.ofReal probabilities[i] • Measure.dirac ((i : ℕ) : ℝ)) +
+        ENNReal.ofReal (1 - ∑ i : Fin probabilities.length, probabilities[i]) •
+          Measure.dirac (probabilities.length : ℝ)
+    | .mean => Measure.dirac ((probabilities.length : ℝ) +
+        ∑ i : Fin probabilities.length, (((i : ℕ) : ℝ) - probabilities.length) * probabilities[i])
+  else 0
 
 end
 

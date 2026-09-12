@@ -29,7 +29,10 @@ private def lower (env : List String) : Surface → Except String Input
       | .number q => pure q
       | _ => throw "discrete expects nonnegative literal weights"
     let distribution ← finiteDistribution weights
-    return .discrete affinity distribution
+    return .discrete affinity (distribution.probabilities.dropLast.foldr
+      (fun p tail => .cons (.real p) tail) .nil)
+  | .discreteRemainder affinity probabilities =>
+      return .discrete affinity (← lower env probabilities)
   | .neg a => return .neg (← lower env a)
   | .fst a => return .fst (← lower env a)
   | .snd a => return .snd (← lower env a)

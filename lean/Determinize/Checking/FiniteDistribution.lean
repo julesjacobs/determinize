@@ -11,6 +11,10 @@ def finiteDistribution (weights : List Rat) : Except String FiniteDistribution :
     else throw "discrete weights must sum to one"
   else throw "negative discrete weight"
 
+/-- Complete the final probability and check the exact parameter domain. -/
+def remainderDistribution (probabilities : List Rat) : Except String FiniteDistribution :=
+  finiteDistribution (probabilities ++ [1 - probabilities.sum])
+
 /-- Rational Bernoulli law on outcomes zero and one, including endpoints. -/
 def bernoulliDistribution (p : Rat) : Except String FiniteDistribution := do
   if 0 ≤ p ∧ p ≤ 1 then finiteDistribution [1 - p, p]

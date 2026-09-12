@@ -8,11 +8,11 @@ namespace Binding
 /-- All free variables fit within the given number of available binders. -/
 def Scoped {α : Type} (depth : Nat) : Expr α → Prop
   | .bvar i => i < depth
-  | .reject | .unit | .bool _ | .real _ | .nil | .discrete .. => True
+  | .reject | .unit | .bool _ | .real _ | .nil => True
   | .lam body => Scoped (depth+1) body
   | .fix body => Scoped (depth+2) body
   | .fst body | .snd body | .inl body | .inr body | .neg body
-  | .poisson _ body | .bernoulli _ body | .exponential _ body => Scoped depth body
+  | .discrete _ body | .poisson _ body | .bernoulli _ body | .exponential _ body => Scoped depth body
   | .app a b | .pair a b | .cons a b | .add a b | .mul a b | .div a b | .lt a b
   | .uniform _ a b | .gaussian _ a b | .beta _ a b | .gamma _ a b =>
       Scoped depth a ∧ Scoped depth b
@@ -29,7 +29,7 @@ def scopedDecision {α : Type} (depth : Nat) (expression : Expr α) : Decidable 
   | bool v => exact isTrue True.intro
   | real v => exact isTrue True.intro
   | nil  => exact isTrue True.intro
-  | discrete k d => exact isTrue True.intro
+  | discrete k d => exact scopedDecision depth d
   | lam body => exact scopedDecision (depth+1) body
   | fix body => exact scopedDecision (depth+2) body
   | fst body => exact scopedDecision depth body
@@ -127,7 +127,7 @@ theorem scoped_mono {α : Type} (expression : Expr α) {a b : Nat}
   | bool v => trivial
   | real v => trivial
   | nil  => trivial
-  | discrete k d => trivial
+  | discrete k d ih => exact ih bounded le
   | lam body ih => exact ih bounded (Nat.add_le_add_right le 1)
   | fix body ih => exact ih bounded (Nat.add_le_add_right le 2)
   | fst body ih => exact ih bounded le

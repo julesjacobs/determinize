@@ -121,12 +121,13 @@ theorem generationOp_some_reduce {expression : Expr} {op : Op}
     (∃ fiber continuation, reduce expression = .sample (.sample .G, op) fiber continuation) ∨
       reduce expression = .stuck := by
   cases expression <;> rw [reduce.eq_def]
-  all_goals simp only [Expr.skeleton, generationOp, ← isValue_eq_skeletonIsValue] at active
+  all_goals simp only [Expr.skeleton, generationOp, ← isValue_eq_skeletonIsValue,
+    Expr.literalListArity?_skeleton, ← realListValue?_map_length] at active
   all_goals try simp only [reduceCtorEq] at active
   all_goals dsimp only
   all_goals repeat' split
   all_goals simp_all only [↓reduceIte, Bool.not_eq_true, Bool.false_eq_true, siteOp,
-    reduceCtorEq]
+    reduceCtorEq, Option.map_some, Option.bind_some]
   all_goals first
     | exact Or.inl ⟨_, _, rfl⟩
     | exact Or.inr rfl

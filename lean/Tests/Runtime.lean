@@ -12,6 +12,11 @@ private def value (text : String) (target := true) : IO String := do
 
 def runtime : IO Unit := do
   for (text, expected) in [
+      ("discrete[E](*)", "0.000000"),
+      ("discrete[E](0.25,0.25,*)", "1.250000"),
+      ("let p = uniform[E](0,1) in discrete[E](p/2,0.25,*)", "1.250000"),
+      ("let f = fun p => p :: 0.25 :: [] in discrete_list[E](f 0.25)", "1.250000"),
+      ("discrete[E](0.1,0.2,0.1,0.2,0.1,0.2,0.1,*)", "3.000000"),
       ("uniform[E](0,2)", "1.000000"),
       ("gauss[E](3,2)", "3.000000"),
       ("poisson[E](4)", "4.000000"),
@@ -31,12 +36,15 @@ def runtime : IO Unit := do
       "gamma(2,3)", "beta(2,3)", "flip(0.4)", "bernoulli(0.6)", "discrete(0.25,0.25,0.5)"] do
     let a ← value text false; let b ← value text false
     assert (a == b) s!"seed replay changed: {text}"
-  for text in ["uniform(2,1)", "gauss(1,-1)", "poisson(-1)", "beta(0,1)",
+  for text in ["discrete(-0.1,*)", "discrete(0.6,0.6,*)", "uniform(2,1)", "gauss(1,-1)", "poisson(-1)", "beta(0,1)",
       "exponential(0)", "gamma(1,0)", "flip(2)", "observe(false)",
       "(rec f x => f x) ()"] do
     let p ← IO.ofExcept (compile text)
     for expression in [p.checked.source, p.checked.source.determinize] do
       assert (Runtime.run expression 0 100 |> fun r => !r.isOk) s!"bad run returned a value: {text}"
+  let boundary := "discrete[E](" ++ String.intercalate "+" (List.replicate 20 "0.05") ++ ",*)"
+  for target in [false, true] do
+    assert ((← value boundary target) == "0.000000") "rounding at probability sum one failed"
   let p ← IO.ofExcept (compile "gauss[E](1,uniform[G](1,2))")
   let (_, stats) ← IO.ofExcept (Runtime.run p.checked.source.determinize)
   assert (stats.draws == 1) "atomic mean skipped a sampled variance operand"

@@ -39,6 +39,26 @@ theorem deliver_stepMeaning (value : Value) (stack : List Frame)
       | left operation right environment =>
           obtain rfl := Except.ok.inj action
           exact Or.inl ⟨_, rfl, trivial, sameObservations_of_eq _ _ (left_argument_step _ _ _ _ _).2⟩
+      | discrete kind =>
+          cases read : value.probabilities? with
+          | none =>
+              simp only [step, read] at action
+              change Except.error (Failure.invalid "expected a list of probabilities") = Except.ok result at action
+              contradiction
+          | some p =>
+              simp only [step, read] at action
+              change draw (kind, .discrete p.length) p stack = .ok result at action
+              unfold draw at action
+              cases law : finiteLaw (.discrete p.length) kind p with
+              | error failure => simp [law, bind, Except.bind] at action
+              | ok outcomes =>
+                  simp only [law, bind, Except.bind, pure, Except.pure] at action
+                  obtain rfl := Except.ok.inj action
+                  apply Or.inr
+                  apply paperStep_sample _ (kind, .discrete p.length) p outcomes stack law
+                  · simpa [stateExpr, stackExpr, List.foldl_cons, frameExpr] using
+                      (stack_context stack tailShape (.discrete kind (valueExpr value)) rfl).1
+                  · exact discrete_correspondence kind value p read stack outcomes law tailShape
       | draw site pending environment arguments =>
           cases value <;> simp only [step, pure, bind, Except.bind, Except.pure, throw] at action
           all_goals try contradiction
@@ -134,7 +154,7 @@ theorem deliver_stepMeaning (value : Value) (stack : List Frame)
 theorem stepMeaning (state : State) (shape : StateShape state) (result : Step)
     (action : step state = .ok result) : StepMeaning state result := by
   cases state with
-  | eval expression environment stack => exact eval_stepMeaning expression environment stack shape result action
+  | eval expression environment stack => exact eval_stepMeaning expression environment stack result action
   | deliver value stack => exact deliver_stepMeaning value stack shape result action
   | rejected =>
       obtain rfl := Except.ok.inj action

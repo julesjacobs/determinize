@@ -10,7 +10,7 @@ def expressionWork : Core → Nat
   | .letE a _ | .ite a _ _ | .matchSum a _ _ | .matchList a _ _ => expressionWork a + 2
   | .uniform _ a b | .gaussian _ a b | .beta _ a b | .gamma _ a b =>
       expressionWork a + expressionWork b + 3
-  | .poisson _ a | .bernoulli _ a | .exponential _ a => expressionWork a + 2
+  | .poisson _ a | .bernoulli _ a | .exponential _ a | .discrete _ a => expressionWork a + 2
   | _ => 1
 
 def frameWork : Frame → Nat
@@ -25,7 +25,6 @@ def bookkeepingRank : State → Nat
 
 /-- States whose next transition only evaluates operands, delivers values, or rejects. -/
 def Bookkeeping : State → Prop
-  | .eval (.discrete ..) _ _ => False
   | .eval _ _ _ => True
   | .deliver _ (.left .. :: _) => True
   | .deliver _ (.unary .inl :: _) | .deliver _ (.unary .inr :: _) => True

@@ -167,9 +167,10 @@ private partial def inferExpr (Γ : List UType) (e : Input) : M Draft := do
     let a ← require (← inferExpr Γ a) ta
     let b ← require (← inferExpr Γ b) tb
     return node t [a,b]
-  | .discrete requested _ => do
+  | .discrete requested probabilities => do
     let i ← siteAffinity requested
-    return node (.float i) []
+    let probabilities ← require (← inferExpr Γ probabilities) (.list (.float i))
+    return node (.float i) [probabilities]
   | .poisson requested a | .bernoulli requested a | .exponential requested a =>
     let i ← siteAffinity requested; let t := UType.float i; let g ← general
     let ta := match e with | .poisson .. | .bernoulli .. => t | _ => g
@@ -234,7 +235,7 @@ private partial def finish : Draft → M (Core × Certificate)
       | .uniform _ ..,[a,b] => pure (.uniform (.sample m) a b)
       | .gaussian _ ..,[a,b] => pure (.gaussian (.sample m) a b)
       | .poisson _ ..,[a] => pure (.poisson (.sample m) a)
-      | .discrete _ d,[] => pure (.discrete (.sample m) d)
+      | .discrete _ ..,[p] => pure (.discrete (.sample m) p)
       | .bernoulli _ ..,[a] => pure (.bernoulli (.sample m) a)
       | .exponential _ ..,[a] => pure (.exponential (.sample m) a)
       | .beta _ ..,[a,b] => pure (.beta (.sample m) a b)

@@ -34,6 +34,9 @@ def explorer : IO Unit := do
       ("let _ = observe(false) in uniform[G](0,1)", 0),
       ("if flip(0) then uniform[G](0,1) else 7", 7),
       ("discrete[G](0,0.25,0,0.75)", 5/2),
+      ("discrete[G](*)", 0),
+      ("let p = bernoulli[E](0.5) in discrete[E](p/2,0.25,*)", 5/4),
+      ("let f = fun p => p :: 0.25 :: [] in discrete_list[E](f 0.25)", 5/4),
       ("bernoulli[G](1)", 1), ("bernoulli[G](0)", 0)] do
     let candidate ← graph text
     assert (reward candidate (candidate.states.size+1) == expected) s!"exact reward: {text}"

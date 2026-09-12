@@ -16,6 +16,21 @@ def parsing : IO Unit := do
   assert (parse "(* unfinished" |> fun r => !r.isOk) "unterminated comment accepted"
   for text in ["uniform(0)", "poisson(1,2)", "observe[E](true)"] do
     assert (!(parse text).isOk) s!"invalid primitive syntax accepted: {text}"
+  for text in ["discrete[E](*)", "discrete[E](* )", "discrete[E]( * )",
+      "discrete[E](*\n)", "discrete(*)", "discrete[G] (* )",
+      "discrete (* comment *) [E] (* )"] do
+    let p ← IO.ofExcept (compile text)
+    match p.checked.source with
+    | .discrete (.sample _) .nil => pure ()
+    | _ => throw (IO.userError s!"empty remainder syntax changed: {text}")
+    let q ← IO.ofExcept (compile (pretty p.checked.source))
+    assert (p.checked.source == q.checked.source) s!"empty remainder roundtrip changed: {text}"
+  for text in ["(*) comment *) 0", "(* outer (*) inner *) *) 0"] do
+    let p ← IO.ofExcept (compile text)
+    assert (p.checked.source == .real 0) s!"block comment changed: {text}"
+  let commented ← IO.ofExcept (compile "discrete[E] (* comment *) (0,1)")
+  assert (commented.checked.source == .discrete (.sample .E) (.cons (.real 0) .nil))
+    "comment before discrete arguments changed"
   let coin ← IO.ofExcept (compile "bernoulli[E](0.25)")
   assert (coin.checked.source == .bernoulli (.sample .E) (.real (1/4)))
     "elaboration replaced a Bernoulli source draw"
@@ -24,7 +39,7 @@ def parsing : IO Unit := do
   let categorical ← IO.ofExcept (compile "discrete[E](0.25,0.25,0.5)")
   match categorical.checked.source with
   | .discrete (.sample .E) d =>
-      assert (d.probabilities == [1/4, 1/4, 1/2]) "discrete weights changed"
+      assert (d == .cons (.real (1/4)) (.cons (.real (1/4)) .nil)) "discrete probabilities changed"
       assert (categorical.checked.source.determinize == .discrete .mean d)
         "discrete determinization changed its weights"
   | _ => throw (IO.userError "elaboration replaced a discrete source draw")
@@ -38,7 +53,7 @@ def parsing : IO Unit := do
     (.letE (.app (.lam (.add (.bvar 2) (.bvar 0))) (.bernoulli none (.real (1/2))))
       (.ite (.lt (.bvar 0) (.bvar 1)) (.bool false) (.bool true)))))
     "comparison desugaring changed binders or affinities"
-  for text in ["let x = uniform(0,1) in x + x", "fun x => x", "uniform[G](0,1)", "observe(false)", "observe(true)", "bernoulli[E](0.25)", "bernoulli[G](0.25)", "flip(0.25)", "bernoulli[E](0.00125)", "uniform[E](0.2,0.375)", "discrete[E](0.25,0.25,0.5)", "discrete[G](0,0.25,0.75)", "discrete[E](0,1,0)"] do
+  for text in ["let x = discrete[E](*) in discrete[E](0,*)", "let x = uniform(0,1) in x + x", "fun x => x", "uniform[G](0,1)", "observe(false)", "observe(true)", "bernoulli[E](0.25)", "bernoulli[G](0.25)", "flip(0.25)", "bernoulli[E](0.00125)", "uniform[E](0.2,0.375)", "discrete[E](0.25,0.25,0.5)", "discrete[G](0,0.25,0.75)", "discrete[E](0,1,0)"] do
     let p ← IO.ofExcept (compile text)
     let q ← IO.ofExcept (compile (pretty p.checked.source))
     assert (p.checked.source == q.checked.source)

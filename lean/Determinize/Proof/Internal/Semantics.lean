@@ -41,7 +41,7 @@ def realArity {Literal : Type} : Expr Literal → Nat
   | .letE x b => x.realArity + b.realArity
   | .uniform _ l r | .gaussian _ l r | .beta _ l r | .gamma _ l r =>
       l.realArity + r.realArity
-  | .poisson _ x | .bernoulli _ x | .exponential _ x => x.realArity
+  | .poisson _ x | .bernoulli _ x | .exponential _ x | .discrete _ x => x.realArity
   | _ => 0
 
 end Expr

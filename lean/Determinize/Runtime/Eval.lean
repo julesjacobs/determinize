@@ -63,6 +63,11 @@ private def draw (op : Op) (action : DistributionAction) (args : List Float) : E
       else set {s with eSeed := next, draws := s.draws + 1}
       return .number value
 
+private def numbers : Value → EvalM (List Float)
+  | .nil => pure []
+  | .cons head tail => return (← number head) :: (← numbers tail)
+  | _ => throw (.failure "expected a list of probabilities")
+
 private partial def eval (env : List Value) (e : Expr Float) : EvalM Value := do
   tick
   match e with
@@ -115,7 +120,9 @@ private partial def eval (env : List Value) (e : Expr Float) : EvalM Value := do
     let op := match e with
       | .uniform .. => Op.uniform | .gaussian .. => .gaussian | .beta .. => .beta | _ => .gamma
     draw op k [a,b]
-  | .discrete k d => draw (.discrete d) k []
+  | .discrete k p =>
+    let probabilities ← numbers (← eval env p)
+    draw (.discrete probabilities.length) k probabilities
   | .bernoulli k a =>
     let a ← number (← eval env a)
     draw .bernoulli k [a]

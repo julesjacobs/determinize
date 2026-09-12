@@ -495,8 +495,10 @@ private theorem paperMeasure_mass_one (op : Determinize.Spec.Paper.Op) (params :
   | bernoulli =>
       let := DiscreteLaws.bernoulli_probability (.sample .G) (params.1 0) hDomain
       exact measure_univ (μ := Determinize.Spec.Paper.bernoulliFiber (.sample .G) (params.1 0))
-  | discrete d =>
-      exact measure_univ (μ := Determinize.Spec.Paper.discreteFiber (.sample .G) d)
+  | discrete n =>
+      simp only [Determinize.Spec.Paper.domain] at hDomain
+      rw [Determinize.Spec.Paper.paperMeasure, if_pos hDomain]
+      exact DiscreteLaws.remainder_mass n params.1 hDomain
 
 private theorem paperMeasure_zero_off_domain (op : Determinize.Spec.Paper.Op) (params : Determinize.Spec.Paper.Params op)
     (hDomain : ¬ Determinize.Spec.Paper.domain op params) : Determinize.Spec.Paper.paperMeasure op params = 0 := by
@@ -532,7 +534,9 @@ private theorem paperMeasure_zero_off_domain (op : Determinize.Spec.Paper.Op) (p
       rw [if_neg (by simpa only [Determinize.Spec.Paper.domain] using hDomain)]
 
   | bernoulli => exact DiscreteLaws.bernoulli_off_domain (.sample .G) (params.1 0) hDomain
-  | discrete _ => exact False.elim (hDomain trivial)
+  | discrete _ =>
+      simp only [Determinize.Spec.Paper.domain] at hDomain
+      rw [Determinize.Spec.Paper.paperMeasure, if_neg hDomain]
 
 private theorem paperMeasure_mass_le_one (op : Determinize.Spec.Paper.Op) (params : Determinize.Spec.Paper.Params op) :
     Determinize.Spec.Paper.paperMeasure op params Set.univ ≤ 1 := by
@@ -1044,7 +1048,15 @@ noncomputable def primitiveKernel :
       DiscreteLaws.bernoulli_measurable (.sample .G) |>.comp
         (show Measurable (fun params : Determinize.Spec.Paper.Params .bernoulli =>
           params.1 0) by fun_prop)⟩
-  | .discrete d => ⟨Determinize.Spec.Paper.paperMeasure (.discrete d), measurable_const⟩
+  | .discrete n => ⟨Determinize.Spec.Paper.paperMeasure (.discrete n), by
+      apply Measurable.ite (measurableSet_domain (.discrete n))
+      · apply Measurable.add
+        · exact Finset.measurable_sum _ fun i _ =>
+            ((measurable_pi_apply i).comp measurable_fst).ennreal_ofReal.smul_measure _
+        · apply Measurable.smul_measure
+          apply Measurable.ennreal_ofReal
+          fun_prop
+      · exact measurable_const⟩
 
 theorem primitiveKernel_apply (op : Determinize.Spec.Paper.Op) (params : Determinize.Spec.Paper.Params op) :
     primitiveKernel op params = Determinize.Spec.Paper.paperMeasure op params := by
@@ -1092,7 +1104,10 @@ noncomputable def primitiveLaws : Determinize.Proof.Paper.PrimitiveLaws where
     | beta => exact beta_integrable_id params hDomain
     | gamma => exact gamma_integrable_id params hDomain
     | bernoulli => exact DiscreteLaws.bernoulli_integrable (.sample .G) (params.1 0) _
-    | discrete d => exact DiscreteLaws.discrete_integrable (.sample .G) d _
+    | discrete n =>
+        simp only [Determinize.Spec.Paper.domain] at hDomain
+        rw [Determinize.Spec.Paper.paperMeasure, if_pos hDomain]
+        exact DiscreteLaws.remainder_integrable n params.1 (fun x => x)
   mean_law := by
     intro op params hDomain
     rw [primitiveKernel_apply]
@@ -1104,6 +1119,9 @@ noncomputable def primitiveLaws : Determinize.Proof.Paper.PrimitiveLaws where
     | beta => exact beta_mean params hDomain
     | gamma => exact gamma_mean params hDomain
     | bernoulli => exact DiscreteLaws.bernoulli_mean (.sample .G) (params.1 0) hDomain
-    | discrete d => exact DiscreteLaws.discrete_mean (.sample .G) d
+    | discrete n =>
+        simp only [Determinize.Spec.Paper.domain] at hDomain
+        rw [Determinize.Spec.Paper.paperMeasure, if_pos hDomain]
+        exact DiscreteLaws.remainder_mean n params.1 hDomain
 
 end Determinize.Proof.Paper

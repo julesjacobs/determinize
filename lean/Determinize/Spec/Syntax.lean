@@ -37,7 +37,7 @@ inductive Expr (Literal : Type := ℝ) where
   | uniform (action : DistributionAction) (lower upper : Expr Literal)
   | gaussian (action : DistributionAction) (mean variance : Expr Literal)
   | poisson (action : DistributionAction) (rate : Expr Literal)
-  | discrete (action : DistributionAction) (distribution : FiniteDistribution)
+  | discrete (action : DistributionAction) (probabilities : Expr Literal)
   | bernoulli (action : DistributionAction) (probability : Expr Literal)
   | exponential (action : DistributionAction) (rate : Expr Literal)
   | beta (action : DistributionAction) (alpha beta : Expr Literal)
@@ -59,7 +59,7 @@ def mapVars {Literal : Type} (replace : Nat → Nat → Expr Literal) (depth : N
   | .bvar index => replace depth index
   | .unit => .unit
   | .reject => .reject
-  | .discrete action d => .discrete action d
+  | .discrete action d => .discrete action (d.mapVars replace depth)
   | .bool value => .bool value
   | .real value => .real value
   | .lam body => .lam (body.mapVars replace (depth + 1))
@@ -140,7 +140,7 @@ def determinize {Literal : Type} : Expr Literal → Expr Literal
       .gaussian action.determinize mean.determinize variance.determinize
   | .poisson action rate => .poisson action.determinize rate.determinize
   | .bernoulli action probability => .bernoulli action.determinize probability.determinize
-  | .discrete action d => .discrete action.determinize d
+  | .discrete action d => .discrete action.determinize d.determinize
   | .exponential action rate =>
       .exponential action.determinize rate.determinize
   | .beta action left right =>
@@ -152,7 +152,7 @@ def mapLiteral {α β : Type} (f : α → β) : Expr α → Expr β
   | .bvar index => .bvar index
   | .unit => .unit
   | .reject => .reject
-  | .discrete action d => .discrete action d
+  | .discrete action d => .discrete action (d.mapLiteral f)
   | .bool value => .bool value
   | .real value => .real (f value)
   | .lam body => .lam (body.mapLiteral f)
@@ -248,8 +248,10 @@ inductive Typed : List Ty → Expr → Ty → Prop
       Typed context (.poisson (.sample affinity) rate) (.float affinity)
   | poissonMean : Typed context rate (.float affinity) →
       Typed context (.poisson .mean rate) (.float affinity)
-  | discrete : Typed context (.discrete (.sample affinity) d) (.float affinity)
-  | discreteMean : Typed context (.discrete .mean d) (.float affinity)
+  | discrete : Typed context probabilities (.list (.float affinity)) →
+      Typed context (.discrete (.sample affinity) probabilities) (.float affinity)
+  | discreteMean : Typed context probabilities (.list (.float affinity)) →
+      Typed context (.discrete .mean probabilities) (.float affinity)
   | bernoulli : Typed context probability (.float affinity) →
       Typed context (.bernoulli (.sample affinity) probability) (.float affinity)
   | bernoulliMean : Typed context probability (.float affinity) →

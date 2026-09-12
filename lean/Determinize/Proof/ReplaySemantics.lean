@@ -9,7 +9,7 @@ instead of sampled, still integrating every E draw: the law of the real the
 replay returns exactly at `depth`. The result is the zero measure when the trace does not fit
 the program: a G site that finds no entry or an entry of another primitive, or an
 entry left over when the program returns. For `discrete`, the comparison `op = op'`
-checks the entire stored distribution, including its number of outcomes and probabilities. -/
+checks the number of supplied probabilities; their values are evaluated operands. -/
 noncomputable def outputGivenTraceAt : Nat → Expr → Trace → Measure ℝ
   | 0, .real value, [] => Measure.dirac value
   | 0, _, _ => 0

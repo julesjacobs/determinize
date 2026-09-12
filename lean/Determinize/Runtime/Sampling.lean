@@ -71,21 +71,25 @@ def sample (op : Op) (action : DistributionAction) (args : List Float) : RandomM
       if v < 0 then throw "gaussian requires variance ≥ 0"
       else if mean || v == 0 then pure a
       else do pure (a + Float.sqrt v * (← normal))
-    | .discrete d,[] => do
-      if mean then pure (Float.ofInt d.mean.num / Float.ofNat d.mean.den)
+    | .discrete n, probabilities => do
+      unless probabilities.length == n do throw "invalid primitive arity"
+      unless probabilities.all (· ≥ 0) do throw "discrete requires nonnegative probabilities"
+      let total := probabilities.foldl (· + ·) 0.0
+      -- Allow accumulation rounding at the domain boundary in this numerical backend.
+      let tolerance := 8.0 * 2.220446049250313e-16 * Float.ofNat (n + 1)
+      if total > 1.0 + tolerance then throw "discrete probabilities sum to more than one"
+      if mean then
+        let supplied := probabilities.zipIdx.foldl
+          (fun acc (p,i) => acc + Float.ofNat i * p) 0.0
+        pure (supplied + Float.ofNat n * max 0.0 (1.0 - total))
       else
         let u ← uniform01
         let mut cumulative := 0.0
-        let mut last := 0
         let mut selected := none
-        for (p, i) in d.probabilities.zipIdx do
-          if p > 0 then
-            last := i
-            let probability := Float.ofInt p.num / Float.ofNat p.den
-            unless finite probability do throw "nonfinite discrete probability"
-            cumulative := cumulative + probability
-            if selected.isNone && u < cumulative then selected := some i
-        pure (Float.ofNat (selected.getD last))
+        for (p,i) in probabilities.zipIdx do
+          cumulative := cumulative + p
+          if selected.isNone && u < cumulative then selected := some i
+        pure (Float.ofNat (selected.getD n))
     | .bernoulli,[a] =>
       if a < 0 || a > 1 then throw "bernoulli requires probability in [0,1]"
       else if mean then pure a

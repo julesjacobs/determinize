@@ -5,7 +5,7 @@ open Spec.Paper Determinize.Finite Checking Binding MeasureTheory
 
 set_option maxHeartbeats 800000 in
 theorem eval_stepMeaning (expression : Core) (environment : List Value) (stack : List Frame)
-    (shape : ∀ frame ∈ stack, FrameShape frame) (result : Step)
+    (result : Step)
     (action : step (.eval expression environment stack) = .ok result) :
     StepMeaning (.eval expression environment stack) result := by
   cases expression <;>
@@ -50,18 +50,6 @@ theorem eval_stepMeaning (expression : Core) (environment : List Value) (stack :
       | exact (poisson_setup _ _ _ _ ).2
       | exact (bernoulli_setup _ _ _ _ ).2
       | exact (exponential_setup _ _ _ _ ).2
-  case discrete kind d =>
-    unfold draw at action
-    cases law : finiteLaw (.discrete d) kind [] with
-    | error failure => simp [law, bind, Except.bind] at action
-    | ok outcomes =>
-        simp only [law, bind, Except.bind, pure, Except.pure] at action
-        obtain rfl := Except.ok.inj action
-        apply Or.inr
-        apply paperStep_sample _ (kind, .discrete d) [] outcomes stack law
-        · simpa [stateExpr, close, interpret, Expr.mapLiteral, Expr.mapVars, primitiveExpr] using
-            (stack_context stack shape (primitiveExpr (kind, .discrete d) [])
-              (primitiveExpr_notValue _ _)).1
-        · exact discrete_correspondence kind d environment stack outcomes law shape
+      | exact (discrete_setup _ _ _ _).2
 
 end Determinize.Proof.FiniteModel

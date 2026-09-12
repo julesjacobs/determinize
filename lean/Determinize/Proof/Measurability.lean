@@ -95,7 +95,7 @@ def zeroFill : Skeleton → Expr
   | .bvar index => .bvar index
   | .unit => .unit
   | .reject => .reject
-  | .discrete kind d => .discrete kind d
+  | .discrete kind d => .discrete kind (zeroFill d)
   | .bool value => .bool value
   | .real => .real 0
   | .lam body => .lam (zeroFill body)
@@ -165,10 +165,10 @@ end RealCoordinates
 theorem realCoordinates_length (expression : Expr) :
     expression.realCoordinates.length = expression.skeleton.realArity := by
   cases expression with
-  | bvar | reject | unit | bool | real | nil | discrete =>
+  | bvar | reject | unit | bool | real | nil =>
       simp [Expr.realCoordinates, Expr.skeleton, Expr.realArity]
   | lam body | fix body | fst body | snd body | inl body
-  | inr body | neg body | poisson _ body | bernoulli _ body | exponential _ body =>
+  | inr body | neg body | poisson _ body | bernoulli _ body | exponential _ body | discrete _ body =>
       simpa [Expr.realCoordinates, Expr.skeleton, Expr.realArity] using
         realCoordinates_length body
   | app left right | pair left right | cons left right | add left right
@@ -441,7 +441,7 @@ def firstChild : Expr → Expr
   | .app left _ | .pair left _ | .cons left _ | .add left _
   | .mul left _ | .div left _ | .lt left _ => left
   | .uniform _ left _ | .gaussian _ left _ | .beta _ left _ | .gamma _ left _ => left
-  | .poisson _ body | .bernoulli _ body | .exponential _ body => body
+  | .poisson _ body | .bernoulli _ body | .exponential _ body | .discrete _ body => body
   | .matchSum first _ _ | .matchList first _ _ | .ite first _ _ => first
   | .letE first _ => first
   | expression => expression
@@ -468,7 +468,7 @@ def firstChild : Skeleton → Skeleton
   | .app left _ | .pair left _ | .cons left _ | .add left _
   | .mul left _ | .div left _ | .lt left _ => left
   | .uniform _ left _ | .gaussian _ left _ | .beta _ left _ | .gamma _ left _ => left
-  | .poisson _ body | .bernoulli _ body | .exponential _ body => body
+  | .poisson _ body | .bernoulli _ body | .exponential _ body | .discrete _ body => body
   | .matchSum first _ _ | .matchList first _ _ | .ite first _ _ => first
   | .letE first _ => first
   | skeleton => skeleton
@@ -828,7 +828,7 @@ def skeletonShift (amount cutoff : Nat) : Skeleton → Skeleton
   | .bvar index => .bvar (if cutoff ≤ index then index + amount else index)
   | .unit => .unit
   | .reject => .reject
-  | .discrete kind d => .discrete kind d
+  | .discrete kind d => .discrete kind (skeletonShift amount cutoff d)
   | .bool value => .bool value
   | .real => .real
   | .lam body => .lam (skeletonShift amount (cutoff + 1) body)
@@ -907,7 +907,7 @@ def skeletonSubstAt (depth : Nat) (replacement : Skeleton) : Skeleton → Skelet
       else .bvar (if depth < index then index - 1 else index)
   | .unit => .unit
   | .reject => .reject
-  | .discrete kind d => .discrete kind d
+  | .discrete kind d => .discrete kind (skeletonSubstAt depth replacement d)
   | .bool value => .bool value
   | .real => .real
   | .lam body => .lam (skeletonSubstAt (depth + 1) replacement body)
@@ -1015,7 +1015,7 @@ def coordinatePlan (depth : Nat) (replacement : Skeleton) (bodyOffset : Nat) :
   | .gamma _ left right =>
       coordinatePlan depth replacement bodyOffset left ++
         coordinatePlan depth replacement (bodyOffset + left.realArity) right
-  | .poisson _ body | .bernoulli _ body | .exponential _ body => coordinatePlan depth replacement bodyOffset body
+  | .poisson _ body | .bernoulli _ body | .exponential _ body | .discrete _ body => coordinatePlan depth replacement bodyOffset body
   | _ => []
 
 def CoordinateSelector.eval (body replacement : List ℝ) : CoordinateSelector → ℝ
@@ -1173,11 +1173,11 @@ theorem applyCoordinatePlan_coordinatePlan (depth : Nat) (replacement expression
         Expr.mapVars] using ih (depth + 2) before suffix
   | fst body ih | snd body ih | inl body ih | inr body ih
   | neg body ih
-  | poisson _ body ih | exponential _ body ih | bernoulli _ body ih
+  | poisson _ body ih | exponential _ body ih | bernoulli _ body ih | discrete _ body ih
   =>
       simpa only [coordinatePlan, Expr.skeleton, Expr.realCoordinates, Expr.substAt,
         Expr.mapVars] using ih depth before suffix
-  | unit | reject | discrete _ _ | bool flag | nil =>
+  | unit | reject | bool flag | nil =>
       simp [coordinatePlan, Expr.skeleton, Expr.realCoordinates, Expr.substAt, Expr.mapVars,
         applyCoordinatePlan]
 
@@ -1543,15 +1543,20 @@ noncomputable def poissonDraw (laws : Determinize.Proof.Paper.PrimitiveLaws) (ki
       (measurable_pi_lambda _ fun index => measurable_getD_nil index.1))
 
 noncomputable def discreteDraw (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction)
-    (d : FiniteDistribution) : SFiniteKernel Unit ℝ :=
-  SFiniteKernel.pullback (primitiveKernelPack laws kind (.discrete d))
-    (fun _ => paramsFromCoordinates (.discrete d) [] []) measurable_const
+    (arity : Nat) : SFiniteKernel (Fin arity → ℝ) ℝ :=
+  SFiniteKernel.pullback (primitiveKernelPack laws kind (.discrete arity))
+    (fun weights => (weights, fun index => ([] : List ℝ).getD index.1 0))
+    (Measurable.prod measurable_id
+      (measurable_pi_lambda _ fun index => measurable_getD_nil index.1))
 
 theorem discreteDraw_apply (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction)
-    (d : FiniteDistribution) :
-    (discreteDraw laws kind d).kernel () = discreteFiber kind d := by
+    (arity : Nat) (weights : List ℝ) (lengthEq : weights.length = arity) :
+    (discreteDraw laws kind arity).kernel (fun index => weights.getD index.1 0) =
+      discreteFiber kind weights := by
+  subst lengthEq
   rw [discreteDraw, pullback_apply, discreteFiber_eq,
-    primitiveFiber_eq_atomic laws kind (.discrete d) [] [] rfl rfl]
+    primitiveFiber_eq_atomic laws kind (.discrete weights.length) weights [] rfl rfl]
+  rfl
 
 noncomputable def bernoulliDraw (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction) :
     SFiniteKernel ℝ ℝ :=
@@ -3041,6 +3046,51 @@ noncomputable def reduceExponential {α : Type*} [MeasurableSpace α]
     (family : MeasurableFamily α expression) :
     family.secondChild.skeleton = Skeleton.secondChild family.skeleton := rfl
 
+noncomputable def reduceDiscrete {α : Type*} [MeasurableSpace α]
+    (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction)
+    {body : α → Expr} (bodyFamily : MeasurableFamily α body)
+    (bodyReduce : MeasurableActionFamily α (fun parameter => reduce (body parameter))) :
+    MeasurableActionFamily α (fun parameter => reduce (.discrete kind (body parameter))) := by
+  classical
+  by_cases bodyValue : Expr.isValue bodyFamily.skeleton = true
+  · have actualBodyValue (parameter : α) : (body parameter).isValue = true :=
+      (bodyFamily.isValue_eq parameter).trans bodyValue
+    have arityEq (parameter : α) : (realListValue? (body parameter)).map List.length =
+        bodyFamily.skeleton.literalListArity? := by
+      rw [realListValue?_map_length, ← Expr.literalListArity?_skeleton, bodyFamily.skeleton_eq]
+    cases skeletonArity : bodyFamily.skeleton.literalListArity? with
+    | some arity =>
+        let parameters := fun parameter => fun index : Fin arity =>
+          (body parameter).realCoordinates.getD index.1 0
+        have parametersMeasurable : Measurable parameters :=
+          measurable_pi_lambda _ fun index => bodyFamily.coordinate_measurable index.1
+        apply congr (.sample (site := (kind, .discrete arity))
+          (SFiniteKernel.pullback (discreteDraw laws kind arity) parameters parametersMeasurable)
+          (measurable_realLiteral measurable_snd))
+        funext parameter
+        obtain ⟨weights, weightsEq, lengthEq⟩ :=
+          Option.map_eq_some_iff.mp ((arityEq parameter).trans skeletonArity)
+        rw [reduce, actualBodyValue parameter, weightsEq, pullback_apply]
+        simp only [parameters, realCoordinates_of_realListValue? weightsEq,
+          discreteDraw_apply laws kind arity weights lengthEq, lengthEq]
+        rfl
+    | none =>
+        apply congr stuck
+        funext parameter
+        have weightsEq : realListValue? (body parameter) = none :=
+          Option.map_eq_none_iff.mp ((arityEq parameter).trans skeletonArity)
+        rw [reduce, actualBodyValue parameter, weightsEq]
+        rfl
+  · apply congr (bodyReduce.wrapUnary (.discrete kind) (.discrete kind)
+        (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates]))
+    funext parameter
+    have actualBodyValue : (body parameter).isValue = false := by
+      rw [bodyFamily.isValue_eq parameter]
+      exact Bool.eq_false_of_not_eq_true bodyValue
+    rw [reduce, actualBodyValue]
+    simp
+
+
 noncomputable def reduceFamilyAux
     (laws : Determinize.Proof.Paper.PrimitiveLaws)
     (size : Nat) :
@@ -3063,15 +3113,18 @@ noncomputable def reduceFamilyAux
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
             simp [actualEq, Expr.skeleton, reduce] at fixed ⊢
-      | discrete kind d =>
-          apply congr (.sample (site := (kind, .discrete d))
-            (SFiniteKernel.pullback (discreteDraw laws kind d) (fun _ => ()) measurable_const)
-            (measurable_realLiteral measurable_snd))
+      | discrete kind bodySkeleton =>
+          have bodySmaller : sizeOf family.firstChild.skeleton < size := by
+            rw [← sizeEq, skeletonEq]
+            simp_all [Skeleton.firstChild]
+            omega
+          apply congr (reduceDiscrete laws kind family.firstChild
+            (childReduce family.firstChild bodySmaller))
           funext parameter
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [Expr.skeleton, reduce, pullback_apply, discreteDraw_apply]
+            simp_all [-Determinize.Spec.Paper.reduce, Expr.skeleton, Expr.firstChild]
       | reject | unit | bool | real | lam | fix | nil =>
           apply congr (nextFamily family)
           funext parameter

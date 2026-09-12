@@ -826,3 +826,54 @@ file = "tests/typing/reject/discrete-nonunit.det"
 suite = "typing"
 outcome = "reject"
 stage = "elaboration"
+
+[[case]]
+file = "tests/statistical/discrete-computed-e.det"
+derivation = "discrete-computed-e"
+suite = "statistical"
+outcome = "accept"
+kernel = true
+samples = 20000
+seed = 20260911
+source = { draws = 2, moments = { mean = 1.25, variance = 0.6875, mean_tolerance = 0.04104113789845501, variance_tolerance = 0.026971458184005898, lower = 0, upper = 2, integer = true } }
+target = { number = 1.25, draws = 0, moments = { mean = 1.25, variance = 0, mean_tolerance = 1e-10, variance_tolerance = 1e-10 } }
+
+[[case]]
+file = "tests/statistical/discrete-computed-g.det"
+derivation = "discrete-computed-g"
+suite = "statistical"
+outcome = "accept"
+kernel = true
+samples = 20000
+seed = 20260911
+source = { draws = 2, moments = { mean = 1.25, variance = 0.6875, mean_tolerance = 0.04104113789845501, variance_tolerance = 0.026971458184005898, lower = 0, upper = 2, integer = true } }
+target = { draws = 1, moments = { mean = 1.25, variance = 0.25, mean_tolerance = 0.025, variance_tolerance = 0.001, lower = 0.75, upper = 1.75 } }
+
+[[case]]
+file = "tests/execution/discrete-remainder-empty.det"
+suite = "execution"
+outcome = "accept"
+kernel = true
+source = { number = 0, draws = 1 }
+target = { number = 0, draws = 0 }
+
+[[case]]
+file = "tests/execution/discrete-remainder-last.det"
+suite = "execution"
+outcome = "accept"
+kernel = true
+source = { number = 2, draws = 1 }
+target = { number = 2, draws = 1 }
+
+[[case]]
+file = "tests/execution/discrete-remainder-domain.det"
+suite = "execution"
+outcome = "accept"
+source = { error = "discrete probabilities sum to more than one" }
+target = { error = "discrete probabilities sum to more than one" }
+
+[[case]]
+file = "tests/typing/reject/discrete-remainder-affinity.det"
+suite = "typing"
+outcome = "reject"
+stage = "inference"

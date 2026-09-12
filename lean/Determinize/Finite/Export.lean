@@ -9,10 +9,8 @@ private def rational (q : Rat) : String :=
 private def leanRat (q : Rat) : String := s!"(({q.num} : Rat) / {q.den})"
 private def listText {α : Type} (render : α → String) (values : List α) : String :=
   "[" ++ String.intercalate ", " (values.map render) ++ "]"
-private def distributionText (d : FiniteDistribution) : String :=
-  s!"⟨{listText leanRat d.probabilities}, by decide +kernel, by decide +kernel⟩"
 private def opText : Op → String
-  | .discrete d => s!"(.discrete {distributionText d})"
+  | .discrete n => s!"(.discrete {n})"
   | op => reprStr op
 private def siteText (site : DistributionAction × Op) : String :=
   s!"({reprStr site.1}, {opText site.2})"
@@ -43,6 +41,7 @@ private def frameText : Frame → String
       s!"(.matchSum {Frontend.leanExpression left} {Frontend.leanExpression right} {listText valueText environment})"
   | .matchList nilCase consCase environment =>
       s!"(.matchList {Frontend.leanExpression nilCase} {Frontend.leanExpression consCase} {listText valueText environment})"
+  | .discrete action => s!"(.discrete ({reprStr action}))"
   | .draw site pending environment arguments =>
       s!"(.draw {siteText site} {listText Frontend.leanExpression pending} {listText valueText environment} {listText leanRat arguments})"
 

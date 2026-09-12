@@ -29,6 +29,7 @@ inductive Surface where
   | beta (affinity : Option Affinity) (alpha betaArg : Surface)
   | gamma (affinity : Option Affinity) (shape rate : Surface)
   | discrete (affinity : Option Affinity) (weights : List Surface)
+  | discreteRemainder (affinity : Option Affinity) (probabilities : Surface)
   | flip (affinity : Option Affinity) (probability : Surface)
   | observe (condition : Surface)
 deriving Repr

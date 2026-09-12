@@ -71,8 +71,7 @@ private def render (env : List String) (depth : Nat) : Core → String
   | .uniform k a b => primitive "uniform" k [render env depth a, render env depth b]
   | .gaussian k a b => primitive "gauss" k [render env depth a, render env depth b]
   | .poisson k a => primitive "poisson" k [render env depth a]
-  | .discrete k d =>
-      primitive "discrete" k (d.probabilities.map literal)
+  | .discrete k p => primitive "discrete_list" k [render env depth p]
   | .bernoulli k a => primitive "bernoulli" k [render env depth a]
   | .exponential k a => primitive "exponential" k [render env depth a]
   | .beta k a b => primitive "beta" k [render env depth a, render env depth b]
@@ -109,9 +108,7 @@ def leanExpression : Core → String
   | .uniform action lower upper => s!"(.uniform {leanAction action} {leanExpression lower} {leanExpression upper})"
   | .gaussian action mean variance => s!"(.gaussian {leanAction action} {leanExpression mean} {leanExpression variance})"
   | .poisson action rate => s!"(.poisson {leanAction action} {leanExpression rate})"
-  | .discrete action d =>
-      let ps := String.intercalate ", " (d.probabilities.map fun p => s!"({p.num} / {p.den} : Rat)")
-      s!"(.discrete {leanAction action} ⟨[{ps}], by decide +kernel, by decide +kernel⟩)"
+  | .discrete action p => s!"(.discrete {leanAction action} {leanExpression p})"
   | .bernoulli action probability => s!"(.bernoulli {leanAction action} {leanExpression probability})"
   | .exponential action rate => s!"(.exponential {leanAction action} {leanExpression rate})"
   | .beta action alpha betaArg => s!"(.beta {leanAction action} {leanExpression alpha} {leanExpression betaArg})"
@@ -149,9 +146,7 @@ def leanInput : Input → String
   | .uniform affinity lower upper => s!"(.uniform {leanRequested affinity} {leanInput lower} {leanInput upper})"
   | .gaussian affinity mean variance => s!"(.gaussian {leanRequested affinity} {leanInput mean} {leanInput variance})"
   | .poisson affinity rate => s!"(.poisson {leanRequested affinity} {leanInput rate})"
-  | .discrete affinity d =>
-      let ps := String.intercalate ", " (d.probabilities.map fun p => s!"({p.num} / {p.den} : Rat)")
-      s!"(.discrete {leanRequested affinity} ⟨[{ps}], by decide +kernel, by decide +kernel⟩)"
+  | .discrete affinity p => s!"(.discrete {leanRequested affinity} {leanInput p})"
   | .bernoulli affinity probability => s!"(.bernoulli {leanRequested affinity} {leanInput probability})"
   | .exponential affinity rate => s!"(.exponential {leanRequested affinity} {leanInput rate})"
   | .beta affinity alpha betaArg => s!"(.beta {leanRequested affinity} {leanInput alpha} {leanInput betaArg})"

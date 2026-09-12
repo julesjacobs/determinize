@@ -29,7 +29,7 @@ abbrev affineArity : Op → Nat
   | .beta => 0
   | .gamma => 1
   | .bernoulli => 1
-  | .discrete _ => 0
+  | .discrete n => n
 
 abbrev generalArity : Op → Nat
   | .uniform => 0
@@ -63,7 +63,7 @@ def domain : (op : Op) → Params op → Prop
   | .beta, (_, g) => 0 < g 0 ∧ 0 < g 1
   | .gamma, (a, g) => 0 < a 0 ∧ 0 < g 0
   | .bernoulli, (a, _) => 0 ≤ a 0 ∧ a 0 ≤ 1
-  | .discrete _, _ => True
+  | .discrete _, (a, _) => (∀ i, 0 ≤ a i) ∧ ∑ i, a i ≤ 1
 
 /-- The primitive means on evaluated parameters. -/
 def meanValue : (op : Op) → Params op → ℝ
@@ -74,7 +74,7 @@ def meanValue : (op : Op) → Params op → ℝ
   | .beta, (_, g) => g 0 / (g 0 + g 1)
   | .gamma, (a, g) => a 0 / g 0
   | .bernoulli, (a, _) => a 0
-  | .discrete d, _ => (d.mean : ℝ)
+  | .discrete n, (a, _) => (n : ℝ) + ∑ i : Fin n, (((i : ℕ) : ℝ) - n) * a i
 
 /-- Canonical primitive measure; an off-domain call has zero measure. -/
 def paperMeasure : (op : Op) → Params op → Measure ℝ
@@ -102,7 +102,11 @@ def paperMeasure : (op : Op) → Params op → Measure ℝ
       if 0 < shape ∧ 0 < rate then gammaMeasure shape rate else 0
 
   | .bernoulli, params => bernoulliFiber (.sample .G) (params.1 0)
-  | .discrete d, _ => discreteFiber (.sample .G) d
+  | .discrete n, params =>
+      if (∀ i, 0 ≤ params.1 i) ∧ ∑ i, params.1 i ≤ 1 then
+        (∑ i : Fin n, ENNReal.ofReal (params.1 i) • Measure.dirac ((i : ℕ) : ℝ)) +
+          ENNReal.ofReal (1 - ∑ i, params.1 i) • Measure.dirac (n : ℝ)
+      else 0
 
 /-- The stochastic or mean fiber of a primitive at evaluated operand lists. -/
 def primitiveFiber (kind : DistributionAction) (op : Op) (affine general : List ℝ) : Measure ℝ := by
@@ -153,8 +157,9 @@ theorem bernoulliFiber_eq (kind : DistributionAction) (p : ℝ) :
   cases kind <;> by_cases h : 0 ≤ p ∧ p ≤ 1 <;>
     simp [bernoulliFiber, primitiveFiber, parseParams, paperMeasure, domain, meanValue, h]
 
-theorem discreteFiber_eq (kind : DistributionAction) (d : FiniteDistribution) :
-    discreteFiber kind d = primitiveFiber kind (.discrete d) [] [] := by
+theorem discreteFiber_eq (kind : DistributionAction) (probabilities : List ℝ) :
+    discreteFiber kind probabilities =
+      primitiveFiber kind (.discrete probabilities.length) probabilities [] := by
   cases kind <;>
     simp [discreteFiber, primitiveFiber, parseParams, paperMeasure, domain, meanValue]
 
@@ -182,7 +187,7 @@ def meanConstant : (op : Op) → (Fin (generalArity op) → ℝ) → ℝ
           general 1)
   | .gamma, _ => 0
   | .bernoulli, _ => 0
-  | .discrete d, _ => (d.mean : ℝ)
+  | .discrete n, _ => (n : ℝ)
 
 /-- Coefficient of an affine-position parameter in a primitive mean. -/
 def meanCoeff : (op : Op) →
@@ -195,7 +200,7 @@ def meanCoeff : (op : Op) →
   | .gamma, general, _ => 1 / general
       0
   | .bernoulli, _, _ => 1
-  | .discrete _, _, index => Fin.elim0 index
+  | .discrete n, _, index => ((index : ℕ) : ℝ) - n
 
 theorem meanValue_eq_affine (op : Op) (params : Params op) :
     meanValue op params = meanConstant op params.2 +
@@ -229,7 +234,15 @@ theorem measurableSet_domain (op : Op) :
     have hp : Measurable (fun params : Params .bernoulli => params.1 0) := by fun_prop
     exact (measurableSet_le measurable_const hp).inter
       (measurableSet_le hp measurable_const)
-  · exact MeasurableSet.univ
+  · rename_i n
+    change MeasurableSet {params : Params (.discrete n) |
+      (∀ i, 0 ≤ params.1 i) ∧ ∑ i, params.1 i ≤ 1}
+    have nonnegative : MeasurableSet {params : Params (.discrete n) | ∀ i, 0 ≤ params.1 i} := by
+      rw [Set.ofPred_forall]
+      exact MeasurableSet.iInter fun i => measurableSet_le measurable_const (by fun_prop)
+    have bounded : MeasurableSet {params : Params (.discrete n) | ∑ i, params.1 i ≤ 1} :=
+      measurableSet_le (by fun_prop) measurable_const
+    exact nonnegative.inter bounded
 
 /-- Analytic facts about the canonical primitive measures used by the soundness proof. -/
 structure PrimitiveLaws where

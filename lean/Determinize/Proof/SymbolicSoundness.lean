@@ -147,7 +147,18 @@ theorem domain_valueSet_convex (queryOp : Determinize.Spec.Paper.Op)
       · have bound := add_le_add (mul_le_mul_of_nonneg_left leftDomain.2 ha)
           (mul_le_mul_of_nonneg_left rightDomain.2 hb)
         simpa [hab] using bound
-  | discrete _ => trivial
+  | discrete arity =>
+      change Fin arity → Symbolic.Affine (n + 1) at queryAffineArgs
+      change Fin 0 → ℝ at queryGeneralArgs
+      simp only [Determinize.Spec.Paper.domain, Set.mem_ofPred_eq] at leftDomain rightDomain ⊢
+      simp only [Affine.eval_cons, smul_eq_mul] at leftDomain rightDomain ⊢
+      simp_rw [Affine.eval_cons_convexCombination _ environment left right a b hab]
+      refine ⟨fun i => add_nonneg (mul_nonneg ha (leftDomain.1 i))
+        (mul_nonneg hb (rightDomain.1 i)), ?_⟩
+      rw [Finset.sum_add_distrib, ← Finset.mul_sum, ← Finset.mul_sum]
+      have bound := add_le_add (mul_le_mul_of_nonneg_left leftDomain.2 ha)
+        (mul_le_mul_of_nonneg_left rightDomain.2 hb)
+      simpa [hab] using bound
 
 noncomputable def transitionPack (laws : Determinize.Proof.Paper.PrimitiveLaws)
     (op : Determinize.Spec.Paper.Op)
@@ -988,12 +999,42 @@ theorem symbolicReduce_targetRealize
   induction typed generalizing environment with
   | bvar hvar => simp [symbolicReduce, targetRealize, realize, Expr.determinize, Expr.determinize, reduce]
   | reject | «unit» => simp [symbolicReduce, targetRealize, realize, Expr.determinize, Expr.determinize, reduce]
-  | discrete =>
-      rename_i context' affinity d
-      cases affinity <;> simp [symbolicReduce, targetRealize, realize, Expr.determinize,
-        DistributionAction.determinize, reduce, discreteFiber_eq, Affine.eval_fresh]
-  | discreteMean =>
-      simp [symbolicReduce, targetRealize, realize, Expr.determinize, DistributionAction.determinize, discreteFiber_eq]
+  | discrete probabilitiesTyped ih =>
+      rename_i context' probabilities affinity
+      rw [realize, Expr.determinize, reduce, determinize_isValue, realize_isValue,
+        symbolicReduce.eq_def]
+      by_cases value : probabilities.isValue = true
+      · simp only [value, ↓reduceIte]
+        cases affinity with
+        | E =>
+            obtain ⟨coordinates, eq⟩ := wellTyped_list_value_affine probabilitiesTyped value
+            simp [eq, realListValue?_determinize, realListValue?_realize, targetRealize,
+              realize, Expr.determinize, DistributionAction.determinize, discreteFiber_eq,
+              Affine.eval_fresh]
+        | G =>
+            obtain ⟨constants, ceq, aeq⟩ := wellTyped_list_value_constant probabilitiesTyped value
+            simp [ceq, aeq, realListValue?_determinize, realListValue?_realize, targetRealize,
+              realize, Expr.determinize, DistributionAction.determinize, Function.comp_def]
+      · simp only [value, Bool.false_eq_true, ↓reduceIte]
+        rw [targetRealize_wrap
+          (ExprContext := fun next => .discrete (DistributionAction.sample affinity).determinize next)
+          (context_realize := by intros; simp only [realize, Expr.determinize])
+          (lifted_realize := by intros; simp only [realize, Expr.determinize]), ih environment]
+  | discreteMean probabilitiesTyped ih =>
+      rename_i context' probabilities affinity
+      rw [realize, Expr.determinize, reduce, determinize_isValue, realize_isValue,
+        symbolicReduce.eq_def]
+      by_cases value : probabilities.isValue = true
+      · simp only [value, ↓reduceIte]
+        obtain ⟨coordinates, eq⟩ := wellTyped_list_value_affine probabilitiesTyped value
+        simp [eq, realListValue?_determinize, realListValue?_realize, targetRealize,
+          realize, Expr.determinize, DistributionAction.determinize, discreteFiber_eq]
+      · simp only [value, Bool.false_eq_true, ↓reduceIte]
+        rw [targetRealize_wrap
+          (ExprContext := fun next => .discrete DistributionAction.mean.determinize next)
+          (context_realize := by intros; simp only [realize, Expr.determinize])
+          (lifted_realize := by intros; simp only [realize, Expr.determinize]), ih environment]
+
   | bool => simp [symbolicReduce, targetRealize, realize, Expr.determinize, Expr.determinize, reduce]
   | realE => simp [symbolicReduce, targetRealize, realize, Expr.determinize, Expr.determinize, reduce]
   | realG => simp [symbolicReduce, targetRealize, realize, Expr.determinize, Expr.determinize, reduce]

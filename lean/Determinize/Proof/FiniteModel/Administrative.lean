@@ -153,4 +153,11 @@ theorem exponential_setup (kind : DistributionAction) (argument : Core)
   refine ⟨rfl, ?_⟩
   simp [stateExpr, stackExpr, frameExpr, primitiveExpr, close, interpret, Expr.mapLiteral, Expr.mapVars]
 
+theorem discrete_setup (kind : DistributionAction) (probabilities : Core)
+    (environment : List Value) (stack : List Frame) :
+    AdministrativeStep .evaluate (.eval (.discrete kind probabilities) environment stack)
+      (.eval probabilities environment (.discrete kind :: stack)) := by
+  refine ⟨rfl, ?_⟩
+  simp [stateExpr, stackExpr, frameExpr, close, interpret, Expr.mapLiteral, Expr.mapVars]
+
 end Determinize.Proof.FiniteModel

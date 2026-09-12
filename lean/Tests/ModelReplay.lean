@@ -21,7 +21,9 @@ def modelReplay : IO Unit := do
       "0.1 + 0.2", "let x = 4 in (fun y => x + y) 3",
       "let f = rec f x => f x in f 0",
       "let f = rec f x => if flip(0.5) then 3 else f x in f 0",
-      "discrete[G](0,0.25,0,0.75)", "bernoulli[G](0)", "bernoulli[G](1)",
+      "discrete[G](0,0.25,0,0.75)", "discrete[E](*)",
+      "let p = bernoulli[E](0.5) in discrete[E](p/2,0.25,*)",
+      "let f = fun p => p :: 0.25 :: [] in discrete_list[E](f 0.25)", "bernoulli[G](0)", "bernoulli[G](1)",
       "let _ = observe(flip(0.5)) in 3",
       "match 2::[] with [] => 0 | x::xs => x",
       "let fact = rec f n => if n < 1 then 1 else n * f (n-1) in fact 4"] do

@@ -111,12 +111,26 @@ type. Typing does not establish domain safety. Determinization changes an E draw
 to a mean site with the same probability expression. `flip(p)` lowers to a G-affinity
 Bernoulli comparison and therefore returns a Boolean; `flip[E]` is rejected.
 
-`discrete[E](w0,...,wn)` and `discrete[G](w0,...,wn)` require nonnegative literal
-rational probabilities whose exact sum is one, matching the domain on `main`. Core terms store the checked probabilities
-for numeric outcomes `0,...,n`, including zero-weight positions. Determinization
-changes an E draw to a mean site with the same distribution. Its result is the
-weighted outcome index. Omitted affinities use ordinary affinity inference. Pretty printing
-prints probabilities directly, preserving the unit-sum domain when reparsed.
+`discrete[E](p0,...,pn,*)` supplies probabilities for outcomes `0,...,n`;
+the final outcome `n+1` has the remaining probability `1 - (p0 + ... + pn)`.
+The supplied probabilities may be computed expressions. They must be nonnegative
+and sum to at most one. `discrete[E](*)` always returns zero.
+`discrete_list[E](ps)` takes an ordinary list expression with the same implied-final-probability
+convention. G sampling requires G elements; E sampling accepts E elements.
+The mean is affine in the supplied probabilities, and determinization recursively
+transforms the operand before computing this mean.
+
+The formal semantics uses exact reals and returns zero mass outside the domain.
+Exact execution completes the rational list and checks it with `FiniteDistribution`;
+certificates retain exact arithmetic. Float execution permits accumulation rounding
+at the upper boundary (eight machine epsilons per supplied probability plus one),
+clamps a slightly negative remainder to zero for its mean, and samples with cumulative
+thresholds, falling through to the final outcome. This numerical approximation is
+outside the theorem. Probabilities are not normalized by their sum.
+
+The existing `discrete[E](p0,...,pn)` form still requires literal rational probabilities
+summing exactly to one. It lowers to the new representation without changing its
+outcomes. Pretty printing uses `discrete_list` to preserve arbitrary list operands.
 
 `observe(c)` lowers to `if c then () else reject`. The explicit core rejection term
 has zero output mass: formally it is an absorbing non-value, as proved in

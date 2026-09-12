@@ -1,5 +1,5 @@
 import Determinize.Proof.FiniteModel.Contexts
-import Determinize.Proof.FiniteDistributionMeasure
+import Determinize.Proof.DiscreteRational
 
 namespace Determinize.Proof.FiniteModel
 open Spec.Paper Spec.FiniteModel Determinize.Finite MeasureTheory
@@ -46,17 +46,6 @@ theorem bernoulli_stochastic_matches {affinity : Affinity} (p : Rat) (nonnegativ
   · simp
   · simp [primitiveExpr, reduce, Expr.isValue, realValue?, bernoulliFiber, h0, h1, outcomeMeasure]
 
-theorem discrete_stochastic_matches {affinity : Affinity} (d : Spec.Paper.FiniteDistribution) :
-    FiniteLawMatches (.discrete d) (.sample affinity) []
-      (d.probabilities.zipIdx.map fun (p,i) => (p, (i : Rat))) := by
-  refine ⟨?_, ?_, ?_⟩
-  · intro outcome member
-    obtain ⟨entry, entryMember, rfl⟩ := List.mem_map.mp member
-    exact d.nonnegative _ (List.fst_mem_of_mem_zipIdx entryMember)
-  · simpa [List.map_map, Function.comp_def, List.zipIdx_map_fst] using d.total
-  · simp [primitiveExpr, reduce, discreteFiber, Spec.Paper.FiniteDistribution.measure,
-      outcomeMeasure, List.map_map, Function.comp_def]
-
 theorem bernoulli_mean_matches (p : Rat) (nonnegative : 0 ≤ p) (bounded : p ≤ 1) :
     FiniteLawMatches .bernoulli .mean [p] [(1,p)] := by
   apply singleton_matches
@@ -64,10 +53,43 @@ theorem bernoulli_mean_matches (p : Rat) (nonnegative : 0 ≤ p) (bounded : p �
   have h1 : (p : ℝ) ≤ 1 := by exact_mod_cast bounded
   simp [primitiveExpr, reduce, Expr.isValue, realValue?, bernoulliFiber, h0, h1]
 
-theorem discrete_mean_matches (d : Spec.Paper.FiniteDistribution) :
-    FiniteLawMatches (.discrete d) .mean [] [(1,d.mean)] := by
+theorem realListValue?_fold (p : List Rat) :
+    realListValue? ((p.map fun q => .real (q : ℝ)).foldr Expr.cons .nil) = some (p.map Rat.cast) := by
+  induction p <;> simp_all [realListValue?, realValue?]
+
+theorem isValue_list_fold (p : List Rat) :
+    ((p.map fun q => .real (q : ℝ)).foldr Expr.cons .nil).isValue = true := by
+  induction p <;> simp_all [Expr.isValue]
+
+theorem discrete_stochastic_matches (affinity : Affinity) (p : List Rat)
+    (d : Spec.Paper.FiniteDistribution) (completed : d.probabilities = p ++ [1 - p.sum]) :
+    FiniteLawMatches (.discrete p.length) (.sample affinity) p
+      (d.probabilities.zipIdx.map fun (p,i) => (p, (i : Rat))) := by
+  refine ⟨?_, ?_, ?_⟩
+  · intro outcome member
+    obtain ⟨entry, entryMember, rfl⟩ := List.mem_map.mp member
+    exact d.nonnegative _ (List.fst_mem_of_mem_zipIdx entryMember)
+  · simpa [List.map_map, Function.comp_def, List.zipIdx_map_fst] using d.total
+  · simp only [primitiveExpr, reduce, isValue_list_fold, ↓reduceIte, realListValue?_fold,
+      List.length_map, DiscreteLaws.completed_sample affinity p d completed]
+    simp [Spec.Paper.FiniteDistribution.measure, outcomeMeasure, List.map_map, Function.comp_def]
+
+theorem discrete_mean_matches (p : List Rat) (d : Spec.Paper.FiniteDistribution)
+    (completed : d.probabilities = p ++ [1 - p.sum]) :
+    FiniteLawMatches (.discrete p.length) .mean p [(1,d.mean)] := by
   apply singleton_matches
-  simp [primitiveExpr, reduce, discreteFiber]
+  simp only [primitiveExpr, reduce, isValue_list_fold, ↓reduceIte, realListValue?_fold,
+    List.length_map, DiscreteLaws.completed_mean p d completed]
+
+theorem remainderDistribution_probabilities (p : List Rat) (d : Spec.Paper.FiniteDistribution)
+    (checked : Checking.remainderDistribution p = .ok d) :
+    d.probabilities = p ++ [1 - p.sum] := by
+  unfold Checking.remainderDistribution Checking.finiteDistribution at checked
+  split at checked
+  · split at checked
+    · cases checked; rfl
+    · cases checked
+  · cases checked
 
 theorem uniform_mean_matches (a b : Rat) (domain : a ≤ b) :
     FiniteLawMatches .uniform .mean [a,b] [(1,(a+b)/2)] := by
@@ -112,17 +134,35 @@ sampling measure. Unsupported or invalid calls cannot satisfy the premise. -/
 theorem finiteLaw_sound (op : Op) (kind : DistributionAction) (arguments : List Rat)
     (outcomes : List (Rat × Rat)) (success : finiteLaw op kind arguments = .ok outcomes) :
     FiniteLawMatches op kind arguments outcomes := by
-  cases op <;>
+  cases op with
+  | discrete n =>
+      by_cases arity : arguments.length = n
+      · cases checked : Checking.remainderDistribution arguments with
+        | error message => simp [finiteLaw, arity, checked, Except.mapError, bind, Except.bind] at success
+        | ok d =>
+            have completed := remainderDistribution_probabilities arguments d checked
+            subst n
+            cases kind with
+            | sample affinity =>
+                simp [finiteLaw, checked, Except.mapError, bind, Except.bind, pure, Except.pure] at success
+                subst outcomes
+                exact discrete_stochastic_matches affinity arguments d completed
+            | mean =>
+                simp [finiteLaw, checked, Except.mapError, bind, Except.bind, pure, Except.pure] at success
+                subst outcomes
+                exact discrete_mean_matches arguments d completed
+      · simp [finiteLaw, arity, bind, Except.bind, throw] at success
+  | _ =>
     rcases arguments with _ | ⟨a, _ | ⟨b, _ | ⟨c, rest⟩⟩⟩ <;>
-    cases kind <;>
-    simp only [finiteLaw, supportedDraw] at success
-  all_goals split_ifs at success <;> simp_all [pure, bind, Except.bind, Except.pure, throw]
-  all_goals subst outcomes
-  all_goals try { simpa only [one_div] using exponential_mean_matches a (by assumption) }
-  all_goals aesop (add safe apply [bernoulli_stochastic_matches, discrete_stochastic_matches,
-    bernoulli_mean_matches, discrete_mean_matches, uniform_mean_matches,
-    gaussian_mean_matches, poisson_mean_matches, exponential_mean_matches,
-    beta_mean_matches, gamma_mean_matches])
+      cases kind <;>
+      simp only [finiteLaw, supportedDraw] at success
+    all_goals split_ifs at success <;> simp_all [pure, bind, Except.bind, Except.pure, throw]
+    all_goals subst outcomes
+    all_goals try { simpa only [one_div] using exponential_mean_matches a (by assumption) }
+    all_goals aesop (add safe apply [bernoulli_stochastic_matches,
+      bernoulli_mean_matches, uniform_mean_matches,
+      gaussian_mean_matches, poisson_mean_matches, exponential_mean_matches,
+      beta_mean_matches, gamma_mean_matches])
 
 theorem finiteLaw_probability (op : Op) (kind : DistributionAction) (arguments : List Rat)
     (outcomes : List (Rat × Rat)) (success : finiteLaw op kind arguments = .ok outcomes) :
@@ -170,26 +210,31 @@ theorem draw_correspondence (site : DistributionAction × Op) (arguments : List 
     List.map_append, List.map_cons, List.map_nil] using
     finiteLaw_stack site (arguments ++ [x]) outcomes success stack shape
 
-theorem discrete_step (kind : DistributionAction) (d : FiniteDistribution)
-    (environment : List Value) (stack : List Frame) (outcomes : List (Rat × Rat))
-    (success : finiteLaw (.discrete d) kind [] = .ok outcomes) :
-    step (.eval (.discrete kind d) environment stack) =
-      .ok (.next (.sample (kind, .discrete d) [])
-        (outcomes.map fun (p,y) => (p, .deliver (.number y) stack))) := by
-  change (finiteLaw (.discrete d) kind [] >>= fun outcomes =>
-    pure (Step.next (.sample (kind, .discrete d) [])
-      (outcomes.map fun (p,y) => (p, .deliver (.number y) stack)))) = _
-  rw [success]
-  rfl
+theorem valueExpr_probabilities (value : Value) (p : List Rat)
+    (read : value.probabilities? = some p) :
+    valueExpr value = (p.map fun q => .real (q : ℝ)).foldr Expr.cons .nil := by
+  cases value with
+  | cons head tail =>
+      cases head <;> simp only [Value.probabilities?] at read <;> try contradiction
+      cases tailEq : tail.probabilities? with
+      | none => simp [tailEq] at read
+      | some ps =>
+          simp [tailEq] at read
+          subst p
+          simp [valueExpr, valueExpr_probabilities tail ps tailEq]
+  | nil => cases read; simp [valueExpr]
+  | _ => cases read
+termination_by sizeOf value
 
-theorem discrete_correspondence (kind : DistributionAction) (d : FiniteDistribution)
-    (environment : List Value) (stack : List Frame) (outcomes : List (Rat × Rat))
-    (success : finiteLaw (.discrete d) kind [] = .ok outcomes)
+theorem discrete_correspondence (kind : DistributionAction) (value : Value) (p : List Rat)
+    (read : value.probabilities? = some p) (stack : List Frame) (outcomes : List (Rat × Rat))
+    (success : finiteLaw (.discrete p.length) kind p = .ok outcomes)
     (shape : ∀ frame ∈ stack, FrameShape frame) :
-    reduce (stateExpr (.eval (.discrete kind d) environment stack)) =
-      .sample (kind, .discrete d) (outcomeMeasure outcomes)
+    reduce (stateExpr (.deliver value (.discrete kind :: stack))) =
+      .sample (kind, .discrete p.length) (outcomeMeasure outcomes)
         (fun y => stackExpr stack (.real y)) := by
-  simpa [stateExpr, Binding.close, Checking.interpret, Expr.mapLiteral, Expr.mapVars,
-    primitiveExpr] using finiteLaw_stack (kind, .discrete d) [] outcomes success stack shape
+  simpa only [stateExpr, stackExpr, List.foldl_cons, frameExpr,
+    valueExpr_probabilities value p read, primitiveExpr] using
+    finiteLaw_stack (kind, .discrete p.length) p outcomes success stack shape
 
 end Determinize.Proof.FiniteModel

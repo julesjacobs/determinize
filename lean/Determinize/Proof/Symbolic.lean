@@ -43,7 +43,7 @@ inductive AffineExpr (sampleCount : Nat) where
   | uniform (kind : DistributionAction) (lower upper : AffineExpr sampleCount)
   | gaussian (kind : DistributionAction) (mean variance : AffineExpr sampleCount)
   | poisson (kind : DistributionAction) (rate : AffineExpr sampleCount)
-  | discrete (kind : DistributionAction) (distribution : FiniteDistribution)
+  | discrete (kind : DistributionAction) (probabilities : AffineExpr sampleCount)
   | bernoulli (kind : DistributionAction) (probability : AffineExpr sampleCount)
   | exponential (kind : DistributionAction) (rate : AffineExpr sampleCount)
   | beta (kind : DistributionAction) (alpha beta : AffineExpr sampleCount)
@@ -83,7 +83,7 @@ def realize (environment : Env sampleCount) : AffineExpr sampleCount → Expr
   | .bvar index => .bvar index
   | .unit => .unit
   | .reject => .reject
-  | .discrete kind d => .discrete kind d
+  | .discrete kind d => .discrete kind (d.realize environment)
   | .bool value => .bool value
   | .real value => .real (value.eval environment)
   | .lam body => .lam (body.realize environment)
@@ -136,7 +136,7 @@ def skeleton : AffineExpr sampleCount → Skeleton
   | .bvar index => .bvar index
   | .unit => .unit
   | .reject => .reject
-  | .discrete kind d => .discrete kind d
+  | .discrete kind d => .discrete kind d.skeleton
   | .bool value => .bool value
   | .real _ => .real
   | .lam body => .lam body.skeleton
@@ -185,7 +185,7 @@ def coordinates : AffineExpr sampleCount → List (Affine sampleCount)
   | .letE value body => value.coordinates ++ body.coordinates
   | .uniform _ left right | .gaussian _ left right | .beta _ left right
   | .gamma _ left right => left.coordinates ++ right.coordinates
-  | .poisson _ body | .bernoulli _ body | .exponential _ body => body.coordinates
+  | .poisson _ body | .bernoulli _ body | .exponential _ body | .discrete _ body => body.coordinates
   | _ => []
 
 /-- Embed a source program, every literal becoming a constant affine form (`realize_ofExpr`). -/
@@ -193,7 +193,7 @@ def ofExpr : Expr → AffineExpr 0
   | .bvar index => .bvar index
   | .unit => .unit
   | .reject => .reject
-  | .discrete kind d => .discrete kind d
+  | .discrete kind d => .discrete kind (ofExpr d)
   | .bool value => .bool value
   | .real value => .real (value, Fin.elim0)
   | .lam body => .lam (ofExpr body)
@@ -231,7 +231,7 @@ def mapAffine (transform : Affine n → Affine m) : AffineExpr n → AffineExpr 
   | .bvar index => .bvar index
   | .unit => .unit
   | .reject => .reject
-  | .discrete kind d => .discrete kind d
+  | .discrete kind d => .discrete kind (d.mapAffine transform)
   | .bool value => .bool value
   | .real value => .real (transform value)
   | .lam body => .lam (body.mapAffine transform)
@@ -353,7 +353,8 @@ inductive WellTyped : List Ty → AffineExpr sampleCount → Ty → Prop
       WellTyped context (.gaussian (.sample affinity) mean spread) (.float affinity)
   | poisson : WellTyped context rate (.float affinity) →
       WellTyped context (.poisson (.sample affinity) rate) (.float affinity)
-  | discrete : WellTyped context (.discrete (.sample affinity) d) (.float affinity)
+  | discrete : WellTyped context probabilities (.list (.float affinity)) →
+      WellTyped context (.discrete (.sample affinity) probabilities) (.float affinity)
   | bernoulli : WellTyped context probability (.float affinity) →
       WellTyped context (.bernoulli (.sample affinity) probability) (.float affinity)
   | exponential : WellTyped context rate (.float .G) →
@@ -368,7 +369,8 @@ inductive WellTyped : List Ty → AffineExpr sampleCount → Ty → Prop
       WellTyped context (.gaussian .mean mean spread) (.float affinity)
   | poissonMean : WellTyped context rate (.float affinity) →
       WellTyped context (.poisson .mean rate) (.float affinity)
-  | discreteMean : WellTyped context (.discrete .mean d) (.float affinity)
+  | discreteMean : WellTyped context probabilities (.list (.float affinity)) →
+      WellTyped context (.discrete .mean probabilities) (.float affinity)
   | bernoulliMean : WellTyped context probability (.float affinity) →
       WellTyped context (.bernoulli .mean probability) (.float affinity)
   | exponentialMean : WellTyped context rate (.float .G) →
@@ -385,8 +387,8 @@ theorem WellTyped.realize_typed {sampleCount : Nat} {expression : AffineExpr sam
   induction typed <;> try simp only [realize]
   case bvar hvar => exact Determinize.Spec.Paper.Typed.bvar hvar
   case reject => exact Determinize.Spec.Paper.Typed.reject
-  case discrete => exact Determinize.Spec.Paper.Typed.discrete
-  case discreteMean => exact Determinize.Spec.Paper.Typed.discreteMean
+  case discrete h => exact Determinize.Spec.Paper.Typed.discrete h
+  case discreteMean h => exact Determinize.Spec.Paper.Typed.discreteMean h
   case «unit» => exact Determinize.Spec.Paper.Typed.unit
   case bool => exact Determinize.Spec.Paper.Typed.bool
   case realE => exact Determinize.Spec.Paper.Typed.real
@@ -458,7 +460,7 @@ def shift (amount cutoff : Nat) : AffineExpr sampleCount → AffineExpr sampleCo
   | .bvar index => .bvar (if cutoff ≤ index then index + amount else index)
   | .unit => .unit
   | .reject => .reject
-  | .discrete kind d => .discrete kind d
+  | .discrete kind d => .discrete kind (d.shift amount cutoff)
   | .bool value => .bool value
   | .real value => .real value
   | .lam body => .lam (body.shift amount (cutoff + 1))
@@ -499,7 +501,7 @@ def substAt (depth : Nat) (replacement : AffineExpr sampleCount)
       else .bvar (if depth < index then index - 1 else index)
   | .unit => .unit
   | .reject => .reject
-  | .discrete kind d => .discrete kind d
+  | .discrete kind d => .discrete kind (substAt depth replacement d)
   | .bool value => .bool value
   | .real value => .real value
   | .lam body => .lam (substAt (depth + 1) replacement body)
@@ -554,8 +556,12 @@ theorem wellTyped_shift (h : WellTyped (before ++ suffix) expression ty) :
       rw [shift]
       exact .bvar (Typing.hasVar_shift hvar)
   | reject => rw [shift]; exact .reject
-  | discrete => rw [shift]; exact .discrete
-  | discreteMean => rw [shift]; exact .discreteMean
+  | discrete hv ih =>
+      rw [shift]
+      exact .discrete (ih (before := before) (suffix := suffix) hcontext)
+  | discreteMean hv ih =>
+      rw [shift]
+      exact .discreteMean (ih (before := before) (suffix := suffix) hcontext)
   | unit => rw [shift]; exact .unit
   | bool => rw [shift]; exact .bool
   | realE => rw [shift]; exact .realE
@@ -716,8 +722,12 @@ theorem wellTyped_substAt (h : WellTyped (before ++ binder :: suffix) expression
         rw [substAt, if_neg notEqual]
         exact .bvar shifted
   | reject => rw [substAt]; exact .reject
-  | discrete => rw [substAt]; exact .discrete
-  | discreteMean => rw [substAt]; exact .discreteMean
+  | discrete hv ih =>
+      rw [substAt]
+      exact .discrete (ih replacementTyped (before := before) (suffix := suffix) hcontext)
+  | discreteMean hv ih =>
+      rw [substAt]
+      exact .discreteMean (ih replacementTyped (before := before) (suffix := suffix) hcontext)
   | unit => rw [substAt]; exact .unit
   | bool => rw [substAt]; exact .bool
   | realE => rw [substAt]; exact .realE
@@ -1036,6 +1046,43 @@ noncomputable def constantValue? : AffineExpr n → Option ℝ
   | .real (constant, coefficients) => if coefficients = 0 then some constant else none
   | _ => none
 
+/-- The affine coordinates of a list value of reals, a cons-chain of `real` ending in `nil`:
+the symbolic counterpart of `realListValue?`. -/
+def affineListValue? : AffineExpr n → Option (List (Affine n))
+  | .nil => some []
+  | .cons head tail =>
+      match head.affineValue?, affineListValue? tail with
+      | some coordinate, some coordinates => some (coordinate :: coordinates)
+      | _, _ => none
+  | _ => none
+
+/-- The constants of a list value of general-affinity reals, the counterpart of `constantValue?`. -/
+noncomputable def constantListValue? : AffineExpr n → Option (List ℝ)
+  | .nil => some []
+  | .cons head tail =>
+      match head.constantValue?, constantListValue? tail with
+      | some constant, some constants => some (constant :: constants)
+      | _, _ => none
+  | _ => none
+
+/-- Realization evaluates the coordinates of a list value pointwise. -/
+theorem realListValue?_realize (expression : AffineExpr n) (environment : Env n) :
+    realListValue? (expression.realize environment) =
+      (affineListValue? expression).map (List.map (Symbolic.Affine.eval · environment)) := by
+  induction expression with
+  | cons head tail _ ih =>
+      cases tailEq : affineListValue? tail <;> cases head <;>
+        simp [realize, realListValue?, realValue?, affineListValue?, affineValue?, ih, tailEq]
+  | _ => simp [realize, realListValue?, affineListValue?]
+
+/-- The arity a `discrete` site reads off the skeleton of its weights is the length of their
+affine coordinate list. -/
+theorem skeleton_literalListArity? (expression : AffineExpr n) :
+    expression.skeleton.literalListArity? = (affineListValue? expression).map List.length := by
+  rw [← expression.realize_skeleton (fun _ => 0), Expr.literalListArity?_skeleton,
+    ← realListValue?_map_length, realListValue?_realize, Option.map_map]
+  cases affineListValue? expression <;> simp
+
 theorem wellTyped_arr_value_typed (typed : WellTyped context expression (.arr argument result))
     (value : expression.isValue = true) :
     (∃ a r body, expression = .lam body ∧ Ty.Sub argument a ∧ Ty.Sub r result ∧
@@ -1163,6 +1210,40 @@ theorem constantValue?_eq_some_of_wellTypedG
   rcases affine with ⟨constantTerm, coefficients⟩
   have constant : coefficients = 0 := wellTyped_realG_coefficients typed
   exact ⟨constantTerm, by simp [constantValue?, constant]⟩
+
+/-- A list value of floats is a cons-chain of `real` coordinates. -/
+theorem wellTyped_list_value_affine {expression : AffineExpr n}
+    (typed : WellTyped context expression (.list (.float affinity)))
+    (value : expression.isValue = true) :
+    ∃ coordinates, affineListValue? expression = some coordinates := by
+  induction expression with
+  | nil => exact ⟨[], rfl⟩
+  | cons head tail _ ih =>
+      obtain ⟨headTyped, tailTyped⟩ := wellTyped_cons_inv typed
+      simp only [isValue, Bool.and_eq_true] at value
+      obtain ⟨coordinate, rfl⟩ := wellTyped_real_value headTyped value.1
+      obtain ⟨coordinates, tailEq⟩ := ih tailTyped value.2
+      exact ⟨coordinate :: coordinates, by simp [affineListValue?, affineValue?, tailEq]⟩
+  | _ => obtain eq | ⟨_, _, eq, _⟩ := wellTyped_list_value_typed typed value <;> cases eq
+
+/-- A list value of general-affinity floats has constant coordinates. -/
+theorem wellTyped_list_value_constant {expression : AffineExpr n}
+    (typed : WellTyped context expression (.list (.float .G)))
+    (value : expression.isValue = true) :
+    ∃ constants : List ℝ, constantListValue? expression = some constants ∧
+      affineListValue? expression = some (constants.map fun constant => (constant, 0)) := by
+  induction expression with
+  | nil => exact ⟨[], rfl, rfl⟩
+  | cons head tail _ ih =>
+      obtain ⟨headTyped, tailTyped⟩ := wellTyped_cons_inv typed
+      simp only [isValue, Bool.and_eq_true] at value
+      obtain ⟨coordinate, rfl⟩ := wellTyped_real_value headTyped value.1
+      rcases coordinate with ⟨constant, coefficients⟩
+      obtain rfl : coefficients = 0 := wellTyped_realG_coefficients headTyped
+      obtain ⟨constants, constantEq, affineEq⟩ := ih tailTyped value.2
+      exact ⟨constant :: constants, by simp [constantListValue?, constantValue?, constantEq],
+        by simp [affineListValue?, affineValue?, affineEq]⟩
+  | _ => obtain eq | ⟨_, _, eq, _⟩ := wellTyped_list_value_typed typed value <;> cases eq
 
 noncomputable def Affine.mul? (left right : Affine n) : Option (Affine n) :=
   if right.2 = 0 then some (right.1 • left)
@@ -1536,12 +1617,21 @@ noncomputable def symbolicReduce : AffineExpr n → SymbolicAction n
                 (fun value => .real (value, 0))
           | none => .stuck
       else (symbolicReduce rate).wrap (.poisson kind) (.poisson kind)
-  | .discrete kind d =>
-      match kind with
-      | .sample .E => .sampleE (.discrete d) [] [] (.real (Affine.fresh n))
-      | .mean => .mean (.discrete d) [] [] .real
-      | _ => .sampleG (kind, .discrete d) (discreteFiber kind d)
-          (fun value => .real (value, 0))
+  | .discrete kind probabilities =>
+      if probabilities.isValue then match kind with
+        | .sample .E => match probabilities.affineListValue? with
+          | some coordinates =>
+              .sampleE (.discrete coordinates.length) coordinates [] (.real (Affine.fresh n))
+          | none => .stuck
+        | .mean => match probabilities.affineListValue? with
+          | some coordinates => .mean (.discrete coordinates.length) coordinates [] .real
+          | none => .stuck
+        | .sample .G => match probabilities.constantListValue? with
+          | some constants =>
+              .sampleG (kind, .discrete constants.length) (discreteFiber kind constants)
+                (fun value => .real (value, 0))
+          | none => .stuck
+      else (symbolicReduce probabilities).wrap (.discrete kind) (.discrete kind)
   | .bernoulli kind probability =>
       if probability.isValue then match kind with
         | .sample .E => match probability.affineValue? with
@@ -1830,12 +1920,38 @@ theorem symbolicReduce_realize
   induction typed generalizing environment with
   | bvar hvar => simp [symbolicReduce, SymbolicAction.realize, realize, reduce]
   | reject | «unit» => simp [symbolicReduce, SymbolicAction.realize, realize, reduce]
-  | discrete =>
-      rename_i context' affinity d
-      cases affinity <;> simp [symbolicReduce, SymbolicAction.realize, realize, reduce,
-        discreteFiber_eq, Affine.eval_fresh]
-  | discreteMean =>
-      simp [symbolicReduce, SymbolicAction.realize, realize, discreteFiber_eq]
+  | discrete probabilitiesTyped ih =>
+      rename_i context' probabilities affinity
+      rw [realize, reduce, realize_isValue, symbolicReduce.eq_def]
+      by_cases value : probabilities.isValue = true
+      · simp only [value, ↓reduceIte]
+        cases affinity with
+        | E =>
+            obtain ⟨coordinates, eq⟩ := wellTyped_list_value_affine probabilitiesTyped value
+            simp [eq, realListValue?_realize, SymbolicAction.realize, realize,
+              discreteFiber_eq, Affine.eval_fresh]
+        | G =>
+            obtain ⟨constants, ceq, aeq⟩ := wellTyped_list_value_constant probabilitiesTyped value
+            simp [ceq, aeq, realListValue?_realize, SymbolicAction.realize, realize,
+              Function.comp_def]
+      · simp only [value, Bool.false_eq_true, ↓reduceIte]
+        rw [SymbolicAction.realize_wrap
+          (ExprContext := fun next => .discrete (.sample affinity) next)
+          (context_realize := by intros; simp only [realize])
+          (lifted_realize := by intros; simp only [realize]), ih environment]
+  | discreteMean probabilitiesTyped ih =>
+      rename_i context' probabilities affinity
+      rw [realize, reduce, realize_isValue, symbolicReduce.eq_def]
+      by_cases value : probabilities.isValue = true
+      · simp only [value, ↓reduceIte]
+        obtain ⟨coordinates, eq⟩ := wellTyped_list_value_affine probabilitiesTyped value
+        simp [eq, realListValue?_realize, SymbolicAction.realize, realize, discreteFiber_eq]
+      · simp only [value, Bool.false_eq_true, ↓reduceIte]
+        rw [SymbolicAction.realize_wrap
+          (ExprContext := fun next => .discrete .mean next)
+          (context_realize := by intros; simp only [realize])
+          (lifted_realize := by intros; simp only [realize]), ih environment]
+
   | bool => simp [symbolicReduce, SymbolicAction.realize, realize, reduce]
   | realE => simp [symbolicReduce, SymbolicAction.realize, realize, reduce]
   | realG => simp [symbolicReduce, SymbolicAction.realize, realize, reduce]
@@ -3291,17 +3407,49 @@ theorem symbolicReduce_wellTyped
         (fun next nextTyped => .inr nextTyped)
   case bvar hvar => cases hcontext; cases hvar
   case reject => simp only [symbolicReduce]; exact .next .reject
-  case discrete affinity d =>
-    cases affinity <;> simp only [symbolicReduce]
-    · exact .sampleE rfl rfl .realE
-    · exact .sampleG fun _ => .realG rfl
-  case discreteMean d affinity =>
+  case discrete probabilities affinity probabilitiesTyped ih =>
+    cases hcontext
     simp only [symbolicReduce]
-    refine .mean rfl rfl ?_ (by intros; simp [realize])
-    cases affinity
-    · exact .realE
-    · apply AffineExpr.WellTyped.realG
-      simp [meanAffine, Affine.primitiveMean, affineArity, Pi.zero_def]
+    by_cases value : probabilities.isValue = true
+    · simp only [value, ↓reduceIte]
+      cases affinity with
+      | E =>
+          obtain ⟨coordinates, eq⟩ := wellTyped_list_value_affine probabilitiesTyped value
+          simp only [eq]
+          exact .sampleE rfl rfl .realE
+      | G =>
+          obtain ⟨constants, ceq, _⟩ := wellTyped_list_value_constant probabilitiesTyped value
+          simp only [ceq]
+          exact .sampleG fun _ => .realG rfl
+    · simp only [value, Bool.false_eq_true, ↓reduceIte]
+      exact (ih rfl).wrap (fun _ h => .discrete h) (fun _ h => .discrete h)
+  case discreteMean probabilities affinity probabilitiesTyped ih =>
+    cases hcontext
+    simp only [symbolicReduce]
+    by_cases value : probabilities.isValue = true
+    · simp only [value, ↓reduceIte]
+      cases affinity with
+      | E =>
+          obtain ⟨coordinates, eq⟩ := wellTyped_list_value_affine probabilitiesTyped value
+          simp only [eq]
+          exact .mean rfl rfl .realE (by intros; simp [realize])
+      | G =>
+          obtain ⟨constants, _, aeq⟩ := wellTyped_list_value_constant probabilitiesTyped value
+          simp only [aeq]
+          refine .mean rfl rfl ?_ (by intros; simp [realize])
+          apply AffineExpr.WellTyped.realG
+          have zero (i : Nat) :
+              ((constants.map (fun c => (c, (0 : Fin n → ℝ)))).getD i (0 : Affine n)).2 = 0 := by
+            simp only [List.getD_eq_getElem?_getD, List.getElem?_map]
+            cases constants[i]? <;> rfl
+          simp only [meanAffine, Affine.primitiveMean]
+          funext j
+          apply Finset.sum_eq_zero
+          intro i _
+          rw [zero]
+          simp
+    · simp only [value, Bool.false_eq_true, ↓reduceIte]
+      exact (ih rfl).wrap (fun _ h => .discreteMean h) (fun _ h => .discreteMean h)
   case unit => simp only [symbolicReduce]; exact .next .unit
   case bool => simp only [symbolicReduce]; exact .next .bool
   case realE => simp only [symbolicReduce]; exact .next .realE

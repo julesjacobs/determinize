@@ -44,7 +44,10 @@ def generationOp : Skeleton → Option Op
       if l.isValue then if r.isValue then siteOp (kind, .gaussian) else generationOp r
       else generationOp l
   | .poisson kind x => if x.isValue then siteOp (kind, .poisson) else generationOp x
-  | .discrete kind d => siteOp (kind, .discrete d)
+  | .discrete kind probabilities =>
+      if probabilities.isValue then
+        probabilities.literalListArity?.bind (fun n => siteOp (kind, .discrete n))
+      else generationOp probabilities
   | .bernoulli kind x => if x.isValue then siteOp (kind, .bernoulli) else generationOp x
   | .exponential kind x =>
       if x.isValue then siteOp (kind, .exponential) else generationOp x
@@ -92,7 +95,8 @@ theorem reduce_site {expression : Expr} {site : DistributionAction × Op} {fiber
   cases expression <;> rw [reduce.eq_def] at reduction
   all_goals dsimp only at reduction
   all_goals repeat' first | contradiction | split at reduction
-  all_goals simp_all only [Expr.skeleton, generationOp,
+  all_goals simp_all only [Expr.skeleton, generationOp, Expr.literalListArity?_skeleton,
+    ← realListValue?_map_length, Option.map_some, Option.bind_some,
     ← isValue_eq_skeletonIsValue, ↓reduceIte]
   all_goals first
     | (cases reduction; rfl)

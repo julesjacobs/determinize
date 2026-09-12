@@ -153,9 +153,21 @@ theorem symbolic_generationDraw
         simp [affineValue?, siteOp]
       · simp only [rateValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
         exact ih
-  | discrete =>
-      rename_i context' affinity d
-      cases affinity <;> simp [AffineExpr.skeleton, generationOp, symbolicReduce, siteOp]
+  | discrete probabilitiesTyped ih =>
+      rename_i context' probabilities affinity
+      simp only [AffineExpr.skeleton, generationOp, symbolic_skeleton_isValue,
+        skeleton_literalListArity?, symbolicReduce]
+      by_cases value : probabilities.isValue = true
+      · simp only [value, ↓reduceIte]
+        cases affinity with
+        | E =>
+            obtain ⟨coordinates, eq⟩ := wellTyped_list_value_affine probabilitiesTyped value
+            simp [eq, siteOp]
+        | G =>
+            obtain ⟨constants, ceq, aeq⟩ := wellTyped_list_value_constant probabilitiesTyped value
+            simp [ceq, aeq, siteOp]
+      · simpa [value, generationDraw_wrap] using ih
+
   | bernoulli probabilityTyped ih =>
       rename_i context' probability affinity
       simp only [AffineExpr.skeleton, generationOp, symbolic_skeleton_isValue]
@@ -299,7 +311,15 @@ theorem symbolic_generationDraw
           exact ihr
       · simp only [lowerValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
         exact ihl
-  | discreteMean => simp [AffineExpr.skeleton, generationOp, symbolicReduce, siteOp]
+  | discreteMean probabilitiesTyped ih =>
+      rename_i context' probabilities affinity
+      simp only [AffineExpr.skeleton, generationOp, symbolic_skeleton_isValue,
+        skeleton_literalListArity?, symbolicReduce]
+      by_cases value : probabilities.isValue = true
+      · simp only [value, ↓reduceIte]
+        obtain ⟨coordinates, eq⟩ := wellTyped_list_value_affine probabilitiesTyped value
+        simp [eq, siteOp]
+      · simpa [value, generationDraw_wrap] using ih
   | sub _ _ ih => exact ih
   | _ =>
       simp only [AffineExpr.skeleton, generationOp, symbolic_skeleton_isValue]
@@ -310,11 +330,16 @@ theorem symbolic_generationDraw
           generationDraw_stuck, Option.isSome_none] at *
       all_goals try simp_all [generationOp_symbolic_value]
 
+theorem literalListArity?_determinize_skeleton (expression : Expr) :
+    expression.determinize.skeleton.literalListArity? = expression.skeleton.literalListArity? := by
+  rw [Expr.literalListArity?_skeleton, Expr.literalListArity?_skeleton,
+    ← realListValue?_map_length, ← realListValue?_map_length, realListValue?_determinize]
+
 theorem generationOp_determinize (expression : Expr) :
     generationOp expression.determinize.skeleton = generationOp expression.skeleton := by
   fun_induction Expr.determinize expression <;>
     simp_all [Expr.skeleton, generationOp, ← isValue_eq_skeletonIsValue,
-      SymbolicSoundness.TargetSafety.determinize_isValue]
+      SymbolicSoundness.TargetSafety.determinize_isValue, literalListArity?_determinize_skeleton]
 
 end
 end Determinize.Proof.StepTraces

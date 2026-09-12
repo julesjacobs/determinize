@@ -62,8 +62,12 @@ theorem typed_shift (h : Typed (before ++ suffix) expression ty) :
       rw [Expr.shift, Expr.mapVars]
       exact .bvar (hasVar_shift hvar)
   | reject => rw [Expr.shift, Expr.mapVars]; exact .reject
-  | discrete => rw [Expr.shift, Expr.mapVars]; exact .discrete
-  | discreteMean => rw [Expr.shift, Expr.mapVars]; exact .discreteMean
+  | discrete hv ih =>
+      rw [Expr.shift, Expr.mapVars]
+      exact .discrete (ih (before := before) (suffix := suffix) hcontext)
+  | discreteMean hv ih =>
+      rw [Expr.shift, Expr.mapVars]
+      exact .discreteMean (ih (before := before) (suffix := suffix) hcontext)
   | unit => rw [Expr.shift, Expr.mapVars]; exact .unit
   | bool => rw [Expr.shift, Expr.mapVars]; exact .bool
   | real => rw [Expr.shift, Expr.mapVars]; exact .real
@@ -231,8 +235,12 @@ theorem typed_substAt (h : Typed (before ++ binder :: suffix) expression ty)
         rw [Expr.substAt, Expr.mapVars, if_neg notEqual]
         exact .bvar shifted
   | reject => rw [Expr.substAt, Expr.mapVars]; exact .reject
-  | discrete => rw [Expr.substAt, Expr.mapVars]; exact .discrete
-  | discreteMean => rw [Expr.substAt, Expr.mapVars]; exact .discreteMean
+  | discrete hv ih =>
+      rw [Expr.substAt, Expr.mapVars]
+      exact .discrete (ih replacementTyped (before := before) (suffix := suffix) hcontext)
+  | discreteMean hv ih =>
+      rw [Expr.substAt, Expr.mapVars]
+      exact .discreteMean (ih replacementTyped (before := before) (suffix := suffix) hcontext)
   | unit => rw [Expr.substAt, Expr.mapVars]; exact .unit
   | bool => rw [Expr.substAt, Expr.mapVars]; exact .bool
   | real => rw [Expr.substAt, Expr.mapVars]; exact .real
@@ -461,6 +469,21 @@ theorem typed_real_value (typed : Typed context expression (.float affinity))
     cases sub <;> cases ht <;> exact ih value rfl
   all_goals cases ht <;> simp_all [Expr.isValue]
 
+theorem typed_realList_value (typed : Typed context expression (.list (.float affinity)))
+    (value : expression.isValue = true) :
+    ∃ values, realListValue? expression = some values := by
+  induction expression with
+  | cons head tail _ ih =>
+      obtain impossible | ⟨h, t, eq, headTyped, tailTyped⟩ := typed_list_value typed value
+      · cases impossible
+      cases eq
+      simp only [Expr.isValue, Bool.and_eq_true] at value
+      obtain ⟨v, rfl⟩ := typed_real_value headTyped value.1
+      obtain ⟨vs, eq⟩ := ih tailTyped value.2
+      exact ⟨v :: vs, by simp [realListValue?, realValue?, eq]⟩
+  | nil => exact ⟨[], rfl⟩
+  | _ => obtain eq | ⟨_, _, eq, _⟩ := typed_list_value typed value <;> cases eq
+
 theorem reduce_typed_closed
     (typed : Typed [] expression ty) : ActionTyped ty (reduce expression) := by
   generalize hcontext : ([] : List Ty) = context at typed
@@ -469,8 +492,17 @@ theorem reduce_typed_closed
       rw [← hcontext] at hvar
       exact (noVar_nil hvar).elim
   | reject => rw [reduce]; exact .next .reject
-  | discrete => rw [reduce]; exact .sample fun _ => .real
-  | discreteMean => rw [reduce]; exact .sample fun _ => .real
+  | discrete probabilitiesTyped ih | discreteMean probabilitiesTyped ih =>
+      cases hcontext
+      rw [reduce]
+      split
+      · obtain ⟨values, eq⟩ := typed_realList_value probabilitiesTyped (by assumption)
+        simp only [eq]
+        exact .sample fun value => .real
+      · first
+        | exact (ih rfl).wrap fun next nextTyped => .discrete nextTyped
+        | exact (ih rfl).wrap fun next nextTyped => .discreteMean nextTyped
+
   | unit => rw [reduce]; exact .next .unit
   | bool => rw [reduce]; exact .next .bool
   | real => rw [reduce]; exact .next .real

@@ -25,7 +25,7 @@ inductive Input where
   | uniform (affinity : Option Affinity) (lower upper : Input)
   | gaussian (affinity : Option Affinity) (mean variance : Input)
   | poisson (affinity : Option Affinity) (rate : Input)
-  | discrete (affinity : Option Affinity) (distribution : FiniteDistribution)
+  | discrete (affinity : Option Affinity) (probabilities : Input)
   | bernoulli (affinity : Option Affinity) (probability : Input)
   | exponential (affinity : Option Affinity) (rate : Input)
   | beta (affinity : Option Affinity) (alpha beta : Input)

@@ -36,7 +36,7 @@ def sampleAffinities : Core → List Affinity
   | .uniform action lower upper => actionAffinities action ++ ((sampleAffinities lower) ++ (sampleAffinities upper))
   | .gaussian action mean variance => actionAffinities action ++ ((sampleAffinities mean) ++ (sampleAffinities variance))
   | .poisson action rate => actionAffinities action ++ ((sampleAffinities rate))
-  | .discrete action _ => actionAffinities action
+  | .discrete action p => actionAffinities action ++ sampleAffinities p
   | .bernoulli action probability => actionAffinities action ++ ((sampleAffinities probability))
   | .exponential action rate => actionAffinities action ++ ((sampleAffinities rate))
   | .beta action alpha betaArg => actionAffinities action ++ ((sampleAffinities alpha) ++ (sampleAffinities betaArg))
@@ -101,7 +101,7 @@ def Input.matches : Input → Core → Bool
   | .gamma requested shape rate, .gamma (.sample actual) shape' rate' =>
       (requested.isNone || requested == some actual) && shape.matches shape' && rate.matches rate'
   | .discrete requested distribution, .discrete (.sample actual) distribution' =>
-      (requested.isNone || requested == some actual) && decide (distribution = distribution')
+      (requested.isNone || requested == some actual) && distribution.matches distribution'
   | _, _ => false
 
 structure Certified (input : Input) where

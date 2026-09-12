@@ -1,0 +1,1 @@
+let p = uniform[E](0,1) in discrete[G](p,*)

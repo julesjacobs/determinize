@@ -76,7 +76,7 @@ def primitiveExpr {α : Type} (site : DistributionAction × Op) (arguments : Lis
   | .exponential, [a] => .exponential site.1 a
   | .beta, [a,b] => .beta site.1 a b
   | .gamma, [a,b] => .gamma site.1 a b
-  | .discrete d, [] => .discrete site.1 d
+  | .discrete _, probabilities => .discrete site.1 (probabilities.foldr Expr.cons .nil)
   | _, _ => .reject
 
 def frameExpr (frame : Frame) (hole : Expr) : Expr :=
@@ -94,6 +94,7 @@ def frameExpr (frame : Frame) (hole : Expr) : Expr :=
   | .matchList nilCase consCase environment =>
       .matchList hole (close (environmentExpr environment) 0 (interpret nilCase))
         (close (environmentExpr environment) 2 (interpret consCase))
+  | .discrete action => .discrete action hole
   | .draw site pending environment arguments =>
       primitiveExpr site (arguments.map (fun q => .real (q : ℝ)) ++
         hole :: pending.map (fun e => close (environmentExpr environment) 0 (interpret e)))

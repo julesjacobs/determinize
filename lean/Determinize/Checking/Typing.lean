@@ -154,12 +154,14 @@ def check (Γ : List Ty) (e : Core) (τ : Ty) (c : Certificate) :
   | .poisson .mean a, .float m, .node _ [ca] => do
       let ha ← check Γ a (.float m) ca
       return ⟨Typed.poissonMean ha.down⟩
-  | .discrete (.sample site) d, .float m, .node _ [] => do
+  | .discrete (.sample site) p, .float m, .node _ [cp] => do
       if h : site = m then
-        return ⟨by subst site; exact Typed.discrete⟩
+        let hp ← check Γ p (.list (.float m)) cp
+        return ⟨by subst site; exact Typed.discrete hp.down⟩
       else none
-  | .discrete .mean d, .float m, .node _ [] => do
-      return ⟨Typed.discreteMean⟩
+  | .discrete .mean p, .float m, .node _ [cp] => do
+      let hp ← check Γ p (.list (.float m)) cp
+      return ⟨Typed.discreteMean hp.down⟩
   | .bernoulli (.sample site) a, .float m, .node _ [ca] => do
       if h : site = m then
         let ha ← check Γ a (.float m) ca

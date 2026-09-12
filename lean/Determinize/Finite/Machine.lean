@@ -1,4 +1,5 @@
 import Determinize.Checking.Certificate
+import Determinize.Checking.FiniteDistribution
 import Determinize.Finite.Supported
 
 namespace Determinize.Finite
@@ -28,6 +29,7 @@ inductive Frame where
   | letBody (body : Core) (environment : List Value)
   | matchSum (left right : Core) (environment : List Value)
   | matchList (nilCase consCase : Core) (environment : List Value)
+  | discrete (action : DistributionAction)
   | draw (site : DistributionAction × Op) (pending : List Core)
       (environment : List Value) (arguments : List Rat)
 deriving Repr, BEq
@@ -68,6 +70,11 @@ deriving Repr
 /-- Exact finite laws. Operands have already been evaluated, left to right. -/
 def finiteLaw (op : Op) (kind : DistributionAction) (arguments : List Rat) :
     Except Failure (List (Rat × Rat)) := do
+  if let .discrete n := op then
+    unless arguments.length == n do throw (.invalid "primitive arity")
+    let d ← (remainderDistribution arguments).mapError Failure.invalid
+    if kind == .mean then return [(1, d.mean)]
+    return d.probabilities.zipIdx.map fun (p,i) => (p, (i : Rat))
   let mean ← match op, arguments with
     | .uniform, [a,b] =>
         if a ≤ b then pure ((a+b)/2) else throw (.invalid "uniform bounds")
@@ -83,14 +90,12 @@ def finiteLaw (op : Op) (kind : DistributionAction) (arguments : List Rat) :
         if 0 < a && 0 < b then pure (a/b) else throw (.invalid "gamma parameters")
     | .bernoulli, [p] =>
         if 0 ≤ p && p ≤ 1 then pure p else throw (.invalid "bernoulli probability")
-    | .discrete d, [] => pure d.mean
     | _, _ => throw (.invalid "primitive arity")
   unless supportedDraw kind op do
     throw (.unsupported s!"stochastic {reprStr op}")
   if kind == .mean then return [(1, mean)]
   match op, arguments with
   | .bernoulli, [p] => return [(1-p, 0), (p, 1)]
-  | .discrete d, [] => return d.probabilities.zipIdx.map fun (p,i) => (p, (i : Rat))
   | _, _ => throw (.unsupported s!"stochastic {reprStr op}")
 
 def draw (site : DistributionAction × Op) (arguments : List Rat) (stack : List Frame) :
@@ -119,6 +124,11 @@ def unary (op : Unary) (value : Value) : Except Failure Value :=
   | .inr, v => .ok (.inr v)
   | .neg, .number x => .ok (.number (-x))
   | _, _ => .error (.invalid "unary operand type")
+
+def Value.probabilities? : Value → Option (List Rat)
+  | .nil => some []
+  | .cons (.number p) tail => (Value.probabilities? tail).map (p :: ·)
+  | _ => none
 
 /-- One CEK transition; no Float arithmetic or numerical sampling is used. -/
 def step : State → Except Failure Step
@@ -158,7 +168,7 @@ def step : State → Except Failure Step
           let op := match expression with
             | .poisson .. => Op.poisson | .exponential .. => .exponential | _ => .bernoulli
           pure (.eval a environment (.draw (k, op) [] environment [] :: stack))
-      | .discrete k d => return ← draw (k, .discrete d) [] stack
+      | .discrete k p => pure (.eval p environment (.discrete k :: stack))
       return .next .evaluate [(1,state)]
   | .deliver value [] => match value with
       | .number reward => .ok (.returned reward)
@@ -180,6 +190,9 @@ def step : State → Except Failure Step
           | .nil => pure (.eval nilCase saved stack)
           | .cons head tail => pure (.eval consCase (head :: tail :: saved) stack)
           | _ => throw (.invalid "list match operand")
+      | .discrete action => match value.probabilities? with
+          | some probabilities => return ← draw (action, .discrete probabilities.length) probabilities stack
+          | none => throw (.invalid "expected a list of probabilities")
       | .draw site pending saved arguments => match value with
           | .number x => match pending with
               | [] => return ← draw site (arguments ++ [x]) stack

@@ -15,16 +15,16 @@ example (p : ℝ) (h : p < 0 ∨ 1 < p) :
   change ¬ (0 ≤ p ∧ p ≤ 1)
   rcases h with h | h <;> intro valid <;> linarith [valid.1, valid.2]
 
-example (d : FiniteDistribution) :
-    (∫ x, x ∂primitiveLaws.kernel (.discrete d) (Fin.elim0, Fin.elim0)) =
-      (d.mean : ℝ) :=
-  primitiveLaws.mean_law (.discrete d) _ trivial
+example (n : Nat) (p : Fin n → ℝ) (valid : (∀ i, 0 ≤ p i) ∧ ∑ i, p i ≤ 1) :
+    (∫ x, x ∂primitiveLaws.kernel (.discrete n) (p, Fin.elim0)) =
+      (n : ℝ) + ∑ i : Fin n, (((i : ℕ) : ℝ) - n) * p i :=
+  primitiveLaws.mean_law (.discrete n) _ valid
 
 example (kind : DistributionAction) : primitiveFiber kind .bernoulli [] [] = 0 := by
   cases kind <;> simp [primitiveFiber, parseParams]
 
-example (kind : DistributionAction) (d : FiniteDistribution) :
-    primitiveFiber kind (.discrete d) [1] [] = 0 := by
+example (kind : DistributionAction) :
+    primitiveFiber kind (.discrete 0) [1] [] = 0 := by
   cases kind <;> simp [primitiveFiber, parseParams]
 
 example (p : ℝ) (h : 0 ≤ p ∧ p ≤ 1) :
@@ -32,10 +32,10 @@ example (p : ℝ) (h : 0 ≤ p ∧ p ≤ 1) :
   rw [← bernoulliFiber_eq]
   simp [bernoulliFiber, h]
 
-example (d : FiniteDistribution) :
-    primitiveFiber .mean (.discrete d) [] [] = Measure.dirac (d.mean : ℝ) := by
-  rw [← discreteFiber_eq]
-  rfl
+example : primitiveFiber .mean (.discrete 2) [1/4, 1/4] [] = Measure.dirac (5/4) := by
+  norm_num [primitiveFiber, parseParams, domain, meanValue, Fin.sum_univ_two]
+
+example : discreteFiber .mean [] = Measure.dirac 0 := by simp [discreteFiber]
 
 #print axioms primitiveLaws
 #print axioms primitiveMomentBounds

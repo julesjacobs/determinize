@@ -35,18 +35,20 @@ def checking : IO Unit := do
   assert (!(certify coinInput coin.determinize coinEvidence).isSome)
     "Bernoulli mean accepted as a source draw"
   assert (!(check [] coin floatE (.node floatE [])).isSome) "omitted probability evidence accepted"
-  let d ← IO.ofExcept (finiteDistribution [1/6,1/3,1/2])
-  let changed ← IO.ofExcept (finiteDistribution [1/2,1/3,1/6])
+  let d : Core := .cons (.real (1/6)) (.cons (.real (1/3)) .nil)
+  let changed : Core := .cons (.real (1/2)) (.cons (.real (1/3)) .nil)
   let categorical : Core := .discrete (.sample .E) d
-  let categoricalInput : Input := .discrete (some .E) d
-  let categoricalEvidence : Certificate := .node floatE []
+  let categoricalInput : Input := .discrete (some .E) (.cons (.real (1/6)) (.cons (.real (1/3)) .nil))
+  let categoricalEvidence : Certificate := .node floatE
+    [.node (.list floatE) [.node floatE [],
+      .node (.list floatE) [.node floatE [], .node (.list floatE) []]]]
   assert ((certify categoricalInput categorical categoricalEvidence).isSome)
     "discrete certificate rejected"
   assert (!(certify categoricalInput (.discrete (.sample .E) changed)
     categoricalEvidence).isSome) "changed discrete weights accepted"
   assert (!(certify categoricalInput categorical.determinize categoricalEvidence).isSome)
     "discrete mean accepted as a source draw"
-  assert (!(certify (.discrete (some .G) d) categorical categoricalEvidence).isSome)
+  assert (!(certify (.discrete (some .G) (.cons (.real (1/6)) (.cons (.real (1/3)) .nil))) categorical categoricalEvidence).isSome)
     "discrete sampling affinity changed"
   let nestedInput : Input := .uniform (some .E)
     (.bernoulli (some .G) (.real (1/4))) (.real 1)

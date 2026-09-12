@@ -29,6 +29,15 @@ def realValue? : Expr → Option ℝ
   | .real value => some value
   | _ => none
 
+/-- Read an evaluated list of numeric probabilities. -/
+def realListValue? : Expr → Option (List ℝ)
+  | .nil => some []
+  | .cons head tail =>
+      match realValue? head, realListValue? tail with
+      | some value, some values => some (value :: values)
+      | _, _ => none
+  | _ => none
+
 /-- Conventional left-to-right call-by-value reduction, with values absorbing. -/
 noncomputable def reduce : Expr → Action
   | .bvar _ => .stuck
@@ -140,7 +149,11 @@ noncomputable def reduce : Expr → Action
         | some r => .sample (action, .poisson) (poissonFiber action r) .real
         | none => .stuck
       else (reduce rate).wrap (.poisson action)
-  | .discrete action d => .sample (action, .discrete d) (discreteFiber action d) .real
+  | .discrete action probabilities =>
+      if probabilities.isValue then match realListValue? probabilities with
+        | some values => .sample (action, .discrete values.length) (discreteFiber action values) .real
+        | none => .stuck
+      else (reduce probabilities).wrap (.discrete action)
   | .bernoulli action probability =>
       if probability.isValue then match realValue? probability with
         | some r => .sample (action, .bernoulli) (bernoulliFiber action r) .real

@@ -7,7 +7,7 @@ def mapVars (replace : Nat → Nat → Input) (depth : Nat) :
   | .bvar index => replace depth index
   | .unit => .unit
   | .reject => .reject
-  | .discrete affinity d => .discrete affinity d
+  | .discrete affinity d => .discrete affinity (d.mapVars replace depth)
   | .bool value => .bool value
   | .real value => .real value
   | .lam body => .lam (body.mapVars replace (depth + 1))

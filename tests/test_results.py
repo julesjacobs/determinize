@@ -13,6 +13,9 @@ import unittest
 from test_export import ROOT, LEAN, BIN, solve_export
 
 CASES = [
+    ("let p = bernoulli[E](0.5) in discrete[E](p/2,0.25,*)", "source", Fraction(5, 4)),
+    ("let p = bernoulli[E](0.5) in discrete[E](p/2,0.25,*)", "determinized", Fraction(5, 4)),
+    ("let ps = if flip(0.5) then [] else 0::[] in discrete_list[E](ps)", "source", Fraction(1, 2)),
     ("if flip(0.25) then 8 else -4", "source", Fraction(-1)),
     ("let _ = observe(flip(0.5)) in 3", "source", Fraction(3, 2)),
     ("let f = rec f x => if flip(0.5) then -3 else f x in f 0", "source", Fraction(-3)),
@@ -52,7 +55,7 @@ class ResultTests(unittest.TestCase):
                 self.assertGreater(Fraction(data["escape"]), 0)
 
     def test_kernel_results_and_tampering(self):
-        for program, subject, _ in CASES[:5]:
+        for program, subject, _ in CASES[:8]:
             with self.subTest(program=program), tempfile.TemporaryDirectory() as tmp:
                 result, prefix = generate(Path(tmp), program, subject)
                 self.assertEqual(result.returncode, 0, result.stderr)

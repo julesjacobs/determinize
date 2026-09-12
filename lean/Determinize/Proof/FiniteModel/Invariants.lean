@@ -58,7 +58,6 @@ theorem step_shape (before : State) (shape : StateShape before)
         | apply singleton_shape _ ?_ _ _ _ action _ _ member
           clear action member
           simp_all [StateShape, FrameShape, primitiveArity]
-      all_goals try exact draw_shape _ _ _ shape _ _ action _ _ member
   | deliver value stack =>
       cases stack with
       | nil => cases value <;> simp [step] at action
@@ -104,17 +103,5 @@ theorem reachable_draw_correspondence (source : Core) (subject : Subject)
   apply draw_correspondence site arguments x environment stack outcomes success
   have shape := program_reachable_shape source subject _ reachable
   exact fun frame member => shape frame (by simp [member])
-
-theorem reachable_discrete_correspondence (source : Core) (subject : Subject)
-    (kind : DistributionAction) (d : FiniteDistribution)
-    (environment : List Value) (stack : List Frame) (outcomes : List (Rat × Rat))
-    (reachable : MachineReachable (initialState source subject)
-      (.eval (.discrete kind d) environment stack))
-    (success : finiteLaw (.discrete d) kind [] = .ok outcomes) :
-    reduce (stateExpr (.eval (.discrete kind d) environment stack)) =
-      .sample (kind, .discrete d) (outcomeMeasure outcomes)
-        (fun y => stackExpr stack (.real y)) :=
-  discrete_correspondence kind d environment stack outcomes success
-    (program_reachable_shape source subject _ reachable)
 
 end Determinize.Proof.FiniteModel

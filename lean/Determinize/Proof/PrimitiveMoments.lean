@@ -163,14 +163,23 @@ theorem primitiveMomentBounds : PrimitiveMomentBounds primitiveLaws := by
       simp only [abs_zero, abs_one, mul_zero, mul_one, zero_add, one_mul,
         Fin.sum_univ_one]
       linarith [le_abs_self (affine 0)]
-  | discrete d =>
-      let affine : Fin (affineArity (.discrete d)) → ℝ := Fin.elim0
-      refine ⟨(∫ x : ℝ, |x| ∂primitiveLaws.kernel (.discrete d) (affine, general)),
-        nonnegMoment affine, ?_⟩
-      intro actual _
-      have eq : actual = affine := by funext i; exact Fin.elim0 i
-      rw [eq]
-      simp
+  | discrete n =>
+      refine ⟨n, Nat.cast_nonneg _, ?_⟩
+      intro affine valid
+      simp only [domain] at valid
+      rw [primitiveLaws.kernel_eq_paperMeasure, paperMeasure, if_pos valid]
+      change (∫ x : ℝ, |x| ∂DiscreteLaws.remainderMeasure n affine) ≤ _
+      rw [DiscreteLaws.remainder_integral n affine valid]
+      simp only [Nat.abs_cast]
+      have bound : (∑ i : Fin n, affine i * (i : ℕ)) +
+          (1 - ∑ i, affine i) * (n : ℝ) ≤ n := by
+        have term : ∑ i : Fin n, affine i * (i : ℕ) ≤ (∑ i, affine i) * (n : ℝ) := by
+          rw [Finset.sum_mul]
+          exact Finset.sum_le_sum fun i _ =>
+            mul_le_mul_of_nonneg_left (by exact_mod_cast Nat.le_of_lt i.isLt) (valid.1 i)
+        nlinarith
+      have positive : 0 ≤ ∑ i : Fin n, |affine i| := Finset.sum_nonneg fun _ _ => abs_nonneg _
+      nlinarith [Nat.cast_nonneg (α := ℝ) n]
 
 end
 

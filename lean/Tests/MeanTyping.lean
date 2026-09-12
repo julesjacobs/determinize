@@ -20,4 +20,14 @@ example : (check [.float .E] (.gaussian .mean (.real 0) (.bvar 0)) (.float .E)
 
 example : sampleAffinities (.uniform .mean (.poisson (.sample .E) (.real 2)) (.real 3)) = [.E] := rfl
 
+private def discreteMean : Core := .discrete .mean (.bvar 0)
+private def discreteCert (a : Affinity) : Certificate :=
+  .node (.float a) [.node (.list (.float a)) []]
+example : (check [.list (.float .E)] discreteMean (.float .E) (discreteCert .E)).isSome = true := by
+  decide +kernel
+example : (check [.list (.float .G)] discreteMean (.float .G) (discreteCert .G)).isSome = true := by
+  decide +kernel
+example : (check [.list (.float .E)] discreteMean (.float .G) (discreteCert .G)).isSome = false := by
+  decide +kernel
+
 end Determinize.Tests.MeanTyping

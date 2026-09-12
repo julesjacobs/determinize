@@ -1,0 +1,1 @@
+let p = bernoulli[G](0.5) in discrete[E](p/2,0.25,*)

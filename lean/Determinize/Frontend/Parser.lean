@@ -13,15 +13,26 @@ private partial def comment (cs : List Char) (depth : Nat) : Except String (List
   | '*' :: ')' :: rest => if depth == 1 then .ok rest else comment rest (depth - 1)
   | _ :: rest => comment rest depth
 
-private partial def tokenize (cs : List Char) : Except String (List String) := do
+private def discreteArguments : List String → Bool
+  | "discrete" :: _ => true
+  | "]" :: _ :: "[" :: "discrete" :: _ => true
+  | _ => false
+
+private partial def tokenize (cs : List Char) (before : List String := []) : Except String (List String) := do
+  let emit (token : String) (tail : List Char) : Except String (List String) := do
+    return token :: (← tokenize tail (token :: before))
   match cs with
   | [] => return []
-  | '(' :: '*' :: rest => tokenize (← comment rest 1)
+  | '(' :: '*' :: rest =>
+    if discreteArguments before then
+      if let ')' :: tail := rest.dropWhile Char.isWhitespace then
+        return ["(", "*", ")"] ++ (← tokenize tail (")" :: "*" :: "(" :: before))
+    tokenize (← comment rest 1) before
   | c :: rest =>
-    if c.isWhitespace then return ← tokenize rest
+    if c.isWhitespace then return ← tokenize rest before
     if identStart c then
       let (word, tail) := rest.span identRest
-      return String.ofList (c :: word) :: (← tokenize tail)
+      return ← emit (String.ofList (c :: word)) tail
     if c.isDigit then
       let (whole, tail) := cs.span Char.isDigit
       let (digits, tail) := match tail with
@@ -39,14 +50,14 @@ private partial def tokenize (cs : List Char) : Except String (List String) := d
             pure (digits ++ e :: sign ++ exp, tail)
           else pure (digits, e :: tail)
         | [] => pure (digits, [])
-      return String.ofList digits :: (← tokenize tail)
+      return ← emit (String.ofList digits) tail
     match cs with
-    | '=' :: '>' :: tail => return "=>" :: (← tokenize tail)
-    | ':' :: ':' :: tail => return "::" :: (← tokenize tail)
-    | '<' :: '=' :: tail => return "<=" :: (← tokenize tail)
+    | '=' :: '>' :: tail => emit "=>" tail
+    | ':' :: ':' :: tail => emit "::" tail
+    | '<' :: '=' :: tail => emit "<=" tail
     | _ =>
       if "()[],|=+-*/<>\\".toList.contains c then
-        return String.singleton c :: (← tokenize rest)
+        emit (String.singleton c) rest
       else throw s!"unexpected character {c}"
 
 private def decimal (s : String) : Except String Rat := do
@@ -81,7 +92,7 @@ private def name : P String := do
   let t ← take
   unless t.toList.head?.any identStart do throw s!"expected a name, got '{t}'"
   return t
-private def primitives := ["uniform", "gauss", "gaussian", "poisson", "exponential", "gamma", "beta", "flip", "bernoulli", "discrete", "observe"]
+private def primitives := ["uniform", "gauss", "gaussian", "poisson", "exponential", "gamma", "beta", "flip", "bernoulli", "discrete", "discrete_list", "observe"]
 private def startsAtom (t : String) : Bool :=
   t == "(" || t == "[" ||
   (t.toList.head?.any (fun c => identStart c || c.isDigit) &&
@@ -138,9 +149,19 @@ private partial def expr (minPrec : Nat := 0) : P Surface := do
           expect "]"
         expect "("
         let mut args := []
-        if (← peek) != ")" then
+        let mut remainder := false
+        if t == "discrete" && (← peek) == "*" then
+          expect "*"
+          remainder := true
+        else if (← peek) != ")" then
           args := [← expr]
-          while (← peek) == "," do expect ","; args := args ++ [← expr]
+          while (← peek) == "," do
+            expect ","
+            if t == "discrete" && (← peek) == "*" then
+              expect "*"
+              remainder := true
+              break
+            args := args ++ [← expr]
         expect ")"
         match t, args with
         | "uniform", [a,b] => pure (.uniform affinity a b)
@@ -150,7 +171,10 @@ private partial def expr (minPrec : Nat := 0) : P Surface := do
         | "bernoulli", [a] => pure (.bernoulli affinity a)
         | "beta", [a,b] => pure (.beta affinity a b)
         | "gamma", [a,b] => pure (.gamma affinity a b)
-        | "discrete", weights => pure (.discrete affinity weights)
+        | "discrete_list", [probabilities] => pure (.discreteRemainder affinity probabilities)
+        | "discrete", probabilities =>
+          if remainder then pure (.discreteRemainder affinity (probabilities.foldr Surface.cons .nil))
+          else pure (.discrete affinity probabilities)
         | "flip", [a] => pure (.flip affinity a)
         | "observe", [a] =>
           if affinity.isSome then throw "observe has no sampling affinity"

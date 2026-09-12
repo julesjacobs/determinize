@@ -144,3 +144,10 @@ of 1/2 and 3: variance 25/16, fourth central moment 625/256.
 For `coupling-mixed`, the source moments are those of `nested`, and the target is
 1 + (3/2)U(0,1): mean 7/4, variance 3/16, fourth central moment 81/1280.
 The same analytical tolerance formula above applies.
+
+The computed-discrete fixtures draw `p ~ Bernoulli(1/2)` and then use probabilities
+`[p/2, 1/4, 3/4-p/2]` for outcomes `[0,1,2]`. Marginal probabilities are
+`[1/4,1/4,1/2]`, giving mean `5/4` and variance `11/16`. With E `p`, the target
+is constant `5/4`; with G `p`, it is equally likely to be `3/4` or `7/4`, with
+variance `1/4` and central fourth moment `1/16`. These fixtures exercise the
+implied final probability and recursive determinization of computed probabilities.
