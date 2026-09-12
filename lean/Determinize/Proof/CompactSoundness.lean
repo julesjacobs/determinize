@@ -299,10 +299,11 @@ theorem soundness : Determinize.Spec.Traces.soundnessThm := by
   intro program typed sourceForm safe
   let f := kernelMean (normalizedOutputGivenTrace program)
   obtain ⟨targetSafe, factor, massAe, diracAe⟩ :=
-    soundnessData .E program typed sourceForm safe
+    soundnessData .E program typed sourceForm
+      ((Typing.primitiveDomainSafe_iff_doesNotGetStuck typed).1 safe)
   obtain ⟨markov, hf, hs, ht, hmean⟩ := factor
   have := markov
-  refine ⟨targetSafe, ?_, ?_, ?_⟩
+  refine ⟨fun fuel => Typing.doesNotGetStuckAt_imp_primitiveDomainSafeAt (targetSafe fuel), ?_, ?_, ?_⟩
   · rw [hs, compProd_eq_traceThenOutput, traceThenOutput, traceThenOutput]
     exact Measure.bind_congr_right (massAe.mono fun trace h => by simp only [h])
   · rw [ht, traceThenOutput, ← Measure.bind_dirac_eq_map _

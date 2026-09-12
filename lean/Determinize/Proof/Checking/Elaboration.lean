@@ -19,8 +19,8 @@ theorem certified_alignment {input affinities} (p : Certified input affinities) 
 
 theorem certified_trace_soundness {input affinities} (p : Certified input affinities)
     (m : Affinity) (hTy : p.ty = .float m)
-    (safe : DoesNotGetStuck (interpret p.source)) :
-    DoesNotGetStuck (interpret p.source.determinize) ∧
+    (safe : PrimitiveDomainSafe (interpret p.source)) :
+    PrimitiveDomainSafe (interpret p.source.determinize) ∧
       traceAndOutputLaw (interpret p.source) =
         traceThenOutput (traceLaw (interpret p.source)) (outputGivenTrace (interpret p.source)) ∧
       traceAndOutputLaw (interpret p.source.determinize) =
@@ -41,9 +41,9 @@ theorem certified_trace_soundness {input affinities} (p : Certified input affini
 
 theorem certified_expectation {input affinities} (p : Certified input affinities)
     (m : Affinity) (hTy : p.ty = .float m)
-    (safe : DoesNotGetStuck (interpret p.source))
+    (safe : PrimitiveDomainSafe (interpret p.source))
     (integrable : Integrable id (bigStepMeasure (interpret p.source))) :
-    DoesNotGetStuck (interpret p.source.determinize) ∧
+    PrimitiveDomainSafe (interpret p.source.determinize) ∧
       Integrable id (bigStepMeasure (interpret p.source.determinize)) ∧
       (∫ value : ℝ, value ∂bigStepMeasure (interpret p.source)) =
         ∫ value : ℝ, value ∂bigStepMeasure (interpret p.source.determinize) := by

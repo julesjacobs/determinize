@@ -52,7 +52,7 @@ theorem checked_sourceExpectedReward {source : Core}
     (certificate : ResultCertificate checked.model)
     (typed : Spec.Paper.Typed [] (Subject.source.program source) (.float .E))
     (sourceForm : (Subject.source.program source).sourceForm = true)
-    (safe : Spec.Paper.DoesNotGetStuck (Subject.source.program source))
+    (safe : Spec.Paper.PrimitiveDomainSafe (Subject.source.program source))
     (integrable : MeasureTheory.Integrable id
       (Spec.Paper.bigStepMeasure (Subject.source.program source)))
     (accepted : checkResult checked.model certificate = true) :

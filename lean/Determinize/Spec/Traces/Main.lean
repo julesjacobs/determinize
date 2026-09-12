@@ -32,8 +32,8 @@ mean. No global integrability assumption is required. -/
 def soundnessThm : Prop :=
   ∀ (program : Expr),
     Typed [] program (.float .E) → program.sourceForm = true →
-    DoesNotGetStuck program →
-      DoesNotGetStuck program.determinize ∧
+    PrimitiveDomainSafe program →
+      PrimitiveDomainSafe program.determinize ∧
       traceAndOutputLaw program = traceThenOutput (traceLaw program) (outputGivenTrace program) ∧
       traceAndOutputLaw program.determinize =
         traceThenOutput (traceLaw program) (outputGivenTrace program.determinize) ∧
@@ -53,7 +53,7 @@ conditioned on termination. -/
 def varianceThm : Prop :=
   ∀ (program : Expr),
     Typed [] program (.float .E) → program.sourceForm = true →
-    DoesNotGetStuck program →
+    PrimitiveDomainSafe program →
     MemLp id 2 (bigStepMeasure program) →
       Integrable (fun trace => variance id (outputGivenTrace program trace)) (traceLaw program) ∧
       variance id (bigStepMeasure program) =

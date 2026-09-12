@@ -1,4 +1,4 @@
-import Determinize.Spec.Semantics
+import Determinize.Spec.FiniteModel.Safety
 import Mathlib.Algebra.BigOperators.Ring.Finset
 
 namespace Determinize.Spec.FiniteModel

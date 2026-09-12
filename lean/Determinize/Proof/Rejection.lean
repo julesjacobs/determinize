@@ -1,3 +1,4 @@
+import Determinize.Spec.FiniteModel.Safety
 import Determinize.Spec.Semantics
 
 namespace Determinize.Proof.Rejection

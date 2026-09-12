@@ -24,14 +24,14 @@ namespace Determinize.Spec
 open MeasureTheory ProbabilityTheory Paper
 open scoped ENNReal
 
-/-- Determinization preserves finite expectations and cannot introduce stuckness. -/
+/-- Determinization preserves finite expectations and validity of distribution arguments. -/
 def mainThm : Prop :=
   ∀ (program : Expr),
     Typed [] program (.float .E) →
     program.sourceForm = true →
-    DoesNotGetStuck program →
+    PrimitiveDomainSafe program →
     Integrable id (bigStepMeasure program) →
-    DoesNotGetStuck program.determinize ∧
+    PrimitiveDomainSafe program.determinize ∧
       Integrable id (bigStepMeasure program.determinize) ∧
       (∫ value : ℝ, value ∂bigStepMeasure program) =
         ∫ value : ℝ, value ∂bigStepMeasure program.determinize
@@ -57,7 +57,7 @@ def extendedExpectationThm : Prop :=
   ∀ (program : Expr),
     Typed [] program (.float .E) →
     program.sourceForm = true →
-    DoesNotGetStuck program →
+    PrimitiveDomainSafe program →
     HasExpectation (bigStepMeasure program) →
     HasExpectation (bigStepMeasure program.determinize) ∧
       extendedExpectation (bigStepMeasure program) =
@@ -69,7 +69,7 @@ def jensenThm : Prop :=
   ∀ (program : Expr),
     Typed [] program (.float .E) →
     program.sourceForm = true →
-    DoesNotGetStuck program →
+    PrimitiveDomainSafe program →
     ∀ φ : ℝ → ℝ, ConvexOn ℝ Set.univ φ → (∀ value, 0 ≤ φ value) →
       ∫⁻ value, ENNReal.ofReal (φ value) ∂bigStepMeasure program.determinize ≤
         ∫⁻ value, ENNReal.ofReal (φ value) ∂bigStepMeasure program
@@ -82,7 +82,7 @@ def outputMassThm : Prop :=
   ∀ (program : Expr),
     Typed [] program (.float .E) →
     program.sourceForm = true →
-    DoesNotGetStuck program →
+    PrimitiveDomainSafe program →
     bigStepMeasure program.determinize Set.univ = bigStepMeasure program Set.univ
 
 /-- Determinization does not increase the variance: whenever the source output law has a
@@ -96,7 +96,7 @@ def varianceThm : Prop :=
   ∀ (program : Expr),
     Typed [] program (.float .E) →
     program.sourceForm = true →
-    DoesNotGetStuck program →
+    PrimitiveDomainSafe program →
     MemLp id 2 (bigStepMeasure program) →
     MemLp id 2 (bigStepMeasure program.determinize) ∧
       (∫ value : ℝ, value ^ 2 ∂bigStepMeasure program.determinize) ≤
@@ -116,7 +116,7 @@ def conditionalExpectationThm : Prop :=
   ∀ (program : Expr),
     Typed [] program (.float .E) →
     program.sourceForm = true →
-    DoesNotGetStuck program →
+    PrimitiveDomainSafe program →
     Integrable id (bigStepMeasure program) →
     (∫ value : ℝ, value ∂bigStepMeasure program.determinize) /
         (bigStepMeasure program.determinize Set.univ).toReal =

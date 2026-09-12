@@ -1,6 +1,6 @@
 import Determinize.Proof.Internal.PrimitiveLaws
 import Determinize.Proof.Internal.Environment
-import Determinize.Spec.Semantics
+import Determinize.Spec.FiniteModel.Safety
 import Determinize.Proof.Internal.ExpressionSpace
 import Mathlib.MeasureTheory.Constructions.Pi
 import Mathlib.Tactic.DeriveCountable
@@ -9,9 +9,8 @@ import Mathlib.Tactic.DeriveCountable
 # Semantic objects used by the proof
 
 This module defines the measurable skeleton representation, symbolic sample
-histories, certified one-step kernel, exact-depth output semantics, and the
-primitive-domain safety invariant. The operational reducer itself is the
-reviewer-facing definition in `Spec.Semantics`.
+histories, certified one-step kernel, and exact-depth output semantics. The operational
+reducer and primitive-domain safety are reviewer-facing definitions in `Spec.Semantics`.
 -/
 
 namespace Determinize.Spec.Paper
@@ -136,24 +135,3 @@ noncomputable def cumulativeOutputMeasure (stepKernel : StepKernel)
 noncomputable def bigStepMeasure (stepKernel : StepKernel)
     (program : Expr) : Measure ℝ :=
   ⨆ fuel, cumulativeOutputMeasure stepKernel fuel program
-
-/--
-Primitive-domain safety at a finite reduction depth. Canonical primitive fibers
-have mass one exactly on their parameter domain and are zero off-domain.
-Structural stuckness is outside this predicate; intrinsic typing supplies
-structural progress.
--/
-def PrimitiveDomainSafeAt : Nat → Expr → Prop
-  | 0, _ => True
-  | fuel + 1, expression =>
-      if expression.isValue then True
-      else match reduce expression with
-      | .next next => PrimitiveDomainSafeAt fuel next
-      | .sample _ fiber continuation =>
-          fiber Set.univ = 1 ∧
-            ∀ᵐ value ∂fiber, PrimitiveDomainSafeAt fuel (continuation value)
-      | .stuck => True
-
-/-- Every primitive call reached at a finite depth has valid parameters almost surely. -/
-def PrimitiveDomainSafe (program : Expr) : Prop :=
-  ∀ fuel, PrimitiveDomainSafeAt fuel program

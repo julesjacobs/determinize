@@ -19,6 +19,15 @@ example (fuel : Nat) (value : ℝ) :
 example (ty : Ty) : Typed [] (.lam (.bvar 0)) (.arr ty ty) :=
   .lam (.bvar .head)
 
+example : PrimitiveDomainSafe (.app (.real 0) (.real 1)) := by
+  intro fuel
+  cases fuel <;> trivial
+
+example : ¬ PrimitiveDomainSafe (.uniform (.sample .E) (.real 1) (.real 0)) := by
+  intro h
+  have h := h 1
+  norm_num [PrimitiveDomainSafeAt, reduce, Expr.isValue, realValue?, uniformFiber] at h
+
 def capturedSample : Expr :=
   .letE
     (.uniform (.sample .E) (.real 0) (.real 1))
