@@ -4,9 +4,10 @@ Use the mathematics and examples to explain the idea. Keep assumptions that
 affect the results; leave routine formal details to Lean.
 
 - [x] Language grammar.
+- [x] Type grammar.
 - [ ] Primitive laws, domains, and means.
 - [ ] Output semantics and determinization.
-- [ ] Selected typing rules.
+- [x] Selected typing rules and subtyping.
 - [ ] Domain validity and global guarantees.
 - [ ] Joint trace semantics and conditional trace soundness statement.
 - [ ] Variance decomposition.

@@ -1,0 +1,76 @@
+% !TeX root = ../main.tex
+\begin{figure}[H]
+\centering
+\small
+\begin{mathpar}
+ \inferrule*[right=Refl]{ }{\tau<:\tau}
+ \and
+ \inferrule*[right=Trans]{\tau<:\sigma\\\sigma<:\rho}{\tau<:\rho}
+ \and
+ \inferrule*[right=Real-Sub]{ }{\tyR\G<:\tyR\E}
+ \and
+ \inferrule*[right=Arrow]{\sigma_1<:\tau_1\\\tau_2<:\sigma_2}
+   {\tau_1\to\tau_2<:\sigma_1\to\sigma_2}
+ \and
+ \inferrule*[right=Product]{\tau_1<:\sigma_1\\\tau_2<:\sigma_2}
+   {\tau_1\times\tau_2<:\sigma_1\times\sigma_2}
+ \and
+ \inferrule*[right=Sum]{\tau_1<:\sigma_1\\\tau_2<:\sigma_2}
+   {\tau_1+\tau_2<:\sigma_1+\sigma_2}
+ \and
+ \inferrule*[right=List]{\tau<:\sigma}{\tyL\tau<:\tyL\sigma}
+\end{mathpar}
+\begin{mathpar}
+ \inferrule*[right=Sub]{\typing e\tau\\\tau<:\sigma}{\typing e\sigma}
+ \and
+ \inferrule*[right=Real]{r\in\Real}{\typing r{\tyR m}}
+ \and
+ \inferrule*[right=Reject]{ }{\typing{\kw{reject}}\tau}
+ \and
+ \inferrule*[right=Neg]{\typing e{\tyR m}}{\typing{-e}{\tyR m}}
+ \and
+ \inferrule*[right=Add]{\typing{e_1}{\tyR m}\\\typing{e_2}{\tyR m}}
+   {\typing{e_1+e_2}{\tyR m}}
+ \and
+ \inferrule*[right=Mul]{\typing{e_1}{\tyR\G}\\\typing{e_2}{\tyR m}}
+   {\typing{e_1\cdot e_2}{\tyR m}}
+ \and
+ \inferrule*[right=Div]{\typing{e_1}{\tyR m}\\\typing{e_2}{\tyR\G}}
+   {\typing{e_1/e_2}{\tyR m}}
+ \and
+ \inferrule*[right=Cmp]{\typing{e_1}{\tyR\G}\\\typing{e_2}{\tyR\G}}
+   {\typing{e_1<e_2}{\tyB}}
+\end{mathpar}
+\begin{mathpar}
+ \inferrule*[right=Uniform]{\typing a{\tyR m}\\\typing b{\tyR m}}
+   {\typing{\draw{uniform}\alpha{a,b}}{\tyR m}}
+ \and
+ \inferrule*[right=Gaussian]{\typing u{\tyR m}\\\typing v{\tyR\G}}
+   {\typing{\draw{gaussian}\alpha{u,v}}{\tyR m}}
+ \and
+ \inferrule*[right=Poisson]{\typing\lambda{\tyR m}}
+   {\typing{\draw{poisson}\alpha\lambda}{\tyR m}}
+ \and
+ \inferrule*[right=Exponential]{\typing\lambda{\tyR\G}}
+   {\typing{\draw{exponential}\alpha\lambda}{\tyR m}}
+ \and
+ \inferrule*[right=Bernoulli]{\typing p{\tyR m}}
+   {\typing{\draw{bernoulli}\alpha p}{\tyR m}}
+ \and
+ \inferrule*[right=Discrete]{\typing p{\tyL{\tyR m}}}
+   {\typing{\draw{discrete}\alpha p}{\tyR m}}
+ \and
+ \inferrule*[right=Beta]{\typing a{\tyR\G}\\\typing b{\tyR\G}}
+   {\typing{\draw{beta}\alpha{a,b}}{\tyR m}}
+ \and
+ \inferrule*[right=Gamma]{\typing k{\tyR m}\\\typing\lambda{\tyR\G}}
+   {\typing{\draw{gamma}\alpha{k,\lambda}}{\tyR m}}
+\end{mathpar}
+\caption{Subtyping and typing rules, with $m\in\{\G,\E\}$ and
+$\alpha\in\{m,\M\}$. Rules for variables, unit and Boolean literals, functions,
+recursion, application, let bindings, conditionals, pairs, projections, sum
+injections and case analysis, and list constructors and case analysis are omitted
+because they are standard.}
+\label{fig:typing}
+\Description{Subtyping permits G reals where E reals are expected. Multiplication requires a G left operand, division a G denominator, and comparison two G operands. Distribution rules share the same premises for sampling and mean evaluation.}
+\end{figure}
