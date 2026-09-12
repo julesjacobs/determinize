@@ -449,18 +449,18 @@ private theorem measurable_paperMeasure_discrete (arity : Nat) :
   intro set _
   have hEq : (fun params : Determinize.Statement.Paper.Params (.discrete arity) =>
       Determinize.Statement.Paper.paperMeasure (.discrete arity) params set) =
-      fun params => if (∀ i, 0 ≤ params.2 i) ∧ ∑ i, params.2 i = 1 then
-        ∑ i : Fin arity, ENNReal.ofReal (params.2 i) * Measure.dirac ((i : ℕ) : ℝ) set
+      fun params => if (∀ i, 0 ≤ params.1 i) ∧ ∑ i, params.1 i = 1 then
+        ∑ i : Fin arity, ENNReal.ofReal (params.1 i) * Measure.dirac ((i : ℕ) : ℝ) set
       else 0 := by
     funext params
-    change (if (∀ i, 0 ≤ params.2 i) ∧ ∑ i, params.2 i = 1 then
-      ∑ i : Fin arity, ENNReal.ofReal (params.2 i) • Measure.dirac ((i : ℕ) : ℝ) else 0) set = _
+    change (if (∀ i, 0 ≤ params.1 i) ∧ ∑ i, params.1 i = 1 then
+      ∑ i : Fin arity, ENNReal.ofReal (params.1 i) • Measure.dirac ((i : ℕ) : ℝ) else 0) set = _
     split_ifs <;> simp [Measure.finsetSum_apply, Measure.smul_apply, smul_eq_mul]
   rw [hEq]
   refine Measurable.ite (Determinize.Proof.Paper.measurableSet_domain (.discrete arity)) ?_
     measurable_const
   exact Finset.measurable_sum _ fun i _ =>
-    ((measurable_pi_apply i).comp measurable_snd).ennreal_ofReal.mul measurable_const
+    ((measurable_pi_apply i).comp measurable_fst).ennreal_ofReal.mul measurable_const
 
 private noncomputable def discreteKernel (arity : Nat) :
     ProbabilityTheory.Kernel (Determinize.Statement.Paper.Params (.discrete arity)) ℝ :=
@@ -554,10 +554,10 @@ private theorem paperMeasure_mass_one (op : Determinize.Statement.Paper.Op) (par
       simp only [Measure.add_apply, Measure.smul_apply, smul_eq_mul, measure_univ, mul_one]
       exact hSum
   | discrete arity =>
-      change (if (∀ i, 0 ≤ params.2 i) ∧ ∑ i, params.2 i = 1 then
-        ∑ i : Fin arity, ENNReal.ofReal (params.2 i) • Measure.dirac ((i : ℕ) : ℝ) else 0)
+      change (if (∀ i, 0 ≤ params.1 i) ∧ ∑ i, params.1 i = 1 then
+        ∑ i : Fin arity, ENNReal.ofReal (params.1 i) • Measure.dirac ((i : ℕ) : ℝ) else 0)
           Set.univ = 1
-      have hd : (∀ i, 0 ≤ params.2 i) ∧ ∑ i, params.2 i = 1 := by
+      have hd : (∀ i, 0 ≤ params.1 i) ∧ ∑ i, params.1 i = 1 := by
         simpa only [Determinize.Statement.Paper.domain] using hDomain
       rw [if_pos hd]
       simp only [Measure.finsetSum_apply, Measure.smul_apply, smul_eq_mul, measure_univ, mul_one]
@@ -601,8 +601,8 @@ private theorem paperMeasure_zero_off_domain (op : Determinize.Statement.Paper.O
           ENNReal.ofReal (params.1 0) • Measure.dirac (1 : ℝ) else 0) = 0
       rw [if_neg (by simpa only [Determinize.Statement.Paper.domain] using hDomain)]
   | discrete arity =>
-      change (if (∀ i, 0 ≤ params.2 i) ∧ ∑ i, params.2 i = 1 then
-        ∑ i : Fin arity, ENNReal.ofReal (params.2 i) • Measure.dirac ((i : ℕ) : ℝ) else 0) = 0
+      change (if (∀ i, 0 ≤ params.1 i) ∧ ∑ i, params.1 i = 1 then
+        ∑ i : Fin arity, ENNReal.ofReal (params.1 i) • Measure.dirac ((i : ℕ) : ℝ) else 0) = 0
       rw [if_neg (by simpa only [Determinize.Statement.Paper.domain] using hDomain)]
 
 private theorem paperMeasure_mass_le_one (op : Determinize.Statement.Paper.Op) (params : Determinize.Statement.Paper.Params op) :
@@ -1131,10 +1131,10 @@ private theorem discrete_integrable_id (arity : Nat)
     (params : Determinize.Statement.Paper.Params (.discrete arity))
     (hDomain : Determinize.Statement.Paper.domain (.discrete arity) params) :
     Integrable id (Determinize.Statement.Paper.paperMeasure (.discrete arity) params) := by
-  have hd : (∀ i, 0 ≤ params.2 i) ∧ ∑ i, params.2 i = 1 := by
+  have hd : (∀ i, 0 ≤ params.1 i) ∧ ∑ i, params.1 i = 1 := by
     simpa only [Determinize.Statement.Paper.domain] using hDomain
-  change Integrable id (if (∀ i, 0 ≤ params.2 i) ∧ ∑ i, params.2 i = 1 then
-    ∑ i : Fin arity, ENNReal.ofReal (params.2 i) • Measure.dirac ((i : ℕ) : ℝ) else 0)
+  change Integrable id (if (∀ i, 0 ≤ params.1 i) ∧ ∑ i, params.1 i = 1 then
+    ∑ i : Fin arity, ENNReal.ofReal (params.1 i) • Measure.dirac ((i : ℕ) : ℝ) else 0)
   rw [if_pos hd]
   exact integrable_finsetSum_measure.2 fun _ _ =>
     (integrable_dirac enorm_lt_top).smul_measure ENNReal.ofReal_ne_top
@@ -1144,11 +1144,11 @@ private theorem discrete_mean (arity : Nat)
     (hDomain : Determinize.Statement.Paper.domain (.discrete arity) params) :
     (∫ value : ℝ, value ∂Determinize.Statement.Paper.paperMeasure (.discrete arity) params) =
       Determinize.Statement.Paper.meanValue (.discrete arity) params := by
-  have hd : (∀ i, 0 ≤ params.2 i) ∧ ∑ i, params.2 i = 1 := by
+  have hd : (∀ i, 0 ≤ params.1 i) ∧ ∑ i, params.1 i = 1 := by
     simpa only [Determinize.Statement.Paper.domain] using hDomain
-  change (∫ value : ℝ, value ∂if (∀ i, 0 ≤ params.2 i) ∧ ∑ i, params.2 i = 1 then
-    ∑ i : Fin arity, ENNReal.ofReal (params.2 i) • Measure.dirac ((i : ℕ) : ℝ) else 0) =
-      ∑ i : Fin arity, params.2 i * ((i : ℕ) : ℝ)
+  change (∫ value : ℝ, value ∂if (∀ i, 0 ≤ params.1 i) ∧ ∑ i, params.1 i = 1 then
+    ∑ i : Fin arity, ENNReal.ofReal (params.1 i) • Measure.dirac ((i : ℕ) : ℝ) else 0) =
+      ∑ i : Fin arity, params.1 i * ((i : ℕ) : ℝ)
   rw [if_pos hd, integral_finsetSum_measure fun _ _ =>
     (integrable_dirac enorm_lt_top).smul_measure ENNReal.ofReal_ne_top]
   refine Finset.sum_congr rfl fun i _ => ?_

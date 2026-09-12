@@ -149,13 +149,13 @@ theorem typed_shift (h : Typed (before ++ suffix) expression ty) :
           (ihr (before := before) (suffix := suffix) hcontext)
       | exact .gamma (ihl (before := before) (suffix := suffix) hcontext)
           (ihr (before := before) (suffix := suffix) hcontext)
-  | poisson hv ih | exponential hv ih | bernoulli hv ih =>
+  | poisson hv ih | exponential hv ih | bernoulli hv ih | discrete hv ih =>
       rw [Expr.shift, Expr.mapVars]
       first
       | exact .poisson (ih (before := before) (suffix := suffix) hcontext)
       | exact .exponential (ih (before := before) (suffix := suffix) hcontext)
       | exact .bernoulli (ih (before := before) (suffix := suffix) hcontext)
-  | discrete => rw [Expr.shift, Expr.mapVars]; exact .discrete
+      | exact .discrete (ih (before := before) (suffix := suffix) hcontext)
 
 theorem hasVar_subst (h : HasVar (before ++ binder :: suffix) index ty) :
     (index = before.length ∧ ty = binder) ∨
@@ -311,13 +311,13 @@ theorem typed_substAt (h : Typed (before ++ binder :: suffix) expression ty)
           (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
       | exact .gamma (ihl replacementTyped (before := before) (suffix := suffix) hcontext)
           (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
-  | poisson hv ih | exponential hv ih | bernoulli hv ih =>
+  | poisson hv ih | exponential hv ih | bernoulli hv ih | discrete hv ih =>
       rw [Expr.substAt, Expr.mapVars]
       first
       | exact .poisson (ih replacementTyped (before := before) (suffix := suffix) hcontext)
       | exact .exponential (ih replacementTyped (before := before) (suffix := suffix) hcontext)
       | exact .bernoulli (ih replacementTyped (before := before) (suffix := suffix) hcontext)
-  | discrete => rw [Expr.substAt, Expr.mapVars]; exact .discrete
+      | exact .discrete (ih replacementTyped (before := before) (suffix := suffix) hcontext)
 theorem typed_substHead (bodyTyped : Typed (binder :: suffix) body ty)
     (replacementTyped : Typed suffix replacement binder) :
     Typed suffix (Expr.substHead body replacement) ty := by
@@ -394,6 +394,22 @@ theorem typed_real_value (typed : Typed [] expression (.float mode))
     (value : expression.isValue = true) :
     ∃ result, expression = .real result := by
   cases typed <;> simp_all [Expr.isValue]
+
+/-- A closed list value of floats is a cons-chain of real literals, which `realListValue?`
+reads off; so a `discrete` site with evaluated well-typed weights never gets stuck. -/
+theorem typed_realList_value (typed : Typed [] expression (.list (.float mode)))
+    (value : expression.isValue = true) :
+    ∃ values, realListValue? expression = some values := by
+  induction expression with
+  | nil => exact ⟨[], rfl⟩
+  | cons head tail _ ih =>
+      cases typed with
+      | cons headTyped tailTyped =>
+          simp only [Expr.isValue, Bool.and_eq_true] at value
+          obtain ⟨coordinate, rfl⟩ := typed_real_value headTyped value.1
+          obtain ⟨values, valuesEq⟩ := ih tailTyped value.2
+          exact ⟨coordinate :: values, by simp [realListValue?, realValue?, valuesEq]⟩
+  | _ => cases typed <;> simp_all [Expr.isValue]
 
 theorem reduce_typed_closed
     (typed : Typed [] expression ty) : ActionTyped ty (reduce expression) := by
@@ -681,9 +697,17 @@ theorem reduce_typed_closed
         exact .sample fun value => .real
       · simp only [valueCondition, ↓reduceIte]
         exact (ih rfl).wrap fun next nextTyped => .bernoulli nextTyped
-  | discrete =>
+  | discrete weightsTyped ih =>
+      cases hcontext
+      rename_i weights mode kind
       rw [MeasurableActionFamily.reduce_discrete_eq]
-      exact .sample fun value => .real
+      by_cases weightsValue : weights.isValue = true
+      · simp only [weightsValue, ↓reduceIte]
+        rcases typed_realList_value weightsTyped weightsValue with ⟨values, valuesEq⟩
+        simp only [valuesEq]
+        exact .sample fun value => .real
+      · simp only [weightsValue, ↓reduceIte]
+        exact (ih rfl).wrap fun next nextTyped => .discrete nextTyped
   | beta leftTyped rightTyped ihl ihr =>
       cases hcontext
       rename_i left right mode kind

@@ -53,8 +53,8 @@ instead of sampled, still integrating every expectation-mode draw: the law of th
 replay returns exactly at `depth`. The result is the zero measure when the trace does not fit
 the program: a general-mode site that finds no entry or an entry of another primitive, or an
 entry left over when the program returns. The comparison `op = op'` is the only arity check
-for `discrete`: `reduce` stamps the number of weights into the site name
-`Op.discrete weights.length`, so an entry recorded by a `discrete` of another arity never fits. -/
+for `discrete`: `reduce` stamps the length of the evaluated weight list into the site name
+`Op.discrete n`, so an entry recorded by a `discrete` of another arity never fits. -/
 noncomputable def outputGivenTraceAt : Nat → Expr → Trace → Measure ℝ
   | 0, .real value, [] => Measure.dirac value
   | 0, _, _ => 0

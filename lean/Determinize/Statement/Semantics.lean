@@ -34,6 +34,16 @@ def realValue? : Expr → Option ℝ
   | .real value => some value
   | _ => none
 
+/-- The reals of a list value of real literals, `[w₀, …, wₙ₋₁]` as a cons-chain ending in
+`nil`; `none` for any other value, which makes a `discrete` site with such weights stuck. -/
+def realListValue? : Expr → Option (List ℝ)
+  | .nil => some []
+  | .cons head tail =>
+      match realValue? head, realListValue? tail with
+      | some value, some values => some (value :: values)
+      | _, _ => none
+  | _ => none
+
 /-- Conventional left-to-right call-by-value reduction, with values absorbing. -/
 noncomputable def reduce : Expr → Action
   | .bvar _ => .stuck
@@ -180,8 +190,14 @@ noncomputable def reduce : Expr → Action
         | some p => .sample (mode, kind, .bernoulli) (bernoulliFiber kind p) .real
         | none => .stuck
       else (reduce probability).wrap (.bernoulli mode kind)
+  -- The weights are evaluated like the rate of `poisson`; the site name records how many
+  -- there are once the operand is a list value.
   | .discrete mode kind weights =>
-      .sample (mode, kind, .discrete weights.length) (discreteFiber kind weights) .real
+      if weights.isValue then match realListValue? weights with
+        | some values =>
+            .sample (mode, kind, .discrete values.length) (discreteFiber kind values) .real
+        | none => .stuck
+      else (reduce weights).wrap (.discrete mode kind)
 
 /-- Real output accumulated through `fuel` reduction steps. Only terminal reals
 contribute output; other types may occur during evaluation. A rejected execution contributes

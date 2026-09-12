@@ -11,10 +11,12 @@ assigned separately by `Typed`; no expression constructor contains a type annota
 Each primitive distribution is its own constructor with the paper's operands; a site
 carries its mode and whether it still samples or already returns the primitive's mean.
 `Expr.sourceForm` requires stochastic sites; their operands may be arbitrary expressions.
-`Expr.flip` is sugar: a general-mode `bernoulli` draw compared with `0`. `discrete` carries
-literal weights only, as in the implementation's parser. `observe condition` rejects the
-execution when `condition` evaluates to `false`: a failed observation contributes no output
-mass, so output laws are unnormalized (see `Determinize.Statement.Paper.reduce`).
+`Expr.flip` is sugar: a general-mode `bernoulli` draw compared with `0`. `discrete` takes its
+weights as one operand of list type, so they are arbitrary expressions; the implementation's
+parser accepts literal weights only, which embed as a cons-chain of literals. `observe
+condition` rejects the execution when `condition` evaluates to `false`: a failed observation
+contributes no output mass, so output laws are unnormalized (see
+`Determinize.Statement.Paper.reduce`).
 -/
 
 namespace Determinize.Statement.Paper
@@ -46,7 +48,8 @@ inductive Expr (Literal : Type := ℝ) where
   | beta (mode : Mode) (kind : Kind) (alpha beta : Expr Literal)
   | gamma (mode : Mode) (kind : Kind) (shape rate : Expr Literal)
   | bernoulli (mode : Mode) (kind : Kind) (probability : Expr Literal)
-  | discrete (mode : Mode) (kind : Kind) (weights : List Literal)
+  /-- `discrete(w₀, …, wₙ₋₁)`: the weights are one list-typed operand, `[w₀, …, wₙ₋₁]`. -/
+  | discrete (mode : Mode) (kind : Kind) (weights : Expr Literal)
 
 namespace Expr
 
@@ -72,9 +75,8 @@ def sourceForm : Expr → Bool
   | .uniform _ kind lower upper => kind.isStochastic && lower.sourceForm && upper.sourceForm
   | .gaussian _ kind mean variance =>
       kind.isStochastic && mean.sourceForm && variance.sourceForm
-  | .poisson _ kind rate | .exponential _ kind rate | .bernoulli _ kind rate =>
-      kind.isStochastic && rate.sourceForm
-  | .discrete _ kind _ => kind.isStochastic
+  | .poisson _ kind rate | .exponential _ kind rate | .bernoulli _ kind rate
+  | .discrete _ kind rate => kind.isStochastic && rate.sourceForm
   | .beta _ kind left right => kind.isStochastic && left.sourceForm && right.sourceForm
   | .gamma _ kind shape rate => kind.isStochastic && shape.sourceForm && rate.sourceForm
 
@@ -116,7 +118,7 @@ def mapVars (replace : Nat → Nat → Expr) (depth : Nat) : Expr → Expr
   | .beta m k l r => .beta m k (l.mapVars replace depth) (r.mapVars replace depth)
   | .gamma m k l r => .gamma m k (l.mapVars replace depth) (r.mapVars replace depth)
   | .bernoulli m k x => .bernoulli m k (x.mapVars replace depth)
-  | .discrete m k weights => .discrete m k weights
+  | .discrete m k x => .discrete m k (x.mapVars replace depth)
 
 abbrev shift (amount cutoff : Nat) : Expr → Expr :=
   mapVars (fun cutoff index => .bvar (if cutoff ≤ index then index + amount else index)) cutoff
@@ -178,7 +180,8 @@ def determinize : Expr → Expr
       .gamma mode (determinizeKind mode kind) shape.determinize rate.determinize
   | .bernoulli mode kind probability =>
       .bernoulli mode (determinizeKind mode kind) probability.determinize
-  | .discrete mode kind weights => .discrete mode (determinizeKind mode kind) weights
+  | .discrete mode kind weights =>
+      .discrete mode (determinizeKind mode kind) weights.determinize
 
 /-- `flip(p)`: a Boolean that is `true` with probability `p`, the paper's `flip`, as sugar for
 a general-mode `bernoulli` draw compared with `0`. A Boolean has no mean, so the draw is
@@ -262,7 +265,10 @@ inductive Typed : List Ty → Expr → Ty → Prop
       Typed context (.gamma mode kind shape rate) (.float mode)
   | bernoulli : Typed context probability (.float mode) →
       Typed context (.bernoulli mode kind probability) (.float mode)
-  | discrete : Typed context (.discrete mode kind weights) (.float mode)
+  /-- The weights are a list of floats at the site's mode, like the probability of `bernoulli`:
+  the mean `∑ i, wᵢ · i` is affine in the weights, so expectation-mode weights are sound. -/
+  | discrete : Typed context weights (.list (.float mode)) →
+      Typed context (.discrete mode kind weights) (.float mode)
 
 /-- `flip` is a Boolean and needs a general-mode probability: `Typed.lt` compares general-mode
 operands only, so the `bernoulli` draw behind `flip` is general mode and never determinized. -/

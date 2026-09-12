@@ -49,11 +49,44 @@ def realArity {Literal : Type} : Expr Literal → Nat
   | .letE x b => x.realArity + b.realArity
   | .uniform _ _ l r | .gaussian _ _ l r | .beta _ _ l r | .gamma _ _ l r =>
       l.realArity + r.realArity
-  | .poisson _ _ x | .exponential _ _ x | .bernoulli _ _ x => x.realArity
-  | .discrete _ _ weights => weights.length
+  | .poisson _ _ x | .exponential _ _ x | .bernoulli _ _ x | .discrete _ _ x => x.realArity
   | _ => 0
 
 end Expr
+
+/-- `realListValue?` succeeds exactly on a cons-chain of real literals, with one real per
+literal (`Expr.literalListArity?`). -/
+theorem realListValue?_map_length (expression : Expr) :
+    (realListValue? expression).map List.length = expression.literalListArity? := by
+  induction expression with
+  | cons head tail _ ih =>
+      cases head <;> simp only [realListValue?, realValue?, Expr.literalListArity?, ← ih] <;>
+        cases realListValue? tail <;> simp
+  | _ => simp [realListValue?, Expr.literalListArity?]
+
+/-- The reals of a list value of literals are its real coordinates, in order. -/
+theorem realCoordinates_of_realListValue? {expression : Expr} {values : List ℝ}
+    (equation : realListValue? expression = some values) :
+    expression.realCoordinates = values := by
+  induction expression generalizing values with
+  | cons head tail _ ih =>
+      cases head <;> simp only [realListValue?, realValue?] at equation <;>
+        cases tailEq : realListValue? tail <;> simp [tailEq] at equation
+      rw [← equation, Expr.realCoordinates, Expr.realCoordinates, ih tailEq]
+      rfl
+  | _ => simp_all [realListValue?, Expr.realCoordinates]
+
+theorem realValue?_determinize (expression : Expr) :
+    realValue? expression.determinize = realValue? expression := by
+  cases expression <;> simp [Expr.determinize, realValue?]
+
+/-- Determinization does not change the weights a `discrete` site reads: it maps literals,
+`cons` and `nil` to themselves. -/
+theorem realListValue?_determinize (expression : Expr) :
+    realListValue? expression.determinize = realListValue? expression := by
+  induction expression with
+  | cons head tail _ ih => simp [Expr.determinize, realListValue?, realValue?_determinize, ih]
+  | _ => simp [Expr.determinize, realListValue?]
 
 end Determinize.Statement.Paper
 

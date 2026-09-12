@@ -138,13 +138,31 @@ theorem primitiveMomentBounds : PrimitiveMomentBounds primitiveLaws := by
         primitiveLaws.mean_law .bernoulli (affine, general) valid, meanEq, sumEq, one_mul]
       linarith [le_abs_self (affine 0)]
   | discrete arity =>
-      let affine : Fin (affineArity (.discrete arity)) → ℝ := Fin.elim0
-      refine ⟨(∫ x : ℝ, |x| ∂primitiveLaws.kernel (.discrete arity) (affine, general)),
-        nonnegMoment affine, ?_⟩
-      intro actual _
-      have eq : actual = affine := by funext i; exact Fin.elim0 i
-      rw [eq]
-      simp
+      -- the law lives on `{0, …, arity - 1}`, so `∫ |x| = ∑ wᵢ · i ≤ arity · ∑ |wᵢ|`
+      refine ⟨(arity : ℝ), Nat.cast_nonneg arity, ?_⟩
+      intro affine valid
+      have hd : (∀ i, 0 ≤ affine i) ∧ ∑ i, affine i = 1 := by
+        simpa only [domain] using valid
+      rw [primitiveLaws.kernel_eq_paperMeasure]
+      change (∫ value : ℝ, |value| ∂(if (∀ i, 0 ≤ affine i) ∧ ∑ i, affine i = 1 then
+        ∑ i : Fin arity, ENNReal.ofReal (affine i) • Measure.dirac ((i : ℕ) : ℝ) else 0)) ≤ _
+      rw [if_pos hd, integral_finsetSum_measure fun _ _ =>
+        (integrable_dirac enorm_lt_top).smul_measure ENNReal.ofReal_ne_top]
+      have termEq (i : Fin arity) :
+          (∫ value : ℝ, |value| ∂ENNReal.ofReal (affine i) • Measure.dirac ((i : ℕ) : ℝ)) =
+            affine i * ((i : ℕ) : ℝ) := by
+        rw [integral_smul_measure, integral_dirac, ENNReal.toReal_ofReal (hd.1 i), smul_eq_mul,
+          Nat.abs_cast]
+      rw [Finset.sum_congr rfl fun i _ => termEq i]
+      calc (∑ i : Fin arity, affine i * ((i : ℕ) : ℝ)) ≤ ∑ i : Fin arity, |affine i| * arity :=
+            Finset.sum_le_sum fun i _ => by
+              have indexLe : ((i : ℕ) : ℝ) ≤ arity := by exact_mod_cast i.2.le
+              calc affine i * ((i : ℕ) : ℝ) ≤ |affine i| * ((i : ℕ) : ℝ) :=
+                    mul_le_mul_of_nonneg_right (le_abs_self _) (Nat.cast_nonneg _)
+                _ ≤ |affine i| * arity := mul_le_mul_of_nonneg_left indexLe (abs_nonneg _)
+        _ = arity * ∑ i, |affine i| := by rw [← Finset.sum_mul, mul_comm]
+        _ ≤ arity * (1 + ∑ i, |affine i|) :=
+            mul_le_mul_of_nonneg_left (by linarith) (Nat.cast_nonneg _)
   | gamma =>
       refine ⟨|1 / general 0| + 1, by positivity, ?_⟩
       intro affine valid

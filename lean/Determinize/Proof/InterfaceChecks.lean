@@ -36,6 +36,16 @@ example : cumulativeOutputMeasure 4 capturedSample =
     Expr.substHead, Expr.substAt, Expr.shift, Expr.mapVars, realValue?]
   exact Measure.bind_dirac_eq_map _ (measurable_id.add_const 2)
 
+/-- The weights of `discrete` are an ordinary list expression, evaluated before the draw and
+then read as a list of reals whose length names the site. -/
+example : reduce (.discrete .E .stochastic (.cons (.add (.real 1) (.real 0)) .nil)) =
+    .next (.discrete .E .stochastic (.cons (.real (1 + 0)) .nil)) := by
+  simp [reduce, Expr.isValue, realValue?, Action.wrap]
+
+example : reduce (.discrete .G .stochastic (.cons (.real 1) .nil)) =
+    .sample (.G, .stochastic, .discrete 1) (discreteFiber .stochastic [1]) .real := by
+  simp [reduce, Expr.isValue, realListValue?, realValue?]
+
 example (trace : Traces.Trace) (result value : ℝ) :
     Traces.record (.E, .stochastic, .uniform) value (trace, result) = (trace, result) := rfl
 
