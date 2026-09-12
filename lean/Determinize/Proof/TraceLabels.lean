@@ -1,6 +1,14 @@
 import Determinize.Proof.Measurability
 import Determinize.Proof.Internal.StepTraces
 
+/-!
+# Trace labels
+
+`siteOp` is the primitive a site records (a G-affinity stochastic draw, `none` otherwise)
+and `generationOp` reads it off a skeleton, so that whether the next step records a draw is a
+measurable function of the expression; `entry` builds the recorded event.
+-/
+
 namespace Determinize.Proof.StepTraces
 open MeasureTheory ProbabilityTheory Determinize.Spec.Paper Determinize.Proof.StepTraces
 open Determinize.Proof.Paper
@@ -48,6 +56,7 @@ def generationOp : Skeleton → Option Op
       else generationOp l
   | _ => none
 
+/-- The event recording `value` at a site labelled `op`; `none` when the site records nothing. -/
 def entry (op : Option Op) (value : ℝ) : Event := op.map (fun op => (op, value))
 
 theorem generationEvent_eq_entry (site : DistributionAction × Op) (value : ℝ) :
@@ -60,18 +69,6 @@ theorem generationEvent_eq_entry (site : DistributionAction × Op) (value : ℝ)
 theorem event_some_measurable : Measurable (some : Op × ℝ → Event) := by
   apply measurable_comap_iff.mpr
   exact measurable_inl
-
-def eventValue (event : Event) : ℝ := event.elim 0 Prod.snd
-
-theorem eventValue_measurable : Measurable eventValue := by
-  have h : Measurable (Sum.elim (Prod.snd : Op × ℝ → ℝ) (fun _ : PUnit.{1} => (0 : ℝ))) :=
-    measurable_snd.sumElim measurable_const
-  have eq : eventValue = (Sum.elim (Prod.snd : Op × ℝ → ℝ) (fun _ : PUnit.{1} => (0 : ℝ))) ∘
-      Equiv.optionEquivSumPUnit.{0} (Op × ℝ) := by
-    funext event
-    cases event <;> rfl
-  rw [eq]
-  exact h.comp (comap_measurable (Equiv.optionEquivSumPUnit.{0} (Op × ℝ)))
 
 theorem entry_measurable : Measurable (fun pair : Option Op × ℝ => entry pair.1 pair.2) := by
   apply measurable_from_prod_countable_right
@@ -89,8 +86,6 @@ theorem generationOp_value {skeleton : Skeleton} (value : skeleton.isValue = tru
     generationOp skeleton = none := by
   fun_induction Expr.isValue skeleton <;> simp_all [generationOp]
 
-set_option linter.unusedSimpArgs false in
-set_option maxHeartbeats 800000 in
 theorem reduce_site {expression : Expr} {site : DistributionAction × Op} {fiber : Measure ℝ}
     {continuation : ℝ → Expr} (reduction : reduce expression = .sample site fiber continuation) :
     generationOp expression.skeleton = siteOp site := by
@@ -98,7 +93,7 @@ theorem reduce_site {expression : Expr} {site : DistributionAction × Op} {fiber
   all_goals dsimp only at reduction
   all_goals repeat' first | contradiction | split at reduction
   all_goals simp_all only [Expr.skeleton, generationOp,
-    ← isValue_eq_skeletonIsValue, Bool.true_eq, ↓reduceIte]
+    ← isValue_eq_skeletonIsValue, ↓reduceIte]
   all_goals first
     | (cases reduction; rfl)
     | (obtain ⟨inner, h, _⟩ := Action.wrap_eq_sample reduction

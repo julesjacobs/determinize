@@ -1,5 +1,6 @@
 import Determinize.Proof.Internal.Semantics
 import Determinize.Proof.PrimitiveMass
+import Mathlib.Data.List.GetD
 import Mathlib.Tactic
 
 /-!
@@ -9,14 +10,6 @@ The expression space is decomposed into countably many fixed-skeleton fibers.
 On each fiber, reduction is represented by a measurable family of actions;
 these pieces assemble into the global one-step kernel.
 -/
-
-set_option linter.unusedSimpArgs false
-set_option linter.unusedTactic false
-set_option linter.unreachableTactic false
-set_option linter.unnecessarySeqFocus false
-set_option linter.unnecessarySimpa false
-set_option linter.style.haveILetI false
-set_option linter.unusedVariables false
 
 namespace Determinize.Proof.Paper
 
@@ -68,6 +61,25 @@ noncomputable def mapWithInput (draw : SFiniteKernel α β)
   let transformed := Kernel.deterministic transform measurableTransform
   let paired := draw.kernel ⊗ₖ transformed
   exact ⟨paired.map Prod.snd, inferInstance⟩
+
+theorem mapWithInput_apply (draw : SFiniteKernel α β)
+    (transform : α × β → γ) (measurableTransform : Measurable transform) (parameter : α) :
+    (mapWithInput draw transform measurableTransform).kernel parameter =
+      Measure.map (fun value => transform (parameter, value)) (draw.kernel parameter) := by
+  let := draw.sfinite
+  ext set measurableSet
+  unfold mapWithInput
+  rw [Kernel.map_apply' _ measurable_snd _ measurableSet,
+    Kernel.compProd_apply (measurable_snd measurableSet)]
+  have sectionMeasurable : Measurable (fun value => transform (parameter, value)) := by
+    fun_prop
+  rw [Measure.map_apply sectionMeasurable measurableSet]
+  simp only [Kernel.deterministic_apply]
+  change (∫⁻ value, (Measure.dirac (transform (parameter, value))) set ∂draw.kernel parameter) = _
+  simp_rw [Measure.dirac_apply' _ measurableSet]
+  change (∫⁻ value, ((fun value => transform (parameter, value)) ⁻¹' set).indicator 1 value
+      ∂draw.kernel parameter) = _
+  rw [lintegral_indicator_one (measurableSet.preimage sectionMeasurable)]
 
 noncomputable def pullback (draw : SFiniteKernel β γ) (parameters : α → β)
     (measurableParameters : Measurable parameters) : SFiniteKernel α γ := by
@@ -178,10 +190,14 @@ measurably varying real coordinates. -/
 structure MeasurableFamily (α : Type*) [MeasurableSpace α] (expression : α → Expr) where
   skeleton : Skeleton
   skeleton_eq : ∀ parameter, (expression parameter).skeleton = skeleton
-  coordinate_count : ∀ parameter,
-    (expression parameter).realCoordinates.length = skeleton.realArity
   coordinate_measurable : ∀ index : Nat,
     Measurable fun parameter => (expression parameter).realCoordinates.getD index 0
+
+/-- Every member of a family has as many real coordinates as the skeleton's real arity. -/
+theorem MeasurableFamily.coordinate_count {α : Type*} [MeasurableSpace α]
+    {expression : α → Expr} (family : MeasurableFamily α expression) (parameter : α) :
+    (expression parameter).realCoordinates.length = family.skeleton.realArity := by
+  rw [realCoordinates_length, family.skeleton_eq]
 
 namespace MeasurableFamily
 
@@ -191,13 +207,8 @@ def comp {α β : Type*} [MeasurableSpace α] [MeasurableSpace β]
     MeasurableFamily β (expression ∘ function) where
   skeleton := family.skeleton
   skeleton_eq parameter := family.skeleton_eq (function parameter)
-  coordinate_count parameter := family.coordinate_count (function parameter)
   coordinate_measurable index :=
     (family.coordinate_measurable index).comp measurableFunction
-
-def of_eq {α : Type*} [MeasurableSpace α] {first second : α → Expr}
-    (family : MeasurableFamily α first) (equality : first = second) :
-    MeasurableFamily α second := equality ▸ family
 
 /-- Extract a fixed-skeleton child whose coordinates occupy a contiguous block
 of the parent's coordinate traversal. -/
@@ -211,8 +222,6 @@ def extractContiguous {α : Type*} [MeasurableSpace α]
     MeasurableFamily α child where
   skeleton := childSkeleton
   skeleton_eq := child_skeleton
-  coordinate_count parameter := by
-    rw [realCoordinates_length, child_skeleton]
   coordinate_measurable index := by
     by_cases inBounds : index < childSkeleton.realArity
     · have equality :
@@ -232,10 +241,6 @@ def extractContiguous {α : Type*} [MeasurableSpace α]
         rfl
       rw [equality]
       exact measurable_const
-
-def congr {α : Type*} [MeasurableSpace α] {first second : α → Expr}
-    (family : MeasurableFamily α first) (equal : first = second) :
-    MeasurableFamily α second := equal ▸ family
 
 theorem measurable_realCoordinates {α : Type*} [MeasurableSpace α]
     {expression : α → Expr} (family : MeasurableFamily α expression) :
@@ -271,14 +276,12 @@ def constant {α : Type*} [MeasurableSpace α] (expression : Expr) :
     MeasurableFamily α (fun _ => expression) where
   skeleton := expression.skeleton
   skeleton_eq _ := rfl
-  coordinate_count _ := realCoordinates_length expression
   coordinate_measurable _ := measurable_const
 
 def realLiteral :
     MeasurableFamily ℝ (fun value => Expr.real value) where
   skeleton := .real
   skeleton_eq _ := by simp [Expr.skeleton]
-  coordinate_count _ := by simp [Expr.realCoordinates, Expr.skeleton, Expr.realArity]
   coordinate_measurable index := by
     cases index with
     | zero =>
@@ -299,16 +302,11 @@ def combine {α : Type*} [MeasurableSpace α]
     (skeleton_rule : ∀ l r, (constructor l r).skeleton =
       skeletonConstructor l.skeleton r.skeleton)
     (coordinates_rule : ∀ l r, (constructor l r).realCoordinates =
-      l.realCoordinates ++ r.realCoordinates)
-    (arity_rule : ∀ l r, (skeletonConstructor l r).realArity =
-      l.realArity + r.realArity) :
+      l.realCoordinates ++ r.realCoordinates) :
     MeasurableFamily α (fun parameter => constructor (left parameter) (right parameter)) where
   skeleton := skeletonConstructor leftFamily.skeleton rightFamily.skeleton
   skeleton_eq parameter := by
     rw [skeleton_rule, leftFamily.skeleton_eq, rightFamily.skeleton_eq]
-  coordinate_count parameter := by
-    rw [coordinates_rule, List.length_append, leftFamily.coordinate_count,
-      rightFamily.coordinate_count, arity_rule]
   coordinate_measurable index := by
     by_cases beforeRight : index < leftFamily.skeleton.realArity
     · have functionEq :
@@ -340,21 +338,18 @@ def app {α : Type*} [MeasurableSpace α] {left right : α → Expr} (leftFamily
     MeasurableFamily α (fun parameter => .app (left parameter) (right parameter)) :=
   combine leftFamily rightFamily .app .app
     (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates])
-    (by intros; simp [Expr.realArity])
 
 def pair {α : Type*} [MeasurableSpace α] {left right : α → Expr} (leftFamily : MeasurableFamily α left)
     (rightFamily : MeasurableFamily α right) :
     MeasurableFamily α (fun parameter => .pair (left parameter) (right parameter)) :=
   combine leftFamily rightFamily .pair .pair
     (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates])
-    (by intros; simp [Expr.realArity])
 
 def cons {α : Type*} [MeasurableSpace α] {left right : α → Expr} (leftFamily : MeasurableFamily α left)
     (rightFamily : MeasurableFamily α right) :
     MeasurableFamily α (fun parameter => .cons (left parameter) (right parameter)) :=
   combine leftFamily rightFamily .cons .cons
     (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates])
-    (by intros; simp [Expr.realArity])
 
 def add {α : Type*} [MeasurableSpace α]
     {left right : α → Expr} (leftFamily : MeasurableFamily α left)
@@ -362,7 +357,6 @@ def add {α : Type*} [MeasurableSpace α]
     MeasurableFamily α (fun parameter => .add (left parameter) (right parameter)) :=
   combine leftFamily rightFamily .add .add
     (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates])
-    (by intros; simp [Expr.realArity])
 
 def mul {α : Type*} [MeasurableSpace α]
     {left right : α → Expr} (leftFamily : MeasurableFamily α left)
@@ -370,7 +364,6 @@ def mul {α : Type*} [MeasurableSpace α]
     MeasurableFamily α (fun parameter => .mul (left parameter) (right parameter)) :=
   combine leftFamily rightFamily .mul .mul
     (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates])
-    (by intros; simp [Expr.realArity])
 
 def div {α : Type*} [MeasurableSpace α]
     {left right : α → Expr} (leftFamily : MeasurableFamily α left)
@@ -378,7 +371,6 @@ def div {α : Type*} [MeasurableSpace α]
     MeasurableFamily α (fun parameter => .div (left parameter) (right parameter)) :=
   combine leftFamily rightFamily .div .div
     (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates])
-    (by intros; simp [Expr.realArity])
 
 def lt {α : Type*} [MeasurableSpace α]
     {left right : α → Expr} (leftFamily : MeasurableFamily α left)
@@ -386,7 +378,6 @@ def lt {α : Type*} [MeasurableSpace α]
     MeasurableFamily α (fun parameter => .lt (left parameter) (right parameter)) :=
   combine leftFamily rightFamily Expr.lt Expr.lt
     (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates])
-    (by intros; simp [Expr.realArity])
 
 /-- Lift a unary constructor whose real-coordinate traversal is unchanged. -/
 def wrap {α : Type*} [MeasurableSpace α] {body : α → Expr}
@@ -395,14 +386,10 @@ def wrap {α : Type*} [MeasurableSpace α] {body : α → Expr}
     (skeleton_rule : ∀ expression, (constructor expression).skeleton =
       skeletonConstructor expression.skeleton)
     (coordinates_rule : ∀ expression, (constructor expression).realCoordinates =
-      expression.realCoordinates)
-    (arity_rule : ∀ skeleton,
-      (skeletonConstructor skeleton).realArity = skeleton.realArity) :
+      expression.realCoordinates) :
     MeasurableFamily α (fun parameter => constructor (body parameter)) where
   skeleton := skeletonConstructor bodyFamily.skeleton
   skeleton_eq parameter := by rw [skeleton_rule, bodyFamily.skeleton_eq]
-  coordinate_count parameter := by
-    rw [coordinates_rule, bodyFamily.coordinate_count, arity_rule]
   coordinate_measurable index := by
     have functionEq :
         (fun parameter => (constructor (body parameter)).realCoordinates.getD index 0) =
@@ -417,100 +404,30 @@ def fst {α : Type*} [MeasurableSpace α] {body : α → Expr}
     MeasurableFamily α (fun parameter => .fst (body parameter)) :=
   wrap family .fst .fst
     (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates])
-    (by intros; simp [Expr.realArity])
 
 def snd {α : Type*} [MeasurableSpace α] {body : α → Expr}
     (family : MeasurableFamily α body) :
     MeasurableFamily α (fun parameter => .snd (body parameter)) :=
   wrap family .snd .snd
     (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates])
-    (by intros; simp [Expr.realArity])
 
 def inl {α : Type*} [MeasurableSpace α] {body : α → Expr}
     (family : MeasurableFamily α body) :
     MeasurableFamily α (fun parameter => .inl (body parameter)) :=
   wrap family .inl .inl
     (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates])
-    (by intros; simp [Expr.realArity])
 
 def inr {α : Type*} [MeasurableSpace α] {body : α → Expr}
     (family : MeasurableFamily α body) :
     MeasurableFamily α (fun parameter => .inr (body parameter)) :=
   wrap family .inr .inr
     (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates])
-    (by intros; simp [Expr.realArity])
 
 def neg {α : Type*} [MeasurableSpace α] {body : α → Expr}
     (family : MeasurableFamily α body) :
     MeasurableFamily α (fun parameter => .neg (body parameter)) :=
   wrap family .neg .neg
     (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates])
-    (by intros; simp [Expr.realArity])
-
-/-- Lift a one-hole context whose coordinate traversal has fixed coordinates
-before and after the hole. -/
-def surround {α : Type*} [MeasurableSpace α] {body : α → Expr}
-    (bodyFamily : MeasurableFamily α body)
-    (constructor : Expr → Expr) (resultSkeleton : Skeleton)
-    (skeleton_rule : ∀ parameter, (constructor (body parameter)).skeleton = resultSkeleton)
-    (beforeCoordinates afterCoordinates : List ℝ)
-    (coordinates_rule : ∀ parameter, (constructor (body parameter)).realCoordinates =
-      beforeCoordinates ++ (body parameter).realCoordinates ++ afterCoordinates)
-    (arity_rule : resultSkeleton.realArity =
-      beforeCoordinates.length + bodyFamily.skeleton.realArity + afterCoordinates.length) :
-    MeasurableFamily α (fun parameter => constructor (body parameter)) where
-  skeleton := resultSkeleton
-  skeleton_eq parameter := skeleton_rule parameter
-  coordinate_count parameter := by
-    rw [coordinates_rule parameter, List.length_append, List.length_append,
-      bodyFamily.coordinate_count, arity_rule]
-  coordinate_measurable index := by
-    by_cases inPrefix : index < beforeCoordinates.length
-    · have functionEq :
-          (fun parameter => (constructor (body parameter)).realCoordinates.getD index 0) =
-            fun _ => beforeCoordinates.getD index 0 := by
-          funext parameter
-          rw [coordinates_rule parameter, List.getD_eq_getElem?_getD, List.getElem?_append]
-          have inCombined : index <
-              (beforeCoordinates ++ (body parameter).realCoordinates).length := by
-            simp only [List.length_append]
-            omega
-          rw [if_pos inCombined, List.getElem?_append, if_pos inPrefix,
-            ← List.getD_eq_getElem?_getD]
-      rw [functionEq]
-      exact measurable_const
-    · have afterPrefix : beforeCoordinates.length ≤ index := Nat.le_of_not_gt inPrefix
-      by_cases inBody : index - beforeCoordinates.length < bodyFamily.skeleton.realArity
-      · have functionEq :
-            (fun parameter => (constructor (body parameter)).realCoordinates.getD index 0) =
-              fun parameter => (body parameter).realCoordinates.getD
-                (index - beforeCoordinates.length) 0 := by
-            funext parameter
-            rw [coordinates_rule parameter, List.getD_eq_getElem?_getD, List.getElem?_append]
-            have inCombined : index <
-                (beforeCoordinates ++ (body parameter).realCoordinates).length := by
-              rw [List.length_append, bodyFamily.coordinate_count]
-              omega
-            rw [if_pos inCombined, List.getElem?_append, if_neg inPrefix,
-              ← List.getD_eq_getElem?_getD]
-        rw [functionEq]
-        exact bodyFamily.coordinate_measurable _
-      · have functionEq :
-            (fun parameter => (constructor (body parameter)).realCoordinates.getD index 0) =
-              fun _ => afterCoordinates.getD
-                (index - beforeCoordinates.length - bodyFamily.skeleton.realArity) 0 := by
-            funext parameter
-            rw [coordinates_rule parameter, List.getD_eq_getElem?_getD, List.getElem?_append]
-            have afterCombined : ¬ index <
-                (beforeCoordinates ++ (body parameter).realCoordinates).length := by
-              rw [List.length_append, bodyFamily.coordinate_count]
-              omega
-            rw [if_neg afterCombined, List.length_append, bodyFamily.coordinate_count,
-              ← List.getD_eq_getElem?_getD]
-            congr 1
-            omega
-        rw [functionEq]
-        exact measurable_const
 
 end MeasurableFamily
 
@@ -596,34 +513,19 @@ theorem thirdChild_skeleton (expression : Expr) :
     (Expr.thirdChild expression).skeleton = Skeleton.thirdChild expression.skeleton := by
   cases expression <;> simp [Expr.thirdChild, Expr.skeleton, Skeleton.thirdChild]
 
-theorem list_getD_append_left {α : Type*} (left right : List α) (index : Nat)
-    (default : α) (inBounds : index < left.length) :
-    (left ++ right).getD index default = left.getD index default := by
-  rw [List.getD_eq_getElem?_getD, List.getElem?_append, if_pos inBounds,
-    ← List.getD_eq_getElem?_getD]
-
+/-- `List.getD_append_right` at an index offset by the left length, the form the coordinate
+lemmas rewrite with. -/
 theorem list_getD_append_right {α : Type*} (left right : List α) (index : Nat)
     (default : α) :
     (left ++ right).getD (left.length + index) default = right.getD index default := by
-  rw [List.getD_eq_getElem?_getD, List.getElem?_append, if_neg (by omega),
-    Nat.add_sub_cancel_left, ← List.getD_eq_getElem?_getD]
+  rw [List.getD_append_right _ _ _ _ (Nat.le_add_right _ _), Nat.add_sub_cancel_left]
 
 theorem list_getD_append_middle {α : Type*} (first second third : List α) (index : Nat)
     (default : α) (inBounds : index < second.length) :
     (first ++ second ++ third).getD (first.length + index) default =
       second.getD index default := by
   rw [List.append_assoc]
-  rw [list_getD_append_right first (second ++ third),
-    list_getD_append_left _ _ _ _ inBounds]
-
-theorem list_getD_append_third {α : Type*} (first second third : List α) (index : Nat)
-    (default : α) :
-    (first ++ second ++ third).getD (first.length + second.length + index) default =
-      third.getD index default := by
-  rw [List.append_assoc]
-  simpa [Nat.add_assoc] using
-    (list_getD_append_right first (second ++ third) (second.length + index)
-      default).trans (list_getD_append_right second third index default)
+  rw [list_getD_append_right first (second ++ third), List.getD_append _ _ _ _ inBounds]
 
 theorem firstChild_coordinates_decompose (expression : Expr) :
     ∃ suffix, expression.realCoordinates =
@@ -665,7 +567,7 @@ theorem firstChild_coordinate (expression : Expr) (index : Nat)
     (Expr.firstChild expression).realCoordinates.getD index 0 =
       expression.realCoordinates.getD index 0 := by
   rcases firstChild_coordinates_decompose expression with ⟨suffix, equality⟩
-  rw [equality, list_getD_append_left]
+  rw [equality, List.getD_append]
   rw [realCoordinates_length]
   exact inBounds
 
@@ -679,8 +581,7 @@ theorem secondChild_coordinate (expression : Expr) (index : Nat)
   rw [realCoordinates_length]
   exact inBounds
 
-theorem thirdChild_coordinate (expression : Expr) (index : Nat)
-    (inBounds : index < (Expr.thirdChild expression).skeleton.realArity) :
+theorem thirdChild_coordinate (expression : Expr) (index : Nat) :
     (Expr.thirdChild expression).realCoordinates.getD index 0 =
       expression.realCoordinates.getD (Skeleton.thirdOffset expression.skeleton + index) 0 := by
   rcases thirdChild_coordinates_decompose expression with ⟨front, equality, frontLength⟩
@@ -718,67 +619,8 @@ def thirdChild {α : Type*} [MeasurableSpace α] {parent : α → Expr}
     (Skeleton.thirdOffset family.skeleton)
     (fun parameter => by
       rw [thirdChild_skeleton, family.skeleton_eq])
-    (fun parameter index inBounds => by
-      rw [thirdChild_coordinate]
-      · rw [family.skeleton_eq]
-      · rwa [thirdChild_skeleton, family.skeleton_eq])
-
-end MeasurableFamily
-
-
-namespace MeasurableFamily
-
-def matchSumScrutinee {α : Type*} [MeasurableSpace α] {scrutinee : α → Expr} (family : MeasurableFamily α scrutinee)
-    (left right : Expr) :
-    MeasurableFamily α (fun parameter => .matchSum (scrutinee parameter) left right) := by
-  apply surround family (fun body => .matchSum body left right)
-    (.matchSum family.skeleton left.skeleton right.skeleton)
-    (by intro parameter; simp [Expr.skeleton, family.skeleton_eq parameter]) []
-    (left.realCoordinates ++ right.realCoordinates)
-  · intro parameter
-    simp [Expr.realCoordinates, List.append_assoc]
-  · simp only [Expr.realArity, List.length_nil, zero_add, List.length_append]
-    rw [realCoordinates_length left, realCoordinates_length right]
-    omega
-
-def matchListScrutinee {α : Type*} [MeasurableSpace α] {scrutinee : α → Expr} (family : MeasurableFamily α scrutinee)
-    (nilCase consCase : Expr) :
-    MeasurableFamily α
-      (fun parameter => .matchList (scrutinee parameter) nilCase consCase) := by
-  apply surround family (fun body => .matchList body nilCase consCase)
-    (.matchList family.skeleton nilCase.skeleton consCase.skeleton)
-    (by intro parameter; simp [Expr.skeleton, family.skeleton_eq parameter]) []
-    (nilCase.realCoordinates ++ consCase.realCoordinates)
-  · intro parameter
-    simp [Expr.realCoordinates, List.append_assoc]
-  · simp only [Expr.realArity, List.length_nil, zero_add, List.length_append]
-    rw [realCoordinates_length nilCase, realCoordinates_length consCase]
-    omega
-
-def iteCondition {α : Type*} [MeasurableSpace α] {condition : α → Expr} (family : MeasurableFamily α condition)
-    (thenBranch elseBranch : Expr) :
-    MeasurableFamily α
-      (fun parameter => .ite (condition parameter) thenBranch elseBranch) := by
-  apply surround family (fun body => .ite body thenBranch elseBranch)
-    (.ite family.skeleton thenBranch.skeleton elseBranch.skeleton)
-    (by intro parameter; simp [Expr.skeleton, family.skeleton_eq parameter]) []
-    (thenBranch.realCoordinates ++ elseBranch.realCoordinates)
-  · intro parameter
-    simp [Expr.realCoordinates, List.append_assoc]
-  · simp only [Expr.realArity, List.length_nil, zero_add, List.length_append]
-    rw [realCoordinates_length thenBranch, realCoordinates_length elseBranch]
-    omega
-
-def letValue {α : Type*} [MeasurableSpace α] {value : α → Expr} (family : MeasurableFamily α value) (body : Expr) :
-    MeasurableFamily α (fun parameter => .letE (value parameter) body) := by
-  apply surround family (fun expression => .letE expression body)
-    (.letE family.skeleton body.skeleton)
-    (by intro parameter; simp [Expr.skeleton, family.skeleton_eq parameter]) []
-    body.realCoordinates
-  · intro parameter
-    simp [Expr.realCoordinates]
-  · simp only [Expr.realArity, List.length_nil, zero_add]
-    rw [realCoordinates_length body]
+    (fun parameter index _ => by
+      rw [thirdChild_coordinate, family.skeleton_eq])
 
 end MeasurableFamily
 
@@ -921,38 +763,11 @@ theorem measurable_unaryConstructor {α : Type*} [MeasurableSpace α]
     funext parameter
     simp [coordinates_rule]
 
-theorem measurable_fstConstructor {α : Type*} [MeasurableSpace α] {body : α → Expr} (bodyMeasurable : Measurable body) :
-    Measurable fun parameter => Expr.fst (body parameter) :=
-  measurable_unaryConstructor bodyMeasurable .fst .fst
-    (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates])
-
-theorem measurable_sndConstructor {α : Type*} [MeasurableSpace α] {body : α → Expr} (bodyMeasurable : Measurable body) :
-    Measurable fun parameter => Expr.snd (body parameter) :=
-  measurable_unaryConstructor bodyMeasurable .snd .snd
-    (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates])
-
-theorem measurable_inl {α : Type*} [MeasurableSpace α] {body : α → Expr} (bodyMeasurable : Measurable body) :
-    Measurable fun parameter => Expr.inl (body parameter) :=
-  measurable_unaryConstructor bodyMeasurable .inl .inl
-    (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates])
-
-theorem measurable_inr {α : Type*} [MeasurableSpace α] {body : α → Expr} (bodyMeasurable : Measurable body) :
-    Measurable fun parameter => Expr.inr (body parameter) :=
-  measurable_unaryConstructor bodyMeasurable .inr .inr
-    (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates])
-
-theorem measurable_neg {α : Type*} [MeasurableSpace α]
-    {body : α → Expr} (bodyMeasurable : Measurable body) :
-    Measurable fun parameter => Expr.neg (body parameter) :=
-  measurable_unaryConstructor bodyMeasurable .neg .neg
-    (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates])
-
 theorem measurable_realLiteral {α : Type*} [MeasurableSpace α]
     {value : α → ℝ} (valueMeasurable : Measurable value) :
     Measurable fun parameter => Expr.real (value parameter) := by
   apply measurable_expr_of_parts
-  · simpa [Expr.skeleton] using
-      (measurable_const : Measurable fun _ : α => Skeleton.real)
+  · simp [Expr.skeleton]
   · have singletonCoordinates : Measurable fun parameter : α =>
         (⟨[value parameter]⟩ : RealCoordinates) := by
       apply RealCoordinates.measurable_of_length_getD
@@ -961,54 +776,8 @@ theorem measurable_realLiteral {α : Type*} [MeasurableSpace α]
         cases index with
         | zero => simpa [List.getD] using valueMeasurable
         | succ _ =>
-            simpa [List.getD] using (measurable_const : Measurable fun _ : α => (0 : ℝ))
+            simp [List.getD]
     simpa [Expr.realCoordinates] using singletonCoordinates
-
-theorem measurable_app {α : Type*} [MeasurableSpace α] {function argument : α → Expr} (functionMeasurable : Measurable function)
-    (argumentMeasurable : Measurable argument) :
-    Measurable fun parameter => Expr.app (function parameter) (argument parameter) :=
-  measurable_binaryConstructor functionMeasurable argumentMeasurable .app .app
-    (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates])
-
-theorem measurable_pair {α : Type*} [MeasurableSpace α] {left right : α → Expr} (leftMeasurable : Measurable left)
-    (rightMeasurable : Measurable right) :
-    Measurable fun parameter => Expr.pair (left parameter) (right parameter) :=
-  measurable_binaryConstructor leftMeasurable rightMeasurable .pair .pair
-    (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates])
-
-theorem measurable_cons {α : Type*} [MeasurableSpace α] {head tail : α → Expr} (headMeasurable : Measurable head)
-    (tailMeasurable : Measurable tail) :
-    Measurable fun parameter => Expr.cons (head parameter) (tail parameter) :=
-  measurable_binaryConstructor headMeasurable tailMeasurable .cons .cons
-    (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates])
-
-theorem measurable_add {α : Type*} [MeasurableSpace α]
-    {left right : α → Expr} (leftMeasurable : Measurable left)
-    (rightMeasurable : Measurable right) :
-    Measurable fun parameter => Expr.add (left parameter) (right parameter) :=
-  measurable_binaryConstructor leftMeasurable rightMeasurable .add .add
-    (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates])
-
-theorem measurable_mul {α : Type*} [MeasurableSpace α]
-    {left right : α → Expr} (leftMeasurable : Measurable left)
-    (rightMeasurable : Measurable right) :
-    Measurable fun parameter => Expr.mul (left parameter) (right parameter) :=
-  measurable_binaryConstructor leftMeasurable rightMeasurable .mul .mul
-    (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates])
-
-theorem measurable_div {α : Type*} [MeasurableSpace α]
-    {left right : α → Expr} (leftMeasurable : Measurable left)
-    (rightMeasurable : Measurable right) :
-    Measurable fun parameter => Expr.div (left parameter) (right parameter) :=
-  measurable_binaryConstructor leftMeasurable rightMeasurable .div .div
-    (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates])
-
-theorem measurable_lt {α : Type*} [MeasurableSpace α]
-    {left right : α → Expr} (leftMeasurable : Measurable left)
-    (rightMeasurable : Measurable right) :
-    Measurable fun parameter => Expr.lt (left parameter) (right parameter) :=
-  measurable_binaryConstructor leftMeasurable rightMeasurable Expr.lt Expr.lt
-    (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates])
 
 theorem terminalFloatSet_eq :
     terminalFloatSet = Expr.skeleton ⁻¹' {Skeleton.real} := by
@@ -1052,16 +821,8 @@ def MeasurableFamily.skeletonFiber (skeleton : Skeleton) :
     MeasurableFamily (SkeletonFiber skeleton) Subtype.val where
   skeleton := skeleton
   skeleton_eq expression := expression.property
-  coordinate_count expression := by
-    rw [realCoordinates_length expression]
-    exact congrArg Expr.realArity expression.property
   coordinate_measurable index :=
     (measurable_realCoordinate index).comp measurable_subtype_coe
-
-theorem skeletonFiber_cover :
-    ⋃ skeleton, SkeletonFiber skeleton = Set.univ := by
-  ext expression
-  simp [SkeletonFiber]
 
 def skeletonShift (amount cutoff : Nat) : Skeleton → Skeleton
   | .bvar index => .bvar (if cutoff ≤ index then index + amount else index)
@@ -1116,140 +877,15 @@ def skeletonShift (amount cutoff : Nat) : Skeleton → Skeleton
       .gamma kind (skeletonShift amount cutoff left) (skeletonShift amount cutoff right)
 
 theorem shift_skeleton (amount cutoff : Nat) (expression : Expr) :
-    (expression.shift amount cutoff).skeleton = skeletonShift amount cutoff expression.skeleton := by
-  induction sizeEq : sizeOf expression using Nat.strong_induction_on generalizing expression cutoff with
-  | h size ih =>
-      cases expression with
-      | uniform _ left right | gaussian _ left right | beta _ left right
-      | gamma _ left right =>
-          simp only [Expr.shift, Expr.mapVars, Expr.skeleton, skeletonShift]
-          rw [ih (sizeOf left) (by rw [← sizeEq]; simp_wf <;> omega) cutoff left rfl,
-            ih (sizeOf right) (by rw [← sizeEq]; simp_wf <;> omega) cutoff right rfl]
-      | poisson _ body | bernoulli _ body | exponential _ body =>
-          simp only [Expr.shift, Expr.mapVars, Expr.skeleton, skeletonShift]
-          rw [ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega) cutoff body rfl]
-      | pair left right | app left right | cons left right =>
-          simp only [Expr.shift, Expr.mapVars, Expr.skeleton, skeletonShift]
-          rw [ih (sizeOf left) (by rw [← sizeEq]; simp_wf <;> omega) cutoff left rfl,
-            ih (sizeOf right) (by rw [← sizeEq]; simp_wf <;> omega) cutoff right rfl]
-      | add left right | mul left right | div left right =>
-          simp only [Expr.shift, Expr.mapVars, Expr.skeleton, skeletonShift]
-          rw [ih (sizeOf left) (by rw [← sizeEq]; simp_wf <;> omega) cutoff left rfl,
-            ih (sizeOf right) (by rw [← sizeEq]; simp_wf <;> omega) cutoff right rfl]
-      | lt left right =>
-          simp only [Expr.shift, Expr.mapVars, Expr.skeleton, skeletonShift]
-          rw [ih (sizeOf left) (by rw [← sizeEq]; simp_wf <;> omega) cutoff left rfl,
-            ih (sizeOf right) (by rw [← sizeEq]; simp_wf <;> omega) cutoff right rfl]
-      | matchSum scrutinee left right | ite scrutinee left right =>
-          simp only [Expr.shift, Expr.mapVars, Expr.skeleton, skeletonShift]
-          rw [ih (sizeOf scrutinee) (by rw [← sizeEq]; simp_wf <;> omega)
-              cutoff scrutinee rfl]
-          first
-          | rw [ih (sizeOf left) (by rw [← sizeEq]; simp_wf <;> omega)
-                (cutoff + 1) left rfl,
-              ih (sizeOf right) (by rw [← sizeEq]; simp_wf <;> omega)
-                (cutoff + 1) right rfl]
-          | rw [ih (sizeOf left) (by rw [← sizeEq]; simp_wf <;> omega) cutoff left rfl,
-              ih (sizeOf right) (by rw [← sizeEq]; simp_wf <;> omega) cutoff right rfl]
-      | matchList scrutinee nilCase consCase =>
-          simp only [Expr.shift, Expr.mapVars, Expr.skeleton, skeletonShift]
-          rw [ih (sizeOf scrutinee) (by rw [← sizeEq]; simp_wf <;> omega)
-              cutoff scrutinee rfl,
-            ih (sizeOf nilCase) (by rw [← sizeEq]; simp_wf <;> omega)
-              cutoff nilCase rfl,
-            ih (sizeOf consCase) (by rw [← sizeEq]; simp_wf <;> omega)
-              (cutoff + 2) consCase rfl]
-      | letE value body =>
-          simp only [Expr.shift, Expr.mapVars, Expr.skeleton, skeletonShift]
-          rw [ih (sizeOf value) (by rw [← sizeEq]; simp_wf <;> omega) cutoff value rfl,
-            ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega)
-              (cutoff + 1) body rfl]
-      | lam body | fst body | snd body =>
-          simp only [Expr.shift, Expr.mapVars, Expr.skeleton, skeletonShift]
-          first
-          | rw [ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega)
-                (cutoff + 1) body rfl]
-          | rw [ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega) cutoff body rfl]
-      | fix body =>
-          simp only [Expr.shift, Expr.mapVars, Expr.skeleton, skeletonShift]
-          rw [ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega)
-            (cutoff + 2) body rfl]
-      | inl body | inr body =>
-          simp only [Expr.shift, Expr.mapVars, Expr.skeleton, skeletonShift]
-          rw [ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega) cutoff body rfl]
-      | neg body =>
-          simp only [Expr.shift, Expr.mapVars, Expr.skeleton, skeletonShift]
-          rw [ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega) cutoff body rfl]
-      | bvar index | reject | unit | bool flag | real index | nil | discrete _ _ =>
-          simp [Expr.shift, Expr.mapVars, Expr.skeleton, skeletonShift]
+    (expression.shift amount cutoff).skeleton =
+      skeletonShift amount cutoff expression.skeleton := by
+  induction expression generalizing cutoff <;>
+    simp [Expr.shift, Expr.mapVars, Expr.skeleton, skeletonShift, *]
 
 theorem shift_realCoordinates (amount cutoff : Nat) (expression : Expr) :
     (expression.shift amount cutoff).realCoordinates = expression.realCoordinates := by
-  induction sizeEq : sizeOf expression using Nat.strong_induction_on generalizing expression cutoff with
-  | h size ih =>
-      cases expression with
-      | uniform _ left right | gaussian _ left right | beta _ left right
-      | gamma _ left right =>
-          simp only [Expr.shift, Expr.mapVars, Expr.realCoordinates]
-          rw [ih (sizeOf left) (by rw [← sizeEq]; simp_wf <;> omega) cutoff left rfl,
-            ih (sizeOf right) (by rw [← sizeEq]; simp_wf <;> omega) cutoff right rfl]
-      | poisson _ body | bernoulli _ body | exponential _ body =>
-          simp only [Expr.shift, Expr.mapVars, Expr.realCoordinates]
-          rw [ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega) cutoff body rfl]
-      | pair left right | app left right | cons left right =>
-          simp only [Expr.shift, Expr.mapVars, Expr.realCoordinates]
-          rw [ih (sizeOf left) (by rw [← sizeEq]; simp_wf <;> omega) cutoff left rfl,
-            ih (sizeOf right) (by rw [← sizeEq]; simp_wf <;> omega) cutoff right rfl]
-      | add left right | mul left right | div left right =>
-          simp only [Expr.shift, Expr.mapVars, Expr.realCoordinates]
-          rw [ih (sizeOf left) (by rw [← sizeEq]; simp_wf <;> omega) cutoff left rfl,
-            ih (sizeOf right) (by rw [← sizeEq]; simp_wf <;> omega) cutoff right rfl]
-      | lt left right =>
-          simp only [Expr.shift, Expr.mapVars, Expr.realCoordinates]
-          rw [ih (sizeOf left) (by rw [← sizeEq]; simp_wf <;> omega) cutoff left rfl,
-            ih (sizeOf right) (by rw [← sizeEq]; simp_wf <;> omega) cutoff right rfl]
-      | matchSum scrutinee left right | ite scrutinee left right =>
-          simp only [Expr.shift, Expr.mapVars, Expr.realCoordinates]
-          rw [ih (sizeOf scrutinee) (by rw [← sizeEq]; simp_wf <;> omega)
-              cutoff scrutinee rfl]
-          first
-          | rw [ih (sizeOf left) (by rw [← sizeEq]; simp_wf <;> omega)
-                (cutoff + 1) left rfl,
-              ih (sizeOf right) (by rw [← sizeEq]; simp_wf <;> omega)
-                (cutoff + 1) right rfl]
-          | rw [ih (sizeOf left) (by rw [← sizeEq]; simp_wf <;> omega) cutoff left rfl,
-              ih (sizeOf right) (by rw [← sizeEq]; simp_wf <;> omega) cutoff right rfl]
-      | matchList scrutinee nilCase consCase =>
-          simp only [Expr.shift, Expr.mapVars, Expr.realCoordinates]
-          rw [ih (sizeOf scrutinee) (by rw [← sizeEq]; simp_wf <;> omega)
-              cutoff scrutinee rfl,
-            ih (sizeOf nilCase) (by rw [← sizeEq]; simp_wf <;> omega)
-              cutoff nilCase rfl,
-            ih (sizeOf consCase) (by rw [← sizeEq]; simp_wf <;> omega)
-              (cutoff + 2) consCase rfl]
-      | letE value body =>
-          simp only [Expr.shift, Expr.mapVars, Expr.realCoordinates]
-          rw [ih (sizeOf value) (by rw [← sizeEq]; simp_wf <;> omega) cutoff value rfl,
-            ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega)
-              (cutoff + 1) body rfl]
-      | lam body | fst body | snd body =>
-          simp only [Expr.shift, Expr.mapVars, Expr.realCoordinates]
-          first
-          | rw [ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega)
-                (cutoff + 1) body rfl]
-          | rw [ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega) cutoff body rfl]
-      | fix body =>
-          simp only [Expr.shift, Expr.mapVars, Expr.realCoordinates]
-          rw [ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega)
-            (cutoff + 2) body rfl]
-      | inl body | inr body =>
-          simp only [Expr.shift, Expr.mapVars, Expr.realCoordinates]
-          rw [ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega) cutoff body rfl]
-      | neg body =>
-          simp only [Expr.shift, Expr.mapVars, Expr.realCoordinates]
-          rw [ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega) cutoff body rfl]
-      | bvar index | reject | unit | bool flag | real index | nil | discrete _ _ =>
-          simp [Expr.shift, Expr.mapVars, Expr.realCoordinates]
+  induction expression generalizing cutoff <;>
+    simp [Expr.shift, Expr.mapVars, Expr.realCoordinates, *]
 
 def MeasurableFamily.shift {α : Type*} [MeasurableSpace α]
     {expression : α → Expr} (family : MeasurableFamily α expression)
@@ -1257,9 +893,6 @@ def MeasurableFamily.shift {α : Type*} [MeasurableSpace α]
     MeasurableFamily α (fun parameter => (expression parameter).shift amount cutoff) where
   skeleton := skeletonShift amount cutoff family.skeleton
   skeleton_eq parameter := by rw [shift_skeleton, family.skeleton_eq]
-  coordinate_count parameter := by
-    rw [← family.skeleton_eq parameter, ← shift_skeleton]
-    exact realCoordinates_length _
   coordinate_measurable index := by
     have equality :
         (fun parameter => ((expression parameter).shift amount cutoff).realCoordinates.getD index 0) =
@@ -1331,76 +964,11 @@ def skeletonSubstAt (depth : Nat) (replacement : Skeleton) : Skeleton → Skelet
 theorem substAt_skeleton (depth : Nat) (replacement expression : Expr) :
     (Expr.substAt depth replacement expression).skeleton =
       skeletonSubstAt depth replacement.skeleton expression.skeleton := by
-  induction sizeEq : sizeOf expression using Nat.strong_induction_on generalizing expression depth with
-  | h size ih =>
-      cases expression with
-      | uniform _ left right | gaussian _ left right | beta _ left right
-      | gamma _ left right =>
-          simp only [Expr.substAt, Expr.mapVars, Expr.skeleton, skeletonSubstAt]
-          rw [ih (sizeOf left) (by rw [← sizeEq]; simp_wf <;> omega) depth left rfl,
-            ih (sizeOf right) (by rw [← sizeEq]; simp_wf <;> omega) depth right rfl]
-      | poisson _ body | bernoulli _ body | exponential _ body =>
-          simp only [Expr.substAt, Expr.mapVars, Expr.skeleton, skeletonSubstAt]
-          rw [ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega) depth body rfl]
-      | pair left right | app left right | cons left right =>
-          simp only [Expr.substAt, Expr.mapVars, Expr.skeleton, skeletonSubstAt]
-          rw [ih (sizeOf left) (by rw [← sizeEq]; simp_wf <;> omega) depth left rfl,
-            ih (sizeOf right) (by rw [← sizeEq]; simp_wf <;> omega) depth right rfl]
-      | add left right | mul left right | div left right =>
-          simp only [Expr.substAt, Expr.mapVars, Expr.skeleton, skeletonSubstAt]
-          rw [ih (sizeOf left) (by rw [← sizeEq]; simp_wf <;> omega) depth left rfl,
-            ih (sizeOf right) (by rw [← sizeEq]; simp_wf <;> omega) depth right rfl]
-      | lt left right =>
-          simp only [Expr.substAt, Expr.mapVars, Expr.skeleton, skeletonSubstAt]
-          rw [ih (sizeOf left) (by rw [← sizeEq]; simp_wf <;> omega) depth left rfl,
-            ih (sizeOf right) (by rw [← sizeEq]; simp_wf <;> omega) depth right rfl]
-      | matchSum scrutinee left right | ite scrutinee left right =>
-          simp only [Expr.substAt, Expr.mapVars, Expr.skeleton, skeletonSubstAt]
-          rw [ih (sizeOf scrutinee) (by rw [← sizeEq]; simp_wf <;> omega)
-              depth scrutinee rfl]
-          first
-          | rw [ih (sizeOf left) (by rw [← sizeEq]; simp_wf <;> omega)
-                (depth + 1) left rfl,
-              ih (sizeOf right) (by rw [← sizeEq]; simp_wf <;> omega)
-                (depth + 1) right rfl]
-          | rw [ih (sizeOf left) (by rw [← sizeEq]; simp_wf <;> omega) depth left rfl,
-              ih (sizeOf right) (by rw [← sizeEq]; simp_wf <;> omega) depth right rfl]
-      | matchList scrutinee nilCase consCase =>
-          simp only [Expr.substAt, Expr.mapVars, Expr.skeleton, skeletonSubstAt]
-          rw [ih (sizeOf scrutinee) (by rw [← sizeEq]; simp_wf <;> omega)
-              depth scrutinee rfl,
-            ih (sizeOf nilCase) (by rw [← sizeEq]; simp_wf <;> omega)
-              depth nilCase rfl,
-            ih (sizeOf consCase) (by rw [← sizeEq]; simp_wf <;> omega)
-              (depth + 2) consCase rfl]
-      | letE value body =>
-          simp only [Expr.substAt, Expr.mapVars, Expr.skeleton, skeletonSubstAt]
-          rw [ih (sizeOf value) (by rw [← sizeEq]; simp_wf <;> omega) depth value rfl,
-            ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega)
-              (depth + 1) body rfl]
-      | lam body | fst body | snd body =>
-          simp only [Expr.substAt, Expr.mapVars, Expr.skeleton, skeletonSubstAt]
-          first
-          | rw [ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega)
-                (depth + 1) body rfl]
-          | rw [ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega) depth body rfl]
-      | fix body =>
-          simp only [Expr.substAt, Expr.mapVars, Expr.skeleton, skeletonSubstAt]
-          rw [ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega)
-            (depth + 2) body rfl]
-      | inl body | inr body =>
-          simp only [Expr.substAt, Expr.mapVars, Expr.skeleton, skeletonSubstAt]
-          rw [ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega) depth body rfl]
-      | neg body =>
-          simp only [Expr.substAt, Expr.mapVars, Expr.skeleton, skeletonSubstAt]
-          rw [ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega) depth body rfl]
-      | bvar index =>
-          simp only [Expr.substAt, Expr.mapVars, Expr.skeleton, skeletonSubstAt]
-          split
-          · exact shift_skeleton depth 0 replacement
-          · simp only [Expr.skeleton]
-      | reject | unit | bool flag | real index | nil | discrete _ _ =>
-          simp [Expr.substAt, Expr.mapVars, Expr.skeleton, skeletonSubstAt]
+  induction expression generalizing depth with
+  | bvar index =>
+      simp only [Expr.substAt, Expr.mapVars, Expr.skeleton, skeletonSubstAt]
+      split <;> simp [shift_skeleton, Expr.skeleton]
+  | _ => simp [Expr.substAt, Expr.mapVars, Expr.skeleton, skeletonSubstAt, *]
 
 inductive CoordinateSelector where
   | body (index : Nat)
@@ -1486,8 +1054,7 @@ theorem applyCoordinatePlan_bodyAtPrefix (before suffix : List ℝ) (value : ℝ
     (replacement : List ℝ) :
     applyCoordinatePlan [.body before.length] (before ++ value :: suffix) replacement =
       [value] := by
-  simp [applyCoordinatePlan, CoordinateSelector.eval, List.getD,
-    List.getElem?_append]
+  simp [applyCoordinatePlan, CoordinateSelector.eval, List.getD]
 
 theorem applyCoordinatePlan_coordinatePlan (depth : Nat) (replacement expression : Expr)
     (before suffix : List ℝ) :
@@ -1495,197 +1062,124 @@ theorem applyCoordinatePlan_coordinatePlan (depth : Nat) (replacement expression
         (coordinatePlan depth replacement.skeleton before.length expression.skeleton)
         (before ++ expression.realCoordinates ++ suffix) replacement.realCoordinates =
       (Expr.substAt depth replacement expression).realCoordinates := by
-  induction sizeEq : sizeOf expression using Nat.strong_induction_on
-      generalizing expression depth before suffix with
-  | h size ih =>
-      cases expression with
-      | bvar index =>
-          simp only [coordinatePlan, Expr.substAt, Expr.mapVars, Expr.skeleton, Expr.realCoordinates]
-          split
-          · rw [← realCoordinates_length replacement,
-              applyCoordinatePlan_replacementRange]
-            exact shift_realCoordinates depth 0 replacement |>.symm
-          · simp [applyCoordinatePlan, Expr.realCoordinates]
-      | real value =>
-          simpa [coordinatePlan, Expr.substAt, Expr.mapVars, Expr.skeleton, Expr.realCoordinates] using
-            applyCoordinatePlan_bodyAtPrefix before suffix value replacement.realCoordinates
-      | pair left right | app left right | cons left right =>
-          simp only [coordinatePlan, Expr.skeleton, Expr.realCoordinates, Expr.substAt, Expr.mapVars,
-            applyCoordinatePlan_append]
-          have leftResult := ih (sizeOf left)
-            (by rw [← sizeEq]; simp_wf <;> omega) depth left before
-              (right.realCoordinates ++ suffix) rfl
-          have rightResult := ih (sizeOf right)
-            (by rw [← sizeEq]; simp_wf <;> omega) depth right
-              (before ++ left.realCoordinates) suffix rfl
-          simp only [List.append_assoc] at leftResult rightResult ⊢
-          rw [leftResult]
-          have offsetEquality : before.length + left.skeleton.realArity =
-              (before ++ left.realCoordinates).length := by
-            rw [List.length_append, realCoordinates_length left]
-          rw [offsetEquality, rightResult]
-      | add left right | mul left right | div left right =>
-          simp only [coordinatePlan, Expr.skeleton, Expr.realCoordinates, Expr.substAt, Expr.mapVars,
-            applyCoordinatePlan_append]
-          have leftResult := ih (sizeOf left)
-            (by rw [← sizeEq]; simp_wf <;> omega) depth left before
-              (right.realCoordinates ++ suffix) rfl
-          have rightResult := ih (sizeOf right)
-            (by rw [← sizeEq]; simp_wf <;> omega) depth right
-              (before ++ left.realCoordinates) suffix rfl
-          simp only [List.append_assoc] at leftResult rightResult ⊢
-          rw [leftResult]
-          have offsetEquality : before.length + left.skeleton.realArity =
-              (before ++ left.realCoordinates).length := by
-            rw [List.length_append, realCoordinates_length left]
-          rw [offsetEquality, rightResult]
-      | lt left right =>
-          simp only [coordinatePlan, Expr.skeleton, Expr.realCoordinates, Expr.substAt, Expr.mapVars,
-            applyCoordinatePlan_append]
-          have leftResult := ih (sizeOf left)
-            (by rw [← sizeEq]; simp_wf <;> omega) depth left before
-              (right.realCoordinates ++ suffix) rfl
-          have rightResult := ih (sizeOf right)
-            (by rw [← sizeEq]; simp_wf <;> omega) depth right
-              (before ++ left.realCoordinates) suffix rfl
-          simp only [List.append_assoc] at leftResult rightResult ⊢
-          rw [leftResult]
-          have offsetEquality : before.length + left.skeleton.realArity =
-              (before ++ left.realCoordinates).length := by
-            rw [List.length_append, realCoordinates_length left]
-          rw [offsetEquality, rightResult]
-      | matchSum scrutinee left right =>
-          simp only [coordinatePlan, Expr.skeleton, Expr.realCoordinates, Expr.substAt, Expr.mapVars,
-            applyCoordinatePlan_append]
-          have scrutineeResult := ih (sizeOf scrutinee)
-            (by rw [← sizeEq]; simp_wf <;> omega) depth scrutinee before
-              (left.realCoordinates ++ right.realCoordinates ++ suffix) rfl
-          have leftResult := ih (sizeOf left)
-            (by rw [← sizeEq]; simp_wf <;> omega) (depth + 1) left
-              (before ++ scrutinee.realCoordinates)
-              (right.realCoordinates ++ suffix) rfl
-          have rightResult := ih (sizeOf right)
-            (by rw [← sizeEq]; simp_wf <;> omega) (depth + 1) right
-              (before ++ scrutinee.realCoordinates ++ left.realCoordinates) suffix rfl
-          simp only [List.append_assoc] at scrutineeResult leftResult rightResult ⊢
-          rw [scrutineeResult]
-          have firstOffset : before.length + scrutinee.skeleton.realArity =
-              (before ++ scrutinee.realCoordinates).length := by
-            rw [List.length_append, realCoordinates_length scrutinee]
-          rw [firstOffset]
-          rw [leftResult]
-          have secondOffset : (before ++ scrutinee.realCoordinates).length +
-                left.skeleton.realArity =
-              (before ++ (scrutinee.realCoordinates ++ left.realCoordinates)).length := by
-            simp only [List.length_append]
-            rw [realCoordinates_length left]
-            omega
-          rw [secondOffset, rightResult]
-      | matchList scrutinee nilCase consCase =>
-          simp only [coordinatePlan, Expr.skeleton, Expr.realCoordinates, Expr.substAt, Expr.mapVars,
-            applyCoordinatePlan_append]
-          have scrutineeResult := ih (sizeOf scrutinee)
-            (by rw [← sizeEq]; simp_wf <;> omega) depth scrutinee before
-              (nilCase.realCoordinates ++ consCase.realCoordinates ++ suffix) rfl
-          have nilResult := ih (sizeOf nilCase)
-            (by rw [← sizeEq]; simp_wf <;> omega) depth nilCase
-              (before ++ scrutinee.realCoordinates)
-              (consCase.realCoordinates ++ suffix) rfl
-          have consResult := ih (sizeOf consCase)
-            (by rw [← sizeEq]; simp_wf <;> omega) (depth + 2) consCase
-              (before ++ scrutinee.realCoordinates ++ nilCase.realCoordinates) suffix rfl
-          simp only [List.append_assoc] at scrutineeResult nilResult consResult ⊢
-          rw [scrutineeResult]
-          have firstOffset : before.length + scrutinee.skeleton.realArity =
-              (before ++ scrutinee.realCoordinates).length := by
-            rw [List.length_append, realCoordinates_length scrutinee]
-          rw [firstOffset]
-          rw [nilResult]
-          have secondOffset : (before ++ scrutinee.realCoordinates).length +
-                nilCase.skeleton.realArity =
-              (before ++ (scrutinee.realCoordinates ++ nilCase.realCoordinates)).length := by
-            simp only [List.length_append]
-            rw [realCoordinates_length nilCase]
-            omega
-          rw [secondOffset, consResult]
-      | ite condition thenBranch elseBranch =>
-          simp only [coordinatePlan, Expr.skeleton, Expr.realCoordinates, Expr.substAt, Expr.mapVars,
-            applyCoordinatePlan_append]
-          have conditionResult := ih (sizeOf condition)
-            (by rw [← sizeEq]; simp_wf <;> omega) depth condition before
-              (thenBranch.realCoordinates ++ elseBranch.realCoordinates ++ suffix) rfl
-          have thenResult := ih (sizeOf thenBranch)
-            (by rw [← sizeEq]; simp_wf <;> omega) depth thenBranch
-              (before ++ condition.realCoordinates)
-              (elseBranch.realCoordinates ++ suffix) rfl
-          have elseResult := ih (sizeOf elseBranch)
-            (by rw [← sizeEq]; simp_wf <;> omega) depth elseBranch
-              (before ++ condition.realCoordinates ++ thenBranch.realCoordinates) suffix rfl
-          simp only [List.append_assoc] at conditionResult thenResult elseResult ⊢
-          rw [conditionResult]
-          have firstOffset : before.length + condition.skeleton.realArity =
-              (before ++ condition.realCoordinates).length := by
-            rw [List.length_append, realCoordinates_length condition]
-          rw [firstOffset]
-          rw [thenResult]
-          have secondOffset : (before ++ condition.realCoordinates).length +
-                thenBranch.skeleton.realArity =
-              (before ++ (condition.realCoordinates ++ thenBranch.realCoordinates)).length := by
-            simp only [List.length_append]
-            rw [realCoordinates_length thenBranch]
-            omega
-          rw [secondOffset, elseResult]
-      | letE value body =>
-          simp only [coordinatePlan, Expr.skeleton, Expr.realCoordinates, Expr.substAt, Expr.mapVars,
-            applyCoordinatePlan_append]
-          have valueResult := ih (sizeOf value)
-            (by rw [← sizeEq]; simp_wf <;> omega) depth value before
-              (body.realCoordinates ++ suffix) rfl
-          have bodyResult := ih (sizeOf body)
-            (by rw [← sizeEq]; simp_wf <;> omega) (depth + 1) body
-              (before ++ value.realCoordinates) suffix rfl
-          simp only [List.append_assoc] at valueResult bodyResult ⊢
-          rw [valueResult]
-          have offsetEquality : before.length + value.skeleton.realArity =
-              (before ++ value.realCoordinates).length := by
-            rw [List.length_append, realCoordinates_length value]
-          rw [offsetEquality, bodyResult]
-      | lam body =>
-          simpa only [coordinatePlan, Expr.skeleton, Expr.realCoordinates, Expr.substAt, Expr.mapVars] using
-            ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega)
-              (depth + 1) body before suffix rfl
-      | fix body =>
-          simpa only [coordinatePlan, Expr.skeleton, Expr.realCoordinates, Expr.substAt, Expr.mapVars] using
-            ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega)
-              (depth + 2) body before suffix rfl
-      | fst body | snd body | inl body | inr body
-      | neg body =>
-          simpa only [coordinatePlan, Expr.skeleton, Expr.realCoordinates, Expr.substAt, Expr.mapVars] using
-            ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega)
-              depth body before suffix rfl
-      | uniform _ left right | gaussian _ left right | beta _ left right
-      | gamma _ left right =>
-          simp only [coordinatePlan, Expr.skeleton, Expr.realCoordinates, Expr.substAt, Expr.mapVars,
-            applyCoordinatePlan_append]
-          have leftResult := ih (sizeOf left)
-            (by rw [← sizeEq]; simp_wf <;> omega) depth left before
-              (right.realCoordinates ++ suffix) rfl
-          have rightResult := ih (sizeOf right)
-            (by rw [← sizeEq]; simp_wf <;> omega) depth right
-              (before ++ left.realCoordinates) suffix rfl
-          simp only [List.append_assoc] at leftResult rightResult ⊢
-          rw [leftResult]
-          have offsetEquality : before.length + left.skeleton.realArity =
-              (before ++ left.realCoordinates).length := by
-            rw [List.length_append, realCoordinates_length left]
-          rw [offsetEquality, rightResult]
-      | poisson _ body | bernoulli _ body | exponential _ body =>
-          simpa only [coordinatePlan, Expr.skeleton, Expr.realCoordinates, Expr.substAt, Expr.mapVars] using
-            ih (sizeOf body) (by rw [← sizeEq]; simp_wf <;> omega)
-              depth body before suffix rfl
-      | reject | unit | bool flag | nil | discrete _ _ =>
-          simp [coordinatePlan, Expr.skeleton, Expr.realCoordinates, Expr.substAt, Expr.mapVars,
-            applyCoordinatePlan]
+  induction expression generalizing depth before suffix with
+  | bvar index =>
+      simp only [coordinatePlan, Expr.substAt, Expr.mapVars, Expr.skeleton, Expr.realCoordinates]
+      split
+      · rw [← realCoordinates_length replacement, applyCoordinatePlan_replacementRange]
+        exact shift_realCoordinates depth 0 replacement |>.symm
+      · simp [applyCoordinatePlan, Expr.realCoordinates]
+  | real value =>
+      simpa [coordinatePlan, Expr.substAt, Expr.mapVars, Expr.skeleton, Expr.realCoordinates]
+        using applyCoordinatePlan_bodyAtPrefix before suffix value replacement.realCoordinates
+  | pair left right ihLeft ihRight | app left right ihLeft ihRight
+  | cons left right ihLeft ihRight | add left right ihLeft ihRight
+  | mul left right ihLeft ihRight | div left right ihLeft ihRight
+  | lt left right ihLeft ihRight
+  | uniform _ left right ihLeft ihRight | gaussian _ left right ihLeft ihRight
+  | beta _ left right ihLeft ihRight | gamma _ left right ihLeft ihRight =>
+      simp only [coordinatePlan, Expr.skeleton, Expr.realCoordinates, Expr.substAt, Expr.mapVars,
+        applyCoordinatePlan_append]
+      have leftResult := ihLeft depth before (right.realCoordinates ++ suffix)
+      have rightResult := ihRight depth (before ++ left.realCoordinates) suffix
+      simp only [List.append_assoc] at leftResult rightResult ⊢
+      rw [leftResult]
+      have offsetEquality : before.length + left.skeleton.realArity =
+          (before ++ left.realCoordinates).length := by
+        rw [List.length_append, realCoordinates_length left]
+      rw [offsetEquality, rightResult]
+  | letE value body ihValue ihBody =>
+      simp only [coordinatePlan, Expr.skeleton, Expr.realCoordinates, Expr.substAt, Expr.mapVars,
+        applyCoordinatePlan_append]
+      have valueResult := ihValue depth before (body.realCoordinates ++ suffix)
+      have bodyResult := ihBody (depth + 1) (before ++ value.realCoordinates) suffix
+      simp only [List.append_assoc] at valueResult bodyResult ⊢
+      rw [valueResult]
+      have offsetEquality : before.length + value.skeleton.realArity =
+          (before ++ value.realCoordinates).length := by
+        rw [List.length_append, realCoordinates_length value]
+      rw [offsetEquality, bodyResult]
+  | matchSum scrutinee left right ihScrutinee ihLeft ihRight =>
+      simp only [coordinatePlan, Expr.skeleton, Expr.realCoordinates, Expr.substAt, Expr.mapVars,
+        applyCoordinatePlan_append]
+      have scrutineeResult := ihScrutinee depth before
+        (left.realCoordinates ++ right.realCoordinates ++ suffix)
+      have leftResult := ihLeft (depth + 1) (before ++ scrutinee.realCoordinates)
+        (right.realCoordinates ++ suffix)
+      have rightResult := ihRight (depth + 1)
+        (before ++ scrutinee.realCoordinates ++ left.realCoordinates) suffix
+      simp only [List.append_assoc] at scrutineeResult leftResult rightResult ⊢
+      rw [scrutineeResult]
+      have firstOffset : before.length + scrutinee.skeleton.realArity =
+          (before ++ scrutinee.realCoordinates).length := by
+        rw [List.length_append, realCoordinates_length scrutinee]
+      rw [firstOffset, leftResult]
+      have secondOffset : (before ++ scrutinee.realCoordinates).length +
+            left.skeleton.realArity =
+          (before ++ (scrutinee.realCoordinates ++ left.realCoordinates)).length := by
+        simp only [List.length_append]
+        rw [realCoordinates_length left]
+        omega
+      rw [secondOffset, rightResult]
+  | matchList scrutinee nilCase consCase ihScrutinee ihNil ihCons =>
+      simp only [coordinatePlan, Expr.skeleton, Expr.realCoordinates, Expr.substAt, Expr.mapVars,
+        applyCoordinatePlan_append]
+      have scrutineeResult := ihScrutinee depth before
+        (nilCase.realCoordinates ++ consCase.realCoordinates ++ suffix)
+      have nilResult := ihNil depth (before ++ scrutinee.realCoordinates)
+        (consCase.realCoordinates ++ suffix)
+      have consResult := ihCons (depth + 2)
+        (before ++ scrutinee.realCoordinates ++ nilCase.realCoordinates) suffix
+      simp only [List.append_assoc] at scrutineeResult nilResult consResult ⊢
+      rw [scrutineeResult]
+      have firstOffset : before.length + scrutinee.skeleton.realArity =
+          (before ++ scrutinee.realCoordinates).length := by
+        rw [List.length_append, realCoordinates_length scrutinee]
+      rw [firstOffset, nilResult]
+      have secondOffset : (before ++ scrutinee.realCoordinates).length +
+            nilCase.skeleton.realArity =
+          (before ++ (scrutinee.realCoordinates ++ nilCase.realCoordinates)).length := by
+        simp only [List.length_append]
+        rw [realCoordinates_length nilCase]
+        omega
+      rw [secondOffset, consResult]
+  | ite condition thenBranch elseBranch ihCondition ihThen ihElse =>
+      simp only [coordinatePlan, Expr.skeleton, Expr.realCoordinates, Expr.substAt, Expr.mapVars,
+        applyCoordinatePlan_append]
+      have conditionResult := ihCondition depth before
+        (thenBranch.realCoordinates ++ elseBranch.realCoordinates ++ suffix)
+      have thenResult := ihThen depth (before ++ condition.realCoordinates)
+        (elseBranch.realCoordinates ++ suffix)
+      have elseResult := ihElse depth
+        (before ++ condition.realCoordinates ++ thenBranch.realCoordinates) suffix
+      simp only [List.append_assoc] at conditionResult thenResult elseResult ⊢
+      rw [conditionResult]
+      have firstOffset : before.length + condition.skeleton.realArity =
+          (before ++ condition.realCoordinates).length := by
+        rw [List.length_append, realCoordinates_length condition]
+      rw [firstOffset, thenResult]
+      have secondOffset : (before ++ condition.realCoordinates).length +
+            thenBranch.skeleton.realArity =
+          (before ++ (condition.realCoordinates ++ thenBranch.realCoordinates)).length := by
+        simp only [List.length_append]
+        rw [realCoordinates_length thenBranch]
+        omega
+      rw [secondOffset, elseResult]
+  | lam body ih =>
+      simpa only [coordinatePlan, Expr.skeleton, Expr.realCoordinates, Expr.substAt,
+        Expr.mapVars] using ih (depth + 1) before suffix
+  | fix body ih =>
+      simpa only [coordinatePlan, Expr.skeleton, Expr.realCoordinates, Expr.substAt,
+        Expr.mapVars] using ih (depth + 2) before suffix
+  | fst body ih | snd body ih | inl body ih | inr body ih
+  | neg body ih
+  | poisson _ body ih | exponential _ body ih | bernoulli _ body ih
+  =>
+      simpa only [coordinatePlan, Expr.skeleton, Expr.realCoordinates, Expr.substAt,
+        Expr.mapVars] using ih depth before suffix
+  | unit | reject | discrete _ _ | bool flag | nil =>
+      simp [coordinatePlan, Expr.skeleton, Expr.realCoordinates, Expr.substAt, Expr.mapVars,
+        applyCoordinatePlan]
 
 theorem substAt_realCoordinates (depth : Nat) (replacement expression : Expr) :
     applyCoordinatePlan
@@ -1694,19 +1188,6 @@ theorem substAt_realCoordinates (depth : Nat) (replacement expression : Expr) :
       (Expr.substAt depth replacement expression).realCoordinates := by
   simpa using
     applyCoordinatePlan_coordinatePlan depth replacement expression [] []
-
-theorem coordinatePlan_length (depth : Nat) (replacement expression : Expr) :
-    (coordinatePlan depth replacement.skeleton 0 expression.skeleton).length =
-      (skeletonSubstAt depth replacement.skeleton expression.skeleton).realArity := by
-  calc
-    (coordinatePlan depth replacement.skeleton 0 expression.skeleton).length =
-        (Expr.substAt depth replacement expression).realCoordinates.length := by
-      simpa only [applyCoordinatePlan, List.length_map] using
-        congrArg List.length (substAt_realCoordinates depth replacement expression)
-    _ = (Expr.substAt depth replacement expression).skeleton.realArity :=
-      realCoordinates_length _
-    _ = (skeletonSubstAt depth replacement.skeleton expression.skeleton).realArity :=
-      congrArg Expr.realArity (substAt_skeleton depth replacement expression)
 
 theorem applyCoordinatePlan_getD_of_lt (plan : List CoordinateSelector)
     (body replacement : List ℝ) (index : Nat) (inBounds : index < plan.length) :
@@ -1722,9 +1203,6 @@ def MeasurableFamily.substAt {α : Type*} [MeasurableSpace α]
   skeleton := skeletonSubstAt depth replacementFamily.skeleton bodyFamily.skeleton
   skeleton_eq parameter := by
     rw [substAt_skeleton, replacementFamily.skeleton_eq, bodyFamily.skeleton_eq]
-  coordinate_count parameter := by
-    rw [realCoordinates_length, substAt_skeleton,
-      replacementFamily.skeleton_eq, bodyFamily.skeleton_eq]
   coordinate_measurable index := by
     let plan := coordinatePlan depth replacementFamily.skeleton 0 bodyFamily.skeleton
     have coordinateEquality (parameter : α) :
@@ -1801,9 +1279,6 @@ def paramsFromCoordinates (op : Determinize.Spec.Paper.Op)
     (affine general : List ℝ) : Determinize.Spec.Paper.Params op :=
   (fun index => affine.getD index.1 0, fun index => general.getD index.1 0)
 
-def atomicParams (op : Op) (affine general : List ℝ) : Determinize.Spec.Paper.Params op :=
-  paramsFromCoordinates op affine general
-
 theorem paramsFromCoordinates_eq_getElem
     (op : Determinize.Spec.Paper.Op) (affine general : List ℝ)
     (affineArity : affine.length =
@@ -1811,15 +1286,15 @@ theorem paramsFromCoordinates_eq_getElem
     (generalArity : general.length =
       Determinize.Spec.Paper.generalArity op) :
     paramsFromCoordinates op affine general =
-      (fun index => affine[index.1]'(by simpa [affineArity] using index.2),
-        fun index => general[index.1]'(by simpa [generalArity] using index.2)) := by
+      (fun index => affine[index.1]'(by simp [affineArity]),
+        fun index => general[index.1]'(by simp [generalArity])) := by
   apply Prod.ext
   · funext index
     simp [paramsFromCoordinates, List.getD,
-      show index.1 < affine.length by simpa [affineArity] using index.2]
+      show index.1 < affine.length by simp [affineArity]]
   · funext index
     simp [paramsFromCoordinates, List.getD,
-      show index.1 < general.length by simpa [generalArity] using index.2]
+      show index.1 < general.length by simp [generalArity]]
 
 theorem measurable_meanValue (op : Determinize.Spec.Paper.Op) :
     Measurable (Determinize.Spec.Paper.meanValue op) := by
@@ -1845,11 +1320,11 @@ theorem primitiveFiber_eq_atomic
     (generalArity : general.length =
       Determinize.Spec.Paper.generalArity op) :
     primitiveFiber kind op affine general =
-      (primitiveKernelPack laws kind op).kernel (atomicParams op affine general) := by
+      (primitiveKernelPack laws kind op).kernel (paramsFromCoordinates op affine general) := by
   classical
   cases kind with
   | sample affinity =>
-      simp only [atomicParams, primitiveKernelPack]
+      simp only [primitiveKernelPack]
       unfold primitiveFiber
         Determinize.Spec.Paper.parseParams
       simp only
@@ -1859,14 +1334,14 @@ theorem primitiveFiber_eq_atomic
       exact (paramsFromCoordinates_eq_getElem op affine general
         affineArity generalArity).symm
   | mean =>
-      simp only [atomicParams, primitiveKernelPack]
+      simp only [primitiveKernelPack]
       unfold primitiveFiber
         Determinize.Spec.Paper.parseParams
       simp only
       rw [dif_pos affineArity, dif_pos generalArity]
       let actualParams : Determinize.Spec.Paper.Params op :=
-        (fun index => affine[index.1]'(by simpa [affineArity] using index.2),
-          fun index => general[index.1]'(by simpa [generalArity] using index.2))
+        (fun index => affine[index.1]'(by simp [affineArity]),
+          fun index => general[index.1]'(by simp [generalArity]))
       have actualParamsEquality : actualParams =
           paramsFromCoordinates op affine general := by
         dsimp only [actualParams]
@@ -1896,7 +1371,6 @@ theorem primitiveFiber_eq_atomic
           fun actualDomain => paramsDomain (actualParamsEquality ▸ actualDomain)
         rw [if_neg paramsDomain, if_neg actualOutside]
         simp
-
 
 universe u
 
@@ -1994,15 +1468,15 @@ theorem measurable_getD_pair (index : Nat) :
 
 theorem measurable_getD_first (index : Nat) :
     Measurable fun pair : ℝ × ℝ => [pair.1].getD index 0 := by
-  rcases index with _ | index <;> simp [List.getD] <;> fun_prop
+  rcases index with _ | index <;> simp [List.getD]; fun_prop
 
 theorem measurable_getD_second (index : Nat) :
     Measurable fun pair : ℝ × ℝ => [pair.2].getD index 0 := by
-  rcases index with _ | index <;> simp [List.getD] <;> fun_prop
+  rcases index with _ | index <;> simp [List.getD]; fun_prop
 
 theorem measurable_getD_single (index : Nat) :
     Measurable fun value : ℝ => [value].getD index 0 := by
-  rcases index with _ | index <;> simp [List.getD] <;> fun_prop
+  rcases index with _ | index <;> simp [List.getD]; fun_prop
 
 theorem measurable_getD_nil {α : Type*} [MeasurableSpace α] (index : Nat) :
     Measurable fun _ : α => ([] : List ℝ).getD index 0 := by
@@ -2020,7 +1494,6 @@ theorem uniformDraw_apply (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind :
     (uniformDraw laws kind).kernel (lower, upper) = uniformFiber kind lower upper := by
   rw [uniformDraw, pullback_apply, uniformFiber_eq,
     primitiveFiber_eq_atomic laws kind .uniform [lower, upper] [] rfl rfl]
-  rfl
 
 /-- The kernel of `gaussian` in its evaluated operands. -/
 noncomputable def gaussianDraw (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction) :
@@ -2034,7 +1507,6 @@ theorem gaussianDraw_apply (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind 
     (gaussianDraw laws kind).kernel (mean, variance) = gaussianFiber kind mean variance := by
   rw [gaussianDraw, pullback_apply, gaussianFiber_eq,
     primitiveFiber_eq_atomic laws kind .gaussian [mean] [variance] rfl rfl]
-  rfl
 
 /-- The kernel of `beta` in its evaluated operands. -/
 noncomputable def betaDraw (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction) :
@@ -2048,7 +1520,6 @@ theorem betaDraw_apply (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : Di
     (betaDraw laws kind).kernel (alpha, beta) = betaFiber kind alpha beta := by
   rw [betaDraw, pullback_apply, betaFiber_eq,
     primitiveFiber_eq_atomic laws kind .beta [] [alpha, beta] rfl rfl]
-  rfl
 
 /-- The kernel of `gamma` in its evaluated operands. -/
 noncomputable def gammaDraw (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction) :
@@ -2062,7 +1533,6 @@ theorem gammaDraw_apply (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : D
     (gammaDraw laws kind).kernel (shape, rate) = gammaFiber kind shape rate := by
   rw [gammaDraw, pullback_apply, gammaFiber_eq,
     primitiveFiber_eq_atomic laws kind .gamma [shape] [rate] rfl rfl]
-  rfl
 
 /-- The kernel of `poisson` in its evaluated operands. -/
 noncomputable def poissonDraw (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction) :
@@ -2082,7 +1552,6 @@ theorem discreteDraw_apply (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind 
     (discreteDraw laws kind d).kernel () = discreteFiber kind d := by
   rw [discreteDraw, pullback_apply, discreteFiber_eq,
     primitiveFiber_eq_atomic laws kind (.discrete d) [] [] rfl rfl]
-  rfl
 
 noncomputable def bernoulliDraw (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction) :
     SFiniteKernel ℝ ℝ :=
@@ -2095,13 +1564,11 @@ theorem poissonDraw_apply (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind :
     (poissonDraw laws kind).kernel rate = poissonFiber kind rate := by
   rw [poissonDraw, pullback_apply, poissonFiber_eq,
     primitiveFiber_eq_atomic laws kind .poisson [rate] [] rfl rfl]
-  rfl
 
 theorem bernoulliDraw_apply (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction) (probability : ℝ) :
     (bernoulliDraw laws kind).kernel probability = bernoulliFiber kind probability := by
   rw [bernoulliDraw, pullback_apply, bernoulliFiber_eq,
     primitiveFiber_eq_atomic laws kind .bernoulli [probability] [] rfl rfl]
-  rfl
 
 /-- The kernel of `exponential` in its evaluated operands. -/
 noncomputable def exponentialDraw (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction) :
@@ -2115,7 +1582,6 @@ theorem exponentialDraw_apply (laws : Determinize.Proof.Paper.PrimitiveLaws) (ki
     (exponentialDraw laws kind).kernel rate = exponentialFiber kind rate := by
   rw [exponentialDraw, pullback_apply, exponentialFiber_eq,
     primitiveFiber_eq_atomic laws kind .exponential [] [rate] rfl rfl]
-  rfl
 
 def wrapUnary {α : Type*} [MeasurableSpace α] {action : α → Action}
     (family : MeasurableActionFamily α action)
@@ -2256,7 +1722,6 @@ def nextFamily {α : Type*} [MeasurableSpace α] {expression : α → Expr}
   .next family.measurable
 
 noncomputable def reducePair {α : Type*} [MeasurableSpace α]
-    (laws : Determinize.Proof.Paper.PrimitiveLaws)
     {left right : α → Expr}
     (leftFamily : MeasurableFamily α left) (rightFamily : MeasurableFamily α right)
     (leftReduce : MeasurableActionFamily α (fun parameter => reduce (left parameter)))
@@ -2281,7 +1746,6 @@ noncomputable def reducePair {α : Type*} [MeasurableSpace α]
     simp [reduce, Determinize.Spec.Paper.reduce, isValue_eq_skeletonIsValue, leftFamily.skeleton_eq parameter, leftValue]
 
 noncomputable def reduceCons {α : Type*} [MeasurableSpace α]
-    (laws : Determinize.Proof.Paper.PrimitiveLaws)
     {head tail : α → Expr}
     (headFamily : MeasurableFamily α head) (tailFamily : MeasurableFamily α tail)
     (headReduce : MeasurableActionFamily α (fun parameter => reduce (head parameter)))
@@ -2306,7 +1770,6 @@ noncomputable def reduceCons {α : Type*} [MeasurableSpace α]
     simp [reduce, Determinize.Spec.Paper.reduce, isValue_eq_skeletonIsValue, headFamily.skeleton_eq parameter, headValue]
 
 noncomputable def reduceInl {α : Type*} [MeasurableSpace α]
-    (laws : Determinize.Proof.Paper.PrimitiveLaws)
     {value : α → Expr}
     (valueFamily : MeasurableFamily α value)
     (valueReduce : MeasurableActionFamily α (fun parameter => reduce (value parameter))) :
@@ -2323,7 +1786,6 @@ noncomputable def reduceInl {α : Type*} [MeasurableSpace α]
     simp [reduce, Determinize.Spec.Paper.reduce, isValue_eq_skeletonIsValue, valueFamily.skeleton_eq parameter, isValue]
 
 noncomputable def reduceInr {α : Type*} [MeasurableSpace α]
-    (laws : Determinize.Proof.Paper.PrimitiveLaws)
     {value : α → Expr}
     (valueFamily : MeasurableFamily α value)
     (valueReduce : MeasurableActionFamily α (fun parameter => reduce (value parameter))) :
@@ -2353,7 +1815,6 @@ theorem reduce_app_eq
   cases function <;> simp only [reduce, Determinize.Spec.Paper.reduce]
 
 noncomputable def reduceApp {α : Type*} [MeasurableSpace α]
-    (laws : Determinize.Proof.Paper.PrimitiveLaws)
     {function argument : α → Expr}
     (functionFamily : MeasurableFamily α function)
     (argumentFamily : MeasurableFamily α argument)
@@ -2379,7 +1840,7 @@ noncomputable def reduceApp {α : Type*} [MeasurableSpace α]
           cases actualEq : function parameter <;>
             rw [actualEq] at actualFunctionValue <;>
             simp [actualEq, reduce, Expr.skeleton, Expr.firstChild, Expr.isValue,
-              Expr.isValue, Action.wrap, actualFunctionValue, actualArgumentValue]
+              Expr.isValue, actualArgumentValue]
               at fixed actualFunctionValue ⊢
       case fix =>
           apply congr
@@ -2394,7 +1855,7 @@ noncomputable def reduceApp {α : Type*} [MeasurableSpace α]
           cases actualEq : function parameter <;>
             rw [actualEq] at actualFunctionValue <;>
             simp [actualEq, reduce, Expr.skeleton, Expr.firstChild, Expr.isValue,
-              Expr.isValue, Action.wrap, actualFunctionValue, actualArgumentValue]
+              Expr.isValue, actualArgumentValue]
               at fixed actualFunctionValue ⊢
       all_goals
         apply congr stuck
@@ -2407,10 +1868,10 @@ noncomputable def reduceApp {α : Type*} [MeasurableSpace α]
         rw [functionSkeletonEq] at fixed
         cases actualEq : function parameter <;>
           rw [actualEq] at actualFunctionValue <;>
-          simp [actualEq, Expr.skeleton] at fixed <;>
-          rw [reduce_app_eq] <;>
-          rw [actualFunctionValue, actualArgumentValue] <;>
-          simp [Action.wrap]
+          simp [actualEq, Expr.skeleton] at fixed;
+          rw [reduce_app_eq];
+          rw [actualFunctionValue, actualArgumentValue];
+          simp
     · apply congr (argumentReduce.wrapBinaryRight function functionFamily.measurable
           .app .app (by intros; simp [Expr.skeleton])
           (by intros; simp [Expr.realCoordinates]))
@@ -2445,7 +1906,6 @@ theorem reduce_fst_eq
   cases pair <;> simp only [reduce, Determinize.Spec.Paper.reduce]
 
 noncomputable def reduceFst {α : Type*} [MeasurableSpace α]
-    (laws : Determinize.Proof.Paper.PrimitiveLaws)
     {pair : α → Expr} (pairFamily : MeasurableFamily α pair)
     (pairReduce : MeasurableActionFamily α (fun parameter => reduce (pair parameter))) :
     MeasurableActionFamily α (fun parameter => reduce (.fst (pair parameter))) := by
@@ -2461,8 +1921,8 @@ noncomputable def reduceFst {α : Type*} [MeasurableSpace α]
       rw [pairSkeletonEq] at fixed
       cases actualEq : pair parameter <;>
         rw [actualEq] at actualPairValue <;>
-        simp [actualEq, Expr.skeleton] at fixed <;>
-        rw [reduce_fst_eq, actualPairValue] <;>
+        simp [actualEq, Expr.skeleton] at fixed;
+        rw [reduce_fst_eq, actualPairValue];
         simp [Expr.firstChild]
     all_goals
       apply congr stuck
@@ -2473,8 +1933,8 @@ noncomputable def reduceFst {α : Type*} [MeasurableSpace α]
       rw [pairSkeletonEq] at fixed
       cases actualEq : pair parameter <;>
         rw [actualEq] at actualPairValue <;>
-        simp [actualEq, Expr.skeleton] at fixed <;>
-        rw [reduce_fst_eq, actualPairValue] <;>
+        simp [actualEq, Expr.skeleton] at fixed;
+        rw [reduce_fst_eq, actualPairValue];
         simp
   · apply congr (pairReduce.wrapUnary .fst .fst
         (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates]))
@@ -2496,7 +1956,6 @@ theorem reduce_snd_eq
   cases pair <;> simp only [reduce, Determinize.Spec.Paper.reduce]
 
 noncomputable def reduceSnd {α : Type*} [MeasurableSpace α]
-    (laws : Determinize.Proof.Paper.PrimitiveLaws)
     {pair : α → Expr} (pairFamily : MeasurableFamily α pair)
     (pairReduce : MeasurableActionFamily α (fun parameter => reduce (pair parameter))) :
     MeasurableActionFamily α (fun parameter => reduce (.snd (pair parameter))) := by
@@ -2512,8 +1971,8 @@ noncomputable def reduceSnd {α : Type*} [MeasurableSpace α]
       rw [pairSkeletonEq] at fixed
       cases actualEq : pair parameter <;>
         rw [actualEq] at actualPairValue <;>
-        simp [actualEq, Expr.skeleton] at fixed <;>
-        rw [reduce_snd_eq, actualPairValue] <;>
+        simp [actualEq, Expr.skeleton] at fixed;
+        rw [reduce_snd_eq, actualPairValue];
         simp [Expr.secondChild]
     all_goals
       apply congr stuck
@@ -2524,8 +1983,8 @@ noncomputable def reduceSnd {α : Type*} [MeasurableSpace α]
       rw [pairSkeletonEq] at fixed
       cases actualEq : pair parameter <;>
         rw [actualEq] at actualPairValue <;>
-        simp [actualEq, Expr.skeleton] at fixed <;>
-        rw [reduce_snd_eq, actualPairValue] <;>
+        simp [actualEq, Expr.skeleton] at fixed;
+        rw [reduce_snd_eq, actualPairValue];
         simp
   · apply congr (pairReduce.wrapUnary .snd .snd
         (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates]))
@@ -2549,7 +2008,6 @@ theorem reduce_matchSum_eq
   cases scrutinee <;> simp only [reduce, Determinize.Spec.Paper.reduce]
 
 noncomputable def reduceMatchSum {α : Type*} [MeasurableSpace α]
-    (laws : Determinize.Proof.Paper.PrimitiveLaws)
     {scrutinee left right : α → Expr}
     (scrutineeFamily : MeasurableFamily α scrutinee)
     (leftFamily : MeasurableFamily α left) (rightFamily : MeasurableFamily α right)
@@ -2569,8 +2027,8 @@ noncomputable def reduceMatchSum {α : Type*} [MeasurableSpace α]
       rw [scrutineeSkeletonEq] at fixed
       cases actualEq : scrutinee parameter <;>
         rw [actualEq] at actualScrutineeValue <;>
-        simp [actualEq, Expr.skeleton] at fixed <;>
-        rw [reduce_matchSum_eq, actualScrutineeValue] <;>
+        simp [actualEq, Expr.skeleton] at fixed;
+        rw [reduce_matchSum_eq, actualScrutineeValue];
         simp [Expr.firstChild]
     case inr =>
       apply congr (nextFamily (rightFamily.substHead scrutineeFamily.firstChild))
@@ -2581,8 +2039,8 @@ noncomputable def reduceMatchSum {α : Type*} [MeasurableSpace α]
       rw [scrutineeSkeletonEq] at fixed
       cases actualEq : scrutinee parameter <;>
         rw [actualEq] at actualScrutineeValue <;>
-        simp [actualEq, Expr.skeleton] at fixed <;>
-        rw [reduce_matchSum_eq, actualScrutineeValue] <;>
+        simp [actualEq, Expr.skeleton] at fixed;
+        rw [reduce_matchSum_eq, actualScrutineeValue];
         simp [Expr.firstChild]
     all_goals
       apply congr stuck
@@ -2593,8 +2051,8 @@ noncomputable def reduceMatchSum {α : Type*} [MeasurableSpace α]
       rw [scrutineeSkeletonEq] at fixed
       cases actualEq : scrutinee parameter <;>
         rw [actualEq] at actualScrutineeValue <;>
-        simp [actualEq, Expr.skeleton] at fixed <;>
-        rw [reduce_matchSum_eq, actualScrutineeValue] <;>
+        simp [actualEq, Expr.skeleton] at fixed;
+        rw [reduce_matchSum_eq, actualScrutineeValue];
         simp
   · apply congr (scrutineeReduce.wrapTernaryFirst left right leftFamily.measurable
         rightFamily.measurable .matchSum .matchSum
@@ -2619,7 +2077,6 @@ theorem reduce_matchList_eq
   cases scrutinee <;> simp only [reduce, Determinize.Spec.Paper.reduce]
 
 noncomputable def reduceMatchList {α : Type*} [MeasurableSpace α]
-    (laws : Determinize.Proof.Paper.PrimitiveLaws)
     {scrutinee nilCase consCase : α → Expr}
     (scrutineeFamily : MeasurableFamily α scrutinee)
     (nilFamily : MeasurableFamily α nilCase) (consFamily : MeasurableFamily α consCase)
@@ -2640,8 +2097,8 @@ noncomputable def reduceMatchList {α : Type*} [MeasurableSpace α]
       rw [scrutineeSkeletonEq] at fixed
       cases actualEq : scrutinee parameter <;>
         rw [actualEq] at actualScrutineeValue <;>
-        simp [actualEq, Expr.skeleton] at fixed <;>
-        rw [reduce_matchList_eq, actualScrutineeValue] <;>
+        simp [actualEq, Expr.skeleton] at fixed;
+        rw [reduce_matchList_eq, actualScrutineeValue];
         simp
     case cons =>
       apply congr (nextFamily
@@ -2653,8 +2110,8 @@ noncomputable def reduceMatchList {α : Type*} [MeasurableSpace α]
       rw [scrutineeSkeletonEq] at fixed
       cases actualEq : scrutinee parameter <;>
         rw [actualEq] at actualScrutineeValue <;>
-        simp [actualEq, Expr.skeleton] at fixed <;>
-        rw [reduce_matchList_eq, actualScrutineeValue] <;>
+        simp [actualEq, Expr.skeleton] at fixed;
+        rw [reduce_matchList_eq, actualScrutineeValue];
         simp [Expr.firstChild, Expr.secondChild]
     all_goals
       apply congr stuck
@@ -2665,8 +2122,8 @@ noncomputable def reduceMatchList {α : Type*} [MeasurableSpace α]
       rw [scrutineeSkeletonEq] at fixed
       cases actualEq : scrutinee parameter <;>
         rw [actualEq] at actualScrutineeValue <;>
-        simp [actualEq, Expr.skeleton] at fixed <;>
-        rw [reduce_matchList_eq, actualScrutineeValue] <;>
+        simp [actualEq, Expr.skeleton] at fixed;
+        rw [reduce_matchList_eq, actualScrutineeValue];
         simp
   · apply congr (scrutineeReduce.wrapTernaryFirst nilCase consCase nilFamily.measurable
         consFamily.measurable .matchList .matchList
@@ -2689,10 +2146,9 @@ theorem reduce_ite_eq
       else (reduce condition).wrap
         (fun next => .ite next thenBranch elseBranch) := by
   cases condition <;> simp only [reduce, Determinize.Spec.Paper.reduce]
-  case bool value => cases value <;> simp only [reduce, Determinize.Spec.Paper.reduce]
+  case bool value => cases value <;> rfl
 
 noncomputable def reduceIte {α : Type*} [MeasurableSpace α]
-    (laws : Determinize.Proof.Paper.PrimitiveLaws)
     {condition thenBranch elseBranch : α → Expr}
     (conditionFamily : MeasurableFamily α condition)
     (thenFamily : MeasurableFamily α thenBranch)
@@ -2716,8 +2172,8 @@ noncomputable def reduceIte {α : Type*} [MeasurableSpace α]
           rw [conditionSkeletonEq] at fixed
           cases actualEq : condition parameter <;>
             rw [actualEq] at actualConditionValue <;>
-            simp [actualEq, Expr.skeleton] at fixed <;>
-            rw [reduce_ite_eq, actualConditionValue] <;>
+            simp [actualEq, Expr.skeleton] at fixed;
+            rw [reduce_ite_eq, actualConditionValue];
             simp_all
       | true =>
           apply congr (nextFamily thenFamily)
@@ -2728,8 +2184,8 @@ noncomputable def reduceIte {α : Type*} [MeasurableSpace α]
           rw [conditionSkeletonEq] at fixed
           cases actualEq : condition parameter <;>
             rw [actualEq] at actualConditionValue <;>
-            simp [actualEq, Expr.skeleton] at fixed <;>
-            rw [reduce_ite_eq, actualConditionValue] <;>
+            simp [actualEq, Expr.skeleton] at fixed;
+            rw [reduce_ite_eq, actualConditionValue];
             simp_all
     all_goals
       apply congr stuck
@@ -2740,8 +2196,8 @@ noncomputable def reduceIte {α : Type*} [MeasurableSpace α]
       rw [conditionSkeletonEq] at fixed
       cases actualEq : condition parameter <;>
         rw [actualEq] at actualConditionValue <;>
-        simp [actualEq, Expr.skeleton] at fixed <;>
-        rw [reduce_ite_eq, actualConditionValue] <;>
+        simp [actualEq, Expr.skeleton] at fixed;
+        rw [reduce_ite_eq, actualConditionValue];
         simp
   · apply congr (conditionReduce.wrapTernaryFirst thenBranch elseBranch
         thenFamily.measurable elseFamily.measurable .ite .ite
@@ -2761,7 +2217,6 @@ theorem reduce_let_eq
   cases value <;> simp only [reduce, Determinize.Spec.Paper.reduce]
 
 noncomputable def reduceLet {α : Type*} [MeasurableSpace α]
-    (laws : Determinize.Proof.Paper.PrimitiveLaws)
     {value body : α → Expr}
     (valueFamily : MeasurableFamily α value) (bodyFamily : MeasurableFamily α body)
     (valueReduce : MeasurableActionFamily α (fun parameter => reduce (value parameter))) :
@@ -2787,7 +2242,6 @@ noncomputable def reduceLet {α : Type*} [MeasurableSpace α]
     simp
 
 def realCoordinateResult {α : Type*} [MeasurableSpace α]
-    {expression : α → Expr} (family : MeasurableFamily α expression)
     (value : α → ℝ) (valueMeasurable : Measurable value) :
     MeasurableFamily α (fun parameter => Expr.real (value parameter)) :=
   MeasurableFamily.realLiteral.comp value valueMeasurable
@@ -2803,7 +2257,6 @@ theorem reduce_neg_eq
   cases body <;> simp only [reduce, Determinize.Spec.Paper.reduce]
 
 noncomputable def reduceNeg {α : Type*} [MeasurableSpace α]
-    (laws : Determinize.Proof.Paper.PrimitiveLaws)
     {body : α → Expr} (bodyFamily : MeasurableFamily α body)
     (bodyReduce : MeasurableActionFamily α (fun parameter => reduce (body parameter))) :
     MeasurableActionFamily α (fun parameter => reduce (.neg (body parameter))) := by
@@ -2811,7 +2264,7 @@ noncomputable def reduceNeg {α : Type*} [MeasurableSpace α]
   by_cases bodyValue : Expr.isValue bodyFamily.skeleton = true
   · cases bodySkeletonEq : bodyFamily.skeleton
     case real =>
-      let resultFamily := realCoordinateResult bodyFamily
+      let resultFamily := realCoordinateResult
         (fun parameter => -((body parameter).realCoordinates.getD 0 0))
         (bodyFamily.coordinate_measurable 0).neg
       apply congr (nextFamily resultFamily)
@@ -2822,9 +2275,9 @@ noncomputable def reduceNeg {α : Type*} [MeasurableSpace α]
       rw [bodySkeletonEq] at fixed
       cases actualEq : body parameter <;>
         rw [actualEq] at actualBodyValue <;>
-        simp [actualEq, Expr.skeleton] at fixed <;>
-        rw [reduce_neg_eq, actualBodyValue] <;>
-        simp_all [resultFamily, Expr.realCoordinates, List.getD]
+        simp [actualEq, Expr.skeleton] at fixed;
+        rw [reduce_neg_eq, actualBodyValue];
+        simp_all [Expr.realCoordinates, List.getD]
     all_goals
       apply congr stuck
       funext parameter
@@ -2834,8 +2287,8 @@ noncomputable def reduceNeg {α : Type*} [MeasurableSpace α]
       rw [bodySkeletonEq] at fixed
       cases actualEq : body parameter <;>
         rw [actualEq] at actualBodyValue <;>
-        simp [actualEq, Expr.skeleton] at fixed <;>
-        rw [reduce_neg_eq, actualBodyValue] <;>
+        simp [actualEq, Expr.skeleton] at fixed;
+        rw [reduce_neg_eq, actualBodyValue];
         simp
   · apply congr (bodyReduce.wrapUnary .neg .neg
         (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates]))
@@ -2856,10 +2309,9 @@ theorem reduce_add_eq
           | _, _ => .stuck
         else (reduce right).wrap (.add left)
       else (reduce left).wrap (fun next => .add next right) := by
-  cases left <;> cases right <;> simp only [reduce, Determinize.Spec.Paper.reduce] <;> rfl
+  rfl
 
 noncomputable def reduceAdd {α : Type*} [MeasurableSpace α]
-    (laws : Determinize.Proof.Paper.PrimitiveLaws)
     {left right : α → Expr}
     (leftFamily : MeasurableFamily α left) (rightFamily : MeasurableFamily α right)
     (leftReduce : MeasurableActionFamily α (fun parameter => reduce (left parameter)))
@@ -2873,7 +2325,7 @@ noncomputable def reduceAdd {α : Type*} [MeasurableSpace α]
       case real =>
         cases rightSkeletonEq : rightFamily.skeleton
         case real =>
-          let resultFamily := realCoordinateResult leftFamily
+          let resultFamily := realCoordinateResult
             (fun parameter => (left parameter).realCoordinates.getD 0 0 +
               (right parameter).realCoordinates.getD 0 0)
             ((leftFamily.coordinate_measurable 0).add (rightFamily.coordinate_measurable 0))
@@ -2889,12 +2341,12 @@ noncomputable def reduceAdd {α : Type*} [MeasurableSpace α]
           rw [rightSkeletonEq] at rightFixed
           cases leftActualEq : left parameter <;>
             rw [leftActualEq] at actualLeftValue <;>
-            simp [leftActualEq, Expr.skeleton] at leftFixed <;>
+            simp [leftActualEq, Expr.skeleton] at leftFixed;
             cases rightActualEq : right parameter <;>
             rw [rightActualEq] at actualRightValue <;>
-            simp [rightActualEq, Expr.skeleton] at rightFixed <;>
-            rw [reduce_add_eq, actualLeftValue, actualRightValue] <;>
-            simp_all [resultFamily, realValue?, Expr.realCoordinates, List.getD]
+            simp [rightActualEq, Expr.skeleton] at rightFixed;
+            rw [reduce_add_eq, actualLeftValue, actualRightValue];
+            simp_all [realValue?, Expr.realCoordinates, List.getD]
         all_goals
           apply congr stuck
           funext parameter
@@ -2908,11 +2360,11 @@ noncomputable def reduceAdd {α : Type*} [MeasurableSpace α]
           rw [rightSkeletonEq] at rightFixed
           cases leftActualEq : left parameter <;>
             rw [leftActualEq] at actualLeftValue <;>
-            simp [leftActualEq, Expr.skeleton] at leftFixed <;>
+            simp [leftActualEq, Expr.skeleton] at leftFixed;
             cases rightActualEq : right parameter <;>
             rw [rightActualEq] at actualRightValue <;>
-            simp [rightActualEq, Expr.skeleton] at rightFixed <;>
-            rw [reduce_add_eq, actualLeftValue, actualRightValue] <;>
+            simp [rightActualEq, Expr.skeleton] at rightFixed;
+            rw [reduce_add_eq, actualLeftValue, actualRightValue];
             simp [realValue?]
       all_goals
         apply congr stuck
@@ -2925,8 +2377,8 @@ noncomputable def reduceAdd {α : Type*} [MeasurableSpace α]
         rw [leftSkeletonEq] at leftFixed
         cases leftActualEq : left parameter <;>
           rw [leftActualEq] at actualLeftValue <;>
-          simp [leftActualEq, Expr.skeleton] at leftFixed <;>
-          rw [reduce_add_eq, actualLeftValue, actualRightValue] <;>
+          simp [leftActualEq, Expr.skeleton] at leftFixed;
+          rw [reduce_add_eq, actualLeftValue, actualRightValue];
           simp [realValue?]
     · apply congr (rightReduce.wrapBinaryRight left leftFamily.measurable
           .add .add (by intros; simp [Expr.skeleton])
@@ -2959,10 +2411,9 @@ theorem reduce_mul_eq
           | _, _ => .stuck
         else (reduce right).wrap (.mul left)
       else (reduce left).wrap (fun next => .mul next right) := by
-  cases left <;> cases right <;> simp only [reduce, Determinize.Spec.Paper.reduce] <;> rfl
+  rfl
 
 noncomputable def reduceMul {α : Type*} [MeasurableSpace α]
-    (laws : Determinize.Proof.Paper.PrimitiveLaws)
     {left right : α → Expr}
     (leftFamily : MeasurableFamily α left) (rightFamily : MeasurableFamily α right)
     (leftReduce : MeasurableActionFamily α (fun parameter => reduce (left parameter)))
@@ -2976,7 +2427,7 @@ noncomputable def reduceMul {α : Type*} [MeasurableSpace α]
       case real =>
         cases rightSkeletonEq : rightFamily.skeleton
         case real =>
-          let resultFamily := realCoordinateResult leftFamily
+          let resultFamily := realCoordinateResult
             (fun parameter => (left parameter).realCoordinates.getD 0 0 *
               (right parameter).realCoordinates.getD 0 0)
             ((leftFamily.coordinate_measurable 0).mul (rightFamily.coordinate_measurable 0))
@@ -2992,12 +2443,12 @@ noncomputable def reduceMul {α : Type*} [MeasurableSpace α]
           rw [rightSkeletonEq] at rightFixed
           cases leftActualEq : left parameter <;>
             rw [leftActualEq] at actualLeftValue <;>
-            simp [leftActualEq, Expr.skeleton] at leftFixed <;>
+            simp [leftActualEq, Expr.skeleton] at leftFixed;
             cases rightActualEq : right parameter <;>
             rw [rightActualEq] at actualRightValue <;>
-            simp [rightActualEq, Expr.skeleton] at rightFixed <;>
-            rw [reduce_mul_eq, actualLeftValue, actualRightValue] <;>
-            simp_all [resultFamily, realValue?, Expr.realCoordinates, List.getD]
+            simp [rightActualEq, Expr.skeleton] at rightFixed;
+            rw [reduce_mul_eq, actualLeftValue, actualRightValue];
+            simp_all [realValue?, Expr.realCoordinates, List.getD]
         all_goals
           apply congr stuck
           funext parameter
@@ -3011,11 +2462,11 @@ noncomputable def reduceMul {α : Type*} [MeasurableSpace α]
           rw [rightSkeletonEq] at rightFixed
           cases leftActualEq : left parameter <;>
             rw [leftActualEq] at actualLeftValue <;>
-            simp [leftActualEq, Expr.skeleton] at leftFixed <;>
+            simp [leftActualEq, Expr.skeleton] at leftFixed;
             cases rightActualEq : right parameter <;>
             rw [rightActualEq] at actualRightValue <;>
-            simp [rightActualEq, Expr.skeleton] at rightFixed <;>
-            rw [reduce_mul_eq, actualLeftValue, actualRightValue] <;>
+            simp [rightActualEq, Expr.skeleton] at rightFixed;
+            rw [reduce_mul_eq, actualLeftValue, actualRightValue];
             simp [realValue?]
       all_goals
         apply congr stuck
@@ -3028,8 +2479,8 @@ noncomputable def reduceMul {α : Type*} [MeasurableSpace α]
         rw [leftSkeletonEq] at leftFixed
         cases leftActualEq : left parameter <;>
           rw [leftActualEq] at actualLeftValue <;>
-          simp [leftActualEq, Expr.skeleton] at leftFixed <;>
-          rw [reduce_mul_eq, actualLeftValue, actualRightValue] <;>
+          simp [leftActualEq, Expr.skeleton] at leftFixed;
+          rw [reduce_mul_eq, actualLeftValue, actualRightValue];
           simp [realValue?]
     · apply congr (rightReduce.wrapBinaryRight left leftFamily.measurable
           .mul .mul (by intros; simp [Expr.skeleton])
@@ -3062,10 +2513,9 @@ theorem reduce_div_eq
           | _, _ => .stuck
         else (reduce right).wrap (.div left)
       else (reduce left).wrap (fun next => .div next right) := by
-  cases left <;> cases right <;> simp only [reduce, Determinize.Spec.Paper.reduce] <;> rfl
+  rfl
 
 noncomputable def reduceDiv {α : Type*} [MeasurableSpace α]
-    (laws : Determinize.Proof.Paper.PrimitiveLaws)
     {left right : α → Expr}
     (leftFamily : MeasurableFamily α left) (rightFamily : MeasurableFamily α right)
     (leftReduce : MeasurableActionFamily α (fun parameter => reduce (left parameter)))
@@ -3079,7 +2529,7 @@ noncomputable def reduceDiv {α : Type*} [MeasurableSpace α]
       case real =>
         cases rightSkeletonEq : rightFamily.skeleton
         case real =>
-          let resultFamily := realCoordinateResult leftFamily
+          let resultFamily := realCoordinateResult
             (fun parameter => (left parameter).realCoordinates.getD 0 0 /
               (right parameter).realCoordinates.getD 0 0)
             ((leftFamily.coordinate_measurable 0).div (rightFamily.coordinate_measurable 0))
@@ -3095,12 +2545,12 @@ noncomputable def reduceDiv {α : Type*} [MeasurableSpace α]
           rw [rightSkeletonEq] at rightFixed
           cases leftActualEq : left parameter <;>
             rw [leftActualEq] at actualLeftValue <;>
-            simp [leftActualEq, Expr.skeleton] at leftFixed <;>
+            simp [leftActualEq, Expr.skeleton] at leftFixed;
             cases rightActualEq : right parameter <;>
             rw [rightActualEq] at actualRightValue <;>
-            simp [rightActualEq, Expr.skeleton] at rightFixed <;>
-            rw [reduce_div_eq, actualLeftValue, actualRightValue] <;>
-            simp_all [resultFamily, realValue?, Expr.realCoordinates, List.getD]
+            simp [rightActualEq, Expr.skeleton] at rightFixed;
+            rw [reduce_div_eq, actualLeftValue, actualRightValue];
+            simp_all [realValue?, Expr.realCoordinates, List.getD]
         all_goals
           apply congr stuck
           funext parameter
@@ -3114,11 +2564,11 @@ noncomputable def reduceDiv {α : Type*} [MeasurableSpace α]
           rw [rightSkeletonEq] at rightFixed
           cases leftActualEq : left parameter <;>
             rw [leftActualEq] at actualLeftValue <;>
-            simp [leftActualEq, Expr.skeleton] at leftFixed <;>
+            simp [leftActualEq, Expr.skeleton] at leftFixed;
             cases rightActualEq : right parameter <;>
             rw [rightActualEq] at actualRightValue <;>
-            simp [rightActualEq, Expr.skeleton] at rightFixed <;>
-            rw [reduce_div_eq, actualLeftValue, actualRightValue] <;>
+            simp [rightActualEq, Expr.skeleton] at rightFixed;
+            rw [reduce_div_eq, actualLeftValue, actualRightValue];
             simp [realValue?]
       all_goals
         apply congr stuck
@@ -3131,8 +2581,8 @@ noncomputable def reduceDiv {α : Type*} [MeasurableSpace α]
         rw [leftSkeletonEq] at leftFixed
         cases leftActualEq : left parameter <;>
           rw [leftActualEq] at actualLeftValue <;>
-          simp [leftActualEq, Expr.skeleton] at leftFixed <;>
-          rw [reduce_div_eq, actualLeftValue, actualRightValue] <;>
+          simp [leftActualEq, Expr.skeleton] at leftFixed;
+          rw [reduce_div_eq, actualLeftValue, actualRightValue];
           simp [realValue?]
     · apply congr (rightReduce.wrapBinaryRight left leftFamily.measurable
           .div .div (by intros; simp [Expr.skeleton])
@@ -3165,10 +2615,9 @@ theorem reduce_lt_eq
           | _, _ => .stuck
         else (reduce right).wrap (.lt left)
       else (reduce left).wrap (fun next => .lt next right) := by
-  cases left <;> cases right <;> simp only [reduce, Determinize.Spec.Paper.reduce] <;> rfl
+  rfl
 
 noncomputable def reduceLt {α : Type*} [MeasurableSpace α]
-    (laws : Determinize.Proof.Paper.PrimitiveLaws)
     {left right : α → Expr}
     (leftFamily : MeasurableFamily α left) (rightFamily : MeasurableFamily α right)
     (leftReduce : MeasurableActionFamily α (fun parameter => reduce (left parameter)))
@@ -3204,14 +2653,13 @@ noncomputable def reduceLt {α : Type*} [MeasurableSpace α]
           rw [rightSkeletonEq] at rightFixed
           cases leftActualEq : left parameter <;>
             rw [leftActualEq] at actualLeftValue <;>
-            simp [leftActualEq, Expr.skeleton] at leftFixed <;>
+            simp [leftActualEq, Expr.skeleton] at leftFixed;
             cases rightActualEq : right parameter <;>
             rw [rightActualEq] at actualRightValue <;>
-            simp [rightActualEq, Expr.skeleton] at rightFixed <;>
-            rw [reduce_lt_eq, actualLeftValue, actualRightValue] <;>
+            simp [rightActualEq, Expr.skeleton] at rightFixed;
+            rw [reduce_lt_eq, actualLeftValue, actualRightValue];
             by_cases less : parameter ∈ region <;>
-            simp_all [region, trueFamily, falseFamily, Set.piecewise, realValue?,
-              Expr.realCoordinates, List.getD] <;>
+            simp_all [region, Set.piecewise, realValue?, Expr.realCoordinates, List.getD];
             split <;> simp_all
         all_goals
           apply congr stuck
@@ -3226,11 +2674,11 @@ noncomputable def reduceLt {α : Type*} [MeasurableSpace α]
           rw [rightSkeletonEq] at rightFixed
           cases leftActualEq : left parameter <;>
             rw [leftActualEq] at actualLeftValue <;>
-            simp [leftActualEq, Expr.skeleton] at leftFixed <;>
+            simp [leftActualEq, Expr.skeleton] at leftFixed;
             cases rightActualEq : right parameter <;>
             rw [rightActualEq] at actualRightValue <;>
-            simp [rightActualEq, Expr.skeleton] at rightFixed <;>
-            rw [reduce_lt_eq, actualLeftValue, actualRightValue] <;>
+            simp [rightActualEq, Expr.skeleton] at rightFixed;
+            rw [reduce_lt_eq, actualLeftValue, actualRightValue];
             simp [realValue?]
       all_goals
         apply congr stuck
@@ -3243,8 +2691,8 @@ noncomputable def reduceLt {α : Type*} [MeasurableSpace α]
         rw [leftSkeletonEq] at leftFixed
         cases leftActualEq : left parameter <;>
           rw [leftActualEq] at actualLeftValue <;>
-          simp [leftActualEq, Expr.skeleton] at leftFixed <;>
-          rw [reduce_lt_eq, actualLeftValue, actualRightValue] <;>
+          simp [leftActualEq, Expr.skeleton] at leftFixed;
+          rw [reduce_lt_eq, actualLeftValue, actualRightValue];
           simp [realValue?]
     · apply congr (rightReduce.wrapBinaryRight left leftFamily.measurable
           Expr.lt Expr.lt (by intros; simp [Expr.skeleton])
@@ -3275,7 +2723,7 @@ theorem reduce_uniform_eq (kind : DistributionAction) (lower upper : Expr) :
           | _, _ => .stuck
         else (reduce upper).wrap (.uniform kind lower)
       else (reduce lower).wrap (fun next => .uniform kind next upper) := by
-  simp only [reduce, Determinize.Spec.Paper.reduce] <;> rfl
+  simp only [reduce, Determinize.Spec.Paper.reduce]; rfl
 
 theorem reduce_gaussian_eq (kind : DistributionAction) (mean variance : Expr) :
     reduce (.gaussian kind mean variance) =
@@ -3285,7 +2733,7 @@ theorem reduce_gaussian_eq (kind : DistributionAction) (mean variance : Expr) :
           | _, _ => .stuck
         else (reduce variance).wrap (.gaussian kind mean)
       else (reduce mean).wrap (fun next => .gaussian kind next variance) := by
-  simp only [reduce, Determinize.Spec.Paper.reduce] <;> rfl
+  simp only [reduce, Determinize.Spec.Paper.reduce]; rfl
 
 theorem reduce_poisson_eq (kind : DistributionAction) (rate : Expr) :
     reduce (.poisson kind rate) =
@@ -3293,7 +2741,7 @@ theorem reduce_poisson_eq (kind : DistributionAction) (rate : Expr) :
         | some r => .sample (kind, .poisson) (poissonFiber kind r) .real
         | none => .stuck
       else (reduce rate).wrap (.poisson kind) := by
-  simp only [reduce, Determinize.Spec.Paper.reduce] <;> rfl
+  simp only [reduce, Determinize.Spec.Paper.reduce]; rfl
 
 theorem reduce_bernoulli_eq (kind : DistributionAction) (probability : Expr) :
     reduce (.bernoulli kind probability) =
@@ -3301,7 +2749,7 @@ theorem reduce_bernoulli_eq (kind : DistributionAction) (probability : Expr) :
         | some r => .sample (kind, .bernoulli) (bernoulliFiber kind r) .real
         | none => .stuck
       else (reduce probability).wrap (.bernoulli kind) := by
-  simp only [reduce, Determinize.Spec.Paper.reduce] <;> rfl
+  simp only [reduce, Determinize.Spec.Paper.reduce]; rfl
 
 theorem reduce_exponential_eq (kind : DistributionAction) (rate : Expr) :
     reduce (.exponential kind rate) =
@@ -3309,7 +2757,7 @@ theorem reduce_exponential_eq (kind : DistributionAction) (rate : Expr) :
         | some r => .sample (kind, .exponential) (exponentialFiber kind r) .real
         | none => .stuck
       else (reduce rate).wrap (.exponential kind) := by
-  simp only [reduce, Determinize.Spec.Paper.reduce] <;> rfl
+  simp only [reduce, Determinize.Spec.Paper.reduce]; rfl
 
 theorem reduce_beta_eq (kind : DistributionAction) (alpha beta : Expr) :
     reduce (.beta kind alpha beta) =
@@ -3319,7 +2767,7 @@ theorem reduce_beta_eq (kind : DistributionAction) (alpha beta : Expr) :
           | _, _ => .stuck
         else (reduce beta).wrap (.beta kind alpha)
       else (reduce alpha).wrap (fun next => .beta kind next beta) := by
-  simp only [reduce, Determinize.Spec.Paper.reduce] <;> rfl
+  simp only [reduce, Determinize.Spec.Paper.reduce]; rfl
 
 theorem reduce_gamma_eq (kind : DistributionAction) (shape rate : Expr) :
     reduce (.gamma kind shape rate) =
@@ -3329,7 +2777,177 @@ theorem reduce_gamma_eq (kind : DistributionAction) (shape rate : Expr) :
           | _, _ => .stuck
         else (reduce rate).wrap (.gamma kind shape)
       else (reduce shape).wrap (fun next => .gamma kind next rate) := by
-  simp only [reduce, Determinize.Spec.Paper.reduce] <;> rfl
+  simp only [reduce, Determinize.Spec.Paper.reduce]; rfl
+
+/-- The reducer of a primitive with two real operands on a fixed-skeleton fiber: once both
+operands are values, real skeletons draw from the primitive's kernel in the operands'
+coordinates and every other skeleton is stuck; otherwise the active operand is reduced under
+the site. `reduce_eq` is the primitive's unfolding lemma and `draw_apply` identifies the
+packaged kernel with the primitive's fiber. -/
+noncomputable def reduceBinaryDraw {α : Type*} [MeasurableSpace α]
+    (site : DistributionAction × Op) (constructor : Expr → Expr → Expr)
+    (skeletonConstructor : Skeleton → Skeleton → Skeleton)
+    (skeleton_rule : ∀ left right, (constructor left right).skeleton =
+      skeletonConstructor left.skeleton right.skeleton)
+    (coordinates_rule : ∀ left right, (constructor left right).realCoordinates =
+      left.realCoordinates ++ right.realCoordinates)
+    (fiber : ℝ → ℝ → Measure ℝ)
+    (reduce_eq : ∀ left right, reduce (constructor left right) =
+      if left.isValue then
+        if right.isValue then match realValue? left, realValue? right with
+          | some a, some b => .sample site (fiber a b) .real
+          | _, _ => .stuck
+        else (reduce right).wrap (constructor left)
+      else (reduce left).wrap (fun next => constructor next right))
+    (draw : SFiniteKernel (ℝ × ℝ) ℝ) (draw_apply : ∀ a b, draw.kernel (a, b) = fiber a b)
+    {left right : α → Expr}
+    (leftFamily : MeasurableFamily α left) (rightFamily : MeasurableFamily α right)
+    (leftReduce : MeasurableActionFamily α (fun parameter => reduce (left parameter)))
+    (rightReduce : MeasurableActionFamily α (fun parameter => reduce (right parameter))) :
+    MeasurableActionFamily α
+      (fun parameter => reduce (constructor (left parameter) (right parameter))) := by
+  classical
+  by_cases leftValue : Expr.isValue leftFamily.skeleton = true
+  · by_cases rightValue : Expr.isValue rightFamily.skeleton = true
+    · cases leftSkeletonEq : leftFamily.skeleton
+      case real =>
+        cases rightSkeletonEq : rightFamily.skeleton
+        case real =>
+          let parameters := fun parameter =>
+            ((left parameter).realCoordinates.getD 0 0, (right parameter).realCoordinates.getD 0 0)
+          have parametersMeasurable : Measurable parameters :=
+            (leftFamily.coordinate_measurable 0).prodMk (rightFamily.coordinate_measurable 0)
+          apply congr (.sample (site := site) (SFiniteKernel.pullback draw parameters
+            parametersMeasurable) (measurable_realLiteral measurable_snd))
+          funext parameter
+          have leftFixed := leftFamily.skeleton_eq parameter
+          have rightFixed := rightFamily.skeleton_eq parameter
+          have actualLeftValue : (left parameter).isValue = true :=
+            (leftFamily.isValue_eq parameter).trans leftValue
+          have actualRightValue : (right parameter).isValue = true :=
+            (rightFamily.isValue_eq parameter).trans rightValue
+          rw [leftSkeletonEq] at leftFixed
+          rw [rightSkeletonEq] at rightFixed
+          cases leftActualEq : left parameter <;>
+            rw [leftActualEq] at actualLeftValue <;>
+            simp [leftActualEq, Expr.skeleton] at leftFixed;
+            cases rightActualEq : right parameter <;>
+            rw [rightActualEq] at actualRightValue <;>
+            simp [rightActualEq, Expr.skeleton] at rightFixed;
+            rw [reduce_eq, actualLeftValue, actualRightValue];
+            simp_all [pullback_apply, parameters, realValue?, Expr.realCoordinates,
+              List.getD]
+        all_goals
+          apply congr stuck
+          funext parameter
+          have leftFixed := leftFamily.skeleton_eq parameter
+          have rightFixed := rightFamily.skeleton_eq parameter
+          have actualLeftValue : (left parameter).isValue = true :=
+            (leftFamily.isValue_eq parameter).trans leftValue
+          have actualRightValue : (right parameter).isValue = true :=
+            (rightFamily.isValue_eq parameter).trans rightValue
+          rw [leftSkeletonEq] at leftFixed
+          rw [rightSkeletonEq] at rightFixed
+          cases leftActualEq : left parameter <;>
+            rw [leftActualEq] at actualLeftValue <;>
+            simp [leftActualEq, Expr.skeleton] at leftFixed;
+            cases rightActualEq : right parameter <;>
+            rw [rightActualEq] at actualRightValue <;>
+            simp [rightActualEq, Expr.skeleton] at rightFixed;
+            rw [reduce_eq, actualLeftValue, actualRightValue];
+            simp [realValue?]
+      all_goals
+        apply congr stuck
+        funext parameter
+        have leftFixed := leftFamily.skeleton_eq parameter
+        have actualLeftValue : (left parameter).isValue = true :=
+          (leftFamily.isValue_eq parameter).trans leftValue
+        have actualRightValue : (right parameter).isValue = true :=
+          (rightFamily.isValue_eq parameter).trans rightValue
+        rw [leftSkeletonEq] at leftFixed
+        cases leftActualEq : left parameter <;>
+          rw [leftActualEq] at actualLeftValue <;>
+          simp [leftActualEq, Expr.skeleton] at leftFixed;
+          rw [reduce_eq, actualLeftValue, actualRightValue];
+          simp [realValue?]
+    · apply congr (rightReduce.wrapBinaryRight left leftFamily.measurable
+          constructor skeletonConstructor
+          skeleton_rule coordinates_rule)
+      funext parameter
+      have actualLeftValue : (left parameter).isValue = true :=
+        (leftFamily.isValue_eq parameter).trans leftValue
+      have actualRightValue : (right parameter).isValue = false := by
+        rw [rightFamily.isValue_eq parameter]
+        exact Bool.eq_false_of_not_eq_true rightValue
+      rw [reduce_eq, actualLeftValue, actualRightValue]
+      simp
+  · apply congr (leftReduce.wrapBinaryLeft right rightFamily.measurable
+        constructor skeletonConstructor
+        skeleton_rule coordinates_rule)
+    funext parameter
+    have actualLeftValue : (left parameter).isValue = false := by
+      rw [leftFamily.isValue_eq parameter]
+      exact Bool.eq_false_of_not_eq_true leftValue
+    rw [reduce_eq, actualLeftValue]
+    simp
+
+/-- `reduceBinaryDraw` for a primitive with one real operand. -/
+noncomputable def reduceUnaryDraw {α : Type*} [MeasurableSpace α]
+    (site : DistributionAction × Op) (constructor : Expr → Expr)
+    (skeletonConstructor : Skeleton → Skeleton)
+    (skeleton_rule : ∀ expression, (constructor expression).skeleton =
+      skeletonConstructor expression.skeleton)
+    (coordinates_rule : ∀ expression, (constructor expression).realCoordinates =
+      expression.realCoordinates)
+    (fiber : ℝ → Measure ℝ)
+    (reduce_eq : ∀ body, reduce (constructor body) =
+      if body.isValue then match realValue? body with
+        | some value => .sample site (fiber value) .real
+        | none => .stuck
+      else (reduce body).wrap constructor)
+    (draw : SFiniteKernel ℝ ℝ) (draw_apply : ∀ value, draw.kernel value = fiber value)
+    {body : α → Expr} (bodyFamily : MeasurableFamily α body)
+    (bodyReduce : MeasurableActionFamily α (fun parameter => reduce (body parameter))) :
+    MeasurableActionFamily α (fun parameter => reduce (constructor (body parameter))) := by
+  classical
+  by_cases bodyValue : Expr.isValue bodyFamily.skeleton = true
+  · cases bodySkeletonEq : bodyFamily.skeleton
+    case real =>
+      let parameters := fun parameter => (body parameter).realCoordinates.getD 0 0
+      have parametersMeasurable : Measurable parameters := bodyFamily.coordinate_measurable 0
+      apply congr (.sample (site := site) (SFiniteKernel.pullback draw parameters
+        parametersMeasurable) (measurable_realLiteral measurable_snd))
+      funext parameter
+      have fixed := bodyFamily.skeleton_eq parameter
+      have actualBodyValue : (body parameter).isValue = true :=
+        (bodyFamily.isValue_eq parameter).trans bodyValue
+      rw [bodySkeletonEq] at fixed
+      cases actualEq : body parameter <;>
+        rw [actualEq] at actualBodyValue <;>
+        simp [actualEq, Expr.skeleton] at fixed;
+        rw [reduce_eq, actualBodyValue];
+        simp_all [pullback_apply, parameters, realValue?, Expr.realCoordinates,
+          List.getD]
+    all_goals
+      apply congr stuck
+      funext parameter
+      have fixed := bodyFamily.skeleton_eq parameter
+      have actualBodyValue : (body parameter).isValue = true :=
+        (bodyFamily.isValue_eq parameter).trans bodyValue
+      rw [bodySkeletonEq] at fixed
+      cases actualEq : body parameter <;>
+        rw [actualEq] at actualBodyValue <;>
+        simp [actualEq, Expr.skeleton] at fixed;
+        rw [reduce_eq, actualBodyValue];
+        simp [realValue?]
+  · apply congr (bodyReduce.wrapUnary constructor skeletonConstructor
+        skeleton_rule coordinates_rule)
+    funext parameter
+    have actualBodyValue : (body parameter).isValue = false := by
+      rw [bodyFamily.isValue_eq parameter]
+      exact Bool.eq_false_of_not_eq_true bodyValue
+    rw [reduce_eq, actualBodyValue]
+    simp
 
 noncomputable def reduceUniform {α : Type*} [MeasurableSpace α]
     (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction)
@@ -3338,91 +2956,11 @@ noncomputable def reduceUniform {α : Type*} [MeasurableSpace α]
     (leftReduce : MeasurableActionFamily α (fun parameter => reduce (left parameter)))
     (rightReduce : MeasurableActionFamily α (fun parameter => reduce (right parameter))) :
     MeasurableActionFamily α
-      (fun parameter => reduce (.uniform kind (left parameter) (right parameter))) := by
-  classical
-  by_cases leftValue : Expr.isValue leftFamily.skeleton = true
-  · by_cases rightValue : Expr.isValue rightFamily.skeleton = true
-    · cases leftSkeletonEq : leftFamily.skeleton
-      case real =>
-        cases rightSkeletonEq : rightFamily.skeleton
-        case real =>
-          let parameters := fun parameter =>
-            ((left parameter).realCoordinates.getD 0 0, (right parameter).realCoordinates.getD 0 0)
-          have parametersMeasurable : Measurable parameters :=
-            (leftFamily.coordinate_measurable 0).prodMk (rightFamily.coordinate_measurable 0)
-          apply congr (.sample (site := (kind, .uniform)) (SFiniteKernel.pullback (uniformDraw laws kind) parameters
-            parametersMeasurable) (measurable_realLiteral measurable_snd))
-          funext parameter
-          have leftFixed := leftFamily.skeleton_eq parameter
-          have rightFixed := rightFamily.skeleton_eq parameter
-          have actualLeftValue : (left parameter).isValue = true :=
-            (leftFamily.isValue_eq parameter).trans leftValue
-          have actualRightValue : (right parameter).isValue = true :=
-            (rightFamily.isValue_eq parameter).trans rightValue
-          rw [leftSkeletonEq] at leftFixed
-          rw [rightSkeletonEq] at rightFixed
-          cases leftActualEq : left parameter <;>
-            rw [leftActualEq] at actualLeftValue <;>
-            simp [leftActualEq, Expr.skeleton] at leftFixed <;>
-            cases rightActualEq : right parameter <;>
-            rw [rightActualEq] at actualRightValue <;>
-            simp [rightActualEq, Expr.skeleton] at rightFixed <;>
-            rw [reduce_uniform_eq, actualLeftValue, actualRightValue] <;>
-            simp_all [pullback_apply, uniformDraw_apply, parameters, realValue?, Expr.realCoordinates,
-              List.getD]
-        all_goals
-          apply congr stuck
-          funext parameter
-          have leftFixed := leftFamily.skeleton_eq parameter
-          have rightFixed := rightFamily.skeleton_eq parameter
-          have actualLeftValue : (left parameter).isValue = true :=
-            (leftFamily.isValue_eq parameter).trans leftValue
-          have actualRightValue : (right parameter).isValue = true :=
-            (rightFamily.isValue_eq parameter).trans rightValue
-          rw [leftSkeletonEq] at leftFixed
-          rw [rightSkeletonEq] at rightFixed
-          cases leftActualEq : left parameter <;>
-            rw [leftActualEq] at actualLeftValue <;>
-            simp [leftActualEq, Expr.skeleton] at leftFixed <;>
-            cases rightActualEq : right parameter <;>
-            rw [rightActualEq] at actualRightValue <;>
-            simp [rightActualEq, Expr.skeleton] at rightFixed <;>
-            rw [reduce_uniform_eq, actualLeftValue, actualRightValue] <;>
-            simp [realValue?]
-      all_goals
-        apply congr stuck
-        funext parameter
-        have leftFixed := leftFamily.skeleton_eq parameter
-        have actualLeftValue : (left parameter).isValue = true :=
-          (leftFamily.isValue_eq parameter).trans leftValue
-        have actualRightValue : (right parameter).isValue = true :=
-          (rightFamily.isValue_eq parameter).trans rightValue
-        rw [leftSkeletonEq] at leftFixed
-        cases leftActualEq : left parameter <;>
-          rw [leftActualEq] at actualLeftValue <;>
-          simp [leftActualEq, Expr.skeleton] at leftFixed <;>
-          rw [reduce_uniform_eq, actualLeftValue, actualRightValue] <;>
-          simp [realValue?]
-    · apply congr (rightReduce.wrapBinaryRight left leftFamily.measurable
-          (.uniform kind) (.uniform kind) (by intros; simp [Expr.skeleton])
-          (by intros; simp [Expr.realCoordinates]))
-      funext parameter
-      have actualLeftValue : (left parameter).isValue = true :=
-        (leftFamily.isValue_eq parameter).trans leftValue
-      have actualRightValue : (right parameter).isValue = false := by
-        rw [rightFamily.isValue_eq parameter]
-        exact Bool.eq_false_of_not_eq_true rightValue
-      rw [reduce_uniform_eq, actualLeftValue, actualRightValue]
-      simp
-  · apply congr (leftReduce.wrapBinaryLeft right rightFamily.measurable
-        (.uniform kind) (.uniform kind) (by intros; simp [Expr.skeleton])
-        (by intros; simp [Expr.realCoordinates]))
-    funext parameter
-    have actualLeftValue : (left parameter).isValue = false := by
-      rw [leftFamily.isValue_eq parameter]
-      exact Bool.eq_false_of_not_eq_true leftValue
-    rw [reduce_uniform_eq, actualLeftValue]
-    simp
+      (fun parameter => reduce (.uniform kind (left parameter) (right parameter))) :=
+  reduceBinaryDraw (kind, .uniform) (.uniform kind) (.uniform kind)
+    (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates]) (uniformFiber kind)
+    (reduce_uniform_eq kind) (uniformDraw laws kind) (uniformDraw_apply laws kind)
+    leftFamily rightFamily leftReduce rightReduce
 
 noncomputable def reduceGaussian {α : Type*} [MeasurableSpace α]
     (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction)
@@ -3431,91 +2969,11 @@ noncomputable def reduceGaussian {α : Type*} [MeasurableSpace α]
     (leftReduce : MeasurableActionFamily α (fun parameter => reduce (left parameter)))
     (rightReduce : MeasurableActionFamily α (fun parameter => reduce (right parameter))) :
     MeasurableActionFamily α
-      (fun parameter => reduce (.gaussian kind (left parameter) (right parameter))) := by
-  classical
-  by_cases leftValue : Expr.isValue leftFamily.skeleton = true
-  · by_cases rightValue : Expr.isValue rightFamily.skeleton = true
-    · cases leftSkeletonEq : leftFamily.skeleton
-      case real =>
-        cases rightSkeletonEq : rightFamily.skeleton
-        case real =>
-          let parameters := fun parameter =>
-            ((left parameter).realCoordinates.getD 0 0, (right parameter).realCoordinates.getD 0 0)
-          have parametersMeasurable : Measurable parameters :=
-            (leftFamily.coordinate_measurable 0).prodMk (rightFamily.coordinate_measurable 0)
-          apply congr (.sample (site := (kind, .gaussian)) (SFiniteKernel.pullback (gaussianDraw laws kind) parameters
-            parametersMeasurable) (measurable_realLiteral measurable_snd))
-          funext parameter
-          have leftFixed := leftFamily.skeleton_eq parameter
-          have rightFixed := rightFamily.skeleton_eq parameter
-          have actualLeftValue : (left parameter).isValue = true :=
-            (leftFamily.isValue_eq parameter).trans leftValue
-          have actualRightValue : (right parameter).isValue = true :=
-            (rightFamily.isValue_eq parameter).trans rightValue
-          rw [leftSkeletonEq] at leftFixed
-          rw [rightSkeletonEq] at rightFixed
-          cases leftActualEq : left parameter <;>
-            rw [leftActualEq] at actualLeftValue <;>
-            simp [leftActualEq, Expr.skeleton] at leftFixed <;>
-            cases rightActualEq : right parameter <;>
-            rw [rightActualEq] at actualRightValue <;>
-            simp [rightActualEq, Expr.skeleton] at rightFixed <;>
-            rw [reduce_gaussian_eq, actualLeftValue, actualRightValue] <;>
-            simp_all [pullback_apply, gaussianDraw_apply, parameters, realValue?, Expr.realCoordinates,
-              List.getD]
-        all_goals
-          apply congr stuck
-          funext parameter
-          have leftFixed := leftFamily.skeleton_eq parameter
-          have rightFixed := rightFamily.skeleton_eq parameter
-          have actualLeftValue : (left parameter).isValue = true :=
-            (leftFamily.isValue_eq parameter).trans leftValue
-          have actualRightValue : (right parameter).isValue = true :=
-            (rightFamily.isValue_eq parameter).trans rightValue
-          rw [leftSkeletonEq] at leftFixed
-          rw [rightSkeletonEq] at rightFixed
-          cases leftActualEq : left parameter <;>
-            rw [leftActualEq] at actualLeftValue <;>
-            simp [leftActualEq, Expr.skeleton] at leftFixed <;>
-            cases rightActualEq : right parameter <;>
-            rw [rightActualEq] at actualRightValue <;>
-            simp [rightActualEq, Expr.skeleton] at rightFixed <;>
-            rw [reduce_gaussian_eq, actualLeftValue, actualRightValue] <;>
-            simp [realValue?]
-      all_goals
-        apply congr stuck
-        funext parameter
-        have leftFixed := leftFamily.skeleton_eq parameter
-        have actualLeftValue : (left parameter).isValue = true :=
-          (leftFamily.isValue_eq parameter).trans leftValue
-        have actualRightValue : (right parameter).isValue = true :=
-          (rightFamily.isValue_eq parameter).trans rightValue
-        rw [leftSkeletonEq] at leftFixed
-        cases leftActualEq : left parameter <;>
-          rw [leftActualEq] at actualLeftValue <;>
-          simp [leftActualEq, Expr.skeleton] at leftFixed <;>
-          rw [reduce_gaussian_eq, actualLeftValue, actualRightValue] <;>
-          simp [realValue?]
-    · apply congr (rightReduce.wrapBinaryRight left leftFamily.measurable
-          (.gaussian kind) (.gaussian kind) (by intros; simp [Expr.skeleton])
-          (by intros; simp [Expr.realCoordinates]))
-      funext parameter
-      have actualLeftValue : (left parameter).isValue = true :=
-        (leftFamily.isValue_eq parameter).trans leftValue
-      have actualRightValue : (right parameter).isValue = false := by
-        rw [rightFamily.isValue_eq parameter]
-        exact Bool.eq_false_of_not_eq_true rightValue
-      rw [reduce_gaussian_eq, actualLeftValue, actualRightValue]
-      simp
-  · apply congr (leftReduce.wrapBinaryLeft right rightFamily.measurable
-        (.gaussian kind) (.gaussian kind) (by intros; simp [Expr.skeleton])
-        (by intros; simp [Expr.realCoordinates]))
-    funext parameter
-    have actualLeftValue : (left parameter).isValue = false := by
-      rw [leftFamily.isValue_eq parameter]
-      exact Bool.eq_false_of_not_eq_true leftValue
-    rw [reduce_gaussian_eq, actualLeftValue]
-    simp
+      (fun parameter => reduce (.gaussian kind (left parameter) (right parameter))) :=
+  reduceBinaryDraw (kind, .gaussian) (.gaussian kind) (.gaussian kind)
+    (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates]) (gaussianFiber kind)
+    (reduce_gaussian_eq kind) (gaussianDraw laws kind) (gaussianDraw_apply laws kind)
+    leftFamily rightFamily leftReduce rightReduce
 
 noncomputable def reduceBeta {α : Type*} [MeasurableSpace α]
     (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction)
@@ -3524,91 +2982,11 @@ noncomputable def reduceBeta {α : Type*} [MeasurableSpace α]
     (leftReduce : MeasurableActionFamily α (fun parameter => reduce (left parameter)))
     (rightReduce : MeasurableActionFamily α (fun parameter => reduce (right parameter))) :
     MeasurableActionFamily α
-      (fun parameter => reduce (.beta kind (left parameter) (right parameter))) := by
-  classical
-  by_cases leftValue : Expr.isValue leftFamily.skeleton = true
-  · by_cases rightValue : Expr.isValue rightFamily.skeleton = true
-    · cases leftSkeletonEq : leftFamily.skeleton
-      case real =>
-        cases rightSkeletonEq : rightFamily.skeleton
-        case real =>
-          let parameters := fun parameter =>
-            ((left parameter).realCoordinates.getD 0 0, (right parameter).realCoordinates.getD 0 0)
-          have parametersMeasurable : Measurable parameters :=
-            (leftFamily.coordinate_measurable 0).prodMk (rightFamily.coordinate_measurable 0)
-          apply congr (.sample (site := (kind, .beta)) (SFiniteKernel.pullback (betaDraw laws kind) parameters
-            parametersMeasurable) (measurable_realLiteral measurable_snd))
-          funext parameter
-          have leftFixed := leftFamily.skeleton_eq parameter
-          have rightFixed := rightFamily.skeleton_eq parameter
-          have actualLeftValue : (left parameter).isValue = true :=
-            (leftFamily.isValue_eq parameter).trans leftValue
-          have actualRightValue : (right parameter).isValue = true :=
-            (rightFamily.isValue_eq parameter).trans rightValue
-          rw [leftSkeletonEq] at leftFixed
-          rw [rightSkeletonEq] at rightFixed
-          cases leftActualEq : left parameter <;>
-            rw [leftActualEq] at actualLeftValue <;>
-            simp [leftActualEq, Expr.skeleton] at leftFixed <;>
-            cases rightActualEq : right parameter <;>
-            rw [rightActualEq] at actualRightValue <;>
-            simp [rightActualEq, Expr.skeleton] at rightFixed <;>
-            rw [reduce_beta_eq, actualLeftValue, actualRightValue] <;>
-            simp_all [pullback_apply, betaDraw_apply, parameters, realValue?, Expr.realCoordinates,
-              List.getD]
-        all_goals
-          apply congr stuck
-          funext parameter
-          have leftFixed := leftFamily.skeleton_eq parameter
-          have rightFixed := rightFamily.skeleton_eq parameter
-          have actualLeftValue : (left parameter).isValue = true :=
-            (leftFamily.isValue_eq parameter).trans leftValue
-          have actualRightValue : (right parameter).isValue = true :=
-            (rightFamily.isValue_eq parameter).trans rightValue
-          rw [leftSkeletonEq] at leftFixed
-          rw [rightSkeletonEq] at rightFixed
-          cases leftActualEq : left parameter <;>
-            rw [leftActualEq] at actualLeftValue <;>
-            simp [leftActualEq, Expr.skeleton] at leftFixed <;>
-            cases rightActualEq : right parameter <;>
-            rw [rightActualEq] at actualRightValue <;>
-            simp [rightActualEq, Expr.skeleton] at rightFixed <;>
-            rw [reduce_beta_eq, actualLeftValue, actualRightValue] <;>
-            simp [realValue?]
-      all_goals
-        apply congr stuck
-        funext parameter
-        have leftFixed := leftFamily.skeleton_eq parameter
-        have actualLeftValue : (left parameter).isValue = true :=
-          (leftFamily.isValue_eq parameter).trans leftValue
-        have actualRightValue : (right parameter).isValue = true :=
-          (rightFamily.isValue_eq parameter).trans rightValue
-        rw [leftSkeletonEq] at leftFixed
-        cases leftActualEq : left parameter <;>
-          rw [leftActualEq] at actualLeftValue <;>
-          simp [leftActualEq, Expr.skeleton] at leftFixed <;>
-          rw [reduce_beta_eq, actualLeftValue, actualRightValue] <;>
-          simp [realValue?]
-    · apply congr (rightReduce.wrapBinaryRight left leftFamily.measurable
-          (.beta kind) (.beta kind) (by intros; simp [Expr.skeleton])
-          (by intros; simp [Expr.realCoordinates]))
-      funext parameter
-      have actualLeftValue : (left parameter).isValue = true :=
-        (leftFamily.isValue_eq parameter).trans leftValue
-      have actualRightValue : (right parameter).isValue = false := by
-        rw [rightFamily.isValue_eq parameter]
-        exact Bool.eq_false_of_not_eq_true rightValue
-      rw [reduce_beta_eq, actualLeftValue, actualRightValue]
-      simp
-  · apply congr (leftReduce.wrapBinaryLeft right rightFamily.measurable
-        (.beta kind) (.beta kind) (by intros; simp [Expr.skeleton])
-        (by intros; simp [Expr.realCoordinates]))
-    funext parameter
-    have actualLeftValue : (left parameter).isValue = false := by
-      rw [leftFamily.isValue_eq parameter]
-      exact Bool.eq_false_of_not_eq_true leftValue
-    rw [reduce_beta_eq, actualLeftValue]
-    simp
+      (fun parameter => reduce (.beta kind (left parameter) (right parameter))) :=
+  reduceBinaryDraw (kind, .beta) (.beta kind) (.beta kind)
+    (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates]) (betaFiber kind)
+    (reduce_beta_eq kind) (betaDraw laws kind) (betaDraw_apply laws kind)
+    leftFamily rightFamily leftReduce rightReduce
 
 noncomputable def reduceGamma {α : Type*} [MeasurableSpace α]
     (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction)
@@ -3617,226 +2995,41 @@ noncomputable def reduceGamma {α : Type*} [MeasurableSpace α]
     (leftReduce : MeasurableActionFamily α (fun parameter => reduce (left parameter)))
     (rightReduce : MeasurableActionFamily α (fun parameter => reduce (right parameter))) :
     MeasurableActionFamily α
-      (fun parameter => reduce (.gamma kind (left parameter) (right parameter))) := by
-  classical
-  by_cases leftValue : Expr.isValue leftFamily.skeleton = true
-  · by_cases rightValue : Expr.isValue rightFamily.skeleton = true
-    · cases leftSkeletonEq : leftFamily.skeleton
-      case real =>
-        cases rightSkeletonEq : rightFamily.skeleton
-        case real =>
-          let parameters := fun parameter =>
-            ((left parameter).realCoordinates.getD 0 0, (right parameter).realCoordinates.getD 0 0)
-          have parametersMeasurable : Measurable parameters :=
-            (leftFamily.coordinate_measurable 0).prodMk (rightFamily.coordinate_measurable 0)
-          apply congr (.sample (site := (kind, .gamma)) (SFiniteKernel.pullback (gammaDraw laws kind) parameters
-            parametersMeasurable) (measurable_realLiteral measurable_snd))
-          funext parameter
-          have leftFixed := leftFamily.skeleton_eq parameter
-          have rightFixed := rightFamily.skeleton_eq parameter
-          have actualLeftValue : (left parameter).isValue = true :=
-            (leftFamily.isValue_eq parameter).trans leftValue
-          have actualRightValue : (right parameter).isValue = true :=
-            (rightFamily.isValue_eq parameter).trans rightValue
-          rw [leftSkeletonEq] at leftFixed
-          rw [rightSkeletonEq] at rightFixed
-          cases leftActualEq : left parameter <;>
-            rw [leftActualEq] at actualLeftValue <;>
-            simp [leftActualEq, Expr.skeleton] at leftFixed <;>
-            cases rightActualEq : right parameter <;>
-            rw [rightActualEq] at actualRightValue <;>
-            simp [rightActualEq, Expr.skeleton] at rightFixed <;>
-            rw [reduce_gamma_eq, actualLeftValue, actualRightValue] <;>
-            simp_all [pullback_apply, gammaDraw_apply, parameters, realValue?, Expr.realCoordinates,
-              List.getD]
-        all_goals
-          apply congr stuck
-          funext parameter
-          have leftFixed := leftFamily.skeleton_eq parameter
-          have rightFixed := rightFamily.skeleton_eq parameter
-          have actualLeftValue : (left parameter).isValue = true :=
-            (leftFamily.isValue_eq parameter).trans leftValue
-          have actualRightValue : (right parameter).isValue = true :=
-            (rightFamily.isValue_eq parameter).trans rightValue
-          rw [leftSkeletonEq] at leftFixed
-          rw [rightSkeletonEq] at rightFixed
-          cases leftActualEq : left parameter <;>
-            rw [leftActualEq] at actualLeftValue <;>
-            simp [leftActualEq, Expr.skeleton] at leftFixed <;>
-            cases rightActualEq : right parameter <;>
-            rw [rightActualEq] at actualRightValue <;>
-            simp [rightActualEq, Expr.skeleton] at rightFixed <;>
-            rw [reduce_gamma_eq, actualLeftValue, actualRightValue] <;>
-            simp [realValue?]
-      all_goals
-        apply congr stuck
-        funext parameter
-        have leftFixed := leftFamily.skeleton_eq parameter
-        have actualLeftValue : (left parameter).isValue = true :=
-          (leftFamily.isValue_eq parameter).trans leftValue
-        have actualRightValue : (right parameter).isValue = true :=
-          (rightFamily.isValue_eq parameter).trans rightValue
-        rw [leftSkeletonEq] at leftFixed
-        cases leftActualEq : left parameter <;>
-          rw [leftActualEq] at actualLeftValue <;>
-          simp [leftActualEq, Expr.skeleton] at leftFixed <;>
-          rw [reduce_gamma_eq, actualLeftValue, actualRightValue] <;>
-          simp [realValue?]
-    · apply congr (rightReduce.wrapBinaryRight left leftFamily.measurable
-          (.gamma kind) (.gamma kind) (by intros; simp [Expr.skeleton])
-          (by intros; simp [Expr.realCoordinates]))
-      funext parameter
-      have actualLeftValue : (left parameter).isValue = true :=
-        (leftFamily.isValue_eq parameter).trans leftValue
-      have actualRightValue : (right parameter).isValue = false := by
-        rw [rightFamily.isValue_eq parameter]
-        exact Bool.eq_false_of_not_eq_true rightValue
-      rw [reduce_gamma_eq, actualLeftValue, actualRightValue]
-      simp
-  · apply congr (leftReduce.wrapBinaryLeft right rightFamily.measurable
-        (.gamma kind) (.gamma kind) (by intros; simp [Expr.skeleton])
-        (by intros; simp [Expr.realCoordinates]))
-    funext parameter
-    have actualLeftValue : (left parameter).isValue = false := by
-      rw [leftFamily.isValue_eq parameter]
-      exact Bool.eq_false_of_not_eq_true leftValue
-    rw [reduce_gamma_eq, actualLeftValue]
-    simp
+      (fun parameter => reduce (.gamma kind (left parameter) (right parameter))) :=
+  reduceBinaryDraw (kind, .gamma) (.gamma kind) (.gamma kind)
+    (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates]) (gammaFiber kind)
+    (reduce_gamma_eq kind) (gammaDraw laws kind) (gammaDraw_apply laws kind)
+    leftFamily rightFamily leftReduce rightReduce
 
 noncomputable def reducePoisson {α : Type*} [MeasurableSpace α]
     (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction)
     {body : α → Expr} (bodyFamily : MeasurableFamily α body)
     (bodyReduce : MeasurableActionFamily α (fun parameter => reduce (body parameter))) :
-    MeasurableActionFamily α (fun parameter => reduce (.poisson kind (body parameter))) := by
-  classical
-  by_cases bodyValue : Expr.isValue bodyFamily.skeleton = true
-  · cases bodySkeletonEq : bodyFamily.skeleton
-    case real =>
-      let parameters := fun parameter => (body parameter).realCoordinates.getD 0 0
-      have parametersMeasurable : Measurable parameters := bodyFamily.coordinate_measurable 0
-      apply congr (.sample (site := (kind, .poisson)) (SFiniteKernel.pullback (poissonDraw laws kind) parameters
-        parametersMeasurable) (measurable_realLiteral measurable_snd))
-      funext parameter
-      have fixed := bodyFamily.skeleton_eq parameter
-      have actualBodyValue : (body parameter).isValue = true :=
-        (bodyFamily.isValue_eq parameter).trans bodyValue
-      rw [bodySkeletonEq] at fixed
-      cases actualEq : body parameter <;>
-        rw [actualEq] at actualBodyValue <;>
-        simp [actualEq, Expr.skeleton] at fixed <;>
-        rw [reduce_poisson_eq, actualBodyValue] <;>
-        simp_all [pullback_apply, poissonDraw_apply, parameters, realValue?, Expr.realCoordinates,
-          List.getD]
-    all_goals
-      apply congr stuck
-      funext parameter
-      have fixed := bodyFamily.skeleton_eq parameter
-      have actualBodyValue : (body parameter).isValue = true :=
-        (bodyFamily.isValue_eq parameter).trans bodyValue
-      rw [bodySkeletonEq] at fixed
-      cases actualEq : body parameter <;>
-        rw [actualEq] at actualBodyValue <;>
-        simp [actualEq, Expr.skeleton] at fixed <;>
-        rw [reduce_poisson_eq, actualBodyValue] <;>
-        simp [realValue?]
-  · apply congr (bodyReduce.wrapUnary (.poisson kind) (.poisson kind)
-        (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates]))
-    funext parameter
-    have actualBodyValue : (body parameter).isValue = false := by
-      rw [bodyFamily.isValue_eq parameter]
-      exact Bool.eq_false_of_not_eq_true bodyValue
-    rw [reduce_poisson_eq, actualBodyValue]
-    simp
+    MeasurableActionFamily α (fun parameter => reduce (.poisson kind (body parameter))) :=
+  reduceUnaryDraw (kind, .poisson) (.poisson kind) (.poisson kind)
+    (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates]) (poissonFiber kind)
+    (reduce_poisson_eq kind) (poissonDraw laws kind) (poissonDraw_apply laws kind)
+    bodyFamily bodyReduce
 
 noncomputable def reduceBernoulli {α : Type*} [MeasurableSpace α]
     (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction)
     {body : α → Expr} (bodyFamily : MeasurableFamily α body)
     (bodyReduce : MeasurableActionFamily α (fun parameter => reduce (body parameter))) :
-    MeasurableActionFamily α (fun parameter => reduce (.bernoulli kind (body parameter))) := by
-  classical
-  by_cases bodyValue : Expr.isValue bodyFamily.skeleton = true
-  · cases bodySkeletonEq : bodyFamily.skeleton
-    case real =>
-      let parameters := fun parameter => (body parameter).realCoordinates.getD 0 0
-      have parametersMeasurable : Measurable parameters := bodyFamily.coordinate_measurable 0
-      apply congr (.sample (site := (kind, .bernoulli)) (SFiniteKernel.pullback (bernoulliDraw laws kind) parameters
-        parametersMeasurable) (measurable_realLiteral measurable_snd))
-      funext parameter
-      have fixed := bodyFamily.skeleton_eq parameter
-      have actualBodyValue : (body parameter).isValue = true :=
-        (bodyFamily.isValue_eq parameter).trans bodyValue
-      rw [bodySkeletonEq] at fixed
-      cases actualEq : body parameter <;>
-        rw [actualEq] at actualBodyValue <;>
-        simp [actualEq, Expr.skeleton] at fixed <;>
-        rw [reduce_bernoulli_eq, actualBodyValue] <;>
-        simp_all [pullback_apply, bernoulliDraw_apply, parameters, realValue?, Expr.realCoordinates,
-          List.getD]
-    all_goals
-      apply congr stuck
-      funext parameter
-      have fixed := bodyFamily.skeleton_eq parameter
-      have actualBodyValue : (body parameter).isValue = true :=
-        (bodyFamily.isValue_eq parameter).trans bodyValue
-      rw [bodySkeletonEq] at fixed
-      cases actualEq : body parameter <;>
-        rw [actualEq] at actualBodyValue <;>
-        simp [actualEq, Expr.skeleton] at fixed <;>
-        rw [reduce_bernoulli_eq, actualBodyValue] <;>
-        simp [realValue?]
-  · apply congr (bodyReduce.wrapUnary (.bernoulli kind) (.bernoulli kind)
-        (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates]))
-    funext parameter
-    have actualBodyValue : (body parameter).isValue = false := by
-      rw [bodyFamily.isValue_eq parameter]
-      exact Bool.eq_false_of_not_eq_true bodyValue
-    rw [reduce_bernoulli_eq, actualBodyValue]
-    simp
+    MeasurableActionFamily α (fun parameter => reduce (.bernoulli kind (body parameter))) :=
+  reduceUnaryDraw (kind, .bernoulli) (.bernoulli kind) (.bernoulli kind)
+    (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates]) (bernoulliFiber kind)
+    (reduce_bernoulli_eq kind) (bernoulliDraw laws kind) (bernoulliDraw_apply laws kind)
+    bodyFamily bodyReduce
 
 noncomputable def reduceExponential {α : Type*} [MeasurableSpace α]
     (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction)
     {body : α → Expr} (bodyFamily : MeasurableFamily α body)
     (bodyReduce : MeasurableActionFamily α (fun parameter => reduce (body parameter))) :
-    MeasurableActionFamily α (fun parameter => reduce (.exponential kind (body parameter))) := by
-  classical
-  by_cases bodyValue : Expr.isValue bodyFamily.skeleton = true
-  · cases bodySkeletonEq : bodyFamily.skeleton
-    case real =>
-      let parameters := fun parameter => (body parameter).realCoordinates.getD 0 0
-      have parametersMeasurable : Measurable parameters := bodyFamily.coordinate_measurable 0
-      apply congr (.sample (site := (kind, .exponential)) (SFiniteKernel.pullback (exponentialDraw laws kind) parameters
-        parametersMeasurable) (measurable_realLiteral measurable_snd))
-      funext parameter
-      have fixed := bodyFamily.skeleton_eq parameter
-      have actualBodyValue : (body parameter).isValue = true :=
-        (bodyFamily.isValue_eq parameter).trans bodyValue
-      rw [bodySkeletonEq] at fixed
-      cases actualEq : body parameter <;>
-        rw [actualEq] at actualBodyValue <;>
-        simp [actualEq, Expr.skeleton] at fixed <;>
-        rw [reduce_exponential_eq, actualBodyValue] <;>
-        simp_all [pullback_apply, exponentialDraw_apply, parameters, realValue?, Expr.realCoordinates,
-          List.getD]
-    all_goals
-      apply congr stuck
-      funext parameter
-      have fixed := bodyFamily.skeleton_eq parameter
-      have actualBodyValue : (body parameter).isValue = true :=
-        (bodyFamily.isValue_eq parameter).trans bodyValue
-      rw [bodySkeletonEq] at fixed
-      cases actualEq : body parameter <;>
-        rw [actualEq] at actualBodyValue <;>
-        simp [actualEq, Expr.skeleton] at fixed <;>
-        rw [reduce_exponential_eq, actualBodyValue] <;>
-        simp [realValue?]
-  · apply congr (bodyReduce.wrapUnary (.exponential kind) (.exponential kind)
-        (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates]))
-    funext parameter
-    have actualBodyValue : (body parameter).isValue = false := by
-      rw [bodyFamily.isValue_eq parameter]
-      exact Bool.eq_false_of_not_eq_true bodyValue
-    rw [reduce_exponential_eq, actualBodyValue]
-    simp
+    MeasurableActionFamily α (fun parameter => reduce (.exponential kind (body parameter))) :=
+  reduceUnaryDraw (kind, .exponential) (.exponential kind) (.exponential kind)
+    (by intros; simp [Expr.skeleton]) (by intros; simp [Expr.realCoordinates])
+    (exponentialFiber kind) (reduce_exponential_eq kind) (exponentialDraw laws kind)
+    (exponentialDraw_apply laws kind) bodyFamily bodyReduce
 
 @[simp] theorem MeasurableFamily.firstChild_skeleton_def {α : Type*}
     [MeasurableSpace α] {expression : α → Expr}
@@ -3848,7 +3041,7 @@ noncomputable def reduceExponential {α : Type*} [MeasurableSpace α]
     (family : MeasurableFamily α expression) :
     family.secondChild.skeleton = Skeleton.secondChild family.skeleton := rfl
 
-noncomputable def measurable_reduceAux
+noncomputable def reduceFamilyAux
     (laws : Determinize.Proof.Paper.PrimitiveLaws)
     (size : Nat) :
     {α : Type u} → [MeasurableSpace α] → {expression : α → Expr} →
@@ -3889,238 +3082,238 @@ noncomputable def measurable_reduceAux
       | pair leftSkeleton rightSkeleton =>
           have leftSmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
-            simp_all [Skeleton.firstChild, Skeleton.secondChild]
+            simp_all [Skeleton.firstChild]
             omega
           have rightSmaller : sizeOf family.secondChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
             simp_all [Skeleton.firstChild, Skeleton.secondChild]
             omega
-          apply congr (reducePair laws family.firstChild family.secondChild
+          apply congr (reducePair family.firstChild family.secondChild
             (childReduce family.firstChild leftSmaller)
             (childReduce family.secondChild rightSmaller))
           funext parameter
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild]
+            simp_all [-Determinize.Spec.Paper.reduce, Expr.skeleton, Expr.firstChild, Expr.secondChild]
       | cons headSkeleton tailSkeleton =>
           have headSmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
-            simp_all [Skeleton.firstChild, Skeleton.secondChild]
+            simp_all [Skeleton.firstChild]
             omega
           have tailSmaller : sizeOf family.secondChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
             simp_all [Skeleton.firstChild, Skeleton.secondChild]
             omega
-          apply congr (reduceCons laws family.firstChild family.secondChild
+          apply congr (reduceCons family.firstChild family.secondChild
             (childReduce family.firstChild headSmaller)
             (childReduce family.secondChild tailSmaller))
           funext parameter
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild]
+            simp_all [-Determinize.Spec.Paper.reduce, Expr.skeleton, Expr.firstChild, Expr.secondChild]
       | inl valueSkeleton =>
           have valueSmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
-            simp_all [Skeleton.firstChild, Skeleton.secondChild]
+            simp_all [Skeleton.firstChild]
             omega
-          apply congr (reduceInl laws family.firstChild
+          apply congr (reduceInl family.firstChild
             (childReduce family.firstChild valueSmaller))
           funext parameter
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild]
+            simp_all [-Determinize.Spec.Paper.reduce, Expr.skeleton, Expr.firstChild]
       | inr valueSkeleton =>
           have valueSmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
-            simp_all [Skeleton.firstChild, Skeleton.secondChild]
+            simp_all [Skeleton.firstChild]
             omega
-          apply congr (reduceInr laws family.firstChild
+          apply congr (reduceInr family.firstChild
             (childReduce family.firstChild valueSmaller))
           funext parameter
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild]
+            simp_all [-Determinize.Spec.Paper.reduce, Expr.skeleton, Expr.firstChild]
       | app functionSkeleton argumentSkeleton =>
           have functionSmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
-            simp_all [Skeleton.firstChild, Skeleton.secondChild]
+            simp_all [Skeleton.firstChild]
             omega
           have argumentSmaller : sizeOf family.secondChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
             simp_all [Skeleton.firstChild, Skeleton.secondChild]
             omega
-          apply congr (reduceApp laws family.firstChild family.secondChild
+          apply congr (reduceApp family.firstChild family.secondChild
             (childReduce family.firstChild functionSmaller)
             (childReduce family.secondChild argumentSmaller))
           funext parameter
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild]
+            simp_all [-Determinize.Spec.Paper.reduce, Expr.skeleton, Expr.firstChild, Expr.secondChild]
       | fst pairSkeleton =>
           have pairSmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
-            simp_all [Skeleton.firstChild, Skeleton.secondChild]
+            simp_all [Skeleton.firstChild]
             omega
-          apply congr (reduceFst laws family.firstChild
+          apply congr (reduceFst family.firstChild
             (childReduce family.firstChild pairSmaller))
           funext parameter
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild]
+            simp_all [-Determinize.Spec.Paper.reduce, Expr.skeleton, Expr.firstChild]
       | snd pairSkeleton =>
           have pairSmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
-            simp_all [Skeleton.firstChild, Skeleton.secondChild]
+            simp_all [Skeleton.firstChild]
             omega
-          apply congr (reduceSnd laws family.firstChild
+          apply congr (reduceSnd family.firstChild
             (childReduce family.firstChild pairSmaller))
           funext parameter
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild]
+            simp_all [-Determinize.Spec.Paper.reduce, Expr.skeleton, Expr.firstChild]
       | matchSum scrutineeSkeleton leftSkeleton rightSkeleton =>
           have scrutineeSmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
-            simp_all [Skeleton.firstChild, Skeleton.secondChild]
+            simp_all [Skeleton.firstChild]
             omega
-          apply congr (reduceMatchSum laws family.firstChild family.secondChild
+          apply congr (reduceMatchSum family.firstChild family.secondChild
             family.thirdChild (childReduce family.firstChild scrutineeSmaller))
           funext parameter
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild,
+            simp_all [-Determinize.Spec.Paper.reduce, Expr.skeleton, Expr.firstChild, Expr.secondChild,
               Expr.thirdChild]
       | matchList scrutineeSkeleton nilSkeleton consSkeleton =>
           have scrutineeSmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
-            simp_all [Skeleton.firstChild, Skeleton.secondChild]
+            simp_all [Skeleton.firstChild]
             omega
-          apply congr (reduceMatchList laws family.firstChild
+          apply congr (reduceMatchList family.firstChild
             family.secondChild family.thirdChild
             (childReduce family.firstChild scrutineeSmaller))
           funext parameter
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild,
+            simp_all [-Determinize.Spec.Paper.reduce, Expr.skeleton, Expr.firstChild, Expr.secondChild,
               Expr.thirdChild]
       | ite conditionSkeleton thenSkeleton elseSkeleton =>
           have conditionSmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
-            simp_all [Skeleton.firstChild, Skeleton.secondChild]
+            simp_all [Skeleton.firstChild]
             omega
-          apply congr (reduceIte laws family.firstChild family.secondChild
+          apply congr (reduceIte family.firstChild family.secondChild
             family.thirdChild (childReduce family.firstChild conditionSmaller))
           funext parameter
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild,
+            simp_all [-Determinize.Spec.Paper.reduce, Expr.skeleton, Expr.firstChild, Expr.secondChild,
               Expr.thirdChild]
       | letE valueSkeleton bodySkeleton =>
           have valueSmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
-            simp_all [Skeleton.firstChild, Skeleton.secondChild]
+            simp_all [Skeleton.firstChild]
             omega
-          apply congr (reduceLet laws family.firstChild family.secondChild
+          apply congr (reduceLet family.firstChild family.secondChild
             (childReduce family.firstChild valueSmaller))
           funext parameter
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild]
+            simp_all [-Determinize.Spec.Paper.reduce, Expr.skeleton, Expr.firstChild, Expr.secondChild]
       | neg bodySkeleton =>
           have bodySmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
-            simp_all [Skeleton.firstChild, Skeleton.secondChild]
+            simp_all [Skeleton.firstChild]
             omega
-          apply congr (reduceNeg laws family.firstChild
+          apply congr (reduceNeg family.firstChild
             (childReduce family.firstChild bodySmaller))
           funext parameter
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild]
+            simp_all [-Determinize.Spec.Paper.reduce, Expr.skeleton, Expr.firstChild]
       | add leftSkeleton rightSkeleton =>
           have leftSmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
-            simp_all [Skeleton.firstChild, Skeleton.secondChild]
+            simp_all [Skeleton.firstChild]
             omega
           have rightSmaller : sizeOf family.secondChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
             simp_all [Skeleton.firstChild, Skeleton.secondChild]
             omega
-          apply congr (reduceAdd laws family.firstChild family.secondChild
+          apply congr (reduceAdd family.firstChild family.secondChild
             (childReduce family.firstChild leftSmaller)
             (childReduce family.secondChild rightSmaller))
           funext parameter
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild]
+            simp_all [-Determinize.Spec.Paper.reduce, Expr.skeleton, Expr.firstChild, Expr.secondChild]
       | mul leftSkeleton rightSkeleton =>
           have leftSmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
-            simp_all [Skeleton.firstChild, Skeleton.secondChild]
+            simp_all [Skeleton.firstChild]
             omega
           have rightSmaller : sizeOf family.secondChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
             simp_all [Skeleton.firstChild, Skeleton.secondChild]
             omega
-          apply congr (reduceMul laws family.firstChild family.secondChild
+          apply congr (reduceMul family.firstChild family.secondChild
             (childReduce family.firstChild leftSmaller)
             (childReduce family.secondChild rightSmaller))
           funext parameter
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild]
+            simp_all [-Determinize.Spec.Paper.reduce, Expr.skeleton, Expr.firstChild, Expr.secondChild]
       | div leftSkeleton rightSkeleton =>
           have leftSmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
-            simp_all [Skeleton.firstChild, Skeleton.secondChild]
+            simp_all [Skeleton.firstChild]
             omega
           have rightSmaller : sizeOf family.secondChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
             simp_all [Skeleton.firstChild, Skeleton.secondChild]
             omega
-          apply congr (reduceDiv laws family.firstChild family.secondChild
+          apply congr (reduceDiv family.firstChild family.secondChild
             (childReduce family.firstChild leftSmaller)
             (childReduce family.secondChild rightSmaller))
           funext parameter
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild]
+            simp_all [-Determinize.Spec.Paper.reduce, Expr.skeleton, Expr.firstChild, Expr.secondChild]
       | lt leftSkeleton rightSkeleton =>
           have leftSmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
-            simp_all [Skeleton.firstChild, Skeleton.secondChild]
+            simp_all [Skeleton.firstChild]
             omega
           have rightSmaller : sizeOf family.secondChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
             simp_all [Skeleton.firstChild, Skeleton.secondChild]
             omega
-          apply congr (reduceLt laws family.firstChild family.secondChild
+          apply congr (reduceLt family.firstChild family.secondChild
             (childReduce family.firstChild leftSmaller)
             (childReduce family.secondChild rightSmaller))
           funext parameter
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild]
+            simp_all [-Determinize.Spec.Paper.reduce, Expr.skeleton, Expr.firstChild, Expr.secondChild]
       | uniform kind leftSkeleton rightSkeleton =>
           have leftSmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
-            simp_all [Skeleton.firstChild, Skeleton.secondChild]
+            simp_all [Skeleton.firstChild]
             omega
           have rightSmaller : sizeOf family.secondChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
@@ -4133,11 +3326,11 @@ noncomputable def measurable_reduceAux
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild]
+            simp_all [-Determinize.Spec.Paper.reduce, Expr.skeleton, Expr.firstChild, Expr.secondChild]
       | gaussian kind leftSkeleton rightSkeleton =>
           have leftSmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
-            simp_all [Skeleton.firstChild, Skeleton.secondChild]
+            simp_all [Skeleton.firstChild]
             omega
           have rightSmaller : sizeOf family.secondChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
@@ -4150,11 +3343,11 @@ noncomputable def measurable_reduceAux
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild]
+            simp_all [-Determinize.Spec.Paper.reduce, Expr.skeleton, Expr.firstChild, Expr.secondChild]
       | beta kind leftSkeleton rightSkeleton =>
           have leftSmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
-            simp_all [Skeleton.firstChild, Skeleton.secondChild]
+            simp_all [Skeleton.firstChild]
             omega
           have rightSmaller : sizeOf family.secondChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
@@ -4167,11 +3360,11 @@ noncomputable def measurable_reduceAux
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild]
+            simp_all [-Determinize.Spec.Paper.reduce, Expr.skeleton, Expr.firstChild, Expr.secondChild]
       | gamma kind leftSkeleton rightSkeleton =>
           have leftSmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
-            simp_all [Skeleton.firstChild, Skeleton.secondChild]
+            simp_all [Skeleton.firstChild]
             omega
           have rightSmaller : sizeOf family.secondChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
@@ -4184,11 +3377,11 @@ noncomputable def measurable_reduceAux
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild, Expr.secondChild]
+            simp_all [-Determinize.Spec.Paper.reduce, Expr.skeleton, Expr.firstChild, Expr.secondChild]
       | poisson kind bodySkeleton =>
           have bodySmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
-            simp_all [Skeleton.firstChild, Skeleton.secondChild]
+            simp_all [Skeleton.firstChild]
             omega
           apply congr (reducePoisson laws kind family.firstChild
             (childReduce family.firstChild bodySmaller))
@@ -4196,11 +3389,11 @@ noncomputable def measurable_reduceAux
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild]
+            simp_all [-Determinize.Spec.Paper.reduce, Expr.skeleton, Expr.firstChild]
       | bernoulli kind bodySkeleton =>
           have bodySmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
-            simp_all [Skeleton.firstChild, Skeleton.secondChild]
+            simp_all [Skeleton.firstChild]
             omega
           apply congr (reduceBernoulli laws kind family.firstChild
             (childReduce family.firstChild bodySmaller))
@@ -4208,11 +3401,11 @@ noncomputable def measurable_reduceAux
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild]
+            simp_all [-Determinize.Spec.Paper.reduce, Expr.skeleton, Expr.firstChild]
       | exponential kind bodySkeleton =>
           have bodySmaller : sizeOf family.firstChild.skeleton < size := by
             rw [← sizeEq, skeletonEq]
-            simp_all [Skeleton.firstChild, Skeleton.secondChild]
+            simp_all [Skeleton.firstChild]
             omega
           apply congr (reduceExponential laws kind family.firstChild
             (childReduce family.firstChild bodySmaller))
@@ -4220,12 +3413,12 @@ noncomputable def measurable_reduceAux
           have fixed := family.skeleton_eq parameter
           rw [skeletonEq] at fixed
           cases actualEq : expression parameter <;>
-            simp_all [-Determinize.Spec.Paper.reduce, actualEq, Expr.skeleton, Expr.firstChild]
-noncomputable def measurable_reduce {α : Type u} [MeasurableSpace α]
+            simp_all [-Determinize.Spec.Paper.reduce, Expr.skeleton, Expr.firstChild]
+noncomputable def reduceFamily {α : Type u} [MeasurableSpace α]
     (laws : Determinize.Proof.Paper.PrimitiveLaws)
     {expression : α → Expr} (family : MeasurableFamily α expression) :
     MeasurableActionFamily α (fun parameter => reduce (expression parameter)) :=
-  measurable_reduceAux laws (sizeOf family.skeleton) family rfl
+  reduceFamilyAux laws (sizeOf family.skeleton) family rfl
 
 noncomputable def kernel {α : Type*} [MeasurableSpace α] {action : α → Action}
     (family : MeasurableActionFamily α action) :
@@ -4248,7 +3441,7 @@ theorem kernel_apply {α : Type*} [MeasurableSpace α] {action : α → Action}
     family.kernel.kernel parameter =
       match action parameter with
       | .next successor => Measure.dirac successor
-      | .sample site fiber continuation => fiber.map continuation
+      | .sample _site fiber continuation => fiber.map continuation
       | .stuck => 0 := by
   induction family with
   | @next successor successorMeasurable =>
@@ -4293,7 +3486,7 @@ noncomputable def toSkeletonFiber (skeleton : Skeleton) (expression : Expr) :
   let base := (SkeletonFiber skeleton).piecewise id (fun _ => zeroFill skeleton)
   refine ⟨base expression, ?_⟩
   by_cases member : expression ∈ SkeletonFiber skeleton
-  · simpa [base, Set.piecewise, member] using member
+  · simp [base, member]
   · have different : expression.skeleton ≠ skeleton := by
       simpa [SkeletonFiber] using member
     simp [base, Set.piecewise, different, SkeletonFiber]
@@ -4313,7 +3506,7 @@ theorem measurable_toSkeletonFiber (skeleton : Skeleton) :
   have baseFixed : ∀ expression, base expression ∈ SkeletonFiber skeleton := by
     intro expression
     by_cases member : expression ∈ SkeletonFiber skeleton
-    · simpa [base, Set.piecewise, member] using member
+    · simp [base, member]
     · have different : expression.skeleton ≠ skeleton := by
         simpa [SkeletonFiber] using member
       simp [base, Set.piecewise, different, SkeletonFiber]
@@ -4332,7 +3525,7 @@ noncomputable def skeletonKernel
     (laws : Determinize.Proof.Paper.PrimitiveLaws)
     (skeleton : Skeleton) : Kernel Expr Expr := by
   classical
-  let actionFamily := measurable_reduce laws (MeasurableFamily.skeletonFiber skeleton)
+  let actionFamily := reduceFamily laws (MeasurableFamily.skeletonFiber skeleton)
   let localKernel := actionFamily.kernel
   let pulled := localKernel.kernel.comap (toSkeletonFiber skeleton)
     (measurable_toSkeletonFiber skeleton)
@@ -4346,7 +3539,7 @@ theorem skeletonKernel_apply_of_mem
   classical
   simp only [skeletonKernel, Kernel.piecewise_apply, if_pos member,
     Kernel.comap_apply]
-  let actionFamily := measurable_reduce laws (MeasurableFamily.skeletonFiber skeleton)
+  let actionFamily := reduceFamily laws (MeasurableFamily.skeletonFiber skeleton)
   rw [kernel_apply actionFamily (toSkeletonFiber skeleton expression)]
   rw [toSkeletonFiber_coe_of_mem skeleton expression member]
   unfold stepMeasure
@@ -4365,8 +3558,8 @@ theorem skeletonKernel_sfinite
     (skeleton : Skeleton) : IsSFiniteKernel (skeletonKernel laws skeleton) := by
   classical
   unfold skeletonKernel
-  let actionFamily := measurable_reduce laws (MeasurableFamily.skeletonFiber skeleton)
-  letI := actionFamily.kernel.sfinite
+  let actionFamily := reduceFamily laws (MeasurableFamily.skeletonFiber skeleton)
+  let := actionFamily.kernel.sfinite
   infer_instance
 
 noncomputable def globalKernel
@@ -4394,7 +3587,7 @@ theorem globalKernel_sfinite
     (laws : Determinize.Proof.Paper.PrimitiveLaws) :
     IsSFiniteKernel (globalKernel laws) := by
   classical
-  letI (skeleton : Skeleton) : IsSFiniteKernel (skeletonKernel laws skeleton) :=
+  let (skeleton : Skeleton) : IsSFiniteKernel (skeletonKernel laws skeleton) :=
     skeletonKernel_sfinite laws skeleton
   unfold globalKernel
   infer_instance
@@ -4426,7 +3619,7 @@ theorem reduce_sample_continuation_measurable
     (expression : Expr) {site : DistributionAction × Op} (fiber : Measure ℝ) (continuation : ℝ → Expr)
     (equality : reduce expression = .sample site fiber continuation) :
     Measurable continuation := by
-  let family := measurable_reduce laws
+  let family := reduceFamily laws
     (MeasurableFamily.constant (α := Unit) expression)
   exact sample_continuation_measurable_of_family family () equality
 
@@ -4495,11 +3688,6 @@ noncomputable def exactOutputKernelPack
 noncomputable def exactOutputKernel
     (stepKernel : StepKernel) (depth : Nat) : Kernel Expr ℝ :=
   (exactOutputKernelPack stepKernel depth).kernel
-
-theorem exactOutputKernel_sfinite
-    (stepKernel : StepKernel) (depth : Nat) :
-    IsSFiniteKernel (exactOutputKernel stepKernel depth) :=
-  (exactOutputKernelPack stepKernel depth).sfinite
 
 theorem exactOutputKernel_apply
     (stepKernel : StepKernel) (depth : Nat) (expression : Expr) :
@@ -4674,7 +3862,7 @@ theorem exactOutputKernel_zero_apply_of_not_value
   rw [exactOutputKernel_apply]
   cases expression <;> simp_all [Expr.isValue, exactOutputMeasure]
 
-theorem exactOutputKernel_zero_comp_surface
+theorem exactOutputKernel_zero_comp_step
     (stepKernel : StepKernel) :
     exactOutputKernel stepKernel 0 ∘ₖ stepKernel.kernel =
       exactOutputKernel stepKernel 0 + exactOutputKernel stepKernel 1 := by
@@ -4698,7 +3886,7 @@ theorem exactOutputKernel_zero_comp_surface
       stepKernel expression isValue]
     simp
 
-theorem exactOutputKernel_succ_comp_surface
+theorem exactOutputKernel_succ_comp_step
     (stepKernel : StepKernel) (depth : Nat) :
     exactOutputKernel stepKernel (depth + 1) ∘ₖ stepKernel.kernel =
       exactOutputKernel stepKernel (depth + 2) := by
@@ -4735,8 +3923,8 @@ theorem cumulativeKernel_eq_finsetSum
   | succ fuel ih =>
       rw [cumulativeKernel_succ, ih,
         finsetSum_comp_kernel, Finset.sum_range_succ']
-      rw [exactOutputKernel_zero_comp_surface]
-      simp_rw [exactOutputKernel_succ_comp_surface]
+      rw [exactOutputKernel_zero_comp_step]
+      simp_rw [exactOutputKernel_succ_comp_step]
       rw [Finset.sum_range_succ']
       have shifted :
           (∑ depth ∈ Finset.range (fuel + 1),
@@ -4794,7 +3982,7 @@ theorem measure_sum_eq_iSup_range_succ {α : Type*} [MeasurableSpace α]
     exact le_iSup (fun fuel => ∑ depth ∈ Finset.range fuel, measures depth set)
       (fuel + 1)
 
-theorem exactDepthConstruction (stepKernel : StepKernel) (program : Expr) :
+theorem bigStepMeasure_eq_sum_exactOutputMeasure (stepKernel : StepKernel) (program : Expr) :
     bigStepMeasure stepKernel program =
       Measure.sum (fun depth => exactOutputMeasure stepKernel depth program) := by
   unfold bigStepMeasure

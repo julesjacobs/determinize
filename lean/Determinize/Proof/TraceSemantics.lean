@@ -2,6 +2,15 @@ import Determinize.Proof.TraceLabels
 import Determinize.Proof.Internal.StepTraces
 import Determinize.Proof.OrdinarySemantics
 
+/-!
+# Detailed trace semantics as kernels
+
+The one-step law together with its recorded event (`record`, `tracedStepKernel`), the joint
+law of a detailed trace and output at an exact depth as a measurable kernel (`exactKernel`,
+equal to `exactMeasure`), and trace erasure (`correspondence`): forgetting the trace recovers
+the ordinary output semantics.
+-/
+
 namespace Determinize.Proof.StepTraces
 
 open MeasureTheory ProbabilityTheory Determinize.Spec.Paper Determinize.Proof.StepTraces
@@ -54,20 +63,16 @@ theorem map_bind {α β γ : Type*} [MeasurableSpace α] [MeasurableSpace β]
     [MeasurableSpace γ] (μ : Measure α) (kernel : Kernel α β)
     (f : β → γ) (hf : Measurable f) :
     (μ.bind kernel).map f = μ.bind (fun a => (kernel a).map f) := by
-  rw [← Measure.bind_dirac_eq_map _ hf]
-  rw [Measure.bind_bind kernel.aemeasurable
-    (show AEMeasurable (fun x => Measure.dirac (f x)) (μ.bind kernel) from
-      (Measure.measurable_dirac.comp hf).aemeasurable)]
-  simp_rw [Measure.bind_dirac_eq_map _ hf]
+  rw [Measure.map_comp μ kernel hf]
+  exact congrArg _ (funext fun a => Kernel.map_apply kernel hf a)
 
 theorem bind_map {α β γ : Type*} [MeasurableSpace α] [MeasurableSpace β]
     [MeasurableSpace γ] (μ : Measure α) (f : α → β) (hf : Measurable f)
     (kernel : Kernel β γ) :
     (μ.map f).bind kernel = μ.bind (fun a => kernel (f a)) := by
-  rw [← Measure.bind_dirac_eq_map _ hf,
-    Measure.bind_bind (show AEMeasurable (fun x => Measure.dirac (f x)) μ from
-      (Measure.measurable_dirac.comp hf).aemeasurable) kernel.aemeasurable]
-  simp_rw [Measure.dirac_bind kernel.measurable]
+  rw [← Measure.deterministic_comp_eq_map hf, Measure.comp_assoc,
+    Kernel.comp_deterministic_eq_comap]
+  rfl
 
 /-- A one-step expression kernel used to prove measurability of the direct trace evaluator. -/
 def record : Action → Measure (Event × Expr)
@@ -97,7 +102,7 @@ theorem recordKernel_apply {α : Type*} [MeasurableSpace α] {action : α → Ac
   induction family with
   | next measurable => rfl
   | sample draw measurable =>
-      exact SymbolicSoundness.TargetSafety.sfiniteKernel_mapWithInput_apply _ _ _ _
+      exact SFiniteKernel.mapWithInput_apply _ _ _ _
   | stuck => rfl
   | @piecewise region _ measurableRegion whenTrue whenFalse trueFamily falseFamily ihTrue ihFalse =>
       calc
@@ -111,7 +116,7 @@ theorem recordKernel_apply {α : Type*} [MeasurableSpace α] {action : α → Ac
 
 def recordSkeletonKernel (skeleton : Skeleton) : Kernel Expr (Event × Expr) := by
   classical
-  let family := MeasurableActionFamily.measurable_reduce primitiveLaws
+  let family := MeasurableActionFamily.reduceFamily primitiveLaws
     (MeasurableFamily.skeletonFiber skeleton)
   let localKernel := recordKernel family
   exact Kernel.piecewise (skeletonFiber_measurable skeleton)
@@ -134,11 +139,13 @@ theorem recordSkeletonKernel_sfinite (skeleton : Skeleton) :
     IsSFiniteKernel (recordSkeletonKernel skeleton) := by
   classical
   unfold recordSkeletonKernel
-  let family := MeasurableActionFamily.measurable_reduce primitiveLaws
+  let family := MeasurableActionFamily.reduceFamily primitiveLaws
     (MeasurableFamily.skeletonFiber skeleton)
   let := (recordKernel family).sfinite
   infer_instance
 
+/-- One reduction step with its recorded event, `record (reduce expression)`, as a measurable
+kernel (`tracedStepKernel_apply`). -/
 def tracedStepKernel : SFiniteKernel Expr (Event × Expr) := by
   let _ (skeleton : Skeleton) := recordSkeletonKernel_sfinite skeleton
   exact ⟨Kernel.sum recordSkeletonKernel, inferInstance⟩
@@ -171,6 +178,8 @@ theorem tracedStep_erasure (expression : Expr) :
           (generationEvent_measurable site).prodMk measurable)]
       rfl
 
+/-- Extend an exact-depth kernel by one recorded step: run `previous` on the successor and put
+the event in front of the trace. -/
 def successorKernel (previous : SFiniteKernel Expr (Output)) :
     SFiniteKernel (Event × Expr) (Output) :=
   SFiniteKernel.mapWithInput
@@ -182,9 +191,10 @@ theorem successorKernel_apply (previous : SFiniteKernel Expr (Output))
     (entry : Event) (expression : Expr) :
     (successorKernel previous).kernel (entry, expression) =
       (previous.kernel expression).map (prepend entry) := by
-  rw [successorKernel, SymbolicSoundness.TargetSafety.sfiniteKernel_mapWithInput_apply,
+  rw [successorKernel, SFiniteKernel.mapWithInput_apply,
     MeasurableActionFamily.pullback_apply]
 
+/-- `exactMeasure depth` as a measurable kernel (`exactKernel_apply`). -/
 def exactKernel : (depth : Nat) → SFiniteKernel Expr (Output)
   | 0 => SFiniteKernel.piecewise terminalFloatSet_measurable
       (SFiniteKernel.deterministic (fun e => ([], terminalFloatValue e))
@@ -234,30 +244,6 @@ theorem exact_succ_kernel (depth : Nat) (expression : Expr)
     if_neg (show expression ∉ MeasurableActionFamily.valueSet from notValue),
     Kernel.comp_apply, tracedStepKernel_apply]
 
-theorem exact_length (depth : Nat) (expression : Expr) :
-    ∀ᵐ point ∂exactMeasure depth expression, point.1.length = depth := by
-  induction depth generalizing expression with
-  | zero =>
-      cases expression <;> try (solve | simp [exactMeasure])
-      case real value =>
-        change ∀ᵐ point : Output ∂Measure.dirac ([], value), point.1.length = 0
-        have measurableLength : MeasurableSet {point : Output | point.1.length = 0} :=
-          measurableSet_eq_fun (trace_length_measurable.comp measurable_fst) measurable_const
-        exact (ae_dirac_iff measurableLength).2 rfl
-  | succ depth ih =>
-      by_cases value : expression.isValue = true
-      · simp [exactMeasure, value]
-      · rw [exact_succ_kernel depth expression value]
-        have measurableLength : MeasurableSet {point : Output | point.1.length = depth + 1} :=
-          measurableSet_eq_fun (trace_length_measurable.comp measurable_fst) measurable_const
-        rw [Measure.ae_comp_iff measurableLength]
-        filter_upwards [] with next
-        rw [successorKernel_apply, exactKernel_apply,
-          ae_map_iff (show Measurable (prepend next.1) from
-            prepend_measurable.comp (measurable_const.prodMk measurable_id)).aemeasurable
-            measurableLength]
-        simpa only [prepend, List.length_cons, Nat.add_left_inj] using ih next.2
-
 theorem exact_erasure (step : StepKernel) (depth : Nat) (expression : Expr) :
     (exactMeasure depth expression).map Prod.snd = exactOutputMeasure step depth expression := by
   induction depth generalizing expression with
@@ -289,7 +275,7 @@ theorem correspondence : Determinize.Proof.StepTraces.correspondenceThm := by
   rw [jointMeasure, Measure.map_sum measurable_snd.aemeasurable]
   change Measure.sum (fun depth => (exactMeasure depth program).map Prod.snd) = _
   simp_rw [exact_erasure step]
-  rw [← MeasurableActionFamily.exactDepthConstruction step,
+  rw [← MeasurableActionFamily.bigStepMeasure_eq_sum_exactOutputMeasure step,
     Determinize.Proof.Paper.bigStepMeasure_eq]
 
 end

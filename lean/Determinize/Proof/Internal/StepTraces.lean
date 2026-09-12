@@ -57,24 +57,4 @@ noncomputable def jointMeasure (program : Expr) : Measure (Trace × ℝ) :=
 def correspondenceThm : Prop :=
   ∀ program : Expr, (jointMeasure program).map Prod.snd = bigStepMeasure program
 
-/-- The actual source and target joint laws factor over the same operational traces. -/
-def MeanOnTraces (source target : Expr) : Prop :=
-  ∃ (traces : Measure Trace) (fiber : Kernel Trace ℝ) (output : Trace → ℝ),
-    traces Set.univ ≤ 1 ∧
-    IsMarkovKernel fiber ∧
-    Measurable output ∧
-    jointMeasure source = traces ⊗ₘ fiber ∧
-    jointMeasure target = traces.map (fun trace => (trace, output trace)) ∧
-    ∀ᵐ trace ∂traces,
-      Integrable id (fiber trace) ∧ output trace = ∫ value : ℝ, value ∂fiber trace
-
-/-- Trace soundness for expectation-affinity programs on detailed traces, without a global
-integrability assumption. General-affinity programs are handled by the compact layer, which
-promotes them. -/
-def soundnessThm : Prop :=
-  ∀ program : Expr,
-    Typed [] program (.float .E) → program.sourceForm = true → DoesNotGetStuck program →
-      DoesNotGetStuck program.determinize ∧ MeanOnTraces program program.determinize
-
-
 end Determinize.Proof.StepTraces

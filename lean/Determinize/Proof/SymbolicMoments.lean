@@ -1,6 +1,14 @@
 import Determinize.Proof.PrimitiveMoments
 import Determinize.Proof.SymbolicSoundness
 
+/-!
+# Moments along a sample history
+
+Under `PrimitiveMomentBounds`, every affine form is integrable under the history's actual law
+and its integral is its value at the mean environment (`integrable_affine`,
+`integral_affine`).
+-/
+
 namespace Determinize.Proof.Paper.SymbolicSoundness.SampleEnv
 
 open MeasureTheory ProbabilityTheory Determinize.Spec.Paper
@@ -14,7 +22,7 @@ theorem transitionMoment_le (laws : PrimitiveLaws)
     (expression : Symbolic.Affine (n + 1)) (environment : Env n)
     (valid : domain op (fun i => (affineArgs i).eval environment, generalArgs)) :
     (∫ next, ‖expression.eval next‖ ∂(transitionPack laws op affineArgs generalArgs).kernel environment) ≤
-      |(Affine.tail expression).eval environment| + |expression.2 0| *
+      |(Symbolic.Affine.tail expression).eval environment| + |expression.2 0| *
         (∫ value : ℝ, |value| ∂laws.kernel op (fun i => (affineArgs i).eval environment, generalArgs)) := by
   rw [transitionPack_apply, integral_map
     (show AEMeasurable (fun value : ℝ => Env.cons value environment)
@@ -28,18 +36,18 @@ theorem transitionMoment_le (laws : PrimitiveLaws)
   have integrable : Integrable (fun x : ℝ => x) (laws.kernel op params) :=
     laws.integrable_id op params valid
   have leftIntegrable : Integrable
-      (fun x => |(Affine.tail expression).eval environment + expression.2 0 * x|)
+      (fun x => |(Symbolic.Affine.tail expression).eval environment + expression.2 0 * x|)
       (laws.kernel op params) :=
     ((integrable_const _).add (integrable.const_mul _)).abs
   calc
-    _ ≤ ∫ x : ℝ, |(Affine.tail expression).eval environment| + |expression.2 0| * |x|
+    _ ≤ ∫ x : ℝ, |(Symbolic.Affine.tail expression).eval environment| + |expression.2 0| * |x|
         ∂laws.kernel op params := by
       apply integral_mono leftIntegrable
         ((integrable_const _).add (integrable.abs.const_mul _))
       intro x
-      change |(Affine.tail expression).eval environment + expression.2 0 * x| ≤
-        |(Affine.tail expression).eval environment| + |expression.2 0| * |x|
-      simpa only [abs_mul] using abs_add_le ((Affine.tail expression).eval environment) (expression.2 0 * x)
+      change |(Symbolic.Affine.tail expression).eval environment + expression.2 0 * x| ≤
+        |(Symbolic.Affine.tail expression).eval environment| + |expression.2 0| * |x|
+      simpa only [abs_mul] using abs_add_le ((Symbolic.Affine.tail expression).eval environment) (expression.2 0 * x)
     _ = _ := by
       rw [integral_add (integrable_const _) (integrable.abs.const_mul _),
         integral_const, integral_const_mul]
@@ -65,12 +73,12 @@ theorem integrable_affine (laws : PrimitiveLaws) (bounds : PrimitiveMomentBounds
         exact integrable_eval_transition laws op affineArgs generalArgs expression environment valid
       · obtain ⟨bound, boundNonneg, boundRule⟩ := bounds op generalArgs
         let upper : Env n → ℝ := fun environment =>
-          |(Affine.tail expression).eval environment| + |expression.2 0| *
+          |(Symbolic.Affine.tail expression).eval environment| + |expression.2 0| *
             (bound * (1 + ∑ i, |(affineArgs i).eval environment|))
         have sumIntegrable : Integrable (fun environment => ∑ i, |(affineArgs i).eval environment|) prior :=
           integrable_finsetSum _ fun i _ => (ih safe.1 (affineArgs i)).abs
         have upperIntegrable : Integrable upper prior :=
-          (ih safe.1 (Affine.tail expression)).abs.add
+          (ih safe.1 (Symbolic.Affine.tail expression)).abs.add
             (((integrable_const (1 : ℝ)).add sumIntegrable).const_mul bound |>.const_mul _)
         have normMeasurable : AEStronglyMeasurable
             (fun environment => ∫ next, ‖expression.eval next‖ ∂transition environment) prior :=

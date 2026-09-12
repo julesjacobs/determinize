@@ -7,8 +7,6 @@ import Mathlib.Probability.Kernel.WithDensity
 
 namespace Determinize.Proof.Paper
 
-set_option linter.style.haveILetI false
-
 open MeasureTheory
 
 private theorem measurable_paperMeasure_gaussian :
@@ -444,7 +442,7 @@ private theorem paperMeasure_mass_one (op : Determinize.Spec.Paper.Op) (params :
       have hd : 0 ≤ params.2 0 := by
         simpa only [Determinize.Spec.Paper.domain] using hDomain
       rw [dif_pos hd]
-      letI := ProbabilityTheory.instIsProbabilityMeasureGaussianReal
+      let := ProbabilityTheory.instIsProbabilityMeasureGaussianReal
         (params.1 0) ⟨params.2 0, hd⟩
       exact measure_univ
   | poisson =>
@@ -459,7 +457,7 @@ private theorem paperMeasure_mass_one (op : Determinize.Spec.Paper.Op) (params :
         ext
         exact (Real.coe_toNNReal _ hd).symm
       rw [hRate]
-      letI : IsProbabilityMeasure
+      let : IsProbabilityMeasure
           ((ProbabilityTheory.poissonMeasure
               (params.1 0).toNNReal).map
             (fun value : Nat => (value : ℝ))) :=
@@ -471,7 +469,7 @@ private theorem paperMeasure_mass_one (op : Determinize.Spec.Paper.Op) (params :
       have hd : 0 < params.2 0 := by
         simpa only [Determinize.Spec.Paper.domain] using hDomain
       rw [if_pos hd]
-      letI := ProbabilityTheory.isProbabilityMeasure_expMeasure hd
+      let := ProbabilityTheory.isProbabilityMeasure_expMeasure hd
       exact measure_univ
   | beta =>
       change (if 0 < params.2 0 ∧ 0 < params.2 1 then
@@ -481,7 +479,7 @@ private theorem paperMeasure_mass_one (op : Determinize.Spec.Paper.Op) (params :
           0 < params.2 1 := by
         simpa only [Determinize.Spec.Paper.domain] using hDomain
       rw [if_pos hd]
-      letI := ProbabilityTheory.isProbabilityMeasureBeta hd.1 hd.2
+      let := ProbabilityTheory.isProbabilityMeasureBeta hd.1 hd.2
       exact measure_univ
   | gamma =>
       change (if 0 < params.1 0 ∧ 0 < params.2 0 then
@@ -491,11 +489,11 @@ private theorem paperMeasure_mass_one (op : Determinize.Spec.Paper.Op) (params :
           0 < params.2 0 := by
         simpa only [Determinize.Spec.Paper.domain] using hDomain
       rw [if_pos hd]
-      letI := ProbabilityTheory.isProbabilityMeasure_gammaMeasure hd.1 hd.2
+      let := ProbabilityTheory.isProbabilityMeasure_gammaMeasure hd.1 hd.2
       exact measure_univ
 
   | bernoulli =>
-      letI := DiscreteLaws.bernoulli_probability (.sample .G) (params.1 0) hDomain
+      let := DiscreteLaws.bernoulli_probability (.sample .G) (params.1 0) hDomain
       exact measure_univ (μ := Determinize.Spec.Paper.bernoulliFiber (.sample .G) (params.1 0))
   | discrete d =>
       exact measure_univ (μ := Determinize.Spec.Paper.discreteFiber (.sample .G) d)
@@ -552,7 +550,7 @@ private theorem gaussian_integrable_id (params : Determinize.Spec.Paper.Params .
     ProbabilityTheory.gaussianReal (params.1 0)
       ⟨params.2 0, h⟩ else 0)
   rw [dif_pos hd]
-  letI : ProbabilityTheory.IsGaussian
+  let : ProbabilityTheory.IsGaussian
       (ProbabilityTheory.gaussianReal (params.1 0)
         ⟨params.2 0, hd⟩) :=
     ProbabilityTheory.isGaussian_gaussianReal _ _
@@ -754,7 +752,7 @@ private theorem gamma_mul_pdf_ae {shape rate : ℝ} (hShape : 0 < shape)
 private theorem gamma_pdf_integrable {shape rate : ℝ} (hShape : 0 < shape)
     (hRate : 0 < rate) :
     Integrable (ProbabilityTheory.gammaPDFReal shape rate) volume := by
-  letI : IsProbabilityMeasure (ProbabilityTheory.gammaMeasure shape rate) :=
+  let : IsProbabilityMeasure (ProbabilityTheory.gammaMeasure shape rate) :=
     ProbabilityTheory.isProbabilityMeasure_gammaMeasure hShape hRate
   have hOne : Integrable (fun _ : ℝ => (1 : ℝ))
       (ProbabilityTheory.gammaMeasure shape rate) := integrable_const _
@@ -771,7 +769,7 @@ private theorem gamma_pdf_integrable {shape rate : ℝ} (hShape : 0 < shape)
 private theorem integral_gamma_pdf_eq_one {shape rate : ℝ} (hShape : 0 < shape)
     (hRate : 0 < rate) :
     (∫ value : ℝ, ProbabilityTheory.gammaPDFReal shape rate value) = 1 := by
-  letI : IsProbabilityMeasure (ProbabilityTheory.gammaMeasure shape rate) :=
+  let : IsProbabilityMeasure (ProbabilityTheory.gammaMeasure shape rate) :=
     ProbabilityTheory.isProbabilityMeasure_gammaMeasure hShape hRate
   have hOne : (∫ _value : ℝ, (1 : ℝ) ∂
       ProbabilityTheory.gammaMeasure shape rate) = 1 := by simp
@@ -929,7 +927,7 @@ private theorem beta_mul_pdf (alpha beta : ℝ) (hAlpha : 0 < alpha)
 private theorem beta_pdf_integrable {alpha beta : ℝ} (hAlpha : 0 < alpha)
     (hBeta : 0 < beta) :
     Integrable (ProbabilityTheory.betaPDFReal alpha beta) volume := by
-  letI : IsProbabilityMeasure (ProbabilityTheory.betaMeasure alpha beta) :=
+  let : IsProbabilityMeasure (ProbabilityTheory.betaMeasure alpha beta) :=
     ProbabilityTheory.isProbabilityMeasureBeta hAlpha hBeta
   have hOne : Integrable (fun _ : ℝ => (1 : ℝ))
       (ProbabilityTheory.betaMeasure alpha beta) := integrable_const _
@@ -945,7 +943,7 @@ private theorem beta_pdf_integrable {alpha beta : ℝ} (hAlpha : 0 < alpha)
 private theorem integral_beta_pdf_eq_one {alpha beta : ℝ} (hAlpha : 0 < alpha)
     (hBeta : 0 < beta) :
     (∫ value : ℝ, ProbabilityTheory.betaPDFReal alpha beta value) = 1 := by
-  letI : IsProbabilityMeasure (ProbabilityTheory.betaMeasure alpha beta) :=
+  let : IsProbabilityMeasure (ProbabilityTheory.betaMeasure alpha beta) :=
     ProbabilityTheory.isProbabilityMeasureBeta hAlpha hBeta
   have hOne : (∫ _value : ℝ, (1 : ℝ) ∂
       ProbabilityTheory.betaMeasure alpha beta) = 1 := by simp
@@ -1072,13 +1070,9 @@ noncomputable def primitiveLaws : Determinize.Proof.Paper.PrimitiveLaws where
   kernel_eq_paperMeasure := primitiveKernel_apply
   kernel_sfinite := by
     intro op
-    letI : ProbabilityTheory.IsFiniteKernel (primitiveKernel op) :=
+    let : ProbabilityTheory.IsFiniteKernel (primitiveKernel op) :=
       primitiveKernel_finite op
     infer_instance
-  mass_le_one := by
-    intro op params
-    rw [primitiveKernel_apply]
-    exact paperMeasure_mass_le_one op params
   kernel_zero_off_domain := by
     intro op params hDomain
     rw [primitiveKernel_apply]

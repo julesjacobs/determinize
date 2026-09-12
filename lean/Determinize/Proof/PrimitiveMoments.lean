@@ -1,5 +1,13 @@
 import Determinize.Proof.PrimitiveKernels
-import Mathlib.Probability.Kernel.Composition.IntegralCompProd
+
+/-!
+# First moments of the primitive laws
+
+`PrimitiveMomentBounds laws` bounds the first absolute moment linearly in the affine-position
+parameters, with a bound that may depend on the general-position parameters.
+`primitiveMomentBounds` proves this for the canonical primitive kernels.
+`Proof/SymbolicMoments.lean` uses it to integrate affine forms along a sample history.
+-/
 
 namespace Determinize.Proof.Paper
 

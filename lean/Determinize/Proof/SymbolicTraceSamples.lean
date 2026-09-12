@@ -1,5 +1,13 @@
 import Determinize.Proof.SymbolicTraceLaws
 
+/-!
+# Trace laws at E-affinity sites
+
+The concrete steps of source and target at a `sampleE` site (`concrete_sampleE`,
+`concrete_target_sampleE`) and the unfolding of `actualTraceLaw` and `targetTraceLaw` there:
+the source extends its history by the draw, the target steps to the mean.
+-/
+
 namespace Determinize.Proof.StepTraces
 open MeasureTheory ProbabilityTheory Determinize.Spec.Paper Determinize.Proof.StepTraces
 open Determinize.Proof.Paper Symbolic Symbolic.AffineExpr
@@ -10,18 +18,18 @@ theorem concrete_sampleE (laws : PrimitiveLaws)
     (expression : AffineExpr n) (typed : WellTyped [] expression ty)
     (op : Op) (affine : List (Symbolic.Affine n)) (general : List ℝ)
     (continuation : AffineExpr (n+1))
-    (actionEq : symbolicReduce laws expression = .sampleE op affine general continuation)
+    (actionEq : symbolicReduce expression = .sampleE op affine general continuation)
     (environment : Env n) :
     reduce (expression.realize environment) =
       .sample (.sample .E, op) (laws.kernel op
         (fun i => Symbolic.Affine.eval (affine.getD i.1 (0, fun _ => 0)) environment,
          fun i => general.getD i.1 0))
         (fun value => continuation.realize (Env.cons value environment)) := by
-  have actionTyped := symbolicReduce_wellTyped laws typed
+  have actionTyped := symbolicReduce_wellTyped typed
   rw [actionEq] at actionTyped
   rcases SymbolicAction.wellTyped_sampleE_iff.mp actionTyped with ⟨affineLength, generalLength, _⟩
 
-  rw [← symbolicReduce_realize laws typed environment, actionEq]
+  rw [← symbolicReduce_realize typed environment, actionEq]
   simp only [Symbolic.AffineExpr.SymbolicAction.realize]
   congr 1
   classical
@@ -37,11 +45,11 @@ theorem concrete_sampleE (laws : PrimitiveLaws)
   · simp [List.getD_eq_getElem?_getD, index.isLt, affineLength]
   · simp [List.getD_eq_getElem?_getD, index.isLt, generalLength]
 
-theorem concrete_target_sampleE (laws : PrimitiveLaws)
+theorem concrete_target_sampleE
     (expression : AffineExpr n) (typed : WellTyped [] expression ty)
     (op : Op) (affine : List (Symbolic.Affine n)) (general : List ℝ)
     (continuation : AffineExpr (n+1))
-    (actionEq : symbolicReduce laws expression = .sampleE op affine general continuation)
+    (actionEq : symbolicReduce expression = .sampleE op affine general continuation)
     (mean : Env n)
     (paramsDomain : domain op
         (fun i => Symbolic.Affine.eval (affine.getD i.1 (0, fun _ => 0)) mean,
@@ -54,11 +62,11 @@ theorem concrete_target_sampleE (laws : PrimitiveLaws)
   let affineArgs : Fin (affineArity op) → Symbolic.Affine n := fun i => affine.getD i.1 (0, fun _ => 0)
   let generalArgs : Fin (generalArity op) → ℝ := fun i => general.getD i.1 0
   let params : Params op := (fun i => Symbolic.Affine.eval (affineArgs i) mean, generalArgs)
-  have actionTyped := symbolicReduce_wellTyped laws typed
+  have actionTyped := symbolicReduce_wellTyped typed
   rw [actionEq] at actionTyped
   rcases SymbolicAction.wellTyped_sampleE_iff.mp actionTyped with ⟨affineLength, generalLength, _⟩
 
-  rw [← symbolicReduce_targetRealize laws typed mean, actionEq]
+  rw [← symbolicReduce_targetRealize typed mean, actionEq]
   simp only [targetRealize]
   congr 1
   classical
@@ -107,7 +115,7 @@ theorem history_bind_snoc (laws : PrimitiveLaws) (history : Symbolic.SampleEnv l
 theorem actualTraceLaw_sampleE (depth : Nat) (history : Symbolic.SampleEnv primitiveLaws n)
     (expression : AffineExpr n) (typed : WellTyped [] expression ty) (notValue : expression.isValue ≠ true)
     (op : Op) (affine : List (Symbolic.Affine n)) (general : List ℝ) (continuation : AffineExpr (n+1))
-    (actionEq : symbolicReduce primitiveLaws expression = .sampleE op affine general continuation) :
+    (actionEq : symbolicReduce expression = .sampleE op affine general continuation) :
     actualTraceLaw (depth+1) history expression =
       (actualTraceLaw depth (Symbolic.SampleEnv.snoc history op
         (fun i => affine.getD i.1 (0,fun _ => 0)) (fun i => general.getD i.1 0)) continuation).map (prepend none) := by
@@ -124,31 +132,11 @@ theorem actualTraceLaw_sampleE (depth : Nat) (history : Symbolic.SampleEnv primi
     generationOp_realize, sampleE_opNone typed actionEq]
   rfl
 
-theorem historyReplay_sampleE (depth : Nat) (history : Symbolic.SampleEnv primitiveLaws n)
-    (safe : history.DomainSafe primitiveLaws)
-    (expression : AffineExpr n) (typed : WellTyped [] expression ty) (notValue : expression.isValue ≠ true)
-    (op : Op) (affine : List (Symbolic.Affine n)) (general : List ℝ) (continuation : AffineExpr (n+1))
-    (actionEq : symbolicReduce primitiveLaws expression = .sampleE op affine general continuation)
-    (extendedSafe : (Symbolic.SampleEnv.snoc history op
-        (fun i => affine.getD i.1 (0,fun _ => 0)) (fun i => general.getD i.1 0)).DomainSafe primitiveLaws)
-    (tape : Trace) :
-    (historyReplay (depth+1) history safe expression).kernel tape =
-      (historyReplay depth (Symbolic.SampleEnv.snoc history op
-        (fun i => affine.getD i.1 (0,fun _ => 0)) (fun i => general.getD i.1 0)) extendedSafe continuation).kernel (List.tail tape) := by
-  rw [historyReplay_apply, historyReplay_apply,
-    history_bind_snoc _ _ _ _ _ (fun env => replayMeasure depth (continuation.realize env) (List.tail tape)) ((replay_measurable depth (List.tail tape)).comp continuation.realize_measurable)]
-  apply Measure.bind_congr_right
-  filter_upwards [] with env
-  apply replay_succ_sampleE
-  · simpa only [AffineExpr.realize_isValue] using notValue
-  · rw [generationOp_realize, sampleE_opNone typed actionEq]
-  · exact concrete_sampleE primitiveLaws expression typed op affine general continuation actionEq env
-
 theorem targetTraceLaw_sampleE (depth : Nat) (history : Symbolic.SampleEnv primitiveLaws n)
     (safe : history.DomainSafe primitiveLaws)
     (expression : AffineExpr n) (typed : WellTyped [] expression ty) (notValue : expression.isValue ≠ true)
     (op : Op) (affine : List (Symbolic.Affine n)) (general : List ℝ) (continuation : AffineExpr (n+1))
-    (actionEq : symbolicReduce primitiveLaws expression = .sampleE op affine general continuation)
+    (actionEq : symbolicReduce expression = .sampleE op affine general continuation)
     (extendedSafe : (Symbolic.SampleEnv.snoc history op
         (fun i => affine.getD i.1 (0,fun _ => 0)) (fun i => general.getD i.1 0)).DomainSafe primitiveLaws) :
     targetTraceLaw (depth+1) history expression =
@@ -158,7 +146,7 @@ theorem targetTraceLaw_sampleE (depth : Nat) (history : Symbolic.SampleEnv primi
   let generalArgs : Fin (generalArity op) → ℝ := fun i => general.getD i.1 0
   let mean := history.meanEnvironment primitiveLaws
   have domainAtMean := SymbolicSoundness.SampleEnv.domain_at_meanEnvironment primitiveLaws history safe op affineArgs generalArgs extendedSafe.2
-  have reduction := concrete_target_sampleE primitiveLaws expression typed op affine general continuation actionEq mean domainAtMean
+  have reduction := concrete_target_sampleE expression typed op affine general continuation actionEq mean domainAtMean
   rw [targetTraceLaw, exact_succ_sample _ _ _ _
     (by simpa only [determinize_isValue, AffineExpr.realize_isValue] using notValue) reduction,
     generationOp_determinize, generationOp_realize, sampleE_opNone typed actionEq]

@@ -20,27 +20,6 @@ open MeasureTheory ProbabilityTheory Determinize.Spec Determinize.Spec.Paper
 open Determinize.Spec.Traces
 open scoped ENNReal ProbabilityTheory
 
-/-- The source output law under a trace factorization: the mixture of the fibers over the
-trace law. -/
-theorem TraceFactorization.source_law {source target : Expr} {fiber : Kernel Trace ℝ}
-    {output : Trace → ℝ} (factor : TraceFactorization source target fiber output) :
-    bigStepMeasure source = fiber ∘ₘ traceLaw source := by
-  obtain ⟨markov, -, sourceJoint, -, -⟩ := factor
-  have := markov
-  rw [← Proof.Traces.correspondence source, sourceJoint]
-  exact Measure.snd_compProd (traceLaw source) fiber
-
-/-- The target output law under a trace factorization: the pushforward of the trace law along
-`output`. -/
-theorem TraceFactorization.target_law {source target : Expr} {fiber : Kernel Trace ℝ}
-    {output : Trace → ℝ} (factor : TraceFactorization source target fiber output) :
-    bigStepMeasure target = (traceLaw source).map output := by
-  obtain ⟨-, measurableOutput, -, targetJoint, -⟩ := factor
-  rw [← Proof.Traces.correspondence target, targetJoint,
-    Measure.map_map measurable_snd (show Measurable (fun trace => (trace, output trace)) from
-      measurable_id.prodMk measurableOutput)]
-  rfl
-
 /-- The two output laws behind `MeanOnTraces`: the source output is the mixture of the fibers
 over the trace law and the target output is the pushforward of the trace law along `output`. -/
 theorem MeanOnTraces.output_laws {source target : Expr} (sound : MeanOnTraces source target) :

@@ -1,15 +1,16 @@
 import Determinize.Proof.Subtyping
 import Determinize.Proof.Measurability
 
-/-! # Type safety for the paper semantics -/
+/-!
+# Type safety for the paper semantics
 
-set_option linter.unusedSimpArgs false
-set_option linter.unusedTactic false
-set_option linter.unreachableTactic false
-set_option linter.unnecessarySeqFocus false
-set_option linter.unnecessarySimpa false
-set_option linter.style.haveILetI false
-set_option linter.unusedVariables false
+Substitution preserves typing (`typed_shift`, `typed_substAt`, `typed_substHead`,
+`typed_substTwo`), and a closed well-typed expression reduces to a well-typed action
+(`reduce_typed_closed`, progress and preservation through `ActionTyped`). Typing rules out
+structural stuckness. The public `PrimitiveDomainSafe` premise separately requires valid
+primitive parameters, and `primitiveDomainSafe_iff_doesNotGetStuck` connects the two facts
+with full non-stuckness for the symbolic proof.
+-/
 
 namespace Determinize.Proof.Paper
 
@@ -36,8 +37,7 @@ theorem hasVar_shift (h : HasVar (before ++ suffix) index ty) :
   | cons head before ih =>
       cases h with
       | head =>
-          simp only [List.cons_append, List.length_cons, Nat.not_succ_le_zero,
-            ↓reduceIte]
+          simp only [List.cons_append, List.length_cons]
           exact .head
       | tail h =>
           rename_i index
@@ -46,7 +46,7 @@ theorem hasVar_shift (h : HasVar (before ++ suffix) index ty) :
           · simp only [condition, ↓reduceIte]
             have shifted := ih h
             simp only [condition, ↓reduceIte] at shifted
-            convert HasVar.tail (head := head) shifted using 1 <;> omega
+            convert HasVar.tail (head := head) shifted using 1; omega
           · simp only [condition, ↓reduceIte]
             have shifted := ih h
             simp only [condition, ↓reduceIte] at shifted
@@ -189,8 +189,7 @@ theorem hasVar_subst (h : HasVar (before ++ binder :: suffix) index ty) :
       cases h with
       | head =>
           right
-          simp only [List.cons_append, List.length_cons, Nat.zero_lt_succ,
-            ↓reduceIte]
+          simp only [List.cons_append, List.length_cons]
           exact ⟨by omega, .head⟩
       | tail h =>
           rcases ih h with equal | shifted
@@ -208,7 +207,7 @@ theorem hasVar_subst (h : HasVar (before ++ binder :: suffix) index ty) :
               have shifted := shifted
               simp only [condition, ↓reduceIte] at shifted
               have shifted' := HasVar.tail (head := head) shifted
-              convert shifted' using 1 <;> omega
+              convert shifted' using 1; omega
             · simp only [condition, ↓reduceIte]
               have shifted := shifted
               simp only [condition, ↓reduceIte] at shifted
@@ -497,9 +496,9 @@ theorem reduce_typed_closed
           · rcases function with ⟨a, r, body, rfl, ha, hr, bodyTyped⟩
             simpa using ActionTyped.next
               ((typed_substTwo bodyTyped (argumentTyped.sub ha) (.fix bodyTyped)).sub hr)
-        · simp only [argumentValue, ↓reduceIte]
+        · simp only [argumentValue]
           exact (iha rfl).wrap fun next nextTyped => .app functionTyped nextTyped
-      · simp only [functionValue, ↓reduceIte]
+      · simp only [functionValue]
         exact (ihf rfl).wrap fun next nextTyped => .app nextTyped argumentTyped
   | pair leftTyped rightTyped ihl ihr =>
       cases hcontext
@@ -517,7 +516,7 @@ theorem reduce_typed_closed
       · simp only [pairValue, ↓reduceIte]
         rcases typed_prod_value pairTyped pairValue with ⟨left, right, rfl, leftTyped, rightTyped⟩
         simpa using ActionTyped.next leftTyped
-      · simp only [pairValue, ↓reduceIte]
+      · simp only [pairValue]
         exact (ih rfl).wrap fun next nextTyped => .fst nextTyped
   | snd pairTyped ih =>
       cases hcontext
@@ -527,7 +526,7 @@ theorem reduce_typed_closed
       · simp only [pairValue, ↓reduceIte]
         rcases typed_prod_value pairTyped pairValue with ⟨left, right, rfl, leftTyped, rightTyped⟩
         simpa using ActionTyped.next rightTyped
-      · simp only [pairValue, ↓reduceIte]
+      · simp only [pairValue]
         exact (ih rfl).wrap fun next nextTyped => .snd nextTyped
   | inl valueTyped ih =>
       cases hcontext
@@ -552,7 +551,7 @@ theorem reduce_typed_closed
           simpa using ActionTyped.next (typed_substHead leftTyped valueTyped)
         · rcases sum with ⟨value, rfl, valueTyped⟩
           simpa using ActionTyped.next (typed_substHead rightTyped valueTyped)
-      · simp only [scrutineeValue, ↓reduceIte]
+      · simp only [scrutineeValue]
         exact (ihs rfl).wrap fun next nextTyped =>
           .matchSum nextTyped leftTyped rightTyped
   | nil => rw [reduce]; exact .next .nil
@@ -575,7 +574,7 @@ theorem reduce_typed_closed
           simpa using ActionTyped.next nilTyped
         · rcases cons with ⟨head, tail, rfl, headTyped, tailTyped⟩
           simpa using ActionTyped.next (typed_substTwo consTyped headTyped tailTyped)
-      · simp only [scrutineeValue, ↓reduceIte]
+      · simp only [scrutineeValue]
         exact (ihs rfl).wrap fun next nextTyped =>
           .matchList nextTyped nilTyped consTyped
   | ite conditionTyped thenTyped elseTyped ihc iht ihe =>
@@ -588,7 +587,7 @@ theorem reduce_typed_closed
         cases result
         · simpa using ActionTyped.next elseTyped
         · simpa using ActionTyped.next thenTyped
-      · simp only [conditionValue, ↓reduceIte]
+      · simp only [conditionValue]
         exact (ihc rfl).wrap fun next nextTyped => .ite nextTyped thenTyped elseTyped
   | letE valueTyped bodyTyped ihv ihb =>
       cases hcontext
@@ -597,7 +596,7 @@ theorem reduce_typed_closed
       by_cases valueCondition : value.isValue = true
       · simp only [valueCondition, ↓reduceIte]
         exact .next (typed_substHead bodyTyped valueTyped)
-      · simp only [valueCondition, ↓reduceIte]
+      · simp only [valueCondition]
         exact (ihv rfl).wrap fun next nextTyped => .letE nextTyped bodyTyped
   | sub valueTyped h ih =>
       cases hcontext
@@ -610,7 +609,7 @@ theorem reduce_typed_closed
       · simp only [valueCondition, ↓reduceIte]
         rcases typed_real_value valueTyped valueCondition with ⟨coordinate, rfl⟩
         simpa using ActionTyped.next (Typed.real (value := -coordinate))
-      · simp only [valueCondition, ↓reduceIte]
+      · simp only [valueCondition]
         exact (ih rfl).wrap fun next nextTyped => .neg nextTyped
   | add leftTyped rightTyped ihl ihr =>
       cases hcontext
@@ -623,9 +622,9 @@ theorem reduce_typed_closed
           rcases typed_real_value leftTyped leftValue with ⟨left, rfl⟩
           rcases typed_real_value rightTyped rightValue with ⟨right, rfl⟩
           exact .next .real
-        · simp only [rightValue, ↓reduceIte]
+        · simp only [rightValue]
           exact (ihr rfl).wrap fun next nextTyped => .add leftTyped nextTyped
-      · simp only [leftValue, ↓reduceIte]
+      · simp only [leftValue]
         exact (ihl rfl).wrap fun next nextTyped => .add nextTyped rightTyped
   | mul leftTyped rightTyped ihl ihr =>
       cases hcontext
@@ -638,9 +637,9 @@ theorem reduce_typed_closed
           rcases typed_real_value leftTyped leftValue with ⟨left, rfl⟩
           rcases typed_real_value rightTyped rightValue with ⟨right, rfl⟩
           exact .next .real
-        · simp only [rightValue, ↓reduceIte]
+        · simp only [rightValue]
           exact (ihr rfl).wrap fun next nextTyped => .mul leftTyped nextTyped
-      · simp only [leftValue, ↓reduceIte]
+      · simp only [leftValue]
         exact (ihl rfl).wrap fun next nextTyped => .mul nextTyped rightTyped
   | div leftTyped rightTyped ihl ihr =>
       cases hcontext
@@ -653,9 +652,9 @@ theorem reduce_typed_closed
           rcases typed_real_value leftTyped leftValue with ⟨left, rfl⟩
           rcases typed_real_value rightTyped rightValue with ⟨right, rfl⟩
           exact .next .real
-        · simp only [rightValue, ↓reduceIte]
+        · simp only [rightValue]
           exact (ihr rfl).wrap fun next nextTyped => .div leftTyped nextTyped
-      · simp only [leftValue, ↓reduceIte]
+      · simp only [leftValue]
         exact (ihl rfl).wrap fun next nextTyped => .div nextTyped rightTyped
   | lt leftTyped rightTyped ihl ihr =>
       cases hcontext
@@ -668,9 +667,9 @@ theorem reduce_typed_closed
           rcases typed_real_value leftTyped leftValue with ⟨left, rfl⟩
           rcases typed_real_value rightTyped rightValue with ⟨right, rfl⟩
           exact .next .bool
-        · simp only [rightValue, ↓reduceIte]
+        · simp only [rightValue]
           exact (ihr rfl).wrap fun next nextTyped => .lt leftTyped nextTyped
-      · simp only [leftValue, ↓reduceIte]
+      · simp only [leftValue]
         exact (ihl rfl).wrap fun next nextTyped => .lt nextTyped rightTyped
   | uniform leftTyped rightTyped ihl ihr | uniformMean leftTyped rightTyped ihl ihr =>
       cases hcontext
@@ -683,11 +682,11 @@ theorem reduce_typed_closed
           rcases typed_real_value leftTyped leftValue with ⟨left, rfl⟩
           rcases typed_real_value rightTyped rightValue with ⟨right, rfl⟩
           exact .sample fun value => .real
-        · simp only [rightValue, ↓reduceIte]
+        · simp only [rightValue]
           first
           | exact (ihr rfl).wrap fun next nextTyped => .uniform leftTyped nextTyped
           | exact (ihr rfl).wrap fun next nextTyped => .uniformMean leftTyped nextTyped
-      · simp only [leftValue, ↓reduceIte]
+      · simp only [leftValue]
         first
         | exact (ihl rfl).wrap fun next nextTyped => .uniform nextTyped rightTyped
         | exact (ihl rfl).wrap fun next nextTyped => .uniformMean nextTyped rightTyped
@@ -702,11 +701,11 @@ theorem reduce_typed_closed
           rcases typed_real_value leftTyped leftValue with ⟨left, rfl⟩
           rcases typed_real_value rightTyped rightValue with ⟨right, rfl⟩
           exact .sample fun value => .real
-        · simp only [rightValue, ↓reduceIte]
+        · simp only [rightValue]
           first
           | exact (ihr rfl).wrap fun next nextTyped => .gaussian leftTyped nextTyped
           | exact (ihr rfl).wrap fun next nextTyped => .gaussianMean leftTyped nextTyped
-      · simp only [leftValue, ↓reduceIte]
+      · simp only [leftValue]
         first
         | exact (ihl rfl).wrap fun next nextTyped => .gaussian nextTyped rightTyped
         | exact (ihl rfl).wrap fun next nextTyped => .gaussianMean nextTyped rightTyped
@@ -718,7 +717,7 @@ theorem reduce_typed_closed
       · simp only [valueCondition, ↓reduceIte]
         rcases typed_real_value valueTyped valueCondition with ⟨coordinate, rfl⟩
         exact .sample fun value => .real
-      · simp only [valueCondition, ↓reduceIte]
+      · simp only [valueCondition]
         first
         | exact (ih rfl).wrap fun next nextTyped => .poisson nextTyped
         | exact (ih rfl).wrap fun next nextTyped => .poissonMean nextTyped
@@ -730,7 +729,7 @@ theorem reduce_typed_closed
       · simp only [valueCondition, ↓reduceIte]
         rcases typed_real_value valueTyped valueCondition with ⟨coordinate, rfl⟩
         exact .sample fun value => .real
-      · simp only [valueCondition, ↓reduceIte]
+      · simp only [valueCondition]
         first
         | exact (ih rfl).wrap fun next nextTyped => .bernoulli nextTyped
         | exact (ih rfl).wrap fun next nextTyped => .bernoulliMean nextTyped
@@ -742,7 +741,7 @@ theorem reduce_typed_closed
       · simp only [valueCondition, ↓reduceIte]
         rcases typed_real_value valueTyped valueCondition with ⟨coordinate, rfl⟩
         exact .sample fun value => .real
-      · simp only [valueCondition, ↓reduceIte]
+      · simp only [valueCondition]
         first
         | exact (ih rfl).wrap fun next nextTyped => .exponential nextTyped
         | exact (ih rfl).wrap fun next nextTyped => .exponentialMean nextTyped
@@ -757,11 +756,11 @@ theorem reduce_typed_closed
           rcases typed_real_value leftTyped leftValue with ⟨left, rfl⟩
           rcases typed_real_value rightTyped rightValue with ⟨right, rfl⟩
           exact .sample fun value => .real
-        · simp only [rightValue, ↓reduceIte]
+        · simp only [rightValue]
           first
           | exact (ihr rfl).wrap fun next nextTyped => .beta leftTyped nextTyped
           | exact (ihr rfl).wrap fun next nextTyped => .betaMean leftTyped nextTyped
-      · simp only [leftValue, ↓reduceIte]
+      · simp only [leftValue]
         first
         | exact (ihl rfl).wrap fun next nextTyped => .beta nextTyped rightTyped
         | exact (ihl rfl).wrap fun next nextTyped => .betaMean nextTyped rightTyped
@@ -776,11 +775,11 @@ theorem reduce_typed_closed
           rcases typed_real_value leftTyped leftValue with ⟨left, rfl⟩
           rcases typed_real_value rightTyped rightValue with ⟨right, rfl⟩
           exact .sample fun value => .real
-        · simp only [rightValue, ↓reduceIte]
+        · simp only [rightValue]
           first
           | exact (ihr rfl).wrap fun next nextTyped => .gamma leftTyped nextTyped
           | exact (ihr rfl).wrap fun next nextTyped => .gammaMean leftTyped nextTyped
-      · simp only [leftValue, ↓reduceIte]
+      · simp only [leftValue]
         first
         | exact (ihl rfl).wrap fun next nextTyped => .gamma nextTyped rightTyped
         | exact (ihl rfl).wrap fun next nextTyped => .gammaMean nextTyped rightTyped
