@@ -16,7 +16,8 @@ namespace Determinize.Proof.Traces
 
 open MeasureTheory ProbabilityTheory Determinize.Spec.Paper Determinize.Spec.Traces
 open Determinize.Proof.Paper
-open StepTraces (normalizedOutputGivenTrace outputGivenTraceKernel outputGivenTraceKernel_apply outputGivenTrace_mass_le_one)
+open StepTraces (normalizedOutputGivenTrace outputGivenTraceKernel
+  outputGivenTraceKernel_apply outputGivenTrace_mass_le_one)
 open scoped ProbabilityTheory
 
 /-- The compact replay is a finite kernel: its mass is at most one. -/
@@ -46,7 +47,8 @@ theorem outputGivenTrace_ae_eq_condKernel (program : Expr) {traces : Measure Tra
 
 /-- The determinized program has the trace law of its source. -/
 theorem traceLaw_determinize (affinity : Affinity) (program : Expr)
-    (typed : Typed [] program (.float affinity)) (sourceForm : program.sourceForm = true) (safe : DoesNotGetStuck program) :
+    (typed : Typed [] program (.float affinity)) (sourceForm : program.sourceForm = true)
+    (safe : DoesNotGetStuck program) :
     traceLaw program.determinize = traceLaw program := by
   let output := kernelMean (normalizedOutputGivenTrace program)
   obtain ⟨-, ⟨-, measurableOutput, -, targetMap, -⟩, -, -⟩ :=
@@ -64,12 +66,14 @@ theorem traceLaw_determinize (affinity : Affinity) (program : Expr)
 distributions of the outputs given the trace, and trace soundness holds for those. -/
 theorem conditionalLaw : Determinize.Spec.Traces.conditionalLawThm := by
   intro program typed sourceForm safe
-  obtain ⟨-, sourceFactor, targetFactor, ae⟩ := soundness program typed sourceForm safe
+  obtain ⟨targetSafe, sourceFactor, targetFactor, ae⟩ :=
+    replaySoundness program typed sourceForm safe
+  have sameTraces := traceLaw_determinize .E program typed sourceForm
+    ((Typing.primitiveDomainSafe_iff_doesNotGetStuck typed).1 safe)
   have sourceAe := outputGivenTrace_ae_eq_condKernel program sourceFactor rfl
   have targetAe := outputGivenTrace_ae_eq_condKernel program.determinize targetFactor
-    (traceLaw_determinize .E program typed sourceForm
-      ((Typing.primitiveDomainSafe_iff_doesNotGetStuck typed).1 safe))
-  refine ⟨sourceAe, targetAe, ?_⟩
+    sameTraces
+  refine ⟨targetSafe, sameTraces, ?_⟩
   filter_upwards [ae, sourceAe, targetAe] with trace good sourceEq targetEq
   rw [← sourceEq, ← targetEq]
   exact good

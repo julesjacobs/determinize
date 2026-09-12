@@ -5,7 +5,7 @@ import Determinize.Proof.TraceFactorization
 # Compact trace soundness
 
 The detailed step-trace results are transported to compact traces of general-affinity draws, with
-`Spec.Traces.outputGivenTrace` as the fiber: the Markov version `normalizedOutputGivenTrace` factors
+`Proof.Traces.outputGivenTrace` as the fiber: the Markov version `normalizedOutputGivenTrace` factors
 the joint laws, and almost surely it agrees with `outputGivenTrace` on the source, while on the
 target `outputGivenTrace` is the Dirac mass at the target output.
 -/
@@ -93,7 +93,7 @@ theorem exact_succ_next (depth : Nat) (e next : Expr) (nv : e.isValue ≠ true)
 
 /-! ### The compact replay as the fiber -/
 
-/-- `Spec.Traces.outputGivenTrace` normalized to a Markov kernel, as an s-finite kernel. -/
+/-- `Proof.Traces.outputGivenTrace` normalized to a Markov kernel, as an s-finite kernel. -/
 def normalizedKernel (source : Expr) : SFiniteKernel Trace ℝ :=
   ⟨normalizedOutputGivenTrace source, inferInstance⟩
 
@@ -283,8 +283,19 @@ theorem targetLaw (program : Expr) (typed : Typed [] program (.float .E))
   filter_upwards [sameFiber] with trace same
   simp only [kernelMean, replayMean, same]
 
-/-- The public trace soundness theorem. -/
-theorem soundness : Determinize.Spec.Traces.soundnessThm := by
+/-- Replay factorization and its conditional-mean property, used to identify the conditional laws. -/
+theorem replaySoundness :
+  ∀ (program : Expr),
+    Typed [] program (.float .E) → program.sourceForm = true →
+    PrimitiveDomainSafe program →
+      PrimitiveDomainSafe program.determinize ∧
+      traceAndOutputLaw program = traceThenOutput (traceLaw program) (outputGivenTrace program) ∧
+      traceAndOutputLaw program.determinize =
+        traceThenOutput (traceLaw program) (outputGivenTrace program.determinize) ∧
+      ∀ᵐ trace ∂traceLaw program,
+        Integrable id (outputGivenTrace program trace) ∧
+        outputGivenTrace program.determinize trace =
+          Measure.dirac (replayMean program trace) := by
   intro program typed sourceForm safe
   let f := kernelMean (normalizedOutputGivenTrace program)
   obtain ⟨targetSafe, factor, massAe, diracAe⟩ :=

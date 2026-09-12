@@ -29,9 +29,6 @@ theorem conditionalExpectationPreservation : Spec.conditionalExpectationThm :=
 theorem traceErasure : Spec.Traces.correspondenceThm :=
   Proof.Traces.correspondence
 
-theorem traceSoundness : Spec.Traces.soundnessThm :=
-  Proof.Traces.soundness
-
 theorem traceConditionalLaw : Spec.Traces.conditionalLawThm :=
   Proof.Traces.conditionalLaw
 
@@ -47,6 +44,5 @@ end Determinize.Theorems
 #print axioms Determinize.Theorems.varianceNonIncrease
 #print axioms Determinize.Theorems.conditionalExpectationPreservation
 #print axioms Determinize.Theorems.traceErasure
-#print axioms Determinize.Theorems.traceSoundness
 #print axioms Determinize.Theorems.traceConditionalLaw
 #print axioms Determinize.Theorems.traceVarianceDecomposition

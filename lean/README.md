@@ -1,10 +1,10 @@
 Review these three entry points and the definitions they import:
 
 - `Determinize/Spec/Main.lean` defines the expectation-preservation propositions directly: `mainThm` (finite expectations), `extendedExpectationThm` (expectations in the extended reals, infinite values included), `jensenThm` (Jensen's inequality between the two output laws), `outputMassThm` (equal output mass), `varianceThm` (non-increasing second moment and variance) and `conditionalExpectationThm` (equal expectations conditioned on acceptance, the statement behind `observe`). `Spec` contains ordinary syntax, typing, primitive distributions and means, determinization, and semantics.
-- `Determinize/Spec/Traces/Main.lean` defines trace erasure (`correspondenceThm`), trace soundness (`soundnessThm`), its formulation using Mathlib’s regular conditional distributions (`conditionalLawThm`), and the law of total variance along traces (`Spec.Traces.varianceThm`). `Spec/Traces/Semantics.lean` defines the operational traces, the joint law `traceAndOutputLaw` of a program's trace and output, and `outputGivenTrace`, the program replayed along a trace.
-- `Determinize/Theorems.lean` proves all ten propositions without additional hypotheses and prints their axioms.
+- `Determinize/Spec/Traces/Main.lean` defines trace erasure (`correspondenceThm`), conditional trace soundness (`conditionalLawThm`) and the law of total variance along traces (`Spec.Traces.varianceThm`). `Spec/Traces/Semantics.lean` defines the operational traces, the joint law `traceAndOutputLaw` of a program's trace and output. The conditional-law and trace-variance propositions use Mathlib's `Measure.condKernel`; operational replay lives in `Proof/ReplaySemantics.lean`.
+- `Determinize/Theorems.lean` proves all nine propositions without additional hypotheses and prints their axioms.
 
-Run `lake build --wfail` from this directory; the build is warning-free and contains no `sorry`. Check that all ten axiom reports contain only `propext`, `Classical.choice`, and `Quot.sound`. With Lean's kernel and these standard axioms trusted, reviewers can omit the proof bodies in `Proof`. `Spec` contains the specification; any proof imports there supply proof-irrelevant evidence. `Spec/Traces/Main.lean` imports finiteness evidence from `Proof/TraceMass.lean`, without introducing a measurable space on expressions.
+Run `lake build --wfail` from this directory; the build is warning-free and contains no `sorry`. Check that all nine axiom reports contain only `propext`, `Classical.choice`, and `Quot.sound`. With Lean's kernel and these standard axioms trusted, reviewers can omit the proof bodies in `Proof`. `Spec` contains the specification; any proof imports there supply proof-irrelevant evidence. `Spec/Traces/Main.lean` imports finiteness evidence from `Proof/TraceMass.lean`, without introducing a measurable space on expressions.
 
 The typed determinization theorems assume `PrimitiveDomainSafe`: every distribution call reached at a finite execution depth has valid parameters almost surely. Typing supplies structural progress; it does not prove argument bounds. The expectation and trace theorems also establish target domain safety. The proof derives full non-stuckness from typing and this premise. Finite replay certificates do not require typing, so their separate contract retains full `DoesNotGetStuck` in `Spec/FiniteModel/Safety.lean`.
 
@@ -29,7 +29,7 @@ The statements follow the paper's theorems, not its letter. Reviewers comparing 
 
 - **Primitive domains.** Sampling outside a primitive's parameter domain (`uniform(a, b)` with `a > b`, a negative Gaussian variance, and so on) yields the zero measure and counts as stuck, and so does a mean site outside the same domain; the paper's mean table is unconditional. `uniform(a, a)` is the Dirac measure at `a`; the paper's table has no such row.
 - **Validity hypothesis.** The typed determinization theorems assume `PrimitiveDomainSafe program`: almost surely, at every reduction depth, no off-domain primitive call occurs, E draws included. Typing supplies structural progress. The paper's "valid G-trace" is informal. The hypothesis is necessary: a source that loses mass with positive probability on an off-domain E parameter can have a different expectation than its determinization.
-- **Expectations.** `Traces.soundnessThm` needs no integrability hypothesis and proves that almost every fiber is integrable, which the paper assumes as "integrable σ" and states as the open lemma "Mean valuation correctness". `mainThm` covers finite expectations; `extendedExpectationThm` is the paper's extended-real global theorem; `jensenThm` is the paper's global Jensen corollary restricted to real-valued convex functions.
+- **Expectations.** `Spec.Traces.conditionalLawThm` needs no integrability hypothesis and proves that the source conditional output law is integrable at almost every trace, which the paper assumes as "integrable σ" and states as the open lemma "Mean valuation correctness". `mainThm` covers finite expectations; `extendedExpectationThm` is the paper's extended-real global theorem; `jensenThm` is the paper's global Jensen corollary restricted to real-valued convex functions.
 
 ## Lean command-line implementation
 
@@ -90,7 +90,7 @@ The executable runs the verified checker as compiled Lean code. An exported
 `.lean` certificate independently reconstructs the checks using kernel reduction
 (`by decide +kernel`, not `native_decide`); it does not import the inference algorithm.
 For a float-valued program it includes `traceGuarantee`, conditional on
-`PrimitiveDomainSafe`. The generic `certified_expectation` theorem additionally requires
+`PrimitiveDomainSafe`: target domain safety, equal G-trace laws, and the target conditional law equal to a Dirac mass at the source conditional mean, with finite source conditional means almost everywhere. The generic `certified_expectation` theorem additionally requires
 integrability. Typing alone proves neither hypothesis. Non-float programs receive
 typing and input-preservation certificates without a float-output theorem.
 
