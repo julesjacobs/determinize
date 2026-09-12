@@ -2306,14 +2306,83 @@ Next, we define an integrability condition for the symbolic sampling enviornment
 \paragraph{Tracewise soundness}
 
 \begin{definition}[General-mode trace]
-  A general ($\G$) mode trace is a finite or infinite sequence of sample values
+  A general ($\G$) mode trace is a finite sequence of sample values
   \[
-    \gamma=(r_1,r_2,\ldots),
+    \gamma=(r_1,\ldots,r_n) \in Trace,
+    \quad
+    Trace =: \bigsqcup_{n\in\mathbb N}\mathbb R^n.
   \]
   consumed in order as general mode sampling operations are encountered in a program.
 \end{definition}
 
 We say that a $\G$-mode trace is valid if resolving the general-mode sampling operations according to that trace does not cause an undefined arithmetic operation or an invalid distribution parameter.
+
+\paragraph{Measurable space on traces}
+We can equip each $\mathbb R^n$ with its Borel $\sigma$-algebra and $Trace$ with the corresponding disjoint-union $\sigma$-algebra. 
+
+Recall that $Expr_\tau$ is a measurable space. Furthermore, we can equip the augmented space
+\[
+  Trace\times Expr_\tau
+\]
+with the product \(\sigma\)-algebra
+\[
+  \mathcal B(Trace)\otimes\mathcal B(Expr_\tau).
+\]
+
+\paragraph{Tracewise semantics}
+The tracewise semantics augments an expression with the unused suffix of its $\G$-mode trace. We write:
+\[
+  \sem{e : \tau}^\gamma
+  \in
+  \mathcal D(Trace\times Expr_\tau)
+\]
+for its small-step semantics. Each rule of
+\Cref{tab:small-step-semantics} is lifted by threading the trace through the
+transition. The only essential change occurs at a $\G$-mode sampling operation. 
+
+For example,
+\begin{align*}
+\sem{\uniform(v_1,v_2):\Float{\G}}^{r::\gamma}
+=
+\delta_{(\gamma,r:\Float{\G})},
+\\
+\sem{\uniform(v_1,v_2):\Float{\E}}^\gamma
+=
+\mathsf{Uniform}(v_1,v_2)
+\monbind\lambda v.\,
+\delta_{(\gamma,v:\Float{\E})}.
+\end{align*}
+
+Thus, a \(\G\)-sample consumes the next trace entry. A missing entry at a \(\G\)-sample yields the zero measure.
+
+The tracewise $n$-step semantics is obtained by iterating the small-step semantics, similar to the concrete semantics:
+
+\[
+  \bigsemstep{e:\tau}{n}^{\gamma}
+  =
+  \begin{cases}
+    \delta_{(\gamma,e:\tau)}
+      & \text{if } n=0, \\[2mm]
+    \displaystyle
+    \bigsemstep{e:\tau}{n-1}^{\gamma}
+    \monbind
+    \lambda(\gamma',e').\,
+    \sem{e':\tau}^{\gamma'}
+      & \text{if } n>0.
+  \end{cases}
+\]
+
+Finally, the tracewise big-step semantics is
+\[
+  \bigsem{e:\tau}^{\gamma}(A)
+  :=
+  \lim_{n\to\infty}
+  \bigsemstep{e:\tau}{n}^{\gamma}(A).
+\]
+
+\paragraph{Tracewise symbolic semantics}
+
+
 
 **** NOTE: Skipping many steps here, but everything is essentially the same as the concrete semantics, e.g.
 
@@ -3008,7 +3077,7 @@ The following also hold (both proofs are straightforward?):
         \left.\mathsf{exp}_\tau(s)\right|_{Val_\tau}
       \right]
       \mu(ds)
-    \tag{\text{by \Cref{thm:pointwise-agreement-of-interpretations}}}
+    \tag{}
     \\
     &=
     \mathbb E\!\left[
