@@ -14,10 +14,6 @@ inductive DistributionAction where
   | mean
 deriving DecidableEq, Repr, Countable
 
-def DistributionAction.isSample : DistributionAction → Bool
-  | .sample _ => true
-  | .mean => false
-
 def DistributionAction.determinize : DistributionAction → DistributionAction
   | .sample .E => .mean
   | action => action

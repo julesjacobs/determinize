@@ -10,10 +10,6 @@ theorem interpret_determinize (e : Core) :
     interpret e.determinize = (interpret e).determinize := by
   induction e <;> simp_all [interpret, Expr.mapLiteral, Expr.determinize]
 
-theorem interpret_sourceForm (e : Core) :
-    (interpret e).sourceForm = e.sourceForm := by
-  induction e <;> simp_all [interpret, Expr.mapLiteral, Expr.sourceForm]
-
 theorem certified_alignment {input} (p : Certified input) :
     input.matches p.source = true := p.aligned
 
@@ -33,7 +29,7 @@ theorem certified_trace_conditional_law {input} (p : Certified input)
     | E => exact h
     | G => exact .sub h .general
   exact Determinize.Theorems.traceConditionalLaw (interpret p.source)
-    typed ((interpret_sourceForm _).trans p.sourceOnly) safe
+    typed safe
 
 theorem certified_expectation {input} (p : Certified input)
     (m : Affinity) (hTy : p.ty = .float m)
@@ -50,6 +46,6 @@ theorem certified_expectation {input} (p : Certified input)
     | E => exact h
     | G => exact .sub h .general
   exact Determinize.Theorems.expectationPreservation (interpret p.source)
-    typed ((interpret_sourceForm _).trans p.sourceOnly) safe integrable
+    typed safe integrable
 
 end Determinize.Proof.Checking

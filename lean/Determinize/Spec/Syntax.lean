@@ -10,7 +10,7 @@ are unannotated, as in the paper's grammar, and a literal types at either affini
 assigned separately by `Typed`; no expression constructor contains a type annotation.
 Each primitive distribution is its own constructor with the paper's operands; a site
 samples with an E/G affinity or computes the primitive’s mean without an affinity annotation.
-`Expr.sourceForm` requires stochastic sites; their operands may be arbitrary expressions.
+Programs may contain both sampling and mean sites; their operands may be arbitrary expressions.
 -/
 
 namespace Determinize.Spec.Paper
@@ -52,27 +52,6 @@ def isValue {Literal : Type} : Expr Literal → Bool
   | .pair left right | .cons left right => left.isValue && right.isValue
   | .inl operand | .inr operand => operand.isValue
   | _ => false
-
-/-- Source expressions contain only stochastic sampling sites. -/
-def sourceForm {Literal : Type} : Expr Literal → Bool
-  | .bvar _ | .reject | .unit | .bool _ | .real _ | .nil => true
-  | .lam body | .fix body | .fst body | .snd body
-  | .inl body | .inr body | .neg body => body.sourceForm
-  | .app left right | .pair left right | .cons left right
-  | .add left right | .mul left right | .div left right | .lt left right =>
-      left.sourceForm && right.sourceForm
-  | .matchSum scrutinee left right | .ite scrutinee left right =>
-      scrutinee.sourceForm && left.sourceForm && right.sourceForm
-  | .matchList scrutinee nilCase consCase =>
-      scrutinee.sourceForm && nilCase.sourceForm && consCase.sourceForm
-  | .letE value body => value.sourceForm && body.sourceForm
-  | .discrete action _ => action.isSample
-  | .uniform action lower upper => action.isSample && lower.sourceForm && upper.sourceForm
-  | .gaussian action mean variance =>
-      action.isSample && mean.sourceForm && variance.sourceForm
-  | .poisson action rate | .bernoulli action rate | .exponential action rate => action.isSample && rate.sourceForm
-  | .beta action left right => action.isSample && left.sourceForm && right.sourceForm
-  | .gamma action shape rate => action.isSample && shape.sourceForm && rate.sourceForm
 
 /-- Apply `replace depth index` to variables, increasing `depth` beneath binders. -/
 def mapVars {Literal : Type} (replace : Nat → Nat → Expr Literal) (depth : Nat) :

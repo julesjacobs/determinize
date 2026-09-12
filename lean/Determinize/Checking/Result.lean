@@ -51,7 +51,6 @@ theorem checked_sourceExpectedReward {source : Core}
     (checked : CheckedModel source .determinized)
     (certificate : ResultCertificate checked.model)
     (typed : Spec.Paper.Typed [] (Subject.source.program source) (.float .E))
-    (sourceForm : (Subject.source.program source).sourceForm = true)
     (safe : Spec.Paper.PrimitiveDomainSafe (Subject.source.program source))
     (integrable : MeasureTheory.Integrable id
       (Spec.Paper.bigStepMeasure (Subject.source.program source)))
@@ -59,7 +58,7 @@ theorem checked_sourceExpectedReward {source : Core}
     (∫ value : ℝ, value ∂Spec.Paper.bigStepMeasure (Subject.source.program source)) =
       (certificate.values checked.model.initial : ℝ) := by
   have preservation := Theorems.expectationPreservation (Subject.source.program source)
-    typed sourceForm safe integrable
+    typed safe integrable
   exact preservation.2.2.trans (checked_expectedReward checked certificate accepted).2
 
 end Determinize.Checking

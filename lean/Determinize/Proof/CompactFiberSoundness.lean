@@ -1,4 +1,4 @@
-import Determinize.Proof.CompactReplay
+import Determinize.Proof.SymbolicMeanTraces
 
 /-!
 # Fiber soundness of the compact replay
@@ -51,6 +51,23 @@ theorem compactHistoryReplay_next (depth : Nat) (history : Symbolic.SampleEnv pr
   · simpa only [AffineExpr.realize_isValue] using notValue
   · rw [← symbolicReduce_realize typed env, actionEq]
     rfl
+
+theorem compactHistoryReplay_mean (depth : Nat) (history : Symbolic.SampleEnv primitiveLaws n)
+    (safe : history.DomainSafe primitiveLaws) (expression : AffineExpr n)
+    (typed : WellTyped [] expression ty)
+    (actionEq : symbolicReduce expression = .mean op affine general continuation)
+    (valid : ∀ᵐ env ∂history.actualMeasure primitiveLaws,
+      domain op (meanParams op affine general env)) (tape : DrawTrace) :
+    (compactHistoryReplay (depth + 1) history safe expression).kernel tape =
+      (compactHistoryReplay depth history safe
+        (continuation (meanAffine op affine general))).kernel tape := by
+  have actionTyped := symbolicReduce_wellTyped typed
+  rw [actionEq] at actionTyped
+  rw [compactHistoryReplay_apply, compactHistoryReplay_apply]
+  apply Measure.bind_congr_right
+  filter_upwards [valid] with env valid
+  rw [ogtAt_succ_mean _ _ _ _ _ (concrete_mean expression typed actionEq env valid),
+    ← mean_continuation_realize actionTyped]
 
 theorem compactHistoryReplay_sampleE (depth : Nat) (history : Symbolic.SampleEnv primitiveLaws n)
     (safe : history.DomainSafe primitiveLaws)
@@ -209,6 +226,26 @@ theorem compact_exactDepth_fiberSound (depth : Nat) (history : Symbolic.SampleEn
                 rw [compactFiber_apply, compactFiber_apply, retain_cons_none]
                 exact compactHistoryReplay_next depth history historySafe expression next typed
                   value actionEq _)
+        | mean op affine general continuation =>
+            have stepSafe := sourceSafe.mono (fun env safe =>
+              source_mean_safe_step expression typed actionEq env safe)
+            have valid := stepSafe.mono (fun _ h => h.1)
+            have nextSafe : SafeConfigAt primitiveLaws depth history
+                (continuation (meanAffine op affine general)) :=
+              ⟨historySafe, (SymbolicAction.wellTyped_mean_iff.mp actionTyped).2.2.1,
+                stepSafe.mono fun _ h => h.2⟩
+            have validMean := SymbolicSoundness.SampleEnv.domain_at_meanEnvironment primitiveLaws
+              history historySafe op (fun i => affine.getD i.1 0)
+                (fun i => general.getD i.1 0) valid
+            have sound := ih history (continuation (meanAffine op affine general)) nextSafe
+            rw [actualTraceLaw_mean _ _ _ typed actionEq valid,
+              targetTraceLaw_mean _ _ _ typed actionEq validMean]
+            exact FiberSound.mapTrace _ _ _ _ sound (fun tape : Trace => (List.cons none tape : Trace))
+              (trace_cons_measurable.comp (measurable_const.prodMk measurable_id))
+              (fun tape => by
+                rw [compactFiber_apply, compactFiber_apply, retain_cons_none]
+                exact compactHistoryReplay_mean depth history historySafe expression typed
+                  actionEq valid _)
         | sampleE op affine general continuation =>
             let extended := Symbolic.SampleEnv.snoc history op
               (fun i => affine.getD i.1 (0, fun _ => 0)) (fun i => general.getD i.1 0)
@@ -317,6 +354,24 @@ theorem target_selfReplay (depth : Nat) (history : Symbolic.SampleEnv primitiveL
                 (selfReplay_measurable _ _)]
             filter_upwards [ih history next ⟨historySafe, nextTyped, nextSafe⟩] with p hp
             simpa only [prepend, retain_cons_none, ogtAt_succ_next depth nv reduction] using hp
+        | mean op affine general continuation =>
+            have stepSafe := sourceSafe.mono (fun env safe =>
+              source_mean_safe_step expression typed actionEq env safe)
+            have valid := stepSafe.mono (fun _ h => h.1)
+            have nextSafe : SafeConfigAt primitiveLaws depth history
+                (continuation (meanAffine op affine general)) :=
+              ⟨historySafe, (SymbolicAction.wellTyped_mean_iff.mp actionTyped).2.2.1,
+                stepSafe.mono fun _ h => h.2⟩
+            have validMean := SymbolicSoundness.SampleEnv.domain_at_meanEnvironment primitiveLaws
+              history historySafe op (fun i => affine.getD i.1 0)
+                (fun i => general.getD i.1 0) valid
+            rw [targetTraceLaw_mean _ _ _ typed actionEq validMean,
+              ae_map_iff (show Measurable (prepend none) from
+                prepend_measurable.comp (measurable_const.prodMk measurable_id)).aemeasurable
+                (selfReplay_measurable _ _)]
+            filter_upwards [ih history (continuation (meanAffine op affine general)) nextSafe] with p hp
+            simpa only [prepend, retain_cons_none,
+              targetReplay_mean depth history expression typed actionEq validMean] using hp
         | sampleE op affine general continuation =>
             let extended := Symbolic.SampleEnv.snoc history op
               (fun i => affine.getD i.1 (0, fun _ => 0)) (fun i => general.getD i.1 0)
@@ -386,19 +441,19 @@ theorem compactHistoryReplay_nil (depth : Nat) (source : Expr) (tape : DrawTrace
     AffineExpr.realize_ofExpr]
 
 theorem safeConfig_of_source (source : Expr) (typed : Typed [] source (.float .E))
-    (sourceTags : (AffineExpr.ofExpr source).SourceTags) (sourceSafe : PrimitiveDomainSafe source)
+    (sourceSafe : PrimitiveDomainSafe source)
     (depth : Nat) : SafeConfigAt primitiveLaws depth .nil (AffineExpr.ofExpr source) := by
-  refine ⟨trivial, AffineExpr.wellTyped_ofExpr_of_typed typed sourceTags, ?_⟩
+  refine ⟨trivial, AffineExpr.wellTyped_ofExpr_of_typed typed , ?_⟩
   rw [Symbolic.SampleEnv.actualMeasure, ae_dirac_eq]
   simpa only [Filter.eventually_pure, AffineExpr.realize_ofExpr] using sourceSafe depth
 
 theorem compact_exactDepth_source_fiberSound (source : Expr) (typed : Typed [] source (.float .E))
-    (sourceTags : (AffineExpr.ofExpr source).SourceTags) (sourceSafe : PrimitiveDomainSafe source)
+    (sourceSafe : PrimitiveDomainSafe source)
     (depth : Nat) :
     FiberSound (compactFiber depth .nil nilDomainSafe (AffineExpr.ofExpr source))
       (exactMeasure depth source) (exactMeasure depth source.determinize) := by
   have sound := compact_exactDepth_fiberSound depth .nil (AffineExpr.ofExpr source)
-    (safeConfig_of_source source typed sourceTags sourceSafe depth)
+    (safeConfig_of_source source typed sourceSafe depth)
   have actualEq : actualTraceLaw depth .nil (AffineExpr.ofExpr source) = exactMeasure depth source := by
     unfold actualTraceLaw
     change (Measure.dirac Env.empty).bind
@@ -413,12 +468,12 @@ theorem compact_exactDepth_source_fiberSound (source : Expr) (typed : Typed [] s
   rwa [actualEq, targetEq] at sound
 
 theorem target_selfReplay_source (source : Expr) (typed : Typed [] source (.float .E))
-    (sourceTags : (AffineExpr.ofExpr source).SourceTags) (sourceSafe : PrimitiveDomainSafe source)
+    (sourceSafe : PrimitiveDomainSafe source)
     (depth : Nat) :
     ∀ᵐ p ∂exactMeasure depth source.determinize,
       outputGivenTraceAt depth source.determinize (retain p.1) = Measure.dirac p.2 := by
   have h := target_selfReplay depth .nil (AffineExpr.ofExpr source)
-    (safeConfig_of_source source typed sourceTags sourceSafe depth)
+    (safeConfig_of_source source typed sourceSafe depth)
   simpa only [targetTraceLaw, Symbolic.SampleEnv.meanEnvironment, AffineExpr.realize_ofExpr] using h
 
 end

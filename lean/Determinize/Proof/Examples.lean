@@ -18,10 +18,6 @@ def reciprocal : Expr :=
       (.add (.bvar 1)
         (.div (.real 1) (.bvar 0))))
 
-theorem nestedAffine_source : nestedAffine.sourceForm = true := by simp [nestedAffine, uniform, Expr.sourceForm, DistributionAction.isSample]
-example : nestedGeneral.sourceForm = true := by simp [nestedGeneral, uniform, Expr.sourceForm, DistributionAction.isSample]
-theorem reciprocal_source : reciprocal.sourceForm = true := by simp [reciprocal, uniform, Expr.sourceForm, DistributionAction.isSample]
-
 example : Typed [] nestedAffine (.float .E) := .uniform (uniform_typed .E) (.add .real .real)
 
 example : Typed [] nestedGeneral (.float .E) := .gaussian .real (uniform_typed .G)
@@ -45,9 +41,6 @@ example : reduce nestedAffine =
     .sample (.sample .E, .uniform) (uniformFiber (.sample .E) 0 1)
       (fun value => .uniform (.sample .E) (.real value) (.add (.real 2) (.real 3))) := by
   simp [nestedAffine, uniform, reduce, Expr.isValue, realValue?, Action.wrap, Function.comp_def]
-
-example : (Expr.uniform .mean (.real 0) (.real 1)).sourceForm = false := by
-  simp [Expr.sourceForm, DistributionAction.isSample]
 
 -- A literal takes either affinity, so a product of literals types at both affinities.
 example : Typed [] (.mul (.real 2) (.real 1)) (.float .E) := .mul .real .real
@@ -140,13 +133,10 @@ theorem reciprocal_safe : DoesNotGetStuck reciprocal := by
 
 /-- This concrete trace result requires no global integrability premise. -/
 example : Determinize.Proof.Traces.MeanOnTraces reciprocal reciprocal.determinize :=
-  (Traces.meanOnTraces .E reciprocal reciprocal_typed reciprocal_source reciprocal_safe).2
+  (Traces.meanOnTraces .E reciprocal reciprocal_typed reciprocal_safe).2
 
 /-- A general-affinity draw scales an expectation-affinity draw from the left. -/
 def scaledSample : Expr := .letE (uniform .G) (.mul (.bvar 0) (uniform .E))
-
-theorem scaledSample_source : scaledSample.sourceForm = true := by
-  simp [scaledSample, uniform, Expr.sourceForm, DistributionAction.isSample]
 
 theorem scaledSample_typed : Typed [] scaledSample (.float .E) :=
   .letE (uniform_typed .G) (.mul (.bvar .head) (uniform_typed .E))
@@ -167,7 +157,7 @@ theorem scaledSample_safe : DoesNotGetStuck scaledSample := by
     exact safe_real _
 
 example : Determinize.Proof.Traces.MeanOnTraces scaledSample scaledSample.determinize :=
-  (Traces.meanOnTraces .E scaledSample scaledSample_typed scaledSample_source scaledSample_safe).2
+  (Traces.meanOnTraces .E scaledSample scaledSample_typed scaledSample_safe).2
 
 def loopFunction : Expr :=
   .fix
@@ -177,8 +167,6 @@ def loop : Expr := .app loopFunction .unit
 
 example : Typed [] loop (.float .E) :=
   .app (.fix (.app (.bvar (.tail .head)) (.bvar .head))) .unit
-
-example : loop.sourceForm = true := by simp [loop, loopFunction, Expr.sourceForm]
 
 theorem loop_reduction : reduce loop = .next loop := by
   simp [loop, loopFunction, reduce, Expr.isValue, Expr.substTwo, Expr.substAt, Expr.shift, Expr.mapVars]
@@ -198,5 +186,68 @@ example : traceAndOutputLaw loop = 0 := by
     | succ depth ih =>
         rw [Traces.exact_succ_next depth loop loop (by simp [loop, Expr.isValue]) loop_reduction, ih]
   simp [traceAndOutputLaw, h]
+
+def affineMean : Expr :=
+  .letE (uniform .E) (.uniform .mean (.bvar 0) (.add (.bvar 0) (.real 2)))
+
+theorem affineMean_typed : Typed [] affineMean (.float .E) :=
+  .letE (uniform_typed .E) (.uniformMean (.bvar .head) (.add (.bvar .head) .real))
+
+theorem affineMean_safe : DoesNotGetStuck affineMean := by
+  apply safe_let_uniform .E
+  intro x
+  simp only [Expr.substHead, Expr.substAt, Expr.mapVars, Expr.shift]
+  apply safe_next (next := .uniform .mean (.real x) (.real (x + 2)))
+  · simp [reduce, Expr.isValue, realValue?, Action.wrap]
+  apply safe_sample (site := (.mean, .uniform)) (fiber := uniformFiber .mean x (x + 2))
+    (continuation := Expr.real)
+  · simp [reduce, Expr.isValue, realValue?]
+  · simp [uniformFiber]
+  · exact safe_real
+
+example : Determinize.Proof.Traces.MeanOnTraces affineMean affineMean.determinize :=
+  (Traces.meanOnTraces .E affineMean affineMean_typed affineMean_safe).2
+
+example : bigStepMeasure affineMean.determinize Set.univ = bigStepMeasure affineMean Set.univ :=
+  Determinize.Theorems.outputMassPreservation affineMean affineMean_typed
+    ((Determinize.Proof.Paper.Typing.primitiveDomainSafe_iff_doesNotGetStuck affineMean_typed).mpr
+      affineMean_safe)
+
+def meanDenominator : Expr := .div (uniform .E) (.uniform .mean (.real 1) (.real 3))
+
+example : Typed [] meanDenominator (.float .E) :=
+  .div (uniform_typed .E) (.uniformMean .real .real)
+
+example (affinity : Affinity) : Typed [] (.uniform .mean (.real 1) (.real 3)) (.float affinity) :=
+  .uniformMean .real .real
+
+def meanWithDraw : Expr := .gaussian .mean (.real 0) (uniform .G)
+
+example : Typed [] meanWithDraw (.float .G) := .gaussianMean .real (uniform_typed .G)
+
+example : reduce meanWithDraw =
+    .sample (.sample .G, .uniform) (uniformFiber (.sample .G) 0 1)
+      (fun value => .gaussian .mean (.real 0) (.real value)) := by
+  simp [meanWithDraw, uniform, reduce, Expr.isValue, realValue?, Action.wrap, Function.comp_def]
+
+example : traceAndOutputLawAt 1 (.uniform .mean (.real 1) (.real 3)) =
+    Measure.dirac ([], (2 : ℝ)) := by
+  norm_num [traceAndOutputLawAt, reduce, Expr.isValue, realValue?, uniformFiber]
+  have recordMean (v : ℝ) : (record (.mean, .uniform) v : Output → Output) = id := rfl
+  simp_rw [recordMean, Measure.map_id]
+  exact Measure.dirac_bind
+    (show Measurable (fun value : ℝ => Measure.dirac (([] : Trace), value)) from
+      Measure.measurable_dirac.comp (measurable_const.prodMk measurable_id)) 2
+
+example : traceAndOutputLawAt 1 (.uniform .mean (.real 3) (.real 1)) = 0 := by
+  norm_num [traceAndOutputLawAt, reduce, Expr.isValue, realValue?, uniformFiber]
+
+example : ¬ PrimitiveDomainSafe (.uniform .mean (.real 3) (.real 1)) := by
+  intro safe
+  have h := safe 1
+  norm_num [PrimitiveDomainSafeAt, reduce, Expr.isValue, realValue?, uniformFiber] at h
+
+example : Typed [] (.uniform .mean (.real 3) (.real 1)) (.float .E) :=
+  .uniformMean .real .real
 
 end Determinize.Proof.Examples

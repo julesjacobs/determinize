@@ -102,22 +102,13 @@ theorem typed_determinize
       try cases ‹Affinity›
       all_goals aesop (add unsafe constructors Determinize.Spec.Paper.Typed)
 
-set_option maxHeartbeats 800000 in
-theorem sourceTags_of_sourceForm {expression : Expr}
-    (source : expression.sourceForm = true) :
-    (Symbolic.AffineExpr.ofExpr expression).SourceTags := by
-  fun_induction Expr.sourceForm expression <;>
-    simp_all [Symbolic.AffineExpr.ofExpr, Symbolic.AffineExpr.SourceTags]
-
 /-- Typing preservation's companion for validity: the determinization of a well-typed source that
 does not get stuck does not get stuck either. -/
 theorem doesNotGetStuck_determinize (typed : Typed [] source (.float .E))
-    (sourceForm : source.sourceForm = true)
     (safe : DoesNotGetStuck source) : DoesNotGetStuck source.determinize :=
   (Typing.primitiveDomainSafe_iff_doesNotGetStuck (typed_determinize typed)).1
     (SymbolicSoundness.TargetSafety.determinize_primitiveDomainSafe_of_typed_source primitiveLaws
       (MeasurableActionFamily.stepKernel primitiveLaws) source typed
-      (sourceTags_of_sourceForm sourceForm)
       ((Typing.primitiveDomainSafe_iff_doesNotGetStuck typed).2 safe))
 
 end Determinize.Proof.Paper

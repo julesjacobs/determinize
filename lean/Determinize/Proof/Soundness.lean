@@ -73,8 +73,8 @@ namespace Determinize.Proof.Paper
 
 /-- The public expectation theorem follows from operational trace soundness. -/
 theorem finiteExpectationSoundness : Determinize.Spec.mainThm := by
-  intro program typed sourceForm sourceSafe sourceIntegrable
-  rcases Determinize.Proof.Traces.meanOnTraces .E program typed sourceForm
+  intro program typed sourceSafe sourceIntegrable
+  rcases Determinize.Proof.Traces.meanOnTraces .E program typed
     ((Typing.primitiveDomainSafe_iff_doesNotGetStuck typed).1 sourceSafe) with ⟨targetSafe, traces⟩
   rcases traces.finite_expectation sourceIntegrable with ⟨targetIntegrable, expectation⟩
   exact ⟨fun fuel => Typing.doesNotGetStuckAt_imp_primitiveDomainSafeAt (targetSafe fuel),

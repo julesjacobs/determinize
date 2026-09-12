@@ -47,12 +47,11 @@ theorem outputGivenTrace_ae_eq_condKernel (program : Expr) {traces : Measure Tra
 
 /-- The determinized program has the trace law of its source. -/
 theorem traceLaw_determinize (affinity : Affinity) (program : Expr)
-    (typed : Typed [] program (.float affinity)) (sourceForm : program.sourceForm = true)
-    (safe : DoesNotGetStuck program) :
+    (typed : Typed [] program (.float affinity)) (safe : DoesNotGetStuck program) :
     traceLaw program.determinize = traceLaw program := by
   let output := kernelMean (normalizedOutputGivenTrace program)
   obtain ⟨-, ⟨-, measurableOutput, -, targetMap, -⟩, -, -⟩ :=
-    soundnessData affinity program typed sourceForm safe
+    soundnessData affinity program typed safe
   have pairMeasurable : Measurable fun trace : Trace => (trace, output trace) :=
     measurable_id.prodMk measurableOutput
   calc traceLaw program.determinize
@@ -65,10 +64,10 @@ theorem traceLaw_determinize (affinity : Affinity) (program : Expr)
 /-- The public conditional-law theorem: both replays are versions of the regular conditional
 distributions of the outputs given the trace, and trace soundness holds for those. -/
 theorem conditionalLaw : Determinize.Spec.Traces.conditionalLawThm := by
-  intro program typed sourceForm safe
+  intro program typed safe
   obtain ⟨targetSafe, sourceFactor, targetFactor, ae⟩ :=
-    replaySoundness program typed sourceForm safe
-  have sameTraces := traceLaw_determinize .E program typed sourceForm
+    replaySoundness program typed safe
+  have sameTraces := traceLaw_determinize .E program typed
     ((Typing.primitiveDomainSafe_iff_doesNotGetStuck typed).1 safe)
   have sourceAe := outputGivenTrace_ae_eq_condKernel program sourceFactor rfl
   have targetAe := outputGivenTrace_ae_eq_condKernel program.determinize targetFactor
