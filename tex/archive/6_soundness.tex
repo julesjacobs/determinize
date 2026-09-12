@@ -2328,6 +2328,9 @@ with the product \(\sigma\)-algebra
 \[
   \mathcal B(Trace)\otimes\mathcal B(Expr_\tau).
 \]
+For any measurable space $X$, let $\pi_2:Trace\times X\to X$ denote
+the second-coordinate projection, and write $(\pi_2)_*\mu$ for the
+pushforward of $\mu$ along $\pi_2$.
 
 \paragraph{Tracewise semantics}
 The tracewise semantics augments an expression with the unused suffix of its $\G$-mode trace. We write:
@@ -2372,12 +2375,14 @@ The tracewise $n$-step semantics is obtained by iterating the small-step semanti
   \end{cases}
 \]
 
-Finally, the tracewise big-step semantics is
+Finally, the tracewise big-step semantics is the measure
+$\bigsem{e:\tau}^{\gamma}\in\mathcal D(Val_\tau)$ defined, for every
+measurable $A\subseteq Val_\tau$, by
 \[
   \bigsem{e:\tau}^{\gamma}(A)
   :=
   \lim_{n\to\infty}
-  \bigsemstep{e:\tau}{n}^{\gamma}(A).
+  \bigsemstep{e:\tau}{n}^{\gamma}(Trace\times A).
 \]
 
 \paragraph{Tracewise symbolic semantics}
@@ -2776,31 +2781,118 @@ Note that fixing $\gamma$ removes the randomness from the $\G$-samples, which de
   $\G$-mode trace. Then, for every $n\in\mathbb N$, 
   \[
     \mathbb E\!\left[
-      \left.\bigsemstep{e:\tau}{n}^{\gamma}\right|_{Val_\tau}
+      (\pi_2)_*
+      \left(
+        \left.\bigsemstep{e:\tau}{n}^{\gamma}
+        \right|_{Trace\times Val_\tau}
+      \right)
     \right] < \infty
   \]
   and
   \[
     \mathbb E\!\left[
-      \left.
+      (\pi_2)_*
+      \left(
+        \left.
         \bigsemstep{\exptrans{e:\tau}:\tau}{n}^{\gamma}
-      \right|_{Val_\tau}
+        \right|_{Trace\times Val_\tau}
+      \right)
     \right] < \infty.
   \]
   Moreover,
   \[
     \mathbb E\!\left[
-      \bigsemstep{e:\tau}{n}^{\gamma}
+      (\pi_2)_*
+      \left(
+        \left.\bigsemstep{e:\tau}{n}^{\gamma}
+        \right|_{Trace\times Val_\tau}
+      \right)
     \right]
     =
     \mathbb E\!\left[
-      \bigsemstep{\exptrans{e:\tau}:\tau}{n}^{\gamma}
+      (\pi_2)_*
+      \left(
+        \left.
+        \bigsemstep{\exptrans{e:\tau}:\tau}{n}^{\gamma}
+        \right|_{Trace\times Val_\tau}
+      \right)
     \right].
   \]
 \end{theorem}
 
 \begin{proof}
-  TODO.
+  Since $\gamma$ is fixed, tracewise symbolic evaluation contains no
+  remaining probabilistic choice: $\G$-mode samples are read from
+  $\gamma$, while $\E$-mode samples are recorded in the symbolic
+  environment. Thus, there are a remaining trace $\gamma_n$ and a
+  symbolic state
+  \[
+    s_n^\gamma=(\sigma_n\mid\hat e_n:\tau)
+  \]
+  such that
+  \[
+    \symbigsemstep{\mathsf{init}_\tau(e:\tau)}{n}^{\gamma}
+    =
+    \delta_{(\gamma_n,s_n^\gamma)}.
+  \]
+  Moreover, $\sigma_n$ is integrable by preservation of integrability
+  under tracewise symbolic reduction.
+
+  The tracewise actual and expected $n$-step interpretation theorems give
+  \[
+    (\pi_2)_*
+    \left(
+      \left.\bigsemstep{e:\tau}{n}^{\gamma}
+      \right|_{Trace\times Val_\tau}
+    \right)
+    =
+    \left.\mathsf{act}_\tau(s_n^\gamma)\right|_{Val_\tau}
+  \]
+  and
+  \[
+    (\pi_2)_*
+    \left(
+      \left.\bigsemstep{\exptrans{e:\tau}:\tau}{n}^{\gamma}
+      \right|_{Trace\times Val_\tau}
+    \right)
+    =
+    \left.\mathsf{exp}_\tau(s_n^\gamma)\right|_{Val_\tau}.
+  \]
+  Hence,
+  \begin{align}
+    &\mathbb E\!\left[
+      (\pi_2)_*
+      \left(
+        \left.\bigsemstep{e:\tau}{n}^{\gamma}
+        \right|_{Trace\times Val_\tau}
+      \right)
+    \right]
+    \notag
+    \\
+    &=
+    \mathbb E\!\left[
+      \left.\mathsf{act}_\tau(s_n^\gamma)\right|_{Val_\tau}
+    \right]
+    \tag{\text{by the tracewise actual $n$-step interpretation theorem}}
+    \\
+    &=
+    \mathbb E\!\left[
+      \left.\mathsf{exp}_\tau(s_n^\gamma)\right|_{Val_\tau}
+    \right]
+    \tag{\text{by \Cref{thm:tracewise-agreement-of-interpretations}}}
+    \\
+    &=
+    \mathbb E\!\left[
+      (\pi_2)_*
+      \left(
+        \left.\bigsemstep{\exptrans{e:\tau}:\tau}{n}^{\gamma}
+        \right|_{Trace\times Val_\tau}
+      \right)
+    \right]
+    \tag{\text{by the tracewise expected $n$-step interpretation theorem}}.
+  \end{align}
+  The middle equality also shows that the expectation of the
+  determinized semantics is well-defined.
 \end{proof}
 
 \begin{theorem}[Tracewise big-step soundness]
@@ -2838,498 +2930,77 @@ Note that fixing $\gamma$ removes the randomness from the $\G$-samples, which de
 
 
 \begin{proof}
-  TODO.
-\end{proof}
-
-
-\paragraph{Global soundness}
-
-\begin{theorem}[Convex function inequality]
-  \label{thm:global-convex-domination}
-  Let $\tau=\Float{m}$, where $m=\G$ or $m=\E$, and let $\mu \in \mathcal{D}(State_\tau)$. Then, for every nonnegative measurable convex function
-  $\varphi:\mathbb R\to[0,\infty]$,
-  \[
-    \int_{Val_\tau}
-      \varphi(v)\,
-      \left.
-        (\mu\monbind\mathsf{exp}_\tau)
-      \right|_{Val_\tau}(dv)
-    \leq
-    \int_{Val_\tau}
-      \varphi(v)\,
-      \left.
-        (\mu\monbind\mathsf{act}_\tau)
-      \right|_{Val_\tau}(dv).
-  \]
-\end{theorem}
-
-\begin{proof}
-  Fix a symbolic state
-  \[
-    s=(\sigma\mid\hat e:\tau)\in State_\tau.
-  \]
-  If $\hat e$ is not a symbolic value, then neither interpretation assigns
-  any mass to $Val_\tau$. Hence both restricted measures are the zero
-  measure, and the required pointwise inequality is immediate.
-
-  Otherwise, since $\tau=\Float{m}$, we have $\hat e=\sym(a)$ for some
-  affine expression
-  \[
-    a=c_0+\sum_{i=1}^k c_i u_i.
-  \]
-  Let $\bar\rho$ be the unique valuation such that
-  \[
-    \sem{\sigma}_{\mathsf{mean}}=\delta_{\bar\rho}.
-  \]
-  Since $\sigma$ is integrable, the affine expression is integrable under
-  $\sem{\sigma}_{\mathsf{env}}$, so Jensen's inequality applies. For this
-  fixed state $s$, we have
-  \begin{align}
-    &\int_{Val_\tau}
-      \varphi(v)\,
-      \left.\mathsf{exp}_\tau(s)\right|_{Val_\tau}(dv)
-    \notag
-    \\
-    &=
-    \int_{Val_\tau}
-      \varphi(v)\,
-      \left.
-        \left(
-          \sem{\sigma}_{\mathsf{mean}}
-          \monbind
-          \lambda\rho.\,
-          \delta_{\mathsf{erealize}_\rho(\sym(a)):\tau}
-        \right)
-      \right|_{Val_\tau}(dv)
-    \tag{\text{by the definition of $\mathsf{exp}_\tau$}}
-    \\
-    &=
-    \int_{Val_\tau}
-      \varphi(v)\,
-      \delta_{\mathsf{erealize}_{\bar\rho}(\sym(a)):\tau}(dv)
-    \tag{\text{since $\sem{\sigma}_{\mathsf{mean}}=\delta_{\bar\rho}$ and by monad left identity}}
-    \\
-    &=
-    \int_{Val_\tau}
-      \varphi(v)\,
-      \delta_{c_0+\sum_{i=1}^k c_i\bar\rho(u_i)}(dv)
-    \tag{\text{by the definition of $\mathsf{erealize}_{\bar\rho}$}}
-    \\
-    &=
-    \varphi\!\left(
-      c_0+\sum_{i=1}^k c_i\bar\rho(u_i)
-    \right)
-    \tag{\text{by integration against a Dirac measure}}
-    \\
-    &=
-    \varphi\!\left(
-      c_0+
-      \sum_{i=1}^k c_i
-      \int_{\mathbb R^k}
-        \rho(u_i)\,
-        \sem{\sigma}_{\mathsf{env}}(d\rho)
-    \right)
-    \tag{\text{by \Cref{lem:mean-valuation-agreement}}}
-    \\
-    &=
-    \varphi\!\left(
-      \int_{\mathbb R^k}
-        \left(
-          c_0+\sum_{i=1}^k c_i\rho(u_i)
-        \right)
-        \sem{\sigma}_{\mathsf{env}}(d\rho)
-    \right)
-    \tag{\text{by linearity of integration}}
-    \\
-    &\leq
-    \int_{\mathbb R^k}
-      \varphi\!\left(
-        c_0+\sum_{i=1}^k c_i\rho(u_i)
-      \right)
-      \sem{\sigma}_{\mathsf{env}}(d\rho)
-    \tag{\text{by Jensen's inequality}}
-    \\
-    &=
-    \int_{Val_\tau}
-      \varphi(v)\,
-      \left.\mathsf{act}_\tau(s)\right|_{Val_\tau}(dv)
-    \tag{\text{by the definitions of $\mathsf{act}_\tau$ and $\mathsf{realize}_\rho$}}.
-  \end{align}
-
-  Now integrate this pointwise inequality over
-  $\mu$:
-  \begin{align}
-    &\int_{Val_\tau}
-      \varphi(v)\,
-      \left.
-        (\mu\monbind\mathsf{exp}_\tau)
-      \right|_{Val_\tau}(dv)
-    \notag
-    \\
-    &=
-    \int_{Val_\tau}
-      \varphi(v)\,
-      \left(
-        \int_{State_\tau}
-          \left.\mathsf{exp}_\tau(s)\right|_{Val_\tau}
-          \,\mu(ds)
-      \right)(dv)
-    \tag{\text{by the definition of monadic bind}}
-    \\
-    &=
-    \int_{State_\tau}
-      \left(
-        \int_{Val_\tau}
-          \varphi(v)\,
-          \left.\mathsf{exp}_\tau(s)\right|_{Val_\tau}(dv)
-      \right)
-      \mu(ds)
-    \tag{\text{by Tonelli theorem}}
-    \\
-    &\leq
-    \int_{State_\tau}
-      \left(
-        \int_{Val_\tau}
-          \varphi(v)\,
-          \left.\mathsf{act}_\tau(s)\right|_{Val_\tau}(dv)
-      \right)
-      \mu(ds)
-    \tag{\text{by the pointwise inequality above}}
-    \\
-    &=
-    \int_{Val_\tau}
-      \varphi(v)\,
-      \left(
-        \int_{State_\tau}
-          \left.\mathsf{act}_\tau(s)\right|_{Val_\tau}
-          \,\mu(ds)
-      \right)(dv)
-    \tag{\text{by Tonelli theorem}}
-    \\
-    &=
-    \int_{Val_\tau}
-      \varphi(v)\,
-      \left.
-        (\mu\monbind\mathsf{act}_\tau)
-      \right|_{Val_\tau}(dv)
-    \tag{by definition of monadic bind}.
-  \end{align}
-\end{proof}
-
-The following also hold (both proofs are straightforward?):
-\begin{enumerate}
-  \item $\int_{Val_\tau}
-  \varphi(v)\,
-  \bigsemstep{\exptrans{e:\tau}:\tau}{n}(dv)
-  \leq
-  \int_{Val_\tau}
-  \varphi(v)\,
-  \bigsemstep{e:\tau}{n}(dv)$
-
-  \item $\int_{Val_\tau}
-  \varphi(v)\,
-  \bigsem{\exptrans{e:\tau}:\tau}(dv)
-  \leq
-  \int_{Val_\tau}
-  \varphi(v)\,
-  \bigsem{e:\tau}(dv)$
-\end{enumerate}
-
-
-\begin{theorem}[Agreement of interpretations]
-  \label{thm:global-agreement-of-interpretations}
-  Let $\tau=\Float{m}$, where $m=\G$ or $m=\E$, and let $\mu \in \mathcal{D}(State_\tau)$. If
-  \[
-    \mathbb E\!\left[
-      \left.
-        (\mu\monbind\mathsf{act}_\tau)
-      \right|_{Val_\tau}
-    \right]
-  \]
-  is well-defined in the extended reals, then so is
-  \[
-    \mathbb E\!\left[
-      \left.
-        (\mu\monbind\mathsf{exp}_\tau)
-      \right|_{Val_\tau}
-    \right],
-  \]
-  and
-  \[
-    \mathbb E\!\left[
-      \left.
-        (\mu\monbind\mathsf{act}_\tau)
-      \right|_{Val_\tau}
-    \right]
-    =
-    \mathbb E\!\left[
-      \left.
-        (\mu\monbind\mathsf{exp}_\tau)
-      \right|_{Val_\tau}
-    \right].
-  \]
-\end{theorem}
-
-
-\begin{proof}
-
-  We first prove that the expected interpretation has a well-defined
-  expectation. The functions
-  \[
-    v^+=\max(v,0)
-    \qquad\text{and}\qquad
-    v^-=\max(-v,0)
-  \]
-  are nonnegative, measurable, and convex. Applying~\Cref{thm:global-convex-domination} to each function gives
-  \begin{align}
-    \int_{Val_\tau}
-      v^+\,
-      \left.
-        (\mu\monbind\mathsf{exp}_\tau)
-      \right|_{Val_\tau}(dv)
-    &\leq
-    \int_{Val_\tau}
-      v^+\,
-      \left.
-        (\mu\monbind\mathsf{act}_\tau)
-      \right|_{Val_\tau}(dv)
-    \tag{\text{by the convex inequality with $\varphi=v^+$}},
-    \\
-    \int_{Val_\tau}
-      v^-\,
-      \left.
-        (\mu\monbind\mathsf{exp}_\tau)
-      \right|_{Val_\tau}(dv)
-    &\leq
-    \int_{Val_\tau}
-      v^-\,
-      \left.
-        (\mu\monbind\mathsf{act}_\tau)
-      \right|_{Val_\tau}(dv)
-    \tag{\text{by the convex inequality with $\varphi=v^-$}}.
-  \end{align}
-
-  By assumption,
-  \[
-    \mathbb E\!\left[
-      \left.
-        (\mu\monbind\mathsf{act}_\tau)
-      \right|_{Val_\tau}
-    \right]
-  \]
-  is well-defined. Hence at least one of its positive and negative
-  integrals is finite. The corresponding inequality above shows that
-  the same integral is finite for the expected interpretation.
-  Therefore,
-  \[
-    \mathbb E\!\left[
-      \left.
-        (\mu\monbind\mathsf{exp}_\tau)
-      \right|_{Val_\tau}
-    \right]
-  \]
-  is also well-defined.
-
-  Finally, we prove equality of the expectations:
-  \begin{align}
-    &\mathbb E\!\left[
-      \left.
-        (\mu\monbind\mathsf{act}_\tau)
-      \right|_{Val_\tau}
-    \right]
-    \notag
-    \\
-    &=
-    % \mathbb E\!\left[
-    %   \mu\monbind
-    %   \lambda s.\,
-    %   \left.\mathsf{act}_\tau(s)\right|_{Val_\tau}
-    % \right]
-    % \tag{\text{by \Cref{lem:restriction-of-bind}}}
-    % \\
-    % &=
-    \int_{State_\tau}
-      \mathbb E\!\left[
-        \left.\mathsf{act}_\tau(s)\right|_{Val_\tau}
-      \right]
-      \mu(ds)
-    \tag{\text{by \Cref{lem:extended-expectation-of-bind}}}
-    \\
-    &=
-    \int_{State_\tau}
-      \mathbb E\!\left[
-        \left.\mathsf{exp}_\tau(s)\right|_{Val_\tau}
-      \right]
-      \mu(ds)
-    \tag{}
-    \\
-    &=
-    \mathbb E\!\left[
-      \mu\monbind
-      \lambda s.\,
-      \left.\mathsf{exp}_\tau(s)\right|_{Val_\tau}
-    \right]
-    \tag{\text{by \Cref{lem:extended-expectation-of-bind}}}
-    % \\
-    % &=
-    % \mathbb E\!\left[
-    %   \left.
-    %     (\mu\monbind\mathsf{exp}_\tau)
-    %   \right|_{Val_\tau}
-    % \right]
-    % \tag{\text{by \Cref{lem:restriction-of-bind}}}.
-  \end{align}
-\end{proof}
-
-\begin{theorem}[Soundness $n$-step]
-  \label{thm:global-soundness-n-step}
-  Let $e:\tau$ be closed and well typed, where
-  $\tau=\Float{m}$ and $m=\G$ or $\E$. Let $n\in\mathbb N$. If
-  \[
-    \mathbb E\!\left[
-      \left.\bigsemstep{e:\tau}{n}\right|_{Val_\tau}
-    \right]
-  \]
-  is well-defined in the extended reals, then
-  \[
-    \mathbb E\!\left[
-      \left.
-        \bigsemstep{\exptrans{e:\tau}:\tau}{n}
-      \right|_{Val_\tau}
-    \right]
-  \]
-  is also well-defined, and
-  \[
-    \mathbb E\!\left[
-      \left.\bigsemstep{e:\tau}{n}\right|_{Val_\tau}
-    \right]
-    =
-    \mathbb E\!\left[
-      \left.
-        \bigsemstep{\exptrans{e:\tau}:\tau}{n}
-      \right|_{Val_\tau}
-    \right].
-  \]
-\end{theorem}
-
-\begin{proof}
-  ** Proving the expectation has a well-defined expectation is the same. 
-
-  Let
-  \[
-    \mu_n
-    =
-    \symbigsemstep{\mathsf{init}_\tau(e:\tau)}{n}.
-  \]
-  Then
-  \begin{align}
-    &\mathbb E\!\left[
-      \left.\bigsemstep{e:\tau}{n}\right|_{Val_\tau}
-    \right]
-    \notag
-    \\
-    &=
-    \mathbb E\!\left[
-      \left.(\mu_n\monbind\mathsf{act}_\tau)\right|_{Val_\tau}
-    \right]
-    \tag{\text{by the actual interpretation theorem}}
-    \\
-    &=
-    \mathbb E\!\left[
-      \left.(\mu_n\monbind\mathsf{exp}_\tau)\right|_{Val_\tau}
-    \right]
-    \tag{\text{by \Cref{thm:global-agreement-of-interpretations}}}
-    \\
-    &=
-    \mathbb E\!\left[
-      \left.
-        \bigsemstep{\exptrans{e:\tau}:\tau}{n}
-      \right|_{Val_\tau}
-    \right]
-    \tag{\text{by the expected interpretation theorem}}.
-  \end{align}
-\end{proof}
-
-\begin{theorem}[Soundness big step]
-  \label{thm:global-soundness-big-step}
-  Let $e:\tau$ be closed and well typed, where
-  $\tau=\Float{m}$ and $m=\G$ or $\E$. If
-  \[
-    \mathbb E[\bigsem{e:\tau}]
-  \]
-  is well-defined in the extended reals, then
-  \[
-    \mathbb E[\bigsem{\exptrans{e:\tau}:\tau}]
-  \]
-  is also well-defined, and
-  \[
-    \mathbb E[\bigsem{e:\tau}]
-    =
-    \mathbb E[\bigsem{\exptrans{e:\tau}:\tau}].
-  \]
-\end{theorem}
-
-\begin{proof}
-  ** Proving the expectation has a well-defined expectation is the same. 
-
   For each $n\in\mathbb N$, let
   \[
-    \mu_n
+    \mu_n^\gamma
     =
-    \left.
-      \bigsemstep{e:\tau}{n}
-    \right|_{Val_\tau}
+    (\pi_2)_*
+    \left(
+      \left.\bigsemstep{e:\tau}{n}^{\gamma}
+      \right|_{Trace\times Val_\tau}
+    \right)
     \qquad\text{and}\qquad
-    \nu_n
+    \nu_n^\gamma
     =
-    \left.
-      \bigsemstep{\exptrans{e:\tau}:\tau}{n}
-    \right|_{Val_\tau}.
+    (\pi_2)_*
+    \left(
+      \left.\bigsemstep{\exptrans{e:\tau}:\tau}{n}^{\gamma}
+      \right|_{Trace\times Val_\tau}
+    \right).
   \]
-  Since values are absorbing, $(\mu_n)_{n\in\mathbb N}$ and
-  $(\nu_n)_{n\in\mathbb N}$ are increasing sequences of measures on
-  $Val_\tau$. We obtain:
+  Also let
+  \[
+    \mu^\gamma
+    =
+    \bigsem{e:\tau}^{\gamma}
+    \qquad\text{and}\qquad
+    \nu^\gamma
+    =
+    \bigsem{\exptrans{e:\tau}:\tau}^{\gamma}.
+  \]
+  Since values are absorbing, $(\mu_n^\gamma)_{n\in\mathbb N}$ and
+  $(\nu_n^\gamma)_{n\in\mathbb N}$ are increasing, and
+  \[
+    \mu^\gamma=\lim_{n\to\infty}\mu_n^\gamma,
+    \qquad
+    \nu^\gamma=\lim_{n\to\infty}\nu_n^\gamma.
+  \]
+
   \begin{align}
-    \mathbb E\!\left[\bigsem{e:\tau}\right]
+    \mathbb E[\mu^\gamma]
     &=
-    \mathbb E\!\left[\lim_{n\to\infty}\mu_n\right]
-    \tag{\text{by the definition of the big-step semantics}}
+    \mathbb E\!\left[
+      \lim_{n\to\infty}\mu_n^\gamma
+    \right]
+    \tag{\text{by the definition of tracewise big-step semantics}}
     \\
     &=
-    \lim_{n\to\infty}
-    \mathbb E\!\left[\mu_n\right]
+    \lim_{n\to\infty}\mathbb E[\mu_n^\gamma]
     \tag{\text{by \Cref{lem:extended-expectation-increasing-limits}}}
     \\
     &=
-    \lim_{n\to\infty}
-    \mathbb E\!\left[\nu_n\right]
-    \tag{\text{by \Cref{thm:global-soundness-n-step}}}
-    \\
-    &=
-    \mathbb E\!\left[\lim_{n\to\infty}\nu_n\right]
-    \tag{\text{by \Cref{lem:extended-expectation-increasing-limits}}}
+    \lim_{n\to\infty}\mathbb E[\nu_n^\gamma]
+    \tag{\text{by \Cref{thm:tracewise-n-step-soundness}}}
     \\
     &=
     \mathbb E\!\left[
-      \bigsem{\exptrans{e:\tau}:\tau}
+      \lim_{n\to\infty}\nu_n^\gamma
     \right]
-    \tag{\text{by the definition of the big-step semantics}}.
+    \tag{\text{by \Cref{lem:extended-expectation-increasing-limits}}}
+    \\
+    &=
+    \mathbb E[\nu^\gamma]
+    \tag{\text{by the definition of tracewise big-step semantics}}.
   \end{align}
 \end{proof}
 
-
-\todo[inline]{A tracewise small-step semantics on \(Trace\times Expr_\tau\), carrying the unused suffix of \(\gamma\).
-Its \(n\)-step iteration.
-A tracewise big-step semantics obtained by restricting to values and taking the limit, as with your ordinary semantics.}
-
-
-Trace decomposition separates a program’s randomness into:
-1. The randomness from the \(\G\)-mode samples—the trace \(\gamma\).
-2. The remaining randomness from the \(\E\)-mode samples after \(\gamma\) is fixed.
+\paragraph{Trace decomposition}
 Let \(\eta_e\) be the distribution of \(G\)-mode traces generated by \(e\). For a fixed trace \(\gamma\),
 \[
 \bigsem{e:\tau}^{\gamma}
-\]is the conditional output distribution obtained by fixing the \(G\)-samples according to \(\gamma\), while still sampling the \(E\)-variables.
+\]
+is the output distribution obtained by fixing the \(G\)-samples according to
+\(\gamma\), while still sampling the \(E\)-variables.
 Trace decomposition says that mixing these conditional distributions using the actual probabilities of the traces reconstructs the original global semantics:
 \[
 \bigsem{e:\tau}
@@ -3338,168 +3009,593 @@ Trace decomposition says that mixing these conditional distributions using the a
 \monbind
 \lambda\gamma.\,
 \bigsem{e:\tau}^{\gamma}.
-\]Equivalently, for every measurable \(A\subseteq Val_\tau\),
-\[
-\bigsem{e:\tau}(A)
-=
-\int
-  \bigsem{e:\tau}^{\gamma}(A)
-\,\eta_e(d\gamma).
-\]This is the measure-theoretic law of total probability:
-\[
-\Pr(\text{output}\in A)
-=
-\int
-\Pr(\text{output}\in A\mid\gamma)
-\,\eta_e(d\gamma).
 \]
 
+For example, let
+\[
+e=\uniform(0,1):\Float{\G}.
+\]
+Every complete trace has exactly one entry:
+\[
+\gamma=(r).
+\]
+The trace measure \(\eta_e\) is the uniform distribution on \([0,1]\),
+embedded into the one-element component \(\mathbb R^1\subseteq Trace\):
+\[
+\eta_e(B)
+=
+\int_0^1 \mathbf 1_B((r))\,dr
+\]
+for every measurable \(B\subseteq Trace\). Thus,
+\[
+\eta_e(\mathbb R^1)=1,
+\qquad
+\eta_e(\mathbb R^n)=0
+\quad\text{for }n\neq1.
+\]
+For example,
+\[
+\eta_e\bigl(\{(r):0.2\leq r\leq0.5\}\bigr)=0.3.
+\]
+Because the distribution is continuous,
+\[
+\eta_e(\{(0.32)\})=0.
+\]
+
+We first show that taking one ordinary step and then generating the trace
+of the residual expression agrees with generating the complete trace
+first and taking one tracewise step.
+
+\begin{lemma}[One-step trace reconstruction]
+\label{lem:one-step-trace-reconstruction}
+Let $p:\tau$ be closed and well typed, and let $\eta_p$ be its
+$\G$-mode trace distribution. Then
+\[
+  \eta_p
+  \monbind
+  \lambda\gamma.\,
+  \sem{p:\tau}^{\gamma}
+  =
+  \sem{p:\tau}
+  \monbind
+  \lambda e'.\,
+  \left(
+    \eta_{e'}
+    \monbind
+    \lambda\gamma'.\,
+    \delta_{(\gamma',e')}
+  \right).
+\]
+\end{lemma}
+
+Projecting away the unused trace gives the following simpler form. The previous theorem preserves the relationship between $e'$ and its unused trace.
+
+\begin{corollary}[One-step trace reconstruction, expression marginal]
+\label{cor:one-step-trace-reconstruction}
+Let $p:\tau$ be closed and well typed, and let $\eta_p$ be its
+$\G$-mode trace distribution. Then
+\[
+  \sem{p:\tau}
+  =
+  (\pi_2)_*
+  \left(
+    \eta_p
+    \monbind
+    \lambda\gamma.\,
+    \sem{p:\tau}^{\gamma}
+  \right).
+\]
+\end{corollary}
 
 \begin{proof}
-  Let $\eta_e$ be the $\G$-mode trace measure induced by $e:\tau$.
-  By \Cref{lem:trace-measure-preservation}, this is also the trace
-  measure induced by $\exptrans{e:\tau}:\tau$.
-
-  By \Cref{lem:tracewise-conditioning} and the disintegration theorem,
-  for every nonnegative measurable function
-  $f:Val_\tau\to[0,\infty]$,
-  \[
-    \int_{Val_\tau}
-      f(v)\,
-      \bigsem{e:\tau}(dv)
-    =
-    \int
+  Let $A\subseteq Expr_\tau$ be measurable. Then
+  \begin{align}
+    &\left(
+      (\pi_2)_*
       \left(
-        \int_{Val_\tau}
-          f(v)\,
-          \bigsem{e:\tau}^{\gamma}(dv)
+        \eta_p
+        \monbind
+        \lambda\gamma.\,
+        \sem{p:\tau}^{\gamma}
       \right)
-      \eta_e(d\gamma).
-  \]
-
-  Applying the same result to $\exptrans{e:\tau}:\tau$, and using
-  \Cref{lem:trace-measure-preservation}, gives
-  \[
-    \int_{Val_\tau}
-      f(v)\,
-      \bigsem{\exptrans{e:\tau}:\tau}(dv)
-    =
-    \int
+    \right)(A)
+    \notag
+    \\
+    &=
+    \left(
+      \eta_p
+      \monbind
+      \lambda\gamma.\,
+      \sem{p:\tau}^{\gamma}
+    \right)(Trace\times A)
+    \tag{\text{by the definition of pushforward}}
+    \\
+    &=
+    \left(
+      \sem{p:\tau}
+      \monbind
+      \lambda e'.\,
       \left(
-        \int_{Val_\tau}
-          f(v)\,
-          \bigsem{\exptrans{e:\tau}:\tau}^{\gamma}(dv)
+        \eta_{e'}
+        \monbind
+        \lambda\gamma'.\,
+        \delta_{(\gamma',e')}
       \right)
-      \eta_e(d\gamma).
-  \]
+    \right)(Trace\times A)
+    \tag{\text{by \Cref{lem:one-step-trace-reconstruction}}}
+    \\
+    &=
+    \int_{Expr_\tau}
+      \mathbf 1_A(e')\,\eta_{e'}(Trace)\,
+      \sem{p:\tau}(de')
+    \tag{\text{by the definitions of bind and the Dirac measure}}
+    \\
+    &=
+    \sem{p:\tau}(A)
+    \tag{\text{since $\eta_{e'}(Trace)=1$}}.
+  \end{align}
 \end{proof}
 
-\begin{theorem}[Trace decomposition]
-  \label{thm:trace-decomposition}
-  Let $e:\tau$ be closed and well typed, where
-  $\tau=\Float{m}$ and $m=\G$ or $\E$.
-  There exists a finite measure $\eta_e$ on valid $\G$-mode traces such
-  that, for every nonnegative measurable function
-  $f:Val_\tau\to[0,\infty]$,
-  \[
-    \int_{Val_\tau}
-      f(v)\,
-      \bigsem{e:\tau}(dv)
-    =
-    \int
+Iterating the one-step result gives the corresponding finite-step
+reconstruction.
+
+\begin{lemma}[Finite-step trace reconstruction]
+\label{lem:finite-step-trace-reconstruction}
+Let $p:\tau$ be closed and well typed, and let $\eta_p$ be its
+$\G$-mode trace distribution. Then, for every $n\in\mathbb N$,
+\[
+  \eta_p
+  \monbind
+  \lambda\gamma.\,
+  \bigsemstep{p:\tau}{n}^{\gamma}
+  =
+  \bigsemstep{p:\tau}{n}
+  \monbind
+  \lambda e'.\,
+  \left(
+    \eta_{e'}
+    \monbind
+    \lambda\gamma'.\,
+    \delta_{(\gamma',e')}
+  \right).
+\]
+\end{lemma}
+
+\begin{proof}
+  By induction on $n$.
+
+  For $n=0$,
+  \begin{align}
+    &\eta_p
+    \monbind
+    \lambda\gamma.\,
+    \bigsemstep{p:\tau}{0}^{\gamma}
+    \notag
+    \\
+    &=
+    \eta_p
+    \monbind
+    \lambda\gamma.\,
+    \delta_{(\gamma,p)}
+    \tag{\text{by the definition of tracewise $0$-step semantics}}
+    \\
+    &=
+    \delta_p
+    \monbind
+    \lambda e'.\,
+    \left(
+      \eta_{e'}
+      \monbind
+      \lambda\gamma'.\,
+      \delta_{(\gamma',e')}
+    \right)
+    \tag{\text{by the left-unit law}}
+    \\
+    &=
+    \bigsemstep{p:\tau}{0}
+    \monbind
+    \lambda e'.\,
+    \left(
+      \eta_{e'}
+      \monbind
+      \lambda\gamma'.\,
+      \delta_{(\gamma',e')}
+    \right)
+    \tag{\text{by the definition of global $0$-step semantics}}.
+  \end{align}
+
+  For $n+1$,
+  \begin{align}
+    &\eta_p
+    \monbind
+    \lambda\gamma.\,
+    \bigsemstep{p:\tau}{n+1}^{\gamma}
+    \notag
+    \\
+    &=
+    \eta_p
+    \monbind
+    \lambda\gamma.\,
+    \left(
+      \bigsemstep{p:\tau}{n}^{\gamma}
+      \monbind
+      \lambda(\gamma',e').\,
+      \sem{e':\tau}^{\gamma'}
+    \right)
+    \tag{\text{by the definition of tracewise $(n+1)$-step semantics}}
+    \\
+    &=
+    \left(
+      \eta_p
+      \monbind
+      \lambda\gamma.\,
+      \bigsemstep{p:\tau}{n}^{\gamma}
+    \right)
+    \monbind
+    \lambda(\gamma',e').\,
+    \sem{e':\tau}^{\gamma'}
+    \tag{\text{by associativity of monadic bind}}
+    \\
+    &=
+    \left(
+      \bigsemstep{p:\tau}{n}
+      \monbind
+      \lambda e'.\,
       \left(
-        \int_{Val_\tau}
-          f(v)\,
-          \bigsem{e:\tau}^{\gamma}(dv)
+        \eta_{e'}
+        \monbind
+        \lambda\gamma'.\,
+        \delta_{(\gamma',e')}
       \right)
-      \eta_e(d\gamma),
-  \]
-  and
-  \[
-    \int_{Val_\tau}
-      f(v)\,
-      \bigsem{\exptrans{e:\tau}:\tau}(dv)
-    =
-    \int
+    \right)
+    \monbind
+    \lambda(\gamma',e').\,
+    \sem{e':\tau}^{\gamma'}
+    \tag{\text{by the induction hypothesis}}
+    \\
+    &=
+    \bigsemstep{p:\tau}{n}
+    \monbind
+    \lambda e'.\,
+    \left(
+      \eta_{e'}
+      \monbind
+      \lambda\gamma'.\,
+      \sem{e':\tau}^{\gamma'}
+    \right)
+    \tag{\text{by associativity and the left-unit law}}
+    \\
+    &=
+    \bigsemstep{p:\tau}{n}
+    \monbind
+    \lambda e'.\,
+    \left(
+      \sem{e':\tau}
+      \monbind
+      \lambda e''.\,
       \left(
-        \int_{Val_\tau}
-          f(v)\,
-          \bigsem{\exptrans{e:\tau}:\tau}^{\gamma}(dv)
+        \eta_{e''}
+        \monbind
+        \lambda\gamma''.\,
+        \delta_{(\gamma'',e'')}
       \right)
-      \eta_e(d\gamma).
-  \]
+    \right)
+    \tag{\text{by \Cref{lem:one-step-trace-reconstruction}}}
+    \\
+    &=
+    \left(
+      \bigsemstep{p:\tau}{n}
+      \monbind
+      \lambda e'.\,
+      \sem{e':\tau}
+    \right)
+    \monbind
+    \lambda e''.\,
+    \left(
+      \eta_{e''}
+      \monbind
+      \lambda\gamma''.\,
+      \delta_{(\gamma'',e'')}
+    \right)
+    \tag{\text{by associativity of monadic bind}}
+    \\
+    &=
+    \bigsemstep{p:\tau}{n+1}
+    \monbind
+    \lambda e''.\,
+    \left(
+      \eta_{e''}
+      \monbind
+      \lambda\gamma''.\,
+      \delta_{(\gamma'',e'')}
+    \right)
+    \tag{\text{by the definition of global $(n+1)$-step semantics}}.
+  \end{align}
+\end{proof}
+
+Projecting away the unused trace again yields a one-bind formulation.
+
+\begin{corollary}[Finite-step trace reconstruction, expression marginal]
+\label{cor:finite-step-trace-reconstruction}
+Let $p:\tau$ be closed and well typed, and let $\eta_p$ be its
+$\G$-mode trace distribution. Then, for every $n\in\mathbb N$,
+\[
+  \bigsemstep{p:\tau}{n}
+  =
+  (\pi_2)_*
+  \left(
+    \eta_p
+    \monbind
+    \lambda\gamma.\,
+    \bigsemstep{p:\tau}{n}^{\gamma}
+  \right).
+\]
+\end{corollary}
+
+\begin{proof}
+  Let $A\subseteq Expr_\tau$ be measurable. Then
+  \begin{align}
+    &\left(
+      (\pi_2)_*
+      \left(
+        \eta_p
+        \monbind
+        \lambda\gamma.\,
+        \bigsemstep{p:\tau}{n}^{\gamma}
+      \right)
+    \right)(A)
+    \notag
+    \\
+    &=
+    \left(
+      \eta_p
+      \monbind
+      \lambda\gamma.\,
+      \bigsemstep{p:\tau}{n}^{\gamma}
+    \right)(Trace\times A)
+    \tag{\text{by the definition of pushforward}}
+    \\
+    &=
+    \left(
+      \bigsemstep{p:\tau}{n}
+      \monbind
+      \lambda e'.\,
+      \left(
+        \eta_{e'}
+        \monbind
+        \lambda\gamma'.\,
+        \delta_{(\gamma',e')}
+      \right)
+    \right)(Trace\times A)
+    \tag{\text{by \Cref{lem:finite-step-trace-reconstruction}}}
+    \\
+    &=
+    \int_{Expr_\tau}
+      \mathbf 1_A(e')\,\eta_{e'}(Trace)\,
+      \bigsemstep{p:\tau}{n}(de')
+    \tag{\text{by the definitions of bind and the Dirac measure}}
+    \\
+    &=
+    \bigsemstep{p:\tau}{n}(A)
+    \tag{\text{since $\eta_{e'}(Trace)=1$}}.
+  \end{align}
+\end{proof}
+
+The transformation preserves the trace distribution used by these
+reconstruction results.
+
+\begin{lemma}[Preservation of the trace distribution]
+\label{lem:preservation-of-trace-distribution}
+The expressions $e:\tau$ and $\exptrans{e:\tau}:\tau$ generate the same
+distribution of $\G$-mode traces:
+\[
+  \eta_{\exptrans{e:\tau}}
+  =
+  \eta_e.
+\]
+\end{lemma}
+
+\begin{proof}
+  By induction on the typing derivation of $e:\tau$. The transformation
+  changes only $\E$-mode computations, which do not contribute entries
+  to the $\G$-mode trace. Moreover, the typing rules ensure that no
+  $\G$-mode sampling operation or its parameters depend on an
+  $\E$-mode value. Hence corresponding evaluations generate the same
+  $\G$-mode traces with the same probabilities.
+\end{proof}
+
+We can now reconstruct both global output distributions from their
+tracewise semantics.
+
+\begin{theorem}[Trace representation of the global semantics]
+\label{thm:trace-representation}
+Let $e:\tau$ be closed and well typed, where
+$\tau=\Float{m}$ and $m=\G$ or $\E$.
+There exists a probability measure $\eta_e$ on $Trace$, concentrated on valid
+$\G$-mode traces, such that the maps
+\[
+  \gamma\longmapsto\bigsem{e:\tau}^{\gamma}
+  \qquad\text{and}\qquad
+  \gamma\longmapsto
+  \bigsem{\exptrans{e:\tau}:\tau}^{\gamma}
+\]
+are measurable kernels and
+\[
+  \bigsem{e:\tau}
+  =
+  \eta_e
+  \monbind
+  \lambda\gamma.\,
+  \bigsem{e:\tau}^{\gamma},
+\]
+and
+\[
+  \bigsem{\exptrans{e:\tau}:\tau}
+  =
+  \eta_e
+  \monbind
+  \lambda\gamma.\,
+  \bigsem{\exptrans{e:\tau}:\tau}^{\gamma}.
+\]
+Here, $\bigsem{p:\tau}^{\gamma}$ denotes the tracewise output distribution
+obtained by fixing the $\G$-mode samples according to $\gamma$ while leaving
+the $\E$-mode samples probabilistic.
 \end{theorem}
 
-
 \begin{proof}
-  Let $\eta_e$ be the finite trace measure given by
-  \Cref{lem:joint-trace-factorization}.
+  Let $\eta_e$ be the $\G$-mode trace distribution generated by $e:\tau$.
+  By \Cref{lem:preservation-of-trace-distribution}, it is also the trace
+  distribution generated by $\exptrans{e:\tau}:\tau$.
 
-  For the original expression,
+  Let $A\subseteq Val_\tau$ be measurable. Then
   \begin{align}
-    &\int_{Val_\tau}
-      f(v)\,
-      \bigsem{e:\tau}(dv)
-    \notag
+    \bigsem{e:\tau}(A)
+    &=
+    \lim_{n\to\infty}
+    \bigsemstep{e:\tau}{n}(A)
+    \tag{\text{by the definition of big-step semantics}}
     \\
     &=
-    \int_{Trace\times Val_\tau}
-      f(v)\,
-      \bigsem{e:\tau}_{\mathsf{tr}}(d\gamma,dv)
-    \tag{\text{by \Cref{lem:trace-erasure}}}
+    \lim_{n\to\infty}
+    \left(
+      (\pi_2)_*
+      \left(
+        \eta_e
+        \monbind
+        \lambda\gamma.\,
+        \bigsemstep{e:\tau}{n}^{\gamma}
+      \right)
+    \right)(A)
+    \tag{\text{by \Cref{cor:finite-step-trace-reconstruction}}}
+    \\
+    &=
+    \lim_{n\to\infty}
+    \left(
+      \eta_e
+      \monbind
+      \lambda\gamma.\,
+      \bigsemstep{e:\tau}{n}^{\gamma}
+    \right)(Trace\times A)
+    \tag{\text{by the definition of pushforward}}
+    \\
+    &=
+    \lim_{n\to\infty}
+    \int_{Trace}
+      \bigsemstep{e:\tau}{n}^{\gamma}(Trace\times A)\,
+      \eta_e(d\gamma)
+    \tag{\text{by the definition of monadic bind}}
     \\
     &=
     \int_{Trace}
       \left(
-        \int_{Val_\tau}
-          f(v)\,
-          \bigsem{e:\tau}^{\gamma}(dv)
+        \lim_{n\to\infty}
+        \bigsemstep{e:\tau}{n}^{\gamma}(Trace\times A)
       \right)
       \eta_e(d\gamma)
-    \tag{\text{by \Cref{lem:joint-trace-factorization}}}.
-  \end{align}
-
-  Likewise, for the determinized expression,
-  \begin{align}
-    &\int_{Val_\tau}
-      f(v)\,
-      \bigsem{\exptrans{e:\tau}:\tau}(dv)
-    \notag
+    \tag{\text{by the monotone convergence theorem}}
     \\
     &=
-    \int_{Trace\times Val_\tau}
-      f(v)\,
-      \bigsem{\exptrans{e:\tau}:\tau}_{\mathsf{tr}}(d\gamma,dv)
-    \tag{\text{by \Cref{lem:trace-erasure}}}
+    \int_{Trace}
+      \bigsem{e:\tau}^{\gamma}(A)\,
+      \eta_e(d\gamma)
+    \tag{\text{by the definition of tracewise big-step semantics}}
+    \\
+    &=
+    \left(
+      \eta_e
+      \monbind
+      \lambda\gamma.\,
+      \bigsem{e:\tau}^{\gamma}
+    \right)(A)
+    \tag{\text{by the definition of monadic bind}}.
+  \end{align}
+  Since this holds for every measurable $A\subseteq Val_\tau$,
+  \[
+    \bigsem{e:\tau}
+    =
+    \eta_e
+    \monbind
+    \lambda\gamma.\,
+    \bigsem{e:\tau}^{\gamma}.
+  \]
+
+  Similarly,
+  \begin{align}
+    \bigsem{\exptrans{e:\tau}:\tau}(A)
+    &=
+    \lim_{n\to\infty}
+    \bigsemstep{\exptrans{e:\tau}:\tau}{n}(A)
+    \tag{\text{by the definition of big-step semantics}}
+    \\
+    &=
+    \lim_{n\to\infty}
+    \left(
+      (\pi_2)_*
+      \left(
+        \eta_e
+        \monbind
+        \lambda\gamma.\,
+        \bigsemstep{\exptrans{e:\tau}:\tau}{n}^{\gamma}
+      \right)
+    \right)(A)
+    \tag{\text{by \Cref{cor:finite-step-trace-reconstruction,lem:preservation-of-trace-distribution}}}
+    \\
+    &=
+    \lim_{n\to\infty}
+    \left(
+      \eta_e
+      \monbind
+      \lambda\gamma.\,
+      \bigsemstep{\exptrans{e:\tau}:\tau}{n}^{\gamma}
+    \right)(Trace\times A)
+    \tag{\text{by the definition of pushforward}}
+    \\
+    &=
+    \lim_{n\to\infty}
+    \int_{Trace}
+      \bigsemstep{\exptrans{e:\tau}:\tau}{n}^{\gamma}(Trace\times A)\,
+      \eta_e(d\gamma)
+    \tag{\text{by the definition of monadic bind}}
     \\
     &=
     \int_{Trace}
       \left(
-        \int_{Val_\tau}
-          f(v)\,
-          \bigsem{\exptrans{e:\tau}:\tau}^{\gamma}(dv)
+        \lim_{n\to\infty}
+        \bigsemstep{\exptrans{e:\tau}:\tau}{n}^{\gamma}(Trace\times A)
       \right)
       \eta_e(d\gamma)
-    \tag{\text{by \Cref{lem:joint-trace-factorization}}}.
+    \tag{\text{by the monotone convergence theorem}}
+    \\
+    &=
+    \int_{Trace}
+      \bigsem{\exptrans{e:\tau}:\tau}^{\gamma}(A)\,
+      \eta_e(d\gamma)
+    \tag{\text{by the definition of tracewise big-step semantics}}
+    \\
+    &=
+    \left(
+      \eta_e
+      \monbind
+      \lambda\gamma.\,
+      \bigsem{\exptrans{e:\tau}:\tau}^{\gamma}
+    \right)(A)
+    \tag{\text{by the definition of monadic bind}}.
   \end{align}
+  Since this holds for every measurable $A\subseteq Val_\tau$,
+  \[
+    \bigsem{\exptrans{e:\tau}:\tau}
+    =
+    \eta_e
+    \monbind
+    \lambda\gamma.\,
+    \bigsem{\exptrans{e:\tau}:\tau}^{\gamma}.
+  \]
 \end{proof}
 
+\paragraph{Global soundness}
+Now, integrate over all traces.
 
-
-\begin{proof}[Proof outline]
-  First prove the corresponding decomposition for the tracewise
-  $n$-step semantics. Pass to the big-step semantics by summing over
-  terminating evaluation depths. Finally, erase the trace component;
-  this recovers the ordinary big-step semantics.
-\end{proof}
-
-
-
-
-
-
-
-\begin{theorem}[Global convex-function inequality]
+\begin{theorem}[Global convex function inequality]
   \label{thm:global-convex-domination}
   Let $e:\tau$ be closed and well typed, where
   $\tau=\Float{m}$ and $m=\G$ or $\E$.
@@ -3518,44 +3614,51 @@ Trace decomposition says that mixing these conditional distributions using the a
 
 \begin{proof}
   Let $\eta_e$ be the measure given by
-  \Cref{thm:trace-decomposition}. Then
-  \begin{align}
-    &\int_{Val_\tau}
-      \varphi(v)\,
-      \bigsem{\exptrans{e:\tau}:\tau}(dv)
-    \notag
-    \\
-    &=
-    \int
-      \varphi\!\left(
-        \mathbb E\!\left[
-          \bigsem{e:\tau}^{\gamma}
-        \right]
-      \right)
-      \eta_e(d\gamma)
-    \tag{\text{by trace decomposition and
-    \Cref{lem:tracewise-mean-form}}}
-    \\
-    &\leq
-    \int
-      \left(
-        \int_{Val_\tau}
-          \varphi(v)\,
-          \bigsem{e:\tau}^{\gamma}(dv)
-      \right)
-      \eta_e(d\gamma)
-    \tag{\text{by Jensen's inequality for each $\gamma$}}
-    \\
-    &=
+  \Cref{thm:trace-representation}. Then
+\begin{align}
+&\int_{Val_\tau}
+  \varphi(v)\,
+  \bigsem{\exptrans{e:\tau}:\tau}(dv)
+\notag
+\\
+&=
+\int_{Trace}
+  \left(
     \int_{Val_\tau}
       \varphi(v)\,
-      \bigsem{e:\tau}(dv)
-    \tag{\text{by trace decomposition}}.
-  \end{align}
+      \bigsem{\exptrans{e:\tau}:\tau}^{\gamma}(dv)
+  \right)
+  \eta_e(d\gamma)
+\tag{\text{by trace representation and Tonelli}}
+\\
+&=
+\int_{Trace}
+  \varphi\!\left(
+    \mathbb E[
+      \bigsem{e:\tau}^{\gamma}
+    ]
+  \right)
+  \eta_e(d\gamma)
+\tag{\text{by tracewise mean form}}
+\\
+&\leq
+\int_{Trace}
+  \left(
+    \int_{Val_\tau}
+      \varphi(v)\,
+      \bigsem{e:\tau}^{\gamma}(dv)
+  \right)
+  \eta_e(d\gamma)
+\tag{\text{by Jensen's inequality for each $\gamma$}}
+\\
+&=
+\int_{Val_\tau}
+  \varphi(v)\,
+  \bigsem{e:\tau}(dv)
+\tag{\text{by trace representation and Tonelli}}.
+\end{align}
+
 \end{proof}
-
-
-
 
 
 \begin{theorem}[Soundness big step]
@@ -3578,42 +3681,90 @@ Trace decomposition says that mixing these conditional distributions using the a
   \]
 \end{theorem}
 
-\begin{proof}[Proof outline]
-  Apply \Cref{thm:global-convex-domination} with
+\begin{proof}
+  Let
   \[
     v^+=\max(v,0)
     \qquad\text{and}\qquad
     v^-=\max(-v,0).
   \]
-  Since the source expectation is well-defined, at least one of its
-  positive and negative parts is finite. The corresponding inequality
-  shows that the same part is finite for the determinized semantics.
-  Hence its expectation is also well-defined.
+  Both functions are nonnegative, measurable, and convex. Hence,
+  \begin{align}
+    &\int_{Val_\tau}
+      v^+\,
+      \bigsem{\exptrans{e:\tau}:\tau}(dv)
+    \notag
+    \\
+    &\leq
+    \int_{Val_\tau}
+      v^+\,
+      \bigsem{e:\tau}(dv)
+    \tag{\text{by \Cref{thm:global-convex-domination} with $\varphi=v^+$}},
+    \\
+    &\int_{Val_\tau}
+      v^-\,
+      \bigsem{\exptrans{e:\tau}:\tau}(dv)
+    \notag
+    \\
+    &\leq
+    \int_{Val_\tau}
+      v^-\,
+      \bigsem{e:\tau}(dv)
+    \tag{\text{by \Cref{thm:global-convex-domination} with $\varphi=v^-$}}.
+  \end{align}
 
-  Let $\eta_e$ be given by \Cref{thm:trace-decomposition}. Then
+  Since $\mathbb E[\bigsem{e:\tau}]$ is well-defined, at least one of
+  \[
+    \int_{Val_\tau}v^+\,\bigsem{e:\tau}(dv)
+    \qquad\text{and}\qquad
+    \int_{Val_\tau}v^-\,\bigsem{e:\tau}(dv)
+  \]
+  is finite. The corresponding inequality above makes the same integral
+  finite for $\bigsem{\exptrans{e:\tau}:\tau}$. Therefore,
+  \[
+    \mathbb E[\bigsem{\exptrans{e:\tau}:\tau}]
+  \]
+  is well-defined.
+
+  Let $\eta_e$ be given by \Cref{thm:trace-representation}. Finally,
   \begin{align}
     \mathbb E[\bigsem{e:\tau}]
     &=
-    \int
+    \mathbb E\!\left[
+      \eta_e
+      \monbind
+      \lambda\gamma.\,
+      \bigsem{e:\tau}^{\gamma}
+    \right]
+    \tag{\text{by \Cref{thm:trace-representation}}}
+    \\
+    &=
+    \int_{Trace}
       \mathbb E\!\left[
         \bigsem{e:\tau}^{\gamma}
       \right]
       \eta_e(d\gamma)
-    \tag{\text{by trace decomposition}}
+    \tag{\text{by \Cref{lem:extended-expectation-of-bind}}}
     \\
     &=
-    \int
+    \int_{Trace}
       \mathbb E\!\left[
         \bigsem{\exptrans{e:\tau}:\tau}^{\gamma}
       \right]
       \eta_e(d\gamma)
-    \tag{\text{by \Cref{thm:tracewise-soundness}}}
+    \tag{\text{by \Cref{thm:tracewise-big-step-soundness}}}
     \\
     &=
-    \mathbb E[
-      \bigsem{\exptrans{e:\tau}:\tau}
-    ]
-    \tag{\text{by trace decomposition}}.
+    \mathbb E\!\left[
+      \eta_e
+      \monbind
+      \lambda\gamma.\,
+      \bigsem{\exptrans{e:\tau}:\tau}^{\gamma}
+    \right]
+    \tag{\text{by \Cref{lem:extended-expectation-of-bind}}}
+    \\
+    &=
+    \mathbb E[\bigsem{\exptrans{e:\tau}:\tau}]
+    \tag{\text{by \Cref{thm:trace-representation}}}.
   \end{align}
 \end{proof}
-
