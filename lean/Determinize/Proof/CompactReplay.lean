@@ -1,19 +1,20 @@
 import Determinize.Proof.CompactTrace
+import Determinize.Proof.ReplaySemantics
 
 /-!
 # The compact replay as a measurable kernel
 
-`Spec.Traces.outputGivenTraceAt` replays a program along a compact trace of general-affinity draws.
+`Proof.Traces.outputGivenTraceAt` replays a program along a compact trace of general-affinity draws.
 This file packages it as an s-finite kernel in the trace and the expression, mirroring
 `replayKernel` for detailed traces, proves the one-step unfolding lemmas the lockstep
-arguments use, bounds the total mass of `Spec.Traces.outputGivenTrace` by one, and builds the
+arguments use, bounds the total mass of `Proof.Traces.outputGivenTrace` by one, and builds the
 Markov kernel that agrees with it wherever it has mass one.
 -/
 
 namespace Determinize.Proof.StepTraces
 open MeasureTheory ProbabilityTheory Determinize.Spec.Paper Determinize.Proof.StepTraces
 open Determinize.Proof.Paper
-open Determinize.Spec.Traces (outputGivenTraceAt outputGivenTrace)
+open Determinize.Proof.Traces (outputGivenTraceAt outputGivenTrace)
 open scoped ProbabilityTheory ENNReal
 noncomputable section
 open Classical
@@ -337,7 +338,7 @@ theorem ogtAt_continuation_measurable (depth : Nat) {expression : Expr}
   exact (compactReplayKernel depth).kernel.measurable.comp
     (measurable_const.prodMk (continuation_measurable reduction))
 
-/-- The compact replay at every depth, summed: `Spec.Traces.outputGivenTrace` as a kernel. -/
+/-- The compact replay at every depth, summed: `Proof.Traces.outputGivenTrace` as a kernel. -/
 def outputGivenTraceKernel (program : Expr) : Kernel DrawTrace ℝ :=
   Kernel.sum fun depth =>
     (SFiniteKernel.pullback (compactReplayKernel depth) (fun tape : DrawTrace => (tape, program))
@@ -358,15 +359,6 @@ instance outputGivenTraceKernel_sfinite (program : Expr) :
   infer_instance
 
 /-! ### Total mass -/
-
-theorem sample_fiber_mass_le_one {expression : Expr} {site : DistributionAction × Op}
-    {fiber : Measure ℝ} {continuation : ℝ → Expr}
-    (reduction : reduce expression = .sample site fiber continuation) : fiber Set.univ ≤ 1 := by
-  have mass := (MeasurableActionFamily.stepKernel primitiveLaws).mass_le_one expression
-  rw [StepKernel.kernel_eq_stepMeasure, Determinize.Spec.Paper.stepMeasure, reduction,
-    Action.measure] at mass
-  rwa [Measure.map_apply (continuation_measurable reduction) MeasurableSet.univ,
-    Set.preimage_univ] at mass
 
 theorem ogtAt_partial_mass_le_one (n : Nat) (expression : Expr) (tape : DrawTrace) :
     ∑ depth ∈ Finset.range n, outputGivenTraceAt depth expression tape Set.univ ≤ 1 := by
@@ -402,7 +394,7 @@ theorem ogtAt_partial_mass_le_one (n : Nat) (expression : Expr) (tape : DrawTrac
                     outputGivenTraceAt depth (continuation v) tape Set.univ ∂fiber
                   ≤ ∫⁻ _, 1 ∂fiber := lintegral_mono fun v => ih (continuation v) tape
                 _ = fiber Set.univ := by simp
-                _ ≤ 1 := sample_fiber_mass_le_one reduction
+                _ ≤ 1 := reduce_sample_mass_le_one reduction
             · have general : kind = .sample .G := by
                 cases kind with
                 | sample affinity => cases affinity <;> simp_all [siteOp]
@@ -451,7 +443,7 @@ theorem outputGivenTrace_eq_ogtAt (depth : Nat) (program : Expr) (tape : DrawTra
 
 /-! ### A Markov version and a measurability lemma -/
 
-/-- `Spec.Traces.outputGivenTrace` where it has mass one, the Dirac mass at `0` elsewhere. -/
+/-- `Proof.Traces.outputGivenTrace` where it has mass one, the Dirac mass at `0` elsewhere. -/
 def normalizedOutputGivenTrace (program : Expr) : Kernel DrawTrace ℝ :=
   Kernel.piecewise
     (measurableSet_eq_fun ((outputGivenTraceKernel program).measurable_coe MeasurableSet.univ)

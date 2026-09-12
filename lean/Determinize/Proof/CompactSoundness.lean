@@ -5,7 +5,7 @@ import Determinize.Proof.TraceFactorization
 # Compact trace soundness
 
 The detailed step-trace results are transported to compact traces of general-affinity draws, with
-`Spec.Traces.outputGivenTrace` as the fiber: the Markov version `normalizedOutputGivenTrace` factors
+`Proof.Traces.outputGivenTrace` as the fiber: the Markov version `normalizedOutputGivenTrace` factors
 the joint laws, and almost surely it agrees with `outputGivenTrace` on the source, while on the
 target `outputGivenTrace` is the Dirac mass at the target output.
 -/
@@ -85,17 +85,6 @@ theorem correspondence : Determinize.Spec.Traces.correspondenceThm := by
   rw [joint_eq_detailed, Measure.map_map measurable_snd eraseOutput_measurable]
   exact StepTraces.correspondence e
 
-theorem joint_mass_le_one (e : Expr) : traceAndOutputLaw e Set.univ ≤ 1 := by
-  rw [joint_eq_detailed, Measure.map_apply eraseOutput_measurable MeasurableSet.univ]
-  exact StepTraces.joint_mass_le_one e
-
-theorem traceLaw_mass_le_one (e : Expr) : traceLaw e Set.univ ≤ 1 := by
-  rw [traceLaw, Measure.map_apply measurable_fst MeasurableSet.univ]
-  exact joint_mass_le_one e
-
-instance (e : Expr) : IsFiniteMeasure (traceLaw e) :=
-  ⟨(traceLaw_mass_le_one e).trans_lt (by simp)⟩
-
 theorem exact_succ_next (depth : Nat) (e next : Expr) (nv : e.isValue ≠ true)
     (h : reduce e = .next next) : traceAndOutputLawAt (depth+1) e = traceAndOutputLawAt depth next := by
   simp [traceAndOutputLawAt, nv, h]
@@ -104,7 +93,7 @@ theorem exact_succ_next (depth : Nat) (e next : Expr) (nv : e.isValue ≠ true)
 
 /-! ### The compact replay as the fiber -/
 
-/-- `Spec.Traces.outputGivenTrace` normalized to a Markov kernel, as an s-finite kernel. -/
+/-- `Proof.Traces.outputGivenTrace` normalized to a Markov kernel, as an s-finite kernel. -/
 def normalizedKernel (source : Expr) : SFiniteKernel Trace ℝ :=
   ⟨normalizedOutputGivenTrace source, inferInstance⟩
 
@@ -221,7 +210,7 @@ theorem soundnessDataE (source : Expr) (typed : Typed [] source (.float .E))
   let ν := (traceAndOutputLaw source.determinize).map Prod.fst
   let f := kernelMean (normalizedOutputGivenTrace source)
   rcases (compact_normalized_fiberSound source typed tags domainSafe).factorization
-    (joint_mass_le_one source.determinize) with ⟨hm, hf, hs, ht, hmean⟩
+    (traceAndOutputLaw_mass_le_one source.determinize) with ⟨hm, hf, hs, ht, hmean⟩
   have hν : traceLaw source = ν := by
     let : IsFiniteMeasure ν := ⟨hm.trans_lt (by simp)⟩
     rw [traceLaw, hs]
@@ -294,8 +283,19 @@ theorem targetLaw (program : Expr) (typed : Typed [] program (.float .E))
   filter_upwards [sameFiber] with trace same
   simp only [kernelMean, replayMean, same]
 
-/-- The public trace soundness theorem. -/
-theorem soundness : Determinize.Spec.Traces.soundnessThm := by
+/-- Replay factorization and its conditional-mean property, used to identify the conditional laws. -/
+theorem replaySoundness :
+  ∀ (program : Expr),
+    Typed [] program (.float .E) → program.sourceForm = true →
+    PrimitiveDomainSafe program →
+      PrimitiveDomainSafe program.determinize ∧
+      traceAndOutputLaw program = traceThenOutput (traceLaw program) (outputGivenTrace program) ∧
+      traceAndOutputLaw program.determinize =
+        traceThenOutput (traceLaw program) (outputGivenTrace program.determinize) ∧
+      ∀ᵐ trace ∂traceLaw program,
+        Integrable id (outputGivenTrace program trace) ∧
+        outputGivenTrace program.determinize trace =
+          Measure.dirac (replayMean program trace) := by
   intro program typed sourceForm safe
   let f := kernelMean (normalizedOutputGivenTrace program)
   obtain ⟨targetSafe, factor, massAe, diracAe⟩ :=

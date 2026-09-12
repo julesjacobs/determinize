@@ -1,4 +1,5 @@
 import Determinize.Proof.Soundness
+import Determinize.Proof.ConditionalLaw
 import Mathlib.Analysis.Convex.Continuous
 import Mathlib.Analysis.Convex.Integral
 import Mathlib.Data.EReal.Operations
@@ -440,16 +441,19 @@ namespace Determinize.Proof.Traces
 
 open MeasureTheory ProbabilityTheory Determinize.Spec.Traces
 
-/-- The law of total variance along traces, with `Spec.Traces.outputGivenTrace` as the fiber. -/
+/-- The law of total variance along traces, stated with regular conditional distributions. -/
 theorem varianceSoundness : Determinize.Spec.Traces.varianceThm := by
   intro program typed sourceForm sourceSafe memLp
+  have replayAe := outputGivenTrace_ae_eq_condKernel program
+    (replaySoundness program typed sourceForm sourceSafe).2.1 rfl
   have sourceSafe := (Determinize.Proof.Paper.Typing.primitiveDomainSafe_iff_doesNotGetStuck typed).1 sourceSafe
   obtain ⟨_, factor, massAe, _⟩ := soundnessData .E program typed sourceForm
     sourceSafe
   obtain ⟨integrable, decomposition⟩ := factor.variance_decomposition memLp
   have congr : (fun trace => variance id (StepTraces.normalizedOutputGivenTrace program trace))
-      =ᵐ[traceLaw program] fun trace => variance id (outputGivenTrace program trace) :=
-    massAe.mono fun trace h => by simp only [h]
+      =ᵐ[traceLaw program] fun trace => variance id ((traceAndOutputLaw program).condKernel trace) := by
+    filter_upwards [massAe, replayAe] with trace mass replay
+    rw [← mass, replay]
   exact ⟨integrable.congr congr, by rw [decomposition, integral_congr_ae congr]⟩
 
 end Determinize.Proof.Traces

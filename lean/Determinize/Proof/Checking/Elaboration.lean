@@ -17,26 +17,22 @@ theorem interpret_sourceForm (e : Core) :
 theorem certified_alignment {input} (p : Certified input) :
     input.matches p.source = true := p.aligned
 
-theorem certified_trace_soundness {input} (p : Certified input)
+theorem certified_trace_conditional_law {input} (p : Certified input)
     (m : Affinity) (hTy : p.ty = .float m)
     (safe : PrimitiveDomainSafe (interpret p.source)) :
     PrimitiveDomainSafe (interpret p.source.determinize) ∧
-      traceAndOutputLaw (interpret p.source) =
-        traceThenOutput (traceLaw (interpret p.source)) (outputGivenTrace (interpret p.source)) ∧
-      traceAndOutputLaw (interpret p.source.determinize) =
-        traceThenOutput (traceLaw (interpret p.source))
-          (outputGivenTrace (interpret p.source.determinize)) ∧
+      traceLaw (interpret p.source.determinize) = traceLaw (interpret p.source) ∧
       ∀ᵐ trace ∂traceLaw (interpret p.source),
-        Integrable id (outputGivenTrace (interpret p.source) trace) ∧
-        outputGivenTrace (interpret p.source.determinize) trace =
-          Measure.dirac (∫ value : ℝ, value ∂outputGivenTrace (interpret p.source) trace) := by
+        Integrable id ((traceAndOutputLaw (interpret p.source)).condKernel trace) ∧
+        (traceAndOutputLaw (interpret p.source.determinize)).condKernel trace =
+          Measure.dirac (∫ value : ℝ, value ∂(traceAndOutputLaw (interpret p.source)).condKernel trace) := by
   rw [interpret_determinize]
   have typed : Typed [] (interpret p.source) (.float .E) := by
     have h : Typed [] (interpret p.source) (.float m) := hTy ▸ p.typed
     cases m with
     | E => exact h
     | G => exact .sub h .general
-  exact Determinize.Theorems.traceSoundness (interpret p.source)
+  exact Determinize.Theorems.traceConditionalLaw (interpret p.source)
     typed ((interpret_sourceForm _).trans p.sourceOnly) safe
 
 theorem certified_expectation {input} (p : Certified input)

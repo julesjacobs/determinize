@@ -91,6 +91,6 @@ def checking : IO Unit := do
   assert (invalidDomainProgram.checked.ty == floatE) "typing must not claim to establish domain safety"
 
 #print axioms Determinize.Proof.Checking.check_sound
-#print axioms Determinize.Proof.Checking.certified_trace_soundness
+#print axioms Determinize.Proof.Checking.certified_trace_conditional_law
 
 end Determinize.Tests

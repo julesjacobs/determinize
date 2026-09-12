@@ -14,15 +14,12 @@ def certificateText (text : String) : Except String String := do
     | .float m =>
       "\ntheorem traceGuarantee (safe : PrimitiveDomainSafe (interpret checked.source)) :\n" ++
       "    PrimitiveDomainSafe (interpret target) ∧\n" ++
-      "      traceAndOutputLaw (interpret checked.source) =\n" ++
-      "        traceThenOutput (traceLaw (interpret checked.source)) (outputGivenTrace (interpret checked.source)) ∧\n" ++
-      "      traceAndOutputLaw (interpret target) =\n" ++
-      "        traceThenOutput (traceLaw (interpret checked.source)) (outputGivenTrace (interpret target)) ∧\n" ++
+      "      traceLaw (interpret target) = traceLaw (interpret checked.source) ∧\n" ++
       "      ∀ᵐ trace ∂traceLaw (interpret checked.source),\n" ++
-      "        MeasureTheory.Integrable id (outputGivenTrace (interpret checked.source) trace) ∧\n" ++
-      "        outputGivenTrace (interpret target) trace =\n" ++
-      "          MeasureTheory.Measure.dirac (∫ value : ℝ, value ∂outputGivenTrace (interpret checked.source) trace) :=\n" ++
-      s!"  Determinize.Proof.Checking.certified_trace_soundness checked .{prettyAffinity m} (by decide +kernel) safe\n"
+      "        MeasureTheory.Integrable id ((traceAndOutputLaw (interpret checked.source)).condKernel trace) ∧\n" ++
+      "        (traceAndOutputLaw (interpret target)).condKernel trace =\n" ++
+      "          MeasureTheory.Measure.dirac (∫ value : ℝ, value ∂(traceAndOutputLaw (interpret checked.source)).condKernel trace) :=\n" ++
+      s!"  Determinize.Proof.Checking.certified_trace_conditional_law checked .{prettyAffinity m} (by decide +kernel) safe\n"
     | _ => ""
   return "import Determinize.Proof.Checking.Elaboration\n\n" ++
     "open Determinize.Checking Determinize.Spec.Paper Determinize.Spec.Traces\n\n" ++
