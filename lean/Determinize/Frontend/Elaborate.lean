@@ -74,9 +74,10 @@ private partial def lower (env : List String) : Surface → Except String Input
       | "+" => return binary .add a b
       | "-" => return binary .add a (unary .neg b)
       | "*" =>
-        match b.expression with
-        | .real _ => return binary .mul b a
-        | _ => return binary .mul a b
+        match a.expression, b.expression with
+        | .real _, _ => return binary .mul a b
+        | _, .real _ => return binary .mul b a
+        | _, _ => return binary .mul a b
       | "/" => return binary .div a b
       | "<" => return binary .lt a b
       | "<=" => return ⟨.letE a.expression (.letE

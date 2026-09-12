@@ -36,4 +36,12 @@ def parsing : IO Unit := do
     assert (eraseAnnotations p.checked.source == eraseAnnotations q.checked.source)
       s!"pretty-printed source changed program: {text} -> {pretty p.checked.source}"
 
+  for text in ["2 * 3", "uniform[E](0,1) * 3", "(2 * 3) * (uniform[G](0,1) * 4)"] do
+    let mut p ← IO.ofExcept (compile text)
+    for _ in [:3] do
+      let q ← IO.ofExcept (compile (pretty p.checked.source))
+      assert (p.checked.source == q.checked.source)
+        s!"multiplication roundtrip changed program: {text}"
+      p := q
+
 end Determinize.Tests
