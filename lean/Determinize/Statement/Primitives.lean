@@ -25,7 +25,9 @@ open MeasureTheory ProbabilityTheory
 noncomputable section
 
 /-- The primitive names; a trace records which primitive a general-mode draw came from.
-`discrete n` carries its number of weights. -/
+`discrete n` carries its number of weights: no static arity check exists, but `reduce` stamps
+`weights.length` into the site name, and replay compares site names (`Traces.outputGivenTraceAt`),
+so a trace entry recorded by a `discrete` of another arity never fits. -/
 inductive Op where
   | uniform
   | gaussian

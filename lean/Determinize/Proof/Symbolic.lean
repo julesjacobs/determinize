@@ -34,8 +34,8 @@ inductive AffineExpr (sampleCount : Nat) where
   | pair (left right : AffineExpr sampleCount)
   | fst (pair : AffineExpr sampleCount)
   | snd (pair : AffineExpr sampleCount)
-  | inl (value : AffineExpr sampleCount)
-  | inr (value : AffineExpr sampleCount)
+  | inl (operand : AffineExpr sampleCount)
+  | inr (operand : AffineExpr sampleCount)
   | matchSum (scrutinee left right : AffineExpr sampleCount)
   | nil | cons (head tail : AffineExpr sampleCount)
   | matchList (scrutinee nilCase consCase : AffineExpr sampleCount)
@@ -312,10 +312,10 @@ inductive WellTyped : List Ty → AffineExpr sampleCount → Ty → Prop
       WellTyped context (.fst pairValue) leftTy
   | snd : WellTyped context pairValue (.prod leftTy rightTy) →
       WellTyped context (.snd pairValue) rightTy
-  | inl : WellTyped context value leftTy →
-      WellTyped context (.inl value) (.sum leftTy rightTy)
-  | inr : WellTyped context value rightTy →
-      WellTyped context (.inr value) (.sum leftTy rightTy)
+  | inl : WellTyped context operand leftTy →
+      WellTyped context (.inl operand) (.sum leftTy rightTy)
+  | inr : WellTyped context operand rightTy →
+      WellTyped context (.inr operand) (.sum leftTy rightTy)
   | matchSum : WellTyped context scrutinee (.sum leftTy rightTy) →
       WellTyped (leftTy :: context) left result → WellTyped (rightTy :: context) right result →
       WellTyped context (.matchSum scrutinee left right) result
@@ -332,12 +332,12 @@ inductive WellTyped : List Ty → AffineExpr sampleCount → Ty → Prop
   | letE : WellTyped context value valueTy → WellTyped (valueTy :: context) body result →
       WellTyped context (.letE value body) result
   | observe : WellTyped context condition .bool → WellTyped context (.observe condition) .unit
-  | promote : WellTyped context value (.float .G) →
-      WellTyped context (.promote value) (.float .E)
-  | negE : WellTyped context value (.float .E) →
-      WellTyped context (.neg value) (.float .E)
-  | negG : WellTyped context value (.float .G) →
-      WellTyped context (.neg value) (.float .G)
+  | promote : WellTyped context operand (.float .G) →
+      WellTyped context (.promote operand) (.float .E)
+  | negE : WellTyped context operand (.float .E) →
+      WellTyped context (.neg operand) (.float .E)
+  | negG : WellTyped context operand (.float .G) →
+      WellTyped context (.neg operand) (.float .G)
   | addE : WellTyped context left (.float .E) → WellTyped context right (.float .E) →
       WellTyped context (.add left right) (.float .E)
   | addG : WellTyped context left (.float .G) → WellTyped context right (.float .G) →
@@ -384,8 +384,8 @@ theorem WellTyped.realize_typed {sampleCount : Nat} {expression : AffineExpr sam
   case pair left right => exact Determinize.Statement.Paper.Typed.pair left right
   case fst pairValue => exact Determinize.Statement.Paper.Typed.fst pairValue
   case snd pairValue => exact Determinize.Statement.Paper.Typed.snd pairValue
-  case inl value => exact Determinize.Statement.Paper.Typed.inl value
-  case inr value => exact Determinize.Statement.Paper.Typed.inr value
+  case inl operand => exact Determinize.Statement.Paper.Typed.inl operand
+  case inr operand => exact Determinize.Statement.Paper.Typed.inr operand
   case matchSum scrutinee left right => exact Determinize.Statement.Paper.Typed.matchSum scrutinee left right
   case nil => exact Determinize.Statement.Paper.Typed.nil
   case cons head tail => exact Determinize.Statement.Paper.Typed.cons head tail
@@ -395,9 +395,9 @@ theorem WellTyped.realize_typed {sampleCount : Nat} {expression : AffineExpr sam
     exact Determinize.Statement.Paper.Typed.ite condition thenBranch elseBranch
   case letE value body => exact Determinize.Statement.Paper.Typed.letE value body
   case observe condition => exact Determinize.Statement.Paper.Typed.observe condition
-  case promote value => exact Determinize.Statement.Paper.Typed.promote value
-  case negE value => exact Determinize.Statement.Paper.Typed.neg value
-  case negG value => exact Determinize.Statement.Paper.Typed.neg value
+  case promote operand => exact Determinize.Statement.Paper.Typed.promote operand
+  case negE operand => exact Determinize.Statement.Paper.Typed.neg operand
+  case negG operand => exact Determinize.Statement.Paper.Typed.neg operand
   case addE left right => exact Determinize.Statement.Paper.Typed.add left right
   case addG left right => exact Determinize.Statement.Paper.Typed.add left right
   case mulGE left right => exact Determinize.Statement.Paper.Typed.mul left right
