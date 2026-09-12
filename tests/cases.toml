@@ -1,41 +1,41 @@
 version = 1
 
 [[exclude]]
-file = "examples/loops/example.det"
+file = "examples/loops/walk-sketches.det"
 reason = "Informal sketches containing multiple programs and unsupported syntax."
 
 [[case]]
-file = "tests/execution/legacy/apply.det"
+file = "tests/execution/apply.det"
 suite = "execution"
 outcome = "accept"
 source = { number = 5 }
 target = { number = 5 }
 
 [[case]]
-file = "tests/execution/legacy/arith.det"
+file = "tests/execution/arith.det"
 suite = "execution"
 outcome = "accept"
 source = { number = 7 }
 target = { number = 7 }
 
 [[case]]
-file = "tests/typing/accept/legacy/beta.det"
+file = "tests/typing/accept/beta.det"
 suite = "typing"
 outcome = "accept"
 
 [[case]]
-file = "tests/execution/legacy/case-gauss.det"
+file = "tests/execution/case-gauss.det"
 suite = "execution"
 outcome = "accept"
 target = { number = 0 }
 
 [[case]]
-file = "tests/typing/accept/legacy/exponential.det"
+file = "tests/typing/accept/exponential.det"
 suite = "typing"
 outcome = "accept"
 
 [[case]]
-file = "tests/execution/legacy/factorial.det"
+file = "tests/execution/factorial.det"
 suite = "execution"
 outcome = "accept"
 kernel = true
@@ -43,37 +43,37 @@ source = { number = 24 }
 target = { number = 24 }
 
 [[case]]
-file = "tests/execution/legacy/foldr.det"
+file = "tests/execution/foldr.det"
 suite = "execution"
 outcome = "accept"
 kernel = true
 target = { number = 4.5 }
 
 [[case]]
-file = "tests/typing/accept/legacy/funny.det"
+file = "tests/typing/accept/funny.det"
 suite = "typing"
 outcome = "accept"
 
 [[case]]
-file = "tests/execution/legacy/gamma.det"
+file = "tests/execution/gamma.det"
 suite = "execution"
 outcome = "accept"
 target = { number = 1.0625 }
 
 [[case]]
-file = "tests/typing/accept/legacy/gauss.det"
+file = "tests/typing/accept/gauss.det"
 suite = "typing"
 outcome = "accept"
 
 [[case]]
-file = "tests/execution/legacy/if.det"
+file = "tests/execution/if.det"
 suite = "execution"
 outcome = "accept"
 source = { number = 1 }
 target = { number = 1 }
 
 [[case]]
-file = "tests/execution/legacy/lambda.det"
+file = "tests/execution/lambda.det"
 suite = "execution"
 outcome = "accept"
 kernel = true
@@ -81,65 +81,65 @@ source = { number = 6 }
 target = { number = 6 }
 
 [[case]]
-file = "tests/execution/legacy/let.det"
+file = "tests/execution/let.det"
 suite = "execution"
 outcome = "accept"
 source = { number = 3 }
 target = { number = 3 }
 
 [[case]]
-file = "tests/execution/legacy/lists.det"
+file = "tests/execution/lists.det"
 suite = "execution"
 outcome = "accept"
 source = { number = 6 }
 target = { number = 6 }
 
 [[case]]
-file = "tests/typing/accept/legacy/mult.det"
+file = "tests/typing/accept/mult.det"
 suite = "typing"
 outcome = "accept"
 
 [[case]]
-file = "tests/typing/accept/legacy/observe.det"
+file = "tests/typing/accept/observe.det"
 suite = "typing"
 outcome = "accept"
 kernel = true
 
 [[case]]
-file = "tests/execution/legacy/pairs.det"
+file = "tests/execution/pairs.det"
 suite = "execution"
 outcome = "accept"
 source = { number = 3 }
 target = { number = 3 }
 
 [[case]]
-file = "tests/execution/legacy/partial.det"
+file = "tests/execution/partial.det"
 suite = "execution"
 outcome = "accept"
 source = { number = 10 }
 target = { number = 10 }
 
 [[case]]
-file = "tests/execution/legacy/rec.det"
+file = "tests/execution/rec.det"
 suite = "execution"
 outcome = "accept"
 source = { number = 3 }
 target = { number = 3 }
 
 [[case]]
-file = "tests/typing/accept/legacy/retry.det"
+file = "tests/typing/accept/retry.det"
 suite = "typing"
 outcome = "accept"
 
 [[case]]
-file = "tests/execution/legacy/sums.det"
+file = "tests/execution/sums.det"
 suite = "execution"
 outcome = "accept"
 source = { number = 4 }
 target = { number = 4 }
 
 [[case]]
-file = "tests/execution/legacy/uniform.det"
+file = "tests/execution/uniform.det"
 suite = "execution"
 outcome = "accept"
 target = { number = 2.5 }
@@ -150,7 +150,7 @@ suite = "typing"
 outcome = "accept"
 
 [[case]]
-file = "examples/ex.det"
+file = "examples/loops/bounded-iteration.det"
 suite = "typing"
 outcome = "accept"
 
@@ -185,57 +185,57 @@ suite = "typing"
 outcome = "accept"
 
 [[case]]
-file = "examples/paper/ex1.det"
+file = "examples/paper/nested-uniform-parameters.det"
 suite = "typing"
 outcome = "accept"
 
 [[case]]
-file = "examples/paper/ex2.det"
+file = "examples/paper/squared-nested-uniform.det"
 suite = "typing"
 outcome = "accept"
 
 [[case]]
-file = "examples/paper/ex3.det"
+file = "examples/paper/sum-of-squares.det"
 suite = "typing"
 outcome = "accept"
 
 [[case]]
-file = "examples/paper/ex4.det"
+file = "examples/paper/gamma-affine-shape.det"
 suite = "typing"
 outcome = "accept"
 
 [[case]]
-file = "examples/paper/ex5.det"
+file = "examples/paper/gamma-product-shape.det"
 suite = "typing"
 outcome = "accept"
 
 [[case]]
-file = "examples/paper/ex6.det"
+file = "examples/paper/beta-random-shape.det"
 suite = "typing"
 outcome = "accept"
 
 [[case]]
-file = "examples/symbolic/symbolic_example.det"
+file = "examples/symbolic/nested-uniform.det"
 suite = "typing"
 outcome = "accept"
 
 [[case]]
-file = "examples/symbolic/symbolic_mixed.det"
+file = "examples/symbolic/mixed-affinities.det"
 suite = "typing"
 outcome = "accept"
 
 [[case]]
-file = "examples/symbolic/symbolic_pairs.det"
+file = "examples/symbolic/pair-sum.det"
 suite = "typing"
 outcome = "accept"
 
 [[case]]
-file = "examples/symbolic/symbolic_rec_list_sum.det"
+file = "examples/symbolic/recursion-and-list.det"
 suite = "typing"
 outcome = "accept"
 
 [[case]]
-file = "examples/symbolic/symbolic_sum_distributions.det"
+file = "examples/symbolic/distribution-sum.det"
 suite = "typing"
 outcome = "accept"
 
@@ -798,25 +798,25 @@ source = { moments = { mean = 1.75, variance = 0.3819444444444444, mean_toleranc
 target = { moments = { mean = 1.75, variance = 0.1875, mean_tolerance = 0.021433035249352805, variance_tolerance = 0.008301497678849015 } }
 
 [[case]]
-file = "tests/execution/legacy/beta-shape.det"
+file = "tests/execution/beta-shape.det"
 suite = "typing"
 outcome = "accept"
 kernel = true
 
 [[case]]
-file = "tests/execution/legacy/div.det"
+file = "tests/execution/div.det"
 suite = "typing"
 outcome = "accept"
 kernel = true
 
 [[case]]
-file = "tests/execution/legacy/flip-prob.det"
+file = "tests/execution/flip-prob.det"
 suite = "typing"
 outcome = "accept"
 kernel = true
 
 [[case]]
-file = "tests/execution/legacy/gauss-variance.det"
+file = "tests/execution/gauss-variance.det"
 suite = "typing"
 outcome = "accept"
 kernel = true

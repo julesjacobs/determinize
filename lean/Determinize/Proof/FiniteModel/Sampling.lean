@@ -1,5 +1,5 @@
 import Determinize.Proof.FiniteModel.Contexts
-import Determinize.Proof.DiscreteRational
+import Determinize.Proof.Primitives.DiscreteRational
 
 namespace Determinize.Proof.FiniteModel
 open Spec.Paper Spec.FiniteModel Determinize.Finite MeasureTheory

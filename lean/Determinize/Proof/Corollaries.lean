@@ -1,5 +1,5 @@
 import Determinize.Proof.Soundness
-import Determinize.Proof.ConditionalLaw
+import Determinize.Proof.Traces.ConditionalLaw
 import Mathlib.Analysis.Convex.Continuous
 import Mathlib.Analysis.Convex.Integral
 import Mathlib.Data.EReal.Operations

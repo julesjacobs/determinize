@@ -24,7 +24,7 @@ case "$file" in
     [[ -n "$lint" ]] && emit_context PostToolUse "chktex on $file (style hints, not errors; fix the ones that are real):"$'\n'"$lint"
     ;;
   lean/*.lean|lean/*/*.lean|lean/*/*/*.lean)
-    out="$("$ROOT/.claude/scripts/check.sh" --quiet lean 2>&1)" || {
+    out="$("$ROOT/check.sh" --quiet lean 2>&1)" || {
       echo "lake build failed after editing $file:" >&2
       tail -n 40 <<<"$out" >&2
       exit 2

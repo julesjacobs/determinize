@@ -1,5 +1,5 @@
 import Determinize.Spec.Traces.Semantics
-import Determinize.Proof.TraceMass
+import Determinize.Proof.Traces.Mass
 import Mathlib.Probability.Kernel.Disintegration.StandardBorel
 import Mathlib.MeasureTheory.Integral.Bochner.Basic
 import Mathlib.Probability.Moments.Variance

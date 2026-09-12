@@ -30,16 +30,21 @@ shell; `.#sim` and `.#tex` select individual toolchains.
 From the repository root:
 
 ```sh
-./run.sh tests/execution/legacy/arith.det
+./run.sh tests/execution/arith.det
 ./run.sh --samples 20000 --seed 1 tests/statistical/gaussian.det
 ./run.sh --result /tmp/model --subject source tests/statistical/discrete.det
 (cd lean && lake env lean /tmp/model.result.lean)
-./det.sh --all
+./test.sh --all
+./check.sh --all
 ```
 
 `run.sh` builds and invokes the Lean CLI; arguments and relative paths are passed
-through. `det.sh` runs the full Lean test entry point, including the shared corpus
+through. `test.sh` runs the full Lean test entry point, including the shared corpus
 and independent certificates. It accepts `--all` and `--statistical`.
+`check.sh --all` additionally checks theorem axioms, simulator tests, bundle freshness,
+and the paper build. Select individual areas with `./check.sh lean tex`, or use
+`./check.sh --changed` for areas affected by uncommitted changes. The scripts use
+tools on `PATH` first; Nix is optional.
 
 An E draw is replaced by its distribution's mean; a G draw remains stochastic.
 Finite-model certificates prove the selected core program's integrability and
@@ -55,7 +60,7 @@ uv venv --python 3.12 /tmp/determinize-storm
 uv pip install --python /tmp/determinize-storm/bin/python -r tools/storm-requirements.txt
 STORM_PYTHON=/tmp/determinize-storm/bin/python ./run.sh --storm \
   tests/statistical/discrete.det --prefix /tmp/model --subject source
-STORM_PYTHON=/tmp/determinize-storm/bin/python ./det.sh --all
+STORM_PYTHON=/tmp/determinize-storm/bin/python ./test.sh --all
 ```
 
 Storm uses exact rational matrices. The wrapper checks `.result.lean` with Lean's

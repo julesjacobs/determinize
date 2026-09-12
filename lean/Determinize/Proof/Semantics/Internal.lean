@@ -1,0 +1,188 @@
+import Determinize.Proof.Primitives.Laws
+import Determinize.Proof.Symbolic.Environment
+import Determinize.Spec.FiniteModel.Safety
+import Determinize.Proof.Semantics.ExpressionSpace
+
+/-!
+# Semantic objects used by the proof
+
+This module defines the measurable skeleton representation, symbolic sample
+histories, certified one-step kernel, and exact-depth output semantics. The operational
+reducer and primitive-domain safety are reviewer-facing definitions in `Spec.Semantics`.
+-/
+
+namespace Determinize.Spec.Paper
+
+open MeasureTheory ProbabilityTheory
+open scoped ENNReal ProbabilityTheory
+
+/-- Interpret one reduction action as a measure of successor expressions. -/
+noncomputable def Action.measure : Action → Measure Expr
+  | .next expression => Measure.dirac expression
+  | .sample _ fiber continuation => fiber.map continuation
+  | .stuck => 0
+
+/-- The measurable transition used by the proof's expression kernels. -/
+noncomputable def stepMeasure (expression : Expr) : Measure Expr :=
+  (reduce expression).measure
+
+@[match_pattern] abbrev Skeleton.real : Skeleton := Expr.real ()
+
+namespace Expr
+
+def realArity {Literal : Type} : Expr Literal → Nat
+  | .real _ => 1
+  | .lam x | .fix x | .fst x | .snd x | .inl x
+  | .inr x | .neg x => x.realArity
+  | .app l r | .pair l r | .cons l r | .add l r | .mul l r
+  | .div l r | .lt l r => l.realArity + r.realArity
+  | .matchSum x l r | .ite x l r => x.realArity + l.realArity + r.realArity
+  | .matchList x n c => x.realArity + n.realArity + c.realArity
+  | .letE x b => x.realArity + b.realArity
+  | .uniform _ l r | .gaussian _ l r | .beta _ l r | .gamma _ l r =>
+      l.realArity + r.realArity
+  | .poisson _ x | .bernoulli _ x | .exponential _ x | .discrete _ x => x.realArity
+  | _ => 0
+
+end Expr
+
+end Determinize.Spec.Paper
+
+namespace Determinize.Proof.Paper
+
+open MeasureTheory ProbabilityTheory
+open Determinize.Spec.Paper
+open scoped ENNReal ProbabilityTheory
+
+namespace Symbolic
+
+/-- An affine expression in the ordered E samples. -/
+abbrev Affine (sampleCount : Nat) := ℝ × (Fin sampleCount → ℝ)
+
+def Affine.eval (expression : Affine sampleCount) (environment : Env sampleCount) : ℝ :=
+  expression.1 + ∑ i, expression.2 i * environment i
+
+namespace Affine
+
+/-! The linear structure of affine expressions: negation, sum and scaling are pointwise; the
+newest sample is prepended with `Fin.cons` and dropped with `Fin.tail`. -/
+
+def neg (expression : Affine n) : Affine n :=
+  (-expression.1, fun index => -expression.2 index)
+
+def add (left right : Affine n) : Affine n :=
+  (left.1 + right.1, fun index => left.2 index + right.2 index)
+
+def smul (scalar : ℝ) (expression : Affine n) : Affine n :=
+  (scalar * expression.1, fun index => scalar * expression.2 index)
+
+/-- The same expression over one more sample, which it does not use. -/
+def weaken (expression : Affine n) : Affine (n + 1) :=
+  (expression.1, Fin.cons 0 expression.2)
+
+/-- The newest sample itself. -/
+def fresh (n : Nat) : Affine (n + 1) :=
+  (0, Fin.cons 1 0)
+
+/-- Drop the coefficient of the newest sample. -/
+def tail (expression : Affine (n + 1)) : Affine n :=
+  (expression.1, Fin.tail expression.2)
+
+@[simp] theorem eval_neg (expression : Affine n) (environment : Env n) :
+    (neg expression).eval environment = -expression.eval environment := by
+  simp only [neg, eval, neg_mul, Finset.sum_neg_distrib]
+  ring
+
+@[simp] theorem eval_add (left right : Affine n) (environment : Env n) :
+    (add left right).eval environment = left.eval environment + right.eval environment := by
+  simp only [add, eval, add_mul, Finset.sum_add_distrib]
+  ring
+
+theorem eval_smul (scalar : ℝ) (expression : Affine n) (environment : Env n) :
+    (smul scalar expression).eval environment = scalar * expression.eval environment := by
+  simp only [smul, eval, mul_assoc, ← Finset.mul_sum]
+  ring
+
+@[simp] theorem eval_weaken (expression : Affine n) (head : ℝ) (environment : Env n) :
+    (weaken expression).eval (Env.cons head environment) = expression.eval environment := by
+  simp only [weaken, eval, Fin.sum_univ_succ, Env.cons_zero, Env.cons_succ, Fin.cons_zero,
+    Fin.cons_succ, zero_mul, zero_add]
+
+@[simp] theorem eval_fresh (n : Nat) (head : ℝ) (environment : Env n) :
+    (fresh n).eval (Env.cons head environment) = head := by
+  simp only [fresh, eval, Fin.sum_univ_succ, Env.cons_zero, Env.cons_succ, Fin.cons_zero,
+    Fin.cons_succ, Pi.zero_apply, one_mul, zero_mul, Finset.sum_const_zero, add_zero, zero_add]
+
+end Affine
+
+/-- Ordered symbolic E-sample environment from the paper. -/
+inductive SampleEnv (laws : Determinize.Proof.Paper.PrimitiveLaws) : Nat → Type where
+  | nil : SampleEnv laws 0
+  | snoc (history : SampleEnv laws n) (op : Determinize.Spec.Paper.Op)
+      (affineArgs : Fin (Determinize.Spec.Paper.affineArity op) → Affine n)
+      (generalArgs : Fin (Determinize.Spec.Paper.generalArity op) → ℝ) : SampleEnv laws (n + 1)
+
+namespace SampleEnv
+
+noncomputable def actualMeasure (laws : Determinize.Proof.Paper.PrimitiveLaws) :
+    {n : Nat} → SampleEnv laws n → Measure (Env n)
+  | 0, .nil => Measure.dirac Env.empty
+  | _ + 1, .snoc history op affineArgs generalArgs =>
+      (actualMeasure laws history).bind fun environment =>
+        (laws.kernel op
+          (fun i => (affineArgs i).eval environment, generalArgs)).map
+            (fun value => Env.cons value environment)
+
+/-- Every recorded primitive call is in-domain almost surely under its prefix law. -/
+noncomputable def DomainSafe (laws : Determinize.Proof.Paper.PrimitiveLaws) :
+    {n : Nat} → SampleEnv laws n → Prop
+  | 0, .nil => True
+  | _ + 1, .snoc history op affineArgs generalArgs =>
+      DomainSafe laws history ∧
+        ∀ᵐ environment ∂actualMeasure laws history,
+          Determinize.Spec.Paper.domain op (fun i => (affineArgs i).eval environment, generalArgs)
+
+noncomputable def meanEnvironment (laws : Determinize.Proof.Paper.PrimitiveLaws) :
+    {n : Nat} → SampleEnv laws n → Env n
+  | 0, .nil => Env.empty
+  | _ + 1, .snoc history op affineArgs generalArgs =>
+      let environment := meanEnvironment laws history
+      let params := (fun i => (affineArgs i).eval environment, generalArgs)
+      Env.cons (Determinize.Spec.Paper.meanValue op params) environment
+
+end SampleEnv
+
+end Symbolic
+
+/-- Measurability and subprobability laws for the specified pointwise reduction. -/
+structure StepKernel where
+  kernel : Kernel Expr Expr
+  kernel_eq_stepMeasure : ∀ expression, kernel expression = stepMeasure expression
+  kernel_sfinite : IsSFiniteKernel kernel
+  mass_le_one : ∀ expression, kernel expression Set.univ ≤ 1
+  sample_continuation_measurable : ∀ expression {site} fiber continuation,
+    reduce expression = .sample site fiber continuation → Measurable continuation
+  terminal_measurable : MeasurableSet terminalFloatSet
+  terminal_value_measurable : Measurable terminalFloatValue
+
+noncomputable def nStepMeasure (stepKernel : StepKernel) : Nat → Expr → Measure Expr
+  | 0, expression => Measure.dirac expression
+  | fuel + 1, expression => stepKernel.kernel ∘ₘ nStepMeasure stepKernel fuel expression
+
+/-- Output that terminates for the first time at exactly this reduction depth. -/
+noncomputable def exactOutputMeasure (stepKernel : StepKernel) :
+    Nat → Expr → Measure ℝ
+  | 0, .real value => Measure.dirac value
+  | 0, _ => 0
+  | fuel + 1, expression =>
+      if expression.isValue then 0
+      else (stepKernel.kernel expression).bind (exactOutputMeasure stepKernel fuel)
+
+noncomputable def cumulativeOutputMeasure (stepKernel : StepKernel)
+    (fuel : Nat) (program : Expr) : Measure ℝ :=
+  ((nStepMeasure stepKernel fuel program).restrict terminalFloatSet).map terminalFloatValue
+
+/-- The paper's big-step meaning is the pointwise limit of absorbing value mass. -/
+noncomputable def bigStepMeasure (stepKernel : StepKernel)
+    (program : Expr) : Measure ℝ :=
+  ⨆ fuel, cumulativeOutputMeasure stepKernel fuel program

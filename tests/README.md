@@ -6,9 +6,9 @@ authoritative test manifest; Lean runs the programs and checks their results.
 From the repository root:
 
 ```sh
-./lean/test.sh                # Unit tests, corpus fast checks, kernel certificates
-./lean/test.sh --statistical  # Unit tests and sampled source/target moment checks
-./lean/test.sh --all          # Both suites and kernel certificates
+./test.sh                # Unit tests, corpus fast checks, kernel certificates
+./test.sh --statistical  # Unit tests and sampled source/target moment checks
+./test.sh --all          # Both suites and kernel certificates
 ```
 
 Requirements: the repository's Lean/Lake toolchain and Python 3.11+ (standard
@@ -26,9 +26,7 @@ created outside the repository and deleted automatically.
 - `../examples/`: reader-facing examples, registered in the same manifest.
 - `../lean/Tests/`: test runner and internal parser/checker/runtime unit tests.
 
-`legacy/` contains the original `det/` programs, moved without changing their
-contents. Former Lean fixtures are in `typing/accept/`. Existing examples remain
-in place. `examples/loops/example.det` is explicitly excluded because it contains
+`examples/loops/walk-sketches.det` is explicitly excluded because it contains
 informal sketches rather than one executable program.
 
 Every `.det` under `tests/` and `examples/` must occur exactly once in the manifest
@@ -61,7 +59,7 @@ A rejection case uses `outcome = "reject"` and `stage = "parse"`, `"elaboration"
 checks an exported certificate using `decide +kernel` in the fast/full suite.
 
 Compilation-only cases deliberately make no claim about termination or parameter
-domains. For example, `typing/accept/legacy/funny.det` can choose invalid distribution
+domains. For example, `typing/accept/funny.det` can choose invalid distribution
 parameters; acceptance must not be interpreted as successful execution.
 
 ## Statistical ground truth
@@ -132,7 +130,7 @@ certificates. `test_results.py` checks exact expected rewards, malformed certifi
 nonabsorption, resource limits, and failure reports. Set `STORM_PYTHON` to an
 interpreter with `tools/storm-requirements.txt` installed for real Storm comparisons.
 
-`./det.sh` delegates to the Lean suite. The corpus uses analytical expectations
+`./test.sh` delegates to the Lean suite. The corpus uses analytical expectations
 and requires no OCaml toolchain. See the [Lean documentation](../lean/README.md)
 for the current language and numerical runtime limits.
 

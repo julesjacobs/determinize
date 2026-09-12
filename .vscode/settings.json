@@ -1,19 +1,16 @@
 {
   "latex-workshop.linting.chktex.enabled": true,
-  "latex-workshop.linting.chktex.executablePath": "/usr/local/texlive/2025/bin/universal-darwin/chktex",
+  "latex-workshop.linting.chktex.executablePath": "chktex",
   "latex-workshop.latex.autoBuild.run": "onSave",
   "latex-workshop.latex.rootFile.doNotPrompt": true,
   "latex-workshop.latex.search.rootFiles.include": [
-    "tex/*.tex"
+    "tex/main.tex"
   ],
   "latex-workshop.latex.outDir": "%DIR%",
   "latex-workshop.latex.tools": [
     {
       "name": "latexmk",
-      "command": "/Library/TeX/texbin/latexmk",
-      "env": {
-        "PATH": "/Library/TeX/texbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
-      },
+      "command": "latexmk",
       "args": [
         "-pdf",
         "-synctex=1",
@@ -33,9 +30,5 @@
     }
   ],
   "latex-workshop.latex.recipe.default": "first",
-  "latex-workshop.view.pdf.viewer": "tab",
-  "latex-workshop.view.pdf.external.viewer.command": "/usr/bin/open",
-  "latex-workshop.view.pdf.external.viewer.args": [
-    "%PDF%"
-  ]
+  "latex-workshop.view.pdf.viewer": "tab"
 }

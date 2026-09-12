@@ -1,4 +1,4 @@
-import Determinize.Proof.CompactSoundness
+import Determinize.Proof.Traces.CompactSoundness
 import Determinize.Spec.Main
 
 /-!

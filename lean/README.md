@@ -1,10 +1,10 @@
 Review these three entry points and the definitions they import:
 
 - `Determinize/Spec/Main.lean` defines the expectation-preservation propositions directly: `mainThm` (finite expectations), `extendedExpectationThm` (expectations in the extended reals, infinite values included), `jensenThm` (Jensen's inequality between the two output laws), `outputMassThm` (equal output mass), `varianceThm` (non-increasing second moment and variance) and `conditionalExpectationThm` (equal expectations conditioned on acceptance, the statement behind `observe`). `Spec` contains ordinary syntax, typing, primitive distributions and means, determinization, and semantics.
-- `Determinize/Spec/Traces/Main.lean` defines trace erasure (`correspondenceThm`), conditional trace soundness (`conditionalLawThm`) and the law of total variance along traces (`Spec.Traces.varianceThm`). `Spec/Traces/Semantics.lean` defines the operational traces, the joint law `traceAndOutputLaw` of a program's trace and output. The conditional-law and trace-variance propositions use Mathlib's `Measure.condKernel`; operational replay lives in `Proof/ReplaySemantics.lean`.
+- `Determinize/Spec/Traces/Main.lean` defines trace erasure (`correspondenceThm`), conditional trace soundness (`conditionalLawThm`) and the law of total variance along traces (`Spec.Traces.varianceThm`). `Spec/Traces/Semantics.lean` defines the operational traces, the joint law `traceAndOutputLaw` of a program's trace and output. The conditional-law and trace-variance propositions use Mathlib's `Measure.condKernel`; operational replay lives in `Proof/Traces/ReplaySemantics.lean`.
 - `Determinize/Theorems.lean` proves all nine propositions without additional hypotheses and prints their axioms.
 
-Run `lake build --wfail` from this directory; the build is warning-free and contains no `sorry`. Check that all nine axiom reports contain only `propext`, `Classical.choice`, and `Quot.sound`. With Lean's kernel and these standard axioms trusted, reviewers can omit the proof bodies in `Proof`. `Spec` contains the specification; any proof imports there supply proof-irrelevant evidence. `Spec/Traces/Main.lean` imports finiteness evidence from `Proof/TraceMass.lean`, without introducing a measurable space on expressions.
+Run `lake build --wfail` from this directory; the build is warning-free and contains no `sorry`. Check that all nine axiom reports contain only `propext`, `Classical.choice`, and `Quot.sound`. With Lean's kernel and these standard axioms trusted, reviewers can omit the proof bodies in `Proof`. `Spec` contains the specification; any proof imports there supply proof-irrelevant evidence. `Spec/Traces/Main.lean` imports finiteness evidence from `Proof/Traces/Mass.lean`, without introducing a measurable space on expressions.
 
 The typed determinization theorems assume `PrimitiveDomainSafe`: every distribution call reached at a finite execution depth has valid parameters almost surely. Typing supplies structural progress; it does not prove argument bounds. The expectation and trace theorems also establish target domain safety. The proof derives full non-stuckness from typing and this premise. Finite replay certificates do not require typing, so their separate contract retains full `DoesNotGetStuck` in `Spec/FiniteModel/Safety.lean`.
 
@@ -14,7 +14,7 @@ Source expressions need not be in ANF. Each primitive distribution is its own co
 
 Output laws are defined directly by recursion over reduction depth. Deterministic actions continue evaluation; sampling actions integrate the continuation over the primitive measure on reals. Expressions of every type may occur during evaluation, but only terminal reals contribute output. Neither evaluator requires a measurable structure on expressions. `Proof` introduces one internally to establish measurability of the evaluators.
 
-A trace is a list of `(primitive, value)` pairs recording only stochastic G draws. Deterministic steps and E draws add no entry. Trace soundness factors the actual joint trace/output measures over `traceLaw source`, the trace marginal of the source joint law: the source output is a Markov kernel indexed by the trace, and the target output is a measurable function of the trace. For almost every trace, the source fiber is an integrable probability measure and the target output equals its mean. The target therefore has the same trace law and the same termination probability as the source. No global integrability is required. Detailed traces with one entry per reduction step live in `Proof/Internal/StepTraces.lean`. The proof uses them to connect symbolic execution to compact traces; `Proof/CompactFiberSoundness.lean` and `Proof/CompactSoundness.lean` establish the trace factorization directly using compact replay.
+A trace is a list of `(primitive, value)` pairs recording only stochastic G draws. Deterministic steps and E draws add no entry. Trace soundness factors the actual joint trace/output measures over `traceLaw source`, the trace marginal of the source joint law: the source output is a Markov kernel indexed by the trace, and the target output is a measurable function of the trace. For almost every trace, the source fiber is an integrable probability measure and the target output equals its mean. The target therefore has the same trace law and the same termination probability as the source. No global integrability is required. Detailed traces with one entry per reduction step live in `Proof/Traces/Detailed.lean`. The proof uses them to connect symbolic execution to compact traces; `Proof/Traces/CompactFiberSoundness.lean` and `Proof/Traces/CompactSoundness.lean` establish the trace factorization directly using compact replay.
 
 The output-mass theorem preserves acceptance/termination mass; dividing the preserved integral by that mass gives the conditional-expectation theorem. The variance theorems bound the target variance and decompose source variance along replay traces. The finite expectation theorem adds source integrability and proves target integrability and equal integrals. The extended-real theorem only assumes that one of `∫ v⁺` and `∫ v⁻` under the source output law is finite, and concludes the same for the target and equal extended-real expectations. Jensen's inequality bounds `∫ φ` under the target output law by `∫ φ` under the source output law for every nonnegative convex `φ : ℝ → ℝ`. Both corollaries are derived from trace soundness in `Proof/Corollaries.lean`. Output measures are unnormalized: divergence contributes no output mass, and expectations are not conditioned on termination.
 
@@ -38,9 +38,9 @@ The statements follow the paper's theorems, not its letter. Reviewers comparing 
 Build with `lake build --wfail`, then run from `lean/`:
 
 ```sh
-.lake/build/bin/determinize ../tests/execution/legacy/foldr.det
-.lake/build/bin/determinize --samples 1000 --seed 42 ../tests/execution/legacy/foldr.det
-.lake/build/bin/determinize --check --certificate /tmp/Certificate.lean ../tests/execution/legacy/foldr.det
+.lake/build/bin/determinize ../tests/execution/foldr.det
+.lake/build/bin/determinize --samples 1000 --seed 42 ../tests/execution/foldr.det
+.lake/build/bin/determinize --check --certificate /tmp/Certificate.lean ../tests/execution/foldr.det
 lake env lean /tmp/Certificate.lean
 ./test.sh
 ```
@@ -53,7 +53,21 @@ they evaluate every operand exactly once and check the primitive domain. They ar
 output notation, not additional source primitives. `--fuel` bounds each numerical
 run; `--samples` defaults to zero, so compilation does not execute the program.
 
-The implementation is separated as follows:
+## Source layout
+
+Under `Determinize/`:
+
+- `Spec/`: mathematical definitions, assumptions, and theorem statements; `Traces/`
+  and `FiniteModel/` contain their respective specifications.
+- `Proof/Primitives/`: distribution laws, kernels, masses, and moments.
+- `Proof/Semantics/`: expression measurability, evaluator kernels, and type safety.
+- `Proof/Symbolic/`: affine expressions, symbolic reduction, and its invariants.
+- `Proof/Traces/`: detailed and compact traces, replay, and conditional laws.
+- `Proof/FiniteModel/`: finite-model correspondence and certificate soundness.
+- `Proof/Soundness.lean`, `Proof/Corollaries.lean`: global results derived from traces.
+- `Theorems.lean`: exported proofs of the propositions in `Spec/`.
+
+The executable and its checkers are separated as follows:
 
 - `Frontend/`: unverified parsing, desugaring/name resolution, constraint inference,
   pretty printing, orchestration, and certificate export.
@@ -61,6 +75,7 @@ The implementation is separated as follows:
   that inference preserves the elaborated expression and explicit sampling affinities.
 - `Proof/Checking/`: checker soundness, rational/real determinization correspondence,
   and application of the existing trace and finite-expectation theorems.
+- `Finite/`: unverified exact exploration, solving, and model export.
 - `Runtime/`: an unverified floating-point interpreter and seeded numerical samplers.
 - `Tests/`: parsing, inference, certificate rejection, runtime, and kernel proof tests.
 - `Main.lean`: the CLI.
@@ -134,7 +149,7 @@ outcomes. Pretty printing uses `discrete_list` to preserve arbitrary list operan
 
 `observe(c)` lowers to `if c then () else reject`. The explicit core rejection term
 has zero output mass: formally it is an absorbing non-value, as proved in
-`Proof/Rejection.lean`. The numerical runtime returns a distinct rejection outcome
+`Proof/Semantics/Rejection.lean`. The numerical runtime returns a distinct rejection outcome
 immediately; ordinary divergence still exhausts fuel. Conditions are evaluated once,
 and rejected executions do not evaluate their continuation. The CLI reports rejected
 observations separately from execution failures. `conditionalExpectationPreservation`

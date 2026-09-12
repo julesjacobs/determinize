@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "allow": [
-      "Bash(./det.sh)",
+      "Bash(./test.sh)",
       "Bash(./run.sh *)",
       "Bash(npm test *)",
       "Bash(npm run build *)",
@@ -40,7 +40,7 @@
       "Bash(nix develop * --command lake build *)",
       "Bash(nix develop * --command lake env *)",
       "Bash(nix develop * --command lake exe cache get)",
-      "Bash(.claude/scripts/check.sh *)",
+      "Bash(./check.sh *)",
       "Bash(git status *)",
       "Bash(git diff *)",
       "Bash(git log *)",

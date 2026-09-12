@@ -9,7 +9,7 @@ read_hook_input
 [[ "${CLAUDE_SKIP_STOP_CHECK:-0}" == "1" ]] && exit 0
 cd "$ROOT"
 
-out="$("$ROOT/.claude/scripts/check.sh" --changed 2>&1)"
+out="$("$ROOT/check.sh" --changed 2>&1)"
 rc=$?
 if [[ $rc -ne 0 ]]; then
   {

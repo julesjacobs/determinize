@@ -1,4 +1,4 @@
-import Determinize.Proof.PrimitiveMoments
+import Determinize.Proof.Primitives.Moments
 
 namespace Determinize.Tests
 open Spec.Paper Proof.Paper MeasureTheory

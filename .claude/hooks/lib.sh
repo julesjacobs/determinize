@@ -3,7 +3,7 @@
 #
 # Design: hooks run in whatever environment Claude Code was launched from,
 # which may have the root Lean devshell loaded via direnv.
-# `in_shell NAME CMD...` runs CMD with the toolchain of flake devShell NAME:
+# `in_shell` is shared with the public check script:
 #   1. if the command is already on PATH, run it directly (fast path);
 #   2. else if direnv is installed, `direnv exec <dir>` (uses nix-direnv cache, ~0.2s);
 #   3. else `nix develop .#NAME --command` (cold: several seconds);
@@ -11,29 +11,7 @@
 
 ROOT="${CLAUDE_PROJECT_DIR:-$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel 2>/dev/null || pwd)}"
 
-# Directory whose .envrc loads a given devshell.
-shell_dir() {
-  case "$1" in
-    sim) echo "$ROOT/sim" ;;
-    tex) echo "$ROOT/tex" ;;
-    lean) echo "$ROOT/lean" ;;
-    *) echo "$ROOT" ;;
-  esac
-}
-
-in_shell() {
-  local name="$1"; shift
-  local dir; dir="$(shell_dir "$name")"
-  if command -v "$1" >/dev/null 2>&1; then
-    "$@"
-  elif command -v direnv >/dev/null 2>&1 && direnv exec "$dir" true >/dev/null 2>&1; then
-    direnv exec "$dir" "$@"
-  elif command -v nix >/dev/null 2>&1; then
-    (cd "$ROOT" && nix develop ".#$name" --command "$@")
-  else
-    "$@"
-  fi
-}
+source "$ROOT/tools/dev-shell.sh"
 
 # Read the hook's JSON payload from stdin into $HOOK_INPUT and expose a
 # `jfield PATH` accessor (dot-separated, e.g. tool_input.file_path).

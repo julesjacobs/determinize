@@ -2,7 +2,7 @@ import Determinize.Spec.Main
 import Determinize.Spec.Traces.Main
 import Determinize.Proof.Soundness
 import Determinize.Proof.Corollaries
-import Determinize.Proof.ConditionalLaw
+import Determinize.Proof.Traces.ConditionalLaw
 
 /-! The public propositions, proved with no additional hypotheses. -/
 

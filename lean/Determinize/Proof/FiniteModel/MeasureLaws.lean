@@ -1,5 +1,5 @@
 import Determinize.Proof.FiniteModel.Sampling
-import Determinize.Proof.OrdinarySemantics
+import Determinize.Proof.Semantics.Ordinary
 
 namespace Determinize.Proof.FiniteModel
 open Spec.Paper MeasureTheory

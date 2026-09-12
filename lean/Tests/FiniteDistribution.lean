@@ -1,6 +1,6 @@
 import Tests.Parsing
 import Determinize.Checking.FiniteDistribution
-import Determinize.Proof.DiscreteLaws
+import Determinize.Proof.Primitives.DiscreteLaws
 
 namespace Determinize.Tests
 open Checking
