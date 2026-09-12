@@ -22,7 +22,7 @@ created outside the repository and deleted automatically.
 
 - `execution/`: exact numeric or structural results, draw counts, and runtime errors.
 - `statistical/`: analytical source and determinized means and variances.
-- `typing/accept/`, `typing/reject/`: acceptance, inferred types/modes, or rejection stage.
+- `typing/accept/`, `typing/reject/`: acceptance, inferred types/affinities, or rejection stage.
 - `../examples/`: reader-facing examples, registered in the same manifest.
 - `../lean/Tests/`: test runner and internal parser/checker/runtime unit tests.
 
@@ -57,7 +57,7 @@ steps per run; the default is 100,000.
 
 A rejection case uses `outcome = "reject"` and `stage = "parse"`, `"elaboration"`,
 `"inference"`, or `"certificate"`. Acceptance cases may assert `expected_type` and
-`modes` (sample annotations in syntax traversal order). `kernel = true` independently
+`affinities` (sample annotations in syntax traversal order). `kernel = true` independently
 checks an exported certificate using `decide +kernel` in the fast/full suite.
 
 Compilation-only cases deliberately make no claim about termination or parameter

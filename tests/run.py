@@ -60,7 +60,7 @@ def load_manifest(path=ROOT / 'tests/cases.toml', root=ROOT):
     cases = data.get('case', [])
     require(bool(cases), 'empty corpus')
     seen = set()
-    allowed = {'file', 'suite', 'outcome', 'stage', 'expected_type', 'modes', 'source', 'target',
+    allowed = {'file', 'suite', 'outcome', 'stage', 'expected_type', 'affinities', 'source', 'target',
                'samples', 'seed', 'fuel', 'kernel', 'derivation'}
     for c in cases:
         keys(c, allowed)
@@ -81,11 +81,11 @@ def load_manifest(path=ROOT / 'tests/cases.toml', root=ROOT):
                 require(type(c[k]) is bool, f'{file}: {k} must be Boolean')
         if 'expected_type' in c:
             require(isinstance(c['expected_type'], str) and c['expected_type'], 'invalid expected type')
-        if 'modes' in c:
-            require(isinstance(c['modes'], list) and all(m in ('E', 'G') for m in c['modes']), 'invalid modes')
+        if 'affinities' in c:
+            require(isinstance(c['affinities'], list) and all(m in ('E', 'G') for m in c['affinities']), 'invalid affinities')
         if c['outcome'] == 'reject':
             require(c.get('stage') in {'parse', 'elaboration', 'inference', 'certificate'}, 'missing rejection stage')
-            require(c['suite'] == 'typing' and not any(k in c for k in ('source', 'target', 'kernel', 'modes', 'expected_type')),
+            require(c['suite'] == 'typing' and not any(k in c for k in ('source', 'target', 'kernel', 'affinities', 'expected_type')),
                     'rejected case has acceptance expectations')
         else:
             require('stage' not in c, 'accepted case has rejection stage')

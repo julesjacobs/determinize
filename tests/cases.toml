@@ -385,7 +385,7 @@ file = "tests/execution/variance-operand.det"
 suite = "execution"
 outcome = "accept"
 expected_type = "float[E]"
-modes = ["E", "G"]
+affinities = ["E", "G"]
 target = { number = 1, draws = 1 }
 
 [[case]]
@@ -434,19 +434,19 @@ stage = "parse"
 file = "tests/typing/accept/mixed-list.det"
 suite = "typing"
 outcome = "accept"
-modes = ["G", "E"]
+affinities = ["G", "E"]
 
 [[case]]
 file = "tests/typing/accept/mixed-pair.det"
 suite = "typing"
 outcome = "accept"
-modes = ["G", "E"]
+affinities = ["G", "E"]
 
 [[case]]
 file = "tests/typing/accept/mixed-sum.det"
 suite = "typing"
 outcome = "accept"
-modes = ["G", "E"]
+affinities = ["G", "E"]
 
 [[case]]
 file = "tests/statistical/uniform.det"

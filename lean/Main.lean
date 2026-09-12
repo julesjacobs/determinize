@@ -56,8 +56,8 @@ private def options : List String → Options → Except String Options
 
 private def summarize (label : String) (e : Core) (o : Options) : IO Unit := do
   let mut count := 0
-  let mut sum := 0.0
-  let mut squares := 0.0
+  let mut mean := 0.0
+  let mut m2 := 0.0
   let mut first := ""
   let mut failed := 0
   let mut rejected := 0
@@ -69,13 +69,20 @@ private def summarize (label : String) (e : Core) (o : Options) : IO Unit := do
     | .ok (.returned v _) =>
       if first.isEmpty then first := v.display
       match v with
-      | .number x => count := count + 1; sum := sum + x; squares := squares + x*x
+      | .number x =>
+          count := count + 1
+          let delta := x - mean
+          mean := mean + delta / Float.ofNat count
+          m2 := m2 + delta * (x - mean)
       | _ => pure ()
   IO.println s!"{label}: {o.samples - failed - rejected}/{o.samples} runs returned a value"
   if count > 0 then
-    let mean := sum / Float.ofNat count
-    let variance := max 0.0 (squares / Float.ofNat count - mean*mean)
-    IO.println s!"  empirical mean among returned values: {mean}; variance: {variance}"
+    let variance := m2 / Float.ofNat count
+    let meanText := if mean.isNaN || mean.isInf then
+      "unavailable (floating-point overflow)" else toString mean
+    let varianceText := if variance.isNaN || variance.isInf then
+      "unavailable (floating-point overflow)" else toString (max 0.0 variance)
+    IO.println s!"  empirical mean among returned values: {meanText}; variance: {varianceText}"
   else if !first.isEmpty then IO.println s!"  first value: {first}"
   if rejected > 0 then IO.println s!"  rejected observations: {rejected}"
   if failed > 0 then IO.println s!"  first failure: {error}"

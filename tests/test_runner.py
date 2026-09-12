@@ -29,16 +29,25 @@ class ManifestTests(unittest.TestCase):
 
 
 class RunnerTests(unittest.TestCase):
-    def run_probe(self, text, observation, statistical=False):
+    def run_probe(self, text, observation, statistical=False, affinities=None):
         with tempfile.TemporaryDirectory() as tmp:
             program = Path(tmp) / 'Probe.det'
             program.write_text(text)
             manifest = Path(tmp) / 'cases.json'
             case = runner_case({'file': str(program), 'suite': 'statistical' if 'moments' in observation else 'execution',
                                 'outcome': 'accept', 'source': observation, 'samples': 2000})
+            if affinities is not None:
+                case['affinities'] = affinities
             manifest.write_text(json.dumps([case]))
             return subprocess.run([ROOT / 'lean/.lake/build/bin/det-tests', '--corpus', manifest,
                                    'statistical' if statistical else 'fast'], text=True, capture_output=True)
+
+    def test_affinity_expectations_are_checked(self):
+        for expected, success in [(['E'], True), (['G'], False)]:
+            result = self.run_probe('uniform[E](0,1)', {}, affinities=expected)
+            self.assertEqual(result.returncode == 0, success, result.stderr)
+            if not success:
+                self.assertIn('expected affinities [G], got [E]', result.stderr)
 
     def test_wrong_exact_result_fails(self):
         result = self.run_probe('1+2', {'number': 4})
@@ -64,6 +73,32 @@ class RunnerTests(unittest.TestCase):
         result = self.run_probe('uniform[E](2,1)', {'moments': moments}, True)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('uniform requires', result.stderr)
+
+
+class CliStatisticsTests(unittest.TestCase):
+    def summarize(self, text, samples):
+        with tempfile.TemporaryDirectory() as tmp:
+            program = Path(tmp) / 'Statistics.det'
+            program.write_text(text)
+            result = subprocess.run([ROOT / 'lean/.lake/build/bin/determinize',
+                                     '--samples', str(samples), program], text=True, capture_output=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            return result.stdout
+
+    def test_constant_has_zero_variance(self):
+        output = self.summarize('1000000001', 1000)
+        self.assertEqual(output.count('mean among returned values: 1000000001.000000; variance: 0.000000'), 2)
+
+    def test_population_variance_and_returned_value_denominator(self):
+        output = self.summarize('bernoulli[G](0.5)', 20)
+        self.assertEqual(output.count('mean among returned values: 0.450000; variance: 0.247500'), 2)
+        output = self.summarize('let _ = observe(flip(0.5)) in 3', 20)
+        self.assertEqual(output.count('mean among returned values: 3.000000; variance: 0.000000'), 2)
+        self.assertIn('rejected observations:', output)
+
+    def test_overflow_is_not_reported_as_zero_variance(self):
+        output = self.summarize('1e200 + bernoulli[G](0.5) * 1e200', 20)
+        self.assertEqual(output.count('variance: unavailable (floating-point overflow)'), 2)
 
 
 if __name__ == '__main__':
