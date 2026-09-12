@@ -5,7 +5,7 @@
 - Model: 6 Pro (verified in the composer).
 - Input: complete 14-file Statement/Traces/Theorems surface and all 81 supporting project Lean files; 23,495 lines. Mathlib not bundled.
 - Objective: review the entire specification surface for redundant representations, canonical replacements for existential witnesses, derivable assumptions/data, algorithm leakage, and mathematical correctness; propose concrete Lean interfaces and a prioritized refactoring plan without weakening theorems.
-- Status: generation started; awaiting response.
+- Status: response not collected. Monitoring was superseded by the requested fresh post-refactor pass in [pro-architecture-review.md](pro-architecture-review.md); this baseline record is preserved.
 - Local review and synthesis: `development-review.md`.
 
 Pro's suggestions will be separated from locally verified conclusions. No implementation changes are authorized by a suggestion alone.

@@ -85,8 +85,16 @@ Complete Lean migration (details in migration-plan.md):
 
 Development/specification review:
 [x] Review redundant representations and theorem witnesses; kernel-check result-mode and canonical trace-output simplifications (development-review.md).
-[ ] Complete the independent Pro full-surface audit and incorporate assessed findings (pro-spec-review.md; monitor active).
+[x] Complete the fresh post-refactor Pro design/specification/architecture audit and assess findings (pro-architecture-review.md; baseline record in pro-spec-review.md).
 [x] Compare sampling representations against the statement surface and specify affinity-free mean syntax with direct typing rules (development-review.md).
 
 Full refactor (per-step checks and decisions in refactor-plan.md):
 [x] Complete the specification and implementation refactor, with one reviewed commit per retained step.
+
+[x] Independently challenge the Pro recommendations and record which survive (pro-recommendations-critique.md).
+
+[x] Trial public distribution-domain safety premises; preserve untyped finite-certificate safety and assess before/after (KEEP; domain-safety-trial.md).
+
+[x] Review the 19-commit migration/refactor stack and separate uncommitted domain-safety trial (three P2 findings in pr-stack-review.md).
+
+[x] Fix stack findings: affinity schema, multiplication roundtrips, and numerical statistics; regressions and follow-up review pass.
