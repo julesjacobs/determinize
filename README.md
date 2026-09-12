@@ -70,9 +70,10 @@ suite explicitly skips real Storm comparisons; the Lean certificate tests still 
 (cd tex && latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex)
 ```
 
-Open `sim/index.html` to explore coupled traces. The simulator is an unverified
-visualization and has documented differences from Lean. Do not deploy it as part
-of local verification.
+Open `sim/index.html` to explore coupled traces. The simulator has its own compiler
+and numerical runtime; Lean certificates apply to the core programs produced by
+the Lean CLI. The simulator is an unverified visualization.
 
-[Migration audit](migration-audit.md) records replacement coverage, deliberate
-behavioral changes, and the retirement of the old symbolic-coupling CLI.
+See the [Lean documentation](lean/README.md) for the language, theorem premises,
+and implementation limits, and the [test guide](tests/README.md) for analytical
+expectations and certificate checks. No OCaml toolchain is required.

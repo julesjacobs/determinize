@@ -23,10 +23,10 @@ The default build checks nested sampling, the `x + 1/y` example, a G draw scalin
 The statements follow the paper's theorems, not its letter. Reviewers comparing against `tex/` should know:
 
 - **Affinity labels on sample sites.** The paper's transformation `⟦e : τ⟧` is type-directed; here `Expr.determinize` is a function on terms, so every sample site carries its affinity and that label decides whether the site is switched to its mean (`DistributionAction.determinize`). Literals and arithmetic carry no labels.
-- **Multiplication and division.** Lean, the paper, and the simulator use a G left operand for multiplication and a G denominator for division. Lean allows silent structural subtyping; the frontend also puts a literal scaling factor on the left. See `mul-div-typing.md` for the rule and its history.
+- **Multiplication and division.** Lean, the paper, and the simulator use a G left operand for multiplication and a G denominator for division. The other operand carries the result affinity. A G factor may depend on the G trace, while the expression remains affine in E draws. Lean allows silent structural subtyping; the frontend also puts a literal scaling factor on the left.
 
 - **Primitive domains.** Sampling outside a primitive's parameter domain (`uniform(a, b)` with `a > b`, a negative Gaussian variance, and so on) yields the zero measure and counts as stuck, and so does a mean site outside the same domain; the paper's mean table is unconditional. `uniform(a, a)` is the Dirac measure at `a`; the paper's table has no such row.
-- **Validity hypothesis.** Every theorem assumes `DoesNotGetStuck program`: almost surely, at every reduction depth, no off-domain sample occurs, E draws included. The paper's "valid G-trace" is informal. The hypothesis is necessary: a source that loses mass with positive probability on an off-domain E parameter has a different expectation than its determinization.
+- **Validity hypothesis.** The typed determinization theorems assume `PrimitiveDomainSafe program`: almost surely, at every reduction depth, no off-domain primitive call occurs, E draws included. Typing supplies structural progress. The paper's "valid G-trace" is informal. The hypothesis is necessary: a source that loses mass with positive probability on an off-domain E parameter can have a different expectation than its determinization.
 - **Expectations.** `Traces.soundnessThm` needs no integrability hypothesis and proves that almost every fiber is integrable, which the paper assumes as "integrable σ" and states as the open lemma "Mean valuation correctness". `mainThm` covers finite expectations; `extendedExpectationThm` is the paper's extended-real global theorem; `jensenThm` is the paper's global Jensen corollary restricted to real-valued convex functions.
 
 ## Lean command-line implementation
@@ -119,15 +119,19 @@ has zero output mass: formally it is an absorbing non-value, as proved in
 `Proof/Rejection.lean`. The numerical runtime returns a distinct rejection outcome
 immediately; ordinary divergence still exhausts fuel. Conditions are evaluated once,
 and rejected executions do not evaluate their continuation. The CLI reports rejected
-observations separately from execution failures. No conditioning theorem is claimed;
+observations separately from execution failures. `conditionalExpectationPreservation`
+proves equality of the normalized expectations under its stated premises;
 empirical means use returned values and differ from unnormalized expectations.
 
 Inference is monomorphic, uses an occurs check and structural subtyping constraints,
 and defaults unconstrained affinities to E and unused type variables to `unit`.
 Products, sums, and lists are covariant; function arguments are contravariant and
-results covariant. Subsumption appears in certificates, never in the expression.
+results covariant. `Float[G]` is a subtype of `Float[E]`; the reverse is not allowed.
+Using a G draw at type E leaves its sample annotation G, so determinization still
+retains the draw. Subsumption appears in certificates, never in the expression.
 The checker validates every subsumption step against `Ty.Sub`. Inference
-completeness and optimality are not claimed.
+completeness and optimality are not claimed; some valid programs can be rejected
+depending on conditional branch order.
 
 The shared corpus and analytical expectations live in [`../tests/`](../tests/README.md).
 Run `./test.sh` for unit tests, all corpus compilation/typing checks, exact execution
@@ -150,7 +154,11 @@ zero yields zero. Nonfinite arithmetic and sampling results fail explicitly. Gam
 rejection and Poisson iterations are bounded, and Poisson rates above 1,000,000 are
 rejected by this numerical runtime. Failed and exhausted runs are reported.
 
-The OCaml implementation is retired; see [migration-audit.md](../migration-audit.md).
+Statistical tests cover representative parameters, not the entire numerical range.
+Overflow and underflow in intermediate calculations can distort finite outputs:
+for example, `beta[E](1e308, 1e308)` currently produces a numerical mean of zero
+instead of one half. The exact rational evaluator and real-measure theorems do
+not use these Float calculations.
 
 ### Discrete-distribution migration
 
@@ -268,6 +276,8 @@ positive and negative reward files. It records version/options/status in
 exact sparse-matrix API and requires exact agreement with the Lean-checked answer.
 Storm is not trusted by the theorem. Each subprocess has a
 120-second timeout, adjustable with `--timeout`.
+When overriding the wrapper's `--binary`, use an absolute path; relative executable
+paths currently resolve against the repository root rather than the caller's directory.
 
 `lean/test.sh` includes exact ground truth and independent result-certificate
 replay with tampered values and horizons. Set `STORM_PYTHON` to an interpreter

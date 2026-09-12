@@ -132,9 +132,9 @@ certificates. `test_results.py` checks exact expected rewards, malformed certifi
 nonabsorption, resource limits, and failure reports. Set `STORM_PYTHON` to an
 interpreter with `tools/storm-requirements.txt` installed for real Storm comparisons.
 
-`./det.sh` delegates to the Lean suite. OCaml and its generated baselines have
-been retired; their recovery location and intentional behavioral differences are
-in [migration-audit.md](../migration-audit.md).
+`./det.sh` delegates to the Lean suite. The corpus uses analytical expectations
+and requires no OCaml toolchain. See the [Lean documentation](../lean/README.md)
+for the current language and numerical runtime limits.
 
 The coupling prototype's motivating examples use `nested`, `coupling-branch`, and
 `coupling-mixed`. Simulator projection/trace tests read these same files.

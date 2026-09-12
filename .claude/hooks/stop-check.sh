@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Stop: enforce AGENTS.md "always make sure that code / tex builds after making changes".
+# Stop: check code and TeX builds after changes.
 # Runs the checks for the areas that have uncommitted changes; blocks the stop
 # (exit 2) with the failure summary so Claude fixes it before finishing.
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"

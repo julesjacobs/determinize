@@ -79,7 +79,7 @@ rel_path() {
   esac
 }
 
-# Cross-platform user notification: macOS `say` (per AGENTS.md), Linux notify-send,
+# Cross-platform user notification: macOS `say`, Linux notify-send,
 # otherwise a terminal bell. Never fails.
 notify_user() {
   local msg="$1"

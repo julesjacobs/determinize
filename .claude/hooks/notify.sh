@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Stop / Notification: audible or desktop notification (AGENTS.md asks for macOS `say`;
-# this degrades gracefully on Linux and in headless sessions).
+# Stop / Notification: audible or desktop notification, with Linux and headless fallbacks.
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 read_hook_input
 case "$(jfield hook_event_name)" in
