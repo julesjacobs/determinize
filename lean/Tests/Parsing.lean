@@ -14,6 +14,8 @@ def parsing : IO Unit := do
   assert (parse "uniform[Q](0,1)" |> fun r => !r.isOk) "invalid affinity accepted"
   assert (parse "1 garbage )" |> fun r => !r.isOk) "trailing input accepted"
   assert (parse "(* unfinished" |> fun r => !r.isOk) "unterminated comment accepted"
+  for text in ["uniform(0)", "poisson(1,2)", "observe[E](true)"] do
+    assert (!(parse text).isOk) s!"invalid primitive syntax accepted: {text}"
   let coin ← IO.ofExcept (compile "bernoulli[E](0.25)")
   assert (coin.checked.source == .bernoulli (.sample .E) (.real (1/4)))
     "elaboration replaced a Bernoulli source draw"

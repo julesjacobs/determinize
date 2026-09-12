@@ -81,7 +81,6 @@ private def name : P String := do
   let t ← take
   unless t.toList.head?.any identStart do throw s!"expected a name, got '{t}'"
   return t
-private def node (tag : String) (args : List Surface) : Surface := .node tag [] none args
 private def primitives := ["uniform", "gauss", "gaussian", "poisson", "exponential", "gamma", "beta", "flip", "bernoulli", "discrete", "observe"]
 private def startsAtom (t : String) : Bool :=
   t == "(" || t == "[" ||
@@ -93,36 +92,40 @@ private partial def expr (minPrec : Nat := 0) : P Surface := do
   let mut left ← match t with
     | "let" => do
       let x ← name; expect "="; let a ← expr; expect "in"
-      pure (.node "let" [x] none [a, ← expr])
+      pure (.letE x a (← expr))
     | "fun" | "lambda" | "\\" => do
-      let x ← name; expect "=>"; pure (.node "lam" [x] none [← expr])
+      let x ← name; expect "=>"; pure (.lam x (← expr))
     | "rec" => do
-      let f ← name; let x ← name; expect "=>"; pure (.node "fix" [f,x] none [← expr])
+      let f ← name; let x ← name; expect "=>"; pure (.fix f x (← expr))
     | "if" => do
       let c ← expr; expect "then"; let a ← expr; expect "else"
-      pure (node "ite" [c,a,← expr])
+      pure (.ite c a (← expr))
     | "match" => do
       let e ← expr; expect "with"
       if (← peek) == "|" then discard take
       if (← peek) == "[" then
         expect "["; expect "]"; expect "=>"; let n ← expr
         expect "|"; let x ← name; expect "::"; let xs ← name; expect "=>"
-        pure (.node "matchList" [x,xs] none [e,n,← expr])
+        pure (.matchList x xs e n (← expr))
       else
         expect "inl"; let x ← name; expect "=>"; let a ← expr
         expect "|"; expect "inr"; let y ← name; expect "=>"
-        pure (.node "matchSum" [x,y] none [e,a,← expr])
+        pure (.matchSum x y e a (← expr))
     | "(" => do
-      if (← peek) == ")" then expect ")"; pure (node "unit" [])
+      if (← peek) == ")" then expect ")"; pure (.unit)
       else
         let a ← expr
         if (← peek) == "," then
-          expect ","; let b ← expr; expect ")"; pure (node "pair" [a,b])
+          expect ","; let b ← expr; expect ")"; pure (.pair a b)
         else expect ")"; pure a
-    | "[" => do expect "]"; pure (node "nil" [])
-    | "-" => do pure (node "neg" [← expr 70])
-    | "fst" | "snd" | "inl" | "inr" => do pure (node t [← expr 81])
-    | "true" | "false" => pure (node t [])
+    | "[" => do expect "]"; pure (.nil)
+    | "-" => do pure (.neg (← expr 70))
+    | "fst" => do pure (.fst (← expr 81))
+    | "snd" => do pure (.snd (← expr 81))
+    | "inl" => do pure (.inl (← expr 81))
+    | "inr" => do pure (.inr (← expr 81))
+    | "true" => pure (.bool true)
+    | "false" => pure (.bool false)
     | _ => do
       if primitives.contains t then
         let mut affinity := none
@@ -139,7 +142,20 @@ private partial def expr (minPrec : Nat := 0) : P Surface := do
           args := [← expr]
           while (← peek) == "," do expect ","; args := args ++ [← expr]
         expect ")"
-        pure (.node t [] affinity args)
+        match t, args with
+        | "uniform", [a,b] => pure (.uniform affinity a b)
+        | "gauss", [a,b] | "gaussian", [a,b] => pure (.gaussian affinity a b)
+        | "poisson", [a] => pure (.poisson affinity a)
+        | "exponential", [a] => pure (.exponential affinity a)
+        | "bernoulli", [a] => pure (.bernoulli affinity a)
+        | "beta", [a,b] => pure (.beta affinity a b)
+        | "gamma", [a,b] => pure (.gamma affinity a b)
+        | "discrete", weights => pure (.discrete affinity weights)
+        | "flip", [a] => pure (.flip affinity a)
+        | "observe", [a] =>
+          if affinity.isSome then throw "observe has no sampling affinity"
+          pure (.observe a)
+        | _, _ => throw s!"wrong arguments for {t}"
       else if t.toList.head?.any Char.isDigit then
         pure (.number (← decimal t))
       else if t.toList.head?.any identStart then pure (.var t)
@@ -156,10 +172,19 @@ private partial def expr (minPrec : Nat := 0) : P Surface := do
     | some (l,r) =>
       if l < minPrec then break
       discard take
-      left := node op [left, ← expr r]
+      let right ← expr r
+      left ← match op with
+        | "<" => pure (.lt left right)
+        | "<=" => pure (.le left right)
+        | "::" => pure (.cons left right)
+        | "+" => pure (.add left right)
+        | "-" => pure (.sub left right)
+        | "*" => pure (.mul left right)
+        | "/" => pure (.div left right)
+        | _ => throw s!"unknown operator {op}"
     | none =>
       if minPrec ≤ 80 && startsAtom op then
-        left := node "app" [left, ← expr 81]
+        left := .app left (← expr 81)
       else break
   return left
 

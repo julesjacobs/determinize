@@ -26,68 +26,59 @@ private def index (env : List String) (x : String) : Except String Nat :=
 private partial def lower (env : List String) : Surface → Except String Input
   | .var x => do pure (pureInput (.bvar (← index env x)))
   | .number q => pure (pureInput (.real q))
-  | .node tag names affinity args => do
-    match tag, names, args with
-    | "lam", [x], [b] => return unary .lam (← lower (x :: env) b)
-    | "fix", [f,x], [b] => return unary .fix (← lower (x :: f :: env) b)
-    | "let", [x], [a,b] => return binary .letE (← lower env a) (← lower (x :: env) b)
-    | "matchList", [x,xs], [e,n,c] =>
-      return ternary .matchList (← lower env e) (← lower env n) (← lower (x :: xs :: env) c)
-    | "matchSum", [x,y], [e,l,r] =>
-      return ternary .matchSum (← lower env e) (← lower (x :: env) l) (← lower (y :: env) r)
-    | "unit", _, [] => return pureInput .unit
-    | "nil", _, [] => return pureInput .nil
-    | "true", _, [] => return pureInput (.bool true)
-    | "false", _, [] => return pureInput (.bool false)
-    | "ite", _, [c,a,b] => return ternary .ite (← lower env c) (← lower env a) (← lower env b)
-    | "discrete", _, _ =>
-      let weights ← args.mapM fun a => match a with
-        | .number q => pure q
-        | _ => throw "discrete expects nonnegative literal weights"
-      let distribution ← finiteDistribution weights
-      return ⟨.discrete (.sample (affinity.getD .G)) distribution, [affinity]⟩
-    | _, _, [a] =>
-      let a ← lower env a
-      match tag with
-      | "neg" => return unary .neg a
-      | "fst" => return unary .fst a
-      | "snd" => return unary .snd a
-      | "inl" => return unary .inl a
-      | "inr" => return unary .inr a
-      | "poisson" => return draw1 .poisson affinity a
-      | "exponential" => return draw1 .exponential affinity a
-      | "observe" =>
-        if affinity.isSome then throw "observe has no sampling affinity"
-        return ⟨.ite a.expression .unit reject, a.affinities⟩
-      | "bernoulli" => return draw1 .bernoulli affinity a
-      | "flip" =>
-        if affinity == some .E then throw "flip produces a Boolean and requires [G]"
-        let draw := draw1 .bernoulli (some .G) a
-        return ⟨.lt (.real 0) draw.expression, draw.affinities⟩
-      | _ => throw s!"unknown unary operation {tag}"
-    | _, _, [a,b] =>
-      let a ← lower env a; let b ← lower env b
-      match tag with
-      | "app" => return binary .app a b
-      | "pair" => return binary .pair a b
-      | "::" => return binary .cons a b
-      | "+" => return binary .add a b
-      | "-" => return binary .add a (unary .neg b)
-      | "*" =>
-        match a.expression, b.expression with
-        | .real _, _ => return binary .mul a b
-        | _, .real _ => return binary .mul b a
-        | _, _ => return binary .mul a b
-      | "/" => return binary .div a b
-      | "<" => return binary .lt a b
-      | "<=" => return ⟨.letE a.expression (.letE
-          (b.expression.shift 1 0) (.ite (.lt (.bvar 0) (.bvar 1)) (.bool false) (.bool true))), a.affinities ++ b.affinities⟩
-      | "uniform" => return draw2 .uniform affinity a b
-      | "gauss" | "gaussian" => return draw2 .gaussian affinity a b
-      | "beta" => return draw2 .beta affinity a b
-      | "gamma" => return draw2 .gamma affinity a b
-      | _ => throw s!"unknown binary operation {tag}"
-    | _, _, _ => throw s!"wrong arguments for {tag}"
+  | .lam x b => return unary .lam (← lower (x :: env) b)
+  | .fix f x b => return unary .fix (← lower (x :: f :: env) b)
+  | .letE x a b => return binary .letE (← lower env a) (← lower (x :: env) b)
+  | .matchList x xs e n c =>
+    return ternary .matchList (← lower env e) (← lower env n) (← lower (x :: xs :: env) c)
+  | .matchSum x y e l r =>
+    return ternary .matchSum (← lower env e) (← lower (x :: env) l) (← lower (y :: env) r)
+  | .unit => return pureInput .unit
+  | .nil => return pureInput .nil
+  | .bool b => return pureInput (.bool b)
+  | .ite c a b => return ternary .ite (← lower env c) (← lower env a) (← lower env b)
+  | .discrete affinity args => do
+    let weights ← args.mapM fun a => match a with
+      | .number q => pure q
+      | _ => throw "discrete expects nonnegative literal weights"
+    let distribution ← finiteDistribution weights
+    return ⟨.discrete (.sample (affinity.getD .G)) distribution, [affinity]⟩
+  | .neg a => return unary .neg (← lower env a)
+  | .fst a => return unary .fst (← lower env a)
+  | .snd a => return unary .snd (← lower env a)
+  | .inl a => return unary .inl (← lower env a)
+  | .inr a => return unary .inr (← lower env a)
+  | .poisson affinity a => return draw1 .poisson affinity (← lower env a)
+  | .exponential affinity a => return draw1 .exponential affinity (← lower env a)
+  | .bernoulli affinity a => return draw1 .bernoulli affinity (← lower env a)
+  | .observe condition => do
+    let a ← lower env condition
+    return ⟨.ite a.expression .unit reject, a.affinities⟩
+  | .flip affinity probability => do
+    if affinity == some .E then throw "flip produces a Boolean and requires [G]"
+    let draw := draw1 .bernoulli (some .G) (← lower env probability)
+    return ⟨.lt (.real 0) draw.expression, draw.affinities⟩
+  | .app a b => return binary .app (← lower env a) (← lower env b)
+  | .pair a b => return binary .pair (← lower env a) (← lower env b)
+  | .cons a b => return binary .cons (← lower env a) (← lower env b)
+  | .add a b => return binary .add (← lower env a) (← lower env b)
+  | .div a b => return binary .div (← lower env a) (← lower env b)
+  | .lt a b => return binary .lt (← lower env a) (← lower env b)
+  | .sub a b => return binary .add (← lower env a) (unary .neg (← lower env b))
+  | .mul a b => do
+    let a ← lower env a; let b ← lower env b
+    match a.expression, b.expression with
+    | .real _, _ => return binary .mul a b
+    | _, .real _ => return binary .mul b a
+    | _, _ => return binary .mul a b
+  | .le a b => do
+    let a ← lower env a; let b ← lower env b
+    return ⟨.letE a.expression (.letE
+      (b.expression.shift 1 0) (.ite (.lt (.bvar 0) (.bvar 1)) (.bool false) (.bool true))), a.affinities ++ b.affinities⟩
+  | .uniform affinity a b => return draw2 .uniform affinity (← lower env a) (← lower env b)
+  | .gaussian affinity a b => return draw2 .gaussian affinity (← lower env a) (← lower env b)
+  | .beta affinity a b => return draw2 .beta affinity (← lower env a) (← lower env b)
+  | .gamma affinity a b => return draw2 .gamma affinity (← lower env a) (← lower env b)
 
 def elaborate (e : Surface) : Except String Input := lower [] e
 

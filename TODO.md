@@ -98,3 +98,8 @@ Full refactor (per-step checks and decisions in refactor-plan.md):
 [x] Review the 19-commit migration/refactor stack and separate uncommitted domain-safety trial (three P2 findings in pr-stack-review.md).
 
 [x] Fix stack findings: affinity schema, multiplication roundtrips, and numerical statistics; regressions and follow-up review pass.
+
+Frontend AST refactor:
+[x] Replace string-tagged parsed syntax with explicit constructors.
+[ ] Store optional affinities in resolved syntax and check alignment structurally.
+[ ] Validate certificates and corpus; compare each refactor and retain improvements.
