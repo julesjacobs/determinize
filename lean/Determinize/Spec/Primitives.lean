@@ -21,7 +21,9 @@ open MeasureTheory ProbabilityTheory
 
 noncomputable section
 
-/-- The primitive names; a trace records which primitive a G draw came from. -/
+/-- The primitive names; a trace records which primitive a G draw came from.
+`discrete` carries its checked distribution, including all probabilities and their length.
+Replay compares primitive names, so a discrete trace entry must match the whole distribution. -/
 inductive Op where
   | uniform
   | gaussian

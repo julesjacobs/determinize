@@ -44,10 +44,10 @@ noncomputable def reduce : Expr → Action
         if right.isValue then .next expression
         else (reduce right).wrap (fun next => .pair left next)
       else (reduce left).wrap (fun next => .pair next right)
-  | expression@(.inl value) =>
-      if value.isValue then .next expression else (reduce value).wrap .inl
-  | expression@(.inr value) =>
-      if value.isValue then .next expression else (reduce value).wrap .inr
+  | expression@(.inl operand) =>
+      if operand.isValue then .next expression else (reduce operand).wrap .inl
+  | expression@(.inr operand) =>
+      if operand.isValue then .next expression else (reduce operand).wrap .inr
   | expression@(.cons head tail) =>
       if head.isValue then
         if tail.isValue then .next expression

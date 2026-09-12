@@ -24,8 +24,8 @@ inductive Expr (Literal : Type := ℝ) where
   | fix (body : Expr Literal)
   | app (function argument : Expr Literal)
   | pair (left right : Expr Literal) | fst (pair : Expr Literal)
-  | snd (pair : Expr Literal) | inl (value : Expr Literal)
-  | inr (value : Expr Literal)
+  | snd (pair : Expr Literal) | inl (operand : Expr Literal)
+  | inr (operand : Expr Literal)
   | matchSum (scrutinee left right : Expr Literal)
   | nil | cons (head tail : Expr Literal)
   | matchList (scrutinee nilCase consCase : Expr Literal)
@@ -50,7 +50,7 @@ namespace Expr
 def isValue {Literal : Type} : Expr Literal → Bool
   | .unit | .bool _ | .real _ | .lam _ | .fix _ | .nil => true
   | .pair left right | .cons left right => left.isValue && right.isValue
-  | .inl value | .inr value => value.isValue
+  | .inl operand | .inr operand => operand.isValue
   | _ => false
 
 /-- Source expressions contain only stochastic sampling sites. -/
@@ -139,8 +139,8 @@ def determinize {Literal : Type} : Expr Literal → Expr Literal
   | .pair left right => .pair left.determinize right.determinize
   | .fst pairValue => .fst pairValue.determinize
   | .snd pairValue => .snd pairValue.determinize
-  | .inl value => .inl value.determinize
-  | .inr value => .inr value.determinize
+  | .inl operand => .inl operand.determinize
+  | .inr operand => .inr operand.determinize
   | .matchSum scrutinee left right =>
       .matchSum scrutinee.determinize left.determinize right.determinize
   | .nil => .nil
@@ -230,10 +230,10 @@ inductive Typed : List Ty → Expr → Ty → Prop
       Typed context (.pair left right) (.prod leftTy rightTy)
   | fst : Typed context pair (.prod leftTy rightTy) → Typed context (.fst pair) leftTy
   | snd : Typed context pair (.prod leftTy rightTy) → Typed context (.snd pair) rightTy
-  | inl : Typed context value leftTy →
-      Typed context (.inl value) (.sum leftTy rightTy)
-  | inr : Typed context value rightTy →
-      Typed context (.inr value) (.sum leftTy rightTy)
+  | inl : Typed context operand leftTy →
+      Typed context (.inl operand) (.sum leftTy rightTy)
+  | inr : Typed context operand rightTy →
+      Typed context (.inr operand) (.sum leftTy rightTy)
   | matchSum : Typed context scrutinee (.sum leftTy rightTy) →
       Typed (leftTy :: context) left result → Typed (rightTy :: context) right result →
       Typed context (.matchSum scrutinee left right) result
@@ -248,7 +248,7 @@ inductive Typed : List Ty → Expr → Ty → Prop
   | letE : Typed context value valueTy → Typed (valueTy :: context) body result →
       Typed context (.letE value body) result
   | sub : Typed context value a → Ty.Sub a b → Typed context value b
-  | neg : Typed context value (.float affinity) → Typed context (.neg value) (.float affinity)
+  | neg : Typed context operand (.float affinity) → Typed context (.neg operand) (.float affinity)
   | add : Typed context left (.float affinity) → Typed context right (.float affinity) →
       Typed context (.add left right) (.float affinity)
   | mul : Typed context left (.float .G) → Typed context right (.float affinity) →

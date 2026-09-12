@@ -86,12 +86,14 @@ def outputMassThm : Prop :=
     bigStepMeasure program.determinize Set.univ = bigStepMeasure program Set.univ
 
 /-- Determinization does not increase the variance: whenever the source output law has a
-finite second moment, so does the target output law, and neither the second moment nor the
-variance increases. The output laws are unnormalized, but they have equal mass
-(`outputMassThm`) and equal mean (`mainThm`), so the inequality holds for Mathlib's `variance`
-(`∫ (v - ∫ v)²`, with the unnormalized mean) and equally for the laws normalized by their
-mass: in both readings the difference of the variances is the difference of the second
-moments, up to the common mass. -/
+finite second moment, so does the target output law (first conjunct). The second conjunct
+is the raw second moment, `∫ v²` as a Bochner integral, and is Jensen's inequality for the
+square (`jensenThm` with `φ = (· ^ 2)`); the third is Mathlib's `variance`
+(`∫ (v - ∫ v)²`, with the unnormalized mean). The output laws are unnormalized, but they have
+equal mass (`outputMassThm`) and equal mean (`mainThm`), so their variances differ from their
+second moments by a term the two laws share and the third conjunct follows from the second;
+it is kept as a separate conjunct so that the statement reads off directly. The same
+inequalities hold for the laws normalized by their common mass. -/
 def varianceThm : Prop :=
   ∀ (program : Expr),
     Typed [] program (.float .E) →
