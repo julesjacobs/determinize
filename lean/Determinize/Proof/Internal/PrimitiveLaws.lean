@@ -231,19 +231,11 @@ theorem measurableSet_domain (op : Op) :
       (measurableSet_le hp measurable_const)
   · exact MeasurableSet.univ
 
-theorem measurable_meanConstant (op : Op) : Measurable (meanConstant op) := by
-  cases op <;> unfold meanConstant <;> fun_prop
-
-theorem measurable_meanCoeff (op : Op) (i : Fin (affineArity op)) :
-    Measurable (fun general => meanCoeff op general i) := by
-  cases op <;> unfold meanCoeff <;> fun_prop
-
 /-- Analytic facts about the canonical primitive measures used by the soundness proof. -/
 structure PrimitiveLaws where
   kernel : (op : Op) → Kernel (Params op) ℝ
   kernel_eq_paperMeasure : ∀ op params, kernel op params = paperMeasure op params
   kernel_sfinite : ∀ op, IsSFiniteKernel (kernel op)
-  mass_le_one : ∀ op params, kernel op params Set.univ ≤ 1
   kernel_zero_off_domain : ∀ op params, ¬ domain op params → kernel op params = 0
   mass_one : ∀ op params, domain op params → kernel op params Set.univ = 1
   integrable_id : ∀ op params, domain op params →

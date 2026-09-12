@@ -206,7 +206,7 @@ theorem soundnessDataE (source : Expr) (typed : Typed [] source (.float .E))
         outputGivenTrace source.determinize trace = Measure.dirac (kernelMean (normalizedOutputGivenTrace source) trace) := by
   have tags := sourceTags_of_sourceForm sourceForm
   have domainSafe := (Typing.primitiveDomainSafe_iff_doesNotGetStuck typed).2 safe
-  refine ⟨(StepTraces.soundness source typed sourceForm safe).1, ?_⟩
+  refine ⟨doesNotGetStuck_determinize typed sourceForm safe, ?_⟩
   let ν := (traceAndOutputLaw source.determinize).map Prod.fst
   let f := kernelMean (normalizedOutputGivenTrace source)
   rcases (compact_normalized_fiberSound source typed tags domainSafe).factorization
@@ -254,24 +254,8 @@ theorem meanOnTraces (affinity : Affinity) (program : Expr) (typed : Typed [] pr
 /-- A measure composed with a kernel is the bind that pairs each point with its draw. -/
 theorem compProd_eq_traceThenOutput (traces : Measure Trace) [SFinite traces]
     (fiber : Kernel Trace ℝ) [IsSFiniteKernel fiber] :
-    traces ⊗ₘ fiber = traceThenOutput traces fiber := by
-  let paired := SFiniteKernel.mapWithInput ⟨fiber, inferInstance⟩ id measurable_id
-  have pairedEq (trace : Trace) :
-      paired.kernel trace = (fiber trace).map (fun value => (trace, value)) := by
-    rw [SymbolicSoundness.TargetSafety.sfiniteKernel_mapWithInput_apply]
-    rfl
-  have eq : traceThenOutput traces fiber = traces.bind paired.kernel := by
-    rw [traceThenOutput]
-    congr 1
-    funext trace
-    rw [pairedEq]
-  rw [eq]
-  ext set hs
-  rw [Measure.bind_apply hs paired.kernel.aemeasurable, Measure.compProd_apply hs]
-  apply lintegral_congr
-  intro trace
-  rw [pairedEq, Measure.map_apply (show Measurable (fun value : ℝ => (trace, value)) from
-    measurable_const.prodMk measurable_id) hs]
+    traces ⊗ₘ fiber = traceThenOutput traces fiber :=
+  StepTraces.compProd_eq_bind_pair traces fiber
 
 /-- Determinization returns the canonical replay mean on each terminating trace. -/
 theorem targetLaw (program : Expr) (typed : Typed [] program (.float .E))

@@ -7,15 +7,6 @@ Expressions carry affine functions of earlier expectation-affinity samples. The
 symbolic reducer records those samples while preserving a fixed residual shape.
 -/
 
-set_option aesop.warn.nonterminal false
-set_option linter.unusedSimpArgs false
-set_option linter.unusedTactic false
-set_option linter.unreachableTactic false
-set_option linter.unnecessarySeqFocus false
-set_option linter.unnecessarySimpa false
-set_option linter.style.haveILetI false
-set_option linter.unusedVariables false
-
 namespace Determinize.Proof.Paper
 
 open MeasureTheory ProbabilityTheory
@@ -25,6 +16,8 @@ attribute [local simp] Determinize.Spec.Paper.reduce
 
 namespace Symbolic
 
+/-- Symbolic expressions over `sampleCount` E-affinity draws: the paper syntax with every
+real literal an affine form in those draws. -/
 inductive AffineExpr (sampleCount : Nat) where
   | reject
   | bvar (index : Nat) | unit | bool (value : Bool)
@@ -58,6 +51,7 @@ inductive AffineExpr (sampleCount : Nat) where
 
 namespace AffineExpr
 
+/-- Evaluate every affine literal at `environment`, giving a concrete expression. -/
 def realize (environment : Env sampleCount) : AffineExpr sampleCount → Expr
   | .bvar index => .bvar index
   | .unit => .unit
@@ -109,6 +103,8 @@ def realize (environment : Env sampleCount) : AffineExpr sampleCount → Expr
   | .gamma kind shape rate =>
       .gamma kind (shape.realize environment) (rate.realize environment)
 
+/-- The skeleton of every realization, which does not depend on the environment
+(`realize_skeleton`). -/
 def skeleton : AffineExpr sampleCount → Skeleton
   | .bvar index => .bvar index
   | .unit => .unit
@@ -146,6 +142,8 @@ def skeleton : AffineExpr sampleCount → Skeleton
   | .beta kind left right => .beta kind left.skeleton right.skeleton
   | .gamma kind shape rate => .gamma kind shape.skeleton rate.skeleton
 
+/-- The affine literals in coordinate order; realizing evaluates them pointwise
+(`realize_coordinates`). -/
 def coordinates : AffineExpr sampleCount → List (Affine sampleCount)
   | .real value => [value]
   | .lam body | .fix body | .fst body | .snd body
@@ -163,6 +161,7 @@ def coordinates : AffineExpr sampleCount → List (Affine sampleCount)
   | .poisson _ body | .bernoulli _ body | .exponential _ body => body.coordinates
   | _ => []
 
+/-- Embed a source program, every literal becoming a constant affine form (`realize_ofExpr`). -/
 def ofExpr : Expr → AffineExpr 0
   | .bvar index => .bvar index
   | .unit => .unit
@@ -200,6 +199,7 @@ def ofExpr : Expr → AffineExpr 0
   | .beta kind left right => .beta kind (ofExpr left) (ofExpr right)
   | .gamma kind shape rate => .gamma kind (ofExpr shape) (ofExpr rate)
 
+/-- Apply `transform` to every affine literal. -/
 def mapAffine (transform : Affine n → Affine m) : AffineExpr n → AffineExpr m
   | .bvar index => .bvar index
   | .unit => .unit
@@ -251,16 +251,11 @@ def mapAffine (transform : Affine n → Affine m) : AffineExpr n → AffineExpr 
   | .gamma kind shape rate =>
       .gamma kind (shape.mapAffine transform) (rate.mapAffine transform)
 
-def Affine.weaken (expression : Affine n) : Affine (n + 1) :=
-  (expression.1, Fin.cases 0 expression.2)
-
-def Affine.fresh (n : Nat) : Affine (n + 1) :=
-  (0, Fin.cases 1 (fun _ => 0))
-
 @[simp] theorem Affine.eval_const (constant : ℝ) (environment : Env n) :
     Symbolic.Affine.eval ((constant, 0) : Affine n) environment = constant := by
   simp [Symbolic.Affine.eval]
 
+/-- The same expression over one more draw, which it does not mention (`Affine.weaken`). -/
 def weakenSamples (expression : AffineExpr n) : AffineExpr (n + 1) :=
   expression.mapAffine Affine.weaken
 
@@ -422,10 +417,9 @@ theorem WellTyped.weakenSamples (typed : WellTyped context expression ty) :
     WellTyped context expression.weakenSamples ty := by
   apply WellTyped.mapAffine typed Affine.weaken
   intro affine zero
-  change (Fin.cases 0 affine.2 : Fin (_ + 1) → ℝ) = 0
+  change (Fin.cons 0 affine.2 : Fin (_ + 1) → ℝ) = 0
   rw [zero]
-  funext index
-  refine Fin.cases ?_ (fun tail => ?_) index <;> rfl
+  exact funext (Fin.cases rfl fun _ => rfl)
 
 def shift (amount cutoff : Nat) : AffineExpr sampleCount → AffineExpr sampleCount
   | .bvar index => .bvar (if cutoff ≤ index then index + amount else index)
@@ -436,14 +430,14 @@ def shift (amount cutoff : Nat) : AffineExpr sampleCount → AffineExpr sampleCo
   | .real value => .real value
   | .lam body => .lam (body.shift amount (cutoff + 1))
   | .fix body => .fix (body.shift amount (cutoff + 2))
-  | .app f x => .app (f.shift amount cutoff) (x.shift amount cutoff)
-  | .pair l r => .pair (l.shift amount cutoff) (r.shift amount cutoff)
-  | .fst x => .fst (x.shift amount cutoff)
-  | .snd x => .snd (x.shift amount cutoff)
-  | .inl x => .inl (x.shift amount cutoff)
-  | .inr x => .inr (x.shift amount cutoff)
-  | .matchSum x l r => .matchSum (x.shift amount cutoff)
-      (l.shift amount (cutoff + 1)) (r.shift amount (cutoff + 1))
+  | .app function argument => .app (function.shift amount cutoff) (argument.shift amount cutoff)
+  | .pair left right => .pair (left.shift amount cutoff) (right.shift amount cutoff)
+  | .fst pairValue => .fst (pairValue.shift amount cutoff)
+  | .snd pairValue => .snd (pairValue.shift amount cutoff)
+  | .inl operand => .inl (operand.shift amount cutoff)
+  | .inr operand => .inr (operand.shift amount cutoff)
+  | .matchSum scrutinee left right => .matchSum (scrutinee.shift amount cutoff)
+      (left.shift amount (cutoff + 1)) (right.shift amount (cutoff + 1))
   | .nil => .nil
   | .cons h t => .cons (h.shift amount cutoff) (t.shift amount cutoff)
   | .matchList x n c => .matchList (x.shift amount cutoff)
@@ -477,14 +471,15 @@ def substAt (depth : Nat) (replacement : AffineExpr sampleCount)
   | .real value => .real value
   | .lam body => .lam (substAt (depth + 1) replacement body)
   | .fix body => .fix (substAt (depth + 2) replacement body)
-  | .app f x => .app (substAt depth replacement f) (substAt depth replacement x)
-  | .pair l r => .pair (substAt depth replacement l) (substAt depth replacement r)
-  | .fst x => .fst (substAt depth replacement x)
-  | .snd x => .snd (substAt depth replacement x)
-  | .inl x => .inl (substAt depth replacement x)
-  | .inr x => .inr (substAt depth replacement x)
-  | .matchSum x l r => .matchSum (substAt depth replacement x)
-      (substAt (depth + 1) replacement l) (substAt (depth + 1) replacement r)
+  | .app function argument =>
+      .app (substAt depth replacement function) (substAt depth replacement argument)
+  | .pair left right => .pair (substAt depth replacement left) (substAt depth replacement right)
+  | .fst pairValue => .fst (substAt depth replacement pairValue)
+  | .snd pairValue => .snd (substAt depth replacement pairValue)
+  | .inl operand => .inl (substAt depth replacement operand)
+  | .inr operand => .inr (substAt depth replacement operand)
+  | .matchSum scrutinee left right => .matchSum (substAt depth replacement scrutinee)
+      (substAt (depth + 1) replacement left) (substAt (depth + 1) replacement right)
   | .nil => .nil
   | .cons h t => .cons (substAt depth replacement h) (substAt depth replacement t)
   | .matchList x n c => .matchList (substAt depth replacement x)
@@ -643,46 +638,6 @@ theorem wellTyped_shift (h : WellTyped (before ++ suffix) expression ty) :
       rw [shift]
       exact .exponential (ih (before := before) (suffix := suffix) hcontext)
 
-theorem aexprHasVar_subst (h : Determinize.Spec.Paper.HasVar (before ++ binder :: suffix) index ty) :
-    (index = before.length ∧ ty = binder) ∨
-      (index ≠ before.length ∧ Determinize.Spec.Paper.HasVar (before ++ suffix)
-        (if before.length < index then index - 1 else index) ty) := by
-  induction before generalizing index with
-  | nil =>
-      cases h with
-      | head => exact .inl ⟨rfl, rfl⟩
-      | tail h =>
-          right
-          exact ⟨by simp only [List.length_nil]; omega, by simpa using h⟩
-  | cons head before ih =>
-      cases h with
-      | head =>
-          right
-          simp only [List.cons_append, List.length_cons, Nat.zero_lt_succ,
-            ↓reduceIte]
-          exact ⟨by omega, .head⟩
-      | tail h =>
-          rcases ih h with equal | shifted
-          · left
-            exact ⟨congrArg Nat.succ equal.1, equal.2⟩
-          · right
-            rcases shifted with ⟨notEqual, shifted⟩
-            rename_i index
-            constructor
-            · simp only [List.length_cons]
-              omega
-            simp only [List.cons_append, List.length_cons, Nat.succ_lt_succ_iff]
-            by_cases condition : before.length < index
-            · simp only [condition, ↓reduceIte]
-              have shifted := shifted
-              simp only [condition, ↓reduceIte] at shifted
-              have shifted' := Determinize.Spec.Paper.HasVar.tail (head := head) shifted
-              convert shifted' using 1 <;> omega
-            · simp only [condition, ↓reduceIte]
-              have shifted := shifted
-              simp only [condition, ↓reduceIte] at shifted
-              exact Determinize.Spec.Paper.HasVar.tail (head := head) shifted
-
 theorem wellTyped_substAt (h : WellTyped (before ++ binder :: suffix) expression ty)
     (replacementTyped : WellTyped suffix replacement binder) :
     WellTyped (before ++ suffix)
@@ -691,7 +646,7 @@ theorem wellTyped_substAt (h : WellTyped (before ++ binder :: suffix) expression
   induction h generalizing before suffix with
   | bvar hvar =>
       rw [← hcontext] at hvar
-      rcases aexprHasVar_subst hvar with equal | shifted
+      rcases Typing.hasVar_subst hvar with equal | shifted
       · rcases equal with ⟨rfl, rfl⟩
         rw [substAt, if_pos rfl]
         simpa only [List.nil_append, List.append_assoc, List.length_nil] using
@@ -854,7 +809,7 @@ theorem realize_skeleton (expression : AffineExpr sampleCount)
     cases expression with
     | _ =>
         simp (disch := simp_wf) only [realize, skeleton, Expr.skeleton, recurse]
-        all_goals repeat' first | rfl | rw [recurse _ (by simp_wf <;> omega)]
+        all_goals repeat' first | rfl | rw [recurse _ (by simp_wf; omega)]
 
 set_option maxHeartbeats 800000 in
 theorem realize_coordinates (expression : AffineExpr sampleCount)
@@ -871,7 +826,7 @@ theorem realize_coordinates (expression : AffineExpr sampleCount)
     | _ =>
         simp (disch := simp_wf) only [realize, coordinates, Expr.realCoordinates,
           List.map_append, List.map_nil, recurse]
-        all_goals repeat' first | rfl | rw [recurse _ (by simp_wf <;> omega)]
+        all_goals repeat' first | rfl | rw [recurse _ (by simp_wf; omega)]
 
 set_option maxHeartbeats 800000 in
 theorem realize_shift (expression : AffineExpr sampleCount)
@@ -889,7 +844,7 @@ theorem realize_shift (expression : AffineExpr sampleCount)
     cases expression with
     | _ =>
         simp (disch := simp_wf) only [shift, realize, Expr.shift, Expr.mapVars, recurse]
-        all_goals repeat' first | rfl | rw [recurse _ _ (by simp_wf <;> omega)]
+        all_goals repeat' first | rfl | rw [recurse _ _ (by simp_wf; omega)]
 
 set_option maxHeartbeats 800000 in
 theorem realize_substAt (expression replacement : AffineExpr sampleCount)
@@ -910,7 +865,7 @@ theorem realize_substAt (expression replacement : AffineExpr sampleCount)
         split <;> simp_all only [realize, realize_shift]
     | _ =>
         simp (disch := simp_wf) only [substAt, realize, Expr.substAt, Expr.mapVars, recurse]
-        all_goals repeat' first | rfl | rw [recurse _ _ (by simp_wf <;> omega)]
+        all_goals repeat' first | rfl | rw [recurse _ _ (by simp_wf; omega)]
 
 theorem realize_substHead (body replacement : AffineExpr sampleCount)
     (environment : Env sampleCount) :
@@ -924,18 +879,6 @@ theorem realize_substTwo (body argument function : AffineExpr sampleCount)
       (body.realize environment).substTwo (argument.realize environment)
         (function.realize environment) := by
   simp only [substTwo, Expr.substTwo, realize_substAt]
-
-@[simp] theorem Affine.eval_weaken (expression : Affine n) (head : ℝ)
-    (environment : Env n) :
-    (Affine.weaken expression).eval (Env.cons head environment) = expression.eval environment := by
-  simp only [Affine.weaken, Symbolic.Affine.eval, Fin.sum_univ_succ, Env.cons_zero,
-    Env.cons_succ, Fin.cases_zero, Fin.cases_succ, zero_mul, zero_add]
-
-@[simp] theorem Affine.eval_fresh (n : Nat) (head : ℝ) (environment : Env n) :
-    (Affine.fresh n).eval (Env.cons head environment) = head := by
-  simp only [Affine.fresh, Symbolic.Affine.eval, Fin.sum_univ_succ, Env.cons_zero,
-    Env.cons_succ, Fin.cases_zero, Fin.cases_succ, one_mul, zero_mul, Finset.sum_const_zero,
-    add_zero, zero_add]
 
 set_option maxHeartbeats 800000 in
 theorem realize_mapAffine (expression : AffineExpr n) (transform : Affine n → Affine m)
@@ -954,7 +897,7 @@ theorem realize_mapAffine (expression : AffineExpr n) (transform : Affine n → 
     | real value => simp only [mapAffine, realize, eval_transform]
     | _ =>
         simp (disch := simp_wf) only [mapAffine, realize, recurse]
-        all_goals repeat' first | rfl | rw [recurse _ (by simp_wf <;> omega)]
+        all_goals repeat' first | rfl | rw [recurse _ (by simp_wf; omega)]
 
 @[simp] theorem realize_weakenSamples (expression : AffineExpr n) (head : ℝ)
     (environment : Env n) :
@@ -976,7 +919,7 @@ set_option maxHeartbeats 800000 in
         simp [ofExpr, realize, Symbolic.Affine.eval]
     | _ =>
         simp (disch := simp_wf) only [ofExpr, realize, recurse]
-        all_goals repeat' first | rfl | rw [recurse _ (by simp_wf <;> omega)]
+        all_goals repeat' first | rfl | rw [recurse _ (by simp_wf; omega)]
 
 def isValue : AffineExpr n → Bool
   | .unit | .bool _ | .real _ | .lam _ | .fix _ | .nil => true
@@ -993,12 +936,15 @@ def isValue : AffineExpr n → Bool
       ih (sizeOf child) (by rwa [← sizeEq]) child rfl
     cases expression <;> simp (disch := simp_wf) only [realize, isValue, Expr.isValue,
       recurse]
-    all_goals repeat' first | rfl | rw [recurse _ (by simp_wf <;> omega)]
+    all_goals repeat' first | rfl | rw [recurse _ (by simp_wf; omega)]
 
+/-- The affine form of a real literal; `none` for any other expression. -/
 def affineValue? : AffineExpr n → Option (Affine n)
   | .real value => some value
   | _ => none
 
+/-- The value of a G-affinity literal, an affine form with zero coefficients; `none` for a
+literal that depends on a draw and for any other expression. -/
 noncomputable def constantValue? : AffineExpr n → Option ℝ
   | .real (constant, coefficients) => if coefficients = 0 then some constant else none
   | _ => none
@@ -1099,44 +1045,6 @@ theorem wellTyped_list_value (typed : WellTyped context expression (.list elemen
   · exact Or.inl he
   · exact Or.inr ⟨h, t, he⟩
 
-theorem wellTyped_pair_inv
-    (typed : WellTyped context (.pair left right)
-      (.prod leftTy rightTy)) :
-    WellTyped context left leftTy ∧ WellTyped context right rightTy := by
-  generalize he : AffineExpr.pair left right = expression at typed
-  generalize ht : Ty.prod leftTy rightTy = ty at typed
-  induction typed generalizing leftTy rightTy
-  case sub h sub ih =>
-    cases sub <;> cases ht
-    obtain ⟨hl, hr⟩ := ih he rfl
-    exact ⟨hl.sub (by assumption), hr.sub (by assumption)⟩
-  all_goals cases he <;> cases ht
-  all_goals first | exact ⟨by assumption, by assumption⟩ | assumption
-
-theorem wellTyped_inl_inv
-    (typed : WellTyped context (.inl value)
-      (.sum leftTy rightTy)) : WellTyped context value leftTy := by
-  generalize he : AffineExpr.inl value = expression at typed
-  generalize ht : Ty.sum leftTy rightTy = ty at typed
-  induction typed generalizing leftTy rightTy
-  case sub h sub ih =>
-    cases sub <;> cases ht
-    exact (ih he rfl).sub (by assumption)
-  all_goals cases he <;> cases ht
-  all_goals first | exact ⟨by assumption, by assumption⟩ | assumption
-
-theorem wellTyped_inr_inv
-    (typed : WellTyped context (.inr value)
-      (.sum leftTy rightTy)) : WellTyped context value rightTy := by
-  generalize he : AffineExpr.inr value = expression at typed
-  generalize ht : Ty.sum leftTy rightTy = ty at typed
-  induction typed generalizing leftTy rightTy
-  case sub h sub ih =>
-    cases sub <;> cases ht
-    exact (ih he rfl).sub (by assumption)
-  all_goals cases he <;> cases ht
-  all_goals first | exact ⟨by assumption, by assumption⟩ | assumption
-
 theorem wellTyped_cons_inv
     (typed : WellTyped context (.cons head tail) (.list element)) :
     WellTyped context head element ∧ WellTyped context tail (.list element) := by
@@ -1148,7 +1056,7 @@ theorem wellTyped_cons_inv
     obtain ⟨hl, hr⟩ := ih he rfl
     exact ⟨hl.sub (by assumption), hr.sub (.list (by assumption))⟩
   all_goals cases he <;> cases ht
-  all_goals first | exact ⟨by assumption, by assumption⟩ | assumption
+  all_goals exact ⟨by assumption, by assumption⟩
 
 theorem wellTyped_realG_coefficients
     (typed : WellTyped context (.real value) (.float .G)) : value.2 = 0 := by
@@ -1169,44 +1077,14 @@ theorem constantValue?_eq_some_of_wellTypedG
   have constant : coefficients = 0 := wellTyped_realG_coefficients typed
   exact ⟨constantTerm, by simp [constantValue?, constant]⟩
 
-def Affine.neg (expression : Affine n) : Affine n :=
-  (-expression.1, fun index => -expression.2 index)
-
-def Affine.add (left right : Affine n) : Affine n :=
-  (left.1 + right.1, fun index => left.2 index + right.2 index)
-
 noncomputable def Affine.mul? (left right : Affine n) : Option (Affine n) :=
   if right.2 = 0 then some (right.1 • left)
   else if left.2 = 0 then some (left.1 • right)
   else none
 
+/-- The quotient of two affine forms when the denominator is constant; `none` otherwise. -/
 noncomputable def Affine.div? (left right : Affine n) : Option (Affine n) :=
   if right.2 = 0 then some ((right.1)⁻¹ • left) else none
-
-@[simp] theorem Affine.eval_neg (expression : Affine n) (environment : Env n) :
-    (Affine.neg expression).eval environment = -expression.eval environment := by
-  simp only [Affine.neg, Symbolic.Affine.eval]
-  have sumRule : (∑ index, -expression.2 index * environment index) =
-      -(∑ index, expression.2 index * environment index) := by
-    rw [← Finset.sum_neg_distrib]
-    apply Finset.sum_congr rfl
-    intro index _
-    ring
-  rw [sumRule]
-  ring
-
-@[simp] theorem Affine.eval_add (left right : Affine n) (environment : Env n) :
-    (Affine.add left right).eval environment = left.eval environment + right.eval environment := by
-  simp only [Affine.add, Symbolic.Affine.eval]
-  have sumRule : (∑ index, (left.2 index + right.2 index) * environment index) =
-      (∑ index, left.2 index * environment index) +
-        ∑ index, right.2 index * environment index := by
-    rw [← Finset.sum_add_distrib]
-    apply Finset.sum_congr rfl
-    intro index _
-    ring
-  rw [sumRule]
-  ring
 
 theorem Affine.eval_mul_of_eq_some {left right result : Affine n}
     (equality : Affine.mul? left right = some result) (environment : Env n) :
@@ -1251,34 +1129,9 @@ theorem Affine.eval_mul_of_eq_some {left right result : Affine n}
 theorem Affine.mul?_eq_some_of_left {left right : Affine n} (constant : left.2 = 0) :
     ∃ result, Affine.mul? left right = some result := by
   unfold Affine.mul?
-  split_ifs <;> first | exact ⟨_, rfl⟩ | exact absurd constant (by assumption)
+  split_ifs <;> exact ⟨_, rfl⟩
 
-theorem Affine.eval_div_of_eq_some {left right result : Affine n}
-    (equality : Affine.div? left right = some result) (environment : Env n) :
-    result.eval environment = left.eval environment / right.eval environment := by
-  unfold Affine.div? at equality
-  split at equality
-  · rename_i constant
-    simp only [Option.some.injEq] at equality
-    subst result
-    rcases right with ⟨rightConstant, rightCoefficients⟩
-    simp only at constant
-    subst rightCoefficients
-    simp only [Symbolic.Affine.eval, Pi.zero_apply, zero_mul, Finset.sum_const_zero,
-      add_zero, Prod.smul_fst, Prod.smul_snd, Pi.smul_apply, smul_eq_mul,
-      div_eq_mul_inv]
-    have sumRule : (∑ index, rightConstant⁻¹ * left.2 index * environment index) =
-        rightConstant⁻¹ * ∑ index, left.2 index * environment index := by
-      rw [Finset.mul_sum]
-      apply Finset.sum_congr rfl
-      intro index _
-      ring
-    rw [sumRule]
-    ring
-  · contradiction
-
-inductive SymbolicAction
-    (laws : Determinize.Proof.Paper.PrimitiveLaws) (sampleCount : Nat) where
+inductive SymbolicAction (sampleCount : Nat) where
   | next (expression : AffineExpr sampleCount)
   | sampleE (op : Determinize.Spec.Paper.Op)
       (affineArgs : List (Affine sampleCount))
@@ -1289,7 +1142,9 @@ inductive SymbolicAction
 
 namespace SymbolicAction
 
-noncomputable def realize (environment : Env n) : SymbolicAction laws n → Action
+/-- The concrete action at `environment`: a `sampleE` site draws from the primitive fiber at
+the evaluated parameters and its continuation sees the draw as the fresh coordinate. -/
+noncomputable def realize (environment : Env n) : SymbolicAction n → Action
   | .next expression => .next (expression.realize environment)
   | .sampleE op affine general continuation =>
       .sample (.sample .E, op) (primitiveFiber (.sample .E) op
@@ -1299,15 +1154,18 @@ noncomputable def realize (environment : Env n) : SymbolicAction laws n → Acti
       .sample site fiber (fun value => (continuation value).realize environment)
   | .stuck => .stuck
 
-def wrap (context : AffineExpr n → AffineExpr n) (liftedContext : AffineExpr (n + 1) → AffineExpr (n + 1)) :
-    SymbolicAction laws n → SymbolicAction laws n
+/-- Continue a symbolic step under an evaluation context. The continuation of a `sampleE`
+lives in `n + 1` variables, hence the second, lifted context. -/
+def wrap (context : AffineExpr n → AffineExpr n)
+    (liftedContext : AffineExpr (n + 1) → AffineExpr (n + 1)) :
+    SymbolicAction n → SymbolicAction n
   | .next expression => .next (context expression)
   | .sampleE op affine general continuation =>
       .sampleE op affine general (liftedContext continuation)
   | .sampleG site fiber continuation => .sampleG site fiber (context ∘ continuation)
   | .stuck => .stuck
 
-theorem realize_wrap (action : SymbolicAction laws n) (environment : Env n)
+theorem realize_wrap (action : SymbolicAction n) (environment : Env n)
     (context : AffineExpr n → AffineExpr n) (liftedContext : AffineExpr (n + 1) → AffineExpr (n + 1))
     (context_realize : ∀ expression,
       (context expression).realize environment = ExprContext (expression.realize environment))
@@ -1329,7 +1187,10 @@ theorem realize_wrap (action : SymbolicAction laws n) (environment : Env n)
       funext value
       exact context_realize (continuation value)
 
-inductive WellTyped (ty : Ty) : SymbolicAction laws n → Prop
+/-- Typing of a symbolic step at `ty`: its expression or continuations are closed and well
+typed, a `sampleE` carries the right number of parameters, and a `sampleG` is a G-affinity
+site with a primitive fiber at constant parameters. -/
+inductive WellTyped (ty : Ty) : SymbolicAction n → Prop
   | next : AffineExpr.WellTyped [] expression ty → WellTyped ty (.next expression)
   | sampleE : affine.length = Determinize.Spec.Paper.affineArity op →
       general.length = Determinize.Spec.Paper.generalArity op →
@@ -1345,14 +1206,14 @@ theorem WellTyped.sub (typed : WellTyped a action) (h : Ty.Sub a b) : WellTyped 
   | sampleG ht => exact .sampleG (fun v => (ht v).sub h)
 
 @[simp] theorem wellTyped_next_iff :
-    WellTyped ty (.next expression : SymbolicAction laws n) ↔
+    WellTyped ty (.next expression : SymbolicAction n) ↔
       AffineExpr.WellTyped [] expression ty := by
   constructor
   · intro typed; cases typed; assumption
   · exact .next
 
 @[simp] theorem wellTyped_sampleE_iff :
-    WellTyped ty (.sampleE op affine general continuation : SymbolicAction laws n) ↔
+    WellTyped ty (.sampleE op affine general continuation : SymbolicAction n) ↔
       affine.length = Determinize.Spec.Paper.affineArity op ∧
       general.length = Determinize.Spec.Paper.generalArity op ∧
       AffineExpr.WellTyped [] continuation ty := by
@@ -1361,14 +1222,14 @@ theorem WellTyped.sub (typed : WellTyped a action) (h : Ty.Sub a b) : WellTyped 
   · rintro ⟨ha, hg, typed⟩; exact .sampleE ha hg typed
 
 @[simp] theorem wellTyped_sampleG_iff :
-    WellTyped ty (.sampleG site fiber continuation : SymbolicAction laws n) ↔
+    WellTyped ty (.sampleG site fiber continuation : SymbolicAction n) ↔
       ∀ value, AffineExpr.WellTyped [] (continuation value) ty := by
   constructor
   · intro typed; cases typed; assumption
   · exact .sampleG
 
 @[simp] theorem not_wellTyped_stuck :
-    ¬ WellTyped ty (.stuck : SymbolicAction laws n) := by
+    ¬ WellTyped ty (.stuck : SymbolicAction n) := by
   intro typed
   cases typed
 
@@ -1385,32 +1246,33 @@ theorem WellTyped.wrap (typed : WellTyped childTy action)
 
 end SymbolicAction
 
-noncomputable def symbolicReduce
-    (laws : Determinize.Proof.Paper.PrimitiveLaws) :
-    AffineExpr n → SymbolicAction laws n
-  | expression@(.bvar _) => .stuck
+/-- One step of symbolic reduction, mirroring `reduce` (`symbolicReduce_realize`): deterministic
+steps and G-affinity sites behave as in `reduce`, and an E-affinity site becomes a
+`sampleE` whose continuation sees the draw as the fresh coordinate. -/
+noncomputable def symbolicReduce : AffineExpr n → SymbolicAction n
+  | .bvar _ => .stuck
   | expression@(.reject) | expression@(.unit) | expression@(.bool _) | expression@(.real _)
   | expression@(.lam _) | expression@(.fix _) | expression@.nil =>
       .next expression
   | expression@(.pair left right) =>
       if left.isValue then
         if right.isValue then .next expression
-        else (symbolicReduce laws right).wrap (fun next => .pair left next)
+        else (symbolicReduce right).wrap (fun next => .pair left next)
           (fun next => .pair left.weakenSamples next)
-      else (symbolicReduce laws left).wrap (fun next => .pair next right)
+      else (symbolicReduce left).wrap (fun next => .pair next right)
         (fun next => .pair next right.weakenSamples)
   | expression@(.inl value) =>
       if value.isValue then .next expression
-      else (symbolicReduce laws value).wrap .inl .inl
+      else (symbolicReduce value).wrap .inl .inl
   | expression@(.inr value) =>
       if value.isValue then .next expression
-      else (symbolicReduce laws value).wrap .inr .inr
+      else (symbolicReduce value).wrap .inr .inr
   | expression@(.cons head tail) =>
       if head.isValue then
         if tail.isValue then .next expression
-        else (symbolicReduce laws tail).wrap (fun next => .cons head next)
+        else (symbolicReduce tail).wrap (fun next => .cons head next)
           (fun next => .cons head.weakenSamples next)
-      else (symbolicReduce laws head).wrap (fun next => .cons next tail)
+      else (symbolicReduce head).wrap (fun next => .cons next tail)
         (fun next => .cons next tail.weakenSamples)
   | .app function argument =>
       if function.isValue then
@@ -1419,25 +1281,25 @@ noncomputable def symbolicReduce
           | .lam body => .next (body.substHead argument)
           | fix@(.fix body) => .next (body.substTwo argument fix)
           | _ => .stuck
-        else (symbolicReduce laws argument).wrap (fun next => .app function next)
+        else (symbolicReduce argument).wrap (fun next => .app function next)
           (fun next => .app function.weakenSamples next)
-      else (symbolicReduce laws function).wrap (fun next => .app next argument)
+      else (symbolicReduce function).wrap (fun next => .app next argument)
         (fun next => .app next argument.weakenSamples)
   | .fst pairValue =>
       if pairValue.isValue then match pairValue with
         | AffineExpr.pair left _ => .next left | _ => .stuck
-      else (symbolicReduce laws pairValue).wrap .fst .fst
+      else (symbolicReduce pairValue).wrap .fst .fst
   | .snd pairValue =>
       if pairValue.isValue then match pairValue with
         | AffineExpr.pair _ right => .next right | _ => .stuck
-      else (symbolicReduce laws pairValue).wrap .snd .snd
+      else (symbolicReduce pairValue).wrap .snd .snd
   | .matchSum scrutinee left right =>
       if scrutinee.isValue then
         match scrutinee with
         | .inl value => .next (left.substHead value)
         | .inr value => .next (right.substHead value)
         | _ => .stuck
-      else (symbolicReduce laws scrutinee).wrap
+      else (symbolicReduce scrutinee).wrap
         (fun next => .matchSum next left right)
         (fun next => .matchSum next left.weakenSamples right.weakenSamples)
   | .matchList scrutinee nilCase consCase =>
@@ -1446,7 +1308,7 @@ noncomputable def symbolicReduce
         | .nil => .next nilCase
         | .cons head tail => .next (consCase.substTwo head tail)
         | _ => .stuck
-      else (symbolicReduce laws scrutinee).wrap
+      else (symbolicReduce scrutinee).wrap
         (fun next => .matchList next nilCase consCase)
         (fun next => .matchList next nilCase.weakenSamples consCase.weakenSamples)
   | .ite condition thenBranch elseBranch =>
@@ -1455,24 +1317,24 @@ noncomputable def symbolicReduce
         | .bool true => .next thenBranch
         | .bool false => .next elseBranch
         | _ => .stuck
-      else (symbolicReduce laws condition).wrap
+      else (symbolicReduce condition).wrap
         (fun next => .ite next thenBranch elseBranch)
         (fun next => .ite next thenBranch.weakenSamples elseBranch.weakenSamples)
   | .letE value body =>
       if value.isValue then .next (body.substHead value)
-      else (symbolicReduce laws value).wrap (fun next => .letE next body)
+      else (symbolicReduce value).wrap (fun next => .letE next body)
         (fun next => .letE next body.weakenSamples)
   | .neg body =>
       if body.isValue then match body with
         | .real value => .next (.real (Affine.neg value)) | _ => .stuck
-      else (symbolicReduce laws body).wrap .neg .neg
+      else (symbolicReduce body).wrap .neg .neg
   | .add left right =>
       if left.isValue then
         if right.isValue then match left.affineValue?, right.affineValue? with
           | some x, some y => .next (.real (Affine.add x y)) | _, _ => .stuck
-        else (symbolicReduce laws right).wrap (.add left)
+        else (symbolicReduce right).wrap (.add left)
           (.add left.weakenSamples)
-      else (symbolicReduce laws left).wrap (fun next => .add next right)
+      else (symbolicReduce left).wrap (fun next => .add next right)
         (fun next => .add next right.weakenSamples)
   | .mul left right =>
       if left.isValue then
@@ -1480,9 +1342,9 @@ noncomputable def symbolicReduce
           | some x, some y => match Affine.mul? x y with
             | some result => .next (.real result) | none => .stuck
           | _, _ => .stuck
-        else (symbolicReduce laws right).wrap (.mul left)
+        else (symbolicReduce right).wrap (.mul left)
           (.mul left.weakenSamples)
-      else (symbolicReduce laws left).wrap (fun next => .mul next right)
+      else (symbolicReduce left).wrap (fun next => .mul next right)
         (fun next => .mul next right.weakenSamples)
   | .div left right =>
       if left.isValue then
@@ -1490,16 +1352,16 @@ noncomputable def symbolicReduce
           | some x, some y => match Affine.div? x y with
             | some result => .next (.real result) | none => .stuck
           | _, _ => .stuck
-        else (symbolicReduce laws right).wrap (.div left)
+        else (symbolicReduce right).wrap (.div left)
           (.div left.weakenSamples)
-      else (symbolicReduce laws left).wrap (fun next => .div next right)
+      else (symbolicReduce left).wrap (fun next => .div next right)
         (fun next => .div next right.weakenSamples)
   | .lt left right =>
       if left.isValue then
         if right.isValue then match left.constantValue?, right.constantValue? with
           | some x, some y => .next (.bool (x < y)) | _, _ => .stuck
-        else (symbolicReduce laws right).wrap (.lt left) (.lt left.weakenSamples)
-      else (symbolicReduce laws left).wrap (fun next => .lt next right)
+        else (symbolicReduce right).wrap (.lt left) (.lt left.weakenSamples)
+      else (symbolicReduce left).wrap (fun next => .lt next right)
         (fun next => .lt next right.weakenSamples)
   | .uniform kind lower upper =>
       if lower.isValue then
@@ -1512,9 +1374,9 @@ noncomputable def symbolicReduce
                 .sampleG (kind, .uniform) (uniformFiber kind x y)
                   (fun value => .real (value, 0))
             | _, _ => .stuck
-        else (symbolicReduce laws upper).wrap (.uniform kind lower)
+        else (symbolicReduce upper).wrap (.uniform kind lower)
           (.uniform kind lower.weakenSamples)
-      else (symbolicReduce laws lower).wrap (fun next => .uniform kind next upper)
+      else (symbolicReduce lower).wrap (fun next => .uniform kind next upper)
         (fun next => .uniform kind next upper.weakenSamples)
   | .gaussian kind mean variance =>
       if mean.isValue then
@@ -1527,9 +1389,9 @@ noncomputable def symbolicReduce
                 .sampleG (kind, .gaussian) (gaussianFiber kind x y)
                   (fun value => .real (value, 0))
             | _, _ => .stuck
-        else (symbolicReduce laws variance).wrap (.gaussian kind mean)
+        else (symbolicReduce variance).wrap (.gaussian kind mean)
           (.gaussian kind mean.weakenSamples)
-      else (symbolicReduce laws mean).wrap (fun next => .gaussian kind next variance)
+      else (symbolicReduce mean).wrap (fun next => .gaussian kind next variance)
         (fun next => .gaussian kind next variance.weakenSamples)
   | .poisson kind rate =>
       if rate.isValue then match kind with
@@ -1541,7 +1403,7 @@ noncomputable def symbolicReduce
               .sampleG (kind, .poisson) (poissonFiber kind x)
                 (fun value => .real (value, 0))
           | none => .stuck
-      else (symbolicReduce laws rate).wrap (.poisson kind) (.poisson kind)
+      else (symbolicReduce rate).wrap (.poisson kind) (.poisson kind)
   | .discrete kind d =>
       match kind with
       | .sample .E => .sampleE (.discrete d) [] [] (.real (Affine.fresh n))
@@ -1557,7 +1419,7 @@ noncomputable def symbolicReduce
               .sampleG (kind, .bernoulli) (bernoulliFiber kind x)
                 (fun value => .real (value, 0))
           | none => .stuck
-      else (symbolicReduce laws probability).wrap (.bernoulli kind) (.bernoulli kind)
+      else (symbolicReduce probability).wrap (.bernoulli kind) (.bernoulli kind)
   | .exponential kind rate =>
       if rate.isValue then match kind with
         | .sample .E => match rate.constantValue? with
@@ -1568,7 +1430,7 @@ noncomputable def symbolicReduce
               .sampleG (kind, .exponential) (exponentialFiber kind x)
                 (fun value => .real (value, 0))
           | none => .stuck
-      else (symbolicReduce laws rate).wrap (.exponential kind) (.exponential kind)
+      else (symbolicReduce rate).wrap (.exponential kind) (.exponential kind)
   | .beta kind alpha betaParam =>
       if alpha.isValue then
         if betaParam.isValue then match kind with
@@ -1579,9 +1441,9 @@ noncomputable def symbolicReduce
             | some x, some y =>
                 .sampleG (kind, .beta) (betaFiber kind x y) (fun value => .real (value, 0))
             | _, _ => .stuck
-        else (symbolicReduce laws betaParam).wrap (.beta kind alpha)
+        else (symbolicReduce betaParam).wrap (.beta kind alpha)
           (.beta kind alpha.weakenSamples)
-      else (symbolicReduce laws alpha).wrap (fun next => .beta kind next betaParam)
+      else (symbolicReduce alpha).wrap (fun next => .beta kind next betaParam)
         (fun next => .beta kind next betaParam.weakenSamples)
   | .gamma kind shape rate =>
       if shape.isValue then
@@ -1593,87 +1455,87 @@ noncomputable def symbolicReduce
             | some x, some y =>
                 .sampleG (kind, .gamma) (gammaFiber kind x y) (fun value => .real (value, 0))
             | _, _ => .stuck
-        else (symbolicReduce laws rate).wrap (.gamma kind shape)
+        else (symbolicReduce rate).wrap (.gamma kind shape)
           (.gamma kind shape.weakenSamples)
-      else (symbolicReduce laws shape).wrap (fun next => .gamma kind next rate)
+      else (symbolicReduce shape).wrap (fun next => .gamma kind next rate)
         (fun next => .gamma kind next rate.weakenSamples)
 
-theorem symbolicReduce_app_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
-    (function operand : AffineExpr n) : symbolicReduce laws (.app function operand) =
+theorem symbolicReduce_app_eq
+    (function operand : AffineExpr n) : symbolicReduce (.app function operand) =
     if function.isValue then
       if operand.isValue then
         match function with
         | .lam body => .next (body.substHead operand)
         | fix@(.fix body) => .next (body.substTwo operand fix)
         | _ => .stuck
-      else (symbolicReduce laws operand).wrap (fun next => .app function next)
+      else (symbolicReduce operand).wrap (fun next => .app function next)
         (fun next => .app function.weakenSamples next)
-    else (symbolicReduce laws function).wrap (fun next => .app next operand)
+    else (symbolicReduce function).wrap (fun next => .app next operand)
       (fun next => .app next operand.weakenSamples) := by
   rw [symbolicReduce.eq_def]
 
-theorem symbolicReduce_fst_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
-    (pairValue : AffineExpr n) : symbolicReduce laws (.fst pairValue) =
+theorem symbolicReduce_fst_eq
+    (pairValue : AffineExpr n) : symbolicReduce (.fst pairValue) =
     if pairValue.isValue then match pairValue with
       | .pair left _ => .next left | _ => .stuck
-    else (symbolicReduce laws pairValue).wrap .fst .fst := by
+    else (symbolicReduce pairValue).wrap .fst .fst := by
   rw [symbolicReduce.eq_def]
 
-theorem symbolicReduce_snd_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
-    (pairValue : AffineExpr n) : symbolicReduce laws (.snd pairValue) =
+theorem symbolicReduce_snd_eq
+    (pairValue : AffineExpr n) : symbolicReduce (.snd pairValue) =
     if pairValue.isValue then match pairValue with
       | .pair _ right => .next right | _ => .stuck
-    else (symbolicReduce laws pairValue).wrap .snd .snd := by
+    else (symbolicReduce pairValue).wrap .snd .snd := by
   rw [symbolicReduce.eq_def]
 
-theorem symbolicReduce_matchSum_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
+theorem symbolicReduce_matchSum_eq
     (scrutinee left right : AffineExpr n) :
-    symbolicReduce laws (.matchSum scrutinee left right) =
+    symbolicReduce (.matchSum scrutinee left right) =
       if scrutinee.isValue then match scrutinee with
         | .inl value => .next (left.substHead value)
         | .inr value => .next (right.substHead value)
         | _ => .stuck
-      else (symbolicReduce laws scrutinee).wrap
+      else (symbolicReduce scrutinee).wrap
         (fun next => .matchSum next left right)
         (fun next => .matchSum next left.weakenSamples right.weakenSamples) := by
   rw [symbolicReduce.eq_def]
 
-theorem symbolicReduce_matchList_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
+theorem symbolicReduce_matchList_eq
     (scrutinee nilCase consCase : AffineExpr n) :
-    symbolicReduce laws (.matchList scrutinee nilCase consCase) =
+    symbolicReduce (.matchList scrutinee nilCase consCase) =
       if scrutinee.isValue then match scrutinee with
         | .nil => .next nilCase
         | .cons head tail => .next (consCase.substTwo head tail)
         | _ => .stuck
-      else (symbolicReduce laws scrutinee).wrap
+      else (symbolicReduce scrutinee).wrap
         (fun next => .matchList next nilCase consCase)
         (fun next => .matchList next nilCase.weakenSamples
           consCase.weakenSamples) := by
   rw [symbolicReduce.eq_def]
 
-theorem symbolicReduce_ite_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
+theorem symbolicReduce_ite_eq
     (condition thenBranch elseBranch : AffineExpr n) :
-    symbolicReduce laws (.ite condition thenBranch elseBranch) =
+    symbolicReduce (.ite condition thenBranch elseBranch) =
       if condition.isValue then match condition with
         | .bool true => .next thenBranch
         | .bool false => .next elseBranch
         | _ => .stuck
-      else (symbolicReduce laws condition).wrap
+      else (symbolicReduce condition).wrap
         (fun next => .ite next thenBranch elseBranch)
         (fun next => .ite next thenBranch.weakenSamples elseBranch.weakenSamples) := by
   rw [symbolicReduce.eq_def]
 
-theorem symbolicReduce_let_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
+theorem symbolicReduce_let_eq
     (value body : AffineExpr n) :
-    symbolicReduce laws (.letE value body) =
+    symbolicReduce (.letE value body) =
     if value.isValue then .next (body.substHead value)
-    else (symbolicReduce laws value).wrap (fun next => .letE next body)
+    else (symbolicReduce value).wrap (fun next => .letE next body)
       (fun next => .letE next body.weakenSamples) := by
   rw [symbolicReduce.eq_def]
 
-theorem symbolicReduce_uniform_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
+theorem symbolicReduce_uniform_eq
     (kind : DistributionAction) (lower upper : AffineExpr n) :
-    symbolicReduce laws (.uniform kind lower upper) =
+    symbolicReduce (.uniform kind lower upper) =
           if lower.isValue then
             if upper.isValue then match kind with
               | .sample .E => match lower.affineValue?, upper.affineValue? with
@@ -1684,15 +1546,15 @@ theorem symbolicReduce_uniform_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
                     .sampleG (kind, .uniform) (uniformFiber kind x y)
                       (fun value => .real (value, 0))
                 | _, _ => .stuck
-            else (symbolicReduce laws upper).wrap (.uniform kind lower)
+            else (symbolicReduce upper).wrap (.uniform kind lower)
               (.uniform kind lower.weakenSamples)
-          else (symbolicReduce laws lower).wrap (fun next => .uniform kind next upper)
+          else (symbolicReduce lower).wrap (fun next => .uniform kind next upper)
             (fun next => .uniform kind next upper.weakenSamples) := by
   rw [symbolicReduce.eq_def]
 
-theorem symbolicReduce_gaussian_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
+theorem symbolicReduce_gaussian_eq
     (kind : DistributionAction) (mean variance : AffineExpr n) :
-    symbolicReduce laws (.gaussian kind mean variance) =
+    symbolicReduce (.gaussian kind mean variance) =
           if mean.isValue then
             if variance.isValue then match kind with
               | .sample .E => match mean.affineValue?, variance.constantValue? with
@@ -1703,15 +1565,15 @@ theorem symbolicReduce_gaussian_eq (laws : Determinize.Proof.Paper.PrimitiveLaws
                     .sampleG (kind, .gaussian) (gaussianFiber kind x y)
                       (fun value => .real (value, 0))
                 | _, _ => .stuck
-            else (symbolicReduce laws variance).wrap (.gaussian kind mean)
+            else (symbolicReduce variance).wrap (.gaussian kind mean)
               (.gaussian kind mean.weakenSamples)
-          else (symbolicReduce laws mean).wrap (fun next => .gaussian kind next variance)
+          else (symbolicReduce mean).wrap (fun next => .gaussian kind next variance)
             (fun next => .gaussian kind next variance.weakenSamples) := by
   rw [symbolicReduce.eq_def]
 
-theorem symbolicReduce_poisson_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
+theorem symbolicReduce_poisson_eq
     (kind : DistributionAction) (rate : AffineExpr n) :
-    symbolicReduce laws (.poisson kind rate) =
+    symbolicReduce (.poisson kind rate) =
           if rate.isValue then match kind with
             | .sample .E => match rate.affineValue? with
               | some x => .sampleE .poisson [x] [] (.real (Affine.fresh n))
@@ -1721,12 +1583,12 @@ theorem symbolicReduce_poisson_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
                   .sampleG (kind, .poisson) (poissonFiber kind x)
                     (fun value => .real (value, 0))
               | none => .stuck
-          else (symbolicReduce laws rate).wrap (.poisson kind) (.poisson kind) := by
+          else (symbolicReduce rate).wrap (.poisson kind) (.poisson kind) := by
   rw [symbolicReduce.eq_def]
 
-theorem symbolicReduce_bernoulli_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
+theorem symbolicReduce_bernoulli_eq
     (kind : DistributionAction) (probability : AffineExpr n) :
-    symbolicReduce laws (.bernoulli kind probability) =
+    symbolicReduce (.bernoulli kind probability) =
           if probability.isValue then match kind with
             | .sample .E => match probability.affineValue? with
               | some x => .sampleE .bernoulli [x] [] (.real (Affine.fresh n))
@@ -1736,12 +1598,12 @@ theorem symbolicReduce_bernoulli_eq (laws : Determinize.Proof.Paper.PrimitiveLaw
                   .sampleG (kind, .bernoulli) (bernoulliFiber kind x)
                     (fun value => .real (value, 0))
               | none => .stuck
-          else (symbolicReduce laws probability).wrap (.bernoulli kind) (.bernoulli kind) := by
+          else (symbolicReduce probability).wrap (.bernoulli kind) (.bernoulli kind) := by
   rw [symbolicReduce.eq_def]
 
-theorem symbolicReduce_exponential_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
+theorem symbolicReduce_exponential_eq
     (kind : DistributionAction) (rate : AffineExpr n) :
-    symbolicReduce laws (.exponential kind rate) =
+    symbolicReduce (.exponential kind rate) =
           if rate.isValue then match kind with
             | .sample .E => match rate.constantValue? with
               | some x => .sampleE .exponential [] [x] (.real (Affine.fresh n))
@@ -1751,13 +1613,13 @@ theorem symbolicReduce_exponential_eq (laws : Determinize.Proof.Paper.PrimitiveL
                   .sampleG (kind, .exponential) (exponentialFiber kind x)
                     (fun value => .real (value, 0))
               | none => .stuck
-          else (symbolicReduce laws rate).wrap (.exponential kind)
+          else (symbolicReduce rate).wrap (.exponential kind)
             (.exponential kind) := by
   rw [symbolicReduce.eq_def]
 
-theorem symbolicReduce_beta_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
+theorem symbolicReduce_beta_eq
     (kind : DistributionAction) (alpha betaParam : AffineExpr n) :
-    symbolicReduce laws (.beta kind alpha betaParam) =
+    symbolicReduce (.beta kind alpha betaParam) =
           if alpha.isValue then
             if betaParam.isValue then match kind with
               | .sample .E => match alpha.constantValue?, betaParam.constantValue? with
@@ -1768,15 +1630,15 @@ theorem symbolicReduce_beta_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
                     .sampleG (kind, .beta) (betaFiber kind x y)
                       (fun value => .real (value, 0))
                 | _, _ => .stuck
-            else (symbolicReduce laws betaParam).wrap (.beta kind alpha)
+            else (symbolicReduce betaParam).wrap (.beta kind alpha)
               (.beta kind alpha.weakenSamples)
-          else (symbolicReduce laws alpha).wrap (fun next => .beta kind next betaParam)
+          else (symbolicReduce alpha).wrap (fun next => .beta kind next betaParam)
             (fun next => .beta kind next betaParam.weakenSamples) := by
   rw [symbolicReduce.eq_def]
 
-theorem symbolicReduce_gamma_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
+theorem symbolicReduce_gamma_eq
     (kind : DistributionAction) (shape rate : AffineExpr n) :
-    symbolicReduce laws (.gamma kind shape rate) =
+    symbolicReduce (.gamma kind shape rate) =
           if shape.isValue then
             if rate.isValue then match kind with
               | .sample .E => match shape.affineValue?, rate.constantValue? with
@@ -1787,18 +1649,17 @@ theorem symbolicReduce_gamma_eq (laws : Determinize.Proof.Paper.PrimitiveLaws)
                     .sampleG (kind, .gamma) (gammaFiber kind x y)
                       (fun value => .real (value, 0))
                 | _, _ => .stuck
-            else (symbolicReduce laws rate).wrap (.gamma kind shape)
+            else (symbolicReduce rate).wrap (.gamma kind shape)
               (.gamma kind shape.weakenSamples)
-          else (symbolicReduce laws shape).wrap (fun next => .gamma kind next rate)
+          else (symbolicReduce shape).wrap (fun next => .gamma kind next rate)
             (fun next => .gamma kind next rate.weakenSamples) := by
   rw [symbolicReduce.eq_def]
 
 set_option maxHeartbeats 800000 in
 theorem symbolicReduce_realize
-    (laws : Determinize.Proof.Paper.PrimitiveLaws)
     {expression : AffineExpr n} (typed : WellTyped context expression ty)
     (environment : Env n) :
-    (symbolicReduce laws expression).realize environment =
+    (symbolicReduce expression).realize environment =
       reduce (expression.realize environment) := by
   induction typed generalizing environment with
   | bvar hvar => simp [symbolicReduce, SymbolicAction.realize, realize, reduce]
@@ -1817,11 +1678,10 @@ theorem symbolicReduce_realize
       rename_i context' left leftTy right rightTy
       rw [symbolicReduce, realize, reduce, realize_isValue]
       by_cases leftValue : left.isValue = true
-      · simp only [leftValue, Bool.true_eq, ↓reduceIte]
+      · simp only [leftValue, ↓reduceIte]
         by_cases rightValue : right.isValue = true
         · simp [rightValue, SymbolicAction.realize, realize]
-        · simp only [rightValue, Bool.eq_false_of_not_eq_true rightValue,
-            Bool.false_eq_true, ↓reduceIte]
+        · simp only [rightValue, Bool.false_eq_true, ↓reduceIte]
           rw [SymbolicAction.realize_wrap
             (ExprContext := fun next => .pair
               (left.realize environment) next)
@@ -1829,8 +1689,7 @@ theorem symbolicReduce_realize
             (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
             ihr environment, realize_isValue,
             if_neg rightValue]
-      · simp only [leftValue, Bool.eq_false_of_not_eq_true leftValue,
-          Bool.false_eq_true, ↓reduceIte]
+      · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
           (ExprContext := fun next => .pair
             next (right.realize environment))
@@ -1842,8 +1701,7 @@ theorem symbolicReduce_realize
       rw [symbolicReduce, realize, reduce, realize_isValue]
       by_cases valueIsValue : value.isValue = true
       · simp [valueIsValue, SymbolicAction.realize, realize]
-      · simp only [valueIsValue, Bool.eq_false_of_not_eq_true valueIsValue,
-          Bool.false_eq_true, ↓reduceIte]
+      · simp only [valueIsValue, Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
           (ExprContext := fun next => .inl next)
           (context_realize := by intros; simp only [realize])
@@ -1853,8 +1711,7 @@ theorem symbolicReduce_realize
       rw [symbolicReduce, realize, reduce, realize_isValue]
       by_cases valueIsValue : value.isValue = true
       · simp [valueIsValue, SymbolicAction.realize, realize]
-      · simp only [valueIsValue, Bool.eq_false_of_not_eq_true valueIsValue,
-          Bool.false_eq_true, ↓reduceIte]
+      · simp only [valueIsValue, Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
           (ExprContext := fun next => .inr next)
           (context_realize := by intros; simp only [realize])
@@ -1863,19 +1720,17 @@ theorem symbolicReduce_realize
       rename_i context' head element tail
       rw [symbolicReduce, realize, reduce, realize_isValue]
       by_cases headValue : head.isValue = true
-      · simp only [headValue, Bool.true_eq, ↓reduceIte]
+      · simp only [headValue, ↓reduceIte]
         by_cases tailValue : tail.isValue = true
         · simp [tailValue, SymbolicAction.realize, realize]
-        · simp only [tailValue, Bool.eq_false_of_not_eq_true tailValue,
-            Bool.false_eq_true, ↓reduceIte]
+        · simp only [tailValue, Bool.false_eq_true, ↓reduceIte]
           rw [SymbolicAction.realize_wrap
             (ExprContext := fun next => .cons (head.realize environment) next)
             (context_realize := by intros; simp only [realize])
             (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
             iht environment, realize_isValue,
             if_neg tailValue]
-      · simp only [headValue, Bool.eq_false_of_not_eq_true headValue,
-          Bool.false_eq_true, ↓reduceIte]
+      · simp only [headValue, Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
           (ExprContext := fun next => .cons next (tail.realize environment))
           (context_realize := by intros; simp only [realize])
@@ -1894,23 +1749,19 @@ theorem symbolicReduce_realize
               realize, realize_substTwo]
         · rw [symbolicReduce_app_eq]
           simp only [functionValue, operandValue,
-            Bool.eq_false_of_not_eq_true operandValue,
             Bool.false_eq_true, ↓reduceIte]
           rw [SymbolicAction.realize_wrap
             (ExprContext := fun next => .app (function.realize environment) next)
             (context_realize := by intros; simp only [realize])
             (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
             iho environment, realize_isValue, if_neg operandValue]
-          all_goals simp_all [isValue]
       · rw [symbolicReduce_app_eq]
-        simp only [functionValue, Bool.eq_false_of_not_eq_true functionValue,
-          Bool.false_eq_true, ↓reduceIte]
+        simp only [functionValue, Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
           (ExprContext := fun next => .app next (operand.realize environment))
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
           ihf environment]
-        all_goals simp_all [isValue]
   | fst pairTyped ih =>
       rename_i context' pairValue leftTy rightTy
       rw [realize, MeasurableActionFamily.reduce_fst_eq, realize_isValue]
@@ -1919,13 +1770,11 @@ theorem symbolicReduce_realize
         obtain ⟨left, right, rfl⟩ := wellTyped_prod_value pairTyped pairIsValue
         simp [symbolicReduce, pairIsValue, SymbolicAction.realize, realize]
       · rw [symbolicReduce_fst_eq]
-        simp only [pairIsValue, Bool.eq_false_of_not_eq_true pairIsValue,
-          Bool.false_eq_true, ↓reduceIte]
+        simp only [pairIsValue, Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
           (ExprContext := fun next => .fst next)
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize]), ih environment]
-        all_goals simp_all [isValue]
   | snd pairTyped ih =>
       rename_i context' pairValue leftTy rightTy
       rw [realize, MeasurableActionFamily.reduce_snd_eq, realize_isValue]
@@ -1934,13 +1783,11 @@ theorem symbolicReduce_realize
         obtain ⟨left, right, rfl⟩ := wellTyped_prod_value pairTyped pairIsValue
         simp [symbolicReduce, pairIsValue, SymbolicAction.realize, realize]
       · rw [symbolicReduce_snd_eq]
-        simp only [pairIsValue, Bool.eq_false_of_not_eq_true pairIsValue,
-          Bool.false_eq_true, ↓reduceIte]
+        simp only [pairIsValue, Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
           (ExprContext := fun next => .snd next)
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize]), ih environment]
-        all_goals simp_all [isValue]
   | matchSum scrutineeTyped leftTyped rightTyped ihs ihl ihr =>
       rename_i context' scrutinee leftTy rightTy left result right
       rw [realize, MeasurableActionFamily.reduce_matchSum_eq, realize_isValue]
@@ -1953,7 +1800,6 @@ theorem symbolicReduce_realize
             realize_substHead]
       · rw [symbolicReduce_matchSum_eq]
         simp only [scrutineeValue,
-          Bool.eq_false_of_not_eq_true scrutineeValue,
           Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
           (ExprContext := fun next => .matchSum next
@@ -1961,7 +1807,6 @@ theorem symbolicReduce_realize
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
           ihs environment]
-        all_goals simp_all [isValue]
   | matchList scrutineeTyped nilTyped consTyped ihs ihn ihc =>
       rename_i context' scrutinee element nilCase result consCase
       rw [realize, MeasurableActionFamily.reduce_matchList_eq, realize_isValue]
@@ -1975,7 +1820,6 @@ theorem symbolicReduce_realize
             realize_substTwo]
       · rw [symbolicReduce_matchList_eq]
         simp only [scrutineeValue,
-          Bool.eq_false_of_not_eq_true scrutineeValue,
           Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
           (ExprContext := fun next => .matchList next
@@ -1983,7 +1827,6 @@ theorem symbolicReduce_realize
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
           ihs environment]
-        all_goals simp_all [isValue]
   | ite conditionTyped thenTyped elseTyped ihc iht ihe =>
       rename_i context' condition thenBranch result elseBranch
       rw [realize, MeasurableActionFamily.reduce_ite_eq, realize_isValue]
@@ -1993,7 +1836,6 @@ theorem symbolicReduce_realize
         cases answer <;> simp [symbolicReduce, conditionValue, SymbolicAction.realize, realize]
       · rw [symbolicReduce_ite_eq]
         simp only [conditionValue,
-          Bool.eq_false_of_not_eq_true conditionValue,
           Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
           (ExprContext := fun next => .ite next
@@ -2001,21 +1843,18 @@ theorem symbolicReduce_realize
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
           ihc environment]
-        all_goals simp_all [isValue]
   | letE valueTyped bodyTyped ihv ihb =>
       rename_i context' value valueTy body result
       rw [realize, MeasurableActionFamily.reduce_let_eq, realize_isValue]
       by_cases valueIsValue : value.isValue = true
       · simp [symbolicReduce, valueIsValue, SymbolicAction.realize, realize_substHead]
       · rw [symbolicReduce_let_eq]
-        simp only [valueIsValue, Bool.eq_false_of_not_eq_true valueIsValue,
-          Bool.false_eq_true, ↓reduceIte]
+        simp only [valueIsValue, Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
           (ExprContext := fun next => .letE next (body.realize environment))
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
           ihv environment]
-        all_goals simp_all [isValue]
   | sub valueTyped h ih => exact ih environment
   | negE valueTyped ih =>
       rename_i context' value
@@ -2025,13 +1864,11 @@ theorem symbolicReduce_realize
       · simp only [valueIsValue, ↓reduceIte]
         obtain ⟨coordinate, rfl⟩ := wellTyped_real_value valueTyped valueIsValue
         simp [SymbolicAction.realize, realize, Affine.eval_neg]
-      · simp only [valueIsValue, Bool.eq_false_of_not_eq_true valueIsValue,
-          Bool.false_eq_true, ↓reduceIte]
+      · simp only [valueIsValue, Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
           (ExprContext := fun next => .neg next)
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize]), ih environment]
-        all_goals simp_all [isValue]
   | negG valueTyped ih =>
       rename_i context' value
       rw [realize, MeasurableActionFamily.reduce_neg_eq, realize_isValue,
@@ -2040,13 +1877,11 @@ theorem symbolicReduce_realize
       · simp only [valueIsValue, ↓reduceIte]
         obtain ⟨coordinate, rfl⟩ := wellTyped_real_value valueTyped valueIsValue
         simp [SymbolicAction.realize, realize, Affine.eval_neg]
-      · simp only [valueIsValue, Bool.eq_false_of_not_eq_true valueIsValue,
-          Bool.false_eq_true, ↓reduceIte]
+      · simp only [valueIsValue, Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
           (ExprContext := fun next => .neg next)
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize]), ih environment]
-        all_goals simp_all [isValue]
   | addE leftTyped rightTyped ihl ihr =>
       rename_i context' left right
       rw [realize, MeasurableActionFamily.reduce_add_eq, realize_isValue,
@@ -2059,15 +1894,13 @@ theorem symbolicReduce_realize
           obtain ⟨y, rfl⟩ := wellTyped_real_value rightTyped rightValue
           simp [affineValue?, SymbolicAction.realize, realize, Expr.isValue,
             realValue?, Affine.eval_add]
-        · simp only [rightValue, Bool.eq_false_of_not_eq_true rightValue,
-            Bool.false_eq_true, ↓reduceIte]
+        · simp only [rightValue, Bool.false_eq_true, ↓reduceIte]
           rw [SymbolicAction.realize_wrap
             (ExprContext := fun next => .add (left.realize environment) next)
             (context_realize := by intros; simp only [realize])
             (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
             ihr environment, realize_isValue, if_neg rightValue]
-      · simp only [leftValue, Bool.eq_false_of_not_eq_true leftValue,
-          Bool.false_eq_true, ↓reduceIte]
+      · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
           (ExprContext := fun next => .add next (right.realize environment))
           (context_realize := by intros; simp only [realize])
@@ -2085,15 +1918,13 @@ theorem symbolicReduce_realize
           obtain ⟨y, rfl⟩ := wellTyped_real_value rightTyped rightValue
           simp [affineValue?, SymbolicAction.realize, realize, Expr.isValue,
             realValue?, Affine.eval_add]
-        · simp only [rightValue, Bool.eq_false_of_not_eq_true rightValue,
-            Bool.false_eq_true, ↓reduceIte]
+        · simp only [rightValue, Bool.false_eq_true, ↓reduceIte]
           rw [SymbolicAction.realize_wrap
             (ExprContext := fun next => .add (left.realize environment) next)
             (context_realize := by intros; simp only [realize])
             (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
             ihr environment, realize_isValue, if_neg rightValue]
-      · simp only [leftValue, Bool.eq_false_of_not_eq_true leftValue,
-          Bool.false_eq_true, ↓reduceIte]
+      · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
           (ExprContext := fun next => .add next (right.realize environment))
           (context_realize := by intros; simp only [realize])
@@ -2115,15 +1946,13 @@ theorem symbolicReduce_realize
             Affine.mul?_eq_some_of_left (left := (x0, xc)) (right := y) leftZero
           simp [affineValue?, product, SymbolicAction.realize, realize,
             Expr.isValue, realValue?, Affine.eval_mul_of_eq_some product]
-        · simp only [rightValue, Bool.eq_false_of_not_eq_true rightValue,
-            Bool.false_eq_true, ↓reduceIte]
+        · simp only [rightValue, Bool.false_eq_true, ↓reduceIte]
           rw [SymbolicAction.realize_wrap
             (ExprContext := fun next => .mul (left.realize environment) next)
             (context_realize := by intros; simp only [realize])
             (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
             ihr environment, realize_isValue, if_neg rightValue]
-      · simp only [leftValue, Bool.eq_false_of_not_eq_true leftValue,
-          Bool.false_eq_true, ↓reduceIte]
+      · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
           (ExprContext := fun next => .mul next (right.realize environment))
           (context_realize := by intros; simp only [realize])
@@ -2146,15 +1975,13 @@ theorem symbolicReduce_realize
           simp [affineValue?, Affine.mul?, SymbolicAction.realize, realize,
             Expr.isValue, realValue?, Symbolic.Affine.eval, Finset.sum_const_zero]
           ring
-        · simp only [rightValue, Bool.eq_false_of_not_eq_true rightValue,
-            Bool.false_eq_true, ↓reduceIte]
+        · simp only [rightValue, Bool.false_eq_true, ↓reduceIte]
           rw [SymbolicAction.realize_wrap
             (ExprContext := fun next => .mul (left.realize environment) next)
             (context_realize := by intros; simp only [realize])
             (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
             ihr environment, realize_isValue, if_neg rightValue]
-      · simp only [leftValue, Bool.eq_false_of_not_eq_true leftValue,
-          Bool.false_eq_true, ↓reduceIte]
+      · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
           (ExprContext := fun next => .mul next (right.realize environment))
           (context_realize := by intros; simp only [realize])
@@ -2183,15 +2010,13 @@ theorem symbolicReduce_realize
             ring
           rw [sumRule]
           ring
-        · simp only [rightValue, Bool.eq_false_of_not_eq_true rightValue,
-            Bool.false_eq_true, ↓reduceIte]
+        · simp only [rightValue, Bool.false_eq_true, ↓reduceIte]
           rw [SymbolicAction.realize_wrap
             (ExprContext := fun next => .div (left.realize environment) next)
             (context_realize := by intros; simp only [realize])
             (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
             ihr environment, realize_isValue, if_neg rightValue]
-      · simp only [leftValue, Bool.eq_false_of_not_eq_true leftValue,
-          Bool.false_eq_true, ↓reduceIte]
+      · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
           (ExprContext := fun next => .div next (right.realize environment))
           (context_realize := by intros; simp only [realize])
@@ -2215,15 +2040,13 @@ theorem symbolicReduce_realize
             Expr.isValue, realValue?, Symbolic.Affine.eval, Finset.sum_const_zero,
             div_eq_mul_inv]
           ring
-        · simp only [rightValue, Bool.eq_false_of_not_eq_true rightValue,
-            Bool.false_eq_true, ↓reduceIte]
+        · simp only [rightValue, Bool.false_eq_true, ↓reduceIte]
           rw [SymbolicAction.realize_wrap
             (ExprContext := fun next => .div (left.realize environment) next)
             (context_realize := by intros; simp only [realize])
             (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
             ihr environment, realize_isValue, if_neg rightValue]
-      · simp only [leftValue, Bool.eq_false_of_not_eq_true leftValue,
-          Bool.false_eq_true, ↓reduceIte]
+      · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
           (ExprContext := fun next => .div next (right.realize environment))
           (context_realize := by intros; simp only [realize])
@@ -2245,15 +2068,13 @@ theorem symbolicReduce_realize
           obtain rfl : yc = 0 := wellTyped_realG_coefficients rightTyped
           simp [constantValue?, SymbolicAction.realize, realize, Expr.isValue,
             realValue?, Symbolic.Affine.eval, Finset.sum_const_zero]
-        · simp only [rightValue, Bool.eq_false_of_not_eq_true rightValue,
-            Bool.false_eq_true, ↓reduceIte]
+        · simp only [rightValue, Bool.false_eq_true, ↓reduceIte]
           rw [SymbolicAction.realize_wrap
             (ExprContext := fun next => .lt (left.realize environment) next)
             (context_realize := by intros; simp only [realize])
             (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
             ihr environment, realize_isValue, if_neg rightValue]
-      · simp only [leftValue, Bool.eq_false_of_not_eq_true leftValue,
-          Bool.false_eq_true, ↓reduceIte]
+      · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
           (ExprContext := fun next => .lt next (right.realize environment))
           (context_realize := by intros; simp only [realize])
@@ -2279,15 +2100,13 @@ theorem symbolicReduce_realize
               obtain rfl : xc = 0 := wellTyped_realG_coefficients leftTyped
               obtain rfl : yc = 0 := wellTyped_realG_coefficients rightTyped
               simp [constantValue?, SymbolicAction.realize, realize, Expr.isValue, realValue?]
-        · simp only [rightValue, Bool.eq_false_of_not_eq_true rightValue,
-            Bool.false_eq_true, ↓reduceIte]
+        · simp only [rightValue, Bool.false_eq_true, ↓reduceIte]
           rw [SymbolicAction.realize_wrap
             (ExprContext := fun next => .uniform (.sample affinity) (left.realize environment) next)
             (context_realize := by intros; simp only [realize])
             (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
             ihr environment, realize_isValue, if_neg rightValue]
-      · simp only [leftValue, Bool.eq_false_of_not_eq_true leftValue,
-          Bool.false_eq_true, ↓reduceIte]
+      · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
           (ExprContext := fun next => .uniform (.sample affinity) next (right.realize environment))
           (context_realize := by intros; simp only [realize])
@@ -2315,15 +2134,13 @@ theorem symbolicReduce_realize
               obtain rfl : xc = 0 := wellTyped_realG_coefficients leftTyped
               obtain rfl : yc = 0 := wellTyped_realG_coefficients rightTyped
               simp [constantValue?, SymbolicAction.realize, realize, Expr.isValue, realValue?]
-        · simp only [rightValue, Bool.eq_false_of_not_eq_true rightValue,
-            Bool.false_eq_true, ↓reduceIte]
+        · simp only [rightValue, Bool.false_eq_true, ↓reduceIte]
           rw [SymbolicAction.realize_wrap
             (ExprContext := fun next => .gaussian (.sample affinity) (left.realize environment) next)
             (context_realize := by intros; simp only [realize])
             (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
             ihr environment, realize_isValue, if_neg rightValue]
-      · simp only [leftValue, Bool.eq_false_of_not_eq_true leftValue,
-          Bool.false_eq_true, ↓reduceIte]
+      · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
           (ExprContext := fun next => .gaussian (.sample affinity) next (right.realize environment))
           (context_realize := by intros; simp only [realize])
@@ -2338,19 +2155,17 @@ theorem symbolicReduce_realize
         obtain ⟨x, rfl⟩ := wellTyped_real_value valueTyped valueIsValue
         cases affinity with
         | E =>
-              simp [affineValue?, SymbolicAction.realize, realize, Expr.isValue,
+              simp [affineValue?, SymbolicAction.realize, realize,
                 realValue?, poissonFiber_eq, Affine.eval_fresh]
         | G =>
             rcases x with ⟨x0, xc⟩
             obtain rfl : xc = 0 := wellTyped_realG_coefficients valueTyped
-            simp [constantValue?, SymbolicAction.realize, realize, Expr.isValue, realValue?]
-      · simp only [valueIsValue, Bool.eq_false_of_not_eq_true valueIsValue,
-          Bool.false_eq_true, ↓reduceIte]
+            simp [constantValue?, SymbolicAction.realize, realize, realValue?]
+      · simp only [valueIsValue, Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
           (ExprContext := fun next => .poisson (.sample affinity) next)
           (context_realize := by intros; simp only [realize])
-          (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-          ih environment]
+          (lifted_realize := by intros; simp only [realize]), ih environment]
   | bernoulli valueTyped ih =>
       rename_i context' value affinity
       rw [realize, MeasurableActionFamily.reduce_bernoulli_eq, realize_isValue,
@@ -2360,19 +2175,17 @@ theorem symbolicReduce_realize
         obtain ⟨x, rfl⟩ := wellTyped_real_value valueTyped valueIsValue
         cases affinity with
         | E =>
-              simp [affineValue?, SymbolicAction.realize, realize, Expr.isValue,
+              simp [affineValue?, SymbolicAction.realize, realize,
                 realValue?, bernoulliFiber_eq, Affine.eval_fresh]
         | G =>
             rcases x with ⟨x0, xc⟩
             obtain rfl : xc = 0 := wellTyped_realG_coefficients valueTyped
-            simp [constantValue?, SymbolicAction.realize, realize, Expr.isValue, realValue?]
-      · simp only [valueIsValue, Bool.eq_false_of_not_eq_true valueIsValue,
-          Bool.false_eq_true, ↓reduceIte]
+            simp [constantValue?, SymbolicAction.realize, realize, realValue?]
+      · simp only [valueIsValue, Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
           (ExprContext := fun next => .bernoulli (.sample affinity) next)
           (context_realize := by intros; simp only [realize])
-          (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-          ih environment]
+          (lifted_realize := by intros; simp only [realize]), ih environment]
   | exponential valueTyped ih =>
       rename_i context' value affinity
       rw [realize, MeasurableActionFamily.reduce_exponential_eq, realize_isValue,
@@ -2384,19 +2197,17 @@ theorem symbolicReduce_realize
         | E =>
               rcases x with ⟨x0, xc⟩
               obtain rfl : xc = 0 := wellTyped_realG_coefficients valueTyped
-              simp [constantValue?, SymbolicAction.realize, realize, Expr.isValue,
+              simp [constantValue?, SymbolicAction.realize, realize,
                 realValue?, exponentialFiber_eq, Affine.eval_fresh]
         | G =>
             rcases x with ⟨x0, xc⟩
             obtain rfl : xc = 0 := wellTyped_realG_coefficients valueTyped
-            simp [constantValue?, SymbolicAction.realize, realize, Expr.isValue, realValue?]
-      · simp only [valueIsValue, Bool.eq_false_of_not_eq_true valueIsValue,
-          Bool.false_eq_true, ↓reduceIte]
+            simp [constantValue?, SymbolicAction.realize, realize, realValue?]
+      · simp only [valueIsValue, Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
           (ExprContext := fun next => .exponential (.sample affinity) next)
           (context_realize := by intros; simp only [realize])
-          (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-          ih environment]
+          (lifted_realize := by intros; simp only [realize]), ih environment]
   | beta leftTyped rightTyped ihl ihr =>
       rename_i context' left right affinity
       rw [realize, MeasurableActionFamily.reduce_beta_eq, realize_isValue,
@@ -2421,15 +2232,13 @@ theorem symbolicReduce_realize
               obtain rfl : xc = 0 := wellTyped_realG_coefficients leftTyped
               obtain rfl : yc = 0 := wellTyped_realG_coefficients rightTyped
               simp [constantValue?, SymbolicAction.realize, realize, Expr.isValue, realValue?]
-        · simp only [rightValue, Bool.eq_false_of_not_eq_true rightValue,
-            Bool.false_eq_true, ↓reduceIte]
+        · simp only [rightValue, Bool.false_eq_true, ↓reduceIte]
           rw [SymbolicAction.realize_wrap
             (ExprContext := fun next => .beta (.sample affinity) (left.realize environment) next)
             (context_realize := by intros; simp only [realize])
             (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
             ihr environment, realize_isValue, if_neg rightValue]
-      · simp only [leftValue, Bool.eq_false_of_not_eq_true leftValue,
-          Bool.false_eq_true, ↓reduceIte]
+      · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
           (ExprContext := fun next => .beta (.sample affinity) next (right.realize environment))
           (context_realize := by intros; simp only [realize])
@@ -2457,15 +2266,13 @@ theorem symbolicReduce_realize
               obtain rfl : xc = 0 := wellTyped_realG_coefficients leftTyped
               obtain rfl : yc = 0 := wellTyped_realG_coefficients rightTyped
               simp [constantValue?, SymbolicAction.realize, realize, Expr.isValue, realValue?]
-        · simp only [rightValue, Bool.eq_false_of_not_eq_true rightValue,
-            Bool.false_eq_true, ↓reduceIte]
+        · simp only [rightValue, Bool.false_eq_true, ↓reduceIte]
           rw [SymbolicAction.realize_wrap
             (ExprContext := fun next => .gamma (.sample affinity) (left.realize environment) next)
             (context_realize := by intros; simp only [realize])
             (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
             ihr environment, realize_isValue, if_neg rightValue]
-      · simp only [leftValue, Bool.eq_false_of_not_eq_true leftValue,
-          Bool.false_eq_true, ↓reduceIte]
+      · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
         rw [SymbolicAction.realize_wrap
           (ExprContext := fun next => .gamma (.sample affinity) next (right.realize environment))
           (context_realize := by intros; simp only [realize])
@@ -2475,9 +2282,8 @@ theorem symbolicReduce_realize
 set_option maxHeartbeats 1600000 in
 set_option maxRecDepth 4000 in
 theorem symbolicReduce_wellTyped
-    (laws : Determinize.Proof.Paper.PrimitiveLaws)
     {expression : AffineExpr n} (typed : WellTyped [] expression ty) :
-    SymbolicAction.WellTyped ty (symbolicReduce laws expression) := by
+    SymbolicAction.WellTyped ty (symbolicReduce expression) := by
   generalize hcontext : ([] : List Ty) = context at typed
   induction typed
   case uniform left affinity right leftTyped rightTyped ihLeft ihRight =>
@@ -2498,13 +2304,13 @@ theorem symbolicReduce_wellTyped
             rcases y with ⟨y0, yc⟩
             obtain rfl : xc = 0 := wellTyped_realG_coefficients leftTyped
             obtain rfl : yc = 0 := wellTyped_realG_coefficients rightTyped
-            simp only [constantValue?, eq_self_iff_true, ↓reduceIte]
+            simp only [constantValue?, ↓reduceIte]
             exact .sampleG fun value => .realG rfl
-      · simp only [rightValue, ↓reduceIte]
+      · simp only [rightValue]
         exact (ihRight rfl).wrap
           (fun next nextTyped => .uniform leftTyped nextTyped)
           (fun next nextTyped => .uniform leftTyped.weakenSamples nextTyped)
-    · simp only [leftValue, ↓reduceIte]
+    · simp only [leftValue]
       exact (ihLeft rfl).wrap
         (fun next nextTyped => .uniform nextTyped rightTyped)
         (fun next nextTyped => .uniform nextTyped rightTyped.weakenSamples)
@@ -2521,20 +2327,20 @@ theorem symbolicReduce_wellTyped
         | E =>
               rcases y with ⟨y0, yc⟩
               obtain rfl : yc = 0 := wellTyped_realG_coefficients rightTyped
-              simp only [affineValue?, constantValue?, eq_self_iff_true, ↓reduceIte]
+              simp only [affineValue?, constantValue?, ↓reduceIte]
               exact .sampleE rfl rfl .realE
         | G =>
             rcases x with ⟨x0, xc⟩
             rcases y with ⟨y0, yc⟩
             obtain rfl : xc = 0 := wellTyped_realG_coefficients leftTyped
             obtain rfl : yc = 0 := wellTyped_realG_coefficients rightTyped
-            simp only [constantValue?, eq_self_iff_true, ↓reduceIte]
+            simp only [constantValue?, ↓reduceIte]
             exact .sampleG fun value => .realG rfl
-      · simp only [rightValue, ↓reduceIte]
+      · simp only [rightValue]
         exact (ihRight rfl).wrap
           (fun next nextTyped => .gaussian leftTyped nextTyped)
           (fun next nextTyped => .gaussian leftTyped.weakenSamples nextTyped)
-    · simp only [leftValue, ↓reduceIte]
+    · simp only [leftValue]
       exact (ihLeft rfl).wrap
         (fun next nextTyped => .gaussian nextTyped rightTyped)
         (fun next nextTyped => .gaussian nextTyped rightTyped.weakenSamples)
@@ -2551,9 +2357,9 @@ theorem symbolicReduce_wellTyped
       | G =>
           rcases x with ⟨x0, xc⟩
           obtain rfl : xc = 0 := wellTyped_realG_coefficients valueTyped
-          simp only [constantValue?, eq_self_iff_true, ↓reduceIte]
+          simp only [constantValue?, ↓reduceIte]
           exact .sampleG fun value => .realG rfl
-    · simp only [isValue, ↓reduceIte]
+    · simp only [isValue]
       exact (ih rfl).wrap
         (fun next nextTyped => .poisson nextTyped)
         (fun next nextTyped => .poisson nextTyped)
@@ -2570,9 +2376,9 @@ theorem symbolicReduce_wellTyped
       | G =>
           rcases x with ⟨x0, xc⟩
           obtain rfl : xc = 0 := wellTyped_realG_coefficients valueTyped
-          simp only [constantValue?, eq_self_iff_true, ↓reduceIte]
+          simp only [constantValue?, ↓reduceIte]
           exact .sampleG fun value => .realG rfl
-    · simp only [isValue, ↓reduceIte]
+    · simp only [isValue]
       exact (ih rfl).wrap
         (fun next nextTyped => .bernoulli nextTyped)
         (fun next nextTyped => .bernoulli nextTyped)
@@ -2586,14 +2392,14 @@ theorem symbolicReduce_wellTyped
       | E =>
             rcases x with ⟨x0, xc⟩
             obtain rfl : xc = 0 := wellTyped_realG_coefficients valueTyped
-            simp only [constantValue?, eq_self_iff_true, ↓reduceIte]
+            simp only [constantValue?, ↓reduceIte]
             exact .sampleE rfl rfl .realE
       | G =>
           rcases x with ⟨x0, xc⟩
           obtain rfl : xc = 0 := wellTyped_realG_coefficients valueTyped
-          simp only [constantValue?, eq_self_iff_true, ↓reduceIte]
+          simp only [constantValue?, ↓reduceIte]
           exact .sampleG fun value => .realG rfl
-    · simp only [isValue, ↓reduceIte]
+    · simp only [isValue]
       exact (ih rfl).wrap
         (fun next nextTyped => .exponential nextTyped)
         (fun next nextTyped => .exponential nextTyped)
@@ -2612,20 +2418,20 @@ theorem symbolicReduce_wellTyped
               rcases y with ⟨y0, yc⟩
               obtain rfl : xc = 0 := wellTyped_realG_coefficients leftTyped
               obtain rfl : yc = 0 := wellTyped_realG_coefficients rightTyped
-              simp only [constantValue?, eq_self_iff_true, ↓reduceIte]
+              simp only [constantValue?, ↓reduceIte]
               exact .sampleE rfl rfl .realE
         | G =>
             rcases x with ⟨x0, xc⟩
             rcases y with ⟨y0, yc⟩
             obtain rfl : xc = 0 := wellTyped_realG_coefficients leftTyped
             obtain rfl : yc = 0 := wellTyped_realG_coefficients rightTyped
-            simp only [constantValue?, eq_self_iff_true, ↓reduceIte]
+            simp only [constantValue?, ↓reduceIte]
             exact .sampleG fun value => .realG rfl
-      · simp only [rightValue, ↓reduceIte]
+      · simp only [rightValue]
         exact (ihRight rfl).wrap
           (fun next nextTyped => .beta leftTyped nextTyped)
           (fun next nextTyped => .beta leftTyped.weakenSamples nextTyped)
-    · simp only [leftValue, ↓reduceIte]
+    · simp only [leftValue]
       exact (ihLeft rfl).wrap
         (fun next nextTyped => .beta nextTyped rightTyped)
         (fun next nextTyped => .beta nextTyped rightTyped.weakenSamples)
@@ -2642,20 +2448,20 @@ theorem symbolicReduce_wellTyped
         | E =>
               rcases y with ⟨y0, yc⟩
               obtain rfl : yc = 0 := wellTyped_realG_coefficients rightTyped
-              simp only [affineValue?, constantValue?, eq_self_iff_true, ↓reduceIte]
+              simp only [affineValue?, constantValue?, ↓reduceIte]
               exact .sampleE rfl rfl .realE
         | G =>
             rcases x with ⟨x0, xc⟩
             rcases y with ⟨y0, yc⟩
             obtain rfl : xc = 0 := wellTyped_realG_coefficients leftTyped
             obtain rfl : yc = 0 := wellTyped_realG_coefficients rightTyped
-            simp only [constantValue?, eq_self_iff_true, ↓reduceIte]
+            simp only [constantValue?, ↓reduceIte]
             exact .sampleG fun value => .realG rfl
-      · simp only [rightValue, ↓reduceIte]
+      · simp only [rightValue]
         exact (ihRight rfl).wrap
           (fun next nextTyped => .gamma leftTyped nextTyped)
           (fun next nextTyped => .gamma leftTyped.weakenSamples nextTyped)
-    · simp only [leftValue, ↓reduceIte]
+    · simp only [leftValue]
       exact (ihLeft rfl).wrap
         (fun next nextTyped => .gamma nextTyped rightTyped)
         (fun next nextTyped => .gamma nextTyped rightTyped.weakenSamples)
@@ -2673,11 +2479,11 @@ theorem symbolicReduce_wellTyped
           exact .next ((wellTyped_substHead bodyTyped (argumentTyped.sub ha)).sub hr)
         · rcases function with ⟨a, r, body, rfl, ha, hr, bodyTyped⟩
           exact .next ((wellTyped_substTwo bodyTyped (argumentTyped.sub ha) (.fix bodyTyped)).sub hr)
-      · simp only [argumentValue, ↓reduceIte]
+      · simp only [argumentValue]
         exact (iha rfl).wrap
           (fun next nextTyped => .app functionTyped nextTyped)
           (fun next nextTyped => .app functionTyped.weakenSamples nextTyped)
-    · simp only [functionValue, ↓reduceIte]
+    · simp only [functionValue]
       exact (ihf rfl).wrap
         (fun next nextTyped => .app nextTyped argumentTyped)
         (fun next nextTyped => .app nextTyped argumentTyped.weakenSamples)
@@ -2690,7 +2496,7 @@ theorem symbolicReduce_wellTyped
       obtain ⟨left, right, rfl, leftTyped, rightTyped⟩ :=
         wellTyped_prod_value_typed pairTyped value
       exact .next leftTyped
-    · simp only [value, ↓reduceIte]
+    · simp only [value]
       exact (ih rfl).wrap (fun next nextTyped => .fst nextTyped)
         (fun next nextTyped => .fst nextTyped)
   case snd pairTyped ih =>
@@ -2702,7 +2508,7 @@ theorem symbolicReduce_wellTyped
       obtain ⟨left, right, rfl, leftTyped, rightTyped⟩ :=
         wellTyped_prod_value_typed pairTyped value
       exact .next rightTyped
-    · simp only [value, ↓reduceIte]
+    · simp only [value]
       exact (ih rfl).wrap (fun next nextTyped => .snd nextTyped)
         (fun next nextTyped => .snd nextTyped)
   case matchSum context scrutinee leftTy rightTy left result right
@@ -2716,7 +2522,7 @@ theorem symbolicReduce_wellTyped
         exact .next (wellTyped_substHead leftTyped childTyped)
       · rcases right with ⟨child, rfl, childTyped⟩
         exact .next (wellTyped_substHead rightTyped childTyped)
-    · simp only [value, ↓reduceIte]
+    · simp only [value]
       exact (ih rfl).wrap
         (fun next nextTyped => .matchSum nextTyped leftTyped rightTyped)
         (fun next nextTyped => .matchSum nextTyped leftTyped.weakenSamples
@@ -2731,7 +2537,7 @@ theorem symbolicReduce_wellTyped
       · subst nil; exact .next nilTyped
       · rcases cons with ⟨head, tail, rfl, headTyped, tailTyped⟩
         exact .next (wellTyped_substTwo consTyped headTyped tailTyped)
-    · simp only [value, ↓reduceIte]
+    · simp only [value]
       exact (ih rfl).wrap
         (fun next nextTyped => .matchList nextTyped nilTyped consTyped)
         (fun next nextTyped => .matchList nextTyped nilTyped.weakenSamples
@@ -2744,7 +2550,7 @@ theorem symbolicReduce_wellTyped
     · simp only [value, ↓reduceIte]
       obtain ⟨result, rfl⟩ := wellTyped_bool_value conditionTyped value
       cases result <;> simp only <;> exact .next (by assumption)
-    · simp only [value, ↓reduceIte]
+    · simp only [value]
       exact (ih rfl).wrap
         (fun next nextTyped => .ite nextTyped thenTyped elseTyped)
         (fun next nextTyped => .ite nextTyped thenTyped.weakenSamples elseTyped.weakenSamples)
@@ -2754,7 +2560,7 @@ theorem symbolicReduce_wellTyped
     by_cases isValue : value.isValue = true
     · simp only [isValue, ↓reduceIte]
       exact .next (wellTyped_substHead bodyTyped valueTyped)
-    · simp only [isValue, ↓reduceIte]
+    · simp only [isValue]
       exact (ih rfl).wrap
         (fun next nextTyped => .letE nextTyped bodyTyped)
         (fun next nextTyped => .letE nextTyped bodyTyped.weakenSamples)
@@ -2771,11 +2577,11 @@ theorem symbolicReduce_wellTyped
           constantValue?_eq_some_of_wellTypedG rightTyped rightValue
         simp only [leftEquation, rightEquation]
         exact .next .bool
-      · simp only [rightValue, ↓reduceIte]
+      · simp only [rightValue]
         exact (ihRight rfl).wrap
           (fun next nextTyped => .lt leftTyped nextTyped)
           (fun next nextTyped => .lt leftTyped.weakenSamples nextTyped)
-    · simp only [leftValue, ↓reduceIte]
+    · simp only [leftValue]
       exact (ihLeft rfl).wrap
         (fun next nextTyped => .lt nextTyped rightTyped)
         (fun next nextTyped => .lt nextTyped rightTyped.weakenSamples)
@@ -2792,13 +2598,13 @@ theorem symbolicReduce_wellTyped
         rcases rightAffine with ⟨rightConstant, rightCoefficients⟩
         have leftZero : leftCoefficients = 0 := wellTyped_realG_coefficients leftTyped
         have rightZero : rightCoefficients = 0 := wellTyped_realG_coefficients rightTyped
-        simp only [affineValue?, Affine.div?, rightZero, ↓reduceIte, Option.some.injEq]
+        simp only [affineValue?, Affine.div?, rightZero, ↓reduceIte]
         exact SymbolicAction.WellTyped.next (.realG (by simp [leftZero]))
-      · simp only [rightValue, ↓reduceIte]
+      · simp only [rightValue]
         exact (ihRight rfl).wrap
           (fun next nextTyped => .divGG leftTyped nextTyped)
           (fun next nextTyped => .divGG leftTyped.weakenSamples nextTyped)
-    · simp only [leftValue, ↓reduceIte]
+    · simp only [leftValue]
       exact (ihLeft rfl).wrap
         (fun next nextTyped => .divGG nextTyped rightTyped)
         (fun next nextTyped => .divGG nextTyped rightTyped.weakenSamples)
@@ -2813,13 +2619,13 @@ theorem symbolicReduce_wellTyped
         obtain ⟨rightAffine, rfl⟩ := wellTyped_real_value rightTyped rightValue
         rcases rightAffine with ⟨rightConstant, rightCoefficients⟩
         have rightZero : rightCoefficients = 0 := wellTyped_realG_coefficients rightTyped
-        simp only [affineValue?, Affine.div?, rightZero, ↓reduceIte, Option.some.injEq]
+        simp only [affineValue?, Affine.div?, rightZero, ↓reduceIte]
         exact SymbolicAction.WellTyped.next .realE
-      · simp only [rightValue, ↓reduceIte]
+      · simp only [rightValue]
         exact (ihRight rfl).wrap
           (fun next nextTyped => .divEG leftTyped nextTyped)
           (fun next nextTyped => .divEG leftTyped.weakenSamples nextTyped)
-    · simp only [leftValue, ↓reduceIte]
+    · simp only [leftValue]
       exact (ihLeft rfl).wrap
         (fun next nextTyped => .divEG nextTyped rightTyped)
         (fun next nextTyped => .divEG nextTyped rightTyped.weakenSamples)
@@ -2841,11 +2647,11 @@ theorem symbolicReduce_wellTyped
           rw [leftZero, rightZero]
           funext index
           simp only [Pi.zero_apply, zero_add]))
-      · simp only [rightValue, ↓reduceIte]
+      · simp only [rightValue]
         exact (ihRight rfl).wrap
           (fun next nextTyped => .addG leftTyped nextTyped)
           (fun next nextTyped => .addG leftTyped.weakenSamples nextTyped)
-    · simp only [leftValue, ↓reduceIte]
+    · simp only [leftValue]
       exact (ihLeft rfl).wrap
         (fun next nextTyped => .addG nextTyped rightTyped)
         (fun next nextTyped => .addG nextTyped rightTyped.weakenSamples)
@@ -2860,11 +2666,11 @@ theorem symbolicReduce_wellTyped
         obtain ⟨rightAffine, rfl⟩ := wellTyped_real_value rightTyped rightValue
         simp only [affineValue?, Affine.add]
         exact SymbolicAction.WellTyped.next .realE
-      · simp only [rightValue, ↓reduceIte]
+      · simp only [rightValue]
         exact (ihRight rfl).wrap
           (fun next nextTyped => .addE leftTyped nextTyped)
           (fun next nextTyped => .addE leftTyped.weakenSamples nextTyped)
-    · simp only [leftValue, ↓reduceIte]
+    · simp only [leftValue]
       exact (ihLeft rfl).wrap
         (fun next nextTyped => .addE nextTyped rightTyped)
         (fun next nextTyped => .addE nextTyped rightTyped.weakenSamples)
@@ -2878,7 +2684,7 @@ theorem symbolicReduce_wellTyped
     · simp only [isValue, ↓reduceIte]
       obtain ⟨coordinate, rfl⟩ := wellTyped_real_value valueTyped isValue
       exact .next .realE
-    · simp only [isValue, ↓reduceIte]
+    · simp only [isValue]
       exact (ih rfl).wrap
         (fun next nextTyped => .negE nextTyped)
         (fun next nextTyped => .negE nextTyped)
@@ -2891,7 +2697,7 @@ theorem symbolicReduce_wellTyped
       rcases coordinate with ⟨constant, coefficients⟩
       have zero : coefficients = 0 := wellTyped_realG_coefficients valueTyped
       exact .next (.realG (by rw [zero]; funext index; simp [Affine.neg]))
-    · simp only [isValue, ↓reduceIte]
+    · simp only [isValue]
       exact (ih rfl).wrap
         (fun next nextTyped => .negG nextTyped)
         (fun next nextTyped => .negG nextTyped)
@@ -2910,11 +2716,11 @@ theorem symbolicReduce_wellTyped
           (left := (leftConstant, leftCoefficients)) (right := rightAffine) leftZero
         simp only [affineValue?, product]
         exact SymbolicAction.WellTyped.next .realE
-      · simp only [rightValue, ↓reduceIte]
+      · simp only [rightValue]
         exact (ihRight rfl).wrap
           (fun next nextTyped => .mulGE leftTyped nextTyped)
           (fun next nextTyped => .mulGE leftTyped.weakenSamples nextTyped)
-    · simp only [leftValue, ↓reduceIte]
+    · simp only [leftValue]
       exact (ihLeft rfl).wrap
         (fun next nextTyped => .mulGE nextTyped rightTyped)
         (fun next nextTyped => .mulGE nextTyped rightTyped.weakenSamples)
@@ -2931,13 +2737,13 @@ theorem symbolicReduce_wellTyped
         rcases rightAffine with ⟨rightConstant, rightCoefficients⟩
         have leftZero : leftCoefficients = 0 := wellTyped_realG_coefficients leftTyped
         have rightZero : rightCoefficients = 0 := wellTyped_realG_coefficients rightTyped
-        simp only [affineValue?, Affine.mul?, rightZero, ↓reduceIte, Option.some.injEq]
+        simp only [affineValue?, Affine.mul?, rightZero, ↓reduceIte]
         exact SymbolicAction.WellTyped.next (.realG (by simp [leftZero]))
-      · simp only [rightValue, ↓reduceIte]
+      · simp only [rightValue]
         exact (ihRight rfl).wrap
           (fun next nextTyped => .mulGG leftTyped nextTyped)
           (fun next nextTyped => .mulGG leftTyped.weakenSamples nextTyped)
-    · simp only [leftValue, ↓reduceIte]
+    · simp only [leftValue]
       exact (ihLeft rfl).wrap
         (fun next nextTyped => .mulGG nextTyped rightTyped)
         (fun next nextTyped => .mulGG nextTyped rightTyped.weakenSamples)
@@ -2950,11 +2756,11 @@ theorem symbolicReduce_wellTyped
       by_cases rightValue : right.isValue = true
       · simp only [rightValue, ↓reduceIte]
         exact .next (.pair leftTyped rightTyped)
-      · simp only [rightValue, ↓reduceIte]
+      · simp only [rightValue]
         exact (ihRight rfl).wrap
           (fun next nextTyped => .pair leftTyped nextTyped)
           (fun next nextTyped => .pair leftTyped.weakenSamples nextTyped)
-    · simp only [leftValue, ↓reduceIte]
+    · simp only [leftValue]
       exact (ihLeft rfl).wrap
         (fun next nextTyped => .pair nextTyped rightTyped)
         (fun next nextTyped => .pair nextTyped rightTyped.weakenSamples)
@@ -2967,11 +2773,11 @@ theorem symbolicReduce_wellTyped
       by_cases tailValue : tail.isValue = true
       · simp only [tailValue, ↓reduceIte]
         exact .next (.cons headTyped tailTyped)
-      · simp only [tailValue, ↓reduceIte]
+      · simp only [tailValue]
         exact (ihTail rfl).wrap
           (fun next nextTyped => .cons headTyped nextTyped)
           (fun next nextTyped => .cons headTyped.weakenSamples nextTyped)
-    · simp only [headValue, ↓reduceIte]
+    · simp only [headValue]
       exact (ihHead rfl).wrap
         (fun next nextTyped => .cons nextTyped tailTyped)
         (fun next nextTyped => .cons nextTyped tailTyped.weakenSamples)
@@ -2982,7 +2788,7 @@ theorem symbolicReduce_wellTyped
     by_cases isValue : value.isValue = true
     · simp only [isValue, ↓reduceIte]
       exact .next (.inl valueTyped)
-    · simp only [isValue, ↓reduceIte]
+    · simp only [isValue]
       exact (ih rfl).wrap (fun next nextTyped => .inl nextTyped)
         (fun next nextTyped => .inl nextTyped)
   case inr valueTyped ih =>
@@ -2992,7 +2798,7 @@ theorem symbolicReduce_wellTyped
     by_cases isValue : value.isValue = true
     · simp only [isValue, ↓reduceIte]
       exact .next (.inr valueTyped)
-    · simp only [isValue, ↓reduceIte]
+    · simp only [isValue]
       exact (ih rfl).wrap (fun next nextTyped => .inr nextTyped)
         (fun next nextTyped => .inr nextTyped)
   case bvar hvar => cases hcontext; cases hvar
@@ -3022,7 +2828,6 @@ theorem wellTyped_ofExpr_of_typed {expression : Expr}
   induction typed
   case sub h sub ih => exact (ih sourceTags).sub sub
   all_goals simp only [ofExpr, SourceTags, DistributionAction.isSample, Bool.false_eq_true, false_and] at sourceTags ⊢
-  all_goals try contradiction
   case uniform lowerTyped upperTyped ihl ihr =>
     obtain ⟨_, lowerTags, upperTags⟩ := sourceTags
     exact .uniform (ihl lowerTags) (ihr upperTags)
@@ -3044,8 +2849,8 @@ theorem wellTyped_ofExpr_of_typed {expression : Expr}
   case gamma shapeTyped rateTyped ihl ihr =>
     obtain ⟨_, shapeTags, rateTags⟩ := sourceTags
     exact .gamma (ihl shapeTags) (ihr rateTags)
-  all_goals try aesop (add unsafe constructors WellTyped)
-  all_goals try (cases ‹Affinity› <;> aesop (add unsafe constructors WellTyped))
+  all_goals try cases ‹Affinity›
+  all_goals aesop (add unsafe constructors WellTyped)
 
 theorem coordinate_count (expression : AffineExpr sampleCount) :
     expression.coordinates.length = expression.skeleton.realArity := by
@@ -3060,12 +2865,12 @@ theorem affine_eval_measurable (expression : Affine sampleCount) :
   intro index _
   exact Measurable.mul measurable_const (measurable_pi_apply index)
 
+/-- `realize` as a measurable family over environments: the skeleton is fixed and every
+coordinate is an affine function of the environment. -/
 def realizeFamily (expression : AffineExpr sampleCount) :
     MeasurableFamily (Env sampleCount) expression.realize where
   skeleton := expression.skeleton
   skeleton_eq := expression.realize_skeleton
-  coordinate_count environment := by
-    rw [realize_coordinates, List.length_map, coordinate_count]
   coordinate_measurable index := by
     rw [show (fun environment =>
         (expression.realize environment).realCoordinates.getD index 0) =

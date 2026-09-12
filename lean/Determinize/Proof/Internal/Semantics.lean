@@ -2,8 +2,6 @@ import Determinize.Proof.Internal.PrimitiveLaws
 import Determinize.Proof.Internal.Environment
 import Determinize.Spec.FiniteModel.Safety
 import Determinize.Proof.Internal.ExpressionSpace
-import Mathlib.MeasureTheory.Constructions.Pi
-import Mathlib.Tactic.DeriveCountable
 
 /-!
 # Semantic objects used by the proof
@@ -63,6 +61,59 @@ abbrev Affine (sampleCount : Nat) := ℝ × (Fin sampleCount → ℝ)
 
 def Affine.eval (expression : Affine sampleCount) (environment : Env sampleCount) : ℝ :=
   expression.1 + ∑ i, expression.2 i * environment i
+
+namespace Affine
+
+/-! The linear structure of affine expressions: negation, sum and scaling are pointwise; the
+newest sample is prepended with `Fin.cons` and dropped with `Fin.tail`. -/
+
+def neg (expression : Affine n) : Affine n :=
+  (-expression.1, fun index => -expression.2 index)
+
+def add (left right : Affine n) : Affine n :=
+  (left.1 + right.1, fun index => left.2 index + right.2 index)
+
+def smul (scalar : ℝ) (expression : Affine n) : Affine n :=
+  (scalar * expression.1, fun index => scalar * expression.2 index)
+
+/-- The same expression over one more sample, which it does not use. -/
+def weaken (expression : Affine n) : Affine (n + 1) :=
+  (expression.1, Fin.cons 0 expression.2)
+
+/-- The newest sample itself. -/
+def fresh (n : Nat) : Affine (n + 1) :=
+  (0, Fin.cons 1 0)
+
+/-- Drop the coefficient of the newest sample. -/
+def tail (expression : Affine (n + 1)) : Affine n :=
+  (expression.1, Fin.tail expression.2)
+
+@[simp] theorem eval_neg (expression : Affine n) (environment : Env n) :
+    (neg expression).eval environment = -expression.eval environment := by
+  simp only [neg, eval, neg_mul, Finset.sum_neg_distrib]
+  ring
+
+@[simp] theorem eval_add (left right : Affine n) (environment : Env n) :
+    (add left right).eval environment = left.eval environment + right.eval environment := by
+  simp only [add, eval, add_mul, Finset.sum_add_distrib]
+  ring
+
+theorem eval_smul (scalar : ℝ) (expression : Affine n) (environment : Env n) :
+    (smul scalar expression).eval environment = scalar * expression.eval environment := by
+  simp only [smul, eval, mul_assoc, ← Finset.mul_sum]
+  ring
+
+@[simp] theorem eval_weaken (expression : Affine n) (head : ℝ) (environment : Env n) :
+    (weaken expression).eval (Env.cons head environment) = expression.eval environment := by
+  simp only [weaken, eval, Fin.sum_univ_succ, Env.cons_zero, Env.cons_succ, Fin.cons_zero,
+    Fin.cons_succ, zero_mul, zero_add]
+
+@[simp] theorem eval_fresh (n : Nat) (head : ℝ) (environment : Env n) :
+    (fresh n).eval (Env.cons head environment) = head := by
+  simp only [fresh, eval, Fin.sum_univ_succ, Env.cons_zero, Env.cons_succ, Fin.cons_zero,
+    Fin.cons_succ, Pi.zero_apply, one_mul, zero_mul, Finset.sum_const_zero, add_zero, zero_add]
+
+end Affine
 
 /-- Ordered symbolic E-sample environment from the paper. -/
 inductive SampleEnv (laws : Determinize.Proof.Paper.PrimitiveLaws) : Nat → Type where

@@ -5,10 +5,11 @@ import Determinize.Proof.ReplaySemantics
 # The compact replay as a measurable kernel
 
 `Proof.Traces.outputGivenTraceAt` replays a program along a compact trace of general-affinity draws.
-This file packages it as an s-finite kernel in the trace and the expression, mirroring
-`replayKernel` for detailed traces, proves the one-step unfolding lemmas the lockstep
-arguments use, bounds the total mass of `Proof.Traces.outputGivenTrace` by one, and builds the
-Markov kernel that agrees with it wherever it has mass one.
+This file packages it as an s-finite kernel in the trace and the expression
+(`compactReplayKernel`), proves the one-step unfolding lemmas the lockstep arguments use, bounds
+the total mass of `Proof.Traces.outputGivenTrace` by one, and builds the Markov kernel that agrees
+with it wherever it has mass one. Lemmas about `Proof.Traces.outputGivenTraceAt` are named
+`ogtAt_*` throughout this file.
 -/
 
 namespace Determinize.Proof.StepTraces
@@ -20,9 +21,6 @@ noncomputable section
 open Classical
 
 /-! ### Unfolding lemmas -/
-
-theorem ogtAt_zero_real (value : ℝ) :
-    outputGivenTraceAt 0 (.real value) [] = Measure.dirac value := rfl
 
 theorem ogtAt_zero_of_notReal {expression : Expr} (notReal : ∀ value, expression ≠ .real value)
     (tape : DrawTrace) : outputGivenTraceAt 0 expression tape = 0 := by
@@ -208,7 +206,7 @@ theorem compactReplayStep_apply (tape : DrawTrace) (expression : Expr) :
   simp only [Kernel.piecewise, Kernel.coe_mk, Set.mem_ofPred_eq]
   by_cases none : generationOp expression.skeleton = none
   · rw [if_pos none, if_pos none,
-      SymbolicSoundness.TargetSafety.sfiniteKernel_mapWithInput_apply,
+      SFiniteKernel.mapWithInput_apply,
       MeasurableActionFamily.pullback_apply, StepKernel.kernel_eq_stepMeasure]
   · rw [if_neg none, if_neg none]
     by_cases fits : matchesHead (tape, expression)
@@ -307,15 +305,6 @@ theorem compactReplayKernel_apply (depth : Nat) (tape : DrawTrace) (expression :
             · rw [Measure.dirac_bind (compactReplayKernel depth).kernel.measurable, ih,
                 sampleContinuation, reduction, ogtAt_unit]
             · exact Measure.bind_zero_left _
-
-theorem ogtAt_measurable (depth : Nat) (expression : Expr) :
-    Measurable (fun tape : DrawTrace => outputGivenTraceAt depth expression tape) := by
-  have eq : (fun tape : DrawTrace => outputGivenTraceAt depth expression tape) =
-      fun tape => (compactReplayKernel depth).kernel (tape, expression) := by
-    funext tape
-    exact (compactReplayKernel_apply _ _ _).symm
-  rw [eq]
-  exact (compactReplayKernel depth).kernel.measurable.comp (measurable_id.prodMk measurable_const)
 
 theorem ogtAt_expression_measurable (depth : Nat) (tape : DrawTrace) :
     Measurable (fun expression : Expr => outputGivenTraceAt depth expression tape) := by
@@ -419,26 +408,18 @@ theorem ogtAt_le_outputGivenTrace (depth : Nat) (program : Expr) (tape : DrawTra
     outputGivenTraceAt depth program tape ≤ outputGivenTrace program tape :=
   Measure.le_sum _ depth
 
-/-- A measure below a subprobability measure and of mass one is that measure. -/
-theorem Measure.eq_of_le_of_mass {α : Type*} [MeasurableSpace α] {μ ν : Measure α} (le : μ ≤ ν)
-    (massNu : ν Set.univ ≤ 1) (massMu : μ Set.univ = 1) : μ = ν := by
-  ext s hs
-  refine le_antisymm (Measure.le_iff'.1 le s) ?_
-  have finite : ν sᶜ ≠ ⊤ :=
-    ne_top_of_le_ne_top ENNReal.one_ne_top ((measure_mono (Set.subset_univ _)).trans massNu)
-  have h : ν s + ν sᶜ ≤ μ s + ν sᶜ := by
-    calc ν s + ν sᶜ = ν Set.univ := measure_add_measure_compl hs
-      _ ≤ 1 := massNu
-      _ = μ s + μ sᶜ := massMu.symm.trans (measure_add_measure_compl hs).symm
-      _ ≤ μ s + ν sᶜ := add_le_add le_rfl (Measure.le_iff'.1 le sᶜ)
-  exact (ENNReal.add_le_add_iff_right finite).mp h
-
-/-- Where a fixed-depth replay already has mass one, it is the whole replay law. -/
+/-- Where a fixed-depth replay already has mass one, it is the whole replay law: a finite
+measure below another of the same total mass equals it. -/
 theorem outputGivenTrace_eq_ogtAt (depth : Nat) (program : Expr) (tape : DrawTrace)
     (mass : outputGivenTraceAt depth program tape Set.univ = 1) :
-    outputGivenTrace program tape = outputGivenTraceAt depth program tape :=
-  (Measure.eq_of_le_of_mass (ogtAt_le_outputGivenTrace depth program tape)
-    (outputGivenTrace_mass_le_one program tape) mass).symm
+    outputGivenTrace program tape = outputGivenTraceAt depth program tape := by
+  have le := ogtAt_le_outputGivenTrace depth program tape
+  have : IsFiniteMeasure (outputGivenTraceAt depth program tape) :=
+    ⟨by rw [mass]; exact ENNReal.one_lt_top⟩
+  refine (Measure.eq_of_le_of_measure_univ_eq le ?_).symm
+  rw [mass]
+  exact le_antisymm (by simpa only [mass] using Measure.le_iff'.1 le Set.univ)
+    (outputGivenTrace_mass_le_one program tape)
 
 
 /-! ### A Markov version and a measurability lemma -/

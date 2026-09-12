@@ -1,5 +1,13 @@
 import Determinize.Proof.Replay
 
+/-!
+# Recorded draws of symbolic steps
+
+Whether a symbolic step records a G-affinity draw (`generationDraw`) agrees with the label
+`generationOp` reads off the skeleton (`symbolic_generationDraw`), and determinization does
+not change that label (`generationOp_determinize`).
+-/
+
 namespace Determinize.Proof.StepTraces
 
 open MeasureTheory ProbabilityTheory Determinize.Spec.Paper Determinize.Proof.StepTraces
@@ -12,34 +20,32 @@ theorem symbolic_skeleton_isValue (expression : AffineExpr n) :
   rw [← expression.realize_skeleton (fun _ => 0), ← isValue_eq_skeletonIsValue,
     AffineExpr.realize_isValue]
 
-def generationDraw : SymbolicAction laws n → Bool
+def generationDraw : SymbolicAction n → Bool
   | .sampleG _ _ _ => true
   | _ => false
 
-@[simp] theorem generationDraw_wrap (action : SymbolicAction laws n)
+@[simp] theorem generationDraw_wrap (action : SymbolicAction n)
     (context : AffineExpr n → AffineExpr n)
     (lifted : AffineExpr (n + 1) → AffineExpr (n + 1)) :
     generationDraw (action.wrap context lifted) = generationDraw action := by
   cases action <;> rfl
 
 @[simp] theorem generationDraw_next (expression : AffineExpr n) :
-    generationDraw (.next expression : SymbolicAction laws n) = false := rfl
-@[simp] theorem generationDraw_stuck : generationDraw (.stuck : SymbolicAction laws n) = false := rfl
+    generationDraw (.next expression : SymbolicAction n) = false := rfl
+@[simp] theorem generationDraw_stuck : generationDraw (.stuck : SymbolicAction n) = false := rfl
 @[simp] theorem generationDraw_sampleE (op affine general continuation) :
-    generationDraw (.sampleE op affine general continuation : SymbolicAction laws n) = false := rfl
+    generationDraw (.sampleE op affine general continuation : SymbolicAction n) = false := rfl
 @[simp] theorem generationDraw_sampleG (fiber continuation) :
-    generationDraw (.sampleG site fiber continuation : SymbolicAction laws n) = true := rfl
+    generationDraw (.sampleG site fiber continuation : SymbolicAction n) = true := rfl
 
 @[simp] theorem generationOp_symbolic_value (expression : AffineExpr n)
     (value : expression.isValue = true) : generationOp expression.skeleton = none :=
   generationOp_value (by rwa [symbolic_skeleton_isValue])
 
-set_option linter.unusedSimpArgs false in
-set_option maxRecDepth 2048 in
 set_option maxHeartbeats 800000 in
-theorem symbolic_generationDraw (laws : PrimitiveLaws)
+theorem symbolic_generationDraw
     (typed : WellTyped context expression ty) :
-    (generationOp expression.skeleton).isSome = generationDraw (symbolicReduce laws expression) := by
+    (generationOp expression.skeleton).isSome = generationDraw (symbolicReduce expression) := by
   induction typed with
   | uniform lowerTyped upperTyped ihl ihr =>
       rename_i context' lower affinity upper
@@ -198,10 +204,9 @@ theorem symbolic_generationDraw (laws : PrimitiveLaws)
       iterate 5
         all_goals try split
         all_goals try simp only [generationDraw_wrap, generationDraw_next,
-          generationDraw_stuck, Option.isSome_none, ↓reduceIte] at *
+          generationDraw_stuck, Option.isSome_none] at *
       all_goals try simp_all [generationOp_symbolic_value]
 
-set_option maxHeartbeats 800000 in
 theorem generationOp_determinize (expression : Expr) :
     generationOp expression.determinize.skeleton = generationOp expression.skeleton := by
   fun_induction Expr.determinize expression <;>

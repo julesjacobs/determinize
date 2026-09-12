@@ -42,7 +42,7 @@ example : cumulativeOutputMeasure 4 capturedSample =
     (uniformFiber (.sample .G) 0 1).map (fun value => value + 2) := by
   simp [capturedSample, cumulativeOutputMeasure, reduce, Expr.isValue,
     realValue?, Action.wrap, Function.comp_def,
-    Expr.substHead, Expr.substAt, Expr.shift, Expr.mapVars, realValue?]
+    Expr.substHead, Expr.substAt, Expr.shift, Expr.mapVars]
   exact Measure.bind_dirac_eq_map _ (measurable_id.add_const 2)
 
 example (trace : Spec.Traces.Trace) (result value : ℝ) :

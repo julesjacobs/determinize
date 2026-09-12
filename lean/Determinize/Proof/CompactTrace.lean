@@ -1,4 +1,4 @@
-import Determinize.Proof.TraceSoundness
+import Determinize.Proof.SymbolicTraceGeneration
 import Determinize.Spec.Traces.Main
 
 /-!
@@ -13,7 +13,6 @@ open MeasureTheory ProbabilityTheory Determinize.Spec.Paper Determinize.Proof.St
 open Determinize.Proof.Paper
 open scoped ProbabilityTheory
 noncomputable section
-open Classical
 
 abbrev DrawTrace := Determinize.Spec.Traces.Trace
 
@@ -44,6 +43,7 @@ theorem draw_tail_measurable : Measurable (List.tail : DrawTrace → DrawTrace) 
     intro i
     simpa using draw_event_measurable (i+1)
 
+/-- Put an event's draw, if it has one, in front of a compact trace. -/
 def emitDraw (event : Event) (trace : DrawTrace) : DrawTrace :=
   match event with | none => trace | some draw => draw :: trace
 
@@ -68,6 +68,7 @@ theorem emitDraw_measurable : Measurable (fun p : Event × DrawTrace => emitDraw
   funext ⟨e,a⟩
   cases e <;> rfl
 
+/-- The compact trace of the first `n` events of a detailed trace. -/
 def retainWithin : Nat → Trace → DrawTrace
   | 0, _ => []
   | n+1, trace => emitDraw (trace.headD none) (retainWithin n trace.tail)
@@ -79,6 +80,7 @@ theorem retainWithin_measurable (n : Nat) : Measurable (retainWithin n) := by
       exact emitDraw_measurable.comp
         (trace_head_measurable.prodMk (ih.comp trace_tail_measurable))
 
+/-- The compact trace of a detailed trace: exactly its G-affinity draws, in order. -/
 def retain (trace : Trace) : DrawTrace := trace.filterMap id
 
 theorem retain_eq (trace : Trace) : retain trace = retainWithin trace.length trace := by
