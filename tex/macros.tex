@@ -1,1 +1,29 @@
-% Shared notation is added with the corresponding definitions.
+\newcommand{\E}{\mathsf{E}}
+\newcommand{\G}{\mathsf{G}}
+\newcommand{\M}{\mathsf{M}}
+\newcommand{\Real}{\mathbb{R}}
+\newcommand{\Nat}{\mathbb{N}}
+\newcommand{\tyR}[1]{\mathsf{real}^{#1}}
+\newcommand{\tyB}{\mathsf{bool}}
+\newcommand{\tyU}{\mathsf{unit}}
+\newcommand{\tyL}[1]{\mathsf{list}(#1)}
+\newcommand{\kw}[1]{\mathsf{#1}}
+\newcommand{\draw}[3]{\mathsf{#1}^{#2}(#3)}
+\newcommand{\avg}[2]{\mathsf{#1}^{\M}(#2)}
+\newcommand{\trans}[1]{T(#1)}
+\newcommand{\valid}[1]{\mathsf{Valid}(#1)}
+\newcommand{\validn}[2]{\mathsf{Valid}_{#2}(#1)}
+\newcommand{\out}[2]{\mu_{#1}^{(#2)}}
+\newcommand{\law}[1]{\mu_{#1}}
+\newcommand{\joint}[2]{J_{#1}^{(#2)}}
+\newcommand{\trlaw}[1]{\eta_{#1}}
+\newcommand{\Trace}{\mathsf{Trace}}
+\newcommand{\Var}{\operatorname{Var}}
+\newcommand{\Expect}{\mathbb{E}}
+\newcommand{\letin}[3]{\kw{let}\ #1=#2\ \kw{in}\ #3}
+\newcommand{\ite}[3]{\kw{if}\ #1\ \kw{then}\ #2\ \kw{else}\ #3}
+\newcommand{\recfn}[3]{\kw{rec}\ #1\ #2.\,#3}
+\newcommand{\scase}[5]{\kw{case}\ #1\ \kw{of}\ \kw{inl}\,#2\Rightarrow #3\mid\kw{inr}\,#4\Rightarrow #5}
+\newcommand{\lcase}[5]{\kw{case}\ #1\ \kw{of}\ []\Rightarrow #2\mid #3::#4\Rightarrow #5}
+\newcommand{\typing}[2]{\Gamma\vdash #1:#2}
+\newcommand{\lean}[1]{\texttt{\detokenize{#1}}}

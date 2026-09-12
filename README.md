@@ -77,7 +77,7 @@ suite explicitly skips real Storm comparisons; the Lean certificate tests still 
 
 The new paper starts at `tex/main.tex`, with one file per section in `tex/sections/`,
 formal figures in `tex/figures/`, and supporting material in `tex/appendix/`, following
-[the paper structure](PAPER_STRUCTURE.md).
+[the paper structure](PAPER_STRUCTURE.md) and [figure plan](tex/FIGURE_PLAN.md).
 Add text, notation, and references as they are reviewed; the previous draft is
 reference material in `tex/archive/`.
 To build that archived draft independently:

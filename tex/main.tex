@@ -6,6 +6,7 @@
 
 \usepackage{mathpartir}
 \usepackage{array}
+\usepackage{float}
 \usepackage{cleveref}
 \input{macros}
 
@@ -14,29 +15,19 @@
 
 \title{Determinize}
 \authorsaddresses{}
-% Add the agreed author metadata and a reviewed abstract here.
 \maketitle
 
-% Follow ../PAPER_STRUCTURE.md. Add prose only after reviewing it;
-% archive/ is reference material, not part of this document.
-\input{sections/introduction}
-\input{sections/language}
-\input{sections/examples}
-\input{sections/type-system}
-\input{sections/traces}
-\input{sections/proof}
-\input{sections/implementation}
-\input{sections/evaluation}
-\input{sections/related-work}
-
-% Enable when the first cited reference has been added to references.bib.
-% \bibliographystyle{ACM-Reference-Format}
-% \bibliography{references}
+\input{sections/1_introduction}
+\input{sections/2_language_and_determinization}
+\input{sections/3_type_system}
+\input{sections/4_type_inference}
+\input{sections/5_traces}
+\input{sections/6_proof}
+\input{sections/7_implementation}
+\input{sections/8_evaluation}
+\input{sections/9_related_work}
 
 \appendix
-\input{appendix/language}
-\input{appendix/semantics}
-\input{appendix/proofs}
-\input{appendix/lean-correspondence}
+\input{sections/10_appendix}
 
 \end{document}

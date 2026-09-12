@@ -1,22 +1,29 @@
 # Proposed paper structure
 
+See [the drafting checklist](tex/FIGURE_PLAN.md). Use examples alongside the
+definitions and rules they explain.
+
 ## Introduction
 
-## Language
+- Introduce the full pipeline through an example: program, inferred E/G annotations,
+  determinization, and guarantees.
+
+## Language and Determinization
 
 - Syntax: `uniform[E]`, `uniform[G]`, etc.
 - Semantics: the one that doesn't require a measure space over `Expr`.
 - Determinization transform: easy because of the `[E]`, `[G]` annotations; independent of typing rules.
 
-## Examples
-
-- A few motivating examples.
-
-## Type system + theorem statement
+## Type System
 
 - Typing rules and intuitive explanations.
 - Soundness theorem statement: the main one without traces.
 - Variance non-increase theorem statement.
+
+## Type Inference
+
+- Infer valid E/G annotations from the typing rules.
+- Explicit annotations as user constraints.
 
 ## Traces
 
