@@ -117,4 +117,44 @@ def leanExpression : Core → String
   | .beta action alpha betaArg => s!"(.beta {leanAction action} {leanExpression alpha} {leanExpression betaArg})"
   | .gamma action shape rate => s!"(.gamma {leanAction action} {leanExpression shape} {leanExpression rate})"
 
+private def leanRequested : Option Affinity → String
+  | none => "none"
+  | some affinity => s!"(some .{prettyAffinity affinity})"
+
+def leanInput : Input → String
+  | .bvar index => s!"(.bvar {index})"
+  | .reject => "(.reject)"
+  | .unit  => s!"(.unit)"
+  | .bool value => s!"(.bool {value})"
+  | .real value => s!"(.real (({value.num} : Rat) / {value.den}))"
+  | .lam body => s!"(.lam {leanInput body})"
+  | .fix body => s!"(.fix {leanInput body})"
+  | .app fn arg => s!"(.app {leanInput fn} {leanInput arg})"
+  | .pair left right => s!"(.pair {leanInput left} {leanInput right})"
+  | .fst pairValue => s!"(.fst {leanInput pairValue})"
+  | .snd pairValue => s!"(.snd {leanInput pairValue})"
+  | .inl value => s!"(.inl {leanInput value})"
+  | .inr value => s!"(.inr {leanInput value})"
+  | .matchSum scrutinee left right => s!"(.matchSum {leanInput scrutinee} {leanInput left} {leanInput right})"
+  | .nil  => s!"(.nil)"
+  | .cons head tail => s!"(.cons {leanInput head} {leanInput tail})"
+  | .matchList scrutinee nilCase consCase => s!"(.matchList {leanInput scrutinee} {leanInput nilCase} {leanInput consCase})"
+  | .ite condition thenBranch elseBranch => s!"(.ite {leanInput condition} {leanInput thenBranch} {leanInput elseBranch})"
+  | .letE value body => s!"(.letE {leanInput value} {leanInput body})"
+  | .neg body => s!"(.neg {leanInput body})"
+  | .add left right => s!"(.add {leanInput left} {leanInput right})"
+  | .mul left right => s!"(.mul {leanInput left} {leanInput right})"
+  | .div left right => s!"(.div {leanInput left} {leanInput right})"
+  | .lt left right => s!"(.lt {leanInput left} {leanInput right})"
+  | .uniform affinity lower upper => s!"(.uniform {leanRequested affinity} {leanInput lower} {leanInput upper})"
+  | .gaussian affinity mean variance => s!"(.gaussian {leanRequested affinity} {leanInput mean} {leanInput variance})"
+  | .poisson affinity rate => s!"(.poisson {leanRequested affinity} {leanInput rate})"
+  | .discrete affinity d =>
+      let ps := String.intercalate ", " (d.probabilities.map fun p => s!"({p.num} / {p.den} : Rat)")
+      s!"(.discrete {leanRequested affinity} ⟨[{ps}], by decide +kernel, by decide +kernel⟩)"
+  | .bernoulli affinity probability => s!"(.bernoulli {leanRequested affinity} {leanInput probability})"
+  | .exponential affinity rate => s!"(.exponential {leanRequested affinity} {leanInput rate})"
+  | .beta affinity alpha betaArg => s!"(.beta {leanRequested affinity} {leanInput alpha} {leanInput betaArg})"
+  | .gamma affinity shape rate => s!"(.gamma {leanRequested affinity} {leanInput shape} {leanInput rate})"
+
 end Determinize.Frontend

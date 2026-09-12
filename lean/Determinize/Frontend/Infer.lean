@@ -10,7 +10,7 @@ private inductive UType where
 deriving Repr, Inhabited
 
 private inductive Draft where
-  | node (expression : Core) (ty : UType) (children : List Draft)
+  | node (expression : Input) (ty : UType) (children : List Draft)
   | cast (body : Draft) (ty : UType)
 private def Draft.ty : Draft → UType
   | .node _ t _ | .cast _ t => t
@@ -19,7 +19,6 @@ private structure InferState where
   types : Array (Option UType) := #[]
   affinities : Array (Option Affinity) := #[]
   constraints : List (Nat × Nat) := []
-  requested : List (Option Affinity) := []
 private abbrev M := StateT InferState (Except String)
 
 private def fresh : M UType := do
@@ -87,16 +86,12 @@ private def require (d : Draft) (t : UType) : M Draft := do
   relate d.ty t
   return .cast d t
 
-private def siteAffinity : M Nat := do
+private def siteAffinity (requested : Option Affinity) : M Nat := do
   let i ← freshAffinity
-  match (← get).requested with
-  | [] => throw "missing sampling-affinity metadata"
-  | m :: ms =>
-    modify fun s => {s with requested := ms}
-    if let some m := m then force i m
+  if let some affinity := requested then force i affinity
   return i
 
-private partial def inferExpr (Γ : List UType) (e : Core) : M Draft := do
+private partial def inferExpr (Γ : List UType) (e : Input) : M Draft := do
   let node := fun t cs => Draft.node e t cs
   match e with
   | .bvar i =>
@@ -165,18 +160,18 @@ private partial def inferExpr (Γ : List UType) (e : Core) : M Draft := do
     let a ← require (← inferExpr Γ a) ta
     let b ← require (← inferExpr Γ b) tb
     return node (match e with | .lt .. => .bool | _ => t) [a,b]
-  | .uniform _ a b | .gaussian _ a b | .beta _ a b | .gamma _ a b =>
-    let i ← siteAffinity; let t := UType.float i; let g ← general
+  | .uniform requested a b | .gaussian requested a b | .beta requested a b | .gamma requested a b =>
+    let i ← siteAffinity requested; let t := UType.float i; let g ← general
     let ta := match e with | .beta .. => g | _ => t
     let tb := match e with | .uniform .. => t | _ => g
     let a ← require (← inferExpr Γ a) ta
     let b ← require (← inferExpr Γ b) tb
     return node t [a,b]
-  | .discrete .. => do
-    let i ← siteAffinity
+  | .discrete requested _ => do
+    let i ← siteAffinity requested
     return node (.float i) []
-  | .poisson _ a | .bernoulli _ a | .exponential _ a =>
-    let i ← siteAffinity; let t := UType.float i; let g ← general
+  | .poisson requested a | .bernoulli requested a | .exponential requested a =>
+    let i ← siteAffinity requested; let t := UType.float i; let g ← general
     let ta := match e with | .poisson .. | .bernoulli .. => t | _ => g
     return node t [← require (← inferExpr Γ a) ta]
 
@@ -236,23 +231,22 @@ private partial def finish : Draft → M (Core × Certificate)
       | .mul ..,[a,b] => pure (.mul a b)
       | .div ..,[a,b] => pure (.div a b)
       | .lt ..,[a,b] => pure (.lt a b)
-      | .uniform k ..,[a,b] => pure (.uniform (setAffinity k m) a b)
-      | .gaussian k ..,[a,b] => pure (.gaussian (setAffinity k m) a b)
-      | .poisson k ..,[a] => pure (.poisson (setAffinity k m) a)
-      | .discrete k d,[] => pure (.discrete (setAffinity k m) d)
-      | .bernoulli k ..,[a] => pure (.bernoulli (setAffinity k m) a)
-      | .exponential k ..,[a] => pure (.exponential (setAffinity k m) a)
-      | .beta k ..,[a,b] => pure (.beta (setAffinity k m) a b)
-      | .gamma k ..,[a,b] => pure (.gamma (setAffinity k m) a b)
+      | .uniform _ ..,[a,b] => pure (.uniform (.sample m) a b)
+      | .gaussian _ ..,[a,b] => pure (.gaussian (.sample m) a b)
+      | .poisson _ ..,[a] => pure (.poisson (.sample m) a)
+      | .discrete _ d,[] => pure (.discrete (.sample m) d)
+      | .bernoulli _ ..,[a] => pure (.bernoulli (.sample m) a)
+      | .exponential _ ..,[a] => pure (.exponential (.sample m) a)
+      | .beta _ ..,[a,b] => pure (.beta (.sample m) a b)
+      | .gamma _ ..,[a,b] => pure (.gamma (.sample m) a b)
       | _,_ => throw "internal annotation shape mismatch"
     return (e,.node t cs)
 
 def infer (input : Input) : Except String (Core × Certificate) := do
   let (result, _) ← (do
-    let draft ← inferExpr [] input.expression
-    unless (← get).requested.isEmpty do throw "excess sampling-affinity metadata"
+    let draft ← inferExpr [] input
     solve
-    finish draft).run { requested := input.affinities }
+    finish draft).run {}
   return result
 
 end Determinize.Frontend

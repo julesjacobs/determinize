@@ -16,34 +16,62 @@ example : interpret draw.determinize = (interpret draw).determinize :=
   Determinize.Proof.Checking.interpret_determinize draw
 
 def checking : IO Unit := do
-  assert ((certify draw draw [some .E] evidence).isSome) "valid certificate rejected"
+  let drawInput : Input := .uniform (some .E) (.real 0) (.real 1)
+  let generalInput : Input := .uniform (some .G) (.real 0) (.real 1)
+  assert ((certify drawInput draw evidence).isSome) "valid certificate rejected"
   assert (!(check [] (.bvar 0) floatE (.node floatE [])).isSome) "unbound variable certificate accepted"
   assert (!(check [] draw floatE (.node floatE [.node .bool [], .node floatE []])).isSome)
     "false child type accepted"
-  assert (!(certify draw (.uniform (.sample .E) (.real 0) (.real 2)) [none] evidence).isSome)
+  assert (!(certify drawInput (.uniform (.sample .E) (.real 0) (.real 2)) evidence).isSome)
     "changed literal accepted"
-  assert (!(certify draw draw [some .G] evidence).isSome) "explicit sampling affinity changed"
-  assert (!(certify draw draw.determinize [none] evidence).isSome) "target accepted as source"
+  assert (!(certify generalInput draw evidence).isSome) "explicit sampling affinity changed"
+  assert (!(certify drawInput draw.determinize evidence).isSome) "target accepted as source"
   let coin : Core := .bernoulli (.sample .E) (.real (1/4))
+  let coinInput : Input := .bernoulli (some .E) (.real (1/4))
   let coinEvidence : Certificate := .node floatE [.node floatE []]
-  assert ((certify coin coin [some .E] coinEvidence).isSome) "Bernoulli certificate rejected"
-  assert (!(certify coin (.bernoulli (.sample .E) (.real (1/2))) [some .E]
+  assert ((certify coinInput coin coinEvidence).isSome) "Bernoulli certificate rejected"
+  assert (!(certify coinInput (.bernoulli (.sample .E) (.real (1/2)))
     coinEvidence).isSome) "changed Bernoulli probability accepted"
-  assert (!(certify coin coin.determinize [some .E] coinEvidence).isSome)
+  assert (!(certify coinInput coin.determinize coinEvidence).isSome)
     "Bernoulli mean accepted as a source draw"
   assert (!(check [] coin floatE (.node floatE [])).isSome) "omitted probability evidence accepted"
   let d ← IO.ofExcept (finiteDistribution [1/6,1/3,1/2])
   let changed ← IO.ofExcept (finiteDistribution [1/2,1/3,1/6])
   let categorical : Core := .discrete (.sample .E) d
+  let categoricalInput : Input := .discrete (some .E) d
   let categoricalEvidence : Certificate := .node floatE []
-  assert ((certify categorical categorical [some .E] categoricalEvidence).isSome)
+  assert ((certify categoricalInput categorical categoricalEvidence).isSome)
     "discrete certificate rejected"
-  assert (!(certify categorical (.discrete (.sample .E) changed) [some .E]
+  assert (!(certify categoricalInput (.discrete (.sample .E) changed)
     categoricalEvidence).isSome) "changed discrete weights accepted"
-  assert (!(certify categorical categorical.determinize [some .E] categoricalEvidence).isSome)
+  assert (!(certify categoricalInput categorical.determinize categoricalEvidence).isSome)
     "discrete mean accepted as a source draw"
-  assert (!(certify categorical categorical [some .G] categoricalEvidence).isSome)
+  assert (!(certify (.discrete (some .G) d) categorical categoricalEvidence).isSome)
     "discrete sampling affinity changed"
+  let nestedInput : Input := .uniform (some .E)
+    (.bernoulli (some .G) (.real (1/4))) (.real 1)
+  let nested : Core := .uniform (.sample .E)
+    (.bernoulli (.sample .G) (.real (1/4))) (.real 1)
+  let nestedEvidence : Certificate := .node floatE
+    [.sub floatE (.node (.float .G) [.node (.float .G) []]), .node floatE []]
+  assert ((certify nestedInput nested nestedEvidence).isSome) "nested affinities rejected"
+  let swapped : Core := .uniform (.sample .G)
+    (.bernoulli (.sample .E) (.real (1/4))) (.real 1)
+  assert (!(nestedInput.matches swapped)) "nested affinities matched at the wrong sites"
+  let unspecified : Input := .bernoulli none (.real (1/4))
+  assert ((certify unspecified coin coinEvidence).isSome) "omitted affinity did not accept E"
+  assert ((certify unspecified (.bernoulli (.sample .G) (.real (1/4)))
+    (.node (.float .G) [.node (.float .G) []])).isSome) "omitted affinity did not accept G"
+  assert (!(certify coinInput (.poisson (.sample .E) (.real (1/4))) coinEvidence).isSome)
+    "different distribution matched"
+  let lambdaInput : Input := .lam (.lam (.bvar 1))
+  let lambdaTy := Ty.arr .unit (.arr .unit .unit)
+  let lambdaEvidence : Certificate := .node lambdaTy
+    [.node (.arr .unit .unit) [.node .unit []]]
+  assert ((certify lambdaInput (.lam (.lam (.bvar 1))) lambdaEvidence).isSome)
+    "valid binder certificate rejected"
+  assert (!(certify lambdaInput (.lam (.lam (.bvar 0))) lambdaEvidence).isSome)
+    "changed binder reference accepted"
   let g := Ty.float .G
   let e := Ty.float .E
   for (a,b) in [(g,e), (.prod g g,.prod e e), (.sum g g,.sum e e),

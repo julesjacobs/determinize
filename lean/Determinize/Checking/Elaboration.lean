@@ -1,4 +1,5 @@
 import Determinize.Checking.Typing
+import Determinize.Checking.Input
 
 namespace Determinize.Checking
 open Spec.Paper
@@ -6,41 +7,6 @@ open Spec.Paper
 private def actionAffinities : DistributionAction → List Affinity
   | .sample affinity => [affinity]
   | .mean => []
-
-/-- Forget sample affinities, retaining all other syntax. -/
-def eraseAnnotations : Core → Core
-  | .bvar index => .bvar index
-  | .unit => .unit
-  | .reject => .reject
-  | .discrete action d => .discrete (setAffinity action .G) d
-  | .bool value => .bool value
-  | .real value => .real value
-  | .lam body => .lam ((eraseAnnotations body))
-  | .fix body => .fix ((eraseAnnotations body))
-  | .app fn arg => .app ((eraseAnnotations fn)) ((eraseAnnotations arg))
-  | .pair left right => .pair ((eraseAnnotations left)) ((eraseAnnotations right))
-  | .fst pairValue => .fst ((eraseAnnotations pairValue))
-  | .snd pairValue => .snd ((eraseAnnotations pairValue))
-  | .inl value => .inl ((eraseAnnotations value))
-  | .inr value => .inr ((eraseAnnotations value))
-  | .matchSum scrutinee left right => .matchSum ((eraseAnnotations scrutinee)) ((eraseAnnotations left)) ((eraseAnnotations right))
-  | .nil => .nil
-  | .cons head tail => .cons ((eraseAnnotations head)) ((eraseAnnotations tail))
-  | .matchList scrutinee nilCase consCase => .matchList ((eraseAnnotations scrutinee)) ((eraseAnnotations nilCase)) ((eraseAnnotations consCase))
-  | .ite condition thenBranch elseBranch => .ite ((eraseAnnotations condition)) ((eraseAnnotations thenBranch)) ((eraseAnnotations elseBranch))
-  | .letE value body => .letE ((eraseAnnotations value)) ((eraseAnnotations body))
-  | .neg body => .neg ((eraseAnnotations body))
-  | .add left right => .add ((eraseAnnotations left)) ((eraseAnnotations right))
-  | .mul left right => .mul ((eraseAnnotations left)) ((eraseAnnotations right))
-  | .div left right => .div ((eraseAnnotations left)) ((eraseAnnotations right))
-  | .lt left right => .lt ((eraseAnnotations left)) ((eraseAnnotations right))
-  | .uniform action lower upper => .uniform (setAffinity action .G) ((eraseAnnotations lower)) ((eraseAnnotations upper))
-  | .gaussian action mean variance => .gaussian (setAffinity action .G) ((eraseAnnotations mean)) ((eraseAnnotations variance))
-  | .poisson action rate => .poisson (setAffinity action .G) ((eraseAnnotations rate))
-  | .bernoulli action probability => .bernoulli (setAffinity action .G) ((eraseAnnotations probability))
-  | .exponential action rate => .exponential (setAffinity action .G) ((eraseAnnotations rate))
-  | .beta action alpha betaArg => .beta (setAffinity action .G) ((eraseAnnotations alpha)) ((eraseAnnotations betaArg))
-  | .gamma action shape rate => .gamma (setAffinity action .G) ((eraseAnnotations shape)) ((eraseAnnotations rate))
 
 def sampleAffinities : Core → List Affinity
   | .bvar _ => []
@@ -76,28 +42,81 @@ def sampleAffinities : Core → List Affinity
   | .beta action alpha betaArg => actionAffinities action ++ ((sampleAffinities alpha) ++ (sampleAffinities betaArg))
   | .gamma action shape rate => actionAffinities action ++ ((sampleAffinities shape) ++ (sampleAffinities rate))
 
-def respectsAffinities : List (Option Affinity) → List Affinity → Bool
-  | [], [] => true
-  | requested :: rs, actual :: ms =>
-      (requested.isNone || requested == some actual) && respectsAffinities rs ms
+/-- The candidate preserves every constructor and payload, and fills only omitted affinities. -/
+def Input.matches : Input → Core → Bool
+  | .bvar index, .bvar index' => decide (index = index')
+  | .reject, .reject => true
+  | .unit, .unit => true
+  | .bool value, .bool value' => decide (value = value')
+  | .real value, .real value' => decide (value = value')
+  | .nil, .nil => true
+  | .lam body, .lam body' =>
+      body.matches body'
+  | .fix body, .fix body' =>
+      body.matches body'
+  | .app fn arg, .app fn' arg' =>
+      fn.matches fn' && arg.matches arg'
+  | .pair left right, .pair left' right' =>
+      left.matches left' && right.matches right'
+  | .fst body, .fst body' =>
+      body.matches body'
+  | .snd body, .snd body' =>
+      body.matches body'
+  | .inl body, .inl body' =>
+      body.matches body'
+  | .inr body, .inr body' =>
+      body.matches body'
+  | .matchSum scrutinee left right, .matchSum scrutinee' left' right' =>
+      scrutinee.matches scrutinee' && left.matches left' && right.matches right'
+  | .cons head tail, .cons head' tail' =>
+      head.matches head' && tail.matches tail'
+  | .matchList scrutinee nilCase consCase, .matchList scrutinee' nilCase' consCase' =>
+      scrutinee.matches scrutinee' && nilCase.matches nilCase' && consCase.matches consCase'
+  | .ite condition thenBranch elseBranch, .ite condition' thenBranch' elseBranch' =>
+      condition.matches condition' && thenBranch.matches thenBranch' && elseBranch.matches elseBranch'
+  | .letE value body, .letE value' body' =>
+      value.matches value' && body.matches body'
+  | .neg body, .neg body' =>
+      body.matches body'
+  | .add left right, .add left' right' =>
+      left.matches left' && right.matches right'
+  | .mul left right, .mul left' right' =>
+      left.matches left' && right.matches right'
+  | .div left right, .div left' right' =>
+      left.matches left' && right.matches right'
+  | .lt left right, .lt left' right' =>
+      left.matches left' && right.matches right'
+  | .uniform requested lower upper, .uniform (.sample actual) lower' upper' =>
+      (requested.isNone || requested == some actual) && lower.matches lower' && upper.matches upper'
+  | .gaussian requested mean variance, .gaussian (.sample actual) mean' variance' =>
+      (requested.isNone || requested == some actual) && mean.matches mean' && variance.matches variance'
+  | .poisson requested rate, .poisson (.sample actual) rate' =>
+      (requested.isNone || requested == some actual) && rate.matches rate'
+  | .bernoulli requested probability, .bernoulli (.sample actual) probability' =>
+      (requested.isNone || requested == some actual) && probability.matches probability'
+  | .exponential requested rate, .exponential (.sample actual) rate' =>
+      (requested.isNone || requested == some actual) && rate.matches rate'
+  | .beta requested alpha betaArg, .beta (.sample actual) alpha' betaArg' =>
+      (requested.isNone || requested == some actual) && alpha.matches alpha' && betaArg.matches betaArg'
+  | .gamma requested shape rate, .gamma (.sample actual) shape' rate' =>
+      (requested.isNone || requested == some actual) && shape.matches shape' && rate.matches rate'
+  | .discrete requested distribution, .discrete (.sample actual) distribution' =>
+      (requested.isNone || requested == some actual) && decide (distribution = distribution')
   | _, _ => false
 
-structure Certified (original : Core) (requested : List (Option Affinity)) where
+structure Certified (input : Input) where
   source : Core
   ty : Ty
   typed : Typed [] (interpret source) ty
   sourceOnly : source.sourceForm = true
-  aligned : eraseAnnotations source = eraseAnnotations original
-  affinitiesRespected : respectsAffinities requested (sampleAffinities source) = true
+  aligned : input.matches source = true
 
-def certify (original candidate : Core) (requested : List (Option Affinity)) (c : Certificate) :
-    Option (Certified original requested) := do
+def certify (input : Input) (candidate : Core) (c : Certificate) :
+    Option (Certified input) := do
   if hSource : candidate.sourceForm = true then
-    if hAlign : eraseAnnotations candidate = eraseAnnotations original then
-      if hAffinities : respectsAffinities requested (sampleAffinities candidate) = true then
-        let h ← check [] candidate c.ty c
-        return ⟨candidate, c.ty, h.down, hSource, hAlign, hAffinities⟩
-      else none
+    if hAlign : input.matches candidate = true then
+      let h ← check [] candidate c.ty c
+      return ⟨candidate, c.ty, h.down, hSource, hAlign⟩
     else none
   else none
 

@@ -9,7 +9,7 @@ def assert (b : Bool) (message : String) : IO Unit :=
 
 def parsing : IO Unit := do
   let input ← IO.ofExcept (elaborate (← IO.ofExcept (parse "(* outer (* inner *) *) 1.25e-2")))
-  assert (input.expression == .real (1/80)) "decimal literals must remain exact"
+  assert (input == .real (1/80)) "decimal literals must remain exact"
   assert (parse "uniform[E](0,1)" |>.isOk) "explicit E affinity"
   assert (parse "uniform[Q](0,1)" |> fun r => !r.isOk) "invalid affinity accepted"
   assert (parse "1 garbage )" |> fun r => !r.isOk) "trailing input accepted"
@@ -31,11 +31,17 @@ def parsing : IO Unit := do
   let program ← IO.ofExcept (compile "let x = 2 in let y = 3 in x <= y")
   assert (program.checked.ty == .bool) "comparison type"
   let recursive ← IO.ofExcept (elaborate (← IO.ofExcept (parse "rec f x => f x")))
-  assert (recursive.expression == .fix (.app (.bvar 1) (.bvar 0))) "recursive binder indices"
+  assert (recursive == .fix (.app (.bvar 1) (.bvar 0))) "recursive binder indices"
+  let comparison ← IO.ofExcept (elaborate (← IO.ofExcept
+    (parse "fun x => uniform[G](0,1) <= (fun y => x + y) (bernoulli(0.5))")))
+  assert (comparison == .lam (.letE (.uniform (some .G) (.real 0) (.real 1))
+    (.letE (.app (.lam (.add (.bvar 2) (.bvar 0))) (.bernoulli none (.real (1/2))))
+      (.ite (.lt (.bvar 0) (.bvar 1)) (.bool false) (.bool true)))))
+    "comparison desugaring changed binders or affinities"
   for text in ["let x = uniform(0,1) in x + x", "fun x => x", "uniform[G](0,1)", "observe(false)", "observe(true)", "bernoulli[E](0.25)", "bernoulli[G](0.25)", "flip(0.25)", "bernoulli[E](0.00125)", "uniform[E](0.2,0.375)", "discrete[E](0.25,0.25,0.5)", "discrete[G](0,0.25,0.75)", "discrete[E](0,1,0)"] do
     let p ← IO.ofExcept (compile text)
     let q ← IO.ofExcept (compile (pretty p.checked.source))
-    assert (eraseAnnotations p.checked.source == eraseAnnotations q.checked.source)
+    assert (p.checked.source == q.checked.source)
       s!"pretty-printed source changed program: {text} -> {pretty p.checked.source}"
 
   for text in ["2 * 3", "uniform[E](0,1) * 3", "(2 * 3) * (uniform[G](0,1) * 4)"] do

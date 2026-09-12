@@ -3,11 +3,6 @@ import Determinize.Spec.Syntax
 namespace Determinize.Checking
 open Spec.Paper
 
-def setAffinity (action : DistributionAction) (affinity : Affinity) : DistributionAction :=
-  match action with
-  | .sample _ => .sample affinity
-  | .mean => .mean
-
 inductive Certificate where
   | node (ty : Ty) (children : List Certificate)
   | sub (ty : Ty) (child : Certificate)

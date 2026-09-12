@@ -1,4 +1,4 @@
-import Determinize.Checking.Certificate
+import Determinize.Checking.Input
 
 namespace Determinize.Frontend
 open Spec.Paper Checking
@@ -31,11 +31,6 @@ inductive Surface where
   | discrete (affinity : Option Affinity) (weights : List Surface)
   | flip (affinity : Option Affinity) (probability : Surface)
   | observe (condition : Surface)
-deriving Repr
-
-structure Input where
-  expression : Core
-  affinities : List (Option Affinity)
 deriving Repr
 
 end Determinize.Frontend

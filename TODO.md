@@ -101,5 +101,5 @@ Full refactor (per-step checks and decisions in refactor-plan.md):
 
 Frontend AST refactor:
 [x] Replace string-tagged parsed syntax with explicit constructors.
-[ ] Store optional affinities in resolved syntax and check alignment structurally.
-[ ] Validate certificates and corpus; compare each refactor and retain improvements.
+[x] Store optional affinities in resolved syntax and check alignment structurally.
+[x] Validate certificates and corpus; compare each refactor and retain improvements (frontend-refactor.md).

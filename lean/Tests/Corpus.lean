@@ -87,7 +87,7 @@ private def compileStage (text : String) : Except (String × String) Program := 
   let ast ← (parse text).mapError ("parse", ·)
   let input ← (elaborate ast).mapError ("elaboration", ·)
   let (source, cert) ← (infer input).mapError ("inference", ·)
-  let some checked := certify input.expression source input.affinities cert
+  let some checked := certify input source cert
     | throw ("certificate", "inference produced an invalid certificate")
   return ⟨input, checked⟩
 

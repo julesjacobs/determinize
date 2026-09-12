@@ -69,20 +69,26 @@ rational determinization to the existing real-literal theorem.
 
 ### What is checked
 
-The inference algorithm produces an expression and a tree of proposed types.
+`Frontend.Surface` represents parsed syntax with named binders and dedicated
+constructors. Elaboration resolves names to de Bruijn indices and removes syntax
+sugar, producing `Checking.Input`. Its sample nodes retain optional E/G affinities;
+it has no mean nodes. Inference fills these annotations and produces `Core` plus
+a tree of proposed types. There is no positional annotation list.
 `check` verifies every node against the existing `Typed` constructors and returns
 an actual proof in `PLift`. It does not use `unsafe`, `sorry`, or inference as an
-oracle. `certify` additionally requires stochastic source form, identical syntax
-after erasing sampling affinities, and preservation of every
-explicit sampling affinity. Thus inference cannot silently change literals, operators,
-binders, or distribution kinds. The parser and initial desugaring remain unverified;
-the certificate identifies the **elaborated core expression**, not the source bytes.
+oracle. `certify` additionally requires stochastic source form and structural
+correspondence between the resolved input and the inferred core. It checks each
+constructor, payload, and optional sampling affinity at the same AST node. Thus inference cannot silently change literals,
+operators,
+binders, or distribution kinds. The certificate identifies the **resolved input
+expression**; parsing, name resolution, and desugaring from source bytes remain
+outside the checked boundary.
 
 The executable runs the verified checker as compiled Lean code. An exported
 `.lean` certificate independently reconstructs the checks using kernel reduction
 (`by decide +kernel`, not `native_decide`); it does not import the inference algorithm.
 For a float-valued program it includes `traceGuarantee`, conditional on
-`DoesNotGetStuck`. The generic `certified_expectation` theorem additionally requires
+`PrimitiveDomainSafe`. The generic `certified_expectation` theorem additionally requires
 integrability. Typing alone proves neither hypothesis. Non-float programs receive
 typing and input-preservation certificates without a float-output theorem.
 

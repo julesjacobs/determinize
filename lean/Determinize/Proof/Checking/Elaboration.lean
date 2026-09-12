@@ -14,10 +14,10 @@ theorem interpret_sourceForm (e : Core) :
     (interpret e).sourceForm = e.sourceForm := by
   induction e <;> simp_all [interpret, Expr.mapLiteral, Expr.sourceForm]
 
-theorem certified_alignment {input affinities} (p : Certified input affinities) :
-    eraseAnnotations p.source = eraseAnnotations input := p.aligned
+theorem certified_alignment {input} (p : Certified input) :
+    input.matches p.source = true := p.aligned
 
-theorem certified_trace_soundness {input affinities} (p : Certified input affinities)
+theorem certified_trace_soundness {input} (p : Certified input)
     (m : Affinity) (hTy : p.ty = .float m)
     (safe : PrimitiveDomainSafe (interpret p.source)) :
     PrimitiveDomainSafe (interpret p.source.determinize) ∧
@@ -39,7 +39,7 @@ theorem certified_trace_soundness {input affinities} (p : Certified input affini
   exact Determinize.Theorems.traceSoundness (interpret p.source)
     typed ((interpret_sourceForm _).trans p.sourceOnly) safe
 
-theorem certified_expectation {input affinities} (p : Certified input affinities)
+theorem certified_expectation {input} (p : Certified input)
     (m : Affinity) (hTy : p.ty = .float m)
     (safe : PrimitiveDomainSafe (interpret p.source))
     (integrable : Integrable id (bigStepMeasure (interpret p.source))) :
