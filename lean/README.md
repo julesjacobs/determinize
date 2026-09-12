@@ -22,9 +22,9 @@ Symbolic mean steps evaluate affine formulas over the existing E samples, preser
 
 The default build checks mean sites with affine-dependent operands, invalid mean parameters, nested sampling, the `x + 1/y` example, a G draw scaling an E draw from the left, and a sampled value captured by a function. `Proof/InterfaceChecks.lean` checks the direct evaluator using only public imports and verifies that these imports provide no measurable structure on expressions.
 
-## Deviations from the paper
+## Deviations from the archived paper
 
-The statements follow the paper's theorems, not its letter. Reviewers comparing against `tex/` should know:
+These comparisons refer to the previous draft in `tex/archive/`; the new paper in `tex/` is being written afresh. Reviewers comparing against the archived draft should know:
 
 - **Affinity labels on sample sites.** The paper's transformation `⟦e : τ⟧` is type-directed; here `Expr.determinize` is a function on terms, so every sample site carries its affinity and that label decides whether the site is switched to its mean (`DistributionAction.determinize`). Literals and arithmetic carry no labels.
 - **Multiplication and division.** Lean, the paper, and the simulator use a G left operand for multiplication and a G denominator for division. The other operand carries the result affinity. A G factor may depend on the G trace, while the expression remains affine in E draws. Lean allows silent structural subtyping; the frontend also puts a literal scaling factor on the left.

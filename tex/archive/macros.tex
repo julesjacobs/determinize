@@ -1,0 +1,54 @@
+\newcommand{\E}{\ensuremath{\mathsf{E}}}
+\newcommand{\G}{\ensuremath{\mathsf{G}}}
+\newcommand{\Float}[1]{\ensuremath{\mathbf{float}[#1]}}
+\newcommand{\Bool}{\ensuremath{\mathbf{bool}}}
+\newcommand{\Unit}{\ensuremath{\mathbf{unit}}}
+\newcommand{\Nat}{\ensuremath{\mathbf{nat}}}
+\newcommand{\List}[1]{\ensuremath{\mathbf{list}\,#1}}
+\newcommand{\darrow}{\Downarrow}
+\newcommand{\sem}[1]{\llbracket #1  \rrbracket}
+\newcommand{\bigsemstep}[2]{\langle #1  \rangle_{#2}}
+\newcommand{\bigsem}[1]{\langle #1  \rangle}
+\newcommand{\symsem}[1]{\widehat{\sem{#1}}}
+\newcommand{\symbigsemstep}[2]{\widehat{\bigsemstep{#1}{#2}}}
+\newcommand{\symbigsem}[1]{\widehat{\bigsem{#1}}}
+\newcommand{\monbind}{\ensuremath{\ensuremath{\gg\!\!=}}}
+
+\newcommand{\letkw}{\textnormal{\ttfamily let}}
+\newcommand{\inkw}{\textnormal{\ttfamily in}}
+\newcommand{\ifkw}{\textnormal{\ttfamily if}}
+\newcommand{\thenkw}{\textnormal{\ttfamily then}}
+\newcommand{\elsekw}{\textnormal{\ttfamily else}}
+
+\newcommand{\flip}{\textnormal{\ttfamily flip}}
+\newcommand{\uniform}{\textnormal{\ttfamily uniform}}
+\newcommand{\discrete}{\textnormal{\ttfamily discrete}}
+\newcommand{\gaussian}{\textnormal{\ttfamily gaussian}}
+\newcommand{\exponential}{\textnormal{\ttfamily exponential}}
+\newcommand{\betafn}{\textnormal{\ttfamily beta}}
+\newcommand{\gammafn}{\textnormal{\ttfamily gamma}}
+\newcommand{\poisson}{\textnormal{\ttfamily poisson}}
+
+\newcommand{\fstkw}{\textnormal{\ttfamily fst}}
+\newcommand{\sndkw}{\textnormal{\ttfamily snd}}
+\newcommand{\funkw}{\textnormal{\ttfamily fun}}
+\newcommand{\observekw}{\textnormal{\ttfamily observe}}
+\newcommand{\matchkw}{\textnormal{\ttfamily match}}
+\newcommand{\withkw}{\textnormal{\ttfamily with}}
+\newcommand{\refkw}{\textnormal{\ttfamily ref}}
+\newcommand{\fixkw}{\textnormal{\ttfamily fix}}
+\newcommand{\matchcase}{\boldsymbol{\mid}}
+\newcommand{\nil}{\text{nil}}
+\newcommand{\diverge}{\textnormal{\ttfamily diverge}}
+\newcommand{\logand}{\mathrel{\&\&}}
+\newcommand{\logor}{\mathrel{||}}
+\newcommand{\lognot}{\text{not}}
+
+% sym in the symbolic expressions
+\newcommand{\sym}{\textnormal{\ttfamily sym}}
+
+% Expectation transformer
+\newcommand{\exptrans}[1]{\mathcal{E}( #1 )}
+
+% Evaluation depth of an expression
+\newcommand{\evalDepth}{\ensuremath{\eta}}

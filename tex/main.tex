@@ -1,74 +1,42 @@
 \documentclass[acmsmall,screen,review,nonacm]{acmart}
-% For anonymous submission, add `anonymous`; for camera-ready, drop `review`.
 
-\settopmatter{printfolios=true}
+\settopmatter{printfolios=true,printacmref=false,printccs=false}
+\setcopyright{none}
 \citestyle{acmauthoryear}
 
 \usepackage{mathpartir}
 \usepackage{array}
-\usepackage{adjustbox}
 \usepackage{cleveref}
-\usepackage{todonotes}
-\usepackage{amsthm}
-\usepackage{amsmath}
-\allowdisplaybreaks
-
-\theoremstyle{remark}
-\newtheorem{remark}{Remark}
-
-% POPL uses the PACMPL journal format (single-column, 10pt).
-\acmJournal{PACMPL}
-\acmVolume{9}
-\acmNumber{POPL}
-\acmArticle{TODO}
-\acmYear{2025}
-\acmMonth{1}
-\acmDOI{10.1145/nnnnnnn.nnnnnnn}
-\acmISBN{978-x-xxxx-xxxx-x/25/01}
-\acmSubmissionID{TODO}
-\setcopyright{none}
-
 \input{macros}
 
 \begin{document}
+\raggedbottom
 
-\title[Short Title]{Determinize}
-
-\author{First Author}
-\affiliation{
-  \department{Department}
-  \institution{University Name}
-  \city{City}
-  \country{Country}
-}
-\email{first.last@example.com}
-
-\author{Second Author}
-\affiliation{
-  \department{Department}
-  \institution{Institute Name}
-  \city{City}
-  \country{Country}
-}
-\email{second@example.com}
-
-\renewcommand{\shortauthors}{First et al.}
-\authorsaddresses{} % Suppress automatic “Authors’ addresses” block.
-
-
+\title{Determinize}
+\authorsaddresses{}
+% Add the agreed author metadata and a reviewed abstract here.
 \maketitle
 
-\input{1_introduction}
-\input{2_syntax}
-\input{3_typing}
-\input{4_inference}
-\input{5_determinization}
-\input{6_soundness}
-\input{7_related_work}
+% Follow ../PAPER_STRUCTURE.md. Add prose only after reviewing it;
+% archive/ is reference material, not part of this document.
+\input{sections/introduction}
+\input{sections/language}
+\input{sections/examples}
+\input{sections/type-system}
+\input{sections/traces}
+\input{sections/proof}
+\input{sections/implementation}
+\input{sections/evaluation}
+\input{sections/related-work}
 
-% Remove this once real citations are added.
-\nocite{*}
-\bibliographystyle{ACM-Reference-Format}
-\bibliography{references}
+% Enable when the first cited reference has been added to references.bib.
+% \bibliographystyle{ACM-Reference-Format}
+% \bibliography{references}
+
+\appendix
+\input{appendix/language}
+\input{appendix/semantics}
+\input{appendix/proofs}
+\input{appendix/lean-correspondence}
 
 \end{document}

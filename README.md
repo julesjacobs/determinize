@@ -8,7 +8,7 @@ formalization, exact expected-reward certificates, and a browser simulator.
 - `tests/`, `examples/`: shared `.det` programs and analytical expectations.
 - `tools/storm.py`: exact Storm comparison against independently checked certificates.
 - `sim/`: browser visualization of ordinary, symbolic, and determinized execution.
-- `tex/`: paper.
+- `tex/`: new paper; `tex/archive/` preserves the previous draft.
 
 ## Setup
 
@@ -73,6 +73,17 @@ suite explicitly skips real Storm comparisons; the Lean certificate tests still 
 ```sh
 (cd sim && npm ci && npm test && npm run build)
 (cd tex && latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex)
+```
+
+The new paper starts at `tex/main.tex`, with one file per section in `tex/sections/`,
+formal figures in `tex/figures/`, and supporting material in `tex/appendix/`, following
+[the paper structure](PAPER_STRUCTURE.md).
+Add text, notation, and references as they are reviewed; the previous draft is
+reference material in `tex/archive/`.
+To build that archived draft independently:
+
+```sh
+(cd tex/archive && latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex)
 ```
 
 Open `sim/index.html` to explore coupled traces. The simulator has its own compiler
