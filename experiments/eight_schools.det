@@ -1,0 +1,47 @@
+(* Gorinova, Moore & Hoffman (ICML 2020), section 6.1 / get_eight_schools.
+   https://proceedings.mlr.press/v119/gorinova20a/gorinova20a.pdf
+   https://github.com/mgorinova/autoreparam/blob/master/models.py
+   mu ~ Normal(0,5), log_tau ~ Normal(0,5), theta_i ~ Normal(mu,exp(log_tau)),
+   y_i ~ Normal(theta_i,s_i), where the paper uses STANDARD DEVIATIONS.
+   .det gauss uses VARIANCE: the first two variances are therefore 25.
+   User-authorized numerical approximation: exp uses range reduction and an
+   order-18 Taylor polynomial, not a new primitive or an alternative prior.
+   This is NOT an exact-real encoding of exp. See hierarchical.md for its bound.
+   The remaining model is encoded by rejection against Gaussian likelihoods
+   with fixed s_i, using Exp(1) auxiliary variables; no continuous equality test.
+   Inference algorithm differs from the paper's HMC. Query: E[theta_1 | y].
+   Final conditional theta_1 draw is E; all evidence draws are retained. *)
+let exp_small = fun x =>
+  let series = rec series k => fun term => fun total =>
+    if 18 < k then total else
+      let next = (x / k) * term in
+      series (k + 1) next (total + next)
+  in series 1 1 1
+in
+let exp_positive = rec exp_positive x =>
+  if 0.5 < x then
+    let half = exp_positive (x / 2) in half * half
+  else exp_small x
+in
+let exp_numeric = fun x =>
+  if x < 0 then 1 / exp_positive (-x) else exp_positive x
+in
+let mu = gauss[G](0, 25) in
+let log_tau = gauss[G](0, 25) in
+let variance = exp_numeric (2 * log_tau) in
+(* Pairs are (treatment effect, known sampling variance). *)
+let observations =
+  (28,225) :: (8,100) :: (-3,256) :: (7,121) ::
+  (-1,81) :: (1,121) :: (18,100) :: (12,324) :: []
+in
+let condition = rec condition rows =>
+  match rows with [] => () | row :: rest =>
+    let theta = gauss[G](mu, variance) in
+    let residual = fst row - theta in
+    let e = exponential[G](1) in
+    let _ = observe(residual * residual / (2 * snd row) <= e) in
+    condition rest
+in
+let _ = condition observations in
+gauss[E]((28 * variance + 225 * mu) / (variance + 225),
+         225 * variance / (variance + 225))
