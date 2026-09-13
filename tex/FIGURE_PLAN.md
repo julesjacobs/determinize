@@ -51,18 +51,22 @@ probability discussion comes after the statements.
 
 **Theorem (Expectation preservation).** Suppose
 $\vdash e : \mathsf{real}^{\mathsf E}$ and $e$ is domain-safe. If
-$\int r\,\mu_e(dr)$ is defined, then $\int r\,\mu_{\operatorname{Determinize}(e)}(dr)$ is defined and
+$\mathbb E_{\mathrm{ret}}[e]$ is defined, then
+$\operatorname{Determinize}(e)$ also has positive output mass and a defined
+conditional expectation, and
 
 $$
-\int r\,\mu_{\operatorname{Determinize}(e)}(dr)=\int r\,\mu_e(dr).
+\mathbb E_{\mathrm{ret}}[\operatorname{Determinize}(e)]
+=\mathbb E_{\mathrm{ret}}[e].
 $$
 
+Here $\mathbb E_{\mathrm{ret}}[e]=\int r\,\mu_e(dr)/\mu_e(\mathbb R)$.
+State the assumption $\mu_e(\mathbb R)>0$ in the bullet defining this notation.
 "Defined" allows $+\infty$ and $-\infty$, but excludes $\infty-\infty$.
-This is the existing `extendedExpectationThm` in
-[`Spec/Main.lean`](../lean/Determinize/Spec/Main.lean). Its finite-expectation
-specialization is `mainThm`, which also explicitly concludes target
-integrability and domain safety. State that finite source expectation stays
-finite; do not make the reader decode this from the extended-real equality.
+This follows from `extendedExpectationThm` and `outputMassThm` in
+[`Spec/Main.lean`](../lean/Determinize/Spec/Main.lean). The finite-expectation
+case is also exported as `conditionalExpectationThm`. Finite source expectation
+stays finite.
 
 Add a short forward pointer: the refined theorem in the Traces section does not
 require the global expectation to exist.
@@ -75,7 +79,7 @@ $\widehat\mu_e=\mu_e/\mu_e(\mathbb R)$; apply the same convention to $\operatorn
 The theorem's output-mass guarantee ensures that the target normalization exists.
 Explain why the normalization matters in the later mass discussion.
 
-**Corollary (Variance non-increase).** Under the same typing and domain-safety
+**Theorem (Variance non-increase).** Under the same typing and domain-safety
 assumptions, if the source has positive output mass and a finite second moment,
 then the target also has positive output mass and a finite second moment, and
 
@@ -86,8 +90,8 @@ $$
 
 The expectations of these normalized laws also agree whenever the source
 expectation is defined. Use the same normalization convention consistently when
-speaking about moments of successful runs; the first theorem's displayed
-integrals are explicitly over the unnormalized measures from the semantics.
+speaking about moments of successful runs. Both main theorems use conditioning
+on successful return.
 
 Lean's `varianceThm` proves second-moment non-increase and a variance inequality
 for the unnormalized measures. Its `variance` centers at the unnormalized first
@@ -104,7 +108,7 @@ $$
 Add the short Lean bridge before describing this formulation as directly
 checked. A finite second moment implies a finite absolute first moment because
 the output measure is finite. No separate first-moment assumption is needed in
-the variance corollary.
+the variance theorem.
 
 ### 3. Explain what an expectation being defined means
 
@@ -116,7 +120,7 @@ r^+=\max(r,0),\qquad r^-=\max(-r,0),\qquad
 A=\int r^+\,\mu_e(dr),\quad B=\int r^-\,\mu_e(dr).
 $$
 
-The signed expectation is $A-B$.
+For positive output mass $q$, the conditional expectation is $(A-B)/q$.
 
 - If both $A$ and $B$ are finite, the expectation is finite. Equivalently,
   $\int |r|\,\mu_e(dr)=A+B<\infty$.
@@ -185,7 +189,7 @@ In the Traces section, state `conditionalLawThm`: equal laws of terminating G
 traces and, almost everywhere, the target conditional output law is a point mass
 at the finite source conditional mean. No global integrability assumption is
 needed. Follow it with the variance decomposition from `Spec/Traces/Main.lean`,
-using the same normalization convention as the earlier variance corollary.
+using the same normalization convention as the earlier variance theorem.
 In the Proof section, derive the global results from this refined theorem.
 
 Keep the general nonnegative-convex-function inequality out of the main statement

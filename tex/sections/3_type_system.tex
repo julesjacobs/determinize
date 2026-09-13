@@ -21,19 +21,22 @@ transformation, which replaces $\E$-mode sampling with $\M$-mode deterministic m
 
 \begin{theorem}[Expectation preservation]
 \label{thm:expectation}
-Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe. If $\Expect[e]$ is defined,
-then $\Expect[\trans e]$ is defined and
+Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe. If
+$\Expect_{\mathrm{ret}}[e]$ is defined, then the transformed program also has
+positive probability of returning and a defined expectation satisfying
 \[
- \Expect[\trans e]=\Expect[e].
+ \Expect_{\mathrm{ret}}[\trans e]=\Expect_{\mathrm{ret}}[e].
 \]
 \end{theorem}
 where
 \begin{itemize}
     \item we write
 $
- \Expect[e]\mathrel{:=}\int_{\Real} r\,\law e(dr)
+ \Expect_{\mathrm{ret}}[e]\mathrel{:=}
+ \frac{1}{\law e(\Real)}\int_{\Real} r\,\law e(dr)
 $
-for the unnormalized expected output of $e$.
+for the expected output conditioned on the program successfully returning
+(we assume $\law e(\Real)>0$).
     \item a program is \emph{domain-safe} if,
 almost surely, every executed distribution has parameters in its domain and
 every executed division has a nonzero divisor.
@@ -41,15 +44,15 @@ every executed division has a nonzero divisor.
 
 We also show that determinization can only improve the variance:
 
-\begin{corollary}[Variance non-increase]
-\label{cor:variance}
+\begin{theorem}[Variance non-increase]
+\label{thm:variance}
 Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe. If
 $\law e(\Real)>0$ and $\int_{\Real}r^2\,\law e(dr)<\infty$, then $\trans e$
 also has positive probability of returning and a finite second moment, and
 \[
  \Var_{\mathrm{ret}}[\trans e]\le\Var_{\mathrm{ret}}[e].
 \]
-\end{corollary}
+\end{theorem}
 where
 \begin{itemize}
     \item $\Var_{\mathrm{ret}}$ is the variance conditioned on the program succesfully returning (i.e., discarding rejected trials and infinite loops)
@@ -69,7 +72,9 @@ infinite. To integrate a signed output, separate its positive and negative parts
  A_e=\int_{\Real}r^+\,\law e(dr),\quad
  B_e=\int_{\Real}r^-\,\law e(dr).
 \]
-Then $\Expect[e]=A_e-B_e$. If both parts are finite, the expectation is finite.
+For $q_e=\law e(\Real)>0$, we have
+$\Expect_{\mathrm{ret}}[e]=(A_e-B_e)/q_e$.
+If both parts are finite, the expectation is finite.
 If exactly one part is infinite, the expectation is $+\infty$ or $-\infty$.
 If both are infinite, the expectation is undefined: the two infinities cannot
 be cancelled. In particular, having a finite expectation is equivalent to
@@ -98,11 +103,21 @@ of whether their expectation is defined.
 
 \paragraph{Domain safety and missing probability.}
 Our theorems require that the program uses the distributions in a domain-safe way.
-For example, the following program is not domain safe:
+For example, the following well-typed program $e$ is not domain-safe:
 \begin{verbatim}
-let u = gaussian(0, 1) in uniform(0, u)
+let u = gaussian[E](0, 1) in uniform[E](0, u)
 \end{verbatim}
-because $u$ may be negative, and then the uniform distribution's parameters are invalid.
+When $u<0$, the uniform distribution's parameters are invalid and execution gets
+stuck. The program returns with probability $1/2$; conditioned on returning,
+its expected output is half the mean of a standard Gaussian conditioned to be
+positive. Determinization sets $u=0$ and returns the mean of
+$\kw{uniform}(0,0)$, which is zero.
+Thus the domain-safety assumption is necessary, because:
+\[
+ \Expect_{\mathrm{ret}}[e]=\frac{1}{\sqrt{2\pi}}
+ \qquad\text{but}\qquad
+ \Expect_{\mathrm{ret}}[\trans e]=0.
+\]
 
 \paragraph{Rejection and divergence}
 Rejection (``observe'' in other languages) is permitted:
@@ -130,14 +145,12 @@ Thus the missing output mass accounts precisely for divergence and rejection;
 neither the original program nor the transformed program loses probability mass due to getting stuck.
 
 When $q_e=\law e(\Real)>0$, the distribution of successfully returned outputs
-is $\law e/q_e$. Its expectation and variance are
+is $\law e/q_e$. Its variance is
 \[
- \begin{aligned}
-  \Expect_{\mathrm{ret}}[e]&=\frac{\Expect[e]}{q_e},\\
-  \Var_{\mathrm{ret}}[e]&=\frac1{q_e}\int_{\Real}
+  \Var_{\mathrm{ret}}[e]=\frac1{q_e}\int_{\Real}
     \bigl(r-\Expect_{\mathrm{ret}}[e]\bigr)^2\,\law e(dr).
- \end{aligned}
 \]
 The expectation is used when defined, and the variance when the second moment
-is finite. Since determinization preserves $q_e$, \cref{thm:expectation} also
-preserves $\Expect_{\mathrm{ret}}[e]$.
+is finite. Determinization preserves both $q_e$ and the unnormalized integral
+$\int_{\Real}r\,\law e(dr)$ whenever it is defined, giving the conditional
+expectation equality in \cref{thm:expectation}.
