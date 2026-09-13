@@ -75,7 +75,8 @@ The executable and its checkers are separated as follows:
   that inference preserves the elaborated expression and explicit sampling affinities.
 - `Proof/Checking/`: checker soundness, rational/real determinization correspondence,
   and application of the existing trace and finite-expectation theorems.
-- `Finite/`: unverified exact exploration, solving, and model export.
+- `Finite/`: unverified exact exploration and model export, plus the verified expected-reward solver.
+- `Proof/LinearAlgebra/`: executable Gaussian elimination with a proof of the original equations.
 - `Runtime/`: an unverified floating-point interpreter and seeded numerical samplers.
 - `Tests/`: parsing, inference, certificate rejection, runtime, and kernel proof tests.
 - `Main.lean`: the CLI.
@@ -288,11 +289,15 @@ lake exe determinize --result /tmp/model --subject source ../tests/statistical/d
 lake env lean /tmp/model.result.lean
 ```
 
-`--result` exports the model and an exact expected-reward certificate. It checks
-all terminal/transient equations and a positive finite-step absorption bound.
+`--result` exports the model and an exact expected-reward certificate. The verified solver establishes
+all terminal/transient equations by Gaussian elimination and finds a positive
+finite-step absorption bound. `solveCertified` returns these proofs; `solve_sound`
+and `solve_expectedReward` state correctness of the data-returning API. The solver
+does not call the result-certificate checker. Exported certificates still use that
+checker to validate the saved answer independently without rerunning elimination.
 The exported `expectedReward` theorem establishes integrability and the exact
 answer for the selected core program. Rejected paths contribute zero; the answer
-is unnormalized. Nonabsorbing models are rejected by this initial result checker.
+is unnormalized. Nonabsorbing models are rejected by the solver.
 The dense exact solver defaults to `--max-result-states 256`.
 
 For Storm comparison, from the repository root:

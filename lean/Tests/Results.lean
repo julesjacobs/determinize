@@ -1,6 +1,7 @@
 import Tests.FiniteModel
 import Tests.Parsing
 import Determinize.Finite.Solve
+import Determinize.Checking.Result
 
 namespace Determinize.Tests
 open Spec.FiniteModel
@@ -24,6 +25,15 @@ abbrev retry : Model where
   normalized := by decide +kernel
 
 def retryResult : ResultCertificate retry := ⟨fun _ => -3, 1⟩
+
+private def solvedRetry :=
+  (Finite.solveCertified retry).toOption.get (by decide +kernel)
+
+example : retry.expectedReward = (-3 : ℝ) := by
+  have value : solvedRetry.val.values retry.initial = -3 := by decide +kernel
+  rw [Proof.FiniteModel.resultCertificate_sound retry solvedRetry.val solvedRetry.property, value]
+  norm_num
+
 example : retry.expectedReward = ((-3 : Rat) : ℝ) :=
   (Checking.checkResult_sound retry retryResult (by decide +kernel)).2
 example : Checking.checkResult retry {retryResult with horizon := 0} = false := by decide +kernel
@@ -43,6 +53,8 @@ def results : IO Unit := do
   assert (match Finite.solve FiniteModel.loop with | .error _ => true | .ok _ => false) "solver accepted a nonabsorbing loop"
   assert (match Finite.solve FiniteModel.fork {maxStates := 2} with | .error _ => true | .ok _ => false) "solver ignored state limit"
 
+#print axioms Finite.solve_sound
+#print axioms Finite.solve_expectedReward
 #print axioms Proof.FiniteModel.resultCertificate_sound
 #print axioms Checking.checkResult_sound
 #print axioms Checking.checked_expectedReward

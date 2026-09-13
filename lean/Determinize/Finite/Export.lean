@@ -1,4 +1,5 @@
 import Determinize.Finite.Solve
+import Determinize.Checking.Result
 import Determinize.Frontend.Pretty
 
 namespace Determinize.Finite
