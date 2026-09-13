@@ -112,7 +112,9 @@ def binary (op : Binary) (left right : Value) (stack : List Frame) : Except Fail
   | .cons, a, b => .ok (.deliver (.cons a b) stack)
   | .add, .number a, .number b => .ok (.deliver (.number (a+b)) stack)
   | .mul, .number a, .number b => .ok (.deliver (.number (a*b)) stack)
-  | .div, .number a, .number b => .ok (.deliver (.number (a/b)) stack)
+  | .div, .number a, .number b =>
+      if b == 0 then .error (.invalid "division by zero")
+      else .ok (.deliver (.number (a/b)) stack)
   | .lt, .number a, .number b => .ok (.deliver (.bool (a<b)) stack)
   | _, _, _ => .error (.invalid "binary operand types")
 

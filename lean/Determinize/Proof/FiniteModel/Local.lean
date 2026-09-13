@@ -12,11 +12,11 @@ theorem paperStep_next (before after : State) (notValue : (stateExpr before).isV
     (reduction : reduce (stateExpr before) = .next (stateExpr after)) :
     PaperStep before [(1,after)] := by
   refine ⟨?_, ?_, ?_⟩
-  · cases h : stateExpr before <;> simp_all [cumulativeOutputMeasure, Expr.isValue]
+  · cases h : stateExpr before <;> simp_all [Cumulative.outputMeasure, Expr.isValue]
   · intro fuel
-    simp [cumulativeOutputMeasure, reduction, weightedOutput]
+    simp [Cumulative.outputMeasure, reduction, weightedOutput]
   · intro fuel
-    simp [DoesNotGetStuckAt, notValue, reduction]
+    simp [DomainSafeAt, notValue, reduction]
 
 theorem paperStep_sample (before : State) (site : DistributionAction × Op) (arguments : List Rat)
     (outcomes : List (Rat × Rat)) (stack : List Frame)
@@ -26,14 +26,14 @@ theorem paperStep_sample (before : State) (site : DistributionAction × Op) (arg
       .sample site (outcomeMeasure outcomes) (fun x => stackExpr stack (.real x))) :
     PaperStep before (outcomes.map fun (p,x) => (p, .deliver (.number x) stack)) := by
   refine ⟨?_, ?_, ?_⟩
-  · cases h : stateExpr before <;> simp_all [cumulativeOutputMeasure, Expr.isValue]
+  · cases h : stateExpr before <;> simp_all [Cumulative.outputMeasure, Expr.isValue]
   · intro fuel
-    simp only [cumulativeOutputMeasure, reduction]
+    simp only [Cumulative.outputMeasure, reduction]
     rw [outcomeMeasure_bind _ _ (Proof.Paper.measurable_sample_cumulative fuel _ _ _ _ reduction)]
     simp only [weightedOutput, List.map_map, Function.comp_def, stateExpr, valueExpr]
   · intro fuel
     have mass := (finiteLaw_probability _ _ _ _ success).measure_univ
-    simp only [DoesNotGetStuckAt, notValue, Bool.false_eq_true, ↓reduceIte, reduction,
+    simp only [DomainSafeAt, notValue, Bool.false_eq_true, ↓reduceIte, reduction,
       mass, true_and, outcomeMeasure_ae, List.mem_map]
     constructor
     · intro safety entry member positive
@@ -51,8 +51,8 @@ theorem reject_same (environment : List Value) (stack : List Frame) :
     simp [stateExpr, close, interpret, Expr.mapLiteral, Expr.mapVars]
   refine ⟨?_, ?_⟩
   · intro fuel
-    rw [equality, absorbing_cumulative_zero _ left.1 left.2]
-    exact (absorbing_cumulative_zero _ right.1 right.2 fuel).symm
+    rw [equality, Cumulative.absorbing_zero _ left.1 left.2]
+    exact (Cumulative.absorbing_zero _ right.1 right.2 fuel).symm
   · intro fuel
     exact iff_of_true ((equality ▸ absorbing_safe _ left.1 left.2) fuel)
       (absorbing_safe _ right.1 right.2 fuel)
@@ -71,6 +71,6 @@ theorem stepMeaning_returned (reward : Rat) : StepMeaning (.deliver (.number rew
     cases fuel <;> trivial
 
 theorem stepMeaning_rejected : StepMeaning .rejected .rejected := by
-  exact ⟨absorbing_cumulative_zero .reject rfl rfl, absorbing_safe .reject rfl rfl⟩
+  exact ⟨Cumulative.absorbing_zero .reject rfl rfl, absorbing_safe .reject rfl rfl⟩
 
 end Determinize.Proof.FiniteModel

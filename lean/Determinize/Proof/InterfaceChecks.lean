@@ -10,23 +10,42 @@ example : True := by
   fail_if_success have := (inferInstance : MeasurableSpace Expr)
   trivial
 
-example (fuel : Nat) (value : ℝ) :
-    cumulativeOutputMeasure fuel (.real value) = Measure.dirac value := by
-  induction fuel with
-  | zero => rfl
-  | succ fuel ih => simpa [cumulativeOutputMeasure, reduce] using ih
+example (value : ℝ) : outputMeasureAt 0 (.real value) = Measure.dirac value := rfl
+
+example (depth : Nat) (value : ℝ) : outputMeasureAt (depth + 1) (.real value) = 0 := rfl
 
 example (ty : Ty) : Typed [] (.lam (.bvar 0)) (.arr ty ty) :=
   .lam (.bvar .head)
 
-example : PrimitiveDomainSafe (.app (.real 0) (.real 1)) := by
-  intro fuel
-  cases fuel <;> trivial
+example : ¬ DomainSafe (.app (.real 0) (.real 1)) := by
+  intro safe
+  have h := safe 1
+  simp [DomainSafeAt, reduce, Expr.isValue] at h
 
-example : ¬ PrimitiveDomainSafe (.uniform (.sample .E) (.real 1) (.real 0)) := by
+example : ¬ DomainSafe (.uniform (.sample .E) (.real 1) (.real 0)) := by
   intro h
   have h := h 1
-  norm_num [PrimitiveDomainSafeAt, reduce, Expr.isValue, realValue?, uniformFiber] at h
+  norm_num [DomainSafeAt, reduce, Expr.isValue, realValue?, uniformFiber] at h
+
+example (x : ℝ) : reduce (.div (.real x) (.real 0)) = .stuck := by
+  simp [reduce, Expr.isValue, realValue?]
+
+example (x : ℝ) : ¬ DomainSafe (.div (.real x) (.real 0)) := by
+  intro safe
+  have h := safe 1
+  simp [DomainSafeAt, reduce, Expr.isValue, realValue?] at h
+
+example (x : ℝ) : bigStepMeasure (.div (.real x) (.real 0)) = 0 := by
+  have zeroAt : ∀ depth, outputMeasureAt depth (.div (.real x) (.real 0)) = 0 := by
+    intro depth
+    cases depth <;> simp [outputMeasureAt, reduce, Expr.isValue, realValue?]
+  simp [bigStepMeasure, zeroAt]
+
+example : ¬ DomainSafe (.div (.real 1) (.bernoulli (.sample .G) (.real (1/2)))) := by
+  intro safe
+  have h := safe 2
+  norm_num [DomainSafeAt, reduce, Expr.isValue, realValue?, Action.wrap,
+    Function.comp_def, bernoulliFiber] at h
 
 def capturedSample : Expr :=
   .letE
@@ -38,9 +57,9 @@ example : Typed [] capturedSample (.float .E) := by
   · exact .uniform .real .real
   · exact .app (.lam (.add (.bvar (.tail .head)) (.bvar .head))) .real
 
-example : cumulativeOutputMeasure 4 capturedSample =
+example : outputMeasureAt 4 capturedSample =
     (uniformFiber (.sample .G) 0 1).map (fun value => value + 2) := by
-  simp [capturedSample, cumulativeOutputMeasure, reduce, Expr.isValue,
+  simp [capturedSample, outputMeasureAt, reduce, Expr.isValue,
     realValue?, Action.wrap, Function.comp_def,
     Expr.substHead, Expr.substAt, Expr.shift, Expr.mapVars]
   exact Measure.bind_dirac_eq_map _ (measurable_id.add_const 2)

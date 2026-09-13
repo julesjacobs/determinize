@@ -22,7 +22,7 @@ private def reward (candidate : Candidate) (steps : Nat) : Rat := Id.run do
 
 def explorer : IO Unit := do
   for (text, expected) in [
-      ("0.1 + 0.2", (3/10 : Rat)), ("7 / 0", 0),
+      ("0.1 + 0.2", (3/10 : Rat)), ("6 / 2", 3), ("if false then 1/0 else 7", 7),
       ("let x = 4 in let f = fun y => x + y in let x = 100 in f 3", 7),
       ("let fact = rec f n => if n < 1 then 1 else n * f (n-1) in fact 5", 120),
       ("match 2::3::[] with [] => 0 | x::xs => match xs with [] => 0 | y::ys => x*10+y", 23),
@@ -67,7 +67,7 @@ def explorer : IO Unit := do
     match explore (.real 3) .source limits with
     | .incomplete actual .. => assert (actual == expected) "resource limit classification"
     | _ => throw (IO.userError "expected incomplete exploration")
-  for text in ["uniform[G](0,1)", "poisson[G](3)", "gauss[G](0,1)",
+  for text in ["1/0", "1/bernoulli[G](0.5)", "uniform[E](0,1)/0", "uniform[G](0,1)", "poisson[G](3)", "gauss[G](0,1)",
       "uniform[E](0,uniform[G](1,2))", "uniform[E](2,1)",
       "bernoulli[G](2)", "true"] do
     let p ← IO.ofExcept (compile text)

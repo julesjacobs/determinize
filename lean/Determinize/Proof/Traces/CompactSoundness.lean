@@ -127,7 +127,7 @@ theorem massOne_compact_measurable (source : Expr) :
 
 /-- On the detailed joint laws, the normalized compact replay is a sound fiber. -/
 theorem joint_normalized_fiberSound (source : Expr) (typed : Typed [] source (.float .E))
-    (safe : PrimitiveDomainSafe source) :
+    (safe : DomainSafe source) :
     FiberSound (normalizedFiber source) (StepTraces.jointMeasure source)
       (StepTraces.jointMeasure source.determinize) := by
   apply StepTraces.FiberSound.sum
@@ -151,7 +151,7 @@ theorem joint_normalized_fiberSound (source : Expr) (typed : Typed [] source (.f
 
 /-- On the compact joint laws, the normalized compact replay is a sound fiber. -/
 theorem compact_normalized_fiberSound (source : Expr) (typed : Typed [] source (.float .E))
-    (safe : PrimitiveDomainSafe source) :
+    (safe : DomainSafe source) :
     FiberSound (normalizedKernel source) (traceAndOutputLaw source) (traceAndOutputLaw source.determinize) := by
   rw [joint_eq_detailed, joint_eq_detailed]
   exact StepTraces.FiberSound.mapTrace _ _ _ _ (joint_normalized_fiberSound source typed safe)
@@ -160,7 +160,7 @@ theorem compact_normalized_fiberSound (source : Expr) (typed : Typed [] source (
 
 /-- Almost every terminating target trace gives the source replay mass one. -/
 theorem compact_source_massOne (source : Expr) (typed : Typed [] source (.float .E))
-    (safe : PrimitiveDomainSafe source) :
+    (safe : DomainSafe source) :
     ∀ᵐ q ∂traceAndOutputLaw source.determinize, outputGivenTrace source q.1 Set.univ = 1 := by
   rw [joint_eq_detailed, ae_map_iff eraseOutput_measurable.aemeasurable
     (massOne_compact_measurable source), StepTraces.jointMeasure, Measure.ae_sum_iff]
@@ -176,7 +176,7 @@ theorem compact_source_massOne (source : Expr) (typed : Typed [] source (.float 
 
 /-- Replaying the target along its own compact trace returns its output. -/
 theorem compact_target_selfReplay (source : Expr) (typed : Typed [] source (.float .E))
-    (safe : PrimitiveDomainSafe source) :
+    (safe : DomainSafe source) :
     ∀ᵐ q ∂traceAndOutputLaw source.determinize,
       outputGivenTrace source.determinize q.1 = Measure.dirac q.2 := by
   rw [joint_eq_detailed, ae_map_iff eraseOutput_measurable.aemeasurable
@@ -194,19 +194,18 @@ compact replay together with the identifications that give the public statement:
 surely the source fiber is `outputGivenTrace` itself, and the target replay is the Dirac mass
 at the target output. -/
 theorem soundnessDataE (source : Expr) (typed : Typed [] source (.float .E))
-    (safe : DoesNotGetStuck source) :
-    DoesNotGetStuck source.determinize ∧
+    (safe : DomainSafe source) :
+    DomainSafe source.determinize ∧
       TraceFactorization source source.determinize (normalizedOutputGivenTrace source)
         (kernelMean (normalizedOutputGivenTrace source)) ∧
       (∀ᵐ trace ∂traceLaw source,
         outputGivenTrace source trace = normalizedOutputGivenTrace source trace) ∧
       ∀ᵐ trace ∂traceLaw source,
         outputGivenTrace source.determinize trace = Measure.dirac (kernelMean (normalizedOutputGivenTrace source) trace) := by
-  have domainSafe := (Typing.primitiveDomainSafe_iff_doesNotGetStuck typed).2 safe
-  refine ⟨doesNotGetStuck_determinize typed safe, ?_⟩
+  refine ⟨domainSafe_determinize typed safe, ?_⟩
   let ν := (traceAndOutputLaw source.determinize).map Prod.fst
   let f := kernelMean (normalizedOutputGivenTrace source)
-  rcases (compact_normalized_fiberSound source typed domainSafe).factorization
+  rcases (compact_normalized_fiberSound source typed safe).factorization
     (traceAndOutputLaw_mass_le_one source.determinize) with ⟨hm, hf, hs, ht, hmean⟩
   have hν : traceLaw source = ν := by
     let : IsFiniteMeasure ν := ⟨hm.trans_lt (by simp)⟩
@@ -219,18 +218,18 @@ theorem soundnessDataE (source : Expr) (typed : Typed [] source (.float .E))
   have pairMeasurable : Measurable (fun trace : Trace => (trace, f trace)) :=
     measurable_id.prodMk hf
   refine ⟨⟨inferInstance, hf, hs, ht, hmean⟩, ?_, ?_⟩
-  · have massOne := compact_source_massOne source typed domainSafe
+  · have massOne := compact_source_massOne source typed safe
     rw [ht] at massOne
     filter_upwards [ae_of_ae_map pairMeasurable.aemeasurable massOne] with trace mass
     exact (normalizedOutputGivenTrace_eq source trace mass).symm
-  · have dirac := compact_target_selfReplay source typed domainSafe
+  · have dirac := compact_target_selfReplay source typed safe
     rw [ht] at dirac
     exact ae_of_ae_map pairMeasurable.aemeasurable dirac
 
 /-- Apply expectation-affinity soundness using silent subtyping for general-affinity programs. -/
 theorem soundnessData (affinity : Affinity) (program : Expr) (typed : Typed [] program (.float affinity))
-    (safe : DoesNotGetStuck program) :
-    DoesNotGetStuck program.determinize ∧
+    (safe : DomainSafe program) :
+    DomainSafe program.determinize ∧
       TraceFactorization program program.determinize (normalizedOutputGivenTrace program)
         (kernelMean (normalizedOutputGivenTrace program)) ∧
       (∀ᵐ trace ∂traceLaw program,
@@ -243,8 +242,8 @@ theorem soundnessData (affinity : Affinity) (program : Expr) (typed : Typed [] p
 
 /-- Some trace factorization exists: the input of the corollaries. -/
 theorem meanOnTraces (affinity : Affinity) (program : Expr) (typed : Typed [] program (.float affinity))
-    (safe : DoesNotGetStuck program) :
-    DoesNotGetStuck program.determinize ∧ MeanOnTraces program program.determinize :=
+    (safe : DomainSafe program) :
+    DomainSafe program.determinize ∧ MeanOnTraces program program.determinize :=
   let ⟨targetSafe, factor, _, _⟩ := soundnessData affinity program typed safe
   ⟨targetSafe, _, factor⟩
 
@@ -256,7 +255,7 @@ theorem compProd_eq_traceThenOutput (traces : Measure Trace) [SFinite traces]
 
 /-- Determinization returns the canonical replay mean on each terminating trace. -/
 theorem targetLaw (program : Expr) (typed : Typed [] program (.float .E))
-    (safe : DoesNotGetStuck program) :
+    (safe : DomainSafe program) :
     traceAndOutputLaw program.determinize =
       (traceLaw program).map (fun trace => (trace, replayMean program trace)) := by
   obtain ⟨_, factor, sameFiber, _⟩ := soundnessDataE program typed safe
@@ -267,8 +266,8 @@ theorem targetLaw (program : Expr) (typed : Typed [] program (.float .E))
 /-- Replay factorization and its conditional-mean property, used to identify the conditional laws. -/
 theorem replaySoundness :
   ∀ (program : Expr),
-    Typed [] program (.float .E) → PrimitiveDomainSafe program →
-      PrimitiveDomainSafe program.determinize ∧
+    Typed [] program (.float .E) → DomainSafe program →
+      DomainSafe program.determinize ∧
       traceAndOutputLaw program = traceThenOutput (traceLaw program) (outputGivenTrace program) ∧
       traceAndOutputLaw program.determinize =
         traceThenOutput (traceLaw program) (outputGivenTrace program.determinize) ∧
@@ -279,11 +278,10 @@ theorem replaySoundness :
   intro program typed safe
   let f := kernelMean (normalizedOutputGivenTrace program)
   obtain ⟨targetSafe, factor, massAe, diracAe⟩ :=
-    soundnessData .E program typed
-      ((Typing.primitiveDomainSafe_iff_doesNotGetStuck typed).1 safe)
+    soundnessData .E program typed safe
   obtain ⟨markov, hf, hs, ht, hmean⟩ := factor
   have := markov
-  refine ⟨fun fuel => Typing.doesNotGetStuckAt_imp_primitiveDomainSafeAt (targetSafe fuel), ?_, ?_, ?_⟩
+  refine ⟨targetSafe, ?_, ?_, ?_⟩
   · rw [hs, compProd_eq_traceThenOutput, traceThenOutput, traceThenOutput]
     exact Measure.bind_congr_right (massAe.mono fun trace h => by simp only [h])
   · rw [ht, traceThenOutput, ← Measure.bind_dirac_eq_map _

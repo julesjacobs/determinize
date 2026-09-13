@@ -4,8 +4,7 @@ import Mathlib.MeasureTheory.Measure.GiryMonad
 /-!
 # Paper operational semantics
 
-The reducer evaluates the operands of a primitive left to right and then draws from its fiber. Arithmetic is
-Lean real arithmetic; in particular, division is total and `x / 0 = 0`. The
+The reducer evaluates the operands of a primitive left to right and then draws from its fiber. Division by zero is stuck. The
 output semantics integrates sampled reals directly, without measures on expressions.
 -/
 
@@ -121,7 +120,7 @@ noncomputable def reduce : Expr → Action
   | .div left right =>
       if left.isValue then
         if right.isValue then match realValue? left, realValue? right with
-          | some x, some y => .next (.real (x / y)) | _, _ => .stuck
+          | some x, some y => if y = 0 then .stuck else .next (.real (x / y)) | _, _ => .stuck
         else (reduce right).wrap (.div left)
       else (reduce left).wrap (fun next => .div next right)
   | .lt left right =>
@@ -179,39 +178,37 @@ noncomputable def reduce : Expr → Action
         else (reduce rate).wrap (.gamma action shape)
       else (reduce shape).wrap (fun next => .gamma action next rate)
 
-/-- Real output accumulated through `fuel` reduction steps. Only terminal reals
-contribute output; other types may occur during evaluation. -/
-noncomputable def cumulativeOutputMeasure : Nat → Expr → Measure ℝ
+/-- Output from executions first returning a real at exactly `depth` reduction steps. -/
+noncomputable def outputMeasureAt : Nat → Expr → Measure ℝ
   | 0, .real value => Measure.dirac value
   | 0, _ => 0
-  | fuel + 1, expression => match reduce expression with
-      | .next next => cumulativeOutputMeasure fuel next
-      | .sample _ fiber continuation =>
-          fiber.bind fun value => cumulativeOutputMeasure fuel (continuation value)
-      | .stuck => 0
+  | depth + 1, expression =>
+      if expression.isValue then 0
+      else match reduce expression with
+        | .next next => outputMeasureAt depth next
+        | .sample _ fiber continuation =>
+            fiber.bind fun value => outputMeasureAt depth (continuation value)
+        | .stuck => 0
 
 /-- The output law, without conditioning on termination. -/
 noncomputable def bigStepMeasure (program : Expr) : Measure ℝ :=
-  ⨆ fuel, cumulativeOutputMeasure fuel program
+  Measure.sum fun depth => outputMeasureAt depth program
 
-/--
-Primitive-domain safety at a finite reduction depth. Canonical primitive fibers
-have mass one exactly on their parameter domain and are zero off-domain.
-Structural stuckness is outside this predicate; typing supplies structural progress.
--/
-def PrimitiveDomainSafeAt : Nat → Expr → Prop
+/-- Operations remain within their domains through the given reduction depth.
+For typed programs, failures are invalid distribution parameters or division by zero. -/
+def DomainSafeAt : Nat → Expr → Prop
   | 0, _ => True
   | fuel + 1, expression =>
       if expression.isValue then True
       else match reduce expression with
-      | .next next => PrimitiveDomainSafeAt fuel next
+      | .next next => DomainSafeAt fuel next
       | .sample _ fiber continuation =>
           fiber Set.univ = 1 ∧
-            ∀ᵐ value ∂fiber, PrimitiveDomainSafeAt fuel (continuation value)
-      | .stuck => True
+            ∀ᵐ value ∂fiber, DomainSafeAt fuel (continuation value)
+      | .stuck => False
 
-/-- Every primitive call reached at a finite depth has valid parameters almost surely. -/
-def PrimitiveDomainSafe (program : Expr) : Prop :=
-  ∀ fuel, PrimitiveDomainSafeAt fuel program
+/-- Every operation reached at a finite depth has valid arguments almost surely. -/
+def DomainSafe (program : Expr) : Prop :=
+  ∀ fuel, DomainSafeAt fuel program
 
 end Determinize.Spec.Paper

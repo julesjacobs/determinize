@@ -299,8 +299,8 @@ target = { number = 5 }
 file = "tests/execution/division-zero.det"
 suite = "execution"
 outcome = "accept"
-source = { number = 0 }
-target = { number = 0 }
+source = { error = "division by zero" }
+target = { error = "division by zero" }
 
 [[case]]
 file = "tests/execution/boolean.det"

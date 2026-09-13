@@ -1250,9 +1250,11 @@ noncomputable def Affine.mul? (left right : Affine n) : Option (Affine n) :=
   else if left.2 = 0 then some (left.1 • right)
   else none
 
-/-- The quotient of two affine forms when the denominator is constant; `none` otherwise. -/
+/-- The quotient of two affine forms when the denominator is constant and nonzero; `none` otherwise. -/
 noncomputable def Affine.div? (left right : Affine n) : Option (Affine n) :=
-  if right.2 = 0 then some ((right.1)⁻¹ • left) else none
+  if right.2 = 0 then
+    if right.1 = 0 then none else some ((right.1)⁻¹ • left)
+  else none
 
 theorem Affine.eval_mul_of_eq_some {left right result : Affine n}
     (equality : Affine.mul? left right = some result) (environment : Env n) :
@@ -1370,6 +1372,7 @@ theorem realize_wrap (action : SymbolicAction n) (environment : Env n)
 typed, a `sampleE` carries the right number of parameters, and a `sampleG` is a G-affinity
 site with a primitive fiber at constant parameters. -/
 inductive WellTyped (ty : Ty) : SymbolicAction n → Prop
+  | stuck : WellTyped ty .stuck
   | next : AffineExpr.WellTyped [] expression ty → WellTyped ty (.next expression)
   | sampleE : affine.length = Determinize.Spec.Paper.affineArity op →
       general.length = Determinize.Spec.Paper.generalArity op →
@@ -1386,6 +1389,7 @@ inductive WellTyped (ty : Ty) : SymbolicAction n → Prop
 
 theorem WellTyped.sub (typed : WellTyped a action) (h : Ty.Sub a b) : WellTyped b action := by
   cases typed with
+  | stuck => exact .stuck
   | next ht => exact .next (ht.sub h)
   | sampleE ha hg ht => exact .sampleE ha hg (ht.sub h)
   | mean ha hg ht natural => exact .mean ha hg (ht.sub h) natural
@@ -1425,11 +1429,6 @@ theorem WellTyped.sub (typed : WellTyped a action) (h : Ty.Sub a b) : WellTyped 
   · intro typed; cases typed; assumption
   · exact .sampleG
 
-@[simp] theorem not_wellTyped_stuck :
-    ¬ WellTyped ty (.stuck : SymbolicAction n) := by
-  intro typed
-  cases typed
-
 theorem WellTyped.wrap {action : SymbolicAction n} (typed : WellTyped childTy action)
     (contextTyped : ∀ expression, AffineExpr.WellTyped [] expression childTy →
       AffineExpr.WellTyped [] (context expression) resultTy)
@@ -1441,6 +1440,7 @@ theorem WellTyped.wrap {action : SymbolicAction n} (typed : WellTyped childTy ac
         intros; simp_all only [AffineExpr.realize]) :
     WellTyped resultTy (SymbolicAction.wrap context liftedContext action) := by
   cases typed with
+  | stuck => exact .stuck
   | next typed => exact .next (contextTyped _ typed)
   | sampleE ha hg typed => exact .sampleE ha hg (liftedTyped _ typed)
   | mean ha hg typed natural =>
@@ -2283,7 +2283,10 @@ theorem symbolicReduce_realize
           obtain ⟨y, rfl⟩ := wellTyped_real_value rightTyped rightValue
           rcases y with ⟨y0, yc⟩
           obtain rfl : yc = 0 := wellTyped_realG_coefficients rightTyped
-          simp [affineValue?, Affine.div?, SymbolicAction.realize, realize,
+          by_cases h : y0 = 0
+          · simp [affineValue?, Affine.div?, SymbolicAction.realize, realize,
+              Expr.isValue, realValue?, Symbolic.Affine.eval, h]
+          simp [h, affineValue?, Affine.div?, SymbolicAction.realize, realize,
             Expr.isValue, realValue?, Symbolic.Affine.eval, Finset.sum_const_zero,
             div_eq_mul_inv]
           have sumRule : (∑ i, y0⁻¹ * x.2 i * environment i) =
@@ -2320,7 +2323,10 @@ theorem symbolicReduce_realize
           rcases y with ⟨y0, yc⟩
           obtain rfl : xc = 0 := wellTyped_realG_coefficients leftTyped
           obtain rfl : yc = 0 := wellTyped_realG_coefficients rightTyped
-          simp [affineValue?, Affine.div?, SymbolicAction.realize, realize,
+          by_cases h : y0 = 0
+          · simp [affineValue?, Affine.div?, SymbolicAction.realize, realize,
+              Expr.isValue, realValue?, Symbolic.Affine.eval, h]
+          simp [h, affineValue?, Affine.div?, SymbolicAction.realize, realize,
             Expr.isValue, realValue?, Symbolic.Affine.eval, Finset.sum_const_zero,
             div_eq_mul_inv]
           ring
@@ -3202,7 +3208,10 @@ theorem symbolicReduce_wellTyped
         rcases rightAffine with ⟨rightConstant, rightCoefficients⟩
         have leftZero : leftCoefficients = 0 := wellTyped_realG_coefficients leftTyped
         have rightZero : rightCoefficients = 0 := wellTyped_realG_coefficients rightTyped
-        simp only [affineValue?, Affine.div?, rightZero, ↓reduceIte]
+        by_cases h : rightConstant = 0
+        · simp only [affineValue?, Affine.div?, rightZero, h, ↓reduceIte]
+          exact .stuck
+        simp only [affineValue?, Affine.div?, rightZero, h, ↓reduceIte]
         exact SymbolicAction.WellTyped.next (.realG (by simp [leftZero]))
       · simp only [rightValue]
         exact (ihRight rfl).wrap
@@ -3223,7 +3232,10 @@ theorem symbolicReduce_wellTyped
         obtain ⟨rightAffine, rfl⟩ := wellTyped_real_value rightTyped rightValue
         rcases rightAffine with ⟨rightConstant, rightCoefficients⟩
         have rightZero : rightCoefficients = 0 := wellTyped_realG_coefficients rightTyped
-        simp only [affineValue?, Affine.div?, rightZero, ↓reduceIte]
+        by_cases h : rightConstant = 0
+        · simp only [affineValue?, Affine.div?, rightZero, h, ↓reduceIte]
+          exact .stuck
+        simp only [affineValue?, Affine.div?, rightZero, h, ↓reduceIte]
         exact SymbolicAction.WellTyped.next .realE
       · simp only [rightValue]
         exact (ihRight rfl).wrap

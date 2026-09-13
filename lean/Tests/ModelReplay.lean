@@ -18,7 +18,7 @@ private def setRow (candidate : Candidate) (i : Nat) (row : Row) : Candidate :=
 
 def modelReplay : IO Unit := do
   for text in [
-      "0.1 + 0.2", "let x = 4 in (fun y => x + y) 3",
+      "0.1 + 0.2", "6/2", "if false then 1/0 else 7", "let x = 4 in (fun y => x + y) 3",
       "let f = rec f x => f x in f 0",
       "let f = rec f x => if flip(0.5) then 3 else f x in f 0",
       "discrete[G](0,0.25,0,0.75)", "discrete[E](*)",
@@ -29,6 +29,17 @@ def modelReplay : IO Unit := do
       "let fact = rec f n => if n < 1 then 1 else n * f (n-1) in fact 4"] do
     let (source, candidate) ← candidateFor text
     assert (accepted source candidate) s!"machine replay: {text}"
+  let divisionByZero : Candidate := ⟨0, #[
+    .eval (.div (.real 7) (.real 0)) [] [],
+    .eval (.real 7) [] [.left .div (.real 0) []],
+    .deliver (.number 7) [.left .div (.real 0) []],
+    .eval (.real 0) [] [.right .div (.number 7)],
+    .deliver (.number 0) [.right .div (.number 7)],
+    .deliver (.number 0) []],
+    (Array.range 5).map (fun i => ⟨.transient, #[⟨i+1, 1⟩]⟩) ++
+      #[⟨.returned 0, #[⟨5,1⟩]⟩]⟩
+  assert (!(accepted (.div (.real 7) (.real 0)) divisionByZero))
+    "certificate accepted a fabricated division-by-zero result"
   let (threeSource, three) ← candidateFor "3"
   let (sevenSource, seven) ← candidateFor "7"
   let some checkedThree := checkModel threeSource .source three

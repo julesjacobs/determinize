@@ -47,7 +47,7 @@ theorem outputGivenTrace_ae_eq_condKernel (program : Expr) {traces : Measure Tra
 
 /-- The determinized program has the trace law of its source. -/
 theorem traceLaw_determinize (affinity : Affinity) (program : Expr)
-    (typed : Typed [] program (.float affinity)) (safe : DoesNotGetStuck program) :
+    (typed : Typed [] program (.float affinity)) (safe : DomainSafe program) :
     traceLaw program.determinize = traceLaw program := by
   let output := kernelMean (normalizedOutputGivenTrace program)
   obtain ⟨-, ⟨-, measurableOutput, -, targetMap, -⟩, -, -⟩ :=
@@ -68,7 +68,7 @@ theorem conditionalLaw : Determinize.Spec.Traces.conditionalLawThm := by
   obtain ⟨targetSafe, sourceFactor, targetFactor, ae⟩ :=
     replaySoundness program typed safe
   have sameTraces := traceLaw_determinize .E program typed
-    ((Typing.primitiveDomainSafe_iff_doesNotGetStuck typed).1 safe)
+    safe
   have sourceAe := outputGivenTrace_ae_eq_condKernel program sourceFactor rfl
   have targetAe := outputGivenTrace_ae_eq_condKernel program.determinize targetFactor
     sameTraces

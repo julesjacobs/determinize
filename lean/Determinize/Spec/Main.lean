@@ -24,13 +24,13 @@ namespace Determinize.Spec
 open MeasureTheory ProbabilityTheory Paper
 open scoped ENNReal
 
-/-- Determinization preserves finite expectations and validity of distribution arguments. -/
+/-- Determinization preserves finite expectations and operation-domain safety. -/
 def mainThm : Prop :=
   ∀ (program : Expr),
     Typed [] program (.float .E) →
-    PrimitiveDomainSafe program →
+    DomainSafe program →
     Integrable id (bigStepMeasure program) →
-    PrimitiveDomainSafe program.determinize ∧
+    DomainSafe program.determinize ∧
       Integrable id (bigStepMeasure program.determinize) ∧
       (∫ value : ℝ, value ∂bigStepMeasure program) =
         ∫ value : ℝ, value ∂bigStepMeasure program.determinize
@@ -55,7 +55,7 @@ expectation is well-defined, possibly infinite, so is the target's, and they agr
 def extendedExpectationThm : Prop :=
   ∀ (program : Expr),
     Typed [] program (.float .E) →
-    PrimitiveDomainSafe program →
+    DomainSafe program →
     HasExpectation (bigStepMeasure program) →
     HasExpectation (bigStepMeasure program.determinize) ∧
       extendedExpectation (bigStepMeasure program) =
@@ -66,7 +66,7 @@ under the determinized output law as under the source output law. -/
 def jensenThm : Prop :=
   ∀ (program : Expr),
     Typed [] program (.float .E) →
-    PrimitiveDomainSafe program →
+    DomainSafe program →
     ∀ φ : ℝ → ℝ, ConvexOn ℝ Set.univ φ → (∀ value, 0 ≤ φ value) →
       ∫⁻ value, ENNReal.ofReal (φ value) ∂bigStepMeasure program.determinize ≤
         ∫⁻ value, ENNReal.ofReal (φ value) ∂bigStepMeasure program
@@ -78,7 +78,7 @@ being accepted). The source and target output laws have the same mass, so togeth
 def outputMassThm : Prop :=
   ∀ (program : Expr),
     Typed [] program (.float .E) →
-    PrimitiveDomainSafe program →
+    DomainSafe program →
     bigStepMeasure program.determinize Set.univ = bigStepMeasure program Set.univ
 
 /-- Determinization does not increase the variance: whenever the source output law has a
@@ -93,7 +93,7 @@ inequalities hold for the laws normalized by their common mass. -/
 def varianceThm : Prop :=
   ∀ (program : Expr),
     Typed [] program (.float .E) →
-    PrimitiveDomainSafe program →
+    DomainSafe program →
     MemLp id 2 (bigStepMeasure program) →
     MemLp id 2 (bigStepMeasure program.determinize) ∧
       (∫ value : ℝ, value ^ 2 ∂bigStepMeasure program.determinize) ≤
@@ -112,7 +112,7 @@ normalized by its mass (`0` for a program that is always rejected, as `0 / 0 = 0
 def conditionalExpectationThm : Prop :=
   ∀ (program : Expr),
     Typed [] program (.float .E) →
-    PrimitiveDomainSafe program →
+    DomainSafe program →
     Integrable id (bigStepMeasure program) →
     (∫ value : ℝ, value ∂bigStepMeasure program.determinize) /
         (bigStepMeasure program.determinize Set.univ).toReal =

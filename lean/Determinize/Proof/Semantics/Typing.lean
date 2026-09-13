@@ -4,12 +4,8 @@ import Determinize.Proof.Semantics.Measurability
 /-!
 # Type safety for the paper semantics
 
-Substitution preserves typing (`typed_shift`, `typed_substAt`, `typed_substHead`,
-`typed_substTwo`), and a closed well-typed expression reduces to a well-typed action
-(`reduce_typed_closed`, progress and preservation through `ActionTyped`). Typing rules out
-structural stuckness. The public `PrimitiveDomainSafe` premise separately requires valid
-primitive parameters, and `primitiveDomainSafe_iff_doesNotGetStuck` connects the two facts
-with full non-stuckness for the symbolic proof.
+Substitution and successful reduction preserve typing. `ActionTyped` also allows
+stuck actions; the public `DomainSafe` assumption excludes them almost surely.
 -/
 
 namespace Determinize.Proof.Paper
@@ -374,6 +370,7 @@ theorem typed_substTwo
   · exact argumentTyped
 
 inductive ActionTyped (ty : Ty) : Action → Prop
+  | stuck : ActionTyped ty .stuck
   | next : Typed [] expression ty → ActionTyped ty (.next expression)
   | sample : (∀ value, Typed [] (continuation value) ty) →
       ActionTyped ty (.sample site fiber continuation)
@@ -383,6 +380,7 @@ theorem ActionTyped.wrap (actionTyped : ActionTyped childTy action)
       Typed [] (context expression) resultTy) :
     ActionTyped resultTy (action.wrap context) := by
   cases actionTyped with
+  | stuck => exact .stuck
   | next typed => exact .next (wrapTyped _ typed)
   | sample typed =>
       exact .sample fun value => wrapTyped _ (typed value)
@@ -393,6 +391,7 @@ theorem ActionTyped.wrap (actionTyped : ActionTyped childTy action)
 
 theorem ActionTyped.sub (typed : ActionTyped a action) (h : Ty.Sub a b) : ActionTyped b action := by
   cases typed with
+  | stuck => exact .stuck
   | next ht => exact .next (ht.sub h)
   | sample ht => exact .sample (fun v => (ht v).sub h)
 
@@ -683,7 +682,9 @@ theorem reduce_typed_closed
         · simp only [rightValue, ↓reduceIte]
           rcases typed_real_value leftTyped leftValue with ⟨left, rfl⟩
           rcases typed_real_value rightTyped rightValue with ⟨right, rfl⟩
-          exact .next .real
+          by_cases h : right = 0
+          · simp only [realValue?, h, ↓reduceIte]; exact .stuck
+          · simp only [realValue?, h, ↓reduceIte]; exact .next .real
         · simp only [rightValue]
           exact (ihr rfl).wrap fun next nextTyped => .div leftTyped nextTyped
       · simp only [leftValue]
@@ -816,79 +817,11 @@ theorem reduce_typed_closed
         | exact (ihl rfl).wrap fun next nextTyped => .gamma nextTyped rightTyped
         | exact (ihl rfl).wrap fun next nextTyped => .gammaMean nextTyped rightTyped
 
-theorem doesNotGetStuckAt_imp_primitiveDomainSafeAt
-    (safe : Determinize.Spec.Paper.DoesNotGetStuckAt fuel expression) :
-    PrimitiveDomainSafeAt fuel expression := by
-  induction fuel generalizing expression with
-  | zero => trivial
-  | succ fuel ih =>
-      simp only [DoesNotGetStuckAt, PrimitiveDomainSafeAt] at safe ⊢
-      split <;> rename_i value
-      · trivial
-      · have valueFalse := Bool.eq_false_of_not_eq_true value
-        rw [valueFalse] at safe
-        cases equation : reduce expression with
-        | next next =>
-            rw [equation] at safe
-            simp only at safe ⊢
-            exact ih safe
-        | sample site fiber continuation =>
-            rw [equation] at safe
-            simp only at safe ⊢
-            refine ⟨safe.1, ?_⟩
-            filter_upwards [safe.2] with coordinate coordinateSafe
-            exact ih coordinateSafe
-        | stuck =>
-            rw [equation] at safe
-            contradiction
-
-theorem primitiveDomainSafeAt_imp_doesNotGetStuckAt
-    (typed : Typed [] expression ty)
-    (safe : PrimitiveDomainSafeAt fuel expression) :
-    Determinize.Spec.Paper.DoesNotGetStuckAt fuel expression := by
-  induction fuel generalizing expression ty with
-  | zero => trivial
-  | succ fuel ih =>
-      simp only [PrimitiveDomainSafeAt, DoesNotGetStuckAt] at safe ⊢
-      split <;> rename_i value
-      · trivial
-      · have valueFalse := Bool.eq_false_of_not_eq_true value
-        rw [valueFalse] at safe
-        have actionTyped := reduce_typed_closed typed
-        cases equation : reduce expression with
-        | next next =>
-            rw [equation] at safe
-            simp only at safe ⊢
-            rw [equation] at actionTyped
-            cases actionTyped with
-            | next nextTyped => exact ih nextTyped safe
-        | sample site fiber continuation =>
-            rw [equation] at safe
-            simp only at safe ⊢
-            rw [equation] at actionTyped
-            cases actionTyped with
-            | sample continuationTyped =>
-                refine ⟨safe.1, ?_⟩
-                filter_upwards [safe.2] with coordinate coordinateSafe
-                exact ih (continuationTyped coordinate) coordinateSafe
-        | stuck =>
-            rw [equation] at actionTyped
-            cases actionTyped
-
-theorem primitiveDomainSafe_iff_doesNotGetStuck
-    (typed : Typed [] expression ty) :
-    PrimitiveDomainSafe expression ↔ Determinize.Spec.Paper.DoesNotGetStuck expression := by
-  constructor
-  · intro safe fuel
-    exact primitiveDomainSafeAt_imp_doesNotGetStuckAt typed (safe fuel)
-  · intro safe fuel
-    exact doesNotGetStuckAt_imp_primitiveDomainSafeAt (safe fuel)
-
-theorem doesNotGetStuckAt_of_value (fuel : Nat) (value : expression.isValue = true) :
-    DoesNotGetStuckAt fuel expression := by
+theorem domainSafeAt_of_value (fuel : Nat) (value : expression.isValue = true) :
+    DomainSafeAt fuel expression := by
   cases fuel with
   | zero => trivial
-  | succ fuel => rw [DoesNotGetStuckAt, if_pos value]; trivial
+  | succ fuel => rw [DomainSafeAt, if_pos value]; trivial
 
 end Typing
 

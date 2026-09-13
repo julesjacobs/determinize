@@ -38,6 +38,8 @@ private theorem binary_shape (op : Binary) (left right : Value) (stack : List Fr
     (success : binary op left right stack = .ok result) : StateShape result := by
   cases op <;> cases left <;> cases right <;>
     simp only [binary, reduceCtorEq, Except.ok.injEq] at success
+  all_goals repeat' split at success
+  all_goals try simp only [reduceCtorEq, Except.ok.injEq] at success
   all_goals subst result
   all_goals exact shape
 

@@ -1,6 +1,6 @@
 import Determinize.Proof.Primitives.Laws
 import Determinize.Proof.Symbolic.Environment
-import Determinize.Spec.FiniteModel.Safety
+import Determinize.Spec.Semantics
 import Determinize.Proof.Semantics.ExpressionSpace
 
 /-!
@@ -8,7 +8,7 @@ import Determinize.Proof.Semantics.ExpressionSpace
 
 This module defines the measurable skeleton representation, symbolic sample
 histories, certified one-step kernel, and exact-depth output semantics. The operational
-reducer and primitive-domain safety are reviewer-facing definitions in `Spec.Semantics`.
+reducer and operation-domain safety are reviewer-facing definitions in `Spec.Semantics`.
 -/
 
 namespace Determinize.Spec.Paper

@@ -17,23 +17,23 @@ noncomputable def machineOutputMeasure (state : State) : Measure ℝ :=
   ⨆ fuel, machineOutput fuel state
 
 def SameObservations (before after : State) : Prop :=
-  (∀ fuel, cumulativeOutputMeasure fuel (stateExpr before) =
-    cumulativeOutputMeasure fuel (stateExpr after)) ∧
-  (∀ fuel, DoesNotGetStuckAt fuel (stateExpr before) ↔ DoesNotGetStuckAt fuel (stateExpr after))
+  (∀ fuel, Cumulative.outputMeasure fuel (stateExpr before) =
+    Cumulative.outputMeasure fuel (stateExpr after)) ∧
+  (∀ fuel, DomainSafeAt fuel (stateExpr before) ↔ DomainSafeAt fuel (stateExpr after))
 
 def PaperStep (before : State) (successors : List (Rat × State)) : Prop :=
-  cumulativeOutputMeasure 0 (stateExpr before) = 0 ∧
-  (∀ fuel, cumulativeOutputMeasure (fuel+1) (stateExpr before) =
-    weightedOutput successors (fun after => cumulativeOutputMeasure fuel (stateExpr after))) ∧
-  (∀ fuel, DoesNotGetStuckAt (fuel+1) (stateExpr before) ↔
-    ∀ outcome ∈ successors, 0 < outcome.1 → DoesNotGetStuckAt fuel (stateExpr outcome.2))
+  Cumulative.outputMeasure 0 (stateExpr before) = 0 ∧
+  (∀ fuel, Cumulative.outputMeasure (fuel+1) (stateExpr before) =
+    weightedOutput successors (fun after => Cumulative.outputMeasure fuel (stateExpr after))) ∧
+  (∀ fuel, DomainSafeAt (fuel+1) (stateExpr before) ↔
+    ∀ outcome ∈ successors, 0 < outcome.1 → DomainSafeAt fuel (stateExpr outcome.2))
 
 def StepMeaning (state : State) : Step → Prop
   | .returned reward =>
-      (∀ fuel, cumulativeOutputMeasure fuel (stateExpr state) = Measure.dirac (reward : ℝ)) ∧
-      DoesNotGetStuck (stateExpr state)
+      (∀ fuel, Cumulative.outputMeasure fuel (stateExpr state) = Measure.dirac (reward : ℝ)) ∧
+      DomainSafe (stateExpr state)
   | .rejected =>
-      (∀ fuel, cumulativeOutputMeasure fuel (stateExpr state) = 0) ∧ DoesNotGetStuck (stateExpr state)
+      (∀ fuel, Cumulative.outputMeasure fuel (stateExpr state) = 0) ∧ DomainSafe (stateExpr state)
   | .next _ successors =>
       (∃ after, successors = [(1,after)] ∧ Bookkeeping state ∧ SameObservations state after) ∨
       PaperStep state successors
@@ -58,7 +58,7 @@ theorem machineOutput_le_paper (initial : State)
     (meaning : ∀ state, MachineReachable initial state → ∀ result,
       step state = .ok result → StepMeaning state result)
     (fuel : Nat) (state : State) (reachable : MachineReachable initial state) :
-    machineOutput fuel state ≤ cumulativeOutputMeasure fuel (stateExpr state) := by
+    machineOutput fuel state ≤ Cumulative.outputMeasure fuel (stateExpr state) := by
   induction fuel generalizing state with
   | zero =>
       cases action : step state with
@@ -93,7 +93,7 @@ theorem execution_safe (initial : State)
       step state = .ok result → StepMeaning state result)
     (noFailure : ∀ state, MachineReachable initial state → ∀ failure, step state ≠ .error failure)
     (fuel : Nat) (state : State) (reachable : MachineReachable initial state) :
-    DoesNotGetStuckAt fuel (stateExpr state) := by
+    DomainSafeAt fuel (stateExpr state) := by
   cases fuel with
   | zero => trivial
   | succ fuel =>
@@ -122,7 +122,7 @@ theorem paper_le_machine_horizon (initial : State)
       step state = .ok result → StepMeaning state result)
     (noFailure : ∀ state, MachineReachable initial state → ∀ failure, step state ≠ .error failure)
     (fuel : Nat) (state : State) (reachable : MachineReachable initial state) :
-    ∃ horizon, cumulativeOutputMeasure fuel (stateExpr state) ≤ machineOutput horizon state := by
+    ∃ horizon, Cumulative.outputMeasure fuel (stateExpr state) ≤ machineOutput horizon state := by
   cases action : step state with
   | error failure => exact False.elim (noFailure state reachable failure action)
   | ok result =>
@@ -141,12 +141,12 @@ theorem paper_le_machine_horizon (initial : State)
             | zero => exact ⟨0, by rw [advance.1]; exact bot_le⟩
             | succ fuel =>
                 have bounds : ∀ entry ∈ successors, 0 < entry.1 → ∃ horizon,
-                    cumulativeOutputMeasure fuel (stateExpr entry.2) ≤ machineOutput horizon entry.2 := by
+                    Cumulative.outputMeasure fuel (stateExpr entry.2) ≤ machineOutput horizon entry.2 := by
                   intro entry member positive
                   exact paper_le_machine_horizon initial meaning noFailure fuel entry.2
                     (.next reachable action member positive)
                 obtain ⟨horizon, bound⟩ := weightedOutput_uniform_bound successors
-                  (fun after => cumulativeOutputMeasure fuel (stateExpr after)) machineOutput machineOutput_mono bounds
+                  (fun after => Cumulative.outputMeasure fuel (stateExpr after)) machineOutput machineOutput_mono bounds
                 exact ⟨horizon+1, by simpa [machineOutput, action, advance.2.1 fuel] using bound⟩
 termination_by (fuel, bookkeepingRank state)
 decreasing_by all_goals omega
@@ -157,11 +157,12 @@ theorem execution_output_eq (initial : State)
     (noFailure : ∀ state, MachineReachable initial state → ∀ failure, step state ≠ .error failure)
     (state : State) (reachable : MachineReachable initial state) :
     machineOutputMeasure state = bigStepMeasure (stateExpr state) := by
-  unfold machineOutputMeasure bigStepMeasure
+  rw [Proof.Paper.bigStepMeasure_eq_iSup_cumulative]
+  unfold machineOutputMeasure
   apply le_antisymm
   · apply iSup_le
     intro fuel
-    exact (machineOutput_le_paper initial meaning fuel state reachable).trans (le_iSup (fun n => cumulativeOutputMeasure n (stateExpr state)) fuel)
+    exact (machineOutput_le_paper initial meaning fuel state reachable).trans (le_iSup (fun n => Cumulative.outputMeasure n (stateExpr state)) fuel)
   · apply iSup_le
     intro fuel
     obtain ⟨horizon, bound⟩ := paper_le_machine_horizon initial meaning noFailure fuel state reachable

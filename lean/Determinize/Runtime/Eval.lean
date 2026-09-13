@@ -113,7 +113,9 @@ private partial def eval (env : List Value) (e : Expr Float) : EvalM Value := do
     match e with
     | .add .. => checkedNumber (a + b)
     | .mul .. => checkedNumber (a * b)
-    | .div .. => checkedNumber (if b == 0 then 0 else a / b)
+    | .div .. =>
+      if b == 0 then throw (.failure "division by zero")
+      checkedNumber (a / b)
     | _ => return .bool (a < b)
   | .uniform k a b | .gaussian k a b | .beta k a b | .gamma k a b =>
     let a ← number (← eval env a); let b ← number (← eval env b)

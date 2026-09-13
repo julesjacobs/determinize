@@ -102,6 +102,8 @@ theorem deliver_stepMeaning (value : Value) (stack : List Frame)
       | right operation left =>
           cases operation <;> cases left <;> cases value <;>
             simp only [step, binary, pure, bind, Except.bind, Except.pure, reduceCtorEq] at action
+          all_goals try split_ifs at action
+          all_goals try simp only [beq_iff_eq] at *
           all_goals obtain rfl := Except.ok.inj action
           all_goals try
             apply Or.inl
@@ -117,7 +119,7 @@ theorem deliver_stepMeaning (value : Value) (stack : List Frame)
                 (by simp) (by simp) stack tailShape
             | apply lift_root _ _ (mul_root _ _) (by simp [stateExpr, stackExpr, frameExpr, binaryExpr, Expr.isValue])
                 (by simp) (by simp) stack tailShape
-            | apply lift_root _ _ (div_root _ _) (by simp [stateExpr, stackExpr, frameExpr, binaryExpr, Expr.isValue])
+            | apply lift_root _ _ (div_root _ _ (by assumption)) (by simp [stateExpr, stackExpr, frameExpr, binaryExpr, Expr.isValue])
                 (by simp) (by simp) stack tailShape
             | apply lift_root _ _ (lt_root _ _) (by simp [stateExpr, stackExpr, frameExpr, binaryExpr, Expr.isValue])
                 (by simp) (by simp) stack tailShape

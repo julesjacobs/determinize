@@ -112,28 +112,28 @@ theorem stack_absorbing (stack : List Frame) (hole : Expr)
       have frameResult := frame_absorbing frame hole notValue absorbing
       exact ih (frameExpr frame hole) frameResult.1 frameResult.2
 
-theorem absorbing_cumulative_zero (expression : Expr)
+theorem absorbing_output_at_zero (expression : Expr)
     (notValue : expression.isValue = false) (absorbing : reduce expression = .next expression)
-    (fuel : Nat) : cumulativeOutputMeasure fuel expression = 0 := by
+    (fuel : Nat) : outputMeasureAt fuel expression = 0 := by
   induction fuel with
-  | zero => cases expression <;> simp_all [Expr.isValue, cumulativeOutputMeasure]
-  | succ fuel ih => simpa [cumulativeOutputMeasure, absorbing] using ih
+  | zero => cases expression <;> simp_all [Expr.isValue, outputMeasureAt]
+  | succ fuel ih => simpa [outputMeasureAt, notValue, absorbing] using ih
 
 theorem absorbing_safe (expression : Expr)
     (notValue : expression.isValue = false) (absorbing : reduce expression = .next expression) :
-    DoesNotGetStuck expression := by
+    DomainSafe expression := by
   intro fuel
   induction fuel with
   | zero => trivial
-  | succ fuel ih => simpa [DoesNotGetStuckAt, notValue, absorbing] using ih
+  | succ fuel ih => simpa [DomainSafeAt, notValue, absorbing] using ih
 
 theorem stack_reject_zero (stack : List Frame) :
     bigStepMeasure (stackExpr stack .reject) = 0 := by
   have absorbing := stack_absorbing stack .reject rfl rfl
-  simp [bigStepMeasure, absorbing_cumulative_zero _ absorbing.1 absorbing.2]
+  simp [bigStepMeasure, absorbing_output_at_zero _ absorbing.1 absorbing.2]
 
 theorem stack_reject_safe (stack : List Frame) :
-    DoesNotGetStuck (stackExpr stack .reject) := by
+    DomainSafe (stackExpr stack .reject) := by
   have absorbing := stack_absorbing stack .reject rfl rfl
   exact absorbing_safe _ absorbing.1 absorbing.2
 
@@ -143,7 +143,7 @@ theorem rejection_step (environment : List Value) (stack : List Frame) :
     step (.eval .reject environment stack) = .ok (.next .evaluate [(1,.rejected)]) ∧
     bigStepMeasure (stateExpr (.eval .reject environment stack)) =
       bigStepMeasure (stateExpr .rejected) ∧
-    DoesNotGetStuck (stateExpr (.eval .reject environment stack)) := by
+    DomainSafe (stateExpr (.eval .reject environment stack)) := by
   refine ⟨rfl, ?_, ?_⟩
   · simp [stateExpr, interpret, close, Expr.mapLiteral, Expr.mapVars, stack_reject_zero,
       show bigStepMeasure (.reject : Expr) = 0 from stack_reject_zero []]

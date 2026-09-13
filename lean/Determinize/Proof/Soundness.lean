@@ -75,9 +75,9 @@ namespace Determinize.Proof.Paper
 theorem finiteExpectationSoundness : Determinize.Spec.mainThm := by
   intro program typed sourceSafe sourceIntegrable
   rcases Determinize.Proof.Traces.meanOnTraces .E program typed
-    ((Typing.primitiveDomainSafe_iff_doesNotGetStuck typed).1 sourceSafe) with ⟨targetSafe, traces⟩
+    sourceSafe with ⟨targetSafe, traces⟩
   rcases traces.finite_expectation sourceIntegrable with ⟨targetIntegrable, expectation⟩
-  exact ⟨fun fuel => Typing.doesNotGetStuckAt_imp_primitiveDomainSafeAt (targetSafe fuel),
+  exact ⟨targetSafe,
     targetIntegrable, expectation⟩
 
 end Determinize.Proof.Paper

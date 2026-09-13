@@ -381,28 +381,24 @@ namespace Determinize.Proof.Paper
 /-- Extended-real expectation preservation, from operational trace soundness. -/
 theorem extendedExpectationSoundness : Determinize.Spec.extendedExpectationThm := by
   intro program typed sourceSafe defined
-  have sourceSafe := (Determinize.Proof.Paper.Typing.primitiveDomainSafe_iff_doesNotGetStuck typed).1 sourceSafe
   exact (Determinize.Proof.Traces.meanOnTraces .E program typed
     sourceSafe).2.extended_expectation defined
 
 /-- Jensen's inequality between the two output laws, from operational trace soundness. -/
 theorem jensenSoundness : Determinize.Spec.jensenThm := by
   intro program typed sourceSafe φ convex nonneg
-  have sourceSafe := (Determinize.Proof.Paper.Typing.primitiveDomainSafe_iff_doesNotGetStuck typed).1 sourceSafe
   exact (Determinize.Proof.Traces.meanOnTraces .E program typed
     sourceSafe).2.lintegral_convex_le convex nonneg
 
 /-- Output mass preservation, from operational trace soundness. -/
 theorem outputMassSoundness : Determinize.Spec.outputMassThm := by
   intro program typed sourceSafe
-  have sourceSafe := (Determinize.Proof.Paper.Typing.primitiveDomainSafe_iff_doesNotGetStuck typed).1 sourceSafe
   exact (Determinize.Proof.Traces.meanOnTraces .E program typed
     sourceSafe).2.output_mass
 
 /-- Variance non-increase, from operational trace soundness. -/
 theorem varianceSoundness : Determinize.Spec.varianceThm := by
   intro program typed sourceSafe memLp
-  have sourceSafe := (Determinize.Proof.Paper.Typing.primitiveDomainSafe_iff_doesNotGetStuck typed).1 sourceSafe
   exact (Determinize.Proof.Traces.meanOnTraces .E program typed
     sourceSafe).2.variance_le memLp
 
@@ -410,7 +406,6 @@ theorem varianceSoundness : Determinize.Spec.varianceThm := by
 soundness. -/
 theorem conditionalExpectationSoundness : Determinize.Spec.conditionalExpectationThm := by
   intro program typed sourceSafe integrable
-  have sourceSafe := (Determinize.Proof.Paper.Typing.primitiveDomainSafe_iff_doesNotGetStuck typed).1 sourceSafe
   exact (Determinize.Proof.Traces.meanOnTraces .E program typed
     sourceSafe).2.conditional_expectation integrable
 
@@ -425,7 +420,6 @@ theorem varianceSoundness : Determinize.Spec.Traces.varianceThm := by
   intro program typed sourceSafe memLp
   have replayAe := outputGivenTrace_ae_eq_condKernel program
     (replaySoundness program typed sourceSafe).2.1 rfl
-  have sourceSafe := (Determinize.Proof.Paper.Typing.primitiveDomainSafe_iff_doesNotGetStuck typed).1 sourceSafe
   obtain ⟨_, factor, massAe, _⟩ := soundnessData .E program typed
     sourceSafe
   obtain ⟨integrable, decomposition⟩ := factor.variance_decomposition memLp

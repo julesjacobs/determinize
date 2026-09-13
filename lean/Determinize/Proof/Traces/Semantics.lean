@@ -275,8 +275,10 @@ theorem correspondence : Determinize.Proof.StepTraces.correspondenceThm := by
   rw [jointMeasure, Measure.map_sum measurable_snd.aemeasurable]
   change Measure.sum (fun depth => (exactMeasure depth program).map Prod.snd) = _
   simp_rw [exact_erasure step]
-  rw [← MeasurableActionFamily.bigStepMeasure_eq_sum_exactOutputMeasure step,
-    Determinize.Proof.Paper.bigStepMeasure_eq]
+  unfold Determinize.Spec.Paper.bigStepMeasure
+  congr 1
+  funext depth
+  exact Determinize.Proof.Paper.exactOutputMeasure_eq depth program
 
 end
 

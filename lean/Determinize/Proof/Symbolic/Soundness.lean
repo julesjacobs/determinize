@@ -5,7 +5,7 @@ import Mathlib.Probability.Kernel.Composition.MeasureComp
 /-!
 # Soundness of symbolic reduction
 
-The symbolic semantics preserves typing and primitive-domain safety while
+The symbolic semantics preserves typing and operation-domain safety while
 replacing E samples by their means. Operational trace soundness builds on these
 invariants in `CompactFiberSoundness`.
 -/
@@ -384,7 +384,7 @@ def SafeConfigAt (laws : Determinize.Proof.Paper.PrimitiveLaws) (fuel : Nat)
   Symbolic.SampleEnv.DomainSafe laws history ∧
     Symbolic.AffineExpr.WellTyped [] expression (.float .E) ∧
     ∀ᵐ environment ∂Symbolic.SampleEnv.actualMeasure laws history,
-      PrimitiveDomainSafeAt fuel (expression.realize environment)
+      DomainSafeAt fuel (expression.realize environment)
 
 theorem stochastic_mass_one_imp_domain (laws : Determinize.Proof.Paper.PrimitiveLaws)
     (op : Determinize.Spec.Paper.Op) (params : Determinize.Spec.Paper.Params op)
@@ -498,20 +498,20 @@ theorem nStepMeasure_succ_next_univ
       (Determinize.Proof.Paper.MeasurableActionFamily.nStepKernelPack
         stepKernel fuel).kernel.measurable]
 
-theorem doesNotGetStuckAt_iff_nStepMeasure_univ_eq_one
+theorem domainSafeAt_iff_nStepMeasure_univ_eq_one
     (stepKernel : StepKernel) (fuel : Nat) (expression : Expr)
     (typed : Determinize.Spec.Paper.Typed [] expression ty) :
-    Determinize.Spec.Paper.DoesNotGetStuckAt fuel expression ↔
+    Determinize.Spec.Paper.DomainSafeAt fuel expression ↔
       nStepMeasure stepKernel fuel expression Set.univ = 1 := by
   induction fuel generalizing expression ty with
-  | zero => simp [DoesNotGetStuckAt, nStepMeasure]
+  | zero => simp [DomainSafeAt, nStepMeasure]
   | succ fuel ih =>
       by_cases value : expression.isValue = true
-      · simp only [DoesNotGetStuckAt, value, ↓reduceIte]
+      · simp only [DomainSafeAt, value, ↓reduceIte]
         exact (iff_true_intro
           (nStepMeasure_univ_eq_one_of_value stepKernel (fuel + 1) expression value)).symm
       · have valueFalse : expression.isValue = false := Bool.eq_false_of_not_eq_true value
-        simp only [DoesNotGetStuckAt, valueFalse, Bool.false_eq_true, ↓reduceIte]
+        simp only [DomainSafeAt, valueFalse, Bool.false_eq_true, ↓reduceIte]
         have actionTyped := Typing.reduce_typed_closed typed
         cases reduction : reduce expression with
         | next next =>
@@ -580,18 +580,9 @@ theorem doesNotGetStuckAt_iff_nStepMeasure_univ_eq_one
                   filter_upwards [continuationMass] with value mass
                   exact (ih (continuation value) (continuationTyped value)).mpr mass
         | stuck =>
-            rw [reduction] at actionTyped
-            cases actionTyped
-
-theorem primitiveDomainSafeAt_iff_nStepMeasure_univ_eq_one
-    (stepKernel : StepKernel) (fuel : Nat) (expression : Expr)
-    (typed : Determinize.Spec.Paper.Typed [] expression ty) :
-    PrimitiveDomainSafeAt fuel expression ↔
-      nStepMeasure stepKernel fuel expression Set.univ = 1 := by
-  rw [← doesNotGetStuckAt_iff_nStepMeasure_univ_eq_one stepKernel fuel expression typed]
-  constructor
-  · exact Typing.primitiveDomainSafeAt_imp_doesNotGetStuckAt typed
-  · exact Typing.doesNotGetStuckAt_imp_primitiveDomainSafeAt
+            rw [nStepMeasure_succ_eq_firstStep stepKernel fuel expression,
+              stepKernel.kernel_eq_stepMeasure]
+            simp [stepMeasure, reduction, Determinize.Spec.Paper.Action.measure]
 
 theorem measurable_nStepMass_realize (stepKernel : StepKernel)
     (fuel : Nat) (expression : Symbolic.AffineExpr n) :
@@ -606,18 +597,18 @@ theorem measurable_nStepMass_realize (stepKernel : StepKernel)
   simpa only [Determinize.Proof.Paper.MeasurableActionFamily.nStepKernelPack_apply]
     using composed
 
-theorem measurableSet_primitiveDomainSafeAt_realize
+theorem measurableSet_domainSafeAt_realize
     (stepKernel : StepKernel) (fuel : Nat)
     (expression : Symbolic.AffineExpr n)
     (typed : Symbolic.AffineExpr.WellTyped [] expression ty) :
     MeasurableSet {environment |
-      PrimitiveDomainSafeAt fuel (expression.realize environment)} := by
+      DomainSafeAt fuel (expression.realize environment)} := by
   have setEq : {environment |
-      PrimitiveDomainSafeAt fuel (expression.realize environment)} =
+      DomainSafeAt fuel (expression.realize environment)} =
       (fun environment => nStepMeasure stepKernel fuel
         (expression.realize environment) Set.univ) ⁻¹' {1} := by
     ext environment
-    exact primitiveDomainSafeAt_iff_nStepMeasure_univ_eq_one stepKernel fuel
+    exact domainSafeAt_iff_nStepMeasure_univ_eq_one stepKernel fuel
       (expression.realize environment) (typed.realize_typed environment)
   rw [setEq]
   exact measurable_nStepMass_realize stepKernel fuel expression (measurableSet_singleton 1)
@@ -711,14 +702,14 @@ theorem source_sampleG_safe_swap
     (expression : Symbolic.AffineExpr n)
     (typed : Symbolic.AffineExpr.WellTyped [] expression ty)
     (sourceSafe : ∀ᵐ environment ∂Symbolic.SampleEnv.actualMeasure laws history,
-      PrimitiveDomainSafeAt (fuel + 1) (expression.realize environment))
+      DomainSafeAt (fuel + 1) (expression.realize environment))
     (fiber : Measure ℝ) (continuation : ℝ → Symbolic.AffineExpr n)
     (reduction : Symbolic.AffineExpr.symbolicReduce expression =
       Symbolic.AffineExpr.SymbolicAction.sampleG site fiber continuation) :
     fiber Set.univ = 1 ∧
       ∀ᵐ value ∂fiber,
         ∀ᵐ environment ∂Symbolic.SampleEnv.actualMeasure laws history,
-          PrimitiveDomainSafeAt fuel ((continuation value).realize environment) := by
+          DomainSafeAt fuel ((continuation value).realize environment) := by
   have actionTyped := Symbolic.AffineExpr.symbolicReduce_wellTyped typed
   rw [reduction] at actionTyped
   have continuationTyped : ∀ value,
@@ -734,11 +725,11 @@ theorem source_sampleG_safe_swap
   have sourceActionSafe :
       ∀ᵐ environment ∂Symbolic.SampleEnv.actualMeasure laws history,
         fiber Set.univ = 1 ∧ ∀ᵐ value ∂fiber,
-          PrimitiveDomainSafeAt fuel ((continuation value).realize environment) := by
+          DomainSafeAt fuel ((continuation value).realize environment) := by
     filter_upwards [sourceSafe] with environment safe
     have notValue := not_value_of_reduce_sample (expression.realize environment)
       fiber (fun value => (continuation value).realize environment) (concreteReduction environment)
-    simp only [PrimitiveDomainSafeAt, Bool.eq_false_of_not_eq_true notValue,
+    simp only [DomainSafeAt, Bool.eq_false_of_not_eq_true notValue,
       Bool.false_eq_true, ↓reduceIte, concreteReduction] at safe
     exact safe
   have actualMass := SampleEnv.actualMeasure_univ_eq_one laws history historySafe
@@ -757,7 +748,7 @@ theorem source_sampleG_safe_swap
           nStepMeasure stepKernel fuel ((continuation value).realize environment) Set.univ = 1 := by
     filter_upwards [sourceActionSafe] with environment safe
     filter_upwards [safe.2] with value continuationSafe
-    exact (primitiveDomainSafeAt_iff_nStepMeasure_univ_eq_one stepKernel fuel
+    exact (domainSafeAt_iff_nStepMeasure_univ_eq_one stepKernel fuel
       ((continuation value).realize environment)
       ((continuationTyped value).realize_typed environment)).mp continuationSafe
   have jointMeasurable := sampleG_joint_nStepMass_measurable laws stepKernel fuel expression
@@ -775,7 +766,7 @@ theorem source_sampleG_safe_swap
     (Measure.ae_ae_comm massSetMeasurable).mp nestedMass
   filter_upwards [swappedMass] with value safeAtValue
   filter_upwards [safeAtValue] with environment mass
-  exact (primitiveDomainSafeAt_iff_nStepMeasure_univ_eq_one stepKernel fuel
+  exact (domainSafeAt_iff_nStepMeasure_univ_eq_one stepKernel fuel
     ((continuation value).realize environment)
     ((continuationTyped value).realize_typed environment)).mpr mass
 
@@ -786,7 +777,7 @@ theorem source_sampleE_safe_extension
     (expression : Symbolic.AffineExpr n)
     (typed : Symbolic.AffineExpr.WellTyped [] expression ty)
     (sourceSafe : ∀ᵐ environment ∂Symbolic.SampleEnv.actualMeasure laws history,
-      PrimitiveDomainSafeAt (fuel + 1) (expression.realize environment))
+      DomainSafeAt (fuel + 1) (expression.realize environment))
     (op : Determinize.Spec.Paper.Op) (affine : List (Symbolic.Affine n)) (general : List ℝ)
     (continuation : Symbolic.AffineExpr (n + 1))
     (reduction : Symbolic.AffineExpr.symbolicReduce expression =
@@ -799,7 +790,7 @@ theorem source_sampleE_safe_extension
     Symbolic.SampleEnv.DomainSafe laws extended ∧
       Symbolic.AffineExpr.WellTyped [] continuation ty ∧
       ∀ᵐ environment ∂Symbolic.SampleEnv.actualMeasure laws extended,
-        PrimitiveDomainSafeAt fuel (continuation.realize environment) := by
+        DomainSafeAt fuel (continuation.realize environment) := by
   have actionTyped := Symbolic.AffineExpr.symbolicReduce_wellTyped typed
   rw [reduction] at actionTyped
   rcases (Symbolic.AffineExpr.SymbolicAction.wellTyped_sampleE_iff.mp actionTyped) with
@@ -838,12 +829,12 @@ theorem source_sampleE_safe_extension
             Set.univ = 1 ∧
           ∀ᵐ value ∂laws.kernel op
             (fun index => Symbolic.Affine.eval (affineArgs index) environment, generalArgs),
-            PrimitiveDomainSafeAt fuel
+            DomainSafeAt fuel
               (continuation.realize (Env.cons value environment)) := by
     filter_upwards [sourceSafe] with environment safe
     have notValue := not_value_of_reduce_sample (expression.realize environment)
       _ _ (concreteReduction environment)
-    simp only [PrimitiveDomainSafeAt, Bool.eq_false_of_not_eq_true notValue,
+    simp only [DomainSafeAt, Bool.eq_false_of_not_eq_true notValue,
       Bool.false_eq_true, ↓reduceIte, concreteReduction] at safe
     exact safe
   have domainAE : ∀ᵐ environment ∂Symbolic.SampleEnv.actualMeasure laws history,
@@ -857,25 +848,25 @@ theorem source_sampleE_safe_extension
   let transition := (SampleEnv.transitionPack laws op affineArgs generalArgs).kernel
   have nested : ∀ᵐ environment ∂Symbolic.SampleEnv.actualMeasure laws history,
       ∀ᵐ nextEnvironment ∂transition environment,
-        PrimitiveDomainSafeAt fuel (continuation.realize nextEnvironment) := by
+        DomainSafeAt fuel (continuation.realize nextEnvironment) := by
     filter_upwards [sourceActionSafe] with environment safe
     rw [SampleEnv.transitionPack_apply]
     exact (MeasureTheory.ae_map_iff
       (μ := laws.kernel op
         (fun i => Symbolic.Affine.eval (affineArgs i) environment, generalArgs))
       (f := fun value => Env.cons value environment)
-      (p := fun nextEnvironment => PrimitiveDomainSafeAt fuel
+      (p := fun nextEnvironment => DomainSafeAt fuel
         (continuation.realize nextEnvironment))
       (measurable_envCons.comp
         (measurable_id.prodMk measurable_const)).aemeasurable
-      (measurableSet_primitiveDomainSafeAt_realize stepKernel fuel continuation
+      (measurableSet_domainSafeAt_realize stepKernel fuel continuation
         continuationTyped)).mpr safe.2
   have measureEq : Symbolic.SampleEnv.actualMeasure laws extended =
       transition ∘ₘ Symbolic.SampleEnv.actualMeasure laws history := by
     exact SampleEnv.actualMeasure_snoc_eq_comp laws history op affineArgs generalArgs
   rw [measureEq]
   exact Measure.ae_comp_of_ae_ae
-    (measurableSet_primitiveDomainSafeAt_realize stepKernel fuel continuation continuationTyped)
+    (measurableSet_domainSafeAt_realize stepKernel fuel continuation continuationTyped)
     nested
 
 theorem determinize_isValue (expression : Expr) :
@@ -1374,7 +1365,10 @@ theorem symbolicReduce_targetRealize
           obtain ⟨y, rfl⟩ := wellTyped_real_value rightTyped rightValue
           rcases y with ⟨y0, yc⟩
           obtain rfl : yc = 0 := wellTyped_realG_coefficients rightTyped
-          simp [affineValue?, Affine.div?, targetRealize, realize, Expr.determinize,
+          by_cases h : y0 = 0
+          · simp [affineValue?, Affine.div?, targetRealize, realize, Expr.determinize,
+              Expr.isValue, realValue?, Symbolic.Affine.eval, h]
+          simp [h, affineValue?, Affine.div?, targetRealize, realize, Expr.determinize,
             Expr.isValue, realValue?, Symbolic.Affine.eval, Finset.sum_const_zero,
             div_eq_mul_inv]
           have sumRule : (∑ i, y0⁻¹ * x.2 i * environment i) =
@@ -1411,7 +1405,10 @@ theorem symbolicReduce_targetRealize
           rcases y with ⟨y0, yc⟩
           obtain rfl : xc = 0 := wellTyped_realG_coefficients leftTyped
           obtain rfl : yc = 0 := wellTyped_realG_coefficients rightTyped
-          simp [affineValue?, Affine.div?, targetRealize, realize, Expr.determinize,
+          by_cases h : y0 = 0
+          · simp [affineValue?, Affine.div?, targetRealize, realize, Expr.determinize,
+              Expr.isValue, realValue?, Symbolic.Affine.eval, h]
+          simp [h, affineValue?, Affine.div?, targetRealize, realize, Expr.determinize,
             Expr.isValue, realValue?, Symbolic.Affine.eval, Finset.sum_const_zero,
             div_eq_mul_inv]
           ring
@@ -1847,13 +1844,28 @@ theorem symbolicReduce_targetRealize
           ihl environment]
 
 /-- A valid mean call takes one deterministic step, using no additional sample coordinate. -/
+theorem safeConfigAt_not_stuck
+    (safe : SafeConfigAt laws (fuel + 1) history expression)
+    (notValue : expression.isValue ≠ true) : symbolicReduce expression ≠ .stuck := by
+  intro stuck
+  let : IsProbabilityMeasure (history.actualMeasure laws) :=
+    ⟨SampleEnv.actualMeasure_univ_eq_one laws history safe.1⟩
+  have impossible : ∀ᵐ environment ∂history.actualMeasure laws, False := by
+    filter_upwards [safe.2.2] with environment valid
+    have reduction : reduce (expression.realize environment) = .stuck := by
+      rw [← symbolicReduce_realize safe.2.1 environment, stuck]
+      rfl
+    simp [DomainSafeAt, AffineExpr.realize_isValue, notValue, reduction] at valid
+  rcases impossible.exists with ⟨_, contradiction⟩
+  exact contradiction
+
 theorem source_mean_safe_step
     (expression : AffineExpr n) (typed : WellTyped [] expression ty)
     (actionEq : symbolicReduce expression = .mean op affine general continuation)
     (environment : Env n)
-    (safe : PrimitiveDomainSafeAt (fuel + 1) (expression.realize environment)) :
+    (safe : DomainSafeAt (fuel + 1) (expression.realize environment)) :
     domain op (meanParams op affine general environment) ∧
-      PrimitiveDomainSafeAt fuel ((continuation (meanAffine op affine general)).realize environment) := by
+      DomainSafeAt fuel ((continuation (meanAffine op affine general)).realize environment) := by
   have actionTyped := symbolicReduce_wellTyped typed
   rw [actionEq] at actionTyped
   obtain ⟨ha, hg, nextTyped, natural⟩ := SymbolicAction.wellTyped_mean_iff.mp actionTyped
@@ -1864,7 +1876,7 @@ theorem source_mean_safe_step
     rw [← symbolicReduce_realize typed environment, actionEq]
     rfl
   have nv := not_value_of_reduce_sample _ _ _ reduction
-  rw [PrimitiveDomainSafeAt, if_neg nv, reduction] at safe
+  rw [DomainSafeAt, if_neg nv, reduction] at safe
   dsimp only at safe
   have valid := (primitiveFiber_mean_mass op affine general ha hg environment).mp safe.1
   refine ⟨valid, ?_⟩
@@ -1878,7 +1890,7 @@ theorem safeConfigAt_target
     (stepKernel : StepKernel) (fuel : Nat)
     (history : Symbolic.SampleEnv laws n) (expression : AffineExpr n)
     (safe : SafeConfigAt laws fuel history expression) :
-    PrimitiveDomainSafeAt fuel
+    DomainSafeAt fuel
       ((expression.realize (Symbolic.SampleEnv.meanEnvironment laws history)).determinize) := by
   induction fuel generalizing n history expression with
   | zero => trivial
@@ -1886,12 +1898,12 @@ theorem safeConfigAt_target
       rcases safe with ⟨historySafe, typed, sourceSafe⟩
       let mean := Symbolic.SampleEnv.meanEnvironment laws history
       by_cases value : expression.isValue = true
-      · simp only [PrimitiveDomainSafeAt, determinize_isValue,
+      · simp only [DomainSafeAt, determinize_isValue,
           Symbolic.AffineExpr.realize_isValue, value, ↓reduceIte]
       · have targetNotValue :
             (expression.realize mean).determinize.isValue ≠ true := by
           simpa only [determinize_isValue, Symbolic.AffineExpr.realize_isValue] using value
-        rw [PrimitiveDomainSafeAt, if_neg targetNotValue]
+        rw [DomainSafeAt, if_neg targetNotValue]
         have targetStep := symbolicReduce_targetRealize typed mean
         rw [← targetStep]
         have actionTyped := Symbolic.AffineExpr.symbolicReduce_wellTyped typed
@@ -1903,7 +1915,7 @@ theorem safeConfigAt_target
                 using actionTyped
             have nextSafe : ∀ᵐ environment
                 ∂Symbolic.SampleEnv.actualMeasure laws history,
-                PrimitiveDomainSafeAt fuel (next.realize environment) := by
+                DomainSafeAt fuel (next.realize environment) := by
               filter_upwards [sourceSafe] with environment environmentSafe
               have concreteStep : reduce (expression.realize environment) =
                   .next (next.realize environment) := by
@@ -1912,7 +1924,7 @@ theorem safeConfigAt_target
                 rfl
               have sourceNotValue : (expression.realize environment).isValue ≠ true := by
                 simpa only [Symbolic.AffineExpr.realize_isValue] using value
-              simpa only [PrimitiveDomainSafeAt,
+              simpa only [DomainSafeAt,
                 Bool.eq_false_of_not_eq_true sourceNotValue, Bool.false_eq_true,
                 ↓reduceIte, concreteStep] using environmentSafe
             exact ih history next ⟨historySafe, nextTyped, nextSafe⟩
@@ -1942,7 +1954,7 @@ theorem safeConfigAt_target
             change Symbolic.SampleEnv.DomainSafe laws extended ∧
                 WellTyped [] continuation (.float .E) ∧
                 ∀ᵐ environment ∂Symbolic.SampleEnv.actualMeasure laws extended,
-                  PrimitiveDomainSafeAt fuel (continuation.realize environment) at extendedSafe
+                  DomainSafeAt fuel (continuation.realize environment) at extendedSafe
             rcases extendedSafe with ⟨extendedDomainSafe, continuationTyped,
               continuationSourceSafe⟩
             have actionShape :=
@@ -1985,7 +1997,7 @@ theorem safeConfigAt_target
             constructor
             · simp
             · rw [ae_dirac_eq]
-              change PrimitiveDomainSafeAt fuel
+              change DomainSafeAt fuel
                 ((continuation.realize
                   (Env.cons (Determinize.Spec.Paper.meanValue op params) mean)).determinize)
               have meanExtended : Symbolic.SampleEnv.meanEnvironment laws extended =
@@ -2007,13 +2019,13 @@ theorem safeConfigAt_target
             filter_upwards [continuationSafe] with sampledValue sampledSafe
             exact ih history (continuation sampledValue)
               ⟨historySafe, continuationTyped sampledValue, sampledSafe⟩
-        | stuck => exact (Symbolic.AffineExpr.SymbolicAction.not_wellTyped_stuck actionTyped).elim
+        | stuck => exact (safeConfigAt_not_stuck ⟨historySafe, typed, sourceSafe⟩ value actionEq).elim
 
-theorem determinize_primitiveDomainSafe_of_typed_source
+theorem determinize_domainSafe_of_typed_source
     (laws : Determinize.Proof.Paper.PrimitiveLaws) (stepKernel : StepKernel)
     (program : Expr) (typed : Determinize.Spec.Paper.Typed [] program (.float .E))
-    (sourceSafe : PrimitiveDomainSafe program) :
-    PrimitiveDomainSafe program.determinize := by
+    (sourceSafe : DomainSafe program) :
+    DomainSafe program.determinize := by
   let symbolic := AffineExpr.ofExpr program
   have symbolicTyped : WellTyped [] symbolic (.float .E) :=
     AffineExpr.wellTyped_ofExpr_of_typed typed

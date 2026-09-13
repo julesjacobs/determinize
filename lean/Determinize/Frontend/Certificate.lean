@@ -12,8 +12,8 @@ def certificateText (text : String) : Except String String := do
     | throw "invalid certificate"
   let theoremText := match certificate.ty with
     | .float m =>
-      "\ntheorem traceGuarantee (safe : PrimitiveDomainSafe (interpret checked.source)) :\n" ++
-      "    PrimitiveDomainSafe (interpret target) ∧\n" ++
+      "\ntheorem traceGuarantee (safe : DomainSafe (interpret checked.source)) :\n" ++
+      "    DomainSafe (interpret target) ∧\n" ++
       "      traceLaw (interpret target) = traceLaw (interpret checked.source) ∧\n" ++
       "      ∀ᵐ trace ∂traceLaw (interpret checked.source),\n" ++
       "        MeasureTheory.Integrable id ((traceAndOutputLaw (interpret checked.source)).condKernel trace) ∧\n" ++

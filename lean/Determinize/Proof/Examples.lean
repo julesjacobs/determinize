@@ -74,13 +74,13 @@ example : ¬ Typed [] (.mul (uniform .E) (.real 2)) (.float .E) := mul_uniformE_
 example : ¬ Typed [] (.mul (uniform .E) (uniform .E)) (.float .E) := mul_uniformE_not_typed _
 
 private theorem safe_next {expression next : Expr}
-    (reduction : reduce expression = .next next) (safe : DoesNotGetStuck next) :
-    DoesNotGetStuck expression := by
+    (reduction : reduce expression = .next next) (safe : DomainSafe next) :
+    DomainSafe expression := by
   intro fuel
   cases fuel with
   | zero => trivial
   | succ fuel =>
-      rw [DoesNotGetStuckAt]
+      rw [DomainSafeAt]
       split
       · trivial
       · rw [reduction]
@@ -88,24 +88,25 @@ private theorem safe_next {expression next : Expr}
 
 private theorem safe_sample {expression : Expr} {fiber : Measure ℝ} {continuation : ℝ → Expr}
     (reduction : reduce expression = .sample site fiber continuation) (mass : fiber Set.univ = 1)
-    (safe : ∀ value, DoesNotGetStuck (continuation value)) : DoesNotGetStuck expression := by
+    (safe : ∀ᵐ value ∂fiber, DomainSafe (continuation value)) : DomainSafe expression := by
   intro fuel
   cases fuel with
   | zero => trivial
   | succ fuel =>
-      rw [DoesNotGetStuckAt]
+      rw [DomainSafeAt]
       split
       · trivial
       · rw [reduction]
-        exact ⟨mass, Filter.Eventually.of_forall (fun value => safe value fuel)⟩
+        exact ⟨mass, safe.mono (fun _ h => h fuel)⟩
 
-private theorem safe_real (value : ℝ) : DoesNotGetStuck (.real value) := by
+private theorem safe_real (value : ℝ) : DomainSafe (.real value) := by
   intro fuel
-  cases fuel <;> simp [DoesNotGetStuckAt, Expr.isValue]
+  cases fuel <;> simp [DomainSafeAt, Expr.isValue]
 
 private theorem safe_let_uniform (affinity : Affinity) (body : Expr)
-    (safe : ∀ value, DoesNotGetStuck (body.substHead (.real value))) :
-    DoesNotGetStuck (.letE (uniform affinity) body) := by
+    (safe : ∀ᵐ value ∂uniformFiber (.sample affinity) 0 1,
+      DomainSafe (body.substHead (.real value))) :
+    DomainSafe (.letE (uniform affinity) body) := by
   let μ := uniformFiber (.sample affinity) 0 1
   have reduction : reduce (.letE (uniform affinity) body) =
       .sample (.sample affinity, .uniform) μ
@@ -113,20 +114,24 @@ private theorem safe_let_uniform (affinity : Affinity) (body : Expr)
     simp [uniform, reduce, Expr.isValue, realValue?, Action.wrap, Function.comp_def, μ]
   apply safe_sample reduction
   · simp [μ, uniformFiber, uniformMeasure, Real.volume_Icc]
-  · intro value
-    exact safe_next (by simp [reduce, Expr.isValue]) (safe value)
+  · filter_upwards [safe] with value valueSafe
+    exact safe_next (by simp [reduce, Expr.isValue]) valueSafe
 
-theorem reciprocal_safe : DoesNotGetStuck reciprocal := by
+theorem reciprocal_safe : DomainSafe reciprocal := by
   apply safe_let_uniform .E
+  apply Filter.Eventually.of_forall
   intro x
   simp [Expr.substHead, Expr.substAt, Expr.shift, Expr.mapVars, uniform]
-  change DoesNotGetStuck (.letE (uniform .G)
+  change DomainSafe (.letE (uniform .G)
     (.add (.real x) (.div (.real 1) (.bvar 0))))
   apply safe_let_uniform .G
-  intro y
+  have nonzero : ∀ᵐ y ∂uniformFiber (.sample .G) 0 1, y ≠ 0 := by
+    simpa [uniformFiber, uniformMeasure] using
+      (ae_restrict_of_ae (s := Set.Icc (0 : ℝ) 1) (volume.ae_ne (0 : ℝ)))
+  filter_upwards [nonzero] with y nonzero
   simp [Expr.substHead, Expr.substAt, Expr.shift, Expr.mapVars]
   apply safe_next (next := .add (.real x) (.real (1 / y)))
-  · simp [reduce, Expr.isValue, realValue?, Action.wrap]
+  · simp [reduce, Expr.isValue, realValue?, Action.wrap, nonzero]
   apply safe_next (next := .real (x + 1 / y))
   · simp [reduce, Expr.isValue, realValue?]
   exact safe_real _
@@ -141,17 +146,19 @@ def scaledSample : Expr := .letE (uniform .G) (.mul (.bvar 0) (uniform .E))
 theorem scaledSample_typed : Typed [] scaledSample (.float .E) :=
   .letE (uniform_typed .G) (.mul (.bvar .head) (uniform_typed .E))
 
-theorem scaledSample_safe : DoesNotGetStuck scaledSample := by
+theorem scaledSample_safe : DomainSafe scaledSample := by
   apply safe_let_uniform .G
+  apply Filter.Eventually.of_forall
   intro y
   simp [Expr.substHead, Expr.substAt, Expr.shift, Expr.mapVars, uniform]
-  change DoesNotGetStuck (.mul (.real y) (uniform .E))
+  change DomainSafe (.mul (.real y) (uniform .E))
   let μ := uniformFiber (.sample .E) 0 1
   refine safe_sample (site := (.sample .E, .uniform)) (fiber := μ)
     (continuation := fun value => .mul (.real y) (.real value)) ?_ ?_ ?_
   · simp [uniform, reduce, Expr.isValue, realValue?, Action.wrap, Function.comp_def, μ]
   · simp [μ, uniformFiber, uniformMeasure, Real.volume_Icc]
-  · intro value
+  · apply Filter.Eventually.of_forall
+    intro value
     apply safe_next (next := .real (y * value))
     · simp [reduce, Expr.isValue, realValue?]
     exact safe_real _
@@ -171,12 +178,12 @@ example : Typed [] loop (.float .E) :=
 theorem loop_reduction : reduce loop = .next loop := by
   simp [loop, loopFunction, reduce, Expr.isValue, Expr.substTwo, Expr.substAt, Expr.shift, Expr.mapVars]
 
-example : DoesNotGetStuck loop := by
+example : DomainSafe loop := by
   intro fuel
   induction fuel with
   | zero => trivial
   | succ fuel ih =>
-      rw [DoesNotGetStuckAt, if_neg (by simp [loop, Expr.isValue]), loop_reduction]
+      rw [DomainSafeAt, if_neg (by simp [loop, Expr.isValue]), loop_reduction]
       exact ih
 
 example : traceAndOutputLaw loop = 0 := by
@@ -193,8 +200,9 @@ def affineMean : Expr :=
 theorem affineMean_typed : Typed [] affineMean (.float .E) :=
   .letE (uniform_typed .E) (.uniformMean (.bvar .head) (.add (.bvar .head) .real))
 
-theorem affineMean_safe : DoesNotGetStuck affineMean := by
+theorem affineMean_safe : DomainSafe affineMean := by
   apply safe_let_uniform .E
+  apply Filter.Eventually.of_forall
   intro x
   simp only [Expr.substHead, Expr.substAt, Expr.mapVars, Expr.shift]
   apply safe_next (next := .uniform .mean (.real x) (.real (x + 2)))
@@ -203,15 +211,14 @@ theorem affineMean_safe : DoesNotGetStuck affineMean := by
     (continuation := Expr.real)
   · simp [reduce, Expr.isValue, realValue?]
   · simp [uniformFiber]
-  · exact safe_real
+  · exact Filter.Eventually.of_forall safe_real
 
 example : Determinize.Proof.Traces.MeanOnTraces affineMean affineMean.determinize :=
   (Traces.meanOnTraces .E affineMean affineMean_typed affineMean_safe).2
 
 example : bigStepMeasure affineMean.determinize Set.univ = bigStepMeasure affineMean Set.univ :=
   Determinize.Theorems.outputMassPreservation affineMean affineMean_typed
-    ((Determinize.Proof.Paper.Typing.primitiveDomainSafe_iff_doesNotGetStuck affineMean_typed).mpr
-      affineMean_safe)
+    affineMean_safe
 
 def meanDenominator : Expr := .div (uniform .E) (.uniform .mean (.real 1) (.real 3))
 
@@ -242,10 +249,10 @@ example : traceAndOutputLawAt 1 (.uniform .mean (.real 1) (.real 3)) =
 example : traceAndOutputLawAt 1 (.uniform .mean (.real 3) (.real 1)) = 0 := by
   norm_num [traceAndOutputLawAt, reduce, Expr.isValue, realValue?, uniformFiber]
 
-example : ¬ PrimitiveDomainSafe (.uniform .mean (.real 3) (.real 1)) := by
+example : ¬ DomainSafe (.uniform .mean (.real 3) (.real 1)) := by
   intro safe
   have h := safe 1
-  norm_num [PrimitiveDomainSafeAt, reduce, Expr.isValue, realValue?, uniformFiber] at h
+  norm_num [DomainSafeAt, reduce, Expr.isValue, realValue?, uniformFiber] at h
 
 example : Typed [] (.uniform .mean (.real 3) (.real 1)) (.float .E) :=
   .uniformMean .real .real

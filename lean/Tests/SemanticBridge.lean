@@ -28,9 +28,8 @@ example :
   simp [stateExpr, stackExpr, environmentExpr, valueExpr, close, interpret, Expr.mapLiteral, Expr.mapVars]
 
 example :
-    reduce (stateExpr (.deliver (.number 0) [.right .div (.number 7)])) = .next (.real 0) := by
-  rw [(div_root 7 0).2]
-  simp [stateExpr, stackExpr, valueExpr]
+    reduce (stateExpr (.deliver (.number 0) [.right .div (.number 7)])) = .stuck := by
+  simp [stateExpr, stackExpr, frameExpr, binaryExpr, valueExpr, reduce, Expr.isValue, realValue?]
 
 example :
     bigStepMeasure (.letE (.gaussian (.sample .G) (.real 2) .reject) (.real 7)) = 0 := by
@@ -39,7 +38,7 @@ example :
     stack_reject_zero [.draw (.sample .G, .gaussian) [] [] [2], .letBody (.real 7) []]
 
 example :
-    DoesNotGetStuck (.letE (.gaussian (.sample .G) (.real 2) .reject) (.real 7)) := by
+    DomainSafe (.letE (.gaussian (.sample .G) (.real 2) .reject) (.real 7)) := by
   simpa [stackExpr, frameExpr, primitiveExpr, environmentExpr, close, interpret,
     Expr.mapLiteral, Expr.mapVars] using
     stack_reject_safe [.draw (.sample .G, .gaussian) [] [] [2], .letBody (.real 7) []]

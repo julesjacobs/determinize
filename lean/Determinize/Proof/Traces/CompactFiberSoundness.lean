@@ -208,14 +208,14 @@ theorem compact_exactDepth_fiberSound (depth : Nat) (history : Symbolic.SampleEn
             have nextTyped : WellTyped [] next (.float .E) :=
               SymbolicAction.wellTyped_next_iff.mp actionTyped
             have nextSafe : ∀ᵐ env ∂history.actualMeasure primitiveLaws,
-                PrimitiveDomainSafeAt depth (next.realize env) := by
+                DomainSafeAt depth (next.realize env) := by
               filter_upwards [sourceSafe] with env valid
               have reduction : reduce (expression.realize env) = .next (next.realize env) := by
                 rw [← symbolicReduce_realize typed env, actionEq]
                 rfl
               have nv : (expression.realize env).isValue ≠ true := by
                 simpa only [AffineExpr.realize_isValue] using value
-              simpa only [PrimitiveDomainSafeAt, Bool.eq_false_of_not_eq_true nv,
+              simpa only [DomainSafeAt, Bool.eq_false_of_not_eq_true nv,
                 Bool.false_eq_true, ↓reduceIte, reduction] using valid
             have sound := ih history next ⟨historySafe, nextTyped, nextSafe⟩
             rw [actualTraceLaw_next _ _ _ _ typed value actionEq,
@@ -283,7 +283,7 @@ theorem compact_exactDepth_fiberSound (depth : Nat) (history : Symbolic.SampleEn
                   retain_cons_some]
                 exact compactHistoryReplay_sampleG depth history historySafe expression typed
                   value fiber continuation actionEq op opEq v _)
-        | stuck => exact (SymbolicAction.not_wellTyped_stuck actionTyped).elim
+        | stuck => exact (safeConfigAt_not_stuck ⟨historySafe, typed, sourceSafe⟩ value actionEq).elim
 /-! ### The target replays itself -/
 
 theorem selfReplay_measurable (depth : Nat) (target : Expr) :
@@ -334,14 +334,14 @@ theorem target_selfReplay (depth : Nat) (history : Symbolic.SampleEnv primitiveL
         | next next =>
             have nextTyped := SymbolicAction.wellTyped_next_iff.mp actionTyped
             have nextSafe : ∀ᵐ env ∂history.actualMeasure primitiveLaws,
-                PrimitiveDomainSafeAt depth (next.realize env) := by
+                DomainSafeAt depth (next.realize env) := by
               filter_upwards [sourceSafe] with env valid
               have reduction : reduce (expression.realize env) = .next (next.realize env) := by
                 rw [← symbolicReduce_realize typed env, actionEq]
                 rfl
               have nv' : (expression.realize env).isValue ≠ true := by
                 simpa only [AffineExpr.realize_isValue] using value
-              simpa only [PrimitiveDomainSafeAt, Bool.eq_false_of_not_eq_true nv',
+              simpa only [DomainSafeAt, Bool.eq_false_of_not_eq_true nv',
                 Bool.false_eq_true, ↓reduceIte, reduction] using valid
             have reduction :
                 reduce (expression.realize (history.meanEnvironment primitiveLaws)).determinize =
@@ -422,7 +422,7 @@ theorem target_selfReplay (depth : Nat) (history : Symbolic.SampleEnv primitiveL
               ⟨historySafe, SymbolicAction.wellTyped_sampleG_iff.mp actionTyped r, valid⟩] with p hp
             simpa only [prepend, entry, Option.map_some, retain_cons_some,
               ogtAt_succ_sampleG depth nv reduction] using hp
-        | stuck => exact (SymbolicAction.not_wellTyped_stuck actionTyped).elim
+        | stuck => exact (safeConfigAt_not_stuck ⟨historySafe, typed, sourceSafe⟩ value actionEq).elim
 /-! ### Specialization to a concrete source -/
 
 theorem nilDomainSafe :
@@ -441,14 +441,14 @@ theorem compactHistoryReplay_nil (depth : Nat) (source : Expr) (tape : DrawTrace
     AffineExpr.realize_ofExpr]
 
 theorem safeConfig_of_source (source : Expr) (typed : Typed [] source (.float .E))
-    (sourceSafe : PrimitiveDomainSafe source)
+    (sourceSafe : DomainSafe source)
     (depth : Nat) : SafeConfigAt primitiveLaws depth .nil (AffineExpr.ofExpr source) := by
   refine ⟨trivial, AffineExpr.wellTyped_ofExpr_of_typed typed , ?_⟩
   rw [Symbolic.SampleEnv.actualMeasure, ae_dirac_eq]
   simpa only [Filter.eventually_pure, AffineExpr.realize_ofExpr] using sourceSafe depth
 
 theorem compact_exactDepth_source_fiberSound (source : Expr) (typed : Typed [] source (.float .E))
-    (sourceSafe : PrimitiveDomainSafe source)
+    (sourceSafe : DomainSafe source)
     (depth : Nat) :
     FiberSound (compactFiber depth .nil nilDomainSafe (AffineExpr.ofExpr source))
       (exactMeasure depth source) (exactMeasure depth source.determinize) := by
@@ -468,7 +468,7 @@ theorem compact_exactDepth_source_fiberSound (source : Expr) (typed : Typed [] s
   rwa [actualEq, targetEq] at sound
 
 theorem target_selfReplay_source (source : Expr) (typed : Typed [] source (.float .E))
-    (sourceSafe : PrimitiveDomainSafe source)
+    (sourceSafe : DomainSafe source)
     (depth : Nat) :
     ∀ᵐ p ∂exactMeasure depth source.determinize,
       outputGivenTraceAt depth source.determinize (retain p.1) = Measure.dirac p.2 := by

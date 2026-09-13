@@ -2514,7 +2514,7 @@ theorem reduce_div_eq
       if left.isValue then
         if right.isValue then
           match realValue? left, realValue? right with
-          | some x, some y => .next (.real (x / y))
+          | some x, some y => if y = 0 then .stuck else .next (.real (x / y))
           | _, _ => .stuck
         else (reduce right).wrap (.div left)
       else (reduce left).wrap (fun next => .div next right) := by
@@ -2538,7 +2538,9 @@ noncomputable def reduceDiv {α : Type*} [MeasurableSpace α]
             (fun parameter => (left parameter).realCoordinates.getD 0 0 /
               (right parameter).realCoordinates.getD 0 0)
             ((leftFamily.coordinate_measurable 0).div (rightFamily.coordinate_measurable 0))
-          apply congr (nextFamily resultFamily)
+          apply congr (.piecewise
+            (measurableSet_eq_fun (rightFamily.coordinate_measurable 0) (measurable_const (a := (0 : ℝ))))
+            stuck (nextFamily resultFamily))
           funext parameter
           have leftFixed := leftFamily.skeleton_eq parameter
           have rightFixed := rightFamily.skeleton_eq parameter
@@ -2555,7 +2557,7 @@ noncomputable def reduceDiv {α : Type*} [MeasurableSpace α]
             rw [rightActualEq] at actualRightValue <;>
             simp [rightActualEq, Expr.skeleton] at rightFixed;
             rw [reduce_div_eq, actualLeftValue, actualRightValue];
-            simp_all [realValue?, Expr.realCoordinates, List.getD]
+            simp_all [realValue?, Expr.realCoordinates, List.getD, Set.piecewise]
         all_goals
           apply congr stuck
           funext parameter

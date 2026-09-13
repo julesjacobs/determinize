@@ -1,4 +1,4 @@
-import Determinize.Spec.FiniteModel.Safety
+import Determinize.Spec.Semantics
 import Mathlib.Algebra.BigOperators.Ring.Finset
 
 namespace Determinize.Spec.FiniteModel
@@ -51,6 +51,6 @@ noncomputable def Model.expectedReward (model : Model) : ℝ :=
 /-- The model represents the entire output law of this exact core program, and
 accepted programs cannot get stuck. Rejection and divergence remain possible. -/
 def Model.Matches (model : Model) (program : Paper.Expr) : Prop :=
-  Paper.DoesNotGetStuck program ∧ model.outputMeasure = Paper.bigStepMeasure program
+  Paper.DomainSafe program ∧ model.outputMeasure = Paper.bigStepMeasure program
 
 end Determinize.Spec.FiniteModel

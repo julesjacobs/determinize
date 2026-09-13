@@ -15,8 +15,8 @@ theorem certified_alignment {input} (p : Certified input) :
 
 theorem certified_trace_conditional_law {input} (p : Certified input)
     (m : Affinity) (hTy : p.ty = .float m)
-    (safe : PrimitiveDomainSafe (interpret p.source)) :
-    PrimitiveDomainSafe (interpret p.source.determinize) ∧
+    (safe : DomainSafe (interpret p.source)) :
+    DomainSafe (interpret p.source.determinize) ∧
       traceLaw (interpret p.source.determinize) = traceLaw (interpret p.source) ∧
       ∀ᵐ trace ∂traceLaw (interpret p.source),
         Integrable id ((traceAndOutputLaw (interpret p.source)).condKernel trace) ∧
@@ -33,9 +33,9 @@ theorem certified_trace_conditional_law {input} (p : Certified input)
 
 theorem certified_expectation {input} (p : Certified input)
     (m : Affinity) (hTy : p.ty = .float m)
-    (safe : PrimitiveDomainSafe (interpret p.source))
+    (safe : DomainSafe (interpret p.source))
     (integrable : Integrable id (bigStepMeasure (interpret p.source))) :
-    PrimitiveDomainSafe (interpret p.source.determinize) ∧
+    DomainSafe (interpret p.source.determinize) ∧
       Integrable id (bigStepMeasure (interpret p.source.determinize)) ∧
       (∫ value : ℝ, value ∂bigStepMeasure (interpret p.source)) =
         ∫ value : ℝ, value ∂bigStepMeasure (interpret p.source.determinize) := by

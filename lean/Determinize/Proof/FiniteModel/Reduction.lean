@@ -103,10 +103,10 @@ theorem mul_root (a b : Rat) :
   refine ⟨rfl, ?_⟩
   simp [stateExpr, stackExpr, frameExpr, binaryExpr, valueExpr, reduce, Expr.isValue, realValue?]
 
-theorem div_root (a b : Rat) :
+theorem div_root (a b : Rat) (nonzero : b ≠ 0) :
     RootStep (.deliver (.number b) [.right .div (.number a)]) (.deliver (.number (a/b)) []) := by
-  refine ⟨rfl, ?_⟩
-  simp [stateExpr, stackExpr, frameExpr, binaryExpr, valueExpr, reduce, Expr.isValue, realValue?]
+  refine ⟨by simp [step, binary, nonzero, pure, bind, Except.bind, Except.pure], ?_⟩
+  simp [stateExpr, stackExpr, frameExpr, binaryExpr, valueExpr, reduce, Expr.isValue, realValue?, nonzero]
 
 theorem neg_root (a : Rat) :
     RootStep (.deliver (.number a) [.unary .neg]) (.deliver (.number (-a)) []) := by
