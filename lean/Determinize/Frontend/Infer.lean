@@ -19,6 +19,7 @@ private structure InferState where
   types : Array (Option UType) := #[]
   affinities : Array (Option Affinity) := #[]
   constraints : List (Nat × Nat) := []
+  relations : List (UType × UType) := []
 private abbrev M := StateT InferState (Except String)
 
 private def fresh : M UType := do
@@ -54,34 +55,62 @@ private def bindType (i : Nat) (t : UType) : M Unit := do
 private def leAffinity (a b : Nat) : M Unit :=
   modify fun s => {s with constraints := (a,b) :: s.constraints}
 
-private partial def freshAffinities (t : UType) : M UType := do
-  match ← resolve t with
-  | .float _ => float
-  | .prod a b => return .prod (← freshAffinities a) (← freshAffinities b)
-  | .sum a b => return .sum (← freshAffinities a) (← freshAffinities b)
-  | .list a => return .list (← freshAffinities a)
-  | .arr a b => return .arr (← freshAffinities a) (← freshAffinities b)
-  | t => return t
+private def relate (a b : UType) : M Unit :=
+  modify fun s => {s with relations := (a,b) :: s.relations}
 
-/-- Structural subtyping constraints, with contravariant function arguments. -/
-private partial def relate (a b : UType) : M Unit := do
+private partial def unifyShape (a b : UType) : M Unit := do
   let a ← resolve a; let b ← resolve b
   match a,b with
   | .var i, .var j => if i != j then bindType i b
-  | .var i, _ =>
-      let shape ← freshAffinities b
-      bindType i shape
-      relate shape b
-  | _, .var i =>
-      let shape ← freshAffinities a
-      bindType i shape
-      relate a shape
-  | .unit,.unit | .bool,.bool => pure ()
-  | .float a,.float b => leAffinity a b
-  | .prod a b,.prod c d | .sum a b,.sum c d => relate a c; relate b d
-  | .arr a b,.arr c d => relate c a; relate b d
-  | .list a,.list b => relate a b
-  | _,_ => throw s!"incompatible types {repr a} and {repr b}"
+  | .var i, _ => bindType i b
+  | _, .var i => bindType i a
+  | .unit,.unit | .bool,.bool | .float _,.float _ => pure ()
+  | .prod a b,.prod c d | .sum a b,.sum c d | .arr a b,.arr c d =>
+      unifyShape a c; unifyShape b d
+  | .list a,.list b => unifyShape a b
+  | _,_ => throw "incompatible type shapes"
+
+private def freshHead : UType → M UType
+  | .unit => pure .unit
+  | .bool => pure .bool
+  | .float _ => float
+  | .prod _ _ => return .prod (← fresh) (← fresh)
+  | .sum _ _ => return .sum (← fresh) (← fresh)
+  | .arr _ _ => return .arr (← fresh) (← fresh)
+  | .list _ => return .list (← fresh)
+  | .var _ => throw "expected type constructor"
+
+private partial def lowerRelations
+    (queue parked : List (UType × UType)) : M Unit := do
+  match queue with
+  | [] => pure ()
+  | (a,b) :: rest =>
+    let a ← resolve a; let b ← resolve b
+    match a,b with
+    | .var i, .var j =>
+      lowerRelations rest (if i == j then parked else (a,b) :: parked)
+    | .var i, _ =>
+      bindType i (← freshHead b)
+      lowerRelations ((a,b) :: (parked ++ rest)) []
+    | _, .var i =>
+      bindType i (← freshHead a)
+      lowerRelations ((a,b) :: (parked ++ rest)) []
+    | .unit,.unit | .bool,.bool => lowerRelations rest parked
+    | .float p,.float q => leAffinity p q; lowerRelations rest parked
+    | .prod a b,.prod c d | .sum a b,.sum c d =>
+      lowerRelations ((a,c) :: (b,d) :: rest) parked
+    | .arr a b,.arr c d => lowerRelations ((c,a) :: (b,d) :: rest) parked
+    | .list a,.list b => lowerRelations ((a,b) :: rest) parked
+    | _,_ => throw "incompatible types"
+
+private def solveRelations : M Unit := do
+  let s ← get
+  -- Weak unification ensures finite shapes before expansion (Traytel et al., APLAS 2011).
+  -- Its substitution must stay separate: equal shapes may have different affinities.
+  let _ ← (s.relations.forM fun (a,b) => unifyShape a b).run
+    {types := Array.replicate s.types.size none}
+  lowerRelations s.relations []
+
 private def require (d : Draft) (t : UType) : M Draft := do
   relate d.ty t
   return .cast d t
@@ -246,6 +275,7 @@ private partial def finish : Draft → M (Core × Certificate)
 def infer (input : Input) : Except String (Core × Certificate) := do
   let (result, _) ← (do
     let draft ← inferExpr [] input
+    solveRelations
     solve
     finish draft).run {}
   return result

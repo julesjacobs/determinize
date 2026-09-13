@@ -33,4 +33,19 @@ def inference : IO Unit := do
     assert ((sampleAffinities p.checked.source).contains .G && (sampleAffinities p.checked.source).contains .E)
       s!"structural subtyping changed requested affinities: {text}"
 
+  for sample in ["uniform(0,1)", "uniform[E](0,1)"] do
+    for calls in [s!"f x + f ({sample})", s!"f ({sample}) + f x"] do
+      let text := s!"let use = fun f => fun x => {calls} + x*x in use (fun z => z) (uniform[G](0,1))"
+      let p ← IO.ofExcept (compile text)
+      assert (p.checked.ty == .float .E && sampleAffinities p.checked.source == [.E,.G])
+        s!"subtype constraints lost independent affinities: {text}"
+
+  for text in [
+      "fun x => let f = fun y => x :: y in f x",
+      "fun x => let f = fun y => x :: y :: [] in f (x :: [])",
+      "fun f => let g = fun x => f x in g f",
+      "fun x => let f = fun y => x :: y :: [] in let a = f true in f 0"] do
+    let input ← IO.ofExcept (elaborate (← IO.ofExcept (parse text)))
+    assert (!(infer input).isOk) s!"incompatible finite shapes accepted: {text}"
+
 end Determinize.Tests
