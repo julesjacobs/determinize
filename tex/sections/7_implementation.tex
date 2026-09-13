@@ -7,29 +7,3 @@
 \clearpage
 
 \subsection{Finite-state exact computation}
-Exact exploration uses rational arithmetic and merges equal machine states.
-Bernoulli and discrete samples have finite support; all primitive means are
-rational on rational arguments. Continuous samples must first be eliminated or
-replaced by a finite distribution. Such discretization changes the input model;
-we do not prove an approximation bound for it.
-
-When exploration completes, the resulting finite Markov chain carries a Lean
-proof that its output measure equals $\law e$. The graph may contain cycles and
-nonterminating executions. Terminal reachability identifies a closed region from
-which no return or rejection is possible. Setting its output moments to zero
-leaves the output measure unchanged. For each remaining transient state, a
-positive-probability edge of decreasing rank witnesses a path to the boundary.
-These paths suffice to prove uniqueness of the value equations.
-
-Our rational solver proves the equations by Gaussian elimination. Alternatively,
-Storm computes exact values for every state, and Lean checks those values against
-the same equations and boundary conditions. Both routes certify return probability,
-the first two output moments, and hence conditional mean and variance when return
-probability is positive. The finite-model analysis also distinguishes rejection
-from divergence and proves that their probabilities, together with return
-probability, sum to one.
-
-The theorem names the resolved core program. Parsing and floating-point sampling
-remain unverified. A certificate for $\operatorname{Determinize}(e)$ certifies that
-program's output law; transferring its moments to $e$ still requires the premises
-of the soundness theorems.
