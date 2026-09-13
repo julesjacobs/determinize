@@ -1,3 +1,128 @@
 % !TeX root = ../main.tex
 \section{Related Work}
 \label{sec:related-work}
+
+\paragraph{Expectation-preserving transformations.}
+\begin{itemize}
+    \item \textbf{Hakaru}~\cite{zinkov2017composing} compiles expectation queries
+    into symbolic integrals, an alternative to our direct replacement of draws by primitive means.
+    \item \textbf{DP-Finder}~\cite{bichsel2018dpfinder} reports manual
+    expectation-preserving rewrites that improve sampling in privacy testing,
+    motivating automation such as our type inference.
+    \item \textbf{Expectation programming}~\cite{reichelt2022expectation}
+    adapts inference to the particular expectation being estimated, sharing our
+    goal of reducing the sampling needed for a given output mean.
+    \item \textbf{Continuation-passing expected-cost analysis}~\cite{avanzini2021continuation}
+    translates higher-order recursive probabilistic programs into deterministic
+    expectation calculations, a precedent for compiling away randomness.
+\end{itemize}
+
+\paragraph{Type-directed inference and estimator construction.}
+\begin{itemize}
+    \item \textbf{GradInf}~\cite{arya2026gradinf} uses information-flow types
+    to separate primal and residual randomness when constructing gradient
+    estimators, closely related to the G/E separation behind our trace theorem.
+    \item \textbf{MAPPL}~\cite{li2024mappl} uses information-flow types to
+    compile programs with bounded recursion for variable elimination, another
+    use of static dependence information to remove sampling.
+    \item \textbf{Conditional Independence by Typing}~\cite{gorinova2022conditional}
+    derives conditional independence from types to eliminate discrete parameters,
+    providing a type-based marginalization criterion to compare with our arithmetic restrictions.
+    \item \textbf{ADEV}~\cite{lew2023adev} transforms probabilistic programs
+    into unbiased gradient estimators, sharing our use of logical relations to
+    prove expectation properties of transformed programs.
+    \item \textbf{Coercive structural subtyping}~\cite{traytel2011subtyping}
+    uses weak unification to solve structural subtype constraints, the approach
+    adopted by our E/G inference.
+\end{itemize}
+
+\paragraph{Conditional Monte Carlo and Rao--Blackwellization.}
+\begin{itemize}
+    \item \textbf{Conditional Monte Carlo}~\cite{owen2013montecarlo}
+    replaces an output by its conditional expectation to reduce variance,
+    the statistical operation implemented by our transformation.
+    \item \textbf{Blackwell's theorem}~\cite{blackwell1947conditional}
+    improves estimators by conditioning on sufficient statistics, an earlier
+    application of the conditional-expectation principle used in our variance proof.
+    \item \textbf{Rao--Blackwellisation of sampling schemes}~\cite{casella1996rao}
+    integrates out auxiliary randomness in accept--reject and Metropolis sampling,
+    reducing estimator variance as our elimination of E draws does.
+\end{itemize}
+
+\paragraph{Analytic elimination and hybrid inference.}
+\begin{itemize}
+    \item \textbf{Delayed sampling}~\cite{murray2018delayed} postpones draws
+    and exploits conjugacy and affine relationships, pursuing our variance-reduction
+    goal through runtime manipulation of distributions.
+    \item \textbf{Statically and dynamically delayed sampling}~\cite{caylak2024delayed}
+    performs analytic elimination at compile time where possible and provides a
+    typed dynamic alternative, a predecessor to our static elimination of draws.
+    \item \textbf{Semi-symbolic inference}~\cite{atkinson2022semisymbolic}
+    combines symbolic distribution operations with particle filtering and guarantees
+    exact inference for closed distribution families, an alternative criterion
+    for deciding which randomness can be eliminated analytically.
+    \item \textbf{Inference plans}~\cite{cheng2025plans} specify which variables
+    to treat symbolically or sample and statically check those choices,
+    paralleling the checked partition of randomness in our annotations.
+\end{itemize}
+
+\paragraph{Moment analysis and probabilistic slicing.}
+\begin{itemize}
+    \item \textbf{Specification-based slicing}~\cite{navarro2022slicing}
+    deletes instructions while preserving supplied expectation specifications,
+    relating to our choice of expectation as the property a transformation preserves.
+    \item \textbf{Polar}~\cite{moosbrugger2022moment} computes exact higher
+    moments for classes of probabilistic loops using moment recurrences,
+    offering a way to quantify variance without finite-state exploration.
+    \item \textbf{Central moment analysis}~\cite{wang2021central} derives
+    bounds on variance and higher central moments of probabilistic cost
+    accumulators with recursive procedures, complementing our transformation with moment analysis.
+\end{itemize}
+
+\paragraph{Exact symbolic inference and generating functions.}
+\begin{itemize}
+    \item \textbf{$\lambda$PSI}~\cite{gehr2020lpsi} performs exact symbolic
+    inference for higher-order programs with discrete and continuous distributions,
+    an alternative to our concrete finite-state computation.
+    \item \textbf{SPPL}~\cite{saad2021sppl} compiles restricted probabilistic
+    programs into sum-product expressions for exact conditioning and event probabilities,
+    offering distribution-level inference alongside our expectation-preserving transformation.
+    \item \textbf{Genfer}~\cite{zaiser2023genfer} uses generating functions
+    and automatic differentiation for exact inference on discrete models with
+    potentially infinite support, going beyond the finite-state requirement of our solver.
+    \item \textbf{Prodigy}~\cite{klinkenberg2024loopy} uses generating functions
+    for exact inference with loops and observations, providing an infinite-state
+    symbolic alternative to our finite-state solver.
+    \item \textbf{Geni}~\cite{li2025generating} compiles functional probabilistic
+    programs into generating functions with a correctness proof, another way
+    to obtain exact computations by transforming programs.
+\end{itemize}
+
+\paragraph{Semantics and conditioning.}
+\begin{itemize}
+    \item \textbf{Kozen's probabilistic semantics}~\cite{kozen1981semantics}
+    relates random-input execution to operators on measures and represents
+    nontermination by missing mass, as our output measures do.
+    \item \textbf{A lambda-calculus foundation for universal probabilistic
+    programming}~\cite{borgstrom2016lambda} relates sampling-based and
+    distribution-based operational semantics for higher-order continuous programs,
+    closely matching the language features covered by our output semantics.
+    \item \textbf{Symbolic disintegration}~\cite{shan2017disintegration}
+    constructs conditional distributions even for observations of probability zero,
+    addressing the conditioning problem that also arises for our continuous G traces.
+\end{itemize}
+
+\begin{samepage}
+\paragraph{Verified implementation and finite-state computation.}
+\begin{itemize}
+    \item \textbf{Zar}~\cite{bagnall2023zar} verifies compilation of discrete
+    programs with loops and conditioning into random-bit samplers in Coq,
+    covering sampler correctness beyond our verified transformation and exact solver.
+    \item \textbf{Fixed-point certificates for MDPs}~\cite{chatterjee2025certificates}
+    come with an Isabelle/HOL-verified checker for Storm-generated reachability
+    and expected-reward certificates, a precedent for our checked external-solver route.
+    \item \textbf{Storm}~\cite{hensel2022storm} supports probabilistic model
+    checking with exact arithmetic and produces the finite-model value vectors
+    checked by our Lean certificate checker.
+\end{itemize}
+\end{samepage}
