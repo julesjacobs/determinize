@@ -14,7 +14,7 @@ structure Row where
   edges : Array Edge
 deriving Repr
 
-/-- Complete exploration data awaiting the independent model checker. -/
+/-- Finite graph data shared by verified construction and external replay. -/
 structure Candidate where
   initial : Nat := 0
   states : Array State

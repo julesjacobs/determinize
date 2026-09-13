@@ -65,7 +65,7 @@ theorem replay_machineOutput (candidate : Candidate) {source : Checking.Core} {s
       | error failure => simp [Candidate.RowReplays, action] at row
       | ok result =>
           cases result <;> simp only [Candidate.RowReplays, action] at row
-          all_goals simp_all [Model.outputWithin, Candidate.toModel, machineOutput]
+          all_goals simp_all [Model.outputWithin, machineOutput]
   | succ fuel ih =>
       have row := valid.replays i
       cases action : step (candidate.state i) with
@@ -74,10 +74,10 @@ theorem replay_machineOutput (candidate : Candidate) {source : Checking.Core} {s
           cases result with
           | returned reward =>
               simp only [Candidate.RowReplays, action] at row
-              simp [Model.outputWithin, Candidate.toModel, row, machineOutput, action]
+              simp [Model.outputWithin, row, machineOutput, action]
           | rejected =>
               simp only [Candidate.RowReplays, action] at row
-              simp [Model.outputWithin, Candidate.toModel, row, machineOutput, action]
+              simp [Model.outputWithin, row, machineOutput, action]
           | next evidence successors =>
               simp only [Candidate.RowReplays, action] at row
               rw [Model.outputWithin.eq_2 (candidate.toModel valid) i fuel]

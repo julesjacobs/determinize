@@ -104,7 +104,7 @@ instance (candidate : Candidate) (source : Core) (subject : Subject) :
       fun ⟨a, b, c, d, e, f⟩ => ⟨a, b, c, d, e, f⟩⟩
 
 /-- This constructs a finite rational model, but supplies no `Matches` proof. -/
-def Candidate.toModel (candidate : Candidate) {source : Core} {subject : Subject}
+abbrev Candidate.toModel (candidate : Candidate) {source : Core} {subject : Subject}
     (valid : candidate.ReplayValid source subject) : Model where
   size := candidate.states.size
   initial := ⟨candidate.initial, valid.initial_lt⟩

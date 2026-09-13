@@ -89,6 +89,33 @@ def TerminationCertificate.statistics (model : Model) (certificate : Termination
   let r := certificate.rejection model.initial
   ⟨p, r, 1-p-r⟩
 
+private def equationAt (model : Model) (values : Fin model.size → Rat)
+    (state : Fin model.size) : Prop :=
+  values state = match model.kind state with
+    | .returned r => r | .rejected => 0
+    | .transient => ∑ next, model.transition state next * values next
+
+private instance (model : Model) (values : Fin model.size → Rat) (state : Fin model.size) :
+    Decidable (equationAt model values state) := inferInstanceAs (Decidable (_ = _))
+
+def TerminationCertificate.StateValid (model : Model) (certificate : TerminationCertificate model)
+    (state : Fin model.size) : Prop :=
+  (certificate.output.dead state = true → model.kind state = .transient ∧
+    ∀ next, 0 < model.transition state next → certificate.output.dead next = true) ∧
+  ((cut model certificate.output.dead).kind state = .transient →
+    0 < model.transition state (certificate.output.next state) ∧
+      certificate.output.rank (certificate.output.next state) < certificate.output.rank state) ∧
+  (∀ moment, equationAt (certificate.output.model model moment) (certificate.output.values moment) state) ∧
+    equationAt (rejectionQuery model certificate.output.dead) certificate.rejection state
+
+instance (model : Model) (certificate : TerminationCertificate model) (state : Fin model.size) :
+    Decidable (certificate.StateValid model state) := inferInstanceAs (Decidable (_ ∧ _ ∧ _ ∧ _))
+
+theorem terminationStates_valid (model : Model) (certificate : TerminationCertificate model)
+    (states : ∀ state, certificate.StateValid model state) : certificate.Valid model := by
+  exact ⟨⟨fun state => (states state).1, fun state => (states state).2.1,
+    fun moment state => (states state).2.2.1 moment⟩, fun state => (states state).2.2.2⟩
+
 theorem terminationCertificate_sound (model : Model) (certificate : TerminationCertificate model)
     (valid : certificate.Valid model) : (certificate.statistics model).Matches model := by
   have output := (momentCertificate_sound model certificate.output valid.1).1

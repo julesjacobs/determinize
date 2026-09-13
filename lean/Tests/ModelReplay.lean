@@ -14,6 +14,15 @@ private def candidateFor (text : String) (subject : Subject := .source) : IO (Co
 private def accepted (source : Core) (candidate : Candidate) (subject : Subject := .source) : Bool :=
   (checkModel source subject candidate).isSome
 
+private def indexedAccepted (source : Core) (candidate : Candidate) (subject : Subject := .source) : Bool :=
+  let keys := candidate.states.map stateFingerprint
+  let indices := candidate.states.map fun state => match step state with
+    | .ok (.next _ outcomes) => (outcomes.map fun (outcome : Rat × State) =>
+        (candidate.states.toList.findIdx? fun s => decide (s = outcome.2)).getD 0).toArray
+    | _ => #[]
+  decide (candidate.IndexedReplayValid source subject
+    (fun i => keys[i.val]!) (fun i k => (indices[i.val]!)[k]!))
+
 private def setRow (candidate : Candidate) (i : Nat) (row : Row) : Candidate :=
   {candidate with rows := candidate.rows.set! i row}
 
@@ -30,6 +39,7 @@ def modelReplay : IO Unit := do
       "let fact = rec f n => if n < 1 then 1 else n * f (n-1) in fact 4"] do
     let (source, candidate) ← candidateFor text
     assert (accepted source candidate) s!"machine replay: {text}"
+    assert (indexedAccepted source candidate) s!"indexed machine replay: {text}"
   let divisionByZero : Candidate := ⟨0, #[
     .eval (.div (.real 7) (.real 0)) [] [],
     .eval (.real 7) [] [.left .div (.real 0) []],
@@ -69,6 +79,12 @@ def modelReplay : IO Unit := do
       states := oneExtra.states.push .rejected
       rows := oneExtra.rows.push ⟨.rejected,#[⟨extra+1,1⟩]⟩ }
   assert (!accepted duplicate) "duplicate unreachable states"
+  for candidate in [coin, oneExtra, duplicate,
+      {coin with initial := 1}, {coin with rows := coin.rows.pop},
+      {coin with states := coin.states.pop, rows := coin.rows.pop}] do
+    assert (indexedAccepted coinSource candidate == accepted candidate) "indexed replay agrees with full replay"
+  assert (!indexedAccepted targetSource target .source) "indexed wrong subject"
+  assert (!indexedAccepted (.real 7) target .determinized) "indexed wrong source"
   let mut sampled := false
   let mut terminal := false
   for i in [:coin.rows.size] do
@@ -84,6 +100,7 @@ def modelReplay : IO Unit := do
           {row with edges := #[⟨coin.states.size,1⟩]},
           {row with kind := .returned 99}] do
         assert (!accepted (setRow coin i replacement)) "mutated sampled row"
+        assert (!indexedAccepted coinSource (setRow coin i replacement)) "indexed mutated sampled row"
     match row.kind with
     | .returned reward =>
         terminal := true
@@ -106,6 +123,8 @@ def modelReplay : IO Unit := do
     #[⟨.rejected,#[⟨0,1⟩]⟩]⟩
   assert (!(checkModel (.bvar 0) .source broken).isSome) "stuck machine cannot be labeled rejected"
 
+#print axioms indexedStates_valid
+#print axioms indexedReplay_valid
 #print axioms Proof.FiniteModel.replay_matches
 #print axioms checkModel
 #print axioms replay_reachable_covered

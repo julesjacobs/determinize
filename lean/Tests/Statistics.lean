@@ -58,6 +58,7 @@ def statistics : IO Unit := do
   assert (match Finite.solveStatistics mixedOutcomes {maxStates := 4} with
     | .error _ => true | _ => false) "statistics state limit"
 
+#print axioms Finite.sparseResults_valid
 #print axioms massBalance
 #print axioms terminationCertificate_sound
 #print axioms Checking.checked_termination

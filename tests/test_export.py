@@ -123,6 +123,22 @@ def checkRoundTrip : IO Unit := do
                 self.assertIn("error", rejected.stdout + rejected.stderr)
 
 
+    def test_indexed_witness_tampering(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            result, output = self.run_export(Path(tmp), "bernoulli[G](0.5)", "--subject", "source")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            certificate = Path(str(output) + ".replay.lean")
+            original = certificate.read_text()
+            for old, new in [("(fun i => stateKeys i)", "(fun _ => 0)"),
+                             ("(fun i k => successorIndices[i][k]!)", "(fun _ _ => 0)")]:
+                with self.subTest(witness=old):
+                    changed = original.replace(old, new)
+                    self.assertNotEqual(changed, original)
+                    certificate.write_text(changed)
+                    checked = subprocess.run(["lake", "env", "lean", str(certificate)],
+                                             cwd=LEAN, text=True, capture_output=True, timeout=120)
+                    self.assertNotEqual(checked.returncode, 0)
+
     def test_no_export_on_failure(self):
         for program, options, message in [
             ("3", ["--max-states", "0"], "Incomplete"),

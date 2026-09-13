@@ -1,4 +1,5 @@
 import Determinize.Proof.FiniteModel.Soundness
+import Determinize.Proof.FiniteModel.IndexedReplay
 
 namespace Determinize.Checking
 open Spec.FiniteModel Determinize.Finite

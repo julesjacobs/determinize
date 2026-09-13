@@ -1,5 +1,5 @@
 import Determinize.Checking.Result
-import Determinize.Proof.FiniteModel.Termination
+import Determinize.Proof.FiniteModel.SparseQueries
 
 namespace Determinize.Checking
 open Spec.FiniteModel Proof.FiniteModel MeasureTheory ProbabilityTheory
