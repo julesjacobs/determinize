@@ -1,3 +1,4 @@
+import Determinize.Finite.Explore
 import Determinize.Frontend.Certificate
 import Determinize.Runtime.Eval
 import Determinize.Finite.Export

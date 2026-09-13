@@ -1,4 +1,4 @@
-import Determinize.Finite.Explore
+import Determinize.Finite.Graph
 import Determinize.Proof.FiniteModel.Equality
 import Determinize.Proof.FiniteModel.Substitution
 

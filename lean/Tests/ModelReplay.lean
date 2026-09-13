@@ -1,3 +1,4 @@
+import Determinize.Finite.Explore
 import Tests.Parsing
 import Determinize.Checking.FiniteModel
 
