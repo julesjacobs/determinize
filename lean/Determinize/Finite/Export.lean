@@ -141,13 +141,17 @@ def write (outputPath : System.FilePath) (source : Checking.Core) (subject : Sub
 def resultCertificateText (source : Checking.Core) (subject : Subject) (candidate : Candidate)
     (model : Model) (certificate : Proof.FiniteModel.MomentCertificate model) : String :=
   let vector := fun moment => "#[" ++ String.intercalate ", " ((List.ofFn (certificate.values moment)).map leanRat) ++ "]"
+  let ranks := "#[" ++ String.intercalate ", " ((List.ofFn certificate.rank).map toString) ++ "]"
+  let next := "#[" ++ String.intercalate ", " ((List.ofFn certificate.next).map fun j => s!"⟨{j.val}, by decide +kernel⟩") ++ "]"
   let dead := "#[" ++ String.intercalate ", " ((List.ofFn certificate.dead).map toString) ++ "]"
   (replayCertificateText source subject candidate).replace
     "import Determinize.Checking.FiniteModel" "import Determinize.Checking.Statistics" ++
   "\nopen Determinize.Proof.FiniteModel\n" ++
+  s!"\ndef nextStates : Vector (Fin model.size) model.size := ⟨{next}, by rfl⟩\n" ++
   "\ndef result : MomentCertificate model where\n" ++
   s!"  dead := fun i => {dead}[i.val]!\n" ++
-  s!"  horizon := {certificate.horizon}\n" ++
+  s!"  rank := fun i => {ranks}[i.val]!\n" ++
+  "  next := fun i => nextStates[i]\n" ++
   "  values := fun moment i => (match moment with\n" ++
   s!"    | .mass => {vector .mass}\n    | .first => {vector .first}\n    | .second => {vector .second})[i.val]!\n" ++
   "\ntheorem resultAccepted : Determinize.Checking.checkStatistics model result = true := by\n" ++
@@ -174,8 +178,7 @@ def writeResult (outputPath : System.FilePath) (source : Checking.Core) (subject
   let certified ← IO.ofExcept (solveStatistics model limits)
   let certificate := certified.val
   let statistics := certificate.statistics model
-  let survival := Checking.survivalVector (Proof.FiniteModel.cut model certificate.dead) certificate.horizon
-  let escape := 1 - survival.toArray.foldl max 0
+  let rankBound := (List.ofFn certificate.rank).foldl max 0
   let optional := fun value : Option Rat => match value with
     | none => Lean.Json.null | some q => Lean.toJson (rational q)
   let metadata := Lean.Json.mkObj [
@@ -186,8 +189,7 @@ def writeResult (outputPath : System.FilePath) (source : Checking.Core) (subject
     ("conditional_variance", optional statistics.conditionalVariance),
     ("subject", Lean.toJson (if subject == .source then "source" else "determinized")),
     ("states", Lean.toJson model.size),
-    ("horizon", Lean.toJson certificate.horizon),
-    ("escape", Lean.toJson (rational escape))]
+    ("rank_bound", Lean.toJson rankBound)]
   write outputPath source subject candidate valid
   IO.FS.writeFile (outputPath.toString ++ ".result.lean")
     (resultCertificateText source subject candidate model certificate)

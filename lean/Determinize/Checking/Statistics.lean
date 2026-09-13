@@ -7,12 +7,12 @@ open Spec.FiniteModel Proof.FiniteModel MeasureTheory ProbabilityTheory
 /-- Check external values against the original model, including the divergent boundary. -/
 def checkStatistics (model : Model) (certificate : MomentCertificate model) : Bool :=
   decide (ClosedDivergence model certificate.dead) &&
-    decide (∀ state : Fin model.size, (survivalVector (cut model certificate.dead) certificate.horizon)[state] < 1) &&
+    decide ((⟨certificate.rank, certificate.next⟩ : Paths (cut model certificate.dead)).Valid (cut model certificate.dead)) &&
     decide (∀ moment, (certificate.result model moment).Equations (certificate.model model moment))
 
 theorem checkStatistics_valid (model : Model) (certificate : MomentCertificate model) :
     checkStatistics model certificate = true ↔ certificate.Valid model := by
-  simp only [checkStatistics, Bool.and_eq_true, decide_eq_true_eq, survivalVector_correct,
+  simp only [checkStatistics, Bool.and_eq_true, decide_eq_true_eq,
     MomentCertificate.Valid, and_assoc]
 
 theorem checked_statistics {source : Core} {subject : Subject}

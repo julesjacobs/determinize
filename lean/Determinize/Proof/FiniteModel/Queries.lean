@@ -1,4 +1,5 @@
 import Determinize.Proof.FiniteModel.Boundary
+import Determinize.Proof.FiniteModel.Paths
 
 namespace Determinize.Proof.FiniteModel
 open Spec.FiniteModel MeasureTheory
@@ -12,14 +13,15 @@ abbrev rewards (model : Model) (f : Rat → Rat) : Model :=
 theorem query_sound (model : Model) (f : Rat → Rat) (g : ℝ → ℝ)
     (agree : ∀ r : Rat, g (r : ℝ) = (f r : ℝ))
     (certificate : ResultCertificate (rewards model f))
-    (valid : certificate.Valid (rewards model f)) :
+    (equations : certificate.Equations (rewards model f))
+    (paths : Paths (rewards model f)) (valid : paths.Valid (rewards model f)) :
     (∫ x, g x ∂model.outputMeasure) = (certificate.values model.initial : ℝ) := by
-  have unique := homogeneous_unique (rewards model f) certificate valid.2
+  have unique := paths_unique (rewards model f) paths valid
     (fun state => (∫ x, g x ∂outputAt model state) - (certificate.values state : ℝ))
   have zero := unique (by
     intro state
     rw [outputAt_equations model state g]
-    have eqs := valid.1 state
+    have eqs := equations state
     cases h : model.kind state with
     | returned reward => simp [rewards, h] at eqs; simp [rewards, h, agree, eqs]
     | rejected => simp [rewards, h] at eqs; simp [rewards, h, eqs]

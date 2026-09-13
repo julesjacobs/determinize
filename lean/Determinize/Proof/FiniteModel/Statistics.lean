@@ -24,27 +24,21 @@ def Moment.real : Moment → ℝ → ℝ
 theorem Moment.agree (moment : Moment) (q : Rat) : moment.real (q : ℝ) = (moment.rational q : ℝ) := by
   cases moment <;> simp [Moment.real, Moment.rational]
 
-theorem survival_rewards (model : Model) (f : Rat → Rat) (n : Nat) (state : Fin model.size) :
-    (rewards model f).survivalWithin n state = model.survivalWithin n state := by
-  induction n generalizing state with
-  | zero => cases h : model.kind state <;> simp [Model.survivalWithin, h]
-  | succ n ih =>
-      cases h : model.kind state <;> simp [Model.survivalWithin, h, ih]
-
 structure MomentCertificate (model : Model) where
   dead : Fin model.size → Bool
-  horizon : Nat
+  rank : Fin model.size → Nat
+  next : Fin model.size → Fin model.size
   values : Moment → Fin model.size → Rat
 
 abbrev MomentCertificate.model (model : Model) (certificate : MomentCertificate model) (moment : Moment) :=
   rewards (cut model certificate.dead) moment.rational
 
 def MomentCertificate.result (model : Model) (certificate : MomentCertificate model) (moment : Moment) :
-    ResultCertificate (certificate.model model moment) := ⟨certificate.values moment, certificate.horizon⟩
+    ResultCertificate (certificate.model model moment) := ⟨certificate.values moment, 0⟩
 
 def MomentCertificate.Valid (model : Model) (certificate : MomentCertificate model) : Prop :=
   ClosedDivergence model certificate.dead ∧
-    (∀ state, (cut model certificate.dead).survivalWithin certificate.horizon state < 1) ∧
+    (⟨certificate.rank, certificate.next⟩ : Paths (cut model certificate.dead)).Valid (cut model certificate.dead) ∧
     ∀ moment, (certificate.result model moment).Equations (certificate.model model moment)
 
 instance (model : Model) (certificate : MomentCertificate model) : Decidable (certificate.Valid model) :=
@@ -59,10 +53,10 @@ theorem momentCertificate_integral (model : Model) (certificate : MomentCertific
     (∫ x, moment.real x ∂model.outputMeasure) = (certificate.values moment model.initial : ℝ) := by
   rw [← cut_outputMeasure model certificate.dead valid.1]
   apply query_sound (cut model certificate.dead) moment.rational moment.real moment.agree
-    (certificate.result model moment)
-  refine ⟨valid.2.2 moment, ?_⟩
-  intro state
-  simpa [ResultCertificate.Absorption, MomentCertificate.result, survival_rewards] using valid.2.1 state
+    (certificate.result model moment) (valid.2.2 moment) ⟨certificate.rank, certificate.next⟩
+  intro state transient
+  apply valid.2.1 state
+  cases h : (cut model certificate.dead).kind state <;> simp_all
 
 theorem momentCertificate_sound (model : Model) (certificate : MomentCertificate model)
     (valid : certificate.Valid model) : (certificate.statistics model).Matches model.outputMeasure := by

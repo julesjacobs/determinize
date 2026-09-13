@@ -51,8 +51,7 @@ class ResultTests(unittest.TestCase):
                 self.assertEqual(Fraction(data["answer"]), expected)
                 self.assertEqual(solve_export(prefix), expected)
                 self.assertEqual(data["subject"], subject)
-                self.assertGreater(data["horizon"], 0)
-                self.assertGreater(Fraction(data["escape"]), 0)
+                self.assertGreaterEqual(data["rank_bound"], 0)
 
     def test_kernel_results_and_tampering(self):
         for program, subject, _ in CASES[:8]:
@@ -70,9 +69,9 @@ class ResultTests(unittest.TestCase):
                 end = text.index("\n\n", start)
                 certificate.write_text(text[:start] + "  values := fun _ _ => 12345" + text[end:])
                 self.assertNotEqual(kernel(certificate).returncode, 0)
-                start = text.index("  horizon :=", text.index("def result :"))
+                start = text.index("  rank :=", text.index("def result :"))
                 end = text.index("\n", start)
-                certificate.write_text(text[:start] + "  horizon := 0" + text[end:])
+                certificate.write_text(text[:start] + "  rank := fun _ => 0" + text[end:])
                 self.assertNotEqual(kernel(certificate).returncode, 0)
 
     def test_divergence_and_conditional_moments(self):

@@ -60,6 +60,7 @@ theorem cut_outputMeasure (model : Model) (dead : Fin model.size → Bool)
 structure Boundary (model : Model) where
   dead : Fin model.size → Bool
   closed : ClosedDivergence model dead
+  rank : Fin model.size → Nat
 
 def reachStep (model : Model) (reachable : Vector Bool model.size) : Vector Bool model.size :=
   Vector.ofFn fun state => decide (model.kind state ≠ .transient ∨
@@ -77,16 +78,20 @@ theorem stable_closed (model : Model) (reachable : Vector Bool model.size)
   have hn := h.2 next positive
   simpa using hn
 
-private def findBoundary (model : Model) : Nat → Vector Bool model.size → Option (Boundary model)
-  | 0, _ => none
-  | fuel+1, reachable =>
+private def findBoundary (model : Model) : Nat → Nat → Vector Bool model.size →
+    Vector Nat model.size → Option (Boundary model)
+  | 0, _, _, _ => none
+  | fuel+1, level, reachable, rank =>
     let next := reachStep model reachable
     if stable : ∀ state : Fin model.size, next[state] = reachable[state] then
-      some ⟨fun state => !reachable[state], stable_closed model reachable stable⟩
-    else findBoundary model fuel next
+      some ⟨fun state => !reachable[state], stable_closed model reachable stable, fun state => rank[state]⟩
+    else
+      let ranks := Vector.ofFn fun state => if reachable[state] then rank[state] else if next[state] then level else 0
+      findBoundary model fuel (level+1) next ranks
 
 def analyze (model : Model) : Except String (Boundary model) :=
-  match findBoundary model (model.size+2) (Vector.replicate model.size false) with
+  match findBoundary model (model.size+2) 0 (Vector.replicate model.size false)
+      (Vector.replicate model.size 0) with
   | some boundary => .ok boundary
   | none => .error "terminal reachability did not stabilize"
 

@@ -24,7 +24,7 @@ example : mixedStatistics.Matches mixedOutcomes.outputMeasure :=
   momentCertificate_sound mixedOutcomes mixedResult.val mixedResult.property
 
 example : Checking.checkStatistics mixedOutcomes mixedResult.val = true := by decide +kernel
-example : Checking.checkStatistics mixedOutcomes {mixedResult.val with horizon := 0} = false := by decide +kernel
+example : Checking.checkStatistics mixedOutcomes {mixedResult.val with rank := fun _ => 0} = false := by decide +kernel
 example : Checking.checkStatistics mixedOutcomes {mixedResult.val with dead := fun _ => true} = false := by decide +kernel
 example : Checking.checkStatistics mixedOutcomes {mixedResult.val with dead := fun _ => false} = false := by decide +kernel
 example : Checking.checkStatistics mixedOutcomes
@@ -35,7 +35,17 @@ example : (divergentResult.val.statistics FiniteModel.loop).conditionalMean = no
 example : (divergentResult.val.statistics FiniteModel.loop).conditionalVariance = none := by decide +kernel
 example : (divergentResult.val.statistics FiniteModel.loop) = ⟨0,0,0⟩ := by decide +kernel
 
+private def chain : Model where
+  size := 65
+  initial := 0
+  kind := fun i => if i.val = 64 then .returned 0 else .transient
+  transition := fun i j => if j = (⟨min (i.val+1) 64, Nat.lt_succ_of_le (Nat.min_le_right _ _)⟩ : Fin 65) then 1 else 0
+  nonnegative := by intro i j; split <;> norm_num
+  normalized := by intro i; simp
+
 def statistics : IO Unit := do
+  let paths ← IO.ofExcept (findPaths chain (fun i => 64 - i.val))
+  assert ((paths.val.next ⟨0, by decide⟩).val == 1) "path construction over a long chain"
   let result ← IO.ofExcept (Finite.solveStatistics mixedOutcomes)
   assert (result.val.statistics mixedOutcomes == ⟨1/2,1/2,5⟩) "mixed return/rejection/divergence moments"
   assert (match Finite.solveStatistics mixedOutcomes {maxStates := 4} with
