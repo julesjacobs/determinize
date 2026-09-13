@@ -1,0 +1,95 @@
+% !TeX root = ../main.tex
+\begin{figure}[p]
+\centering
+\small
+\setlength{\jot}{2pt}
+\newcommand{\semanticsHeading}[1]{%
+  \par\nointerlineskip\textbf{#1}\par\nobreak\vspace{6pt}\nointerlineskip}
+\semanticsHeading{Values and evaluation contexts}
+\(\displaystyle
+\begin{aligned}
+ v&::=r\mid()\mid\kw{true}\mid\kw{false}\mid\lambda x.e\mid\recfn f x e
+       \mid\langle v,v\rangle\mid\kw{inl}\,v\mid\kw{inr}\,v\mid[]\mid v::v\\
+ C&::=[\,]\mid C\,e\mid v\,C\mid\letin x C e\mid\ite C{e_1}{e_2}\\
+  &\quad\mid\langle C,e\rangle\mid\langle v,C\rangle\mid\kw{fst}\,C\mid\kw{snd}\,C
+       \mid\kw{inl}\,C\mid\kw{inr}\,C\\
+  &\quad\mid C::e\mid v::C\mid\scase C x{e_1}y{e_2}\mid\lcase C{e_0}x{xs}{e_1}\\
+  &\quad\mid -C\mid C\mathbin\circ e\mid v\mathbin\circ C
+       \mid\draw D\alpha{\bar v,C,\bar e},\qquad\circ\in\{+,\cdot,/,<\}.
+\end{aligned}
+\)\par
+\par\vspace{16pt}
+\semanticsHeading{Deterministic reduction}
+\begingroup
+\setlength{\jot}{0pt}
+\(\displaystyle
+\begin{aligned}[t]
+ (\lambda x.e)\,v&\rightsquigarrow e[x\mapsto v]\\
+ (\recfn f x e)\,v&\rightsquigarrow e[x\mapsto v,f\mapsto\recfn f x e]\\
+ \letin x v e&\rightsquigarrow e[x\mapsto v]\\
+ \ite{\kw{true}}{e_1}{e_2}&\rightsquigarrow e_1\\
+ \ite{\kw{false}}{e_1}{e_2}&\rightsquigarrow e_2\\
+ \kw{fst}\,\langle v_1,v_2\rangle&\rightsquigarrow v_1\\
+ \kw{snd}\,\langle v_1,v_2\rangle&\rightsquigarrow v_2\\[3pt]
+ \scase{\kw{inl}\,v}x{e_1}y{e_2}&\rightsquigarrow e_1[x\mapsto v]\\
+ \scase{\kw{inr}\,v}x{e_1}y{e_2}&\rightsquigarrow e_2[y\mapsto v]\\
+ \lcase{[]}{e_0}x{xs}{e_1}&\rightsquigarrow e_0\\
+ \lcase{v::w}{e_0}x{xs}{e_1}&\rightsquigarrow e_1[x\mapsto v,xs\mapsto w]\\[3pt]
+ \avg D{\bar v}&\rightsquigarrow \operatorname{Mean}_D(\bar v)\quad(\operatorname{Domain}_D(\bar v)).
+\end{aligned}
+\)\par
+\endgroup
+\par\vspace{16pt}
+\semanticsHeading{Primitive distributions}
+\begingroup
+\renewcommand{\arraystretch}{1.08}
+\setlength{\heavyrulewidth}{0.5pt}
+\begin{tabular*}{0.72\linewidth}{@{\extracolsep{\fill}}lll@{}}
+\toprule
+Distribution $D(\bar v)$ & $\operatorname{Domain}_D(\bar v)$ & $\operatorname{Mean}_D(\bar v)$\\
+\midrule
+$\kw{uniform}(a,b)$ & $a\le b$ & $(a+b)/2$\\
+$\kw{gaussian}(u,v)$ & $v\ge0$ & $u$\\
+$\kw{poisson}(\lambda)$ & $\lambda\ge0$ & $\lambda$\\
+$\kw{exponential}(\lambda)$ & $\lambda>0$ & $1/\lambda$\\
+$\kw{bernoulli}(p)$ & $0\le p\le1$ & $p$\\
+$\kw{discrete}([p_i]_{i<n})$ & $p_i\ge0,\ \sum_{i<n}p_i\le1$ & $n+\sum_{i<n}(i-n)p_i$\\
+$\kw{beta}(a,b)$ & $a>0,\ b>0$ & $a/(a+b)$\\
+$\kw{gamma}(k,\lambda)$ & $k>0,\ \lambda>0$ & $k/\lambda$\\
+\bottomrule
+\end{tabular*}
+\endgroup
+\par\vspace{16pt}
+\semanticsHeading{Output measures}
+\begingroup
+\settowidth{\dimen0}{$\displaystyle\int_{\Real}\out{C[r]}n(B)\,D(\bar v)(dr)$}
+\edef\outputTermWidth{\the\dimen0}
+\settowidth{\dimen2}{$e=C[\draw D m{\bar v}],\enspace\operatorname{Domain}_D(\bar v),\enspace m\in\{\G,\E\}$}
+\edef\outputConditionWidth{\the\dimen2}
+\setlength{\jot}{0pt}
+\(\displaystyle
+\begin{aligned}
+ \out e0(B)&=
+ \left\{\begin{array}{@{}w{l}{\outputTermWidth}@{\quad}w{l}{\outputConditionWidth}@{\quad}l@{}}
+  \delta_r(B) & e=r,\quad r\in\Real & \text{(Return real numbers)}\\
+  0 & \text{otherwise} & \text{(No real result yet)}
+ \end{array}\right.\\[5pt]
+ \out e{n+1}(B)&=
+ \left\{\begin{array}{@{}w{l}{\outputTermWidth}@{\quad}w{l}{\outputConditionWidth}@{\quad}l@{}}
+  \out{C[e_2]}n(B) & e=C[e_1],\quad e_1\rightsquigarrow e_2
+    & \text{(Deterministic step)}\\[5pt]
+  \displaystyle\int_{\Real}\out{C[r]}n(B)\,D(\bar v)(dr)
+    & e=C[\draw D m{\bar v}],\enspace\operatorname{Domain}_D(\bar v),\enspace m\in\{\G,\E\}
+    & \text{(Average over samples)}\\[7pt]
+  0 & \text{otherwise} & \text{(No output at this depth)}
+ \end{array}\right.\\[5pt]
+ \law e(B)&=\sum_{n=0}^{\infty}\out e n(B).
+\end{aligned}
+\)\par
+\endgroup
+\captionsetup{skip=10pt}
+\caption{Operational semantics. $\out e n(B)$ is the probability that $e$ returns a real number in $B$ after exactly $n$ steps.
+Summing over $n$ gives the output distribution $\law e$.}
+\label{fig:semantics}
+\Description{The semantics consists of values and evaluation contexts, deterministic reductions, primitive distributions with domains and means, and output measures summed over exact termination depths.}
+\end{figure}

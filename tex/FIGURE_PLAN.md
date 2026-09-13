@@ -5,8 +5,9 @@ affect the results; leave routine formal details to Lean.
 
 - [x] Language grammar.
 - [x] Type grammar.
-- [ ] Primitive laws, domains, and means.
-- [ ] Output semantics and determinization.
+- [x] Primitive laws, domains, and means.
+- [x] Output semantics.
+- [ ] Determinization.
 - [x] Selected typing rules and subtyping.
 - [ ] Domain validity and global guarantees.
 - [ ] Joint trace semantics and conditional trace soundness statement.
