@@ -1,96 +1,258 @@
 #!/usr/bin/env python3
-"""Compare Storm's explicit-model result with a kernel-checked Lean certificate."""
+"""Obtain exact output moments from Storm and certify them against the Lean model."""
 import argparse
+from collections import deque
 from fractions import Fraction
 import importlib.metadata
 import json
+import os
+import signal
 from pathlib import Path
 import subprocess
 import sys
+import time
 
 ROOT = Path(__file__).resolve().parents[1]
 PROPERTY = 'R=? [ F "done" ]'
+
+
+def read_model(prefix):
+    lines = Path(str(prefix) + ".tra").read_text().splitlines()
+    if not lines or lines[0] != "dtmc":
+        raise ValueError("expected an explicit DTMC")
+    edges = [(int(i), int(j), Fraction(q)) for i, j, q in
+             (line.split() for line in lines[1:])]
+    size = 1 + max(max(i, j) for i, j, _ in edges)
+    if {i for i, _, _ in edges} != set(range(size)):
+        raise ValueError("missing transition rows")
+    labels = Path(str(prefix) + ".lab").read_text().splitlines()
+    if labels[0] != "#DECLARATION" or labels[2] != "#END":
+        raise ValueError("expected explicit label declarations")
+    sets = {name: set() for name in labels[1].split()}
+    for line in labels[3:]:
+        state, *names = line.split()
+        for name in names:
+            sets[name].add(int(state))
+    if sets["done"] != {size - 1} or len(sets["init"]) != 1:
+        raise ValueError("unexpected sink or initial-state mapping")
+    if not sets["init"] <= set(range(size - 1)):
+        raise ValueError("initial state is the synthetic sink")
+    rewards = [Fraction(0)] * size
+    for sign, factor in [("positive", 1), ("negative", -1)]:
+        for line in Path(str(prefix) + f".{sign}.state.rew").read_text().splitlines():
+            state, reward = line.split()
+            rewards[int(state)] += factor * Fraction(reward)
+    return size, edges, sets, rewards
+
+
+def boundary(size, edges, labels):
+    predecessors = [set() for _ in range(size)]
+    for i, j, p in edges:
+        if p > 0:
+            predecessors[j].add(i)
+
+    def reverse_search(roots):
+        ranks = {i: 0 for i in roots}
+        following = {i: i for i in roots}
+        queue = deque(sorted(roots))
+        while queue:
+            j = queue.popleft()
+            for i in sorted(predecessors[j]):
+                if i not in ranks:
+                    ranks[i] = ranks[j] + 1
+                    following[i] = j
+                    queue.append(i)
+        return ranks, following
+
+    terminals = labels["returned"] | labels["rejected"] | labels["done"]
+    reachable, _ = reverse_search(terminals)
+    dead = set(range(size)) - reachable.keys()
+    ranks, following = reverse_search(terminals | dead)
+    return dead, [ranks[i] for i in range(size - 1)], [following[i] for i in range(size - 1)]
 
 
 def storm_worker(prefix):
     import stormpy
     import stormpy.info
 
-    lines = Path(str(prefix) + ".tra").read_text().splitlines()
-    if lines[0] != "dtmc":
-        raise ValueError("expected an explicit DTMC")
-    edges = [(int(i), int(j), stormpy.Rational(q))
-             for i, j, q in (line.split() for line in lines[1:])]
-    size = 1 + max(max(i, j) for i, j, _ in edges)
+    size, edges, labels, outputs = read_model(prefix)
+    dead, ranks, following = boundary(size, edges, labels)
     builder = stormpy.ExactSparseMatrixBuilder(rows=size, columns=size, entries=len(edges))
     for i, j, probability in sorted(edges, key=lambda edge: edge[:2]):
-        builder.add_next_value(i, j, probability)
+        builder.add_next_value(i, j, stormpy.Rational(str(probability)))
     transitions = builder.build()
     labeling = stormpy.StateLabeling(size)
-    labels = Path(str(prefix) + ".lab").read_text().splitlines()
-    if labels[0] != "#DECLARATION" or labels[2] != "#END":
-        raise ValueError("expected explicit label declarations")
-    for label in labels[1].split():
+    for label, states in labels.items():
         labeling.add_label(label)
-    for line in labels[3:]:
-        state, *names = line.split()
-        for name in names:
-            labeling.add_label_to_state(name, int(state))
-    results = {"storm_version": stormpy.info.storm_version(),
-               "storm_build_type": stormpy.info.storm_build_type()}
-    for sign in ("positive", "negative"):
-        rewards = [stormpy.Rational(0) for _ in range(size)]
-        for line in Path(str(prefix) + f".{sign}.state.rew").read_text().splitlines():
-            state, reward = line.split()
-            rewards[int(state)] = stormpy.Rational(reward)
+        for state in states | (dead if label == "done" else set()):
+            labeling.add_label_to_state(label, state)
+
+    def query(rewards):
+        vector = [stormpy.Rational(str(q)) for q in rewards]
         components = stormpy.SparseExactModelComponents(transitions, labeling,
-            {"": stormpy.SparseExactRewardModel(optional_state_reward_vector=rewards)})
+            {"": stormpy.SparseExactRewardModel(optional_state_reward_vector=vector)})
         model = stormpy.SparseExactDtmc(components)
-        initial, = model.initial_states
         prop, = stormpy.parse_properties(PROPERTY)
-        results[sign] = str(stormpy.model_checking(model, prop).at(initial))
+        result = stormpy.model_checking(model, prop, only_initial_states=False)
+        values = [Fraction(str(q)) for q in result.get_values()]
+        if len(values) != size or values[-1] != 0:
+            raise ValueError("unexpected Storm vector dimensions or sink value")
+        return values[:-1]
+
+    positive = query([max(q, 0) for q in outputs])
+    negative = query([max(-q, 0) for q in outputs])
+    values = {
+        "mass": query([int(i in labels["returned"]) for i in range(size)]),
+        "rejection": query([int(i in labels["rejected"]) for i in range(size)]),
+        "first": [p - n for p, n in zip(positive, negative)],
+        "second": query([q*q for q in outputs]),
+    }
+    results = {"storm_version": stormpy.info.storm_version(),
+               "storm_build_type": stormpy.info.storm_build_type(),
+               "values": {name: [str(q) for q in vector] for name, vector in values.items()},
+               "dead": [i in dead for i in range(size - 1)],
+               "rank": ranks, "next": following}
     Path(str(prefix) + ".storm-values.json").write_text(json.dumps(results) + "\n")
+
+
+def certificate_text(prefix, result):
+    size, _, labels, _ = read_model(prefix)
+    n = size - 1
+    dead = result["dead"]
+    values = result["values"]
+    if len(dead) != n or any(type(b) is not bool for b in dead):
+        raise ValueError("invalid divergent-state vector")
+    if set(values) != {"mass", "first", "second", "rejection"} or any(len(v) != n for v in values.values()):
+        raise ValueError("invalid moment vector dimensions")
+    ranks, following = result["rank"], result["next"]
+    if len(ranks) != n or any(type(r) is not int or r < 0 for r in ranks):
+        raise ValueError("invalid path ranks")
+    if len(following) != n or any(type(j) is not int or not 0 <= j < n for j in following):
+        raise ValueError("invalid path successors")
+    if any(type(q) is not str for vector in values.values() for q in vector):
+        raise ValueError("expected exact rational strings")
+    values = {name: [Fraction(q) for q in vector] for name, vector in values.items()}
+
+    def rat(q):
+        return f"(({q.numerator} : Rat) / {q.denominator})"
+
+    text = Path(str(prefix) + ".replay.lean").read_text().replace(
+        "import Determinize.Checking.FiniteModel", "import Determinize.Checking.Statistics")
+    text += "\nopen Determinize.Proof.FiniteModel\n"
+    for name, vector in values.items():
+        text += f"\ndef {name}Values : Vector Rat model.size := ⟨#[{', '.join(map(rat, vector))}], by decide +kernel⟩\n"
+    text += f"\ndef deadStates : Vector Bool model.size := ⟨#[{', '.join(str(b).lower() for b in dead)}], by decide +kernel⟩\n"
+    text += f"\ndef ranks : Vector Nat model.size := ⟨#[{', '.join(map(str, ranks))}], by decide +kernel⟩\n"
+    destinations = ', '.join(f"⟨{j}, by decide +kernel⟩" for j in following)
+    text += f"\ndef nextStates : Vector (Fin model.size) model.size := ⟨#[{destinations}], by rfl⟩\n"
+    text += f"""
+def result : MomentCertificate model where
+  dead := fun i => deadStates[i]
+  rank := fun i => ranks[i]
+  next := fun i => nextStates[i]
+  values := fun moment i => (match moment with
+    | .mass => massValues | .first => firstValues | .second => secondValues)[i]
+
+theorem resultAccepted : Determinize.Checking.checkStatistics model result = true := by
+  decide +kernel
+
+def statistics := result.statistics model
+
+theorem outputStatistics : statistics.Matches (bigStepMeasure (checkedSubject.program checkedSource)) :=
+  Determinize.Checking.checked_statistics ⟨model, modelMatches⟩ result resultAccepted
+
+theorem conditionalVariance (positive : 0 < statistics.returnMass) :
+    ProbabilityTheory.variance id ((bigStepMeasure (checkedSubject.program checkedSource) Set.univ)⁻¹ •
+      bigStepMeasure (checkedSubject.program checkedSource)) =
+      ((statistics.secondMoment / statistics.returnMass - (statistics.firstMoment / statistics.returnMass)^2 : Rat) : ℝ) :=
+  Determinize.Checking.checked_conditionalVariance ⟨model, modelMatches⟩ result resultAccepted positive
+
+def termination : TerminationCertificate model := ⟨result, fun i => rejectionValues[i]⟩
+
+theorem terminationAccepted : Determinize.Checking.checkTermination model termination = true := by
+  decide +kernel
+
+theorem terminationProbabilities : (termination.statistics model).Matches model :=
+  Determinize.Checking.checked_termination model termination terminationAccepted
+
+#print axioms terminationProbabilities
+#print axioms resultAccepted
+#print axioms outputStatistics
+#print axioms conditionalVariance
+"""
+    initial, = labels["init"]
+    return text, {name: vector[initial] for name, vector in values.items()}
+
+
+def run_command(argv, *, cwd, timeout):
+    with subprocess.Popen(argv, cwd=cwd, text=True, stdout=subprocess.PIPE,
+                          stderr=subprocess.PIPE, start_new_session=True) as process:
+        try:
+            stdout, stderr = process.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            process.communicate()
+            raise
+        return subprocess.CompletedProcess(argv, process.returncode, stdout, stderr)
 
 
 def run(args):
     prefix = args.prefix.resolve()
     report = {"status": "running", "subject": args.subject, "property": PROPERTY,
-              "engine": "stormpy sparse exact DTMC, rational arithmetic",
-              "timeout_seconds": args.timeout, "stage": "certificate generation", "commands": []}
+              "engine": "stormpy sparse exact DTMC, rational arithmetic", "result_source": "storm",
+              "timeout_seconds": args.timeout, "stage": "model export", "commands": []}
     report_path = Path(str(prefix) + ".storm.json")
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(json.dumps(report, indent=2) + "\n")
 
     def command(argv, cwd=ROOT):
         report["commands"].append([str(arg) for arg in argv])
-        result = subprocess.run(argv, cwd=cwd, text=True, capture_output=True,
-                                timeout=args.timeout)
-        report.setdefault("logs", []).append({"stdout": result.stdout, "stderr": result.stderr,
-                                             "exit_code": result.returncode})
-        if result.returncode:
-            raise RuntimeError(result.stderr or result.stdout or f"exit {result.returncode}")
+        started = time.monotonic()
+        completed = run_command(argv, cwd=cwd, timeout=args.timeout)
+        report.setdefault("logs", []).append({"stdout": completed.stdout, "stderr": completed.stderr,
+                                             "exit_code": completed.returncode,
+                                             "seconds": time.monotonic() - started})
+        if completed.returncode:
+            raise RuntimeError(completed.stderr or completed.stdout or f"exit {completed.returncode}")
 
     try:
         report["stormpy_version"] = importlib.metadata.version("stormpy")
-        command([args.binary, "--result", prefix, "--subject", args.subject,
-                 "--max-result-states", str(args.max_result_states), args.file.resolve()])
-        report["stage"] = "kernel check"
-        command(["lake", "env", "lean", str(prefix) + ".result.lean"], ROOT / "lean")
-        report["kernel_checked"] = True
+        command([args.binary, "--check", "--export", prefix, "--subject", args.subject,
+                 "--max-states", str(getattr(args, "max_states", 10000)), args.file.resolve()])
         report["stage"] = "Storm"
         values_path = Path(str(prefix) + ".storm-values.json")
         values_path.unlink(missing_ok=True)
         command([sys.executable, Path(__file__).resolve(), "--worker", prefix])
         values = json.loads(values_path.read_text())
-        exact = json.loads(Path(str(prefix) + ".result.json").read_text())["answer"]
-        answer = Fraction(values["positive"]) - Fraction(values["negative"])
-        report.update(values, exact_answer=exact, storm_answer=str(answer))
-        if answer != Fraction(exact):
-            raise RuntimeError("Storm result disagrees with the certified exact answer")
+        text, answer = certificate_text(prefix, values)
+        certificate = Path(str(prefix) + ".storm.lean")
+        certificate.write_text(text)
+        report["stage"] = "kernel check"
+        command(["lake", "env", "lean", certificate], ROOT / "lean")
+        report.update(kernel_checked=True, storm_version=values["storm_version"],
+                      storm_build_type=values["storm_build_type"],
+                      exact_answer=str(answer["first"]), return_mass=str(answer["mass"]),
+                      second_moment=str(answer["second"]))
+        p = answer["mass"]
+        report["rejection_probability"] = str(answer["rejection"])
+        report["divergence_probability"] = str(1-p-answer["rejection"])
+        report["conditional_mean"] = str(answer["first"] / p) if p else None
+        report["conditional_variance"] = str(answer["second"] / p - (answer["first"] / p)**2) if p else None
+        if getattr(args, "compare", False):
+            report["stage"] = "solver comparison"
+            command([args.binary, "--check", "--result", prefix, "--subject", args.subject, args.file.resolve()])
+            internal = json.loads(Path(str(prefix) + ".result.json").read_text())
+            for external, key in [("first", "answer"), ("mass", "return_mass"), ("second", "second_moment"),
+                                  ("rejection", "rejection_probability")]:
+                if answer[external] != Fraction(internal[key]):
+                    raise RuntimeError("Storm result disagrees with the internal solver")
         report["status"] = "completed"
-        print(f"Certified expected terminal reward ({args.subject}): {exact}; Storm agrees")
+        print(f"Lean-certified Storm result ({args.subject}): {answer['first']}; return mass {p}")
         return 0
-    except (OSError, RuntimeError, ValueError, subprocess.TimeoutExpired,
+    except (OSError, RuntimeError, ValueError, ZeroDivisionError, KeyError, TypeError, subprocess.TimeoutExpired,
             importlib.metadata.PackageNotFoundError) as error:
         report.update(status="failed", error=str(error))
         print(str(error), file=sys.stderr)
@@ -108,7 +270,8 @@ def main():
     parser.add_argument("--prefix", required=True, type=Path)
     parser.add_argument("--subject", choices=("source", "determinized"), default="determinized")
     parser.add_argument("--binary", type=Path, default=ROOT / "lean/.lake/build/bin/determinize")
-    parser.add_argument("--max-result-states", type=int, default=256)
+    parser.add_argument("--max-states", type=int, default=10000)
+    parser.add_argument("--compare", action="store_true", help="also compare with the internal solver")
     parser.add_argument("--timeout", type=float, default=120)
     return run(parser.parse_args())
 

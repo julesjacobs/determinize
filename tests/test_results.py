@@ -7,6 +7,7 @@ from unittest.mock import patch
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -92,6 +93,23 @@ class ResultTests(unittest.TestCase):
                 checked = kernel(Path(str(prefix) + ".result.lean"))
                 self.assertEqual(checked.returncode, 0, checked.stdout + checked.stderr)
 
+    def test_termination_probabilities(self):
+        cases = [
+            ("let f = rec f x => f x in f 0", ("0", "0", "1")),
+            ("let _ = observe(false) in 3", ("0", "1", "0")),
+            ("let f = rec f x => f x in if flip(0.5) then f 0 else let _ = observe(flip(0.5)) in 1",
+             ("1/4", "1/4", "1/2")),
+        ]
+        for program, expected in cases:
+            with self.subTest(program=program), tempfile.TemporaryDirectory() as tmp:
+                result, prefix = generate(Path(tmp), program)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                data = json.loads(Path(str(prefix) + ".result.json").read_text())
+                self.assertEqual(tuple(data[key] for key in
+                    ("return_mass", "rejection_probability", "divergence_probability")), expected)
+                checked = kernel(Path(str(prefix) + ".result.lean"))
+                self.assertEqual(checked.returncode, 0, checked.stdout + checked.stderr)
+
     def test_failure_preserves_outputs(self):
         for program, options, error in [
             ("1/0", [], "division"),
@@ -109,44 +127,93 @@ class ResultTests(unittest.TestCase):
                 self.assertFalse(Path(str(prefix) + ".result.json").exists())
                 self.assertFalse(Path(str(prefix) + ".tra").exists())
 
-    def test_storm_failure_reports(self):
+    def adapter(self):
         spec = importlib.util.spec_from_file_location("storm_adapter", ROOT / "tools/storm.py")
         adapter = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(adapter)
-        for failure in ("timeout", "kernel", "disagreement"):
+        return adapter
+
+    def test_storm_failure_reports(self):
+        adapter = self.adapter()
+        for failure in ("timeout", "storm", "kernel", "disagreement"):
             with self.subTest(failure=failure), tempfile.TemporaryDirectory() as tmp:
                 prefix = Path(tmp) / "model"
                 args = SimpleNamespace(prefix=prefix, subject="source", timeout=1,
-                                       binary=BIN, max_result_states=256, file=Path(tmp) / "input.det")
+                                       binary=BIN, compare=True, file=Path(tmp) / "input.det")
                 calls = []
 
                 def command(argv, **kwargs):
                     calls.append(argv)
                     if failure == "timeout":
                         raise subprocess.TimeoutExpired(argv, 1)
-                    if len(calls) == 2 and failure == "kernel":
-                        return subprocess.CompletedProcess(argv, 1, "kernel rejected", "")
-                    if len(calls) == 3:
-                        Path(str(prefix) + ".result.json").write_text('{"answer": "1/3"}')
+                    stage = len(calls)
+                    if (stage == 2 and failure == "storm") or (stage == 3 and failure == "kernel"):
+                        return subprocess.CompletedProcess(argv, 1, failure + " rejected", "")
+                    if stage == 2:
                         Path(str(prefix) + ".storm-values.json").write_text(
-                            '{"positive": "1/2", "negative": "0"}')
+                            '{"storm_version": "test", "storm_build_type": "test"}')
+                    if stage == 4:
+                        Path(str(prefix) + ".result.json").write_text('{"answer": "1/3"}')
                     return subprocess.CompletedProcess(argv, 0, "", "")
 
                 with patch.object(adapter.importlib.metadata, "version", return_value="test"), \
-                     patch.object(adapter.subprocess, "run", side_effect=command), \
-                     patch("builtins.print"):
+                     patch.object(adapter, "run_command", side_effect=command), \
+                     patch.object(adapter, "certificate_text", return_value=("proof", {
+                         "mass": Fraction(1), "first": Fraction(1,2), "second": Fraction(1,4),
+                         "rejection": Fraction(0)})), patch("builtins.print"):
                     self.assertEqual(adapter.run(args), 1)
                 report = json.loads(Path(str(prefix) + ".storm.json").read_text())
                 self.assertEqual(report["status"], "failed")
-                self.assertEqual(len(calls), {"timeout": 1, "kernel": 2, "disagreement": 3}[failure])
+                self.assertEqual(len(calls), {"timeout": 1, "storm": 2, "kernel": 3, "disagreement": 4}[failure])
                 if failure == "disagreement":
                     self.assertIn("disagrees", report["error"])
+                    self.assertTrue(report["kernel_checked"])
                 else:
                     self.assertNotIn("kernel_checked", report)
 
+    def test_storm_timeout_stops_children(self):
+        adapter = self.adapter()
+        with tempfile.TemporaryDirectory() as tmp:
+            pidfile = Path(tmp) / "child.pid"
+            script = ("import subprocess, sys, time; "
+                      "from pathlib import Path; "
+                      "p=subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(30)']); "
+                      f"Path({str(pidfile)!r}).write_text(str(p.pid)); time.sleep(30)")
+            with self.assertRaises(subprocess.TimeoutExpired):
+                adapter.run_command([sys.executable, "-c", script], cwd=ROOT, timeout=1)
+            child = int(pidfile.read_text())
+            state = subprocess.run(["ps", "-p", str(child), "-o", "stat="],
+                                   text=True, capture_output=True).stdout.strip()
+            self.assertTrue(not state or state.startswith("Z"), state)
+
+    def test_storm_certificate_validation(self):
+        adapter = self.adapter()
+        with tempfile.TemporaryDirectory() as tmp:
+            result, prefix = generate(Path(tmp), "if flip(0.5) then 1 else 2")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            size, edges, labels, _ = adapter.read_model(prefix)
+            dead, rank, following = adapter.boundary(size, edges, labels)
+            valid = {"dead": [i in dead for i in range(size-1)], "rank": rank, "next": following,
+                     "values": {name: ["0"]*(size-1) for name in ("mass", "first", "second", "rejection")}}
+            for key, invalid in [("dead", [False]), ("rank", [-1]*(size-1)),
+                                 ("next", [size-1]*(size-1)), ("values", {})]:
+                with self.subTest(key=key), self.assertRaises(ValueError):
+                    adapter.certificate_text(prefix, {**valid, key: invalid})
+            for bad in ("inf", "nan", "1/0"):
+                with self.subTest(bad=bad), self.assertRaises((ValueError, ZeroDivisionError)):
+                    adapter.certificate_text(prefix, {**valid, "values": {
+                        **valid["values"], "mass": [bad]*(size-1)}})
+            certificate, _ = adapter.certificate_text(prefix, valid)
+            path = Path(tmp) / "wrong.lean"
+            path.write_text(certificate)
+            self.assertNotEqual(kernel(path).returncode, 0)
+
     @unittest.skipUnless(os.environ.get("STORM_PYTHON"), "set STORM_PYTHON for real Storm integration")
     def test_storm(self):
-        for program, subject, expected in CASES:
+        for program, subject, expected in CASES + [
+            ("let f = rec f x => f x in f 0", "source", Fraction(0)),
+            ("let f = rec f x => f x in if flip(0.5) then f 0 else 2", "source", Fraction(1)),
+        ]:
             with self.subTest(program=program), tempfile.TemporaryDirectory() as tmp:
                 directory = Path(tmp)
                 source = directory / "input.det"
