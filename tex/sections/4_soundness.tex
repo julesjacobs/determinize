@@ -1,18 +1,9 @@
 % !TeX root = ../main.tex
-\section{Type System and Soundness Theorem}
-\label{sec:type-system}
+\clearpage
+\section{Soundness}
+\label{sec:soundness}
 
-\input{figures/typing}
-
-We use the type system in \cref{fig:typing} to check which samples can be replaced
-by their means. Its rules restrict how $\E$ samples may be used:
-\begin{itemize}
-    \item The arguments of addition are at $\E$-mode when the sum itself is.
-    \item Multiplication requires a $\G$ left operand and allows an $\E$ right operand. \jules{Give examples and explain the intuition for why that's ok even though the arguments may not be independent}
-    \item Division requires a $\G$ denominator but allows an $\E$ numerator.
-    \item The distribution rules allow $\E$ parameters where the mean is
-affine in those parameters. \jules{Give examples and explain the intuition for why that's ok}
-\end{itemize}
+\subsection{Expectation and Variance}
 
 \begin{theorem}[Expectation preservation\leanref{expectation-preservation}]
 \label{thm:expectation}
@@ -130,3 +121,105 @@ and
 
 Thus the missing output mass accounts precisely for divergence and rejection;
 neither the original program nor the transformed program loses probability mass due to getting stuck.
+
+\clearpage
+\subsection{When Expectations Are Undefined}
+\label{sec:traces}
+
+Consider a program that flips a fair coin until tails, then samples uniformly
+from $[-2^n,2^n]$, where $n$ is the number of heads:
+\begin{lstlisting}
+let sample = rec f bound =>
+  if bernoulli[G](1/2) < 1 then uniform[E](-bound, bound)
+  else f (2 * bound)
+in sample 1
+\end{lstlisting}
+Fixing the $\G$ draws to $1,1,0$ (two heads, then tails) leaves the single draw
+$\draw{uniform}\E{-4,4}$. After $n$ heads followed by tails, the
+remaining draw is $\draw{uniform}\E{-2^n,2^n}$. Determinization replaces it
+by its mean, zero.
+
+The replacement looks right for each fixed sequence of $\G$ draws---its
+$\G$ trace---but \cref{thm:expectation} gives no guarantee for this program:
+its expectation is undefined. It returns almost surely; writing $N$ for the number of heads
+and $X$ for its output, we have
+\[
+ \Pr(N=n)=2^{-n-1},\qquad
+ \Expect[|X|]=\sum_{n=0}^{\infty}2^{-n-1}\frac{2^n}{2}
+ =\sum_{n=0}^{\infty}\frac14=\infty.
+\]
+By symmetry, the positive and negative parts both have infinite expectation.
+The transformed program has expectation zero.
+
+We therefore compare the programs conditional on their $\G$ traces. For a
+domain-safe program of type $\tyR\E$, determinization preserves the law of terminating $\G$ traces. For almost every such trace, the original program has a finite
+conditional mean and the transformed program returns that mean. This comparison requires no
+global expectation.
+
+\paragraph{Trace semantics.}
+We record the $\G$ draws alongside each returned value, giving a joint measure
+$J_e$ on $\Trace\times\Real$ (\cref{fig:traces}). Forgetting the output gives
+the trace measure $\trlaw e$; forgetting the trace gives the original output
+measure $\law e$. These are the two marginals of $J_e$.
+Only successful returns contribute mass to these measures.
+
+\input{figures/traces}
+
+\noindent\begin{minipage}{\linewidth}
+In the coin-flipping example, each terminating $\G$ trace has positive probability.
+A trace can also contain continuous draws:
+\begin{lstlisting}
+let u = uniform[G](-1, 1) in
+uniform[E](0, 2) / u
+\end{lstlisting}
+Both programs have undefined global expectations. Yet for each fixed $u\ne0$,
+the remaining expression has mean $1/u$, exactly the value returned by the
+transformed program. Every individual value of $u$ has probability zero, so conditioning on a trace
+cannot simply mean dividing by its probability.
+\end{minipage}
+
+We write $\law e(\,\cdot\mid\tau)$ for the output distribution conditioned on
+returning and on trace $\tau$, and $\Expect[e\mid\tau]$ for its mean.
+These are defined through the joint measure $J_e$:
+\[
+\begin{aligned}
+ J_e(A\times B)&=\int_A \law e(B\mid\tau)\,\trlaw e(d\tau),\\[3pt]
+ \Expect[e\mid\tau]&=\int_{\Real}r\,\law e(dr\mid\tau).
+\end{aligned}
+\]
+
+\begin{theorem}[Trace soundness\leanref{trace-soundness}]
+\label{thm:trace-soundness}
+Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe. Then $\trans e$ is domain-safe,
+\[
+ \trlaw{\trans e}=\trlaw e,
+\]
+and, for $\trlaw e$-almost every trace $\tau$,
+\[
+ \int_{\Real}|r|\,\law e(dr\mid\tau)<\infty,
+ \qquad
+ \law{\trans e}(\,\cdot\mid\tau)
+ =\delta_{\Expect[e\mid\tau]}.
+\]
+\end{theorem}
+
+\paragraph{Variance decomposition.}
+The transformed program retains only variation between the conditional means.
+The original program's output can also vary after the $\G$ trace is fixed,
+due to the $\E$-samples.
+
+\begin{theorem}[Trace variance decomposition\leanref{trace-variance}]
+\label{thm:trace-variance}
+Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe. If
+$q_e=\law e(\Real)>0$ and $\int_{\Real}r^2\,\law e(dr)<\infty$, then
+\[
+ \underbrace{\Var_{\mathrm{ret}}[e]}_{\text{Original variance}}
+ =\underbrace{\Var_{\mathrm{ret}}[\trans e]}_{\text{Variance between traces}}
+  +\underbrace{\Expect_{\tau\sim\trlaw e/q_e}
+    \!\left[\Var\bigl(\law e(\,\cdot\mid\tau)\bigr)\right]}_{\text{Average variance within a trace}}.
+\]
+\end{theorem}
+
+The last term averages the original program's variance after fixing a trace, using
+$\trlaw e/q_e$ to condition on returning. It is nonnegative and gives exactly
+the variance removed by determinization.

@@ -15,7 +15,7 @@ affect the results; leave routine formal details to Lean.
 - [ ] Derive the main theorem from trace soundness.
 - [ ] Example programs and moment calculations.
 - [x] Clear section bodies, retaining the outline.
-- [ ] Type inference.
+- [x] Type inference, including shape checking, subtype constraints, and affinity solving.
 - [ ] Write the general symbolic invariants and induction.
 - [ ] Author review of the mathematical definitions and statements.
 - [ ] Introduction, implementation, evaluation, and related work.
@@ -36,7 +36,7 @@ semantics loses no probability through some additional mechanism.
 - [x] Check the exported Lean statements and their assumptions.
 - [x] Prove return-or-diverge mass balance, including rejection, in Lean.
 - [x] Prove its equivalence with domain safety under real typing.
-- [x] Rename section 3 to "Type System and Soundness Theorem".
+- [x] Group typing with inference, and the main and trace soundness results together.
 - [x] State expectation preservation first, followed by variance non-increase.
 - [x] Explain finite, infinite, and undefined expectations with positive and negative parts.
 - [x] Give an undefined-expectation example that also motivates the trace theorem.
@@ -46,7 +46,7 @@ semantics loses no probability through some additional mechanism.
 
 ### 1. Lead with the guarantee
 
-After the typing rules, explain in one sentence that replacing E samples by
+At the start of Soundness, explain in one sentence that replacing E samples by
 means preserves the expected output and reduces variance. Briefly gloss domain
 safety as valid arguments for executed operations, almost surely. The detailed
 probability discussion comes after the statements.

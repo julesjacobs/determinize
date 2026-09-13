@@ -1,0 +1,96 @@
+% !TeX root = ../main.tex
+\begin{figure}[H]
+\centering
+\small
+\textbf{Subtype constraint reduction}
+\medskip
+
+\begin{minipage}{\linewidth}
+After the shape check, reduce the generated constraints below.
+Resolve bound type variables before each reduction and apply substitutions
+throughout the constraints.
+\end{minipage}
+\[
+\begin{aligned}
+ \tyR a<:\tyR b
+   &\;\leadsto\;\{a\le b\},\\[4pt]
+ (\tau_1\to\tau_2)<:(\sigma_1\to\sigma_2)
+   &\;\leadsto\;\{\sigma_1<:\tau_1,\;\tau_2<:\sigma_2\},\\[4pt]
+ (\tau_1\star\tau_2)<:(\sigma_1\star\sigma_2)
+   &\;\leadsto\;\{\tau_1<:\sigma_1,\;\tau_2<:\sigma_2\}
+       &&(\star\in\{\times,+\}),\\[4pt]
+ \tyL\tau<:\tyL\sigma
+   &\;\leadsto\;\{\tau<:\sigma\},\\[4pt]
+ \chi<:\chi
+   &\;\leadsto\;\varnothing
+       &&(\chi\in\{\tyU,\tyB\}).
+\end{aligned}
+\]
+\par\vspace{8pt}
+
+\textbf{Constructor expansion}
+\medskip
+
+\begin{minipage}{\linewidth}
+$X,Y$ are unbound type variables. For a constructor-headed type $\tau$,
+let $h(\tau)$ keep only its outer constructor, with fresh children:
+\end{minipage}
+\[
+\begin{aligned}
+ h(\tyR a)&=\tyR b,
+ &h(\tau\to\sigma)&=X\to Y,
+ &h(\tyL\tau)&=\tyL X,\\[3pt]
+ h(\tau\star\sigma)&=X\star Y\quad(\star\in\{\times,+\}),
+ &h(\tyU)&=\tyU,
+ &h(\tyB)&=\tyB.
+\end{aligned}
+\]
+Variables introduced by $h$ are fresh.
+\smallskip
+
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular*}{\linewidth}{@{}l@{\extracolsep{\fill}}ll@{}}
+\toprule
+Constraint & Substitution & Remaining constraint\\
+\midrule
+$X<:X$ & --- & none\\
+$X<:Y\quad(X\ne Y)$ & --- & defer $X<:Y$\\
+$X<:\tau$ & $X\mapsto h(\tau)$ & $h(\tau)<:\tau$\\
+$\tau<:X$ & $X\mapsto h(\tau)$ & $\tau<:h(\tau)$\\
+\bottomrule
+\end{tabular*}
+\medskip
+
+\begin{minipage}{\linewidth}
+The last two rows require constructor-headed $\tau$; the two occurrences of
+$h(\tau)$ in a row denote the same fresh type. Revisit deferred constraints
+after each expansion.
+\end{minipage}
+\par\vspace{12pt}
+
+\textbf{Affinity solving}\leanref{affinity-solving}
+\medskip
+
+\begin{minipage}{\linewidth}
+With $\G\le\E$, propagate assignments until no further change:
+\end{minipage}
+\begin{mathpar}
+ \inferrule{a\le b\\a=\E}{b:=\E}
+ \and
+ \inferrule{a\le b\\b=\G}{a:=\G}
+\end{mathpar}
+\begin{minipage}{\linewidth}
+Explicit annotations and required $\G$ affinities supply the initial assignments.
+Conflicting assignments reject inference. Set remaining affinity variables to
+$\E$ and remaining type variables to $\tyU$.
+\end{minipage}
+
+\caption{Solving the constraints generated in \cref{fig:inference}.}
+\label{fig:inference-solving}
+\Description{Structural subtype constraints reduce componentwise, with
+contravariance for function arguments. A preliminary shape-unification check
+rejects constructor clashes and infinite types. Unbound type variables expand
+to constructors with fresh children; variable inequalities remain deferred. Affinity
+constraints propagate E forward and G backward; remaining affinities default
+to E, and remaining type variables to unit.}
+\end{figure}

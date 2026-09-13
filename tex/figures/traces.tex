@@ -27,9 +27,8 @@
 \]
 \caption{Trace refinement of \cref{fig:semantics}.
 $\joint e n$ records the trace and output of executions returning after exactly
-$n$ steps. A $\G$ draw of value $r$ from primitive $D$ prepends $(D,r)$;
-$\E$ draws and mean computations add no entry. $(p_{D,r})_*$ applies
-$p_{D,r}$ to each trace/output pair in the measure. Sampling requires $\operatorname{Domain}_D(\bar v)$.
+$n$ steps. $(p_{D,r})_*$ prepends $(D,r)$ to each trace.
+Sampling requires $\operatorname{Domain}_D(\bar v)$.
 The deterministic-step and zero cases are unchanged, with $J$ in place of $\mu$.}
 \label{fig:traces}
 \Description{Traces record primitive names and values of G draws. The refined

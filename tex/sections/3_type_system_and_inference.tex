@@ -1,0 +1,33 @@
+% !TeX root = ../main.tex
+\section{Type System and Inference}
+\label{sec:type-system}
+
+\subsection{Typing}
+\input{figures/typing}
+
+We use the type system in \cref{fig:typing} to check which samples can be replaced
+by their means. Its rules restrict how $\E$ samples may be used:
+\begin{itemize}
+    \item The arguments of addition are at $\E$-mode when the sum itself is.
+    \item Multiplication requires a $\G$ left operand and allows an $\E$ right operand. \jules{Give examples and explain the intuition for why that's ok even though the arguments may not be independent}
+    \item Division requires a $\G$ denominator but allows an $\E$ numerator.
+    \item The distribution rules allow $\E$ parameters where the mean is
+affine in those parameters. \jules{Give examples and explain the intuition for why that's ok}
+\end{itemize}
+
+\subsection{Type Inference}
+\label{sec:type-inference}
+
+We infer types and $\E/\G$ annotations together by generating subtype
+constraints (\cref{fig:inference}). 
+We choose $\E$ wherever the constraints allow it, to allow more sampling to be transformed to means.
+
+Constraint solving follows the weak-unification approach of
+\citet{traytel2011subtyping}. First, we erase affinities and unify the resulting
+type shapes, rejecting constructor mismatches and infinite types (occurs check). This check ensures
+that the subsequent constructor expansion terminates. We then solve the original
+constraints using \cref{fig:inference-solving}, to obtain the constraints on $\E/\G$.
+We then propagate modes that are forced to be $\G$ or $\E$ and set the remaining unconstrained modes to $\E$.
+
+\input{figures/inference}
+\input{figures/inference-solving}

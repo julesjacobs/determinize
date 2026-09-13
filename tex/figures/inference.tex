@@ -1,0 +1,64 @@
+% !TeX root = ../main.tex
+\begin{figure}[H]
+\centering
+\small
+\newcommand{\inferconstraints}[3]{\Gamma\vdash #1\Rightarrow #2\mid #3}
+\textbf{Constraint generation}\leanref{constraint-generation}
+\medskip
+
+\begin{minipage}{\linewidth}
+The judgment $\inferconstraints e\tau C$ infers type $\tau$ and generates
+constraints $C$. Types may contain type variables and affinity variables
+$a\in\{\G,\E\}$. In the table, $\inferconstraints{e_i}{\tau_i}{C_i}$.
+Each displayed $a$ is fresh; the generated constraints are $\bigcup_i C_i$
+together with the listed constraints.
+\end{minipage}
+\medskip
+
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular*}{\linewidth}{@{}l@{\extracolsep{\fill}}ll@{}}
+\toprule
+Expression & Inferred type & Added constraints\\
+\midrule
+$r$ & $\tyR a$ & $\varnothing$\\
+$-e_1$ & $\tyR a$ & $\tau_1<:\tyR a$\\
+$e_1+e_2$ & $\tyR a$ & $\tau_1<:\tyR a,\quad\tau_2<:\tyR a$\\
+$e_1\cdot e_2$ & $\tyR a$ & $\tau_1<:\tyR\G,\quad\tau_2<:\tyR a$\\
+$e_1/e_2$ & $\tyR a$ & $\tau_1<:\tyR a,\quad\tau_2<:\tyR\G$\\
+$e_1<e_2$ & $\tyB$ & $\tau_1<:\tyR\G,\quad\tau_2<:\tyR\G$\\
+\midrule
+$\kw{uniform}(e_1,e_2)$ & $\tyR a$ & $\tau_1<:\tyR a,\quad\tau_2<:\tyR a$\\
+$\kw{gaussian}(e_1,e_2)$ & $\tyR a$ & $\tau_1<:\tyR a,\quad\tau_2<:\tyR\G$\\
+$\kw{discrete}(e_1)$ & $\tyR a$ & $\tau_1<:\tyL{\tyR a}$\\
+\bottomrule
+\end{tabular*}
+\medskip
+
+\begin{minipage}{\linewidth}
+At a sampling site, $a$ also supplies the inferred annotation.
+An explicit annotation $m\in\{\G,\E\}$ adds $a=m$.
+\end{minipage}
+\par\vspace{12pt}
+
+\textbf{Application and let bindings}
+\begin{mathpar}
+\inferrule*[right=App]
+  {\inferconstraints{e_1}{\tau_1}{C_1}\\
+   \inferconstraints{e_2}{\tau_2}{C_2}\\
+   \sigma,\rho\text{ fresh}}
+  {\inferconstraints{e_1\,e_2}{\rho}
+    {C_1\cup C_2\cup\{\tau_1<:(\sigma\to\rho),\ \tau_2<:\sigma\}}}
+\and
+\inferrule*[right=Let]
+  {\inferconstraints{e_1}{\tau_1}{C_1}\\
+   \Gamma,x:\tau_1\vdash e_2\Rightarrow\tau_2\mid C_2}
+  {\inferconstraints{\letin x{e_1}{e_2}}{\tau_2}{C_1\cup C_2}}
+\end{mathpar}
+\caption{Selected constraint-generation rules. Other distributions use the
+parameter types in \cref{fig:typing}.}
+\label{fig:inference}
+\Description{Constraint generation for arithmetic, three representative sampling
+primitives, application, and let bindings. Each operand's inferred type must be
+a subtype of its required type. Sampling sites share their inferred real affinity
+with their annotation; explicit annotations fix that affinity.}
+\end{figure}

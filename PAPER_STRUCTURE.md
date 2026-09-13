@@ -14,18 +14,20 @@ definitions and rules they explain.
 - Semantics: the one that doesn't require a measure space over `Expr`.
 - Determinization transform: easy because of the `[E]`, `[G]` annotations; independent of typing rules.
 
-## Type System and Soundness Theorem
+## Type System and Inference
 
 - Typing rules and intuitive explanations.
-- Soundness theorem statement: the main one without traces.
-- Variance non-increase theorem statement.
-
-## Type Inference
-
 - Infer valid E/G annotations from the typing rules.
 - Explicit annotations as user constraints.
 
-## When Expectations Are Undefined
+## Soundness
+
+### Expectation and Variance
+
+- Expectation preservation and variance non-increase.
+- Defined expectations, domain safety, and output-mass preservation.
+
+### When Expectations Are Undefined
 
 - Refined semantics.
 - Refined theorem.
