@@ -3609,41 +3609,29 @@ Note that fixing $\gamma$ removes the randomness from the $\G$-samples, which de
   $\G$-mode trace. Then, for every $n\in\mathbb N$, 
   \[
     \mathbb E\!\left[
-      (\pi_2)_*
-      \left(
-        \left.\bigsemstep{e:\tau}{n}^{\gamma}
-        \right|_{Trace\times Val_\tau}
-      \right)
+      \left.\bigsemstep{e:\tau}{n}^{\gamma}
+      \right|_{Val_\tau}
     \right] < \infty
   \]
   and
   \[
     \mathbb E\!\left[
-      (\pi_2)_*
-      \left(
-        \left.
-        \bigsemstep{\exptrans{e:\tau}:\tau}{n}^{\gamma}
-        \right|_{Trace\times Val_\tau}
-      \right)
+      \left.
+      \bigsemstep{\exptrans{e:\tau}:\tau}{n}^{\gamma}
+      \right|_{Val_\tau}
     \right] < \infty.
   \]
   Moreover,
   \[
     \mathbb E\!\left[
-      (\pi_2)_*
-      \left(
-        \left.\bigsemstep{e:\tau}{n}^{\gamma}
-        \right|_{Trace\times Val_\tau}
-      \right)
+      \left.\bigsemstep{e:\tau}{n}^{\gamma}
+      \right|_{Val_\tau}
     \right]
     =
     \mathbb E\!\left[
-      (\pi_2)_*
-      \left(
-        \left.
-        \bigsemstep{\exptrans{e:\tau}:\tau}{n}^{\gamma}
-        \right|_{Trace\times Val_\tau}
-      \right)
+      \left.
+      \bigsemstep{\exptrans{e:\tau}:\tau}{n}^{\gamma}
+      \right|_{Val_\tau}
     \right].
   \]
 \end{theorem}
@@ -3661,39 +3649,31 @@ Note that fixing $\gamma$ removes the randomness from the $\G$-samples, which de
   \[
     \symbigsemstep{\mathsf{init}_\tau(e:\tau)}{n}^{\gamma}
     =
-    \delta_{(\gamma_n,s_n^\gamma)}.
+    \delta_{s_n^\gamma}.
   \]
   Moreover, $\sigma_n$ is integrable by preservation of integrability
   under tracewise symbolic reduction.
 
   The tracewise actual and expected $n$-step interpretation theorems give
   \[
-    (\pi_2)_*
-    \left(
-      \left.\bigsemstep{e:\tau}{n}^{\gamma}
-      \right|_{Trace\times Val_\tau}
-    \right)
+    \left.\bigsemstep{e:\tau}{n}^{\gamma}
+    \right|_{Val_\tau}
     =
     \left.\mathsf{act}_\tau(s_n^\gamma)\right|_{Val_\tau}
   \]
   and
   \[
-    (\pi_2)_*
-    \left(
-      \left.\bigsemstep{\exptrans{e:\tau}:\tau}{n}^{\gamma}
-      \right|_{Trace\times Val_\tau}
-    \right)
+    \left.
+    \bigsemstep{\exptrans{e:\tau}:\tau}{n}^{\gamma}
+    \right|_{Val_\tau}
     =
     \left.\mathsf{exp}_\tau(s_n^\gamma)\right|_{Val_\tau}.
   \]
   Hence,
   \begin{align}
     &\mathbb E\!\left[
-      (\pi_2)_*
-      \left(
-        \left.\bigsemstep{e:\tau}{n}^{\gamma}
-        \right|_{Trace\times Val_\tau}
-      \right)
+      \left.\bigsemstep{e:\tau}{n}^{\gamma}
+      \right|_{Val_\tau}
     \right]
     \notag
     \\
@@ -3711,11 +3691,9 @@ Note that fixing $\gamma$ removes the randomness from the $\G$-samples, which de
     \\
     &=
     \mathbb E\!\left[
-      (\pi_2)_*
-      \left(
-        \left.\bigsemstep{\exptrans{e:\tau}:\tau}{n}^{\gamma}
-        \right|_{Trace\times Val_\tau}
-      \right)
+      \left.
+      \bigsemstep{\exptrans{e:\tau}:\tau}{n}^{\gamma}
+      \right|_{Val_\tau}
     \right]
     \tag{\text{by the tracewise expected $n$-step interpretation theorem}}.
   \end{align}
@@ -3874,340 +3852,36 @@ We first show that taking one ordinary step and then generating the trace
 of the residual expression agrees with generating the complete trace
 first and taking one tracewise step.
 
+
 \begin{lemma}[One-step trace reconstruction]
-\label{lem:one-step-trace-reconstruction}
-Let $p:\tau$ be closed and well typed, and let $\eta_p$ be its
-$\G$-mode trace distribution. Then
-\[
-  \eta_p
-  \monbind
-  \lambda\gamma.\,
-  \sem{p:\tau}^{\gamma}
-  =
-  \sem{p:\tau}
-  \monbind
-  \lambda e'.\,
-  \left(
-    \eta_{e'}
-    \monbind
-    \lambda\gamma'.\,
-    \delta_{(\gamma',e')}
-  \right).
-\]
-\end{lemma}
-
-Projecting away the unused trace gives the following simpler form. The previous theorem preserves the relationship between $e'$ and its unused trace.
-
-\begin{corollary}[One-step trace reconstruction, expression marginal]
-\label{cor:one-step-trace-reconstruction}
-Let $p:\tau$ be closed and well typed, and let $\eta_p$ be its
-$\G$-mode trace distribution. Then
-\[
-  \sem{p:\tau}
-  =
-  (\pi_2)_*
-  \left(
+  \label{lem:one-step-trace-reconstruction}
+  Let $p:\tau$ be closed and well typed, and let $\eta_p$ be its
+  $\G$-mode trace distribution. Then
+  \[
+    \sem{p:\tau}
+    =
     \eta_p
     \monbind
     \lambda\gamma.\,
-    \sem{p:\tau}^{\gamma}
-  \right).
-\]
-\end{corollary}
+    \sem{p:\tau}^{\gamma}.
+  \]
+\end{lemma}
 
-\begin{proof}
-  Let $A\subseteq Expr_\tau$ be measurable. Then
-  \begin{align}
-    &\left(
-      (\pi_2)_*
-      \left(
-        \eta_p
-        \monbind
-        \lambda\gamma.\,
-        \sem{p:\tau}^{\gamma}
-      \right)
-    \right)(A)
-    \notag
-    \\
-    &=
-    \left(
-      \eta_p
-      \monbind
-      \lambda\gamma.\,
-      \sem{p:\tau}^{\gamma}
-    \right)(Trace\times A)
-    \tag{\text{by the definition of pushforward}}
-    \\
-    &=
-    \left(
-      \sem{p:\tau}
-      \monbind
-      \lambda e'.\,
-      \left(
-        \eta_{e'}
-        \monbind
-        \lambda\gamma'.\,
-        \delta_{(\gamma',e')}
-      \right)
-    \right)(Trace\times A)
-    \tag{\text{by \Cref{lem:one-step-trace-reconstruction}}}
-    \\
-    &=
-    \int_{Expr_\tau}
-      \mathbf 1_A(e')\,\eta_{e'}(Trace)\,
-      \sem{p:\tau}(de')
-    \tag{\text{by the definitions of bind and the Dirac measure}}
-    \\
-    &=
-    \sem{p:\tau}(A)
-    \tag{\text{since $\eta_{e'}(Trace)=1$}}.
-  \end{align}
-\end{proof}
-
-Iterating the one-step result gives the corresponding finite-step
-reconstruction.
 
 \begin{lemma}[Finite-step trace reconstruction]
-\label{lem:finite-step-trace-reconstruction}
-Let $p:\tau$ be closed and well typed, and let $\eta_p$ be its
-$\G$-mode trace distribution. Then, for every $n\in\mathbb N$,
-\[
-  \eta_p
-  \monbind
-  \lambda\gamma.\,
-  \bigsemstep{p:\tau}{n}^{\gamma}
-  =
-  \bigsemstep{p:\tau}{n}
-  \monbind
-  \lambda e'.\,
-  \left(
-    \eta_{e'}
+  \label{lem:finite-step-trace-reconstruction}
+  Let $p:\tau$ be closed and well typed, and let $\eta_p$ be its
+  $\G$-mode trace distribution. Then, for every $n\in\mathbb N$,
+  \[
+    \bigsemstep{p:\tau}{n}
+    =
+    \eta_p
     \monbind
-    \lambda\gamma'.\,
-    \delta_{(\gamma',e')}
-  \right).
-\]
+    \lambda\gamma.\,
+    \bigsemstep{p:\tau}{n}^{\gamma}.
+  \]
 \end{lemma}
 
-\begin{proof}
-  By induction on $n$.
-
-  For $n=0$,
-  \begin{align}
-    &\eta_p
-    \monbind
-    \lambda\gamma.\,
-    \bigsemstep{p:\tau}{0}^{\gamma}
-    \notag
-    \\
-    &=
-    \eta_p
-    \monbind
-    \lambda\gamma.\,
-    \delta_{(\gamma,p)}
-    \tag{\text{by the definition of tracewise $0$-step semantics}}
-    \\
-    &=
-    \delta_p
-    \monbind
-    \lambda e'.\,
-    \left(
-      \eta_{e'}
-      \monbind
-      \lambda\gamma'.\,
-      \delta_{(\gamma',e')}
-    \right)
-    \tag{\text{by the left-unit law}}
-    \\
-    &=
-    \bigsemstep{p:\tau}{0}
-    \monbind
-    \lambda e'.\,
-    \left(
-      \eta_{e'}
-      \monbind
-      \lambda\gamma'.\,
-      \delta_{(\gamma',e')}
-    \right)
-    \tag{\text{by the definition of global $0$-step semantics}}.
-  \end{align}
-
-  For $n+1$,
-  \begin{align}
-    &\eta_p
-    \monbind
-    \lambda\gamma.\,
-    \bigsemstep{p:\tau}{n+1}^{\gamma}
-    \notag
-    \\
-    &=
-    \eta_p
-    \monbind
-    \lambda\gamma.\,
-    \left(
-      \bigsemstep{p:\tau}{n}^{\gamma}
-      \monbind
-      \lambda(\gamma',e').\,
-      \sem{e':\tau}^{\gamma'}
-    \right)
-    \tag{\text{by the definition of tracewise $(n+1)$-step semantics}}
-    \\
-    &=
-    \left(
-      \eta_p
-      \monbind
-      \lambda\gamma.\,
-      \bigsemstep{p:\tau}{n}^{\gamma}
-    \right)
-    \monbind
-    \lambda(\gamma',e').\,
-    \sem{e':\tau}^{\gamma'}
-    \tag{\text{by associativity of monadic bind}}
-    \\
-    &=
-    \left(
-      \bigsemstep{p:\tau}{n}
-      \monbind
-      \lambda e'.\,
-      \left(
-        \eta_{e'}
-        \monbind
-        \lambda\gamma'.\,
-        \delta_{(\gamma',e')}
-      \right)
-    \right)
-    \monbind
-    \lambda(\gamma',e').\,
-    \sem{e':\tau}^{\gamma'}
-    \tag{\text{by the induction hypothesis}}
-    \\
-    &=
-    \bigsemstep{p:\tau}{n}
-    \monbind
-    \lambda e'.\,
-    \left(
-      \eta_{e'}
-      \monbind
-      \lambda\gamma'.\,
-      \sem{e':\tau}^{\gamma'}
-    \right)
-    \tag{\text{by associativity and the left-unit law}}
-    \\
-    &=
-    \bigsemstep{p:\tau}{n}
-    \monbind
-    \lambda e'.\,
-    \left(
-      \sem{e':\tau}
-      \monbind
-      \lambda e''.\,
-      \left(
-        \eta_{e''}
-        \monbind
-        \lambda\gamma''.\,
-        \delta_{(\gamma'',e'')}
-      \right)
-    \right)
-    \tag{\text{by \Cref{lem:one-step-trace-reconstruction}}}
-    \\
-    &=
-    \left(
-      \bigsemstep{p:\tau}{n}
-      \monbind
-      \lambda e'.\,
-      \sem{e':\tau}
-    \right)
-    \monbind
-    \lambda e''.\,
-    \left(
-      \eta_{e''}
-      \monbind
-      \lambda\gamma''.\,
-      \delta_{(\gamma'',e'')}
-    \right)
-    \tag{\text{by associativity of monadic bind}}
-    \\
-    &=
-    \bigsemstep{p:\tau}{n+1}
-    \monbind
-    \lambda e''.\,
-    \left(
-      \eta_{e''}
-      \monbind
-      \lambda\gamma''.\,
-      \delta_{(\gamma'',e'')}
-    \right)
-    \tag{\text{by the definition of global $(n+1)$-step semantics}}.
-  \end{align}
-\end{proof}
-
-Projecting away the unused trace again yields a one-bind formulation.
-
-\begin{corollary}[Finite-step trace reconstruction, expression marginal]
-\label{cor:finite-step-trace-reconstruction}
-Let $p:\tau$ be closed and well typed, and let $\eta_p$ be its
-$\G$-mode trace distribution. Then, for every $n\in\mathbb N$,
-\[
-  \bigsemstep{p:\tau}{n}
-  =
-  (\pi_2)_*
-  \left(
-    \eta_p
-    \monbind
-    \lambda\gamma.\,
-    \bigsemstep{p:\tau}{n}^{\gamma}
-  \right).
-\]
-\end{corollary}
-
-\begin{proof}
-  Let $A\subseteq Expr_\tau$ be measurable. Then
-  \begin{align}
-    &\left(
-      (\pi_2)_*
-      \left(
-        \eta_p
-        \monbind
-        \lambda\gamma.\,
-        \bigsemstep{p:\tau}{n}^{\gamma}
-      \right)
-    \right)(A)
-    \notag
-    \\
-    &=
-    \left(
-      \eta_p
-      \monbind
-      \lambda\gamma.\,
-      \bigsemstep{p:\tau}{n}^{\gamma}
-    \right)(Trace\times A)
-    \tag{\text{by the definition of pushforward}}
-    \\
-    &=
-    \left(
-      \bigsemstep{p:\tau}{n}
-      \monbind
-      \lambda e'.\,
-      \left(
-        \eta_{e'}
-        \monbind
-        \lambda\gamma'.\,
-        \delta_{(\gamma',e')}
-      \right)
-    \right)(Trace\times A)
-    \tag{\text{by \Cref{lem:finite-step-trace-reconstruction}}}
-    \\
-    &=
-    \int_{Expr_\tau}
-      \mathbf 1_A(e')\,\eta_{e'}(Trace)\,
-      \bigsemstep{p:\tau}{n}(de')
-    \tag{\text{by the definitions of bind and the Dirac measure}}
-    \\
-    &=
-    \bigsemstep{p:\tau}{n}(A)
-    \tag{\text{since $\eta_{e'}(Trace)=1$}}.
-  \end{align}
-\end{proof}
 
 The transformation preserves the trace distribution used by these
 reconstruction results.
@@ -4236,38 +3910,39 @@ We can now reconstruct both global output distributions from their
 tracewise semantics.
 
 \begin{theorem}[Trace representation of the global semantics]
-\label{thm:trace-representation}
-Let $e:\tau$ be closed and well typed, where
-$\tau=\Float{m}$ and $m=\G$ or $\E$.
-There exists a probability measure $\eta_e$ on $Trace$, concentrated on valid
-$\G$-mode traces, such that the maps
-\[
-  \gamma\longmapsto\bigsem{e:\tau}^{\gamma}
-  \qquad\text{and}\qquad
-  \gamma\longmapsto
-  \bigsem{\exptrans{e:\tau}:\tau}^{\gamma}
-\]
-are measurable kernels and
-\[
-  \bigsem{e:\tau}
-  =
-  \eta_e
-  \monbind
-  \lambda\gamma.\,
-  \bigsem{e:\tau}^{\gamma},
-\]
-and
-\[
-  \bigsem{\exptrans{e:\tau}:\tau}
-  =
-  \eta_e
-  \monbind
-  \lambda\gamma.\,
-  \bigsem{\exptrans{e:\tau}:\tau}^{\gamma}.
-\]
-Here, $\bigsem{p:\tau}^{\gamma}$ denotes the tracewise output distribution
-obtained by fixing the $\G$-mode samples according to $\gamma$ while leaving
-the $\E$-mode samples probabilistic.
+  \label{thm:trace-representation}
+  Let $e:\tau$ be closed and well typed, where
+  $\tau=\Float{m}$ and $m=\G$ or $\E$.
+  There exists a probability measure $\eta_e$ on $Trace$, concentrated on
+  valid $\G$-mode traces, such that the maps
+  \[
+    \gamma\longmapsto\bigsem{e:\tau}^{\gamma}
+    \qquad\text{and}\qquad
+    \gamma\longmapsto
+    \bigsem{\exptrans{e:\tau}:\tau}^{\gamma}
+  \]
+  are measurable kernels and
+  \[
+    \bigsem{e:\tau}
+    =
+    \eta_e
+    \monbind
+    \lambda\gamma.\,
+    \bigsem{e:\tau}^{\gamma},
+  \]
+  and
+  \[
+    \bigsem{\exptrans{e:\tau}:\tau}
+    =
+    \eta_e
+    \monbind
+    \lambda\gamma.\,
+    \bigsem{\exptrans{e:\tau}:\tau}^{\gamma}.
+  \]
+
+  Here, $\bigsem{p:\tau}^{\gamma}$ denotes the tracewise output
+  distribution obtained by fixing the $\G$-mode samples according to
+  $\gamma$ while leaving the $\E$-mode samples probabilistic.
 \end{theorem}
 
 \begin{proof}
@@ -4286,30 +3961,17 @@ the $\E$-mode samples probabilistic.
     &=
     \lim_{n\to\infty}
     \left(
-      (\pi_2)_*
-      \left(
-        \eta_e
-        \monbind
-        \lambda\gamma.\,
-        \bigsemstep{e:\tau}{n}^{\gamma}
-      \right)
-    \right)(A)
-    \tag{\text{by \Cref{cor:finite-step-trace-reconstruction}}}
-    \\
-    &=
-    \lim_{n\to\infty}
-    \left(
       \eta_e
       \monbind
       \lambda\gamma.\,
       \bigsemstep{e:\tau}{n}^{\gamma}
-    \right)(Trace\times A)
-    \tag{\text{by the definition of pushforward}}
+    \right)(A)
+    \tag{\text{by \Cref{lem:finite-step-trace-reconstruction}}}
     \\
     &=
     \lim_{n\to\infty}
     \int_{Trace}
-      \bigsemstep{e:\tau}{n}^{\gamma}(Trace\times A)\,
+      \bigsemstep{e:\tau}{n}^{\gamma}(A)\,
       \eta_e(d\gamma)
     \tag{\text{by the definition of monadic bind}}
     \\
@@ -4317,7 +3979,7 @@ the $\E$-mode samples probabilistic.
     \int_{Trace}
       \left(
         \lim_{n\to\infty}
-        \bigsemstep{e:\tau}{n}^{\gamma}(Trace\times A)
+        \bigsemstep{e:\tau}{n}^{\gamma}(A)
       \right)
       \eta_e(d\gamma)
     \tag{\text{by the monotone convergence theorem}}
@@ -4337,6 +3999,7 @@ the $\E$-mode samples probabilistic.
     \right)(A)
     \tag{\text{by the definition of monadic bind}}.
   \end{align}
+
   Since this holds for every measurable $A\subseteq Val_\tau$,
   \[
     \bigsem{e:\tau}
@@ -4358,30 +4021,17 @@ the $\E$-mode samples probabilistic.
     &=
     \lim_{n\to\infty}
     \left(
-      (\pi_2)_*
-      \left(
-        \eta_e
-        \monbind
-        \lambda\gamma.\,
-        \bigsemstep{\exptrans{e:\tau}:\tau}{n}^{\gamma}
-      \right)
-    \right)(A)
-    \tag{\text{by \Cref{cor:finite-step-trace-reconstruction,lem:preservation-of-trace-distribution}}}
-    \\
-    &=
-    \lim_{n\to\infty}
-    \left(
       \eta_e
       \monbind
       \lambda\gamma.\,
       \bigsemstep{\exptrans{e:\tau}:\tau}{n}^{\gamma}
-    \right)(Trace\times A)
-    \tag{\text{by the definition of pushforward}}
+    \right)(A)
+    \tag{\text{by \Cref{lem:finite-step-trace-reconstruction,lem:preservation-of-trace-distribution}}}
     \\
     &=
     \lim_{n\to\infty}
     \int_{Trace}
-      \bigsemstep{\exptrans{e:\tau}:\tau}{n}^{\gamma}(Trace\times A)\,
+      \bigsemstep{\exptrans{e:\tau}:\tau}{n}^{\gamma}(A)\,
       \eta_e(d\gamma)
     \tag{\text{by the definition of monadic bind}}
     \\
@@ -4389,7 +4039,7 @@ the $\E$-mode samples probabilistic.
     \int_{Trace}
       \left(
         \lim_{n\to\infty}
-        \bigsemstep{\exptrans{e:\tau}:\tau}{n}^{\gamma}(Trace\times A)
+        \bigsemstep{\exptrans{e:\tau}:\tau}{n}^{\gamma}(A)
       \right)
       \eta_e(d\gamma)
     \tag{\text{by the monotone convergence theorem}}
@@ -4409,6 +4059,7 @@ the $\E$-mode samples probabilistic.
     \right)(A)
     \tag{\text{by the definition of monadic bind}}.
   \end{align}
+
   Since this holds for every measurable $A\subseteq Val_\tau$,
   \[
     \bigsem{\exptrans{e:\tau}:\tau}
