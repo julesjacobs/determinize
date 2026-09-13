@@ -108,6 +108,31 @@ def varianceThm : Prop :=
         ∫ value : ℝ, value ^ 2 ∂bigStepMeasure program ∧
       variance id (bigStepMeasure program.determinize) ≤ variance id (bigStepMeasure program)
 
+/-- Output law conditioned on returning a real; used only when output mass is positive. -/
+noncomputable def returnedLaw (program : Expr) : Measure ℝ :=
+  (bigStepMeasure program Set.univ)⁻¹ • bigStepMeasure program
+
+/-- Variance decreases for the probability laws of successful outputs. -/
+def conditionalVarianceThm : Prop :=
+  ∀ (program : Expr),
+    Typed [] program (.float .E) → DomainSafe program →
+    bigStepMeasure program Set.univ ≠ 0 → MemLp id 2 (bigStepMeasure program) →
+      bigStepMeasure program.determinize Set.univ ≠ 0 ∧
+      MemLp id 2 (returnedLaw program.determinize) ∧
+      variance id (returnedLaw program.determinize) ≤ variance id (returnedLaw program)
+
+/-- Extended expectations conditioned on returning, including infinite expectations. -/
+def conditionalExtendedExpectationThm : Prop :=
+  ∀ (program : Expr),
+    Typed [] program (.float .E) → DomainSafe program →
+    bigStepMeasure program Set.univ ≠ 0 → HasExpectation (bigStepMeasure program) →
+      bigStepMeasure program.determinize Set.univ ≠ 0 ∧
+      HasExpectation (bigStepMeasure program.determinize) ∧
+      ((bigStepMeasure program.determinize Set.univ).toReal⁻¹ : EReal) *
+          extendedExpectation (bigStepMeasure program.determinize) =
+        ((bigStepMeasure program Set.univ).toReal⁻¹ : EReal) *
+          extendedExpectation (bigStepMeasure program)
+
 /-- Determinization preserves the expectation conditioned on acceptance, which is what makes
 `observe` meaningful: when output mass is positive, rejection sampling on the determinized
 program preserves the conditional expectation. The output

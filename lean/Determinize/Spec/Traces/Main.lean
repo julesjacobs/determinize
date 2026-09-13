@@ -1,3 +1,4 @@
+import Determinize.Spec.Main
 import Determinize.Spec.Traces.Semantics
 import Determinize.Proof.Traces.Mass
 import Mathlib.Probability.Kernel.Disintegration.StandardBorel
@@ -51,5 +52,17 @@ def varianceThm : Prop :=
       variance id (bigStepMeasure program) =
         variance id (bigStepMeasure program.determinize) +
           ∫ trace, variance id ((traceAndOutputLaw program).condKernel trace) ∂traceLaw program
+
+/-- Total variance conditioned on returning, with the trace law normalized by output mass. -/
+def conditionalVarianceThm : Prop :=
+  ∀ (program : Expr),
+    Typed [] program (.float .E) → DomainSafe program →
+    bigStepMeasure program Set.univ ≠ 0 → MemLp id 2 (bigStepMeasure program) →
+      Integrable (fun trace => variance id ((traceAndOutputLaw program).condKernel trace))
+        ((bigStepMeasure program Set.univ)⁻¹ • traceLaw program) ∧
+      variance id (returnedLaw program) =
+        variance id (returnedLaw program.determinize) +
+          ∫ trace, variance id ((traceAndOutputLaw program).condKernel trace)
+            ∂((bigStepMeasure program Set.univ)⁻¹ • traceLaw program)
 
 end Determinize.Spec.Traces

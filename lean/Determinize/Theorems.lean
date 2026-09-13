@@ -1,7 +1,7 @@
 import Determinize.Spec.Main
 import Determinize.Spec.Traces.Main
 import Determinize.Proof.Soundness
-import Determinize.Proof.Corollaries
+import Determinize.Proof.Normalization
 import Determinize.Proof.Traces.ConditionalLaw
 import Determinize.Proof.Semantics.Termination
 
@@ -39,6 +39,15 @@ theorem traceConditionalLaw : Spec.Traces.conditionalLawThm :=
 theorem traceVarianceDecomposition : Spec.Traces.varianceThm :=
   Proof.Traces.varianceSoundness
 
+theorem conditionalVarianceNonIncrease : Spec.conditionalVarianceThm :=
+  Proof.Paper.conditionalVarianceSoundness
+
+theorem returnedExtendedExpectation : Spec.conditionalExtendedExpectationThm :=
+  Proof.Paper.conditionalExtendedExpectationSoundness
+
+theorem conditionalTraceVarianceDecomposition : Spec.Traces.conditionalVarianceThm :=
+  Proof.Traces.conditionalVarianceSoundness
+
 end Determinize.Theorems
 
 #print axioms Determinize.Theorems.expectationPreservation
@@ -51,3 +60,7 @@ end Determinize.Theorems
 #print axioms Determinize.Theorems.traceErasure
 #print axioms Determinize.Theorems.traceConditionalLaw
 #print axioms Determinize.Theorems.traceVarianceDecomposition
+
+#print axioms Determinize.Theorems.conditionalVarianceNonIncrease
+#print axioms Determinize.Theorems.returnedExtendedExpectation
+#print axioms Determinize.Theorems.conditionalTraceVarianceDecomposition
