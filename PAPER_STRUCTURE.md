@@ -14,7 +14,7 @@ definitions and rules they explain.
 - Semantics: the one that doesn't require a measure space over `Expr`.
 - Determinization transform: easy because of the `[E]`, `[G]` annotations; independent of typing rules.
 
-## Type System
+## Type System and Soundness Theorem
 
 - Typing rules and intuitive explanations.
 - Soundness theorem statement: the main one without traces.

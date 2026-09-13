@@ -4,9 +4,20 @@
 
 \input{figures/syntax}
 
+\begin{definition}[Determinization]
+\label{def:determinization}
+$\trans e$ replaces every $\E$ annotation in $e$ by $\M$. For each distribution
+primitive $D$,
+\[
+ \trans{D^\E(e_1,\ldots,e_n)}
+ =D^\M(\trans{e_1},\ldots,\trans{e_n}).
+\]
+All other constructs, including $\G$ and $\M$ sites, retain their form with
+their subexpressions transformed recursively.
+\end{definition}
+
 This needs:
 \begin{itemize}
-    \item Determinization transformation
     \item Some more examples
 \end{itemize}
 

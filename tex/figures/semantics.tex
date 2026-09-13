@@ -18,7 +18,7 @@
        \mid\draw D\alpha{\bar v,C,\bar e},\qquad\circ\in\{+,\cdot,/,<\}.
 \end{aligned}
 \)\par
-\par\vspace{16pt}
+\par\vspace{15pt}
 \semanticsHeading{Deterministic reduction}
 \begingroup
 \setlength{\jot}{0pt}
@@ -27,6 +27,7 @@
  (\lambda x.e)\,v&\rightsquigarrow e[x\mapsto v]\\
  (\recfn f x e)\,v&\rightsquigarrow e[x\mapsto v,f\mapsto\recfn f x e]\\
  \letin x v e&\rightsquigarrow e[x\mapsto v]\\
+ \kw{reject}&\rightsquigarrow\kw{reject}\\
  \ite{\kw{true}}{e_1}{e_2}&\rightsquigarrow e_1\\
  \ite{\kw{false}}{e_1}{e_2}&\rightsquigarrow e_2\\
  \kw{fst}\,\langle v_1,v_2\rangle&\rightsquigarrow v_1\\
@@ -39,7 +40,7 @@
 \end{aligned}
 \)\par
 \endgroup
-\par\vspace{16pt}
+\par\vspace{15pt}
 \semanticsHeading{Primitive distributions}
 \begingroup
 \renewcommand{\arraystretch}{1.08}
@@ -59,7 +60,7 @@ $\kw{gamma}(k,\lambda)$ & $k>0,\ \lambda>0$ & $k/\lambda$\\
 \bottomrule
 \end{tabular*}
 \endgroup
-\par\vspace{16pt}
+\par\vspace{15pt}
 \semanticsHeading{Output measures}
 \begingroup
 \settowidth{\dimen0}{$\displaystyle\int_{\Real}\out{C[r]}n(B)\,D(\bar v)(dr)$}
