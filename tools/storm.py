@@ -6,6 +6,7 @@ from fractions import Fraction
 import importlib.metadata
 import json
 import os
+import re
 import signal
 from pathlib import Path
 import subprocess
@@ -145,6 +146,10 @@ def certificate_text(prefix, result):
     text += f"\ndef ranks : Vector Nat model.size := ⟨#[{', '.join(map(str, ranks))}], by decide +kernel⟩\n"
     destinations = ', '.join(f"⟨{j}, by decide +kernel⟩" for j in following)
     text += f"\ndef nextStates : Vector (Fin model.size) model.size := ⟨#[{destinations}], by rfl⟩\n"
+    state_proofs = "\n".join(
+        f"theorem result_{i} : resultClaim (⟨{i}, by decide +kernel⟩ : Fin model.size) := by\n  decide +kernel\n"
+        for i in range(n))
+    evidence_entries = ", ".join(f"⟨⟨{i}, by decide +kernel⟩, result_{i}⟩" for i in range(n))
     text += f"""
 def result : MomentCertificate model where
   dead := fun i => deadStates[i]
@@ -153,8 +158,21 @@ def result : MomentCertificate model where
   values := fun moment i => (match moment with
     | .mass => massValues | .first => firstValues | .second => secondValues)[i]
 
+def termination : TerminationCertificate model := ⟨result, fun i => rejectionValues[i]⟩
+
+abbrev resultClaim (i : Fin model.size) : Prop := candidate.QueryStateValid machineReplay termination i
+{state_proofs}
+def resultEvidence : Vector (Subtype (fun i : Fin model.size => resultClaim i)) model.size := ⟨#[{evidence_entries}], by rfl⟩
+theorem resultIndices : ∀ i : Fin model.size, (resultEvidence[i]).val = i := by decide +kernel
+theorem allResults (i : Fin model.size) : resultClaim i := (resultIndices i) ▸ (resultEvidence[i]).property
+
+theorem terminationAccepted : Determinize.Checking.checkTermination model termination = true :=
+  (Determinize.Checking.checkTermination_valid model termination).mpr
+    (sparseResults_valid candidate machineReplay termination allResults)
+
 theorem resultAccepted : Determinize.Checking.checkStatistics model result = true := by
-  decide +kernel
+  exact (Determinize.Checking.checkStatistics_valid model result).mpr
+    ((Determinize.Checking.checkTermination_valid model termination).mp terminationAccepted).1
 
 def statistics := result.statistics model
 
@@ -167,11 +185,6 @@ theorem conditionalVariance (positive : 0 < statistics.returnMass) :
       ((statistics.secondMoment / statistics.returnMass - (statistics.firstMoment / statistics.returnMass)^2 : Rat) : ℝ) :=
   Determinize.Checking.checked_conditionalVariance ⟨model, modelMatches⟩ result resultAccepted positive
 
-def termination : TerminationCertificate model := ⟨result, fun i => rejectionValues[i]⟩
-
-theorem terminationAccepted : Determinize.Checking.checkTermination model termination = true := by
-  decide +kernel
-
 theorem terminationProbabilities : (termination.statistics model).Matches model :=
   Determinize.Checking.checked_termination model termination terminationAccepted
 
@@ -182,6 +195,21 @@ theorem terminationProbabilities : (termination.statistics model).Matches model 
 """
     initial, = labels["init"]
     return text, {name: vector[initial] for name, vector in values.items()}
+
+
+def checked_axioms(output):
+    reports = {name: {item.strip() for item in axioms.split(",") if item.strip()}
+               for name, axioms in re.findall(r"'([^']+)' depends on axioms:\s*\[([^]]*)\]", output)}
+    for name in re.findall(r"'([^']+)' does not depend on any axioms", output):
+        reports[name] = set()
+    required = {"outputStatistics", "terminationProbabilities", "conditionalVariance"}
+    if not required <= reports.keys():
+        raise ValueError("missing certificate axiom reports")
+    allowed = {"propext", "Classical.choice", "Quot.sound"}
+    for name, axioms in reports.items():
+        if axioms - allowed:
+            raise ValueError(f"unexpected axioms for {name}: {sorted(axioms - allowed)}")
+    return {name: sorted(reports[name]) for name in sorted(required)}
 
 
 def run_command(argv, *, cwd, timeout):
@@ -217,6 +245,7 @@ def run(args):
                                              "seconds": time.monotonic() - started})
         if completed.returncode:
             raise RuntimeError(completed.stderr or completed.stdout or f"exit {completed.returncode}")
+        return completed
 
     try:
         report["stormpy_version"] = importlib.metadata.version("stormpy")
@@ -231,7 +260,8 @@ def run(args):
         certificate = Path(str(prefix) + ".storm.lean")
         certificate.write_text(text)
         report["stage"] = "kernel check"
-        command(["lake", "env", "lean", certificate], ROOT / "lean")
+        checked = command(["lake", "env", "lean", certificate], ROOT / "lean")
+        report["axioms"] = checked_axioms(checked.stdout + checked.stderr)
         report.update(kernel_checked=True, storm_version=values["storm_version"],
                       storm_build_type=values["storm_build_type"],
                       exact_answer=str(answer["first"]), return_mass=str(answer["mass"]),

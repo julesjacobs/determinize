@@ -154,7 +154,9 @@ class ResultTests(unittest.TestCase):
                             '{"storm_version": "test", "storm_build_type": "test"}')
                     if stage == 4:
                         Path(str(prefix) + ".result.json").write_text('{"answer": "1/3"}')
-                    return subprocess.CompletedProcess(argv, 0, "", "")
+                    output = "\n".join(f"'{name}' depends on axioms: [propext, Classical.choice, Quot.sound]"
+                                       for name in ("outputStatistics", "terminationProbabilities", "conditionalVariance"))
+                    return subprocess.CompletedProcess(argv, 0, output, "")
 
                 with patch.object(adapter.importlib.metadata, "version", return_value="test"), \
                      patch.object(adapter, "run_command", side_effect=command), \
@@ -170,6 +172,17 @@ class ResultTests(unittest.TestCase):
                     self.assertTrue(report["kernel_checked"])
                 else:
                     self.assertNotIn("kernel_checked", report)
+
+    def test_certificate_axioms(self):
+        adapter = self.adapter()
+        output = "\n".join(f"'{name}' depends on axioms: [propext, Classical.choice, Quot.sound]"
+                           for name in ("outputStatistics", "terminationProbabilities", "conditionalVariance"))
+        self.assertEqual(len(adapter.checked_axioms(output)), 3)
+        for invalid in ("", output.replace("Quot.sound", "sorryAx"),
+                        output.replace("Quot.sound", "Lean.ofReduceBool"),
+                        output.replace("Quot.sound", "unprovedClaim")):
+            with self.assertRaises(ValueError):
+                adapter.checked_axioms(invalid)
 
     def test_storm_timeout_stops_children(self):
         adapter = self.adapter()
@@ -207,6 +220,24 @@ class ResultTests(unittest.TestCase):
             path = Path(tmp) / "wrong.lean"
             path.write_text(certificate)
             self.assertNotEqual(kernel(path).returncode, 0)
+
+    @unittest.skipUnless(os.environ.get("STORM_PYTHON"), "set STORM_PYTHON for real Storm integration")
+    def test_storm_above_dense_limit(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            source = directory / "input.det"
+            source.write_text("let f = rec f x => if x <= 0 then 7 else f (x-1) in f 9")
+            prefix = directory / "model"
+            result = subprocess.run([os.environ["STORM_PYTHON"], ROOT / "tools/storm.py",
+                                     source, "--prefix", prefix, "--subject", "source", "--timeout", "300"],
+                                    text=True, capture_output=True, timeout=360)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            report = json.loads(Path(str(prefix) + ".storm.json").read_text())
+            self.assertTrue(report["kernel_checked"])
+            self.assertEqual(Fraction(report["exact_answer"]), 7)
+            self.assertGreater(self.adapter().read_model(prefix)[0]-1, 256)
+            self.assertFalse(Path(str(prefix) + ".result.json").exists())
+            self.assertTrue(all("--result" not in command for command in report["commands"]))
 
     @unittest.skipUnless(os.environ.get("STORM_PYTHON"), "set STORM_PYTHON for real Storm integration")
     def test_storm(self):
