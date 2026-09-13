@@ -24,6 +24,14 @@ namespace Determinize.Spec
 open MeasureTheory ProbabilityTheory Paper
 open scoped ENNReal
 
+/-- A domain-safe, real-typed program either returns or continues forever.
+Rejection counts as divergence. -/
+def returnOrDivergeThm : Prop :=
+  ∀ (affinity : Affinity) (program : Expr),
+    Typed [] program (.float affinity) →
+    DomainSafe program →
+    bigStepMeasure program Set.univ + divergenceProbability program = 1
+
 /-- Determinization preserves finite expectations and operation-domain safety. -/
 def mainThm : Prop :=
   ∀ (program : Expr),

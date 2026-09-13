@@ -3,10 +3,14 @@ import Determinize.Spec.Traces.Main
 import Determinize.Proof.Soundness
 import Determinize.Proof.Corollaries
 import Determinize.Proof.Traces.ConditionalLaw
+import Determinize.Proof.Semantics.Termination
 
 /-! The public propositions, proved with no additional hypotheses. -/
 
 namespace Determinize.Theorems
+
+theorem returnOrDiverge : Spec.returnOrDivergeThm :=
+  Proof.Paper.returnOrDiverge
 
 theorem expectationPreservation : Spec.mainThm :=
   Proof.Paper.finiteExpectationSoundness
@@ -38,6 +42,7 @@ theorem traceVarianceDecomposition : Spec.Traces.varianceThm :=
 end Determinize.Theorems
 
 #print axioms Determinize.Theorems.expectationPreservation
+#print axioms Determinize.Theorems.returnOrDiverge
 #print axioms Determinize.Theorems.extendedExpectationPreservation
 #print axioms Determinize.Theorems.jensenInequality
 #print axioms Determinize.Theorems.outputMassPreservation

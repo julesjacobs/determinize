@@ -257,4 +257,57 @@ example : ¬ DomainSafe (.uniform .mean (.real 3) (.real 1)) := by
 example : Typed [] (.uniform .mean (.real 3) (.real 1)) (.float .E) :=
   .uniformMean .real .real
 
+open scoped ENNReal
+
+private theorem running_real (depth : Nat) (r : ℝ) :
+    runningProbabilityAt depth (.real r) = 0 := by
+  cases depth <;> simp [runningProbabilityAt, Expr.isValue]
+
+private theorem running_reject (depth : Nat) :
+    runningProbabilityAt depth .reject = 1 := by
+  induction depth with
+  | zero => rfl
+  | succ depth ih => simpa [runningProbabilityAt, reduce, Expr.isValue] using ih
+
+example (r : ℝ) : divergenceProbability (.real r) = 0 := by
+  simp [divergenceProbability, running_real]
+
+example : divergenceProbability .reject = 1 := by
+  simp [divergenceProbability, running_reject]
+
+example : divergenceProbability (.div (.real 1) (.real 0)) = 0 := by
+  apply le_antisymm _ zero_le
+  calc
+    divergenceProbability (.div (.real 1) (.real 0)) ≤
+        runningProbabilityAt 1 (.div (.real 1) (.real 0)) := iInf_le _ 1
+    _ = 0 := by simp [runningProbabilityAt, reduce, Expr.isValue, realValue?]
+
+private noncomputable def halfReject : Expr :=
+  .ite (.lt (.bernoulli (.sample .G) (.real (1 / 2))) (.real 1)) (.real 7) .reject
+
+private theorem halfReject_running (n : Nat) :
+    runningProbabilityAt (n + 3) halfReject = 1 / 2 := by
+  norm_num [halfReject, runningProbabilityAt, reduce, Expr.isValue, bernoulliFiber,
+    Action.wrap, realValue?, running_real, running_reject, ENNReal.ofReal_div_of_pos]
+
+example : divergenceProbability halfReject = 1 / 2 := by
+  apply le_antisymm
+  · exact (iInf_le _ 3).trans_eq (halfReject_running 0)
+  · apply le_iInf
+    intro n
+    match n with
+    | 0 | 1 | 2 =>
+        norm_num [halfReject, runningProbabilityAt, reduce, Expr.isValue, bernoulliFiber,
+          Action.wrap, realValue?, ENNReal.ofReal_div_of_pos]
+    | n + 3 => exact (halfReject_running n).ge
+
+example : divergenceProbability loop = 1 := by
+  have running (depth : Nat) : runningProbabilityAt depth loop = 1 := by
+    induction depth with
+    | zero => rfl
+    | succ depth ih =>
+        simpa [runningProbabilityAt, loop, loopFunction, Expr.isValue, reduce,
+          Expr.substTwo, Expr.substAt, Expr.shift, Expr.mapVars] using ih
+  simp [divergenceProbability, running]
+
 end Determinize.Proof.Examples

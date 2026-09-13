@@ -194,6 +194,22 @@ noncomputable def outputMeasureAt : Nat → Expr → Measure ℝ
 noncomputable def bigStepMeasure (program : Expr) : Measure ℝ :=
   Measure.sum fun depth => outputMeasureAt depth program
 
+/-- Probability of executing `depth` steps and still not being a value.
+Stuck executions contribute zero; rejection keeps taking steps. -/
+noncomputable def runningProbabilityAt : Nat → Expr → ℝ≥0∞
+  | 0, expression => if expression.isValue then 0 else 1
+  | depth + 1, expression =>
+      if expression.isValue then 0
+      else match reduce expression with
+        | .next next => runningProbabilityAt depth next
+        | .sample _ fiber continuation =>
+            ∫⁻ value, runningProbabilityAt depth (continuation value) ∂fiber
+        | .stuck => 0
+
+/-- Probability of continuing forever, including rejection's infinite self-loop. -/
+noncomputable def divergenceProbability (program : Expr) : ℝ≥0∞ :=
+  ⨅ depth, runningProbabilityAt depth program
+
 /-- Operations remain within their domains through the given reduction depth.
 For typed programs, failures are invalid distribution parameters or division by zero. -/
 def DomainSafeAt : Nat → Expr → Prop
