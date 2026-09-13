@@ -1,87 +1,76 @@
-# Finite models and certified expected terminal rewards
+# Certified finite computation
 
-The reviewed definitions are in `Determinize/Spec/FiniteModel/`. The exact
-explorer and model checker are implemented. `Proof/FiniteModel/Soundness.lean`
-proves that every accepted graph represents the selected paper program's complete
-output law and that the program does not get stuck. Result certificates connect
-checked linear equations and absorption to the actual expected reward. Optional
-Storm comparisons are implemented separately.
+The reviewed definitions are in `Determinize/Spec/FiniteModel/`. Graph construction,
+rational solving, and external certificate checking share those definitions.
+Implementation details and correctness proofs live in `Proof/FiniteModel/`.
 
-## Model and quantity
+## Model and observables
 
-`Model` contains a nonempty finite state space, an initial state, exact rational
-transition probabilities, and a `StateKind` for each state:
+A `Model` has a nonempty finite state space, initial state, rational nonnegative
+transition rows summing to one, and states classified as transient, returned with
+a rational value, or rejected. Evaluation stops at either terminal kind.
+`outputWithin n s` records the output law reached within `n` transitions;
+`outputMeasure` is its increasing supremum. Rejection and divergence contribute
+no output. Finitely many terminal values ensure finite output moments even when
+the chain can diverge.
 
-- `transient`: evaluation continues.
-- `returned r`: evaluation returned rational reward `r`.
-- `rejected`: an observation failed.
+`OutputStatistics.Matches` states exact return mass and first and second output
+moments. Conditional mean and variance divide by return mass; the executable
+accessors return `none` at mass zero.
 
-Rows are nonnegative and sum to one.
-Returned rewards are paid once. Evaluation stops at returned or rejected states, so terminal matrix rows do not affect the model output law. `outputWithin n s` records the unnormalized real
-output law reached within `n` transitions from `s`; a returned initial state
-contributes at depth zero. `outputMeasure` is its increasing supremum.
-`rewardWithin` computes the finite-horizon expectation in rational arithmetic,
-with a proof connecting it to the real integral.
-
-Rewards may be negative. Rejection and divergence contribute no output mass.
-The answer is not conditioned on returning. `Model.expectedReward` is the integral of the output law. Finite terminal rewards ensure integrability for every model, including nonabsorbing models. The result checker certifies equality with the proposed answer.
+`Termination.lean` defines rejection probability by marking rejected states as
+returned and discarding successful returns. Divergence probability is the infimum
+of finite-depth survival probabilities. `massBalanceThm` states that return,
+rejection, and divergence probabilities sum to one. `TerminationStatistics.Matches`
+relates the three reported rationals to these probabilities. This distinction is
+for the finite model: the core paper semantics counts rejection among executions
+that do not return.
 
 ## Exact execution boundary
 
-The explorer uses rational arithmetic, including division by zero returning zero
-as in the core semantics. It does not use the Float runtime or round values for
-state equality. `supportedDraw` records the sampling policy:
+The exact machine uses rational arithmetic and structural state equality.
+Bernoulli and discrete samples have finite successors. Primitive means are
+rational on rational arguments. Residual stochastic continuous and Poisson calls
+are unsupported, including when nested inside a mean site's operands.
+Arity and domains are checked; division by zero fails. Encountered nonnumeric
+final values and unsupported operations fail explicitly.
 
-| Evaluated call | Exact execution |
-| --- | --- |
-| Stochastic Bernoulli | Outcomes 0 and 1 |
-| Stochastic discrete with checked rational weights | Numeric indices |
-| Mean site with rational parameters | Rational mean formula |
-| Other stochastic primitive | Unsupported |
+Functions, recursion, pairs, sums, and lists may occur internally. Structural
+exploration can identify finite cycles but does not abstract infinite state
+spaces. Continuous distributions require an explicit finite approximation
+before exploration unless determinization eliminates them. No discretization
+error theorem is claimed.
 
-Arity and parameter domains are checked at each call. Operands evaluate before
-the draw, so a residual continuous stochastic operand remains unsupported even
-inside a mean site. Stochastic Poisson and degenerate continuous draws remain
-unsupported. Unreachable unsupported expressions do not require export failure.
+## Graph construction and correspondence
 
-Functions, recursion, pairs, sums, and lists may occur internally. Encountered
-nonnumeric final values, invalid operations, invalid parameters, and unsupported
-draws produce explicit failures. Resource exhaustion produces an incomplete
-result rather than a model certificate.
+`Finite.explore source subject limits` returns either a complete candidate with
+`Candidate.ReplayValid source subject`, an incomplete result, or a failure.
+The builder maintains correspondence between its state array and lookup map,
+completed rows, and successor coverage. It proves row weights by aggregating all
+outcomes for each destination. Hash collisions preserve correctness. The normal
+export path consumes this proof directly and does not replay the graph.
 
-## Checked model and exported evidence
+The candidate records graph data. The independently supplied source and subject
+select the program: either the resolved core source or its Lean determinization.
+`replay_matches` proves `Model.Matches`, which states paper domain safety and
+equality of complete unbounded output laws. No typing or termination premise is
+needed for this finite-model correspondence.
 
-`Checking.checkModel source subject candidate` returns a `CheckedModel` containing
-a rational model and a proof of `Model.Matches (subject.program source)`.
-`checkModelReplay` exposes the underlying `Candidate.ReplayValid` evidence.
-The result theorem consumes this extracted model and its correctness proof directly.
+External graph replay validates:
 
-The source and `Subject.source`/`Subject.determinized` selection are supplied
-independently of the candidate; the candidate stores neither request metadata nor step evidence tags. Determinized selection uses the existing Lean
-transform. A certificate for the determinized program does not automatically
-certify the source's safety or integrability.
+- Initial-state alignment, source scope, dimensions, and distinct stored states.
+- Every actual exact-machine step and terminal classification.
+- Every positive-probability successor and its exact transition weight.
+- Distinct valid edge indices, positive weights, normalized rows, and absorbing
+  terminal rows.
 
-Replay validation checks:
+Portable replay supplies successor indices and state fingerprints. Lean checks
+the indices against actual successors and checks each fingerprint; equal-key
+pairs still undergo structural comparison. Sparse row checks imply the original
+full-matrix contract, including zero weights at absent destinations.
 
-- Dimensions, the actual initial state, source scope (including unused bodies),
-  and uniqueness of stored machine states.
-- Every stored state's actual `Finite.step` result and terminal kind.
-- Coverage of every positive-probability successor; zero-weight successors may be absent.
-- Exact transition weights, valid distinct edge indices, and positive sparse weights.
-- Nonnegative normalized matrix rows and absorbing terminal rows.
-
-Equality is kernel-reducible for nested closures and environments. The checker
-uses neither the explorer's hash table nor its Boolean equality implementation.
-Unique additional valid states are allowed. Duplicate states are rejected even
-when unreachable. Result absorption certificates still quantify over all states.
-
-Each export includes `.candidate.lean` with unverified data and `.replay.lean`
-with an independent `decide +kernel` proof of replay, the constructed model, and
-`modelMatches`. This last theorem states safety and equality of unbounded paper
-output measures. Axiom checks use only Lean's standard axioms. Tests include
-closures, value constructors, finite distributions with zero weights,
-probabilistic recursion, and pure divergence. Tampering with the initial state
-invalidates the certificate.
+Unique extra valid states are allowed. All certificate obligations cover every
+stored state, including unreachable states.
 
 ## Why replay implies paper correspondence
 
@@ -110,68 +99,77 @@ The internal proof modules establish the following chain:
 - `Soundness.replay_matches` composes these results without additional typing,
   termination, absorption, or integrability premises.
 
-## Exploration and files
+## Boundary analysis and value equations
 
-`Finite/Explore.lean` performs breadth-first exploration, aggregates equal
-successors, and omits zero-weight edges. Equality is structural and resolves hash
-collisions. Complete exploration produces candidate data; the checker validates
-it before `Finite/Export.lean` writes files.
+Terminal reachability computes a closed region D from which no terminal state
+is reachable. `cut_outputMeasure` proves that replacing D by zero-output terminal
+states preserves the entire output law. For each remaining transient state, a
+chosen positive edge of strictly smaller natural rank witnesses a route to the
+boundary. Other edges may loop or increase rank.
 
-State count, edge count, and serialized per-state size have independent limits.
-The size check happens after construction and is not a hard memory bound. On
-failure, existing output files are preserved and the exit status indicates the
-failure. Infinite recursion can produce a finite cyclic graph, while growing
-arguments, environments, or stacks can exhaust limits. Complete exploration does
-not imply absorption or finite expected execution time.
+`paths_unique` proves uniqueness of the terminal-value equations: a maximum
+absolute difference between two solutions propagates along the chosen edges and
+reaches a zero boundary. This avoids a numerical absorption bound. The analyzer
+and path constructor return proofs on success; neither claims a separate
+completeness theorem about its implementation.
 
-## Result certificates and Storm
+`MomentCertificate` contains D, ranks, chosen successors, and rational value
+vectors for return mass and first and second moments. `checkStatistics` checks
+closedness, descending edges, and all equations against the original model.
+`momentCertificate_sound` relates them to its output law. Terminal relabelling
+and `query_sound` share the proof across observables.
 
-A `ResultCertificate model` supplies rational state values `v` and a horizon `k`. Its validity conditions are:
+`TerminationCertificate` adds a rejection vector, using the same D and paths.
+The rejection query is formed before cutting off D, so a divergent state cannot
+be counted as rejection. `terminationCertificate_sound` proves rejection
+probability and derives divergence from the mass-balance theorem.
 
-- Returned states satisfy `v(s) = reward(s)`; rejected states satisfy `v(s) = 0`.
-- Transient states satisfy `v(s) = Σ_t P(s,t) v(t)`.
-- Every state satisfies `survivalWithin k s < 1`. Horizon zero is sufficient for an all-terminal model.
+The verified internal route uses `solveValues` and the proved Gaussian elimination
+algorithm, retaining equation proofs without checking the solutions afterward.
+`solveStatistics` and `solveTermination` share boundary evidence. Separate right-hand
+sides currently use separate elimination runs. The older horizon-based
+`solveCertified`/`checkResult` API remains available for absorbing models; the CLI
+uses the general moment route.
 
-`Proof/FiniteModel/Result.lean` proves `resultCertificate_sound`. Every output
-measure is dominated by a finite sum of terminal Dirac measures, so the output is
-integrable even with signed rewards. The unbounded measures satisfy the transition
-equations. The difference between any two equation solutions is bounded by its
-maximum absolute value times survival probability. The absorption bound forces
-that maximum to zero. A transient self-loop still admits spurious equation
-solutions and cannot pass the absorption check. Nonabsorbing result certification
-requires a later extension; model correspondence itself includes divergence.
+## Portable files and Storm
 
-`Checking/Result.lean` implements `checkResult` and proves `checkResult_sound`.
-Its tabulated survival calculation is proved equal to `survivalWithin`.
-`checked_expectedReward` combines the extracted model with a checked result, establishing
-integrability and the exact expected reward of the selected paper program.
-`checked_sourceExpectedReward` additionally retains the source typing, safety, and
-integrability premises needed to transport a determinized answer to the source.
-A certificate for the determinized subject alone does not discharge those premises.
+`--export PREFIX` writes raw `.candidate.lean`, standalone `.replay.lean`, and
+Storm transition, label, and positive/negative reward files. `--result PREFIX`
+adds `.result.json` and `.result.lean`. Portable Lean files use `decide +kernel`
+and export axiom reports. They validate saved data rather than rerun exploration
+and elimination. Each state has a separate kernel proof, assembled through a
+checked proof table. Moment and rejection equations sum over sparse edges; their
+proofs imply the full matrix equations. These checks can cost more than native
+execution.
 
-`Finite/Solve.lean` uses unverified rational Gaussian elimination and searches
-horizons up to the number of states for survival probabilities below one. The JSON summary derives a uniform escape bound from the checked horizon; it is not a certificate field.
-Every generated certificate passes `checkResult` against the original checked
-Lean model. Dense solving defaults to at most 256 states; rational arithmetic and
-independent kernel replay can be expensive. `--result PREFIX` writes the usual
-model files plus `.result.json` and a standalone `.result.lean` theorem. Run
-`lake env lean PREFIX.result.lean` to check its evidence independently.
+The Storm encoding redirects each terminal to a synthetic zero-reward sink,
+paying its output reward once. The adapter adds D to the reward-until-target set;
+original terminals remain outside that target so their reward is paid. It asks
+Storm for every state's exact rational value, removes the synthetic sink only
+after checking its dimension and zero value, and writes `.storm.lean`.
+Positive and negative parts are queried separately for signed first moments.
+Return, rejection, and second moments use nonnegative reward vectors.
 
-The Storm writer redirects returned and rejected states to a fresh zero-reward
-`done` sink, paying returned rewards once. Signed rewards use separate positive
-and negative reward files. `tools/storm.py` invokes Lean certificate generation,
-independently kernel-checks the certificate, runs Storm through `stormpy` on both
-reward files with `R=? [ F "done" ]`, and compares their difference with the exact
-answer. `.storm.json` records the version, engine, property, commands,
-logs, completion status, and failures/timeouts. The adapter reads rational explicit
-data into Storm’s exact sparse-matrix API because its default explicit-file reader
-does not accept fractional literals. Storm’s rational answer must match exactly;
-the independent Lean rational solver supplies the certificate evidence.
+The checker binds Storm's vectors to the original Lean graph and its requested
+source/subject. Incorrect transitions, state ordering, rewards, boundary analysis,
+or rational conversion cannot establish a false equation certificate. The adapter
+never invokes our solver by default; `--compare` enables a differential check.
+The result report marks `kernel_checked` only after Lean accepts the certificate
+and reports that its output-statistics, termination-probability, and conditional-
+variance theorems use only `propext`, `Classical.choice`, and `Quot.sound`.
 
-Parsing/desugaring and the reviewed specification remain in the trust boundary.
-Certificates bind the theorem to the exported core source and subject, not to the
-bytes of the `.det` file. Inference, exploration, solving, Storm, and serialization
-are unverified; accepted model and result evidence is checked by Lean. The formal
-result does not rely on the correctness of the Storm file serialization or on
-agreement with Storm. The executable Float sampler remains
-outside this exact finite-model theorem.
+## Limits and remaining boundaries
+
+Exploration limits state count, edge count, and serialized size per state. Size
+is checked after construction and is not a memory bound. An incomplete graph
+never becomes a certificate. Computational failures preserve prior exports;
+filesystem write failures can leave partial output files. Dense solving defaults
+to 256 states; Storm uses the exploration limit instead. Subprocess timeouts
+bound adapter stages.
+
+Parsing and desugaring are unverified. The theorem names the resolved core
+program rather than the original source bytes. Floating-point sampling is not
+proved to implement the real-valued semantics. A determinized-program certificate
+does not discharge the source safety and integrability premises needed to
+transfer its moments back to the source. No approximation theorem connects a
+user-chosen discretization to a continuous program.

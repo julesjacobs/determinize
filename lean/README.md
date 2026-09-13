@@ -251,8 +251,8 @@ lake env lean /tmp/model.replay.lean
 ```
 
 These are program-level model certificates: they cover unbounded execution,
-rejection, and divergence. Expected-reward certificates additionally require a
-uniform absorption bound. The replay checker checks the full transition matrix;
+rejection, and divergence. Moment certificates also cover finite graphs with
+divergence. Portable replay checks sparse rows and successor-index witnesses;
 checking large graphs can cost substantially more than exploration.
 
 Limits default to `--max-states 10000 --max-edges 100000
@@ -281,7 +281,7 @@ invariants, and a bookkeeping bound feed into the unbounded execution proof.
 `Graph.lean` connects the graph to machine output, and `Soundness.lean` establishes
 `Model.Matches`, which is carried by the extracting checker’s result.
 
-### Certified expected rewards and Storm
+### Certified output moments and Storm
 
 From `lean/`:
 
@@ -290,18 +290,31 @@ lake exe determinize --result /tmp/model --subject source ../tests/statistical/d
 lake env lean /tmp/model.result.lean
 ```
 
-`--result` exports the model and an exact expected-reward certificate. The verified solver establishes
-all terminal/transient equations by Gaussian elimination and finds a positive
-finite-step absorption bound. `solveCertified` returns these proofs; `solve_sound`
-and `solve_expectedReward` state correctness of the data-returning API. The solver
-does not call the result-certificate checker. Exported certificates still use that
-checker to validate the saved answer independently without rerunning elimination.
-The exported `expectedReward` theorem establishes integrability and the exact
-answer for the selected core program. Rejected paths contribute zero; the answer
-is unnormalized. Nonabsorbing models are rejected by the solver.
-The dense exact solver defaults to `--max-result-states 256`.
+`--result` exports the model, `.result.json`, and a standalone `.result.lean`
+certificate. The JSON reports return, rejection, and divergence probabilities,
+the first two unnormalized output moments, and conditional mean and variance.
+Conditional quantities are `null` when return probability is zero.
+For example, equal chances of diverging and returning 2 give return mass 1/2,
+first moment 1, second moment 2, conditional mean 2, and conditional variance 0.
 
-For Storm comparison, from the repository root:
+The verified builder constructs the graph correspondence proof. Terminal
+reachability identifies a closed divergent region, which contributes no output.
+One positive-probability edge of decreasing rank per remaining transient state
+proves uniqueness of the equations. `Finite.solveStatistics` and
+`Finite.solveTermination` use verified rational Gaussian elimination and return
+proofs directly. No graph replay or result checker runs on this internal path.
+The dense solver defaults to `--max-result-states 256`.
+
+Portable exports check saved graph data, path witnesses, and value equations in
+Lean's kernel, using per-state proofs and sparse equations. `outputStatistics` certifies the selected core program's output
+law; `expectedReward` and `conditionalVariance` give its first moment and
+conditional variance. `terminationProbabilities` certifies return, rejection,
+and divergence probabilities for the finite model. These probabilities sum to
+one by `Proof.FiniteModel.massBalance`, with divergence defined as the limit of
+survival probabilities. The paper semantics counts rejection among executions
+with no output; the finite model distinguishes rejection from divergence.
+
+For an independent Storm certificate, from the repository root:
 
 ```sh
 python3 -m venv /tmp/determinize-storm
@@ -309,15 +322,22 @@ python3 -m venv /tmp/determinize-storm
 /tmp/determinize-storm/bin/python tools/storm.py tests/statistical/discrete.det --prefix /tmp/model --subject source
 ```
 
-The wrapper independently kernel-checks the certificate and runs Storm on the
-positive and negative reward files. It records version/options/status in
-`/tmp/model.storm.json`. The adapter loads rational explicit data into Storm's
-exact sparse-matrix API and requires exact agreement with the Lean-checked answer.
-Storm is not trusted by the theorem. Each subprocess has a
-120-second timeout, adjustable with `--timeout`.
-When overriding the wrapper's `--binary`, use an absolute path; relative executable
-paths currently resolve against the repository root rather than the caller's directory.
+The adapter invokes `--export`, obtains full exact rational state-value vectors
+from Storm, and writes `.storm.lean`. Lean checks the vectors against the original
+model, including boundary conditions. This route never calls our solver unless
+`--compare` is supplied and has no 256-state solver limit. Both routes certify
+the same quantities. Storm, rational decoding, and serialization are outside the
+proof; incorrect vectors fail checking.
 
-`lean/test.sh` includes exact ground truth and independent result-certificate
-replay with tampered values and horizons. Set `STORM_PYTHON` to an interpreter
-with the pinned `stormpy` dependency to include real Storm integration tests.
+`.storm.json` records the certified values, versions, commands, stage durations,
+and completion or failure. A successful report also requires axiom reports using
+only `propext`, `Classical.choice`, and `Quot.sound`. Each subprocess has a 120-second timeout, adjustable
+with `--timeout`; large portable kernel checks can require more time.
+When overriding `--binary`, use an absolute path; relative paths resolve against
+the repository root.
+
+`lean/test.sh` includes exact ground truth, independent kernel replay, and
+certificates with tampered values, boundaries, ranks, and dimensions.
+Set `STORM_PYTHON` to an interpreter with the pinned `stormpy` dependency to
+include real Storm integration tests. The precise contract and proof boundaries
+are described in [finite-model-contract.md](finite-model-contract.md).
