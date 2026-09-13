@@ -28,3 +28,26 @@
 \newcommand{\typing}[2]{\Gamma\vdash #1:#2}
 \newcommand{\lean}[1]{\texttt{\detokenize{#1}}}
 \newcommand{\jules}[1]{\textcolor{red}{JJ: #1}}
+
+\lstdefinelanguage{det}{
+  sensitive=true,
+  morekeywords={let,in,if,then,else,fun,rec,match,with,true,false,reject},
+  morekeywords=[2]{uniform,gaussian,poisson,exponential,bernoulli,discrete,beta,gamma},
+  morekeywords=[3]{G,E,M},
+  morecomment=[n]{(*}{*)}
+}
+\lstset{
+  language=det,
+  basicstyle=\small\ttfamily,
+  keywordstyle=\color{blue!55!black}\bfseries,
+  keywordstyle=[2]\color{teal!65!black},
+  keywordstyle=[3]\color{violet!65!black}\bfseries,
+  commentstyle=\color{black!55}\itshape,
+  columns=fullflexible,
+  keepspaces=true,
+  xleftmargin=1.5em,
+  showstringspaces=false,
+  upquote=true,
+  aboveskip=\medskipamount,
+  belowskip=\medskipamount
+}

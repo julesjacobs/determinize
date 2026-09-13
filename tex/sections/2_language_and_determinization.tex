@@ -12,7 +12,7 @@ primitive $D$,
  \trans{D^\E(e_1,\ldots,e_n)}
  =D^\M(\trans{e_1},\ldots,\trans{e_n}).
 \]
-All other constructs, including $\G$ and $\M$ sites, retain their form with
+All other constructs, including $\G$ and $\M$ distribution expressions, retain their form with
 their subexpressions transformed recursively.
 \end{definition}
 
@@ -22,4 +22,7 @@ This needs:
 \end{itemize}
 
 \input{figures/semantics}
+In $\kw{gaussian}(u,v)$, $v$ is the variance.
+The distribution $\kw{discrete}([p_i]_{i<n})$ returns $i$ with probability $p_i$
+for $0\le i<n$, and $n$ with the remaining probability $1-\sum_{i<n}p_i$.
 \clearpage

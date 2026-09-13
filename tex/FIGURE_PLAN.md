@@ -10,8 +10,8 @@ affect the results; leave routine formal details to Lean.
 - [x] Determinization.
 - [x] Selected typing rules and subtyping.
 - [x] Domain validity and global guarantees.
-- [ ] Joint trace semantics and conditional trace soundness statement.
-- [ ] Variance decomposition.
+- [x] Joint trace semantics and conditional trace soundness statement.
+- [x] Variance decomposition.
 - [ ] Derive the main theorem from trace soundness.
 - [ ] Example programs and moment calculations.
 - [x] Clear section bodies, retaining the outline.
@@ -41,7 +41,7 @@ semantics loses no probability through some additional mechanism.
 - [x] Explain finite, infinite, and undefined expectations with positive and negative parts.
 - [x] Give an undefined-expectation example that also motivates the trace theorem.
 - [x] Explain domain safety and state mass balance and output-mass preservation.
-- [ ] Add a Lean bridge lemma for normalized variance.
+- [x] Add a Lean bridge lemma for normalized variance.
 - [ ] Author review of the prose and normalization convention.
 
 ### 1. Lead with the guarantee
@@ -70,7 +70,7 @@ This follows from `extendedExpectationThm` and `outputMassThm` in
 case is also exported as `conditionalExpectationThm`. Finite source expectation
 stays finite.
 
-Add a short forward pointer: the refined theorem in the Traces section does not
+Add a short forward pointer: the refined theorem in When Expectations Are Undefined does not
 require the global expectation to exist.
 
 ### 2. Follow with variance reduction
@@ -185,9 +185,9 @@ Lean sources: `returnOrDivergeThm` and `outputMassThm` in `Spec/Main.lean`, and
 `Proof/Semantics/Termination.lean` is useful for the formal development, but need
 not be another paper theorem or replace the direct domain-safety assumption.
 
-### Traces and proof sections
+### When Expectations Are Undefined and proof sections
 
-In the Traces section, state `conditionalLawThm`: equal laws of terminating G
+In When Expectations Are Undefined, state `conditionalLawThm`: equal laws of terminating G
 traces and, almost everywhere, the target conditional output law is a point mass
 at the finite source conditional mean. No global integrability assumption is
 needed. Follow it with the variance decomposition from `Spec/Traces/Main.lean`,

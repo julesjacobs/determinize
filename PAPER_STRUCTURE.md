@@ -25,7 +25,7 @@ definitions and rules they explain.
 - Infer valid E/G annotations from the typing rules.
 - Explicit annotations as user constraints.
 
-## Traces
+## When Expectations Are Undefined
 
 - Refined semantics.
 - Refined theorem.

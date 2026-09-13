@@ -4,20 +4,15 @@
 
 \input{figures/typing}
 
-We use the type system in \cref{fig:typing} to check that mode $\E$ sampling is safe.
-The type system checks that $\E$ samples are used ``expectation-affinely'':
-they influence the expectation value of the final returned value in an affine way.
-For example:
+We use the type system in \cref{fig:typing} to check which samples can be replaced
+by their means. Its rules restrict how $\E$ samples may be used:
 \begin{itemize}
     \item The arguments of addition are at $\E$-mode when the sum itself is.
-    \item Multiplication requires one $\G$-operand and allows one $\E$-operand. \jules{Give examples and explain the intuition for why that's ok even though the arguments may not be independent}
+    \item Multiplication requires a $\G$ left operand and allows an $\E$ right operand. \jules{Give examples and explain the intuition for why that's ok even though the arguments may not be independent}
     \item Division requires a $\G$ denominator but allows an $\E$ numerator.
     \item The distribution rules allow $\E$ parameters where the mean is
 affine in those parameters. \jules{Give examples and explain the intuition for why that's ok}
 \end{itemize}
-
-The aim of the type system is a soundness theorem for the determinization
-transformation, which replaces $\E$-mode sampling with $\M$-mode deterministic mean computation.
 
 \begin{theorem}[Expectation preservation]
 \label{thm:expectation}
@@ -42,7 +37,7 @@ almost surely, every executed distribution has parameters in its domain and
 every executed division has a nonzero divisor.
 \end{itemize}
 
-We also show that determinization can only improve the variance:
+Determinization also never increases the variance:
 
 \begin{theorem}[Variance non-increase]
 \label{thm:variance}
@@ -53,19 +48,18 @@ also has positive probability of returning and a finite second moment, and
  \Var_{\mathrm{ret}}[\trans e]\le\Var_{\mathrm{ret}}[e].
 \]
 \end{theorem}
-where
-\begin{itemize}
-    \item $\Var_{\mathrm{ret}}$ is the variance conditioned on the program succesfully returning (i.e., discarding rejected trials and infinite loops)
-\end{itemize}
+Here $\Var_{\mathrm{ret}}$ is the variance conditioned on returning:
+\[
+  \Var_{\mathrm{ret}}[e]=\frac1{\law e(\Real)}\int_{\Real}
+    \bigl(r-\Expect_{\mathrm{ret}}[e]\bigr)^2\,\law e(dr).
+\]
 
-The reader may note that both theorems require the expectation or variance of the
-input program to be well defined (which makes sense for theorems that state that expectation is preserved and variance only decreases).
-We give the mathematical background below.
-\Cref{sec:traces} gives refined theorems that apply even when the input program's
-expectation is not well defined, and state that the expectation, although undefined, is still preserved in a finer grained sense.
+The expectation theorem allows $+\infty$ and $-\infty$, but excludes undefined
+expectations. \Cref{sec:traces} compares programs after fixing the $\G$ draws,
+even when their global expectations are undefined.
 
 \paragraph{When is an expectation defined?}
-For a nonnegative quantity, the integral is always defined (by taking a supremum), although it may be
+For a nonnegative quantity, the integral is always defined, although it may be
 infinite. To integrate a signed output, separate its positive and negative parts:
 \[
  r^+=\max(r,0),\qquad r^-=\max(-r,0),\qquad
@@ -85,28 +79,24 @@ The absolute-value integral is nonnegative, so the question is whether it is
 \emph{finite}, not whether it is defined.
 
 For example, consider
-\begin{verbatim}
+\begin{lstlisting}
 let u = uniform[G](0, 1) in
 let s = 2 * bernoulli[G](1/2) - 1 in
 s / u + uniform[E](-1, 1)
-\end{verbatim}
+\end{lstlisting}
 The program returns almost surely and is domain-safe: the exceptional event
 $u=0$ has probability zero. Yet $\int_0^1 du/u=\infty$, and the random sign makes
 both the positive and negative parts infinite, so the program's expectation is undefined. In contrast, $1/u$
 alone has the defined expectation $+\infty$.
 
-Determinization still removes the centered $\E$ noise and returns $s/u$. For almost
-every fixed $\G$ trace, $u$ and $s$ are fixed, the source has the finite
-conditional mean $s/u$, and the target returns exactly that number. This is the
-property formalized in \cref{sec:traces}, which applies to all programs, regardless
-of whether their expectation is defined.
+Determinization replaces the final uniform draw by zero and returns $s/u$,
+whose expectation is still undefined.
 
 \paragraph{Domain safety and missing probability.}
-Our theorems require that the program uses the distributions in a domain-safe way.
-For example, the following well-typed program $e$ is not domain-safe:
-\begin{verbatim}
+The following well-typed program $e$ is not domain-safe:
+\begin{lstlisting}
 let u = gaussian[E](0, 1) in uniform[E](0, u)
-\end{verbatim}
+\end{lstlisting}
 When $u<0$, the uniform distribution's parameters are invalid and execution gets
 stuck. The program returns with probability $1/2$; conditioned on returning,
 its expected output is half the mean of a standard Gaussian conditioned to be
@@ -120,15 +110,12 @@ Thus the domain-safety assumption is necessary, because:
 \]
 
 \paragraph{Rejection and divergence}
-Rejection (``observe'' in other languages) is permitted:
-we formally model $\kw{reject}$ as an infinite loop that contributes no output.
+Rejection, as in a failed $\kw{observe}$, contributes no output.
+We model $\kw{reject}$ as an infinite loop.
 
 Let $d_e$ denote the probability of divergence, including rejection. It is the
 limit, as $n$ grows, of the probability of executing $n$ steps and still not
 being a value.
-
-The following theorem states the analogue of conventional type safety,
-and safety of the determinization transformation.
 
 \begin{proposition}[Probability preservation]
 \label{prop:probability}
@@ -143,14 +130,3 @@ and
 
 Thus the missing output mass accounts precisely for divergence and rejection;
 neither the original program nor the transformed program loses probability mass due to getting stuck.
-
-When $q_e=\law e(\Real)>0$, the distribution of successfully returned outputs
-is $\law e/q_e$. Its variance is
-\[
-  \Var_{\mathrm{ret}}[e]=\frac1{q_e}\int_{\Real}
-    \bigl(r-\Expect_{\mathrm{ret}}[e]\bigr)^2\,\law e(dr).
-\]
-The expectation is used when defined, and the variance when the second moment
-is finite. Determinization preserves both $q_e$ and the unnormalized integral
-$\int_{\Real}r\,\law e(dr)$ whenever it is defined, giving the conditional
-expectation equality in \cref{thm:expectation}.

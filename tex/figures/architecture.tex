@@ -52,8 +52,8 @@
 \draw[flow] (explore) -- (solve);
 \draw[flow] (solve) -- (answer);
 
-\node[stage] (storm) at (.365,-8.50) {Storm\\exact state values};
-\node[verified] (check) at (.635,-8.50) {Value-vector\\checker};
+\node[stage] (storm) at (.365,-8.50) {Storm solver};
+\node[verified] (check) at (.635,-8.50) {Certificate\\checker};
 \draw[flow] (explore.south) -- (storm.north);
 \draw[flow] (storm) -- (check);
 \draw[flow,shorten >=5pt] (check.east) -| (answer.south);
@@ -75,6 +75,7 @@
 checking, with a branch to the checked source and another through determinization.
 One program branches to formal measure semantics, floating-point sampling,
 and verified finite graph construction. The graph feeds either a
-verified exact rational solver or Storm followed by a verified vector checker.
+verified exact rational solver or Storm's exact model checking of expected
+accumulated rewards, followed by a verified certificate checker.
 Both routes produce exact mean and variance conditioned on returning, when return probability is positive.}
 \end{figure}

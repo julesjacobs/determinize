@@ -1,0 +1,39 @@
+% !TeX root = ../main.tex
+\begin{figure}[ht]
+\centering
+\small
+\textbf{$\G$ traces $\tau\in\Trace$}
+\[
+ \tau ::= []\mid(D,r)::\tau,
+ \qquad
+ p_{D,r}(\tau,s)=((D,r)::\tau,s).
+\]
+\textbf{Refined output measures}
+\[
+\begin{aligned}
+ \joint r0&=\delta_{([],r)},\\[4pt]
+ \joint{C[\draw D\E{\bar v}]}{n+1}
+  &=\int_{\Real}\joint{C[r]}n\,D(\bar v)(dr),\\[4pt]
+ \joint{C[\draw D\G{\bar v}]}{n+1}
+  &=\int_{\Real}(p_{D,r})_*\joint{C[r]}n\,D(\bar v)(dr).
+\end{aligned}
+\]
+\[
+ J_e=\sum_{n=0}^{\infty}\joint e n,
+ \qquad
+ \trlaw e(A)=J_e(A\times\Real),
+ \qquad
+ \law e(B)=J_e(\Trace\times B).
+\]
+\caption{Trace refinement of \cref{fig:semantics}.
+$\joint e n$ records the trace and output of executions returning after exactly
+$n$ steps. A $\G$ draw of value $r$ from primitive $D$ prepends $(D,r)$;
+$\E$ draws and mean computations add no entry. $(p_{D,r})_*$ applies
+$p_{D,r}$ to each trace/output pair in the measure. Sampling requires $\operatorname{Domain}_D(\bar v)$.
+The deterministic-step and zero cases are unchanged, with $J$ in place of $\mu$.}
+\label{fig:traces}
+\Description{Traces record primitive names and values of G draws. The refined
+semantics returns an empty trace at a real value, averages over E samples without
+recording them, and prepends each G sample to the continuation trace. Summing over
+termination depths gives the joint law; its marginals give traces and outputs.}
+\end{figure}
