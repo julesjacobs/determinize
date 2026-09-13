@@ -74,12 +74,12 @@ private theorem outputWithin_bound (model : Model) (n : Nat) (state : Fin model.
               Finset.sum_le_sum (fun next _ => smul_le_smul_left _ (ih next))
             _ = terminalBound model := by rw [← Finset.sum_smul, transition_mass, one_smul]
 
-private noncomputable def outputAt (model : Model) (state : Fin model.size) : Measure ℝ :=
+noncomputable def outputAt (model : Model) (state : Fin model.size) : Measure ℝ :=
   ⨆ n, model.outputWithin n state
 
-private theorem outputAt_integrable (model : Model) (state : Fin model.size) :
-    Integrable id (outputAt model state) :=
-  (terminalBound_integrable model id).mono_measure (iSup_le (fun n => outputWithin_bound model n state))
+theorem outputAt_integrable (model : Model) (state : Fin model.size) (f : ℝ → ℝ := id) :
+    Integrable f (outputAt model state) :=
+  (terminalBound_integrable model f).mono_measure (iSup_le (fun n => outputWithin_bound model n state))
 
 /-- Finite terminal rewards bound the output law, including for nonabsorbing models. -/
 theorem outputMeasure_integrable (model : Model) : Integrable id model.outputMeasure :=
@@ -134,7 +134,7 @@ private theorem homogeneous_bound (model : Model) (d : Fin model.size → ℝ)
       · rw [eqs state]
         simp [Model.survivalWithin, h]
 
-private theorem homogeneous_unique (model : Model) (certificate : ResultCertificate model)
+theorem homogeneous_unique (model : Model) (certificate : ResultCertificate model)
     (absorption : certificate.Absorption model) (d : Fin model.size → ℝ)
     (eqs : ∀ state, d state = if model.kind state = .transient then
       ∑ next, (model.transition state next : ℝ) * d next else 0) : ∀ state, d state = 0 := by
@@ -150,21 +150,21 @@ private theorem homogeneous_unique (model : Model) (certificate : ResultCertific
   apply abs_eq_zero.mp
   exact le_antisymm (zero ▸ largest_bound state (Finset.mem_univ _)) (abs_nonneg _)
 
-private theorem outputAt_equations (model : Model) (state : Fin model.size) :
-    (∫ value : ℝ, value ∂outputAt model state) = match model.kind state with
-      | .returned reward => (reward : ℝ)
+theorem outputAt_equations (model : Model) (state : Fin model.size) (f : ℝ → ℝ := id) :
+    (∫ value : ℝ, f value ∂outputAt model state) = match model.kind state with
+      | .returned reward => f (reward : ℝ)
       | .rejected => 0
       | .transient => ∑ next, (model.transition state next : ℝ) *
-          (∫ value : ℝ, value ∂outputAt model next) := by
+          (∫ value : ℝ, f value ∂outputAt model next) := by
   cases h : model.kind state with
   | returned reward => simp [outputAt, returned_outputWithin model state reward h]
   | rejected => simp [outputAt, rejected_outputWithin model state h]
   | transient =>
       rw [outputAt_transient model state h]
-      rw [integral_finsetSum_measure (f := fun x : ℝ => x) (s := Finset.univ)
+      rw [integral_finsetSum_measure (f := f) (s := Finset.univ)
         (μ := fun next => ENNReal.ofReal (model.transition state next : ℝ) • outputAt model next)
         (fun next _ =>
-        (outputAt_integrable model next).smul_measure (by simp))]
+        (outputAt_integrable model next f).smul_measure (by simp))]
       simp only [integral_smul_measure, smul_eq_mul]
       apply Finset.sum_congr rfl
       intro next _
@@ -178,7 +178,7 @@ theorem resultCertificate_sound (model : Model) (certificate : ResultCertificate
     (fun state => (∫ value : ℝ, value ∂outputAt model state) - (certificate.values state : ℝ))
   have zero := unique (by
     intro state
-    rw [outputAt_equations]
+    rw [outputAt_equations model state (fun x => x)]
     have eqs := valid.1 state
     cases h : model.kind state with
     | returned reward => simp only [h] at eqs ⊢; simp [eqs]

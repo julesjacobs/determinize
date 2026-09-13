@@ -67,17 +67,35 @@ class ResultTests(unittest.TestCase):
                     self.assertNotIn(forbidden, checked.stdout)
                 text = certificate.read_text()
                 start = text.index("  values :=", text.index("def result :"))
-                end = text.index("\n", start)
-                certificate.write_text(text[:start] + "  values := fun _ => 12345" + text[end:])
+                end = text.index("\n\n", start)
+                certificate.write_text(text[:start] + "  values := fun _ _ => 12345" + text[end:])
                 self.assertNotEqual(kernel(certificate).returncode, 0)
                 start = text.index("  horizon :=", text.index("def result :"))
                 end = text.index("\n", start)
                 certificate.write_text(text[:start] + "  horizon := 0" + text[end:])
                 self.assertNotEqual(kernel(certificate).returncode, 0)
 
+    def test_divergence_and_conditional_moments(self):
+        cases = [
+            ("let f = rec f x => f x in f 0", ("0", "0", "0", None, None)),
+            ("let f = rec f x => f x in if flip(0.5) then f 0 else if flip(0.5) then -2 else 4",
+             ("1/2", "1/2", "5", "1", "9")),
+            ("let _ = observe(flip(0.5)) in if flip(0.5) then -2 else 4",
+             ("1/2", "1/2", "5", "1", "9")),
+        ]
+        for program, expected in cases:
+            with self.subTest(program=program), tempfile.TemporaryDirectory() as tmp:
+                result, prefix = generate(Path(tmp), program)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                data = json.loads(Path(str(prefix) + ".result.json").read_text())
+                self.assertEqual(tuple(data[key] for key in
+                    ("return_mass", "answer", "second_moment", "conditional_mean", "conditional_variance")), expected)
+                checked = kernel(Path(str(prefix) + ".result.lean"))
+                self.assertEqual(checked.returncode, 0, checked.stdout + checked.stderr)
+
     def test_failure_preserves_outputs(self):
         for program, options, error in [
-            ("let f = rec f x => f x in f 0", [], "singular"),
+            ("1/0", [], "division"),
             ("if flip(0.5) then 2 else 3", ["--max-result-states", "1"], "state limit"),
             ("uniform[G](0,1)", [], "unsupported"),
         ]:

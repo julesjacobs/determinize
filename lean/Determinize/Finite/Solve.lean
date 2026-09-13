@@ -23,8 +23,9 @@ private def absorption (model : Model) (remaining : Nat) (horizon : Nat)
         simp [next, Model.survivalWithin, correct])
 
 /-- The equations are established by elimination, without checking a proposed answer. -/
-def solveCertified (model : Model) (limits : SolveLimits := {}) :
-    Except String {certificate : ResultCertificate model // certificate.Valid model} := do
+def solveValues (model : Model) (limits : SolveLimits := {}) :
+    Except String {values : Fin model.size → Rat //
+      (⟨values, 0⟩ : ResultCertificate model).Equations model} := do
   if model.size > limits.maxStates then
     throw s!"exact solver state limit exceeded ({model.size} > {limits.maxStates})"
   let A := fun state next : Fin model.size =>
@@ -42,10 +43,19 @@ def solveCertified (model : Model) (limits : SolveLimits := {}) :
     cases kind : model.kind state <;>
       simp [A, b, kind, sub_mul, Finset.sum_sub_distrib] at h ⊢
     all_goals first | exact sub_eq_zero.mp h | exact h
+  return ⟨solution.val, equations⟩
+
+def absorptionBound (model : Model) :
+    Option {n : Nat // ∀ state, model.survivalWithin n state < 1} :=
   let initial := Vector.ofFn fun state => if model.kind state = StateKind.transient then (1 : Rat) else 0
-  let some bound := absorption model model.size 0 initial (by simp [initial, Model.survivalWithin])
+  absorption model model.size 0 initial (by simp [initial, Model.survivalWithin])
+
+def solveCertified (model : Model) (limits : SolveLimits := {}) :
+    Except String {certificate : ResultCertificate model // certificate.Valid model} := do
+  let solution ← solveValues model limits
+  let some bound := absorptionBound model
     | throw "no uniform absorption bound: some state cannot reach a terminal state"
-  return ⟨⟨solution.val, bound.val⟩, equations, bound.property⟩
+  return ⟨⟨solution.val, bound.val⟩, solution.property, bound.property⟩
 
 def solve (model : Model) (limits : SolveLimits := {}) : Except String (ResultCertificate model) :=
   (solveCertified model limits).map Subtype.val

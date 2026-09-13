@@ -1,5 +1,5 @@
-import Determinize.Finite.Solve
-import Determinize.Checking.Result
+import Determinize.Finite.Statistics
+import Determinize.Checking.Statistics
 import Determinize.Frontend.Pretty
 
 namespace Determinize.Finite
@@ -137,43 +137,61 @@ def write (outputPath : System.FilePath) (source : Checking.Core) (subject : Sub
     IO.FS.writeFile (outputPath.toString ++ suffix) content
 
 
-/-- A standalone theorem about the selected paper program's expected output. -/
+/-- A standalone theorem about the selected program's mass and output moments. -/
 def resultCertificateText (source : Checking.Core) (subject : Subject) (candidate : Candidate)
-    (model : Model) (certificate : ResultCertificate model) : String :=
-  let values := (List.ofFn certificate.values).map leanRat
+    (model : Model) (certificate : Proof.FiniteModel.MomentCertificate model) : String :=
+  let vector := fun moment => "#[" ++ String.intercalate ", " ((List.ofFn (certificate.values moment)).map leanRat) ++ "]"
+  let dead := "#[" ++ String.intercalate ", " ((List.ofFn certificate.dead).map toString) ++ "]"
   (replayCertificateText source subject candidate).replace
-    "import Determinize.Checking.FiniteModel" "import Determinize.Checking.Result" ++
-  "\ndef result : ResultCertificate model where\n" ++
-  "  values := fun i => #[" ++ String.intercalate ", " values ++ "][i.val]!\n" ++
+    "import Determinize.Checking.FiniteModel" "import Determinize.Checking.Statistics" ++
+  "\nopen Determinize.Proof.FiniteModel\n" ++
+  "\ndef result : MomentCertificate model where\n" ++
+  s!"  dead := fun i => {dead}[i.val]!\n" ++
   s!"  horizon := {certificate.horizon}\n" ++
-  "\ntheorem resultAccepted : Determinize.Checking.checkResult model result = true := by\n" ++
+  "  values := fun moment i => (match moment with\n" ++
+  s!"    | .mass => {vector .mass}\n    | .first => {vector .first}\n    | .second => {vector .second})[i.val]!\n" ++
+  "\ntheorem resultAccepted : Determinize.Checking.checkStatistics model result = true := by\n" ++
   "  decide +kernel\n" ++
+  "\ndef statistics := result.statistics model\n" ++
+  "\ntheorem outputStatistics : statistics.Matches (bigStepMeasure (checkedSubject.program checkedSource)) :=\n" ++
+  "  Determinize.Checking.checked_statistics ⟨model, modelMatches⟩ result resultAccepted\n" ++
   "\ntheorem expectedReward :\n" ++
   "    MeasureTheory.Integrable id (bigStepMeasure (checkedSubject.program checkedSource)) ∧\n" ++
   "    (∫ value : ℝ, value ∂bigStepMeasure (checkedSubject.program checkedSource)) =\n" ++
-  "      (result.values model.initial : ℝ) := by\n" ++
-  "  exact Determinize.Checking.checked_expectedReward ⟨model, modelMatches⟩ result resultAccepted\n" ++
-  "\n#print axioms resultAccepted\n#print axioms expectedReward\n"
+  "      (statistics.firstMoment : ℝ) := by\n" ++
+  "  exact ⟨modelMatches.2 ▸ Determinize.Proof.FiniteModel.outputMeasure_integrable model, outputStatistics.2.1⟩\n" ++
+  "\ntheorem conditionalVariance (positive : 0 < statistics.returnMass) :\n" ++
+  "    ProbabilityTheory.variance id ((bigStepMeasure (checkedSubject.program checkedSource) Set.univ)⁻¹ •\n" ++
+  "      bigStepMeasure (checkedSubject.program checkedSource)) =\n" ++
+  "      ((statistics.secondMoment / statistics.returnMass - (statistics.firstMoment / statistics.returnMass)^2 : Rat) : ℝ) :=\n" ++
+  "  Determinize.Checking.checked_conditionalVariance ⟨model, modelMatches⟩ result resultAccepted positive\n" ++
+  "\n#print axioms resultAccepted\n#print axioms expectedReward\n#print axioms outputStatistics\n#print axioms conditionalVariance\n"
 
 def writeResult (outputPath : System.FilePath) (source : Checking.Core) (subject : Subject)
     (candidate : Candidate) (valid : candidate.ReplayValid source subject)
     (limits : SolveLimits := {}) : IO Rat := do
-  let checked : Checking.CheckedModel source subject :=
-    ⟨candidate.toModel valid, Proof.FiniteModel.replay_matches candidate valid⟩
-  let certificate ← IO.ofExcept (solve checked.model limits)
-  let answer := certificate.values checked.model.initial
-  let survival := Checking.survivalVector checked.model certificate.horizon
+  let model := candidate.toModel valid
+  let certified ← IO.ofExcept (solveStatistics model limits)
+  let certificate := certified.val
+  let statistics := certificate.statistics model
+  let survival := Checking.survivalVector (Proof.FiniteModel.cut model certificate.dead) certificate.horizon
   let escape := 1 - survival.toArray.foldl max 0
+  let optional := fun value : Option Rat => match value with
+    | none => Lean.Json.null | some q => Lean.toJson (rational q)
   let metadata := Lean.Json.mkObj [
-    ("answer", Lean.toJson (rational answer)),
+    ("answer", Lean.toJson (rational statistics.firstMoment)),
+    ("return_mass", Lean.toJson (rational statistics.returnMass)),
+    ("second_moment", Lean.toJson (rational statistics.secondMoment)),
+    ("conditional_mean", optional statistics.conditionalMean),
+    ("conditional_variance", optional statistics.conditionalVariance),
     ("subject", Lean.toJson (if subject == .source then "source" else "determinized")),
-    ("states", Lean.toJson checked.model.size),
+    ("states", Lean.toJson model.size),
     ("horizon", Lean.toJson certificate.horizon),
     ("escape", Lean.toJson (rational escape))]
   write outputPath source subject candidate valid
   IO.FS.writeFile (outputPath.toString ++ ".result.lean")
-    (resultCertificateText source subject candidate checked.model certificate)
+    (resultCertificateText source subject candidate model certificate)
   IO.FS.writeFile (outputPath.toString ++ ".result.json") (metadata.pretty ++ "\n")
-  return answer
+  return statistics.firstMoment
 
 end Determinize.Finite
