@@ -1378,6 +1378,8 @@ The following lemma states that taking one symbolic step and then actualizing th
     \tag{\text{by definition of $\mathsf{act}_\tau$}}
   \end{align}
   This is the right-hand side, completing the conditional case.
+
+  \paragraph{***Show a sampling case}
 \end{proof}
 
 
@@ -1943,8 +1945,336 @@ The following theorem states that taking one symbolic step and then applying the
 \end{theorem}
 
 \begin{proof}
-  TODO.
+  By structural induction on the symbolic residual expression $\hat e$,
+  with the statement quantified over all $\sigma$. We show the conditional
+  case; the remaining cases are analogous.
+
+  Suppose
+  \[
+    \hat e
+    =
+    \ifkw\ \hat e_1\ \thenkw\ \hat e_2\ \elsekw\ \hat e_3,
+  \]
+  where
+  \[
+    \vdash \hat e_1 : \Bool
+    \qquad\text{and}\qquad
+    \vdash \hat e_2,\hat e_3 : \tau.
+  \]
+
+  We proceed by cases on $\hat e_1$.
+
+  \paragraph{Case $\hat e_1 = \mathsf{true}$.}
+  For the left-hand side,
+  \begin{align}
+    &\symsem{
+      (\sigma \mid
+      \ifkw\ \mathsf{true}\ \thenkw\ \hat e_2\
+      \elsekw\ \hat e_3 : \tau)
+    }
+    \monbind
+    \lambda(\sigma' \mid \hat e').\,
+    \mathsf{exp}_\tau(\sigma' \mid \hat e')
+    \notag \\
+    &\qquad=
+    \delta_{(\sigma \mid \hat e_2 : \tau)}
+    \monbind
+    \lambda(\sigma' \mid \hat e').\,
+    \mathsf{exp}_\tau(\sigma' \mid \hat e')
+    \tag{\text{by symbolic $\mathsf{if}$ rule}} \\
+    &\qquad=
+    \mathsf{exp}_\tau(\sigma \mid \hat e_2 : \tau)
+    \tag{\text{by monad left identity}} \\
+    &\qquad=
+    \sem{\sigma}_{\mathsf{mean}}
+    \monbind
+    \lambda\rho.\,
+    \delta_{\mathsf{erealize}_\rho(\hat e_2) : \tau}.
+    \tag{\text{by definition of $\mathsf{exp}_\tau$}}
+  \end{align}
+  For the right-hand side,
+  \begin{align}
+    &\mathsf{exp}_\tau
+    \bigl(
+      \sigma
+      \mid
+      \ifkw\ \mathsf{true}\ \thenkw\ \hat e_2\
+      \elsekw\ \hat e_3 : \tau
+    \bigr)
+    \monbind
+    \lambda e'.\,\sem{e' : \tau}
+    \notag \\
+    &\qquad=
+    \sem{\sigma}_{\mathsf{mean}}
+    \monbind
+    \lambda\rho.\,
+    \sem{
+      \mathsf{erealize}_\rho
+      \bigl(
+        \ifkw\ \mathsf{true}\ \thenkw\ \hat e_2\
+        \elsekw\ \hat e_3
+      \bigr)
+      : \tau
+    }
+    \tag{\text{by definition of $\mathsf{exp}_\tau$}} \\
+    &\qquad=
+    \sem{\sigma}_{\mathsf{mean}}
+    \monbind
+    \lambda\rho.\,
+    \sem{
+      \ifkw\ \mathsf{true}\
+      \thenkw\ \mathsf{erealize}_\rho(\hat e_2)\
+      \elsekw\ \mathsf{erealize}_\rho(\hat e_3)
+      : \tau
+    }
+    \tag{\text{by $\mathsf{erealize}_\rho$ on $\mathsf{if}$}} \\
+    &\qquad=
+    \sem{\sigma}_{\mathsf{mean}}
+    \monbind
+    \lambda\rho.\,
+    \delta_{\mathsf{erealize}_\rho(\hat e_2) : \tau}.
+    \tag{\text{by ordinary $\mathsf{if}$ rule}}
+  \end{align}
+  The two sides agree.
+
+  \paragraph{Case $\hat e_1 = \mathsf{false}$.} Analogous to above.
+
+  \paragraph{Case $\hat e_1$ is not a Boolean value.}
+  Abbreviate $\mathsf{If}(\hat g) := \ifkw\ \hat g\ \thenkw\ \hat e_2\
+  \elsekw\ \hat e_3$. The induction hypothesis for the subexpression $\hat e_1$ is:
+  \begin{equation}
+    \label{eq:expected-if-ih}
+    \symsem{(\sigma \mid \hat e_1 : \Bool)}
+    \monbind
+    \lambda(\sigma' \mid \hat g).\,
+    \mathsf{exp}_{\Bool}(\sigma' \mid \hat g)
+    =
+    \mathsf{exp}_{\Bool}(\sigma \mid \hat e_1)
+    \monbind
+    \lambda b.\,\sem{b : \Bool}.
+  \end{equation}
+
+  We start from the left-hand side:
+
+  \begin{align}
+    &\symsem{(\sigma \mid \mathsf{If}(\hat e_1) : \tau)}
+    \monbind
+    \lambda(\sigma' \mid \hat e').\,
+    \mathsf{exp}_\tau(\sigma' \mid \hat e')
+    \notag \\
+    &\quad=
+    \left(
+      \symsem{(\sigma \mid \hat e_1 : \Bool)}
+      \monbind
+      \lambda(\sigma' \mid \hat g).\,
+      \delta_{(\sigma' \mid \mathsf{If}(\hat g) : \tau)}
+    \right)
+    \monbind
+    \lambda(\sigma' \mid \hat e').\,
+    \mathsf{exp}_\tau(\sigma' \mid \hat e')
+    \tag{\text{by symbolic $\mathsf{if}$ rule}} \\
+    &\quad=
+    \symsem{(\sigma \mid \hat e_1 : \Bool)}
+    \monbind
+    \lambda(\sigma' \mid \hat g).\,
+    \left(
+      \delta_{(\sigma' \mid \mathsf{If}(\hat g) : \tau)}
+      \monbind
+      \lambda(\sigma'' \mid \hat e'').\,
+      \mathsf{exp}_\tau(\sigma'' \mid \hat e'')
+    \right)
+    \tag{\text{by associativity}} \\
+    &\quad=
+    \symsem{(\sigma \mid \hat e_1 : \Bool)}
+    \monbind
+    \lambda(\sigma' \mid \hat g).\,
+    \mathsf{exp}_\tau(\sigma' \mid \mathsf{If}(\hat g) : \tau)
+    \tag{\text{by left identity}} \\
+    &\quad=
+    \symsem{(\sigma \mid \hat e_1 : \Bool)}
+    \monbind
+    \lambda(\sigma' \mid \hat g).\,
+    \left(
+      \sem{\sigma'}_{\mathsf{mean}}
+      \monbind
+      \lambda\rho.\,
+      \delta_{\mathsf{erealize}_\rho(\mathsf{If}(\hat g)) : \tau}
+    \right)
+    \tag{\text{by definition of $\mathsf{exp}_\tau$}} \\
+    &\quad=
+    \symsem{(\sigma \mid \hat e_1 : \Bool)}
+    \monbind
+    \lambda(\sigma' \mid \hat g).\,
+    \left(
+      \sem{\sigma'}_{\mathsf{mean}}
+      \monbind
+      \lambda\rho.\,
+      \delta_{\mathsf{If}(\mathsf{erealize}_\rho(\hat g)) : \tau}
+    \right)
+    \tag{\text{by $\mathsf{erealize}_\rho$ on $\mathsf{if}$}} \\
+    &\quad=
+    \symsem{(\sigma \mid \hat e_1 : \Bool)}
+    \monbind
+    \lambda(\sigma' \mid \hat g).\,
+    \left(
+      \sem{\sigma'}_{\mathsf{mean}}
+      \monbind
+      \lambda\rho.\,
+      \left(
+        \delta_{\mathsf{erealize}_\rho(\hat g) : \Bool}
+        \monbind
+        \lambda b.\,\delta_{\mathsf{If}(b) : \tau}
+      \right)
+    \right)
+    \tag{\text{by left identity}} \\
+    &\quad=
+    \symsem{(\sigma \mid \hat e_1 : \Bool)}
+    \monbind
+    \lambda(\sigma' \mid \hat g).\,
+    \left(
+      \underbrace{
+        \left(
+          \sem{\sigma'}_{\mathsf{mean}}
+          \monbind
+          \lambda\rho.\,
+          \delta_{\mathsf{erealize}_\rho(\hat g) : \Bool}
+        \right)
+      }_{=\,\mathsf{exp}_{\Bool}(\sigma' \mid \hat g)}
+      \monbind
+      \lambda b.\,\delta_{\mathsf{If}(b) : \tau}
+    \right)
+    \tag{\text{by associativity}} \\
+    &\quad=
+    \symsem{(\sigma \mid \hat e_1 : \Bool)}
+    \monbind
+    \lambda(\sigma' \mid \hat g).\,
+    \left(
+      \mathsf{exp}_{\Bool}(\sigma' \mid \hat g)
+      \monbind
+      \lambda b.\,\delta_{\mathsf{If}(b) : \tau}
+    \right)
+    \tag{\text{by definition of $\mathsf{exp}_{\Bool}$}} \\
+    &\quad=
+    \left(
+      \symsem{(\sigma \mid \hat e_1 : \Bool)}
+      \monbind
+      \lambda(\sigma' \mid \hat g).\,
+      \mathsf{exp}_{\Bool}(\sigma' \mid \hat g)
+    \right)
+    \monbind
+    \lambda b.\,\delta_{\mathsf{If}(b) : \tau}
+    \tag{\text{by associativity}}
+  \end{align}
+  The head of the expression is now exactly the left-hand side of the induction
+  hypothesis~\eqref{eq:expected-if-ih}. Applying it:
+  \begin{align}
+    &\quad=
+    \left(
+      \mathsf{exp}_{\Bool}(\sigma \mid \hat e_1)
+      \monbind
+      \lambda b.\,\sem{b : \Bool}
+    \right)
+    \monbind
+    \lambda b.\,\delta_{\mathsf{If}(b) : \tau}
+    \tag{\text{by \eqref{eq:expected-if-ih}}} \\
+    &\quad=
+    \mathsf{exp}_{\Bool}(\sigma \mid \hat e_1)
+    \monbind
+    \lambda b.\,
+    \left(
+      \sem{b : \Bool}
+      \monbind
+      \lambda b'.\,\delta_{\mathsf{If}(b') : \tau}
+    \right)
+    \tag{\text{by associativity}} \\
+    &\quad=
+    \left(
+      \sem{\sigma}_{\mathsf{mean}}
+      \monbind
+      \lambda\rho.\,
+      \delta_{\mathsf{erealize}_\rho(\hat e_1) : \Bool}
+    \right)
+    \monbind
+    \lambda b.\,
+    \left(
+      \sem{b : \Bool}
+      \monbind
+      \lambda b'.\,\delta_{\mathsf{If}(b') : \tau}
+    \right)
+    \tag{\text{by definition of $\mathsf{exp}_{\Bool}$}} \\
+    &\quad=
+    \sem{\sigma}_{\mathsf{mean}}
+    \monbind
+    \lambda\rho.\,
+    \left(
+      \delta_{\mathsf{erealize}_\rho(\hat e_1) : \Bool}
+      \monbind
+      \lambda b.\,
+      \left(
+        \sem{b : \Bool}
+        \monbind
+        \lambda b'.\,\delta_{\mathsf{If}(b') : \tau}
+      \right)
+    \right)
+    \tag{\text{by associativity}} \\
+    &\quad=
+    \sem{\sigma}_{\mathsf{mean}}
+    \monbind
+    \lambda\rho.\,
+    \left(
+      \sem{\mathsf{erealize}_\rho(\hat e_1) : \Bool}
+      \monbind
+      \lambda b'.\,\delta_{\mathsf{If}(b') : \tau}
+    \right)
+    \tag{\text{by left identity}} \\
+    &\quad=
+    \sem{\sigma}_{\mathsf{mean}}
+    \monbind
+    \lambda\rho.\,
+    \sem{
+      \ifkw\ \mathsf{erealize}_\rho(\hat e_1)\
+      \thenkw\ \mathsf{erealize}_\rho(\hat e_2)\
+      \elsekw\ \mathsf{erealize}_\rho(\hat e_3)
+      : \tau
+    }
+    \tag{\text{by ordinary $\mathsf{if}$ rule}} \\
+    &\quad=
+    \sem{\sigma}_{\mathsf{mean}}
+    \monbind
+    \lambda\rho.\,
+    \sem{\mathsf{erealize}_\rho(\mathsf{If}(\hat e_1)) : \tau}
+    \tag{\text{by $\mathsf{erealize}_\rho$ on $\mathsf{if}$}} \\
+    &\quad=
+    \sem{\sigma}_{\mathsf{mean}}
+    \monbind
+    \lambda\rho.\,
+    \left(
+      \delta_{\mathsf{erealize}_\rho(\mathsf{If}(\hat e_1)) : \tau}
+      \monbind
+      \lambda e'.\,\sem{e' : \tau}
+    \right)
+    \tag{\text{by left identity}} \\
+    &\quad=
+    \left(
+      \sem{\sigma}_{\mathsf{mean}}
+      \monbind
+      \lambda\rho.\,
+      \delta_{\mathsf{erealize}_\rho(\mathsf{If}(\hat e_1)) : \tau}
+    \right)
+    \monbind
+    \lambda e'.\,\sem{e' : \tau}
+    \tag{\text{by associativity}} \\
+    &\quad=
+    \mathsf{exp}_\tau(\sigma \mid \mathsf{If}(\hat e_1) : \tau)
+    \monbind
+    \lambda e'.\,\sem{e' : \tau}.
+    \tag{\text{by definition of $\mathsf{exp}_\tau$}}
+  \end{align}
+  This is the right-hand side, completing the conditional case.
+
+  \paragraph{***Show sampling case for E and G.}
 \end{proof}
+
 
 \begin{theorem}[Expected interpretation of symbolic $n$-step semantics]
   \label{thm:expected-symbolic-n-step}
@@ -1966,7 +2296,126 @@ The following theorem states that taking one symbolic step and then applying the
 \end{theorem}
 
 \begin{proof}
-  TODO.
+  The proof is by induction on $n$, with the statement quantified over all
+  well-typed symbolic states.
+
+  For $n=0$, let $s \in State_\tau$. Then
+  \begin{align}
+    \symbigsemstep{s : \tau}{0}
+    \monbind
+    \mathsf{exp}_\tau
+    &=
+    \delta_{s : \tau}
+    \monbind
+    \mathsf{exp}_\tau
+    \tag{\text{by definition of n-step symbolic semantics}} \\
+    &=
+    \mathsf{exp}_\tau(s)
+    \tag{\text{by monad left identity}} \\
+    &=
+    \mathsf{exp}_\tau(s)
+    \monbind
+    \lambda e.\,\delta_{e : \tau}
+    \tag{\text{by monad right identity}} \\
+    &=
+    \mathsf{exp}_\tau(s)
+    \monbind
+    \lambda e.\,\bigsemstep{e : \tau}{0}.
+    \tag{\text{by definition of n-step semantics}}
+  \end{align}
+
+  For the inductive step, assume the statement holds for $n$ for every
+  well-typed symbolic state, and let
+  $s = (\sigma \mid \hat e : \tau) \in State_\tau$. We use
+  \Cref{thm:expected-symbolic-step}:
+
+  \begin{equation}
+    \symsem{s : \tau}
+    \monbind
+    \mathsf{exp}_\tau
+    =
+    \mathsf{exp}_\tau(s)
+    \monbind
+    \lambda e'.\,\sem{e' : \tau}
+  \end{equation}
+  for every well-typed symbolic state $s \in State_\tau$. Then
+  \begin{align}
+    &\symbigsemstep{s : \tau}{n+1}
+    \monbind
+    \mathsf{exp}_\tau
+    \notag \\
+    &=
+    \left(
+      \symbigsemstep{s : \tau}{n}
+      \monbind
+      \lambda s'.\,\symsem{s' : \tau}
+    \right)
+    \monbind
+    \mathsf{exp}_\tau
+    \tag{\text{by definition of symbolic n-step}} \\
+    &=
+    \symbigsemstep{s : \tau}{n}
+    \monbind
+    \lambda s'.\,
+      \left(
+        \symsem{s' : \tau}
+        \monbind
+        \mathsf{exp}_\tau
+      \right)
+    \tag{\text{by monad associativity}} \\
+    &=
+    \symbigsemstep{s : \tau}{n}
+    \monbind
+    \lambda s'.\,
+      \left(
+        \mathsf{exp}_\tau(s')
+        \monbind
+        \lambda e'.\,\sem{e' : \tau}
+      \right)
+    \tag{\text{by \Cref{thm:expected-symbolic-step}}} \\
+    &=
+    \left(
+      \symbigsemstep{s : \tau}{n}
+      \monbind
+      \lambda s'.\,\mathsf{exp}_\tau(s')
+    \right)
+    \monbind
+    \lambda e'.\,\sem{e' : \tau}
+    \tag{\text{by monad associativity}} \\
+    &=
+    \left(
+      \symbigsemstep{s : \tau}{n}
+      \monbind
+      \mathsf{exp}_\tau
+    \right)
+    \monbind
+    \lambda e'.\,\sem{e' : \tau}
+    \tag{\text{by eta-conversion}} \\
+    &=
+    \left(
+      \mathsf{exp}_\tau(s)
+      \monbind
+      \lambda e.\,\bigsemstep{e : \tau}{n}
+    \right)
+    \monbind
+    \lambda e'.\,\sem{e' : \tau}
+    \tag{\text{by induction hypothesis}} \\
+    &=
+    \mathsf{exp}_\tau(s)
+    \monbind
+    \lambda e.\,
+      \left(
+        \bigsemstep{e : \tau}{n}
+        \monbind
+        \lambda e'.\,\sem{e' : \tau}
+      \right)
+    \tag{\text{by monad associativity}} \\
+    &=
+    \mathsf{exp}_\tau(s)
+    \monbind
+    \lambda e.\,\bigsemstep{e : \tau}{n+1}.
+    \tag{\text{by definition of n-step semantics}}
+  \end{align}
 \end{proof}
 
 
