@@ -1379,7 +1379,188 @@ The following lemma states that taking one symbolic step and then actualizing th
   \end{align}
   This is the right-hand side, completing the conditional case.
 
-  \paragraph{***Show a sampling case}
+\paragraph{Case $\hat e
+  =
+  \uniform[\E](\sym(a_1),\sym(a_2)):\Float{\E}$.}
+
+For every valuation $\rho$ sampled from
+$\sem{\sigma}_{\mathsf{env}}$, write
+\[
+  \rho \vdash a_1 \Downarrow r_1
+  \qquad\text{and}\qquad
+  \rho \vdash a_2 \Downarrow r_2.
+\]
+
+For the left-hand side,
+\begin{align}
+  &\symsem{
+    (\sigma \mid
+    \uniform[\E](\sym(a_1),\sym(a_2)):\Float{\E})
+  }
+  \monbind
+  \lambda(\sigma' \mid \hat e').\,
+  \mathsf{act}_{\Float{\E}}(\sigma' \mid \hat e')
+  \notag
+  \\
+  &\qquad=
+  \delta_{
+    (\sigma,u\sim\uniform[\E](a_1,a_2)
+    \mid \sym(u):\Float{\E})
+  }
+  \monbind
+  \lambda(\sigma' \mid \hat e').\,
+  \mathsf{act}_{\Float{\E}}(\sigma' \mid \hat e')
+  \tag{\text{by symbolic $\E$-sampling rule}}
+  \\
+  &\qquad=
+  \mathsf{act}_{\Float{\E}}
+  \bigl(
+    \sigma,u\sim\uniform[\E](a_1,a_2)
+    \mid \sym(u):\Float{\E}
+  \bigr)
+  \tag{\text{by monad left identity}}
+  \\
+  &\qquad=
+  \sem{\sigma,u\sim\uniform[\E](a_1,a_2)}_{\mathsf{env}}
+  \monbind
+  \lambda\rho'.\,
+  \delta_{\mathsf{realize}_{\rho'}(\sym(u)):\Float{\E}}
+  \tag{\text{by definition of $\mathsf{act}_{\Float{\E}}$}}
+  \\
+  &\qquad=
+  \left(
+    \sem{\sigma}_{\mathsf{env}}
+    \monbind
+    \lambda\rho.\,
+    \left(
+      \mathsf{Uniform}(r_1,r_2)
+      \monbind
+      \lambda r.\,
+      \delta_{\rho[u\mapsto r]}
+    \right)
+  \right)
+  \monbind
+  \lambda\rho'.\,
+  \delta_{\mathsf{realize}_{\rho'}(\sym(u)):\Float{\E}}
+  \tag{\text{by definition of $\sem{\cdot}_{\mathsf{env}}$}}
+  \\
+  &\qquad=
+  \sem{\sigma}_{\mathsf{env}}
+  \monbind
+  \lambda\rho.\,
+  \left(
+    \mathsf{Uniform}(r_1,r_2)
+    \monbind
+    \lambda r.\,
+    \left(
+      \delta_{\rho[u\mapsto r]}
+      \monbind
+      \lambda\rho'.\,
+      \delta_{\mathsf{realize}_{\rho'}(\sym(u)):\Float{\E}}
+    \right)
+  \right)
+  \tag{\text{by associativity}}
+  \\
+  &\qquad=
+  \sem{\sigma}_{\mathsf{env}}
+  \monbind
+  \lambda\rho.\,
+  \left(
+    \mathsf{Uniform}(r_1,r_2)
+    \monbind
+    \lambda r.\,
+    \delta_{\mathsf{realize}_{\rho[u\mapsto r]}(\sym(u)):\Float{\E}}
+  \right)
+  \tag{\text{by monad left identity}}
+  \\
+  &\qquad=
+  \sem{\sigma}_{\mathsf{env}}
+  \monbind
+  \lambda\rho.\,
+  \left(
+    \mathsf{Uniform}(r_1,r_2)
+    \monbind
+    \lambda r.\,
+    \delta_{r:\Float{\E}}
+  \right).
+  \tag{\text{by definition of $\mathsf{realize}_{\rho[u\mapsto r]}$}}
+\end{align}
+
+For the right-hand side,
+\begin{align}
+  &\mathsf{act}_{\Float{\E}}
+  \bigl(
+    \sigma
+    \mid
+    \uniform[\E](\sym(a_1),\sym(a_2)):\Float{\E}
+  \bigr)
+  \monbind
+  \lambda e'.\,\sem{e':\Float{\E}}
+  \notag
+  \\
+  &\qquad=
+  \left(
+    \sem{\sigma}_{\mathsf{env}}
+    \monbind
+    \lambda\rho.\,
+    \delta_{
+      \mathsf{realize}_\rho
+      \bigl(
+        \uniform[\E](\sym(a_1),\sym(a_2))
+      \bigr)
+      :\Float{\E}
+    }
+  \right)
+  \monbind
+  \lambda e'.\,\sem{e':\Float{\E}}
+  \tag{\text{by definition of $\mathsf{act}_{\Float{\E}}$}}
+  \\
+  &\qquad=
+  \left(
+    \sem{\sigma}_{\mathsf{env}}
+    \monbind
+    \lambda\rho.\,
+    \delta_{
+      \uniform(r_1,r_2):\Float{\E}
+    }
+  \right)
+  \monbind
+  \lambda e'.\,\sem{e':\Float{\E}}
+  \tag{\text{by definition of $\mathsf{realize}_\rho$}}
+  \\
+  &\qquad=
+  \sem{\sigma}_{\mathsf{env}}
+  \monbind
+  \lambda\rho.\,
+  \left(
+    \delta_{\uniform(r_1,r_2):\Float{\E}}
+    \monbind
+    \lambda e'.\,\sem{e':\Float{\E}}
+  \right)
+  \tag{\text{by associativity}}
+  \\
+  &\qquad=
+  \sem{\sigma}_{\mathsf{env}}
+  \monbind
+  \lambda\rho.\,
+  \sem{\uniform(r_1,r_2):\Float{\E}}
+  \tag{\text{by monad left identity}}
+  \\
+  &\qquad=
+  \sem{\sigma}_{\mathsf{env}}
+  \monbind
+  \lambda\rho.\,
+  \left(
+    \mathsf{Uniform}(r_1,r_2)
+    \monbind
+    \lambda r.\,
+    \delta_{r:\Float{\E}}
+  \right).
+  \tag{\text{by ordinary $\mathsf{Uniform}$ rule}}
+\end{align}
+
+The two sides agree.
+
 \end{proof}
 
 
@@ -2272,7 +2453,205 @@ The following theorem states that taking one symbolic step and then applying the
   \end{align}
   This is the right-hand side, completing the conditional case.
 
-  \paragraph{***Show sampling case for E and G.}
+  
+\paragraph{Case $\hat e
+  =
+  \uniform[\E](\sym(a_1),\sym(a_2)):\Float{\E}$.}
+
+For every valuation $\rho$ sampled from
+$\sem{\sigma}_{\mathsf{mean}}$, write
+\[
+  \rho \vdash a_1 \Downarrow r_1
+  \qquad\text{and}\qquad
+  \rho \vdash a_2 \Downarrow r_2.
+\]
+
+For the left-hand side,
+\begin{align}
+  &\symsem{
+    (\sigma \mid
+    \uniform[\E](\sym(a_1),\sym(a_2)):\Float{\E})
+  }
+  \monbind
+  \lambda(\sigma' \mid \hat e').\,
+  \mathsf{exp}_{\Float{\E}}(\sigma' \mid \hat e')
+  \notag
+  \\
+  &\qquad=
+  \delta_{
+    (\sigma,u\sim\uniform[\E](a_1,a_2)
+    \mid \sym(u):\Float{\E})
+  }
+  \monbind
+  \lambda(\sigma' \mid \hat e').\,
+  \mathsf{exp}_{\Float{\E}}(\sigma' \mid \hat e')
+  \tag{\text{by symbolic $\E$-sampling rule}}
+  \\
+  &\qquad=
+  \mathsf{exp}_{\Float{\E}}
+  \bigl(
+    \sigma,u\sim\uniform[\E](a_1,a_2)
+    \mid \sym(u):\Float{\E}
+  \bigr)
+  \tag{\text{by monad left identity}}
+  \\
+  &\qquad=
+  \sem{\sigma,u\sim\uniform[\E](a_1,a_2)}_{\mathsf{mean}}
+  \monbind
+  \lambda\rho'.\,
+  \delta_{\mathsf{erealize}_{\rho'}(\sym(u)):\Float{\E}}
+  \tag{\text{by definition of $\mathsf{exp}_{\Float{\E}}$}}
+  \\
+  &\qquad=
+  \left(
+    \sem{\sigma}_{\mathsf{mean}}
+    \monbind
+    \lambda\rho.\,
+    \delta_{
+      \rho\left[
+        u\mapsto
+        \mathbb{E}_{X\sim\mathsf{Uniform}(r_1,r_2)}[X]
+      \right]
+    }
+  \right)
+  \monbind
+  \lambda\rho'.\,
+  \delta_{\mathsf{erealize}_{\rho'}(\sym(u)):\Float{\E}}
+  \tag{\text{by definition of $\sem{\cdot}_{\mathsf{mean}}$}}
+  \\
+  &\qquad=
+  \sem{\sigma}_{\mathsf{mean}}
+  \monbind
+  \lambda\rho.\,
+  \left(
+    \delta_{
+      \rho\left[
+        u\mapsto
+        \mathbb{E}_{X\sim\mathsf{Uniform}(r_1,r_2)}[X]
+      \right]
+    }
+    \monbind
+    \lambda\rho'.\,
+    \delta_{\mathsf{erealize}_{\rho'}(\sym(u)):\Float{\E}}
+  \right)
+  \tag{\text{by associativity}}
+  \\
+  &\qquad=
+  \sem{\sigma}_{\mathsf{mean}}
+  \monbind
+  \lambda\rho.\,
+  \delta_{
+    \mathsf{erealize}_{
+      \rho\left[
+        u\mapsto
+        \mathbb{E}_{X\sim\mathsf{Uniform}(r_1,r_2)}[X]
+      \right]
+    }
+    (\sym(u))
+    :\Float{\E}
+  }
+  \tag{\text{by monad left identity}}
+  \\
+  &\qquad=
+  \sem{\sigma}_{\mathsf{mean}}
+  \monbind
+  \lambda\rho.\,
+  \delta_{
+    \mathbb{E}_{X\sim\mathsf{Uniform}(r_1,r_2)}[X]
+    :\Float{\E}
+  }
+  \tag{\text{by definition of $\mathsf{erealize}$}}
+  \\
+  &\qquad=
+  \sem{\sigma}_{\mathsf{mean}}
+  \monbind
+  \lambda\rho.\,
+  \delta_{
+    ((r_1+r_2)\times 0.5)
+    :\Float{\E}
+  }.
+  \tag{\text{by the mean of $\mathsf{Uniform}(r_1,r_2)$}}
+\end{align}
+
+For the right-hand side,
+\begin{align}
+  &\mathsf{exp}_{\Float{\E}}
+  \bigl(
+    \sigma
+    \mid
+    \uniform[\E](\sym(a_1),\sym(a_2)):\Float{\E}
+  \bigr)
+  \monbind
+  \lambda e'.\,\sem{e':\Float{\E}}
+  \notag
+  \\
+  &\qquad=
+  \left(
+    \sem{\sigma}_{\mathsf{mean}}
+    \monbind
+    \lambda\rho.\,
+    \delta_{
+      \mathsf{erealize}_\rho
+      \bigl(
+        \uniform[\E](\sym(a_1),\sym(a_2))
+      \bigr)
+      :\Float{\E}
+    }
+  \right)
+  \monbind
+  \lambda e'.\,\sem{e':\Float{\E}}
+  \tag{\text{by definition of $\mathsf{exp}_{\Float{\E}}$}}
+  \\
+  &\qquad=
+  \left(
+    \sem{\sigma}_{\mathsf{mean}}
+    \monbind
+    \lambda\rho.\,
+    \delta_{
+      \mathsf{mean}_{\mathsf{Uniform}}(r_1,r_2)
+      :\Float{\E}
+    }
+  \right)
+  \monbind
+  \lambda e'.\,\sem{e':\Float{\E}}
+  \tag{\text{by definition of $\mathsf{erealize}_\rho$}}
+  \\
+  &\qquad=
+  \sem{\sigma}_{\mathsf{mean}}
+  \monbind
+  \lambda\rho.\,
+  \left(
+    \delta_{
+      \mathsf{mean}_{\mathsf{Uniform}}(r_1,r_2)
+      :\Float{\E}
+    }
+    \monbind
+    \lambda e'.\,\sem{e':\Float{\E}}
+  \right)
+  \tag{\text{by associativity}}
+  \\
+  &\qquad=
+  \sem{\sigma}_{\mathsf{mean}}
+  \monbind
+  \lambda\rho.\,
+  \sem{
+    \mathsf{mean}_{\mathsf{Uniform}}(r_1,r_2)
+    :\Float{\E}
+  }
+  \tag{\text{by monad left identity}}
+  \\
+  &\qquad=
+  \sem{\sigma}_{\mathsf{mean}}
+  \monbind
+  \lambda\rho.\,
+  \delta_{
+    ((r_1+r_2)\times 0.5)
+    :\Float{\E}
+  }.
+  \tag{\text{by ordinary $\mathsf{mean}_{\mathsf{Uniform}}$ rule}}
+\end{align}
+
+The two sides agree.
 \end{proof}
 
 
