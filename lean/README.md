@@ -75,7 +75,7 @@ The executable and its checkers are separated as follows:
   that inference preserves the elaborated expression and explicit sampling affinities.
 - `Proof/Checking/`: checker soundness, rational/real determinization correspondence,
   and application of the existing trace and finite-expectation theorems.
-- `Finite/`: unverified exact exploration and model export, plus the verified expected-reward solver.
+- `Finite/`: verified graph construction and expected-reward solving, with model export.
 - `Proof/LinearAlgebra/`: executable Gaussian elimination with a proof of the original equations.
 - `Runtime/`: an unverified floating-point interpreter and seeded numerical samplers.
 - `Tests/`: parsing, inference, certificate rejection, runtime, and kernel proof tests.
@@ -211,7 +211,7 @@ certificates, and the numerical runtime. The runtime remains unverified.
 models, one-time terminal rewards, rejection, the initial primitive policy, and
 certificates with value equations and finite-step absorption bounds. Definitions
 live in `Spec/FiniteModel/`; proofs and theorems composing checker
-correctness guarantees live in `Proof/FiniteModel/`. The unverified explorer is implemented in `Finite/`. The verified
+correctness guarantees live in `Proof/FiniteModel/`. The verified explorer is implemented in `Finite/`, with builder invariants in `Proof/FiniteModel/`. The verified
 model checker is in `Checking/FiniteModel.lean`. `replay_matches` supplies the correspondence proof carried by each extracted `CheckedModel`.
 `Checking/Result.lean` proves result-checker soundness and the composed program
 expected-reward theorem. `Tests/Results.lean` checks signed rewards, absorption,
@@ -232,7 +232,7 @@ Stochastic Bernoulli and discrete draws have finite successors; mean draws of
 all supported primitives are rational. Residual stochastic continuous and
 Poisson draws are rejected. Terminal results must be numeric.
 
-Successful exploration is checked against the executable machine before writing
+Successful exploration carries a proof of correspondence with the executable machine before writing
 `.candidate.lean`, `.replay.lean`, `.tra`, `.lab`, `.positive.state.rew`, and
 `.negative.state.rew`. The replay checker takes the requested source and subject
 separately from the candidate and checks their alignment, exact transitions,
@@ -240,6 +240,7 @@ complete positive successor coverage, rewards, and absorbing terminal states.
 Acceptance constructs a `CheckedModel` with a `Spec.FiniteModel.Model` and
 a proof of paper safety and complete output-law equality. Stored states must be unique.
 
+The internal export path uses the builder’s proof without replaying the graph.
 The `.candidate.lean` file contains raw data. The `.replay.lean` file additionally
 contains `machineReplay`, proved by `decide +kernel`, the resulting `model`, and
 `modelMatches`, which certifies the selected paper program.

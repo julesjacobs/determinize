@@ -103,12 +103,12 @@ def main (args : List String) : IO UInt32 := do
       IO.println s!"Wrote kernel-checkable certificate: {path}"
     if let some outputPath := o.exportPrefix then
       match Finite.explore p.checked.source o.subject o.limits with
-      | .complete candidate =>
+      | .complete candidate valid =>
           if o.certifyResult then
-            let answer ← Finite.writeResult outputPath p.checked.source o.subject candidate o.solveLimits
+            let answer ← Finite.writeResult outputPath p.checked.source o.subject candidate valid o.solveLimits
             IO.println s!"Certified expected terminal reward ({reprStr o.subject}): {answer}"
           else
-            Finite.write outputPath p.checked.source o.subject candidate
+            Finite.write outputPath p.checked.source o.subject candidate valid
           IO.println s!"Wrote {reprStr o.subject} model (paper correspondence checked): {outputPath} ({candidate.states.size} states)"
       | .incomplete limit discovered expanded edges =>
           throw (IO.userError s!"Incomplete exploration ({reprStr limit}): {discovered} discovered, {expanded} expanded, {edges} edges. No export written.")

@@ -76,11 +76,12 @@ class ExportTests(unittest.TestCase):
                 result, output = self.run_export(Path(tmp), program, "--subject", "source")
                 self.assertEqual(result.returncode, 0, result.stderr)
                 candidate = Path(str(output) + ".replay.lean")
+                candidate.write_text("import Determinize.Finite.Explore\n" + candidate.read_text())
                 with candidate.open("a") as stream:
                     stream.write("""
 def checkRoundTrip : IO Unit := do
   match explore checkedSource checkedSubject with
-  | .complete replay =>
+  | .complete replay _ =>
       unless replay.states == candidate.states &&
           reprStr replay.rows == reprStr candidate.rows &&
           replay.initial == candidate.initial do

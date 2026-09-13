@@ -1,4 +1,4 @@
-import Determinize.Finite.Explore
+import Tests.ReferenceExplorer
 import Tests.Parsing
 import Determinize.Checking.FiniteModel
 
@@ -7,7 +7,7 @@ open Frontend Checking Spec.Paper Spec.FiniteModel Determinize.Finite
 
 private def candidateFor (text : String) (subject : Subject := .source) : IO (Core × Candidate) := do
   let p ← IO.ofExcept (compile text)
-  match explore p.checked.source subject with
+  match ReferenceExplorer.explore p.checked.source subject with
   | .complete candidate => return (p.checked.source, candidate)
   | result => throw (IO.userError s!"expected complete graph: {reprStr result}")
 
@@ -99,7 +99,7 @@ def modelReplay : IO Unit := do
   assert (!accepted {coin with states := coin.states.set! 0 (.eval (.real 7) [] [])}) "changed initial expression"
   assert (!accepted {coin with states := coin.states.set! 1 (.eval (.bvar 99) [] [])}) "malformed reachable state"
   let unusedFreeVariable : Core := .letE (.lam (.bvar 2)) (.real 3)
-  match explore unusedFreeVariable .source with
+  match ReferenceExplorer.explore unusedFreeVariable .source with
   | .complete candidate => assert (!(checkModel unusedFreeVariable .source candidate).isSome) "free variable in unused closure"
   | _ => throw (IO.userError "scope fixture must finish exploration")
   let broken : Candidate := ⟨0,#[.eval (.bvar 0) [] []],

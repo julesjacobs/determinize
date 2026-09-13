@@ -59,7 +59,7 @@ private def rowText (row : Row) : String :=
   s!"⟨{kindText row.kind}, #[{String.intercalate ", " edges}]⟩"
 
 def candidateText (candidate : Candidate) : String :=
-  "import Determinize.Finite.Explore\n\n" ++
+  "import Determinize.Finite.Graph\n\n" ++
   "open Determinize.Finite Determinize.Spec.Paper Determinize.Spec.FiniteModel\n\n" ++
   "set_option maxRecDepth 100000\nset_option maxHeartbeats 0\n\n" ++
   "def candidate : Candidate where\n" ++
@@ -69,7 +69,7 @@ def candidateText (candidate : Candidate) : String :=
 
 /-- Export kernel-checked replay and paper-semantics correspondence. -/
 def replayCertificateText (source : Checking.Core) (subject : Subject) (candidate : Candidate) : String :=
-  (candidateText candidate).replace "import Determinize.Finite.Explore"
+  (candidateText candidate).replace "import Determinize.Finite.Graph"
     "import Determinize.Checking.FiniteModel" ++
   s!"\ndef checkedSource : Expr Rat := {Frontend.leanExpression source}\n" ++
   s!"def checkedSubject : Subject := {reprStr subject}\n" ++
@@ -127,9 +127,7 @@ def render (candidate : Candidate) : Except String Files := do
 
 /-- Call only with complete exploration data. No files are written if rendering fails. -/
 def write (outputPath : System.FilePath) (source : Checking.Core) (subject : Subject)
-    (candidate : Candidate) : IO Unit := do
-  let some _ := Checking.checkModel source subject candidate
-    | throw (IO.userError "model candidate failed validation")
+    (candidate : Candidate) (_valid : candidate.ReplayValid source subject) : IO Unit := do
   let files ← IO.ofExcept (render candidate)
   if let some parent := outputPath.parent then IO.FS.createDirAll parent
   for (suffix, content) in [(".candidate.lean", files.candidate),
@@ -158,9 +156,10 @@ def resultCertificateText (source : Checking.Core) (subject : Subject) (candidat
   "\n#print axioms resultAccepted\n#print axioms expectedReward\n"
 
 def writeResult (outputPath : System.FilePath) (source : Checking.Core) (subject : Subject)
-    (candidate : Candidate) (limits : SolveLimits := {}) : IO Rat := do
-  let some checked := Checking.checkModel source subject candidate
-    | throw (IO.userError "model candidate failed validation")
+    (candidate : Candidate) (valid : candidate.ReplayValid source subject)
+    (limits : SolveLimits := {}) : IO Rat := do
+  let checked : Checking.CheckedModel source subject :=
+    ⟨candidate.toModel valid, Proof.FiniteModel.replay_matches candidate valid⟩
   let certificate ← IO.ofExcept (solve checked.model limits)
   let answer := certificate.values checked.model.initial
   let survival := Checking.survivalVector checked.model certificate.horizon
@@ -171,7 +170,7 @@ def writeResult (outputPath : System.FilePath) (source : Checking.Core) (subject
     ("states", Lean.toJson checked.model.size),
     ("horizon", Lean.toJson certificate.horizon),
     ("escape", Lean.toJson (rational escape))]
-  write outputPath source subject candidate
+  write outputPath source subject candidate valid
   IO.FS.writeFile (outputPath.toString ++ ".result.lean")
     (resultCertificateText source subject candidate checked.model certificate)
   IO.FS.writeFile (outputPath.toString ++ ".result.json") (metadata.pretty ++ "\n")

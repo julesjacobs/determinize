@@ -1,3 +1,4 @@
+import Tests.ReferenceExplorer
 import Determinize.Finite.Explore
 import Tests.Parsing
 import Determinize.Finite.Export
@@ -8,8 +9,18 @@ open Frontend Checking Spec.Paper Spec.FiniteModel Determinize.Finite
 private def graph (text : String) (subject : Subject := .source) : IO Candidate := do
   let p ← IO.ofExcept (compile text)
   match explore p.checked.source subject with
-  | .complete candidate => return candidate
-  | result => throw (IO.userError s!"exploration of {text}: {reprStr result}")
+  | .complete candidate _ =>
+      let .complete previous := ReferenceExplorer.explore p.checked.source subject
+        | throw (IO.userError s!"reference exploration failed: {text}")
+      assert (candidate.states == previous.states) s!"changed state numbering: {text}"
+      assert (candidate.rows.size == previous.rows.size) s!"changed row count: {text}"
+      for (currentRow, previousRow) in candidate.rows.toList.zip previous.rows.toList do
+        assert (currentRow.kind == previousRow.kind) s!"changed state kind: {text}"
+        let weights := fun (row : Row) => (row.edges.toList.map fun edge =>
+          (edge.target, edge.probability)).mergeSort (fun a b => a.1 ≤ b.1)
+        assert (weights currentRow == weights previousRow) s!"changed weights: {text}"
+      return candidate
+  | _ => throw (IO.userError s!"exploration failed: {text}")
 
 private def reward (candidate : Candidate) (steps : Nat) : Rat := Id.run do
   let mut values := Array.replicate candidate.states.size (0 : Rat)
@@ -76,7 +87,7 @@ def explorer : IO Unit := do
     | .failed .. => pure ()
     | _ => throw (IO.userError s!"expected export failure: {text}")
   let state := State.deliver (.number 1) []
-  assert (aggregate [(0,state),(1/3,state),(2/3,state)] == [(1,state)]) "duplicate successors"
+  assert (ReferenceExplorer.aggregate [(0,state),(1/3,state),(2/3,state)] == [(1,state)]) "duplicate successors"
   let terminal : Candidate := ⟨0, #[state],
     #[⟨.returned (-3), #[⟨0,1⟩]⟩]⟩
   let files ← IO.ofExcept (render terminal)

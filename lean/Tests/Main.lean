@@ -6,6 +6,7 @@ import Tests.Corpus
 import Tests.FiniteDistribution
 import Tests.PrimitiveLaws
 import Tests.FiniteModel
+import Tests.Construction
 import Tests.Explorer
 import Tests.LinearAlgebra
 import Tests.Results
