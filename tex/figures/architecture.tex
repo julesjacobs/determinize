@@ -16,9 +16,9 @@
 \node[heading] at (0,1.25) {Compilation};
 \draw[black!20] (0,.95) -- (1,.95);
 \node[data, text width=.10\textwidth] (file) at (.06,-1.05) {\texttt{.det}\\program};
-\node[stage, compilation, text width=.17\textwidth] (front) at (.25,-1.05) {Parse, elaborate,\\infer types and E/G};
-\node[verified, compilation, text width=.17\textwidth] (typing) at (.48,-1.05) {Typing and\\annotation checker};
-\node[verified, compilation, text width=.14\textwidth] (det) at (.715,-1.05) {Determinize};
+\node[stage, compilation, text width=.17\textwidth] (front) at (.25,-1.05) {Parse, elaborate,\\infer types and E/G\leanref{frontend}};
+\node[verified, compilation, text width=.17\textwidth] (typing) at (.48,-1.05) {Typing and\\annotation checker\leanref{typing-checker}};
+\node[verified, compilation, text width=.14\textwidth] (det) at (.715,-1.05) {Determinize\leanref{determinization}};
 \node[data, text width=.15\textwidth] (source) at (.90,.40) {Checked source\\$e_{\mathrm{src}}$};
 \node[data, text width=.15\textwidth] (target) at (.90,-1.05) {Transformed program\\$e_{\mathrm{det}}$};
 \draw[flow] (file) -- (front);
@@ -32,16 +32,16 @@
 \draw[black!20] (0,-2.65) -- (1,-2.65);
 \node[data] (program) at (.10,-5.15) {Program $e$};
 \node[note] at (.10,-5.60) {$e\in\{e_{\mathrm{src}},e_{\mathrm{det}}\}$};
-\node[verified] (semantics) at (.365,-3.50) {Measure-theoretic\\semantics};
+\node[verified] (semantics) at (.365,-3.50) {Measure-theoretic\\semantics\leanref{output-measures}};
 \node[data] (measure) at (.90,-3.50) {Output measure\\$\law e$};
 \draw[flow] (semantics) -- (measure);
 
-\node[stage] (runtime) at (.365,-5.15) {Floating-point\\interpreter};
+\node[stage] (runtime) at (.365,-5.15) {Floating-point\\interpreter\leanref{interpreter}};
 \node[data] (estimates) at (.90,-5.15) {Empirical mean\\and variance};
 \draw[flow] (runtime) -- (estimates);
 
-\node[verified] (explore) at (.365,-6.80) {Finite graph\\construction};
-\node[verified] (solve) at (.635,-6.80) {Exact rational\\solver};
+\node[verified] (explore) at (.365,-6.80) {Finite graph\\construction\leanref{graph-construction}};
+\node[verified] (solve) at (.635,-6.80) {Exact rational\\solver\leanref{rational-solver}};
 \node[data] (answer) at (.90,-6.80)
   {Exact mean\\and variance};
 \draw[draw=black!65, line width=.6pt] (program.east) -- (.235,-5.15);
@@ -52,8 +52,8 @@
 \draw[flow] (explore) -- (solve);
 \draw[flow] (solve) -- (answer);
 
-\node[stage] (storm) at (.365,-8.50) {Storm solver};
-\node[verified] (check) at (.635,-8.50) {Certificate\\checker};
+\node[stage] (storm) at (.365,-8.50) {Storm solver\leanref{storm-solver}};
+\node[verified] (check) at (.635,-8.50) {Certificate\\checker\leanref{certificate-checker}};
 \draw[flow] (explore.south) -- (storm.north);
 \draw[flow] (storm) -- (check);
 \draw[flow,shorten >=5pt] (check.east) -| (answer.south);

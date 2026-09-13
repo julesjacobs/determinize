@@ -14,7 +14,7 @@ by their means. Its rules restrict how $\E$ samples may be used:
 affine in those parameters. \jules{Give examples and explain the intuition for why that's ok}
 \end{itemize}
 
-\begin{theorem}[Expectation preservation]
+\begin{theorem}[Expectation preservation\leanref{expectation-preservation}]
 \label{thm:expectation}
 Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe. If
 $\Expect_{\mathrm{ret}}[e]$ is defined, then the transformed program also has
@@ -32,14 +32,14 @@ $
 $
 for the expected output conditioned on the program successfully returning
 (we assume $\law e(\Real)>0$).
-    \item a program is \emph{domain-safe} if,
+    \item a program is \emph{domain-safe}\leanref{domain-safety} if,
 almost surely, every executed distribution has parameters in its domain and
 every executed division has a nonzero divisor.
 \end{itemize}
 
 Determinization also never increases the variance:
 
-\begin{theorem}[Variance non-increase]
+\begin{theorem}[Variance non-increase\leanref{variance-non-increase}]
 \label{thm:variance}
 Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe. If
 $\law e(\Real)>0$ and $\int_{\Real}r^2\,\law e(dr)<\infty$, then $\trans e$
@@ -58,7 +58,7 @@ The expectation theorem allows $+\infty$ and $-\infty$, but excludes undefined
 expectations. \Cref{sec:traces} compares programs after fixing the $\G$ draws,
 even when their global expectations are undefined.
 
-\paragraph{When is an expectation defined?}
+\paragraph{When is an expectation defined?\leanref{expectation-defined}}
 For a nonnegative quantity, the integral is always defined, although it may be
 infinite. To integrate a signed output, separate its positive and negative parts:
 \[
@@ -113,7 +113,7 @@ Thus the domain-safety assumption is necessary, because:
 Rejection, as in a failed $\kw{observe}$, contributes no output.
 We model $\kw{reject}$ as an infinite loop.
 
-Let $d_e$ denote the probability of divergence, including rejection. It is the
+Let $d_e$ denote the probability of divergence\leanref{divergence}, including rejection. It is the
 limit, as $n$ grows, of the probability of executing $n$ steps and still not
 being a value.
 
@@ -122,9 +122,9 @@ being a value.
 Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe. Then $\trans e$ is domain-safe,
 and
 \[
- \law e(\Real)+d_e=1,
+ \law e(\Real)+d_e=1\leanref{return-or-diverge},
  \qquad
- \law{\trans e}(\Real)=\law e(\Real).
+ \law{\trans e}(\Real)=\law e(\Real)\leanref{output-mass}.
 \]
 \end{proposition}
 

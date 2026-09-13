@@ -1,0 +1,68 @@
+\newif\ifleanlinks
+\newcommand{\leanrevision}{e4d9b18c232ec2663d45e20eed72df2c4b8e42b1}
+\newcommand{\leanpublicbase}{https://github.com/julesjacobs/determinize/blob/\leanrevision}
+\newcommand{\leanreviewbase}{https://apndx.org/pub/sca95063a7c}
+\newcommand{\leanlinkbase}{}
+\newcommand{\leansourcesuffix}{}
+\newcommand{\leanreviewlinks}{%
+  \ifdefempty{\leanreviewbase}{\leanlinksfalse}{%
+    \let\leanlinkbase\leanreviewbase
+    \renewcommand{\leansourcesuffix}{.html}}}
+\makeatletter
+\AtBeginDocument{%
+  \if@ACM@review
+    \leanreviewlinks
+  \else\if@ACM@anonymous
+    \leanreviewlinks
+  \else
+    \let\leanlinkbase\leanpublicbase
+  \fi\fi}
+\makeatother
+
+\newcommand{\DeclareLeanLink}[3]{%
+  \expandafter\def\csname leanurl@#1\endcsname{\leanlinkbase/#2\leansourcesuffix\#L#3}}
+\newcommand{\leanmark}{%
+  \resizebox{!}{.9ex}{\raisebox{\depth}{%
+    \textcolor{black!45}{\ensuremath{\nearrow}}}}}
+\newcommand{\leanlink}[1]{%
+  \nobreak\hspace{.08em}\href{\csname leanurl@#1\endcsname}{\leanmark}}
+\DeclareRobustCommand{\leanref}[1]{%
+  \ifleanlinks
+    \ifcsname leanurl@#1\endcsname
+      \ifmmode\smash{\text{\mbox{\leanlink{#1}}}}\else\smash{\mbox{\leanlink{#1}}}\fi
+    \else
+      \PackageError{lean-links}{Unknown Lean reference '#1'}{Add it to lean-links.tex.}%
+    \fi
+  \fi}
+\pdfstringdefDisableCommands{\def\leanref#1{}}
+
+\DeclareLeanLink{expressions}{lean/Determinize/Spec/Syntax.lean}{19-L46}
+\DeclareLeanLink{determinization}{lean/Determinize/Spec/Syntax.lean}{109-L149}
+\DeclareLeanLink{types}{lean/Determinize/Spec/Types.lean}{21-L27}
+\DeclareLeanLink{subtyping}{lean/Determinize/Spec/Types.lean}{30-L38}
+\DeclareLeanLink{typing}{lean/Determinize/Spec/Syntax.lean}{196}
+\DeclareLeanLink{values}{lean/Determinize/Spec/Syntax.lean}{50-L55}
+\DeclareLeanLink{evaluation-contexts}{lean/Determinize/Proof/FiniteModel/Contexts.lean}{16-L55}
+\DeclareLeanLink{reduction}{lean/Determinize/Spec/Semantics.lean}{41}
+\DeclareLeanLink{output-measures}{lean/Determinize/Spec/Semantics.lean}{182-L195}
+\DeclareLeanLink{primitive-distributions}{lean/Determinize/Spec/Primitives.lean}{38-L115}
+\DeclareLeanLink{domain-safety}{lean/Determinize/Spec/Semantics.lean}{213-L228}
+\DeclareLeanLink{expectation-defined}{lean/Determinize/Spec/Main.lean}{46-L59}
+\DeclareLeanLink{expectation-preservation}{lean/Determinize/Spec/Main.lean}{125-L134}
+\DeclareLeanLink{variance-non-increase}{lean/Determinize/Spec/Main.lean}{116-L122}
+\DeclareLeanLink{divergence}{lean/Determinize/Spec/Semantics.lean}{198-L211}
+\DeclareLeanLink{return-or-diverge}{lean/Determinize/Spec/Main.lean}{27-L33}
+\DeclareLeanLink{output-mass}{lean/Determinize/Spec/Main.lean}{86-L90}
+\DeclareLeanLink{traces}{lean/Determinize/Spec/Traces/Semantics.lean}{17}
+\DeclareLeanLink{trace-semantics}{lean/Determinize/Spec/Traces/Semantics.lean}{25-L48}
+\DeclareLeanLink{trace-law}{lean/Determinize/Spec/Traces/Main.lean}{16-L18}
+\DeclareLeanLink{trace-erasure}{lean/Determinize/Spec/Traces/Main.lean}{12-L14}
+\DeclareLeanLink{trace-soundness}{lean/Determinize/Spec/Traces/Main.lean}{23-L37}
+\DeclareLeanLink{trace-variance}{lean/Determinize/Spec/Traces/Main.lean}{56-L66}
+\DeclareLeanLink{frontend}{lean/Determinize/Frontend/Compile.lean}{13-L18}
+\DeclareLeanLink{typing-checker}{lean/Determinize/Checking/Elaboration.lean}{107-L118}
+\DeclareLeanLink{interpreter}{lean/Determinize/Runtime/Eval.lean}{135-L141}
+\DeclareLeanLink{graph-construction}{lean/Determinize/Finite/Explore.lean}{19-L56}
+\DeclareLeanLink{rational-solver}{lean/Determinize/Finite/Statistics.lean}{7-L25}
+\DeclareLeanLink{storm-solver}{tools/storm.py}{91-L110}
+\DeclareLeanLink{certificate-checker}{lean/Determinize/Checking/Statistics.lean}{8-L25}

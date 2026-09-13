@@ -2,14 +2,14 @@
 \begin{figure}[H]
 \centering
 \small
-\textbf{Type grammar}
+\textbf{Type grammar}\leanref{types}
 \[
  \tau ::= \tyU\mid\tyB\mid\tyR m\mid\tau\to\tau
        \mid\tau\times\tau\mid\tau+\tau\mid\tyL\tau
  \qquad m ::= \G\mid\E
 \]
 \par\vspace{8pt}
-\textbf{Real typing}
+\textbf{Real typing}\leanref{typing}
 \begin{mathpar}
  \inferrule*[right=Real]{r\in\Real}{\typing r{\tyR m}}
  \and
@@ -55,7 +55,7 @@
    {\typing{\draw{gamma}\alpha{k,\lambda}}{\tyR m}}
 \end{mathpar}
 \par\vspace{8pt}
-\textbf{Subtyping}
+\textbf{Subtyping}\leanref{subtyping}
 \begin{mathpar}
  \inferrule*[right=Refl]{ }{\tau<:\tau}
  \and

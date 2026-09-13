@@ -65,7 +65,7 @@ These are defined through the joint measure $J_e$:
 \end{aligned}
 \]
 
-\begin{theorem}[Trace soundness]
+\begin{theorem}[Trace soundness\leanref{trace-soundness}]
 \label{thm:trace-soundness}
 Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe. Then $\trans e$ is domain-safe,
 \[
@@ -85,7 +85,7 @@ The transformed program retains only variation between the conditional means.
 The original program's output can also vary after the $\G$ trace is fixed,
 due to the $\E$-samples.
 
-\begin{theorem}[Trace variance decomposition]
+\begin{theorem}[Trace variance decomposition\leanref{trace-variance}]
 \label{thm:trace-variance}
 Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe. If
 $q_e=\law e(\Real)>0$ and $\int_{\Real}r^2\,\law e(dr)<\infty$, then

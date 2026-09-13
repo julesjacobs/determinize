@@ -2,13 +2,13 @@
 \begin{figure}[ht]
 \centering
 \small
-\textbf{$\G$ traces $\tau\in\Trace$}
+\textbf{$\G$ traces $\tau\in\Trace$}\leanref{traces}
 \[
  \tau ::= []\mid(D,r)::\tau,
  \qquad
  p_{D,r}(\tau,s)=((D,r)::\tau,s).
 \]
-\textbf{Refined output measures}
+\textbf{Refined output measures}\leanref{trace-semantics}
 \[
 \begin{aligned}
  \joint r0&=\delta_{([],r)},\\[4pt]
@@ -21,9 +21,9 @@
 \[
  J_e=\sum_{n=0}^{\infty}\joint e n,
  \qquad
- \trlaw e(A)=J_e(A\times\Real),
+ \trlaw e(A)=J_e(A\times\Real)\leanref{trace-law},
  \qquad
- \law e(B)=J_e(\Trace\times B).
+ \law e(B)=J_e(\Trace\times B)\leanref{trace-erasure}.
 \]
 \caption{Trace refinement of \cref{fig:semantics}.
 $\joint e n$ records the trace and output of executions returning after exactly
