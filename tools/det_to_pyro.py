@@ -313,6 +313,15 @@ def is_observation(expression: Expression) -> bool:
     return isinstance(expression, Call) and expression.name in _OBSERVATIONS
 
 
+def eliminated_random_variables(program: Program) -> tuple[str, ...]:
+    """Return the names of sample[E] bindings replaced by their means."""
+    return tuple(
+        binding.name
+        for binding in program.bindings
+        if is_distribution(binding.expression) and binding.expression.affinity == "E"
+    )
+
+
 def load_proposals(path: str | Path | None, model_name: str) -> dict[str, Any]:
     if path is None:
         return {}

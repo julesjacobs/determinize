@@ -21,6 +21,7 @@ from det_to_pyro import (
     SequentialGuide,
     SequentialModel,
     default_proposals_path,
+    eliminated_random_variables,
     load_proposals,
     parse_file,
 )
@@ -262,8 +263,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "estimator comparisons are unreliable"
             )
 
-    comparison: dict[str, float | None] = {}
+    comparison: dict[str, float | int | None] = {}
     if {"source", "determinized"} <= summaries.keys():
+        eliminated = eliminated_random_variables(program)
+        comparison["random_variables_eliminated"] = len(eliminated)
         source_variance = summaries["source"]["estimator_variance"]
         target_variance = summaries["determinized"]["estimator_variance"]
         if source_variance is not None and target_variance is not None:
@@ -277,7 +280,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         comparison["mean_runtime_ratio"] = source_time / target_time
         print("comparison:")
         for key, value in comparison.items():
-            print(f"  {key}: {format_number(value)}")
+            label = (
+                "random variables eliminated"
+                if key == "random_variables_eliminated"
+                else key
+            )
+            print(f"  {label}: {format_number(value)}")
 
     if args.json_out:
         payload = {
