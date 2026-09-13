@@ -30,6 +30,13 @@ example : Checking.checkStatistics mixedOutcomes {mixedResult.val with dead := f
 example : Checking.checkStatistics mixedOutcomes
     {mixedResult.val with values := fun _ _ => 7} = false := by decide +kernel
 
+private def mixedTermination := (Finite.solveTermination mixedOutcomes mixedResult).toOption.get (by decide +kernel)
+example : mixedTermination.val.statistics mixedOutcomes = ⟨1/2,1/4,1/4⟩ := by decide +kernel
+example : (mixedTermination.val.statistics mixedOutcomes).Matches mixedOutcomes :=
+  terminationCertificate_sound _ _ mixedTermination.property
+example : Checking.checkTermination mixedOutcomes
+    {mixedTermination.val with rejection := fun _ => 0} = false := by decide +kernel
+
 private def divergentResult := (Finite.solveStatistics FiniteModel.loop).toOption.get (by decide +kernel)
 example : (divergentResult.val.statistics FiniteModel.loop).conditionalMean = none := by decide +kernel
 example : (divergentResult.val.statistics FiniteModel.loop).conditionalVariance = none := by decide +kernel
@@ -51,6 +58,9 @@ def statistics : IO Unit := do
   assert (match Finite.solveStatistics mixedOutcomes {maxStates := 4} with
     | .error _ => true | _ => false) "statistics state limit"
 
+#print axioms massBalance
+#print axioms terminationCertificate_sound
+#print axioms Checking.checked_termination
 #print axioms cut_outputMeasure
 #print axioms momentCertificate_sound
 #print axioms Checking.checked_statistics

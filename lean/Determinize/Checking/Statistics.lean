@@ -1,5 +1,5 @@
 import Determinize.Checking.Result
-import Determinize.Proof.FiniteModel.Statistics
+import Determinize.Proof.FiniteModel.Termination
 
 namespace Determinize.Checking
 open Spec.FiniteModel Proof.FiniteModel MeasureTheory ProbabilityTheory
@@ -33,5 +33,20 @@ theorem checked_conditionalVariance {source : Core} {subject : Subject}
   rw [← checked.correct.2]
   exact statistics_conditional_variance checked.model _
     (momentCertificate_sound _ _ ((checkStatistics_valid _ _).mp accepted)) positive
+
+def checkTermination (model : Model) (certificate : TerminationCertificate model) : Bool :=
+  checkStatistics model certificate.output && decide
+    ((⟨certificate.rejection, 0⟩ : ResultCertificate (rejectionQuery model certificate.output.dead)).Equations
+      (rejectionQuery model certificate.output.dead))
+
+theorem checkTermination_valid (model : Model) (certificate : TerminationCertificate model) :
+    checkTermination model certificate = true ↔ certificate.Valid model := by
+  simp only [checkTermination, Bool.and_eq_true, checkStatistics_valid, decide_eq_true_eq,
+    TerminationCertificate.Valid]
+
+theorem checked_termination (model : Model) (certificate : TerminationCertificate model)
+    (accepted : checkTermination model certificate = true) :
+    (certificate.statistics model).Matches model :=
+  terminationCertificate_sound model certificate ((checkTermination_valid _ _).mp accepted)
 
 end Determinize.Checking

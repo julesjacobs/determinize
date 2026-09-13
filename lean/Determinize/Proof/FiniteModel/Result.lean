@@ -5,7 +5,7 @@ import Mathlib.Data.ENNReal.BigOperators
 namespace Determinize.Proof.FiniteModel
 open Spec.FiniteModel MeasureTheory
 
-private theorem monotone_measure_iSup_apply (μ : Nat → Measure ℝ) (mono : Monotone μ)
+theorem monotone_measure_iSup_apply (μ : Nat → Measure ℝ) (mono : Monotone μ)
     (s : Set ℝ) (hs : MeasurableSet s) : (⨆ n, μ n) s = ⨆ n, μ n s := by
   let ν : Measure ℝ := Measure.ofMeasurable (fun s _ => ⨆ n, μ n s) (by simp) (by
     intro f hf hd

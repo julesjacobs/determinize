@@ -139,7 +139,9 @@ def write (outputPath : System.FilePath) (source : Checking.Core) (subject : Sub
 
 /-- A standalone theorem about the selected program's mass and output moments. -/
 def resultCertificateText (source : Checking.Core) (subject : Subject) (candidate : Candidate)
-    (model : Model) (certificate : Proof.FiniteModel.MomentCertificate model) : String :=
+    (model : Model) (termination : Proof.FiniteModel.TerminationCertificate model) : String :=
+  let certificate := termination.output
+  let rejection := "#[" ++ String.intercalate ", " ((List.ofFn termination.rejection).map leanRat) ++ "]"
   let vector := fun moment => "#[" ++ String.intercalate ", " ((List.ofFn (certificate.values moment)).map leanRat) ++ "]"
   let ranks := "#[" ++ String.intercalate ", " ((List.ofFn certificate.rank).map toString) ++ "]"
   let next := "#[" ++ String.intercalate ", " ((List.ofFn certificate.next).map fun j => s!"⟨{j.val}, by decide +kernel⟩") ++ "]"
@@ -169,6 +171,11 @@ def resultCertificateText (source : Checking.Core) (subject : Subject) (candidat
   "      bigStepMeasure (checkedSubject.program checkedSource)) =\n" ++
   "      ((statistics.secondMoment / statistics.returnMass - (statistics.firstMoment / statistics.returnMass)^2 : Rat) : ℝ) :=\n" ++
   "  Determinize.Checking.checked_conditionalVariance ⟨model, modelMatches⟩ result resultAccepted positive\n" ++
+  "\ndef termination : TerminationCertificate model := ⟨result, fun i => " ++ rejection ++ "[i.val]!⟩\n" ++
+  "\ntheorem terminationAccepted : Determinize.Checking.checkTermination model termination = true := by\n  decide +kernel\n" ++
+  "\ntheorem terminationProbabilities : (termination.statistics model).Matches model :=\n" ++
+  "  Determinize.Checking.checked_termination model termination terminationAccepted\n" ++
+  "\n#print axioms terminationProbabilities\n" ++
   "\n#print axioms resultAccepted\n#print axioms expectedReward\n#print axioms outputStatistics\n#print axioms conditionalVariance\n"
 
 def writeResult (outputPath : System.FilePath) (source : Checking.Core) (subject : Subject)
@@ -176,6 +183,8 @@ def writeResult (outputPath : System.FilePath) (source : Checking.Core) (subject
     (limits : SolveLimits := {}) : IO Rat := do
   let model := candidate.toModel valid
   let certified ← IO.ofExcept (solveStatistics model limits)
+  let termination ← IO.ofExcept (solveTermination model certified limits)
+  let outcomes := termination.val.statistics model
   let certificate := certified.val
   let statistics := certificate.statistics model
   let rankBound := (List.ofFn certificate.rank).foldl max 0
@@ -184,6 +193,8 @@ def writeResult (outputPath : System.FilePath) (source : Checking.Core) (subject
   let metadata := Lean.Json.mkObj [
     ("answer", Lean.toJson (rational statistics.firstMoment)),
     ("return_mass", Lean.toJson (rational statistics.returnMass)),
+    ("rejection_probability", Lean.toJson (rational outcomes.rejectionProbability)),
+    ("divergence_probability", Lean.toJson (rational outcomes.divergenceProbability)),
     ("second_moment", Lean.toJson (rational statistics.secondMoment)),
     ("conditional_mean", optional statistics.conditionalMean),
     ("conditional_variance", optional statistics.conditionalVariance),
@@ -192,7 +203,7 @@ def writeResult (outputPath : System.FilePath) (source : Checking.Core) (subject
     ("rank_bound", Lean.toJson rankBound)]
   write outputPath source subject candidate valid
   IO.FS.writeFile (outputPath.toString ++ ".result.lean")
-    (resultCertificateText source subject candidate model certificate)
+    (resultCertificateText source subject candidate model termination.val)
   IO.FS.writeFile (outputPath.toString ++ ".result.json") (metadata.pretty ++ "\n")
   return statistics.firstMoment
 

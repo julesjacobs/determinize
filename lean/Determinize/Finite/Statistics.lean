@@ -1,5 +1,5 @@
 import Determinize.Finite.Solve
-import Determinize.Proof.FiniteModel.Statistics
+import Determinize.Proof.FiniteModel.Termination
 
 namespace Determinize.Finite
 open Spec.FiniteModel Proof.FiniteModel
@@ -23,5 +23,12 @@ def solveStatistics (model : Model) (limits : SolveLimits := {}) :
     · exact mass.property
     · exact first.property
     · exact second.property⟩
+
+def solveTermination (model : Model)
+    (output : {certificate : MomentCertificate model // certificate.Valid model})
+    (limits : SolveLimits := {}) :
+    Except String {certificate : TerminationCertificate model // certificate.Valid model} := do
+  let rejection ← solveValues (rejectionQuery model output.val.dead) limits
+  return ⟨⟨output.val, rejection.val⟩, output.property, rejection.property⟩
 
 end Determinize.Finite
