@@ -32,22 +32,22 @@
 \draw[black!20] (0,-2.65) -- (1,-2.65);
 \node[data] (program) at (.10,-5.15) {Program $e$};
 \node[note] at (.10,-5.60) {$e\in\{e_{\mathrm{src}},e_{\mathrm{det}}\}$};
-\node[stage] (runtime) at (.365,-3.50) {Floating-point\\interpreter};
-\node[data] (estimates) at (.90,-3.50) {Empirical mean\\and variance};
-\draw[flow] (runtime) -- (estimates);
-
-\node[verified] (semantics) at (.365,-5.15) {Measure-theoretic\\semantics};
-\node[data] (measure) at (.90,-5.15) {Output measure\\$\law e$};
+\node[verified] (semantics) at (.365,-3.50) {Measure-theoretic\\semantics};
+\node[data] (measure) at (.90,-3.50) {Output measure\\$\law e$};
 \draw[flow] (semantics) -- (measure);
+
+\node[stage] (runtime) at (.365,-5.15) {Floating-point\\interpreter};
+\node[data] (estimates) at (.90,-5.15) {Empirical mean\\and variance};
+\draw[flow] (runtime) -- (estimates);
 
 \node[verified] (explore) at (.365,-6.80) {Finite graph\\construction};
 \node[verified] (solve) at (.635,-6.80) {Exact rational\\solver};
 \node[data] (answer) at (.90,-6.80)
-  {Exact\\probabilities\\and moments};
+  {Exact mean\\and variance};
 \draw[draw=black!65, line width=.6pt] (program.east) -- (.235,-5.15);
 \draw[draw=black!65, line width=.6pt] (.235,-3.50) -- (.235,-6.80);
-\draw[flow] (.235,-3.50) -- (runtime.west);
-\draw[flow] (.235,-5.15) -- (semantics.west);
+\draw[flow] (.235,-3.50) -- (semantics.west);
+\draw[flow] (.235,-5.15) -- (runtime.west);
 \draw[flow] (.235,-6.80) -- (explore.west);
 \draw[flow] (explore) -- (solve);
 \draw[flow] (solve) -- (answer);
@@ -56,7 +56,7 @@
 \node[verified] (check) at (.635,-8.50) {Value-vector\\checker};
 \draw[flow] (explore.south) -- (storm.north);
 \draw[flow] (storm) -- (check);
-\draw[flow] (check.east) -| (answer.south);
+\draw[flow,shorten >=5pt] (check.east) -| (answer.south);
 
 \node[inner sep=0pt] at (.50,-9.80) {
   \begin{tikzpicture}
@@ -73,8 +73,8 @@
 \label{fig:architecture}
 \Description{Compilation uses an unverified front end followed by verified type
 checking, with a branch to the checked source and another through determinization.
-One program branches to floating-point sampling, formal
-measure semantics, and verified finite graph construction. The graph feeds either a
+One program branches to formal measure semantics, floating-point sampling,
+and verified finite graph construction. The graph feeds either a
 verified exact rational solver or Storm followed by a verified vector checker.
-Both routes produce exact probabilities and output moments.}
+Both routes produce exact mean and variance conditioned on returning, when return probability is positive.}
 \end{figure}
