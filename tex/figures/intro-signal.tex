@@ -1,0 +1,25 @@
+% !TeX root = ../main.tex
+\begin{figure}[H]
+\centering
+\begin{minipage}[t]{.48\linewidth}
+\raggedright\textbf{Source (annotations inferred)}
+\begin{lstlisting}[xleftmargin=0pt]
+let x = uniform[G](0, 1) in
+let y = gaussian[E](x, 1) in
+x * y
+\end{lstlisting}
+\end{minipage}\hfill
+\begin{minipage}[t]{.48\linewidth}
+\raggedright\textbf{After replacement (simplified)}
+\begin{lstlisting}[xleftmargin=0pt]
+let x = uniform[G](0, 1) in
+x * x
+\end{lstlisting}
+\end{minipage}
+\par\smallskip
+Expected output: $\signalMean$ in both programs.
+\caption{A signal and its noisy measurement.}
+\label{fig:intro-signal}
+\Description{The first sample remains random and the second is replaced by its
+mean. The output becomes x squared, preserving expectation one third.}
+\end{figure}

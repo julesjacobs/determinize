@@ -1,5 +1,29 @@
 version = 1
 
+[[case]]
+file = "examples/paper/noisy-iteration.det"
+suite = "typing"
+outcome = "accept"
+expected_type = "float[E]"
+affinities = ["G", "E"]
+kernel = true
+
+[[case]]
+file = "examples/paper/noisy-product.det"
+suite = "typing"
+outcome = "accept"
+expected_type = "float[E]"
+affinities = ["G", "E"]
+kernel = true
+
+[[case]]
+file = "examples/paper/dungeon.det"
+suite = "typing"
+outcome = "accept"
+expected_type = "float[E]"
+affinities = ["G", "E"]
+kernel = true
+
 [[exclude]]
 file = "examples/loops/walk-sketches.det"
 reason = "Informal sketches containing multiple programs and unsupported syntax."

@@ -1,0 +1,29 @@
+% !TeX root = ../main.tex
+\begin{figure}[H]
+\centering
+\begin{minipage}{\linewidth}
+\raggedright
+\lstset{xleftmargin=0pt}
+\textbf{Dungeon crawl: source (annotations inferred)}
+\begin{lstlisting}
+let crawl = fun loot =>
+  (rec visit depth =>
+    if flip[G](0.25) then 0
+    else loot depth + visit (depth + 1)
+  ) 1
+in
+crawl (fun depth => 200 * depth * bernoulli[E](0.01))
+\end{lstlisting}
+\medskip
+\textbf{After replacement (simplified)}\quad\texttt{crawl} unchanged
+\begin{lstlisting}
+crawl (fun depth => 2 * depth)
+\end{lstlisting}
+\end{minipage}
+\caption{Dungeon crawl. \texttt{flip(p)} returns true with probability $p$,
+false otherwise; \texttt{bernoulli(p)} returns $1$ with probability $p$, $0$ otherwise.}
+\label{fig:intro-dungeon}
+\Description{The complete source program defines a recursive crawl and passes
+it a random loot function. Exit coins remain random; jackpot coins become their
+means. Only the final call changes, to a loot function returning twice the depth.}
+\end{figure}

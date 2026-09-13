@@ -1,0 +1,4 @@
+(rec run x =>
+  if flip(0.5) then x
+  else run (1 - x + gaussian(0, 1))
+) 0

@@ -1,0 +1,48 @@
+% !TeX root = ../main.tex
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[font=\footnotesize]
+\begin{groupplot}[
+  group style={group size=2 by 1, horizontal sep=1.6cm},
+  width=.43\linewidth, height=4.6cm,
+  axis line style={black!45}, tick style={black!45},
+  grid=major, grid style={black!10},
+  title style={font=\small\bfseries},
+  ylabel style={font=\footnotesize}, xlabel style={font=\footnotesize},
+]
+\nextgroupplot[title={Signal: output variance},
+  ymin=0,ymax=.6,ytick={0,.2,.4,.6},
+  xmin=-.6,xmax=1.6,xtick={0,1},xticklabels={Source,Determinized},
+  scaled y ticks=false]
+\addplot[ybar,bar width=25pt,draw=black!65,fill=black!18]
+  coordinates {(0,\signalSourceVarianceValue)};
+\addplot[ybar,bar width=25pt,draw=teal!75!black,fill=teal!25]
+  coordinates {(1,\signalTargetVarianceValue)};
+\node[anchor=south] at (axis cs:0,\signalSourceVarianceValue) {$\displaystyle\signalSourceVariance$};
+\node[anchor=south] at (axis cs:1,\signalTargetVarianceValue) {$\displaystyle\signalTargetVariance$};
+\node[anchor=north east,text=teal!75!black] at (rel axis cs:.98,.98)
+  {$\signalReduction\times$ reduction};
+
+\nextgroupplot[title={Dungeon: output variance},
+  ymin=0,ymax=48000,ytick={0,10000,20000,30000,40000},
+  xmin=-.6,xmax=1.6,xtick={0,1},xticklabels={Source,Determinized},
+  scaled y ticks=false]
+\addplot[ybar,bar width=25pt,draw=black!65,fill=black!18]
+  coordinates {(0,\dungeonSourceVarianceValue)};
+\addplot[ybar,bar width=25pt,draw=teal!75!black,fill=teal!25]
+  coordinates {(1,\dungeonTargetVarianceValue)};
+\node[anchor=south] at (axis cs:0,\dungeonSourceVarianceValue) {$\dungeonSourceVariance$};
+\node[anchor=south] at (axis cs:1,\dungeonTargetVarianceValue) {$\dungeonTargetVariance$};
+\node[anchor=north east,text=teal!75!black] at (rel axis cs:.98,.98)
+  {$\dungeonReduction\times$ reduction};
+\end{groupplot}
+\end{tikzpicture}
+\caption{Output variance for \cref{fig:intro-signal,fig:intro-dungeon},
+calculated analytically. Averaging $n$ independent runs divides variance by $n$,
+so the reduction factors also apply to the runs needed for the same variance of the average.}
+\label{fig:intro-variance}
+\Description{Source and determinized output variances are 19/45 and 4/45 for
+the signal, and 36192 and 2928 for the dungeon. The variance reduction factors,
+4.75 and approximately 12.36, also give the reduction in runs needed for the
+same variance of the sample average.}
+\end{figure}

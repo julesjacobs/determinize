@@ -1,0 +1,3 @@
+let x = uniform(0, 1) in
+let y = gaussian(x, 1) in
+x * y

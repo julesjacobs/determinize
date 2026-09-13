@@ -43,6 +43,22 @@ def kernel(path):
 
 
 class ResultTests(unittest.TestCase):
+    def test_paper_noisy_iteration(self):
+        program = (ROOT / "examples/paper/noisy-iteration.det").read_text()
+        with tempfile.TemporaryDirectory() as tmp:
+            result, prefix = generate(Path(tmp), program, "determinized")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            data = json.loads(Path(str(prefix) + ".result.json").read_text())
+            self.assertEqual(data["return_mass"], "1")
+            self.assertEqual(data["conditional_mean"], "1/3")
+            self.assertEqual(data["second_moment"], "1/3")
+            self.assertEqual(data["conditional_variance"], "2/9")
+            self.assertEqual(solve_export(prefix), Fraction(1, 3))
+            checked = kernel(Path(str(prefix) + ".result.lean"))
+            self.assertEqual(checked.returncode, 0, checked.stdout + checked.stderr)
+            for forbidden in ("sorryAx", "ofReduceBool", "trustCompiler"):
+                self.assertNotIn(forbidden, checked.stdout + checked.stderr)
+
     def test_exact_ground_truth(self):
         for program, subject, expected in CASES:
             with self.subTest(program=program), tempfile.TemporaryDirectory() as tmp:

@@ -1,0 +1,43 @@
+% !TeX root = ../main.tex
+\begin{figure}[H]
+\centering
+\begin{minipage}[t]{.48\linewidth}
+\raggedright\textbf{Source (annotations inferred)}
+\begin{lstlisting}[xleftmargin=0pt]
+(rec run x =>
+  if flip[G](0.5) then x
+  else run
+    (1 - x + gaussian[E](0, 1))
+) 0
+\end{lstlisting}
+\end{minipage}\hfill
+\begin{minipage}[t]{.48\linewidth}
+\raggedright\textbf{After replacement (simplified)}
+\begin{lstlisting}[xleftmargin=0pt]
+(rec run x =>
+  if flip[G](0.5) then x
+  else run (1 - x)
+) 0
+\end{lstlisting}
+\end{minipage}
+\par\medskip
+Let $v_i$ be the expected output from loop entry $\texttt{x}=i$
+in the transformed program.
+\[
+ \begin{pmatrix}v_0\\v_1\end{pmatrix}
+ =\begin{pmatrix}0&\tfrac12\\\tfrac12&0\end{pmatrix}
+  \begin{pmatrix}v_0\\v_1\end{pmatrix}
+  +\begin{pmatrix}0\\\tfrac12\end{pmatrix}
+ \qquad\Longrightarrow\qquad
+ \begin{pmatrix}v_0\\v_1\end{pmatrix}
+ =\begin{pmatrix}\tfrac13\\\tfrac23\end{pmatrix}.
+\]
+\caption{A noisy iteration becomes a finite-state loop.
+Both programs have expected output $v_0=1/3$.}
+\label{fig:intro-exact}
+\Description{The source repeatedly replaces x by one minus x plus Gaussian
+noise, stopping with probability one half at each iteration. Removing the noise
+leaves two possible loop-entry values, zero and one. Their expected outputs
+satisfy v0 equals v1 over two, and v1 equals one half plus v0 over two,
+giving initial expected output one third.}
+\end{figure}

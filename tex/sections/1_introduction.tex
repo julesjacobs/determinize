@@ -2,11 +2,48 @@
 \section{Introduction}
 \label{sec:introduction}
 
-This needs:
 \begin{itemize}
-    \item Short context
-    \item Motivating example
-    \item Overview of the entire pipeline and ideas: E/G annotations, transformation, type system, correctness statement, inferring E/G
-    \item Variance reduction for sampling, exact computation via storm
-    \item Contributions list
+    \item Estimate expected output by averaging runs. Can we get the same accuracy with fewer runs?
+    \item Signal \texttt{x}, noisy measurement \texttt{y}: estimate the expected
+    product \texttt{x * y}.
+    \item Type inference marks draws G (keep) or E (replace by mean).
+    We call this replacement determinization.
 \end{itemize}
+
+\input{figures/intro-signal}
+
+\begin{itemize}
+    \item Given \texttt{x}, \texttt{y} has mean \texttt{x}, and the product is
+    linear in \texttt{y}. Replacing \texttt{y} gives \texttt{x * x}; \texttt{x} stays random.
+    \item With both draws marked E,
+\begin{lstlisting}
+let x = uniform[E](0, 1) in
+let y = gaussian[E](x, 1) in
+x * y
+\end{lstlisting}
+    replacement gives \texttt{x = y = 1/2}, returning $1/4$ instead of $1/3$.
+    \item Next: inference through higher-order functions and recursion.
+    \item Dungeon: before each room, exit with probability $1/4$; otherwise,
+    a $1\%$ chance of a jackpot worth $200$ times the depth, then continue.
+\end{itemize}
+
+\input{figures/intro-dungeon}
+
+\begin{itemize}
+    \item Exit coins control recursion; jackpots enter the sum linearly.
+    Only jackpots become mean payouts.
+    \item Less variance means fewer independent runs for the same accuracy
+    (\cref{fig:intro-variance}).
+\end{itemize}
+
+\input{figures/intro-variance}
+
+\begin{itemize}
+    \item Removing noise can also make exact computation possible.
+    \item Start at zero; on each fair coin, stop or replace \texttt{x} by
+    \texttt{1 - x} plus Gaussian noise (\cref{fig:intro-exact}).
+    \item After determinization, loop entries have only \texttt{x = 0} or
+    \texttt{x = 1}. Solve two linear equations instead of sampling.
+\end{itemize}
+
+\input{figures/intro-exact}
