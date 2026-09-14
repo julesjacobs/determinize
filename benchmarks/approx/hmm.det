@@ -1,3 +1,12 @@
+(* 2 state Hidden Markov Model with valid probabilities *)
+
+let emit = 0.05 :: 0.25 :: [] in
+let measurement_mean = -1.0 :: 1.0 :: [] in
+let measurement_std = 1.0 :: 1.0 :: [] in
+let trans = 0.05 :: 0.5 :: [] in
+let initial_state = 0 in
+let data = 0 :: 0 :: 0 :: 0 :: 0 :: 0 :: 0 :: 0 :: [] in
+
 let index = rec index xs => fun i =>
   match xs with
   [] => 1 / 0
@@ -9,18 +18,27 @@ let equal = fun x => fun y =>
   if x <= y then y <= x else false
 in
 
-fun emit => fun reward_mean => fun reward_std => fun trans =>
-rec hmm z => fun data =>
+let hmm = rec hmm z => fun data =>
   match data with
   [] => 0
   | datum :: remaining_data =>
-      (* ordinary HMM observation *)
+      (* observed discrete component of the emission *)
       let y = bernoulli(index emit z) in
       let _ = observe(equal y datum) in
 
-      (* continuous quantity generated at this same state *)
-      let r = gauss(index reward_mean z, index reward_std z) in
+      (* unobserved continuous component of the same emission *)
+      let x = gauss(
+        index measurement_mean z,
+        index measurement_std z
+      ) in
 
+      (* transition to the next hidden state *)
       let next_z = bernoulli(index trans z) in
+
       let rest = hmm next_z remaining_data in
-      r + rest
+
+      (* query: total value of the unobserved continuous emissions *)
+      x + rest
+in
+
+hmm initial_state data
