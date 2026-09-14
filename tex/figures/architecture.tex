@@ -13,6 +13,17 @@
   note/.style={font=\footnotesize, text=black!70, align=center},
   heading/.style={font=\small\bfseries, anchor=west}
 ]
+\node[inner sep=0pt] at (.50,2.05) {
+  \begin{tikzpicture}
+  \node[verified, minimum width=5mm, minimum height=3mm, text width=0pt,
+    inner sep=0pt,anchor=west] (verifiedSwatch) at (0,0) {};
+  \node[note,anchor=west,inner sep=0pt] (verifiedLegend) at ([xshift=5pt]verifiedSwatch.east) {Verified in Lean};
+  \node[stage, minimum width=5mm, minimum height=3mm, text width=0pt,
+    inner sep=0pt,anchor=west] (unverifiedSwatch) at ([xshift=18pt]verifiedLegend.east) {};
+  \node[note,anchor=west,inner sep=0pt] at ([xshift=5pt]unverifiedSwatch.east) {Unverified algorithm};
+  \end{tikzpicture}
+};
+
 \node[heading] at (0,1.25) {Compilation};
 \draw[black!20] (0,.95) -- (1,.95);
 \node[data, text width=.10\textwidth] (file) at (.06,-1.05) {\texttt{.det}\\program};
@@ -58,16 +69,20 @@
 \draw[flow] (storm) -- (check);
 \draw[flow,shorten >=5pt] (check.east) -| (answer.south);
 
-\node[inner sep=0pt] at (.50,-9.80) {
-  \begin{tikzpicture}
-  \node[verified, minimum width=5mm, minimum height=3mm, text width=0pt,
-    inner sep=0pt,anchor=west] (verifiedSwatch) at (0,0) {};
-  \node[note,anchor=west,inner sep=0pt] (verifiedLegend) at ([xshift=5pt]verifiedSwatch.east) {Verified in Lean};
-  \node[stage, minimum width=5mm, minimum height=3mm, text width=0pt,
-    inner sep=0pt,anchor=west] (unverifiedSwatch) at ([xshift=18pt]verifiedLegend.east) {};
-  \node[note,anchor=west,inner sep=0pt] at ([xshift=5pt]unverifiedSwatch.east) {Unverified algorithm};
-  \end{tikzpicture}
-};
+\node[heading] at (0,-9.85) {Guarantees};
+\draw[black!20] (0,-10.15) -- (1,-10.15);
+\node[data, text width=.15\textwidth] (lawsrc) at (.10,-11.45) {Source measure\\$\law{e_{\mathrm{src}}}$};
+\node[verified, text width=.58\textwidth, align=left, font=\footnotesize, minimum height=14mm] (theorems) at (.50,-11.45) {%
+  \Cref{thm:expectation}:\ $\Expect_{\mathrm{ret}}[e_{\mathrm{det}}]=\Expect_{\mathrm{ret}}[e_{\mathrm{src}}]$\leanref{expectation-preservation}\\
+  \Cref{thm:variance}:\ $\Var_{\mathrm{ret}}[e_{\mathrm{det}}]\le\Var_{\mathrm{ret}}[e_{\mathrm{src}}]$\leanref{variance-non-increase}\\
+  \Cref{thm:trace-soundness}:\ $\trlaw{e_{\mathrm{det}}}=\trlaw{e_{\mathrm{src}}}$,\ %
+    $\law{e_{\mathrm{det}}}(\,\cdot\mid\tau)=\delta_{\Expect[e_{\mathrm{src}}\mid\tau]}$\leanref{trace-soundness}\\
+  \Cref{thm:trace-variance}:\ $\Var_{\mathrm{ret}}[e_{\mathrm{src}}]
+    =\Var_{\mathrm{ret}}[e_{\mathrm{det}}]
+    +\Expect_{\tau}\bigl[\Var\bigl(\law{e_{\mathrm{src}}}(\,\cdot\mid\tau)\bigr)\bigr]$\leanref{trace-variance}};
+\node[data, text width=.15\textwidth] (lawdet) at (.91,-11.45) {Target measure\\$\law{e_{\mathrm{det}}}$};
+\draw[flow] (lawsrc) -- (theorems);
+\draw[flow] (lawdet) -- (theorems);
 \end{tikzpicture}
 \caption{Implementation architecture.}
 \label{fig:architecture}
@@ -77,5 +92,9 @@ One program branches to formal measure semantics, floating-point sampling,
 and verified finite graph construction. The graph feeds either a
 verified exact rational solver or Storm's exact model checking of expected
 accumulated rewards, followed by a verified certificate checker.
-Both routes produce exact mean and variance conditioned on returning, when return probability is positive.}
+Both routes produce exact mean and variance conditioned on returning, when return probability is positive.
+A final panel lists the guarantees: determinization preserves the conditional
+expectation, never increases the conditional variance, keeps the trace law and
+replaces each conditional output law by the point mass at its mean, and the
+variance removed equals the average within-trace variance.}
 \end{figure}
