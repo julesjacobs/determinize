@@ -1,0 +1,26 @@
+let index = rec index xs => fun i =>
+  match xs with
+  [] => 1 / 0
+  | x :: rest =>
+      if i < 1 then x else index rest (i - 1)
+in
+
+let equal = fun x => fun y =>
+  if x <= y then y <= x else false
+in
+
+fun emit => fun reward_mean => fun reward_std => fun trans =>
+rec hmm z => fun data =>
+  match data with
+  [] => 0
+  | datum :: remaining_data =>
+      (* ordinary HMM observation *)
+      let y = bernoulli(index emit z) in
+      let _ = observe(equal y datum) in
+
+      (* continuous quantity generated at this same state *)
+      let r = gauss(index reward_mean z, index reward_std z) in
+
+      let next_z = bernoulli(index trans z) in
+      let rest = hmm next_z remaining_data in
+      r + rest

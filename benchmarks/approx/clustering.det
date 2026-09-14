@@ -1,0 +1,59 @@
+let without_last = rec without_last xs =>
+  match xs with
+  [] => []
+  | x :: rest =>
+      match rest with
+      [] => []
+      | _ :: _ => x :: without_last rest
+in
+
+let index_number = rec index_number xs => fun i =>
+  match xs with
+  [] => 1 / 0
+  | x :: rest =>
+      if i < 1 then x else index_number rest (i - 1)
+in
+
+let select_row = rec select_row rows => fun i =>
+  match rows with
+  [] => []
+  | row :: rest =>
+      if i < 1 then row else select_row rest (i - 1)
+in
+
+let is_one = fun x =>
+  if x < 1 then false else true
+in
+
+fun gaussian_pdf => fun pi => fun mu => fun sigma => fun M =>
+fun initial_total => fun x =>
+let dimensions = rec dimensions cells => fun means => fun d => fun total =>
+  match cells with
+  [] => total
+  | cell :: remaining_cells =>
+      match cell with
+      inl observed_x =>
+        let l = gaussian_pdf (observed_x + 0) (index_number means d)
+          (index_number sigma d) in
+
+        let a = bernoulli[G](l / index_number M d) in
+        let _ = observe(is_one a) in
+        dimensions remaining_cells means (d + 1) total
+      | inr _ =>
+        let x_missing = gauss[E](index_number means d,
+          index_number sigma d) in
+
+        dimensions remaining_cells means (d + 1) (total + x_missing)
+in
+
+let clustering = rec clustering rows => fun total =>
+  match rows with
+  [] => total
+  | row :: remaining_rows =>
+      let z = discrete_list[G](without_last pi) in
+      let means = select_row mu z in
+      let next_total = dimensions row means 0 total in
+      clustering remaining_rows next_total
+in
+
+clustering x initial_total

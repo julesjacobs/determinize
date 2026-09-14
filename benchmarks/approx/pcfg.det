@@ -1,0 +1,72 @@
+let length = rec length xs =>
+  match xs with
+  [] => 0
+  | _ :: rest => 1 + length rest
+in
+
+let equal = fun x => fun y =>
+  if x <= y then y <= x else false
+in
+
+let prefix = rec prefix xs => fun n =>
+  if n < 1 then []
+  else
+    match xs with
+    [] => []
+    | x :: rest => x :: prefix rest (n - 1)
+in
+
+let suffix = rec suffix xs => fun n =>
+  if n < 1 then xs
+  else
+    match xs with
+    [] => []
+    | _ :: rest => suffix rest (n - 1)
+in
+
+let repeat = rec repeat n => fun x =>
+  if n < 1 then [] else x :: repeat (n - 1) x
+in
+
+fun leaf_cost_mean => fun leaf_cost_sd =>
+fun split_cost_mean => fun split_cost_sd =>
+rec pcfg words =>
+  let z = bernoulli(0.5) in
+
+  if z < 1 then
+    (* S -> S S *)
+
+    let word_count = length words in
+    if word_count < 2 then
+      let _ = observe(false) in
+      0
+    else
+      let split_probability = 1 / (word_count - 1) in
+      let split_weights = repeat (word_count - 2) split_probability in
+      let split_choice = discrete_list(split_weights) in
+      let sp = split_choice + 1 in
+
+      let c = gauss(split_cost_mean, split_cost_sd) in
+
+      let c1 = pcfg (prefix words sp) in
+      let c2 = pcfg (suffix words sp) in
+
+      c + c1 + c2
+  else
+    (* S -> 0 *)
+
+    if equal (length words) 1 then
+      match words with
+      [] =>
+        let _ = observe(false) in
+        0
+      | word :: _ =>
+          if equal word 0 then
+            let c = gauss(leaf_cost_mean, leaf_cost_sd) in
+            c
+          else
+            let _ = observe(false) in
+            0
+    else
+      let _ = observe(false) in
+      0
