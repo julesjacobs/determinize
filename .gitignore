@@ -27,6 +27,7 @@
 *.toc
 *.vrb
 *.xdv
+*.xcp
 *-blx.bib
 *-converted-to.*
 *.out
