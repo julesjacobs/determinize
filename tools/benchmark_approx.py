@@ -10,12 +10,14 @@ Sampling and independent Metropolis-Hastings estimates.
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import math
 import re
 import statistics
 import subprocess
 import sys
+import tempfile
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -311,6 +313,13 @@ def compile_with_lean(path: Path, binary: Path) -> CompiledPair:
         checked_type, source_text, target_text,
         parse_core(source_text), parse_core(target_text),
     )
+
+
+def compile_source_with_lean(source: str, name: str, binary: Path) -> CompiledPair:
+    with tempfile.TemporaryDirectory(prefix="determinize-scale-") as directory:
+        path = Path(directory) / f"{name}.det"
+        path.write_text(source)
+        return compile_with_lean(path, binary)
 
 
 class PyroProgram:
@@ -715,13 +724,57 @@ def resolve_models(arguments: Sequence[Path], model_dir: Path) -> list[Path]:
     return result
 
 
+def replace_top_binding(source: str, name: str, value: str) -> str:
+    pattern = re.compile(rf"^let {re.escape(name)} = .* in$", flags=re.MULTILINE)
+    result, replacements = pattern.subn(f"let {name} = {value} in", source, count=1)
+    if replacements != 1:
+        raise BenchmarkError(f"could not find one-line top-level binding {name!r}")
+    return result
+
+
+def scaled_source(
+    model: Path, scale: int | None, branching_lambda: float | None,
+) -> str:
+    source = model.read_text()
+    if scale is not None:
+        if scale < 1:
+            raise BenchmarkError("scales must be positive integers")
+        if model.stem == "hmm":
+            source = replace_top_binding(source, "data", "0 :: " * scale + "[]")
+        elif model.stem == "pcfg":
+            source = replace_top_binding(source, "words", "0 :: " * scale + "[]")
+        elif model.stem == "branching":
+            source = replace_top_binding(source, "depth", str(scale))
+        else:
+            raise BenchmarkError(
+                f"no scaling rule is defined for model {model.stem!r}"
+            )
+    if branching_lambda is not None and model.stem == "branching":
+        if branching_lambda <= 0:
+            raise BenchmarkError("--branching-lambda must be positive")
+        source = replace_top_binding(
+            source, "offspring_lambda", repr(branching_lambda)
+        )
+    return source
+
+
+def truth_for(
+    truths: dict[str, float], model: Path, scale: int | None,
+) -> float | None:
+    if scale is not None:
+        return truths.get(f"{model.stem}:{scale}")
+    return truths.get(model.stem)
+
+
 def resolve_truths(
     truth: float | None, truth_file: Path | None, models: Sequence[Path],
+    scales: Sequence[int] | None,
 ) -> dict[str, float]:
     if truth is not None:
-        if len(models) != 1:
-            raise BenchmarkError("--truth requires exactly one model")
-        return {models[0].stem: truth}
+        if len(models) != 1 or (scales is not None and len(scales) != 1):
+            raise BenchmarkError("--truth requires exactly one model and one scale")
+        key = models[0].stem if scales is None else f"{models[0].stem}:{scales[0]}"
+        return {key: truth}
     if truth_file is None:
         return {}
     try:
@@ -739,37 +792,83 @@ def resolve_truths(
 
 
 def print_summary(subject: str, summary: dict[str, Any]) -> None:
-    print(f"    {subject}:")
+    print(f"      {subject}:")
     for key in (
         "mean_estimate", "mean_output_variance", "estimator_variance",
         "rmse", "mean_ess", "mean_acceptance_rate", "mean_seconds",
     ):
         if summary.get(key) is not None:
-            print(f"      {key}: {format_number(summary[key])}")
+            print(f"        {key}: {format_number(summary[key])}")
 
 
 def print_comparison(compared: dict[str, Any]) -> None:
-    print("    comparison:")
+    print("      comparison:")
     for key in (
         "output_variance_reduction_factor", "estimator_variance_reduction_factor",
         "ess_ratio", "rmse_reduction_factor",
     ):
-        print(f"      {key}: {format_number(compared[key])}")
+        print(f"        {key}: {format_number(compared[key])}")
     if compared["rmse_reduction_factor"] is None:
-        print("      RMSE unavailable: provide --truth or --truth-file")
+        print("        RMSE unavailable: provide --truth or --truth-file")
         return
-    print("      RMSE vs samples:")
+    print("        RMSE vs samples:")
     for subject, point in compared["rmse_vs_samples"].items():
         print(
-            f"        {subject}: samples={point['samples']}, "
+            f"          {subject}: samples={point['samples']}, "
             f"rmse={format_number(point['rmse'])}"
         )
-    print("      RMSE vs wall-clock time:")
+    print("        RMSE vs wall-clock time:")
     for subject, point in compared["rmse_vs_wall_clock_time"].items():
         print(
-            f"        {subject}: mean_seconds={format_number(point['mean_seconds'])}, "
+            f"          {subject}: mean_seconds={format_number(point['mean_seconds'])}, "
             f"rmse={format_number(point['rmse'])}"
         )
+
+
+RESULT_COLUMNS = (
+    "model", "scale", "sampling_algorithm", "status", "error",
+    "samples", "runs",
+    "output_variance_reduction_factor",
+    "estimator_variance_reduction_factor", "ess_ratio",
+    "rmse_reduction_factor",
+    "rmse_difference_at_equal_samples",
+    "wall_clock_speedup_factor", "wall_clock_seconds_saved",
+)
+
+
+def result_csv_row(result: dict[str, Any]) -> dict[str, Any]:
+    source = result["source"]
+    target = result["determinized"]
+    compared = result["comparison"]
+    source_rmse = source["rmse"]
+    target_rmse = target["rmse"]
+    return {
+        "model": result["model"],
+        "scale": result["scale"],
+        "sampling_algorithm": result["sampling_algorithm"],
+        "status": "ok",
+        "error": "",
+        "samples": result["samples"],
+        "runs": result["runs"],
+        "output_variance_reduction_factor": compared[
+            "output_variance_reduction_factor"
+        ],
+        "estimator_variance_reduction_factor": compared[
+            "estimator_variance_reduction_factor"
+        ],
+        "ess_ratio": compared["ess_ratio"],
+        "rmse_reduction_factor": compared["rmse_reduction_factor"],
+        "rmse_difference_at_equal_samples": (
+            source_rmse - target_rmse
+            if source_rmse is not None and target_rmse is not None else None
+        ),
+        "wall_clock_speedup_factor": ratio(
+            source["mean_seconds"], target["mean_seconds"]
+        ),
+        "wall_clock_seconds_saved": (
+            source["mean_seconds"] - target["mean_seconds"]
+        ),
+    }
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -780,6 +879,17 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--algorithm", choices=("both", "importance", "mcmc"), default="both"
     )
     parser.add_argument("--samples", type=int, default=1000)
+    parser.add_argument(
+        "--scales", nargs="+", type=int,
+        help=(
+            "benchmark sizes: HMM observation count, PCFG word count, or "
+            "branching depth"
+        ),
+    )
+    parser.add_argument(
+        "--branching-lambda", type=float,
+        help="override offspring_lambda for branching scale sweeps",
+    )
     parser.add_argument("--runs", type=int, default=5)
     parser.add_argument("--warmup", type=int, default=200)
     parser.add_argument("--seed", type=int, default=1)
@@ -787,13 +897,23 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--binary", type=Path, default=DEFAULT_BINARY)
     parser.add_argument("--dump-dir", type=Path)
     parser.add_argument("--json-out", type=Path)
+    parser.add_argument(
+        "--results-file", "--csv-out", dest="results_file", type=Path,
+        help=(
+            "write a compact CSV results file with one row per model, "
+            "scale, and sampling algorithm"
+        ),
+    )
     truth_group = parser.add_mutually_exclusive_group()
     truth_group.add_argument(
         "--truth", type=float, help="reference expectation for a single model"
     )
     truth_group.add_argument(
         "--truth-file", type=Path,
-        help="JSON object mapping model stems to reference expectations",
+        help=(
+            "JSON object mapping model stems, or model:scale keys during a "
+            "scale sweep, to reference expectations"
+        ),
     )
     args = parser.parse_args(argv)
     if args.samples < 2 or args.runs < 1 or args.warmup < 0:
@@ -803,7 +923,9 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     try:
         models = resolve_models(args.models, args.model_dir)
-        truths = resolve_truths(args.truth, args.truth_file, models)
+        truths = resolve_truths(args.truth, args.truth_file, models, args.scales)
+        if args.scales is not None and any(scale < 1 for scale in args.scales):
+            raise BenchmarkError("--scales values must be positive")
     except BenchmarkError as error:
         parser.error(str(error))
     if not models:
@@ -813,66 +935,124 @@ def main(argv: Sequence[str] | None = None) -> int:
         "configuration": {
             "algorithms": algorithms, "samples": args.samples, "runs": args.runs,
             "warmup": args.warmup, "seed": args.seed, "binary": str(args.binary),
-            "truths": truths,
+            "truths": truths, "scales": args.scales,
+            "branching_lambda": args.branching_lambda,
         },
         "models": {},
     }
+    results: list[dict[str, Any]] = []
+    result_errors: list[dict[str, Any]] = []
     failed = False
 
     for model_index, model in enumerate(models):
-        print(f"model: {model}")
-        record: dict[str, Any] = {}
+        print(f"model: {model}", flush=True)
+        record: dict[str, Any] = {"scales": {}}
         payload["models"][model.stem] = record
-        try:
-            compiled = compile_with_lean(model, args.binary)
-            record["checked_type"] = compiled.checked_type
-            truth = truths.get(model.stem)
-            record["truth"] = truth
-            if not compiled.checked_type.startswith("float["):
-                raise BenchmarkError(
-                    f"model is open or non-scalar ({compiled.checked_type}); "
-                    "apply its top-level function to concrete arguments"
+        scales: list[int | None] = list(args.scales) if args.scales else [None]
+        for scale_index, scale in enumerate(scales):
+            scale_key = "configured" if scale is None else str(scale)
+            scale_record: dict[str, Any] = {}
+            record["scales"][scale_key] = scale_record
+            print(f"  scale: {scale_key}")
+            try:
+                variant = scaled_source(model, scale, args.branching_lambda)
+                unchanged = (
+                    scale is None
+                    and not (model.stem == "branching" and args.branching_lambda is not None)
                 )
-            if args.dump_dir:
-                args.dump_dir.mkdir(parents=True, exist_ok=True)
-                (args.dump_dir / f"{model.stem}.source.det").write_text(compiled.source_text + "\n")
-                (args.dump_dir / f"{model.stem}.determinized.det").write_text(compiled.target_text + "\n")
-            record["algorithms"] = {}
-            for algorithm_index, algorithm in enumerate(algorithms):
-                print(f"  algorithm: {algorithm}")
-                summaries: dict[str, dict[str, Any]] = {}
-                trial_record: dict[str, list[dict[str, Any]]] = {}
-                for subject_index, (subject, expression) in enumerate((
-                    ("source", compiled.source), ("determinized", compiled.target),
-                )):
-                    runtime = PyroProgram(expression)
-                    trials = []
-                    for run in range(args.runs):
-                        seed = (
-                            args.seed + model_index * 1_000_000
-                            + algorithm_index * 100_000 + run
-                        )
-                        trials.append(run_trial(
-                            runtime, subject, algorithm, args.samples, args.warmup,
-                            seed, args.max_initial_attempts,
-                        ))
-                    summaries[subject] = summarize(trials, truth)
-                    trial_record[subject] = [asdict(trial) for trial in trials]
-                    print_summary(subject, summaries[subject])
-                compared = comparison(summaries, args.samples)
-                print_comparison(compared)
-                record["algorithms"][algorithm] = {
-                    "summaries": summaries, "comparison": compared, "trials": trial_record,
-                }
-        except Exception as error:  # continue benchmarking the remaining files
-            failed = True
-            record["error"] = str(error)
-            print(f"  error: {error}", file=sys.stderr)
+                compiled = (
+                    compile_with_lean(model, args.binary) if unchanged
+                    else compile_source_with_lean(
+                        variant, f"{model.stem}-scale-{scale_key}", args.binary
+                    )
+                )
+                scale_record["checked_type"] = compiled.checked_type
+                truth = truth_for(truths, model, scale)
+                scale_record["truth"] = truth
+                if not compiled.checked_type.startswith("float["):
+                    raise BenchmarkError(
+                        f"model is open or non-scalar ({compiled.checked_type}); "
+                        "apply its top-level function to concrete arguments"
+                    )
+                if args.dump_dir:
+                    args.dump_dir.mkdir(parents=True, exist_ok=True)
+                    prefix = f"{model.stem}.scale-{scale_key}"
+                    (args.dump_dir / f"{prefix}.source.det").write_text(
+                        compiled.source_text + "\n"
+                    )
+                    (args.dump_dir / f"{prefix}.determinized.det").write_text(
+                        compiled.target_text + "\n"
+                    )
+                scale_record["algorithms"] = {}
+                for algorithm_index, algorithm in enumerate(algorithms):
+                    print(f"    algorithm: {algorithm}")
+                    summaries: dict[str, dict[str, Any]] = {}
+                    trial_record: dict[str, list[dict[str, Any]]] = {}
+                    for subject, expression in (
+                        ("source", compiled.source),
+                        ("determinized", compiled.target),
+                    ):
+                        runtime = PyroProgram(expression)
+                        trials = []
+                        for run in range(args.runs):
+                            seed = (
+                                args.seed + model_index * 1_000_000
+                                + scale_index * 10_000
+                                + algorithm_index * 100_000 + run
+                            )
+                            trials.append(run_trial(
+                                runtime, subject, algorithm, args.samples, args.warmup,
+                                seed, args.max_initial_attempts,
+                            ))
+                        summaries[subject] = summarize(trials, truth)
+                        trial_record[subject] = [asdict(trial) for trial in trials]
+                        print_summary(subject, summaries[subject])
+                    compared = comparison(summaries, args.samples)
+                    print_comparison(compared)
+                    scale_record["algorithms"][algorithm] = {
+                        "summaries": summaries,
+                        "comparison": compared,
+                        "trials": trial_record,
+                    }
+                    results.append({
+                        "model": model.stem,
+                        "sampling_algorithm": algorithm,
+                        "scale": scale_key,
+                        "truth": truth,
+                        "samples": args.samples,
+                        "runs": args.runs,
+                        "source": summaries["source"],
+                        "determinized": summaries["determinized"],
+                        "comparison": compared,
+                    })
+            except Exception as error:  # continue with other scales and files
+                failed = True
+                scale_record["error"] = str(error)
+                result_errors.append({
+                    "model": model.stem,
+                    "scale": scale_key,
+                    "error": str(error),
+                })
+                print(f"    error: {error}", file=sys.stderr)
 
     if args.json_out:
         args.json_out.parent.mkdir(parents=True, exist_ok=True)
         args.json_out.write_text(json.dumps(payload, indent=2, allow_nan=True) + "\n")
         print(f"wrote {args.json_out}")
+    if args.results_file:
+        args.results_file.parent.mkdir(parents=True, exist_ok=True)
+        with args.results_file.open("w", newline="") as results_stream:
+            writer = csv.DictWriter(results_stream, fieldnames=RESULT_COLUMNS)
+            writer.writeheader()
+            writer.writerows(result_csv_row(result) for result in results)
+            for error in result_errors:
+                writer.writerow({
+                    "model": error["model"],
+                    "scale": error["scale"],
+                    "status": "error",
+                    "error": error["error"],
+                })
+        print(f"wrote results file: {args.results_file}")
     return 1 if failed else 0
 
 

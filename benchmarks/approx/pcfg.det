@@ -1,3 +1,11 @@
+(* A probabilistic context-free grammar (PCFG) parser with random costs attached to grammar rules *)
+
+let leaf_cost_mean = 1.0 in
+let leaf_cost_sd = 1.0 in
+let split_cost_mean = 0.5 in
+let split_cost_sd = 1.0 in
+let words = 0 :: 0 :: 0 :: [] in
+
 let length = rec length xs =>
   match xs with
   [] => 0
@@ -28,9 +36,7 @@ let repeat = rec repeat n => fun x =>
   if n < 1 then [] else x :: repeat (n - 1) x
 in
 
-fun leaf_cost_mean => fun leaf_cost_sd =>
-fun split_cost_mean => fun split_cost_sd =>
-rec pcfg words =>
+let pcfg = rec pcfg words =>
   let z = bernoulli(0.5) in
 
   if z < 1 then
@@ -70,3 +76,6 @@ rec pcfg words =>
     else
       let _ = observe(false) in
       0
+in
+
+pcfg words
