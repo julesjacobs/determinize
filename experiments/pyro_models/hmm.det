@@ -1,0 +1,48 @@
+(* Wood et al. (2014), Program 5.1: three-state HMM.
+
+   The initial distribution, transition matrix, Normal emission model, and
+   all 16 observations are the published benchmark.  The observation and
+   posterior-predictive traversals use the language's native recursion.
+
+   Expectation query used by this experiment: after conditioning on the
+   published observations, return the sum of 10 posterior-predictive
+   observations.  Their Normal draws are marked E and can be determinized;
+   their latent states remain G draws. *)
+
+
+(* HMM orignal model and evidence: *)
+let transition_probabilities = fun z =>
+  if z < 1 then 0.10 :: 0.50 :: 0.40 :: []
+  else if z < 2 then 0.20 :: 0.20 :: 0.60 :: []
+  else 0.15 :: 0.15 :: 0.70 :: []
+in
+let transition = fun z =>
+  discrete_list[G](transition_probabilities z)
+in
+let obs_mean = fun z =>
+  if z < 1 then -1.0 else if z < 2 then 1.0 else 0.0
+in
+let observations =
+  0.9 :: 0.8 :: 0.7 :: 0.0 :: -0.025 :: -5.0 :: -2.0 :: -0.1 ::
+  0.0 :: 0.13 :: 0.45 :: 6.0 :: 0.2 :: 0.3 :: -1.0 :: -1.0 :: []
+in
+let condition = rec condition ys => fun z =>
+  match ys with
+  [] => z
+  | y :: rest =>
+      let next_z = transition z in
+      let _ = observe_gauss(y, obs_mean next_z, 1.0) in
+      condition rest next_z
+in
+let z_0 = discrete[G](1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0) in
+let z_16 = condition observations z_0 in
+
+(* Added query: *)
+let predict = rec predict h => fun z => fun total =>
+  if h < 1 then total
+  else
+    let next_z = transition z in
+    let next_y = gauss[E](obs_mean next_z, 1.0) in
+    predict (h - 1) next_z (total + next_y)
+in
+predict 10 z_16 0.0

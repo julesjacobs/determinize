@@ -1,0 +1,30 @@
+(* Wood et al. (2014), Program 5.4: Marsaglia.
+
+   The recursive Marsaglia rejection sampler, prior on mu, observation
+   variance, and the two published observations are unchanged.
+
+   We replace the original query predict(mu) with a posterior-predictive
+   expectation query: draw a new observation from Normal(mu, 2).
+   gauss and observe_gauss take a variance. *)
+
+(* Original model: *)
+let marsaglia_normal = rec marsaglia_normal mean => fun var =>
+  let x = uniform[G](-1, 1) in
+  let y = uniform[G](-1, 1) in
+  let s = x * x + y * y in
+  if s < 1 then
+    mean + sqrt(var) * x * sqrt((-2 * log(s)) / s)
+  else
+    marsaglia_normal mean var
+in
+
+let sigma_squared = 2 in
+
+let mu = marsaglia_normal 1 5 in
+
+let _ = observe_gauss(9, mu, sigma_squared) in
+let _ = observe_gauss(8, mu, sigma_squared) in
+
+(* Added query: *)
+let y_rep = gauss[E](mu, sigma_squared) in
+y_rep

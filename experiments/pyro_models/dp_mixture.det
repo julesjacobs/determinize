@@ -1,0 +1,82 @@
+(* Wood et al. (2014), Program 5.2: uncollapsed DP mixture.
+
+   Faithful encoding of the published model:
+   CRP concentration 1.72, component priors, and all ten observations
+   are unchanged. We explicitly thread the CRP restaurant state rather
+   than using Anglican's built-in CRP/memoization primitives.
+
+   After conditioning on the published observations, we replace Wood
+   et al.'s original prediction queries with a posterior-predictive
+   expectation query. *)
+
+let alpha = 1.72 in
+let H = 60 in
+
+(* Original model: *)
+let new_component = fun u =>
+  let g = gamma[G](1, 10) in
+  let v = 10 / g in
+  let m = gauss[G](0, v) in
+  (m, v)
+in
+
+let population = rec population restaurant =>
+  match restaurant with
+  [] => 0
+  | table :: rest => fst table + population rest
+in
+
+let probabilities = rec probabilities restaurant => fun denominator =>
+  match restaurant with
+  [] => (alpha / denominator) :: []
+  | table :: rest =>
+      (fst table / denominator) :: probabilities rest denominator
+in
+
+let seat = rec seat restaurant => fun index =>
+  match restaurant with
+  [] =>
+    let component = new_component () in
+    (component, (1, component) :: [])
+  | table :: rest =>
+      if index < 1 then
+        (snd table, (fst table + 1, snd table) :: rest)
+      else
+        let seated = seat rest (index - 1) in
+        (fst seated, table :: snd seated)
+in
+
+let crp_step = fun restaurant =>
+  let denominator = population restaurant + alpha in
+  let index = discrete_list[G](probabilities restaurant denominator) in
+  seat restaurant index
+in
+
+let observations =
+  1.0 :: 1.1 :: 1.2 :: -10.0 :: -15.0 :: -20.0 ::
+  0.01 :: 0.1 :: 0.05 :: 0.0 :: []
+in
+
+let condition = rec condition ys => fun restaurant =>
+  match ys with
+  [] => restaurant
+  | y :: rest =>
+      let seated = crp_step restaurant in
+      let component = fst seated in
+      let _ = observe_gauss(y, fst component, snd component) in
+      condition rest (snd seated)
+in
+
+let r_10 = condition observations [] in
+
+(* Added query: *)
+let predict = rec predict h => fun restaurant => fun total =>
+  if h < 1 then total
+  else
+    let seated = crp_step restaurant in
+    let component = fst seated in
+    let y = gauss[E](fst component, snd component) in
+    predict (h - 1) (snd seated) (total + y)
+in
+
+predict H r_10 0
