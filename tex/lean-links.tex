@@ -28,9 +28,29 @@
 % kept next to the PDF); the PDF is the SVG rendered by rsvg-convert and
 % trimmed to the drawing with pdfcrop. Placed like the Coq rooster in the
 % Coq literature: a superscript-height mark right after the statement name.
+% The wordmark is hairline art (its stroke is 3.6% of its height, 0.16pt at
+% 1ex), so on its own it is barely visible on screen; a thin rounded frame
+% around it, like the LEAN button in leanblueprint, makes it read as a mark
+% without altering the logo itself.
 \newcommand{\leanlogo}[1][1ex]{%
   \includegraphics[height=#1,alt={Lean}]{figures/logos/lean-logo}}
-\newcommand{\leanmark}{\raisebox{.5ex}{\leanlogo}}
+% Drawn with pgf primitives rather than a tikz node: \leanref is also used
+% inside tikz nodes (figures/architecture.tex), and a nested node would
+% inherit the outer node's text width, fill, and minimum size.
+\newcommand{\leanbadge}{%
+  \begingroup
+  \setbox0=\hbox{\leanlogo}%
+  \pgfpicture
+    \pgfsetbaseline{0pt}%
+    \pgfsetlinewidth{.3pt}%
+    \pgfsetstrokecolor{black!50}%
+    \pgfsetcornersarced{\pgfpoint{1pt}{1pt}}%
+    \pgfpathrectanglecorners{\pgfpoint{-1pt}{-1pt}}{\pgfpoint{\wd0+1pt}{\ht0+1pt}}%
+    \pgfusepath{stroke}%
+    \pgftext[left,bottom]{\copy0}%
+  \endpgfpicture
+  \endgroup}
+\newcommand{\leanmark}{\raisebox{.3ex}{\leanbadge}}
 \newcommand{\leanlink}[1]{%
   \nobreak\hspace{.08em}\href{\csname leanurl@#1\endcsname}{\leanmark}}
 \DeclareRobustCommand{\leanref}[1]{%
