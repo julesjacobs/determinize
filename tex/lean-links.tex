@@ -21,9 +21,16 @@
 
 \newcommand{\DeclareLeanLink}[3]{%
   \expandafter\def\csname leanurl@#1\endcsname{\leanlinkbase/#2\leansourcesuffix\#L#3}}
-\newcommand{\leanmark}{%
-  \resizebox{!}{.9ex}{\raisebox{\depth}{%
-    \textcolor{black!45}{\ensuremath{\nearrow}}}}}
+% The link mark is the official Lean logo (the "LEAN" wordmark with the TM sign), used as
+% provided by Lean FRO -- colours and TM sign included -- as its trademark
+% policy requires (https://lean-lang.org/trademark-policy/). Source:
+% https://lean-lang.org/logos/ (lean-logo-official-TM-transparent-2400x900.svg,
+% kept next to the PDF); the PDF is the SVG rendered by rsvg-convert and
+% trimmed to the drawing with pdfcrop. Placed like the Coq rooster in the
+% Coq literature: a superscript-height mark right after the statement name.
+\newcommand{\leanlogo}[1][1ex]{%
+  \includegraphics[height=#1,alt={Lean}]{figures/logos/lean-logo}}
+\newcommand{\leanmark}{\raisebox{.5ex}{\leanlogo}}
 \newcommand{\leanlink}[1]{%
   \nobreak\hspace{.08em}\href{\csname leanurl@#1\endcsname}{\leanmark}}
 \DeclareRobustCommand{\leanref}[1]{%
