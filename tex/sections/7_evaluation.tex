@@ -2,6 +2,109 @@
 \section{Evaluation}
 \label{sec:evaluation}
 
+\paragraph{Research questions.}
 \begin{itemize}
-    \item Benchmarks
+    \item \textbf{RQ1: Expressiveness.} What classes of probabilistic programs can our determinization transformation handle? Can determinization enable exact expected-value analysis for programs that prior tools can only bound, time out on, or do not support?
+    \item \textbf{RQ2: Sampling.} Does determinization improve sampling-based inference without changing the inference algorithm?
+\end{itemize}
+Then, within these two research questions, include a section in the results table showing how much probabilistic computation is eliminated, e.g., number of random choices before/after determinization.
+
+\subsection{Expressiveness}
+
+\paragraph{Goal.}
+Evaluate determinization on probabilistic programs following prior work on expected-value analysis and expectation invariants.
+
+\paragraph{Benchmarks.}
+Potential benchmarks:
+\begin{itemize}
+    \item expectation-invariant benchmarks: \texttt{2d-walk}, \texttt{aggregate-rv}, \texttt{hare-turtle}, \texttt{coupon5}, \texttt{hawk-dove}, etc.;
+    \item recursive expected-value benchmarks: \texttt{recursive}, \texttt{dice}, \texttt{exponential}, \texttt{geometric}, \texttt{non-linear-recur}, etc.;
+    \item scalable variants, e.g., \texttt{aggregate-rv}($n$), \texttt{coupon}($n$), recursion depth, number of random choices, etc.
+\end{itemize}
+
+\paragraph{Comparison with prior work.}
+For each benchmark, classify the result as:
+\begin{itemize}
+    \item exact expected value;
+    \item sound lower bound;
+    \item sound upper bound;
+    \item timeout;
+    \item unsupported.
+\end{itemize}
+Look especially for:
+\begin{itemize}
+    \item programs where prior tools return only bounds but determinization + Storm computes the expectation exactly;
+    \item programs unsupported by prior tools but supported by our pipeline;
+    \item programs that are infinite-state before determinization but have a finite-state program after determinization.
+\end{itemize}
+
+\paragraph{Measurements.}
+\begin{itemize}
+    \item analysis result / expected value / bounds;
+    \item total runtime;
+    \item determinization time;
+    \item Storm/model-checking time;
+    \item number of random choices before/after (number of continuous random variables eliminated);
+    \item determinized model/state-space size or Storm-generated model size?
+\end{itemize}
+
+\paragraph{Infinite-state determinized programs.}
+For programs that remain outside exact model checking:
+\begin{itemize}
+    \item compare Monte Carlo on the original program against Monte Carlo after determinization;
+    \item measure estimator variance and error versus samples/time;
+    \item investigate whether determinization gives substantially tighter empirical estimates.
+\end{itemize}
+
+\subsection{Sampling}
+
+\paragraph{Goal.}
+Evaluate whether determinization can be used as a preprocessing pass before off-the-shelf probabilistic inference.
+
+Compare:
+\[
+    P + \text{Pyro sampling algorithm}
+\]
+against
+\[
+    \operatorname{det}(P) + \text{the same Pyro sampling algorithm}.
+\]
+
+\paragraph{Inference algorithms.}
+Potential algorithms:
+\begin{itemize}
+    \item importance sampling;
+    \item sequential Monte Carlo;
+    \item MCMC;
+    \item particle MCMC.
+\end{itemize}
+
+\paragraph{Soft conditioning.}
+We do not currently determinize soft conditioning itself. Instead:
+\begin{itemize}
+    \item leave soft observations unchanged;
+    \item identify the dependency cone of each observation;
+    \item treat randomness affecting the likelihood as general-mode (G);
+    \item determinize expectation-mode (E) randomness elsewhere in the program whenever sound.
+\end{itemize}
+Thus, a benchmark may contain arbitrary soft conditioning as long as the randomness being eliminated does not affect the likelihood.
+
+\paragraph{Benchmarks.}
+\begin{itemize}
+    \item Programs in \url{https://stonebuddha.github.io/papers/WangHR21b-preprint.pdf} (CITE).
+    \item Programs in Anglican \url{https://probprog.github.io/anglican/examples/index.html} (CITE).
+\end{itemize}
+
+\paragraph{Measurements.}
+For each inference algorithm, measure:
+\begin{itemize}
+    \item estimator variance;
+    \item absolute / relative error versus number of samples;
+    \item error versus wall-clock time;
+    \item samples required to reach a fixed error;
+    \item effective sample size, where applicable;
+    \item effective sample size per second;
+    \item MCMC autocorrelation / mixing, where applicable;
+    \item particle degeneracy / ESS for SMC, where applicable;
+    \item determinization overhead?
 \end{itemize}
