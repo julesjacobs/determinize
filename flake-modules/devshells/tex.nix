@@ -13,6 +13,7 @@
             ps: with ps; [
               # main.tex
               cleveref
+              pgfplots
               todonotes
 
               # acmart.cls
@@ -34,6 +35,16 @@
             ]
           ))
         ];
+
+        # Make a bare `latexmk` (run in ./tex) build main.pdf with pdflatex:
+        # $pdf_mode = 1 selects pdflatex over latexmk's default DVI mode, and
+        # @default_files replaces the default '*.tex' glob (which would also try
+        # to build macros.tex, lean-links.tex, ...). latexmk reads this file as
+        # its system rc (LATEXMKRCSYS), so no .latexmkrc is needed in the repo.
+        LATEXMKRCSYS = pkgs.writeText "latexmkrc" ''
+          $pdf_mode = 1;
+          @default_files = ('main.tex');
+        '';
       };
     };
 }
