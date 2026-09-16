@@ -50,13 +50,48 @@ This table tracks whether each benchmark can be determinized, either fully or pa
 | `example-fig7-Q1.det` | No | Yes, with abstraction | The threshold draw controls the number of doublings. Rewrite it as a Bernoulli choice, discard unused `lnX`, and merge all `x > 1000` values to preserve the stated Boolean query in finite state. | [GuBPI] |
 | `example4-Q1.det` | No | No | Both continuous inputs influence branch decisions and the final predicate. Their continuum of possible values remains even though the program has no loop. | [GuBPI] |
 | `example5-Q1.det` | No | No | All three continuous inputs influence the conditional update and final predicate, leaving a continuum of states that Storm cannot enumerate exactly. | [GuBPI] |
-| `growing-walk.det` | No | No | The stopping draw controls recursion, and each continuous step affects both the result and its soft likelihood. Soft scoring and the unbounded continuous accumulated value prevent a finite-state Storm model. | [GuBPI] |
+| `growing-walk.det`* | No | No | The stopping draw controls recursion, and each continuous step affects both the result and its soft likelihood. Soft scoring and the unbounded continuous accumulated value prevent a finite-state Storm model. | [GuBPI] |
 | `herman-3-Q1.det` | No | Yes, with abstraction | The threshold draws control the finite three-bit protocol state. Rewrite them as Bernoulli choices and retain only whether `count` is zero to preserve the stated query. | [GuBPI] |
-| `param-estimation-recursive.det` | No | No | The continuous prior, steps, and direction choices affect control, likelihood, or the returned posterior value. Soft scoring and continuous unbounded walk values preclude a finite-state model. | [GuBPI] |
-| `pedestrian.det` | No | No | The continuous start, steps, and directions affect the walk likelihood, and the start is returned. The soft score and continuously many positions prevent finite-state Storm translation. | [GuBPI] |
+| `param-estimation-recursive.det`* | No | No | The continuous prior, steps, and direction choices affect control, likelihood, or the returned posterior value. Soft scoring and continuous unbounded walk values preclude a finite-state model. | [GuBPI] |
+| `pedestrian.det`* | No | No | The continuous start, steps, and directions affect the walk likelihood, and the start is returned. The soft score and continuously many positions prevent finite-state Storm translation. | [GuBPI] |
 | `random-box-walk.det` | No | No | Each sampled `s` determines direction, step size, future termination, and the output. The bounded interval still contains infinitely many reachable positions. | [GuBPI] |
 | `tug-of-war-Q1.det` | No | Yes | Every threshold event affects the final comparison, so the choices must remain random. Rewriting the uniform guards as finite Bernoulli choices yields a finite acyclic model. | [GuBPI] |
+| `binaryGmm.det` | No | No | Both continuous means affect every soft likelihood, and `mu1` is returned. Neither draw can be replaced by its mean, and the model retains continuously many states. | [GuBPI] |
+| `coinBias.det` | No | No | The continuous `bias` determines each random branch, every failed match is rejected, and `bias` is returned. The resulting conditioned model has continuously many bias values. | [GuBPI] |
+| `max.det` | No | No | Both Gaussian draws determine the comparison and the returned maximum, so neither can be replaced by its mean. Their continuous values prevent finite-state exploration. | [GuBPI] |
+| `nealsFunnel.det` | Yes, fully | Yes | Every sampled `y` has conditional mean `0`, including returned `y0`; the unused draws can also be removed. The resulting program deterministically returns `0`. | [GuBPI] |
+| `smallLikelihood.det` | No | No | The continuous `mu` affects every soft likelihood and is returned. It must remain random, leaving continuously many states. | [GuBPI] |
+| `pd-beta-v1.program` | No | No | `prob(0.5)` updates `p_pos`, determining exit time, `p_dis`, terminal likelihood, and the return. Both state variables have infinitely many reachable values. | [Wang et al.] |
+| `pd-beta-v2.program` | No | No | The file is identical to `pd-beta-v1.program`; its coin controls exit, likelihood, and return, with infinitely many reachable states. | [Wang et al.] |
+| `pd-beta-v3.program` | No | No | The file is identical to `pd-beta-v1.program`; its coin controls exit, likelihood, and return, with infinitely many reachable states. | [Wang et al.] |
+| `pd-beta-v4.program` | No | No | The file is identical to `pd-beta-v1.program`; its coin controls exit, likelihood, and return, with infinitely many reachable states. | [Wang et al.] |
+| `pd-v1.program` | No | No | `prob(0.5)` controls the exit time, accumulated `p_dis`, Beta likelihood, and returned `p_pos`; both state variables are unbounded. | [Wang et al.] |
+| `pd.program` | No | No | `prob(0.5)` controls the exit time, accumulated `p_dis`, normal likelihood, and returned `p_pos`; both state variables are unbounded. | [Wang et al.] |
+| `pdld.program` | No | No | `prob(0.5)` controls exit, `p_dis`, the normal likelihood, and returned `p_pos`. Its larger variance does not bound the state space. | [Wang et al.] |
+| `pdmb-v3.program` | Yes, trivially | No | No sampling occurs: `r_0`–`r_4` are free real inputs. Some inputs cause divergence or unbounded state, so this is not a closed finite model. | [Wang et al.] |
+| `pdmb-v4.program` | Yes, trivially | No | No sampling occurs: `r_0`–`r_5` are free real inputs. The loop or `p_dis` may be unbounded, so this is not a closed finite model. | [Wang et al.] |
+| `pdmb-v5.program` | No | No | Region-specific coins update `p_pos`, thereby controlling the guard, `p_dis`, terminal score, and return. Position and distance are unbounded. | [Wang et al.] |
+| `phylogenetic.det` | Yes, partially | No | `birth ~ Uniform(0,0.01)` only changes unused `amount`, so it becomes `0.005`. Continuous `lambda` controls scored branching and the return; `wait` controls exit. | [Wang et al.] |
+| `2d_robot.prog` | No | No | Direction and `Uniform(1,3)` steps update `x-y`, which is both loop guard and cost. This difference has continuous, unbounded reachability. | [Chatterjee et al.] |
+| `example_1.prog` | Yes, partially | No | The fair branch has expected tick `0` and expected update `y`, so it disappears. `r ~ Uniform(-1,0.5)` still controls the unbounded `x` loop. | [Chatterjee et al.] |
+| `example_3.prog` | Yes, partially | No | Within the nondeterministic branch, the fair choice becomes tick `0` and unchanged `y`. Nondeterminism remains, while continuous `r` controls the unbounded loop. | [Chatterjee et al.] |
+| `goods_discount.prog` | No | No | `r ~ Uniform(1,2)` updates guard variable `d`, fixing the iteration count and all costs. Bounded `n` does not remove the continuum of `d` values. | [Chatterjee et al.] |
+| `pollutant_disposal.prog` | Yes, partially | No | The `0.6` choice is removable because both branches differ only by names `x`/`y`. Their continuous samples still determine cost and the unbounded update of `n`. | [Chatterjee et al.] |
+| `convoy.det` | No | No | `Uniform(-2,2)` changes `a1`, then `v1`, `x1`, and guard `x1-x2`; it cannot become its mean. `while true` leaves unbounded continuous state and no return. | [Chakarov et al.] |
+| `dreckon.det` | Yes, fully | Yes | Over the fixed `N = 500` horizon, step sizes become `1.5`, sensor noises become `0`, and symmetric directions average to displacement `(0,0)`. The target is finite and deterministic. | [Chakarov et al.] |
+| `invpend.det` | Yes, fully | Yes | The bounded loop is affine: initial means are `-4`, `2.5`, `3`, and `0`, and both disturbance means are `0`. This gives one finite deterministic trajectory. | [Chakarov et al.] |
+| `pack.det` | Yes, partially | Yes, with reward encoding | Weight noises become `0.1` or `0.05`; object type stays random because it controls bounded counters and exit. Attempts, count, and weight become rewards. | [Chakarov et al.] |
+| `roulette.det` | No | No | `rand(5,10)` and every flip update guard variable `money`; `i` counts an unbounded number of rounds. Reachable money is continuous and unbounded. | [Chakarov et al.] |
+| `track.det` | Yes, partially | No | The guard is always true because `tgtVal-curVal <= 5 || tgtVal-curVal >= -5`; initial `curVal` then cancels. Noise still controls truncation, and `count` is unbounded. | [Chakarov et al.] |
 
 [k-induction]: https://github.com/probing-lab/polar/tree/master/benchmarks/k_induction
 [EXIST]: https://github.com/moves-rwth/cegispro2/tree/main/cegispro2/benchmarks/TACAS23_EXIST
 [GuBPI]: https://github.com/gubpi-tool/gubpi/tree/main/benchmarks/Recursive
+[Wang et al.]: https://arxiv.org/pdf/2307.13160
+[Chatterjee et al.]: https://research-explorer.ista.ac.at/download/17162/17182/2024_ProcACMProgLanguage_Chatterjee.pdf
+[Chakarov et al.]: https://plv.colorado.edu/papers/martingales-cav13.pdf
+
+* For the asterics: after some slight modifications:
+    *  growing-walk.det: No/No → Yes, partially/No
+    * param-estimation-recursive.det: No/No → Yes, fully/Yes
+    * pedestrian.det: No/No → Yes, fully/Yes
