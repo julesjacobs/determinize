@@ -36,7 +36,9 @@
   \includegraphics[height=#1,alt={Lean}]{figures/logos/lean-logo}}
 % Drawn with pgf primitives rather than a tikz node: \leanref is also used
 % inside tikz nodes (figures/architecture.tex), and a nested node would
-% inherit the outer node's text width, fill, and minimum size.
+% inherit the outer node's text width, fill, and minimum size. The frame's
+% padding and corner radius are in ex so the badge keeps its proportions in
+% \small and \footnotesize text.
 \newcommand{\leanbadge}{%
   \begingroup
   \setbox0=\hbox{\leanlogo}%
@@ -44,15 +46,20 @@
     \pgfsetbaseline{0pt}%
     \pgfsetlinewidth{.3pt}%
     \pgfsetstrokecolor{black!50}%
-    \pgfsetcornersarced{\pgfpoint{1pt}{1pt}}%
-    \pgfpathrectanglecorners{\pgfpoint{-1pt}{-1pt}}{\pgfpoint{\wd0+1pt}{\ht0+1pt}}%
+    \pgfsetcornersarced{\pgfpoint{.25ex}{.25ex}}%
+    \pgfpathrectanglecorners{\pgfpoint{-.3ex}{-.3ex}}{\pgfpoint{\wd0+.3ex}{\ht0+.3ex}}%
     \pgfusepath{stroke}%
     \pgftext[left,bottom]{\copy0}%
   \endpgfpicture
   \endgroup}
-\newcommand{\leanmark}{\raisebox{.3ex}{\leanbadge}}
+% \leanmark sets the mark after a name, with a gap a little wider than a
+% thin space so the frame does not touch the last letter; \leanmark* is
+% the bare mark for mentioning it in prose after a word space.
+\newcommand{\leanmarksep}{\nobreak\hspace{.2em}}
+\NewDocumentCommand{\leanmark}{s}{%
+  \IfBooleanF{#1}{\leanmarksep}\raisebox{.3ex}{\leanbadge}}
 \newcommand{\leanlink}[1]{%
-  \nobreak\hspace{.08em}\href{\csname leanurl@#1\endcsname}{\leanmark}}
+  \leanmarksep\href{\csname leanurl@#1\endcsname}{\leanmark*}}
 \DeclareRobustCommand{\leanref}[1]{%
   \ifleanlinks
     \ifcsname leanurl@#1\endcsname
