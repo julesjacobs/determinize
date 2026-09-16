@@ -3,7 +3,7 @@
 \section{Implementation}
 \label{sec:implementation}
 
-The theory from the previous sections is completely formalized and accompanied by a complete pipeline in the Lean programming language [TODO: cite]with the formalization relying heavily on previous formalizations in the Mathlib library [TODO: cite]. The final implementation was mostly carried out by a combination of Claude Fable 5.1 and ChatGPT Astra. The formalization of the main theorems was guided by our pre-existing paper proofs and the implementation of the complete compilation pipeline was based on pre-existing handwritten prototypes. The formalization of the correctness of (parts of) the pipeline is mostly mechanical [TODO: check].
+The theory from the previous sections is completely formalized and accompanied by a complete pipeline in the Lean programming language \cite{lean} with the formalization relying heavily on previous formalizations in the Mathlib library \cite{mathlib}. The final implementation was mostly carried out by a combination of Claude Fable 5.1 and ChatGPT Astra. The formalization of the main theorems was guided by our pre-existing paper proofs and the implementation of the complete compilation pipeline was based on pre-existing handwritten prototypes. The formalization of the correctness of (parts of) the pipeline is mostly mechanical [TODO: check].
 
 In order to make it clear which parts of the pipeline need human review and which ones can be left to the Lean type-checker, we separated the code into three parts:
 \begin{itemize}
@@ -35,13 +35,21 @@ The above steps are unverified, but produce a certificate that will be evaluated
 
 \subsection{Type Certification}
 
+In this part, the compiler verifies that the certificate emitted in by the type inference step is correct. [TODO: mention translation validation]
+
 \subsection{Determinization}
 
 The determinization function is trivial, it just makes all $\E$-sites into $\M$-sites
 
-\subsection{Measure-theoretic semantics}
+\subsection{Semantics}
 
-\subsection{Floating-point interpreter}
+The syntax, typing and mode inference do not assume any particular literal type. We implement the semantics for both exact real numbers as well as floating point numbers. The former allows us to formalize the exact statements of the soundness theorems, and the latter allow us to actually compute.
+
+\subsubsection{Measure-theoretic semantics}
+
+\subsubsection{Floating-point interpreter}
+
+\subsection{Theorem formalization}
 
 \subsection{Finite graph construction}
 
