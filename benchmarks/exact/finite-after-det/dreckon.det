@@ -81,7 +81,9 @@ end
 Partially determinizable but fully discrete after determinization; finite state after determinization.
 *)
 
-let n = 500 in
+(* Query: E[x] *)
+
+let n = 2 in
 let loop =
   rec loop i => fun x => fun y => fun estX => fun estY =>
     if i <= n then

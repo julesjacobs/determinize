@@ -13,6 +13,8 @@ end
 Fully determinizable; finite state after determinization.
 *)
 
+(* Query: E[x] *)
+
 let x = 5 * bernoulli(0.5) in
 let y = 4 + 3 * bernoulli(0.5) in
 let loop = rec loop x => fun y =>

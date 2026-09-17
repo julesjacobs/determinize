@@ -94,6 +94,9 @@ In **fully discrete after deteterminization?**, `✓ (deterministic)` means dete
 | `continuous_sampling.det` | Yes, partially | No | The fresh local `p ~ Uniform(0,1)` marginalizes exactly to a fair discrete choice, while the branch-local updates become `+0.5` and `-0.5`. The resulting symmetric walk has unbounded `n`. | ✓ | ✓ | [Feng et al.] |
 | `bimodal.det` | Yes, partially | No | Normal steps become `0.75`, but the Bernoulli draw remains because it controls the branch. The unconditional loop makes `xlow` and `xup` unbounded. | ✓ | ✓ | [Moosbrugger et al.] |
 | `figure1.det` | Yes, partially | No | Unused Laplace draw `l` can be removed, but Gaussian `g` remains because it controls whether `sum` changes. The random `x` update feeds `x**2`, and the loop is infinite-state. | ✓ |  | [Moosbrugger et al.] |
+| `coin_flip_unif.det` | Yes, partially | Yes, with reward encoding | Each fresh `p ~ Uniform(0,1)` can be marginalized to a fair coin, but that coin still controls termination. The remaining one-state geometric loop is finite when each recursive step is encoded as reward `1`. | ✓ | ✓ | [Kura & Unno][Kura-Unno] |
+| `icfp21_walk.det` | No | No | Its discrete choices control termination and the `n - 1` or `n + 1` update. The random walk can reach arbitrarily large `n`, so its exact reachable state space is infinite. |  |  | [Kura & Unno][Kura-Unno] |
+| `random_walk_unif.det` | No | No | The uniform draw determines the next continuous `x`, which controls future termination. Recursive updates yield infinitely many reachable real values, preventing an exact finite-state model. | ✓ |  | [Kura & Unno][Kura-Unno] |
 
 [k-induction]: https://github.com/probing-lab/polar/tree/master/benchmarks/k_induction
 [EXIST]: https://github.com/moves-rwth/cegispro2/tree/main/cegispro2/benchmarks/TACAS23_EXIST
@@ -104,10 +107,12 @@ In **fully discrete after deteterminization?**, `✓ (deterministic)` means dete
 [Chakarov et al. (SAS 2014)]: https://home4.cs.colorado.edu/~srirams/papers/sas14-expectations.pdf
 [Feng et al.]: https://arxiv.org/pdf/2302.06082
 [Moosbrugger et al.]: https://arxiv.org/pdf/2204.07185
+[Kura-Unno]: https://github.com/hiroshi-unno/coar/tree/main/benchmarks/OCaml/quantitative/icfp24
 
 
 -------
 Under `benchmarks/exact/`, these are separated as:
+
 * fully determinizable
 * fully determinizable with slight modifications (ie run Slice, remove/replace soft conditioning)
 * partially determinizable (at least one but not all distributions determinized; either fully discrete after determinization but infinite state, or either some continuous distributions left over after determinization -- see fully discrete after deteterminization? column for the distinction)

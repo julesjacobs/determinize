@@ -38,6 +38,8 @@ end
 Fully determinizable; finite state after determinization.
 *)
 
+(* Query: E[pAng] *)
+
 let max = 10 in
 let cartPos = uniform(-5, -3) in
 let cartVelo = uniform(2, 3) in

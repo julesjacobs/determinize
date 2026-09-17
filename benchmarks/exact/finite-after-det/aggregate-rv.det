@@ -14,7 +14,9 @@ end
 Fully determinizable; finite state after determinization.
 *)
 
-let n = 500 in
+(* Query: E[x] *)
+
+let n = 2 in
 let loop = rec loop i => fun x =>
   if i < n then
     let u = uniform(0, 1) in

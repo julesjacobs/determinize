@@ -11,6 +11,34 @@ Then, within these two research questions, include a section in the results tabl
 
 \subsection{Expressiveness}
 
+TODO: Find more programs, specifcially ones with higher order functions
+
+\begin{table}[H]
+    \centering
+    \small
+    \renewcommand{\arraystretch}{1.15}
+    \begin{tabular*}{\linewidth}{@{}l@{\extracolsep{\fill}}c c c c c r@{}}
+        \toprule
+        Benchmark & \# variables & Det. & Expectation & \shortstack{\# states in\\Markov chain} &
+        \shortstack{\# random sites\\eliminated} & Runtime \\
+        \midrule
+        \texttt{aggregate-rv}     & 4  & $\bullet\!\bullet$ & $\mathbb{E}[x]$                    & --- & 1  & --- \\
+        \texttt{coin\_flip\_unif} & 3  & $\bullet\!\circ$   & $\mathbb{E}[\mathit{ret}]$         & --- & 1  & --- \\
+        \texttt{dreckon}          & 11 & $\bullet\!\circ$   & $\mathbb{E}[x]$                    & --- & 14 & --- \\
+        \texttt{invpend}          & 6  & $\bullet\!\bullet$ & $\mathbb{E}[\mathit{pAng}]$        & --- & 6  & --- \\
+        \texttt{pack}             & 8  & $\bullet\!\circ$   & $\mathbb{E}[\mathit{totalWeight}]$ & --- & 3  & --- \\
+        \texttt{swap}             & 4  & $\bullet\!\bullet$ & $\mathbb{E}[x_N]$                  & --- & 4  & --- \\
+        \bottomrule
+    \end{tabular*}
+    \caption{Finite-state benchmarks after determinization. In the determinization
+    column, $\bullet\!\bullet$ denotes full determinization and
+    $\bullet\!\circ$ denotes partial determinization. Variable counts include
+    constants, loop counters, and sampled temporaries in the original benchmark;
+    eliminated sites count static sampling occurrences rather than dynamic draws.
+    State counts and runtimes are pending measurement.}
+    \label{tab:finite-after-determinization}
+\end{table}
+
 \paragraph{Goal.}
 Evaluate determinization on probabilistic programs following prior work on expected-value analysis and expectation invariants.
 

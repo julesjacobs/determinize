@@ -39,6 +39,8 @@ while (nPacked < nPerCarton) {
 Partially determinizable but fully discrete after determinization; finite state after determinization.
 *)
 
+(* Query: E[totalWeight] *)
+
 let run = fun initialCount =>
   let nPerCarton = 10 in
   let loop =
