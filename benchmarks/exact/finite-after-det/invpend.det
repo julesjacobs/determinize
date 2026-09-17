@@ -1,0 +1,70 @@
+(* From Chakarov & Sriram (CAV 2013)
+
+Original file contents:
+
+MAX = 10
+
+cartPos = unifRand(-5.0, -3.0)
+cartVelo = unifRand(2.0, 3.0)
+pAng = unifRand(1.0, 5.0)
+pAngDer = unifRand(-0.5, 0.5)
+
+count = 0
+
+while count <= MAX:
+    count = count + 1
+
+    cartPos = cartPos + 0.01 * cartVelo
+
+    cartVelo = (
+        0.02 * cartPos
+        + 1.03 * cartVelo
+        - 0.3 * pAng
+        - 0.06 * pAngDer
+        + unifRand(-1.0, 1.0)
+    )
+
+    pAng = pAng + 0.01 * pAngDer
+
+    pAngDer = (
+        0.04 * cartPos
+        + 0.07 * cartVelo
+        - 0.51 * pAng
+        + 0.85 * pAngDer
+        + unifRand(-0.8, 0.8)
+    )
+end
+
+Fully determinizable; finite state after determinization.
+*)
+
+let max = 10 in
+let cartPos = uniform(-5, -3) in
+let cartVelo = uniform(2, 3) in
+let pAng = uniform(1, 5) in
+let pAngDer = uniform(-0.5, 0.5) in
+
+let loop = rec loop count => fun cartPos => fun cartVelo => fun pAng => fun pAngDer =>
+  if count <= max then
+    let count = count + 1 in
+    let cartPos = cartPos + 0.01 * cartVelo in
+    let cartVelo =
+      0.02 * cartPos
+      + 1.03 * cartVelo
+      - 0.3 * pAng
+      - 0.06 * pAngDer
+      + uniform(-1, 1)
+    in
+    let pAng = pAng + 0.01 * pAngDer in
+    let pAngDer =
+      0.04 * cartPos
+      + 0.07 * cartVelo
+      - 0.51 * pAng
+      + 0.85 * pAngDer
+      + uniform(-0.8, 0.8)
+    in
+    loop count cartPos cartVelo pAng pAngDer
+  else
+    (cartPos, (cartVelo, (pAng, pAngDer)))
+in
+loop 0 cartPos cartVelo pAng pAngDer

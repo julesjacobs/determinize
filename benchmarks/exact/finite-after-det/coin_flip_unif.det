@@ -1,0 +1,23 @@
+(* ****** SKIP ********
+
+From Kura & Unno (ICFP 2024)
+
+Original program:
+
+[@@@mode "hfl_prop_as_expectation"]
+
+external unif : (float -> float) -> float = "unknown"
+let rec f x k = unif (fun p -> p *. k () +. (1.0 -. p) *. (1.0 +. f () k))
+
+[@@@assert "typeof(f) <: unit -> (unit -> { r : prop | r = 0.0 }) -> { ret : prop | 0.0 <= ret && ret <= 1.0 }"]
+*)
+
+let f = rec f x => fun k =>
+  let p = uniform(0, 1) in
+  if flip(p) then
+    k ()
+  else
+    1 + f () k
+in
+
+f

@@ -1,0 +1,37 @@
+(* From k-induction.
+
+Original file contents:
+
+x = 0
+y = 0
+distance = 0
+while true:
+    direction = Categorical(1/4, 1/4, 1/4, 1/4)
+    step = Uniform(0, 2)
+    if direction == 0:
+        x = x + step
+    elif direction == 1:
+        x = x - step
+    elif direction == 2:
+        y = y + step
+    elif direction == 3:
+        y = y - step
+    end
+end
+
+Partially determinizable but fully discrete after determinization; infinite state after determinization.
+*)
+
+let loop = rec loop x => fun y => fun distance =>
+  let direction = discrete(0.25, 0.25, 0.25, 0.25) in
+  let step = uniform(0, 2) in
+  if direction < 1 then
+    loop (x + step) y distance
+  else if direction < 2 then
+    loop (x - step) y distance
+  else if direction < 3 then
+    loop x (y + step) distance
+  else
+    loop x (y - step) distance
+in
+loop 0 0 0

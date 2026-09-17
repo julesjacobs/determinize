@@ -1,0 +1,33 @@
+(* ***** SKIP ******
+From Lower Bounds for Possibly Divergent Probabilistic Programs (Feng et al OOPSLA 23)
+
+Original file contents:
+
+while (n > 0) {
+    p := uniform(0, 1)
+    {
+        n := n − 1
+        b := b + uniform(0, 1)
+    } [p] {
+        n := n + 1
+        b := b − uniform(0, 1)
+    }
+}
+
+Partially determinizable but fully discrete after determinization; infinite state after determinization.
+*)
+
+let run = fun n => fun b =>
+  let loop = rec loop n => fun b =>
+    if 0 < n then
+      let p = uniform(0, 1) in
+      if flip(p) then
+        loop (n - 1) (b + uniform(0, 1))
+      else
+        loop (n + 1) (b - uniform(0, 1))
+    else
+      b
+  in
+  loop n b
+in
+run

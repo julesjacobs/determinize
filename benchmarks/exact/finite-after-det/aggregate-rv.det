@@ -1,0 +1,25 @@
+(* From Chakarov & Sriram (SAS 2014)
+
+Original program:
+
+x = 0
+n = 500
+i = 0
+while i < n:
+    u = Uniform(0,1)
+    x = x + u
+    i = i + 1
+end 
+
+Fully determinizable; finite state after determinization.
+*)
+
+let n = 500 in
+let loop = rec loop i => fun x =>
+  if i < n then
+    let u = uniform(0, 1) in
+    loop (i + 1) (x + u)
+  else
+    x
+in
+loop 0 0

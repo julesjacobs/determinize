@@ -1,0 +1,48 @@
+(* From POLAR
+
+Original file contents:
+
+toggle, sum, x, y, z = 0, s0, 1, 1, 1
+
+while ★:
+    toggle = 1 − toggle
+
+    if toggle == 0:
+        x = x + 1         {1/2} x + 2
+        y = y + z + x**2  {1/3} y − z − x
+        z = z + y         {1/4} z − y
+    end
+
+    l, g = Laplace(x + y, 1), Normal(0, 1)
+
+    if g < 1/2:
+        sum = sum + x
+    end
+end
+
+Partially determinizable; infinite state after determinization.
+*)
+
+let run = fun s0 =>
+  let loop = rec loop toggle => fun sum => fun x => fun y => fun z =>
+    let toggle = 1 - toggle in
+    let state =
+      if toggle < 1 then
+        let x = if flip(1/2) then x + 1 else x + 2 in
+        let y = if flip(1/3) then y + z + x * x else y - z - x in
+        let z = if flip(1/4) then z + y else z - y in
+        (x, (y, z))
+      else
+        (x, (y, z))
+    in
+    let x = fst state in
+    let y = fst (snd state) in
+    let z = snd (snd state) in
+    let l = x + y + exponential(1) - exponential(1) in
+    let g = gauss[G](0, 1) in
+    let sum = if g < 1/2 then sum + x else sum in
+    loop toggle sum x y z
+  in
+  loop 0 s0 1 1 1
+in
+run

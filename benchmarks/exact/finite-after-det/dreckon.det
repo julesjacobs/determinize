@@ -1,0 +1,117 @@
+(* From Chakarov & Sriram (CAV 2013)
+
+Original program:
+
+real x = 0
+real y = 0
+real estX = 0
+real estY = 0
+
+real dx = 0
+real dy = 0
+real dxc = 0
+real dyc = 0
+
+int i = 0
+int N = 500
+
+for i = 0 to N:
+    cmd = choice(
+        N:    0.1,
+        S:    0.1,
+        E:    0.1,
+        W:    0.1,
+        NE:   0.1,
+        SE:   0.1,
+        NW:   0.1,
+        SW:   0.1,
+        Stay: 0.2
+    )
+
+    switch cmd:
+        N:
+            dxc = 0
+            dyc = rand(1, 2)
+
+        S:
+            dxc = 0
+            dyc = -rand(1, 2)
+
+        E:
+            dxc = rand(1, 2)
+            dyc = 0
+
+        W:
+            dxc = -rand(1, 2)
+            dyc = 0
+
+        NE:
+            dxc = rand(1, 2)
+            dyc = rand(1, 2)
+
+        SE:
+            dxc = rand(1, 2)
+            dyc = -rand(1, 2)
+
+        NW:
+            dxc = -rand(1, 2)
+            dyc = rand(1, 2)
+
+        SW:
+            dxc = -rand(1, 2)
+            dyc = -rand(1, 2)
+
+        Stay:
+            dxc = 0
+            dyc = 0
+    end
+
+    # Actual motion includes small sensor/actuator noise.
+    dx = dxc + rand(-0.05, 0.05)
+    dy = dyc + rand(-0.05, 0.05)
+
+    x = x + dx
+    y = y + dy
+
+    # Estimated motion uses the commanded displacement.
+    estX = estX + dxc
+    estY = estY + dyc
+end
+
+Partially determinizable but fully discrete after determinization; finite state after determinization.
+*)
+
+let n = 500 in
+let loop =
+  rec loop i => fun x => fun y => fun estX => fun estY =>
+    if i <= n then
+      let cmd = discrete(0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.2) in
+      let displacement =
+        if cmd < 1 then
+          (0, uniform(1, 2))
+        else if cmd < 2 then
+          (0, -uniform(1, 2))
+        else if cmd < 3 then
+          (uniform(1, 2), 0)
+        else if cmd < 4 then
+          (-uniform(1, 2), 0)
+        else if cmd < 5 then
+          (uniform(1, 2), uniform(1, 2))
+        else if cmd < 6 then
+          (uniform(1, 2), -uniform(1, 2))
+        else if cmd < 7 then
+          (-uniform(1, 2), uniform(1, 2))
+        else if cmd < 8 then
+          (-uniform(1, 2), -uniform(1, 2))
+        else
+          (0, 0)
+      in
+      let dxc = fst displacement in
+      let dyc = snd displacement in
+      let dx = dxc + uniform(-0.05, 0.05) in
+      let dy = dyc + uniform(-0.05, 0.05) in
+      loop (i + 1) (x + dx) (y + dy) (estX + dxc) (estY + dyc)
+    else
+      (x, (y, (estX, estY)))
+in
+loop 0 0 0 0 0

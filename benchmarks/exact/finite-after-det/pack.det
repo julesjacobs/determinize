@@ -1,0 +1,68 @@
+(* From Chakarov & Sriram (CAV 2013)
+
+Original file contents:
+
+nPerCarton := 10;
+nLight := 0;
+nHeavy := 0;
+nMedium := 0;
+nPacked := 0;
+totalWeight := 0
+
+while (nPacked < nPerCarton) {
+    obj := choose(NORM: 1/2, HEAVY: 1/4, LIGHT: 1/4);
+
+    switch (obj) {
+        NORM:
+            nMedium := nMedium + 1;
+            nPacked := nPacked + 1
+            totalWeight := totalWeight + 0.9 + unifRand(0, 0.2);
+
+        HEAVY:
+            totalWeight := totalWeight + 1.1 + unifRand(0, 0.1);
+            if (nHeavy <= nLight) {
+                nHeavy := nHeavy + 1
+                nPacked := nPacked + 1
+            }
+
+        LIGHT:
+            totalWeight := totalWeight + 0.8 + unifRand(0, 0.1);
+            if (nLight <= nHeavy) {
+                nLight := nLight + 1;
+                nPacked := nPacked + 1
+            }
+    }
+
+    count := count + 1
+}
+
+Partially determinizable but fully discrete after determinization; finite state after determinization.
+*)
+
+let run = fun initialCount =>
+  let nPerCarton = 10 in
+  let loop =
+    rec loop nLight => fun nHeavy => fun nMedium => fun nPacked => fun totalWeight => fun count =>
+      if nPacked < nPerCarton then
+        let obj = discrete(0.5, 0.25, 0.25) in
+        if obj < 1 then
+          loop nLight nHeavy (nMedium + 1) (nPacked + 1)
+            (totalWeight + 0.9 + uniform(0, 0.2)) (count + 1)
+        else if obj < 2 then
+          let totalWeight = totalWeight + 1.1 + uniform(0, 0.1) in
+          if nHeavy <= nLight then
+            loop nLight (nHeavy + 1) nMedium (nPacked + 1) totalWeight (count + 1)
+          else
+            loop nLight nHeavy nMedium nPacked totalWeight (count + 1)
+        else
+          let totalWeight = totalWeight + 0.8 + uniform(0, 0.1) in
+          if nLight <= nHeavy then
+            loop (nLight + 1) nHeavy nMedium (nPacked + 1) totalWeight (count + 1)
+          else
+            loop nLight nHeavy nMedium nPacked totalWeight (count + 1)
+      else
+        (nLight, (nHeavy, (nMedium, (nPacked, (totalWeight, count)))))
+  in
+  loop 0 0 0 0 0 initialCount
+in
+run
