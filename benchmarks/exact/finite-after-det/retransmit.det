@@ -1,0 +1,39 @@
+(* NEW EXAMPLE
+
+(this needs a reward Markov chain, WIP. otherwise, you can query for the expected quality of the first successful transmission.)
+
+Model repeated transmission attempts over a channel that can be in either a good or bad state. In the end, query the expected number of failed attempts before the first success.
+
+On each attempt:
+- In a good state:
+  - Quality is sampled from gauss(12, 1).
+  - Transmission succeeds with probability 0.85.
+- In a bad state:
+  - Quality is sampled from gauss(4, 1.5).
+  - Transmission succeeds with probability 0.30.
+If the transmission succeeds, the program returns that attempt’s sampled quality. If it fails, the channel state is updated.
+
+Partially determinizable but finite state. *)
+
+let receive = rec receive good =>
+  let quality =
+    if good then gauss(12.0, 1.0)
+    else gauss(4.0, 1.5)
+  in
+
+  let success =
+    if good then flip(0.85)
+    else flip(0.30)
+  in
+
+  if success then
+    0
+  else
+    let next =
+      if good then flip(0.80)
+      else flip(0.25)
+    in
+    1 + receive next
+in
+
+receive true

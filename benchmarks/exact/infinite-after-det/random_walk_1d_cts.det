@@ -1,0 +1,28 @@
+(* From POLAR / MORA:
+
+v = 0
+x = 0
+while true:
+    v = Uniform(0,1)
+    x = x + v {7/10} x - v
+end
+
+Partially determinizable but fully discrete after determinization with infinite state.
+
+*)
+
+let v = 0 in
+let x = 0 in
+
+let loop = rec loop v => fun x =>
+  let v = uniform(0, 1) in
+  let x =
+    if flip(0.7) then
+      x + v
+    else
+      x - v
+  in
+  loop v x
+in
+
+loop v x

@@ -1,0 +1,19 @@
+let offspring_lambda = 0.8 in
+let rate = 1.0 in
+
+let branch = rec branch unit =>
+  let k = poisson(offspring_lambda) in
+  let lifetime = exponential(rate) in
+
+  let sum_children = rec sum_children remaining => fun total =>
+    if remaining < 1 then total
+    else
+      let child = branch () in
+      sum_children (remaining - 1) (total + child)
+  in
+
+  let children = sum_children k 0 in
+  lifetime + children
+in
+
+branch ()

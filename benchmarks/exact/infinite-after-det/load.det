@@ -1,0 +1,43 @@
+(* NEW EXAMPLE: 
+
+*)
+
+let local = fun load =>
+  let cpu =
+    uniform(
+      1.0 + 0.2 * load * load,
+      3.0 + 0.2 * load * load
+    )
+  in
+  let transfer = exponential(1.0) in
+  cpu + transfer
+in
+
+let remote = fun load =>
+  let cpu =
+    uniform(
+      0.8 + 0.2 * load * load,
+      2.8 + 0.2 * load * load
+    )
+  in
+  let transfer = exponential(0.9) in
+  cpu + transfer
+in
+
+let run = rec run worker => fun n => fun load =>
+  if n < 1 then
+    0
+  else
+    worker load + run worker (n - 1) load
+in
+
+let load = uniform(0, 1) in
+
+let worker =
+  if load < 0.6 then
+    local
+  else
+    remote
+in
+
+run worker 40 load

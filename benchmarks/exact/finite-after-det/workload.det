@@ -1,0 +1,31 @@
+(* NEW EXAMPLE:
+
+Some team receives a batch of minor/major repairs (bounded, jobs=8). Query the expected completion time.
+
+Partially determinizable but finite state.
+*)
+
+let make_jobs = rec make_jobs n =>
+  if n < 1 then
+    []
+  else
+    let major = flip(0.25) in
+    major :: make_jobs (n - 1)
+in
+
+let repair = rec repair jobs =>
+  match jobs with
+  | [] =>
+      0
+
+  | major :: rest =>
+      let time =
+        if major then uniform(1.5, 2.5)
+        else uniform(0.5, 1.5)
+      in
+
+      time + repair rest
+in
+
+let jobs = make_jobs 8 in
+repair jobs

@@ -91,7 +91,7 @@ else
    1
 
 
-Partially determinizable; infinite state after determinization.
+Partially determinizable but continuous after determinization. 
 *)
 
 let logScr = uniform[G](-0.6, 0.6) in

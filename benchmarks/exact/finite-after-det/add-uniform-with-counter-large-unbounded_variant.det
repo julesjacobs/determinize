@@ -1,0 +1,56 @@
+(* From: GuBPI Zaiser et al. -- MODIFIED
+
+Modified the original program (below) by discretizing the cur < 0.5 and adding a conditional uniform distribution.
+
+# depth 60
+# discretization 0.0 3.0 0.05
+
+# outputSplitProgress 0
+# outputCurrentPath 1
+# outputCurrentArea 0
+
+
+# This is the UNBOUNDED version add_uniform_with_counter_large taken from the PSI repository (translated into SPCF).
+# The original programs is located in PSI/test/add_uniform_with_counter_large.psi
+
+letrec f y =
+    if (y <= 2) and (2 <= y) then
+        0
+    else
+        let cur = sample uniform(0,1) in
+
+        if (cur < 0.5) then
+            cur + f (y + 1)
+        else
+            cur + f y
+in
+
+let x = f 0 in
+
+x
+*)
+
+let equal = fun x => fun y =>
+  if x <= y then y <= x else false
+in
+
+let f = rec f y =>
+  if equal y 2 then
+    0
+  else
+    let left = flip(0.5) in
+    let cur =
+      if left then
+        uniform(0, 0.5)
+      else
+        uniform(0.5, 1)
+    in
+
+    if left then
+      cur + f (y + 1)
+    else
+      cur + f y
+in
+
+let x = f 0 in
+x

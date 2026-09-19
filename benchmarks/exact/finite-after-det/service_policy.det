@@ -1,0 +1,47 @@
+(* NEW EXAMPLE
+
+Choose a service policy and evaluate its latency over a bounded (n=20) workload. In the end, query the expected total latency.
+
+Partially determinizable and finite state.
+*)
+
+let reuse = fun warm =>
+  let next =
+    if warm then flip(0.9)
+    else flip(0.4)
+  in
+
+  let latency =
+    if next then exponential(2.0)
+    else exponential(1.0)
+  in
+
+  (next, latency)
+in
+
+let refresh = fun warm =>
+  let next = flip(0.95) in
+
+  let latency =
+    if next then exponential(1.5)
+    else exponential(0.75)
+  in
+
+  (next, latency)
+in
+
+let run = rec run step => fun n => fun warm =>
+  if n < 1 then
+    0
+  else
+    let result = step warm in
+    let next = fst result in
+    let latency = snd result in
+    latency + run step (n - 1) next
+in
+
+let policy =
+  if flip(0.5) then reuse else refresh
+in
+
+run policy 20 false

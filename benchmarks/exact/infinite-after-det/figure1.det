@@ -20,7 +20,7 @@ while ★:
     end
 end
 
-Partially determinizable; infinite state after determinization.
+Partially determinizable and continuous after determinization.
 *)
 
 let run = fun s0 =>
