@@ -2,6 +2,8 @@ import Determinize.Finite.Explore
 import Determinize.Frontend.Certificate
 import Determinize.Runtime.Eval
 import Determinize.Finite.Export
+import Determinize.Finite.Reward.Explore
+import Determinize.Finite.Reward.Export
 
 open Determinize Determinize.Frontend Determinize.Checking
 
@@ -14,17 +16,19 @@ private structure Options where
   checkOnly : Bool := false
   exportPrefix : Option String := none
   certifyResult : Bool := false
+  additive : Bool := false
   solveLimits : Finite.SolveLimits := {}
   subject : Spec.FiniteModel.Subject := .determinized
   limits : Finite.Limits := {}
 
-private def usage := "Usage: determinize [--check] [--samples N] [--seed N] [--fuel N] [--certificate FILE.lean] [--export PREFIX | --result PREFIX] [--max-result-states N] [--subject source|determinized] [--max-states N] [--max-edges N] [--max-state-bytes N] FILE.det"
+private def usage := "Usage: determinize [--check] [--samples N] [--seed N] [--fuel N] [--certificate FILE.lean] [--export PREFIX | --result PREFIX] [--additive] [--max-result-states N] [--subject source|determinized] [--max-states N] [--max-edges N] [--max-state-bytes N] FILE.det"
 private def natural (s : String) : Except String Nat :=
   match s.toNat? with
   | some n => .ok n
   | none => .error s!"expected a nonnegative integer, got '{s}'"
 private def options : List String → Options → Except String Options
   | [], o => if o.file.isEmpty then .error usage else .ok o
+  | "--additive" :: rest, o => options rest {o with additive := true}
   | "--result" :: outputPath :: rest, o =>
       options rest {o with exportPrefix := some outputPath, certifyResult := true}
   | "--max-result-states" :: n :: rest, o => do
@@ -102,18 +106,32 @@ def main (args : List String) : IO UInt32 := do
       IO.FS.writeFile path (← IO.ofExcept (certificateText text))
       IO.println s!"Wrote kernel-checkable certificate: {path}"
     if let some outputPath := o.exportPrefix then
-      match Finite.explore p.checked.source o.subject o.limits with
-      | .complete candidate valid =>
-          if o.certifyResult then
-            let answer ← Finite.writeResult outputPath p.checked.source o.subject candidate valid o.solveLimits
-            IO.println s!"Certified expected terminal reward ({reprStr o.subject}): {answer}"
-          else
-            Finite.write outputPath p.checked.source o.subject candidate valid
-          IO.println s!"Wrote {reprStr o.subject} model (paper correspondence checked): {outputPath} ({candidate.states.size} states)"
-      | .incomplete limit discovered expanded edges =>
-          throw (IO.userError s!"Incomplete exploration ({reprStr limit}): {discovered} discovered, {expanded} expanded, {edges} edges. No export written.")
-      | .failed state failure =>
-          throw (IO.userError s!"Exploration failed at state {state}: {failure.message}. No export written.")
+      if o.additive then
+        match Finite.Reward.explore p.checked.source o.subject o.limits with
+        | .complete candidate valid =>
+            if o.certifyResult then
+              let answer ← Finite.Reward.writeResult outputPath p.checked.source o.subject candidate valid o.solveLimits
+              IO.println s!"Certified expected output ({reprStr o.subject}): {answer}"
+            else
+              Finite.Reward.write outputPath p.checked.source o.subject candidate valid
+            IO.println s!"Wrote additive {reprStr o.subject} model (paper correspondence checked): {outputPath} ({candidate.states.size} states)"
+        | .incomplete limit discovered expanded edges =>
+            throw (IO.userError s!"Incomplete exploration ({reprStr limit}): {discovered} discovered, {expanded} expanded, {edges} edges. No export written.")
+        | .failed state failure =>
+            throw (IO.userError s!"Exploration failed at state {state}: {failure.message}. No export written.")
+      else
+        match Finite.explore p.checked.source o.subject o.limits with
+        | .complete candidate valid =>
+            if o.certifyResult then
+              let answer ← Finite.writeResult outputPath p.checked.source o.subject candidate valid o.solveLimits
+              IO.println s!"Certified expected terminal reward ({reprStr o.subject}): {answer}"
+            else
+              Finite.write outputPath p.checked.source o.subject candidate valid
+            IO.println s!"Wrote {reprStr o.subject} model (paper correspondence checked): {outputPath} ({candidate.states.size} states)"
+        | .incomplete limit discovered expanded edges =>
+            throw (IO.userError s!"Incomplete exploration ({reprStr limit}): {discovered} discovered, {expanded} expanded, {edges} edges. No export written.")
+        | .failed state failure =>
+            throw (IO.userError s!"Exploration failed at state {state}: {failure.message}. No export written.")
     if o.samples > 0 then
       IO.println "Numerical estimates; domain safety and integrability are not established by typing."
       summarize "Source" p.checked.source o

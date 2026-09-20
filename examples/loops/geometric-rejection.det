@@ -1,0 +1,5 @@
+let f = rec f u =>
+  if flip(0.5) then 1 + f u
+  else if flip(0.5) then 0
+  else let _ = observe(false) in 0
+in f ()

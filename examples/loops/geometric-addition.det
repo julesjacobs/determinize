@@ -1,0 +1,1 @@
+let f = rec f u => if flip(0.5) then 0 else 1 + f u in f ()

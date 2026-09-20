@@ -13,6 +13,7 @@ import Tests.Statistics
 import Tests.Results
 import Tests.ModelReplay
 import Tests.SemanticBridge
+import Tests.RewardModel
 
 open Determinize
 
@@ -28,6 +29,7 @@ def main (args : List String) : IO UInt32 := do
     Tests.modelReplay
     Tests.explorer
     Tests.finiteDistributions
+    Tests.rewardModels
     match args with
     | [] => pure ()
     | ["--corpus", path, affinity] =>

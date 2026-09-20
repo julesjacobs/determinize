@@ -16,7 +16,7 @@ private def keyTree : Nat → List Nat → Nat → String
       let half := values.length / 2
       s!"(if i.val < {offset+half} then {keyTree fuel (values.take half) offset} else {keyTree fuel (values.drop half) (offset+half)})"
 
-private def proofTable (stem claim sizeName allName : String) (size : Nat) : String :=
+def proofTable (stem claim sizeName allName : String) (size : Nat) : String :=
   let proofs := String.join ((List.range size).map fun i =>
     s!"\ntheorem {stem}_{i} : {claim} (⟨{i}, by decide +kernel⟩ : Fin {sizeName}) := by\n  decide +kernel\n")
   let entries := String.intercalate ", " ((List.range size).map fun i =>
@@ -64,12 +64,12 @@ private def frameText : Frame → String
   | .draw site pending environment arguments =>
       s!"(.draw {siteText site} {listText Frontend.leanExpression pending} {listText valueText environment} {listText leanRat arguments})"
 
-private def stateText : State → String
+def stateText : State → String
   | .rejected => ".rejected"
   | .eval expression environment stack =>
       s!"(.eval {Frontend.leanExpression expression} {listText valueText environment} {listText frameText stack})"
   | .deliver value stack => s!"(.deliver {valueText value} {listText frameText stack})"
-private def kindText : StateKind → String
+def kindText : StateKind → String
   | .transient => ".transient" | .rejected => ".rejected"
   | .returned reward => s!"(.returned {leanRat reward})"
 private def rowText (row : Row) : String :=

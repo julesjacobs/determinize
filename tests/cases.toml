@@ -901,3 +901,25 @@ file = "tests/typing/reject/discrete-remainder-affinity.det"
 suite = "typing"
 outcome = "reject"
 stage = "inference"
+
+[[case]]
+file = "examples/loops/geometric-addition.det"
+suite = "typing"
+outcome = "accept"
+expected_type = "float[E]"
+affinities = ["G"]
+kernel = true
+
+[[case]]
+file = "examples/loops/geometric-random-increment.det"
+suite = "typing"
+outcome = "accept"
+affinities = ["G", "G"]
+kernel = true
+
+[[case]]
+file = "examples/loops/geometric-rejection.det"
+suite = "typing"
+outcome = "accept"
+affinities = ["G", "G"]
+kernel = true

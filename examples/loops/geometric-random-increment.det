@@ -1,0 +1,4 @@
+let f = rec f u =>
+  if flip(0.5) then 0
+  else (1 + 2 * bernoulli[G](0.5)) + f u
+in f ()

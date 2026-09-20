@@ -1,0 +1,115 @@
+import Determinize.Spec.RewardModel.Control
+import Determinize.Finite.Statistics
+import Determinize.Proof.RewardModel.Boundary
+import Determinize.Proof.RewardModel.Integrability
+import Determinize.Proof.RewardModel.Certificates
+
+namespace Determinize.Finite.Reward
+open Proof.FiniteModel
+
+def equations (model : Spec.FiniteModel.Model) (rhs values : Fin model.size → Rat) : Prop :=
+  ∀ i, values i = rhs i + if model.kind i = .transient then
+    ∑ j, model.transition i j * values j else 0
+
+instance (model : Spec.FiniteModel.Model) (rhs values : Fin model.size → Rat) :
+    Decidable (equations model rhs values) := inferInstanceAs (Decidable (∀ _, _))
+
+private def solveRhs (model : Spec.FiniteModel.Model) (rhs : Fin model.size → Rat) :
+    Except String {values : Fin model.size → Rat // equations model rhs values} := do
+  let A := fun i j : Fin model.size =>
+    let identity : Rat := if i = j then 1 else 0
+    if model.kind i = .transient then identity - model.transition i j else identity
+  let some solution := Proof.LinearAlgebra.solve model.size A rhs
+    | throw "singular additive reward equations"
+  return ⟨solution.val, by
+    intro i
+    have h := solution.property i
+    by_cases transient : model.kind i = .transient
+    · simp [A, transient, sub_mul, Finset.sum_sub_distrib] at h
+      simp only [transient, ↓reduceIte]
+      exact (sub_eq_iff_eq_add.mp h)
+    · simpa [A, transient] using h⟩
+
+def firstRhs (model : Spec.RewardModel.Model) (dead : Fin model.size → Bool)
+    (mass : Fin model.size → Rat) (i : Fin model.size) : Rat :=
+  if dead i then 0 else match model.kind i with
+  | .returned b => b
+  | .rejected => 0
+  | .transient => ((model.edges i).map fun e => e.probability * e.reward * mass e.target).sum
+
+def secondRhs (model : Spec.RewardModel.Model) (dead : Fin model.size → Bool)
+    (mass first : Fin model.size → Rat) (i : Fin model.size) : Rat :=
+  if dead i then 0 else match model.kind i with
+  | .returned b => b*b
+  | .rejected => 0
+  | .transient => ((model.edges i).map fun e =>
+      e.probability * (2*e.reward*first e.target + e.reward*e.reward*mass e.target)).sum
+
+private def solveMomentBounds (model : Spec.RewardModel.Model) :
+    Except String (Proof.RewardModel.MomentBounds model) := do
+  let aRhs := fun i => match model.kind i with
+    | .returned b => |b|
+    | .rejected => 0
+    | .transient => ((model.edges i).map fun e => e.probability * |e.reward|).sum
+  let a ← solveRhs model.control aRhs
+  let bRhs := fun i => match model.kind i with
+    | .returned b => b^2
+    | .rejected => 0
+    | .transient => ((model.edges i).map fun e =>
+        e.probability * (2*|e.reward| * a.val e.target + e.reward^2)).sum
+  let b ← solveRhs model.control bRhs
+  if certified : (∀ i, 0 ≤ a.val i) ∧ (∀ i, 0 ≤ b.val i) ∧
+      (∀ i, (match model.kind i with
+        | .returned q => |q|
+        | .rejected => 0
+        | .transient => ((model.edges i).map fun e =>
+            e.probability * (a.val e.target + |e.reward|)).sum) ≤ a.val i) ∧
+      (∀ i, (match model.kind i with
+        | .returned q => q^2
+        | .rejected => 0
+        | .transient => ((model.edges i).map fun e =>
+            e.probability * (b.val e.target + 2*|e.reward| * a.val e.target + e.reward^2)).sum) ≤ b.val i) then
+    return ⟨a.val, b.val, certified.1, certified.2.1, certified.2.2.1, certified.2.2.2⟩
+  else throw "absolute-moment bounds failed validation"
+
+/-- Checked linear equations; source correspondence and integral interpretation are separate. -/
+structure Solution (model : Spec.RewardModel.Model) where
+  boundary : Boundary model.control
+  paths : Paths (cut model.control boundary.dead)
+  pathsValid : paths.Valid (cut model.control boundary.dead)
+  mass : Fin model.size → Rat
+  massValid : (⟨mass, 0⟩ : Spec.FiniteModel.ResultCertificate
+    (rewards (cut model.control boundary.dead) Moment.mass.rational)).Equations _
+  first : Fin model.size → Rat
+  firstValid : equations (cut model.control boundary.dead) (firstRhs model boundary.dead mass) first
+  second : Fin model.size → Rat
+  secondValid : equations (cut model.control boundary.dead) (secondRhs model boundary.dead mass first) second
+  rejection : Fin model.size → Rat
+  rejectionValid : (⟨rejection, 0⟩ : Spec.FiniteModel.ResultCertificate
+    (rejectionQuery model.control boundary.dead)).Equations _
+  momentsValid : Proof.RewardModel.MomentEquations (Proof.RewardModel.cut model boundary.dead)
+    (fun moment => match moment with | .mass => mass | .first => first | .second => second)
+  bounds : Proof.RewardModel.MomentBounds (Proof.RewardModel.cut model boundary.dead)
+
+def solve (model : Spec.RewardModel.Model) (limits : SolveLimits := {}) : Except String (Solution model) := do
+  if model.size > limits.maxStates then
+    throw s!"exact solver state limit exceeded ({model.size} > {limits.maxStates})"
+  let boundary ← analyze model.control
+  let stopped := cut model.control boundary.dead
+  let paths ← findPaths stopped boundary.rank
+  let mass ← solveValues (rewards stopped Moment.mass.rational) limits
+  let first ← solveRhs stopped (firstRhs model boundary.dead mass.val)
+  let second ← solveRhs stopped (secondRhs model boundary.dead mass.val first.val)
+  let rejection ← solveValues (rejectionQuery model.control boundary.dead) limits
+  let bounds ← solveMomentBounds (Proof.RewardModel.cut model boundary.dead)
+  if correct : Proof.RewardModel.MomentEquations (Proof.RewardModel.cut model boundary.dead)
+      (fun moment => match moment with | .mass => mass.val | .first => first.val | .second => second.val) then
+    return ⟨boundary, paths.val, paths.property, mass.val, mass.property,
+      first.val, first.property, second.val, second.property, rejection.val, rejection.property, correct, bounds⟩
+  else throw "additive moment equations failed validation"
+
+def Solution.statistics {model : Spec.RewardModel.Model} (solution : Solution model) :
+    Spec.FiniteModel.OutputStatistics :=
+  ⟨solution.mass model.initial, solution.first model.initial, solution.second model.initial⟩
+
+end Determinize.Finite.Reward

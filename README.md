@@ -68,6 +68,29 @@ kernel and requires exact agreement with Storm. It records versions, commands,
 status, and failures in `.storm.json`. Without `STORM_PYTHON`, the ordinary test
 suite explicitly skips real Storm comparisons; the Lean certificate tests still run.
 
+Use `--additive` with `--result`, `--export`, or `--storm` for loops whose
+pending outer additions would otherwise produce infinitely many machine states:
+
+```sh
+./run.sh --check --additive --result /tmp/geometric --subject source \
+  examples/loops/geometric-addition.det
+STORM_PYTHON=/tmp/determinize-storm/bin/python ./run.sh --storm \
+  examples/loops/geometric-addition.det --additive --prefix /tmp/geometric --subject source --compare
+```
+
+The geometric example has 45 states, mean 1 and variance 2. Computed or random
+left operands work once evaluated. This mode extracts only outer additions;
+`f()+1`, scaling around a recursive call, and growing environment accumulators
+can still exceed the exploration limit. See [the additive contract](lean/finite-model-contract.md#additive-output-models).
+
+Evaluation examples with unbounded recursion:
+
+| Example | Return mass | First moment | Second moment | Conditional variance |
+| --- | ---: | ---: | ---: | ---: |
+| [Geometric addition](examples/loops/geometric-addition.det) | 1 | 1 | 3 | 2 |
+| [Random increments](examples/loops/geometric-random-increment.det) | 1 | 2 | 13 | 9 |
+| [Rejection](examples/loops/geometric-rejection.det) | 1/2 | 1/2 | 3/2 | 2 |
+
 ## Simulator and paper
 
 ```sh

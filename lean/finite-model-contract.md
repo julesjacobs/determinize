@@ -173,3 +173,42 @@ proved to implement the real-valued semantics. A determinized-program certificat
 does not discharge the source safety and integrability premises needed to
 transfer its moments back to the source. No approximation theorem connects a
 user-chosen discretization to a continuous program.
+
+
+## Additive output models
+
+`--additive` selects a separate backend. Normalization extracts the maximal outer
+suffix of already evaluated numeric-left addition frames, sums their constants
+into the transition reward, and retains one zero-addition frame as a numeric check.
+Computed and random left operands are evaluated normally before extraction.
+Other frames, values and environments remain concrete. Right-hand-side folding,
+multiplication and accumulator abstraction are outside this implementation.
+
+An edge reward translates successful outputs. It contributes nothing on rejected
+or divergent executions. Thus this is not unconditional accumulated path reward:
+with return mass p, first moment m and second moment s at the successor, an edge
+with reward r contributes p, m+r*p and s+2*r*m+r²*p respectively, weighted by its
+probability. Distinct rewards to the same target remain distinct in these sums.
+Storm uses their aggregated probabilities for its controller and solves the
+successive moment right-hand sides, splitting signed right-hand sides into
+positive and negative reward queries.
+
+`Spec/RewardModel/Model.lean` defines the full successful-output law and `Matches`
+requires both source `DomainSafe` and equality of that law. `Results.lean` adds
+first/square integrability and output statistics. Local replay is checked against
+the source and selected subject. Exported certificates prove `modelMatches`,
+`checkedResult`, `integrability`, `outputStatistics` and `conditionalVariance`.
+The `terminationProbabilities` theorem concerns the probability controller;
+separate first-hit source rejection/divergence correspondence is not asserted.
+
+Integrability follows from checked nonnegative absolute first/second moment
+upper bounds on the graph stopped at closed non-returning classes. These bounds
+are produced by two additional rational solves. All vector equations, bounds,
+closed-class evidence and paths are checked by Lean's kernel. No external solver
+or native evaluation axiom enters the theorem. Storm's untrusted `.additive.edges`
+sidecar preserves probability/reward pairs; generated `.storm.lean` certificates
+are checked against the source replay. Native results use `.result.lean`.
+
+The old backend remains the default. Incomplete exploration emits no new model;
+finite source syntax does not imply a finite normalized graph. Source and
+transformed programs must each be explored separately when both are needed.

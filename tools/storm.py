@@ -72,7 +72,7 @@ def boundary(size, edges, labels):
     return dead, [ranks[i] for i in range(size - 1)], [following[i] for i in range(size - 1)]
 
 
-def storm_worker(prefix):
+def storm_worker(prefix, additive=False):
     import stormpy
     import stormpy.info
 
@@ -100,14 +100,19 @@ def storm_worker(prefix):
             raise ValueError("unexpected Storm vector dimensions or sink value")
         return values[:-1]
 
-    positive = query([max(q, 0) for q in outputs])
-    negative = query([max(-q, 0) for q in outputs])
-    values = {
-        "mass": query([int(i in labels["returned"]) for i in range(size)]),
-        "rejection": query([int(i in labels["rejected"]) for i in range(size)]),
-        "first": [p - n for p, n in zip(positive, negative)],
-        "second": query([q*q for q in outputs]),
-    }
+    if additive:
+        import storm_additive
+        additive_edges = storm_additive.read_edges(prefix, size, edges, labels)
+        values = storm_additive.moments(query, size, labels, outputs, dead, additive_edges)
+    else:
+        positive = query([max(q, 0) for q in outputs])
+        negative = query([max(-q, 0) for q in outputs])
+        values = {
+            "mass": query([int(i in labels["returned"]) for i in range(size)]),
+            "rejection": query([int(i in labels["rejected"]) for i in range(size)]),
+            "first": [p - n for p, n in zip(positive, negative)],
+            "second": query([q*q for q in outputs]),
+        }
     results = {"storm_version": stormpy.info.storm_version(),
                "storm_build_type": stormpy.info.storm_build_type(),
                "values": {name: [str(q) for q in vector] for name, vector in values.items()},
@@ -116,14 +121,15 @@ def storm_worker(prefix):
     Path(str(prefix) + ".storm-values.json").write_text(json.dumps(results) + "\n")
 
 
-def certificate_text(prefix, result):
+def certificate_text(prefix, result, additive=False):
     size, _, labels, _ = read_model(prefix)
     n = size - 1
     dead = result["dead"]
     values = result["values"]
     if len(dead) != n or any(type(b) is not bool for b in dead):
         raise ValueError("invalid divergent-state vector")
-    if set(values) != {"mass", "first", "second", "rejection"} or any(len(v) != n for v in values.values()):
+    expected = {"mass", "first", "second", "rejection"} | ({"boundFirst", "boundSecond"} if additive else set())
+    if set(values) != expected or any(len(v) != n for v in values.values()):
         raise ValueError("invalid moment vector dimensions")
     ranks, following = result["rank"], result["next"]
     if len(ranks) != n or any(type(r) is not int or r < 0 for r in ranks):
@@ -133,6 +139,11 @@ def certificate_text(prefix, result):
     if any(type(q) is not str for vector in values.values() for q in vector):
         raise ValueError("expected exact rational strings")
     values = {name: [Fraction(q) for q in vector] for name, vector in values.items()}
+    if additive:
+        import storm_additive
+        text = storm_additive.certificate_text(prefix, values, dead, ranks, following)
+        initial, = labels["init"]
+        return text, {name: vector[initial] for name, vector in values.items()}
 
     def rat(q):
         return f"(({q.numerator} : Rat) / {q.denominator})"
@@ -197,7 +208,7 @@ theorem terminationProbabilities : (termination.statistics model).Matches model 
     return text, {name: vector[initial] for name, vector in values.items()}
 
 
-def checked_axioms(output):
+def checked_axioms(output, additive=False):
     reports = {name: {item.strip() for item in axioms.split(",") if item.strip()}
                for name, axioms in re.findall(r"'([^']+)' depends on axioms:\s*\[([^]]*)\]", output)}
     for name in re.findall(r"'([^']+)' does not depend on any axioms", output):
@@ -205,6 +216,10 @@ def checked_axioms(output):
     required = {"outputStatistics", "terminationProbabilities", "conditionalVariance"}
     if not required <= reports.keys():
         raise ValueError("missing certificate axiom reports")
+    if additive:
+        required |= {"integrability", "checkedResult", "modelMatches"}
+        if not required <= reports.keys():
+            raise ValueError("missing additive certificate axiom reports")
     allowed = {"propext", "Classical.choice", "Quot.sound"}
     for name, axioms in reports.items():
         if axioms - allowed:
@@ -230,6 +245,7 @@ def run_command(argv, *, cwd, timeout):
 def run(args):
     prefix = args.prefix.resolve()
     report = {"status": "running", "subject": args.subject, "property": PROPERTY,
+              "mode": "additive" if getattr(args, "additive", False) else "terminal",
               "engine": "stormpy sparse exact DTMC, rational arithmetic", "result_source": "storm",
               "timeout_seconds": args.timeout, "stage": "model export", "commands": []}
     report_path = Path(str(prefix) + ".storm.json")
@@ -249,19 +265,20 @@ def run(args):
 
     try:
         report["stormpy_version"] = importlib.metadata.version("stormpy")
-        command([args.binary, "--check", "--export", prefix, "--subject", args.subject,
+        mode = ["--additive"] if getattr(args, "additive", False) else []
+        command([args.binary, *mode, "--check", "--export", prefix, "--subject", args.subject,
                  "--max-states", str(getattr(args, "max_states", 10000)), args.file.resolve()])
         report["stage"] = "Storm"
         values_path = Path(str(prefix) + ".storm-values.json")
         values_path.unlink(missing_ok=True)
-        command([sys.executable, Path(__file__).resolve(), "--worker", prefix])
+        command([sys.executable, Path(__file__).resolve(), "--worker", prefix, *mode])
         values = json.loads(values_path.read_text())
-        text, answer = certificate_text(prefix, values)
+        text, answer = certificate_text(prefix, values, additive=bool(mode))
         certificate = Path(str(prefix) + ".storm.lean")
         certificate.write_text(text)
         report["stage"] = "kernel check"
         checked = command(["lake", "env", "lean", certificate], ROOT / "lean")
-        report["axioms"] = checked_axioms(checked.stdout + checked.stderr)
+        report["axioms"] = checked_axioms(checked.stdout + checked.stderr, additive=bool(mode))
         report.update(kernel_checked=True, storm_version=values["storm_version"],
                       storm_build_type=values["storm_build_type"],
                       exact_answer=str(answer["first"]), return_mass=str(answer["mass"]),
@@ -273,7 +290,8 @@ def run(args):
         report["conditional_variance"] = str(answer["second"] / p - (answer["first"] / p)**2) if p else None
         if getattr(args, "compare", False):
             report["stage"] = "solver comparison"
-            command([args.binary, "--check", "--result", prefix, "--subject", args.subject, args.file.resolve()])
+            command([args.binary, *mode, "--check", "--result", prefix, "--subject", args.subject,
+                     "--max-states", str(getattr(args, "max_states", 10000)), args.file.resolve()])
             internal = json.loads(Path(str(prefix) + ".result.json").read_text())
             for external, key in [("first", "answer"), ("mass", "return_mass"), ("second", "second_moment"),
                                   ("rejection", "rejection_probability")]:
@@ -292,8 +310,10 @@ def run(args):
 
 
 def main():
-    if len(sys.argv) == 3 and sys.argv[1] == "--worker":
-        storm_worker(Path(sys.argv[2]))
+    if len(sys.argv) in (3, 4) and sys.argv[1] == "--worker":
+        if len(sys.argv) == 4 and sys.argv[3] != "--additive":
+            raise ValueError("unknown worker mode")
+        storm_worker(Path(sys.argv[2]), additive=len(sys.argv) == 4)
         return 0
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("file", type=Path)
@@ -301,6 +321,7 @@ def main():
     parser.add_argument("--subject", choices=("source", "determinized"), default="determinized")
     parser.add_argument("--binary", type=Path, default=ROOT / "lean/.lake/build/bin/determinize")
     parser.add_argument("--max-states", type=int, default=10000)
+    parser.add_argument("--additive", action="store_true", help="extract outer evaluated additions as rewards")
     parser.add_argument("--compare", action="store_true", help="also compare with the internal solver")
     parser.add_argument("--timeout", type=float, default=120)
     return run(parser.parse_args())

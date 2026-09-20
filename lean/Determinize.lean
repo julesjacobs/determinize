@@ -9,5 +9,7 @@ import Determinize.Proof.Semantics.Rejection
 import Determinize.Theorems
 import Determinize.Proof.Examples
 import Determinize.Proof.InterfaceChecks
+import Determinize.Proof.RewardModel.Moments
+import Determinize.Proof.RewardModel.Soundness
 
 /-! The default build checks the public proofs and coverage examples. -/
