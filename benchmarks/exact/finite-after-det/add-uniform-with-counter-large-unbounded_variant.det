@@ -52,5 +52,4 @@ let f = rec f y =>
       cur + f y
 in
 
-let x = f 0 in
-x
+f 0 

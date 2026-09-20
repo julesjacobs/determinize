@@ -114,6 +114,6 @@ let loop =
       let dy = dyc + uniform(-0.05, 0.05) in
       loop (i + 1) (x + dx) (y + dy) (estX + dxc) (estY + dyc)
     else
-      (x, (y, (estX, estY)))
+      x
 in
 loop 0 0 0 0 0

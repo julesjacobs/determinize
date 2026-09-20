@@ -13,16 +13,20 @@ Partially determinizable but fully discrete after determinization with infinite 
 
 let v = 0 in
 let x = 0 in
+let steps = 10 in
 
-let loop = rec loop v => fun x =>
-  let v = uniform(0, 1) in
-  let x =
-    if flip(0.7) then
-      x + v
-    else
-      x - v
-  in
-  loop v x
+let loop = rec loop i => fun v => fun x =>
+  if i < steps then
+    let v = uniform(0, 1) in
+    let x =
+      if flip(0.9) then
+        x + v
+      else
+        x - v
+    in
+    loop (i + 1) v x
+  else
+    x
 in
 
-loop v x
+loop 0 v x

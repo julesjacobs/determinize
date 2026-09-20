@@ -67,6 +67,6 @@ let loop = rec loop count => fun cartPos => fun cartVelo => fun pAng => fun pAng
     in
     loop count cartPos cartVelo pAng pAngDer
   else
-    (cartPos, (cartVelo, (pAng, pAngDer)))
+    pAng
 in
 loop 0 cartPos cartVelo pAng pAngDer

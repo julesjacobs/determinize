@@ -13,13 +13,17 @@ end
 Fully determinizable; finite state after determinization.
 *)
 
-(* Query: E[x] *)
+(* Query: E[x_1] *)
 
 let x = 5 * bernoulli(0.5) in
 let y = 4 + 3 * bernoulli(0.5) in
-let loop = rec loop x => fun y =>
-  let unif1 = uniform(-1, 1) in
-  let unif2 = uniform(-2, 2) in
-  loop (y + unif1) (x + unif2)
+let steps = 1 in
+let loop = rec loop i => fun x => fun y =>
+  if i < steps then
+    let unif1 = uniform(-1, 1) in
+    let unif2 = uniform(-2, 2) in
+    loop (i + 1) (y + unif1) (x + unif2)
+  else
+    x
 in
-loop x y
+loop 0 x y

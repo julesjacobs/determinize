@@ -22,16 +22,22 @@ end
 Partially determinizable but fully discrete after determinization; infinite state after determinization.
 *)
 
-let loop = rec loop x => fun y => fun distance =>
-  let direction = discrete(0.25, 0.25, 0.25, 0.25) in
-  let step = uniform(0, 2) in
-  if direction < 1 then
-    loop (x + step) y distance
-  else if direction < 2 then
-    loop (x - step) y distance
-  else if direction < 3 then
-    loop x (y + step) distance
+(* Query E[x_1] *)
+
+let steps = 10 in
+let loop = rec loop i => fun x => fun y => fun distance =>
+  if i < steps then
+    let direction = discrete(0.25, 0.25, 0.25, 0.25) in
+    let step = uniform(0, 10) in
+    if direction < 1 then
+      loop (i + 1) (x + step) y distance
+    else if direction < 2 then
+      loop (i + 1) (x - step) y distance
+    else if direction < 3 then
+      loop (i + 1) x (y + step) distance
+    else
+      loop (i + 1) x (y - step) distance
   else
-    loop x (y - step) distance
+    x
 in
-loop 0 0 0
+loop 0 0 0 0

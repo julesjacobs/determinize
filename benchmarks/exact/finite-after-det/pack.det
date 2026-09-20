@@ -41,30 +41,30 @@ Partially determinizable but fully discrete after determinization; finite state 
 
 (* Query: E[totalWeight] *)
 
-let run = fun initialCount =>
-  let nPerCarton = 10 in
-  let loop =
-    rec loop nLight => fun nHeavy => fun nMedium => fun nPacked => fun totalWeight => fun count =>
-      if nPacked < nPerCarton then
-        let obj = discrete(0.5, 0.25, 0.25) in
-        if obj < 1 then
-          loop nLight nHeavy (nMedium + 1) (nPacked + 1)
-            (totalWeight + 0.9 + uniform(0, 0.2)) (count + 1)
-        else if obj < 2 then
-          let totalWeight = totalWeight + 1.1 + uniform(0, 0.1) in
-          if nHeavy <= nLight then
-            loop nLight (nHeavy + 1) nMedium (nPacked + 1) totalWeight (count + 1)
-          else
-            loop nLight nHeavy nMedium nPacked totalWeight (count + 1)
+let nPerCarton = 10 in
+let loop =
+  rec loop nLight => fun nHeavy => fun nPacked =>
+    if nPacked < nPerCarton then
+      let obj = discrete(0.5, 0.25, 0.25) in
+
+      if obj < 1 then
+        let weight = 0.9 + uniform(0, 0.2) in
+        weight + loop nLight nHeavy (nPacked + 1)
+
+      else if obj < 2 then
+        let weight = 1.1 + uniform(0, 0.1) in
+        if nHeavy <= nLight then
+          weight + loop nLight (nHeavy + 1) (nPacked + 1)
         else
-          let totalWeight = totalWeight + 0.8 + uniform(0, 0.1) in
-          if nLight <= nHeavy then
-            loop (nLight + 1) nHeavy nMedium (nPacked + 1) totalWeight (count + 1)
-          else
-            loop nLight nHeavy nMedium nPacked totalWeight (count + 1)
+          weight + loop nLight nHeavy nPacked
+
       else
-        (nLight, (nHeavy, (nMedium, (nPacked, (totalWeight, count)))))
-  in
-  loop 0 0 0 0 0 initialCount
+        let weight = 0.8 + uniform(0, 0.1) in
+        if nLight <= nHeavy then
+          weight + loop (nLight + 1) nHeavy (nPacked + 1)
+        else
+          weight + loop nLight nHeavy nPacked
+    else
+      0
 in
-run
+loop 0 0 0

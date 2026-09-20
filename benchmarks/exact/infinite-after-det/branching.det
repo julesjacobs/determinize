@@ -1,4 +1,4 @@
-let offspring_lambda = 0.8 in
+let offspring_lambda = 0.2 in
 let rate = 1.0 in
 
 let branch = rec branch unit =>

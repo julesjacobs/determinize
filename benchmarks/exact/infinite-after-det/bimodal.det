@@ -21,15 +21,21 @@ end
 Partially determinizable but fully discrete after determinization; infinite state after determinization.
 *)
 
-let loop = rec loop x => fun xlow => fun xup =>
-  let d = bernoulli(1/3) in
-  if d < 1 then
-    let step = gauss(3/4, 1) in
-    let xlow = xlow - step in
-    loop xlow xlow xup
+(* Query E[x_1] *)
+
+let steps = 1 in
+let loop = rec loop i => fun x => fun xlow => fun xup =>
+  if i < steps then
+    let d = bernoulli(1/3) in
+    if d < 1 then
+      let step = gauss(3/4, 4) in
+      let xlow = xlow - step in
+      loop (i + 1) xlow xlow xup
+    else
+      let step = gauss(3/4, 4) in
+      let xup = xup + step in
+      loop (i + 1) xup xlow xup
   else
-    let step = gauss(3/4, 1) in
-    let xup = xup + step in
-    loop xup xlow xup
+    x
 in
-loop 0 0 0
+loop 0 0 0 0

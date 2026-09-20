@@ -30,4 +30,4 @@ let run = fun n => fun b =>
   in
   loop n b
 in
-run
+run 10 0

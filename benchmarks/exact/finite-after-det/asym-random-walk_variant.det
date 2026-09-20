@@ -41,5 +41,4 @@ let f = rec f x =>
     uniform(0, 1) + f (x + 1)
 in
 
-let t = f 0 in
-t
+f 0

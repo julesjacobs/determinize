@@ -13,11 +13,12 @@ let rec f x k = unif (fun p -> p *. k () +. (1.0 -. p) *. (1.0 +. f () k))
 *)
 
 let f = rec f x => fun k =>
-  let p = uniform(0, 1) in
+  (* let p = uniform(0, 1) in *)
+  let p = 0.5 in 
   if flip(p) then
     k ()
   else
     1 + f () k
 in
 
-f
+f () (fun u => 0)

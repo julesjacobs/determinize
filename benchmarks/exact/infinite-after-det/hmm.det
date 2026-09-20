@@ -40,7 +40,7 @@ let equal = fun x => fun y =>
 in
 
 let emit = 0.05 :: 0.25 :: [] in
-let dwell_rate = 1.0 :: 0.25 :: [] in
+let dwell_rate = 0.8 :: 1.2 :: [] in
 let trans = 0.05 :: 0.5 :: [] in
 let initial_state = 0 in
 let data = 0 :: 0 :: 0 :: 0 :: 0 :: 0 :: 0 :: 0 :: [] in
