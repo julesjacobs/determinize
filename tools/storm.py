@@ -276,10 +276,14 @@ def run(args):
         text, answer = certificate_text(prefix, values, additive=bool(mode))
         certificate = Path(str(prefix) + ".storm.lean")
         certificate.write_text(text)
-        report["stage"] = "kernel check"
-        checked = command(["lake", "env", "lean", certificate], ROOT / "lean")
-        report["axioms"] = checked_axioms(checked.stdout + checked.stderr, additive=bool(mode))
-        report.update(kernel_checked=True, storm_version=values["storm_version"],
+        if getattr(args, "skip_certificate", False):
+            report.update(kernel_checked=False, certificate_check_skipped=True)
+        else:
+            report["stage"] = "kernel check"
+            checked = command(["lake", "env", "lean", certificate], ROOT / "lean")
+            report["axioms"] = checked_axioms(checked.stdout + checked.stderr, additive=bool(mode))
+            report["kernel_checked"] = True
+        report.update(storm_version=values["storm_version"],
                       storm_build_type=values["storm_build_type"],
                       exact_answer=str(answer["first"]), return_mass=str(answer["mass"]),
                       second_moment=str(answer["second"]))
@@ -298,7 +302,8 @@ def run(args):
                 if answer[external] != Fraction(internal[key]):
                     raise RuntimeError("Storm result disagrees with the internal solver")
         report["status"] = "completed"
-        print(f"Lean-certified Storm result ({args.subject}): {answer['first']}; return mass {p}")
+        label = "Storm result" if getattr(args, "skip_certificate", False) else "Lean-certified Storm result"
+        print(f"{label} ({args.subject}): {answer['first']}; return mass {p}")
         return 0
     except (OSError, RuntimeError, ValueError, ZeroDivisionError, KeyError, TypeError, subprocess.TimeoutExpired,
             importlib.metadata.PackageNotFoundError) as error:
@@ -322,6 +327,7 @@ def main():
     parser.add_argument("--binary", type=Path, default=ROOT / "lean/.lake/build/bin/determinize")
     parser.add_argument("--max-states", type=int, default=10000)
     parser.add_argument("--additive", action="store_true", help="extract outer evaluated additions as rewards")
+    parser.add_argument("--skip-certificate", action="store_true", help="skip the Lean kernel certificate check")
     parser.add_argument("--compare", action="store_true", help="also compare with the internal solver")
     parser.add_argument("--timeout", type=float, default=120)
     return run(parser.parse_args())
