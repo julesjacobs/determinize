@@ -201,11 +201,15 @@ the source and selected subject. Exported certificates prove `modelMatches`,
 The `terminationProbabilities` theorem concerns the probability controller;
 separate first-hit source rejection/divergence correspondence is not asserted.
 
-Integrability follows from checked nonnegative absolute first/second moment
-upper bounds on the graph stopped at closed non-returning classes. These bounds
-are produced by two additional rational solves. All vector equations, bounds,
-closed-class evidence and paths are checked by Lean's kernel. No external solver
-or native evaluation axiom enters the theorem. Storm's untrusted `.additive.edges`
+`finite_integrable` proves `Model.IntegrableMoments` for every finite reward
+model, without a solution certificate, termination premise, or supplied moment
+bounds. The proof constructs a closed divergence boundary and descending paths,
+proves the remaining boundary-value operator is invertible and preserves
+nonnegativity, and derives finite absolute first/second moment bounds internally.
+The bounds therefore require no additional runtime solves or certificate vectors.
+All moment equations, closed-class evidence and paths in result certificates are
+checked by Lean's kernel. No external solver or native evaluation axiom enters
+the theorem. Storm's untrusted `.additive.edges`
 sidecar preserves probability/reward pairs; generated `.storm.lean` certificates
 are checked against the source replay. Native results use `.result.lean`.
 

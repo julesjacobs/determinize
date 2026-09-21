@@ -128,7 +128,7 @@ def certificate_text(prefix, result, additive=False):
     values = result["values"]
     if len(dead) != n or any(type(b) is not bool for b in dead):
         raise ValueError("invalid divergent-state vector")
-    expected = {"mass", "first", "second", "rejection"} | ({"boundFirst", "boundSecond"} if additive else set())
+    expected = {"mass", "first", "second", "rejection"}
     if set(values) != expected or any(len(v) != n for v in values.values()):
         raise ValueError("invalid moment vector dimensions")
     ranks, following = result["rank"], result["next"]

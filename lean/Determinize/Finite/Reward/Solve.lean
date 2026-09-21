@@ -1,7 +1,6 @@
 import Determinize.Spec.RewardModel.Control
 import Determinize.Finite.Statistics
 import Determinize.Proof.RewardModel.Boundary
-import Determinize.Proof.RewardModel.Integrability
 import Determinize.Proof.RewardModel.Certificates
 
 namespace Determinize.Finite.Reward
@@ -45,33 +44,6 @@ def secondRhs (model : Spec.RewardModel.Model) (dead : Fin model.size → Bool)
   | .transient => ((model.edges i).map fun e =>
       e.probability * (2*e.reward*first e.target + e.reward*e.reward*mass e.target)).sum
 
-private def solveMomentBounds (model : Spec.RewardModel.Model) :
-    Except String (Proof.RewardModel.MomentBounds model) := do
-  let aRhs := fun i => match model.kind i with
-    | .returned b => |b|
-    | .rejected => 0
-    | .transient => ((model.edges i).map fun e => e.probability * |e.reward|).sum
-  let a ← solveRhs model.control aRhs
-  let bRhs := fun i => match model.kind i with
-    | .returned b => b^2
-    | .rejected => 0
-    | .transient => ((model.edges i).map fun e =>
-        e.probability * (2*|e.reward| * a.val e.target + e.reward^2)).sum
-  let b ← solveRhs model.control bRhs
-  if certified : (∀ i, 0 ≤ a.val i) ∧ (∀ i, 0 ≤ b.val i) ∧
-      (∀ i, (match model.kind i with
-        | .returned q => |q|
-        | .rejected => 0
-        | .transient => ((model.edges i).map fun e =>
-            e.probability * (a.val e.target + |e.reward|)).sum) ≤ a.val i) ∧
-      (∀ i, (match model.kind i with
-        | .returned q => q^2
-        | .rejected => 0
-        | .transient => ((model.edges i).map fun e =>
-            e.probability * (b.val e.target + 2*|e.reward| * a.val e.target + e.reward^2)).sum) ≤ b.val i) then
-    return ⟨a.val, b.val, certified.1, certified.2.1, certified.2.2.1, certified.2.2.2⟩
-  else throw "absolute-moment bounds failed validation"
-
 /-- Checked linear equations; source correspondence and integral interpretation are separate. -/
 structure Solution (model : Spec.RewardModel.Model) where
   boundary : Boundary model.control
@@ -89,7 +61,6 @@ structure Solution (model : Spec.RewardModel.Model) where
     (rejectionQuery model.control boundary.dead)).Equations _
   momentsValid : Proof.RewardModel.MomentEquations (Proof.RewardModel.cut model boundary.dead)
     (fun moment => match moment with | .mass => mass | .first => first | .second => second)
-  bounds : Proof.RewardModel.MomentBounds (Proof.RewardModel.cut model boundary.dead)
 
 def solve (model : Spec.RewardModel.Model) (limits : SolveLimits := {}) : Except String (Solution model) := do
   if model.size > limits.maxStates then
@@ -101,11 +72,10 @@ def solve (model : Spec.RewardModel.Model) (limits : SolveLimits := {}) : Except
   let first ← solveRhs stopped (firstRhs model boundary.dead mass.val)
   let second ← solveRhs stopped (secondRhs model boundary.dead mass.val first.val)
   let rejection ← solveValues (rejectionQuery model.control boundary.dead) limits
-  let bounds ← solveMomentBounds (Proof.RewardModel.cut model boundary.dead)
   if correct : Proof.RewardModel.MomentEquations (Proof.RewardModel.cut model boundary.dead)
       (fun moment => match moment with | .mass => mass.val | .first => first.val | .second => second.val) then
     return ⟨boundary, paths.val, paths.property, mass.val, mass.property,
-      first.val, first.property, second.val, second.property, rejection.val, rejection.property, correct, bounds⟩
+      first.val, first.property, second.val, second.property, rejection.val, rejection.property, correct⟩
   else throw "additive moment equations failed validation"
 
 def Solution.statistics {model : Spec.RewardModel.Model} (solution : Solution model) :

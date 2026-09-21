@@ -1,4 +1,5 @@
 import Determinize.Proof.RewardModel.Laws
+import Determinize.Proof.RewardModel.FiniteIntegrability
 import Determinize.Finite.Reward.Solve
 import Determinize.Spec.RewardModel.Results
 
@@ -53,7 +54,7 @@ private theorem integral_shift_moment (μ : Measure ℝ) [IsFiniteMeasure μ]
     simp [integral_const, mul_comm]
 
 set_option maxHeartbeats 1200000 in
-theorem momentAt_equation (model : Model) (bounds : MomentBounds model) (moment : Moment)
+theorem momentAt_equation (model : Model) (moment : Moment)
     (i : Fin model.size) :
     momentAt model moment i = match model.kind i with
     | .returned b => moment.real (b : ℝ)
@@ -72,7 +73,7 @@ theorem momentAt_equation (model : Model) (bounds : MomentBounds model) (moment 
     have integrable (e : Edge model.size) : Integrable moment.real
         (ENNReal.ofReal (e.probability : ℝ) • shift e.reward (model.outputAt e.target)) :=
       (translated_integrable (model.outputAt e.target)
-        (outputAt_integrable model bounds e.target).1 (outputAt_integrable model bounds e.target).2
+        (finite_integrable model e.target).1 (finite_integrable model e.target).2
         e.reward moment).smul_measure (by simp)
     rw [integral_list_sum (model.edges i)
       (fun e => ENNReal.ofReal (e.probability : ℝ) • shift e.reward (model.outputAt e.target))
@@ -81,8 +82,8 @@ theorem momentAt_equation (model : Model) (bounds : MomentBounds model) (moment 
     apply List.map_congr_left
     intro e he
     rw [integral_smul_measure, ENNReal.toReal_ofReal (by exact_mod_cast model.nonnegative i e he),
-      integral_shift_moment _ (outputAt_integrable model bounds e.target).1
-        (outputAt_integrable model bounds e.target).2]
+      integral_shift_moment _ (finite_integrable model e.target).1
+        (finite_integrable model e.target).2]
     rfl
 
 theorem linear_unique (model : Spec.FiniteModel.Model) (paths : Paths model) (valid : paths.Valid model)
@@ -138,14 +139,14 @@ private theorem equations_real (model : Model) (values : Moment → Fin model.si
     simpa [kind, translatedValue, Moment.rational, Moment.real, Rat.cast_list_sum,
       List.map_map, Function.comp_def] using h
 
-theorem moment_values_sound (model : Model) (bounds : MomentBounds model)
+theorem moment_values_sound (model : Model)
     (paths : Paths model.control) (pathsValid : paths.Valid model.control)
     (values : Moment → Fin model.size → Rat) (valid : MomentEquations model values) :
     ∀ moment i, momentAt model moment i = (values moment i : ℝ) := by
   have mass : ∀ i, momentAt model .mass i = (values .mass i:ℝ) := by
     apply edge_unique model paths pathsValid (fun _ => 1) (fun _ => 0)
     · intro i
-      have h := momentAt_equation model bounds .mass i
+      have h := momentAt_equation model .mass i
       cases kind : model.kind i <;> simpa [kind, Moment.real] using h
     · intro i
       have h := equations_real model values valid .mass i
@@ -153,7 +154,7 @@ theorem moment_values_sound (model : Model) (bounds : MomentBounds model)
   have first : ∀ i, momentAt model .first i = (values .first i:ℝ) := by
     apply edge_unique model paths pathsValid (fun b => (b:ℝ)) (fun e => (e.reward:ℝ)*(values .mass e.target:ℝ))
     · intro i
-      have h := momentAt_equation model bounds .first i
+      have h := momentAt_equation model .first i
       cases kind : model.kind i <;> simpa [kind, Moment.real, mass] using h
     · intro i
       have h := equations_real model values valid .first i
@@ -162,7 +163,7 @@ theorem moment_values_sound (model : Model) (bounds : MomentBounds model)
     apply edge_unique model paths pathsValid (fun b => (b:ℝ)^2)
       (fun e => 2*(e.reward:ℝ)*(values .first e.target:ℝ) + (e.reward:ℝ)^2*(values .mass e.target:ℝ))
     · intro i
-      have h := momentAt_equation model bounds .second i
+      have h := momentAt_equation model .second i
       cases kind : model.kind i <;> simpa [kind, Moment.real, mass, first, add_assoc] using h
     · intro i
       have h := equations_real model values valid .second i
@@ -173,16 +174,15 @@ theorem moment_values_sound (model : Model) (bounds : MomentBounds model)
   · exact first
   · exact second
 
-theorem solution_integrable (model : Model) (solution : Determinize.Finite.Reward.Solution model) :
-    Integrable (fun x : ℝ => x) model.outputMeasure ∧ Integrable (fun x : ℝ => x^2) model.outputMeasure := by
-  have h := outputAt_integrable _ solution.bounds model.initial
-  rwa [cut_outputAt model solution.boundary.dead solution.boundary.closed] at h
+theorem outputMeasure_integrable (model : Model) :
+    Integrable (fun x : ℝ => x) model.outputMeasure ∧ Integrable (fun x : ℝ => x^2) model.outputMeasure :=
+  finite_integrable model model.initial
 
 theorem solution_statistics (model : Model) (solution : Determinize.Finite.Reward.Solution model) :
     solution.statistics.Matches model.outputMeasure := by
   let values := fun (moment : Moment) => match moment with
     | .mass => solution.mass | .first => solution.first | .second => solution.second
-  have correct := moment_values_sound (cut model solution.boundary.dead) solution.bounds
+  have correct := moment_values_sound (cut model solution.boundary.dead)
     solution.paths solution.pathsValid values solution.momentsValid
   have moments (moment : Moment) : (∫ x, moment.real x ∂model.outputMeasure) = (values moment model.initial : ℝ) := by
     have h := correct moment model.initial
@@ -195,7 +195,7 @@ theorem solution_statistics (model : Model) (solution : Determinize.Finite.Rewar
 
 theorem solution_result (model : Model) (program : Spec.Paper.Expr) (matching : model.Matches program)
     (solution : Determinize.Finite.Reward.Solution model) : ResultMatches model program solution.statistics :=
-  ⟨matching, (solution_integrable model solution).1, (solution_integrable model solution).2,
+  ⟨matching, (outputMeasure_integrable model).1, (outputMeasure_integrable model).2,
     solution_statistics model solution⟩
 
 theorem solution_conditional_variance (model : Model) (solution : Determinize.Finite.Reward.Solution model)
@@ -212,7 +212,7 @@ theorem solution_conditional_variance (model : Model) (solution : Determinize.Fi
     have : (0 : ℝ) < (solution.statistics.returnMass : ℝ) := by exact_mod_cast positive
     linarith
   have mem : MemLp id 2 model.outputMeasure :=
-    (memLp_two_iff_integrable_sq aestronglyMeasurable_id).mpr (solution_integrable model solution).2
+    (memLp_two_iff_integrable_sq aestronglyMeasurable_id).mpr (outputMeasure_integrable model).2
   rw [Proof.normalized_variance _ nonzero mem]
   change (∫ x : ℝ, x^2 ∂model.outputMeasure) / model.outputMeasure.real Set.univ -
     ((∫ x : ℝ, x ∂model.outputMeasure) / model.outputMeasure.real Set.univ)^2 = _

@@ -32,10 +32,12 @@ class AdditiveTests(unittest.TestCase):
             self.assertEqual(checked.returncode, 0, checked.stdout + checked.stderr)
             self.assertNotIn('sorryAx', checked.stdout)
             text = certificate.read_text()
+            self.assertNotIn("boundFirstValues", text)
+            self.assertNotIn("bounds :=", text)
             for old, new in [
                 ('first := fun i => firstValues[i]', 'first := fun _ => 12345'),
-                ('first := fun i => boundFirstValues[i]', 'first := fun _ => 0'),
-                ('second := fun i => boundSecondValues[i]', 'second := fun _ => 0'),
+                ('mass := fun i => massValues[i]', 'mass := fun _ => 0'),
+                ('second := fun i => secondValues[i]', 'second := fun _ => 0'),
                 ('checkedSource : Expr Rat :=', 'checkedSource : Expr Rat := .real 999 --'),
             ]:
                 self.assertIn(old, text)
@@ -47,6 +49,26 @@ class AdditiveTests(unittest.TestCase):
             self.assertEqual(count, 1)
             certificate.write_text(changed)
             self.assertNotEqual(kernel(certificate).returncode, 0)
+
+    def test_divergence_certificates(self):
+        cases = [
+            ('let f = rec f u => 1 + f u in f ()', ('0', '0', '0', '1')),
+            ('let d = rec d u => 1 + d u in 2 + (if flip(0.25) then 10 else d ())',
+             ('1/4', '3', '36', '3/4')),
+            ('let f = rec f u => if flip(0.5) then 0 else (-1) + f u in f ()',
+             ('1', '-1', '3', '0')),
+        ]
+        for program, expected in cases:
+            with self.subTest(program=program), tempfile.TemporaryDirectory() as tmp:
+                result, prefix = generate(Path(tmp), program, 'source', '--additive')
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                data = json.loads(Path(str(prefix) + '.result.json').read_text())
+                self.assertEqual(tuple(data[key] for key in
+                    ('return_mass', 'answer', 'second_moment', 'divergence_probability')), expected)
+                checked = kernel(Path(str(prefix) + '.result.lean'))
+                self.assertEqual(checked.returncode, 0, checked.stdout + checked.stderr)
+                for forbidden in ('sorryAx', 'ofReduceBool', 'trustCompiler'):
+                    self.assertNotIn(forbidden, checked.stdout + checked.stderr)
 
     def test_edge_format_preserves_rewards(self):
         with tempfile.TemporaryDirectory() as tmp:

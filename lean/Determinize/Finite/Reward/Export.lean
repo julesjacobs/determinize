@@ -74,7 +74,6 @@ def resultCertificateText (source : Checking.Core) (subject : Subject) (candidat
     "import Determinize.Proof.RewardModel.Soundness\nimport Determinize.Proof.RewardModel.Moments" ++
   vector "massValues" solution.mass ++ vector "firstValues" solution.first ++
   vector "secondValues" solution.second ++ vector "rejectionValues" solution.rejection ++
-  vector "boundFirstValues" solution.bounds.first ++ vector "boundSecondValues" solution.bounds.second ++
   s!"\ndef deadStates : Vector Bool model.size := ⟨#[{dead}], by rfl⟩\n" ++
   s!"def ranks : Vector Nat model.size := ⟨#[{ranks}], by rfl⟩\n" ++
   s!"def nextStates : Vector (Fin model.size) model.size := ⟨#[{next}], by rfl⟩\n" ++
@@ -88,9 +87,6 @@ def resultCertificateText (source : Checking.Core) (subject : Subject) (candidat
   "  second := fun i => secondValues[i]\n  secondValid := by decide +kernel\n" ++
   "  rejection := fun i => rejectionValues[i]\n  rejectionValid := by decide +kernel\n" ++
   "  momentsValid := by decide +kernel\n" ++
-  "  bounds := {\n      first := fun i => boundFirstValues[i]\n      second := fun i => boundSecondValues[i]\n" ++
-  "      first_nonnegative := by decide +kernel, second_nonnegative := by decide +kernel,\n" ++
-  "      first_bound := by decide +kernel, second_bound := by decide +kernel}\n" ++
   "\nabbrev statistics := solution.statistics\n" ++
   "\ntheorem checkedResult : Determinize.Spec.RewardModel.ResultMatches model\n" ++
   "    (checkedSubject.program checkedSource) statistics :=\n" ++
@@ -98,7 +94,7 @@ def resultCertificateText (source : Checking.Core) (subject : Subject) (candidat
   "\ntheorem integrability : MeasureTheory.Integrable (fun x : ℝ => x)\n" ++
   "    (bigStepMeasure (checkedSubject.program checkedSource)) ∧\n" ++
   "    MeasureTheory.Integrable (fun x : ℝ => x^2) (bigStepMeasure (checkedSubject.program checkedSource)) := by\n" ++
-  "  simpa only [modelMatches.2] using Determinize.Proof.RewardModel.solution_integrable model solution\n" ++
+  "  simpa only [modelMatches.2] using Determinize.Proof.RewardModel.outputMeasure_integrable model\n" ++
   "\ntheorem outputStatistics : statistics.Matches (bigStepMeasure (checkedSubject.program checkedSource)) := by\n" ++
   "  simpa only [modelMatches.2] using Determinize.Proof.RewardModel.solution_statistics model solution\n" ++
   "\ntheorem conditionalVariance (positive : 0 < statistics.returnMass) :\n" ++

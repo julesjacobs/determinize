@@ -60,6 +60,7 @@ example : Reward.normalize (.deliver (.number 2)
 
 end Determinize.Tests
 
+#print axioms Determinize.Proof.RewardModel.finite_integrable
 #print axioms Determinize.Proof.RewardModel.replay_matches
 #print axioms Determinize.Proof.RewardModel.solution_result
 #print axioms Determinize.Proof.RewardModel.solution_conditional_variance

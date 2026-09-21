@@ -51,18 +51,7 @@ def moments(query, size, labels, outputs, dead, edges):
         if i not in stopped:
             rhs[i] += p * (2*r*first[j] + r*r*mass[j])
     second = signed(rhs)
-    rhs = [abs(q) for q in outputs]
-    for i, _, p, r in edges:
-        if i not in stopped:
-            rhs[i] += p * abs(r)
-    bound_first = query(rhs)
-    rhs = [q*q for q in outputs]
-    for i, j, p, r in edges:
-        if i not in stopped:
-            rhs[i] += p * (2*abs(r)*bound_first[j] + r*r)
-    bound_second = query(rhs)
-    return {"mass": mass, "rejection": rejection, "first": first, "second": second,
-            "boundFirst": bound_first, "boundSecond": bound_second}
+    return {"mass": mass, "rejection": rejection, "first": first, "second": second}
 
 
 def certificate_text(prefix, values, dead, ranks, following):
@@ -97,11 +86,6 @@ def solution : Reward.Solution model where
   rejection := fun i => rejectionValues[i]
   rejectionValid := by decide +kernel
   momentsValid := by decide +kernel
-  bounds := {
-      first := fun i => boundFirstValues[i]
-      second := fun i => boundSecondValues[i]
-      first_nonnegative := by decide +kernel, second_nonnegative := by decide +kernel,
-      first_bound := by decide +kernel, second_bound := by decide +kernel}
 
 abbrev statistics := solution.statistics
 
@@ -112,7 +96,7 @@ theorem checkedResult : Determinize.Spec.RewardModel.ResultMatches model
 theorem integrability : MeasureTheory.Integrable (fun x : ℝ => x)
     (bigStepMeasure (checkedSubject.program checkedSource)) ∧
     MeasureTheory.Integrable (fun x : ℝ => x^2) (bigStepMeasure (checkedSubject.program checkedSource)) := by
-  simpa only [modelMatches.2] using Determinize.Proof.RewardModel.solution_integrable model solution
+  simpa only [modelMatches.2] using Determinize.Proof.RewardModel.outputMeasure_integrable model
 
 theorem outputStatistics : statistics.Matches (bigStepMeasure (checkedSubject.program checkedSource)) := by
   simpa only [modelMatches.2] using Determinize.Proof.RewardModel.solution_statistics model solution
