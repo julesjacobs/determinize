@@ -85,7 +85,6 @@ def solution : Reward.Solution model where
   secondValid := by decide +kernel
   rejection := fun i => rejectionValues[i]
   rejectionValid := by decide +kernel
-  momentsValid := by decide +kernel
 
 abbrev statistics := solution.statistics
 

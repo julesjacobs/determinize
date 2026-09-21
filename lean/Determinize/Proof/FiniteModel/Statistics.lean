@@ -60,7 +60,8 @@ theorem momentCertificate_integral (model : Model) (certificate : MomentCertific
 
 theorem momentCertificate_sound (model : Model) (certificate : MomentCertificate model)
     (valid : certificate.Valid model) : (certificate.statistics model).Matches model.outputMeasure := by
-  refine ⟨?_, ?_, ?_⟩
+  refine ⟨(integrable_const_iff_isFiniteMeasure (by norm_num : (1 : ℝ) ≠ 0)).mp
+    (outputAt_integrable model model.initial (fun _ => 1)), outputAt_integrable model model.initial (fun x => x ^ 2), ?_, ?_, ?_⟩
   · simpa [Moment.real, MomentCertificate.statistics, integral_const] using
       momentCertificate_integral model certificate valid .mass
   · exact momentCertificate_integral model certificate valid .first
@@ -73,26 +74,32 @@ theorem outputMeasure_memLp (model : Model) : MemLp id 2 model.outputMeasure :=
 theorem statistics_conditional_mean (statistics : OutputStatistics) (law : Measure ℝ)
     (correct : statistics.Matches law) :
     (∫ x : ℝ, x ∂law) / law.real Set.univ = (statistics.firstMoment / statistics.returnMass : Rat) := by
-  rw [correct.1, correct.2.1, Rat.cast_div]
+  rw [correct.mass, correct.first, Rat.cast_div]
 
-theorem statistics_conditional_variance (model : Model) (statistics : OutputStatistics)
-    (correct : statistics.Matches model.outputMeasure) (positive : 0 < statistics.returnMass) :
-    variance id ((model.outputMeasure Set.univ)⁻¹ • model.outputMeasure) =
+theorem statistics_first_integrable (statistics : OutputStatistics) (law : Measure ℝ)
+    (correct : statistics.Matches law) : Integrable id law := by
+  let := correct.finite
+  exact ((memLp_two_iff_integrable_sq aestronglyMeasurable_id).mpr
+    correct.squareIntegrable).integrable (by norm_num)
+
+theorem statistics_conditional_variance (law : Measure ℝ) (statistics : OutputStatistics)
+    (correct : statistics.Matches law) (positive : 0 < statistics.returnMass) :
+    variance id ((law Set.univ)⁻¹ • law) =
       ((statistics.secondMoment / statistics.returnMass -
         (statistics.firstMoment / statistics.returnMass) ^ 2 : Rat) : ℝ) := by
-  have finite : IsFiniteMeasure model.outputMeasure := by
-    exact (integrable_const_iff_isFiniteMeasure (by norm_num : (1 : ℝ) ≠ 0)).mp
-      (outputAt_integrable model model.initial (fun _ => 1))
-  have nonzero : model.outputMeasure Set.univ ≠ 0 := by
+  let := correct.finite
+  have nonzero : law Set.univ ≠ 0 := by
     intro zero
-    have h := correct.1
+    have h := correct.mass
     simp [measureReal_def, zero] at h
     have : (0 : ℝ) < (statistics.returnMass : ℝ) := by exact_mod_cast positive
     linarith
-  rw [normalized_variance _ nonzero (outputMeasure_memLp model)]
-  change (∫ x : ℝ, x ^ 2 ∂model.outputMeasure) / model.outputMeasure.real Set.univ -
-    ((∫ x : ℝ, x ∂model.outputMeasure) / model.outputMeasure.real Set.univ) ^ 2 = _
-  rw [correct.1, correct.2.1, correct.2.2]
+  have mem : MemLp id 2 law :=
+    (memLp_two_iff_integrable_sq aestronglyMeasurable_id).mpr correct.squareIntegrable
+  rw [normalized_variance _ nonzero mem]
+  change (∫ x : ℝ, x ^ 2 ∂law) / law.real Set.univ -
+    ((∫ x : ℝ, x ∂law) / law.real Set.univ) ^ 2 = _
+  rw [correct.mass, correct.first, correct.second]
   push_cast
   rfl
 

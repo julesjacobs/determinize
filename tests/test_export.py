@@ -63,7 +63,7 @@ class ExportTests(unittest.TestCase):
             with self.subTest(program=program, subject=subject), tempfile.TemporaryDirectory() as tmp:
                 result, output = self.run_export(Path(tmp), program, "--subject", subject)
                 self.assertEqual(result.returncode, 0, result.stderr)
-                self.assertIn("paper correspondence checked", result.stdout)
+                self.assertIn("kernel-checkable paper correspondence", result.stdout)
                 self.assertEqual(solve_export(output), expected)
 
     def test_generated_lean_data(self):
@@ -110,7 +110,7 @@ def checkRoundTrip : IO Unit := do
                 checked = subprocess.run(["lake", "env", "lean", str(certificate)],
                                          cwd=LEAN, text=True, capture_output=True, timeout=120)
                 self.assertEqual(checked.returncode, 0, checked.stdout + checked.stderr)
-                self.assertIn("machineReplay", checked.stdout)
+                self.assertIn("graphValid", checked.stdout)
                 self.assertIn("modelMatches", checked.stdout)
                 for forbidden in ["sorryAx", "ofReduceBool", "trustCompiler"]:
                     self.assertNotIn(forbidden, checked.stdout)
@@ -129,8 +129,8 @@ def checkRoundTrip : IO Unit := do
             self.assertEqual(result.returncode, 0, result.stderr)
             certificate = Path(str(output) + ".replay.lean")
             original = certificate.read_text()
-            for old, new in [("(fun i => stateKeys i)", "(fun _ => 0)"),
-                             ("(fun i k => successorIndices[i][k]!)", "(fun _ _ => 0)")]:
+            self.assertNotIn("stateKeys", original)
+            for old, new in [("(fun i k => successorIndices[i][k]!)", "(fun _ _ => 0)")]:
                 with self.subTest(witness=old):
                     changed = original.replace(old, new)
                     self.assertNotEqual(changed, original)

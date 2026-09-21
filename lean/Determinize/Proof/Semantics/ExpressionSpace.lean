@@ -18,7 +18,7 @@ abbrev Skeleton := Expr Unit
 
 namespace Expr
 
-def skeleton : Expr → Skeleton
+def skeleton {Literal : Type} : Expr Literal → Skeleton
   | .discrete kind d => .discrete kind d.skeleton
   | .bvar i => .bvar i | .reject => .reject | .unit => .unit | .bool b => .bool b
   | .real _ => .real () | .lam b => .lam b.skeleton
@@ -42,7 +42,7 @@ def skeleton : Expr → Skeleton
   | .beta k l r => .beta k l.skeleton r.skeleton
   | .gamma k l r => .gamma k l.skeleton r.skeleton
 
-def realCoordinates : Expr → List ℝ
+def realCoordinates {Literal : Type} : Expr Literal → List Literal
   | .real value => [value]
   | .lam x | .fix x | .fst x | .snd x | .inl x
   | .inr x | .neg x => x.realCoordinates

@@ -23,6 +23,14 @@ example : mixedStatistics.conditionalVariance = some 9 := by decide +kernel
 example : mixedStatistics.Matches mixedOutcomes.outputMeasure :=
   momentCertificate_sound mixedOutcomes mixedResult.val mixedResult.property
 
+example (law : MeasureTheory.Measure ℝ) (s : OutputStatistics)
+    (h : s.Matches law) : MeasureTheory.Integrable id law :=
+  statistics_first_integrable s law h
+
+example (law : MeasureTheory.Measure ℝ) (s : OutputStatistics)
+    (notIntegrable : ¬ MeasureTheory.Integrable (fun x : ℝ => x ^ 2) law) :
+    ¬ s.Matches law := fun h => notIntegrable h.squareIntegrable
+
 example : Checking.checkStatistics mixedOutcomes mixedResult.val = true := by decide +kernel
 example : Checking.checkStatistics mixedOutcomes {mixedResult.val with rank := fun _ => 0} = false := by decide +kernel
 example : Checking.checkStatistics mixedOutcomes {mixedResult.val with dead := fun _ => true} = false := by decide +kernel

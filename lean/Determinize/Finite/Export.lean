@@ -8,14 +8,6 @@ open Spec.Paper Spec.FiniteModel
 private def rational (q : Rat) : String :=
   if q.den == 1 then toString q.num else s!"{q.num}/{q.den}"
 private def leanRat (q : Rat) : String := s!"(({q.num} : Rat) / {q.den})"
-private def keyTree : Nat → List Nat → Nat → String
-  | 0, _, _ => "0"
-  | _+1, [], _ => "0"
-  | _+1, [value], _ => toString value
-  | fuel+1, values, offset =>
-      let half := values.length / 2
-      s!"(if i.val < {offset+half} then {keyTree fuel (values.take half) offset} else {keyTree fuel (values.drop half) (offset+half)})"
-
 def proofTable (stem claim sizeName allName : String) (size : Nat) : String :=
   let proofs := String.join ((List.range size).map fun i =>
     s!"\ntheorem {stem}_{i} : {claim} (⟨{i}, by decide +kernel⟩ : Fin {sizeName}) := by\n  decide +kernel\n")
@@ -85,9 +77,8 @@ def candidateText (candidate : Candidate) : String :=
   "  states := #[\n    " ++ String.intercalate ",\n    " (candidate.states.toList.map stateText) ++ "\n  ]\n" ++
   "  rows := #[\n    " ++ String.intercalate ",\n    " (candidate.rows.toList.map rowText) ++ "\n  ]\n"
 
-/-- Export kernel-checked replay and paper-semantics correspondence. -/
+/-- Export kernel-checkable replay and paper-semantics correspondence. -/
 def replayCertificateText (source : Checking.Core) (subject : Subject) (candidate : Candidate) : String :=
-  let keys := keyTree candidate.states.size (candidate.states.toList.map stateFingerprint) 0
   let indices := candidate.states.toList.map fun state =>
     let destinations : List Nat := match step state with
       | .ok (.next _ outcomes) => outcomes.map fun (outcome : Rat × State) =>
@@ -100,18 +91,17 @@ def replayCertificateText (source : Checking.Core) (subject : Subject) (candidat
     "import Determinize.Checking.FiniteModel" ++
   s!"\ndef checkedSource : Expr Rat := {Frontend.leanExpression source}\n" ++
   s!"def checkedSubject : Subject := {reprStr subject}\n" ++
-  s!"\ndef stateKeys (i : Fin candidate.states.size) : Nat := {keys}\n" ++
   s!"def successorIndices : Vector (Array Nat) candidate.states.size := ⟨{indices}, by rfl⟩\n" ++
   "\nabbrev rowClaim (i : Fin candidate.states.size) : Prop := candidate.IndexedStateValid\n" ++
-  "  (fun i => stateKeys i) (fun i k => successorIndices[i][k]!) i\n" ++ rowProofs ++
+  "  (fun i k => successorIndices[i][k]!) i\n" ++ rowProofs ++
   "\ntheorem indexedReplay : candidate.IndexedReplayValid checkedSource checkedSubject\n" ++
-  "    (fun i => stateKeys i) (fun i k => successorIndices[i][k]!) :=\n" ++
-  "  indexedStates_valid candidate checkedSource checkedSubject _ _ (by decide +kernel) allRows\n" ++
-  "\ntheorem machineReplay : candidate.ReplayValid checkedSource checkedSubject :=\n" ++
-  "  indexedReplay_valid candidate checkedSource checkedSubject _ _ indexedReplay\n\nabbrev model : Model := candidate.toModel machineReplay\n" ++
+  "    (fun i k => successorIndices[i][k]!) :=\n" ++
+  "  indexedStates_valid candidate checkedSource checkedSubject _ (by decide +kernel) allRows\n" ++
+  "\ntheorem graphValid : candidate.GraphValid :=\n" ++
+  "  indexedReplay_valid candidate checkedSource checkedSubject _ indexedReplay\n\nabbrev model : Model := candidate.graphModel graphValid\n" ++
   "\ntheorem modelMatches : model.Matches (checkedSubject.program checkedSource) :=\n" ++
-  "  Determinize.Proof.FiniteModel.replay_matches candidate machineReplay\n" ++
-  "\n#print axioms machineReplay\n#print axioms modelMatches\n"
+  "  Determinize.Proof.FiniteModel.indexedReplay_matches candidate _ indexedReplay\n" ++
+  "\n#print axioms graphValid\n#print axioms modelMatches\n"
 
 
 structure Files where
@@ -192,10 +182,10 @@ def resultCertificateText (source : Checking.Core) (subject : Subject) (candidat
   "  values := fun moment i => (match moment with\n" ++
   s!"    | .mass => {vector .mass}\n    | .first => {vector .first}\n    | .second => {vector .second})[i.val]!\n" ++
   "\ndef termination : TerminationCertificate model := ⟨result, fun i => " ++ rejection ++ "[i.val]!⟩\n" ++
-  "\nabbrev resultClaim (i : Fin model.size) : Prop := candidate.QueryStateValid machineReplay termination i\n" ++ stateProofs ++
+  "\nabbrev resultClaim (i : Fin model.size) : Prop := candidate.QueryStateValid graphValid termination i\n" ++ stateProofs ++
   "\ntheorem terminationAccepted : Determinize.Checking.checkTermination model termination = true :=\n" ++
   "  (Determinize.Checking.checkTermination_valid model termination).mpr\n" ++
-  "    (sparseResults_valid candidate machineReplay termination allResults)\n" ++
+  "    (sparseResults_valid candidate graphValid termination allResults)\n" ++
   "\ntheorem resultAccepted : Determinize.Checking.checkStatistics model result = true := by\n" ++
   "  exact (Determinize.Checking.checkStatistics_valid model result).mpr\n    ((Determinize.Checking.checkTermination_valid model termination).mp terminationAccepted).1\n" ++
   "\ndef statistics := result.statistics model\n" ++
@@ -205,7 +195,7 @@ def resultCertificateText (source : Checking.Core) (subject : Subject) (candidat
   "    MeasureTheory.Integrable id (bigStepMeasure (checkedSubject.program checkedSource)) ∧\n" ++
   "    (∫ value : ℝ, value ∂bigStepMeasure (checkedSubject.program checkedSource)) =\n" ++
   "      (statistics.firstMoment : ℝ) := by\n" ++
-  "  exact ⟨modelMatches.2 ▸ Determinize.Proof.FiniteModel.outputMeasure_integrable model, outputStatistics.2.1⟩\n" ++
+  "  exact ⟨modelMatches.2 ▸ Determinize.Proof.FiniteModel.outputMeasure_integrable model, outputStatistics.first⟩\n" ++
   "\ntheorem conditionalVariance (positive : 0 < statistics.returnMass) :\n" ++
   "    ProbabilityTheory.variance id ((bigStepMeasure (checkedSubject.program checkedSource) Set.univ)⁻¹ •\n" ++
   "      bigStepMeasure (checkedSubject.program checkedSource)) =\n" ++
@@ -231,6 +221,9 @@ def writeResult (outputPath : System.FilePath) (source : Checking.Core) (subject
   let metadata := Lean.Json.mkObj [
     ("answer", Lean.toJson (rational statistics.firstMoment)),
     ("return_mass", Lean.toJson (rational statistics.returnMass)),
+    ("kernel_checked", Lean.toJson false),
+    ("certificate_status", Lean.toJson "generated"),
+    ("termination_statistics_scope", Lean.toJson "graph"),
     ("rejection_probability", Lean.toJson (rational outcomes.rejectionProbability)),
     ("divergence_probability", Lean.toJson (rational outcomes.divergenceProbability)),
     ("second_moment", Lean.toJson (rational statistics.secondMoment)),

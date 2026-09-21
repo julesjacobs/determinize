@@ -5,6 +5,25 @@ import Determinize.Checking.FiniteModel
 namespace Determinize.Tests
 open Frontend Checking Spec.Paper Spec.FiniteModel Determinize.Finite
 
+private def duplicateLabels : Candidate := ⟨0,
+  #[.eval (.real 3) [] [], .eval (.real 3) [] [],
+    .deliver (.number 3) [], .deliver (.number 3) []],
+  #[⟨.transient, #[⟨2, 1⟩]⟩, ⟨.transient, #[⟨3, 1⟩]⟩,
+    ⟨.returned 3, #[⟨2, 1⟩]⟩, ⟨.returned 3, #[⟨3, 1⟩]⟩]⟩
+
+private def duplicateIndices (i : Fin duplicateLabels.states.size) (_ : Nat) : Nat :=
+  if i.val = 0 then 2 else 3
+
+private theorem duplicateReplay : duplicateLabels.IndexedReplayValid (.real 3) .source
+    duplicateIndices := by decide +kernel
+
+example : (duplicateLabels.graphModel (indexedReplay_valid _ _ _ _ duplicateReplay)).Matches
+    (Subject.source.program (.real 3)) :=
+  Proof.FiniteModel.indexedReplay_matches _ _ duplicateReplay
+
+example : ¬ duplicateLabels.IndexedReplayValid (.real 3) .source (fun _ _ => 0) := by
+  decide +kernel
+
 private def candidateFor (text : String) (subject : Subject := .source) : IO (Core × Candidate) := do
   let p ← IO.ofExcept (compile text)
   match ReferenceExplorer.explore p.checked.source subject with
@@ -15,13 +34,12 @@ private def accepted (source : Core) (candidate : Candidate) (subject : Subject 
   (checkModel source subject candidate).isSome
 
 private def indexedAccepted (source : Core) (candidate : Candidate) (subject : Subject := .source) : Bool :=
-  let keys := candidate.states.map stateFingerprint
   let indices := candidate.states.map fun state => match step state with
     | .ok (.next _ outcomes) => (outcomes.map fun (outcome : Rat × State) =>
         (candidate.states.toList.findIdx? fun s => decide (s = outcome.2)).getD 0).toArray
     | _ => #[]
   decide (candidate.IndexedReplayValid source subject
-    (fun i => keys[i.val]!) (fun i k => (indices[i.val]!)[k]!))
+    (fun i k => (indices[i.val]!)[k]!))
 
 private def setRow (candidate : Candidate) (i : Nat) (row : Row) : Candidate :=
   {candidate with rows := candidate.rows.set! i row}
@@ -79,7 +97,8 @@ def modelReplay : IO Unit := do
       states := oneExtra.states.push .rejected
       rows := oneExtra.rows.push ⟨.rejected,#[⟨extra+1,1⟩]⟩ }
   assert (!accepted duplicate) "duplicate unreachable states"
-  for candidate in [coin, oneExtra, duplicate,
+  assert (indexedAccepted coinSource duplicate) "duplicate state labels in indexed replay"
+  for candidate in [coin, oneExtra,
       {coin with initial := 1}, {coin with rows := coin.rows.pop},
       {coin with states := coin.states.pop, rows := coin.rows.pop}] do
     assert (indexedAccepted coinSource candidate == accepted candidate) "indexed replay agrees with full replay"
@@ -125,6 +144,7 @@ def modelReplay : IO Unit := do
 
 #print axioms indexedStates_valid
 #print axioms indexedReplay_valid
+#print axioms Proof.FiniteModel.indexedReplay_matches
 #print axioms Proof.FiniteModel.replay_matches
 #print axioms checkModel
 #print axioms replay_reachable_covered

@@ -188,37 +188,23 @@ theorem solution_statistics (model : Model) (solution : Determinize.Finite.Rewar
     have h := correct moment model.initial
     unfold momentAt at h
     rwa [cut_outputAt model solution.boundary.dead solution.boundary.closed] at h
-  refine ⟨?_, ?_, ?_⟩
+  refine ⟨inferInstanceAs (IsFiniteMeasure (model.outputAt model.initial)),
+    (outputMeasure_integrable model).2, ?_, ?_, ?_⟩
   · simpa [Moment.real, Determinize.Finite.Reward.Solution.statistics, values, integral_const] using moments .mass
   · exact moments .first
   · exact moments .second
 
 theorem solution_result (model : Model) (program : Spec.Paper.Expr) (matching : model.Matches program)
     (solution : Determinize.Finite.Reward.Solution model) : ResultMatches model program solution.statistics :=
-  ⟨matching, (outputMeasure_integrable model).1, (outputMeasure_integrable model).2,
-    solution_statistics model solution⟩
+  ⟨matching, solution_statistics model solution⟩
 
 theorem solution_conditional_variance (model : Model) (solution : Determinize.Finite.Reward.Solution model)
     (positive : 0 < solution.statistics.returnMass) :
     ProbabilityTheory.variance id ((model.outputMeasure Set.univ)⁻¹ • model.outputMeasure) =
       ((solution.statistics.secondMoment / solution.statistics.returnMass -
-        (solution.statistics.firstMoment / solution.statistics.returnMass)^2 : Rat) : ℝ) := by
-  let : IsFiniteMeasure model.outputMeasure := inferInstanceAs (IsFiniteMeasure (model.outputAt model.initial))
-  have correct := solution_statistics model solution
-  have nonzero : model.outputMeasure Set.univ ≠ 0 := by
-    intro zero
-    have h := correct.1
-    simp [measureReal_def, zero] at h
-    have : (0 : ℝ) < (solution.statistics.returnMass : ℝ) := by exact_mod_cast positive
-    linarith
-  have mem : MemLp id 2 model.outputMeasure :=
-    (memLp_two_iff_integrable_sq aestronglyMeasurable_id).mpr (outputMeasure_integrable model).2
-  rw [Proof.normalized_variance _ nonzero mem]
-  change (∫ x : ℝ, x^2 ∂model.outputMeasure) / model.outputMeasure.real Set.univ -
-    ((∫ x : ℝ, x ∂model.outputMeasure) / model.outputMeasure.real Set.univ)^2 = _
-  rw [correct.1, correct.2.1, correct.2.2]
-  push_cast
-  rfl
+        (solution.statistics.firstMoment / solution.statistics.returnMass)^2 : Rat) : ℝ) :=
+  statistics_conditional_variance model.outputMeasure solution.statistics
+    (solution_statistics model solution) positive
 
 theorem solution_termination (model : Model) (solution : Determinize.Finite.Reward.Solution model) :
     (⟨solution.mass model.initial, solution.rejection model.initial,

@@ -235,12 +235,12 @@ function stdNormal(rng) {
 
 function poissonSample(lambda, rng) {
   if (lambda === 0) return 0;
-  const l = Math.exp(-lambda);
-  let k = 0;
-  let p = 1;
-  do {
-    k += 1;
-    p *= rng.positive();
-  } while (p > l);
-  return k - 1;
+  // Exponential arrival times avoid exp(-lambda) underflow at large rates.
+  let arrival = -Math.log(rng.positive());
+  let count = 0;
+  while (arrival <= lambda) {
+    count += 1;
+    arrival -= Math.log(rng.positive());
+  }
+  return count;
 }

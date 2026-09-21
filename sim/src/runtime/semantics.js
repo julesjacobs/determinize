@@ -406,7 +406,7 @@ function step(expr, ctx) {
       if (!isValue(expr.arg)) return stepChild(expr, "arg", ctx);
       if (expr.fn.kind === "Lam") return out(subst(expr.fn.body, expr.fn.param, expr.arg), ctx);
       if (expr.fn.kind === "Rec") {
-        const body = subst(subst(expr.fn.body, expr.fn.name, expr.fn), expr.fn.param, expr.arg);
+        const body = subst(subst(expr.fn.body, expr.fn.param, expr.arg), expr.fn.name, expr.fn);
         return out(body, ctx);
       }
       throw new Error("application to non-function");

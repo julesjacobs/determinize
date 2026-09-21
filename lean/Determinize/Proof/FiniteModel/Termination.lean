@@ -118,7 +118,7 @@ theorem terminationStates_valid (model : Model) (certificate : TerminationCertif
 
 theorem terminationCertificate_sound (model : Model) (certificate : TerminationCertificate model)
     (valid : certificate.Valid model) : (certificate.statistics model).Matches model := by
-  have output := (momentCertificate_sound model certificate.output valid.1).1
+  have output := (momentCertificate_sound model certificate.output valid.1).mass
   have rejection : model.rejectionProbability.toReal = (certificate.rejection model.initial : ℝ) := by
     have query := query_sound (cut model.rejectionModel certificate.output.dead) (fun _ => 1)
       (fun _ => 1) (fun _ => by simp) ⟨certificate.rejection, 0⟩ valid.2

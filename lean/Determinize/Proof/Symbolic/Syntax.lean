@@ -18,36 +18,7 @@ namespace Symbolic
 
 /-- Symbolic expressions over `sampleCount` E-affinity draws: the paper syntax with every
 real literal an affine form in those draws. -/
-inductive AffineExpr (sampleCount : Nat) where
-  | reject
-  | bvar (index : Nat) | unit | bool (value : Bool)
-  | real (value : Affine sampleCount)
-  | lam (body : AffineExpr sampleCount)
-  | fix (body : AffineExpr sampleCount)
-  | app (function argument : AffineExpr sampleCount)
-  | pair (left right : AffineExpr sampleCount)
-  | fst (pair : AffineExpr sampleCount)
-  | snd (pair : AffineExpr sampleCount)
-  | inl (operand : AffineExpr sampleCount)
-  | inr (operand : AffineExpr sampleCount)
-  | matchSum (scrutinee left right : AffineExpr sampleCount)
-  | nil | cons (head tail : AffineExpr sampleCount)
-  | matchList (scrutinee nilCase consCase : AffineExpr sampleCount)
-  | ite (condition thenBranch elseBranch : AffineExpr sampleCount)
-  | letE (value body : AffineExpr sampleCount)
-  | neg (body : AffineExpr sampleCount)
-  | add (left right : AffineExpr sampleCount)
-  | mul (left right : AffineExpr sampleCount)
-  | div (left right : AffineExpr sampleCount)
-  | lt (left right : AffineExpr sampleCount)
-  | uniform (kind : DistributionAction) (lower upper : AffineExpr sampleCount)
-  | gaussian (kind : DistributionAction) (mean variance : AffineExpr sampleCount)
-  | poisson (kind : DistributionAction) (rate : AffineExpr sampleCount)
-  | discrete (kind : DistributionAction) (probabilities : AffineExpr sampleCount)
-  | bernoulli (kind : DistributionAction) (probability : AffineExpr sampleCount)
-  | exponential (kind : DistributionAction) (rate : AffineExpr sampleCount)
-  | beta (kind : DistributionAction) (alpha beta : AffineExpr sampleCount)
-  | gamma (kind : DistributionAction) (shape rate : AffineExpr sampleCount)
+abbrev AffineExpr (sampleCount : Nat) := Expr (Affine sampleCount)
 
 namespace Affine
 
@@ -83,110 +54,63 @@ def realize (environment : Env sampleCount) : AffineExpr sampleCount → Expr
   | .bvar index => .bvar index
   | .unit => .unit
   | .reject => .reject
-  | .discrete kind d => .discrete kind (d.realize environment)
+  | .discrete kind d => .discrete kind (realize environment d)
   | .bool value => .bool value
   | .real value => .real (value.eval environment)
-  | .lam body => .lam (body.realize environment)
+  | .lam body => .lam (realize environment body)
   | .fix body =>
-      .fix (body.realize environment)
+      .fix (realize environment body)
   | .app function argument =>
-      .app (function.realize environment) (argument.realize environment)
+      .app (realize environment function) (realize environment argument)
   | .pair left right =>
-      .pair (left.realize environment) (right.realize environment)
-  | .fst pairValue => .fst (pairValue.realize environment)
-  | .snd pairValue => .snd (pairValue.realize environment)
-  | .inl value => .inl (value.realize environment)
-  | .inr value => .inr (value.realize environment)
-  | .matchSum scrutinee left right => .matchSum (scrutinee.realize environment)
-      (left.realize environment) (right.realize environment)
+      .pair (realize environment left) (realize environment right)
+  | .fst pairValue => .fst (realize environment pairValue)
+  | .snd pairValue => .snd (realize environment pairValue)
+  | .inl value => .inl (realize environment value)
+  | .inr value => .inr (realize environment value)
+  | .matchSum scrutinee left right => .matchSum (realize environment scrutinee)
+      (realize environment left) (realize environment right)
   | .nil => .nil
   | .cons head tail =>
-      .cons (head.realize environment) (tail.realize environment)
+      .cons (realize environment head) (realize environment tail)
   | .matchList scrutinee nilCase consCase =>
-      .matchList (scrutinee.realize environment)
-        (nilCase.realize environment) (consCase.realize environment)
+      .matchList (realize environment scrutinee)
+        (realize environment nilCase) (realize environment consCase)
   | .ite condition thenBranch elseBranch =>
-      .ite (condition.realize environment) (thenBranch.realize environment)
-        (elseBranch.realize environment)
+      .ite (realize environment condition) (realize environment thenBranch)
+        (realize environment elseBranch)
   | .letE value body =>
-      .letE (value.realize environment) (body.realize environment)
-  | .neg body => .neg (body.realize environment)
+      .letE (realize environment value) (realize environment body)
+  | .neg body => .neg (realize environment body)
   | .add left right =>
-      .add (left.realize environment) (right.realize environment)
+      .add (realize environment left) (realize environment right)
   | .mul left right =>
-      .mul (left.realize environment) (right.realize environment)
+      .mul (realize environment left) (realize environment right)
   | .div left right =>
-      .div (left.realize environment) (right.realize environment)
-  | .lt left right => .lt (left.realize environment) (right.realize environment)
+      .div (realize environment left) (realize environment right)
+  | .lt left right => .lt (realize environment left) (realize environment right)
   | .uniform kind lower upper =>
-      .uniform kind (lower.realize environment) (upper.realize environment)
+      .uniform kind (realize environment lower) (realize environment upper)
   | .gaussian kind mean variance =>
-      .gaussian kind (mean.realize environment) (variance.realize environment)
-  | .poisson kind rate => .poisson kind (rate.realize environment)
-  | .bernoulli kind probability => .bernoulli kind (probability.realize environment)
-  | .exponential kind rate => .exponential kind (rate.realize environment)
+      .gaussian kind (realize environment mean) (realize environment variance)
+  | .poisson kind rate => .poisson kind (realize environment rate)
+  | .bernoulli kind probability => .bernoulli kind (realize environment probability)
+  | .exponential kind rate => .exponential kind (realize environment rate)
   | .beta kind left right =>
-      .beta kind (left.realize environment) (right.realize environment)
+      .beta kind (realize environment left) (realize environment right)
   | .gamma kind shape rate =>
-      .gamma kind (shape.realize environment) (rate.realize environment)
+      .gamma kind (realize environment shape) (realize environment rate)
+
+abbrev _root_.Determinize.Spec.Paper.Expr.realize := @AffineExpr.realize
 
 /-- The skeleton of every realization, which does not depend on the environment
 (`realize_skeleton`). -/
-def skeleton : AffineExpr sampleCount → Skeleton
-  | .bvar index => .bvar index
-  | .unit => .unit
-  | .reject => .reject
-  | .discrete kind d => .discrete kind d.skeleton
-  | .bool value => .bool value
-  | .real _ => .real
-  | .lam body => .lam body.skeleton
-  | .fix body => .fix body.skeleton
-  | .app function argument => .app function.skeleton argument.skeleton
-  | .pair left right => .pair left.skeleton right.skeleton
-  | .fst pairValue => .fst pairValue.skeleton
-  | .snd pairValue => .snd pairValue.skeleton
-  | .inl value => .inl value.skeleton
-  | .inr value => .inr value.skeleton
-  | .matchSum scrutinee left right =>
-      .matchSum scrutinee.skeleton left.skeleton right.skeleton
-  | .nil => .nil
-  | .cons head tail => .cons head.skeleton tail.skeleton
-  | .matchList scrutinee nilCase consCase =>
-      .matchList scrutinee.skeleton nilCase.skeleton consCase.skeleton
-  | .ite condition thenBranch elseBranch =>
-      .ite condition.skeleton thenBranch.skeleton elseBranch.skeleton
-  | .letE value body => .letE value.skeleton body.skeleton
-  | .neg body => .neg body.skeleton
-  | .add left right => .add left.skeleton right.skeleton
-  | .mul left right => .mul left.skeleton right.skeleton
-  | .div left right => .div left.skeleton right.skeleton
-  | .lt left right => .lt left.skeleton right.skeleton
-  | .uniform kind lower upper => .uniform kind lower.skeleton upper.skeleton
-  | .gaussian kind mean variance => .gaussian kind mean.skeleton variance.skeleton
-  | .poisson kind rate => .poisson kind rate.skeleton
-  | .bernoulli kind probability => .bernoulli kind probability.skeleton
-  | .exponential kind rate => .exponential kind rate.skeleton
-  | .beta kind left right => .beta kind left.skeleton right.skeleton
-  | .gamma kind shape rate => .gamma kind shape.skeleton rate.skeleton
+abbrev skeleton {sampleCount : Nat} : AffineExpr sampleCount → Skeleton := Expr.skeleton
 
-/-- The affine literals in coordinate order; realizing evaluates them pointwise
-(`realize_coordinates`). -/
-def coordinates : AffineExpr sampleCount → List (Affine sampleCount)
-  | .real value => [value]
-  | .lam body | .fix body | .fst body | .snd body
-  | .inl body | .inr body | .neg body => body.coordinates
-  | .app left right | .pair left right | .cons left right
-  | .add left right | .mul left right | .div left right | .lt left right =>
-      left.coordinates ++ right.coordinates
-  | .matchSum scrutinee left right | .ite scrutinee left right =>
-      scrutinee.coordinates ++ left.coordinates ++ right.coordinates
-  | .matchList scrutinee nilCase consCase =>
-      scrutinee.coordinates ++ nilCase.coordinates ++ consCase.coordinates
-  | .letE value body => value.coordinates ++ body.coordinates
-  | .uniform _ left right | .gaussian _ left right | .beta _ left right
-  | .gamma _ left right => left.coordinates ++ right.coordinates
-  | .poisson _ body | .bernoulli _ body | .exponential _ body | .discrete _ body => body.coordinates
-  | _ => []
+abbrev coordinates {sampleCount : Nat} : AffineExpr sampleCount → List (Affine sampleCount) :=
+  Expr.realCoordinates
+
+abbrev _root_.Determinize.Spec.Paper.Expr.coordinates := @Expr.realCoordinates
 
 /-- Embed a source program, every literal becoming a constant affine form (`realize_ofExpr`). -/
 def ofExpr : Expr → AffineExpr 0
@@ -231,52 +155,54 @@ def mapAffine (transform : Affine n → Affine m) : AffineExpr n → AffineExpr 
   | .bvar index => .bvar index
   | .unit => .unit
   | .reject => .reject
-  | .discrete kind d => .discrete kind (d.mapAffine transform)
+  | .discrete kind d => .discrete kind (mapAffine transform d)
   | .bool value => .bool value
   | .real value => .real (transform value)
-  | .lam body => .lam (body.mapAffine transform)
+  | .lam body => .lam (mapAffine transform body)
   | .fix body =>
-      .fix (body.mapAffine transform)
+      .fix (mapAffine transform body)
   | .app function argument =>
-      .app (function.mapAffine transform) (argument.mapAffine transform)
+      .app (mapAffine transform function) (mapAffine transform argument)
   | .pair left right =>
-      .pair (left.mapAffine transform) (right.mapAffine transform)
-  | .fst pairValue => .fst (pairValue.mapAffine transform)
-  | .snd pairValue => .snd (pairValue.mapAffine transform)
-  | .inl value => .inl (value.mapAffine transform)
-  | .inr value => .inr (value.mapAffine transform)
-  | .matchSum scrutinee left right => .matchSum (scrutinee.mapAffine transform)
-      (left.mapAffine transform) (right.mapAffine transform)
+      .pair (mapAffine transform left) (mapAffine transform right)
+  | .fst pairValue => .fst (mapAffine transform pairValue)
+  | .snd pairValue => .snd (mapAffine transform pairValue)
+  | .inl value => .inl (mapAffine transform value)
+  | .inr value => .inr (mapAffine transform value)
+  | .matchSum scrutinee left right => .matchSum (mapAffine transform scrutinee)
+      (mapAffine transform left) (mapAffine transform right)
   | .nil => .nil
   | .cons head tail =>
-      .cons (head.mapAffine transform) (tail.mapAffine transform)
+      .cons (mapAffine transform head) (mapAffine transform tail)
   | .matchList scrutinee nilCase consCase =>
-      .matchList (scrutinee.mapAffine transform)
-        (nilCase.mapAffine transform) (consCase.mapAffine transform)
+      .matchList (mapAffine transform scrutinee)
+        (mapAffine transform nilCase) (mapAffine transform consCase)
   | .ite condition thenBranch elseBranch =>
-      .ite (condition.mapAffine transform) (thenBranch.mapAffine transform)
-        (elseBranch.mapAffine transform)
+      .ite (mapAffine transform condition) (mapAffine transform thenBranch)
+        (mapAffine transform elseBranch)
   | .letE value body =>
-      .letE (value.mapAffine transform) (body.mapAffine transform)
-  | .neg body => .neg (body.mapAffine transform)
+      .letE (mapAffine transform value) (mapAffine transform body)
+  | .neg body => .neg (mapAffine transform body)
   | .add left right =>
-      .add (left.mapAffine transform) (right.mapAffine transform)
+      .add (mapAffine transform left) (mapAffine transform right)
   | .mul left right =>
-      .mul (left.mapAffine transform) (right.mapAffine transform)
+      .mul (mapAffine transform left) (mapAffine transform right)
   | .div left right =>
-      .div (left.mapAffine transform) (right.mapAffine transform)
-  | .lt left right => .lt (left.mapAffine transform) (right.mapAffine transform)
+      .div (mapAffine transform left) (mapAffine transform right)
+  | .lt left right => .lt (mapAffine transform left) (mapAffine transform right)
   | .uniform kind lower upper =>
-      .uniform kind (lower.mapAffine transform) (upper.mapAffine transform)
+      .uniform kind (mapAffine transform lower) (mapAffine transform upper)
   | .gaussian kind mean variance =>
-      .gaussian kind (mean.mapAffine transform) (variance.mapAffine transform)
-  | .poisson kind rate => .poisson kind (rate.mapAffine transform)
-  | .bernoulli kind probability => .bernoulli kind (probability.mapAffine transform)
-  | .exponential kind rate => .exponential kind (rate.mapAffine transform)
+      .gaussian kind (mapAffine transform mean) (mapAffine transform variance)
+  | .poisson kind rate => .poisson kind (mapAffine transform rate)
+  | .bernoulli kind probability => .bernoulli kind (mapAffine transform probability)
+  | .exponential kind rate => .exponential kind (mapAffine transform rate)
   | .beta kind left right =>
-      .beta kind (left.mapAffine transform) (right.mapAffine transform)
+      .beta kind (mapAffine transform left) (mapAffine transform right)
   | .gamma kind shape rate =>
-      .gamma kind (shape.mapAffine transform) (rate.mapAffine transform)
+      .gamma kind (mapAffine transform shape) (mapAffine transform rate)
+
+abbrev _root_.Determinize.Spec.Paper.Expr.mapAffine := @AffineExpr.mapAffine
 
 @[simp] theorem Affine.eval_const (constant : ℝ) (environment : Env n) :
     Symbolic.Affine.eval ((constant, 0) : Affine n) environment = constant := by
@@ -285,6 +211,8 @@ def mapAffine (transform : Affine n → Affine m) : AffineExpr n → AffineExpr 
 /-- The same expression over one more draw, which it does not mention (`Affine.weaken`). -/
 def weakenSamples (expression : AffineExpr n) : AffineExpr (n + 1) :=
   expression.mapAffine Affine.weaken
+
+abbrev _root_.Determinize.Spec.Paper.Expr.weakenSamples := @AffineExpr.weakenSamples
 
 /-- Evaluate a primitive mean as an affine formula in the existing E samples. -/
 noncomputable def meanAffine (op : Op) (affine : List (Affine n)) (general : List ℝ) : Affine n :=
@@ -456,95 +384,10 @@ theorem WellTyped.weakenSamples (typed : WellTyped context expression ty) :
   rw [zero]
   exact funext (Fin.cases rfl fun _ => rfl)
 
-def shift (amount cutoff : Nat) : AffineExpr sampleCount → AffineExpr sampleCount
-  | .bvar index => .bvar (if cutoff ≤ index then index + amount else index)
-  | .unit => .unit
-  | .reject => .reject
-  | .discrete kind d => .discrete kind (d.shift amount cutoff)
-  | .bool value => .bool value
-  | .real value => .real value
-  | .lam body => .lam (body.shift amount (cutoff + 1))
-  | .fix body => .fix (body.shift amount (cutoff + 2))
-  | .app function argument => .app (function.shift amount cutoff) (argument.shift amount cutoff)
-  | .pair left right => .pair (left.shift amount cutoff) (right.shift amount cutoff)
-  | .fst pairValue => .fst (pairValue.shift amount cutoff)
-  | .snd pairValue => .snd (pairValue.shift amount cutoff)
-  | .inl operand => .inl (operand.shift amount cutoff)
-  | .inr operand => .inr (operand.shift amount cutoff)
-  | .matchSum scrutinee left right => .matchSum (scrutinee.shift amount cutoff)
-      (left.shift amount (cutoff + 1)) (right.shift amount (cutoff + 1))
-  | .nil => .nil
-  | .cons h t => .cons (h.shift amount cutoff) (t.shift amount cutoff)
-  | .matchList x n c => .matchList (x.shift amount cutoff)
-      (n.shift amount cutoff) (c.shift amount (cutoff + 2))
-  | .ite c t e => .ite (c.shift amount cutoff) (t.shift amount cutoff)
-      (e.shift amount cutoff)
-  | .letE x b => .letE (x.shift amount cutoff)
-      (b.shift amount (cutoff + 1))
-  | .neg x => .neg (x.shift amount cutoff)
-  | .add l r => .add (l.shift amount cutoff) (r.shift amount cutoff)
-  | .mul l r => .mul (l.shift amount cutoff) (r.shift amount cutoff)
-  | .div l r => .div (l.shift amount cutoff) (r.shift amount cutoff)
-  | .lt l r => .lt (l.shift amount cutoff) (r.shift amount cutoff)
-  | .uniform k lower upper => .uniform k (lower.shift amount cutoff) (upper.shift amount cutoff)
-  | .gaussian k mean variance =>
-      .gaussian k (mean.shift amount cutoff) (variance.shift amount cutoff)
-  | .poisson k rate => .poisson k (rate.shift amount cutoff)
-  | .bernoulli k probability => .bernoulli k (probability.shift amount cutoff)
-  | .exponential k rate => .exponential k (rate.shift amount cutoff)
-  | .beta k left right => .beta k (left.shift amount cutoff) (right.shift amount cutoff)
-  | .gamma k shape rate => .gamma k (shape.shift amount cutoff) (rate.shift amount cutoff)
-
-def substAt (depth : Nat) (replacement : AffineExpr sampleCount)
-    (expression : AffineExpr sampleCount) : AffineExpr sampleCount := match expression with
-  | .bvar index => if index = depth then replacement.shift depth 0
-      else .bvar (if depth < index then index - 1 else index)
-  | .unit => .unit
-  | .reject => .reject
-  | .discrete kind d => .discrete kind (substAt depth replacement d)
-  | .bool value => .bool value
-  | .real value => .real value
-  | .lam body => .lam (substAt (depth + 1) replacement body)
-  | .fix body => .fix (substAt (depth + 2) replacement body)
-  | .app function argument =>
-      .app (substAt depth replacement function) (substAt depth replacement argument)
-  | .pair left right => .pair (substAt depth replacement left) (substAt depth replacement right)
-  | .fst pairValue => .fst (substAt depth replacement pairValue)
-  | .snd pairValue => .snd (substAt depth replacement pairValue)
-  | .inl operand => .inl (substAt depth replacement operand)
-  | .inr operand => .inr (substAt depth replacement operand)
-  | .matchSum scrutinee left right => .matchSum (substAt depth replacement scrutinee)
-      (substAt (depth + 1) replacement left) (substAt (depth + 1) replacement right)
-  | .nil => .nil
-  | .cons h t => .cons (substAt depth replacement h) (substAt depth replacement t)
-  | .matchList x n c => .matchList (substAt depth replacement x)
-      (substAt depth replacement n) (substAt (depth + 2) replacement c)
-  | .ite c t e => .ite (substAt depth replacement c)
-      (substAt depth replacement t) (substAt depth replacement e)
-  | .letE x b => .letE (substAt depth replacement x)
-      (substAt (depth + 1) replacement b)
-  | .neg x => .neg (substAt depth replacement x)
-  | .add l r => .add (substAt depth replacement l) (substAt depth replacement r)
-  | .mul l r => .mul (substAt depth replacement l) (substAt depth replacement r)
-  | .div l r => .div (substAt depth replacement l) (substAt depth replacement r)
-  | .lt l r => .lt (substAt depth replacement l) (substAt depth replacement r)
-  | .uniform k lower upper =>
-      .uniform k (substAt depth replacement lower) (substAt depth replacement upper)
-  | .gaussian k mean variance =>
-      .gaussian k (substAt depth replacement mean) (substAt depth replacement variance)
-  | .poisson k rate => .poisson k (substAt depth replacement rate)
-  | .bernoulli k probability => .bernoulli k (substAt depth replacement probability)
-  | .exponential k rate => .exponential k (substAt depth replacement rate)
-  | .beta k left right =>
-      .beta k (substAt depth replacement left) (substAt depth replacement right)
-  | .gamma k shape rate =>
-      .gamma k (substAt depth replacement shape) (substAt depth replacement rate)
-
-def substHead (body replacement : AffineExpr sampleCount) : AffineExpr sampleCount :=
-  substAt 0 replacement body
-
-def substTwo (body argument function : AffineExpr sampleCount) : AffineExpr sampleCount :=
-  substAt 0 argument (substAt 1 function body)
+abbrev shift (amount cutoff : Nat) (expression : AffineExpr sampleCount) := Expr.shift amount cutoff expression
+abbrev substAt (depth : Nat) (replacement expression : AffineExpr sampleCount) := Expr.substAt depth replacement expression
+abbrev substHead (body replacement : AffineExpr sampleCount) := Expr.substHead body replacement
+abbrev substTwo (body argument function : AffineExpr sampleCount) := Expr.substTwo body argument function
 
 theorem wellTyped_shift (h : WellTyped (before ++ suffix) expression ty) :
     WellTyped (before ++ inserted ++ suffix)
@@ -553,155 +396,155 @@ theorem wellTyped_shift (h : WellTyped (before ++ suffix) expression ty) :
   induction h generalizing before suffix with
   | bvar hvar =>
       rw [← hcontext] at hvar
-      rw [shift]
+      simp only [Expr.mapVars, Expr.shift, shift]
       exact .bvar (Typing.hasVar_shift hvar)
-  | reject => rw [shift]; exact .reject
+  | reject => simp only [Expr.mapVars, Expr.shift, shift]; exact .reject
   | discrete hv ih =>
-      rw [shift]
+      simp only [Expr.mapVars, Expr.shift, shift]
       exact .discrete (ih (before := before) (suffix := suffix) hcontext)
   | discreteMean hv ih =>
-      rw [shift]
+      simp only [Expr.mapVars, Expr.shift, shift]
       exact .discreteMean (ih (before := before) (suffix := suffix) hcontext)
-  | unit => rw [shift]; exact .unit
-  | bool => rw [shift]; exact .bool
-  | realE => rw [shift]; exact .realE
-  | realG zero => rw [shift]; exact .realG zero
+  | unit => simp only [Expr.mapVars, Expr.shift, shift]; exact .unit
+  | bool => simp only [Expr.mapVars, Expr.shift, shift]; exact .bool
+  | realE => simp only [Expr.mapVars, Expr.shift, shift]; exact .realE
+  | realG zero => simp only [Expr.mapVars, Expr.shift, shift]; exact .realG zero
   | lam h ih =>
-      rw [shift]
+      simp only [Expr.mapVars, Expr.shift, shift]
       exact .lam (ih (before := _ :: before) (suffix := suffix) (by simpa using hcontext))
   | fix h ih =>
-      rw [shift]
+      simp only [Expr.mapVars, Expr.shift, shift]
       exact .fix (ih (before := _ :: _ :: before) (suffix := suffix) (by simpa using hcontext))
   | app hf hx ihf ihx =>
-      rw [shift]
+      simp only [Expr.mapVars, Expr.shift, shift]
       exact .app (ihf (before := before) (suffix := suffix) hcontext)
         (ihx (before := before) (suffix := suffix) hcontext)
   | pair hl hr ihl ihr =>
-      rw [shift]
+      simp only [Expr.mapVars, Expr.shift, shift]
       exact .pair (ihl (before := before) (suffix := suffix) hcontext)
         (ihr (before := before) (suffix := suffix) hcontext)
   | fst hp ih =>
-      rw [shift]
+      simp only [Expr.mapVars, Expr.shift, shift]
       exact .fst (ih (before := before) (suffix := suffix) hcontext)
   | snd hp ih =>
-      rw [shift]
+      simp only [Expr.mapVars, Expr.shift, shift]
       exact .snd (ih (before := before) (suffix := suffix) hcontext)
   | inl hv ih =>
-      rw [shift]
+      simp only [Expr.mapVars, Expr.shift, shift]
       exact .inl (ih (before := before) (suffix := suffix) hcontext)
   | inr hv ih =>
-      rw [shift]
+      simp only [Expr.mapVars, Expr.shift, shift]
       exact .inr (ih (before := before) (suffix := suffix) hcontext)
   | matchSum hs hl hr ihs ihl ihr =>
-      rw [shift]
+      simp only [Expr.mapVars, Expr.shift, shift]
       exact .matchSum (ihs (before := before) (suffix := suffix) hcontext)
         (ihl (before := _ :: before) (suffix := suffix) (by simpa using hcontext))
         (ihr (before := _ :: before) (suffix := suffix) (by simpa using hcontext))
-  | nil => rw [shift]; exact .nil
+  | nil => simp only [Expr.mapVars, Expr.shift, shift]; exact .nil
   | cons hh ht ihh iht =>
-      rw [shift]
+      simp only [Expr.mapVars, Expr.shift, shift]
       exact .cons (ihh (before := before) (suffix := suffix) hcontext)
         (iht (before := before) (suffix := suffix) hcontext)
   | matchList hs hn hc ihs ihn ihc =>
-      rw [shift]
+      simp only [Expr.mapVars, Expr.shift, shift]
       exact .matchList (ihs (before := before) (suffix := suffix) hcontext)
         (ihn (before := before) (suffix := suffix) hcontext)
         (ihc (before := _ :: _ :: before) (suffix := suffix) (by simpa using hcontext))
   | ite hc ht he ihc iht ihe =>
-      rw [shift]
+      simp only [Expr.mapVars, Expr.shift, shift]
       exact .ite (ihc (before := before) (suffix := suffix) hcontext)
         (iht (before := before) (suffix := suffix) hcontext)
         (ihe (before := before) (suffix := suffix) hcontext)
   | letE hv hb ihv ihb =>
-      rw [shift]
+      simp only [Expr.mapVars, Expr.shift, shift]
       exact .letE (ihv (before := before) (suffix := suffix) hcontext)
         (ihb (before := _ :: before) (suffix := suffix) (by simpa using hcontext))
   | sub hv h ih =>
       exact .sub (ih (before := before) (suffix := suffix) hcontext) h
   | negE hv ih =>
-      rw [shift]
+      simp only [Expr.mapVars, Expr.shift, shift]
       exact .negE (ih (before := before) (suffix := suffix) hcontext)
   | negG hv ih =>
-      rw [shift]
+      simp only [Expr.mapVars, Expr.shift, shift]
       exact .negG (ih (before := before) (suffix := suffix) hcontext)
   | addE hl hr ihl ihr =>
-      rw [shift]
+      simp only [Expr.mapVars, Expr.shift, shift]
       exact .addE (ihl (before := before) (suffix := suffix) hcontext)
         (ihr (before := before) (suffix := suffix) hcontext)
   | addG hl hr ihl ihr =>
-      rw [shift]
+      simp only [Expr.mapVars, Expr.shift, shift]
       exact .addG (ihl (before := before) (suffix := suffix) hcontext)
         (ihr (before := before) (suffix := suffix) hcontext)
   | mulGE hl hr ihl ihr =>
-      rw [shift]
+      simp only [Expr.mapVars, Expr.shift, shift]
       exact .mulGE (ihl (before := before) (suffix := suffix) hcontext)
         (ihr (before := before) (suffix := suffix) hcontext)
   | mulGG hl hr ihl ihr =>
-      rw [shift]
+      simp only [Expr.mapVars, Expr.shift, shift]
       exact .mulGG (ihl (before := before) (suffix := suffix) hcontext)
         (ihr (before := before) (suffix := suffix) hcontext)
   | divEG hl hr ihl ihr =>
-      rw [shift]
+      simp only [Expr.mapVars, Expr.shift, shift]
       exact .divEG (ihl (before := before) (suffix := suffix) hcontext)
         (ihr (before := before) (suffix := suffix) hcontext)
   | divGG hl hr ihl ihr =>
-      rw [shift]
+      simp only [Expr.mapVars, Expr.shift, shift]
       exact .divGG (ihl (before := before) (suffix := suffix) hcontext)
         (ihr (before := before) (suffix := suffix) hcontext)
   | lt hl hr ihl ihr =>
-      rw [shift]
+      simp only [Expr.mapVars, Expr.shift, shift]
       exact .lt (ihl (before := before) (suffix := suffix) hcontext)
         (ihr (before := before) (suffix := suffix) hcontext)
   | uniform hl hr ihl ihr =>
-      rw [shift]
+      simp only [Expr.mapVars, Expr.shift, shift]
       exact .uniform (ihl (before := before) (suffix := suffix) hcontext)
         (ihr (before := before) (suffix := suffix) hcontext)
   | uniformMean hl hr ihl ihr =>
-      rw [shift]
+      simp only [Expr.mapVars, Expr.shift, shift]
       exact .uniformMean (ihl (before := before) (suffix := suffix) hcontext)
         (ihr (before := before) (suffix := suffix) hcontext)
   | gaussian hl hr ihl ihr =>
-      rw [shift]
+      simp only [Expr.mapVars, Expr.shift, shift]
       exact .gaussian (ihl (before := before) (suffix := suffix) hcontext)
         (ihr (before := before) (suffix := suffix) hcontext)
   | gaussianMean hl hr ihl ihr =>
-      rw [shift]
+      simp only [Expr.mapVars, Expr.shift, shift]
       exact .gaussianMean (ihl (before := before) (suffix := suffix) hcontext)
         (ihr (before := before) (suffix := suffix) hcontext)
   | beta hl hr ihl ihr =>
-      rw [shift]
+      simp only [Expr.mapVars, Expr.shift, shift]
       exact .beta (ihl (before := before) (suffix := suffix) hcontext)
         (ihr (before := before) (suffix := suffix) hcontext)
   | betaMean hl hr ihl ihr =>
-      rw [shift]
+      simp only [Expr.mapVars, Expr.shift, shift]
       exact .betaMean (ihl (before := before) (suffix := suffix) hcontext)
         (ihr (before := before) (suffix := suffix) hcontext)
   | gamma hl hr ihl ihr =>
-      rw [shift]
+      simp only [Expr.mapVars, Expr.shift, shift]
       exact .gamma (ihl (before := before) (suffix := suffix) hcontext)
         (ihr (before := before) (suffix := suffix) hcontext)
   | gammaMean hl hr ihl ihr =>
-      rw [shift]
+      simp only [Expr.mapVars, Expr.shift, shift]
       exact .gammaMean (ihl (before := before) (suffix := suffix) hcontext)
         (ihr (before := before) (suffix := suffix) hcontext)
   | poisson hv ih =>
-      rw [shift]
+      simp only [Expr.mapVars, Expr.shift, shift]
       exact .poisson (ih (before := before) (suffix := suffix) hcontext)
   | poissonMean hv ih =>
-      rw [shift]
+      simp only [Expr.mapVars, Expr.shift, shift]
       exact .poissonMean (ih (before := before) (suffix := suffix) hcontext)
   | bernoulli hv ih =>
-      rw [shift]
+      simp only [Expr.mapVars, Expr.shift, shift]
       exact .bernoulli (ih (before := before) (suffix := suffix) hcontext)
   | bernoulliMean hv ih =>
-      rw [shift]
+      simp only [Expr.mapVars, Expr.shift, shift]
       exact .bernoulliMean (ih (before := before) (suffix := suffix) hcontext)
   | exponential hv ih =>
-      rw [shift]
+      simp only [Expr.mapVars, Expr.shift, shift]
       exact .exponential (ih (before := before) (suffix := suffix) hcontext)
 
   | exponentialMean hv ih =>
-      rw [shift]
+      simp only [Expr.mapVars, Expr.shift, shift]
       exact .exponentialMean (ih (before := before) (suffix := suffix) hcontext)
 
 theorem wellTyped_substAt (h : WellTyped (before ++ binder :: suffix) expression ty)
@@ -714,174 +557,174 @@ theorem wellTyped_substAt (h : WellTyped (before ++ binder :: suffix) expression
       rw [← hcontext] at hvar
       rcases Typing.hasVar_subst hvar with equal | shifted
       · rcases equal with ⟨rfl, rfl⟩
-        rw [substAt, if_pos rfl]
+        simp only [Expr.mapVars, Expr.substAt, substAt, ↓reduceIte]
         simpa only [List.nil_append, List.append_assoc, List.length_nil] using
           (wellTyped_shift (before := []) (suffix := suffix) (inserted := before)
             replacementTyped)
       · rcases shifted with ⟨notEqual, shifted⟩
-        rw [substAt, if_neg notEqual]
+        simp only [Expr.mapVars, Expr.substAt, substAt, if_neg notEqual]
         exact .bvar shifted
-  | reject => rw [substAt]; exact .reject
+  | reject => simp only [Expr.mapVars, Expr.substAt, substAt]; exact .reject
   | discrete hv ih =>
-      rw [substAt]
+      simp only [Expr.mapVars, Expr.substAt, substAt]
       exact .discrete (ih replacementTyped (before := before) (suffix := suffix) hcontext)
   | discreteMean hv ih =>
-      rw [substAt]
+      simp only [Expr.mapVars, Expr.substAt, substAt]
       exact .discreteMean (ih replacementTyped (before := before) (suffix := suffix) hcontext)
-  | unit => rw [substAt]; exact .unit
-  | bool => rw [substAt]; exact .bool
-  | realE => rw [substAt]; exact .realE
-  | realG zero => rw [substAt]; exact .realG zero
+  | unit => simp only [Expr.mapVars, Expr.substAt, substAt]; exact .unit
+  | bool => simp only [Expr.mapVars, Expr.substAt, substAt]; exact .bool
+  | realE => simp only [Expr.mapVars, Expr.substAt, substAt]; exact .realE
+  | realG zero => simp only [Expr.mapVars, Expr.substAt, substAt]; exact .realG zero
   | lam h ih =>
-      rw [substAt]
+      simp only [Expr.mapVars, Expr.substAt, substAt]
       exact .lam (ih replacementTyped (before := _ :: before) (suffix := suffix)
         (by simpa using hcontext))
   | fix h ih =>
-      rw [substAt]
+      simp only [Expr.mapVars, Expr.substAt, substAt]
       exact .fix (ih replacementTyped (before := _ :: _ :: before) (suffix := suffix)
         (by simpa using hcontext))
   | app hf hx ihf ihx =>
-      rw [substAt]
+      simp only [Expr.mapVars, Expr.substAt, substAt]
       exact .app (ihf replacementTyped (before := before) (suffix := suffix) hcontext)
         (ihx replacementTyped (before := before) (suffix := suffix) hcontext)
   | pair hl hr ihl ihr =>
-      rw [substAt]
+      simp only [Expr.mapVars, Expr.substAt, substAt]
       exact .pair (ihl replacementTyped (before := before) (suffix := suffix) hcontext)
         (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
   | fst hp ih =>
-      rw [substAt]
+      simp only [Expr.mapVars, Expr.substAt, substAt]
       exact .fst (ih replacementTyped (before := before) (suffix := suffix) hcontext)
   | snd hp ih =>
-      rw [substAt]
+      simp only [Expr.mapVars, Expr.substAt, substAt]
       exact .snd (ih replacementTyped (before := before) (suffix := suffix) hcontext)
   | inl hv ih =>
-      rw [substAt]
+      simp only [Expr.mapVars, Expr.substAt, substAt]
       exact .inl (ih replacementTyped (before := before) (suffix := suffix) hcontext)
   | inr hv ih =>
-      rw [substAt]
+      simp only [Expr.mapVars, Expr.substAt, substAt]
       exact .inr (ih replacementTyped (before := before) (suffix := suffix) hcontext)
   | matchSum hs hl hr ihs ihl ihr =>
-      rw [substAt]
+      simp only [Expr.mapVars, Expr.substAt, substAt]
       exact .matchSum
         (ihs replacementTyped (before := before) (suffix := suffix) hcontext)
         (ihl replacementTyped (before := _ :: before) (suffix := suffix)
           (by simpa using hcontext))
         (ihr replacementTyped (before := _ :: before) (suffix := suffix)
           (by simpa using hcontext))
-  | nil => rw [substAt]; exact .nil
+  | nil => simp only [Expr.mapVars, Expr.substAt, substAt]; exact .nil
   | cons hh ht ihh iht =>
-      rw [substAt]
+      simp only [Expr.mapVars, Expr.substAt, substAt]
       exact .cons (ihh replacementTyped (before := before) (suffix := suffix) hcontext)
         (iht replacementTyped (before := before) (suffix := suffix) hcontext)
   | matchList hs hn hc ihs ihn ihc =>
-      rw [substAt]
+      simp only [Expr.mapVars, Expr.substAt, substAt]
       exact .matchList
         (ihs replacementTyped (before := before) (suffix := suffix) hcontext)
         (ihn replacementTyped (before := before) (suffix := suffix) hcontext)
         (ihc replacementTyped (before := _ :: _ :: before) (suffix := suffix)
           (by simpa using hcontext))
   | ite hc ht he ihc iht ihe =>
-      rw [substAt]
+      simp only [Expr.mapVars, Expr.substAt, substAt]
       exact .ite (ihc replacementTyped (before := before) (suffix := suffix) hcontext)
         (iht replacementTyped (before := before) (suffix := suffix) hcontext)
         (ihe replacementTyped (before := before) (suffix := suffix) hcontext)
   | letE hv hb ihv ihb =>
-      rw [substAt]
+      simp only [Expr.mapVars, Expr.substAt, substAt]
       exact .letE (ihv replacementTyped (before := before) (suffix := suffix) hcontext)
         (ihb replacementTyped (before := _ :: before) (suffix := suffix)
           (by simpa using hcontext))
   | sub hv h ih =>
       exact .sub (ih replacementTyped (before := before) (suffix := suffix) hcontext) h
   | negE hv ih =>
-      rw [substAt]
+      simp only [Expr.mapVars, Expr.substAt, substAt]
       exact .negE (ih replacementTyped (before := before) (suffix := suffix) hcontext)
   | negG hv ih =>
-      rw [substAt]
+      simp only [Expr.mapVars, Expr.substAt, substAt]
       exact .negG (ih replacementTyped (before := before) (suffix := suffix) hcontext)
   | addE hl hr ihl ihr =>
-      rw [substAt]
+      simp only [Expr.mapVars, Expr.substAt, substAt]
       exact .addE (ihl replacementTyped (before := before) (suffix := suffix) hcontext)
         (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
   | addG hl hr ihl ihr =>
-      rw [substAt]
+      simp only [Expr.mapVars, Expr.substAt, substAt]
       exact .addG (ihl replacementTyped (before := before) (suffix := suffix) hcontext)
         (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
   | mulGE hl hr ihl ihr =>
-      rw [substAt]
+      simp only [Expr.mapVars, Expr.substAt, substAt]
       exact .mulGE (ihl replacementTyped (before := before) (suffix := suffix) hcontext)
         (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
   | mulGG hl hr ihl ihr =>
-      rw [substAt]
+      simp only [Expr.mapVars, Expr.substAt, substAt]
       exact .mulGG (ihl replacementTyped (before := before) (suffix := suffix) hcontext)
         (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
   | divEG hl hr ihl ihr =>
-      rw [substAt]
+      simp only [Expr.mapVars, Expr.substAt, substAt]
       exact .divEG (ihl replacementTyped (before := before) (suffix := suffix) hcontext)
         (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
   | divGG hl hr ihl ihr =>
-      rw [substAt]
+      simp only [Expr.mapVars, Expr.substAt, substAt]
       exact .divGG (ihl replacementTyped (before := before) (suffix := suffix) hcontext)
         (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
   | lt hl hr ihl ihr =>
-      rw [substAt]
+      simp only [Expr.mapVars, Expr.substAt, substAt]
       exact .lt (ihl replacementTyped (before := before) (suffix := suffix) hcontext)
         (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
   | uniform hl hr ihl ihr =>
-      rw [substAt]
+      simp only [Expr.mapVars, Expr.substAt, substAt]
       exact .uniform (ihl replacementTyped (before := before) (suffix := suffix) hcontext)
         (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
   | uniformMean hl hr ihl ihr =>
-      rw [substAt]
+      simp only [Expr.mapVars, Expr.substAt, substAt]
       exact .uniformMean (ihl replacementTyped (before := before) (suffix := suffix) hcontext)
         (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
   | gaussian hl hr ihl ihr =>
-      rw [substAt]
+      simp only [Expr.mapVars, Expr.substAt, substAt]
       exact .gaussian (ihl replacementTyped (before := before) (suffix := suffix) hcontext)
         (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
   | gaussianMean hl hr ihl ihr =>
-      rw [substAt]
+      simp only [Expr.mapVars, Expr.substAt, substAt]
       exact .gaussianMean (ihl replacementTyped (before := before) (suffix := suffix) hcontext)
         (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
   | beta hl hr ihl ihr =>
-      rw [substAt]
+      simp only [Expr.mapVars, Expr.substAt, substAt]
       exact .beta (ihl replacementTyped (before := before) (suffix := suffix) hcontext)
         (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
   | betaMean hl hr ihl ihr =>
-      rw [substAt]
+      simp only [Expr.mapVars, Expr.substAt, substAt]
       exact .betaMean (ihl replacementTyped (before := before) (suffix := suffix) hcontext)
         (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
   | gamma hl hr ihl ihr =>
-      rw [substAt]
+      simp only [Expr.mapVars, Expr.substAt, substAt]
       exact .gamma (ihl replacementTyped (before := before) (suffix := suffix) hcontext)
         (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
   | gammaMean hl hr ihl ihr =>
-      rw [substAt]
+      simp only [Expr.mapVars, Expr.substAt, substAt]
       exact .gammaMean (ihl replacementTyped (before := before) (suffix := suffix) hcontext)
         (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
   | poisson hv ih =>
-      rw [substAt]
+      simp only [Expr.mapVars, Expr.substAt, substAt]
       exact .poisson (ih replacementTyped (before := before) (suffix := suffix) hcontext)
   | poissonMean hv ih =>
-      rw [substAt]
+      simp only [Expr.mapVars, Expr.substAt, substAt]
       exact .poissonMean (ih replacementTyped (before := before) (suffix := suffix) hcontext)
   | bernoulli hv ih =>
-      rw [substAt]
+      simp only [Expr.mapVars, Expr.substAt, substAt]
       exact .bernoulli (ih replacementTyped (before := before) (suffix := suffix) hcontext)
   | bernoulliMean hv ih =>
-      rw [substAt]
+      simp only [Expr.mapVars, Expr.substAt, substAt]
       exact .bernoulliMean (ih replacementTyped (before := before) (suffix := suffix) hcontext)
   | exponential hv ih =>
-      rw [substAt]
+      simp only [Expr.mapVars, Expr.substAt, substAt]
       exact .exponential (ih replacementTyped (before := before) (suffix := suffix) hcontext)
 
   | exponentialMean hv ih =>
-      rw [substAt]
+      simp only [Expr.mapVars, Expr.substAt, substAt]
       exact .exponentialMean (ih replacementTyped (before := before) (suffix := suffix) hcontext)
 
 theorem wellTyped_substHead (bodyTyped : WellTyped (binder :: suffix) body ty)
     (replacementTyped : WellTyped suffix replacement binder) :
     WellTyped suffix (substHead body replacement) ty := by
-  simpa [substHead] using
+  simpa [substHead, Expr.substHead] using
     wellTyped_substAt (before := []) bodyTyped replacementTyped
 
 theorem wellTyped_substTwo
@@ -930,39 +773,19 @@ theorem realize_shift (expression : AffineExpr sampleCount)
     (environment : Env sampleCount) (amount cutoff : Nat) :
     (expression.shift amount cutoff).realize environment =
       (expression.realize environment).shift amount cutoff := by
-  induction sizeEq : sizeOf expression using Nat.strong_induction_on
-      generalizing expression cutoff with
-  | h size ih =>
-    have recurse (child : AffineExpr sampleCount) (childCutoff : Nat)
-        (smaller : sizeOf child < sizeOf expression) :
-        (child.shift amount childCutoff).realize environment =
-          (child.realize environment).shift amount childCutoff :=
-      ih (sizeOf child) (by rwa [← sizeEq]) child childCutoff rfl
-    cases expression with
-    | _ =>
-        simp (disch := simp_wf) only [shift, realize, Expr.shift, Expr.mapVars, recurse]
-        all_goals repeat' first | rfl | rw [recurse _ _ (by simp_wf; omega)]
+  induction expression generalizing cutoff <;>
+    simp_all [realize, shift, Expr.shift, Expr.mapVars]
 
 set_option maxHeartbeats 800000 in
 theorem realize_substAt (expression replacement : AffineExpr sampleCount)
     (environment : Env sampleCount) (depth : Nat) :
     (substAt depth replacement expression).realize environment =
       Expr.substAt depth (replacement.realize environment) (expression.realize environment) := by
-  induction sizeEq : sizeOf expression using Nat.strong_induction_on
-      generalizing expression depth with
-  | h size ih =>
-    have recurse (child : AffineExpr sampleCount) (childDepth : Nat)
-        (smaller : sizeOf child < sizeOf expression) :
-        (substAt childDepth replacement child).realize environment =
-          Expr.substAt childDepth (replacement.realize environment) (child.realize environment) :=
-      ih (sizeOf child) (by rwa [← sizeEq]) child childDepth rfl
-    cases expression with
-    | bvar index =>
-        simp only [substAt, realize, Expr.substAt, Expr.mapVars]
-        split <;> simp_all only [realize, realize_shift]
-    | _ =>
-        simp (disch := simp_wf) only [substAt, realize, Expr.substAt, Expr.mapVars, recurse]
-        all_goals repeat' first | rfl | rw [recurse _ _ (by simp_wf; omega)]
+  induction expression generalizing depth with
+  | bvar index =>
+      simp only [substAt, Expr.substAt, Expr.mapVars]
+      split <;> simp_all [realize, realize_shift, Expr.mapVars]
+  | _ => simp_all [realize, substAt, Expr.substAt, Expr.mapVars]
 
 theorem realize_substHead (body replacement : AffineExpr sampleCount)
     (environment : Env sampleCount) :
@@ -1018,11 +841,7 @@ set_option maxHeartbeats 800000 in
         simp (disch := simp_wf) only [ofExpr, realize, recurse]
         all_goals repeat' first | rfl | rw [recurse _ (by simp_wf; omega)]
 
-def isValue : AffineExpr n → Bool
-  | .unit | .bool _ | .real _ | .lam _ | .fix _ | .nil => true
-  | .pair left right | .cons left right => left.isValue && right.isValue
-  | .inl value | .inr value => value.isValue
-  | _ => false
+abbrev isValue {n : Nat} : AffineExpr n → Bool := Expr.isValue
 
 @[simp] theorem realize_isValue (expression : AffineExpr n) (environment : Env n) :
     (expression.realize environment).isValue = expression.isValue := by
@@ -1031,20 +850,23 @@ def isValue : AffineExpr n → Bool
     have recurse (child : AffineExpr n) (smaller : sizeOf child < sizeOf expression) :
         (child.realize environment).isValue = child.isValue :=
       ih (sizeOf child) (by rwa [← sizeEq]) child rfl
-    cases expression <;> simp (disch := simp_wf) only [realize, isValue, Expr.isValue,
+    cases expression <;> simp (disch := simp_wf) only [realize, Expr.isValue,
       recurse]
     all_goals repeat' first | rfl | rw [recurse _ (by simp_wf; omega)]
 
-/-- The affine form of a real literal; `none` for any other expression. -/
 def affineValue? : AffineExpr n → Option (Affine n)
   | .real value => some value
   | _ => none
+
+abbrev _root_.Determinize.Spec.Paper.Expr.affineValue? := @AffineExpr.affineValue?
 
 /-- The value of a G-affinity literal, an affine form with zero coefficients; `none` for a
 literal that depends on a draw and for any other expression. -/
 noncomputable def constantValue? : AffineExpr n → Option ℝ
   | .real (constant, coefficients) => if coefficients = 0 then some constant else none
   | _ => none
+
+noncomputable abbrev _root_.Determinize.Spec.Paper.Expr.constantValue? := @AffineExpr.constantValue?
 
 /-- The affine coordinates of a list value of reals, a cons-chain of `real` ending in `nil`:
 the symbolic counterpart of `realListValue?`. -/
@@ -1056,6 +878,8 @@ def affineListValue? : AffineExpr n → Option (List (Affine n))
       | _, _ => none
   | _ => none
 
+abbrev _root_.Determinize.Spec.Paper.Expr.affineListValue? := @AffineExpr.affineListValue?
+
 /-- The constants of a list value of general-affinity reals, the counterpart of `constantValue?`. -/
 noncomputable def constantListValue? : AffineExpr n → Option (List ℝ)
   | .nil => some []
@@ -1064,6 +888,8 @@ noncomputable def constantListValue? : AffineExpr n → Option (List ℝ)
       | some constant, some constants => some (constant :: constants)
       | _, _ => none
   | _ => none
+
+noncomputable abbrev _root_.Determinize.Spec.Paper.Expr.constantListValue? := @AffineExpr.constantListValue?
 
 /-- Realization evaluates the coordinates of a list value pointwise. -/
 theorem realListValue?_realize (expression : AffineExpr n) (environment : Env n) :
@@ -1098,7 +924,7 @@ theorem wellTyped_arr_value_typed (typed : WellTyped context expression (.arr ar
         Ty.Sub.trans hr (by assumption), hb⟩
     · exact Or.inr ⟨a, r, body, he, Ty.Sub.trans (by assumption) ha,
         Ty.Sub.trans hr (by assumption), hb⟩
-  all_goals cases ht <;> simp_all [isValue]
+  all_goals cases ht <;> simp_all [Expr.isValue]
   all_goals exact ⟨_, Ty.Sub.refl _, _, Ty.Sub.refl _, by assumption⟩
 
 theorem wellTyped_prod_value_typed (typed : WellTyped context expression (.prod leftTy rightTy))
@@ -1111,7 +937,7 @@ theorem wellTyped_prod_value_typed (typed : WellTyped context expression (.prod 
     cases sub <;> cases ht
     obtain ⟨l, r, he, hl, hr⟩ := ih value rfl
     exact ⟨l, r, he, hl.sub (by assumption), hr.sub (by assumption)⟩
-  all_goals cases ht <;> simp_all [isValue]
+  all_goals cases ht <;> simp_all [Expr.isValue]
 
 theorem wellTyped_sum_value_typed (typed : WellTyped context expression (.sum leftTy rightTy))
     (value : expression.isValue = true) :
@@ -1124,7 +950,7 @@ theorem wellTyped_sum_value_typed (typed : WellTyped context expression (.sum le
     rcases ih value rfl with ⟨b, he, hb⟩ | ⟨b, he, hb⟩
     · exact Or.inl ⟨b, he, hb.sub (by assumption)⟩
     · exact Or.inr ⟨b, he, hb.sub (by assumption)⟩
-  all_goals cases ht <;> simp_all [isValue]
+  all_goals cases ht <;> simp_all [Expr.isValue]
 
 theorem wellTyped_list_value_typed (typed : WellTyped context expression (.list element))
     (value : expression.isValue = true) :
@@ -1137,7 +963,7 @@ theorem wellTyped_list_value_typed (typed : WellTyped context expression (.list 
     rcases ih value rfl with he | ⟨h, t, he, hh, ht⟩
     · exact Or.inl he
     · exact Or.inr ⟨h, t, he, hh.sub (by assumption), ht.sub (.list (by assumption))⟩
-  all_goals cases ht <;> simp_all [isValue]
+  all_goals cases ht <;> simp_all [Expr.isValue]
 
 theorem wellTyped_bool_value (typed : WellTyped context expression .bool)
     (value : expression.isValue = true) : ∃ result, expression = .bool result := by
@@ -1146,7 +972,7 @@ theorem wellTyped_bool_value (typed : WellTyped context expression .bool)
   case sub h sub ih =>
     cases sub <;> cases ht
     exact ih value rfl
-  all_goals cases ht <;> simp_all [isValue]
+  all_goals cases ht <;> simp_all [Expr.isValue]
 
 theorem wellTyped_real_value (typed : WellTyped context expression (.float affinity))
     (value : expression.isValue = true) : ∃ result, expression = .real result := by
@@ -1154,7 +980,7 @@ theorem wellTyped_real_value (typed : WellTyped context expression (.float affin
   induction typed generalizing affinity
   case sub h sub ih =>
     cases sub <;> cases ht <;> exact ih value rfl
-  all_goals cases ht <;> simp_all [isValue]
+  all_goals cases ht <;> simp_all [Expr.isValue]
 
 theorem wellTyped_arr_value (typed : WellTyped context expression (.arr argument result))
     (value : expression.isValue = true) : (∃ body, expression = .lam body) ∨ ∃ body, expression = .fix body := by
@@ -1182,7 +1008,7 @@ theorem wellTyped_list_value (typed : WellTyped context expression (.list elemen
 theorem wellTyped_cons_inv
     (typed : WellTyped context (.cons head tail) (.list element)) :
     WellTyped context head element ∧ WellTyped context tail (.list element) := by
-  generalize he : AffineExpr.cons head tail = expression at typed
+  generalize he : Expr.cons head tail = expression at typed
   generalize ht : Ty.list element = ty at typed
   induction typed generalizing element
   case sub h sub ih =>
@@ -1194,7 +1020,7 @@ theorem wellTyped_cons_inv
 
 theorem wellTyped_realG_coefficients
     (typed : WellTyped context (.real value) (.float .G)) : value.2 = 0 := by
-  generalize he : AffineExpr.real value = expression at typed
+  generalize he : Expr.real value = expression at typed
   generalize ht : Ty.float .G = ty at typed
   induction typed
   case sub h sub ih =>
@@ -1220,7 +1046,7 @@ theorem wellTyped_list_value_affine {expression : AffineExpr n}
   | nil => exact ⟨[], rfl⟩
   | cons head tail _ ih =>
       obtain ⟨headTyped, tailTyped⟩ := wellTyped_cons_inv typed
-      simp only [isValue, Bool.and_eq_true] at value
+      simp only [Expr.isValue, Bool.and_eq_true] at value
       obtain ⟨coordinate, rfl⟩ := wellTyped_real_value headTyped value.1
       obtain ⟨coordinates, tailEq⟩ := ih tailTyped value.2
       exact ⟨coordinate :: coordinates, by simp [affineListValue?, affineValue?, tailEq]⟩
@@ -1236,7 +1062,7 @@ theorem wellTyped_list_value_constant {expression : AffineExpr n}
   | nil => exact ⟨[], rfl, rfl⟩
   | cons head tail _ ih =>
       obtain ⟨headTyped, tailTyped⟩ := wellTyped_cons_inv typed
-      simp only [isValue, Bool.and_eq_true] at value
+      simp only [Expr.isValue, Bool.and_eq_true] at value
       obtain ⟨coordinate, rfl⟩ := wellTyped_real_value headTyped value.1
       rcases coordinate with ⟨constant, coefficients⟩
       obtain rfl : coefficients = 0 := wellTyped_realG_coefficients headTyped
@@ -1491,11 +1317,11 @@ noncomputable def symbolicReduce : AffineExpr n → SymbolicAction n
         (fun next => .app next argument.weakenSamples)
   | .fst pairValue =>
       if pairValue.isValue then match pairValue with
-        | AffineExpr.pair left _ => .next left | _ => .stuck
+        | Expr.pair left _ => .next left | _ => .stuck
       else (symbolicReduce pairValue).wrap .fst .fst
   | .snd pairValue =>
       if pairValue.isValue then match pairValue with
-        | AffineExpr.pair _ right => .next right | _ => .stuck
+        | Expr.pair _ right => .next right | _ => .stuck
       else (symbolicReduce pairValue).wrap .snd .snd
   | .matchSum scrutinee left right =>
       if scrutinee.isValue then
@@ -1695,6 +1521,8 @@ noncomputable def symbolicReduce : AffineExpr n → SymbolicAction n
       else (symbolicReduce shape).wrap (fun next => .gamma kind next rate)
         (fun next => .gamma kind next rate.weakenSamples)
 
+noncomputable abbrev _root_.Determinize.Spec.Paper.Expr.symbolicReduce := @AffineExpr.symbolicReduce
+
 theorem symbolicReduce_app_eq
     (function operand : AffineExpr n) : symbolicReduce (.app function operand) =
     if function.isValue then
@@ -1708,6 +1536,7 @@ theorem symbolicReduce_app_eq
     else (symbolicReduce function).wrap (fun next => .app next operand)
       (fun next => .app next operand.weakenSamples) := by
   rw [symbolicReduce.eq_def]
+  rfl
 
 theorem symbolicReduce_fst_eq
     (pairValue : AffineExpr n) : symbolicReduce (.fst pairValue) =
@@ -1715,6 +1544,7 @@ theorem symbolicReduce_fst_eq
       | .pair left _ => .next left | _ => .stuck
     else (symbolicReduce pairValue).wrap .fst .fst := by
   rw [symbolicReduce.eq_def]
+  rfl
 
 theorem symbolicReduce_snd_eq
     (pairValue : AffineExpr n) : symbolicReduce (.snd pairValue) =
@@ -1722,6 +1552,7 @@ theorem symbolicReduce_snd_eq
       | .pair _ right => .next right | _ => .stuck
     else (symbolicReduce pairValue).wrap .snd .snd := by
   rw [symbolicReduce.eq_def]
+  rfl
 
 theorem symbolicReduce_matchSum_eq
     (scrutinee left right : AffineExpr n) :
@@ -1734,6 +1565,7 @@ theorem symbolicReduce_matchSum_eq
         (fun next => .matchSum next left right)
         (fun next => .matchSum next left.weakenSamples right.weakenSamples) := by
   rw [symbolicReduce.eq_def]
+  rfl
 
 theorem symbolicReduce_matchList_eq
     (scrutinee nilCase consCase : AffineExpr n) :
@@ -1747,6 +1579,7 @@ theorem symbolicReduce_matchList_eq
         (fun next => .matchList next nilCase.weakenSamples
           consCase.weakenSamples) := by
   rw [symbolicReduce.eq_def]
+  rfl
 
 theorem symbolicReduce_ite_eq
     (condition thenBranch elseBranch : AffineExpr n) :
@@ -1759,6 +1592,7 @@ theorem symbolicReduce_ite_eq
         (fun next => .ite next thenBranch elseBranch)
         (fun next => .ite next thenBranch.weakenSamples elseBranch.weakenSamples) := by
   rw [symbolicReduce.eq_def]
+  rfl
 
 theorem symbolicReduce_let_eq
     (value body : AffineExpr n) :

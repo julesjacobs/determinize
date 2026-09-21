@@ -86,7 +86,6 @@ def resultCertificateText (source : Checking.Core) (subject : Subject) (candidat
   "  first := fun i => firstValues[i]\n  firstValid := by decide +kernel\n" ++
   "  second := fun i => secondValues[i]\n  secondValid := by decide +kernel\n" ++
   "  rejection := fun i => rejectionValues[i]\n  rejectionValid := by decide +kernel\n" ++
-  "  momentsValid := by decide +kernel\n" ++
   "\nabbrev statistics := solution.statistics\n" ++
   "\ntheorem checkedResult : Determinize.Spec.RewardModel.ResultMatches model\n" ++
   "    (checkedSubject.program checkedSource) statistics :=\n" ++
@@ -118,6 +117,9 @@ def writeResult (outputPath : System.FilePath) (source : Checking.Core) (subject
   let metadata := Lean.Json.mkObj [
     ("answer", Lean.toJson (rational statistics.firstMoment)),
     ("return_mass", Lean.toJson (rational statistics.returnMass)),
+    ("kernel_checked", Lean.toJson false),
+    ("certificate_status", Lean.toJson "generated"),
+    ("termination_statistics_scope", Lean.toJson "graph"),
     ("rejection_probability", Lean.toJson (rational (solution.rejection model.initial))),
     ("divergence_probability", Lean.toJson (rational (1-statistics.returnMass-solution.rejection model.initial))),
     ("second_moment", Lean.toJson (rational statistics.secondMoment)),

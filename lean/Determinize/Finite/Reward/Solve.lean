@@ -59,8 +59,18 @@ structure Solution (model : Spec.RewardModel.Model) where
   rejection : Fin model.size → Rat
   rejectionValid : (⟨rejection, 0⟩ : Spec.FiniteModel.ResultCertificate
     (rejectionQuery model.control boundary.dead)).Equations _
-  momentsValid : Proof.RewardModel.MomentEquations (Proof.RewardModel.cut model boundary.dead)
-    (fun moment => match moment with | .mass => mass | .first => first | .second => second)
+
+theorem Solution.momentsValid {model : Spec.RewardModel.Model} (solution : Solution model) : Proof.RewardModel.MomentEquations (Proof.RewardModel.cut model solution.boundary.dead)
+    (fun moment => match moment with | .mass => solution.mass | .first => solution.first | .second => solution.second) := by
+  intro moment i
+  have mass := solution.massValid i
+  have first := solution.firstValid i
+  have second := solution.secondValid i
+  cases moment <;> cases dead : solution.boundary.dead i <;> cases kind : model.kind i <;>
+    simp_all [Proof.RewardModel.cut, cut, rewards, Spec.RewardModel.Model.control,
+      firstRhs, secondRhs, Proof.RewardModel.translatedValue,
+      Moment.rational, mul_add, List.sum_map_add, ← Proof.RewardModel.control_sum,
+      pow_two, mul_assoc, add_comm, add_assoc]
 
 def solve (model : Spec.RewardModel.Model) (limits : SolveLimits := {}) : Except String (Solution model) := do
   if model.size > limits.maxStates then
@@ -72,11 +82,8 @@ def solve (model : Spec.RewardModel.Model) (limits : SolveLimits := {}) : Except
   let first ← solveRhs stopped (firstRhs model boundary.dead mass.val)
   let second ← solveRhs stopped (secondRhs model boundary.dead mass.val first.val)
   let rejection ← solveValues (rejectionQuery model.control boundary.dead) limits
-  if correct : Proof.RewardModel.MomentEquations (Proof.RewardModel.cut model boundary.dead)
-      (fun moment => match moment with | .mass => mass.val | .first => first.val | .second => second.val) then
-    return ⟨boundary, paths.val, paths.property, mass.val, mass.property,
-      first.val, first.property, second.val, second.property, rejection.val, rejection.property, correct⟩
-  else throw "additive moment equations failed validation"
+  return ⟨boundary, paths.val, paths.property, mass.val, mass.property,
+    first.val, first.property, second.val, second.property, rejection.val, rejection.property⟩
 
 def Solution.statistics {model : Spec.RewardModel.Model} (solution : Solution model) :
     Spec.FiniteModel.OutputStatistics :=

@@ -17,10 +17,12 @@ def OutputStatistics.conditionalVariance (statistics : OutputStatistics) : Optio
     some (statistics.secondMoment / statistics.returnMass -
       (statistics.firstMoment / statistics.returnMass) ^ 2)
 
-/-- Exact mass and moments of the complete output law, including nonterminating programs. -/
-def OutputStatistics.Matches (statistics : OutputStatistics) (law : Measure ℝ) : Prop :=
-  law.real Set.univ = (statistics.returnMass : ℝ) ∧
-    (∫ x : ℝ, x ∂law) = (statistics.firstMoment : ℝ) ∧
-    (∫ x : ℝ, x ^ 2 ∂law) = (statistics.secondMoment : ℝ)
+/-- Finite mass and genuine first and second moments of the complete output law. -/
+structure OutputStatistics.Matches (statistics : OutputStatistics) (law : Measure ℝ) : Prop where
+  finite : IsFiniteMeasure law
+  squareIntegrable : Integrable (fun x : ℝ => x ^ 2) law
+  mass : law.real Set.univ = (statistics.returnMass : ℝ)
+  first : (∫ x : ℝ, x ∂law) = (statistics.firstMoment : ℝ)
+  second : (∫ x : ℝ, x ^ 2 ∂law) = (statistics.secondMoment : ℝ)
 
 end Determinize.Spec.FiniteModel

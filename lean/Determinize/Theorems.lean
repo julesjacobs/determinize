@@ -1,3 +1,4 @@
+import Determinize.Proof.RewardModel.FiniteIntegrability
 import Determinize.Spec.Main
 import Determinize.Spec.Traces.Main
 import Determinize.Proof.Soundness
@@ -48,6 +49,9 @@ theorem returnedExtendedExpectation : Spec.conditionalExtendedExpectationThm :=
 theorem conditionalTraceVarianceDecomposition : Spec.Traces.conditionalVarianceThm :=
   Proof.Traces.conditionalVarianceSoundness
 
+theorem finiteRewardIntegrability : Spec.RewardModel.finiteIntegrabilityThm :=
+  Proof.RewardModel.finite_integrable
+
 end Determinize.Theorems
 
 #print axioms Determinize.Theorems.expectationPreservation
@@ -64,3 +68,5 @@ end Determinize.Theorems
 #print axioms Determinize.Theorems.conditionalVarianceNonIncrease
 #print axioms Determinize.Theorems.returnedExtendedExpectation
 #print axioms Determinize.Theorems.conditionalTraceVarianceDecomposition
+
+#print axioms Determinize.Theorems.finiteRewardIntegrability

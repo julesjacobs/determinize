@@ -15,7 +15,7 @@ class WorkflowTests(unittest.TestCase):
             result = subprocess.run([ROOT / "run.sh", "--result", "model", "input.det"],
                                     cwd=directory, text=True, capture_output=True, timeout=120)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-            self.assertIn("Certified expected terminal reward", result.stdout)
+            self.assertIn("Expected terminal reward (kernel-checkable certificate generated)", result.stdout)
             self.assertTrue((directory / "model.result.lean").is_file())
             self.assertFalse((directory / "input.det.dout").exists())
             (directory / "bad.det").write_text("let x =")

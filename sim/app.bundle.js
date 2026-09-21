@@ -19931,11 +19931,11 @@ ${indent(elseBranch)}`;
   }
   function prettyAffine(affine) {
     const terms = [];
-    if (Math.abs(affine.constant ?? 0) > 1e-12 || Object.keys(affine.terms ?? {}).length === 0) {
+    if ((affine.constant ?? 0) !== 0 || Object.keys(affine.terms ?? {}).length === 0) {
       terms.push(formatNumber2(affine.constant ?? 0));
     }
     for (const [name2, coeff] of Object.entries(affine.terms ?? {})) {
-      if (Math.abs(coeff) <= 1e-12) continue;
+      if (coeff === 0) continue;
       if (coeff === 1) terms.push(name2);
       else if (coeff === -1) terms.push(`-${name2}`);
       else terms.push(`${formatNumber2(coeff)}*${name2}`);
@@ -20375,7 +20375,6 @@ ${indent(elseBranch)}`;
   }
 
   // src/runtime/affine.js
-  var EPS = 1e-12;
   function affineConst(value) {
     return normalize({ constant: value, terms: {} });
   }
@@ -20436,27 +20435,27 @@ ${indent(elseBranch)}`;
   function normalize(a) {
     const terms = {};
     for (const [name2, coeff] of Object.entries(a.terms ?? {})) {
-      if (Math.abs(coeff) > EPS) terms[name2] = coeff;
+      if (coeff !== 0) terms[name2] = coeff;
     }
     return {
-      constant: Math.abs(a.constant ?? 0) <= EPS ? 0 : a.constant,
+      constant: a.constant === 0 ? 0 : a.constant ?? 0,
       terms
     };
   }
   function prettyAffine2(a) {
     const parts = [];
-    if (Math.abs(a.constant) > EPS || Object.keys(a.terms).length === 0) parts.push(formatNumber3(a.constant));
+    if (a.constant !== 0 || Object.keys(a.terms).length === 0) parts.push(formatNumber3(a.constant));
     for (const [name2, coeff] of Object.entries(a.terms)) {
-      if (Math.abs(coeff - 1) <= EPS) parts.push(name2);
-      else if (Math.abs(coeff + 1) <= EPS) parts.push(`-${name2}`);
+      if (coeff === 1) parts.push(name2);
+      else if (coeff === -1) parts.push(`-${name2}`);
       else parts.push(`${formatNumber3(coeff)}*${name2}`);
     }
     return parts.join(" + ").replace(/\+ -/g, "- ");
   }
   function formatNumber3(value) {
-    if (Object.is(value, -0) || Math.abs(value) <= EPS) return "0";
+    if (value === 0) return "0";
     if (Number.isInteger(value)) return String(value);
-    return Number(value.toFixed(12)).toString();
+    return Number(value.toPrecision(13)).toString();
   }
 
   // src/runtime/distributions.js
@@ -20673,14 +20672,13 @@ ${indent(elseBranch)}`;
   }
   function poissonSample(lambda, rng) {
     if (lambda === 0) return 0;
-    const l = Math.exp(-lambda);
-    let k = 0;
-    let p = 1;
-    do {
-      k += 1;
-      p *= rng.positive();
-    } while (p > l);
-    return k - 1;
+    let arrival = -Math.log(rng.positive());
+    let count = 0;
+    while (arrival <= lambda) {
+      count += 1;
+      arrival -= Math.log(rng.positive());
+    }
+    return count;
   }
 
   // src/runtime/rng.js
@@ -21032,7 +21030,7 @@ ${indent(elseBranch)}`;
         if (!isValue(expr.arg)) return stepChild(expr, "arg", ctx);
         if (expr.fn.kind === "Lam") return out(subst(expr.fn.body, expr.fn.param, expr.arg), ctx);
         if (expr.fn.kind === "Rec") {
-          const body = subst(subst(expr.fn.body, expr.fn.name, expr.fn), expr.fn.param, expr.arg);
+          const body = subst(subst(expr.fn.body, expr.fn.param, expr.arg), expr.fn.name, expr.fn);
           return out(body, ctx);
         }
         throw new Error("application to non-function");

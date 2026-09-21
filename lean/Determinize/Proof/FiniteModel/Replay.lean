@@ -103,6 +103,20 @@ instance (candidate : Candidate) (source : Core) (subject : Subject) :
     ⟨fun ⟨a, b, c, d, e, f⟩ => ⟨a, b, c, d, e, f⟩,
       fun ⟨a, b, c, d, e, f⟩ => ⟨a, b, c, d, e, f⟩⟩
 
+/-- Structural evidence shared by replay formats; state labels need not be distinct. -/
+structure Candidate.GraphValid (candidate : Candidate) : Prop where
+  initial_lt : candidate.initial < candidate.states.size
+  matrix : candidate.MatrixValid
+  edges : ∀ i, candidate.EdgesValid i
+
+abbrev Candidate.graphModel (candidate : Candidate) (valid : candidate.GraphValid) : Model where
+  size := candidate.states.size
+  initial := ⟨candidate.initial, valid.initial_lt⟩
+  kind := fun i => (candidate.row i).kind
+  transition := candidate.weight
+  nonnegative := valid.matrix.nonnegative
+  normalized := valid.matrix.normalized
+
 /-- This constructs a finite rational model, but supplies no `Matches` proof. -/
 abbrev Candidate.toModel (candidate : Candidate) {source : Core} {subject : Subject}
     (valid : candidate.ReplayValid source subject) : Model where

@@ -51,7 +51,7 @@ theorem symbolic_generationDraw
   induction typed with
   | uniform lowerTyped upperTyped ihl ihr =>
       rename_i context' lower affinity upper
-      simp only [AffineExpr.skeleton, generationOp, symbolic_skeleton_isValue]
+      simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
       rw [symbolicReduce_uniform_eq]
       by_cases lowerValue : lower.isValue = true
       · simp only [lowerValue, ↓reduceIte]
@@ -73,7 +73,7 @@ theorem symbolic_generationDraw
         exact ihl
   | uniformMean lowerTyped upperTyped ihl ihr =>
       rename_i context' lower affinity upper
-      simp only [AffineExpr.skeleton, generationOp, symbolic_skeleton_isValue]
+      simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
       rw [symbolicReduce_uniform_eq]
       by_cases lowerValue : lower.isValue = true
       · simp only [lowerValue, ↓reduceIte]
@@ -88,7 +88,7 @@ theorem symbolic_generationDraw
         exact ihl
   | gaussian lowerTyped upperTyped ihl ihr =>
       rename_i context' lower affinity upper
-      simp only [AffineExpr.skeleton, generationOp, symbolic_skeleton_isValue]
+      simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
       rw [symbolicReduce_gaussian_eq]
       by_cases lowerValue : lower.isValue = true
       · simp only [lowerValue, ↓reduceIte]
@@ -113,7 +113,7 @@ theorem symbolic_generationDraw
         exact ihl
   | gaussianMean lowerTyped upperTyped ihl ihr =>
       rename_i context' lower affinity upper
-      simp only [AffineExpr.skeleton, generationOp, symbolic_skeleton_isValue]
+      simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
       rw [symbolicReduce_gaussian_eq]
       by_cases lowerValue : lower.isValue = true
       · simp only [lowerValue, ↓reduceIte]
@@ -130,7 +130,7 @@ theorem symbolic_generationDraw
         exact ihl
   | poisson rateTyped ih =>
       rename_i context' rate affinity
-      simp only [AffineExpr.skeleton, generationOp, symbolic_skeleton_isValue]
+      simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
       rw [symbolicReduce_poisson_eq]
       by_cases rateValue : rate.isValue = true
       · simp only [rateValue, ↓reduceIte]
@@ -145,7 +145,7 @@ theorem symbolic_generationDraw
         exact ih
   | poissonMean rateTyped ih =>
       rename_i context' rate affinity
-      simp only [AffineExpr.skeleton, generationOp, symbolic_skeleton_isValue]
+      simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
       rw [symbolicReduce_poisson_eq]
       by_cases rateValue : rate.isValue = true
       · simp only [rateValue, ↓reduceIte]
@@ -155,7 +155,7 @@ theorem symbolic_generationDraw
         exact ih
   | discrete probabilitiesTyped ih =>
       rename_i context' probabilities affinity
-      simp only [AffineExpr.skeleton, generationOp, symbolic_skeleton_isValue,
+      simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue,
         skeleton_literalListArity?, symbolicReduce]
       by_cases value : probabilities.isValue = true
       · simp only [value, ↓reduceIte]
@@ -170,7 +170,7 @@ theorem symbolic_generationDraw
 
   | bernoulli probabilityTyped ih =>
       rename_i context' probability affinity
-      simp only [AffineExpr.skeleton, generationOp, symbolic_skeleton_isValue]
+      simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
       rw [symbolicReduce_bernoulli_eq]
       by_cases probabilityValue : probability.isValue = true
       · simp only [probabilityValue, ↓reduceIte]
@@ -185,7 +185,7 @@ theorem symbolic_generationDraw
         exact ih
   | bernoulliMean probabilityTyped ih =>
       rename_i context' probability affinity
-      simp only [AffineExpr.skeleton, generationOp, symbolic_skeleton_isValue]
+      simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
       rw [symbolicReduce_bernoulli_eq]
       by_cases probabilityValue : probability.isValue = true
       · simp only [probabilityValue, ↓reduceIte]
@@ -195,7 +195,7 @@ theorem symbolic_generationDraw
         exact ih
   | exponential rateTyped ih =>
       rename_i context' rate affinity
-      simp only [AffineExpr.skeleton, generationOp, symbolic_skeleton_isValue]
+      simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
       rw [symbolicReduce_exponential_eq]
       by_cases rateValue : rate.isValue = true
       · simp only [rateValue, ↓reduceIte]
@@ -213,7 +213,7 @@ theorem symbolic_generationDraw
         exact ih
   | exponentialMean rateTyped ih =>
       rename_i context' rate affinity
-      simp only [AffineExpr.skeleton, generationOp, symbolic_skeleton_isValue]
+      simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
       rw [symbolicReduce_exponential_eq]
       by_cases rateValue : rate.isValue = true
       · simp only [rateValue, ↓reduceIte]
@@ -225,7 +225,7 @@ theorem symbolic_generationDraw
         exact ih
   | beta lowerTyped upperTyped ihl ihr =>
       rename_i context' lower upper affinity
-      simp only [AffineExpr.skeleton, generationOp, symbolic_skeleton_isValue]
+      simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
       rw [symbolicReduce_beta_eq]
       by_cases lowerValue : lower.isValue = true
       · simp only [lowerValue, ↓reduceIte]
@@ -252,7 +252,7 @@ theorem symbolic_generationDraw
         exact ihl
   | betaMean lowerTyped upperTyped ihl ihr =>
       rename_i context' lower upper affinity
-      simp only [AffineExpr.skeleton, generationOp, symbolic_skeleton_isValue]
+      simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
       rw [symbolicReduce_beta_eq]
       by_cases lowerValue : lower.isValue = true
       · simp only [lowerValue, ↓reduceIte]
@@ -271,7 +271,7 @@ theorem symbolic_generationDraw
         exact ihl
   | gamma lowerTyped upperTyped ihl ihr =>
       rename_i context' lower affinity upper
-      simp only [AffineExpr.skeleton, generationOp, symbolic_skeleton_isValue]
+      simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
       rw [symbolicReduce_gamma_eq]
       by_cases lowerValue : lower.isValue = true
       · simp only [lowerValue, ↓reduceIte]
@@ -296,7 +296,7 @@ theorem symbolic_generationDraw
         exact ihl
   | gammaMean lowerTyped upperTyped ihl ihr =>
       rename_i context' lower affinity upper
-      simp only [AffineExpr.skeleton, generationOp, symbolic_skeleton_isValue]
+      simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
       rw [symbolicReduce_gamma_eq]
       by_cases lowerValue : lower.isValue = true
       · simp only [lowerValue, ↓reduceIte]
@@ -313,7 +313,7 @@ theorem symbolic_generationDraw
         exact ihl
   | discreteMean probabilitiesTyped ih =>
       rename_i context' probabilities affinity
-      simp only [AffineExpr.skeleton, generationOp, symbolic_skeleton_isValue,
+      simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue,
         skeleton_literalListArity?, symbolicReduce]
       by_cases value : probabilities.isValue = true
       · simp only [value, ↓reduceIte]
@@ -322,7 +322,7 @@ theorem symbolic_generationDraw
       · simpa [value, generationDraw_wrap] using ih
   | sub _ _ ih => exact ih
   | _ =>
-      simp only [AffineExpr.skeleton, generationOp, symbolic_skeleton_isValue]
+      simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
       rw [symbolicReduce.eq_def]
       iterate 5
         all_goals try split

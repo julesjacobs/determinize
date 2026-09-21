@@ -24,6 +24,8 @@ class AdditiveTests(unittest.TestCase):
             result, prefix = generate(Path(tmp), GEOMETRIC, 'source', '--additive', '--max-states', '100')
             self.assertEqual(result.returncode, 0, result.stderr)
             data = json.loads(Path(str(prefix) + '.result.json').read_text())
+            self.assertFalse(data['kernel_checked'])
+            self.assertEqual(data['termination_statistics_scope'], 'graph')
             self.assertEqual((data['return_mass'], data['answer'], data['second_moment'],
                               data['conditional_variance']), ('1', '1', '3', '2'))
             self.assertLess(data['states'], 100)
@@ -34,6 +36,7 @@ class AdditiveTests(unittest.TestCase):
             text = certificate.read_text()
             self.assertNotIn("boundFirstValues", text)
             self.assertNotIn("bounds :=", text)
+            self.assertNotIn("momentsValid :=", text)
             for old, new in [
                 ('first := fun i => firstValues[i]', 'first := fun _ => 12345'),
                 ('mass := fun i => massValues[i]', 'mass := fun _ => 0'),

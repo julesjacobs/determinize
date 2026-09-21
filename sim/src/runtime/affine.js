@@ -1,5 +1,3 @@
-const EPS = 1e-12;
-
 export function affineConst(value) {
   return normalize({ constant: value, terms: {} });
 }
@@ -77,27 +75,27 @@ export function evalAffine(a, env) {
 export function normalize(a) {
   const terms = {};
   for (const [name, coeff] of Object.entries(a.terms ?? {})) {
-    if (Math.abs(coeff) > EPS) terms[name] = coeff;
+    if (coeff !== 0) terms[name] = coeff;
   }
   return {
-    constant: Math.abs(a.constant ?? 0) <= EPS ? 0 : a.constant,
+    constant: a.constant === 0 ? 0 : (a.constant ?? 0),
     terms,
   };
 }
 
 export function prettyAffine(a) {
   const parts = [];
-  if (Math.abs(a.constant) > EPS || Object.keys(a.terms).length === 0) parts.push(formatNumber(a.constant));
+  if (a.constant !== 0 || Object.keys(a.terms).length === 0) parts.push(formatNumber(a.constant));
   for (const [name, coeff] of Object.entries(a.terms)) {
-    if (Math.abs(coeff - 1) <= EPS) parts.push(name);
-    else if (Math.abs(coeff + 1) <= EPS) parts.push(`-${name}`);
+    if (coeff === 1) parts.push(name);
+    else if (coeff === -1) parts.push(`-${name}`);
     else parts.push(`${formatNumber(coeff)}*${name}`);
   }
   return parts.join(" + ").replace(/\+ -/g, "- ");
 }
 
 function formatNumber(value) {
-  if (Object.is(value, -0) || Math.abs(value) <= EPS) return "0";
+  if (value === 0) return "0";
   if (Number.isInteger(value)) return String(value);
-  return Number(value.toFixed(12)).toString();
+  return Number(value.toPrecision(13)).toString();
 }

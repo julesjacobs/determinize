@@ -103,7 +103,7 @@ theorem actualTraceLaw_zero_of_not_value (history : Symbolic.SampleEnv primitive
   unfold actualTraceLaw
   have h : ∀ env, exactMeasure 0 (expression.realize env) = 0 := by
     intro env
-    cases expression <;> simp_all [AffineExpr.realize, exactMeasure, AffineExpr.isValue]
+    cases expression <;> simp_all [AffineExpr.realize, exactMeasure, Expr.isValue]
   simp_rw [h]
   simp
 

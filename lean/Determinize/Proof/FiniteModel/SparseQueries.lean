@@ -41,37 +41,37 @@ private instance (candidate : Candidate) (kind : Fin candidate.states.size → S
     (values : Fin candidate.states.size → Rat) (state : Fin candidate.states.size) :
     Decidable (sparseEquation candidate kind values state) := inferInstanceAs (Decidable (_ = _))
 
-def Candidate.QueryStateValid (candidate : Candidate) {source : Checking.Core} {subject : Subject}
-    (valid : candidate.ReplayValid source subject) (certificate : TerminationCertificate (candidate.toModel valid))
+def Candidate.QueryStateValid (candidate : Candidate)
+    (valid : candidate.GraphValid) (certificate : TerminationCertificate (candidate.graphModel valid))
     (state : Fin candidate.states.size) : Prop :=
   (certificate.output.dead state = true → (candidate.row state).kind = .transient ∧
     ∀ next, 0 < candidate.weight state next → certificate.output.dead next = true) ∧
-  ((cut (candidate.toModel valid) certificate.output.dead).kind state = .transient →
+  ((cut (candidate.graphModel valid) certificate.output.dead).kind state = .transient →
     0 < candidate.weight state (certificate.output.next state) ∧
       certificate.output.rank (certificate.output.next state) < certificate.output.rank state) ∧
-  (∀ moment, sparseEquation candidate (certificate.output.model (candidate.toModel valid) moment).kind
+  (∀ moment, sparseEquation candidate (certificate.output.model (candidate.graphModel valid) moment).kind
     (certificate.output.values moment) state) ∧
-  sparseEquation candidate (rejectionQuery (candidate.toModel valid) certificate.output.dead).kind
+  sparseEquation candidate (rejectionQuery (candidate.graphModel valid) certificate.output.dead).kind
     certificate.rejection state
 
-instance (candidate : Candidate) {source : Checking.Core} {subject : Subject}
-    (valid : candidate.ReplayValid source subject) (certificate : TerminationCertificate (candidate.toModel valid))
+instance (candidate : Candidate)
+    (valid : candidate.GraphValid) (certificate : TerminationCertificate (candidate.graphModel valid))
     (state : Fin candidate.states.size) : Decidable (candidate.QueryStateValid valid certificate state) :=
   inferInstanceAs (Decidable (_ ∧ _ ∧ _ ∧ _))
 
-theorem sparseResults_valid (candidate : Candidate) {source : Checking.Core} {subject : Subject}
-    (valid : candidate.ReplayValid source subject) (certificate : TerminationCertificate (candidate.toModel valid))
-    (states : ∀ state, candidate.QueryStateValid valid certificate state) : certificate.Valid (candidate.toModel valid) := by
+theorem sparseResults_valid (candidate : Candidate)
+    (valid : candidate.GraphValid) (certificate : TerminationCertificate (candidate.graphModel valid))
+    (states : ∀ state, candidate.QueryStateValid valid certificate state) : certificate.Valid (candidate.graphModel valid) := by
   apply terminationStates_valid
   intro state
   refine ⟨(states state).1, (states state).2.1, ?_, ?_⟩
   · intro moment
-    change certificate.output.values moment state = match (certificate.output.model (candidate.toModel valid) moment).kind state with
+    change certificate.output.values moment state = match (certificate.output.model (candidate.graphModel valid) moment).kind state with
       | .returned r => r | .rejected => 0
       | .transient => ∑ next, candidate.weight state next * certificate.output.values moment next
     rw [candidate.weighted_sum state (valid.edges state)]
     exact (states state).2.2.1 moment
-  · change certificate.rejection state = match (rejectionQuery (candidate.toModel valid) certificate.output.dead).kind state with
+  · change certificate.rejection state = match (rejectionQuery (candidate.graphModel valid) certificate.output.dead).kind state with
       | .returned r => r | .rejected => 0
       | .transient => ∑ next, candidate.weight state next * certificate.rejection next
     rw [candidate.weighted_sum state (valid.edges state)]

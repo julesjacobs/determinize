@@ -171,7 +171,7 @@ def result : MomentCertificate model where
 
 def termination : TerminationCertificate model := ⟨result, fun i => rejectionValues[i]⟩
 
-abbrev resultClaim (i : Fin model.size) : Prop := candidate.QueryStateValid machineReplay termination i
+abbrev resultClaim (i : Fin model.size) : Prop := candidate.QueryStateValid graphValid termination i
 {state_proofs}
 def resultEvidence : Vector (Subtype (fun i : Fin model.size => resultClaim i)) model.size := ⟨#[{evidence_entries}], by rfl⟩
 theorem resultIndices : ∀ i : Fin model.size, (resultEvidence[i]).val = i := by decide +kernel
@@ -179,7 +179,7 @@ theorem allResults (i : Fin model.size) : resultClaim i := (resultIndices i) ▸
 
 theorem terminationAccepted : Determinize.Checking.checkTermination model termination = true :=
   (Determinize.Checking.checkTermination_valid model termination).mpr
-    (sparseResults_valid candidate machineReplay termination allResults)
+    (sparseResults_valid candidate graphValid termination allResults)
 
 theorem resultAccepted : Determinize.Checking.checkStatistics model result = true := by
   exact (Determinize.Checking.checkStatistics_valid model result).mpr
@@ -288,6 +288,7 @@ def run(args):
                       exact_answer=str(answer["first"]), return_mass=str(answer["mass"]),
                       second_moment=str(answer["second"]))
         p = answer["mass"]
+        report["termination_statistics_scope"] = "graph"
         report["rejection_probability"] = str(answer["rejection"])
         report["divergence_probability"] = str(1-p-answer["rejection"])
         report["conditional_mean"] = str(answer["first"] / p) if p else None

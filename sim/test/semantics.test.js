@@ -241,3 +241,43 @@ test("bundled examples analyze and run as intended", () => {
     assert.ok(trace.frames.length > 0, example.name);
   }
 });
+
+
+test("recursive parameter shadows the recursive function name", () => {
+  for (const source of [
+    "let f = rec x x => x in f 3",
+    "let f = rec x x => (fun y => x) 2 in f 3",
+    "let f = rec f x => if x <= 0 then 3 else f (x - 1) in f 2",
+  ]) {
+    const { expr } = prepareRuntime(source);
+    assert.equal(runOrdinary(expr, makeStreams(1)).value.value, 3);
+  }
+});
+
+test("affine arithmetic preserves small literals and coefficients", () => {
+  const { expr } = prepareRuntime("1e13 * (1e-13 * 1)");
+  assert.equal(runOrdinary(expr, makeStreams(1)).value.value, 1);
+  const symbolic = runSymbolic(prepareRuntime("1e13 * (1e-13 * uniform[E](0, 1))").expr, makeStreams(1));
+  assert.equal(symbolic.value.affine.terms.v1, 1);
+  assert.equal(affineConst(1e-13).constant, 1e-13);
+  assert.equal(affineScale(affineVar("v"), 1e-13).terms.v, 1e-13);
+  const tiny = runSymbolic(prepareRuntime("1e-13 * uniform[E](0, 1)").expr, makeStreams(1));
+  assert.equal(prettyExpr(tiny.value), "1e-13*v1");
+});
+
+test("Poisson sampling preserves mean and variance above the underflow threshold", () => {
+  const rng = makeStreams(1).rngG;
+  for (const rate of [0, 1, 1000]) {
+    let sum = 0;
+    let squares = 0;
+    const samples = 10000;
+    for (let i = 0; i < samples; i++) {
+      const value = sampleDistribution("Poisson", [rate], rng);
+      assert.ok(Number.isInteger(value) && value >= 0);
+      sum += value;
+      squares += (value - rate) ** 2;
+    }
+    assert.ok(Math.abs(sum / samples - rate) <= 6 * Math.sqrt(rate / samples));
+    assert.ok(Math.abs(squares / samples - rate) <= 0.1 * rate);
+  }
+});

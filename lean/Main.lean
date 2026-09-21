@@ -149,10 +149,10 @@ def main (args : List String) : IO UInt32 := do
         | .complete candidate valid =>
             if o.certifyResult then
               let answer ← Finite.Reward.writeResult outputPath p.checked.source o.subject candidate valid o.solveLimits
-              IO.println s!"Certified expected output ({reprStr o.subject}): {answer}"
+              IO.println s!"Expected output (kernel-checkable certificate generated) ({reprStr o.subject}): {answer}"
             else
               Finite.Reward.write outputPath p.checked.source o.subject candidate valid
-            IO.println s!"Wrote additive {reprStr o.subject} model (paper correspondence checked): {outputPath} ({candidate.states.size} states)"
+            IO.println s!"Wrote additive {reprStr o.subject} model (kernel-checkable paper correspondence): {outputPath} ({candidate.states.size} states)"
         | .incomplete limit discovered expanded edges =>
             throw (IO.userError s!"Incomplete exploration ({reprStr limit}): {discovered} discovered, {expanded} expanded, {edges} edges. No export written.")
         | .failed state failure =>
@@ -162,10 +162,10 @@ def main (args : List String) : IO UInt32 := do
         | .complete candidate valid =>
             if o.certifyResult then
               let answer ← Finite.writeResult outputPath p.checked.source o.subject candidate valid o.solveLimits
-              IO.println s!"Certified expected terminal reward ({reprStr o.subject}): {answer}"
+              IO.println s!"Expected terminal reward (kernel-checkable certificate generated) ({reprStr o.subject}): {answer}"
             else
               Finite.write outputPath p.checked.source o.subject candidate valid
-            IO.println s!"Wrote {reprStr o.subject} model (paper correspondence checked): {outputPath} ({candidate.states.size} states)"
+            IO.println s!"Wrote {reprStr o.subject} model (kernel-checkable paper correspondence): {outputPath} ({candidate.states.size} states)"
         | .incomplete limit discovered expanded edges =>
             throw (IO.userError s!"Incomplete exploration ({reprStr limit}): {discovered} discovered, {expanded} expanded, {edges} edges. No export written.")
         | .failed state failure =>

@@ -31,7 +31,7 @@ theorem checked_conditionalVariance {source : Core} {subject : Subject}
       (((certificate.statistics checked.model).secondMoment / (certificate.statistics checked.model).returnMass -
         ((certificate.statistics checked.model).firstMoment / (certificate.statistics checked.model).returnMass) ^ 2 : Rat) : ℝ) := by
   rw [← checked.correct.2]
-  exact statistics_conditional_variance checked.model _
+  exact statistics_conditional_variance checked.model.outputMeasure _
     (momentCertificate_sound _ _ ((checkStatistics_valid _ _).mp accepted)) positive
 
 def checkTermination (model : Model) (certificate : TerminationCertificate model) : Bool :=

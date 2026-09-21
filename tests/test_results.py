@@ -68,6 +68,9 @@ class ResultTests(unittest.TestCase):
                 self.assertEqual(Fraction(data["answer"]), expected)
                 self.assertEqual(solve_export(prefix), expected)
                 self.assertEqual(data["subject"], subject)
+                self.assertFalse(data["kernel_checked"])
+                self.assertEqual(data["certificate_status"], "generated")
+                self.assertEqual(data["termination_statistics_scope"], "graph")
                 self.assertGreaterEqual(data["rank_bound"], 0)
 
     def test_kernel_results_and_tampering(self):

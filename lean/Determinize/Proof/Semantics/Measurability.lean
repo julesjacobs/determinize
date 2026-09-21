@@ -628,7 +628,7 @@ theorem measurable_code : Measurable code := by
   rw [measurable_iff_comap_le]
   rfl
 
-theorem measurable_skeleton : Measurable Expr.skeleton :=
+theorem measurable_skeleton : Measurable (Expr.skeleton (Literal := ℝ)) :=
   measurable_fst.comp measurable_code
 
 theorem measurable_realCoordinates :

@@ -7,7 +7,7 @@ deriving instance DecidableEq for Edge
 private def rowMass (candidate : Candidate) (i : Fin candidate.states.size) (target : Nat) : Rat :=
   ((candidate.row i).edges.toList.map fun edge => if edge.target = target then edge.probability else 0).sum
 
-private def indexedMass (outcomes : List (Rat × State)) (indices : Nat → Nat) (target : Nat) : Rat :=
+def indexedMass (outcomes : List (Rat × State)) (indices : Nat → Nat) (target : Nat) : Rat :=
   (outcomes.zipIdx.map fun (outcome, k) => if indices k = target then outcome.1 else 0).sum
 
 def Candidate.IndexedRowReplays (candidate : Candidate) (indices : Nat → Nat)
@@ -30,114 +30,54 @@ instance (candidate : Candidate) (indices : Nat → Nat) (i : Fin candidate.stat
   unfold Candidate.IndexedRowReplays
   split <;> infer_instance
 
-theorem indexedRow_replays (candidate : Candidate)
-    (injective : Function.Injective candidate.state) (indices : Nat → Nat)
-    (i : Fin candidate.states.size) (valid : candidate.IndexedRowReplays indices i) :
-    candidate.RowReplays i := by
-  unfold Candidate.IndexedRowReplays at valid
-  unfold Candidate.RowReplays
-  split at valid <;> rename_i action
-  · simp at valid
-  · simpa [action] using valid
-  · simpa [action] using valid
-  · rename_i evidence successors
-    simp only [action]
-    refine ⟨valid.1, valid.2.1, ?_, ?_⟩
-    · intro outcome member positive
-      obtain ⟨k, boundK, hk⟩ := List.getElem_of_mem member
-      have covered := valid.2.2.1 ⟨k, boundK⟩ (by simpa [hk] using positive)
-      obtain ⟨bound, located⟩ := Array.getElem?_eq_some_iff.mp covered.1
-      exact ⟨⟨indices k, bound⟩, by simpa [Candidate.state, hk] using located⟩
-    · intro j
-      have weights : candidate.weight i j = indexedMass successors indices j.val := by
-        by_cases present : ∃ edge ∈ (candidate.row i).edges.toList, edge.target = j.val
-        · obtain ⟨edge, member, target⟩ := present
-          simpa only [rowMass, Candidate.weight, target] using valid.2.2.2 edge member
-        · have leftZero : candidate.weight i j = 0 := by
-            apply List.sum_eq_zero
-            intro q member
-            obtain ⟨edge, inEdges, rfl⟩ := List.mem_map.mp member
-            have different : edge.target ≠ j.val := fun h => present ⟨edge, inEdges, h⟩
-            simp [different]
-          rw [leftZero]
-          symm
-          apply List.sum_eq_zero
-          intro q member
-          obtain ⟨⟨outcome, k⟩, inZip, rfl⟩ := List.mem_map.mp member
-          have position := List.mem_zipIdx' inZip
-          by_cases positive : 0 < outcome.1
-          · obtain ⟨edge, memberEdge, target⟩ := (valid.2.2.1 ⟨k, position.1⟩
-              (by simpa [position.2] using positive)).2
-            have different : indices k ≠ j.val := fun h => present ⟨edge, memberEdge, target.trans h⟩
-            simp [different]
-          · have zero : outcome.1 = 0 := le_antisymm (le_of_not_gt positive)
-              (valid.2.1 outcome (List.fst_mem_of_mem_zipIdx inZip))
-            simp [zero]
-      rw [weights]
-      unfold indexedMass
-      conv_rhs => rw [← List.zipIdx_map_fst 0 successors]
-      simp only [List.map_map]
-      congr 1
-      apply List.map_congr_left
-      intro pair member
-      obtain ⟨outcome, k⟩ := pair
-      have position := List.mem_zipIdx' member
-      by_cases positive : 0 < outcome.1
-      · have covered := valid.2.2.1 ⟨k, position.1⟩ (by simpa [position.2] using positive)
-        obtain ⟨bound, located⟩ := Array.getElem?_eq_some_iff.mp covered.1
-        have stateEq : candidate.state ⟨indices k, bound⟩ = outcome.2 := by
-          simpa [Candidate.state, position.2] using located
-        have eq : indices k = j.val ↔ outcome.2 = candidate.state j := by
-          rw [← stateEq, injective.eq_iff, Fin.ext_iff]
-        simp only [Function.comp_apply, eq]
-      · have zero : outcome.1 = 0 := le_antisymm (le_of_not_gt positive)
-          (valid.2.1 outcome (List.fst_mem_of_mem_zipIdx member))
-        simp [zero]
-
-private def valueFingerprint : Value → Nat
-  | .number r => 5 * (r.num.natAbs + r.den)
-  | .bool b => if b then 1 else 2
-  | _ => 0
-
-def stateFingerprint : State → Nat
-  | .eval _ environment stack =>
-      3 * ((environment.map valueFingerprint).sum + stack.length)
-  | .deliver value stack => 3 * (valueFingerprint value + stack.length) + 1
-  | .rejected => 2
-
-def Candidate.FingerprintsValid (candidate : Candidate) (keys : Fin candidate.states.size → Nat) : Prop :=
-  (∀ i, keys i = stateFingerprint (candidate.state i)) ∧
-    (∀ i j, keys i = keys j → candidate.state i = candidate.state j → i = j)
-
-instance (candidate : Candidate) (keys : Fin candidate.states.size → Nat) :
-    Decidable (candidate.FingerprintsValid keys) := inferInstanceAs (Decidable (_ ∧ _))
-
-theorem fingerprints_injective (candidate : Candidate) (keys : Fin candidate.states.size → Nat)
-    (valid : candidate.FingerprintsValid keys) : Function.Injective candidate.state := by
-  intro i j equal
-  apply valid.2 i j _ equal
-  rw [valid.1 i, valid.1 j, equal]
+theorem indexedRow_weights (candidate : Candidate) (indices : Nat → Nat)
+    (i j : Fin candidate.states.size) (evidence : Evidence) (successors : List (Rat × State))
+    (action : step (candidate.state i) = .ok (.next evidence successors))
+    (replay : candidate.IndexedRowReplays indices i) :
+    candidate.weight i j = indexedMass successors indices j.val := by
+  have valid := replay
+  simp only [Candidate.IndexedRowReplays, action] at valid
+  by_cases present : ∃ edge ∈ (candidate.row i).edges.toList, edge.target = j.val
+  · obtain ⟨edge, member, target⟩ := present
+    simpa only [rowMass, Candidate.weight, target] using valid.2.2.2 edge member
+  · have leftZero : candidate.weight i j = 0 := by
+      apply List.sum_eq_zero
+      intro q member
+      obtain ⟨edge, inEdges, rfl⟩ := List.mem_map.mp member
+      have different : edge.target ≠ j.val := fun h => present ⟨edge, inEdges, h⟩
+      simp [different]
+    rw [leftZero]
+    symm
+    apply List.sum_eq_zero
+    intro q member
+    obtain ⟨⟨outcome, k⟩, inZip, rfl⟩ := List.mem_map.mp member
+    have position := List.mem_zipIdx' inZip
+    by_cases positive : 0 < outcome.1
+    · obtain ⟨edge, memberEdge, target⟩ := (valid.2.2.1 ⟨k, position.1⟩
+        (by simpa [position.2] using positive)).2
+      have different : indices k ≠ j.val := fun h => present ⟨edge, memberEdge, target.trans h⟩
+      simp [different]
+    · have zero : outcome.1 = 0 := le_antisymm (le_of_not_gt positive)
+        (valid.2.1 outcome (List.fst_mem_of_mem_zipIdx inZip))
+      simp [zero]
 
 def Candidate.IndexedReplayValid (candidate : Candidate) (source : Core) (subject : Subject)
-    (keys : Fin candidate.states.size → Nat) (indices : Fin candidate.states.size → Nat → Nat) : Prop :=
+    (indices : Fin candidate.states.size → Nat → Nat) : Prop :=
   candidate.rows.size = candidate.states.size ∧ candidate.initial < candidate.states.size ∧
     candidate.states[candidate.initial]? = some (initialState source subject) ∧
-    Proof.FiniteModel.Binding.Scoped 0 source ∧ candidate.FingerprintsValid keys ∧
+    Proof.FiniteModel.Binding.Scoped 0 source ∧
     candidate.MatrixValid ∧ (∀ i, candidate.EdgesValid i) ∧
     (∀ i, candidate.IndexedRowReplays (indices i) i)
 
 instance (candidate : Candidate) (source : Core) (subject : Subject)
-    (keys : Fin candidate.states.size → Nat) (indices : Fin candidate.states.size → Nat → Nat) :
-    Decidable (candidate.IndexedReplayValid source subject keys indices) :=
-  inferInstanceAs (Decidable (_ ∧ _ ∧ _ ∧ _ ∧ _ ∧ _ ∧ _ ∧ _))
+    (indices : Fin candidate.states.size → Nat → Nat) :
+    Decidable (candidate.IndexedReplayValid source subject indices) :=
+  inferInstanceAs (Decidable (_ ∧ _ ∧ _ ∧ _ ∧ _ ∧ _ ∧ _))
 
 theorem indexedReplay_valid (candidate : Candidate) (source : Core) (subject : Subject)
-    (keys : Fin candidate.states.size → Nat) (indices : Fin candidate.states.size → Nat → Nat)
-    (valid : candidate.IndexedReplayValid source subject keys indices) : candidate.ReplayValid source subject := by
-  obtain ⟨rows, initial, aligned, sourceScoped, fingerprints, matrix, edges, replays⟩ := valid
-  have injective := fingerprints_injective candidate keys fingerprints
-  exact ⟨rows, initial, ⟨aligned, sourceScoped, injective⟩, matrix, edges,
-    fun i => indexedRow_replays candidate injective (indices i) i (replays i)⟩
+    (indices : Fin candidate.states.size → Nat → Nat)
+    (valid : candidate.IndexedReplayValid source subject indices) : candidate.GraphValid :=
+  ⟨valid.2.1, valid.2.2.2.2.1, valid.2.2.2.2.2.1⟩
 
 private theorem sum_edge_weights {n : Nat} (edges : List Edge)
     (bounded : ∀ edge ∈ edges, edge.target < n) :
@@ -176,30 +116,25 @@ private theorem matrix_of_sparse (candidate : Candidate)
     simp [Candidate.weight, terminal i isTerminal, Fin.ext_iff]
 
 def Candidate.IndexedStateValid (candidate : Candidate)
-    (keys : Fin candidate.states.size → Nat) (indices : Fin candidate.states.size → Nat → Nat)
-    (i : Fin candidate.states.size) : Prop :=
-  keys i = stateFingerprint (candidate.state i) ∧
-    (∀ j, keys i = keys j → candidate.state i = candidate.state j → i = j) ∧
-    (((candidate.row i).edges.toList.map Edge.probability).sum = 1) ∧
+    (indices : Fin candidate.states.size → Nat → Nat) (i : Fin candidate.states.size) : Prop :=
+  (((candidate.row i).edges.toList.map Edge.probability).sum = 1) ∧
     ((candidate.row i).kind ≠ .transient → (candidate.row i).edges = #[⟨i.val,1⟩]) ∧
     candidate.EdgesValid i ∧ candidate.IndexedRowReplays (indices i) i
 
-instance (candidate : Candidate) (keys : Fin candidate.states.size → Nat)
-    (indices : Fin candidate.states.size → Nat → Nat) (i : Fin candidate.states.size) :
-    Decidable (candidate.IndexedStateValid keys indices i) :=
-  inferInstanceAs (Decidable (_ ∧ _ ∧ _ ∧ _ ∧ _ ∧ _))
+instance (candidate : Candidate) (indices : Fin candidate.states.size → Nat → Nat)
+    (i : Fin candidate.states.size) : Decidable (candidate.IndexedStateValid indices i) :=
+  inferInstanceAs (Decidable (_ ∧ _ ∧ _ ∧ _))
 
 theorem indexedStates_valid (candidate : Candidate) (source : Core) (subject : Subject)
-    (keys : Fin candidate.states.size → Nat) (indices : Fin candidate.states.size → Nat → Nat)
+    (indices : Fin candidate.states.size → Nat → Nat)
     (initial : candidate.rows.size = candidate.states.size ∧ candidate.initial < candidate.states.size ∧
       candidate.states[candidate.initial]? = some (initialState source subject) ∧
       Proof.FiniteModel.Binding.Scoped 0 source)
-    (rows : ∀ i, candidate.IndexedStateValid keys indices i) :
-    candidate.IndexedReplayValid source subject keys indices := by
-  have edges := fun i => (rows i).2.2.2.2.1
+    (rows : ∀ i, candidate.IndexedStateValid indices i) :
+    candidate.IndexedReplayValid source subject indices := by
+  have edges := fun i => (rows i).2.2.1
   exact ⟨initial.1, initial.2.1, initial.2.2.1, initial.2.2.2,
-    ⟨fun i => (rows i).1, fun i => (rows i).2.1⟩,
-    matrix_of_sparse candidate edges (fun i => (rows i).2.2.1) (fun i => (rows i).2.2.2.1),
-    edges, fun i => (rows i).2.2.2.2.2⟩
+    matrix_of_sparse candidate edges (fun i => (rows i).1) (fun i => (rows i).2.1),
+    edges, fun i => (rows i).2.2.2⟩
 
 end Determinize.Finite

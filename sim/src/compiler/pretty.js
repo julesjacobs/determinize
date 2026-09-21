@@ -200,11 +200,11 @@ function domainErrorSummary(expr) {
 
 function prettyAffine(affine) {
   const terms = [];
-  if (Math.abs(affine.constant ?? 0) > 1e-12 || Object.keys(affine.terms ?? {}).length === 0) {
+  if ((affine.constant ?? 0) !== 0 || Object.keys(affine.terms ?? {}).length === 0) {
     terms.push(formatNumber(affine.constant ?? 0));
   }
   for (const [name, coeff] of Object.entries(affine.terms ?? {})) {
-    if (Math.abs(coeff) <= 1e-12) continue;
+    if (coeff === 0) continue;
     if (coeff === 1) terms.push(name);
     else if (coeff === -1) terms.push(`-${name}`);
     else terms.push(`${formatNumber(coeff)}*${name}`);

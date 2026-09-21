@@ -58,18 +58,20 @@ needed for this finite-model correspondence.
 
 External graph replay validates:
 
-- Initial-state alignment, source scope, dimensions, and distinct stored states.
+- Initial-state alignment, source scope, and dimensions.
 - Every actual exact-machine step and terminal classification.
 - Every positive-probability successor and its exact transition weight.
 - Distinct valid edge indices, positive weights, normalized rows, and absorbing
   terminal rows.
 
-Portable replay supplies successor indices and state fingerprints. Lean checks
-the indices against actual successors and checks each fingerprint; equal-key
-pairs still undergo structural comparison. Sparse row checks imply the original
-full-matrix contract, including zero weights at absent destinations.
+Portable replay supplies successor indices. Lean checks these against actual
+successors, then groups probability mass by destination index. Equal state labels
+are allowed: the replay proof does not require injectivity or fingerprints. Sparse
+row checks establish zero weights at absent destinations as well as the weights of
+stored edges. Native exploration still deduplicates states as an optimization.
 
-Unique extra valid states are allowed. All certificate obligations cover every
+Extra valid states, including duplicate labels, are allowed in portable replay.
+All certificate obligations cover every
 stored state, including unreachable states.
 
 ## Why replay implies paper correspondence
@@ -194,8 +196,10 @@ successive moment right-hand sides, splitting signed right-hand sides into
 positive and negative reward queries.
 
 `Spec/RewardModel/Model.lean` defines the full successful-output law and `Matches`
-requires both source `DomainSafe` and equality of that law. `Results.lean` adds
-first/square integrability and output statistics. Local replay is checked against
+requires both source `DomainSafe` and equality of that law. `ResultMatches` adds
+the common `OutputStatistics.Matches` contract: finite measure, square integrability,
+and the exact mass and first/second moments. First integrability is derived from
+that contract, and both backends share the same conditional-variance theorem. Local replay is checked against
 the source and selected subject. Exported certificates prove `modelMatches`,
 `checkedResult`, `integrability`, `outputStatistics` and `conditionalVariance`.
 The `terminationProbabilities` theorem concerns the probability controller;
@@ -207,6 +211,9 @@ bounds. The proof constructs a closed divergence boundary and descending paths,
 proves the remaining boundary-value operator is invertible and preserves
 nonnegativity, and derives finite absolute first/second moment bounds internally.
 The bounds therefore require no additional runtime solves or certificate vectors.
+`Theorems.finiteRewardIntegrability` binds the explicit specification claim.
+The canonical reward moment equations are derived from the three checked linear
+systems; certificates no longer store or recheck both formulations.
 All moment equations, closed-class evidence and paths in result certificates are
 checked by Lean's kernel. No external solver or native evaluation axiom enters
 the theorem. Storm's untrusted `.additive.edges`
@@ -216,3 +223,16 @@ are checked against the source replay. Native results use `.result.lean`.
 The old backend remains the default. Incomplete exploration emits no new model;
 finite source syntax does not imply a finite normalized graph. Source and
 transformed programs must each be explored separately when both are needed.
+
+The resolved input and its alignment predicate are specified in
+`Spec/Frontend.lean`. `sameProgram` means alignment with that resolved input;
+parsing and desugaring of source bytes are still outside that theorem.
+
+Native result generation reports a kernel-checkable certificate, not an independent
+kernel check of that certificate. Native result JSON records
+`certificate_status: "generated"` and `kernel_checked: false`; run Lean on the generated result file to
+check it independently. The Storm wrapper sets `kernel_checked: true` only after
+that check succeeds. Both result formats label
+`termination_statistics_scope: "graph"`: separate rejection and divergence probabilities describe the finite
+graph/controller. The end-to-end correspondence proves the successful-output law;
+it does not separately identify source rejection and divergence events.
