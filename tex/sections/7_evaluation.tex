@@ -66,7 +66,7 @@ We introduce three new benchmarks, \texttt{hmm}, \texttt{load}, and \texttt{bran
     \begin{tabular*}{\linewidth}{@{}l@{\extracolsep{\fill}}c c c c@{}}
         \toprule
         Benchmark &
-        \shortstack{State-space structure\\(source $\rightarrow$ det.)} &
+        \shortstack{Sampling eliminated\\(source $\rightarrow$ det.)} &
         $\widehat{\operatorname{Var}}(P)$ &
         $\widehat{\operatorname{Var}}(\det P)$ & VRF \\
         \midrule
@@ -84,11 +84,9 @@ We introduce three new benchmarks, \texttt{hmm}, \texttt{load}, and \texttt{bran
         \texttt{vasicek}             & $0\!\times\!\mathbb{R} \rightarrow 0$                       & 0.85   & 0.00   & $\infty$ \\
         \bottomrule
     \end{tabular*}
-    \caption{Variance reduction on the sampling benchmark suite using 100,000
-    attempted runs per program. Empirical variances are computed among returned
-    values. State-space structures use the same static sampling-site notation as
-    Table~\ref{tab:finite-after-determinization}. The variance-reduction factor
-    is $\mathrm{VRF}=\widehat{\operatorname{Var}}(P) /
+    \caption{Evaluation of determinization on 12 benchmarks, depicting variance reduction using 100,000
+    samples per program. The variance reduction factor
+    is calculated as $\mathrm{VRF}=\widehat{\operatorname{Var}}(P) /
     \widehat{\operatorname{Var}}(\det P)$.}
     \label{tab:infinite-after-determinization}
 \end{table}
