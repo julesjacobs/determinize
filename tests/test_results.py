@@ -174,7 +174,7 @@ class ResultTests(unittest.TestCase):
                     if stage == 4:
                         Path(str(prefix) + ".result.json").write_text('{"answer": "1/3"}')
                     output = "\n".join(f"'{name}' depends on axioms: [propext, Classical.choice, Quot.sound]"
-                                       for name in ("outputStatistics", "terminationProbabilities", "conditionalVariance"))
+                                       for name in ("outputStatistics", "terminationProbabilities", "conditionalVariance", "reportedStatistics"))
                     return subprocess.CompletedProcess(argv, 0, output, "")
 
                 with patch.object(adapter.importlib.metadata, "version", return_value="test"), \
@@ -195,8 +195,8 @@ class ResultTests(unittest.TestCase):
     def test_certificate_axioms(self):
         adapter = self.adapter()
         output = "\n".join(f"'{name}' depends on axioms: [propext, Classical.choice, Quot.sound]"
-                           for name in ("outputStatistics", "terminationProbabilities", "conditionalVariance"))
-        self.assertEqual(len(adapter.checked_axioms(output)), 3)
+                           for name in ("outputStatistics", "terminationProbabilities", "conditionalVariance", "reportedStatistics"))
+        self.assertEqual(len(adapter.checked_axioms(output)), 4)
         for invalid in ("", output.replace("Quot.sound", "sorryAx"),
                         output.replace("Quot.sound", "Lean.ofReduceBool"),
                         output.replace("Quot.sound", "unprovedClaim")):
@@ -217,6 +217,46 @@ class ResultTests(unittest.TestCase):
             state = subprocess.run(["ps", "-p", str(child), "-o", "stat="],
                                    text=True, capture_output=True).stdout.strip()
             self.assertTrue(not state or state.startswith("Z"), state)
+
+    @unittest.skipUnless(os.environ.get("STORM_PYTHON"), "set STORM_PYTHON for real Storm integration")
+    def test_storm_report_initial_label_tampering(self):
+        adapter = self.adapter()
+        for additive in (False, True):
+            with self.subTest(additive=additive), tempfile.TemporaryDirectory() as tmp:
+                directory = Path(tmp)
+                source = directory / "input.det"
+                source.write_text("bernoulli[G](0.5)")
+                prefix = directory / "model"
+                mode = ["--additive"] if additive else []
+                run = subprocess.run([os.environ["STORM_PYTHON"], ROOT / "tools/storm.py",
+                    source, "--prefix", prefix, "--subject", "source", *mode],
+                    text=True, capture_output=True, timeout=180)
+                self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
+                result = json.loads(Path(str(prefix) + ".storm-values.json").read_text())
+                with patch.object(sys, "path", [str(ROOT / "tools"), *sys.path]):
+                    original, answer = adapter.certificate_text(prefix, result, additive)
+                self.assertEqual(answer["first"], Fraction(1, 2))
+                _, _, labels, rewards = adapter.read_model(prefix)
+                changed_initial = next(i for i in labels["returned"] if rewards[i] == 1)
+                path = Path(str(prefix) + ".lab")
+                lines = path.read_text().splitlines()
+                changed = lines[:3]
+                for line in lines[3:]:
+                    state, *names = line.split()
+                    names = [name for name in names if name != "init"]
+                    if int(state) == changed_initial:
+                        names.append("init")
+                    changed.append(" ".join([state, *names]))
+                path.write_text("\n".join(changed) + "\n")
+                with patch.object(sys, "path", [str(ROOT / "tools"), *sys.path]):
+                    tampered, answer = adapter.certificate_text(prefix, result, additive)
+                self.assertEqual(answer["first"], 1)
+                self.assertNotEqual(original, tampered)
+                certificate = directory / "tampered.lean"
+                certificate.write_text(tampered)
+                checked = kernel(certificate)
+                self.assertNotEqual(checked.returncode, 0)
+                self.assertIn("error", checked.stdout + checked.stderr)
 
     def test_storm_certificate_validation(self):
         adapter = self.adapter()

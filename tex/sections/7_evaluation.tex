@@ -2,7 +2,7 @@
 \section{Evaluation}
 \label{sec:evaluation}
 
-In this section, we evaluate our determinization approach in two complementary ways. We seek to addresses the following questions:
+In this section, we evaluate our determinization approach in two complementary ways. We seek to address the following questions:
 \begin{itemize}
     \item \textbf{RQ1: Expressiveness.} What classes of probabilistic programs can our determinization transformation handle? Can determinization enable exact expected value analysis for programs that prior tools can only bound, time out on, or do not support?
     \item \textbf{RQ2: Sampling.} Does determinization improve sampling-based inference without changing the inference algorithm?
@@ -17,7 +17,7 @@ measurements are averaged over 10 executions.
 First, we study \emph{expressiveness}: whether eliminating $\E$-mode randomness can transform probabilistic programs that are difficult to analyze directly into programs amenable to exact expected value analysis. In particular, we are interested in cases where continuous or otherwise infinite state behavior is removed, yielding a finite state probabilistic model that can be analyzed exactly by Storm -- a probabilistic model checker (CITE). 
 
 Our benchmark suite is drawn primarily from prior work on expected value and moment analysis
-(CITE ALL: chakarov 2013/14, kura, moosbrugger, beutner). We modify two existing benchmarks, \texttt{asym-random-walk} and \texttt{add-uniform-counter-large}, and introduce three new programs, \texttt{service-policy}, \texttt{uniform-nested}, and \texttt{workload}, designed to exercise features not well represented in existing suites, such as higher order functions and lists. Otherwise, we preserve the original programs and only translate them into our source language. We focus on programs with continuous sampling inside loops or recursion, where the source program may have an uncountable state space but determinization can expose a finite discrete structure.
+(CITE ALL: chakarov 2013/14, kura, moosbrugger, beutner). We modify two existing benchmarks, \texttt{asym-random-walk} and \texttt{add-uniform-counter-large}, and introduce three new programs, \texttt{service-policy}, \texttt{uniform-nested}, and \texttt{workload}, designed to exercise features not well represented in existing suites, such as higher order functions and lists. The translations also adapt parameters and returned queries: \texttt{swap} returns after one iteration of the original infinite loop, and \texttt{coin\_flip\_unif} manually replaces a fresh uniform probability by $0.5$. The latter is an additive-extraction control case and eliminates no sampling automatically. Results refer to the checked-in programs, not the original infinite-loop output laws. We focus on programs with continuous sampling inside loops or recursion, where the source program may have an uncountable state space but determinization can expose a finite discrete structure.
 
 We distinguish \emph{full} determinization, which eliminates all sampling, from \emph{partial} determinization, which eliminates at least one but not all samples. Partial determinization may nevertheless yield a finite state model when the remaining randomness is finite valued. 
 
@@ -28,34 +28,36 @@ We distinguish \emph{full} determinization, which eliminates all sampling, from 
     \begin{tabular*}{\linewidth}{@{}l@{\extracolsep{\fill}}c c c c r@{}}
         \toprule
         Benchmark & Det. & Expectation &
-        \shortstack{Sampling eliminated\\(source $\rightarrow$ det.)} &
+        \shortstack{Static sampling sites\\(source $\rightarrow$ det.)} &
         \shortstack{\# states in\\Markov chain} &
         \shortstack{Runtime (s)\\model / Storm} \\
         \midrule
-        \texttt{aggregate-rv}     & $\bullet\!\bullet$ & $\mathbb{E}[x]=1.0$                     & $0\!\times\!\mathbb{R} \rightarrow 0$          & 90    & $0.067 / 0.164$ \\
-        \texttt{asym-random-walk} & $\bullet\!\circ$   & $\mathbb{E}[t]=0.4$                     & $1\!\times\!\mathbb{R}^{3} \rightarrow 1$      & 200   & $0.185 / 0.169$ \\
-        \texttt{coin\_flip\_unif} & $\bullet\!\circ$   & $\mathbb{E}[\mathit{ret}]=1.0$          & $1\!\times\!\mathbb{R} \rightarrow 1$                                 & 72    & $0.068 / 0.161$ \\
-        \texttt{dreckon}          & $\bullet\!\circ$   & $\mathbb{E}[x]=0.0$                     & $1\!\times\!\mathbb{R}^{14} \rightarrow 1$     & 43219 & $175.775 / 2.226$ \\
-        \texttt{invpend}          & $\bullet\!\bullet$ & $\mathbb{E}[\mathit{pAng}]=2.4$         & $0\!\times\!\mathbb{R}^{6} \rightarrow 0$      & 1822  & $7.061 / 0.245$ \\
-        \texttt{pack}             & $\bullet\!\circ$   & $\mathbb{E}[\mathit{totalWeight}]=11.8$ & $1\!\times\!\mathbb{R}^{3} \rightarrow 1$      & 15192 & $37.207 / 1.033$ \\
-        \texttt{retransmit}       & $\bullet\!\circ$   & $\mathbb{E}[\mathit{ret}]=0.2$          & $4\!\times\!\mathbb{R}^{2} \rightarrow 4$      & 182   & $0.164 / 0.183$ \\
-        \texttt{service\_policy}  & $\bullet\!\circ$   & $\mathbb{E}[\mathit{ret}]=13.2$         & $4\!\times\!\mathbb{R}^{4} \rightarrow 4$      & 9491  & $27.198 / 0.576$ \\
-        \texttt{swap}             & $\bullet\!\bullet$ & $\mathbb{E}[x_N]=5.5$                   & $2\!\times\!\mathbb{R}^{2} \rightarrow 0$      & 105   & $0.107 / 0.168$ \\
-        \texttt{uniform-counter}  & $\bullet\!\circ$   & $\mathbb{E}[x]=2.0$                     & $1\!\times\!\mathbb{R}^{2} \rightarrow 1$      & 339   & $0.675 / 0.346$ \\
-        \texttt{uniform\_nested}  & $\bullet\!\bullet$ & $\mathbb{E}[d]=0.1$                     & $0\!\times\!\mathbb{R}^{4} \rightarrow 0$      & 31    & $0.040 / 0.166$ \\
-        \texttt{workload}         & $\bullet\!\circ$   & $\mathbb{E}[\mathit{ret}]=10.0$         & $1\!\times\!\mathbb{R}^{2} \rightarrow 1$      & 27836 & $27.781 / 1.401$ \\
+        \texttt{aggregate-rv}     & $\bullet\!\bullet$ & $\mathbb{E}[x]=1.0$                     & $(0,1) \rightarrow (0,0)$          & 90    & $0.067 / 0.164$ \\
+        \texttt{asym-random-walk} & $\bullet\!\circ$   & $\mathbb{E}[t]=0.4$                     & $(1,3) \rightarrow (1,0)$      & 200   & $0.185 / 0.169$ \\
+        \texttt{coin\_flip\_unif} & --   & $\mathbb{E}[\mathit{ret}]=1.0$          & $(1,0) \rightarrow (1,0)$                                 & 72    & $0.068 / 0.161$ \\
+        \texttt{dreckon}          & $\bullet\!\circ$   & $\mathbb{E}[x]=0.0$                     & $(1,14) \rightarrow (1,0)$     & 43219 & $175.775 / 2.226$ \\
+        \texttt{invpend}          & $\bullet\!\bullet$ & $\mathbb{E}[\mathit{pAng}]=2.4$         & $(0,6) \rightarrow (0,0)$      & 1822  & $7.061 / 0.245$ \\
+        \texttt{pack}             & $\bullet\!\circ$   & $\mathbb{E}[\mathit{totalWeight}]=11.8$ & $(1,3) \rightarrow (1,0)$      & 15192 & $37.207 / 1.033$ \\
+        \texttt{retransmit}       & $\bullet\!\circ$   & $\mathbb{E}[\mathit{ret}]=0.2$          & $(4,2) \rightarrow (4,0)$      & 182   & $0.164 / 0.183$ \\
+        \texttt{service\_policy}  & $\bullet\!\circ$   & $\mathbb{E}[\mathit{ret}]=13.2$         & $(4,4) \rightarrow (4,0)$      & 9491  & $27.198 / 0.576$ \\
+        \texttt{swap}             & $\bullet\!\bullet$ & $\mathbb{E}[x_1]=5.5$                   & $(2,2) \rightarrow (0,0)$      & 105   & $0.107 / 0.168$ \\
+        \texttt{uniform-counter}  & $\bullet\!\circ$   & $\mathbb{E}[x]=2.0$                     & $(1,2) \rightarrow (1,0)$      & 339   & $0.675 / 0.346$ \\
+        \texttt{uniform\_nested}  & $\bullet\!\bullet$ & $\mathbb{E}[d]=0.1$                     & $(0,4) \rightarrow (0,0)$      & 31    & $0.040 / 0.166$ \\
+        \texttt{workload}         & $\bullet\!\circ$   & $\mathbb{E}[\mathit{ret}]=10.0$         & $(1,2) \rightarrow (1,0)$      & 27836 & $27.781 / 1.401$ \\
         \bottomrule
     \end{tabular*}
     \caption{Evaluation of determinization on 12 benchmarks. In the determinization
     column, $\bullet\!\bullet$ denotes full determinization and
-    $\bullet\!\circ$ denotes partial determinization. In the state space structure column represented as $|D|\times\mathbb{R}^{k}$, $|D|$ is the number of static discrete sampling sites and $k$ is the number of static continuous sampling sites. Runtime excludes both the initial build and Lean certificate checking.}
+    $\bullet\!\circ$ denotes partial determinization; -- denotes no eliminated sampling. Each pair $(d,c)$ counts static discrete and continuous sampling sites; it is not a state-space cardinality. Expectations are target-model quantities. Runtime excludes both the initial build and Lean certificate checking.}
     \label{tab:finite-after-determinization}
 \end{table}
+
+The timing runs generate certificates but skip independent kernel checking; they do not establish certificate coverage for all table entries. Target certificates establish target statistics. Transferring finite expectations to the source also requires source domain safety and integrability, which the benchmark runner does not discharge.
 
 \paragraph{Results} TODO.
 
 \subsection{Sampling}
-We next study the utility of determinization as a preprocessing transformation for \emph{sampling-based inference}: whether applying determinization reduces estimator variance. For each benchmark, we compare sampling from the original program $P$ against sampling from $\det(P)$ using the \emph{same} Monte Carlo sampling method. Because determinization analytically eliminates $\E$-mode randomness, the transformed program produces lower variance estimators without requiring any modification to the underlying inference procedure. We report the empirical estimator variance and variance reduction factor on all programs.
+We next study the utility of determinization as a preprocessing transformation for \emph{sampling-based inference}: whether applying determinization reduces estimator variance. For each benchmark, we compare sampling from the original program $P$ against sampling from $\det(P)$ using the \emph{same} Monte Carlo sampling method. We report empirical output variance among returned fuel-bounded numerical executions and its ratio between source and target. Rejection, fuel exhaustion, and numerical failures can affect which executions contribute. The normalized variance theorem concerns the exact returned laws under its stated premises; these measurements do not establish variance guarantees for arbitrary inference procedures.
 
 We introduce three new benchmarks, \texttt{hmm}, \texttt{load}, and \texttt{branching}, and use modified versions of two existing programs, \texttt{neals-funnel} and \texttt{growing-walk}. The suite includes both full and partial determinization and covers reductions from continuous state to finite, countably infinite, and lower-dimensional continuous state. 
 
@@ -66,26 +68,26 @@ We introduce three new benchmarks, \texttt{hmm}, \texttt{load}, and \texttt{bran
     \begin{tabular*}{\linewidth}{@{}l@{\extracolsep{\fill}}c c c c@{}}
         \toprule
         Benchmark &
-        \shortstack{Sampling eliminated\\(source $\rightarrow$ det.)} &
+        \shortstack{Static sampling sites\\(source $\rightarrow$ det.)} &
         $\widehat{\operatorname{Var}}(P)$ &
         $\widehat{\operatorname{Var}}(\det P)$ & VRF \\
         \midrule
-        \texttt{2d-walk}             & $1\!\times\!\mathbb{R} \rightarrow 1$                       & 167.16 & 125.37 & $1.33\times$ \\
-        \texttt{bimodal}             & $1\!\times\!\mathbb{R}^{2} \rightarrow 1$                   & 4.53   & 0.50   & $9.02\times$ \\
-        \texttt{branching}           & $1\!\times\!\mathbb{R} \rightarrow 1$                       & 1.66   & 0.39   & $4.25\times$ \\
-        \texttt{continuous-sampling} & $1\!\times\!\mathbb{R}^{3} \rightarrow 1\!\times\!\mathbb{R}$ & 38.01 & 0.00 & $\infty$ \\
-        \texttt{ckd-epi}             & $0\!\times\!\mathbb{R}^{8} \rightarrow 0\!\times\!\mathbb{R}^{6}$ & 0.00 & 0.00 & $1.00\times$ \\
-        \texttt{figure1}             & $3\!\times\!\mathbb{R}^{3} \rightarrow 3\!\times\!\mathbb{R}$ & 0.21 & 0.21 & $1.00\times$ \\
-        \texttt{growing-walk}        & $1\!\times\!\mathbb{R} \rightarrow 1$                       & 6.12   & 5.62   & $1.09\times$ \\
-        \texttt{hmm}                 & $2\!\times\!\mathbb{R} \rightarrow 2$                       & 12.30  & 0.11   & $109.73\times$ \\
-        \texttt{load}                & $0\!\times\!\mathbb{R}^{5} \rightarrow 0\!\times\!\mathbb{R}$ & 58.35 & 1.44 & $40.58\times$ \\
-        \texttt{neals-funnel}        & $0\!\times\!\mathbb{R}^{11} \rightarrow 0\!\times\!\mathbb{R}$ & 1.46 & 0.00 & $\infty$ \\
-        \texttt{random-walk-1d}      & $1\!\times\!\mathbb{R} \rightarrow 1$                       & 1.73   & 0.90   & $1.93\times$ \\
-        \texttt{vasicek}             & $0\!\times\!\mathbb{R} \rightarrow 0$                       & 0.85   & 0.00   & $\infty$ \\
+        \texttt{2d-walk}             & $(1,1) \rightarrow (1,0)$                       & 167.16 & 125.37 & $1.33\times$ \\
+        \texttt{bimodal}             & $(1,2) \rightarrow (1,0)$                   & 4.53   & 0.50   & $9.02\times$ \\
+        \texttt{branching}           & $(1,1) \rightarrow (1,0)$                       & 1.66   & 0.39   & $4.25\times$ \\
+        \texttt{continuous-sampling} & $(1,3) \rightarrow (1,1)$ & 38.01 & 0.00 & $\infty$ \\
+        \texttt{ckd-epi}             & $(0,8) \rightarrow (0,6)$ & 0.00 & 0.00 & $1.00\times$ \\
+        \texttt{figure1}             & $(3,3) \rightarrow (3,1)$ & 0.21 & 0.21 & $1.00\times$ \\
+        \texttt{growing-walk}        & $(1,1) \rightarrow (1,0)$                       & 6.12   & 5.62   & $1.09\times$ \\
+        \texttt{hmm}                 & $(2,1) \rightarrow (2,0)$                       & 12.30  & 0.11   & $109.73\times$ \\
+        \texttt{load}                & $(0,5) \rightarrow (0,1)$ & 58.35 & 1.44 & $40.58\times$ \\
+        \texttt{neals-funnel}        & $(0,11) \rightarrow (0,1)$ & 1.46 & 0.00 & $\infty$ \\
+        \texttt{random-walk-1d}      & $(1,1) \rightarrow (1,0)$                       & 1.73   & 0.90   & $1.93\times$ \\
+        \texttt{vasicek}             & $(0,1) \rightarrow (0,0)$                       & 0.85   & 0.00   & $\infty$ \\
         \bottomrule
     \end{tabular*}
     \caption{Evaluation of determinization on 12 benchmarks, depicting variance reduction using 100,000
-    samples per program. The variance reduction factor
+    requested samples per program, using only returned numerical values for the empirical variances. The variance reduction factor
     is calculated as $\mathrm{VRF}=\widehat{\operatorname{Var}}(P) /
     \widehat{\operatorname{Var}}(\det P)$.}
     \label{tab:infinite-after-determinization}

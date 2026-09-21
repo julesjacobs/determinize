@@ -1,10 +1,14 @@
-Review these three entry points and the definitions they import:
+Review these entry points and the definitions they import:
 
 - `Determinize/Spec/Main.lean` defines the expectation-preservation propositions directly: `mainThm` (finite expectations), `extendedExpectationThm` (expectations in the extended reals, infinite values included), `jensenThm` (Jensen's inequality between the two output laws), `outputMassThm` (equal output mass), `varianceThm` (non-increasing second moment and variance) and `conditionalExpectationThm` (equal expectations conditioned on acceptance, the statement behind `observe`). `Spec` contains ordinary syntax, typing, primitive distributions and means, determinization, and semantics.
 - `Determinize/Spec/Traces/Main.lean` defines trace erasure (`correspondenceThm`), conditional trace soundness (`conditionalLawThm`) and the law of total variance along traces (`Spec.Traces.varianceThm`). `Spec/Traces/Semantics.lean` defines the operational traces, the joint law `traceAndOutputLaw` of a program's trace and output. The conditional-law and trace-variance propositions use Mathlib's `Measure.condKernel`; operational replay lives in `Proof/Traces/ReplaySemantics.lean`.
-- `Determinize/Theorems.lean` proves all ten propositions without additional hypotheses and prints their axioms.
+- `Determinize/Theorems.lean` proves the public propositions without additional hypotheses and prints their axioms.
 
-Run `lake build --wfail` from this directory; the build is warning-free and contains no `sorry`. Check that all ten public-theorem axiom reports contain only `propext`, `Classical.choice`, and `Quot.sound`. With Lean's kernel and these standard axioms trusted, reviewers can omit the proof bodies in `Proof`. `Spec` contains the specification; any proof imports there supply proof-irrelevant evidence. `Spec/Traces/Main.lean` imports finiteness evidence from `Proof/Traces/Mass.lean`, without introducing a measurable space on expressions.
+For normalized output laws, `returnedExpectationThm` states positive target return mass, probability-law and integrability facts for both `returnedLaw`s, and equality of their finite means. `conditionalExtendedExpectationThm`, `conditionalVarianceThm`, and `Spec.Traces.conditionalVarianceThm` cover extended means and normalized variance results.
+
+For the executable backend, also review `Spec/Frontend.lean`, `Spec/FiniteModel/Model.lean`, `Spec/FiniteModel/Statistics.lean`, `Spec/RewardModel/Model.lean`, and `Spec/RewardModel/Results.lean`. The general `MomentCertificate` and reward `Solution` routes handle closed divergent regions; the older absorption certificate is a sufficient special case. `finiteRewardIntegrability` derives finite moments for every finite additive model without user-supplied integrability bounds. Applying determinization to infer source expectations still requires the source hypotheses; finite target exploration does not establish source integrability.
+
+Run `lake build --wfail` from this directory; the build is warning-free and contains no `sorry`. Check that all public-theorem axiom reports contain only `propext`, `Classical.choice`, and `Quot.sound`. With Lean's kernel and these standard axioms trusted, reviewers can omit the proof bodies in `Proof`. `Spec` contains the specification; any proof imports there supply proof-irrelevant evidence. `Spec/Traces/Main.lean` imports finiteness evidence from `Proof/Traces/Mass.lean`, without introducing a measurable space on expressions.
 
 The typed determinization theorems assume `DomainSafe`: every reached operation has valid arguments almost surely at every finite execution depth. For typed programs, this requires valid distribution parameters and nonzero divisors. Rejection and divergence remain possible. `returnOrDivergeThm` proves that returned mass plus divergence probability is one for domain-safe programs of real type. Divergence is defined as the infimum of finite-depth running probabilities and includes rejection. `Proof.Paper.domainSafe_iff_return_or_diverge` proves the converse under real typing, so the mass-balance equation characterizes domain safety. The expectation and trace theorems also establish target domain safety. Finite replay certificates use the same predicate, defined in `Spec/Semantics.lean`.
 
@@ -324,13 +328,13 @@ python3 -m venv /tmp/determinize-storm
 
 The adapter invokes `--export`, obtains full exact rational state-value vectors
 from Storm, and writes `.storm.lean`. Lean checks the vectors against the original
-model, including boundary conditions. This route never calls our solver unless
+model, including boundary conditions. `reportedStatistics` additionally binds every reported rational statistic (including optional conditional quantities) to the certified initial-state statistics; changing the exported initial label cannot silently select a different answer. This route never calls our solver unless
 `--compare` is supplied and has no 256-state solver limit. Both routes certify
 the same quantities. Storm, rational decoding, and serialization are outside the
 proof; incorrect vectors fail checking.
 
 `.storm.json` records the certified values, versions, commands, stage durations,
-and completion or failure. A successful report also requires axiom reports using
+and completion or failure. A kernel-checked report also requires axiom reports using
 only `propext`, `Classical.choice`, and `Quot.sound`. Each subprocess has a 120-second timeout, adjustable
 with `--timeout`; large portable kernel checks can require more time.
 When overriding `--binary`, use an absolute path; relative paths resolve against

@@ -112,6 +112,18 @@ def varianceThm : Prop :=
 noncomputable def returnedLaw (program : Expr) : Measure ℝ :=
   (bigStepMeasure program Set.univ)⁻¹ • bigStepMeasure program
 
+/-- Positive-mass output laws are probability laws with finite, equal conditional means. -/
+def returnedExpectationThm : Prop :=
+  ∀ (program : Expr),
+    Typed [] program (.float .E) → DomainSafe program →
+    bigStepMeasure program Set.univ ≠ 0 → Integrable id (bigStepMeasure program) →
+      bigStepMeasure program.determinize Set.univ ≠ 0 ∧
+      IsProbabilityMeasure (returnedLaw program) ∧
+      IsProbabilityMeasure (returnedLaw program.determinize) ∧
+      Integrable id (returnedLaw program) ∧
+      Integrable id (returnedLaw program.determinize) ∧
+      (∫ x, x ∂returnedLaw program.determinize) = ∫ x, x ∂returnedLaw program
+
 /-- Variance decreases for the probability laws of successful outputs. -/
 def conditionalVarianceThm : Prop :=
   ∀ (program : Expr),

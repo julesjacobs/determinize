@@ -52,6 +52,9 @@ theorem conditionalTraceVarianceDecomposition : Spec.Traces.conditionalVarianceT
 theorem finiteRewardIntegrability : Spec.RewardModel.finiteIntegrabilityThm :=
   Proof.RewardModel.finite_integrable
 
+theorem returnedExpectation : Spec.returnedExpectationThm :=
+  Proof.Paper.returnedExpectationSoundness
+
 end Determinize.Theorems
 
 #print axioms Determinize.Theorems.expectationPreservation
@@ -70,3 +73,5 @@ end Determinize.Theorems
 #print axioms Determinize.Theorems.conditionalTraceVarianceDecomposition
 
 #print axioms Determinize.Theorems.finiteRewardIntegrability
+
+#print axioms Determinize.Theorems.returnedExpectation

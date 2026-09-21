@@ -90,11 +90,11 @@ In **fully discrete after deteterminization?**, `✓ (deterministic)` means dete
 | `track.det` | No | No | Initial `curVal` and every noise draw reach comparisons or the loop guard, forcing them to G. The pass proves neither the guard tautology nor the algebraic cancellation; `count` is unbounded. | ✓ |  | [Chakarov et al. (CAV 2013)] |
 | `aggregate-rv.det` | Yes, fully | Yes | The fixed 500-step loop is affine, so every `Uniform(0,1)` draw becomes `0.5`; the result is deterministically `250`, with a finite counter range. | ✓ | ✓ (deterministic) | [Chakarov et al. (SAS 2014)] |
 | `hare_turtle.det` | No | No | The Bernoulli controls whether the continuous step updates `h`, and that update controls the loop guard. The continuously many reachable values of `h-t` prevent finite-state translation. | ✓ |  | [Chakarov et al. (SAS 2014)] |
-| `swap.det` | Yes, fully | Yes | The initial choices become `x = 2.5`, `y = 5.5`, and both zero-mean uniform noises become `0`. The resulting nonterminating program is a finite deterministic two-state cycle. | ✓ | ✓ (deterministic) | [Chakarov et al. (SAS 2014)] |
+| `swap.det` | Yes, fully | Yes | The initial choices become `x = 2.5`, `y = 5.5`, and both zero-mean uniform noises become `0`. The checked-in program returns after `steps = 1`; this is a finite-horizon query adaptation of the original infinite loop, not preservation of its returned-output law. | ✓ | ✓ (deterministic) | [Chakarov et al. (SAS 2014)] |
 | `continuous_sampling.det` | Yes, partially | No | The fresh local `p ~ Uniform(0,1)` marginalizes exactly to a fair discrete choice, while the branch-local updates become `+0.5` and `-0.5`. The resulting symmetric walk has unbounded `n`. | ✓ | ✓ | [Feng et al.] |
 | `bimodal.det` | Yes, partially | No | Normal steps become `0.75`, but the Bernoulli draw remains because it controls the branch. The unconditional loop makes `xlow` and `xup` unbounded. | ✓ | ✓ | [Moosbrugger et al.] |
 | `figure1.det` | Yes, partially | No | Unused Laplace draw `l` can be removed, but Gaussian `g` remains because it controls whether `sum` changes. The random `x` update feeds `x**2`, and the loop is infinite-state. | ✓ |  | [Moosbrugger et al.] |
-| `coin_flip_unif.det` | Yes, partially | Yes, with reward encoding | Each fresh `p ~ Uniform(0,1)` can be marginalized to a fair coin, but that coin still controls termination. The remaining one-state geometric loop is finite when each recursive step is encoded as reward `1`. | ✓ | ✓ | [Kura & Unno][Kura-Unno] |
+| `coin_flip_unif.det` | No | Yes, with reward encoding | The checked-in input manually replaces the fresh uniform probability by `0.5`. Determinization eliminates no draw here. The geometric loop is a control case for additive reward extraction. |  | ✓ | [Kura & Unno][Kura-Unno] |
 | `icfp21_walk.det` | No | No | Its discrete choices control termination and the `n - 1` or `n + 1` update. The random walk can reach arbitrarily large `n`, so its exact reachable state space is infinite. |  |  | [Kura & Unno][Kura-Unno] |
 | `random_walk_unif.det` | No | No | The uniform draw determines the next continuous `x`, which controls future termination. Recursive updates yield infinitely many reachable real values, preventing an exact finite-state model. | ✓ |  | [Kura & Unno][Kura-Unno] |
 
@@ -117,3 +117,11 @@ Under `benchmarks/exact/`, these are separated as:
 * fully determinizable with slight modifications (ie run Slice, remove/replace soft conditioning)
 * partially determinizable (at least one but not all distributions determinized; either fully discrete after determinization but infinite state, or either some continuous distributions left over after determinization -- see fully discrete after deteterminization? column for the distinction)
 * other (not determinizable at all or not continuous to begin with, hence uninteresting)
+
+## Evaluation evidence
+
+Results refer to the checked-in parameters and returned queries. Translations include finite-horizon/query adaptations (in particular `swap`) and manual marginalization (`coin_flip_unif`); they are not all semantics-preserving translations of the original returned-output laws.
+
+`python tools/bench.py --finite` measures export and Storm solving, generates certificates, and skips independent kernel checking. Use `--check-certificates --output-dir build/benchmark-certificates` to retain models, certificates, and per-model JSON reports recording `kernel_checked`, commands, versions, and phase durations. A generated certificate or a successful timing run is not evidence that its kernel check completed. Kernel checking is reported separately from export/solve time.
+
+Finite target certificates establish target statistics. Transferring them to the source requires the determinization theorem's safety and integrability premises; these are not discharged by the benchmark runner. Sampling reports describe returned values from fuel-bounded numerical executions, with rejected and failed runs reported separately; they do not establish guarantees for arbitrary inference algorithms.

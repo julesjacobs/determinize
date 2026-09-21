@@ -26,6 +26,18 @@ local instance (program : Expr) : IsFiniteMeasure (Spec.Paper.bigStepMeasure pro
 
 namespace Paper
 
+theorem returnedExpectationSoundness : Spec.returnedExpectationThm := by
+  intro program typed safe positive integrable
+  have mass := outputMassSoundness program typed safe
+  have targetPositive : Spec.Paper.bigStepMeasure program.determinize Set.univ ≠ 0 := by
+    rwa [mass]
+  obtain ⟨_, targetIntegrable, mean⟩ := finiteExpectationSoundness program typed safe integrable
+  refine ⟨targetPositive, normalized_probability _ positive,
+    normalized_probability _ targetPositive,
+    integrable.smul_measure (ENNReal.inv_ne_top.mpr positive),
+    targetIntegrable.smul_measure (ENNReal.inv_ne_top.mpr targetPositive), ?_⟩
+  simp only [returnedLaw, integral_smul_measure, mass, ← mean]
+
 theorem conditionalVarianceSoundness : Spec.conditionalVarianceThm := by
   intro program typed safe positive moment
   have mass := outputMassSoundness program typed safe

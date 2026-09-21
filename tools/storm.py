@@ -121,6 +121,31 @@ def storm_worker(prefix, additive=False):
     Path(str(prefix) + ".storm-values.json").write_text(json.dumps(results) + "\n")
 
 
+def bind_report(text, answer, additive):
+    def rat(q):
+        return f"(({q.numerator} : Rat) / {q.denominator})"
+
+    def optional(q):
+        return "none" if q is None else f"some {rat(q)}"
+
+    mass, first, second, rejection = (answer[k] for k in ("mass", "first", "second", "rejection"))
+    rejection_term = "solution.rejection model.initial" if additive else "(termination.statistics model).rejectionProbability"
+    text += f"""
+theorem reportedStatistics :
+    statistics.returnMass = {rat(mass)} ∧
+    statistics.firstMoment = {rat(first)} ∧
+    statistics.secondMoment = {rat(second)} ∧
+    {rejection_term} = {rat(rejection)} ∧
+    1 - statistics.returnMass - {rejection_term} = {rat(1-mass-rejection)} ∧
+    statistics.conditionalMean = {optional(first/mass if mass else None)} ∧
+    statistics.conditionalVariance = {optional(second/mass-(first/mass)**2 if mass else None)} := by
+  decide +kernel
+
+#print axioms reportedStatistics
+"""
+    return text, answer
+
+
 def certificate_text(prefix, result, additive=False):
     size, _, labels, _ = read_model(prefix)
     n = size - 1
@@ -143,7 +168,7 @@ def certificate_text(prefix, result, additive=False):
         import storm_additive
         text = storm_additive.certificate_text(prefix, values, dead, ranks, following)
         initial, = labels["init"]
-        return text, {name: vector[initial] for name, vector in values.items()}
+        return bind_report(text, {name: vector[initial] for name, vector in values.items()}, additive)
 
     def rat(q):
         return f"(({q.numerator} : Rat) / {q.denominator})"
@@ -205,7 +230,7 @@ theorem terminationProbabilities : (termination.statistics model).Matches model 
 #print axioms conditionalVariance
 """
     initial, = labels["init"]
-    return text, {name: vector[initial] for name, vector in values.items()}
+    return bind_report(text, {name: vector[initial] for name, vector in values.items()}, additive)
 
 
 def checked_axioms(output, additive=False):
@@ -213,7 +238,7 @@ def checked_axioms(output, additive=False):
                for name, axioms in re.findall(r"'([^']+)' depends on axioms:\s*\[([^]]*)\]", output)}
     for name in re.findall(r"'([^']+)' does not depend on any axioms", output):
         reports[name] = set()
-    required = {"outputStatistics", "terminationProbabilities", "conditionalVariance"}
+    required = {"outputStatistics", "terminationProbabilities", "conditionalVariance", "reportedStatistics"}
     if not required <= reports.keys():
         raise ValueError("missing certificate axiom reports")
     if additive:

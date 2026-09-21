@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import nullcontext
 import json
 import math
 import os
@@ -204,12 +205,16 @@ def count_sample_sites(model: Path, args: argparse.Namespace) -> SampleSites:
 def run_finite(models: list[Path], args: argparse.Namespace) -> int:
     heading(f"FINITE-AFTER-DET: EXACT STORM RESULTS ({len(models)} benchmarks)")
     print(
-        "subject=determinized, additive=yes, certificate=skipped, "
+        f"subject=determinized, additive=yes, kernel-check={args.check_certificates}, "
         f"max-states={args.max_states}, timeout={args.storm_timeout:g}s"
     )
     failures = 0
     storm_python = os.environ.get("STORM_PYTHON", sys.executable)
-    with tempfile.TemporaryDirectory(prefix="determinize-bench-") as temporary:
+    print("Statistics describe the target; source safety and integrability are not checked here.")
+    if args.output_dir:
+        args.output_dir.mkdir(parents=True, exist_ok=True)
+    workspace = nullcontext(args.output_dir) if args.output_dir else tempfile.TemporaryDirectory(prefix="determinize-bench-")
+    with workspace as temporary:
         temp = Path(temporary)
         for index, model in enumerate(models, 1):
             print(f"\n[{index}/{len(models)}] {model.name}")
@@ -232,10 +237,12 @@ def run_finite(models: list[Path], args: argparse.Namespace) -> int:
             command = [
                 storm_python, str(STORM), str(model), "--prefix", str(prefix),
                 "--binary", str(args.binary), "--subject", "determinized",
-                "--additive", "--skip-certificate",
+                "--additive",
                 "--max-states", str(args.max_states),
                 "--timeout", str(args.storm_timeout),
             ]
+            if not args.check_certificates:
+                command.append("--skip-certificate")
             completed = subprocess.run(command, cwd=ROOT, text=True, capture_output=True)
             report_path = Path(str(prefix) + ".storm.json")
             try:
@@ -263,14 +270,19 @@ def run_finite(models: list[Path], args: argparse.Namespace) -> int:
                 program_states = None
                 storm_states = None
 
+            print(f"  Certificate:        {'kernel checked' if report.get('kernel_checked') else 'generated, unchecked'}")
+            if args.output_dir:
+                print(f"  Report:             {report_path}")
             logs = report.get("logs", [])
+            if report.get("kernel_checked") and len(logs) >= 3:
+                print(f"  Kernel check time:  {float(logs[2]['seconds']):.3f}s")
             export_seconds = float(logs[0].get("seconds", 0)) if len(logs) >= 1 else None
             storm_seconds = float(logs[1].get("seconds", 0)) if len(logs) >= 2 else None
             measured = [value for value in (export_seconds, storm_seconds) if value is not None]
             total_seconds = sum(measured) if len(measured) == 2 else None
             transitions = transition_count(Path(str(prefix) + ".tra"))
 
-            print(f"  Expected value:     {report.get('exact_answer', 'n/a')}")
+            print(f"  Target expectation: {report.get('exact_answer', 'n/a')}")
             print(f"  Return mass:        {report.get('return_mass', 'n/a')}")
             print(f"  Conditional mean:   {report.get('conditional_mean', 'n/a')}")
             if storm_states is None:
@@ -312,6 +324,8 @@ def main() -> int:
     parser.add_argument("--max-states", type=positive, default=100000, help="finite exploration state limit")
     parser.add_argument("--storm-timeout", type=positive, default=600, help="timeout per Storm phase in seconds")
     parser.add_argument("--binary", type=Path, default=DEFAULT_BINARY, help="determinize executable")
+    parser.add_argument("--check-certificates", action="store_true", help="independently kernel-check finite results (timed separately)")
+    parser.add_argument("--output-dir", type=Path, help="retain finite models, certificates, and JSON reports")
     parser.add_argument("--no-build", action="store_true", help="use the existing determinize executable")
     args = parser.parse_args()
 
