@@ -34,6 +34,14 @@ class SampleSummary:
     failure: str | None
 
 
+@dataclass(frozen=True)
+class SampleSites:
+    source_discrete: int
+    source_continuous: int
+    determinized_discrete: int
+    determinized_continuous: int
+
+
 def positive(value: str) -> int:
     parsed = int(value)
     if parsed <= 0:
@@ -114,6 +122,21 @@ def run_infinite(models: list[Path], args: argparse.Namespace) -> int:
     failures = 0
     for index, model in enumerate(models, 1):
         print(f"\n[{index}/{len(models)}] {model.name}")
+        try:
+            sites = count_sample_sites(model, args)
+        except (RuntimeError, subprocess.TimeoutExpired) as error:
+            failures += 1
+            print(f"  ERROR counting sampling sites: {error}")
+            continue
+        print(
+            "  Sampling sites before: "
+            f"{sites.source_discrete} discrete, {sites.source_continuous} continuous"
+        )
+        print(
+            "  Sampling sites after:  "
+            f"{sites.determinized_discrete} discrete, "
+            f"{sites.determinized_continuous} continuous"
+        )
         command = [
             str(args.binary), "--check", "--samples", str(args.samples),
             "--seed", str(args.seed), "--fuel", str(args.fuel), str(model),
@@ -155,6 +178,29 @@ def transition_count(path: Path) -> int | None:
         return None
 
 
+def count_sample_sites(model: Path, args: argparse.Namespace) -> SampleSites:
+    completed = subprocess.run(
+        [str(args.binary), "--check", "--sample-sites", str(model)],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        timeout=args.storm_timeout,
+    )
+    if completed.returncode:
+        raise RuntimeError(compact_error(completed.stderr or completed.stdout))
+    pattern = re.compile(
+        r"Sampling sites (before|after) determinization: "
+        r"discrete=(\d+), continuous=(\d+)"
+    )
+    counts = {
+        when: (int(discrete), int(continuous))
+        for when, discrete, continuous in pattern.findall(completed.stdout)
+    }
+    if set(counts) != {"before", "after"}:
+        raise RuntimeError("could not parse static sampling-site counts")
+    return SampleSites(*counts["before"], *counts["after"])
+
+
 def run_finite(models: list[Path], args: argparse.Namespace) -> int:
     heading(f"FINITE-AFTER-DET: EXACT STORM RESULTS ({len(models)} benchmarks)")
     print(
@@ -167,6 +213,21 @@ def run_finite(models: list[Path], args: argparse.Namespace) -> int:
         temp = Path(temporary)
         for index, model in enumerate(models, 1):
             print(f"\n[{index}/{len(models)}] {model.name}")
+            try:
+                sites = count_sample_sites(model, args)
+            except (RuntimeError, subprocess.TimeoutExpired) as error:
+                failures += 1
+                print(f"  ERROR counting sampling sites: {error}")
+                continue
+            print(
+                "  Sampling sites before: "
+                f"{sites.source_discrete} discrete, {sites.source_continuous} continuous"
+            )
+            print(
+                "  Sampling sites after:  "
+                f"{sites.determinized_discrete} discrete, "
+                f"{sites.determinized_continuous} continuous"
+            )
             prefix = temp / model.stem
             command = [
                 storm_python, str(STORM), str(model), "--prefix", str(prefix),

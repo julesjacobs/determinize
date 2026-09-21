@@ -17,11 +17,12 @@ private structure Options where
   exportPrefix : Option String := none
   certifyResult : Bool := false
   additive : Bool := false
+  sampleSites : Bool := false
   solveLimits : Finite.SolveLimits := {}
   subject : Spec.FiniteModel.Subject := .determinized
   limits : Finite.Limits := {}
 
-private def usage := "Usage: determinize [--check] [--samples N] [--seed N] [--fuel N] [--certificate FILE.lean] [--export PREFIX | --result PREFIX] [--additive] [--max-result-states N] [--subject source|determinized] [--max-states N] [--max-edges N] [--max-state-bytes N] FILE.det"
+private def usage := "Usage: determinize [--check] [--samples N] [--seed N] [--fuel N] [--certificate FILE.lean] [--export PREFIX | --result PREFIX] [--additive] [--sample-sites] [--max-result-states N] [--subject source|determinized] [--max-states N] [--max-edges N] [--max-state-bytes N] FILE.det"
 private def natural (s : String) : Except String Nat :=
   match s.toNat? with
   | some n => .ok n
@@ -29,6 +30,7 @@ private def natural (s : String) : Except String Nat :=
 private def options : List String → Options → Except String Options
   | [], o => if o.file.isEmpty then .error usage else .ok o
   | "--additive" :: rest, o => options rest {o with additive := true}
+  | "--sample-sites" :: rest, o => options rest {o with sampleSites := true}
   | "--result" :: outputPath :: rest, o =>
       options rest {o with exportPrefix := some outputPath, certifyResult := true}
   | "--max-result-states" :: n :: rest, o => do
@@ -92,6 +94,39 @@ private def summarize (label : String) (e : Core) (o : Options) : IO Unit := do
   if rejected > 0 then IO.println s!"  rejected observations: {rejected}"
   if failed > 0 then IO.println s!"  first failure: {error}"
 
+private structure SampleSites where
+  discrete : Nat := 0
+  continuous : Nat := 0
+
+private def SampleSites.add (left right : SampleSites) : SampleSites :=
+  ⟨left.discrete + right.discrete, left.continuous + right.continuous⟩
+
+private def SampleSites.sample (action : Spec.Paper.DistributionAction)
+    (discrete : Bool) : SampleSites :=
+  match action with
+  | .mean => {}
+  | .sample _ => if discrete then ⟨1, 0⟩ else ⟨0, 1⟩
+
+private def sampleSites : Core → SampleSites
+  | .bvar _ | .reject | .unit | .bool _ | .real _ | .nil => {}
+  | .lam body | .fix body | .fst body | .snd body | .inl body | .inr body | .neg body =>
+      sampleSites body
+  | .app left right | .pair left right | .cons left right | .letE left right
+  | .add left right | .mul left right | .div left right | .lt left right =>
+      (sampleSites left).add (sampleSites right)
+  | .matchSum first second third | .matchList first second third | .ite first second third =>
+      ((sampleSites first).add (sampleSites second)).add (sampleSites third)
+  | .uniform action left right | .gaussian action left right
+  | .beta action left right | .gamma action left right =>
+      ((SampleSites.sample action false).add (sampleSites left)).add (sampleSites right)
+  | .poisson action body | .discrete action body | .bernoulli action body =>
+      (SampleSites.sample action true).add (sampleSites body)
+  | .exponential action body =>
+      (SampleSites.sample action false).add (sampleSites body)
+
+private def printSampleSites (label : String) (sites : SampleSites) : IO Unit :=
+  IO.println s!"Sampling sites {label}: discrete={sites.discrete}, continuous={sites.continuous}"
+
 def main (args : List String) : IO UInt32 := do
   if args == ["--help"] then IO.println usage; return 0
   try
@@ -99,6 +134,9 @@ def main (args : List String) : IO UInt32 := do
     let text ← IO.FS.readFile o.file
     let p ← IO.ofExcept (compile text)
     IO.println s!"Checked: {prettyType p.checked.ty}"
+    if o.sampleSites then
+      printSampleSites "before determinization" (sampleSites p.checked.source)
+      printSampleSites "after determinization" (sampleSites p.checked.source.determinize)
     unless o.checkOnly do
       IO.println s!"Annotated source:\n{pretty p.checked.source}"
       IO.println s!"Determinized:\n{pretty p.checked.source.determinize}"
