@@ -1,0 +1,117 @@
+
+\begin{figure}[t]
+\centering
+\small
+\setlength{\jot}{3pt}
+
+\textbf{Symbolic configurations}
+\[
+\begin{aligned}
+  a
+  &=
+  c_0+\sum_{i=1}^k c_i u_i,
+  \qquad c_0,\ldots,c_k\in\Real,
+  \\[2pt]
+  \sigma
+  &::=
+  \emptyset
+  \mid
+  \sigma,\ u\sim D(\bar a),
+  \\[2pt]
+  s
+  &::=
+  (\sigma\mid\widehat e:\rho).
+\end{aligned}
+\]
+Here $\widehat e$ is a symbolic residual expression, $a$ is an affine
+expression over the variables declared by $\sigma$, and symbolic evaluation
+contexts $\widehat C$ have the same grammar as the evaluation contexts $C$
+in \cref{fig:semantics}.
+
+\par\vspace{10pt}
+\textbf{Deterministic symbolic reduction}
+\[
+\begin{aligned}
+  (\lambda x.\widehat e)\,\widehat v
+  &\rightsquigarrow_{\mathrm{sym}}
+  \widehat e[x\mapsto\widehat v],
+  \\[2pt]
+  \letin x{\widehat v}{\widehat e}
+  &\rightsquigarrow_{\mathrm{sym}}
+  \widehat e[x\mapsto\widehat v],
+  \\[2pt]
+  \avg D{\bar a}
+  &\rightsquigarrow_{\mathrm{sym}}
+  \operatorname{Mean}^{\#}_D(\bar a).
+\end{aligned}
+\]
+The remaining deterministic rules are lifted from
+\cref{fig:semantics}. The affine expression
+$\operatorname{Mean}^{\#}_D(\bar a)$ represents the primitive mean at the
+symbolic arguments $\bar a$.
+
+\par\vspace{10pt}
+\textbf{Symbolic small-step semantics}
+\begin{mathpar}
+  \inferrule*[right=Reduce]
+    {\widehat e_1\rightsquigarrow_{\mathrm{sym}}\widehat e_2}
+    {
+      (\sigma\mid\widehat C[\widehat e_1]:\rho)
+      \xrightarrow{\epsilon}_{\mathrm{sym}}
+      (\sigma\mid\widehat C[\widehat e_2]:\rho)
+    }
+  \and
+  \inferrule*[right=Sample-E]
+    {u\notin\operatorname{dom}(\sigma)}
+    {
+      (\sigma\mid\widehat C[\draw D\E{\bar a}]:\rho)
+      \xrightarrow{\epsilon}_{\mathrm{sym}}
+      (\sigma,u\sim D(\bar a)\mid\widehat C[u]:\rho)
+    }
+  \and
+  \inferrule*[right=Sample-G]
+    {\operatorname{Domain}_D(\bar r)}
+    {
+      (\sigma\mid\widehat C[\draw D\G{\bar r}]:\rho)
+      \xrightarrow{(D,r)}_{\mathrm{sym}}
+      (\sigma\mid\widehat C[r]:\rho)
+    }
+\end{mathpar}
+In \textsc{Sample-G}, the label $r$ is distributed according to
+$D(\bar r)$. The label $\epsilon$ denotes a step that contributes no entry
+to the $\G$ trace.
+
+\par\vspace{10pt}
+\textbf{Interpretations of symbolic configurations}
+\[
+\begin{aligned}
+  \mathsf{Act}(\sigma\mid\widehat e)
+  &=
+  \int
+    \delta_{\mathsf{realize}_\theta(\widehat e)}
+    \,\mathcal A_\sigma(d\theta),
+  \\[5pt]
+  \mathsf{Exp}(\sigma\mid\widehat e)
+  &=
+  \delta_{
+    \trans{
+      \mathsf{realize}_{\bar\theta_\sigma}(\widehat e)
+    }
+  }.
+\end{aligned}
+\]
+Here $\mathcal A_\sigma$ is the joint distribution obtained by sampling
+the declarations of $\sigma$ in order, and $\bar\theta_\sigma$ is the
+sequential mean valuation obtained by replacing each declaration by its
+mean after substituting the means of the preceding declarations.
+The realization $\mathsf{realize}_\theta(\widehat e)$ substitutes the
+valuation $\theta$ into the symbolic residual expression.
+
+\caption{Symbolic semantics and its two exact-depth interpretations.
+Symbolic reduction determines how the environment and residual expression
+evolve. The actual interpretation samples the recorded $\E$ variables,
+whereas the expected interpretation replaces them by their sequential means.
+Both interpretations reuse the concrete exact-depth semantics
+$\out{\cdot}{n}$ from \cref{fig:semantics}.}
+\label{fig:symbolic-semantics}
+\end{figure}

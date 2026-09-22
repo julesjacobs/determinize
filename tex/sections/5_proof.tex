@@ -2,7 +2,114 @@
 \section{Proof}
 \label{sec:proof}
 
-\begin{itemize}
-    \item Symbolic semantics
-    \item Proof ideas
-\end{itemize}
+We now turn to the soundness of our determinization transformation. To motivate the proof strategy, first observe that at an $E$-mode distribution, the original program samples a value, whereas the transformed program computes the mean of the distribution. The resulting programs therefore have different output distributions. Thus, our proof relates both programs to a common symbolic execution, and the original and determiinzed programs are then obtained as two interpretations of the same symbolic execution. 
+
+The symbolic semantics differs from the ordinary semantics only in its treatment of $\E$-mode draws. Rather than immediately sampling an $\E$-mode distribution or replacing it by its mean, symbolic execution records the draw using a fresh symbolic variable and continuous evaluating with that variable: wen symbolic execution encounters
+$\draw D\E{\bar a}$
+it does not sample from $D(\bar a)$. Instead, it introduces a fresh variable $u$, records the binding $u\sim D(\bar a)$ in a symbolic environment, and continues execution with $u$ in place of the sampled value. Dependencies between $\E$-mode draws are therefore preserved symbolically: the parameters of a later distribution may refer to variables introduced by earlier draws. By contrast, $\G$-mode draws are sampled immediately, exactly as in the ordinary semantics.
+
+TODO: Talk about measurable space construction
+
+
+\input{figures/symbolic-semantics.tex}
+
+
+\paragraph{Interpretation of initialized symbolic semantics.}
+Recall that
+\[
+  \mathsf{init}(e)
+  =
+  (\emptyset\mid\mathsf{lift}(e)),
+\]
+where $\mathsf{lift}$ embeds an ordinary expression into the symbolic
+language. The following theorems show that the two interpretations of the
+symbolic semantics recover the source and transformed output measures.
+
+\begin{theorem}[Actual interpretation of initialized symbolic semantics]
+\label{thm:actual-initialized-symbolic}
+Suppose $\vdash e:\tyR\E$ and $e$ is closed. Then, for every $n\in\Nat$,
+\[
+  \mathsf{Act}
+  \left(
+    \widehat\mu_{\mathsf{init}(e)}^{(n)}
+  \right)
+  =
+  \out e n.
+\]
+\end{theorem}
+
+The actual interpretation samples the variables recorded in each terminal
+symbolic state and substitutes the resulting valuation into its symbolic
+output. Thus the theorem states that delaying the $\E$-mode samples
+symbolically and sampling them at the end recovers exactly the source
+program's output distribution at every termination depth.
+
+\begin{theorem}[Expected interpretation of initialized symbolic semantics]
+\label{thm:expected-initialized-symbolic}
+Suppose $\vdash e:\tyR\E$, $e$ is closed, and $e$ is domain-safe. Then, for
+every $n\in\Nat$,
+\[
+  \mathsf{Exp}
+  \left(
+    \widehat\mu_{\mathsf{init}(e)}^{(n)}
+  \right)
+  =
+  \out{\trans e}n.
+\]
+\end{theorem}
+
+The expected interpretation replaces the variables recorded in each
+symbolic environment by their sequential means. The theorem states that
+performing this replacement after symbolic evaluation agrees exactly with
+executing the determinized program.
+
+
+
+\paragraph{Agreement of interpretations.}
+The preceding theorems recover two different output distributions from the
+same symbolic semantics. The key observation is that, after fixing the
+$\G$-mode choices, these distributions have the same expectation.
+
+\begin{theorem}[Agreement of interpretations]
+\label{thm:agreement-of-interpretations}
+Let $\vdash e:\tyR\E$ be closed and well typed, and let
+$\tau\in\Trace$ be a valid $\G$ trace. Suppose symbolic evaluation of
+$\mathsf{init}(e)$ along $\tau$ terminates in
+\[
+  s^\tau
+  =
+  (\sigma\mid a:\tyR\E),
+\]
+where
+\[
+  a=c_0+\sum_{i=1}^k c_i u_i
+\]
+is affine in the variables recorded by $\sigma$. If $\sigma$ is integrable,
+then both interpretations have finite first absolute moments:
+\[
+  \int_{\Real}|r|\,\mathsf{Act}(s^\tau)(dr)<\infty
+\]
+and
+\[
+  \int_{\Real}|r|\,\mathsf{Exp}(s^\tau)(dr)<\infty.
+\]
+Moreover, their expectations agree:
+\[
+  \int_{\Real}r\,\mathsf{Act}(s^\tau)(dr)
+  =
+  \int_{\Real}r\,\mathsf{Exp}(s^\tau)(dr).
+\]
+\end{theorem}
+
+
+\begin{theorem}[Generalized convex inequality]
+Let $\varphi:\Real\to\overline{\Real}$ be measurable, convex, and
+bounded below as required for the relevant integrals to exist. Then
+\[
+  \int_{\Real}
+    \varphi(r)\,\law{\trans e}(dr)
+  \le
+  \int_{\Real}
+    \varphi(r)\,\law e(dr).
+\]
+\end{theorem}
