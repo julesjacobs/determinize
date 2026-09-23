@@ -81,32 +81,6 @@ In \textsc{Sample-G}, the label $r$ is distributed according to
 $D(\bar r)$. The label $\epsilon$ denotes a step that contributes no entry
 to the $\G$ trace.
 
-\par\vspace{10pt}
-\textbf{Interpretations of symbolic configurations}
-\[
-\begin{aligned}
-  \mathsf{Act}(\sigma\mid\widehat e)
-  &=
-  \int
-    \delta_{\mathsf{realize}_\theta(\widehat e)}
-    \,\mathcal A_\sigma(d\theta),
-  \\[5pt]
-  \mathsf{Exp}(\sigma\mid\widehat e)
-  &=
-  \delta_{
-    \trans{
-      \mathsf{realize}_{\bar\theta_\sigma}(\widehat e)
-    }
-  }.
-\end{aligned}
-\]
-Here $\mathcal A_\sigma$ is the joint distribution obtained by sampling
-the declarations of $\sigma$ in order, and $\bar\theta_\sigma$ is the
-sequential mean valuation obtained by replacing each declaration by its
-mean after substituting the means of the preceding declarations.
-The realization $\mathsf{realize}_\theta(\widehat e)$ substitutes the
-valuation $\theta$ into the symbolic residual expression.
-
 \caption{Symbolic semantics and its two exact-depth interpretations.
 Symbolic reduction determines how the environment and residual expression
 evolve. The actual interpretation samples the recorded $\E$ variables,
