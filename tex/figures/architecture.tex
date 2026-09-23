@@ -33,8 +33,11 @@
 \node[data] (program) at (.10,-5.15) {Program $e$};
 \node[note] at (.10,-5.60) {$e\in\{e_{\mathrm{src}},e_{\mathrm{det}}\}$};
 \node[verified] (semantics) at (.365,-3.50) {Measure-theoretic\\semantics\leanref{output-measures}};
-\node[data, text width=.16\textwidth] (measure) at (.91,-3.50) {Output measure\\$\law e$};
+\node[data, text width=.16\textwidth] (measure) at (.635,-3.50) {Output measure\\$\law e$};
+\node[verified, text width=.16\textwidth] (soundness) at (.91,-3.50)
+  {Soundness theorems\leanref{expectation-preservation}\\$\law{e_{\mathrm{src}}}$ -- $\law{e_{\mathrm{det}}}$};
 \draw[flow] (semantics) -- (measure);
+\draw[flow] (measure) -- (soundness);
 
 \node[stage] (runtime) at (.365,-5.15) {Floating-point\\interpreter\leanref{interpreter}};
 \node[data, text width=.16\textwidth] (estimates) at (.91,-5.15) {Empirical mean\\and variance};
@@ -74,7 +77,9 @@
 \Description{Compilation uses an unverified front end followed by verified type
 checking, with a branch to the checked source and another through determinization.
 One program branches to formal measure semantics, floating-point sampling,
-and verified finite graph construction. The graph feeds either a
+and verified finite graph construction. The measure semantics yields an output
+measure, and the soundness theorems relate the output measures of the checked
+source and the transformed program. The graph feeds either a
 verified exact rational solver or Storm's exact model checking of expected
 accumulated rewards, followed by a verified certificate checker.
 Both routes produce exact mean and variance conditioned on returning, when return probability is positive.}
