@@ -3,60 +3,99 @@
 \section{Implementation}
 \label{sec:implementation}
 
-The theory from the previous sections is completely formalized and accompanied by a complete pipeline in the Lean programming language \cite{lean} with the formalization relying heavily on previous formalizations in the Mathlib library \cite{mathlib}. The final implementation was mostly carried out by a combination of Claude Fable 5.1 and ChatGPT Astra. The formalization of the main theorems was guided by our pre-existing paper proofs and the implementation of the complete compilation pipeline was based on pre-existing handwritten prototypes. The formalization of the correctness of (parts of) the pipeline is mostly mechanical [TODO: check].
+The theory from the previous sections is completely formalized and accompanied by a complete execution pipeline in the Lean programming language \cite{lean} with the formalization relying heavily on previous formalizations in the Mathlib library \cite{mathlib}. The final implementation was mostly carried out by a combination of Claude Fable 5.1 and ChatGPT Astra. In order to make it clear which parts of the pipeline need human review and which ones can be left to the Lean type-checker, we separated the code into three parts:
 
-In order to make it clear which parts of the pipeline need human review and which ones can be left to the Lean type-checker, we separated the code into three parts:
-\begin{itemize}
-\item Trusted surface: This part requires the most scrutiny
-\item parts of the pipeline that do not need to be verified directly since they produce a verifiable certificate
-\item the the actual proofs: the correctness and relevance of this part is guaranteed by the Lean type-checker
-\end{itemize}
+\paragraph{Trusted surface} This part requires the most scrutiny. It contains the language's syntax, the typing rules, the semantics, the determinization as well as the theorem statements.
 
-The proofs live in [TODO: check] and the trusted surface are the following modules [TODO: add]
+\paragraph{Mechanized proofs} This part contains the actual proofs of the theorems stated in the trusted surface. It does not require human review since the correctness is guaranteed by the Lean type checker.
+
+\paragraph{Execution pipeline} This part contains the entire non-verified pipeline, i.e. parsing, type inference, finite graph construction, etc. These steps produce certificates whose correctness is verified by [TODO: what?]
+
+The complete compilation, verification and execution pipeline is outlined in Figure \ref{fig:architecture}. We will briefly describe the individual steps in the following.
 
 \input{figures/architecture}
 \ifleanlinks
 \noindent{\footnotesize Definitions and results marked \leanmark* link to the formalization and implementation.}\par
 \fi
 
-\subsection{Parsing and type inference}
+\paragraph{Parsing, elaborate, infer types and E/G.} First, the source code is parsed and typed, including the sampling modes $\E$ and $\G$ [TODO: check whether $\M$ is already mentioned in the article before this]. Due to the complexity of the typing algorithm, the formalization of this step is out of scope of this article.
 
-This part is unchecked. It consists of:
+\paragraph{Typing and annotation checker} Even though the previous typing step is not itself formalized, verifying the correctness of the typing is straightforward and its own correctness verified as well. At the end of this step, the user has a well-typed program $e_{\mathrm{src}}$.
 
-\begin{enumerate}
-\item \verb+parse+ [TODO: Link]: tokenizes and parses the raw input string into a raw syntax tree that still has strings variables as strings
-\item \verb+elaborate+ [TODO: Link]: converts the raw syntax tree into a de-Bruijn-indexed final syntax tree
-\item \verb+infer+ [TODO: Link]: infers the types and sampling modes/affinities and creates a certificate
-\end{enumerate}
+\paragraph{Determinize} This is the determinization function. It is trivial and simply walks through the syntax tree, transforming every $\E$-mode sample into a sample at mode $\M$. The output is a well-typed, determinized program $e_{\mathrm{det}}$.
 
-The syntax tree might contain sampling mode/affinity annotations, those will be inferred later
+Once we have a well-typed program $e$, we can evaluate it. For this, we offer multiple options:
 
-The above steps are unverified, but produce a certificate that will be evaluated in the next step.
+\paragraph{Measure-theoretic semantics} We can reason about its exact semantics and in particular its output measure $\mu_e$. The soundness theorems guarantee that the exact output measures $\mu_{e_{\mathrm{src}}}$ and $\mu_{e_{\mathrm{det}}}$ agree in a meaningful way (cf.\ Sections \ref{sec:soundness} and \ref{sec:proof}).
 
-\subsection{Type Certification}
+\paragraph{Floating-point interpreter} The above semantics rely on exact reals which are not computable in a meaningful way. In order to be able to run the program and to carry out actual sampling, we also provide corresponding non-exact floating-point semantics.
 
-In this part, the compiler verifies that the certificate emitted in by the type inference step is correct. [TODO: mention translation validation]
+\paragraph{Finite graph construction} In case the program corresponds to a Markov chain with only finitely many states, we can create its state graph and continue with it in two ways:
 
-\subsection{Determinization}
+\paragraph{Exact rational solver} The above graph can be used to directly compute the exact mean and variance by our own verified matrix solver.
 
-The determinization function is trivial, it just makes all $\E$-sites into $\M$-sites
+\paragraph{Storm solver} Or alternatively the finite state graph can be entered into the external Storm solver [TODO: cite].
 
-\subsection{Semantics}
+\paragraph{Certificate checker} Our verified certificate checker verifies that the results from our own solver are the same as from the storm solver.
 
-The syntax, typing and mode inference do not assume any particular literal type. We implement the semantics for both exact real numbers as well as floating point numbers. The former allows us to formalize the exact statements of the soundness theorems, and the latter allow us to actually compute.
+% \subsection{Parsing and type inference}
 
-\subsubsection{Measure-theoretic semantics}
+% This part is unchecked. It consists of:
 
-\subsubsection{Floating-point interpreter}
+% \begin{enumerate}
+% \item \verb+parse+ [TODO: Link]: tokenizes and parses the raw input string into a raw syntax tree that still has strings variables as strings
+% \item \verb+elaborate+ [TODO: Link]: converts the raw syntax tree into a de-Bruijn-indexed final syntax tree
+% \item \verb+infer+ [TODO: Link]: infers the types and sampling modes/affinities and creates a certificate
+% \end{enumerate}
 
-\subsection{Theorem formalization}
+% The syntax tree might contain sampling mode/affinity annotations, those will be inferred later
 
-\subsection{Finite graph construction}
+% The above steps are unverified, but produce a certificate that will be evaluated in the next step.
 
-\subsection{Exact rational solver}
+% what is the input, refer to earlier part.
 
-\subsection{Storm solver}
+% Output: typed program including modes
 
-\subsection{Storm certificate checker}
+% \subsection{Type Certification}
 
-\subsection{Finite-state exact computation}
+% In this part, the compiler verifies that the certificate emitted in by the type inference step is correct. [TODO: mention translation validation]
+
+% \subsection{Determinization}
+
+% The determinization function is trivial, it just makes all $\E$-sites into $\M$-sites
+
+% [TODO: tease soundness theorems here]
+
+% \subsection{Semantics}
+
+% The syntax, typing and mode inference do not assume any particular literal type. We implement the semantics for both exact real numbers as well as floating point numbers. The former allows us to formalize the exact statements of the soundness theorems, and the latter allow us to actually compute.
+
+% \subsubsection{Measure-theoretic semantics}
+
+% cannot run
+
+% \subsubsection{Floating-point interpreter}
+
+% Not verified since floating point arithmetic is inherently imprecise
+
+% \subsection{Theorem formalization}
+
+% \subsection{Finite graph construction}
+
+% after determinization, create graph (formalized); either reference graph from an earlier section, or just paraphrase it briefly
+
+% if after determinization is finite state (probabilistic transition system, Markov chain?), in particular only discrete distributions
+
+% we have our own matrix solver (formalized)
+
+% alternative: storm, gives certificate
+
+% formalized: verify that storm's certificat is correct and that the solution is equal to our own solver.
+
+% \subsection{Exact rational solver}
+
+% \subsection{Storm solver}
+
+% \subsection{Storm certificate checker}
+
+% \subsection{Finite-state exact computation}
