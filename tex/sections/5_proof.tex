@@ -18,34 +18,43 @@ TODO: Talk about measurable space construction
 \textbf{Actual and expected interpretations}
 \[
 \begin{aligned}
-  \mathsf{Act}_n(\sigma\mid\widehat e)(B)
+  \mathsf{Act}_n(\sigma\mid\widehat e)
   &=
   \int
-    \out{
+    \joint{
       \mathsf{realize}_\theta(\widehat e)
-    }n(B)\,
+    }n\,
     \mathcal A_\sigma(d\theta),
   \\[6pt]
-  \mathsf{Exp}_n(\sigma\mid\widehat e)(B)
+  \mathsf{Exp}_n(\sigma\mid\widehat e)
   &=
-  \out{
+  \joint{
     \trans{
       \mathsf{realize}_{\bar\theta_\sigma}(\widehat e)
     }
-  }n(B).
+  }n.
 \end{aligned}
 \]
 
 Here $\mathcal A_\sigma$ is the joint distribution obtained by sampling
 the declarations of $\sigma$ in order, and $\bar\theta_\sigma$ is the
 sequential mean valuation. Thus $\mathsf{Act}_n(s)$ and
-$\mathsf{Exp}_n(s)$ are measures over ordinary real outputs, not over
-symbolic configurations. The actual interpretation samples the recorded
-$\E$-mode variables and then applies the ordinary exact-depth semantics.
+$\mathsf{Exp}_n(s)$ are measures over $\Trace\times\Real$, not over symbolic
+configurations. The actual interpretation samples the recorded
+$\E$-mode variables and then applies the trace-refined exact-depth semantics.
 The expected interpretation substitutes their sequential means,
 determinizes the resulting residual expression, and applies the same
-ordinary exact-depth semantics.
+trace-refined exact-depth semantics.
 
+\begin{lemma}[Realization of initialization]
+For every ordinary expression $e$,
+\[
+  \mathsf{realize}_{()}
+  \bigl(\mathsf{lift}(e)\bigr)
+  =
+  e.
+\]
+\end{lemma}
 
 \paragraph{Interpretation of initialized symbolic semantics.}
 Recall that
@@ -56,8 +65,8 @@ Recall that
 \]
 where $\mathsf{lift}$ embeds an ordinary expression into the symbolic
 language. The following theorems show that the two interpretations of the
-symbolic semantics recover the source and transformed output measures.
-
+symbolic semantics recover the source and transformed joint trace--output
+measures.
 
 \begin{theorem}[Actual interpretation of initialized symbolic execution]
 \label{thm:actual-initialized-symbolic}
@@ -66,7 +75,7 @@ $n\in\Nat$,
 \[
   \mathsf{Act}_n\bigl(\mathsf{init}(e)\bigr)
   =
-  \out e n.
+  \joint e n.
 \]
 \end{theorem}
 
@@ -78,7 +87,7 @@ $n\in\Nat$,
 \[
   \mathsf{Exp}_n\bigl(\mathsf{init}(e)\bigr)
   =
-  \out{\trans e}n.
+  \joint{\trans e}n.
 \]
 \end{theorem}
 
@@ -92,11 +101,11 @@ be an integrable terminal symbolic configuration reached after fixing a
 valid $\G$-trace $\tau$. Then $\mathsf{Act}_0(s^\tau)$ and
 $\mathsf{Exp}_0(s^\tau)$ have finite first absolute moments, and
 \[
-  \int_{\Real}
-    r\,\mathsf{Act}_0(s^\tau)(dr)
+  \int_{\Trace\times\Real}
+    r\,\mathsf{Act}_0(s^\tau)(d\tau',dr)
   =
-  \int_{\Real}
-    r\,\mathsf{Exp}_0(s^\tau)(dr).
+  \int_{\Trace\times\Real}
+    r\,\mathsf{Exp}_0(s^\tau)(d\tau',dr).
 \]
 \end{theorem}
 
@@ -107,26 +116,46 @@ Under the preceding assumptions,
   \sum_{n=0}^{\infty}
     \mathsf{Act}_n\bigl(\mathsf{init}(e)\bigr)
   =
-  \law e
+  J_e
 \]
 and
 \[
   \sum_{n=0}^{\infty}
     \mathsf{Exp}_n\bigl(\mathsf{init}(e)\bigr)
   =
-  \law{\trans e}.
+  J_{\trans e}.
+\]
+Consequently, for every measurable $B\subseteq\Real$,
+\[
+  \left(
+    \sum_{n=0}^{\infty}
+      \mathsf{Act}_n\bigl(\mathsf{init}(e)\bigr)
+  \right)(\Trace\times B)
+  =
+  \law e(B)
+\]
+and
+\[
+  \left(
+    \sum_{n=0}^{\infty}
+      \mathsf{Exp}_n\bigl(\mathsf{init}(e)\bigr)
+  \right)(\Trace\times B)
+  =
+  \law{\trans e}(B).
 \]
 \end{corollary}
 
 
 \begin{theorem}[Generalized convex inequality]
-Let $\varphi:\Real\to\overline{\Real}$ be measurable, convex, and
-bounded below as required for the relevant integrals to exist. Then
+\label{thm:generalized-convex-inequality}
+Suppose $\vdash e:\tyR\E$, $e$ is closed and domain-safe, and
+$\varphi:\Real\to\Real$ is nonnegative and convex. Then
 \[
   \int_{\Real}
     \varphi(r)\,\law{\trans e}(dr)
   \le
   \int_{\Real}
-    \varphi(r)\,\law e(dr).
+    \varphi(r)\,\law e(dr),
 \]
+where the integrals are understood as nonnegative extended integrals.
 \end{theorem}
