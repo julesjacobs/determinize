@@ -1,5 +1,6 @@
 import Determinize.Finite.Explore
-import Determinize.Frontend.Certificate
+import Determinize.Frontend.Compile
+import Determinize.Frontend.Pretty
 import Determinize.Runtime.Eval
 import Determinize.Finite.Export
 import Determinize.Finite.Reward.Explore
@@ -12,7 +13,6 @@ private structure Options where
   seed : UInt64 := 0
   samples : Nat := 0
   fuel : Nat := 100000
-  certificate : Option String := none
   checkOnly : Bool := false
   exportPrefix : Option String := none
   certifyResult : Bool := false
@@ -22,7 +22,7 @@ private structure Options where
   subject : Spec.FiniteModel.Subject := .determinized
   limits : Finite.Limits := {}
 
-private def usage := "Usage: determinize [--check] [--samples N] [--seed N] [--fuel N] [--certificate FILE.lean] [--export PREFIX | --result PREFIX] [--additive] [--sample-sites] [--max-result-states N] [--subject source|determinized] [--max-states N] [--max-edges N] [--max-state-bytes N] FILE.det"
+private def usage := "Usage: determinize [--check] [--samples N] [--seed N] [--fuel N] [--export PREFIX | --result PREFIX] [--additive] [--sample-sites] [--max-result-states N] [--subject source|determinized] [--max-states N] [--max-edges N] [--max-state-bytes N] FILE.det"
 private def natural (s : String) : Except String Nat :=
   match s.toNat? with
   | some n => .ok n
@@ -55,7 +55,6 @@ private def options : List String → Options → Except String Options
       if seed ≥ 2^64 then throw "seed must fit in 64 bits"
       options rest {o with seed := UInt64.ofNat seed}
   | "--fuel" :: n :: rest, o => do options rest {o with fuel := ← natural n}
-  | "--certificate" :: file :: rest, o => options rest {o with certificate := some file}
   | arg :: rest, o =>
     if arg.startsWith "-" then .error s!"unknown or incomplete option '{arg}'\n{usage}"
     else if !o.file.isEmpty then .error "expected one input file"
@@ -140,9 +139,6 @@ def main (args : List String) : IO UInt32 := do
     unless o.checkOnly do
       IO.println s!"Annotated source:\n{pretty p.checked.source}"
       IO.println s!"Determinized:\n{pretty p.checked.source.determinize}"
-    if let some path := o.certificate then
-      IO.FS.writeFile path (← IO.ofExcept (certificateText text))
-      IO.println s!"Wrote kernel-checkable certificate: {path}"
     if let some outputPath := o.exportPrefix then
       if o.additive then
         match Finite.Reward.explore p.checked.source o.subject o.limits with

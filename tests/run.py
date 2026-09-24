@@ -61,7 +61,7 @@ def load_manifest(path=ROOT / 'tests/cases.toml', root=ROOT):
     require(bool(cases), 'empty corpus')
     seen = set()
     allowed = {'file', 'suite', 'outcome', 'stage', 'expected_type', 'affinities', 'source', 'target',
-               'samples', 'seed', 'fuel', 'kernel', 'derivation'}
+               'samples', 'seed', 'fuel', 'derivation'}
     for c in cases:
         keys(c, allowed)
         file = c.get('file', '')
@@ -76,16 +76,13 @@ def load_manifest(path=ROOT / 'tests/cases.toml', root=ROOT):
             if k in c:
                 require(type(c[k]) is int and c[k] >= (2 if k == 'samples' else 1 if k == 'fuel' else 0),
                         f'{file}: invalid {k}')
-        for k in ('kernel',):
-            if k in c:
-                require(type(c[k]) is bool, f'{file}: {k} must be Boolean')
         if 'expected_type' in c:
             require(isinstance(c['expected_type'], str) and c['expected_type'], 'invalid expected type')
         if 'affinities' in c:
             require(isinstance(c['affinities'], list) and all(m in ('E', 'G') for m in c['affinities']), 'invalid affinities')
         if c['outcome'] == 'reject':
             require(c.get('stage') in {'parse', 'elaboration', 'inference', 'certificate'}, 'missing rejection stage')
-            require(c['suite'] == 'typing' and not any(k in c for k in ('source', 'target', 'kernel', 'affinities', 'expected_type')),
+            require(c['suite'] == 'typing' and not any(k in c for k in ('source', 'target', 'affinities', 'expected_type')),
                     'rejected case has acceptance expectations')
         else:
             require('stage' not in c, 'accepted case has rejection stage')
@@ -124,7 +121,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     suites = parser.add_mutually_exclusive_group()
     suites.add_argument('--statistical', action='store_true', help='run only the statistical corpus')
-    suites.add_argument('--all', action='store_true', help='run fast checks, statistics, and kernel certificates')
+    suites.add_argument('--all', action='store_true', help='run fast checks and statistics')
     args = parser.parse_args()
     cases = load_manifest()
     selected = [c for c in cases if c['suite'] == 'statistical'] if args.statistical else cases
@@ -133,15 +130,6 @@ def main():
         manifest.write_text(json.dumps([runner_case(c) for c in selected], allow_nan=False))
         exe = ROOT / 'lean/.lake/build/bin/det-tests'
         subprocess.run([exe, '--corpus', manifest, 'statistical' if args.statistical or args.all else 'fast'], cwd=ROOT, check=True)
-        if not args.statistical:
-            for c in cases:
-                if not c.get('kernel'):
-                    continue
-                cert = Path(tmp) / 'Certificate.lean'
-                subprocess.run([ROOT / 'lean/.lake/build/bin/determinize', '--check', '--certificate', cert, ROOT / c['file']], check=True)
-                result = subprocess.run(['lake', 'env', 'lean', cert], cwd=ROOT / 'lean', text=True, capture_output=True, check=True)
-                require(not any(s in result.stdout + result.stderr for s in ('sorryAx', 'ofReduceBool', 'trustCompiler', 'lean4Lean')), 'unexpected certificate axiom')
-            print('Independent kernel certificate checks passed.')
 
 
 if __name__ == '__main__':
