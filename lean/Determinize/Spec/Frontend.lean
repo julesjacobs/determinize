@@ -5,7 +5,7 @@ open Spec.Paper
 
 abbrev Core := Expr Rat
 
-def interpret (e : Core) : Expr := e.mapLiteral (fun (q : Rat) => (q : ℝ))
+def interpret (e : Core) : Expr := e.map (fun (q : Rat) => (q : ℝ)) id
 
 /-- Resolved source syntax. Each sample retains its optional requested affinity. -/
 inductive Input where

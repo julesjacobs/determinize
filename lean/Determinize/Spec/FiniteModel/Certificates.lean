@@ -10,7 +10,7 @@ inductive Subject where
 deriving DecidableEq, Repr
 
 def Subject.program (subject : Subject) (source : Expr Rat) : Expr :=
-  let realSource := source.mapLiteral (fun q : Rat => (q : ℝ))
+  let realSource := source.map (fun q : Rat => (q : ℝ)) id
   match subject with
   | .source => realSource
   | .determinized => realSource.determinize

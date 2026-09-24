@@ -167,7 +167,7 @@ theorem replay_matches (c : Reward.Candidate) {source : Checking.Core} {subject 
     simpa [valid.2.1] using valid.2.2.1
   have initialEqual : stateExpr (initialState source subject) = subject.program source :=
     initial_reification source subject
-      ((Binding.scoped_mapLiteral source (fun q : Rat => (q : ℝ)) 0).mpr valid.2.2.2.1)
+      ((Binding.scoped_map source (fun q : Rat => (q : ℝ)) 0).mpr valid.2.2.2.1)
   constructor
   · intro fuel
     rw [← initialEqual]

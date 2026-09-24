@@ -145,8 +145,8 @@ theorem rejection_step (environment : List Value) (stack : List Frame) :
       bigStepMeasure (stateExpr .rejected) ∧
     DomainSafe (stateExpr (.eval .reject environment stack)) := by
   refine ⟨rfl, ?_, ?_⟩
-  · simp [stateExpr, interpret, close, Expr.mapLiteral, Expr.mapVars, stack_reject_zero,
+  · simp [stateExpr, interpret, close, Expr.map, Expr.mapVars, stack_reject_zero,
       show bigStepMeasure (.reject : Expr) = 0 from stack_reject_zero []]
-  · simpa [stateExpr, interpret, close, Expr.mapLiteral, Expr.mapVars] using stack_reject_safe stack
+  · simpa [stateExpr, interpret, close, Expr.map, Expr.mapVars] using stack_reject_safe stack
 
 end Determinize.Proof.FiniteModel
