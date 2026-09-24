@@ -2,12 +2,12 @@ Review these entry points and the definitions they import:
 
 - `Determinize/Spec/Main.lean` defines the expectation-preservation propositions directly: `mainThm` (finite expectations), `extendedExpectationThm` (expectations in the extended reals, infinite values included), `jensenThm` (Jensen's inequality between the two output laws), `outputMassThm` (equal output mass), `varianceThm` (non-increasing second moment and variance) and `conditionalExpectationThm` (equal expectations conditioned on acceptance, the statement behind `observe`). `Spec` contains ordinary syntax, typing, primitive distributions and means, determinization, and semantics.
 - `Determinize/Spec/Traces/Main.lean` defines trace erasure (`correspondenceThm`), conditional trace soundness (`conditionalLawThm`) and the law of total variance along traces (`Spec.Traces.varianceThm`). `Spec/Traces/Semantics.lean` defines the operational traces, the joint law `traceAndOutputLaw` of a program's trace and output. The conditional-law and trace-variance propositions use Mathlib's `Measure.condKernel`; operational replay lives in `Proof/Traces/ReplaySemantics.lean`.
-- `Determinize/Spec/Inference.lean` states what affinity inference guarantees. `Frontend.infer` fills the omitted sample affinities of a resolved program `input : Input`. A *completion* of `input` fills exactly those affinities (`Input.matches`) and is closed and typed at some type; `AffinityLE` compares programs site by site in the order G ≤ E. `inferCorrectThm`: if `infer` fails, no completion exists; if it succeeds, its program is a completion, typed at the returned type, and every completion lies below it, so it is the greatest completion. The file imports `Frontend/Infer.lean` because `infer` is the subject of the statements; its body need not be read. It reuses `Input`, `Input.matches`, `Core` and `interpret` from `Spec/Frontend.lean`.
+- `Determinize/Spec/Inference.lean` states what affinity inference guarantees. `Frontend.infer` fills the omitted sample affinities of a resolved program `input : Input`. A *completion* of `input` fills exactly those affinities (`Input.matches`) and is closed and typed at some type; `AffinityLE` compares programs site by site in the order G ≤ E. `inferCorrectThm`: if `infer` fails, no completion exists; if it succeeds, its program is a completion, typed at the returned type, and every completion lies below it, so it is the greatest completion. The file imports `Frontend/Infer.lean` because `infer` is the subject of the statements; its body need not be read. It reuses the program types and `Input.matches` from `Spec/Frontend.lean`: `Input` and `Annotated` are `Expr` with rational literals, whose sites carry a requested affinity or `none` (a placeholder), respectively an affinity. `Input.matches` and `AffinityLE` are both `Expr.Sitewise`, which relates two programs with the same constructors, literals and indices site by site. An annotated program is coerced to a `Core` program (`Annotated.toCore`) where `interpret` expects one.
 - `Determinize/Theorems.lean` proves the public propositions without additional hypotheses and prints their axioms. The inference statement is proved as `inferenceCorrectness`.
 
 For normalized output laws, `returnedExpectationThm` states positive target return mass, probability-law and integrability facts for both `returnedLaw`s, and equality of their finite means. `conditionalExtendedExpectationThm`, `conditionalVarianceThm`, and `Spec.Traces.conditionalVarianceThm` cover extended means and normalized variance results.
 
-For the executable backend, also review `Spec/Frontend.lean` (resolved syntax, and the rational core `Core` with its embedding `interpret` into real-literal expressions), `Spec/FiniteModel/Model.lean`, `Spec/FiniteModel/Statistics.lean`, `Spec/RewardModel/Model.lean`, and `Spec/RewardModel/Results.lean`. The general `MomentCertificate` and reward `Solution` routes handle closed divergent regions; the older absorption certificate is a sufficient special case. `finiteRewardIntegrability` derives finite moments for every finite additive model without user-supplied integrability bounds. Applying determinization to infer source expectations still requires the source hypotheses; finite target exploration does not establish source integrability.
+For the executable backend, also review `Spec/Frontend.lean` (the rational core `Core`, with sample and mean sites, and its embedding `interpret` into real-literal expressions), `Spec/FiniteModel/Model.lean`, `Spec/FiniteModel/Statistics.lean`, `Spec/RewardModel/Model.lean`, and `Spec/RewardModel/Results.lean`. The general `MomentCertificate` and reward `Solution` routes handle closed divergent regions; the older absorption certificate is a sufficient special case. `finiteRewardIntegrability` derives finite moments for every finite additive model without user-supplied integrability bounds. Applying determinization to infer source expectations still requires the source hypotheses; finite target exploration does not establish source integrability.
 
 Run `lake build --wfail` from this directory; the build is warning-free and contains no `sorry`. Check that all public-theorem axiom reports contain only `propext`, `Classical.choice`, and `Quot.sound`. With Lean's kernel and these standard axioms trusted, reviewers can omit the proof bodies in `Proof`. `Spec` contains the specification; any proof imports there supply proof-irrelevant evidence. `Spec/Inference.lean` is the only `Spec` file that imports the front end: `Frontend/Infer.lean`, and through it `Frontend/Syntax.lean`, the shape unifier `Frontend/Unify.lean` and the affinity solver `Frontend/Affinity.lean`. `Spec/Traces/Main.lean` imports finiteness evidence from `Proof/Traces/Mass.lean`, without introducing a measurable space on expressions.
 
@@ -101,7 +101,7 @@ The executable and its checkers are separated as follows:
 
 Apart from `Spec/Inference.lean`, `Spec` and the semantic soundness proofs do not import
 the front end or runtime. The CLI uses the formalization's syntax and determinization,
-generalized over literal types. Decimal input is parsed exactly as `Rat`; the mathematical
+generalized over literal and site types. Decimal input is parsed exactly as `Rat`; the mathematical
 interpretation `interpret` embeds each rational into `ℝ`. A proved commuting equation
 (`interpret_determinize` in `Proof/FiniteModel/Initial.lean`) connects rational
 determinization to the existing real-literal theorem.
@@ -110,9 +110,13 @@ determinization to the existing real-literal theorem.
 
 `Frontend.Surface` represents parsed syntax with named binders and dedicated
 constructors. Elaboration resolves names to de Bruijn indices and removes syntax
-sugar, producing `Checking.Input`. Its sample nodes retain optional E/G affinities;
-it has no mean nodes. `infer` fills the omitted affinities and returns the annotated
-`Core` program and a type. There is no positional annotation list.
+sugar, producing an `Input`: an `Expr` with rational literals whose sample sites carry
+an optional E/G affinity, `none` being a placeholder for an affinity to infer. `infer`
+fills the placeholders and returns an `Annotated` program, whose sites all carry an
+affinity, so that it has no mean sites, and a type. There is no positional annotation
+list. `compile` converts the annotated program once into a `Core` program
+(`Program.source`) for the runtime and the finite models, which also run determinized
+programs with mean sites.
 
 The theorem of `Spec/Inference.lean` holds for every `Input`. The returned program
 keeps every constructor, payload, and requested sampling affinity of the input at the
