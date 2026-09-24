@@ -2,13 +2,14 @@ Review these entry points and the definitions they import:
 
 - `Determinize/Spec/Main.lean` defines the expectation-preservation propositions directly: `mainThm` (finite expectations), `extendedExpectationThm` (expectations in the extended reals, infinite values included), `jensenThm` (Jensen's inequality between the two output laws), `outputMassThm` (equal output mass), `varianceThm` (non-increasing second moment and variance) and `conditionalExpectationThm` (equal expectations conditioned on acceptance, the statement behind `observe`). `Spec` contains ordinary syntax, typing, primitive distributions and means, determinization, and semantics.
 - `Determinize/Spec/Traces/Main.lean` defines trace erasure (`correspondenceThm`), conditional trace soundness (`conditionalLawThm`) and the law of total variance along traces (`Spec.Traces.varianceThm`). `Spec/Traces/Semantics.lean` defines the operational traces, the joint law `traceAndOutputLaw` of a program's trace and output. The conditional-law and trace-variance propositions use Mathlib's `Measure.condKernel`; operational replay lives in `Proof/Traces/ReplaySemantics.lean`.
-- `Determinize/Theorems.lean` proves the public propositions without additional hypotheses and prints their axioms.
+- `Determinize/Spec/Inference.lean` states what affinity inference guarantees. `Frontend.infer` fills the omitted sample affinities of a resolved program `input : Input`. A *completion* of `input` fills exactly those affinities (`Input.matches`) and is closed and typed at some type; `AffinityLE` compares programs site by site in the order G ≤ E. `inferCorrectThm`: if `infer` fails, no completion exists; if it succeeds, its program is a completion, typed at the returned type, and every completion lies below it, so it is the greatest completion. The file imports `Frontend/Infer.lean` because `infer` is the subject of the statements; its body need not be read. It reuses `Input`, `Input.matches`, `Core` and `interpret` from `Spec/Frontend.lean`.
+- `Determinize/Theorems.lean` proves the public propositions without additional hypotheses and prints their axioms. The inference statement is proved as `inferenceCorrectness`.
 
 For normalized output laws, `returnedExpectationThm` states positive target return mass, probability-law and integrability facts for both `returnedLaw`s, and equality of their finite means. `conditionalExtendedExpectationThm`, `conditionalVarianceThm`, and `Spec.Traces.conditionalVarianceThm` cover extended means and normalized variance results.
 
-For the executable backend, also review `Spec/Frontend.lean`, `Spec/FiniteModel/Model.lean`, `Spec/FiniteModel/Statistics.lean`, `Spec/RewardModel/Model.lean`, and `Spec/RewardModel/Results.lean`. The general `MomentCertificate` and reward `Solution` routes handle closed divergent regions; the older absorption certificate is a sufficient special case. `finiteRewardIntegrability` derives finite moments for every finite additive model without user-supplied integrability bounds. Applying determinization to infer source expectations still requires the source hypotheses; finite target exploration does not establish source integrability.
+For the executable backend, also review `Spec/Frontend.lean` (resolved syntax, and the rational core `Core` with its embedding `interpret` into real-literal expressions), `Spec/FiniteModel/Model.lean`, `Spec/FiniteModel/Statistics.lean`, `Spec/RewardModel/Model.lean`, and `Spec/RewardModel/Results.lean`. The general `MomentCertificate` and reward `Solution` routes handle closed divergent regions; the older absorption certificate is a sufficient special case. `finiteRewardIntegrability` derives finite moments for every finite additive model without user-supplied integrability bounds. Applying determinization to infer source expectations still requires the source hypotheses; finite target exploration does not establish source integrability.
 
-Run `lake build --wfail` from this directory; the build is warning-free and contains no `sorry`. Check that all public-theorem axiom reports contain only `propext`, `Classical.choice`, and `Quot.sound`. With Lean's kernel and these standard axioms trusted, reviewers can omit the proof bodies in `Proof`. `Spec` contains the specification; any proof imports there supply proof-irrelevant evidence. `Spec/Traces/Main.lean` imports finiteness evidence from `Proof/Traces/Mass.lean`, without introducing a measurable space on expressions.
+Run `lake build --wfail` from this directory; the build is warning-free and contains no `sorry`. Check that all public-theorem axiom reports contain only `propext`, `Classical.choice`, and `Quot.sound`. With Lean's kernel and these standard axioms trusted, reviewers can omit the proof bodies in `Proof`. `Spec` contains the specification; any proof imports there supply proof-irrelevant evidence. `Spec/Inference.lean` is the only `Spec` file that imports the front end: `Frontend/Infer.lean`, and through it `Frontend/Syntax.lean`, the shape unifier `Frontend/Unify.lean` and the affinity solver `Frontend/Affinity.lean`. `Spec/Traces/Main.lean` imports finiteness evidence from `Proof/Traces/Mass.lean`, without introducing a measurable space on expressions.
 
 The typed determinization theorems assume `DomainSafe`: every reached operation has valid arguments almost surely at every finite execution depth. For typed programs, this requires valid distribution parameters and nonzero divisors. Rejection and divergence remain possible. `returnOrDivergeThm` proves that returned mass plus divergence probability is one for domain-safe programs of real type. Divergence is defined as the infimum of finite-depth running probabilities and includes rejection. `Proof.Paper.domainSafe_iff_return_or_diverge` proves the converse under real typing, so the mass-balance equation characterizes domain safety. The expectation and trace theorems also establish target domain safety. Finite replay certificates use the same predicate, defined in `Spec/Semantics.lean`.
 
@@ -44,8 +45,7 @@ Build with `lake build --wfail`, then run from `lean/`:
 ```sh
 .lake/build/bin/determinize ../tests/execution/foldr.det
 .lake/build/bin/determinize --samples 1000 --seed 42 ../tests/execution/foldr.det
-.lake/build/bin/determinize --check --certificate /tmp/Certificate.lean ../tests/execution/foldr.det
-lake env lean /tmp/Certificate.lean
+.lake/build/bin/determinize --check ../tests/execution/foldr.det
 ./test.sh
 ```
 
@@ -68,53 +68,67 @@ Under `Determinize/`:
 - `Proof/Symbolic/`: affine expressions, symbolic reduction, and its invariants.
 - `Proof/Traces/`: detailed and compact traces, replay, and conditional laws.
 - `Proof/FiniteModel/`: finite-model correspondence and certificate soundness.
+- `Proof/Frontend/`: soundness, optimality and completeness of affinity inference.
+  - `Unify.lean`: the shape unifier returns a most general unifier (`unify_mgu`).
+  - `Affinity.lean`: the affinity solver returns the greatest solution (`solveAffinities_spec`).
+  - `Typing.lean`: inversion of `Typed` for each constructor, up to subsumption.
+  - `Decompose.lean`: erasure of types to shapes; decomposing subtyping between decorated
+    types into affinity constraints is sound and complete.
+  - `Ground.lean`: ground substitutions, the relations they solve, monotone read-back, and
+    tactics shared by the two proofs below.
+  - `Soundness.lean`: every solution of the generated constraints reads back to a typed
+    program (`generate_sound`).
+  - `Completeness.lean`: every typed completion comes from a solution of the generated
+    constraints (`generate_complete`).
+  - `Inference.lean`: the statement of `Spec/Inference.lean`.
 - `Proof/Soundness.lean`, `Proof/Corollaries.lean`: global results derived from traces.
 - `Theorems.lean`: exported proofs of the propositions in `Spec/`.
 
 The executable and its checkers are separated as follows:
 
-- `Frontend/`: unverified parsing, desugaring/name resolution, constraint inference,
-  pretty printing, orchestration, and certificate export.
-- `Checking/`: certificate data, a total proof-producing typing checker, and checks
-  that inference preserves the elaborated expression and explicit sampling affinities.
-- `Proof/Checking/`: checker soundness, rational/real determinization correspondence,
-  and application of the existing trace and finite-expectation theorems.
+- `Frontend/`: affinity inference (`Infer.lean`) with the shape unifier (`Unify.lean`)
+  and the affinity solver (`Affinity.lean`), verified in `Proof/Frontend/`; unverified
+  parsing, desugaring/name resolution, and pretty printing; and `compile`
+  (`Compile.lean`), which runs them in order.
+- `Checking/`: executable checkers for finite distributions and for finite-model result,
+  moment, and termination certificates, with their soundness theorems.
 - `Finite/`: verified graph construction and expected-reward solving, with model export.
 - `Proof/LinearAlgebra/`: executable Gaussian elimination with a proof of the original equations.
 - `Runtime/`: an unverified floating-point interpreter and seeded numerical samplers.
-- `Tests/`: parsing, inference, certificate rejection, runtime, and kernel proof tests.
+- `Tests/`: parsing, inference and input preservation, mean-site typing, runtime,
+  finite-model, and kernel proof tests.
 - `Main.lean`: the CLI.
 
-`Spec`, `Spec/Traces`, and the existing soundness proofs do not import the front end
-or runtime. The CLI uses the formalization's syntax and determinization, generalized
-over literal types. Decimal input is parsed exactly as `Rat`; the mathematical
-interpretation embeds each rational into `ℝ`. A proved commuting equation connects
-rational determinization to the existing real-literal theorem.
+Apart from `Spec/Inference.lean`, `Spec` and the semantic soundness proofs do not import
+the front end or runtime. The CLI uses the formalization's syntax and determinization,
+generalized over literal types. Decimal input is parsed exactly as `Rat`; the mathematical
+interpretation `interpret` embeds each rational into `ℝ`. A proved commuting equation
+(`interpret_determinize` in `Proof/FiniteModel/Initial.lean`) connects rational
+determinization to the existing real-literal theorem.
 
-### What is checked
+### What is verified
 
 `Frontend.Surface` represents parsed syntax with named binders and dedicated
 constructors. Elaboration resolves names to de Bruijn indices and removes syntax
 sugar, producing `Checking.Input`. Its sample nodes retain optional E/G affinities;
-it has no mean nodes. Inference fills these annotations and produces `Core` plus
-a tree of proposed types. There is no positional annotation list.
-`check` verifies every node against the existing `Typed` constructors and returns
-an actual proof in `PLift`. It does not use `unsafe`, `sorry`, or inference as an
-oracle. `certify` additionally requires structural
-correspondence between the resolved input and the inferred core. It checks each
-constructor, payload, and optional sampling affinity at the same AST node. Thus inference cannot silently change literals,
-operators,
-binders, or distribution kinds. The certificate identifies the **resolved input
-expression**; parsing, name resolution, and desugaring from source bytes remain
-outside the checked boundary.
+it has no mean nodes. `infer` fills the omitted affinities and returns the annotated
+`Core` program and a type. There is no positional annotation list.
 
-The executable runs the verified checker as compiled Lean code. An exported
-`.lean` certificate independently reconstructs the checks using kernel reduction
-(`by decide +kernel`, not `native_decide`); it does not import the inference algorithm.
-For a float-valued program it includes `traceGuarantee`, conditional on
-`DomainSafe`: target domain safety, equal G-trace laws, and the target conditional law equal to a Dirac mass at the source conditional mean, with finite source conditional means almost everywhere. The generic `certified_expectation` theorem additionally requires
-integrability. Typing alone proves neither hypothesis. Non-float programs receive
-typing and input-preservation certificates without a float-output theorem.
+The theorem of `Spec/Inference.lean` holds for every `Input`. The returned program
+keeps every constructor, payload, and requested sampling affinity of the input at the
+same AST node (`Input.matches`), so inference cannot silently change literals,
+operators, binders, or distribution kinds. It is typed at the returned type, it has
+the most E sites among all completions, and `infer` rejects an input only if no
+completion exists. `compile` takes the typing and input-preservation proofs of its
+`Program` from `Theorems.inferenceCorrectness`; no checker runs afterwards. The
+guarantees start at the **resolved input expression**: parsing, name resolution, and
+desugaring from source bytes are outside the verified boundary, and so is the Lean
+compiler that runs `infer` in the executable.
+
+If the inferred type is a float, the program also has type `float E` by subsumption.
+The theorems of `Spec/Main.lean` and `Spec/Traces/Main.lean` then apply to the
+compiled program under their own hypotheses: `DomainSafe` and, for expectations,
+integrability. Typing alone proves neither hypothesis.
 
 ### Surface extensions and inference limits
 
@@ -166,14 +180,14 @@ and defaults unconstrained affinities to E and unused type variables to `unit`.
 Products, sums, and lists are covariant; function arguments are contravariant and
 results covariant. `Float[G]` is a subtype of `Float[E]`; the reverse is not allowed.
 Using a G draw at type E leaves its sample annotation G, so determinization still
-retains the draw. Subsumption appears in certificates, never in the expression.
-The checker validates every subsumption step against `Ty.Sub`. Inference
-completeness and optimality are not claimed; some valid programs can be rejected
-depending on conditional branch order.
+retains the draw. Subsumption appears in typing derivations, never in the expression.
+Inference is sound, optimal, and complete (`Spec/Inference.lean`): it rejects a
+program only if no assignment of its unannotated affinities is typable, and otherwise
+returns the typable assignment with the most E sites.
 
 The shared corpus and analytical expectations live in [`../tests/`](../tests/README.md).
-Run `./test.sh` for unit tests, all corpus compilation/typing checks, exact execution
-checks, and exported kernel certificates. Run `./test.sh --statistical` for sampled
+Run `./test.sh` for unit tests, all corpus compilation/typing checks, and exact execution
+checks. Run `./test.sh --statistical` for sampled
 source/target moment checks, or `./test.sh --all` for both. Python 3.11+ reads TOML;
 the compiled Lean test runner performs all language evaluation and assertions.
 
@@ -206,8 +220,8 @@ weighted expectation. `Spec/FiniteDistributionMeasure.lean` and
 fibers. Their probability, integrability, expectation, and Bernoulli variance and
 measurability proofs are in the corresponding `Proof/` modules. The shared primitive kernels,
 affine-mean laws, moment bounds, and domain-convexity proofs cover both distributions.
-Both primitives pass through core typing, symbolic and trace semantics, checked
-certificates, and the numerical runtime. The runtime remains unverified.
+Both primitives pass through core typing, symbolic and trace semantics, affinity
+inference, and the numerical runtime. The runtime remains unverified.
 
 ### Finite-model contract
 
