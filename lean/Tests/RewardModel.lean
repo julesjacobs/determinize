@@ -18,7 +18,7 @@ private def parallelRewards : Spec.RewardModel.Model where
 
 private def rewardCase (text : String) (mass first second : Rat) : IO Unit := do
   let program ← IO.ofExcept (Frontend.compile text)
-  match Reward.explore program.checked.source .source {maxStates := 100} with
+  match Reward.explore program.source .source {maxStates := 100} with
   | .complete candidate valid =>
       let solution ← IO.ofExcept (Reward.solve (candidate.toModel valid))
       assert (solution.statistics == ⟨mass, first, second⟩) s!"additive equations: {text}"
@@ -42,7 +42,7 @@ def rewardModels : IO Unit := do
       "let f = rec f u => if flip(0.5) then 0 else f u + 1 in f ()",
       "let f = rec f a => if flip(0.5) then a else f (a+1) in f 0"] do
     let program ← IO.ofExcept (Frontend.compile text)
-    match Reward.explore program.checked.source .source {maxStates := 100} with
+    match Reward.explore program.source .source {maxStates := 100} with
     | .incomplete .states _ _ _ => pure ()
     | _ => throw (IO.userError s!"unexpected additive extraction across a barrier: {text}")
 

@@ -20,31 +20,31 @@ def parsing : IO Unit := do
       "discrete[E](*\n)", "discrete(*)", "discrete[G] (* )",
       "discrete (* comment *) [E] (* )"] do
     let p ← IO.ofExcept (compile text)
-    match p.checked.source with
+    match p.source with
     | .discrete (.sample _) .nil => pure ()
     | _ => throw (IO.userError s!"empty remainder syntax changed: {text}")
-    let q ← IO.ofExcept (compile (pretty p.checked.source))
-    assert (p.checked.source == q.checked.source) s!"empty remainder roundtrip changed: {text}"
+    let q ← IO.ofExcept (compile (pretty p.source))
+    assert (p.source == q.source) s!"empty remainder roundtrip changed: {text}"
   for text in ["(*) comment *) 0", "(* outer (*) inner *) *) 0"] do
     let p ← IO.ofExcept (compile text)
-    assert (p.checked.source == .real 0) s!"block comment changed: {text}"
+    assert (p.source == .real 0) s!"block comment changed: {text}"
   let commented ← IO.ofExcept (compile "discrete[E] (* comment *) (0,1)")
-  assert (commented.checked.source == .discrete (.sample .E) (.cons (.real 0) .nil))
+  assert (commented.source == .discrete (.sample .E) (.cons (.real 0) .nil))
     "comment before discrete arguments changed"
   let coin ← IO.ofExcept (compile "bernoulli[E](0.25)")
-  assert (coin.checked.source == .bernoulli (.sample .E) (.real (1/4)))
+  assert (coin.source == .bernoulli (.sample .E) (.real (1/4)))
     "elaboration replaced a Bernoulli source draw"
-  assert (coin.checked.source.determinize == .bernoulli .mean (.real (1/4)))
+  assert (coin.source.determinize == .bernoulli .mean (.real (1/4)))
     "Bernoulli determinization did not retain its parameter"
   let categorical ← IO.ofExcept (compile "discrete[E](0.25,0.25,0.5)")
-  match categorical.checked.source with
+  match categorical.source with
   | .discrete (.sample .E) d =>
       assert (d == .cons (.real (1/4)) (.cons (.real (1/4)) .nil)) "discrete probabilities changed"
-      assert (categorical.checked.source.determinize == .discrete .mean d)
+      assert (categorical.source.determinize == .discrete .mean d)
         "discrete determinization changed its weights"
   | _ => throw (IO.userError "elaboration replaced a discrete source draw")
   let program ← IO.ofExcept (compile "let x = 2 in let y = 3 in x <= y")
-  assert (program.checked.ty == .bool) "comparison type"
+  assert (program.ty == .bool) "comparison type"
   let recursive ← IO.ofExcept (elaborate (← IO.ofExcept (parse "rec f x => f x")))
   assert (recursive == .fix (.app (.bvar 1) (.bvar 0))) "recursive binder indices"
   let comparison ← IO.ofExcept (elaborate (← IO.ofExcept
@@ -55,15 +55,15 @@ def parsing : IO Unit := do
     "comparison desugaring changed binders or affinities"
   for text in ["let x = discrete[E](*) in discrete[E](0,*)", "let x = uniform(0,1) in x + x", "fun x => x", "uniform[G](0,1)", "observe(false)", "observe(true)", "bernoulli[E](0.25)", "bernoulli[G](0.25)", "flip(0.25)", "bernoulli[E](0.00125)", "uniform[E](0.2,0.375)", "discrete[E](0.25,0.25,0.5)", "discrete[G](0,0.25,0.75)", "discrete[E](0,1,0)"] do
     let p ← IO.ofExcept (compile text)
-    let q ← IO.ofExcept (compile (pretty p.checked.source))
-    assert (p.checked.source == q.checked.source)
-      s!"pretty-printed source changed program: {text} -> {pretty p.checked.source}"
+    let q ← IO.ofExcept (compile (pretty p.source))
+    assert (p.source == q.source)
+      s!"pretty-printed source changed program: {text} -> {pretty p.source}"
 
   for text in ["2 * 3", "uniform[E](0,1) * 3", "(2 * 3) * (uniform[G](0,1) * 4)"] do
     let mut p ← IO.ofExcept (compile text)
     for _ in [:3] do
-      let q ← IO.ofExcept (compile (pretty p.checked.source))
-      assert (p.checked.source == q.checked.source)
+      let q ← IO.ofExcept (compile (pretty p.source))
+      assert (p.source == q.source)
         s!"multiplication roundtrip changed program: {text}"
       p := q
 

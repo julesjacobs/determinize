@@ -8,9 +8,9 @@ open Frontend Checking Spec.Paper Spec.FiniteModel Determinize.Finite
 
 private def graph (text : String) (subject : Subject := .source) : IO Candidate := do
   let p ← IO.ofExcept (compile text)
-  match explore p.checked.source subject with
+  match explore p.source subject with
   | .complete candidate _ =>
-      let .complete previous := ReferenceExplorer.explore p.checked.source subject
+      let .complete previous := ReferenceExplorer.explore p.source subject
         | throw (IO.userError s!"reference exploration failed: {text}")
       assert (candidate.states == previous.states) s!"changed state numbering: {text}"
       assert (candidate.rows.size == previous.rows.size) s!"changed row count: {text}"
@@ -69,7 +69,7 @@ def explorer : IO Unit := do
   assert (retry.rows.toList.zipIdx.any fun (row,i) => row.edges.any fun e => e.target < i) "retry graph"
   assert (reward retry 100 > 2 && reward retry 100 < 3) "geometric retry reward bound"
   let growing ← IO.ofExcept (compile "let f = rec f x => f (x+1) in f 0")
-  match explore growing.checked.source .source {maxStates := 100} with
+  match explore growing.source .source {maxStates := 100} with
   | .incomplete .states .. => pure ()
   | _ => throw (IO.userError "growing recursion must exhaust states")
   for (limits, expected) in [
@@ -83,7 +83,7 @@ def explorer : IO Unit := do
       "uniform[E](0,uniform[G](1,2))", "uniform[E](2,1)",
       "bernoulli[G](2)", "true"] do
     let p ← IO.ofExcept (compile text)
-    match explore p.checked.source .determinized with
+    match explore p.source .determinized with
     | .failed .. => pure ()
     | _ => throw (IO.userError s!"expected export failure: {text}")
   let state := State.deliver (.number 1) []

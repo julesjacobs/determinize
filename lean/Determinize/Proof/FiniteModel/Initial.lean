@@ -1,9 +1,12 @@
 import Determinize.Proof.FiniteModel.Administrative
 import Determinize.Proof.FiniteModel.Replay
-import Determinize.Proof.Checking.Elaboration
 
 namespace Determinize.Proof.FiniteModel
 open Spec.Paper Spec.FiniteModel Determinize.Finite Determinize.Checking Binding
+
+theorem interpret_determinize (e : Core) :
+    interpret e.determinize = (interpret e).determinize := by
+  induction e <;> simp_all [interpret, Expr.mapLiteral, Expr.determinize]
 
 theorem hasVar_scoped {context : List Ty} {index : Nat} {ty : Ty} (h : HasVar context index ty) :
     index < context.length := by
@@ -27,7 +30,7 @@ theorem initial_reification (source : Core) (subject : Subject)
         close_empty (interpret source) 0 bounded
   | determinized =>
       simp only [stateExpr, initialState, environmentExpr, stackExpr, List.foldl_nil,
-        Subject.program, Determinize.Proof.Checking.interpret_determinize]
+        Subject.program, interpret_determinize]
       exact close_empty (interpret source).determinize 0 ((scoped_determinize _ _).mpr bounded)
 
 theorem typed_initial_reification (source : Core) (subject : Subject) (ty : Ty)

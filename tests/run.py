@@ -81,7 +81,7 @@ def load_manifest(path=ROOT / 'tests/cases.toml', root=ROOT):
         if 'affinities' in c:
             require(isinstance(c['affinities'], list) and all(m in ('E', 'G') for m in c['affinities']), 'invalid affinities')
         if c['outcome'] == 'reject':
-            require(c.get('stage') in {'parse', 'elaboration', 'inference', 'certificate'}, 'missing rejection stage')
+            require(c.get('stage') in {'parse', 'elaboration', 'inference'}, 'missing rejection stage')
             require(c['suite'] == 'typing' and not any(k in c for k in ('source', 'target', 'affinities', 'expected_type')),
                     'rejected case has acceptance expectations')
         else:

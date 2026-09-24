@@ -83,13 +83,10 @@ private def statistical (e : Core) (c : CorpusCase) (m : Moments) : IO Unit := d
   close variance m.variance m.variance_tolerance "variance"
   IO.println s!"    mean={mean}, variance={variance}, n={c.samples}"
 
-private def compileStage (text : String) : Except (String × String) Program := do
+private def compileStage (text : String) : Except (String × String) Unit := do
   let ast ← (parse text).mapError ("parse", ·)
   let input ← (elaborate ast).mapError ("elaboration", ·)
-  let (source, cert) ← (inferWithCertificate input).mapError ("inference", ·)
-  let some checked := certify input source cert
-    | throw ("certificate", "inference produced an invalid certificate")
-  return ⟨input, checked⟩
+  discard <| (infer input).mapError ("inference", ·)
 
 private def runCase (c : CorpusCase) (withStatistics : Bool) : IO Unit := do
   let text ← IO.FS.readFile c.file
@@ -103,12 +100,12 @@ private def runCase (c : CorpusCase) (withStatistics : Bool) : IO Unit := do
   else
     let p ← IO.ofExcept (compile text)
     if let some ty := c.expected_type then
-      assert (prettyType p.checked.ty == ty) s!"expected type {ty}, got {prettyType p.checked.ty}"
+      assert (prettyType p.ty == ty) s!"expected type {ty}, got {prettyType p.ty}"
     if let some affinities := c.affinities then
-      let actual := (sampleAffinities p.checked.source).map prettyAffinity
+      let actual := (sampleAffinities p.source).map prettyAffinity
       assert (actual == affinities) s!"expected affinities {affinities}, got {actual}"
-    for (label, e, expectation) in [("source", p.checked.source, c.source),
-        ("target", p.checked.source.determinize, c.target)] do
+    for (label, e, expectation) in [("source", p.source, c.source),
+        ("target", p.source.determinize, c.target)] do
       if let some o := expectation then
         try
           observation e c o
