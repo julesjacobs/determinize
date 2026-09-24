@@ -71,6 +71,9 @@ theorem inferenceFloatSoundness : Spec.inferFloatSoundThm :=
 theorem inferenceFloatCompleteness : Spec.inferFloatCompleteThm :=
   sorry
 
+theorem inferenceFloatTyping : Spec.inferFloatTypedThm :=
+  sorry
+
 end Determinize.Theorems
 
 #print axioms Determinize.Theorems.expectationPreservation
@@ -97,3 +100,4 @@ end Determinize.Theorems
 #print axioms Determinize.Theorems.inferenceCompleteness
 #print axioms Determinize.Theorems.inferenceFloatSoundness
 #print axioms Determinize.Theorems.inferenceFloatCompleteness
+#print axioms Determinize.Theorems.inferenceFloatTyping

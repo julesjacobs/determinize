@@ -224,3 +224,23 @@ These are best updated when the proofs land (step 4) or when the certificate goe
 (step 5).
 
 ## Review
+
+No changes to the five statements; they are approved as written.
+
+On point 7: keep `inferFloatCompleteThm` as it is and **add** the stronger statement as a
+sixth theorem, so that the paper's theorems (`mainThm` etc.) apply to `infer`'s own output
+whenever any `float E` completion exists:
+
+```lean
+def inferFloatTypedThm : Prop :=
+  ∀ (input : Input) (completion : Core),
+    input.matches completion = true →
+    Typed [] (interpret completion) (.float .E) →
+    ∃ program ty, Frontend.infer input = .ok (program, ty) ∧
+      Typed [] (interpret program) (.float .E)
+```
+
+Step 3 adds it to `Spec/Inference.lean` and `Theorems.lean` (with `sorry`), following the
+existing five; step 4 proves it, using the result-shape argument sketched in point 7.
+
+On point 4 (nothing is claimed about the returned type beyond soundness): intended.
