@@ -1,5 +1,4 @@
 import Determinize.Frontend.Syntax
-import Determinize.Frontend.Shift
 import Determinize.Checking.FiniteDistribution
 
 namespace Determinize.Frontend
