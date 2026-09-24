@@ -234,9 +234,9 @@ def generate (Γ : List UType) (e : Input) : Generate Draft := do
 
 namespace Draft
 
-/-- The core node for the input node `e` with the given children, sampling at affinity `m` if
-it is a sample site. -/
-def rebuild (e : Input) (m : Affinity) : List Core → Core
+/-- The annotated node for the input node `e` with the given children, sampling at affinity `m`
+if it is a sample site. -/
+def rebuild (e : Input) (m : Affinity) : List Annotated → Annotated
   | [] => match e with
     | .bvar i => .bvar i
     | .reject => .reject
@@ -253,10 +253,10 @@ def rebuild (e : Input) (m : Affinity) : List Core → Core
     | .inl _ => .inl b
     | .inr _ => .inr b
     | .neg _ => .neg b
-    | .poisson .. => .poisson (.sample m) b
-    | .discrete .. => .discrete (.sample m) b
-    | .bernoulli .. => .bernoulli (.sample m) b
-    | .exponential .. => .exponential (.sample m) b
+    | .poisson .. => .poisson m b
+    | .discrete .. => .discrete m b
+    | .bernoulli .. => .bernoulli m b
+    | .exponential .. => .exponential m b
     | _ => .unit
   | [a, b] => match e with
     | .app .. => .app a b
@@ -267,10 +267,10 @@ def rebuild (e : Input) (m : Affinity) : List Core → Core
     | .mul .. => .mul a b
     | .div .. => .div a b
     | .lt .. => .lt a b
-    | .uniform .. => .uniform (.sample m) a b
-    | .gaussian .. => .gaussian (.sample m) a b
-    | .beta .. => .beta (.sample m) a b
-    | .gamma .. => .gamma (.sample m) a b
+    | .uniform .. => .uniform m a b
+    | .gaussian .. => .gaussian m a b
+    | .beta .. => .beta m a b
+    | .gamma .. => .gamma m a b
     | _ => .unit
   | [a, b, c] => match e with
     | .matchSum .. => .matchSum a b c
@@ -281,7 +281,7 @@ def rebuild (e : Input) (m : Affinity) : List Core → Core
   | _ => .unit
 
 /-- The input with every sample site annotated by the affinity of its type under `ρ`. -/
-def program (ρ : AffinityVar → Affinity) : Draft → Core
+def program (ρ : AffinityVar → Affinity) : Draft → Annotated
   | cast body _ => body.program ρ
   | node e t children => rebuild e (t.affinity ρ) (children.map (program ρ))
 
@@ -315,7 +315,7 @@ def solveInput (input : Input) : Except String Solution := do
   return { draft, shapes, affinities }
 
 /-- The annotated program and its type. `Spec/Inference.lean` states what it guarantees. -/
-def infer (input : Input) : Except String (Core × Ty) := do
+def infer (input : Input) : Except String (Annotated × Ty) := do
   let s ← solveInput input
   return (s.draft.program s.affinities, s.type s.draft.ty)
 

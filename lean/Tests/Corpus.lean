@@ -102,7 +102,7 @@ private def runCase (c : CorpusCase) (withStatistics : Bool) : IO Unit := do
     if let some ty := c.expected_type then
       assert (prettyType p.ty == ty) s!"expected type {ty}, got {prettyType p.ty}"
     if let some affinities := c.affinities then
-      let actual := (sampleAffinities p.source).map prettyAffinity
+      let actual := p.annotated.sites.map prettyAffinity
       assert (actual == affinities) s!"expected affinities {affinities}, got {actual}"
     for (label, e, expectation) in [("source", p.source, c.source),
         ("target", p.source.determinize, c.target)] do

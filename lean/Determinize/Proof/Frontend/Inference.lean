@@ -61,7 +61,7 @@ theorem solveInput_of {input : Input} {d : Draft} {n' : Nat} {θ : Nat → Shape
   simp only [hu, ha]
   rfl
 
-theorem infer_ok {input : Input} {program : Core} {ty : Ty} :
+theorem infer_ok {input : Input} {program : Annotated} {ty : Ty} :
     Frontend.infer input = .ok (program, ty) ↔ ∃ s, solveInput input = .ok s ∧
       program = s.draft.program s.affinities ∧ ty = s.type s.draft.ty := by
   simp only [Frontend.infer, bind_eq_ok, pure_eq_ok, Prod.mk.injEq]
@@ -73,7 +73,7 @@ theorem infer_ok {input : Input} {program : Core} {ty : Ty} :
 /-- The inferred program is typed at every instance of the decorated type of the draft. -/
 theorem solveInput_typed {input : Input} {s : Solution} (h : solveInput input = .ok s)
     (v : Nat → Ty) :
-    input.matches (s.draft.program s.affinities) = true ∧
+    input.matches (s.draft.program s.affinities) ∧
       Typed [] (interpret (s.draft.program s.affinities))
         ((s.draft.ty.decorate s.shapes).instantiate v s.affinities) := by
   obtain ⟨n', hg, hu, ha⟩ := solveInput_ok h
@@ -95,8 +95,8 @@ theorem solveInput_typed {input : Input} {s : Solution} (h : solveInput input = 
 /-! ## Completeness and optimality -/
 
 /-- A typed completion determines a solution of inference above it. -/
-theorem solveInput_complete {input : Input} {completion : Core} {T : Ty}
-    (hm : input.matches completion = true) (ht : Typed [] (interpret completion) T) :
+theorem solveInput_complete {input : Input} {completion : Annotated} {T : Ty}
+    (hm : input.matches completion) (ht : Typed [] (interpret completion) T) :
     ∃ s, solveInput input = .ok s ∧ AffinityLE completion (s.draft.program s.affinities) := by
   -- Lemma C: the completion solves the subtyping constraints.
   obtain ⟨d, n', hg, -, σ₁, -, F⟩ := generate_complete input [] [] 0 ⟨fun _ => .unit, fun _ => .G⟩

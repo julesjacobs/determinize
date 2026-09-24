@@ -55,7 +55,8 @@ example (T : Ty) : ¬Typed [.float .E] (.gaussian .mean (.real 0) (.bvar 0)) T :
   obtain ⟨_, _, hb, _⟩ := typed_gaussianMean_inv h
   exact not_typed_var hb nofun
 
-example : sampleAffinities (.uniform .mean (.poisson (.sample .E) (.real 2)) (.real 3)) = [.E] := rfl
+example : (Expr.uniform .mean (.poisson (.sample .E) (.real 2)) (.real 3) : Core).sites =
+    [.mean, .sample .E] := rfl
 
 private def discreteMean : Expr := .discrete .mean (.bvar 0)
 example : Typed [.list (.float .E)] discreteMean (.float .E) := .discreteMean (.bvar .head)
