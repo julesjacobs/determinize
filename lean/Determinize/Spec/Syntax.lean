@@ -8,40 +8,43 @@ import Mathlib.Tactic.DeriveCountable
 Only sample sites carry affinity labels; subtyping is silent; literals and arithmetic
 are unannotated, as in the paper's grammar, and a literal types at either affinity. Types are
 assigned separately by `Typed`; no expression constructor contains a type annotation.
-Each primitive distribution is its own constructor with the paper's operands; a site
-samples with an E/G affinity or computes the primitive’s mean without an affinity annotation.
-Programs may contain both sampling and mean sites; their operands may be arbitrary expressions.
+Each primitive distribution is its own constructor with the paper's operands and a site. In
+the paper syntax (`Expr` with its default parameters), a site samples with an E/G affinity or
+computes the primitive’s mean without an affinity annotation. Programs may contain both sampling
+and mean sites; their operands may be arbitrary expressions. `Spec/Frontend.lean` reuses the
+constructors with rational literals and other sites for the programs of the front end.
 -/
 
 namespace Determinize.Spec.Paper
 
-/-- Untyped paper expressions with de Bruijn variables; only sample sites carry a affinity. -/
-inductive Expr (Literal : Type := ℝ) where
+/-- Untyped paper expressions with de Bruijn variables. `Site` is the annotation of a
+primitive distribution; in the paper syntax it is a `DistributionAction`. -/
+inductive Expr (Literal : Type := ℝ) (Site : Type := DistributionAction) where
   | bvar (index : Nat)
   | reject
   | unit | bool (value : Bool) | real (value : Literal)
-  | lam (body : Expr Literal)
-  | fix (body : Expr Literal)
-  | app (function argument : Expr Literal)
-  | pair (left right : Expr Literal) | fst (pair : Expr Literal)
-  | snd (pair : Expr Literal) | inl (operand : Expr Literal)
-  | inr (operand : Expr Literal)
-  | matchSum (scrutinee left right : Expr Literal)
-  | nil | cons (head tail : Expr Literal)
-  | matchList (scrutinee nilCase consCase : Expr Literal)
-  | ite (condition thenBranch elseBranch : Expr Literal)
-  | letE (value body : Expr Literal)
-  | neg (body : Expr Literal)
-  | add (left right : Expr Literal) | mul (left right : Expr Literal)
-  | div (left right : Expr Literal) | lt (left right : Expr Literal)
-  | uniform (action : DistributionAction) (lower upper : Expr Literal)
-  | gaussian (action : DistributionAction) (mean variance : Expr Literal)
-  | poisson (action : DistributionAction) (rate : Expr Literal)
-  | discrete (action : DistributionAction) (probabilities : Expr Literal)
-  | bernoulli (action : DistributionAction) (probability : Expr Literal)
-  | exponential (action : DistributionAction) (rate : Expr Literal)
-  | beta (action : DistributionAction) (alpha beta : Expr Literal)
-  | gamma (action : DistributionAction) (shape rate : Expr Literal)
+  | lam (body : Expr Literal Site)
+  | fix (body : Expr Literal Site)
+  | app (function argument : Expr Literal Site)
+  | pair (left right : Expr Literal Site) | fst (pair : Expr Literal Site)
+  | snd (pair : Expr Literal Site) | inl (operand : Expr Literal Site)
+  | inr (operand : Expr Literal Site)
+  | matchSum (scrutinee left right : Expr Literal Site)
+  | nil | cons (head tail : Expr Literal Site)
+  | matchList (scrutinee nilCase consCase : Expr Literal Site)
+  | ite (condition thenBranch elseBranch : Expr Literal Site)
+  | letE (value body : Expr Literal Site)
+  | neg (body : Expr Literal Site)
+  | add (left right : Expr Literal Site) | mul (left right : Expr Literal Site)
+  | div (left right : Expr Literal Site) | lt (left right : Expr Literal Site)
+  | uniform (site : Site) (lower upper : Expr Literal Site)
+  | gaussian (site : Site) (mean variance : Expr Literal Site)
+  | poisson (site : Site) (rate : Expr Literal Site)
+  | discrete (site : Site) (probabilities : Expr Literal Site)
+  | bernoulli (site : Site) (probability : Expr Literal Site)
+  | exponential (site : Site) (rate : Expr Literal Site)
+  | beta (site : Site) (alpha beta : Expr Literal Site)
+  | gamma (site : Site) (shape rate : Expr Literal Site)
 
 deriving instance Repr, DecidableEq, Inhabited for Expr
 
@@ -54,8 +57,8 @@ def isValue {Literal : Type} : Expr Literal → Bool
   | _ => false
 
 /-- Apply `replace depth index` to variables, increasing `depth` beneath binders. -/
-def mapVars {Literal : Type} (replace : Nat → Nat → Expr Literal) (depth : Nat) :
-    Expr Literal → Expr Literal
+def mapVars {Literal Site : Type} (replace : Nat → Nat → Expr Literal Site) (depth : Nat) :
+    Expr Literal Site → Expr Literal Site
   | .bvar index => replace depth index
   | .unit => .unit
   | .reject => .reject
@@ -93,16 +96,18 @@ def mapVars {Literal : Type} (replace : Nat → Nat → Expr Literal) (depth : N
   | .beta k l r => .beta k (l.mapVars replace depth) (r.mapVars replace depth)
   | .gamma k l r => .gamma k (l.mapVars replace depth) (r.mapVars replace depth)
 
-abbrev shift {Literal : Type} (amount cutoff : Nat) : Expr Literal → Expr Literal :=
+abbrev shift {Literal Site : Type} (amount cutoff : Nat) : Expr Literal Site → Expr Literal Site :=
   mapVars (fun cutoff index => .bvar (if cutoff ≤ index then index + amount else index)) cutoff
 
-abbrev substAt {Literal : Type} (depth : Nat) (replacement : Expr Literal) : Expr Literal → Expr Literal :=
+abbrev substAt {Literal Site : Type} (depth : Nat) (replacement : Expr Literal Site) :
+    Expr Literal Site → Expr Literal Site :=
   mapVars (fun depth index => if index = depth then replacement.shift depth 0
     else .bvar (if depth < index then index - 1 else index)) depth
 
-def substHead {Literal : Type} (body replacement : Expr Literal) : Expr Literal :=
+def substHead {Literal Site : Type} (body replacement : Expr Literal Site) : Expr Literal Site :=
   substAt 0 replacement body
-def substTwo {Literal : Type} (body argument function : Expr Literal) : Expr Literal :=
+def substTwo {Literal Site : Type} (body argument function : Expr Literal Site) :
+    Expr Literal Site :=
   substAt 0 argument (substAt 1 function body)
 
 /-- Replace E stochastic samples by their atomic means. -/
@@ -148,42 +153,45 @@ def determinize {Literal : Type} : Expr Literal → Expr Literal
   | .gamma action shape rate =>
       .gamma action.determinize shape.determinize rate.determinize
 
-def mapLiteral {α β : Type} (f : α → β) : Expr α → Expr β
+/-- Apply `literal` to every literal and `site` to every site. -/
+def map {Literal Literal' Site Site' : Type} (literal : Literal → Literal') (site : Site → Site') :
+    Expr Literal Site → Expr Literal' Site'
   | .bvar index => .bvar index
   | .unit => .unit
   | .reject => .reject
-  | .discrete action d => .discrete action (d.mapLiteral f)
   | .bool value => .bool value
-  | .real value => .real (f value)
-  | .lam body => .lam (body.mapLiteral f)
-  | .fix body => .fix (body.mapLiteral f)
-  | .app function argument => .app (function.mapLiteral f) (argument.mapLiteral f)
-  | .pair left right => .pair (left.mapLiteral f) (right.mapLiteral f)
-  | .fst pairValue => .fst (pairValue.mapLiteral f)
-  | .snd pairValue => .snd (pairValue.mapLiteral f)
-  | .inl value => .inl (value.mapLiteral f)
-  | .inr value => .inr (value.mapLiteral f)
+  | .real value => .real (literal value)
+  | .lam body => .lam (body.map literal site)
+  | .fix body => .fix (body.map literal site)
+  | .app function argument => .app (function.map literal site) (argument.map literal site)
+  | .pair left right => .pair (left.map literal site) (right.map literal site)
+  | .fst pairValue => .fst (pairValue.map literal site)
+  | .snd pairValue => .snd (pairValue.map literal site)
+  | .inl value => .inl (value.map literal site)
+  | .inr value => .inr (value.map literal site)
   | .matchSum scrutinee left right =>
-      .matchSum (scrutinee.mapLiteral f) (left.mapLiteral f) (right.mapLiteral f)
+      .matchSum (scrutinee.map literal site) (left.map literal site) (right.map literal site)
   | .nil => .nil
-  | .cons head tail => .cons (head.mapLiteral f) (tail.mapLiteral f)
+  | .cons head tail => .cons (head.map literal site) (tail.map literal site)
   | .matchList scrutinee nilCase consCase =>
-      .matchList (scrutinee.mapLiteral f) (nilCase.mapLiteral f) (consCase.mapLiteral f)
+      .matchList (scrutinee.map literal site) (nilCase.map literal site) (consCase.map literal site)
   | .ite condition thenBranch elseBranch =>
-      .ite (condition.mapLiteral f) (thenBranch.mapLiteral f) (elseBranch.mapLiteral f)
-  | .letE value body => .letE (value.mapLiteral f) (body.mapLiteral f)
-  | .neg body => .neg (body.mapLiteral f)
-  | .add left right => .add (left.mapLiteral f) (right.mapLiteral f)
-  | .mul left right => .mul (left.mapLiteral f) (right.mapLiteral f)
-  | .div left right => .div (left.mapLiteral f) (right.mapLiteral f)
-  | .lt left right => .lt (left.mapLiteral f) (right.mapLiteral f)
-  | .uniform action lower upper => .uniform action (lower.mapLiteral f) (upper.mapLiteral f)
-  | .gaussian action mean variance => .gaussian action (mean.mapLiteral f) (variance.mapLiteral f)
-  | .poisson action rate => .poisson action (rate.mapLiteral f)
-  | .bernoulli action probability => .bernoulli action (probability.mapLiteral f)
-  | .exponential action rate => .exponential action (rate.mapLiteral f)
-  | .beta action alpha betaArg => .beta action (alpha.mapLiteral f) (betaArg.mapLiteral f)
-  | .gamma action shape rate => .gamma action (shape.mapLiteral f) (rate.mapLiteral f)
+      .ite (condition.map literal site) (thenBranch.map literal site) (elseBranch.map literal site)
+  | .letE value body => .letE (value.map literal site) (body.map literal site)
+  | .neg body => .neg (body.map literal site)
+  | .add left right => .add (left.map literal site) (right.map literal site)
+  | .mul left right => .mul (left.map literal site) (right.map literal site)
+  | .div left right => .div (left.map literal site) (right.map literal site)
+  | .lt left right => .lt (left.map literal site) (right.map literal site)
+  | .uniform s lower upper => .uniform (site s) (lower.map literal site) (upper.map literal site)
+  | .gaussian s mean variance =>
+      .gaussian (site s) (mean.map literal site) (variance.map literal site)
+  | .poisson s rate => .poisson (site s) (rate.map literal site)
+  | .discrete s probabilities => .discrete (site s) (probabilities.map literal site)
+  | .bernoulli s probability => .bernoulli (site s) (probability.map literal site)
+  | .exponential s rate => .exponential (site s) (rate.map literal site)
+  | .beta s alpha betaArg => .beta (site s) (alpha.map literal site) (betaArg.map literal site)
+  | .gamma s shape rate => .gamma (site s) (shape.map literal site) (rate.map literal site)
 
 end Expr
 

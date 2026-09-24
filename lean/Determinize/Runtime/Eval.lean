@@ -134,7 +134,7 @@ private partial def eval (env : List Value) (e : Expr Float) : EvalM Value := do
 
 /-- Observation rejection is separate from invalid operations and exhausted fuel. -/
 def runOutcome (e : Core) (seed : UInt64 := 0) (fuel : Nat := 100000) : Except String Outcome :=
-  let expression := e.mapLiteral (fun q => Float.ofInt q.num / Float.ofNat q.den)
+  let expression := e.map (fun q => Float.ofInt q.num / Float.ofNat q.den) id
   match (eval [] expression).run ⟨fuel, seed ^^^ 0x517cc1b727220a95, seed, 0⟩ with
   | .ok (value, state) => .ok (.returned value state)
   | .error .rejected => .ok .rejected

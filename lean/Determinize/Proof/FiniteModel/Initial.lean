@@ -6,7 +6,7 @@ open Spec.Paper Spec.FiniteModel Determinize.Finite Determinize.Checking Binding
 
 theorem interpret_determinize (e : Core) :
     interpret e.determinize = (interpret e).determinize := by
-  induction e <;> simp_all [interpret, Expr.mapLiteral, Expr.determinize]
+  induction e <;> simp_all [interpret, Expr.map, Expr.determinize]
 
 theorem hasVar_scoped {context : List Ty} {index : Nat} {ty : Ty} (h : HasVar context index ty) :
     index < context.length := by
@@ -43,6 +43,6 @@ theorem replay_initial_reification (source : Core) (subject : Subject) (candidat
     stateExpr (candidate.state (candidate.toModel valid).initial) = subject.program source := by
   rw [replay_initial candidate valid]
   apply initial_reification source subject
-  exact (scoped_mapLiteral source (fun q : Rat => (q : ℝ)) 0).mpr valid.aligned.source_scoped
+  exact (scoped_map source (fun q : Rat => (q : ℝ)) 0).mpr valid.aligned.source_scoped
 
 end Determinize.Proof.FiniteModel

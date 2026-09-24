@@ -48,7 +48,7 @@ theorem reject_same (environment : List Value) (stack : List Frame) :
   have left := stack_absorbing stack .reject rfl rfl
   have right := stack_absorbing [] .reject rfl rfl
   have equality : stateExpr (.eval .reject environment stack) = stackExpr stack .reject := by
-    simp [stateExpr, close, interpret, Expr.mapLiteral, Expr.mapVars]
+    simp [stateExpr, close, interpret, Expr.map, Expr.mapVars]
   refine ⟨?_, ?_⟩
   · intro fuel
     rw [equality, Cumulative.absorbing_zero _ left.1 left.2]
