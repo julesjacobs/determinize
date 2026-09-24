@@ -1,5 +1,4 @@
 import Determinize.Spec.Frontend
-import Determinize.Checking.Certificate
 import Determinize.Frontend.Infer
 
 /-!

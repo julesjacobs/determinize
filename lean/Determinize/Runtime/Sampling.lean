@@ -1,4 +1,4 @@
-import Determinize.Checking.Certificate
+import Determinize.Spec.Frontend
 
 namespace Determinize.Runtime
 open Spec.Paper
