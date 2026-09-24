@@ -132,35 +132,35 @@ def main (args : List String) : IO UInt32 := do
     let o ← IO.ofExcept (options args {})
     let text ← IO.FS.readFile o.file
     let p ← IO.ofExcept (compile text)
-    IO.println s!"Checked: {prettyType p.checked.ty}"
+    IO.println s!"Checked: {prettyType p.ty}"
     if o.sampleSites then
-      printSampleSites "before determinization" (sampleSites p.checked.source)
-      printSampleSites "after determinization" (sampleSites p.checked.source.determinize)
+      printSampleSites "before determinization" (sampleSites p.source)
+      printSampleSites "after determinization" (sampleSites p.source.determinize)
     unless o.checkOnly do
-      IO.println s!"Annotated source:\n{pretty p.checked.source}"
-      IO.println s!"Determinized:\n{pretty p.checked.source.determinize}"
+      IO.println s!"Annotated source:\n{pretty p.source}"
+      IO.println s!"Determinized:\n{pretty p.source.determinize}"
     if let some outputPath := o.exportPrefix then
       if o.additive then
-        match Finite.Reward.explore p.checked.source o.subject o.limits with
+        match Finite.Reward.explore p.source o.subject o.limits with
         | .complete candidate valid =>
             if o.certifyResult then
-              let answer ← Finite.Reward.writeResult outputPath p.checked.source o.subject candidate valid o.solveLimits
+              let answer ← Finite.Reward.writeResult outputPath p.source o.subject candidate valid o.solveLimits
               IO.println s!"Expected output (kernel-checkable certificate generated) ({reprStr o.subject}): {answer}"
             else
-              Finite.Reward.write outputPath p.checked.source o.subject candidate valid
+              Finite.Reward.write outputPath p.source o.subject candidate valid
             IO.println s!"Wrote additive {reprStr o.subject} model (kernel-checkable paper correspondence): {outputPath} ({candidate.states.size} states)"
         | .incomplete limit discovered expanded edges =>
             throw (IO.userError s!"Incomplete exploration ({reprStr limit}): {discovered} discovered, {expanded} expanded, {edges} edges. No export written.")
         | .failed state failure =>
             throw (IO.userError s!"Exploration failed at state {state}: {failure.message}. No export written.")
       else
-        match Finite.explore p.checked.source o.subject o.limits with
+        match Finite.explore p.source o.subject o.limits with
         | .complete candidate valid =>
             if o.certifyResult then
-              let answer ← Finite.writeResult outputPath p.checked.source o.subject candidate valid o.solveLimits
+              let answer ← Finite.writeResult outputPath p.source o.subject candidate valid o.solveLimits
               IO.println s!"Expected terminal reward (kernel-checkable certificate generated) ({reprStr o.subject}): {answer}"
             else
-              Finite.write outputPath p.checked.source o.subject candidate valid
+              Finite.write outputPath p.source o.subject candidate valid
             IO.println s!"Wrote {reprStr o.subject} model (kernel-checkable paper correspondence): {outputPath} ({candidate.states.size} states)"
         | .incomplete limit discovered expanded edges =>
             throw (IO.userError s!"Incomplete exploration ({reprStr limit}): {discovered} discovered, {expanded} expanded, {edges} edges. No export written.")
@@ -168,8 +168,8 @@ def main (args : List String) : IO UInt32 := do
             throw (IO.userError s!"Exploration failed at state {state}: {failure.message}. No export written.")
     if o.samples > 0 then
       IO.println "Numerical estimates; domain safety and integrability are not established by typing."
-      summarize "Source" p.checked.source o
-      summarize "Determinized" p.checked.source.determinize o
+      summarize "Source" p.source o
+      summarize "Determinized" p.source.determinize o
     return 0
   catch e =>
     (← IO.getStderr).putStrLn s!"{e}"

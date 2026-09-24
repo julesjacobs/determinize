@@ -285,14 +285,6 @@ def program (ρ : AffinityVar → Affinity) : Draft → Core
   | cast body _ => body.program ρ
   | node e t children => rebuild e (t.affinity ρ) (children.map (program ρ))
 
-/-- The typing certificate: the type of every node, and a subsumption step at every cast that
-changes the type. -/
-def certificate (ty : UType → Ty) : Draft → Certificate
-  | cast body t =>
-    let c := body.certificate ty
-    if c.ty == ty t then c else .sub (ty t) c
-  | node _ t children => .node (ty t) (children.map (certificate ty))
-
 end Draft
 
 /-! ## Inference -/
@@ -326,10 +318,5 @@ def solveInput (input : Input) : Except String Solution := do
 def infer (input : Input) : Except String (Core × Ty) := do
   let s ← solveInput input
   return (s.draft.program s.affinities, s.type s.draft.ty)
-
-/-- Inference together with the typing certificate that `certify` checks. -/
-def inferWithCertificate (input : Input) : Except String (Core × Certificate) := do
-  let s ← solveInput input
-  return (s.draft.program s.affinities, s.draft.certificate s.type)
 
 end Determinize.Frontend

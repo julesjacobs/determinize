@@ -1,5 +1,5 @@
 import Tests.Inference
-import Tests.Checking
+import Tests.Matching
 import Tests.MeanTyping
 import Tests.Runtime
 import Tests.Corpus
@@ -21,7 +21,7 @@ def main (args : List String) : IO UInt32 := do
   try
     Tests.parsing
     Tests.inference
-    Tests.checking
+    Tests.matching
     Tests.runtime
     Tests.linearAlgebra
     Tests.results

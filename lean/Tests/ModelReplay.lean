@@ -26,8 +26,8 @@ example : ¬ duplicateLabels.IndexedReplayValid (.real 3) .source (fun _ _ => 0)
 
 private def candidateFor (text : String) (subject : Subject := .source) : IO (Core × Candidate) := do
   let p ← IO.ofExcept (compile text)
-  match ReferenceExplorer.explore p.checked.source subject with
-  | .complete candidate => return (p.checked.source, candidate)
+  match ReferenceExplorer.explore p.source subject with
+  | .complete candidate => return (p.source, candidate)
   | result => throw (IO.userError s!"expected complete graph: {reprStr result}")
 
 private def accepted (source : Core) (candidate : Candidate) (subject : Subject := .source) : Bool :=

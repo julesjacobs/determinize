@@ -6,7 +6,7 @@ open Frontend Checking Spec.Paper
 
 private def value (text : String) (target := true) : IO String := do
   let p ← IO.ofExcept (compile text)
-  let e := if target then p.checked.source.determinize else p.checked.source
+  let e := if target then p.source.determinize else p.source
   let (v, _) ← IO.ofExcept (Runtime.run e 42 10000)
   return v.display
 
@@ -41,29 +41,29 @@ def runtime : IO Unit := do
       "exponential(0)", "gamma(1,0)", "flip(2)", "observe(false)",
       "(rec f x => f x) ()"] do
     let p ← IO.ofExcept (compile text)
-    for expression in [p.checked.source, p.checked.source.determinize] do
+    for expression in [p.source, p.source.determinize] do
       assert (Runtime.run expression 0 100 |> fun r => !r.isOk) s!"bad run returned a value: {text}"
   let boundary := "discrete[E](" ++ String.intercalate "+" (List.replicate 20 "0.05") ++ ",*)"
   for target in [false, true] do
     assert ((← value boundary target) == "0.000000") "rounding at probability sum one failed"
   let p ← IO.ofExcept (compile "gauss[E](1,uniform[G](1,2))")
-  let (_, stats) ← IO.ofExcept (Runtime.run p.checked.source.determinize)
+  let (_, stats) ← IO.ofExcept (Runtime.run p.source.determinize)
   assert (stats.draws == 1) "atomic mean skipped a sampled variance operand"
 
   let rejected ← IO.ofExcept (compile "let _ = observe(false) in 42")
-  for e in [rejected.checked.source, rejected.checked.source.determinize] do
+  for e in [rejected.source, rejected.source.determinize] do
     match ← IO.ofExcept (Runtime.runOutcome e 42 10) with
     | .rejected => pure ()
     | .returned .. => throw (IO.userError "failed observation returned a value")
   let division ← IO.ofExcept (compile "1/0")
-  match Runtime.runOutcome division.checked.source 42 10 with
+  match Runtime.runOutcome division.source 42 10 with
   | .error message => assert (message == "division by zero") "division failure diagnostic"
   | .ok _ => throw (IO.userError "division by zero was treated as a return or rejection")
   let divergent ← IO.ofExcept (compile "(rec f x => f x) ()")
-  assert (!(Runtime.runOutcome divergent.checked.source 42 10).isOk)
+  assert (!(Runtime.runOutcome divergent.source 42 10).isOk)
     "ordinary divergence was classified as observation rejection"
   let condition ← IO.ofExcept (compile "observe(uniform[G](0,1) < 2)")
-  let (_, state) ← IO.ofExcept (Runtime.run condition.checked.source)
+  let (_, state) ← IO.ofExcept (Runtime.run condition.source)
   assert (state.draws == 1) "observation condition was not evaluated once"
 
 end Determinize.Tests
