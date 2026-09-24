@@ -16,8 +16,9 @@ that make it typable. It follows the reference algorithm of
 2. *Shapes* (`unify`): unify the shapes of the two sides of every constraint. Structural subtyping
    relates only types of the same shape.
 3. *Decoration* (`UType.decorate`): replace every type variable `α` by its most general shape,
-   with the affinity variable `leaf α position` at each float and `unit` at each remaining shape
-   variable. Type variables with equal shapes still get different affinity variables.
+   with the affinity variable `leaf α position` at each float. The remaining shape variables are
+   unconstrained; read-back sets them to `unit`. Type variables with equal shapes still get
+   different affinity variables.
 4. *Decomposition* (`decompose`): split every constraint between decorated types into atomic
    constraints between affinities: covariant, except in function arguments.
 5. *Affinities* (`solveAffinities`): the greatest solution of the atomic constraints.
@@ -46,9 +47,9 @@ inductive UType where
 deriving Repr, Inhabited
 
 /-- The type of a shape, with the affinity variable `leaf position` at the float at each position
-(the list of child indices from the root), and `unit` at every shape variable. -/
+(the list of child indices from the root). Shape variables stay type variables. -/
 def Shape.decorate (leaf : List Nat → AffinityVar) : Shape → UType
-  | .var _ => .unit
+  | .var i => .var i
   | .unit => .unit
   | .bool => .bool
   | .float => .float (.var (leaf []))
@@ -304,7 +305,8 @@ structure Solution where
   shapes : Nat → Shape
   affinities : AffinityVar → Affinity
 
-/-- The type of a draft type in the solution. Decorated types contain no type variables. -/
+/-- The type of a draft type in the solution. The shape variables left after decoration are
+unconstrained and become `unit`. -/
 def Solution.type (s : Solution) (t : UType) : Ty :=
   (t.decorate s.shapes).instantiate (fun _ => .unit) s.affinities
 
