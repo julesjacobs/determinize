@@ -16,7 +16,8 @@ by the most means.
 `inferOptimalThm` that every completion lies below it, so it is the greatest completion; and
 `inferCompleteThm` that `infer` succeeds whenever a completion exists. `inferFloatSoundThm` and
 `inferFloatCompleteThm` restate soundness and completeness at `float E`, the type assumed by the
-theorems in `Spec/Main.lean`.
+theorems in `Spec/Main.lean`, and `inferFloatTypedThm` states that the inferred program has type
+`float E` whenever some completion does.
 
 These statements do not depend on how `infer` works. Soundness, optimality, and completeness
 determine its output program uniquely, but not its output type.
@@ -132,6 +133,16 @@ def inferFloatCompleteThm : Prop :=
     input.matches completion = true →
     Typed [] (interpret completion) (.float .E) →
     ∃ program ty, Frontend.infer input = .ok (program, ty) ∧ AffinityLE completion program
+
+/-- If some completion has type `float E`, then so does the inferred program, even when the
+inferred type is not a float. The theorems in `Spec/Main.lean` then apply to the output of
+`infer` itself. -/
+def inferFloatTypedThm : Prop :=
+  ∀ (input : Input) (completion : Core),
+    input.matches completion = true →
+    Typed [] (interpret completion) (.float .E) →
+    ∃ program ty, Frontend.infer input = .ok (program, ty) ∧
+      Typed [] (interpret program) (.float .E)
 
 /-! ## Examples
 
