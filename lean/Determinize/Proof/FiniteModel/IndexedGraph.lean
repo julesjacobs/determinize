@@ -58,7 +58,7 @@ theorem weightedOutput_indexed {n : Nat} (states : Fin n → State) (fallback : 
   · intro entry _ _
     exact ⟨entry.2, rfl⟩
 
-theorem indexedReplay_machineOutput (candidate : Candidate) {source : Checking.Core} {subject : Subject}
+theorem indexedReplay_machineOutput (candidate : Candidate) {source : Spec.Paper.Core} {subject : Subject}
     (indices : Fin candidate.states.size → Nat → Nat)
     (valid : candidate.IndexedReplayValid source subject indices) (fuel : Nat)
     (i : Fin candidate.states.size) :
@@ -101,7 +101,7 @@ theorem indexedReplay_machineOutput (candidate : Candidate) {source : Checking.C
               obtain ⟨bound, located⟩ := Array.getElem?_eq_some_iff.mp (row.2.2.1 k positive).1
               exact ⟨bound, located⟩
 
-theorem indexedReplay_matches (candidate : Candidate) {source : Checking.Core} {subject : Subject}
+theorem indexedReplay_matches (candidate : Candidate) {source : Spec.Paper.Core} {subject : Subject}
     (indices : Fin candidate.states.size → Nat → Nat)
     (valid : candidate.IndexedReplayValid source subject indices) :
     (candidate.graphModel (indexedReplay_valid candidate source subject indices valid)).Matches

@@ -10,7 +10,7 @@ affinities of the input. Each cast becomes one subsumption step.
 -/
 
 namespace Determinize.Proof.Frontend
-open Determinize.Frontend Spec.Paper Checking Ground
+open Determinize.Frontend Spec.Paper Ground
 
 /-- Lemma S. -/
 theorem generate_sound (σ : Ground) : ∀ (e : Input) (Γ : List UType) (n : Nat) (d : Draft)

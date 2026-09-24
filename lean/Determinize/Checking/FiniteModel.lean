@@ -3,6 +3,7 @@ import Determinize.Proof.FiniteModel.IndexedGraph
 
 namespace Determinize.Checking
 open Spec.FiniteModel Determinize.Finite
+open Spec.Paper (Core)
 
 /-- Kernel-replayable evidence of graph validity. `replay_matches` transports
 this evidence to the paper semantics. -/

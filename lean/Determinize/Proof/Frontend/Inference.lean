@@ -21,7 +21,7 @@ The statement of `Spec/Inference.lean`, assembled from the lemmas of the other f
 -/
 
 namespace Determinize.Proof.Frontend
-open Determinize.Frontend Spec Spec.Paper Checking Ground
+open Determinize.Frontend Spec Spec.Paper Ground
 
 /-! ## The phases of inference -/
 

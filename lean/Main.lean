@@ -7,6 +7,7 @@ import Determinize.Finite.Reward.Explore
 import Determinize.Finite.Reward.Export
 
 open Determinize Determinize.Frontend Determinize.Checking
+open Determinize.Spec.Paper (Core)
 
 private structure Options where
   file : String := ""

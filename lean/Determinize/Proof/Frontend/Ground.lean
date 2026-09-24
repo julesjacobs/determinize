@@ -20,7 +20,7 @@ program is monotone in the affinities (`program_le`).
 -/
 
 namespace Determinize.Proof.Frontend
-open Determinize.Frontend Spec Spec.Paper Checking
+open Determinize.Frontend Spec Spec.Paper
 
 /-! ## Unfolding `generate` -/
 
