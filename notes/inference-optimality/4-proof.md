@@ -1,32 +1,30 @@
 # Step 4: the proofs (in progress)
 
-Status: no statement is proved yet; the six theorems in `Theorems.lean` are still `sorry`. This
-commit only changes `Shape.decorate` so that the proofs get simpler; `infer`'s outputs are
-unchanged (see "The change to `Infer.lean`").
+Status: the inversion lemmas and the decomposition lemmas (S′, C′(b)) are proved. Lemmas S and C
+and the assembly are left; the six theorems in `Theorems.lean` are still `sorry`.
 
-## Plan
+## Done
 
-All proofs go to `lean/Determinize/Proof/Frontend/`, next to step 3's `Unify.lean` and
-`Affinity.lean`, in namespace `Determinize.Proof.Frontend`.
+| File | Contents | Lemma in `1-claims.md` |
+| --- | --- | --- |
+| `Proof/Frontend/Typing.lean` | `typed_<constructor>_inv` for every constructor that occurs in completions except `reject` (31), `hasVar_iff` | "Typed inversion modulo `sub`" |
+| `Proof/Frontend/Decompose.lean` | `shapeOf` (erasure `Ty → Shape`), `shapeOf_sub`, shapes of decorated and instantiated types, `instantiate_decorate`; `decompose_sound`; `affinityAt`, `Approx`, `approx_decorate`, `decompose_complete` | S′, C′(b) |
+| `Frontend/Infer.lean` | `Shape.decorate` keeps shape variables (previous commit; outputs unchanged) | |
 
-1. `Typing.lean`: inversion of `Typed` modulo `sub`, one lemma per constructor that occurs in a
-   completion (all but `reject`, which needs none).
-2. `Decompose.lean`: the shape erasure `shapeOf : Ty → Shape` and `Ty.Sub` preserving it; shapes of
-   decorated and instantiated types; Lemma S′ (`decompose_sound`: equal shapes and a solution of
-   the decomposition give `Ty.Sub` of every instance) and Lemma C′(b) (`decompose_complete`: `Ty.Sub`
-   of instances gives a solution, with the affinities read off at the leaves of the decorated
-   shapes).
-3. `Ground.lean`: ground substitutions (a `Ty` per type variable, an `Affinity` per affinity
-   variable), agreement below a counter, the monad lemmas for unfolding `generate`, and
+`Approx ρ u T` says that `T` has the structure of the decorated type `u` wherever `u` is a
+constructor other than a base type, with the affinity `ρ` gives at each float of `u`. It replaces
+explicit position paths: `approx_decorate` shows that decorated types approximate their instances
+when `θ` factors the shapes and the leaf variables read off the affinities (`affinityAt`), and
+`decompose_complete` is an induction on the `Ty.Sub` derivation, which handles the contravariant
+argument of `arr` for free. `decompose_sound` uses `decompose.induct`.
+
+## Left
+
+1. `Ground.lean`: ground substitutions, agreement below a counter, monad lemmas for `generate`,
    monotonicity of read-back.
-4. `Soundness.lean`, Lemma S: every ground solution of the draft's relations types the read-back
-   program. Induction on `Input`.
-5. `Completeness.lean`, Lemma C: a typed completion makes `generate` succeed and extends to a
-   solution whose read-back is the completion. Induction on `Input`. The conclusion is to be
-   *robust* (it holds for every substitution that agrees below the final counter), which should
-   make a separate "variables are below the counter" invariant unnecessary.
-6. `Inference.lean`: the six theorems. The two corollaries follow from the main three as
-   `2-surface.md` says.
+2. Lemma S (`Soundness.lean`) and Lemma C (`Completeness.lean`), by induction on `Input`. Lemma C
+   with a robust conclusion (for every substitution that agrees below the final counter).
+3. `Inference.lean`: the six theorems, and wiring into `Theorems.lean`.
 
 ## The change to `Infer.lean`
 
