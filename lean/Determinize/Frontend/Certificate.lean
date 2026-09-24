@@ -7,7 +7,7 @@ open Checking Spec.Paper
 /-- The exported file recomputes the checks in Lean's kernel using `decide +kernel`. -/
 def certificateText (text : String) : Except String String := do
   let input ← elaborate (← parse text)
-  let (source, certificate) ← infer input
+  let (source, certificate) ← inferWithCertificate input
   let some _ := certify input source certificate
     | throw "invalid certificate"
   let theoremText := match certificate.ty with

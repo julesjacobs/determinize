@@ -272,12 +272,18 @@ private partial def finish : Draft → M (Core × Certificate)
       | _,_ => throw "internal annotation shape mismatch"
     return (e,.node t cs)
 
-def infer (input : Input) : Except String (Core × Certificate) := do
+/-- Inference together with the typing certificate that `certify` checks. -/
+def inferWithCertificate (input : Input) : Except String (Core × Certificate) := do
   let (result, _) ← (do
     let draft ← inferExpr [] input
     solveRelations
     solve
     finish draft).run {}
   return result
+
+/-- The annotated program and its type. `Spec/Inference.lean` states what it guarantees. -/
+def infer (input : Input) : Except String (Core × Ty) := do
+  let (source, certificate) ← inferWithCertificate input
+  return (source, certificate.ty)
 
 end Determinize.Frontend
