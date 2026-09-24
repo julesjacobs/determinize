@@ -6,7 +6,6 @@ suite = "typing"
 outcome = "accept"
 expected_type = "float[E]"
 affinities = ["G", "E"]
-kernel = true
 
 [[case]]
 file = "examples/paper/noisy-product.det"
@@ -14,7 +13,6 @@ suite = "typing"
 outcome = "accept"
 expected_type = "float[E]"
 affinities = ["G", "E"]
-kernel = true
 
 [[case]]
 file = "examples/paper/dungeon.det"
@@ -22,7 +20,6 @@ suite = "typing"
 outcome = "accept"
 expected_type = "float[E]"
 affinities = ["G", "E"]
-kernel = true
 
 [[exclude]]
 file = "examples/loops/walk-sketches.det"
@@ -62,7 +59,6 @@ outcome = "accept"
 file = "tests/execution/factorial.det"
 suite = "execution"
 outcome = "accept"
-kernel = true
 source = { number = 24 }
 target = { number = 24 }
 
@@ -70,7 +66,6 @@ target = { number = 24 }
 file = "tests/execution/foldr.det"
 suite = "execution"
 outcome = "accept"
-kernel = true
 target = { number = 4.5 }
 
 [[case]]
@@ -100,7 +95,6 @@ target = { number = 1 }
 file = "tests/execution/lambda.det"
 suite = "execution"
 outcome = "accept"
-kernel = true
 source = { number = 6 }
 target = { number = 6 }
 
@@ -127,7 +121,6 @@ outcome = "accept"
 file = "tests/typing/accept/observe.det"
 suite = "typing"
 outcome = "accept"
-kernel = true
 
 [[case]]
 file = "tests/execution/pairs.det"
@@ -277,19 +270,16 @@ outcome = "accept"
 file = "tests/typing/accept/primitives.det"
 suite = "typing"
 outcome = "accept"
-kernel = true
 
 [[case]]
 file = "tests/typing/accept/subtyping.det"
 suite = "typing"
 outcome = "accept"
-kernel = true
 
 [[case]]
 file = "tests/typing/accept/identity.det"
 suite = "typing"
 outcome = "accept"
-kernel = true
 
 [[case]]
 file = "tests/execution/pair.det"
@@ -627,7 +617,6 @@ file = "tests/execution/rejection-short-circuit.det"
 suite = "execution"
 outcome = "accept"
 fuel = 20
-kernel = true
 source = { error = "observation rejected" }
 target = { error = "observation rejected" }
 
@@ -642,7 +631,6 @@ target = { value = "()", draws = 1 }
 file = "tests/execution/bernoulli-zero.det"
 suite = "execution"
 outcome = "accept"
-kernel = true
 source = { number = 0, draws = 1 }
 target = { number = 0, draws = 0 }
 
@@ -650,7 +638,6 @@ target = { number = 0, draws = 0 }
 file = "tests/execution/bernoulli-one.det"
 suite = "execution"
 outcome = "accept"
-kernel = true
 source = { number = 1, draws = 1 }
 target = { number = 1, draws = 0 }
 
@@ -690,7 +677,6 @@ stage = "elaboration"
 file = "tests/statistical/bernoulli-e.det"
 suite = "statistical"
 outcome = "accept"
-kernel = true
 samples = 20000
 seed = 20260911
 source = { moments = { mean = 0.3, variance = 0.21, mean_tolerance = 0.02268259244442751, variance_tolerance = 0.009073632406057235, lower = 0, upper = 1, integer = true } }
@@ -701,7 +687,6 @@ derivation = "bernoulli-e"
 file = "tests/statistical/bernoulli-nested.det"
 suite = "statistical"
 outcome = "accept"
-kernel = true
 samples = 20000
 seed = 20260911
 source = { moments = { mean = 0.5, variance = 0.25, mean_tolerance = 0.024748737341529162, variance_tolerance = 0.00012374678041580844, lower = 0, upper = 1, integer = true } }
@@ -719,7 +704,6 @@ target = { number = 0.25, draws = 1 }
 file = "tests/execution/discrete-zero-weights.det"
 suite = "execution"
 outcome = "accept"
-kernel = true
 source = { number = 1, draws = 1 }
 target = { number = 1, draws = 0 }
 
@@ -727,7 +711,6 @@ target = { number = 1, draws = 0 }
 file = "tests/execution/discrete-singleton.det"
 suite = "execution"
 outcome = "accept"
-kernel = true
 source = { number = 0, draws = 1 }
 target = { number = 0, draws = 0 }
 
@@ -735,7 +718,6 @@ target = { number = 0, draws = 0 }
 file = "tests/execution/discrete-last-nonzero.det"
 suite = "execution"
 outcome = "accept"
-kernel = true
 source = { number = 2, draws = 1 }
 target = { number = 2, draws = 1 }
 
@@ -773,7 +755,6 @@ stage = "inference"
 file = "tests/statistical/discrete-e.det"
 suite = "statistical"
 outcome = "accept"
-kernel = true
 samples = 20000
 seed = 20260911
 source = { moments = { mean = 1.25, variance = 0.6875, mean_tolerance = 0.04104113789845501, variance_tolerance = 0.026971458184005898, lower = 0, upper = 2, integer = true } }
@@ -784,7 +765,6 @@ derivation = "discrete-e"
 file = "tests/execution/discrete-nested.det"
 suite = "execution"
 outcome = "accept"
-kernel = true
 source = { draws = 2 }
 target = { number = 1.5, draws = 0 }
 
@@ -792,7 +772,6 @@ target = { number = 1.5, draws = 0 }
 file = "tests/statistical/bernoulli-mixed.det"
 suite = "statistical"
 outcome = "accept"
-kernel = true
 samples = 20000
 seed = 20260911
 source = { draws = 2, moments = { mean = 0.5, variance = 0.25, mean_tolerance = 0.024748737341529162, variance_tolerance = 0.00012374678041580844, lower = 0, upper = 1, integer = true } }
@@ -803,7 +782,6 @@ derivation = "bernoulli-mixed"
 file = "tests/statistical/coupling-branch.det"
 suite = "statistical"
 outcome = "accept"
-kernel = true
 samples = 20000
 seed = 20260911
 derivation = "coupling-branch"
@@ -814,7 +792,6 @@ target = { moments = { mean = 1.75, variance = 1.5625, mean_tolerance = 0.061871
 file = "tests/statistical/coupling-mixed.det"
 suite = "statistical"
 outcome = "accept"
-kernel = true
 samples = 20000
 seed = 20260911
 derivation = "coupling-mixed"
@@ -825,25 +802,21 @@ target = { moments = { mean = 1.75, variance = 0.1875, mean_tolerance = 0.021433
 file = "tests/execution/beta-shape.det"
 suite = "typing"
 outcome = "accept"
-kernel = true
 
 [[case]]
 file = "tests/execution/div.det"
 suite = "typing"
 outcome = "accept"
-kernel = true
 
 [[case]]
 file = "tests/execution/flip-prob.det"
 suite = "typing"
 outcome = "accept"
-kernel = true
 
 [[case]]
 file = "tests/execution/gauss-variance.det"
 suite = "typing"
 outcome = "accept"
-kernel = true
 
 [[case]]
 file = "tests/typing/reject/discrete-nonunit.det"
@@ -856,7 +829,6 @@ file = "tests/statistical/discrete-computed-e.det"
 derivation = "discrete-computed-e"
 suite = "statistical"
 outcome = "accept"
-kernel = true
 samples = 20000
 seed = 20260911
 source = { draws = 2, moments = { mean = 1.25, variance = 0.6875, mean_tolerance = 0.04104113789845501, variance_tolerance = 0.026971458184005898, lower = 0, upper = 2, integer = true } }
@@ -867,7 +839,6 @@ file = "tests/statistical/discrete-computed-g.det"
 derivation = "discrete-computed-g"
 suite = "statistical"
 outcome = "accept"
-kernel = true
 samples = 20000
 seed = 20260911
 source = { draws = 2, moments = { mean = 1.25, variance = 0.6875, mean_tolerance = 0.04104113789845501, variance_tolerance = 0.026971458184005898, lower = 0, upper = 2, integer = true } }
@@ -877,7 +848,6 @@ target = { draws = 1, moments = { mean = 1.25, variance = 0.25, mean_tolerance =
 file = "tests/execution/discrete-remainder-empty.det"
 suite = "execution"
 outcome = "accept"
-kernel = true
 source = { number = 0, draws = 1 }
 target = { number = 0, draws = 0 }
 
@@ -885,7 +855,6 @@ target = { number = 0, draws = 0 }
 file = "tests/execution/discrete-remainder-last.det"
 suite = "execution"
 outcome = "accept"
-kernel = true
 source = { number = 2, draws = 1 }
 target = { number = 2, draws = 1 }
 
@@ -908,18 +877,15 @@ suite = "typing"
 outcome = "accept"
 expected_type = "float[E]"
 affinities = ["G"]
-kernel = true
 
 [[case]]
 file = "examples/loops/geometric-random-increment.det"
 suite = "typing"
 outcome = "accept"
 affinities = ["G", "G"]
-kernel = true
 
 [[case]]
 file = "examples/loops/geometric-rejection.det"
 suite = "typing"
 outcome = "accept"
 affinities = ["G", "G"]
-kernel = true
