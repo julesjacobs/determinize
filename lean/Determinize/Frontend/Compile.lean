@@ -12,7 +12,7 @@ structure Program where
 
 def compile (text : String) : Except String Program := do
   let input ← elaborate (← parse text)
-  let (source, certificate) ← infer input
+  let (source, certificate) ← inferWithCertificate input
   let some checked := certify input source certificate
     | throw "inference produced an invalid typing or elaboration certificate"
   return ⟨input, checked⟩

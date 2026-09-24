@@ -86,7 +86,7 @@ private def statistical (e : Core) (c : CorpusCase) (m : Moments) : IO Unit := d
 private def compileStage (text : String) : Except (String × String) Program := do
   let ast ← (parse text).mapError ("parse", ·)
   let input ← (elaborate ast).mapError ("elaboration", ·)
-  let (source, cert) ← (infer input).mapError ("inference", ·)
+  let (source, cert) ← (inferWithCertificate input).mapError ("inference", ·)
   let some checked := certify input source cert
     | throw ("certificate", "inference produced an invalid certificate")
   return ⟨input, checked⟩

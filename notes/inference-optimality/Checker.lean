@@ -638,7 +638,7 @@ partial def higherOrder : Input → Bool
 def checkProgram (e : Input) : Outcome := Id.run do
   let text := showInput [] 0 e
   let free := ((sites e).filter Option.isNone).length
-  let inferred := infer e
+  let inferred := inferWithCertificate e
   let hints := binderHints e
   let floatHints := binderHints e (some .float)
   let mut typable : List (List Affinity) := []
@@ -659,7 +659,7 @@ def checkProgram (e : Input) : Outcome := Id.run do
     for (τ, c) in typings ++ floatTypings do
       if (certify e candidate c).isNone then
         problems := s!"synth built an invalid certificate at {prettyType τ} for {pretty candidate}" :: problems
-    let annotated := infer (toInput candidate)
+    let annotated := inferWithCertificate (toInput candidate)
     if typings.isEmpty == annotated.isOk then
       problems := s!"synth ({typings.length} typings) and infer on the annotated program ({if annotated.isOk then "ok" else "fails"}) disagree for {pretty candidate}" :: problems
     unless typings.isEmpty do typable := typable ++ [as]
