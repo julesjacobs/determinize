@@ -18,7 +18,7 @@ namespace Determinize.Proof.Frontend
 open Determinize.Frontend Spec.Paper Ground
 
 /-- What Lemma C establishes about the draft `d` of a completion `ê` at the type `T`. -/
-def Fits (d : Draft) (ê : Core) (T : Ty) (σ : Ground) : Prop :=
+def Fits (d : Draft) (ê : Annotated) (T : Ty) (σ : Ground) : Prop :=
   σ.Solves d.relations ∧ Ty.Sub (σ.inst d.ty) T ∧ d.program σ.affinities = ê
 
 /-! ## Fresh variables
@@ -52,7 +52,7 @@ theorem freshAffinity (σ : Ground) (n : Nat) (m : Affinity) :
     fun _ h => by rw [h.affinity (by omega)]; simp⟩
 
 /-- The type of a sample site that the completion samples at `m` becomes `float m`. -/
-theorem site_complete {r : Option Affinity} {m : Affinity} (hr : (r.isNone || r == some m) = true)
+theorem site_complete {r : Option Affinity} {m : Affinity} (hr : r = none ∨ r = some m)
     (n : Nat) (σ : Ground) :
     ∃ t n₁, (site r).run n = .ok (t, n₁) ∧ n ≤ n₁ ∧ ∃ σ₁, σ.Agree n σ₁ ∧
       Robust n₁ σ₁ fun σ' => σ'.inst t = .float m ∧ t.affinity σ'.affinities = m := by
@@ -63,7 +63,7 @@ theorem site_complete {r : Option Affinity} {m : Affinity} (hr : (r.isNone || r 
     have : σ'.affinities (.generated n) = m := by rw [h.affinity (Nat.lt_succ_self n)]; simp
     simp [UType.affinity, AffinityTerm.eval, this]
   | some m' =>
-    simp only [Option.isNone_some, Bool.false_or, beq_iff_eq, Option.some.injEq] at hr
+    simp only [reduceCtorEq, Option.some.injEq, false_or] at hr
     subst hr
     exact ⟨_, _, rfl, le_rfl, σ, Agree.refl _ _, fun _ _ => by
       simp [UType.affinity, AffinityTerm.eval]⟩
@@ -75,13 +75,11 @@ macro "draft_type" : tactic => `(tactic|
 
 /-- Split a completion that matches the input node. -/
 macro "invert_matches" ê:ident hm:ident : tactic => `(tactic|
-  (cases $ê:ident <;> (try cases ‹DistributionAction›) <;>
-    simp only [Input.matches, Bool.and_eq_true, Bool.false_eq_true, decide_eq_true_eq]
-      at $hm:ident))
+  (cases $ê:ident <;> simp only [Input.matches, Expr.Sitewise] at $hm:ident))
 
 /-- Lemma C. -/
 theorem generate_complete : ∀ (e : Input) (Γ : List UType) (Γ' : List Ty) (n : Nat) (σ : Ground)
-    (ê : Core) (T : Ty), Robust n σ (Context Γ Γ') → e.matches ê = true →
+    (ê : Annotated) (T : Ty), Robust n σ (Context Γ Γ') → e.matches ê →
     Typed Γ' (interpret ê) T →
     ∃ d n', (generate Γ e).run n = .ok (d, n') ∧ n ≤ n' ∧
       ∃ σ₁, σ.Agree n σ₁ ∧ Robust n' σ₁ (Fits d ê T) := by
@@ -270,13 +268,13 @@ theorem generate_complete : ∀ (e : Input) (Γ : List UType) (Γ' : List Ty) (n
     obtain ⟨A, B, R, ts, ta, tb, sT⟩ := typed_matchSum_inv ht
     obtain ⟨σ₀, a₀, e₀⟩ := fresh₃ σ n A B R
     obtain ⟨ds, n₁, hs, le₁, σ₁, a₁, F₁⟩ :=
-      ihs Γ Γ' (n + 1 + 1 + 1) σ₀ _ _ (hΓ.extend a₀ (by omega)) hm.1.1 ts
+      ihs Γ Γ' (n + 1 + 1 + 1) σ₀ _ _ (hΓ.extend a₀ (by omega)) hm.1 ts
     obtain ⟨da, n₂, ha, le₂, σ₂, a₂, F₂⟩ := iha (.var n :: Γ) (A :: Γ') n₁ σ₁ _ _
       ((hΓ.extend (a₀.step a₁ (by omega)) (by omega)).cons fun σ' h => by
-        simp only [inst_var, (e₀ σ' (a₁.step h le₁)).1]; exact .refl _) hm.1.2 ta
+        simp only [inst_var, (e₀ σ' (a₁.step h le₁)).1]; exact .refl _) hm.2.1 ta
     obtain ⟨db, n₃, hb, le₃, σ₃, a₃, F₃⟩ := ihb (.var (n + 1) :: Γ) (B :: Γ') n₂ σ₂ _ _
       ((hΓ.extend (a₀.step (a₁.step a₂ le₁) (by omega)) (by omega)).cons fun σ' h => by
-        simp only [inst_var, (e₀ σ' (a₁.step (a₂.step h le₂) le₁)).2.1]; exact .refl _) hm.2 tb
+        simp only [inst_var, (e₀ σ' (a₁.step (a₂.step h le₂) le₁)).2.1]; exact .refl _) hm.2.2 tb
     refine ⟨_, _, by unfold_generate; simp only [hs, ha, hb, ok_bind]; rfl, by omega, σ₃,
       a₀.step (a₁.step (a₂.step a₃ le₂) le₁) (by omega), fun σ' h' => ?_⟩
     have h₂ := a₃.step h' le₃
@@ -314,16 +312,16 @@ theorem generate_complete : ∀ (e : Input) (Γ : List UType) (Γ' : List Ty) (n
     obtain ⟨A, R, ts, tn, tc, sT⟩ := typed_matchList_inv ht
     obtain ⟨σ₀, a₀, e₀⟩ := fresh₂ σ n A R
     obtain ⟨ds, n₁, hs, le₁, σ₁, a₁, F₁⟩ :=
-      ihs Γ Γ' (n + 1 + 1) σ₀ _ _ (hΓ.extend a₀ (by omega)) hm.1.1 ts
+      ihs Γ Γ' (n + 1 + 1) σ₀ _ _ (hΓ.extend a₀ (by omega)) hm.1 ts
     obtain ⟨dn, n₂, hn, le₂, σ₂, a₂, F₂⟩ :=
-      ihn Γ Γ' n₁ σ₁ _ _ (hΓ.extend (a₀.step a₁ (by omega)) (by omega)) hm.1.2 tn
+      ihn Γ Γ' n₁ σ₁ _ _ (hΓ.extend (a₀.step a₁ (by omega)) (by omega)) hm.2.1 tn
     obtain ⟨dc, n₃, hc, le₃, σ₃, a₃, F₃⟩ :=
       ihc (.var n :: .list (.var n) :: Γ) (A :: .list A :: Γ') n₂ σ₂ _ _
       (((hΓ.extend (a₀.step (a₁.step a₂ le₁) (by omega)) (by omega)).cons fun σ' h => by
           simp only [inst_list, inst_var, (e₀ σ' (a₁.step (a₂.step h le₂) le₁)).1]
           exact .refl _).cons
         fun σ' h => by simp only [inst_var, (e₀ σ' (a₁.step (a₂.step h le₂) le₁)).1]; exact .refl _)
-      hm.2 tc
+      hm.2.2 tc
     refine ⟨_, _, by unfold_generate; simp only [hs, hn, hc, ok_bind]; rfl, by omega, σ₃,
       a₀.step (a₁.step (a₂.step a₃ le₂) le₁) (by omega), fun σ' h' => ?_⟩
     have h₂ := a₃.step h' le₃
@@ -342,11 +340,11 @@ theorem generate_complete : ∀ (e : Input) (Γ : List UType) (Γ' : List Ty) (n
     obtain ⟨R, tc, ta, tb, sT⟩ := typed_ite_inv ht
     obtain ⟨σ₀, a₀, e₀⟩ := fresh₁ σ n R
     obtain ⟨dc, n₁, hc, le₁, σ₁, a₁, F₁⟩ :=
-      ihc Γ Γ' (n + 1) σ₀ _ _ (hΓ.extend a₀ (by omega)) hm.1.1 tc
+      ihc Γ Γ' (n + 1) σ₀ _ _ (hΓ.extend a₀ (by omega)) hm.1 tc
     obtain ⟨da, n₂, ha, le₂, σ₂, a₂, F₂⟩ :=
-      iha Γ Γ' n₁ σ₁ _ _ (hΓ.extend (a₀.step a₁ (by omega)) (by omega)) hm.1.2 ta
+      iha Γ Γ' n₁ σ₁ _ _ (hΓ.extend (a₀.step a₁ (by omega)) (by omega)) hm.2.1 ta
     obtain ⟨db, n₃, hb, le₃, σ₃, a₃, F₃⟩ :=
-      ihb Γ Γ' n₂ σ₂ _ _ (hΓ.extend (a₀.step (a₁.step a₂ le₁) (by omega)) (by omega)) hm.2 tb
+      ihb Γ Γ' n₂ σ₂ _ _ (hΓ.extend (a₀.step (a₁.step a₂ le₁) (by omega)) (by omega)) hm.2.2 tb
     refine ⟨_, _, by unfold_generate; simp only [hc, ha, hb, ok_bind]; rfl, by omega, σ₃,
       a₀.step (a₁.step (a₂.step a₃ le₂) le₁) (by omega), fun σ' h' => ?_⟩
     have h₂ := a₃.step h' le₃
@@ -465,10 +463,10 @@ theorem generate_complete : ∀ (e : Input) (Γ : List UType) (Γ' : List Ty) (n
     intro Γ Γ' n σ ê T hΓ hm ht
     invert_matches ê hm
     obtain ⟨ta, tb, sT⟩ := typed_uniform_inv ht
-    obtain ⟨t, n₀, hsite, le₀, σ₀, a₀, F₀⟩ := site_complete hm.1.1 n σ
-    obtain ⟨da, n₁, ha, le₁, σ₁, a₁, F₁⟩ := iha Γ Γ' n₀ σ₀ _ _ (hΓ.extend a₀ le₀) hm.1.2 ta
+    obtain ⟨t, n₀, hsite, le₀, σ₀, a₀, F₀⟩ := site_complete hm.1 n σ
+    obtain ⟨da, n₁, ha, le₁, σ₁, a₁, F₁⟩ := iha Γ Γ' n₀ σ₀ _ _ (hΓ.extend a₀ le₀) hm.2.1 ta
     obtain ⟨db, n₂, hb, le₂, σ₂, a₂, F₂⟩ :=
-      ihb Γ Γ' n₁ σ₁ _ _ (hΓ.extend (a₀.step a₁ le₀) (by omega)) hm.2 tb
+      ihb Γ Γ' n₁ σ₁ _ _ (hΓ.extend (a₀.step a₁ le₀) (by omega)) hm.2.2 tb
     refine ⟨_, _, by unfold_generate; simp only [hsite, ha, hb, ok_bind]; rfl, by omega, σ₂,
       a₀.step (a₁.step a₂ le₁) le₀, fun σ' h' => ?_⟩
     have h₁ := a₂.step h' le₂
@@ -483,10 +481,10 @@ theorem generate_complete : ∀ (e : Input) (Γ : List UType) (Γ' : List Ty) (n
     intro Γ Γ' n σ ê T hΓ hm ht
     invert_matches ê hm
     obtain ⟨ta, tb, sT⟩ := typed_gaussian_inv ht
-    obtain ⟨t, n₀, hsite, le₀, σ₀, a₀, F₀⟩ := site_complete hm.1.1 n σ
-    obtain ⟨da, n₁, ha, le₁, σ₁, a₁, F₁⟩ := iha Γ Γ' n₀ σ₀ _ _ (hΓ.extend a₀ le₀) hm.1.2 ta
+    obtain ⟨t, n₀, hsite, le₀, σ₀, a₀, F₀⟩ := site_complete hm.1 n σ
+    obtain ⟨da, n₁, ha, le₁, σ₁, a₁, F₁⟩ := iha Γ Γ' n₀ σ₀ _ _ (hΓ.extend a₀ le₀) hm.2.1 ta
     obtain ⟨db, n₂, hb, le₂, σ₂, a₂, F₂⟩ :=
-      ihb Γ Γ' n₁ σ₁ _ _ (hΓ.extend (a₀.step a₁ le₀) (by omega)) hm.2 tb
+      ihb Γ Γ' n₁ σ₁ _ _ (hΓ.extend (a₀.step a₁ le₀) (by omega)) hm.2.2 tb
     refine ⟨_, _, by unfold_generate; simp only [hsite, ha, hb, ok_bind]; rfl, by omega, σ₂,
       a₀.step (a₁.step a₂ le₁) le₀, fun σ' h' => ?_⟩
     have h₁ := a₂.step h' le₂
@@ -501,10 +499,10 @@ theorem generate_complete : ∀ (e : Input) (Γ : List UType) (Γ' : List Ty) (n
     intro Γ Γ' n σ ê T hΓ hm ht
     invert_matches ê hm
     obtain ⟨ta, tb, sT⟩ := typed_beta_inv ht
-    obtain ⟨t, n₀, hsite, le₀, σ₀, a₀, F₀⟩ := site_complete hm.1.1 n σ
-    obtain ⟨da, n₁, ha, le₁, σ₁, a₁, F₁⟩ := iha Γ Γ' n₀ σ₀ _ _ (hΓ.extend a₀ le₀) hm.1.2 ta
+    obtain ⟨t, n₀, hsite, le₀, σ₀, a₀, F₀⟩ := site_complete hm.1 n σ
+    obtain ⟨da, n₁, ha, le₁, σ₁, a₁, F₁⟩ := iha Γ Γ' n₀ σ₀ _ _ (hΓ.extend a₀ le₀) hm.2.1 ta
     obtain ⟨db, n₂, hb, le₂, σ₂, a₂, F₂⟩ :=
-      ihb Γ Γ' n₁ σ₁ _ _ (hΓ.extend (a₀.step a₁ le₀) (by omega)) hm.2 tb
+      ihb Γ Γ' n₁ σ₁ _ _ (hΓ.extend (a₀.step a₁ le₀) (by omega)) hm.2.2 tb
     refine ⟨_, _, by unfold_generate; simp only [hsite, ha, hb, ok_bind]; rfl, by omega, σ₂,
       a₀.step (a₁.step a₂ le₁) le₀, fun σ' h' => ?_⟩
     have h₁ := a₂.step h' le₂
@@ -519,10 +517,10 @@ theorem generate_complete : ∀ (e : Input) (Γ : List UType) (Γ' : List Ty) (n
     intro Γ Γ' n σ ê T hΓ hm ht
     invert_matches ê hm
     obtain ⟨ta, tb, sT⟩ := typed_gamma_inv ht
-    obtain ⟨t, n₀, hsite, le₀, σ₀, a₀, F₀⟩ := site_complete hm.1.1 n σ
-    obtain ⟨da, n₁, ha, le₁, σ₁, a₁, F₁⟩ := iha Γ Γ' n₀ σ₀ _ _ (hΓ.extend a₀ le₀) hm.1.2 ta
+    obtain ⟨t, n₀, hsite, le₀, σ₀, a₀, F₀⟩ := site_complete hm.1 n σ
+    obtain ⟨da, n₁, ha, le₁, σ₁, a₁, F₁⟩ := iha Γ Γ' n₀ σ₀ _ _ (hΓ.extend a₀ le₀) hm.2.1 ta
     obtain ⟨db, n₂, hb, le₂, σ₂, a₂, F₂⟩ :=
-      ihb Γ Γ' n₁ σ₁ _ _ (hΓ.extend (a₀.step a₁ le₀) (by omega)) hm.2 tb
+      ihb Γ Γ' n₁ σ₁ _ _ (hΓ.extend (a₀.step a₁ le₀) (by omega)) hm.2.2 tb
     refine ⟨_, _, by unfold_generate; simp only [hsite, ha, hb, ok_bind]; rfl, by omega, σ₂,
       a₀.step (a₁.step a₂ le₁) le₀, fun σ' h' => ?_⟩
     have h₁ := a₂.step h' le₂

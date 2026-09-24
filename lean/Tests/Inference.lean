@@ -5,13 +5,13 @@ open Frontend Spec.Paper
 
 def inference : IO Unit := do
   let p ← IO.ofExcept (compile "uniform(0,1) + gauss(2,1)")
-  assert (sampleAffinities p.source == [.E,.E]) "unconstrained draws should use E"
+  assert (p.annotated.sites == [.E,.E]) "unconstrained draws should use E"
   let p ← IO.ofExcept (compile "let x = uniform(0,1) in if x < 0.5 then x else 0")
-  assert (sampleAffinities p.source == [.G]) "branching must force G"
+  assert (p.annotated.sites == [.G]) "branching must force G"
   let p ← IO.ofExcept (compile "uniform[G](1,2) * uniform[E](0,1)")
-  assert (sampleAffinities p.source == [.G,.E]) "general left multiplication"
+  assert (p.annotated.sites == [.G,.E]) "general left multiplication"
   let p ← IO.ofExcept (compile "uniform[E](0,1) / uniform[G](1,2)")
-  assert (sampleAffinities p.source == [.E,.G]) "general denominator"
+  assert (p.annotated.sites == [.E,.G]) "general denominator"
   for text in ["let x = uniform[E](0,1) in x*x",
       "uniform[E](0,1) < 0.5", "uniform[G](0,uniform[E](0,1))", "fun x => x x",
       "true + 1", "missing", "flip(uniform[E](0,1))",
@@ -30,14 +30,14 @@ def inference : IO Unit := do
       "let f = if true then (fun x => uniform[G](0,1)) else (fun x => uniform[E](0,1)) in f 0",
       "let f = if true then (rec f x => if x < 0 then f (x+1) else uniform[G](0,1)) else (fun x => uniform[E](0,1)) in f 0"] do
     let p ← IO.ofExcept (compile text)
-    assert ((sampleAffinities p.source).contains .G && (sampleAffinities p.source).contains .E)
+    assert (p.annotated.sites.contains .G && p.annotated.sites.contains .E)
       s!"structural subtyping changed requested affinities: {text}"
 
   for sample in ["uniform(0,1)", "uniform[E](0,1)"] do
     for calls in [s!"f x + f ({sample})", s!"f ({sample}) + f x"] do
       let text := s!"let use = fun f => fun x => {calls} + x*x in use (fun z => z) (uniform[G](0,1))"
       let p ← IO.ofExcept (compile text)
-      assert (p.ty == .float .E && sampleAffinities p.source == [.E,.G])
+      assert (p.ty == .float .E && p.annotated.sites == [.E,.G])
         s!"subtype constraints lost independent affinities: {text}"
 
   for text in [

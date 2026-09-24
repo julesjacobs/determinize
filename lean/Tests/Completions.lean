@@ -14,14 +14,14 @@ private def branches : Input :=
 
 /-- `branches` with the affinities `infer` chooses: only the left factor of the product
 must be G. -/
-private def branchesInferred : Core :=
-  .ite (.bool true) (.uniform (.sample .E) (.real 0) (.real 1))
-    (.mul (.uniform (.sample .G) (.real 0) (.real 1)) (.uniform (.sample .E) (.real 0) (.real 1)))
+private def branchesInferred : Annotated :=
+  .ite (.bool true) (.uniform .E (.real 0) (.real 1))
+    (.mul (.uniform .G (.real 0) (.real 1)) (.uniform .E (.real 0) (.real 1)))
 
 /-- `branches` with every site G. -/
-private def branchesGeneral : Core :=
-  .ite (.bool true) (.uniform (.sample .G) (.real 0) (.real 1))
-    (.mul (.uniform (.sample .G) (.real 0) (.real 1)) (.uniform (.sample .G) (.real 0) (.real 1)))
+private def branchesGeneral : Annotated :=
+  .ite (.bool true) (.uniform .G (.real 0) (.real 1))
+    (.mul (.uniform .G (.real 0) (.real 1)) (.uniform .G (.real 0) (.real 1)))
 
 #guard match Frontend.infer branches with
   | .ok (program, ty) => program == branchesInferred && ty == .float .E
@@ -52,14 +52,13 @@ example : ¬ ∃ program, Completion comparison program := by
   rintro ⟨program, aligned, ty, typed⟩
   -- Alignment fixes the head of `program` and the affinity of its sample site.
   obtain ⟨lower, upper, right, rfl⟩ :
-      ∃ lower upper right, program = .lt (.uniform (.sample .E) lower upper) right := by
-    cases program <;> simp [comparison, Input.matches] at aligned
-    rename_i site right
-    cases site <;> try simp [Input.matches] at aligned
-    rename_i action lower upper
-    cases action <;> simp [Input.matches] at aligned
-    obtain ⟨⟨⟨rfl, -⟩, -⟩, -⟩ := aligned
-    exact ⟨lower, upper, right, rfl⟩
+      ∃ lower upper right, program = .lt (.uniform .E lower upper) right := by
+    cases program <;> simp only [comparison, Input.matches, Expr.Sitewise] at aligned
+    rename_i left right
+    obtain ⟨aligned, -⟩ := aligned
+    cases left <;> simp [Expr.Sitewise] at aligned
+    obtain ⟨rfl, -⟩ := aligned
+    exact ⟨_, _, _, rfl⟩
   -- A comparison needs a G operand, and an E site is not G.
   have left : ∀ {context program ty}, Typed context program ty →
       ∀ {left right}, program = .lt left right → Typed context left (.float .G) := by

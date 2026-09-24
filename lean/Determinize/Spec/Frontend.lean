@@ -1,102 +1,67 @@
 import Determinize.Spec.Syntax
 
+/-!
+# Programs of the front end
+
+The front end has rational literals, and uses the constructors of `Expr` with three kinds of
+sites:
+
+* `Input`, the resolved source program: a site carries the affinity the program requests, or
+  `none`, a placeholder for an affinity to infer;
+* `Annotated`, what inference returns: every site samples at an affinity;
+* `Core`, the paper's sites: a site samples at an affinity or computes a mean. The runtime and
+  the finite models run core programs, determinized ones included.
+-/
+
 namespace Determinize.Spec.Paper
 
 abbrev Core := Expr Rat
 
 def interpret (e : Core) : Expr := e.map (fun (q : Rat) => (q : ℝ)) id
 
-/-- Resolved source syntax. Each sample retains its optional requested affinity. -/
-inductive Input where
-  | bvar (index : Nat)
-  | reject
-  | unit | bool (value : Bool) | real (value : Rat)
-  | lam (body : Input)
-  | fix (body : Input)
-  | app (function argument : Input)
-  | pair (left right : Input) | fst (pair : Input)
-  | snd (pair : Input) | inl (value : Input)
-  | inr (value : Input)
-  | matchSum (scrutinee left right : Input)
-  | nil | cons (head tail : Input)
-  | matchList (scrutinee nilCase consCase : Input)
-  | ite (condition thenBranch elseBranch : Input)
-  | letE (value body : Input)
-  | neg (body : Input)
-  | add (left right : Input) | mul (left right : Input)
-  | div (left right : Input) | lt (left right : Input)
-  | uniform (affinity : Option Affinity) (lower upper : Input)
-  | gaussian (affinity : Option Affinity) (mean variance : Input)
-  | poisson (affinity : Option Affinity) (rate : Input)
-  | discrete (affinity : Option Affinity) (probabilities : Input)
-  | bernoulli (affinity : Option Affinity) (probability : Input)
-  | exponential (affinity : Option Affinity) (rate : Input)
-  | beta (affinity : Option Affinity) (alpha beta : Input)
-  | gamma (affinity : Option Affinity) (shape rate : Input)
+/-- Resolved source syntax. A site carries its requested affinity, or `none` if the affinity is
+to be inferred. -/
+abbrev Input := Expr Rat (Option Affinity)
 
-deriving Repr, DecidableEq
+/-- A program whose sites all sample at an affinity. -/
+abbrev Annotated := Expr Rat Affinity
 
-/-- The candidate preserves every constructor and payload, and fills only omitted affinities. -/
-def Input.matches : Input → Expr Rat → Bool
-  | .bvar index, .bvar index' => decide (index = index')
-  | .reject, .reject => true
-  | .unit, .unit => true
-  | .bool value, .bool value' => decide (value = value')
-  | .real value, .real value' => decide (value = value')
-  | .nil, .nil => true
-  | .lam body, .lam body' =>
-      body.matches body'
-  | .fix body, .fix body' =>
-      body.matches body'
-  | .app fn arg, .app fn' arg' =>
-      fn.matches fn' && arg.matches arg'
-  | .pair left right, .pair left' right' =>
-      left.matches left' && right.matches right'
-  | .fst body, .fst body' =>
-      body.matches body'
-  | .snd body, .snd body' =>
-      body.matches body'
-  | .inl body, .inl body' =>
-      body.matches body'
-  | .inr body, .inr body' =>
-      body.matches body'
-  | .matchSum scrutinee left right, .matchSum scrutinee' left' right' =>
-      scrutinee.matches scrutinee' && left.matches left' && right.matches right'
-  | .cons head tail, .cons head' tail' =>
-      head.matches head' && tail.matches tail'
-  | .matchList scrutinee nilCase consCase, .matchList scrutinee' nilCase' consCase' =>
-      scrutinee.matches scrutinee' && nilCase.matches nilCase' && consCase.matches consCase'
-  | .ite condition thenBranch elseBranch, .ite condition' thenBranch' elseBranch' =>
-      condition.matches condition' && thenBranch.matches thenBranch' && elseBranch.matches elseBranch'
-  | .letE value body, .letE value' body' =>
-      value.matches value' && body.matches body'
+/-- An annotated program is a core program without mean sites. Lean inserts this conversion
+where a core program is expected, as in `interpret program`. -/
+@[coe] def Annotated.toCore (program : Annotated) : Core := program.map id .sample
+
+instance : Coe Annotated Core := ⟨Annotated.toCore⟩
+
+/-- `e` and `e'` are the same program, with the same constructors, literals and variable
+indices, and `R` relates every site of `e` to the corresponding site of `e'`. -/
+def Expr.Sitewise {Literal Site Site' : Type} (R : Site → Site' → Prop) :
+    Expr Literal Site → Expr Literal Site' → Prop
+  | .bvar index, .bvar index' => index = index'
+  | .bool value, .bool value' => value = value'
+  | .real value, .real value' => value = value'
+  | .reject, .reject | .unit, .unit | .nil, .nil => True
+  | .lam body, .lam body' | .fix body, .fix body' | .fst body, .fst body'
+  | .snd body, .snd body' | .inl body, .inl body' | .inr body, .inr body'
   | .neg body, .neg body' =>
-      body.matches body'
-  | .add left right, .add left' right' =>
-      left.matches left' && right.matches right'
-  | .mul left right, .mul left' right' =>
-      left.matches left' && right.matches right'
-  | .div left right, .div left' right' =>
-      left.matches left' && right.matches right'
-  | .lt left right, .lt left' right' =>
-      left.matches left' && right.matches right'
-  | .uniform requested lower upper, .uniform (.sample actual) lower' upper' =>
-      (requested.isNone || requested == some actual) && lower.matches lower' && upper.matches upper'
-  | .gaussian requested mean variance, .gaussian (.sample actual) mean' variance' =>
-      (requested.isNone || requested == some actual) && mean.matches mean' && variance.matches variance'
-  | .poisson requested rate, .poisson (.sample actual) rate' =>
-      (requested.isNone || requested == some actual) && rate.matches rate'
-  | .bernoulli requested probability, .bernoulli (.sample actual) probability' =>
-      (requested.isNone || requested == some actual) && probability.matches probability'
-  | .exponential requested rate, .exponential (.sample actual) rate' =>
-      (requested.isNone || requested == some actual) && rate.matches rate'
-  | .beta requested alpha betaArg, .beta (.sample actual) alpha' betaArg' =>
-      (requested.isNone || requested == some actual) && alpha.matches alpha' && betaArg.matches betaArg'
-  | .gamma requested shape rate, .gamma (.sample actual) shape' rate' =>
-      (requested.isNone || requested == some actual) && shape.matches shape' && rate.matches rate'
-  | .discrete requested distribution, .discrete (.sample actual) distribution' =>
-      (requested.isNone || requested == some actual) && distribution.matches distribution'
-  | _, _ => false
+      Sitewise R body body'
+  | .app a b, .app a' b' | .pair a b, .pair a' b' | .cons a b, .cons a' b'
+  | .letE a b, .letE a' b' | .add a b, .add a' b' | .mul a b, .mul a' b'
+  | .div a b, .div a' b' | .lt a b, .lt a' b' =>
+      Sitewise R a a' ∧ Sitewise R b b'
+  | .matchSum a b c, .matchSum a' b' c' | .matchList a b c, .matchList a' b' c'
+  | .ite a b c, .ite a' b' c' =>
+      Sitewise R a a' ∧ Sitewise R b b' ∧ Sitewise R c c'
+  | .poisson s a, .poisson s' a' | .discrete s a, .discrete s' a'
+  | .bernoulli s a, .bernoulli s' a' | .exponential s a, .exponential s' a' =>
+      R s s' ∧ Sitewise R a a'
+  | .uniform s a b, .uniform s' a' b' | .gaussian s a b, .gaussian s' a' b'
+  | .beta s a b, .beta s' a' b' | .gamma s a b, .gamma s' a' b' =>
+      R s s' ∧ Sitewise R a a' ∧ Sitewise R b b'
+  | _, _ => False
 
+/-- `program` keeps every constructor, literal, variable index and requested affinity of
+`input`, and fills its placeholders. -/
+def Input.matches (input : Input) (program : Annotated) : Prop :=
+  input.Sitewise (fun requested affinity => requested = none ∨ requested = some affinity) program
 
 end Determinize.Spec.Paper

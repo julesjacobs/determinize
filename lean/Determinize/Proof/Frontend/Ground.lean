@@ -206,14 +206,16 @@ theorem affinity_le {ρ ρ' : AffinityVar → Affinity}
   | _ => exact .refl _
 
 theorem rebuild_le (e : Input) {m m' : Affinity} (hm : Ty.Sub (.float m) (.float m'))
-    {children children' : List Core} (h : List.Forall₂ AffinityLE children children') :
+    {children children' : List Annotated} (h : List.Forall₂ AffinityLE children children') :
     AffinityLE (Draft.rebuild e m children) (Draft.rebuild e m' children') := by
+  unfold AffinityLE at *
   match h with
-  | .nil => cases e <;> simp [Draft.rebuild, AffinityLE]
-  | .cons ha .nil => cases e <;> simp [Draft.rebuild, AffinityLE, ha, hm]
-  | .cons ha (.cons hb .nil) => cases e <;> simp [Draft.rebuild, AffinityLE, ha, hb, hm]
-  | .cons ha (.cons hb (.cons hc .nil)) => cases e <;> simp [Draft.rebuild, AffinityLE, ha, hb, hc]
-  | .cons _ (.cons _ (.cons _ (.cons _ _))) => simp [Draft.rebuild, AffinityLE]
+  | .nil => cases e <;> simp [Draft.rebuild, Expr.Sitewise]
+  | .cons ha .nil => cases e <;> simp [Draft.rebuild, Expr.Sitewise, ha, hm]
+  | .cons ha (.cons hb .nil) => cases e <;> simp [Draft.rebuild, Expr.Sitewise, ha, hb, hm]
+  | .cons ha (.cons hb (.cons hc .nil)) =>
+    cases e <;> simp [Draft.rebuild, Expr.Sitewise, ha, hb, hc]
+  | .cons _ (.cons _ (.cons _ (.cons _ _))) => simp [Draft.rebuild, Expr.Sitewise]
 
 /-- Read-back is monotone: larger affinities give a larger program. -/
 theorem program_le {ρ ρ' : AffinityVar → Affinity}
