@@ -16,7 +16,7 @@ theorem variable_step (environment : List Value) (stack : List Frame) (index : N
     AdministrativeStep .evaluate (.eval (.bvar index) environment stack) (.deliver value stack) := by
   constructor
   · simp [step, lookup]; rfl
-  · simp [stateExpr, interpret, close, Expr.mapLiteral, Expr.mapVars,
+  · simp [stateExpr, interpret, close, Expr.map, Expr.mapVars,
       environmentExpr_eq_map, List.getElem?_map, lookup]
 
 theorem binary_setup (operation : Binary) (left right : Core)
@@ -24,14 +24,14 @@ theorem binary_setup (operation : Binary) (left right : Core)
     AdministrativeStep .evaluate (.eval (binaryExpr operation left right) environment stack)
       (.eval left environment (.left operation right environment :: stack)) := by
   cases operation <;> refine ⟨rfl, ?_⟩ <;>
-    simp [stateExpr, stackExpr, frameExpr, binaryExpr, close, Expr.mapVars, interpret, Expr.mapLiteral]
+    simp [stateExpr, stackExpr, frameExpr, binaryExpr, close, Expr.mapVars, interpret, Expr.map]
 
 theorem unary_setup (operation : Unary) (body : Core)
     (environment : List Value) (stack : List Frame) :
     AdministrativeStep .evaluate (.eval (unaryExpr operation body) environment stack)
       (.eval body environment (.unary operation :: stack)) := by
   cases operation <;> refine ⟨rfl, ?_⟩ <;>
-    simp [stateExpr, stackExpr, frameExpr, unaryExpr, close, Expr.mapVars, interpret, Expr.mapLiteral]
+    simp [stateExpr, stackExpr, frameExpr, unaryExpr, close, Expr.mapVars, interpret, Expr.map]
 
 theorem left_argument_step (operation : Binary) (right : Core) (left : Value)
     (environment : List Value) (stack : List Frame) :
@@ -44,37 +44,37 @@ theorem closure_setup (body : Core) (environment : List Value) (stack : List Fra
     AdministrativeStep .evaluate (.eval (.lam body) environment stack)
       (.deliver (.closure body environment) stack) := by
   refine ⟨rfl, ?_⟩
-  simp [stateExpr, valueExpr, close, interpret, Expr.mapLiteral, Expr.mapVars]
+  simp [stateExpr, valueExpr, close, interpret, Expr.map, Expr.mapVars]
 
 theorem recursive_setup (body : Core) (environment : List Value) (stack : List Frame) :
     AdministrativeStep .evaluate (.eval (.fix body) environment stack)
       (.deliver (.recursive body environment) stack) := by
   refine ⟨rfl, ?_⟩
-  simp [stateExpr, valueExpr, close, interpret, Expr.mapLiteral, Expr.mapVars]
+  simp [stateExpr, valueExpr, close, interpret, Expr.map, Expr.mapVars]
 
 theorem let_setup (value body : Core) (environment : List Value) (stack : List Frame) :
     AdministrativeStep .evaluate (.eval (.letE value body) environment stack)
       (.eval value environment (.letBody body environment :: stack)) := by
   refine ⟨rfl, ?_⟩
-  simp [stateExpr, stackExpr, frameExpr, close, interpret, Expr.mapLiteral, Expr.mapVars]
+  simp [stateExpr, stackExpr, frameExpr, close, interpret, Expr.map, Expr.mapVars]
 
 theorem branch_setup (condition yes no : Core) (environment : List Value) (stack : List Frame) :
     AdministrativeStep .evaluate (.eval (.ite condition yes no) environment stack)
       (.eval condition environment (.choose yes no environment :: stack)) := by
   refine ⟨rfl, ?_⟩
-  simp [stateExpr, stackExpr, frameExpr, close, interpret, Expr.mapLiteral, Expr.mapVars]
+  simp [stateExpr, stackExpr, frameExpr, close, interpret, Expr.map, Expr.mapVars]
 
 theorem sum_setup (value left right : Core) (environment : List Value) (stack : List Frame) :
     AdministrativeStep .evaluate (.eval (.matchSum value left right) environment stack)
       (.eval value environment (.matchSum left right environment :: stack)) := by
   refine ⟨rfl, ?_⟩
-  simp [stateExpr, stackExpr, frameExpr, close, interpret, Expr.mapLiteral, Expr.mapVars]
+  simp [stateExpr, stackExpr, frameExpr, close, interpret, Expr.map, Expr.mapVars]
 
 theorem list_setup (value nilCase consCase : Core) (environment : List Value) (stack : List Frame) :
     AdministrativeStep .evaluate (.eval (.matchList value nilCase consCase) environment stack)
       (.eval value environment (.matchList nilCase consCase environment :: stack)) := by
   refine ⟨rfl, ?_⟩
-  simp [stateExpr, stackExpr, frameExpr, close, interpret, Expr.mapLiteral, Expr.mapVars]
+  simp [stateExpr, stackExpr, frameExpr, close, interpret, Expr.map, Expr.mapVars]
 
 theorem draw_argument_step (site : DistributionAction × Op) (next : Core) (rest : List Core)
     (arguments : List Rat) (value : Rat) (environment : List Value) (stack : List Frame) :
@@ -87,77 +87,77 @@ theorem draw_argument_step (site : DistributionAction × Op) (next : Core) (rest
 theorem number_setup (value : Rat) (environment : List Value) (stack : List Frame) :
     AdministrativeStep .evaluate (.eval (.real value) environment stack) (.deliver (.number value) stack) := by
   refine ⟨rfl, ?_⟩
-  simp [stateExpr, valueExpr, close, interpret, Expr.mapLiteral, Expr.mapVars]
+  simp [stateExpr, valueExpr, close, interpret, Expr.map, Expr.mapVars]
 
 theorem bool_setup (value : Bool) (environment : List Value) (stack : List Frame) :
     AdministrativeStep .evaluate (.eval (.bool value) environment stack) (.deliver (.bool value) stack) := by
   refine ⟨rfl, ?_⟩
-  simp [stateExpr, valueExpr, close, interpret, Expr.mapLiteral, Expr.mapVars]
+  simp [stateExpr, valueExpr, close, interpret, Expr.map, Expr.mapVars]
 
 theorem unit_setup  (environment : List Value) (stack : List Frame) :
     AdministrativeStep .evaluate (.eval .unit environment stack) (.deliver .unit stack) := by
   refine ⟨rfl, ?_⟩
-  simp [stateExpr, valueExpr, close, interpret, Expr.mapLiteral, Expr.mapVars]
+  simp [stateExpr, valueExpr, close, interpret, Expr.map, Expr.mapVars]
 
 theorem nil_setup  (environment : List Value) (stack : List Frame) :
     AdministrativeStep .evaluate (.eval .nil environment stack) (.deliver .nil stack) := by
   refine ⟨rfl, ?_⟩
-  simp [stateExpr, valueExpr, close, interpret, Expr.mapLiteral, Expr.mapVars]
+  simp [stateExpr, valueExpr, close, interpret, Expr.map, Expr.mapVars]
 
 theorem uniform_setup (kind : DistributionAction) (left right : Core)
     (environment : List Value) (stack : List Frame) :
     AdministrativeStep .evaluate (.eval (.uniform kind left right) environment stack)
       (.eval left environment (.draw (kind, .uniform) [right] environment [] :: stack)) := by
   refine ⟨rfl, ?_⟩
-  simp [stateExpr, stackExpr, frameExpr, primitiveExpr, close, interpret, Expr.mapLiteral, Expr.mapVars]
+  simp [stateExpr, stackExpr, frameExpr, primitiveExpr, close, interpret, Expr.map, Expr.mapVars]
 
 theorem gaussian_setup (kind : DistributionAction) (left right : Core)
     (environment : List Value) (stack : List Frame) :
     AdministrativeStep .evaluate (.eval (.gaussian kind left right) environment stack)
       (.eval left environment (.draw (kind, .gaussian) [right] environment [] :: stack)) := by
   refine ⟨rfl, ?_⟩
-  simp [stateExpr, stackExpr, frameExpr, primitiveExpr, close, interpret, Expr.mapLiteral, Expr.mapVars]
+  simp [stateExpr, stackExpr, frameExpr, primitiveExpr, close, interpret, Expr.map, Expr.mapVars]
 
 theorem beta_setup (kind : DistributionAction) (left right : Core)
     (environment : List Value) (stack : List Frame) :
     AdministrativeStep .evaluate (.eval (.beta kind left right) environment stack)
       (.eval left environment (.draw (kind, .beta) [right] environment [] :: stack)) := by
   refine ⟨rfl, ?_⟩
-  simp [stateExpr, stackExpr, frameExpr, primitiveExpr, close, interpret, Expr.mapLiteral, Expr.mapVars]
+  simp [stateExpr, stackExpr, frameExpr, primitiveExpr, close, interpret, Expr.map, Expr.mapVars]
 
 theorem gamma_setup (kind : DistributionAction) (left right : Core)
     (environment : List Value) (stack : List Frame) :
     AdministrativeStep .evaluate (.eval (.gamma kind left right) environment stack)
       (.eval left environment (.draw (kind, .gamma) [right] environment [] :: stack)) := by
   refine ⟨rfl, ?_⟩
-  simp [stateExpr, stackExpr, frameExpr, primitiveExpr, close, interpret, Expr.mapLiteral, Expr.mapVars]
+  simp [stateExpr, stackExpr, frameExpr, primitiveExpr, close, interpret, Expr.map, Expr.mapVars]
 
 theorem poisson_setup (kind : DistributionAction) (argument : Core)
     (environment : List Value) (stack : List Frame) :
     AdministrativeStep .evaluate (.eval (.poisson kind argument) environment stack)
       (.eval argument environment (.draw (kind, .poisson) [] environment [] :: stack)) := by
   refine ⟨rfl, ?_⟩
-  simp [stateExpr, stackExpr, frameExpr, primitiveExpr, close, interpret, Expr.mapLiteral, Expr.mapVars]
+  simp [stateExpr, stackExpr, frameExpr, primitiveExpr, close, interpret, Expr.map, Expr.mapVars]
 
 theorem bernoulli_setup (kind : DistributionAction) (argument : Core)
     (environment : List Value) (stack : List Frame) :
     AdministrativeStep .evaluate (.eval (.bernoulli kind argument) environment stack)
       (.eval argument environment (.draw (kind, .bernoulli) [] environment [] :: stack)) := by
   refine ⟨rfl, ?_⟩
-  simp [stateExpr, stackExpr, frameExpr, primitiveExpr, close, interpret, Expr.mapLiteral, Expr.mapVars]
+  simp [stateExpr, stackExpr, frameExpr, primitiveExpr, close, interpret, Expr.map, Expr.mapVars]
 
 theorem exponential_setup (kind : DistributionAction) (argument : Core)
     (environment : List Value) (stack : List Frame) :
     AdministrativeStep .evaluate (.eval (.exponential kind argument) environment stack)
       (.eval argument environment (.draw (kind, .exponential) [] environment [] :: stack)) := by
   refine ⟨rfl, ?_⟩
-  simp [stateExpr, stackExpr, frameExpr, primitiveExpr, close, interpret, Expr.mapLiteral, Expr.mapVars]
+  simp [stateExpr, stackExpr, frameExpr, primitiveExpr, close, interpret, Expr.map, Expr.mapVars]
 
 theorem discrete_setup (kind : DistributionAction) (probabilities : Core)
     (environment : List Value) (stack : List Frame) :
     AdministrativeStep .evaluate (.eval (.discrete kind probabilities) environment stack)
       (.eval probabilities environment (.discrete kind :: stack)) := by
   refine ⟨rfl, ?_⟩
-  simp [stateExpr, stackExpr, frameExpr, close, interpret, Expr.mapLiteral, Expr.mapVars]
+  simp [stateExpr, stackExpr, frameExpr, close, interpret, Expr.map, Expr.mapVars]
 
 end Determinize.Proof.FiniteModel

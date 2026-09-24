@@ -136,7 +136,7 @@ theorem indexedReplay_matches (candidate : Candidate) {source : Checking.Core} {
       (program_reachable_shape source subject state reachable) result action
   have initialEqual : stateExpr (initialState source subject) = subject.program source :=
     initial_reification source subject
-      ((Binding.scoped_mapLiteral source (fun q : Rat => (q : ℝ)) 0).mpr valid.2.2.2.1)
+      ((Binding.scoped_map source (fun q : Rat => (q : ℝ)) 0).mpr valid.2.2.2.1)
   have outputEqual : (candidate.graphModel graph).outputMeasure =
       machineOutputMeasure (initialState source subject) := by
     unfold Model.outputMeasure machineOutputMeasure

@@ -11,21 +11,21 @@ example :
       [.right .app (.closure (.lam (.add (.bvar 1) (.bvar 2))) [.number 7])])) =
     .next (.lam (.add (.real 3) (.real 7))) := by
   rw [(closure_root _ _ _).2]
-  simp [stateExpr, stackExpr, environmentExpr, valueExpr, close, interpret, Expr.mapLiteral, Expr.mapVars]
+  simp [stateExpr, stackExpr, environmentExpr, valueExpr, close, interpret, Expr.map, Expr.mapVars]
 
 example :
     reduce (stateExpr (.deliver (.number 5)
       [.right .app (.recursive (.app (.bvar 1) (.bvar 0)) [])])) =
     .next (.app (.fix (.app (.bvar 1) (.bvar 0))) (.real 5)) := by
   rw [(recursive_root _ _ _).2]
-  simp [stateExpr, stackExpr, environmentExpr, valueExpr, close, interpret, Expr.mapLiteral, Expr.mapVars]
+  simp [stateExpr, stackExpr, environmentExpr, valueExpr, close, interpret, Expr.map, Expr.mapVars]
 
 example :
     reduce (stateExpr (.deliver (.cons (.number 2) (.cons (.number 3) .nil))
       [.matchList (.real 0) (.pair (.bvar 0) (.bvar 1)) []])) =
     .next (.pair (.real 2) (.cons (.real 3) .nil)) := by
   rw [(list_cons_root _ _ _ _ _).2]
-  simp [stateExpr, stackExpr, environmentExpr, valueExpr, close, interpret, Expr.mapLiteral, Expr.mapVars]
+  simp [stateExpr, stackExpr, environmentExpr, valueExpr, close, interpret, Expr.map, Expr.mapVars]
 
 example :
     reduce (stateExpr (.deliver (.number 0) [.right .div (.number 7)])) = .stuck := by
@@ -34,13 +34,13 @@ example :
 example :
     bigStepMeasure (.letE (.gaussian (.sample .G) (.real 2) .reject) (.real 7)) = 0 := by
   simpa [stackExpr, frameExpr, primitiveExpr, environmentExpr, close, interpret,
-    Expr.mapLiteral, Expr.mapVars] using
+    Expr.map, Expr.mapVars] using
     stack_reject_zero [.draw (.sample .G, .gaussian) [] [] [2], .letBody (.real 7) []]
 
 example :
     DomainSafe (.letE (.gaussian (.sample .G) (.real 2) .reject) (.real 7)) := by
   simpa [stackExpr, frameExpr, primitiveExpr, environmentExpr, close, interpret,
-    Expr.mapLiteral, Expr.mapVars] using
+    Expr.map, Expr.mapVars] using
     stack_reject_safe [.draw (.sample .G, .gaussian) [] [] [2], .letBody (.real 7) []]
 
 example : ¬Scoped 0 (.lam (.bvar 1) : Expr) := by simp [Scoped]
@@ -55,7 +55,7 @@ example : stateExpr (initialState source .source) = Subject.source.program sourc
 
 example : stateExpr (initialState source .determinized) =
     .app (.lam (.bvar 0)) (.uniform .mean (.real 0) (.real 2)) := by
-  simpa [Subject.program, source, interpret, Expr.mapLiteral, Expr.determinize,
+  simpa [Subject.program, source, interpret, Expr.map, Expr.determinize,
     DistributionAction.determinize] using typed_initial_reification source .determinized _ typed_source
 
 example : outcomeMeasure [(1,0),(0,1)] = MeasureTheory.Measure.dirac (0 : ℝ) := by
@@ -85,7 +85,7 @@ example : reduce (stateExpr (.deliver (.number (1/3))
     [.draw (.sample .G, .bernoulli) [] [] [], .letBody .reject []])) =
       .sample (.sample .G, .bernoulli) (outcomeMeasure [(2/3,0),(1/3,1)])
         (fun y => .letE (.real y) .reject) := by
-  simpa [stackExpr, frameExpr, Binding.close, interpret, Expr.mapLiteral, Expr.mapVars] using
+  simpa [stackExpr, frameExpr, Binding.close, interpret, Expr.map, Expr.mapVars] using
     draw_correspondence (.sample .G, .bernoulli) [] (1/3) [] [.letBody .reject []]
       [(2/3,0),(1/3,1)] (by decide +kernel) (by simp [FrameShape])
 

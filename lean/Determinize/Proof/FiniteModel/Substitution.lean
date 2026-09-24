@@ -108,9 +108,9 @@ termination_by sizeOf expression
 instance {α : Type} (depth : Nat) (expression : Expr α) : Decidable (Scoped depth expression) :=
   scopedDecision depth expression
 
-theorem scoped_mapLiteral {α β : Type} (expression : Expr α) (f : α → β) (depth : Nat) :
-    Scoped depth (expression.mapLiteral f) ↔ Scoped depth expression := by
-  induction expression generalizing depth <;> simp_all [Scoped, Expr.mapLiteral]
+theorem scoped_map {α β : Type} (expression : Expr α) (f : α → β) (depth : Nat) :
+    Scoped depth (expression.map f id) ↔ Scoped depth expression := by
+  induction expression generalizing depth <;> simp_all [Scoped, Expr.map]
 
 /-- Instantiate free variables with closed expressions; missing entries use
 rejection. For scoped source expressions no missing entry is consulted. -/

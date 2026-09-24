@@ -765,7 +765,7 @@ theorem measurable_unaryConstructor {α : Type*} [MeasurableSpace α]
 
 theorem measurable_realLiteral {α : Type*} [MeasurableSpace α]
     {value : α → ℝ} (valueMeasurable : Measurable value) :
-    Measurable fun parameter => Expr.real (value parameter) := by
+    Measurable fun parameter => (Expr.real (value parameter) : Expr) := by
   apply measurable_expr_of_parts
   · simp [Expr.skeleton]
   · have singletonCoordinates : Measurable fun parameter : α =>
