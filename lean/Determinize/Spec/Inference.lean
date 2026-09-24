@@ -21,7 +21,7 @@ but not the output type.
 
 namespace Determinize.Spec
 
-open Paper Checking
+open Paper
 
 /-- `program` fills exactly the omitted affinities of `input`, and is closed and well typed.
 The type is existential: a completion counts even when it is typed only at a type other than

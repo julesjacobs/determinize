@@ -1,7 +1,7 @@
 import Determinize.Runtime.Sampling
 
 namespace Determinize.Runtime
-open Spec.Paper Checking
+open Spec.Paper
 
 inductive Value where
   | unit | bool (b : Bool) | number (x : Float)

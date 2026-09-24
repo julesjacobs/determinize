@@ -3,6 +3,7 @@ import Determinize.Proof.FiniteModel.BuildModel
 
 namespace Determinize.Finite
 open Spec.FiniteModel Checking
+open Spec.Paper (Core)
 
 structure Limits where
   maxStates : Nat := 10000

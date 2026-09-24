@@ -3,7 +3,7 @@ import Determinize.Frontend.Elaborate
 import Determinize.Theorems
 
 namespace Determinize.Frontend
-open Checking Spec.Paper
+open Spec.Paper
 
 /-- A compiled program: the resolved input, the annotated program and type that `infer` returns,
 and the guarantee of `Theorems.inferenceCorrectness` for them. -/

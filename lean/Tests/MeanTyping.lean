@@ -5,7 +5,7 @@ import Determinize.Proof.Frontend.Typing
 its operands. -/
 
 namespace Determinize.Tests.MeanTyping
-open Determinize.Spec.Paper Determinize.Checking Determinize.Frontend Determinize.Proof.Frontend
+open Determinize.Spec.Paper Determinize.Frontend Determinize.Proof.Frontend
 
 private theorem typed_uniformMean_inv {Γ T} {l u : Expr} (h : Typed Γ (.uniform .mean l u) T) :
     ∃ m, Typed Γ l (.float m) ∧ Typed Γ u (.float m) ∧ Ty.Sub (.float m) T := by

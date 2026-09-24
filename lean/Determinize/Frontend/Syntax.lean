@@ -1,7 +1,7 @@
 import Determinize.Spec.Frontend
 
 namespace Determinize.Frontend
-open Spec.Paper Checking
+open Spec.Paper
 
 inductive Surface where
   | var (name : String)

@@ -3,6 +3,7 @@ import Determinize.Proof.FiniteModel.SparseQueries
 
 namespace Determinize.Checking
 open Spec.FiniteModel Proof.FiniteModel MeasureTheory ProbabilityTheory
+open Spec.Paper (Core)
 
 /-- Check external values against the original model, including the divergent boundary. -/
 def checkStatistics (model : Model) (certificate : MomentCertificate model) : Bool :=

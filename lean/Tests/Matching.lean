@@ -1,7 +1,7 @@
 import Tests.Parsing
 
 namespace Determinize.Tests
-open Frontend Checking Spec.Paper
+open Frontend Spec.Paper
 
 /-! `Input.matches` accepts exactly the programs that keep every constructor, payload and
 requested affinity of the resolved input, and `infer` returns such a program. -/

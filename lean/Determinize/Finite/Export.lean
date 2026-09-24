@@ -78,7 +78,7 @@ def candidateText (candidate : Candidate) : String :=
   "  rows := #[\n    " ++ String.intercalate ",\n    " (candidate.rows.toList.map rowText) ++ "\n  ]\n"
 
 /-- Export kernel-checkable replay and paper-semantics correspondence. -/
-def replayCertificateText (source : Checking.Core) (subject : Subject) (candidate : Candidate) : String :=
+def replayCertificateText (source : Spec.Paper.Core) (subject : Subject) (candidate : Candidate) : String :=
   let indices := candidate.states.toList.map fun state =>
     let destinations : List Nat := match step state with
       | .ok (.next _ outcomes) => outcomes.map fun (outcome : Rat × State) =>
@@ -150,7 +150,7 @@ def render (candidate : Candidate) : Except String Files := do
   return ⟨candidateText candidate, transitions, labels, positiveRewards, negativeRewards⟩
 
 /-- Call only with complete exploration data. No files are written if rendering fails. -/
-def write (outputPath : System.FilePath) (source : Checking.Core) (subject : Subject)
+def write (outputPath : System.FilePath) (source : Spec.Paper.Core) (subject : Subject)
     (candidate : Candidate) (_valid : candidate.ReplayValid source subject) : IO Unit := do
   let files ← IO.ofExcept (render candidate)
   if let some parent := outputPath.parent then IO.FS.createDirAll parent
@@ -162,7 +162,7 @@ def write (outputPath : System.FilePath) (source : Checking.Core) (subject : Sub
 
 
 /-- A standalone theorem about the selected program's mass and output moments. -/
-def resultCertificateText (source : Checking.Core) (subject : Subject) (candidate : Candidate)
+def resultCertificateText (source : Spec.Paper.Core) (subject : Subject) (candidate : Candidate)
     (model : Model) (termination : Proof.FiniteModel.TerminationCertificate model) : String :=
   let certificate := termination.output
   let stateProofs := proofTable "result" "resultClaim" "model.size" "allResults" model.size
@@ -206,7 +206,7 @@ def resultCertificateText (source : Checking.Core) (subject : Subject) (candidat
   "\n#print axioms terminationProbabilities\n" ++
   "\n#print axioms resultAccepted\n#print axioms expectedReward\n#print axioms outputStatistics\n#print axioms conditionalVariance\n"
 
-def writeResult (outputPath : System.FilePath) (source : Checking.Core) (subject : Subject)
+def writeResult (outputPath : System.FilePath) (source : Spec.Paper.Core) (subject : Subject)
     (candidate : Candidate) (valid : candidate.ReplayValid source subject)
     (limits : SolveLimits := {}) : IO Rat := do
   let model := candidate.toModel valid

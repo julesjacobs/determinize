@@ -6,7 +6,7 @@ import Determinize.Proof.FiniteModel.Initial
 namespace Determinize.Proof.RewardModel
 open Determinize.Finite Determinize.Proof.FiniteModel MeasureTheory Spec.RewardModel
 
-private theorem row_next (c : Reward.Candidate) {source : Checking.Core} {subject : Spec.FiniteModel.Subject}
+private theorem row_next (c : Reward.Candidate) {source : Spec.Paper.Core} {subject : Spec.FiniteModel.Subject}
     (valid : c.ReplayValid source subject) (i : Fin c.states.size) (tag : Evidence)
     (xs : List (Rat × State)) (action : step c.states[i] = .ok (.next tag xs)) :
     (c.row i).kind = .transient ∧
@@ -18,14 +18,14 @@ private theorem row_next (c : Reward.Candidate) {source : Checking.Core} {subjec
   refine ⟨h.1, ?_⟩
   simpa [List.filter_map, List.map_map, Function.comp_def] using h.2.2
 
-private theorem row_no_failure (c : Reward.Candidate) {source : Checking.Core} {subject : Spec.FiniteModel.Subject}
+private theorem row_no_failure (c : Reward.Candidate) {source : Spec.Paper.Core} {subject : Spec.FiniteModel.Subject}
     (valid : c.ReplayValid source subject) (i : Fin c.states.size) (e : Failure) :
     step c.states[i] ≠ .error e := by
   intro action
   have h := (valid.2.2.2.2.2 i).2.2
   simp only [Reward.step, action, bind, Except.bind] at h
 
-private theorem row_covered (c : Reward.Candidate) {source : Checking.Core} {subject : Spec.FiniteModel.Subject}
+private theorem row_covered (c : Reward.Candidate) {source : Spec.Paper.Core} {subject : Spec.FiniteModel.Subject}
     (valid : c.ReplayValid source subject) (i : Fin c.states.size) (tag : Evidence)
     (xs : List (Rat × State)) (action : step c.states[i] = .ok (.next tag xs))
     (x : Rat × State) (member : x ∈ xs) (positive : 0 < x.1) :
@@ -41,7 +41,7 @@ private theorem row_covered (c : Reward.Candidate) {source : Checking.Core} {sub
   have same := congrArg (fun t : Rat × State × Rat => t.2.1) eq
   simpa [bound] using same
 
-private theorem replay_no_rewardFailure (c : Reward.Candidate) {source : Checking.Core} {subject : Spec.FiniteModel.Subject}
+private theorem replay_no_rewardFailure (c : Reward.Candidate) {source : Spec.Paper.Core} {subject : Spec.FiniteModel.Subject}
     (valid : c.ReplayValid source subject) (n : Nat) (i : Fin c.states.size) :
     ¬ rewardFailureWithin n c.states[i] := by
   induction n generalizing i with
@@ -66,7 +66,7 @@ private theorem reachable_failure {root state : State} (reachable : MachineReach
   | next prev action member positive ih =>
       exact ih (n+1) (by simp only [failureWithin, action]; exact ⟨_, member, positive, failed⟩)
 
-theorem replay_reachable_no_failure (c : Reward.Candidate) {source : Checking.Core} {subject : Spec.FiniteModel.Subject}
+theorem replay_reachable_no_failure (c : Reward.Candidate) {source : Spec.Paper.Core} {subject : Spec.FiniteModel.Subject}
     (valid : c.ReplayValid source subject) {state : State}
     (reachable : MachineReachable (initialState source subject) state) (e : Failure) :
     step state ≠ .error e := by
@@ -90,7 +90,7 @@ private theorem weighted_filter (xs : List (Rat × State)) (f : State → Measur
         ENNReal.ofReal_eq_zero.mpr (by exact_mod_cast le_of_not_gt positive)
       simpa [List.filter_cons, positive, weightedOutput, zero] using ih
 
-private theorem replay_row_sum (c : Reward.Candidate) {source : Checking.Core} {subject : Spec.FiniteModel.Subject}
+private theorem replay_row_sum (c : Reward.Candidate) {source : Spec.Paper.Core} {subject : Spec.FiniteModel.Subject}
     (valid : c.ReplayValid source subject) (i : Fin c.states.size) (tag : Evidence)
     (xs : List (Rat × State)) (action : step c.states[i] = .ok (.next tag xs))
     (f : State → Measure ℝ) :
@@ -117,7 +117,7 @@ private theorem replay_row_sum (c : Reward.Candidate) {source : Checking.Core} {
   simpa only [weightedOutput] using weighted_filter xs
     (fun s => shift (Reward.normalize s).1 (f (Reward.normalize s).2))
 
-theorem replay_outputWithin (c : Reward.Candidate) {source : Checking.Core} {subject : Spec.FiniteModel.Subject}
+theorem replay_outputWithin (c : Reward.Candidate) {source : Spec.Paper.Core} {subject : Spec.FiniteModel.Subject}
     (valid : c.ReplayValid source subject) (n : Nat) (i : Fin c.states.size) :
     (c.toModel valid).outputWithin n i = rewardOutput n c.states[i] := by
   induction n generalizing i with
@@ -154,7 +154,7 @@ theorem replay_outputWithin (c : Reward.Candidate) {source : Checking.Core} {sub
         simp_rw [ih]
         exact replay_row_sum c valid i tag xs action (rewardOutput n)
 
-theorem replay_matches (c : Reward.Candidate) {source : Checking.Core} {subject : Spec.FiniteModel.Subject}
+theorem replay_matches (c : Reward.Candidate) {source : Spec.Paper.Core} {subject : Spec.FiniteModel.Subject}
     (valid : c.ReplayValid source subject) :
     (c.toModel valid).Matches (subject.program source) := by
   have meaning : ∀ state, MachineReachable (initialState source subject) state → ∀ result,

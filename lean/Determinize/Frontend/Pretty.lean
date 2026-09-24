@@ -1,7 +1,7 @@
 import Determinize.Frontend.Syntax
 
 namespace Determinize.Frontend
-open Spec.Paper Checking
+open Spec.Paper
 
 def prettyAffinity : Affinity → String | .E => "E" | .G => "G"
 def prettyType : Ty → String

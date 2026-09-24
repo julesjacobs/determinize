@@ -55,7 +55,7 @@ theorem weightedOutput_group {α : Type} [DecidableEq α] {n : Nat}
           simp [zero]
       · exact ih restNonnegative restCovered
 
-theorem replay_machineOutput (candidate : Candidate) {source : Checking.Core} {subject : Subject}
+theorem replay_machineOutput (candidate : Candidate) {source : Spec.Paper.Core} {subject : Subject}
     (valid : candidate.ReplayValid source subject) (fuel : Nat) (i : Fin candidate.states.size) :
     (candidate.toModel valid).outputWithin fuel i = machineOutput fuel (candidate.state i) := by
   induction fuel generalizing i with
@@ -90,7 +90,7 @@ theorem replay_machineOutput (candidate : Candidate) {source : Checking.Core} {s
               exact (weightedOutput_group candidate.state valid.aligned.injective successors
                 row.2.1 row.2.2.1 (machineOutput fuel)).symm
 
-theorem replay_machineOutputMeasure (candidate : Candidate) {source : Checking.Core} {subject : Subject}
+theorem replay_machineOutputMeasure (candidate : Candidate) {source : Spec.Paper.Core} {subject : Subject}
     (valid : candidate.ReplayValid source subject) :
     (candidate.toModel valid).outputMeasure = machineOutputMeasure (initialState source subject) := by
   unfold Model.outputMeasure machineOutputMeasure
