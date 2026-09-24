@@ -3,6 +3,10 @@ import Determinize.Spec.Syntax
 namespace Determinize.Checking
 open Spec.Paper
 
+abbrev Core := Expr Rat
+
+def interpret (e : Core) : Expr := e.mapLiteral (fun (q : Rat) => (q : ℝ))
+
 /-- Resolved source syntax. Each sample retains its optional requested affinity. -/
 inductive Input where
   | bvar (index : Nat)

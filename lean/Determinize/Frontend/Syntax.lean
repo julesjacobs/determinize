@@ -1,4 +1,4 @@
-import Determinize.Checking.Input
+import Determinize.Spec.Frontend
 
 namespace Determinize.Frontend
 open Spec.Paper Checking

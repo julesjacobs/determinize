@@ -1,4 +1,4 @@
-import Determinize.Checking.Certificate
+import Determinize.Spec.Frontend
 import Determinize.Checking.FiniteDistribution
 import Determinize.Finite.Supported
 
