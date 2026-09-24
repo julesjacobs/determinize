@@ -6,16 +6,16 @@ authoritative test manifest; Lean runs the programs and checks their results.
 From the repository root:
 
 ```sh
-./test.sh                # Unit tests, corpus fast checks, kernel certificates
+./test.sh                # Unit tests and corpus fast checks
 ./test.sh --statistical  # Unit tests and sampled source/target moment checks
-./test.sh --all          # Both suites and kernel certificates
+./test.sh --all          # Both suites
 ```
 
 Requirements: the repository's Lean/Lake toolchain and Python 3.11+ (standard
 library only). `run.py` validates TOML and passes JSON to the compiled Lean runner
-in `lean/Tests/Corpus.lean`. Lean performs parsing, inference, certificate checking,
+in `lean/Tests/Corpus.lean`. Lean performs parsing, inference,
 execution, and numerical assertions. The suite also checks that incorrect results,
-incorrect moments, runtime failures, and corpus omissions make the tools fail. Temporary manifests and certificates are
+incorrect moments, runtime failures, and corpus omissions make the tools fail. Temporary manifests are
 created outside the repository and deleted automatically.
 
 ## Layout
@@ -24,7 +24,7 @@ created outside the repository and deleted automatically.
 - `statistical/`: analytical source and determinized means and variances.
 - `typing/accept/`, `typing/reject/`: acceptance, inferred types/affinities, or rejection stage.
 - `../examples/`: reader-facing examples, registered in the same manifest.
-- `../lean/Tests/`: test runner and internal parser/checker/runtime unit tests.
+- `../lean/Tests/`: test runner and internal parser/inference/runtime unit tests.
 
 `examples/loops/walk-sketches.det` is explicitly excluded because it contains
 informal sketches rather than one executable program.
@@ -54,9 +54,8 @@ a result. `error` expects a runtime diagnostic substring. `fuel` limits evaluati
 steps per run; the default is 100,000.
 
 A rejection case uses `outcome = "reject"` and `stage = "parse"`, `"elaboration"`,
-`"inference"`, or `"certificate"`. Acceptance cases may assert `expected_type` and
-`affinities` (sample annotations in syntax traversal order). `kernel = true` independently
-checks an exported certificate using `decide +kernel` in the fast/full suite.
+or `"inference"`. Acceptance cases may assert `expected_type` and
+`affinities` (sample annotations in syntax traversal order).
 
 Compilation-only cases deliberately make no claim about termination or parameter
 domains. For example, `typing/accept/funny.det` can choose invalid distribution

@@ -3,7 +3,7 @@
 A probabilistic language with E/G sampling modes, a Lean implementation and
 formalization, exact expected-reward certificates, and a browser simulator.
 
-- `lean/`: parser, inference, checked typing, determinization, numerical execution,
+- `lean/`: parser, verified affinity inference, determinization, numerical execution,
   exact finite-state exploration, and kernel-checkable certificates.
 - `tests/`, `examples/`: shared `.det` programs and analytical expectations.
 - `tools/storm.py`: exact Storm comparison against independently checked certificates.
