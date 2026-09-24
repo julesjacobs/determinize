@@ -2,6 +2,7 @@ import Determinize.Proof.FiniteModel.Replay
 
 namespace Determinize.Finite
 open Spec.FiniteModel Checking
+open Spec.Paper (Core)
 deriving instance DecidableEq for Edge
 
 private def rowMass (candidate : Candidate) (i : Fin candidate.states.size) (target : Nat) : Rat :=

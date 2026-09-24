@@ -23,7 +23,7 @@ def candidateText (candidate : Candidate) : String :=
   "  states := #[\n    " ++ String.intercalate ",\n    " (candidate.states.toList.map Finite.stateText) ++ "\n  ]\n" ++
   "  rows := #[\n    " ++ String.intercalate ",\n    " (candidate.rows.toList.map rowText) ++ "\n  ]\n"
 
-def replayCertificateText (source : Checking.Core) (subject : Subject) (candidate : Candidate) : String :=
+def replayCertificateText (source : Spec.Paper.Core) (subject : Subject) (candidate : Candidate) : String :=
   (candidateText candidate).replace "import Determinize.Finite.Reward.Graph"
     "import Determinize.Proof.RewardModel.Soundness" ++
   s!"\ndef checkedSource : Expr Rat := {Frontend.leanExpression source}\n" ++
@@ -48,7 +48,7 @@ private def controlCandidate (candidate : Candidate) : Finite.Candidate :=
         else edges := edges.push ⟨e.target, e.probability⟩
       return edges}}
 
-def write (outputPath : System.FilePath) (source : Checking.Core) (subject : Subject)
+def write (outputPath : System.FilePath) (source : Spec.Paper.Core) (subject : Subject)
     (candidate : Candidate) (_valid : candidate.ReplayValid source subject) : IO Unit := do
   let files ← IO.ofExcept (Finite.render (controlCandidate candidate))
   let mut edgeText := "additive-rewards 1\n"
@@ -62,7 +62,7 @@ def write (outputPath : System.FilePath) (source : Checking.Core) (subject : Sub
       (".negative.state.rew", files.negativeRewards), (".additive.edges", edgeText)] do
     IO.FS.writeFile (outputPath.toString ++ suffix) content
 
-def resultCertificateText (source : Checking.Core) (subject : Subject) (candidate : Candidate)
+def resultCertificateText (source : Spec.Paper.Core) (subject : Subject) (candidate : Candidate)
     (model : Spec.RewardModel.Model) (solution : Solution model) : String :=
   let vector (name : String) (values : Fin model.size → Rat) :=
     s!"\ndef {name} : Vector Rat model.size := ⟨#[{String.intercalate ", " ((List.ofFn values).map leanRat)}], by rfl⟩\n"
@@ -107,7 +107,7 @@ def resultCertificateText (source : Checking.Core) (subject : Subject) (candidat
   "\n#print axioms checkedResult\n#print axioms integrability\n#print axioms outputStatistics\n" ++
   "#print axioms conditionalVariance\n#print axioms terminationProbabilities\n"
 
-def writeResult (outputPath : System.FilePath) (source : Checking.Core) (subject : Subject)
+def writeResult (outputPath : System.FilePath) (source : Spec.Paper.Core) (subject : Subject)
     (candidate : Candidate) (valid : candidate.ReplayValid source subject) (limits : SolveLimits := {}) : IO Rat := do
   let model := candidate.toModel valid
   let solution ← IO.ofExcept (solve model limits)

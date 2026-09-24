@@ -4,6 +4,7 @@ import Determinize.Checking.FiniteModel
 
 namespace Determinize.Checking
 open Spec.FiniteModel
+open Spec.Paper (Core)
 
 /-- Materialize each horizon once during evaluation. -/
 def survivalVector (model : Model) : Nat → Vector Rat model.size

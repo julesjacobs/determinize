@@ -3,7 +3,7 @@ import Determinize.Runtime.Eval
 import Lean.Data.Json.FromToJson
 
 namespace Determinize.Tests
-open Frontend Checking Spec.Paper Lean
+open Frontend Spec.Paper Lean
 
 structure Moments where
   mean : Float

@@ -2,7 +2,7 @@ import Determinize.Frontend.Compile
 import Determinize.Frontend.Pretty
 
 namespace Determinize.Tests
-open Frontend Checking Spec.Paper
+open Frontend Spec.Paper
 
 def assert (b : Bool) (message : String) : IO Unit :=
   unless b do throw (IO.userError message)

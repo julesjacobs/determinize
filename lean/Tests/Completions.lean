@@ -5,7 +5,7 @@ import Determinize.Spec.Inference
 `comparison` has no completion, and `infer` rejects it. -/
 
 namespace Determinize.Tests.Completions
-open Determinize.Spec Determinize.Spec.Paper Determinize.Checking
+open Determinize.Spec Determinize.Spec.Paper
 
 /-- The elaboration of `if true then uniform(0,1) else uniform(0,1) * uniform(0,1)`. -/
 private def branches : Input :=

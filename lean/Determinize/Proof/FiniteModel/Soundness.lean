@@ -5,7 +5,7 @@ import Determinize.Proof.FiniteModel.Initial
 namespace Determinize.Proof.FiniteModel
 open Spec.Paper Spec.FiniteModel Determinize.Finite
 
-theorem replay_matches (candidate : Candidate) {source : Checking.Core} {subject : Subject}
+theorem replay_matches (candidate : Candidate) {source : Spec.Paper.Core} {subject : Subject}
     (valid : candidate.ReplayValid source subject) :
     (candidate.toModel valid).Matches (subject.program source) := by
   have meaning : ∀ state, MachineReachable (initialState source subject) state → ∀ result,

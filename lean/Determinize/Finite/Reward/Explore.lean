@@ -3,6 +3,7 @@ import Determinize.Finite.Explore
 
 namespace Determinize.Finite.Reward
 open Checking Spec.FiniteModel
+open Spec.Paper (Core)
 
 inductive Exploration (source : Core) (subject : Subject) where
   | complete (candidate : Candidate) (valid : candidate.ReplayValid source subject)

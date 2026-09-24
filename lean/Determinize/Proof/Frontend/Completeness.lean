@@ -15,7 +15,7 @@ final counter, so that the variables of later subterms can still be chosen freel
 -/
 
 namespace Determinize.Proof.Frontend
-open Determinize.Frontend Spec.Paper Checking Ground
+open Determinize.Frontend Spec.Paper Ground
 
 /-- What Lemma C establishes about the draft `d` of a completion `ê` at the type `T`. -/
 def Fits (d : Draft) (ê : Core) (T : Ty) (σ : Ground) : Prop :=

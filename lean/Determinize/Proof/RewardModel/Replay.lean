@@ -4,6 +4,7 @@ import Determinize.Spec.RewardModel.Model
 
 namespace Determinize.Finite.Reward
 open Spec.FiniteModel Checking
+open Spec.Paper (Core)
 
 def Candidate.row (c : Candidate) (i : Fin c.states.size) : Row :=
   c.rows[i.val]?.getD ⟨.rejected, []⟩

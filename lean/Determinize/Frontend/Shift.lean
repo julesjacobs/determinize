@@ -1,6 +1,6 @@
 import Determinize.Spec.Frontend
 
-namespace Determinize.Checking.Input
+namespace Determinize.Spec.Paper.Input
 
 def mapVars (replace : Nat → Nat → Input) (depth : Nat) :
     Input → Input
@@ -44,4 +44,4 @@ def mapVars (replace : Nat → Nat → Input) (depth : Nat) :
 abbrev shift (amount cutoff : Nat) : Input → Input :=
   mapVars (fun cutoff index => .bvar (if cutoff ≤ index then index + amount else index)) cutoff
 
-end Determinize.Checking.Input
+end Determinize.Spec.Paper.Input

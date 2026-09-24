@@ -29,7 +29,7 @@ the proofs can unfold them.
 -/
 
 namespace Determinize.Frontend
-open Spec.Paper Checking
+open Spec.Paper
 
 /-- Affinity variables: one for each float created during generation, and one for each float in
 the decorated shape of a type variable. -/

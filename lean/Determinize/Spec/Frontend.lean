@@ -1,7 +1,6 @@
 import Determinize.Spec.Syntax
 
-namespace Determinize.Checking
-open Spec.Paper
+namespace Determinize.Spec.Paper
 
 abbrev Core := Expr Rat
 
@@ -100,4 +99,4 @@ def Input.matches : Input → Expr Rat → Bool
   | _, _ => false
 
 
-end Determinize.Checking
+end Determinize.Spec.Paper

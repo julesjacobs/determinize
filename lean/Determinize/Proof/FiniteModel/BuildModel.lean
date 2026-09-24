@@ -3,6 +3,7 @@ import Determinize.Proof.FiniteModel.SparseRow
 
 namespace Determinize.Finite.Builder
 open Spec.FiniteModel Checking
+open Spec.Paper (Core)
 variable [Hashable State]
 
 abbrev Work.record (work : Work) (complete : work.rows.size = work.table.states.size)
