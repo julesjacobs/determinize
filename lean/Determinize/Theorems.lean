@@ -6,6 +6,7 @@ import Determinize.Proof.Soundness
 import Determinize.Proof.Normalization
 import Determinize.Proof.Traces.ConditionalLaw
 import Determinize.Proof.Semantics.Termination
+import Determinize.Proof.Frontend.Inference
 
 /-! The public propositions, proved with no additional hypotheses. -/
 
@@ -57,22 +58,22 @@ theorem returnedExpectation : Spec.returnedExpectationThm :=
   Proof.Paper.returnedExpectationSoundness
 
 theorem inferenceSoundness : Spec.inferSoundThm :=
-  sorry
+  Proof.Frontend.inferSound
 
 theorem inferenceOptimality : Spec.inferOptimalThm :=
-  sorry
+  Proof.Frontend.inferOptimal
 
 theorem inferenceCompleteness : Spec.inferCompleteThm :=
-  sorry
+  Proof.Frontend.inferComplete
 
 theorem inferenceFloatSoundness : Spec.inferFloatSoundThm :=
-  sorry
+  Proof.Frontend.inferFloatSound
 
 theorem inferenceFloatCompleteness : Spec.inferFloatCompleteThm :=
-  sorry
+  Proof.Frontend.inferFloatComplete
 
 theorem inferenceFloatTyping : Spec.inferFloatTypedThm :=
-  sorry
+  Proof.Frontend.inferFloatTyped
 
 end Determinize.Theorems
 
