@@ -1,6 +1,7 @@
 import Determinize.Proof.RewardModel.FiniteIntegrability
 import Determinize.Spec.Main
 import Determinize.Spec.Traces.Main
+import Determinize.Spec.Inference
 import Determinize.Proof.Soundness
 import Determinize.Proof.Normalization
 import Determinize.Proof.Traces.ConditionalLaw
@@ -55,6 +56,21 @@ theorem finiteRewardIntegrability : Spec.RewardModel.finiteIntegrabilityThm :=
 theorem returnedExpectation : Spec.returnedExpectationThm :=
   Proof.Paper.returnedExpectationSoundness
 
+theorem inferenceSoundness : Spec.inferSoundThm :=
+  sorry
+
+theorem inferenceOptimality : Spec.inferOptimalThm :=
+  sorry
+
+theorem inferenceCompleteness : Spec.inferCompleteThm :=
+  sorry
+
+theorem inferenceFloatSoundness : Spec.inferFloatSoundThm :=
+  sorry
+
+theorem inferenceFloatCompleteness : Spec.inferFloatCompleteThm :=
+  sorry
+
 end Determinize.Theorems
 
 #print axioms Determinize.Theorems.expectationPreservation
@@ -75,3 +91,9 @@ end Determinize.Theorems
 #print axioms Determinize.Theorems.finiteRewardIntegrability
 
 #print axioms Determinize.Theorems.returnedExpectation
+
+#print axioms Determinize.Theorems.inferenceSoundness
+#print axioms Determinize.Theorems.inferenceOptimality
+#print axioms Determinize.Theorems.inferenceCompleteness
+#print axioms Determinize.Theorems.inferenceFloatSoundness
+#print axioms Determinize.Theorems.inferenceFloatCompleteness

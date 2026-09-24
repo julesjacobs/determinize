@@ -86,7 +86,7 @@ for area in "${areas[@]}"; do
         # asserted with a proof in Theorems.lean: an unasserted one would
         # sit in the trusted surface unproved without failing the build or the axiom check below.
         unasserted=""
-        for stmt in lean/Determinize/Spec/Main.lean lean/Determinize/Spec/Traces/Main.lean lean/Determinize/Spec/RewardModel/Results.lean; do
+        for stmt in lean/Determinize/Spec/Main.lean lean/Determinize/Spec/Inference.lean lean/Determinize/Spec/Traces/Main.lean lean/Determinize/Spec/RewardModel/Results.lean; do
           case "$stmt" in
             */Traces/*) ns="Spec.Traces" ;;
             */RewardModel/*) ns="Spec.RewardModel" ;;
