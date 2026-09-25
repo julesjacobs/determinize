@@ -22,11 +22,11 @@ The complete compilation, verification and execution pipeline is outlined in \cr
 
 \paragraph{Soundness theorems} Suppose $\vdash e_{\mathrm{src}}:\tyR\E$ and $e_{\mathrm{src}}$ is domain-safe. The formalized soundness theorems then show that $e_{\mathrm{det}}$ has the same expectation as $e_{\mathrm{src}}$ whenever the latter is defined (\cref{thm:expectation}), that its variance is no larger whenever $e_{\mathrm{src}}$ returns with positive probability and has a finite second moment (\cref{thm:variance}), and that, for almost every $\G$ trace, $e_{\mathrm{det}}$ returns the conditional mean of $e_{\mathrm{src}}$ (\cref{thm:trace-soundness}).
 
-\paragraph{Measure-theoretic semantics} In order to prove exact statements like the soundness theorems, we provide an implementation of the small and big step semantics based on the Giry-monad. Due to the non-computable nature of exact reals, these semantics can not be used to compute actual results.
+\paragraph{Measure-theoretic semantics} In order to state and prove exact statements like the soundness theorems, we define the small-step and big-step semantics of \cref{fig:semantics} in Lean, using the Giry monad for sampling. The big-step semantics yields a measure on the reals, which Lean cannot compute, so these semantics cannot be run to obtain actual results.
 
-\paragraph{Floating-point interpreter} In order to be able to run the program and to carry out actual sampling, we also provide corresponding non-exact floating-point semantics. This part is unverified since floating point arithmetic is inherently imprecise.
+\paragraph{Floating-point interpreter} In order to be able to run the program and to carry out actual sampling, we also provide an interpreter that evaluates programs with floating-point numbers and pseudo-random samplers. This part is unverified: we have no formal model that relates floating-point arithmetic and the samplers to the real-valued semantics.
 
-\paragraph{Finite graph construction} In case the program's state space is finite, we can actually compute exact results using the theory of finite Markov chain. In this case, the program computes the finite state graph and allows one to continue with it in two ways:
+\paragraph{Finite graph construction} If the program reaches only finitely many machine states, we can compute exact results using the theory of finite Markov chains. In this case, the implementation computes the finite state graph and allows one to continue with it in two ways:
 
 \paragraph{Exact rational solver} The above graph can be used to directly compute the exact mean and variance by our own verified matrix solver.
 
