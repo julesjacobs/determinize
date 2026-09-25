@@ -57,23 +57,8 @@ theorem finiteRewardIntegrability : Spec.RewardModel.finiteIntegrabilityThm :=
 theorem returnedExpectation : Spec.returnedExpectationThm :=
   Proof.Paper.returnedExpectationSoundness
 
-theorem inferenceSoundness : Spec.inferSoundThm :=
-  Proof.Frontend.inferSound
-
-theorem inferenceOptimality : Spec.inferOptimalThm :=
-  Proof.Frontend.inferOptimal
-
-theorem inferenceCompleteness : Spec.inferCompleteThm :=
-  Proof.Frontend.inferComplete
-
-theorem inferenceFloatSoundness : Spec.inferFloatSoundThm :=
-  Proof.Frontend.inferFloatSound
-
-theorem inferenceFloatCompleteness : Spec.inferFloatCompleteThm :=
-  Proof.Frontend.inferFloatComplete
-
-theorem inferenceFloatTyping : Spec.inferFloatTypedThm :=
-  Proof.Frontend.inferFloatTyped
+theorem inferenceCorrectness : Spec.inferCorrectThm :=
+  Proof.Frontend.inferCorrect
 
 end Determinize.Theorems
 
@@ -96,9 +81,4 @@ end Determinize.Theorems
 
 #print axioms Determinize.Theorems.returnedExpectation
 
-#print axioms Determinize.Theorems.inferenceSoundness
-#print axioms Determinize.Theorems.inferenceOptimality
-#print axioms Determinize.Theorems.inferenceCompleteness
-#print axioms Determinize.Theorems.inferenceFloatSoundness
-#print axioms Determinize.Theorems.inferenceFloatCompleteness
-#print axioms Determinize.Theorems.inferenceFloatTyping
+#print axioms Determinize.Theorems.inferenceCorrectness
