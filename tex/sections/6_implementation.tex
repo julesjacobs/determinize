@@ -3,40 +3,36 @@
 \section{Implementation}
 \label{sec:implementation}
 
-The theory from the previous sections is completely formalized and accompanied by a complete execution pipeline in the Lean programming language \cite{lean} with the formalization relying heavily on previous formalizations in the Mathlib library \cite{mathlib}. The final implementation was mostly carried out by a combination of Claude Fable 5.1 and ChatGPT Astra. In order to make it clear which parts of the pipeline need human review and which ones can be left to the Lean type-checker, we separated the code into three parts:
+The theory from the previous sections is entirely formalized and accompanied by a complete execution pipeline in the Lean programming language~\cite{lean} with the formalization relying on Mathlib's formalization of measure theory and probability~\cite{mathlib}, in particular the Giry monad, Markov kernels and their disintegration, as well as the standard continuous and discrete distributions. The final implementation was mostly carried out by a combination of Claude Fable 5.1, Claude Opus 5.5 and GPT 6 Astra. In order to make it clear which parts of the pipeline need human review and which ones can be left to the Lean type-checker, we separated the code into two parts:
 
-\paragraph{Trusted surface} This part requires the most scrutiny. It contains the language's syntax, the typing rules, the semantics, the determinization as well as the theorem statements.
+\begin{enumerate}
+\item \bfseries{Trusted surface/specifications}: This part requires the most scrutiny. It contains the language's syntax, the typing rules, the semantics, the determinization as well as the theorem statements. Additionally, it contains the non-verified functions like the parser or floating-point interpreter.
+\item \bfseries{Lean-checked proofs and procedures} This part contains the actual proofs of the theorems stated in the trusted surface, as well as the parts of the pipeline whose correctness is guaranteed by definitions and theorems inside the trusted surface. It is a current limitation of the Lean programming platform that there is no compiler guarantee that all theorems have accompanying proofs, therefore requiring a manual check.
+\end{enumerate}
 
-\paragraph{Mechanized proofs} This part contains the actual proofs of the theorems stated in the trusted surface. It does not require human review since the correctness is guaranteed by the Lean type checker.
-
-\paragraph{Execution pipeline} This part contains the entire non-verified pipeline, i.e. parsing, type inference, finite graph construction, etc. These steps produce certificates whose correctness is verified by [TODO: what?]
-
-The complete compilation, verification and execution pipeline is outlined in Figure \ref{fig:architecture}. We will briefly describe the individual steps in the following.
+The complete compilation, verification and execution pipeline is outlined in \cref{fig:architecture}. We will briefly describe the individual steps in the following.
 
 \input{figures/architecture}
-\ifleanlinks
-\noindent{\footnotesize Definitions and results marked \leanmark* link to the formalization and implementation.}\par
-\fi
 
-\paragraph{Parsing, elaborate, infer types and E/G.} First, the source code is parsed and typed, including the sampling modes $\E$ and $\G$ [TODO: check whether $\M$ is already mentioned in the article before this]. Due to the complexity of the typing algorithm, the formalization of this step is out of scope of this article.
+\paragraph{Parse and elaborate} First, the source code is parsed, desugared and variable names are replaced by De-Bruijn indices. This part is unverified and, as such, part of the trusted surface.
 
-\paragraph{Typing and annotation checker} Even though the previous typing step is not itself formalized, verifying the correctness of the typing is straightforward and its own correctness verified as well. At the end of this step, the user has a well-typed program $e_{\mathrm{src}}$.
+\paragraph{Infer types and $\E/\G$} Afterwards, the types of the program are inferred and all sampling sites are annotated with either $\E$ or $\G$. The code is verified to produce a correct typing as well as mode annotation, and the program is furthermore shown to assign as many $\E$-sites as possible. At the end of this step, the user has a well-typed program $e_{\mathrm{src}}$.
 
 \paragraph{Determinize} This is the determinization function. It is trivial and simply walks through the syntax tree, transforming every $\E$-mode sample into a sample at mode $\M$. The output is a well-typed, determinized program $e_{\mathrm{det}}$.
 
-Once we have a well-typed program $e$, we can evaluate it. For this, we offer multiple options:
+\paragraph{Soundness theorems} The formalized soundness theorems make sure that both $e_{\mathrm{src}}$ and $e_{\mathrm{det}}$ produce the same expectation and that the variance does not increase.
 
-\paragraph{Measure-theoretic semantics} We can reason about its exact semantics and in particular its output measure $\mu_e$. The soundness theorems guarantee that the exact output measures $\mu_{e_{\mathrm{src}}}$ and $\mu_{e_{\mathrm{det}}}$ agree in a meaningful way (cf.\ Sections \ref{sec:soundness} and \ref{sec:proof}).
+\paragraph{Measure-theoretic semantics} In order to prove exact statements like the soundness theorems, we provide an implementation of the small and big step semantics based on the Giry-monad. Due to the non-computable nature of exact reals, these semantics can not be used to compute actual results.
 
-\paragraph{Floating-point interpreter} The above semantics rely on exact reals which are not computable in a meaningful way. In order to be able to run the program and to carry out actual sampling, we also provide corresponding non-exact floating-point semantics.
+\paragraph{Floating-point interpreter} In order to be able to run the program and to carry out actual sampling, we also provide corresponding non-exact floating-point semantics. This part is unverified since floating point arithmetic is inherently imprecise.
 
-\paragraph{Finite graph construction} In case the program corresponds to a Markov chain with only finitely many states, we can create its state graph and continue with it in two ways:
+\paragraph{Finite graph construction} In case the program's state space is finite, we can actually compute exact results using the theory of finite Markov chain. In this case, the program computes the finite state graph and allows one to continue with it in two ways:
 
 \paragraph{Exact rational solver} The above graph can be used to directly compute the exact mean and variance by our own verified matrix solver.
 
 \paragraph{Storm solver} Or alternatively the finite state graph can be entered into the external Storm solver [TODO: cite].
 
-\paragraph{Certificate checker} Our verified certificate checker verifies that the results from our own solver are the same as from the storm solver.
+\paragraph{Certificate checker} The certificate that Storm produces is checked and it is verified that any such certificate corresponds to the correct expected value for the input program.
 
 % \subsection{Parsing and type inference}
 
