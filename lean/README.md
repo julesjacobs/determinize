@@ -97,13 +97,10 @@ These notes compare the Lean development with the paper in `tex/`. The previous 
   (`checked_statistics`, `checked_conditionalVariance`), not only the expected value. The
   paper does not describe the additive reward models (`--additive`, `Spec/RewardModel`) that
   Section 7 relies on.
-- **Lean links.** `tex/lean-links.tex` pins the paper's links to `e4d9b18`, which predates the
-  verified inference: `Spec/Inference.lean`, the target of the inference-correctness link, does
-  not exist there, and the constraint-generation and affinity-solving links show the earlier
-  inference. Against the current code many line ranges have also moved; for example, `typing`
-  now points at `end Expr` and `expectation-preservation` into `returnedExpectationThm`. The
-  anonymous review build links to a snapshot on apndx.org instead, which these notes do not
-  cover.
+- **Lean links.** `tex/lean-links.tex` pins the paper's GitHub links to `29ee1e7`, and their
+  line ranges match that revision. The anonymous review build links to a snapshot on apndx.org
+  instead. That snapshot predates the verified inference (it has no `Spec/Inference.lean`), so
+  the review build's links are off until the snapshot is regenerated from the pinned revision.
 
 ## Lean command-line implementation
 
