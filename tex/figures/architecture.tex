@@ -13,39 +13,41 @@
   note/.style={font=\footnotesize, text=black!70, align=center},
   heading/.style={font=\small\bfseries, anchor=west}
 ]
-\node[heading] at (0,1.25) {Compilation};
-\draw[black!20] (0,.95) -- (1,.95);
-\node[data, text width=.10\textwidth] (file) at (.06,-1.05) {\texttt{.det}\\program};
-\node[stage, compilation, text width=.17\textwidth] (front) at (.25,-1.05) {Parse and\\elaborate\leanref{frontend}};
-\node[verified, compilation, text width=.17\textwidth] (infer) at (.48,-1.05) {Infer types\\and E/G\leanref{inference}};
-\node[verified, compilation, text width=.155\textwidth] (det) at (.72,-1.05) {Determinize\leanref{determinization}};
-\node[data, text width=.15\textwidth] (source) at (.91,.40) {Annotated source\\$e_{\mathrm{src}}$};
-\node[data, text width=.15\textwidth] (target) at (.91,-1.05) {Transformed program\\$e_{\mathrm{det}}$};
+\node[heading] at (0,2.85) {Compilation};
+\draw[black!20] (0,2.55) -- (1,2.55);
+\node[data, text width=.09\textwidth] (file) at (.053,.45) {\texttt{.det}\\program};
+\node[stage, compilation, text width=.15\textwidth] (front) at (.23,.45) {Parse and\\elaborate\leanref{frontend}};
+\node[verified, compilation, text width=.15\textwidth] (infer) at (.44,.45) {Infer types\\and E/G\leanref{inference}};
+\node[verified, compilation, text width=.155\textwidth] (det) at (.672,-1.05) {Determinize\leanref{determinization}};
+\node[data, text width=.14\textwidth] (source) at (.88,1.95) {Annotated\\source $e_{\mathrm{src}}$};
+\node[verified, compilation, text width=.14\textwidth] (soundness) at (.88,.45)
+  {Soundness theorems\leanref{expectation-preservation}};
+\node[data, text width=.14\textwidth] (target) at (.88,-1.05) {Transformed\\program $e_{\mathrm{det}}$};
 \draw[flow] (file) -- (front);
 \draw[flow] (front) -- (infer);
-\draw[draw=black!65, line width=.6pt] (infer.east) -- (.605,-1.05);
-\draw[flow] (.605,-1.05) -- (det.west);
-\draw[flow] (.605,-1.05) |- (source.west);
+\draw[draw=black!65, line width=.6pt] (infer.east) -- (.555,.45);
+\draw[flow] (.555,.45) |- (det.west);
+\draw[flow] (.555,.45) |- (source.west);
 \draw[flow] (det) -- (target);
+\draw[flow] (source) -- (soundness);
+\draw[flow] (target) -- (soundness);
 
 \node[heading] at (0,-2.35) {Program evaluation};
 \draw[black!20] (0,-2.65) -- (1,-2.65);
 \node[data] (program) at (.10,-5.15) {Program $e$};
 \node[note] at (.10,-5.60) {$e\in\{e_{\mathrm{src}},e_{\mathrm{det}}\}$};
 \node[verified] (semantics) at (.365,-3.50) {Measure-theoretic\\semantics\leanref{output-measures}};
-\node[data, text width=.16\textwidth] (measure) at (.635,-3.50) {Output measure\\$\law e$};
-\node[verified, text width=.16\textwidth] (soundness) at (.91,-3.50)
-  {Soundness theorems\leanref{expectation-preservation}\\$\law{e_{\mathrm{src}}}$ -- $\law{e_{\mathrm{det}}}$};
+\node[data, text width=.16\textwidth] (measure) at (.88,-3.50) {Output measure\\$\law e$};
 \draw[flow] (semantics) -- (measure);
-\draw[flow] (measure) -- (soundness);
+\draw[flow] (measure.east) -- (.99,-3.50) |- (soundness.east);
 
 \node[stage] (runtime) at (.365,-5.15) {Floating-point\\interpreter\leanref{interpreter}};
-\node[data, text width=.16\textwidth] (estimates) at (.91,-5.15) {Empirical mean\\and variance};
+\node[data, text width=.16\textwidth] (estimates) at (.88,-5.15) {Empirical mean\\and variance};
 \draw[flow] (runtime) -- (estimates);
 
 \node[verified] (explore) at (.365,-6.80) {Finite graph\\construction\leanref{graph-construction}};
 \node[verified] (solve) at (.635,-6.80) {Exact rational\\solver\leanref{rational-solver}};
-\node[data, text width=.16\textwidth] (answer) at (.91,-6.80)
+\node[data, text width=.16\textwidth] (answer) at (.88,-6.80)
   {Exact mean\\and variance};
 \draw[draw=black!65, line width=.6pt] (program.east) -- (.235,-5.15);
 \draw[draw=black!65, line width=.6pt] (.235,-3.50) -- (.235,-6.80);
@@ -75,12 +77,13 @@
 \caption{Implementation architecture.}
 \label{fig:architecture}
 \Description{Compilation parses and elaborates the program without verification,
-then runs verified type and E/G inference, with a branch to the annotated source
-and another through determinization.
+then runs verified type and E/G inference, which branches up to the annotated
+source and down through determinization to the transformed program. Between
+these two programs sit the soundness theorems.
 One program branches to formal measure semantics, floating-point sampling,
 and verified finite graph construction. The measure semantics yields an output
-measure, and the soundness theorems relate the output measures of the annotated
-source and the transformed program. The graph feeds either a
+measure, which feeds back up into the soundness theorems: they relate the output
+measures of the annotated source and the transformed program. The graph feeds either a
 verified exact rational solver or Storm's exact model checking of expected
 accumulated rewards, followed by a verified certificate checker.
 Both routes produce exact mean and variance conditioned on returning, when return probability is positive.}
