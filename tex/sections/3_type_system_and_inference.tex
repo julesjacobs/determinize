@@ -29,5 +29,17 @@ that the subsequent constructor expansion terminates. We then solve the original
 constraints using \cref{fig:inference-solving}, to obtain the constraints on $\E/\G$.
 We then propagate modes that are forced to be $\G$ or $\E$ and set the remaining unconstrained modes to $\E$.
 
+A \emph{completion} of a program $e$ is a program $e'$ that annotates the
+unannotated sampling sites of $e$ with $\G$ or $\E$ such that $\vdash e':\tau$
+for some type $\tau$. For two completions, $e'\le e''$ means that they differ
+only at sampling sites that are $\G$ in $e'$ and $\E$ in $e''$.
+
+\begin{theorem}[Inference correctness\leanref{inference}]
+\label{thm:inference}
+If $e$ has a completion, inference returns a completion $\hat e$ of $e$ and a
+type $\tau$ with $\vdash\hat e:\tau$, and $e'\le\hat e$ for every completion
+$e'$ of $e$. Otherwise, inference fails.
+\end{theorem}
+
 \input{figures/inference}
 \input{figures/inference-solving}

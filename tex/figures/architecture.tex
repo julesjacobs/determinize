@@ -16,14 +16,14 @@
 \node[heading] at (0,1.25) {Compilation};
 \draw[black!20] (0,.95) -- (1,.95);
 \node[data, text width=.10\textwidth] (file) at (.06,-1.05) {\texttt{.det}\\program};
-\node[stage, compilation, text width=.17\textwidth] (front) at (.25,-1.05) {Parse, elaborate,\\infer types and E/G\leanref{frontend}};
-\node[verified, compilation, text width=.17\textwidth] (typing) at (.48,-1.05) {Typing and\\annotation checker\leanref{typing-checker}};
+\node[stage, compilation, text width=.17\textwidth] (front) at (.25,-1.05) {Parse and\\elaborate\leanref{frontend}};
+\node[verified, compilation, text width=.17\textwidth] (infer) at (.48,-1.05) {Infer types\\and E/G\leanref{inference}};
 \node[verified, compilation, text width=.155\textwidth] (det) at (.72,-1.05) {Determinize\leanref{determinization}};
-\node[data, text width=.15\textwidth] (source) at (.91,.40) {Checked source\\$e_{\mathrm{src}}$};
+\node[data, text width=.15\textwidth] (source) at (.91,.40) {Annotated source\\$e_{\mathrm{src}}$};
 \node[data, text width=.15\textwidth] (target) at (.91,-1.05) {Transformed program\\$e_{\mathrm{det}}$};
 \draw[flow] (file) -- (front);
-\draw[flow] (front) -- (typing);
-\draw[draw=black!65, line width=.6pt] (typing.east) -- (.605,-1.05);
+\draw[flow] (front) -- (infer);
+\draw[draw=black!65, line width=.6pt] (infer.east) -- (.605,-1.05);
 \draw[flow] (.605,-1.05) -- (det.west);
 \draw[flow] (.605,-1.05) |- (source.west);
 \draw[flow] (det) -- (target);
@@ -74,11 +74,12 @@
 \end{tikzpicture}
 \caption{Implementation architecture.}
 \label{fig:architecture}
-\Description{Compilation uses an unverified front end followed by verified type
-checking, with a branch to the checked source and another through determinization.
+\Description{Compilation parses and elaborates the program without verification,
+then runs verified type and E/G inference, with a branch to the annotated source
+and another through determinization.
 One program branches to formal measure semantics, floating-point sampling,
 and verified finite graph construction. The measure semantics yields an output
-measure, and the soundness theorems relate the output measures of the checked
+measure, and the soundness theorems relate the output measures of the annotated
 source and the transformed program. The graph feeds either a
 verified exact rational solver or Storm's exact model checking of expected
 accumulated rewards, followed by a verified certificate checker.
