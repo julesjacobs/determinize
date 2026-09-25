@@ -70,13 +70,17 @@ theorem inferenceCorrectness : Spec.inferCorrectThm :=
 end Determinize.Theorems
 
 /-! Every proposition `Spec` defines must be the type of a theorem above, and those theorems may
-depend only on the standard axioms. Otherwise the build fails. -/
+depend only on the standard axioms. `Spec` may not rely on `Proof`: every such proposition must be
+defined in a `Spec` module, and no `Spec` module may import a `Proof` module, directly or
+indirectly. Otherwise the build fails. -/
 
 open Lean Elab Command in
 run_cmd do
   let env ← getEnv
+  let isSpec := (`Determinize.Spec).isPrefixOf
+  let isProof := (`Determinize.Proof).isPrefixOf
   let statements := (env.constants.fold (init := #[]) fun found name info =>
-    if (`Determinize.Spec).isPrefixOf name && info.isDefinition && info.type.isProp then found.push name
+    if isSpec name && info.isDefinition && info.type.isProp then found.push name
     else found).qsort Name.lt
   let theorems := (env.constants.fold (init := #[]) fun found name info =>
     if (`Determinize.Theorems).isPrefixOf name && info.isTheorem then found.push (name, info.type)
@@ -92,5 +96,25 @@ run_cmd do
     unless extra.isEmpty do
       complete := false
       logError m!"{name} depends on non-standard axioms {extra}"
+  let moduleOf name := (env.getModuleIdxFor? name).bind (env.header.moduleNames[·]?)
+  for statement in statements do
+    unless (moduleOf statement).any isSpec do
+      complete := false
+      logError m!"{statement} is stated outside the Spec modules"
+  let specModules := env.header.moduleNames.filter isSpec
+  let mut reached : NameSet := specModules.foldl NameSet.insert {}
+  let mut pending := specModules
+  while !pending.isEmpty do
+    let module := pending.back!
+    pending := pending.pop
+    let imports := (env.getModuleIdx? module).bind (env.header.moduleData[·]?) |>.map (·.imports)
+    for dependency in (imports.getD #[]).map (·.module) do
+      if isProof dependency then
+        complete := false
+        logError m!"{module} imports {dependency}, so Spec relies on Proof"
+      else unless reached.contains dependency do
+        reached := reached.insert dependency
+        pending := pending.push dependency
   if complete then
     logInfo m!"{statements.size} Spec statements proved by {theorems.size} theorems, using only {standard}"
+    logInfo m!"{specModules.size} Spec modules import no Proof module, directly or indirectly"
