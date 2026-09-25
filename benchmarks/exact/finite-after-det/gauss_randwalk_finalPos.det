@@ -1,0 +1,18 @@
+(* FROM: Vakar et al. POPL 2019, https://arxiv.org/pdf/1811.04196, Figure 2 
+Queries the expected value of the final position.
+*)
+
+let walk =
+  rec walk times => fun time => fun position =>
+    match times with
+    | [] =>
+        position
+    | nextTime :: remainingTimes =>
+        let nextPosition =
+          gauss(position, nextTime - time)
+        in
+        walk remainingTimes nextTime nextPosition
+in
+
+let times = 1 :: 2 :: 3 :: 4 :: 5 :: 6 :: [] in
+walk times 0 0

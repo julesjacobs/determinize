@@ -32,11 +32,14 @@ We distinguish \emph{full} determinization, which eliminates all sampling, from 
         \shortstack{\# states in\\Markov chain} &
         \shortstack{Runtime (s)\\model / Storm} \\
         \midrule
+        \texttt{addNoise}         & $\bullet\!\bullet$ & $\mathbb{E}[\mathit{sum}]=6.0$          & $(0,1) \rightarrow (0,0)$      & 163   & $0.165 / 0.156$ \\
         \texttt{aggregate-rv}     & $\bullet\!\bullet$ & $\mathbb{E}[x]=1.0$                     & $(0,1) \rightarrow (0,0)$          & 90    & $0.067 / 0.164$ \\
         \texttt{asym-random-walk} & $\bullet\!\circ$   & $\mathbb{E}[t]=0.4$                     & $(1,3) \rightarrow (1,0)$      & 200   & $0.185 / 0.169$ \\
         \texttt{coin\_flip\_unif} & --   & $\mathbb{E}[\mathit{ret}]=1.0$          & $(1,0) \rightarrow (1,0)$                                 & 72    & $0.068 / 0.161$ \\
         \texttt{dreckon}          & $\bullet\!\circ$   & $\mathbb{E}[x]=0.0$                     & $(1,14) \rightarrow (1,0)$     & 43219 & $175.775 / 2.226$ \\
+        \texttt{gauss-random-walk}& $\bullet\!\bullet$ & $\mathbb{E}[y_6]=0.0$                   & $(0,1) \rightarrow (0,0)$      & 237   & $0.198 / 0.180$ \\
         \texttt{invpend}          & $\bullet\!\bullet$ & $\mathbb{E}[\mathit{pAng}]=2.4$         & $(0,6) \rightarrow (0,0)$      & 1822  & $7.061 / 0.245$ \\
+        \texttt{monte-carlo}      & $\bullet\!\bullet$ & $\mathbb{E}[\mathit{estimate}]=2.0$     & $(0,1) \rightarrow (0,0)$      & 773   & $11.173 / 0.180$ \\
         \texttt{pack}             & $\bullet\!\circ$   & $\mathbb{E}[\mathit{totalWeight}]=11.8$ & $(1,3) \rightarrow (1,0)$      & 15192 & $37.207 / 1.033$ \\
         \texttt{retransmit}       & $\bullet\!\circ$   & $\mathbb{E}[\mathit{ret}]=0.2$          & $(4,2) \rightarrow (4,0)$      & 182   & $0.164 / 0.183$ \\
         \texttt{service\_policy}  & $\bullet\!\circ$   & $\mathbb{E}[\mathit{ret}]=13.2$         & $(4,4) \rightarrow (4,0)$      & 9491  & $27.198 / 0.576$ \\
@@ -46,7 +49,7 @@ We distinguish \emph{full} determinization, which eliminates all sampling, from 
         \texttt{workload}         & $\bullet\!\circ$   & $\mathbb{E}[\mathit{ret}]=10.0$         & $(1,2) \rightarrow (1,0)$      & 27836 & $27.781 / 1.401$ \\
         \bottomrule
     \end{tabular*}
-    \caption{Evaluation of determinization on 12 benchmarks. In the determinization
+    \caption{Evaluation of determinization on 15 benchmarks. In the determinization
     column, $\bullet\!\bullet$ denotes full determinization and
     $\bullet\!\circ$ denotes partial determinization; -- denotes no eliminated sampling. Each pair $(d,c)$ counts static discrete and continuous sampling sites; it is not a state-space cardinality. Expectations are target-model quantities. Runtime excludes both the initial build and Lean certificate checking.}
     \label{tab:finite-after-determinization}

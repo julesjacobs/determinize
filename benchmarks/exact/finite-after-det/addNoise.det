@@ -1,0 +1,37 @@
+(* FROM: Barthe et al. CCS 2016
+https://www.pure.ed.ac.uk/ws/portalfiles/portal/27430292/ccs.pdf 
+
+Original program:
+
+let rec addNoise db eps delta =
+  match db with
+  | [] ->
+      return []
+  | y :: yl ->
+      mlet yn = gaussMech (sigma eps delta) y in
+      mlet yln = addNoise yl eps delta in
+      return (yn :: yln)
+
+*)
+
+let addNoise =
+  rec addNoise db => fun variance =>
+    match db with
+    | [] =>
+        []
+    | y :: ys =>
+        let yn = gauss(y, variance) in
+        let yns = addNoise ys variance in
+        yn :: yns
+in
+
+let sum =
+  rec sum xs =>
+    match xs with
+    | [] => 0
+    | x :: rest => x + sum rest
+in
+
+let database = 1 :: 2 :: 3 :: [] in
+let noisy = addNoise database 1 in
+sum noisy
