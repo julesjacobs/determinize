@@ -1,0 +1,51 @@
+% !TeX root = ../main.tex
+\begin{figure}[H]
+\centering
+\begin{minipage}[t]{.48\linewidth}
+\raggedright\textbf{Source (annotations inferred)}
+\begin{lstlisting}[xleftmargin=0pt]
+let walk =
+  rec walk times => fun t => fun y =>
+    match times with
+    | [] => []
+    | next :: rest =>
+        let y' =
+          gaussian[E](y, next - t)
+        in
+        (next, y') :: walk rest next y'
+in
+let times =
+  1 :: 2 :: 4 :: 5.5 :: 6 :: 6.25 :: []
+in
+(0, 0) :: walk times 0 0
+\end{lstlisting}
+\end{minipage}\hfill
+\begin{minipage}[t]{.48\linewidth}
+\raggedright\textbf{After replacement (simplified)}
+\begin{lstlisting}[xleftmargin=0pt]
+let walk =
+  rec walk times => fun t => fun y =>
+    match times with
+    | [] => []
+    | next :: rest =>
+        (next, y) :: walk rest next y
+in
+let times =
+  1 :: 2 :: 4 :: 5.5 :: 6 :: 6.25 :: []
+in
+(0, 0) :: walk times 0 0
+\end{lstlisting}
+\end{minipage}
+\par\smallskip
+The source returns a random path; after replacement it returns
+$[(0,0),(1,0),\ldots,(6,0)]$.
+\caption{A Gaussian random walk from~\cite{vakar2019domain}.
+Both programs return the complete list of sampled time--position pairs.}
+\label{fig:intro-gaussian-walk}
+\Description{The source recursively visits times one through six. At each time,
+it draws a Gaussian position whose mean is the previous position and whose
+variance is the elapsed time, and returns every time--position pair. Replacing
+every draw by its mean leaves the position fixed at zero, so the transformed
+program returns the deterministic path containing positions zero at every time.
+TODO: Give some plots.}
+\end{figure}
