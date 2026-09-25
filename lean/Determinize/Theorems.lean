@@ -67,7 +67,10 @@ theorem inferenceCorrectness : Spec.inferCorrectThm :=
 end Determinize.Theorems
 
 /-! Every proposition `Spec` defines must be the type of a theorem above, and those theorems may
-depend only on the standard axioms. Otherwise the build fails. -/
+depend only on the standard axioms. The propositions may rely on `Proof` only for proofs, which
+cannot change what they mean: Lean treats any two proofs of a proposition as equal. Following the
+propositions through the declarations they use, stopping at proofs, must reach nothing declared in
+a `Proof` module. Otherwise the build fails. -/
 
 open Lean Elab Command in
 run_cmd do
@@ -89,5 +92,23 @@ run_cmd do
     unless extra.isEmpty do
       complete := false
       logError m!"{name} depends on non-standard axioms {extra}"
+  let moduleOf name := (env.getModuleIdxFor? name).bind (env.header.moduleNames[·]?)
+  let mut reached : NameSet := {}
+  let mut pending := statements
+  while !pending.isEmpty do
+    let name := pending.back!
+    pending := pending.pop
+    -- Declarations outside `Determinize` cannot use ours; those in this file have no module index.
+    if reached.contains name || !(moduleOf name).all (`Determinize).isPrefixOf then continue
+    let some info := env.find? name | continue
+    if ← liftTermElabM (Meta.isProp info.type) then continue
+    reached := reached.insert name
+    if (moduleOf name).any (`Determinize.Proof).isPrefixOf then
+      complete := false
+      logError m!"{name} is declared in a Proof module and is not a proof, but Spec relies on it"
+    let constructors := match info with | .inductInfo type => type.ctors.toArray | _ => #[]
+    pending := pending ++ constructors ++ info.type.getUsedConstants ++
+      ((info.value? (allowOpaque := true)).map (·.getUsedConstants)).getD #[]
   if complete then
     logInfo m!"{statements.size} Spec statements proved by {theorems.size} theorems, using only {standard}"
+    logInfo m!"Spec statements rely on {reached.size} declarations other than proofs, none from Proof"
