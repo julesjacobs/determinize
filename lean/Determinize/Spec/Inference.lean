@@ -12,15 +12,12 @@ of their free sample sites; they are compared site by site in the order `G ≤ E
 `Ty.Sub.general`. The greatest completion has the most E sites, which determinization replaces
 by the most means.
 
-`inferSoundThm` states that the output of `infer` is a completion, typed at the returned type;
-`inferOptimalThm` that every completion lies below it, so it is the greatest completion; and
-`inferCompleteThm` that `infer` succeeds whenever a completion exists. `inferFloatSoundThm` and
-`inferFloatCompleteThm` restate soundness and completeness at `float E`, the type assumed by the
-theorems in `Spec/Main.lean`, and `inferFloatTypedThm` states that the inferred program has type
-`float E` whenever some completion does.
+`inferCorrectThm` states that `infer` fails only on inputs without a completion, and otherwise
+returns a completion, typed at the returned type, that lies above every completion: the greatest
+completion.
 
-These statements do not depend on how `infer` works. Soundness, optimality, and completeness
-determine its output program uniquely, but not its output type.
+The statement does not depend on how `infer` works. It determines the output program uniquely,
+but not the output type.
 -/
 
 namespace Determinize.Spec
@@ -100,49 +97,18 @@ def AffinityLE : Core → Core → Prop
       Ty.Sub (.float affinity) (.float affinity') ∧ AffinityLE distribution distribution'
   | _, _ => False
 
-/-- Soundness: the inferred program is a completion of the input, typed at the inferred type. -/
-def inferSoundThm : Prop :=
-  ∀ (input : Input) (program : Core) (ty : Ty),
-    Frontend.infer input = .ok (program, ty) →
-      input.matches program = true ∧ Typed [] (interpret program) ty
-
-/-- Optimality: every completion lies below the inferred program, which by soundness is
-therefore the greatest completion. -/
-def inferOptimalThm : Prop :=
-  ∀ (input : Input) (program : Core) (ty : Ty) (completion : Core),
-    Frontend.infer input = .ok (program, ty) →
-    Completion input completion →
-    AffinityLE completion program
-
-/-- Completeness: inference succeeds on every input that has a completion. -/
-def inferCompleteThm : Prop :=
-  ∀ (input : Input) (completion : Core),
-    Completion input completion →
-    ∃ program ty, Frontend.infer input = .ok (program, ty)
-
-/-- Soundness at `float E`. It needs the inferred type to be a float: `infer` returns `unit`
-for the input `reject`, which also has type `float E`. -/
-def inferFloatSoundThm : Prop :=
-  ∀ (input : Input) (program : Core) (affinity : Affinity),
-    Frontend.infer input = .ok (program, .float affinity) →
-      input.matches program = true ∧ Typed [] (interpret program) (.float .E)
-
-/-- Completeness and optimality for completions of type `float E`. -/
-def inferFloatCompleteThm : Prop :=
-  ∀ (input : Input) (completion : Core),
-    input.matches completion = true →
-    Typed [] (interpret completion) (.float .E) →
-    ∃ program ty, Frontend.infer input = .ok (program, ty) ∧ AffinityLE completion program
-
-/-- If some completion has type `float E`, then so does the inferred program, even when the
-inferred type is not a float. The theorems in `Spec/Main.lean` then apply to the output of
-`infer` itself. -/
-def inferFloatTypedThm : Prop :=
-  ∀ (input : Input) (completion : Core),
-    input.matches completion = true →
-    Typed [] (interpret completion) (.float .E) →
-    ∃ program ty, Frontend.infer input = .ok (program, ty) ∧
-      Typed [] (interpret program) (.float .E)
+/-- Inference fails only when the input has no completion. Otherwise it returns a completion,
+typed at the returned type, and every completion lies below it. -/
+def inferCorrectThm : Prop :=
+  ∀ input : Input,
+    match Frontend.infer input with
+    | .error _ =>
+        ¬ ∃ program : Core, Completion input program
+    | .ok (program, ty) =>
+        input.matches program = true ∧
+        Typed [] (interpret program) ty ∧
+        ∀ completion : Core,
+          Completion input completion → AffinityLE completion program
 
 /-! ## Examples
 
@@ -217,14 +183,5 @@ example : ¬ ∃ program, Completion comparison program := by
     | sub _ sub ih => intro _ _ equal; cases ih equal; exact sub
     | _ => intro _ _ equal; cases equal
   cases sampleE (left typed rfl) rfl
-
--- `infer` types the input `reject` at `unit`, which is not a float, although `reject` also has
--- type `float E`. This is why `inferFloatSoundThm` assumes a float type.
-#guard match Frontend.infer .reject with
-  | .ok (.reject, .unit) => true
-  | _ => false
-
-example : Completion .reject .reject ∧ Typed [] (interpret .reject) (.float .E) :=
-  ⟨⟨rfl, .unit, .reject⟩, .reject⟩
 
 end Determinize.Spec

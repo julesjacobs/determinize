@@ -6,7 +6,7 @@ import Determinize.Proof.Frontend.Unify
 /-!
 # Soundness, optimality, and completeness of affinity inference
 
-The six statements of `Spec/Inference.lean`, assembled from the lemmas of
+The statement of `Spec/Inference.lean`, assembled from the lemmas of
 `notes/inference-optimality/1-claims.md`:
 
 * `solveInput_typed` (soundness): the most general shapes and the greatest solution of the
@@ -17,8 +17,7 @@ The six statements of `Spec/Inference.lean`, assembled from the lemmas of
   constraints (Lemma C). Its shapes unify the shape equations, so `unify` succeeds and they factor
   through the most general shapes; its affinities, read off at the leaves of the decorated shapes,
   solve the atomic constraints (Lemma C′), so `solveAffinities` succeeds and returns a larger
-  solution (Lemma P); read-back is monotone. If the completion has a float type, the decorated
-  type of the draft is a float or a shape variable.
+  solution (Lemma P); read-back is monotone.
 -/
 
 namespace Determinize.Proof.Frontend
@@ -95,15 +94,10 @@ theorem solveInput_typed {input : Input} {s : Solution} (h : solveInput input = 
 
 /-! ## Completeness and optimality -/
 
-/-- A typed completion determines a solution of inference above it. If the completion has a
-float type, so does every instance of the draft's decorated type that sends the remaining shape
-variables to floats. -/
+/-- A typed completion determines a solution of inference above it. -/
 theorem solveInput_complete {input : Input} {completion : Core} {T : Ty}
     (hm : input.matches completion = true) (ht : Typed [] (interpret completion) T) :
-    ∃ s, solveInput input = .ok s ∧ AffinityLE completion (s.draft.program s.affinities) ∧
-      ((∃ m, T = .float m) →
-        ∃ m, (s.draft.ty.decorate s.shapes).instantiate (fun _ => .float .E) s.affinities =
-          .float m) := by
+    ∃ s, solveInput input = .ok s ∧ AffinityLE completion (s.draft.program s.affinities) := by
   -- Lemma C: the completion solves the subtyping constraints.
   obtain ⟨d, n', hg, -, σ₁, -, F⟩ := generate_complete input [] [] 0 ⟨fun _ => .unit, fun _ => .G⟩
     completion T (fun _ _ => List.Forall₂.nil) hm ht
@@ -122,68 +116,35 @@ theorem solveInput_complete {input : Input} {completion : Core} {T : Ty}
     | .generated j => σ₁.affinities (.generated j)
     | .leaf α p => affinityAt (σ₁.types α) p
   let σ₂ : Ground := ⟨σ₁.types, ρ⟩
-  obtain ⟨S₂, sT, program⟩ := F σ₂ fun _ _ => ⟨rfl, rfl⟩
+  obtain ⟨S₂, -, program⟩ := F σ₂ fun _ _ => ⟨rfl, rfl⟩
   have satisfies : Satisfies ρ (affinityConstraints d θ) := by
     intro c hc'
     obtain ⟨p, mem, hc⟩ := List.mem_flatMap.1 hc'
     have approx := approx_decorate (θ := θ) (types := σ₁.types) (ρ := ρ) factor fun _ _ => rfl
     exact decompose_complete (S₂ p mem) _ _ (approx p.1) (approx p.2) c hc
   obtain ⟨ρmax, ha⟩ := solveAffinities_complete satisfies
-  refine ⟨_, solveInput_of hg hu ha, ?_, ?_⟩
-  · rw [← program]
-    exact program_le (solveAffinities_greatest ha satisfies) d
-  · -- The decorated type of the draft has a shape that maps to `float` under `δ`.
-    rintro ⟨m, rfl⟩
-    have shape : (d.ty.decorate θ).shape.subst δ = .float := by
-      have := shapeOf_sub sT
-      rw [Ground.inst, shape_instantiate] at this
-      rw [shape_decorate, Shape.subst_subst, funext factor]
-      exact this
-    show ∃ m, (d.ty.decorate θ).instantiate _ ρmax = _
-    cases hty : (d.ty.decorate θ).shape with
-    | var β => rw [eq_var_of_shape hty]; exact ⟨.E, rfl⟩
-    | float =>
-      obtain ⟨a, ha⟩ := eq_float_of_shape hty
-      rw [ha]
-      exact ⟨_, rfl⟩
-    | _ => rw [hty] at shape; simp [Shape.subst] at shape
+  refine ⟨_, solveInput_of hg hu ha, ?_⟩
+  rw [← program]
+  exact program_le (solveAffinities_greatest ha satisfies) d
 
-/-! ## The statements -/
+/-! ## The statement -/
 
-theorem inferSound : inferSoundThm := by
-  intro input program ty h
-  obtain ⟨s, hs, rfl, rfl⟩ := infer_ok.1 h
-  exact solveInput_typed hs _
-
-theorem inferOptimal : inferOptimalThm := by
-  intro input program ty completion h ⟨hm, T, ht⟩
-  obtain ⟨s, hs, rfl, -⟩ := infer_ok.1 h
-  obtain ⟨s', hs', le, -⟩ := solveInput_complete hm ht
-  rw [hs, Except.ok.injEq] at hs'
-  subst hs'
-  exact le
-
-theorem inferComplete : inferCompleteThm := by
-  intro input completion ⟨hm, T, ht⟩
-  obtain ⟨s, hs, -, -⟩ := solveInput_complete hm ht
-  exact ⟨_, _, infer_ok.2 ⟨s, hs, rfl, rfl⟩⟩
-
-theorem inferFloatSound : inferFloatSoundThm := by
-  intro input program affinity h
-  obtain ⟨hm, ht⟩ := inferSound input program _ h
-  exact ⟨hm, ht.sub (sub_float_E affinity)⟩
-
-theorem inferFloatComplete : inferFloatCompleteThm := by
-  intro input completion hm ht
-  obtain ⟨program, ty, h⟩ := inferComplete input completion ⟨hm, _, ht⟩
-  exact ⟨program, ty, h, inferOptimal input program ty completion h ⟨hm, _, ht⟩⟩
-
-theorem inferFloatTyped : inferFloatTypedThm := by
-  intro input completion hm ht
-  obtain ⟨s, hs, -, float⟩ := solveInput_complete hm ht
-  obtain ⟨m, hty⟩ := float ⟨_, rfl⟩
-  have typed := (solveInput_typed hs fun _ => .float .E).2
-  rw [hty] at typed
-  exact ⟨_, _, infer_ok.2 ⟨s, hs, rfl, rfl⟩, typed.sub (sub_float_E m)⟩
+theorem inferCorrect : inferCorrectThm := by
+  intro input
+  split
+  · rintro ⟨completion, hm, T, ht⟩
+    obtain ⟨s, hs, -⟩ := solveInput_complete hm ht
+    rename_i h
+    rw [infer_ok.2 ⟨s, hs, rfl, rfl⟩] at h
+    cases h
+  · rename_i program ty h
+    obtain ⟨s, hs, rfl, rfl⟩ := infer_ok.1 h
+    obtain ⟨hm, ht⟩ := solveInput_typed hs fun _ => .unit
+    refine ⟨hm, ht, ?_⟩
+    rintro completion ⟨hm', T, ht'⟩
+    obtain ⟨s', hs', le⟩ := solveInput_complete hm' ht'
+    rw [hs, Except.ok.injEq] at hs'
+    subst hs'
+    exact le
 
 end Determinize.Proof.Frontend

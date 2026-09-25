@@ -57,14 +57,6 @@ theorem instantiate_decorate (θ : Nat → Shape) (types : Nat → Ty) (ρ : Aff
       u.instantiate (fun α => ((UType.var α).decorate θ).instantiate types ρ) ρ := by
   induction u <;> simp_all [UType.decorate, UType.instantiate]
 
-/-- A type whose shape is a variable is that variable. -/
-theorem eq_var_of_shape {u : UType} {i : Nat} (h : u.shape = .var i) : u = .var i := by
-  cases u <;> simp_all [UType.shape]
-
-/-- A type whose shape is `float` is a float. -/
-theorem eq_float_of_shape {u : UType} (h : u.shape = .float) : ∃ a, u = .float a := by
-  cases u <;> simp_all [UType.shape]
-
 /-! ## Soundness of decomposition (Lemma S′) -/
 
 theorem satisfies_nil {V : Type} (ρ : V → Affinity) :

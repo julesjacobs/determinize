@@ -8,6 +8,15 @@ All six statements of `Spec/Inference.lean` are proved. `lake build --wfail` pas
 `infer` changed in one place (`Shape.decorate` keeps shape variables instead of turning them
 into `unit`). Its outputs are unchanged; see "The change to `Infer.lean`".
 
+**After review.** The six statements were replaced by one, `inferCorrectThm`, as suggested in
+the review of PR #10: if `infer` fails, the input has no completion; if it succeeds, its program
+is a completion, typed at the returned type, and every completion lies below it. The three
+`float E` statements were dropped, since the returned type does not matter for determinization.
+`inferCorrect` in `Proof/Frontend/Inference.lean` now follows from `solveInput_typed` and
+`solveInput_complete`. The float part of `solveInput_complete` is gone, and with it
+`eq_var_of_shape` and `eq_float_of_shape`. Keeping shape variables in `Shape.decorate` is no
+longer needed, but it does no harm. The rest of this file describes the proofs before the change.
+
 ## Where everything lives
 
 All proofs are in `lean/Determinize/Proof/Frontend/`, namespace `Determinize.Proof.Frontend`.
