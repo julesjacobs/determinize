@@ -30,7 +30,7 @@ The complete compilation, verification and execution pipeline is outlined in \cr
 
 \paragraph{Exact rational solver} The above graph can be used to directly compute the exact mean and variance by our own verified matrix solver.
 
-\paragraph{Storm solver} Or alternatively the finite state graph can be entered into the external Storm solver [TODO: cite].
+\paragraph{Storm solver} Alternatively, the finite state graph can be passed to the external probabilistic model checker Storm~\cite{hensel2022storm}.
 
 \paragraph{Certificate checker} The certificate that Storm produces is checked and it is verified that any such certificate corresponds to the correct expected value for the input program.
 
