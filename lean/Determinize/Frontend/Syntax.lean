@@ -83,7 +83,8 @@ def checkSitewise {Literal Site Site' : Type} [DecidableEq Literal] (r : Site �
 
 theorem checkSitewise_iff {Literal Site Site' : Type} [DecidableEq Literal]
     (R : Site → Site' → Prop) [∀ s s', Decidable (R s s')] (e : Expr Literal Site)
-    (e' : Expr Literal Site') : checkSitewise (fun s s' => decide (R s s')) e e' = true ↔ Sitewise R e e' := by
+    (e' : Expr Literal Site') :
+    checkSitewise (fun s s' => decide (R s s')) e e' = true ↔ Sitewise R e e' := by
   induction e generalizing e' <;> cases e' <;>
     simp [checkSitewise, Sitewise, Bool.and_eq_true, and_assoc, *]
 
