@@ -1,4 +1,4 @@
-import Determinize.Spec.RewardModel.Control
+import Determinize.Proof.RewardModel.Control
 import Determinize.Finite.Statistics
 import Determinize.Proof.RewardModel.Boundary
 import Determinize.Proof.RewardModel.Certificates
