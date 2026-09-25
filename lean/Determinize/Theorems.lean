@@ -1,4 +1,5 @@
 import Determinize.Proof.RewardModel.FiniteIntegrability
+import Determinize.Proof.FiniteModel.Termination
 import Determinize.Spec.Main
 import Determinize.Spec.Traces.Main
 import Determinize.Spec.Inference
@@ -54,6 +55,9 @@ theorem conditionalTraceVarianceDecomposition : Spec.Traces.conditionalVarianceT
 theorem finiteRewardIntegrability : Spec.RewardModel.finiteIntegrabilityThm :=
   Proof.RewardModel.finite_integrable
 
+theorem finiteMassBalance : Spec.FiniteModel.massBalanceThm :=
+  Proof.FiniteModel.massBalance
+
 theorem returnedExpectation : Spec.returnedExpectationThm :=
   Proof.Paper.returnedExpectationSoundness
 
@@ -62,23 +66,28 @@ theorem inferenceCorrectness : Spec.inferCorrectThm :=
 
 end Determinize.Theorems
 
-#print axioms Determinize.Theorems.expectationPreservation
-#print axioms Determinize.Theorems.returnOrDiverge
-#print axioms Determinize.Theorems.extendedExpectationPreservation
-#print axioms Determinize.Theorems.jensenInequality
-#print axioms Determinize.Theorems.outputMassPreservation
-#print axioms Determinize.Theorems.varianceNonIncrease
-#print axioms Determinize.Theorems.conditionalExpectationPreservation
-#print axioms Determinize.Theorems.traceErasure
-#print axioms Determinize.Theorems.traceConditionalLaw
-#print axioms Determinize.Theorems.traceVarianceDecomposition
+/-! Every proposition `Spec` defines must be the type of a theorem above, and those theorems may
+depend only on the standard axioms. Otherwise the build fails. -/
 
-#print axioms Determinize.Theorems.conditionalVarianceNonIncrease
-#print axioms Determinize.Theorems.returnedExtendedExpectation
-#print axioms Determinize.Theorems.conditionalTraceVarianceDecomposition
-
-#print axioms Determinize.Theorems.finiteRewardIntegrability
-
-#print axioms Determinize.Theorems.returnedExpectation
-
-#print axioms Determinize.Theorems.inferenceCorrectness
+open Lean Elab Command in
+run_cmd do
+  let env ← getEnv
+  let statements := (env.constants.fold (init := #[]) fun found name info =>
+    if (`Determinize.Spec).isPrefixOf name && info.isDefinition && info.type.isProp then found.push name
+    else found).qsort Name.lt
+  let theorems := (env.constants.fold (init := #[]) fun found name info =>
+    if (`Determinize.Theorems).isPrefixOf name && info.isTheorem then found.push (name, info.type)
+    else found).qsort (Name.lt ·.1 ·.1)
+  let standard := [``propext, ``Classical.choice, ``Quot.sound]
+  let mut complete := true
+  for statement in statements do
+    unless theorems.any (·.2 == .const statement []) do
+      complete := false
+      logError m!"{statement} is stated in Spec but no theorem in Determinize.Theorems proves it"
+  for (name, _) in theorems do
+    let extra := (← collectAxioms name).filter (!standard.contains ·)
+    unless extra.isEmpty do
+      complete := false
+      logError m!"{name} depends on non-standard axioms {extra}"
+  if complete then
+    logInfo m!"{statements.size} Spec statements proved by {theorems.size} theorems, using only {standard}"
