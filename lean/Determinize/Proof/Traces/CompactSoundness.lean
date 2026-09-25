@@ -1,5 +1,6 @@
 import Determinize.Proof.Traces.CompactFiberSoundness
 import Determinize.Proof.Traces.Factorization
+import Determinize.Proof.Traces.Mass
 
 /-!
 # Compact trace soundness
