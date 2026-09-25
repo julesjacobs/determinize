@@ -13,7 +13,7 @@ Run `lake build --wfail` from this directory; the build is warning-free and cont
 
 The typed determinization theorems assume `DomainSafe`: every reached operation has valid arguments almost surely at every finite execution depth. For typed programs, this requires valid distribution parameters and nonzero divisors. Rejection and divergence remain possible. `returnOrDivergeThm` proves that returned mass plus divergence probability is one for domain-safe programs of real type. Divergence is defined as the infimum of finite-depth running probabilities and includes rejection. `Proof.Paper.domainSafe_iff_return_or_diverge` proves the converse under real typing, so the mass-balance equation characterizes domain safety. The expectation and trace theorems also establish target domain safety. Finite replay certificates use the same predicate, defined in `Spec/Semantics.lean`.
 
-Source expressions need not be in ANF. Each primitive distribution is its own constructor with the paper's operands (`uniform action lower upper`, `gaussian action mean variance`, and so on). `DistributionAction` is either `sample affinity` or `mean`, where `Affinity` is E or G. Mean expressions carry no affinity annotation; their result affinity follows the operand typing rules. Operands may contain nested sampling and are evaluated left to right; a mean site also evaluates every operand exactly once, including a Gaussian's variance. The soundness theorems also cover source expressions containing mean sites. `Spec/Primitives.lean` gives each primitive one fiber: its law at a stochastic site, the Dirac mass at its mean at a mean site, and the zero measure outside the parameter domain. Expressions have no type annotations; `Typed` assigns types separately. Expressions carry E/G labels only on sample sites; literals and arithmetic are unannotated and a literal types at either affinity, as in the paper's `FloatLit`; subtyping is silent; variables are de Bruijn indices. `Typed` enforces the affinity restrictions: E multiplication requires a G left operand, division a G denominator, and comparisons G operands. Arithmetic uses real numbers; division by zero gets stuck. The theorems quantify over closed float programs of either affinity; the proof uses subsumption to assign an E result type to the same program.
+Source expressions need not be in ANF. Each primitive distribution is its own constructor with the paper's operands (`uniform action lower upper`, `gaussian action mean variance`, and so on). `DistributionAction` is either `sample affinity` or `mean`, where `Affinity` is E or G. Mean expressions carry no affinity annotation; their result affinity follows the operand typing rules. Operands may contain nested sampling and are evaluated left to right; a mean site also evaluates every operand exactly once, including a Gaussian's variance. The soundness theorems also cover source expressions containing mean sites. `Spec/Primitives.lean` gives each primitive one fiber: its law at a stochastic site, the Dirac mass at its mean at a mean site, and the zero measure outside the parameter domain. Expressions have no type annotations; `Typed` assigns types separately. Expressions carry E/G labels only on sample sites; literals and arithmetic are unannotated and a literal types at either affinity, as in the paper's rule Real; subtyping is silent; variables are de Bruijn indices. `Typed` enforces the affinity restrictions: E multiplication requires a G left operand, division a G denominator, and comparisons G operands. Arithmetic uses real numbers; division by zero gets stuck. The theorems quantify over closed float programs of either affinity; the proof uses subsumption to assign an E result type to the same program.
 
 `DistributionAction.determinize` changes `sample E` to `mean` and retains `sample G`. A mean site still evaluates its operands and checks its parameter domain; G draws nested in those operands therefore still execute and appear in the trace.
 
@@ -27,16 +27,83 @@ Symbolic mean steps evaluate affine formulas over the existing E samples, preser
 
 The default build checks mean sites with affine-dependent operands, invalid mean parameters, nested sampling, the `x + 1/y` example, a G draw scaling an E draw from the left, and a sampled value captured by a function. `Proof/InterfaceChecks.lean` checks the direct evaluator using only public imports and verifies that these imports provide no measurable structure on expressions.
 
-## Deviations from the archived paper
+## Deviations from the paper
 
-These comparisons refer to the previous draft in `tex/archive/`; the new paper in `tex/` is being written afresh. Reviewers comparing against the archived draft should know:
+These notes compare the Lean development with the paper in `tex/`. The previous draft in
+`tex/archive/` is no longer compared.
 
-- **Affinity labels on sample sites.** The paper's transformation `⟦e : τ⟧` is type-directed; here `Expr.determinize` is a function on terms, so every sample site carries its affinity and that label decides whether the site is switched to its mean (`DistributionAction.determinize`). Literals and arithmetic carry no labels.
-- **Multiplication and division.** Lean, the paper, and the simulator use a G left operand for multiplication and a G denominator for division. The other operand carries the result affinity. A G factor may depend on the G trace, while the expression remains affine in E draws. Lean allows silent structural subtyping; the frontend also puts a literal scaling factor on the left.
-
-- **Primitive domains.** Sampling outside a primitive's parameter domain (`uniform(a, b)` with `a > b`, a negative Gaussian variance, and so on) yields the zero measure and counts as stuck, and so does a mean site outside the same domain; the paper's mean table is unconditional. `uniform(a, a)` is the Dirac measure at `a`; the paper's table has no such row.
-- **Validity hypothesis.** The typed determinization theorems assume `DomainSafe program`: almost surely, at every reduction depth, no off-domain operation occurs, including E draws and division by zero. The paper's "valid G-trace" is informal. The hypothesis is necessary: a source that loses mass with positive probability on an off-domain E parameter can have a different expectation than its determinization.
-- **Expectations.** `Spec.Traces.conditionalLawThm` needs no integrability hypothesis and proves that the source conditional output law is integrable at almost every trace, which the paper assumes as "integrable σ" and states as the open lemma "Mean valuation correctness". `mainThm` covers finite expectations; `extendedExpectationThm` is the paper's extended-real global theorem; `jensenThm` is the paper's global Jensen corollary restricted to real-valued convex functions.
+- **Names.** The paper's modes are affinities here: `real^m` is `Ty.float m`, the mean
+  annotation `M` is `DistributionAction.mean`, and `Determinize(e)` is `Expr.determinize`.
+  The paper's `μ_e^(n)`, `μ_e`, `d_e`, `J_e` and `η_e` are `outputMeasureAt n`,
+  `bigStepMeasure`, `divergenceProbability`, `traceAndOutputLaw` and `traceLaw`. The
+  conditional law `μ_e(· | τ)` is Mathlib's `condKernel` of `traceAndOutputLaw`, and the law
+  conditioned on returning is `returnedLaw`.
+- **Theorems.** Inference correctness (Section 3) is `inferCorrectThm`. In Section 4,
+  expectation preservation is `conditionalExtendedExpectationThm` (with the finite case
+  `returnedExpectationThm`), variance non-increase is `conditionalVarianceThm`, probability
+  preservation is `returnOrDivergeThm` and `outputMassThm`, trace soundness is
+  `Spec.Traces.conditionalLawThm`, and the trace variance decomposition is
+  `Spec.Traces.conditionalVarianceThm`. The target's domain safety, part of probability
+  preservation, is a conjunct of `Spec.Traces.conditionalLawThm`. The generalized convex
+  inequality of Section 5 is `jensenThm`. The paper does not state the unnormalized versions
+  (`mainThm`, `extendedExpectationThm`, `varianceThm`, `Spec.Traces.varianceThm`),
+  `conditionalExpectationThm`, or the finite-model and reward-model theorems.
+- **Evaluation contexts and mean steps.** `Spec` has no evaluation contexts: `reduce` recurses
+  into the leftmost unevaluated operand and wraps the result (`Action.wrap`), which realizes
+  the contexts of the paper's semantics figure. That figure's evaluation-context link points to
+  `Proof/FiniteModel/Contexts.lean`, a proof about finite-model frames. A mean site is not a
+  deterministic reduction, as in the paper, but a sampling action whose fiber is the Dirac mass
+  at the mean, or the zero measure outside the domain. The output law, the reduction depth and
+  the G trace are the same as under the paper's rule.
+- **Primitive distributions.** Domains and means agree with the paper's table. The paper leaves
+  the law at degenerate parameters implicit: `uniform(a, a)` is the Dirac mass at `a`, and so is
+  Mathlib's Gaussian with variance 0. A trace entry records an `Op`, whose discrete label also
+  records the number of supplied probabilities (`Op.discrete arity`); the paper's entry records
+  only the distribution.
+- **Subtyping.** The paper lists reflexivity and transitivity as rules. `Ty.Sub` has the
+  structural rules and reflexivity at base types only; general reflexivity and transitivity are
+  lemmas (`Ty.Sub.refl` and `Ty.Sub.trans` in `Proof/Semantics/Subtyping.lean`).
+- **Gaussian variance.** Section 3 says the distribution rules allow E parameters wherever the
+  mean is affine in them. That would allow an E Gaussian variance, since the mean does not
+  depend on it, but the typing figure and `Typed` both require the variance to be G.
+- **Inference algorithm.** The paper solves subtype constraints by constructor expansion with
+  deferred variable constraints, then propagates E forward and G backward. `Frontend.infer`
+  instead decorates the shape that the most general unifier gives each type variable with a
+  fresh affinity variable at every float position, decomposes the constraints into atomic ones,
+  sets the variables forced below a G to G and all others to E, and checks the result. Both
+  compute the greatest completion, and inference correctness speaks only about the result.
+  Inference takes an `Input`, a program with rational literals and no mean sites, and
+  `interpret` embeds the result into the real-literal `Expr` of the theorems.
+- **Proof structure.** Section 5's actual and expected interpretations `Act_n` and `Exp_n` are
+  `actualTraceLaw` and `targetTraceLaw` (`Proof/Symbolic/TraceLaws.lean`). Lean's invariant at
+  each depth is not a statement about conditional laws but `FiberSound`
+  (`Proof/Traces/Fibers.lean`), with the compact replay of a G trace as an explicit fiber. It
+  identifies that fiber with Mathlib's `condKernel` only for the laws summed over all depths
+  (`Proof/Traces/ConditionalLaw.lean`). Section 5 assumes integrable symbolic configurations;
+  Lean derives the integrability of affine forms from finite primitive moments
+  (`primitiveMomentBounds`).
+- **Surface syntax.** The paper's examples use `fun`, `rec f x =>`, `flip` and subtraction,
+  and its prose mentions `observe`; its grammar has none of these. The unverified front end
+  desugars them, for example `flip(p)` into `0 < bernoulli[G](p)` and `a - b` into `a + -b`.
+  It also accepts `<=`, moves a literal right factor to the left of a multiplication, and reads
+  `discrete(p0, …, pn)` with all n + 1 probabilities, dropping the last. The CLI prints `gauss`
+  for `gaussian` and `discrete_list` for `discrete`.
+- **Implementation (Section 6).** The trust list places the parser and the floating-point
+  interpreter in the trusted surface. The trusted `Spec` contains neither: they live in
+  `Frontend/` and `Runtime/`, and no theorem depends on the interpreter. Storm does not produce
+  a certificate: it returns exact value vectors, and `tools/storm.py` adds the divergent states
+  and a rank and next-state witness, then writes a `MomentCertificate` that Lean's kernel checks.
+  The checked result covers return mass, first and second moments and rejection probability
+  (`checked_statistics`, `checked_conditionalVariance`), not only the expected value. The
+  paper does not describe the additive reward models (`--additive`, `Spec/RewardModel`) that
+  Section 7 relies on.
+- **Lean links.** `tex/lean-links.tex` pins the paper's links to `e4d9b18`, which predates the
+  verified inference: `Spec/Inference.lean`, the target of the inference-correctness link, does
+  not exist there, and the constraint-generation and affinity-solving links show the earlier
+  inference. Against the current code many line ranges have also moved; for example, `typing`
+  now points at `end Expr` and `expectation-preservation` into `returnedExpectationThm`. The
+  anonymous review build links to a snapshot on apndx.org instead, which these notes do not
+  cover.
 
 ## Lean command-line implementation
 
