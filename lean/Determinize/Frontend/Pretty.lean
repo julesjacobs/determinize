@@ -32,13 +32,31 @@ def leanAction : DistributionAction → String
   | .sample affinity => s!"(.sample .{prettyAffinity affinity})"
   | .mean => ".mean"
 
-private def primitive (name : String) (action : DistributionAction) (args : List String) : String :=
-  let head := match action with
+/-- How `pretty` writes the site of a primitive: `head name site` is the head of the
+application, such as `uniform[E]`. -/
+class PrettySite (Site : Type) where
+  head (name : String) : Site → String
+
+instance : PrettySite DistributionAction where
+  head name := fun
     | .sample affinity => s!"{name}[{prettyAffinity affinity}]"
     | .mean => "mean_" ++ name
-  s!"{head}({String.intercalate ", " args})"
 
-private def render (env : List String) (depth : Nat) : Core → String
+instance : PrettySite Affinity where
+  head name affinity := s!"{name}[{prettyAffinity affinity}]"
+
+/-- A placeholder prints as an omitted affinity. -/
+instance : PrettySite (Option Affinity) where
+  head name := fun
+    | some affinity => s!"{name}[{prettyAffinity affinity}]"
+    | none => name
+
+private def primitive {Site : Type} [PrettySite Site] (name : String) (site : Site)
+    (args : List String) : String :=
+  s!"{PrettySite.head name site}({String.intercalate ", " args})"
+
+private def render {Site : Type} [PrettySite Site] (env : List String) (depth : Nat) :
+    Expr Rat Site → String
   | .bvar i => (env[i]?).getD s!"unbound_{i}"
   | .reject => "observe(false)"
   | .unit => "()"
@@ -77,7 +95,8 @@ private def render (env : List String) (depth : Nat) : Core → String
   | .beta k a b => primitive "beta" k [render env depth a, render env depth b]
   | .gamma k a b => primitive "gamma" k [render env depth a, render env depth b]
 
-def pretty (e : Core) : String := render [] 0 e
+/-- Surface syntax that the parser reads back. -/
+def pretty {Site : Type} [PrettySite Site] (e : Expr Rat Site) : String := render [] 0 e
 
 /-- Constructor syntax for independent kernel checking; every rational is parenthesized. -/
 def leanExpression : Core → String
@@ -113,43 +132,5 @@ def leanExpression : Core → String
   | .exponential action rate => s!"(.exponential {leanAction action} {leanExpression rate})"
   | .beta action alpha betaArg => s!"(.beta {leanAction action} {leanExpression alpha} {leanExpression betaArg})"
   | .gamma action shape rate => s!"(.gamma {leanAction action} {leanExpression shape} {leanExpression rate})"
-
-private def leanRequested : Option Affinity → String
-  | none => "none"
-  | some affinity => s!"(some .{prettyAffinity affinity})"
-
-def leanInput : Input → String
-  | .bvar index => s!"(.bvar {index})"
-  | .reject => "(.reject)"
-  | .unit  => s!"(.unit)"
-  | .bool value => s!"(.bool {value})"
-  | .real value => s!"(.real (({value.num} : Rat) / {value.den}))"
-  | .lam body => s!"(.lam {leanInput body})"
-  | .fix body => s!"(.fix {leanInput body})"
-  | .app fn arg => s!"(.app {leanInput fn} {leanInput arg})"
-  | .pair left right => s!"(.pair {leanInput left} {leanInput right})"
-  | .fst pairValue => s!"(.fst {leanInput pairValue})"
-  | .snd pairValue => s!"(.snd {leanInput pairValue})"
-  | .inl value => s!"(.inl {leanInput value})"
-  | .inr value => s!"(.inr {leanInput value})"
-  | .matchSum scrutinee left right => s!"(.matchSum {leanInput scrutinee} {leanInput left} {leanInput right})"
-  | .nil  => s!"(.nil)"
-  | .cons head tail => s!"(.cons {leanInput head} {leanInput tail})"
-  | .matchList scrutinee nilCase consCase => s!"(.matchList {leanInput scrutinee} {leanInput nilCase} {leanInput consCase})"
-  | .ite condition thenBranch elseBranch => s!"(.ite {leanInput condition} {leanInput thenBranch} {leanInput elseBranch})"
-  | .letE value body => s!"(.letE {leanInput value} {leanInput body})"
-  | .neg body => s!"(.neg {leanInput body})"
-  | .add left right => s!"(.add {leanInput left} {leanInput right})"
-  | .mul left right => s!"(.mul {leanInput left} {leanInput right})"
-  | .div left right => s!"(.div {leanInput left} {leanInput right})"
-  | .lt left right => s!"(.lt {leanInput left} {leanInput right})"
-  | .uniform affinity lower upper => s!"(.uniform {leanRequested affinity} {leanInput lower} {leanInput upper})"
-  | .gaussian affinity mean variance => s!"(.gaussian {leanRequested affinity} {leanInput mean} {leanInput variance})"
-  | .poisson affinity rate => s!"(.poisson {leanRequested affinity} {leanInput rate})"
-  | .discrete affinity p => s!"(.discrete {leanRequested affinity} {leanInput p})"
-  | .bernoulli affinity probability => s!"(.bernoulli {leanRequested affinity} {leanInput probability})"
-  | .exponential affinity rate => s!"(.exponential {leanRequested affinity} {leanInput rate})"
-  | .beta affinity alpha betaArg => s!"(.beta {leanRequested affinity} {leanInput alpha} {leanInput betaArg})"
-  | .gamma affinity shape rate => s!"(.gamma {leanRequested affinity} {leanInput shape} {leanInput rate})"
 
 end Determinize.Frontend
