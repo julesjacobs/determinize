@@ -7,7 +7,7 @@ Every theorem of the previous sections is mechanized in the Lean programming lan
 
 \begin{enumerate}
 \item \textbf{Trusted surface/specifications}: This part requires the most scrutiny. It contains the language's syntax, the typing rules, the semantics, the determinization as well as the theorem statements. Additionally, it contains the non-verified functions like the parser or floating-point interpreter.
-\item \textbf{Lean-checked proofs and procedures}: This part contains the actual proofs of the theorems stated in the trusted surface, as well as the parts of the pipeline whose correctness is guaranteed by definitions and theorems inside the trusted surface. It is a current limitation of the Lean programming platform that there is no compiler guarantee that all theorems have accompanying proofs, therefore requiring a manual check.
+\item \textbf{Lean-checked proofs and procedures}: This part contains the actual proofs of the theorems stated in the trusted surface, as well as the parts of the pipeline whose correctness is guaranteed by definitions and theorems inside the trusted surface. The trusted surface states each theorem as a proposition, that is, a definition of type \texttt{Prop}, and Lean does not require a proposition to be proved merely because it is defined. The build therefore fails unless every such proposition is the type of a theorem whose proof depends only on Lean's standard axioms \texttt{propext}, \texttt{Classical.choice} and \texttt{Quot.sound}.
 \end{enumerate}
 
 The complete compilation, verification and execution pipeline is outlined in \cref{fig:architecture}. We will briefly describe the individual steps in the following.
