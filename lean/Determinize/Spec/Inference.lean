@@ -110,9 +110,7 @@ def inferCorrectThm : Prop :=
         ∀ completion : Core,
           Completion input completion → AffinityLE completion program
 
-/-! ## Examples
-
-The programs come from the hand-written list in `notes/inference-optimality/Checker.lean`. -/
+/-! ## Examples -/
 
 /-- The elaboration of `if true then uniform(0,1) else uniform(0,1) * uniform(0,1)`. -/
 private def branches : Input :=

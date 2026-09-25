@@ -6,8 +6,8 @@ import Determinize.Proof.Frontend.Unify
 /-!
 # Soundness, optimality, and completeness of affinity inference
 
-The statement of `Spec/Inference.lean`, assembled from the lemmas of
-`notes/inference-optimality/1-claims.md`:
+The statement of `Spec/Inference.lean`, assembled from the lemmas of the other files in
+`Proof/Frontend/`:
 
 * `solveInput_typed` (soundness): the most general shapes and the greatest solution of the
   affinity constraints solve the subtyping constraints of the draft (Lemma S′), so the read-back
