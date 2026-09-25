@@ -37,6 +37,9 @@ theorem conditionalExpectationPreservation : Spec.conditionalExpectationThm :=
 theorem traceErasure : Spec.Traces.correspondenceThm :=
   Proof.Traces.correspondence
 
+theorem traceJointLawFinite : Spec.Traces.finiteJointLawThm :=
+  Proof.Traces.isFiniteMeasure_traceAndOutputLaw
+
 theorem traceConditionalLaw : Spec.Traces.conditionalLawThm :=
   Proof.Traces.conditionalLaw
 

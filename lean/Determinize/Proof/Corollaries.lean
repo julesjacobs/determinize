@@ -417,7 +417,7 @@ open MeasureTheory ProbabilityTheory Determinize.Spec.Traces
 
 /-- The law of total variance along traces, stated with regular conditional distributions. -/
 theorem varianceSoundness : Determinize.Spec.Traces.varianceThm := by
-  intro program typed sourceSafe memLp
+  intro _ program typed sourceSafe memLp
   have replayAe := outputGivenTrace_ae_eq_condKernel program
     (replaySoundness program typed sourceSafe).2.1 rfl
   obtain ⟨_, factor, massAe, _⟩ := soundnessData .E program typed
