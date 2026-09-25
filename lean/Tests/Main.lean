@@ -1,5 +1,6 @@
 import Tests.Inference
 import Tests.Matching
+import Tests.Completions
 import Tests.MeanTyping
 import Tests.Runtime
 import Tests.Corpus

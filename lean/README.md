@@ -95,8 +95,8 @@ The executable and its checkers are separated as follows:
 - `Finite/`: verified graph construction and expected-reward solving, with model export.
 - `Proof/LinearAlgebra/`: executable Gaussian elimination with a proof of the original equations.
 - `Runtime/`: an unverified floating-point interpreter and seeded numerical samplers.
-- `Tests/`: parsing, inference and input preservation, mean-site typing, runtime,
-  finite-model, and kernel proof tests.
+- `Tests/`: parsing, inference and input preservation, completions, mean-site typing,
+  runtime, finite-model, and kernel proof tests.
 - `Main.lean`: the CLI.
 
 Apart from `Spec/Inference.lean`, `Spec` and the semantic soundness proofs do not import
