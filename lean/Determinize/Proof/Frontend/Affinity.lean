@@ -4,7 +4,7 @@ import Determinize.Frontend.Affinity
 # Correctness of the affinity solver
 
 The solutions of a list of affinity constraints are closed under pointwise join and meet
-(`satisfies_join`, `satisfies_meet`; Lemma L in `notes/inference-optimality/1-claims.md`).
+(`satisfies_join`, `satisfies_meet`; Lemma L).
 `solveAffinities` succeeds exactly when there is a solution, and then returns one that lies above
 every solution (`solveAffinities_spec`; Lemma P).
 -/

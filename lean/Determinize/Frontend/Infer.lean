@@ -6,8 +6,7 @@ import Determinize.Frontend.Affinity
 # Affinity inference
 
 `infer` fills the omitted sample affinities of a resolved program with the greatest affinities
-that make it typable. It follows the reference algorithm of
-`notes/inference-optimality/1-claims.md`:
+that make it typable. It works in phases:
 
 1. *Generation* (`generate`): give every node a type over type variables and affinity variables,
    and record every use of subsumption as a cast in a `Draft`. The casts are the subtyping

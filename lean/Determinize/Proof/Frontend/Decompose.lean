@@ -8,7 +8,7 @@ import Determinize.Proof.Semantics.Subtyping
 Inference turns a subtyping constraint `s <: t` between types with type variables into atomic
 affinity constraints: it replaces every type variable by its decorated most general shape and
 decomposes the two sides. This file relates the atomic constraints to `Ty.Sub`, in both
-directions (Lemmas S′ and C′ in `notes/inference-optimality/1-claims.md`):
+directions (Lemmas S′ and C′):
 
 * `decompose_sound`: if two types have the same shape, a solution of their decomposition makes
   every instance of the first a subtype of the same instance of the second.
