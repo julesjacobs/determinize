@@ -1,0 +1,16 @@
+# Polar: python polar.py invpend.prob --goals "E(pang)" --at_n 11
+# Counter guard (count <= 10) replaced by while true + --at_n 11; lowercase names, single-line expressions. Do not pass --numeric_roots (inaccurate).
+
+cartpos = Uniform(-5, -3)
+cartvelo = Uniform(2, 3)
+pang = Uniform(1, 5)
+pangder = Uniform(-0.5, 0.5)
+
+while true:
+    cartpos = cartpos + 0.01 * cartvelo
+    noise1 = Uniform(-1, 1)
+    cartvelo = 0.02 * cartpos + 1.03 * cartvelo - 0.3 * pang - 0.06 * pangder + noise1
+    pang = pang + 0.01 * pangder
+    noise2 = Uniform(-0.8, 0.8)
+    pangder = 0.04 * cartpos + 0.07 * cartvelo - 0.51 * pang + 0.85 * pangder + noise2
+end

@@ -1,0 +1,32 @@
+def main() {
+    cartPos := uniform(-5, -3);
+    cartVelo := uniform(2, 3);
+    pAng := uniform(1, 5);
+    pAngDer := uniform(-1/2, 1/2);
+
+    for count in [0..11) {
+        cartPos =
+            cartPos
+            + 1/100 * cartVelo;
+
+        cartVelo =
+            1/50 * cartPos
+            + 103/100 * cartVelo
+            - 3/10 * pAng
+            - 3/50 * pAngDer
+            + uniform(-1, 1);
+
+        pAng =
+            pAng
+            + 1/100 * pAngDer;
+
+        pAngDer =
+            1/25 * cartPos
+            + 7/100 * cartVelo
+            - 51/100 * pAng
+            + 17/20 * pAngDer
+            + uniform(-4/5, 4/5);
+    }
+
+    return pAng;
+}

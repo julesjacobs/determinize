@@ -1,0 +1,22 @@
+# Polar: python polar.py add-uniform-with-counter-large-unbounded-variant.prob --goals "E(x)" --after_loop
+# Finite type for y added so Polar accepts the guard y < 2.
+
+types
+    y : Finite(0,1,2)
+end
+
+y = 0
+x = 0
+
+while y < 2:
+    left = Bernoulli(1/2)
+
+    if left == 1:
+        cur = Uniform(0, 0.5)
+        x = x + cur
+        y = y + 1
+    else:
+        cur = Uniform(0.5, 1)
+        x = x + cur
+    end
+end

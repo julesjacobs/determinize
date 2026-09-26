@@ -1,0 +1,12 @@
+def model() {
+    a := uniform(0, 1);
+    b := uniform(0, a);
+    c := uniform(0, b);
+    d := uniform(0, c);
+
+    return d;
+}
+
+def main() {
+    return expectation(infer(model));
+}

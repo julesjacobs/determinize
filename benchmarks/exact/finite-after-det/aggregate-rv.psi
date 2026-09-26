@@ -1,0 +1,14 @@
+def model() {
+    x := 0;
+
+    for i in [0..2) {
+        u := uniform(0, 1);
+        x = x + u;
+    }
+
+    return x;
+}
+
+def main() {
+    return expectation(infer(model));
+}

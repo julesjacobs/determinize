@@ -16,24 +16,30 @@ If the transmission succeeds, the program returns that attempt’s sampled quali
 Partially determinizable but finite state. *)
 
 let receive = rec receive good =>
-  let quality =
-    if good then gauss(12.0, 1.0)
-    else gauss(4.0, 1.5)
+  let capacity =
+    if good then
+      uniform(8, 12)
+    else
+      uniform(2, 6)
   in
 
+  let quality = uniform(0, capacity) in
+
   let success =
-    if good then flip(0.85)
-    else flip(0.30)
+    if good then
+      flip(0.85)
+    else
+      flip(0.30)
   in
 
   if success then
-    0
+    quality
   else
     let next =
       if good then flip(0.80)
       else flip(0.25)
     in
-    1 + receive next
+    quality + receive next
 in
 
 receive true

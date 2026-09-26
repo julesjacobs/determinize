@@ -1,0 +1,25 @@
+def model() {
+    xb := flip(1/2);
+    yb := flip(1/2);
+
+    x := 5 * xb;
+    y := 4 + 3 * yb;
+
+    for i in [0..1) {
+        unif1 := uniform(-1, 1);
+        unif2 := uniform(-2, 2);
+
+        // Preserve simultaneous x,y update
+        oldX := x;
+        oldY := y;
+
+        x = oldY + unif1;
+        y = oldX + unif2;
+    }
+
+    return x;
+}
+
+def main() {
+    return expectation(infer(model));
+}

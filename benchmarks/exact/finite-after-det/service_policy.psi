@@ -1,0 +1,68 @@
+def reuse(warm: B) {
+    next := false;
+
+    if warm {
+        next = flip(9/10);
+    } else {
+        next = flip(2/5);
+    }
+
+    latency := 0;
+
+    if next {
+        latency = exponential(2);
+    } else {
+        latency = exponential(1);
+    }
+
+    return (next, latency);
+}
+
+def refresh(warm: B) {
+    next := flip(19/20);
+
+    latency := 0;
+
+    if next {
+        latency = exponential(3/2);
+    } else {
+        latency = exponential(3/4);
+    }
+
+    return (next, latency);
+}
+
+def run(step: B -> (B × R)) {
+    warm := false;
+    total := 0;
+
+    for n in [0..20) {
+        result := step(warm);
+
+        warm = result[0];
+        latency := result[1];
+
+        total = total + latency;
+    }
+
+    return total;
+}
+
+def model() {
+    // policy has function type B -> (B × R)
+    policy := reuse;
+
+    chooseReuse := flip(1/2);
+
+    if chooseReuse {
+        policy = reuse;
+    } else {
+        policy = refresh;
+    }
+
+    return run(policy);
+}
+
+def main() {
+    return expectation(infer(model));
+}

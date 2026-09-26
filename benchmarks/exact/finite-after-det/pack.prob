@@ -1,0 +1,37 @@
+# Polar: python polar.py pack.prob --goals "E(totalweight)" --after_loop
+# nHeavy/nLight replaced by d = nheavy - nlight (always in {-1,0,1}); lowercase names. Times out in Polar (>900s).
+
+types
+    npacked : FiniteRange(0,10)
+    d : Finite(-1,0,1)
+    obj : Finite(0,1,2)
+end
+
+d = 0
+npacked = 0
+totalweight = 0
+
+while npacked < 10:
+    obj = Categorical(1/2, 1/4, 1/4)
+    if obj == 0:
+        u = Uniform(0, 0.2)
+        totalweight = totalweight + 0.9 + u
+        npacked = npacked + 1
+    elif obj == 1 && d <= 0:
+        u = Uniform(0, 0.1)
+        totalweight = totalweight + 1.1 + u
+        d = d + 1
+        npacked = npacked + 1
+    elif obj == 1:
+        u = Uniform(0, 0.1)
+        totalweight = totalweight + 1.1 + u
+    elif d >= 0:
+        u = Uniform(0, 0.1)
+        totalweight = totalweight + 0.8 + u
+        d = d - 1
+        npacked = npacked + 1
+    else:
+        u = Uniform(0, 0.1)
+        totalweight = totalweight + 0.8 + u
+    end
+end

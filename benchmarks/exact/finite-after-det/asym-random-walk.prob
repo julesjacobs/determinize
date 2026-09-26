@@ -1,0 +1,30 @@
+# Polar: python polar.py asym-random-walk.prob --goals "E(t)" --at_n 60
+# Finite types added and nested if flattened. --after_loop crashes in Polar; the closed form's limit is 5/14.
+
+types
+    x : Finite(0,1,2)
+    done : Finite(0,1)
+    stop : Finite(0,1)
+end
+
+x = 0
+t = 0
+done = 0
+
+while done == 0:
+    stop = Bernoulli(1/2)
+
+    if stop == 1:
+        u = Uniform(-1, 1)
+        t = t + u
+        done = 1
+    elif x >= 2:
+        u = Uniform(-1, 0)
+        t = t + u
+        x = 0
+    else:
+        u = Uniform(0, 1)
+        t = t + u
+        x = x + 1
+    end
+end

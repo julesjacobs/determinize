@@ -1,0 +1,55 @@
+# Polar: python polar.py dreckon.prob --goals "E(x)" --at_n 3
+# Counter guard (i <= 2) replaced by while true + --at_n 3; lowercase names and single-line Categorical for Polar's parser.
+
+x = 0
+y = 0
+estx = 0
+esty = 0
+dxc = 0
+dyc = 0
+
+while true:
+    cmd = Categorical(1/10, 1/10, 1/10, 1/10, 1/10, 1/10, 1/10, 1/10, 1/5)
+    if cmd == 0:
+        dxc = 0
+        dyc = Uniform(1, 2)
+    elif cmd == 1:
+        dxc = 0
+        dyc = Uniform(1, 2)
+        dyc = -dyc
+    elif cmd == 2:
+        dxc = Uniform(1, 2)
+        dyc = 0
+    elif cmd == 3:
+        dxc = Uniform(1, 2)
+        dxc = -dxc
+        dyc = 0
+    elif cmd == 4:
+        dxc = Uniform(1, 2)
+        dyc = Uniform(1, 2)
+    elif cmd == 5:
+        dxc = Uniform(1, 2)
+        dyc = Uniform(1, 2)
+        dyc = -dyc
+    elif cmd == 6:
+        dxc = Uniform(1, 2)
+        dxc = -dxc
+        dyc = Uniform(1, 2)
+    elif cmd == 7:
+        dxc = Uniform(1, 2)
+        dxc = -dxc
+        dyc = Uniform(1, 2)
+        dyc = -dyc
+    else:
+        dxc = 0
+        dyc = 0
+    end
+    noisex = Uniform(-0.05, 0.05)
+    noisey = Uniform(-0.05, 0.05)
+    dx = dxc + noisex
+    dy = dyc + noisey
+    x = x + dx
+    y = y + dy
+    estx = estx + dxc
+    esty = esty + dyc
+end

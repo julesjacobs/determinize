@@ -1,0 +1,9 @@
+# Polar: python polar.py aggregate-rv.prob --goals "E(x)" --at_n 2
+# Counter guard (i < 2) replaced by while true + --at_n 2; Polar rejects counter guards.
+
+x = 0
+
+while true:
+    u = Uniform(0, 1)
+    x = x + u
+end

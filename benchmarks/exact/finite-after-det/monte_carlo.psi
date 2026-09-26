@@ -1,0 +1,30 @@
+def monteCarlo(draw: 1 -> R)(h: R -> R) {
+    estimate := 0;
+
+    for j in [0..10) {
+        // Original recursive i is j + 1
+        i := j + 1;
+
+        x := draw(());
+        estimate =
+            (h(x) + (i - 1) * estimate) / i;
+    }
+
+    return estimate;
+}
+
+def draw(_: 1) {
+    return uniform(0, 1);
+}
+
+def h(x: R) {
+    return 2 * x + 1;
+}
+
+def model() {
+    return monteCarlo(draw)(h);
+}
+
+def main() {
+    return expectation(infer(model));
+}

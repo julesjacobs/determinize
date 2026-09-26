@@ -1,0 +1,80 @@
+def main() {
+    x := 0;
+    y := 0;
+    estX := 0;
+    estY := 0;
+
+    for i in [0..3) {
+        cmd := categorical([
+            1/10, 1/10, 1/10, 1/10,
+            1/10, 1/10, 1/10, 1/10,
+            1/5
+        ]);
+
+        dxc := 0;
+        dyc := 0;
+
+        if cmd == 0 {
+            // N
+            dxc = 0;
+            dyc = uniform(1, 2);
+        } else {
+            if cmd == 1 {
+                // S
+                dxc = 0;
+                dyc = -uniform(1, 2);
+            } else {
+                if cmd == 2 {
+                    // E
+                    dxc = uniform(1, 2);
+                    dyc = 0;
+                } else {
+                    if cmd == 3 {
+                        // W
+                        dxc = -uniform(1, 2);
+                        dyc = 0;
+                    } else {
+                        if cmd == 4 {
+                            // NE
+                            dxc = uniform(1, 2);
+                            dyc = uniform(1, 2);
+                        } else {
+                            if cmd == 5 {
+                                // SE
+                                dxc = uniform(1, 2);
+                                dyc = -uniform(1, 2);
+                            } else {
+                                if cmd == 6 {
+                                    // NW
+                                    dxc = -uniform(1, 2);
+                                    dyc = uniform(1, 2);
+                                } else {
+                                    if cmd == 7 {
+                                        // SW
+                                        dxc = -uniform(1, 2);
+                                        dyc = -uniform(1, 2);
+                                    } else {
+                                        // Stay
+                                        dxc = 0;
+                                        dyc = 0;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        dx := dxc + uniform(-1/20, 1/20);
+        dy := dyc + uniform(-1/20, 1/20);
+
+        x = x + dx;
+        y = y + dy;
+
+        estX = estX + dxc;
+        estY = estY + dyc;
+    }
+
+    return x;
+}
