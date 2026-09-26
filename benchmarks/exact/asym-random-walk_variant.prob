@@ -1,4 +1,4 @@
-# Polar: python polar.py asym-random-walk.prob --goals "E(t)" --at_n 60
+# Polar: python polar.py asym-random-walk_variant.prob --goals "E(t)" --at_n 60
 # Finite types added and nested if flattened. --after_loop crashes in Polar; the closed form's limit is 5/14.
 
 types
