@@ -1,26 +1,19 @@
-let offspring_lambda = 0.8 in
+let offspring_lambda = 0.2 in
 let rate = 1.0 in
-let depth = 40 in
 
-let equal = fun x => fun y =>
-  if x <= y then y <= x else false
+let branch = rec branch unit =>
+  let k = poisson(offspring_lambda) in
+  let lifetime = exponential(rate) in
+
+  let sum_children = rec sum_children remaining => fun total =>
+    if remaining < 1 then total
+    else
+      let child = branch () in
+      sum_children (remaining - 1) (total + child)
+  in
+
+  let children = sum_children k 0 in
+  lifetime + children
 in
 
-let branch = rec branch current_depth =>
-  if equal current_depth 0 then 0
-  else
-    let k = poisson[G](offspring_lambda) in
-    let lifetime = exponential[E](rate) in
-
-    let sum_children = rec sum_children remaining => fun total =>
-      if remaining < 1 then total
-      else
-        let child = branch (current_depth - 1) in
-        sum_children (remaining - 1) (total + child)
-    in
-
-    let children = sum_children k 0 in
-    lifetime + children
-in
-
-branch depth
+branch ()
