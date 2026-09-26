@@ -1,0 +1,527 @@
+{
+  "suite": "exact",
+  "configuration": {
+    "timeout_seconds": 180,
+    "subject": "determinized",
+    "additive": true,
+    "check_certificates": false,
+    "max_states": 100000
+  },
+  "benchmarks": [
+    {
+      "benchmark": "add-uniform-with-counter-large-unbounded_variant.det",
+      "sampling_sites": {
+        "before": {
+          "discrete": 1,
+          "continuous": 2
+        },
+        "after": {
+          "discrete": 1,
+          "continuous": 0
+        }
+      },
+      "status": "completed",
+      "certificate": "generated, unchecked",
+      "target_expectation": "2",
+      "return_mass": "1",
+      "conditional_mean": "2",
+      "states": {
+        "storm": 339,
+        "program": 338,
+        "done_sink": 1
+      },
+      "transitions": 342,
+      "timing_seconds": {
+        "measured": 0.9164000839809887,
+        "model_export": 0.5370930840144865,
+        "storm_solve": 0.3793069999665022
+      },
+      "polar": {
+        "status": "completed",
+        "seconds": 2.4421895829727873,
+        "expectation": "2",
+        "file": "add-uniform-with-counter-large-unbounded_variant.prob"
+      },
+      "psi": {
+        "status": "unsupported"
+      }
+    },
+    {
+      "benchmark": "addNoise.det",
+      "sampling_sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 1
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "status": "completed",
+      "certificate": "generated, unchecked",
+      "target_expectation": "6",
+      "return_mass": "1",
+      "conditional_mean": "6",
+      "states": {
+        "storm": 163,
+        "program": 162,
+        "done_sink": 1
+      },
+      "transitions": 163,
+      "timing_seconds": {
+        "measured": 0.4671502089477144,
+        "model_export": 0.17914624995319173,
+        "storm_solve": 0.2880039589945227
+      },
+      "polar": {
+        "status": "unsupported"
+      },
+      "psi": {
+        "status": "unsupported"
+      }
+    },
+    {
+      "benchmark": "aggregate-rv.det",
+      "sampling_sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 1
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "status": "completed",
+      "certificate": "generated, unchecked",
+      "target_expectation": "1",
+      "return_mass": "1",
+      "conditional_mean": "1",
+      "states": {
+        "storm": 90,
+        "program": 89,
+        "done_sink": 1
+      },
+      "transitions": 90,
+      "timing_seconds": {
+        "measured": 0.2609143750160001,
+        "model_export": 0.07154708297457546,
+        "storm_solve": 0.18936729204142466
+      },
+      "polar": {
+        "status": "completed",
+        "seconds": 1.3330400830018334,
+        "expectation": "1 \u2245 1.00000000000000",
+        "file": "aggregate-rv.prob"
+      },
+      "psi": {
+        "status": "completed",
+        "seconds": 0.0690097080077976,
+        "expectation": "1",
+        "file": "aggregate-rv.psi"
+      }
+    },
+    {
+      "benchmark": "asym-random-walk_variant.det",
+      "sampling_sites": {
+        "before": {
+          "discrete": 1,
+          "continuous": 3
+        },
+        "after": {
+          "discrete": 1,
+          "continuous": 0
+        }
+      },
+      "status": "completed",
+      "certificate": "generated, unchecked",
+      "target_expectation": "5/14",
+      "return_mass": "1",
+      "conditional_mean": "5/14",
+      "states": {
+        "storm": 200,
+        "program": 199,
+        "done_sink": 1
+      },
+      "transitions": 204,
+      "timing_seconds": {
+        "measured": 0.4006533329957165,
+        "model_export": 0.20132437499705702,
+        "storm_solve": 0.19932895799865946
+      },
+      "polar": {
+        "status": "completed",
+        "seconds": 1.488178583967965,
+        "expectation": "823515360433462125/2305843009213693952 \u2245 0.357142857142857",
+        "file": "asym-random-walk_variant.prob"
+      },
+      "psi": {
+        "status": "unsupported"
+      }
+    },
+    {
+      "benchmark": "dreckon.det",
+      "sampling_sites": {
+        "before": {
+          "discrete": 1,
+          "continuous": 14
+        },
+        "after": {
+          "discrete": 1,
+          "continuous": 0
+        }
+      },
+      "status": "failed",
+      "stage": "model export",
+      "error": "Command '[PosixPath('/Users/kaw324/determinize/lean/.lake/build/bin/determinize'), '--additive', '--check', '--export', PosixPath('/private/var/folders/hh/41qkm1f55yg4gx8s0kcrs3t80000gp/T/determinize-bench-iq4vo0mj/dreckon'), '--subject', 'determinized', '--max-states', '100000', PosixPath('/Users/kaw324/determinize/benchmarks/exact/dreckon.det')]' timed out after 180.0 seconds",
+      "polar": {
+        "status": "completed",
+        "seconds": 1.8337915840093046,
+        "expectation": "0 \u2245 0",
+        "file": "dreckon.prob"
+      },
+      "psi": {
+        "status": "timeout",
+        "seconds": 180.39333225000883,
+        "file": "dreckon.psi"
+      }
+    },
+    {
+      "benchmark": "gauss_randwalk_finalPos.det",
+      "sampling_sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 1
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "status": "completed",
+      "certificate": "generated, unchecked",
+      "target_expectation": "0",
+      "return_mass": "1",
+      "conditional_mean": "0",
+      "states": {
+        "storm": 237,
+        "program": 236,
+        "done_sink": 1
+      },
+      "transitions": 237,
+      "timing_seconds": {
+        "measured": 0.5079867499880493,
+        "model_export": 0.19108937494456768,
+        "storm_solve": 0.3168973750434816
+      },
+      "polar": {
+        "status": "unsupported"
+      },
+      "psi": {
+        "status": "unsupported"
+      }
+    },
+    {
+      "benchmark": "invpend.det",
+      "sampling_sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 6
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "status": "completed",
+      "certificate": "generated, unchecked",
+      "target_expectation": "47818866503592844586855950952134181612700753/20000000000000000000000000000000000000000000",
+      "return_mass": "1",
+      "conditional_mean": "47818866503592844586855950952134181612700753/20000000000000000000000000000000000000000000",
+      "states": {
+        "storm": 1822,
+        "program": 1821,
+        "done_sink": 1
+      },
+      "transitions": 1822,
+      "timing_seconds": {
+        "measured": 7.506536667060573,
+        "model_export": 7.273419750039466,
+        "storm_solve": 0.23311691702110693
+      },
+      "polar": {
+        "status": "completed",
+        "seconds": 42.6884595840238,
+        "expectation": "\u2245 2.39094332517964",
+        "file": "invpend.prob"
+      },
+      "psi": {
+        "status": "timeout",
+        "seconds": 180.41787787503563,
+        "file": "invpend.psi"
+      }
+    },
+    {
+      "benchmark": "monte_carlo.det",
+      "sampling_sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 1
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "status": "completed",
+      "certificate": "generated, unchecked",
+      "target_expectation": "2",
+      "return_mass": "1",
+      "conditional_mean": "2",
+      "states": {
+        "storm": 773,
+        "program": 772,
+        "done_sink": 1
+      },
+      "transitions": 773,
+      "timing_seconds": {
+        "measured": 11.506589083990548,
+        "model_export": 11.24967716698302,
+        "storm_solve": 0.25691191700752825
+      },
+      "polar": {
+        "status": "unsupported"
+      },
+      "psi": {
+        "status": "timeout",
+        "seconds": 180.52854191698134,
+        "file": "monte_carlo.psi"
+      }
+    },
+    {
+      "benchmark": "pack.det",
+      "sampling_sites": {
+        "before": {
+          "discrete": 1,
+          "continuous": 3
+        },
+        "after": {
+          "discrete": 1,
+          "continuous": 0
+        }
+      },
+      "status": "completed",
+      "certificate": "generated, unchecked",
+      "target_expectation": "118513705/10077696",
+      "return_mass": "1",
+      "conditional_mean": "118513705/10077696",
+      "states": {
+        "storm": 15192,
+        "program": 15191,
+        "done_sink": 1
+      },
+      "transitions": 15352,
+      "timing_seconds": {
+        "measured": 37.86585508403368,
+        "model_export": 36.952013417030685,
+        "storm_solve": 0.9138416670029983
+      },
+      "polar": {
+        "status": "timeout",
+        "seconds": 180.00720441597514,
+        "file": "pack.prob"
+      },
+      "psi": {
+        "status": "unsupported"
+      }
+    },
+    {
+      "benchmark": "retransmit.det",
+      "sampling_sites": {
+        "before": {
+          "discrete": 4,
+          "continuous": 3
+        },
+        "after": {
+          "discrete": 4,
+          "continuous": 0
+        }
+      },
+      "status": "completed",
+      "certificate": "generated, unchecked",
+      "target_expectation": "9740/1651",
+      "return_mass": "1",
+      "conditional_mean": "9740/1651",
+      "states": {
+        "storm": 205,
+        "program": 204,
+        "done_sink": 1
+      },
+      "transitions": 211,
+      "timing_seconds": {
+        "measured": 0.4685183330439031,
+        "model_export": 0.21795879100682214,
+        "storm_solve": 0.250559542037081
+      },
+      "polar": {
+        "status": "unsupported"
+      },
+      "psi": {
+        "status": "unsupported"
+      }
+    },
+    {
+      "benchmark": "service_policy.det",
+      "sampling_sites": {
+        "before": {
+          "discrete": 4,
+          "continuous": 4
+        },
+        "after": {
+          "discrete": 4,
+          "continuous": 0
+        }
+      },
+      "status": "completed",
+      "certificate": "generated, unchecked",
+      "target_expectation": "13841203/1048576",
+      "return_mass": "1",
+      "conditional_mean": "13841203/1048576",
+      "states": {
+        "storm": 9491,
+        "program": 9490,
+        "done_sink": 1
+      },
+      "transitions": 9570,
+      "timing_seconds": {
+        "measured": 26.476354749989696,
+        "model_export": 25.88117212499492,
+        "storm_solve": 0.5951826249947771
+      },
+      "polar": {
+        "status": "unsupported"
+      },
+      "psi": {
+        "status": "timeout",
+        "seconds": 180.36675516696414,
+        "file": "service_policy.psi"
+      }
+    },
+    {
+      "benchmark": "swap.det",
+      "sampling_sites": {
+        "before": {
+          "discrete": 2,
+          "continuous": 2
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "status": "completed",
+      "certificate": "generated, unchecked",
+      "target_expectation": "11/2",
+      "return_mass": "1",
+      "conditional_mean": "11/2",
+      "states": {
+        "storm": 105,
+        "program": 104,
+        "done_sink": 1
+      },
+      "transitions": 105,
+      "timing_seconds": {
+        "measured": 0.4167815839755349,
+        "model_export": 0.1306700839777477,
+        "storm_solve": 0.2861114999977872
+      },
+      "polar": {
+        "status": "completed",
+        "seconds": 1.4254717910080217,
+        "expectation": "11/2 \u2245 5.50000000000000",
+        "file": "swap.prob"
+      },
+      "psi": {
+        "status": "completed",
+        "seconds": 0.08196629100712016,
+        "expectation": "11/2",
+        "file": "swap.psi"
+      }
+    },
+    {
+      "benchmark": "uniform_nested.det",
+      "sampling_sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 4
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "status": "completed",
+      "certificate": "generated, unchecked",
+      "target_expectation": "1/16",
+      "return_mass": "1",
+      "conditional_mean": "1/16",
+      "states": {
+        "storm": 31,
+        "program": 30,
+        "done_sink": 1
+      },
+      "transitions": 31,
+      "timing_seconds": {
+        "measured": 0.1933772080228664,
+        "model_export": 0.035192916984669864,
+        "storm_solve": 0.15818429103819653
+      },
+      "polar": {
+        "status": "unsupported"
+      },
+      "psi": {
+        "status": "completed",
+        "seconds": 0.06403566600056365,
+        "expectation": "1/16",
+        "file": "uniform_nested.psi"
+      }
+    },
+    {
+      "benchmark": "workload.det",
+      "sampling_sites": {
+        "before": {
+          "discrete": 1,
+          "continuous": 2
+        },
+        "after": {
+          "discrete": 1,
+          "continuous": 0
+        }
+      },
+      "status": "completed",
+      "certificate": "generated, unchecked",
+      "target_expectation": "10",
+      "return_mass": "1",
+      "conditional_mean": "10",
+      "states": {
+        "storm": 27836,
+        "program": 27835,
+        "done_sink": 1
+      },
+      "transitions": 28091,
+      "timing_seconds": {
+        "measured": 28.073300999007188,
+        "model_export": 27.003482291009277,
+        "storm_solve": 1.0698187079979107
+      },
+      "polar": {
+        "status": "unsupported"
+      },
+      "psi": {
+        "status": "unsupported"
+      }
+    }
+  ],
+  "failures": 1
+}

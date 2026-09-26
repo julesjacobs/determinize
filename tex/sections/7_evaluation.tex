@@ -39,7 +39,7 @@ We distinguish \emph{full} determinization, which eliminates all sampling, from 
             & $\mathbb{E}[\mathit{sum}]=6.0$
             & $(0,1) \rightarrow (0,0)$
             & 163
-            & $0.165 / 0.156 / 0.321$
+            & $0.165 / 0.156 / \mathbf{0.321}$
             & $\times$
             & $\times$ \\
         
@@ -48,9 +48,9 @@ We distinguish \emph{full} determinization, which eliminates all sampling, from 
             & $\mathbb{E}[x]=2.0$
             & $(1,2) \rightarrow (1,0)$
             & 339
-            & $0.675 / 0.346 / 1.021$
-            & TBD
-            & TBD \\
+            & $0.675 / 0.346 / \mathbf{1.021}$
+            & $2.442$
+            & $\times$ \\
 
         \texttt{aggregate-rv}
             & $\bullet\!\bullet$
@@ -58,16 +58,16 @@ We distinguish \emph{full} determinization, which eliminates all sampling, from 
             & $(0,1) \rightarrow (0,0)$
             & 90
             & $0.067 / 0.164 / 0.231$
-            & TBD
-            & TBD \\
+            & $1.333$
+            & $\mathbf{0.069}$ \\
 
         \texttt{asym-random-walk}
             & $\bullet\!\circ$
             & $\mathbb{E}[t]=0.4$
             & $(1,3) \rightarrow (1,0)$
             & 200
-            & $0.185 / 0.169 / 0.354$
-            & TBD
+            & $0.185 / 0.169 / \mathbf{0.354}$
+            & $1.488$
             & $\times$ \\
 
         \texttt{dreckon}
@@ -76,15 +76,15 @@ We distinguish \emph{full} determinization, which eliminates all sampling, from 
             & $(1,14) \rightarrow (1,0)$
             & 43219
             & $175.775 / 2.226 / 178.001$
-            & TBD
-            & TBD \\
+            & $\mathbf{1.834}$
+            & \texttt{t.o.} \\
 
         \texttt{gauss-random-walk}
             & $\bullet\!\bullet$
             & $\mathbb{E}[y_6]=0.0$
             & $(0,1) \rightarrow (0,0)$
             & 237
-            & $0.198 / 0.180 / 0.378$
+            & $0.198 / 0.180 / \mathbf{0.378}$
             & $\times$
             & $\times$ \\
 
@@ -93,26 +93,26 @@ We distinguish \emph{full} determinization, which eliminates all sampling, from 
             & $\mathbb{E}[\mathit{pAng}]=2.4$
             & $(0,6) \rightarrow (0,0)$
             & 1822
-            & $7.061 / 0.245 / 7.306$
-            & TBD
-            & TBD \\
+            & $7.061 / 0.245 / \mathbf{7.306}$
+            & $42.688$
+            & \texttt{t.o.} \\
 
         \texttt{monte-carlo}
             & $\bullet\!\bullet$
             & $\mathbb{E}[\mathit{estimate}]=2.0$
             & $(0,1) \rightarrow (0,0)$
             & 773
-            & $11.173 / 0.180 / 11.353$
+            & $11.173 / 0.180 / \mathbf{11.353}$
             & $\times$
-            & TBD \\
+            & \texttt{t.o.} \\
 
         \texttt{pack}
             & $\bullet\!\circ$
             & $\mathbb{E}[\mathit{totalWeight}]=11.8$
             & $(1,3) \rightarrow (1,0)$
             & 15192
-            & $37.207 / 1.033 / 38.240$
-            & TBD
+            & $37.207 / 1.033 / \mathbf{38.240}$
+            & \texttt{t.o.}
             & $\times$ \\
 
         \texttt{retransmit}
@@ -120,7 +120,7 @@ We distinguish \emph{full} determinization, which eliminates all sampling, from 
             & $\mathbb{E}[\mathit{ret}]=0.2$
             & $(4,2) \rightarrow (4,0)$
             & 182
-            & $0.164 / 0.183 / 0.347$
+            & $0.164 / 0.183 / \mathbf{0.347}$
             & $\times$
             & $\times$ \\
 
@@ -129,9 +129,9 @@ We distinguish \emph{full} determinization, which eliminates all sampling, from 
             & $\mathbb{E}[\mathit{ret}]=13.2$
             & $(4,4) \rightarrow (4,0)$
             & 9491
-            & $27.198 / 0.576 / 27.774$
+            & $27.198 / 0.576 / \mathbf{27.774}$
             & $\times$
-            & TBD \\
+            & \texttt{t.o.} \\
 
         \texttt{swap}
             & $\bullet\!\bullet$
@@ -139,8 +139,8 @@ We distinguish \emph{full} determinization, which eliminates all sampling, from 
             & $(2,2) \rightarrow (0,0)$
             & 105
             & $0.107 / 0.168 / 0.275$
-            & TBD
-            & TBD \\
+            & $1.425$
+            & $\mathbf{0.082}$ \\
 
         \texttt{uniform\_nested}
             & $\bullet\!\bullet$
@@ -149,14 +149,14 @@ We distinguish \emph{full} determinization, which eliminates all sampling, from 
             & 31
             & $0.040 / 0.166 / 0.206$
             & $\times$
-            & TBD \\
+            & $\mathbf{0.064}$ \\
 
         \texttt{workload}
             & $\bullet\!\circ$
             & $\mathbb{E}[\mathit{ret}]=10.0$
             & $(1,2) \rightarrow (1,0)$
             & 27836
-            & $27.781 / 1.401 / 29.182$
+            & $27.781 / 1.401 / \mathbf{29.182}$
             & $\times$
             & $\times$ \\
         \bottomrule
@@ -166,11 +166,15 @@ We distinguish \emph{full} determinization, which eliminates all sampling, from 
     In the determinization column, $\bullet\!\bullet$ denotes full
     determinization and $\bullet\!\circ$ denotes partial determinization. Each pair $(d,c)$ counts static
     discrete and continuous sampling sites. Runtime excludes
-    both the initial build and Lean certificate checking. An $\times$ in the last two columns denotes a lack of support.}
+    both the initial build and Lean certificate checking. An $\times$ in the last two columns denotes a lack of support by the language. Timeout=180s, denoted as \texttt{t.o.} in the table.}
     \label{tab:finite-after-determinization}
 \end{table}
 
 The timing runs generate certificates but skip independent kernel checking; they do not establish certificate coverage for all table entries. Target certificates establish target statistics. Transferring finite expectations to the source also requires source domain safety and integrability, which the benchmark runner does not discharge.
+
+Note: $\lambda$PSI uses the `--expectation' flag. 
+
+TODO: talk about all programs
 
 \paragraph{Results} TODO.
 
