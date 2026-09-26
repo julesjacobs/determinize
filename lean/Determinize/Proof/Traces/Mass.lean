@@ -1,4 +1,4 @@
-import Determinize.Spec.Traces.Semantics
+import Determinize.Spec.Traces.Main
 import Determinize.Proof.Primitives.Mass
 
 namespace Determinize.Proof.Traces
@@ -74,5 +74,8 @@ theorem traceAndOutputLaw_mass_le_one (program : Expr) :
 instance isFiniteMeasure_traceAndOutputLaw (program : Expr) :
     IsFiniteMeasure (traceAndOutputLaw program) :=
   ⟨(traceAndOutputLaw_mass_le_one program).trans_lt ENNReal.one_lt_top⟩
+
+instance isFiniteMeasure_traceLaw (program : Expr) : IsFiniteMeasure (traceLaw program) :=
+  inferInstanceAs (IsFiniteMeasure ((traceAndOutputLaw program).map Prod.fst))
 
 end Determinize.Proof.Traces

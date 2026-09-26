@@ -62,7 +62,7 @@ end Paper
 namespace Traces
 
 theorem conditionalVarianceSoundness : Spec.Traces.conditionalVarianceThm := by
-  intro program typed safe positive moment
+  intro _ program typed safe positive moment
   have mass := Paper.outputMassSoundness program typed safe
   have targetPositive : Spec.Paper.bigStepMeasure program.determinize Set.univ ≠ 0 := by rwa [mass]
   obtain ⟨targetMoment, -, -⟩ := Paper.varianceSoundness program typed safe moment

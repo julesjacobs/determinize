@@ -1,6 +1,5 @@
 import Determinize.Spec.Main
 import Determinize.Spec.Traces.Semantics
-import Determinize.Proof.Traces.Mass
 import Mathlib.Probability.Kernel.Disintegration.StandardBorel
 import Mathlib.MeasureTheory.Integral.Bochner.Basic
 import Mathlib.Probability.Moments.Variance
@@ -17,8 +16,10 @@ def correspondenceThm : Prop :=
 noncomputable def traceLaw (program : Expr) : Measure Trace :=
   (traceAndOutputLaw program).map Prod.fst
 
-instance isFiniteMeasure_traceLaw (program : Expr) : IsFiniteMeasure (traceLaw program) :=
-  inferInstanceAs (IsFiniteMeasure ((traceAndOutputLaw program).map Prod.fst))
+/-- Every joint law is a finite measure. Mathlib's disintegration `Measure.condKernel` requires
+this, so the statements below that use it assume it. -/
+def finiteJointLawThm : Prop :=
+  ∀ program : Expr, IsFiniteMeasure (traceAndOutputLaw program)
 
 /-- The source and target have the same law of terminating G traces. For almost every such
 trace, the source's conditional output law has a finite mean and the target's conditional
@@ -26,7 +27,7 @@ output law is the Dirac mass at that mean. These are Mathlib's regular condition
 distributions of the joint laws over their trace marginals, unique up to null sets.
 No global integrability assumption is required. -/
 def conditionalLawThm : Prop :=
-  ∀ (program : Expr),
+  ∀ [∀ program, IsFiniteMeasure (traceAndOutputLaw program)] (program : Expr),
     Typed [] program (.float .E) → DomainSafe program →
       DomainSafe program.determinize ∧
       traceLaw program.determinize = traceLaw program ∧
@@ -44,7 +45,7 @@ so the identity holds for Mathlib's `variance` (`∫ (v - ∫ v)²`) without nor
 both output laws and the trace law by their common mass gives the same identity for the laws
 conditioned on termination. -/
 def varianceThm : Prop :=
-  ∀ (program : Expr),
+  ∀ [∀ program, IsFiniteMeasure (traceAndOutputLaw program)] (program : Expr),
     Typed [] program (.float .E) → DomainSafe program →
     MemLp id 2 (bigStepMeasure program) →
       Integrable (fun trace => variance id ((traceAndOutputLaw program).condKernel trace))
@@ -55,7 +56,7 @@ def varianceThm : Prop :=
 
 /-- Total variance conditioned on returning, with the trace law normalized by output mass. -/
 def conditionalVarianceThm : Prop :=
-  ∀ (program : Expr),
+  ∀ [∀ program, IsFiniteMeasure (traceAndOutputLaw program)] (program : Expr),
     Typed [] program (.float .E) → DomainSafe program →
     bigStepMeasure program Set.univ ≠ 0 → MemLp id 2 (bigStepMeasure program) →
       Integrable (fun trace => variance id ((traceAndOutputLaw program).condKernel trace))
