@@ -83,10 +83,11 @@ for area in "${areas[@]}"; do
         fail=1; report lean "Mathlib cache not fetched: run 'cd lean && lake exe cache get' (downloads prebuilt .olean files, once), then 'lake build'"
       else
         # The formalization is complete: any warning (a `sorry` included) fails the build, and
-        # Theorems.lean fails it unless every Spec statement is proved using the standard axioms only.
+        # Theorems.lean fails it unless every Spec statement is proved using the standard axioms only
+        # and relies on Proof only for proofs.
         out="$(cd lean && in_shell lean lake build --wfail 2>&1)"
         if [[ $? -eq 0 ]]; then
-          report lean "lake build --wfail OK ($(grep -oE '[0-9]+ Spec statements proved by [0-9]+ theorems' <<<"$out"))"
+          report lean "lake build --wfail OK ($(grep -oE '[0-9]+ Spec statements proved by [0-9]+ theorems' <<<"$out"); $(grep -oE 'rely on [0-9]+ declarations other than proofs, none from Proof' <<<"$out"))"
         else fail=1; report lean "lake build --wfail FAILED" "$(grep -vE '^(✔|⚠) \[' <<<"$out" | tail_of)"; fi
       fi
       ;;
