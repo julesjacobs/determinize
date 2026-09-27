@@ -2,217 +2,73 @@
 \section{Evaluation}
 \label{sec:evaluation}
 
-In this section, we evaluate our determinization approach in two complementary ways. We seek to address the following questions:
+In this section, we evaluate our determinization approach in three complementary ways. We seek to address the following research questions:
+
 \begin{itemize}
-    \item \textbf{RQ1: Expressiveness.} What classes of probabilistic programs can our determinization transformation handle? Can determinization enable exact expected value analysis for programs that prior tools can only bound, time out on, or do not support?
-    \item \textbf{RQ2: Sampling.} Does determinization improve sampling-based inference without changing the inference algorithm?
+    \item \textbf{RQ1: Exact analysis.} What classes of probabilistic programs can our determinization transformation handle, and can determinization yield exact expected values for programs that prior tools do not support?
+    
+    \item \textbf{RQ2: Variance reduction.} How much does determinization reduce the variance of program outputs?
+    
+    \item \textbf{RQ3: Monte Carlo efficiency.} How does this variance reduction translate into more precise Monte Carlo estimates under a fixed wall-clock budget?
 \end{itemize}
 
-All experiments have
-been run on a (TODO). Runtime
-measurements are averaged over 10 executions.
+Consequently, our first question concerns \emph{exact inference}, calculating the true expected value of a program over the exact posterior distribution of the program, while the latter two concern \emph{sampling-based inference}, first measuring how much randomness determinization removes and then asking whether that reduction translates into more efficient Monte Carlo estimation in practice. We detail the benchmarks, experimental setup, comparisons, and results for each question in the following subsections below.
 
-\subsection{Expressiveness}
+Before presenting the individual experiments, we introduce a useful distinction. We say that a program is \emph{fully determinized} when the transformation eliminates all of its sampling sites, and \emph{partially determinized} when it eliminates some, but not all, sampling sites. Full determinization produces a deterministic program, whereas partial determinization retains a probabilistic program with fewer sources of randomness.
 
-First, we study \emph{expressiveness}: whether eliminating $\E$-mode randomness can transform probabilistic programs that are difficult to analyze directly into programs amenable to exact expected value analysis. In particular, we are interested in cases where continuous or otherwise infinite state behavior is removed, yielding a finite state probabilistic model that can be analyzed exactly by Storm -- a probabilistic model checker (CITE). 
+All experiments have been run on a MacBook Pro M3 with 16GB RAM. Together with our benchmarks, our implementation is publicaly available at \href{https://github.com/[anonymized]}{https://github.com/[anonymized]}.
 
-Our benchmark suite is drawn primarily from prior work on expected value and moment analysis
-(CITE ALL: chakarov 2013/14, kura, moosbrugger, beutner). We modify two existing benchmarks, \texttt{asym-random-walk} and \texttt{add-uniform-counter-large}, and introduce three new programs, \texttt{service-policy}, \texttt{uniform-nested}, and \texttt{workload}, designed to exercise features not well represented in existing suites, such as higher order functions and lists. The translations also adapt parameters and returned queries: \texttt{swap} returns after one iteration of the original infinite loop, and \texttt{coin\_flip\_unif} manually replaces a fresh uniform probability by $0.5$. The latter is an additive-extraction control case and eliminates no sampling automatically. Results refer to the checked-in programs, not the original infinite-loop output laws. We focus on programs with continuous sampling inside loops or recursion, where the source program may have an uncountable state space but determinization can expose a finite discrete structure.
+\subsection{RQ1: Enabling Exact Expectation Analysis}
 
-We distinguish \emph{full} determinization, which eliminates all sampling, from \emph{partial} determinization, which eliminates at least one but not all samples. Partial determinization may nevertheless yield a finite state model when the remaining randomness is finite valued. 
+We first ask whether determinization can make exact expectation analysis possible for programs with continuous or infinite-state behavior. We compare our approach against POLAR~\cite{moosbrugger2022moment} (which computes exact moments by deriving and solving recurrences for probabilistic loops) and $\lambda$PSI~\cite{gehr2020lpsi} (which performs symbolic exact inference; we use its \texttt{--expectation} mode) in both coverage and runtime. After determinization, each benchmark in Table~\ref{tab:finite-after-determinization} has only finite-state probabilistic behavior, even when some discrete sampling remains. We therefore translate the transformed program into a finite discrete-time Markov chain and use Storm~\cite{hensel2022storm} to compute its return value exactly as an expected-reward query.
 
-\begin{table}[H]
-    \centering
-    \tiny
-    \renewcommand{\arraystretch}{1.15}
-    \begin{tabular*}{\linewidth}{@{}l@{\extracolsep{\fill}}c c c c r r r@{}}
-        \toprule
-        Benchmark & Det. & Expectation &
-        \shortstack{Static sampling sites\\(source $\rightarrow$ det.)} &
-        \shortstack{\# states in\\Markov chain} &
-        \shortstack{Runtime (s)\\model / Storm / total} &
-        \shortstack{POLAR\\runtime (s)} &
-        \shortstack{$\lambda$PSI\\runtime (s)} \\
-        \midrule
-        \texttt{addNoise}
-            & $\bullet\!\bullet$
-            & $\mathbb{E}[\mathit{sum}]=6.0$
-            & $(0,1) \rightarrow (0,0)$
-            & 163
-            & $0.165 / 0.156 / \mathbf{0.321}$
-            & $\times$
-            & $\times$ \\
-        
-        \texttt{add-uniform-counter}
-            & $\bullet\!\circ$
-            & $\mathbb{E}[x]=2.0$
-            & $(1,2) \rightarrow (1,0)$
-            & 339
-            & $0.675 / 0.346 / \mathbf{1.021}$
-            & $2.442$
-            & $\times$ \\
+Our benchmark suite draws primarily from prior work \cite{chakarov2013martingales,chakarov2014expectation,beutner2022guaranteed,barthe2016private,vakar2019domain,sato2019formal,gehr2016psi}, with three new examples we added: \texttt{hmm}, \texttt{service-policy}, and \texttt{workload}.
+These benchmarks exercise a range of language constructs, including: lists for \texttt{addNoise}~\cite{barthe2016private},
+\texttt{gauss-random-walk}~\cite{vakar2019domain}, and \texttt{workload}; higher order functions for \texttt{monte-carlo}~\cite{sato2019formal} and \texttt{service-policy}; distributions with nonconstant parameters for \texttt{uniform-nested}~\cite{gehr2016psi}; unbounded recursion for \texttt{add-uniform-counter}~\cite{beutner2022guaranteed}, \texttt{asym-random-walk}~\cite{beutner2022guaranteed},
+\texttt{pack}~\cite{chakarov2013martingales}, and \texttt{retransmit}; and bounded iteration for \texttt{aggregate-rv}~\cite{chakarov2014expectation}, \texttt{dreckon}~\cite{chakarov2013martingales}, \texttt{invpend}~\cite{chakarov2013martingales},
+and \texttt{swap}~\cite{chakarov2014expectation}. For details and full programs of each, see appendix.
 
-        \texttt{aggregate-rv}
-            & $\bullet\!\bullet$
-            & $\mathbb{E}[x]=1.0$
-            & $(0,1) \rightarrow (0,0)$
-            & 90
-            & $0.067 / 0.164 / 0.231$
-            & $1.333$
-            & $\mathbf{0.069}$ \\
+\input{figures/eval-exact.tex}
 
-        \texttt{asym-random-walk}
-            & $\bullet\!\circ$
-            & $\mathbb{E}[t]=0.4$
-            & $(1,3) \rightarrow (1,0)$
-            & 200
-            & $0.185 / 0.169 / \mathbf{0.354}$
-            & $1.488$
-            & $\times$ \\
+\paragraph{Results} Our results are displayed in~\Cref{tab:finite-after-determinization}. In particular, determinization enables exact expectation analysis on all 14 benchmarks, including many that POLAR and $\lambda$PSI either do not support or time out on. On benchmarks supported by the baselines, its runtime is generally competitive, though the dominant cost on the larger examples is constructing the
+finite model rather than solving it: Storm itself takes at most 2.23 seconds
+on every benchmark. 
 
-        \texttt{dreckon}
-            & $\bullet\!\circ$
-            & $\mathbb{E}[x]=0.0$
-            & $(1,14) \rightarrow (1,0)$
-            & 43219
-            & $175.775 / 2.226 / 178.001$
-            & $\mathbf{1.834}$
-            & \texttt{t.o.} \\
 
-        \texttt{gauss-random-walk}
-            & $\bullet\!\bullet$
-            & $\mathbb{E}[y_6]=0.0$
-            & $(0,1) \rightarrow (0,0)$
-            & 237
-            & $0.198 / 0.180 / \mathbf{0.378}$
-            & $\times$
-            & $\times$ \\
+\subsection{RQ2: Reducing Output Variance}
 
-        \texttt{invpend}
-            & $\bullet\!\bullet$
-            & $\mathbb{E}[\mathit{pAng}]=2.4$
-            & $(0,6) \rightarrow (0,0)$
-            & 1822
-            & $7.061 / 0.245 / \mathbf{7.306}$
-            & $42.688$
-            & \texttt{t.o.} \\
+We next measure how much determinization reduces the variability of individual program outputs. Specifically, we measure the \emph{output variance}: how much the values returned by repeated executions of a program vary around their mean. Recall that for a return value $X$, the output variance is:
+\[
+\operatorname{Var}(X)
+=
+\mathbb{E}\!\left[(X-\mathbb{E}[X])^2\right].
+\]
+Since $\operatorname{Var}(X)$ is generally not known analytically, we estimate it from repeated independent executions of the program. For $K$ returned values $X_1,\ldots,X_K$, we use the sample variance:
+\[
+\widehat{\operatorname{Var}}(X)
+=
+\frac{1}{K-1}\sum_{i=1}^{K}(X_i-\bar X)^2,
+\qquad
+\bar X=\frac{1}{K}\sum_{i=1}^{K}X_i,
+\]
+which is an unbiased estimator of the true output variance $\operatorname{Var}(X)$ under i.i.d.\ sampling. We apply the same Monte Carlo procedure to the source program $P$ and its determinization $\det(P)$.
 
-        \texttt{monte-carlo}
-            & $\bullet\!\bullet$
-            & $\mathbb{E}[\mathit{estimate}]=2.0$
-            & $(0,1) \rightarrow (0,0)$
-            & 773
-            & $11.173 / 0.180 / \mathbf{11.353}$
-            & $\times$
-            & \texttt{t.o.} \\
+Our suite contains 12 benchmarks, including both full and partial determinization, drawn primarily from prior literature~\cite{batz2021latticed,moosbrugger2022moment,bartocci2020mora,feng2023lower,beutner2022guaranteed,karimi2022distribution}, with three new benchmarks we added: \texttt{hmm}, \texttt{load}, and \texttt{branching}. For details and full programs, see appendix. In some of these benchmarks, determinization eliminates continuous randomness entirely, while in others, it removes only some continuous sampling sites but reduces the dimension of the remaining random state. Nevertheless, unlike the benchmarks in RQ1, these programs remain infinite-state and are therefore not amenable to exact analysis with Storm. We therefore evaluate these programs through their reduction in output variance via sampling.
 
-        \texttt{pack}
-            & $\bullet\!\circ$
-            & $\mathbb{E}[\mathit{totalWeight}]=11.8$
-            & $(1,3) \rightarrow (1,0)$
-            & 15192
-            & $37.207 / 1.033 / \mathbf{38.240}$
-            & \texttt{t.o.}
-            & $\times$ \\
+\input{figures/eval-approx.tex}
 
-        \texttt{retransmit}
-            & $\bullet\!\circ$
-            & $\mathbb{E}[\mathit{ret}]=0.2$
-            & $(4,2) \rightarrow (4,0)$
-            & 182
-            & $0.164 / 0.183 / \mathbf{0.347}$
-            & $\times$
-            & $\times$ \\
+\paragraph{Results} Our results are shown in \Cref{tab:infinite-after-determinization}. In particular, determinization reduces output variance on 10 of the 12 benchmarks and leaves it unchanged on the remaining two. The reduction ranges from modest improvements on \texttt{growing-walk} ($1.09\times$) and \texttt{2d-walk} ($1.33\times$) to substantially larger gains on \texttt{bimodal} ($9.02\times$), \texttt{load} ($40.58\times$), and \texttt{hmm} ($109.73\times$).  On \texttt{continuous-sampling}, \texttt{neals-funnel}, and \texttt{vasicek}, determinization removes all variance in the returned value, giving an infinite variance-reduction factor.  In contrast, \texttt{ckd-epi} and \texttt{figure1} show no measurable reduction, illustrating that eliminating sampling sites need not reduce variance in the particular quantity being returned.
 
-        \texttt{service\_policy}
-            & $\bullet\!\circ$
-            & $\mathbb{E}[\mathit{ret}]=13.2$
-            & $(4,4) \rightarrow (4,0)$
-            & 9491
-            & $27.198 / 0.576 / \mathbf{27.774}$
-            & $\times$
-            & \texttt{t.o.} \\
 
-        \texttt{swap}
-            & $\bullet\!\bullet$
-            & $\mathbb{E}[x_1]=5.5$
-            & $(2,2) \rightarrow (0,0)$
-            & 105
-            & $0.107 / 0.168 / 0.275$
-            & $1.425$
-            & $\mathbf{0.082}$ \\
+\subsection{RQ3: Improving Monte Carlo Efficiency}
 
-        \texttt{uniform\_nested}
-            & $\bullet\!\bullet$
-            & $\mathbb{E}[d]=0.1$
-            & $(0,4) \rightarrow (0,0)$
-            & 31
-            & $0.040 / 0.166 / 0.206$
-            & $\times$
-            & $\mathbf{0.064}$ \\
+A reduction in sample complexity does not necessarily translate into the same reduction in wall-clock time, since determinization may also change the cost of generating each sample. For example, a program may have a large variance-reduction factor but more expensive determinized executions, making its practical speedup smaller than its VRF.  Conversely, even a moderate reduction in variance may yield a larger practical improvement if samples from the determinized program are cheaper to generate. 
 
-        \texttt{workload}
-            & $\bullet\!\circ$
-            & $\mathbb{E}[\mathit{ret}]=10.0$
-            & $(1,2) \rightarrow (1,0)$
-            & 27836
-            & $27.781 / 1.401 / \mathbf{29.182}$
-            & $\times$
-            & $\times$ \\
-        \bottomrule
-    \end{tabular*}
+We therefore next evaluate whether determinization improves the \emph{wall-clock efficiency} of Monte Carlo estimation.   We focus on three
+representative benchmarks---\texttt{branching}, \texttt{hmm}, and
+\texttt{load}---that exhibit substantial but finite variance reductions in
+RQ2. 
 
-    \caption{Evaluation of determinization on 15 benchmarks.
-    In the determinization column, $\bullet\!\bullet$ denotes full
-    determinization and $\bullet\!\circ$ denotes partial determinization. Each pair $(d,c)$ counts static
-    discrete and continuous sampling sites. Runtime excludes
-    both the initial build and Lean certificate checking. An $\times$ in the last two columns denotes a lack of support by the language. Timeout=180s, denoted as \texttt{t.o.} in the table.}
-    \label{tab:finite-after-determinization}
-\end{table}
+\todo[inline]{TODO: finish if there is time}
 
-The timing runs generate certificates but skip independent kernel checking; they do not establish certificate coverage for all table entries. Target certificates establish target statistics. Transferring finite expectations to the source also requires source domain safety and integrability, which the benchmark runner does not discharge.
-
-Note: $\lambda$PSI uses the `--expectation' flag. 
-
-TODO: talk about all programs
-
-\paragraph{Results} TODO.
-
-\subsection{Sampling}
-We next study the utility of determinization as a preprocessing transformation for \emph{sampling-based inference}: whether applying determinization reduces estimator variance. For each benchmark, we compare sampling from the original program $P$ against sampling from $\det(P)$ using the \emph{same} Monte Carlo sampling method. We report empirical output variance among returned fuel-bounded numerical executions and its ratio between source and target. Rejection, fuel exhaustion, and numerical failures can affect which executions contribute. The normalized variance theorem concerns the exact returned laws under its stated premises; these measurements do not establish variance guarantees for arbitrary inference procedures.
-
-We introduce three new benchmarks, \texttt{hmm}, \texttt{load}, and \texttt{branching}, and use modified versions of two existing programs, \texttt{neals-funnel} and \texttt{growing-walk}. The suite includes both full and partial determinization and covers reductions from continuous state to finite, countably infinite, and lower-dimensional continuous state. 
-
-\begin{table}[H]
-    \centering
-    \small
-    \renewcommand{\arraystretch}{1.15}
-    \begin{tabular*}{\linewidth}{@{}l@{\extracolsep{\fill}}c c c c@{}}
-        \toprule
-        Benchmark &
-        \shortstack{Static sampling sites\\(source $\rightarrow$ det.)} &
-        $\widehat{\operatorname{Var}}(P)$ &
-        $\widehat{\operatorname{Var}}(\det P)$ & VRF \\
-        \midrule
-        \texttt{2d-walk}             & $(1,1) \rightarrow (1,0)$                       & 167.16 & 125.37 & $1.33\times$ \\
-        \texttt{bimodal}             & $(1,2) \rightarrow (1,0)$                   & 4.53   & 0.50   & $9.02\times$ \\
-        \texttt{branching}           & $(1,1) \rightarrow (1,0)$                       & 1.66   & 0.39   & $4.25\times$ \\
-        \texttt{continuous-sampling} & $(1,3) \rightarrow (1,1)$ & 38.01 & 0.00 & $\infty$ \\
-        \texttt{ckd-epi}             & $(0,8) \rightarrow (0,6)$ & 0.00 & 0.00 & $1.00\times$ \\
-        \texttt{figure1}             & $(3,3) \rightarrow (3,1)$ & 0.21 & 0.21 & $1.00\times$ \\
-        \texttt{growing-walk}        & $(1,1) \rightarrow (1,0)$                       & 6.12   & 5.62   & $1.09\times$ \\
-        \texttt{hmm}                 & $(2,1) \rightarrow (2,0)$                       & 12.30  & 0.11   & $109.73\times$ \\
-        \texttt{load}                & $(0,5) \rightarrow (0,1)$ & 58.35 & 1.44 & $40.58\times$ \\
-        \texttt{neals-funnel}        & $(0,11) \rightarrow (0,1)$ & 1.46 & 0.00 & $\infty$ \\
-        \texttt{random-walk-1d}      & $(1,1) \rightarrow (1,0)$                       & 1.73   & 0.90   & $1.93\times$ \\
-        \texttt{vasicek}             & $(0,1) \rightarrow (0,0)$                       & 0.85   & 0.00   & $\infty$ \\
-        \bottomrule
-    \end{tabular*}
-    \caption{Evaluation of determinization on 12 benchmarks, depicting variance reduction using 100,000
-    requested samples per program, using only returned numerical values for the empirical variances. The variance reduction factor
-    is calculated as $\mathrm{VRF}=\widehat{\operatorname{Var}}(P) /
-    \widehat{\operatorname{Var}}(\det P)$.}
-    \label{tab:infinite-after-determinization}
-\end{table}
-
-\paragraph{Results} TODO.
+\input{figures/eval-wallclock.tex}
