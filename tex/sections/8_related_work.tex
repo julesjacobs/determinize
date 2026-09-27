@@ -2,132 +2,24 @@
 \section{Related Work}
 \label{sec:related-work}
 
-\paragraph{Expectation-preserving transformations.}
-\begin{itemize}
-    \item \textbf{Hakaru}~\cite{zinkov2017composing} compiles expectation queries
-    into symbolic integrals, an alternative to our direct replacement of draws by primitive means.
-    \item \textbf{DP-Finder}~\cite{bichsel2018dpfinder} reports manual
-    expectation-preserving rewrites that improve sampling in privacy testing,
-    motivating automation such as our type inference.
-    \item \textbf{Expectation programming}~\cite{reichelt2022expectation}
-    adapts inference to the particular expectation being estimated, sharing our
-    goal of reducing the sampling needed for a given output mean.
-    \item \textbf{Continuation-passing expected-cost analysis}~\cite{avanzini2021continuation}
-    translates higher-order recursive probabilistic programs into deterministic
-    expectation calculations, a precedent for compiling away randomness.
-\end{itemize}
+\paragraph{Expectation and Moment Analysis}
 
-\paragraph{Type-directed inference and estimator construction.}
-\begin{itemize}
-    \item \textbf{Slice}~\cite{wu2026slice} infers comparison thresholds
-    to discretize continuous draws in higher-order recursive programs,
-    complementing our type-directed replacement of draws by means.
-    \item \textbf{GradInf}~\cite{arya2026gradinf} uses information-flow types
-    to separate primal and residual randomness when constructing gradient
-    estimators, closely related to the G/E separation behind our trace theorem.
-    \item \textbf{MAPPL}~\cite{li2024mappl} uses information-flow types to
-    compile programs with bounded recursion for variable elimination, another
-    use of static dependence information to remove sampling.
-    \item \textbf{Conditional Independence by Typing}~\cite{gorinova2022conditional}
-    derives conditional independence from types to eliminate discrete parameters,
-    providing a type-based marginalization criterion to compare with our arithmetic restrictions.
-    \item \textbf{ADEV}~\cite{lew2023adev} transforms probabilistic programs
-    into unbiased gradient estimators, sharing our goal of proving expectation
-    properties of higher-order probabilistic transformations.
-    \item \textbf{Coercive structural subtyping}~\cite{traytel2011subtyping}
-    uses weak unification to solve structural subtype constraints, the approach
-    adopted by our E/G inference.
-\end{itemize}
+Several probabilistic programming systems directly compute or estimate expectations and moments. Hakaru supports exact symbolic expectation computation via program transformations~\cite{zinkov2017composing}, but does not support higher order constructs. PSI performs exact symbolic inference over discrete and continuous distributions and can answer expectation queries from the resulting exact posterior~\cite{gehr2016psi}; $\lambda$PSI extends this approach with tuples, arrays, higher-order functions, and nested inference~\cite{gehr2020lpsi}, but its loops must be statically bounded and are unrolled during inference. \textsc{Polar} computes exact (higher) moments of program variables by deriving and solving recurrence equations for probabilistic loops~\cite{moosbrugger2022moment}. Its analysis is nevertheless specialized to loop programs and does not provide general recursion, higher-order functions, or recursive data structures. Polar builds off earlier work automatically deriving exact moment-based invariants for the more restricted class of Prob-solvable loops~\cite{bartocci2019automatic}; \textsc{Mora} implements this analysis for expected values, variances, and higher moments~\cite{bartocci2020mora}. Generating function systems such as \textsc{Genfer}, \textsc{Prodigy}, and \textsc{Geni} provide exact moments, including some forms of infinite-state behavior, but operate over more restricted first-order or non-recursive languages~\cite{zaiser2023genfer,klinkenberg2024loopy,li2025generating}. Expectation Programming instead constructs target-aware approximate inference procedures specialized to \emph{estimating} a program's expected return~\cite{reichelt2022expectation}. 
 
-\paragraph{Conditional Monte Carlo and Rao--Blackwellization.}
-\begin{itemize}
-    \item \textbf{Conditional Monte Carlo}~\cite{owen2013montecarlo}
-    replaces an output by its conditional expectation to reduce variance,
-    the statistical operation implemented by our transformation.
-    \item \textbf{Blackwell's theorem}~\cite{blackwell1947conditional}
-    improves estimators by conditioning on sufficient statistics, an earlier
-    application of the conditional-expectation principle used in our variance proof.
-    \item \textbf{Rao--Blackwellisation of sampling schemes}~\cite{casella1996rao}
-    integrates out auxiliary randomness in accept--reject and Metropolis sampling,
-    reducing estimator variance as our elimination of E draws does.
-\end{itemize}
+\todo[inline]{TODO: could compare this `approximate' strategy to the sampling experiments, time permitted.}
 
-\begin{samepage}
-\paragraph{Analytic elimination and hybrid inference.}
-\begin{itemize}
-    \item \textbf{Delayed sampling}~\cite{murray2018delayed} postpones draws
-    and exploits conjugacy and affine relationships, pursuing our variance-reduction
-    goal through runtime manipulation of distributions.
-    \item \textbf{Statically and dynamically delayed sampling}~\cite{caylak2024delayed}
-    performs analytic elimination at compile time where possible and provides a
-    typed dynamic alternative, a predecessor to our static elimination of draws.
-    \item \textbf{Semi-symbolic inference}~\cite{atkinson2022semisymbolic}
-    combines symbolic distribution operations with particle filtering and guarantees
-    exact inference for closed distribution families, an alternative criterion
-    for deciding which randomness can be eliminated analytically.
-    \item \textbf{Inference plans}~\cite{cheng2025plans} specify which variables
-    to treat symbolically or sample and statically check those choices,
-    paralleling the checked partition of randomness in our annotations.
-\end{itemize}
-\end{samepage}
+In contrast to these tools, determinization preserves only the expectation rather than the full output distribution, enabling it to apply to a richer language with a combination of higher-order functions, general recursion, recursive data structures, with discrete and continuous distributions.
 
-\paragraph{Moment analysis and probabilistic slicing.}
-\begin{itemize}
-    \item \textbf{Specification-based slicing}~\cite{navarro2022slicing}
-    deletes instructions while preserving supplied expectation specifications,
-    relating to our choice of expectation as the property a transformation preserves.
-    \item \textbf{Polar}~\cite{moosbrugger2022moment} computes exact higher
-    moments for classes of probabilistic loops using moment recurrences,
-    offering a way to quantify variance without finite-state exploration.
-    \item \textbf{Central moment analysis}~\cite{wang2021central} derives
-    bounds on variance and higher central moments of probabilistic cost
-    accumulators with recursive procedures, complementing our transformation with moment analysis.
-\end{itemize}
+\paragraph{Quantitative Verification and Invariant Synthesis.}
+A complementary line of work reasons about expectations through quantitative invariants. McIver and Morgan's weakest pre-expectation calculus provides a deductive framework for expectation-based reasoning, but analyzing loops generally requires supplying suitable invariants~\cite{mciver2005abstraction}. Katoen et al.\ partially automate this process using templates and constraint solving to synthesize linear quantitative invariants~\cite{katoen2010linear}, while Chakarov and Sankaranarayanan use abstract interpretation to infer linear expectation invariants~\cite{chakarov2014expectation}. Subsequent approaches synthesize restricted classes of polynomial invariants~\cite{chen2015counterexample,feng2017finding}, or construct martingales whose expectations can be related at termination using optional stopping~\cite{barthe2016synthesizing}. More recently, Bao et al.\ learn invariant expectations and upper or lower bounds from program executions, avoiding user-provided templates~\cite{bao2022data}. These approaches reduce the manual burden of quantitative verification to varying degrees, but remain centered on discovering an appropriate invariant or certificate; determinization instead eliminates eligible randomness directly, without requiring an expectation invariant to be supplied or synthesized.
 
-\paragraph{Exact symbolic inference and generating functions.}
-\begin{itemize}
-    \item \textbf{$\lambda$PSI}~\cite{gehr2020lpsi} performs exact symbolic
-    inference for higher-order programs with discrete and continuous distributions,
-    an alternative to our concrete finite-state computation.
-    \item \textbf{SPPL}~\cite{saad2021sppl} compiles restricted probabilistic
-    programs into sum-product expressions for exact conditioning and event probabilities,
-    offering distribution-level inference alongside our expectation-preserving transformation.
-    \item \textbf{Genfer}~\cite{zaiser2023genfer} uses generating functions
-    and automatic differentiation for exact inference on discrete models with
-    potentially infinite support, going beyond the finite-state requirement of our solver.
-    \item \textbf{Prodigy}~\cite{klinkenberg2024loopy} uses generating functions
-    for exact inference with loops and observations, providing an infinite-state
-    symbolic alternative to our finite-state solver.
-    \item \textbf{Geni}~\cite{li2025generating} compiles functional probabilistic
-    programs into generating functions with a correctness proof, another way
-    to obtain exact computations by transforming programs.
-\end{itemize}
 
-\paragraph{Semantics and conditioning.}
-\begin{itemize}
-    \item \textbf{Kozen's probabilistic semantics}~\cite{kozen1981semantics}
-    relates random-input execution to operators on measures and represents
-    nontermination by missing mass, as our output measures do.
-    \item \textbf{A lambda-calculus foundation for universal probabilistic
-    programming}~\cite{borgstrom2016lambda} relates sampling-based and
-    distribution-based operational semantics for higher-order continuous programs,
-    closely matching the language features covered by our output semantics.
-    \item \textbf{Symbolic disintegration}~\cite{shan2017disintegration}
-    constructs conditional distributions even for observations of probability zero,
-    addressing the conditioning problem that also arises for our continuous G traces.
-\end{itemize}
+\paragraph{Expectation Bounds and Quantitative Verification}
 
-\begin{samepage}
-\paragraph{Verified implementation and finite-state computation.}
-\begin{itemize}
-    \item \textbf{Zar}~\cite{bagnall2023zar} verifies compilation of discrete
-    programs with loops and conditioning into random-bit samplers in Coq,
-    covering sampler correctness beyond our verified transformation and exact solver.
-    \item \textbf{Fixed-point certificates for MDPs}~\cite{chatterjee2025certificates}
-    come with an Isabelle/HOL-verified checker for Storm-generated reachability
-    and expected-reward certificates, a precedent for our checked external-solver route.
-    \item \textbf{Storm}~\cite{hensel2022storm} supports probabilistic model
-    checking with exact arithmetic and produces the finite-model value vectors
-    checked by our Lean certificate checker.
-\end{itemize}
-\end{samepage}
+Another line of work establishes sound upper or lower bounds on quantitative properties of probabilistic programs, either fully automatically or via a supplied candidate. Chakarov and Sankaranarayanan use martingales and concentration inequalities to infer probabilistic bounds~\cite{chakarov2013martingales}, and later introduce expectation invariants expressing inequalities over expected program values~\cite{chakarov2014expectation}. Weakest-preexpectation calculi have similarly been used to bound expected runtimes~\cite{kaminski2016weakest} and verify general inequalities over expected values and probabilities~\cite{batz2021relatively}, with dedicated proof rules for lower bounds on expectations and runtimes~\cite{hark2020aiming}. Other approaches automatically derive symbolic upper bounds on expected resource consumption~\cite{ngo2018bounded,chatterjee2024quantitative}. ~\cite{wang2021central} derives bounds on variance and higher central moments of probabilistic cost accumulators with recursive procedures. For higher-order programs, Avanzini et al.\ translate probabilistic programs with unbounded recursion into deterministic CPS terms denoting their expected cost, and use a higher-order logic to prove upper bounds~\cite{avanzini2021continuation}; Kura and Unno extend this style of verification to weakest pre-expectations, expected costs, moments, and conditional expectations for higher-order probabilistic programs with continuous distributions~\cite{kura2024automated}. Finally, \textsc{GuBPI} computes guaranteed lower and upper bounds on posterior probabilities for higher-order recursive programs with continuous distributions~\cite{beutner2022guaranteed}. Our appraoch is fully automatic, providing exact expectations when the program is fully determinizable.
+
+\paragraph{Variance Reduction and Randomness Elimination.}
+Our approach is closely related to conditional Monte Carlo and Rao--Blackwellization, which replace random quantities by conditional expectations to reduce estimator variance~\cite{owen2013montecarlo,casella1996rao}. In probabilistic programming, delayed sampling automatically postpones draws and analytically marginalizes variables when conjugate or affine relationships permit, reducing variance during inference~\cite{murray2018delayed}. Subsequent work performs delayed sampling statically when possible, while retaining a dynamic mechanism for programs whose dependencies cannot be resolved at compile time~\cite{caylak2024delayed}. Semi-symbolic inference similarly combines symbolic manipulation with sampling, performing exact inference for closed distribution families and falling back to particle-based approximation otherwise~\cite{atkinson2022semisymbolic}; inference plans further allow programmers to control which variables are represented symbolically or sampled~\cite{cheng2025plans}.
+
+\paragraph{Type-Directed Program Transformations.}
+Several probabilistic programming systems use static analyses to guide semantics-preserving program transformations. \textsc{Slice} uses a type-directed analysis to discretize continuous randomness~\cite{wu2026slice}, while \textsc{GradInf} uses information-flow typing to factor and partially evaluate randomness when constructing gradient estimators~\cite{arya2026gradinf}. \textsc{ADEV} similarly transforms higher-order probabilistic programs into programs producing unbiased gradient estimates~\cite{lew2023adev}. Determinization follows this type-directed transformation strategy, but uses static dependence information to identify random choices that can be replaced by their expectations. 
