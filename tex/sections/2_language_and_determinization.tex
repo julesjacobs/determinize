@@ -95,7 +95,7 @@ and atomic expressions are unchanged.
 Indeed, determinization may remove all randomness from a program if all distributions are are annotated with $\E$, or only part of it if at least one distirbution is annotated with $\G$. Let us consider several simple examples below to illustrate determinization in action.
 
 \begin{example}
-In this example, determinization first replaces the outer $\E$-annotated Gaussian by its $\M$-annotated counterpart, and then recursively transforms its arguments (trivial recursive steps on constants, which are unchanged by determinization, are omitted for brevity). The nested uniform distribution is annotated with $\G$, so it remains a sampling operation:
+In this example, determinization first replaces the outer $\E$-annotated Gaussian by its $\M$-annotated counterpart, and then recursively transforms its arguments (trivial recursive steps on constants, which are unchanged by determinization, are omitted for brevity). The nested uniform distribution is annotated with $\E$, so it also gets replaced by its $\M$-annotated counterpart:
 \begin{align*}
 \trans{
   \kw{gaussian}^{\E}
@@ -114,7 +114,7 @@ In this example, determinization first replaces the outer $\E$-annotated Gaussia
     1
   \bigr).
 \end{align*}
-Thus, the Gaussian draw is determinized to its mean, while the uniform draw remains stochastic.
+Thus, the Gaussian and uniform draws are determinized to their means.
 \end{example}
 
 \begin{example}
