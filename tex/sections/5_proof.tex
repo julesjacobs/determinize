@@ -4,47 +4,190 @@
 
 We now turn to the soundness of our determinization transformation. To motivate the proof strategy, first observe that at an $E$-mode distribution, the original program samples a value, whereas the transformed program computes the mean of the distribution. The resulting programs therefore have different output distributions. Thus, our proof relates both programs to a common symbolic execution, and the original and determiinzed programs are then obtained as two interpretations of the same symbolic execution. 
 
-The symbolic semantics differs from the ordinary semantics only in its treatment of $\E$-mode draws. Rather than immediately sampling an $\E$-mode distribution or replacing it by its mean, symbolic execution records the draw using a fresh symbolic variable and continuous evaluating with that variable: wen symbolic execution encounters
-$\draw D\E{\bar a}$
-it does not sample from $D(\bar a)$. Instead, it introduces a fresh variable $u$, records the binding $u\sim D(\bar a)$ in a symbolic environment, and continues execution with $u$ in place of the sampled value. Dependencies between $\E$-mode draws are therefore preserved symbolically: the parameters of a later distribution may refer to variables introduced by earlier draws. By contrast, $\G$-mode draws are sampled immediately, exactly as in the ordinary semantics.
+The symbolic semantics differs from the ordinary semantics only in its treatment of $\E$-mode draws Instead of immediately interpreting an $\E$-mode distribution as either a sample or a mean, symbolic execution records it using a fresh variable. The resulting
+symbolic execution admits two interpretations: an \emph{actual}
+interpretation that samples the recorded variables, recovering the source program, and an \emph{expected} interpretation that substitutes their sequential means, recovering the determinized program. Our proof thus proceeds in four stages:
+\begin{enumerate}
+  \item define symbolic execution and its two interpretations;
+  \item show that both interpretations commute with symbolic reduction;
+  \item prove that the interpretations agree after conditioning on retained
+        randomness;
+  \item sum over termination depths and derive the tracewise and global
+        soundness results.
+\end{enumerate}
 
 TODO: Talk about measurable space construction
 
+\subsection{Symbolic Execution}
+
+A symbolic configuration has the form
+\[
+  s=(\sigma\mid\widehat e:\rho),
+\]
+where $\widehat e$ is a residual symbolic expression of type $\rho$ and
+$\sigma$ is an ordered symbolic environment
+\[
+  \sigma
+  ::=
+  \emptyset
+  \mid
+  \sigma,\ u\sim D(\bar a).
+\]
+Each declaration records a fresh variable $u$ together with the distribution
+from which it would be sampled. Its parameters $\bar a$ may be affine
+expressions over variables declared earlier in $\sigma$. The order of these
+declarations is significant, since a later distribution may depend on the
+values of earlier symbolic variables.
 
 \input{figures/symbolic-semantics.tex}
 
-
-\par\vspace{10pt}
-\textbf{Actual and expected interpretations}
+As shown in \cref{fig:symbolic-semantics}, ordinary deterministic reductions
+proceed as in the concrete semantics. An $\M$-mode distribution with
+symbolic arguments reduces to the corresponding symbolic mean. When
+symbolic execution encounters an $\E$-mode distribution
 \[
-\begin{aligned}
+  \draw D\E{\bar a},
+\]
+it introduces a fresh variable $u$, appends the declaration
+$u\sim D(\bar a)$ to $\sigma$, and continues with $u$ in place of the
+distribution expression. This step neither samples a value nor computes a
+mean. It only records the probabilistic dependency for later interpretation.
+
+In contrast, a $\G$-mode distribution is sampled immediately, as in the
+ordinary semantics. Its primitive and sampled value are recorded in the
+transition label $(D,r)$ and therefore contribute to the retained trace.
+All deterministic and $\E$-mode steps carry the silent label $\epsilon$.
+Symbolic execution consequently delays exactly the randomness removed by
+determinization while executing the retained randomness normally.
+
+For example, symbolic execution of
+\[
+  \kw{let}\ x=\kw{uniform}^{\E}(0,2)\ \kw{in}\
+  \kw{gaussian}^{\E}(x+1,1)
+\]
+produces an environment of the form
+\[
+  \sigma
+  =
+  \bigl(
+    u_1\sim\kw{uniform}(0,2),\
+    u_2\sim\kw{gaussian}(u_1+1,1)
+  \bigr)
+\]
+and the residual expression $u_2$. The occurrence of $u_1$ in the second
+declaration preserves the dependency between the two samples. The symbolic
+configuration can subsequently be interpreted either by sampling the
+recorded variables in order or by replacing them with their sequential
+means. These two interpretations recover the source and determinized
+programs, respectively.
+
+
+\subsection{Two Interpretations of Symbolic Execution}
+\label{sec:symbolic-interpretations}
+
+A symbolic configuration records $\E$-mode samples without deciding whether
+they should be sampled, as in the source program, or replaced by their
+means, as in the transformed program. We recover these two behaviors through
+the \emph{actual} and \emph{expected} interpretations.
+
+A valuation $\theta$ assigns a real value to every symbolic variable declared
+in $\sigma$. We write
+\[
+  \mathsf{realize}_\theta(\widehat e)
+\]
+for the ordinary expression obtained by substituting these values into the
+symbolic residual expression $\widehat e$.
+
+For a symbolic environment
+\[
+  \sigma
+  =
+  \bigl(
+    u_1\sim D_1(\bar a_1),\ldots,
+    u_k\sim D_k(\bar a_k)
+  \bigr),
+\]
+let $\mathcal A_\sigma$ be the joint distribution over valuations obtained
+by sampling the declarations in order. In particular, when sampling $u_i$,
+the parameters $\bar a_i$ are evaluated using the previously sampled values
+of $u_1,\ldots,u_{i-1}$. This sequential construction preserves dependencies
+between recorded distributions.
+
+The actual interpretation samples a valuation from $\mathcal A_\sigma$,
+realizes the residual expression under that valuation, and then applies the
+exact-depth trace semantics:
+\[
   \mathsf{Act}_n(\sigma\mid\widehat e)
-  &=
+  =
   \int
-    \joint{
-      \mathsf{realize}_\theta(\widehat e)
-    }n\,
-    \mathcal A_\sigma(d\theta),
-  \\[6pt]
+    \joint{\mathsf{realize}_\theta(\widehat e)}n\,
+    \mathcal A_\sigma(d\theta).
+\]
+Thus, $\mathsf{Act}_n$ interprets every recorded $\E$-mode distribution as an
+ordinary sample, as in the source program.
+
+The expected interpretation instead assigns each symbolic variable its
+sequential mean. Let $\bar\theta_\sigma$ denote the valuation constructed in
+declaration order by
+\[
+  \bar\theta_\sigma(u_i)
+  =
+  \operatorname{Mean}_{D_i}
+  \bigl(\bar a_i[\bar\theta_\sigma]\bigr),
+\]
+where $\bar a_i[\bar\theta_\sigma]$ substitutes the means already assigned
+to the preceding variables. We then realize the residual expression under
+this valuation and determinize any $\E$-mode distributions that have not yet
+been encountered by symbolic execution:
+\[
   \mathsf{Exp}_n(\sigma\mid\widehat e)
-  &=
+  =
   \joint{
     \trans{
       \mathsf{realize}_{\bar\theta_\sigma}(\widehat e)
     }
   }n.
-\end{aligned}
 \]
+Consequently, $\mathsf{Exp}_n$ interprets the recorded variables, as well as
+any remaining $\E$ sites, according to the transformed program.
 
-Here $\mathcal A_\sigma$ is the joint distribution obtained by sampling
-the declarations of $\sigma$ in order, and $\bar\theta_\sigma$ is the
-sequential mean valuation. Thus $\mathsf{Act}_n(s)$ and
-$\mathsf{Exp}_n(s)$ are measures over $\Trace\times\Real$, not over symbolic
-configurations. The actual interpretation samples the recorded
-$\E$-mode variables and then applies the trace-refined exact-depth semantics.
-The expected interpretation substitutes their sequential means,
-determinizes the resulting residual expression, and applies the same
-trace-refined exact-depth semantics.
+Both $\mathsf{Act}_n(s)$ and $\mathsf{Exp}_n(s)$ are measures on
+$\Trace\times\Real$. They describe traces and returned values rather than
+distributions over symbolic configurations. Their difference lies only in
+how they interpret the delayed $\E$-mode randomness: the actual
+interpretation samples it, while the expected interpretation replaces it by
+its sequential means.
+
+For example, consider the symbolic environment
+\[
+  \sigma
+  =
+  \bigl(
+    u_1\sim\kw{uniform}(0,2),\
+    u_2\sim\kw{gaussian}(u_1+1,1)
+  \bigr).
+\]
+Under $\mathcal A_\sigma$, the actual interpretation first samples $u_1$ and
+then samples $u_2$ from a Gaussian whose mean depends on that value. The
+sequential mean valuation instead assigns
+\[
+  \bar\theta_\sigma(u_1)=1,
+  \qquad
+  \bar\theta_\sigma(u_2)=2.
+\]
+This illustrates why the means must be computed in declaration order rather
+than independently.
+
+To connect these interpretations to ordinary programs, define the initial
+symbolic configuration by
+\[
+  \mathsf{init}(e)
+  =
+  \bigl(\emptyset\mid\mathsf{lift}(e)\bigr),
+\]
+where $\mathsf{lift}$ embeds an ordinary expression into the symbolic
+language. Since the initial environment is empty, realizing the lifted
+expression makes no substitutions.
 
 \begin{lemma}[Realization of initialization]
 For every ordinary expression $e$,
@@ -56,18 +199,25 @@ For every ordinary expression $e$,
 \]
 \end{lemma}
 
-\paragraph{Interpretation of initialized symbolic semantics.}
-Recall that
-\[
-  \mathsf{init}(e)
-  =
-  (\emptyset\mid\mathsf{lift}(e)),
-\]
-where $\mathsf{lift}$ embeds an ordinary expression into the symbolic
-language. The following theorems show that the two interpretations of the
-symbolic semantics recover the source and transformed joint trace--output
-measures.
+The next step is to show that both interpretations commute with symbolic
+reduction. Iterating these commuting results will establish that the actual
+interpretation of $\mathsf{init}(e)$ recovers the source semantics, while
+the expected interpretation recovers the semantics of $\trans e$.
 
+\subsection{Commuting Lemmas}
+\label{sec:commuting-lemmas}
+
+We first show that symbolic reduction is compatible with both
+interpretations. For a silent symbolic step, interpreting the configuration
+before the step at depth $n+1$ gives the same measure as interpreting the
+resulting configuration at depth $n$. For a $\G$-mode sample, both
+interpretations integrate over the same primitive distribution and record
+the same event in the trace.
+
+The actual interpretation must additionally account for delayed $\E$-mode
+samples. Extending the symbolic environment postpones a sample without
+changing its joint distribution, since $\mathcal A_\sigma$ eventually
+samples the recorded declarations in the same order.
 
 \begin{lemma}[Actual one-step commuting]
 \label{lem:actual-one-step-commuting}
@@ -110,6 +260,15 @@ Let $s$ be a well-typed, domain-safe symbolic configuration.
 \end{enumerate}
 \end{lemma}
 
+Here $p_{D,r}$ prefixes the event $(D,r)$ to the trace produced by the
+continuation. The first part of the lemma handles deterministic reductions
+and the recording of $\E$-mode samples, both of which produce silent
+symbolic steps. The second part handles retained sampling explicitly.
+
+The expected interpretation satisfies the analogous equations. In the
+$\E$-mode case, extending the symbolic environment assigns the fresh
+variable its sequential mean, which agrees with evaluating the corresponding
+$\M$-mode distribution in the transformed program.
 
 \begin{lemma}[Expected one-step commuting]
 \label{lem:expected-one-step-commuting}
@@ -152,6 +311,11 @@ Let $s$ be a well-typed, domain-safe symbolic configuration.
 \end{enumerate}
 \end{lemma}
 
+Iterating these commuting lemmas connects symbolic execution to the ordinary
+semantics. Starting from an empty symbolic environment, the actual
+interpretation recovers the source program, while the expected
+interpretation recovers its determinization.
+
 \begin{theorem}[Actual interpretation of initialized symbolic execution]
 \label{thm:actual-initialized-symbolic}
 Suppose $\vdash e:\tyR\E$ and $e$ is closed. Then, for every
@@ -163,7 +327,6 @@ $n\in\Nat$,
 \]
 \end{theorem}
 
-
 \begin{theorem}[Expected interpretation of initialized symbolic execution]
 \label{thm:expected-initialized-symbolic}
 Suppose $\vdash e:\tyR\E$ and $e$ is closed. Then, for every
@@ -174,6 +337,32 @@ $n\in\Nat$,
   \joint{\trans e}n.
 \]
 \end{theorem}
+
+These results establish that the two interpretations describe the programs
+we intend to compare. It remains to relate the two measures obtained from
+the common symbolic execution.
+
+\subsection{Agreement of the Two Interpretations}
+\label{sec:interpretation-agreement}
+
+The central step of the proof compares the actual and expected
+interpretations of an arbitrary well-typed symbolic configuration. The
+actual interpretation retains the full distribution of the delayed
+variables, whereas the expected interpretation substitutes their sequential
+means. Nevertheless, they induce the same distribution over retained
+$\G$-randomness.
+
+The proof proceeds over symbolic execution at a fixed depth. Deterministic
+steps are handled by the commuting lemmas. At a $\G$-mode sample, both
+interpretations integrate over the same distribution and extend the trace
+in the same way. At an $\E$-mode sample, the actual interpretation extends
+the joint distribution of symbolic variables, while the expected
+interpretation extends the sequential mean valuation. The typing
+restrictions ensure that the relevant dependence on these variables is
+affine, so integration under the actual interpretation agrees with
+evaluation at the sequential means under the expected interpretation.
+Domain safety ensures that every distribution and primitive mean used in
+this argument is well defined.
 
 \begin{theorem}[Agreement of interpretations]
 \label{thm:agreement}
@@ -204,6 +393,21 @@ and
 \]
 \end{theorem}
 
+The theorem has two conclusions. First, the two interpretations have the
+same trace marginal, so replacing delayed samples by their means does not
+change the retained randomness of successfully returning executions.
+Second, after conditioning on that retained randomness, the expected
+interpretation is concentrated at the conditional mean of the actual
+interpretation. This is the key property from which trace soundness follows.
+
+\subsection{From Exact-Depth Agreement to Trace Soundness}
+\label{sec:exact-depth-to-traces}
+
+We now apply the agreement theorem to the initial symbolic configuration
+$\mathsf{init}(e)$. The two interpretation theorems identify its actual and
+expected interpretations with the exact-depth joint semantics of $e$ and
+$\trans e$, respectively. We therefore obtain agreement at each finite
+termination depth.
 
 \begin{theorem}[Initialized exact-depth tracewise agreement]
 \label{thm:initialized-exact-depth-agreement}
@@ -230,6 +434,9 @@ and
 \]
 \end{theorem}
 
+The exact-depth measures account only for executions returning after a fixed
+number of steps. Summing over all depths recovers the complete joint
+trace--output measures.
 
 \begin{corollary}[Big-step interpretation of initialization]
 Under the preceding assumptions,
@@ -266,17 +473,107 @@ and
 \]
 \end{corollary}
 
-
-\begin{theorem}[Generalized convex inequality]
-\label{thm:generalized-convex-inequality}
-Suppose $\vdash e:\tyR\E$, $e$ is closed and domain-safe, and
-$\varphi:\Real\to\Real$ is nonnegative and convex. Then
+It follows that the complete source and transformed joint measures have the
+same trace marginal:
 \[
-  \int_{\Real}
-    \varphi(r)\,\law{\trans e}(dr)
-  \le
-  \int_{\Real}
-    \varphi(r)\,\law e(dr),
+  \trlaw{\trans e}=\trlaw e.
 \]
-where the integrals are understood as nonnegative extended integrals.
-\end{theorem}
+Disintegrating the two joint measures with respect to this common marginal
+then gives, for $\trlaw e$-almost every trace $\tau$,
+\[
+  \law{\trans e}(\,\cdot\mid\tau)
+  =
+  \delta_{\Expect[e\mid\tau]}.
+\]
+The preservation invariants of symbolic execution also show that
+$\trans e$ is domain-safe whenever $e$ is. Together, these conclusions prove
+\cref{thm:trace-soundness}.
+
+\subsection{Deriving the Global Consequences}
+\label{sec:proof-global-consequences}
+
+The global results follow by marginalizing and integrating the tracewise
+characterization. Because the trace and output marginals of a joint measure
+have the same total mass, equality of the trace measures immediately gives
+\[
+  \law{\trans e}(\Real)=\law e(\Real).
+\]
+Thus determinization preserves the probability of successfully returning.
+
+\paragraph{Expectation preservation.}
+When the global expectation is defined, the law of total expectation gives
+\[
+\begin{aligned}
+  \int_{\Real}r\,\law{\trans e}(dr)
+  &=
+  \int_{\Trace}
+    \Expect[e\mid\tau]\,
+    \trlaw e(d\tau)\\
+  &=
+  \int_{\Real}r\,\law e(dr).
+\end{aligned}
+\]
+The same return probability normalizes both output measures, proving
+\cref{thm:expectation}. For extended expectations, the argument is applied
+separately to the positive and negative parts of the output. The assumption
+that the source expectation is defined excludes the case in which both
+parts are infinite.
+
+\paragraph{Convex functions.}
+Let $\varphi:\Real\to\Real$ be nonnegative and convex. Trace soundness and
+Jensen's inequality give
+\[
+\begin{aligned}
+  \int_{\Real}\varphi(r)\,\law{\trans e}(dr)
+  &=
+  \int_{\Trace}
+    \varphi\bigl(\Expect[e\mid\tau]\bigr)\,
+    \trlaw e(d\tau)\\
+  &\leq
+  \int_{\Trace}
+    \left(
+      \int_{\Real}
+        \varphi(r)\,\law e(dr\mid\tau)
+    \right)
+    \trlaw e(d\tau)\\
+  &=
+  \int_{\Real}\varphi(r)\,\law e(dr).
+\end{aligned}
+\]
+The inequality is Jensen's inequality for each conditional output law, and
+the final equality follows from disintegration and Tonelli's theorem. This
+proves \cref{thm:convex-function}.
+
+\paragraph{Variance.}
+Assume $q_e=\law e(\Real)>0$ and that the source has a finite second moment.
+Applying the law of total variance to the output conditioned on returning
+gives
+\[
+  \Var_{\mathrm{ret}}[e]
+  =
+  \Var_{\mathrm{ret}}[\trans e]
+  +
+  \Expect_{\tau\sim\trlaw e/q_e}
+  \left[
+    \Var\bigl(\law e(\,\cdot\mid\tau)\bigr)
+  \right].
+\]
+The second term is nonnegative and measures exactly the variation remaining
+in the source after its retained randomness has been fixed. This proves the
+trace variance decomposition and, immediately,
+\[
+  \Var_{\mathrm{ret}}[\trans e]
+  \leq
+  \Var_{\mathrm{ret}}[e].
+\]
+
+\paragraph{Divergence and rejection.}
+Finally, domain safety rules out missing mass caused by invalid primitive
+operations. Every execution therefore either successfully returns or
+continues forever, where rejection is included as divergence:
+\[
+  \law e(\Real)+d_e=1.
+\]
+Since determinization preserves output mass, it also preserves the combined
+probability of divergence and rejection, completing the proof of
+\cref{prop:probability}.
