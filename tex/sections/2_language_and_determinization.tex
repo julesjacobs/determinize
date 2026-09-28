@@ -150,20 +150,19 @@ syntactic: it performs the requested replacements, while the type system
 establishes that those replacements are semantically justified.
 
 \paragraph{Output measures.}
-For a closed expression $e$, the measure $\out e n$ describes the real
-values returned after exactly $n$ reduction steps. Deterministic reductions
-advance to the next expression, while sampling reductions integrate over
-all possible samples. Summing over all finite reduction depths gives the
-program's output measure:
-\[
-  \law e(B)=\sum_{n=0}^{\infty}\out e n(B).
-\]
-This measure need not have total mass one. Rejected executions,
-nonterminating executions, invalid distribution applications, and
-executions that do not return a real number contribute no mass. Hence
-$\law e(\mathbb{R})$ is the probability that $e$ successfully returns a
-real value.
+As described above, the reduction rules describe how an individual execution proceeds. To
+describe the behavior of all possible executions, we lift these rules to a
+measure over returned real values. For a closed expression $e$ and
+$n\in\mathbb{N}$, $\out e n$ is a measure on the standard Borel space
+$\mathbb{R}$. For every Borel-measurable set $B\subseteq\mathbb{R}$,
+$\out e n(B)$ is the probability that $e$ returns a value in $B$ after
+exactly $n$ reduction steps. Deterministic steps continue with the resulting
+expression, while sampling steps integrate over every possible sampled
+value. Summing over all finite return depths gives the complete output law of $e$.
 
+The output law may have total mass less than one: for example, executions that do not
+return a real number, contribute no mass. Consequently, $\law e(\mathbb{R})$
+is the probability that $e$ successfully returns a real value. 
 This semantics provides the basis for the results that follow. The output measures give us the mathematical object used in \cref{sec:soundness} to prove that determinizing a
 well-typed program preserves its expected returned value while reducing
 variance under the stated assumptions.
