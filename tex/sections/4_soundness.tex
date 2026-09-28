@@ -3,10 +3,76 @@
 \section{Soundness}
 \label{sec:soundness}
 
-Although determinization is a syntactic transformation, its semantic effect can be characterized by conditioning on the random choices that it retains. Intuitively, once those choices are fixed, the remaining randomness comes only from samples that determinization replaces by their means. The transformed program can then return the expected output of the original program under those fixed choices.
+Although determinization is a syntactic transformation, its semantic effect
+can be characterized by conditioning on the random choices that it retains,
+namely, the samples annotated with $\G$. Intuitively, once the outcomes of
+these $\G$-mode samples are fixed, the remaining randomness comes only from
+the $\E$-mode samples that determinization replaces by their means. Under
+these fixed $\G$ choices, the transformed program returns the expected
+output of the original program over the remaining $\E$-mode randomness.
 
-This conditional characterization is the key to our soundness result and is useful for two reasons. First, it gives a local account of what determinization does even when the program's overall expectation is undefined. Second, when the global expectation and variance do exist, expectation preservation
-and variance reduction follow by integrating over these fixed choices. In what follows, we first formalize this characterization using traces of the retained random choices, and then derive the global consequences.
+This conditional characterization is the key to our soundness result and is useful for two reasons. First, it gives a local account of what determinization does even when the program's overall expectation is undefined. Second, when the global expectation does exist, expectation preservation follows by integrating over these fixed choices. Our results distinguish between finite, infinite, and undefined expectations, so let us first make this terminology precise.
+
+\begin{definition}[Expectation]
+Let $X$ be a real-valued random variable with probability distribution $\mu$, and set
+\[
+r^+=\max(r,0),
+\qquad
+r^-=\max(-r,0).
+\]
+Then
+\[
+\Expect[X^{+}]
+=
+\int_{\Real} r^{+}\,\mu(dr)
+\in[0,\infty],
+\qquad
+\Expect[X^{-}]
+=
+\int_{\Real} r^{-}\,\mu(dr)
+\in[0,\infty]
+\]
+and
+\[
+\Expect[X]
+:=
+\Expect[X^+]-\Expect[X^-].
+\]
+The expectation is \emph{well-defined in the extended reals} when the two terms are not both infinite; in this case it may be finite, $+\infty$, or $-\infty$. It is \emph{undefined} precisely when $\Expect[X^+]=\Expect[X^-]=\infty$, and is \emph{finite} exactly when
+\[
+\int_{\Real}|r|\,\mu(dr)<\infty.
+\]
+\end{definition}
+
+The distinction is important even for simple programs, as the following example illustrates.
+
+\begin{example}[Undefined Global Expectation]
+Consider a program that flips a fair coin until tails and, after $n$ preceding heads, returns a sample from $\draw{uniform}\E{-2^n,2^n}$:
+
+\begin{lstlisting}
+let sample = rec f bound =>
+  if bernoulli[G](1/2) < 1 then uniform[E](-bound, bound)
+  else f (2 * bound)
+in sample 1
+\end{lstlisting}
+
+For any fixed sequence of retained $\G$-samples, the remaining $\E$-sample has mean zero, so the determinized program returns zero. Globally, however, let $N$ be the number of heads and $X$ the returned value. We have $\Pr(N=n)=2^{-(n+1)}$. Conditioned on $N=n$,
+$X\sim\kw{uniform}(-2^n,2^n)$ and hence
+$\Expect[|X|\mid N=n]=2^{n-1}$.\footnote{First absolute moment. For
+$U\sim\kw{uniform}(-a,a)$,
+$\Expect[|U|]=(2a)^{-1}\int_{-a}^{a}|u|\,du=a/2$.} Therefore,
+\[
+  \Expect[|X|]
+  =\sum_{n=0}^{\infty}\Pr(N=n)\Expect[|X|\mid N=n]
+  =\sum_{n=0}^{\infty}2^{-(n+1)}2^{n-1}
+  =\sum_{n=0}^{\infty}\frac14
+  =\infty.
+\]
+Because each conditional distribution is symmetric, $\Expect[X^+]=\Expect[X^-]=\infty$, so the global expectation $\Expect[X]$ is undefined. This thus motivates stating our primary soundness result under fixed retained randomness before deriving global consequences when the relevant expectations exist.
+\end{example}
+
+In what follows, we first formalize this characterization using traces of the retained random choices, and then derive the global consequences.
+
 
 \subsection{Tracewise Soundness}
 \label{sec:traces}
