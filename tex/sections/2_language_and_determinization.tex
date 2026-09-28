@@ -2,27 +2,168 @@
 \section{Language and Determinization}
 \label{sec:language}
 
+This section introduces the probabilistic language on which our
+determinization transformation operates. We first present its syntax and operational semantics, and then define
+determinization as a source-to-source transformation over annotated
+distribution expressions.
+
+\paragraph{Syntax.}
+\Cref{fig:syntax} presents the syntax of our language, a call-by-value
+functional language with recursion, pairs, sums, lists, and primitive
+probability distributions. The expression $\kw{reject}$ represents a failed
+execution path and is used to encode conditioning on observations.
+
+\todo[inline]{TODO: explain why reject and diverge are treated similarly??}
+
+Each distribution occurrence is annotated with one of three modes:
+$\G$, $\E$, or $\M$. The modes $\G$ and $\E$ distinguish samples that must
+remain stochastic from those that are eligible for determinization,
+respectively. The type system in \cref{sec:type-system} determines which
+sampling sites may be assigned mode $\E$. The mode $\M$ marks a distribution
+occurrence that computes the distribution's mean and is used in the output
+of determinization.
+
 \input{figures/syntax}
+
+\paragraph{Operational semantics.}
+\Cref{fig:semantics} gives the call-by-value operational semantics. Values
+and evaluation contexts determine the order of evaluation, while the
+standard functional constructs reduce by the usual substitution rules.
+We omit the routine reductions for arithmetic and comparisons.
+
+For arguments $\bar v$ satisfying the domain condition
+$\operatorname{Domain}_D(\bar v)$, both
+$D^\G(\bar v)$ and $D^\E(\bar v)$ draw a value from the same probability
+distribution $D(\bar v)$. Thus, the distinction between $\G$ and $\E$ does
+not affect the behavior of the source program; it records whether the type
+system permits that sampling operation to be determinized. In contrast, an
+$\M$-annotated distribution reduces deterministically to its mean:
+\[
+  D^\M(\bar v)
+  \rightsquigarrow
+  \operatorname{Mean}_D(\bar v).
+\]
+Consequently, changing an annotation from $\E$ to $\M$ replaces a random
+draw by the mean of its distribution while leaving the evaluation of its
+arguments unchanged.
+
+The primitive-distribution table in \cref{fig:semantics} specifies the
+domain and mean of each supported distribution. A distribution application
+outside its domain has no reduction, just as division by zero has no
+reduction. In $\kw{gaussian}(u,v)$, $v$ denotes the variance, while the
+parameters of the exponential and gamma distributions are rates. The
+distribution $\kw{discrete}([p_i]_{i<n})$ returns $i$ with probability $p_i$ for $0\leq i<n$, and returns $n$ with
+the remaining probability $1-\sum_{i<n}p_i$.
+
+\input{figures/semantics}
+
+\paragraph{Determinization} This leads us to our determinization definition below:
 
 \begin{definition}[Determinization\leanref{determinization}]
 \label{def:determinization}
-$\trans e$ replaces every $\E$ annotation in $e$ by $\M$. For each distribution
-primitive $D$,
+Let $\mathcal{A}=\{\G,\E,\M\}$ be the set of distribution modes. The
+determinization transformation $\trans{\cdot}$ is defined structurally on
+expressions, replacing each $\E$-mode distribution by its $\M$-mode
+counterpart and leaving all other constructs unchanged. In particular, for
+every distribution primitive $D$, mode $\alpha\in\mathcal{A}$, and argument
+expressions $\bar e=(e_1,\ldots,e_n)$,
 \[
- \trans{D^\E(e_1,\ldots,e_n)}
- =D^\M(\trans{e_1},\ldots,\trans{e_n}).
+\trans{D^\alpha(\bar e)}
+=
+\begin{cases}
+D^\M(\trans{\bar e}) & \text{if } \alpha=\E,\\
+D^\alpha(\trans{\bar e}) & \text{if } \alpha\in\{\G,\M\},
+\end{cases}
 \]
-All other constructs, including $\G$ and $\M$ distribution expressions, retain their form with
-their subexpressions transformed recursively.
+where
+\[
+\trans{\bar e}
+=
+(\trans{e_1},\ldots,\trans{e_n}).
+\]
+For every non-distribution constructor $C$,
+\[
+\trans{C(e_1,\ldots,e_n)}
+=
+C(\trans{e_1},\ldots,\trans{e_n}),
+\]
+and atomic expressions are unchanged.
 \end{definition}
 
-This needs:
-\begin{itemize}
-    \item Some more examples
-\end{itemize}
+\todo[inline]{TODO: Provide full determinization transformation in appendix.}
 
-\input{figures/semantics}
-In $\kw{gaussian}(u,v)$, $v$ is the variance.
-The distribution $\kw{discrete}([p_i]_{i<n})$ returns $i$ with probability $p_i$
-for $0\le i<n$, and $n$ with the remaining probability $1-\sum_{i<n}p_i$.
-\clearpage
+Indeed, determinization may remove all randomness from a program if all distributions are are annotated with $\E$, or only part of it if at least one distirbution is annotated with $\G$. Let us consider several simple examples below to illustrate determinization in action.
+
+\begin{example}
+In this example, determinization first replaces the outer $\E$-annotated Gaussian by its $\M$-annotated counterpart, and then recursively transforms its arguments (trivial recursive steps on constants, which are unchanged by determinization, are omitted for brevity). The nested uniform distribution is annotated with $\G$, so it remains a sampling operation:
+\begin{align*}
+\trans{
+  \kw{gaussian}^{\E}
+    \bigl(\kw{uniform}^{\E}(0,1),1\bigr)}
+&=
+\kw{gaussian}^{\M}
+  \bigl(
+    \trans{\kw{uniform}^{\E}(0,1)},
+    1
+  \bigr)
+\\
+&=
+\kw{gaussian}^{\M}
+  \bigl(
+    \kw{uniform}^{\M}(0,1),
+    1
+  \bigr).
+\end{align*}
+Thus, the Gaussian draw is determinized to its mean, while the uniform draw remains stochastic.
+\end{example}
+
+\begin{example}
+Consider the following partial determinization example, where the draws are dependent. The $\G$-annotated uniform draw for $x$ remains stochastic, while the conditional Gaussian draw for $y$ is determinized. Importantly, its mean $2x+1$ may still depend on the sampled value of $x$:
+\[
+\trans{\left(
+\begin{aligned}
+&\kw{let}\ x=\kw{uniform}^{\G}(0,1)\ \kw{in}\\
+&\kw{let}\ y=\kw{gaussian}^{\E}(2x+1,\sigma^2)\ \kw{in}\\
+&x*y
+\end{aligned}
+\right)}
+=
+\begin{aligned}
+&\kw{let}\ x=\kw{uniform}^{\G}(0,1)\ \kw{in}\\
+&\kw{let}\ y=\kw{gaussian}^{\M}(2x+1,\sigma^2)\ \kw{in}\\
+&x*y.
+\end{aligned}
+\]
+Thus, determinization removes the randomness introduced by $y$ without removing the randomness on which its mean depends.
+\end{example}
+
+We note that replacing a sample by its mean is not valid in every context. For example,
+if $X$ is uniformly distributed on $[0,1]$, then $\mathbb{E}[X^2]=\frac{1}{3}$ but $\mathbb{E}[X]^2=\frac{1}{4}$.
+
+The type system therefore prevents the sample in
+\[
+  \kw{let}\ x=\kw{uniform}^{\E}(0,1)\ \kw{in}\ x*x
+\]
+from being assigned mode $\E$. We present these restrictions in
+\cref{sec:type-system}. Thus, the transformation defined above is
+syntactic: it performs the requested replacements, while the type system
+establishes that those replacements are semantically justified.
+
+\paragraph{Output measures.}
+For a closed expression $e$, the measure $\out e n$ describes the real
+values returned after exactly $n$ reduction steps. Deterministic reductions
+advance to the next expression, while sampling reductions integrate over
+all possible samples. Summing over all finite reduction depths gives the
+program's output measure:
+\[
+  \law e(B)=\sum_{n=0}^{\infty}\out e n(B).
+\]
+This measure need not have total mass one. Rejected executions,
+nonterminating executions, invalid distribution applications, and
+executions that do not return a real number contribute no mass. Hence
+$\law e(\mathbb{R})$ is the probability that $e$ successfully returns a
+real value.
+
+This semantics provides the basis for the results that follow. The output measures give us the mathematical object used in \cref{sec:soundness} to prove that determinizing a
+well-typed program preserves its expected returned value while reducing
+variance under the stated assumptions.
