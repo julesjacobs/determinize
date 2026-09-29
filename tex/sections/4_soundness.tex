@@ -68,10 +68,10 @@ $\Expect[|U|]=(2a)^{-1}\int_{-a}^{a}|u|\,du=a/2$.} Therefore,
   =\sum_{n=0}^{\infty}\frac14
   =\infty.
 \]
-Because each conditional distribution is symmetric, $\Expect[X^+]=\Expect[X^-]=\infty$, so the global expectation $\Expect[X]$ is undefined. This thus motivates stating our primary soundness result under fixed retained randomness before deriving global consequences when the relevant expectations exist.
+Because each conditional distribution is symmetric, $\Expect[X^+]=\Expect[X^-]=\infty$, so the global expectation $\Expect[X]$ is undefined. This thus motivates stating our primary soundness result under fixed retained randomness before deriving global soundness when the relevant expectations exist.
 \end{example}
 
-In what follows, we first formalize this characterization using traces of the retained random choices, and then derive the global consequences.
+In what follows, we first formalize this characterization using traces of the retained random choices, and then derive the global soundness.
 
 
 \subsection{Tracewise Soundness}
@@ -83,72 +83,52 @@ We begin by making precise what it means to fix the random choices retained by
 determinization.
 
 \begin{definition}[$\G$-trace\leanref{traces}]
-A \emph{$\G$-trace} is a finite sequence
+Let $\Trace$ be the space of finite sequences of $\G$-mode sampling outcomes. A \emph{$\G$-trace} is a sequence
 \[
   \tau \in \Trace,
   \qquad
   \tau ::= [] \mid (D,r)::\tau,
 \]
-recording the distribution primitive $D$ and sampled value $r$ for each
-executed $\G$-mode sampling operation along a successfully terminating
-execution.
+where each pair $(D,r)$ records the distribution primitive $D$ and sampled value $r$ of an executed $\G$-mode sampling operation along a successfully terminating execution.
 \end{definition}
 
 When the mode is clear, we simply call these \emph{traces}. Note that $\E$-mode samples do not appear in a trace: they remain random after the trace has been fixed. A trace may contain either discrete or continuous
-values, and in the latter case an individual trace may itself have probability
-zero.
+values, and in the latter case an individual trace may itself have probability zero.
 
-To reason about outputs jointly with traces, we refine the output semantics as
-shown in \cref{fig:traces}.  The measure $\joint e n$ records both the trace and
-the returned value of executions of $e$ that terminate after exactly $n$
-steps.  At an $\E$-mode sample, the semantics integrates over the sampled value
-without modifying the trace; at a $\G$-mode sample, it additionally records the
-pair $(D,r)$.  Summing over all termination depths gives a joint measure $J_e$ on $\Trace\times\Real$. Forgetting the output gives
-the trace measure $\trlaw e$; forgetting the trace gives the original output
-measure $\law e$. These are the two marginals of $J_e$.
-Only successful returns contribute mass to these measures. Here, $\trlaw e$ is the measure on traces of successfully returning executions, while $\law e$ is the usual output measure. In particular,
+Now, we refine the output semantics to jointly record the retained $\G$-choices and the returned value, as shown in \cref{fig:traces}. The measure $\joint e n$ records executions returning after exactly $n$ steps: $\E$-mode samples are integrated out, whereas each $\G$-mode sample contributes its primitive distribution $D$ and sampled value $r$ to the trace. Summing over $\joint e n$ for $n$ steps gives a joint measure $J_e$ on $\Trace\times\Real$. Intuitively, $J_e(A\times B)$ is the probability mass of successfully returning executions whose trace lies in $A$ and whose return value lies in $B$.
+
+The two marginals of $J_e$ recover the quantities of interest. Its trace marginal $\trlaw e$ therefore assigns to a measurable set $A\subseteq\Trace$ the probability mass of successful executions whose retained $\G$-choices form a trace in $A$, while its output marginal is precisely the original output measure $\law e$. Hence
 \[
-  \trlaw e(\Trace)=\law e(\Real),
+\trlaw e(\Trace)=\law e(\Real),
 \]
-so both measures have the same total mass, namely the probability that the
-program successfully returns.
+so both carry the same total mass: the probability of successful return.
 
-The joint measure also lets us speak about the output distribution after a
-trace has been fixed.  We write
+\paragraph{Conditioning on traces.}
+The joint semantics not only recovers the trace and output marginals, but also lets us characterize the program's behavior once its retained randomness is fixed. In particular, for a trace $\tau$, we write
 \[
   \law e(\,\cdot\mid\tau)
 \]
-for a conditional output distribution satisfying
+for the conditional distribution of return values given that the $\G$-trace is $\tau$. Formally, this conditional distribution satisfies
 \[
   J_e(A\times B)
   =
-  \int_A
-    \law e(B\mid\tau)\,
-    \trlaw e(d\tau).
+  \int_A \law e(B\mid\tau)\,\trlaw e(d\tau)
 \]
-This formulation is important because conditioning cannot in general be
-defined by dividing by the probability of a trace: for continuous
-$\G$-samples, every individual trace may have probability zero.
+for measurable $A\subseteq\Trace$ and $B\subseteq\Real$. This measure-theoretic formulation is necessary because a trace containing continuous $\G$-samples may itself have probability zero, so conditioning cannot in general be defined by dividing by the probability of an individual trace.
 
-When the conditional output is integrable, we write
+We write
+\[
+  \Expect[e\mid\tau]
+\]
+for the expectation of $\law e(\,\cdot\mid\tau)$, in the sense of the definition above. When finite,
 \[
   \Expect[e\mid\tau]
   =
-  \int_{\Real} r\,\law e(dr\mid\tau)
+  \int_{\Real} r\,\law e(dr\mid\tau).
 \]
-for its conditional mean.  
+Thus, $\Expect[e\mid\tau]$ is the expected return value of the original program after fixing the retained $\G$-choices in $\tau$ and averaging over the remaining $\E$-mode randomness. We can now state this conditional characterization of determinization.
 
-\begin{remark}[Domain safety\leanref{domain-safety}]
-We assume programs are \emph{domain-safe}: almost surely, every executed
-distribution has parameters in its domain and every executed division has a
-nonzero divisor.  Thus execution cannot become stuck because a primitive
-operation is undefined.  We show below that this assumption is necessary.
-\end{remark}
-
-We can now state the central semantic
-characterization of determinization.
-
-\begin{theorem}[Trace soundness\leanref{trace-soundness}]
+\begin{theorem}[Tracewise soundness\leanref{trace-soundness}]
 \label{thm:trace-soundness}
 Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe. Then $\trans e$ is
 domain-safe,
@@ -170,6 +150,13 @@ distribution of retained $\G$-randomness unchanged, while eliminating all
 remaining output randomness once that trace is fixed.  More precisely, for
 almost every trace, the transformed program returns exactly the conditional
 mean of the original program.
+
+\begin{remark}[Domain safety\leanref{domain-safety}]
+We assume programs are \emph{domain-safe}: almost surely, every executed
+distribution has parameters in its domain and every executed division has a
+nonzero divisor.  Thus execution cannot become stuck because a primitive
+operation is undefined.  We show below that this assumption is necessary.
+\end{remark}
 
 The transformed program retains only variation between the conditional means.
 The original program's output can also vary after the $\G$ trace is fixed,
@@ -199,7 +186,7 @@ expectation is defined, however, \cref{thm:trace-soundness} can be integrated
 over traces to obtain our global soundness guarantees.
 
 
-\subsection{Global Consequences}
+\subsection{Global Soundness}
 
 We now recover the usual global notions of expectation and variance from the
 tracewise characterization.
@@ -331,55 +318,6 @@ and
  \law{\trans e}(\Real)=\law e(\Real)\leanref{output-mass}.
 \]
 \end{proposition}
-
-\paragraph{Undefined global expectations.}
-The tracewise theorem is strictly more general than the expectation statement
-of \cref{thm:expectation}.  Consider a program that flips a fair coin
-until tails, then samples uniformly from $[-2^n,2^n]$, where $n$ is the
-number of preceding heads:
-\begin{lstlisting}
-let sample = rec f bound =>
-  if bernoulli[G]\(1/2) < 1 then uniform[E]\(-bound, bound)
-  else f (2 \* bound)
-in sample 1
-\end{lstlisting}
-After $n$ heads followed by tails, the remaining $\E$-sample is
-$\draw{uniform}\E{-2^n,2^n}$, whose conditional mean is zero.  Thus
-determinization returns zero on every terminating trace.
-
-Globally, however, if $N$ is the number of heads and $X$ the returned value,
-then
-\[
-  \Pr(N=n)=2^{-n-1},
-  \qquad
-  \Expect[|X|]
-  =
-  \sum_{n=0}^{\infty}
-  2^{-n-1}\frac{2^n}{2}
-  =
-  \sum_{n=0}^{\infty}\frac14
-  =
-  \infty.
-\]
-By symmetry,
-\[
-  \Expect[X^+]=\Expect[X^-]=\infty,
-\]
-so $\Expect[X]$ is undefined according to the definition above.  Hence global
-expectation preservation cannot even be stated for this program, while
-\cref{thm:trace-soundness} still characterizes exactly what determinization
-does on almost every terminating trace.
-
-This distinction also matters for continuous traces.  For example,
-\begin{lstlisting}
-let u = uniform[G]\(-1, 1) in
-uniform[E]\(0, 2) / u
-\end{lstlisting}
-has an undefined global expectation, but for almost every fixed $u$ the
-conditional mean is $1/u$, exactly the value returned by the determinized
-program.  Because every individual value of $u$ has probability zero,
-conditioning must be understood through the joint measure $J_e$, rather than
-by dividing by the probability of a particular trace.
 
 \paragraph{Why domain safety is necessary.}
 Without domain safety, determinization can change which executions

@@ -11,11 +11,24 @@
 \textbf{Refined output measures}\leanref{trace-semantics}
 \[
 \begin{aligned}
- \joint r0&=\delta_{([],r)},\\[4pt]
- \joint{C[\draw D\E{\bar v}]}{n+1}
-  &=\int_{\Real}\joint{C[r]}n\,D(\bar v)(dr),\\[4pt]
- \joint{C[\draw D\G{\bar v}]}{n+1}
-  &=\int_{\Real}(p_{D,r})_*\joint{C[r]}n\,D(\bar v)(dr).
+ \joint e0
+ &={}
+ \begin{cases}
+   \delta_{([],r)} & e=r,\ r\in\Real,\\
+   0 & \text{otherwise},
+ \end{cases}
+ &\qquad
+ \joint e{n+1}
+ &={}
+ \begin{cases}
+   \joint{C[e_2]}n
+     & e=C[e_1],\ e_1\rightsquigarrow e_2,\\[8pt]
+   \displaystyle\int_{\Real}\joint{C[r]}n\,D(\bar v)(dr)
+     & e=C[\draw D\E{\bar v}],\ \operatorname{Domain}_D(\bar v),\\[8pt]
+   \displaystyle\int_{\Real}(p_{D,r})_*\joint{C[r]}n\,D(\bar v)(dr)
+     & e=C[\draw D\G{\bar v}],\ \operatorname{Domain}_D(\bar v),\\[8pt]
+   0 & \text{otherwise}.
+ \end{cases}
 \end{aligned}
 \]
 \[
@@ -27,9 +40,9 @@
 \]
 \caption{Trace refinement of \cref{fig:semantics}.
 $\joint e n$ records the trace and output of executions returning after exactly
-$n$ steps. $(p_{D,r})_*$ prepends $(D,r)$ to each trace.
-Sampling requires $\operatorname{Domain}_D(\bar v)$.
-The deterministic-step and zero cases are unchanged, with $J$ in place of $\mu$.}
+$n$ steps. An empty trace is returned at a real value, an $\E$-sample is integrated out without changing the trace, while $(p_{D,r})_*$ prepends $(D,r)$ to each trace.
+Sampling requires $\operatorname{Domain}_D(\bar v)$. Summing over $n$ gives $J_e$, whose trace and output
+marginals are $\trlaw e$ and $\law e$, respectively.}
 \label{fig:traces}
 \Description{Traces record primitive names and values of G draws. The refined
 semantics returns an empty trace at a real value, averages over E samples without
