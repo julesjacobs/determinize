@@ -82,8 +82,14 @@ count="$(grep -c '"Determinize\.Theorems\.' "$config")"
 echo "Checking $count theorems of Determinize/Challenge.lean against Determinize/Theorems.lean"
 
 # systemd-run keeps the sandbox from reaching Unix sockets, as comparator's README requires until
-# landrun can restrict them itself (Linux 7.1).
-systemd-run --user --quiet --wait --pipe --collect \
+# landrun can restrict them itself (Linux 7.1). It runs as the user's own service manager, or, where
+# there is none (CI runners), as the system's through sudo.
+if systemctl --user show-environment >/dev/null 2>&1; then
+  manager=(systemd-run --user)
+else
+  manager=(sudo --non-interactive systemd-run --uid="$(id -u)" --gid="$(id -g)" -E HOME="$HOME")
+fi
+"${manager[@]}" --quiet --wait --pipe --collect \
   --property=RestrictAddressFamilies=~AF_UNIX \
   --working-directory="$LEAN" \
   -E PATH="$PATH" -E COMPARATOR_LANDRUN="$landrun" -E COMPARATOR_LEAN4EXPORT="$lean4export" \

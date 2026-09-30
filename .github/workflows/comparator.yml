@@ -1,0 +1,43 @@
+# Check the public Lean theorems with Lean FRO's comparator on a fresh runner (tools/comparator.sh).
+# Comparator assumes the proofs have not been compiled before it runs, which only a fresh
+# checkout guarantees; fetching Mathlib's prebuilt cache first is fine.
+name: Comparator
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: comparator-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  comparator:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      # Mathlib's cache, the Lean toolchain and the project's build need about 12 GB.
+      # jlumbroso/free-disk-space v2.0.0
+      - uses: jlumbroso/free-disk-space@ceedf095f4ec1a097402bc6bd80831f2e1a6fde6
+        with:
+          tool-cache: true
+
+      # actions/checkout v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      # cachix/install-nix-action v31.11.1
+      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24
+
+      - name: Fetch Mathlib's prebuilt cache
+        working-directory: lean
+        run: nix develop ..#lean --command lake exe cache get
+
+      - name: Run comparator
+        run: nix develop .#lean --command comparator-check
