@@ -232,6 +232,13 @@ suite = "typing"
 outcome = "accept"
 
 [[case]]
+file = "examples/paper/gauss-random-walk.det"
+suite = "typing"
+outcome = "accept"
+expected_type = "[(float[E] * float[E])]"
+affinities = ["E"]
+
+[[case]]
 file = "examples/symbolic/nested-uniform.det"
 suite = "typing"
 outcome = "accept"
