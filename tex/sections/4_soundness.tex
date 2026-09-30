@@ -95,96 +95,65 @@ where each pair $(D,r)$ records the distribution primitive $D$ and sampled value
 When the mode is clear, we simply call these \emph{traces}. Note that $\E$-mode samples do not appear in a trace: they remain random after the trace has been fixed. A trace may contain either discrete or continuous
 values, and in the latter case an individual trace may itself have probability zero.
 
-Now, we refine the output semantics to jointly record the retained $\G$-choices and the returned value, as shown in \cref{fig:traces}. The measure $\joint e n$ records executions returning after exactly $n$ steps: $\E$-mode samples are integrated out, whereas each $\G$-mode sample contributes its primitive distribution $D$ and sampled value $r$ to the trace. Summing over $\joint e n$ for $n$ steps gives a joint measure $J_e$ on $\Trace\times\Real$. Intuitively, $J_e(A\times B)$ is the probability mass of successfully returning executions whose trace lies in $A$ and whose return value lies in $B$.
+Now, we refine the output semantics to jointly record the trace and the returned value, as shown in \cref{fig:traces}. The measure $\joint e n$ records executions returning after exactly $n$ steps: $\E$-mode samples are integrated out, whereas each $\G$-mode sample contributes its primitive distribution $D$ and sampled value $r$ to the trace $\tau$. Summing over $\joint e n$ for $n$ steps gives a joint big-step measure $J_e$ on $\Trace\times\Real$. Intuitively, $J_e(A\times B)$ is the probability mass of successfully returning executions whose trace lies in $A$ and whose return value lies in $B$.
 
-The two marginals of $J_e$ recover the quantities of interest. Its trace marginal $\trlaw e$ therefore assigns to a measurable set $A\subseteq\Trace$ the probability mass of successful executions whose retained $\G$-choices form a trace in $A$, while its output marginal is precisely the original output measure $\law e$. Hence
+The two marginals of $J_e$ recover our quantities of interest. For each measurable $A\subseteq\Trace$, its trace marginal $\trlaw e(A)$ is the probability mass of successful executions whose trace lies in $A$. Similarly, for each measurable $B\subseteq\Real$, its output marginal $\law e(B)$ is the probability mass of successful executions whose returned value lies in $B$. Hence,
 \[
 \trlaw e(\Trace)=\law e(\Real),
 \]
-so both carry the same total mass: the probability of successful return.
+so both carry the same total mass: the probability of successful return. 
 
-\paragraph{Conditioning on traces.}
-The joint semantics not only recovers the trace and output marginals, but also lets us characterize the program's behavior once its retained randomness is fixed. In particular, for a trace $\tau$, we write
+\begin{lemma}[Trace preservation]
+\label{lem:trace-preservation}
+Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe. Then $\trans e$ is
+domain-safe and
+\[
+\trlaw{\trans e}=\trlaw e.
+\]
+\end{lemma}
+
+Note that by construction, $J_e$ contains no output pair for a rejected or
+diverging execution, and $\law e$ likewise records only successfully returned
+values. Consequently, $\trlaw e$ is a subprobability measure over traces of
+successfully returning executions; any $\G$-samples made by an execution that
+fails to return contribute no mass.
+
+\paragraph{Conditioning on traces.} 
+The joint semantics not only recovers the trace and output marginals. Conditioning the joint big-step measure \(J_e\) on its trace component gives the output distribution after a trace has been fixed. We write
 \[
   \law e(\,\cdot\mid\tau)
+  \quad\text{such that}\quad
+  J_e(A\times B)=\int_A\law e(B\mid\tau)\,\trlaw e(d\tau).
 \]
-for the conditional distribution of return values given that the $\G$-trace is $\tau$. Formally, this conditional distribution satisfies
+for this conditional output distribution, for measurable $A\subseteq\Trace$ and $B\subseteq\Real$. This measure-theoretic formulation is necessary because a trace containing continuous $\G$-samples may itself have probability zero, so conditioning cannot in general be defined by dividing by the probability of an individual trace. We write 
 \[
-  J_e(A\times B)
-  =
-  \int_A \law e(B\mid\tau)\,\trlaw e(d\tau)
+  \Expect[e\mid\tau] :=
+  \int_{\Real}r^+\,\law e(dr\mid\tau)
+  -
+  \int_{\Real}r^-\,\law e(dr\mid\tau).
 \]
-for measurable $A\subseteq\Trace$ and $B\subseteq\Real$. This measure-theoretic formulation is necessary because a trace containing continuous $\G$-samples may itself have probability zero, so conditioning cannot in general be defined by dividing by the probability of an individual trace.
-
-We write
-\[
-  \Expect[e\mid\tau]
-\]
-for the expectation of $\law e(\,\cdot\mid\tau)$, in the sense of the definition above. When finite,
-\[
-  \Expect[e\mid\tau]
-  =
-  \int_{\Real} r\,\law e(dr\mid\tau).
-\]
-Thus, $\Expect[e\mid\tau]$ is the expected return value of the original program after fixing the retained $\G$-choices in $\tau$ and averaging over the remaining $\E$-mode randomness. We can now state this conditional characterization of determinization.
+for the expectation of $\law e(\,\cdot\mid\tau)$, which is the expected return value of the original program after fixing a trace $\tau$ and averaging over the remaining $\E$-mode randomness. We can now state the conditional characterization of determinization.
 
 \begin{theorem}[Tracewise soundness\leanref{trace-soundness}]
 \label{thm:trace-soundness}
-Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe. Then $\trans e$ is
-domain-safe,
+Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe. For
+$\trlaw e$-almost every trace $\tau$,
 \[
-  \trlaw{\trans e}=\trlaw e,
-\]
-and, for $\trlaw e$-almost every trace $\tau$,
-\[
-  \int_{\Real}|r|\,\law e(dr\mid\tau)<\infty,
-  \qquad
   \law{\trans e}(\,\cdot\mid\tau)
   =
   \delta_{\Expect[e\mid\tau]}.
 \]
-\end{theorem}
-
-The theorem separates the two effects of determinization.  It leaves the
-distribution of retained $\G$-randomness unchanged, while eliminating all
-remaining output randomness once that trace is fixed.  More precisely, for
-almost every trace, the transformed program returns exactly the conditional
-mean of the original program.
-
-\begin{remark}[Domain safety\leanref{domain-safety}]
-We assume programs are \emph{domain-safe}: almost surely, every executed
-distribution has parameters in its domain and every executed division has a
-nonzero divisor.  Thus execution cannot become stuck because a primitive
-operation is undefined.  We show below that this assumption is necessary.
-\end{remark}
-
-The transformed program retains only variation between the conditional means.
-The original program's output can also vary after the $\G$ trace is fixed,
-due to the $\E$-samples.
-
-\begin{theorem}[Trace variance decomposition\leanref{trace-variance}]
-\label{thm:trace-variance}
-Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe. If
-$q_e=\law e(\Real)>0$ and $\int_{\Real}r^2\,\law e(dr)<\infty$, then
+In particular,
 \[
- \underbrace{\Var_{\mathrm{ret}}[e]}_{\text{Original variance}}
- =\underbrace{\Var_{\mathrm{ret}}[\trans e]}_{\text{Variance between traces}}
-  +\underbrace{\Expect_{\tau\sim\trlaw e/q_e}
-    \!\left[\Var\bigl(\law e(\,\cdot\mid\tau)\bigr)\right]}_{\text{Average variance within a trace}}.
+  \Expect[e\mid\tau],\ \Expect[\trans e\mid\tau]\in\Real,
+  \qquad
+  \Expect[\trans e\mid\tau]=\Expect[e\mid\tau].
 \]
 \end{theorem}
 
-The last term averages the original program's variance after fixing a trace, using
-$\trlaw e/q_e$ to condition on returning. It is nonnegative and gives exactly
-the variance removed by determinization.
-
 This tracewise statement does not require the program to have a global
-expectation.  The conditional mean may be finite for almost every trace even
-when averaging those means over all traces does not produce a well-defined
-global expectation.  We return to such examples below.  When a global
-expectation is defined, however, \cref{thm:trace-soundness} can be integrated
+expectation. It states that for all traces except a set of measure zero, the transformed program returns the average output of the original program under some fixed trace. When a global expectation is defined, however, \cref{thm:trace-soundness} can be integrated
 over traces to obtain our global soundness guarantees.
-
 
 \subsection{Global Soundness}
 
@@ -269,6 +238,22 @@ over the same distribution of traces.  The variance statement is the
 corresponding law of total variance.  Determinization preserves variation
 between different $\G$-traces and removes exactly the variation that remains
 after a trace has been fixed.
+
+\begin{theorem}[Trace variance decomposition\leanref{trace-variance}]
+\label{thm:trace-variance}
+Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe. If
+$q_e=\law e(\Real)>0$ and $\int_{\Real}r^2\,\law e(dr)<\infty$, then
+\[
+ \underbrace{\Var_{\mathrm{ret}}[e]}_{\text{Original variance}}
+ =\underbrace{\Var_{\mathrm{ret}}[\trans e]}_{\text{Variance between traces}}
+  +\underbrace{\Expect_{\tau\sim\trlaw e/q_e}
+    \!\left[\Var\bigl(\law e(\,\cdot\mid\tau)\bigr)\right]}_{\text{Average variance within a trace}}.
+\]
+\end{theorem}
+
+The last term averages the original program's variance after fixing a trace, using
+$\trlaw e/q_e$ to condition on returning. It is nonnegative and gives exactly
+the variance removed by determinization.
 
 \begin{theorem}[Variance non-increase\leanref{variance-non-increase}]
 \label{thm:variance}

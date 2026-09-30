@@ -18,7 +18,7 @@ Before presenting the individual experiments, we introduce a useful distinction.
 
 All experiments have been run on a MacBook Pro M3 with 16GB RAM. Together with our benchmarks, our implementation is publicaly available at \href{https://github.com/[anonymized]}{https://github.com/[anonymized]}.
 
-\subsection{RQ1: Enabling Exact Expectation Analysis}
+\subsection{RQ1: Enabling Exact Expectations}
 
 We first ask whether determinization can make exact expectation analysis possible for programs with continuous or infinite-state behavior. We compare our approach against POLAR~\cite{moosbrugger2022moment} (which computes exact moments by deriving and solving recurrences for probabilistic loops) and $\lambda$PSI~\cite{gehr2020lpsi} (which performs symbolic exact inference; we use its \texttt{--expectation} mode) in both coverage and runtime. After determinization, each benchmark in Table~\ref{tab:finite-after-determinization} has only finite-state probabilistic behavior, even when some discrete sampling remains. We therefore translate the transformed program into a finite discrete-time Markov chain and use Storm~\cite{hensel2022storm} to compute its return value exactly as an expected-reward query.
 

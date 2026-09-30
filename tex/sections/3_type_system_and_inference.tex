@@ -43,3 +43,10 @@ $e'$ of $e$. Otherwise, inference fails.
 
 \input{figures/inference}
 \input{figures/inference-solving}
+
+\begin{remark}[Domain safety\leanref{domain-safety}]
+We assume programs are \emph{domain-safe}: almost surely, every executed
+distribution has parameters in its domain and every executed division has a
+nonzero divisor.  Thus execution cannot become stuck because a primitive
+operation is undefined.  We show below that this assumption is necessary.
+\end{remark}
