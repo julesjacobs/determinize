@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Repository build, test, and theorem-axiom checks.
 #
-#   check.sh [--quiet] AREA...      AREA in: sim bundle tex lean det
+#   check.sh [--quiet] AREA...      AREA in: sim bundle tex lean comparator det
 #   check.sh --changed              pick areas from `git status` (what the Stop hook does)
-#   check.sh --all                  builds, full corpus/certificates, simulator, bundle and paper
+#   check.sh --all                  builds, comparator, full corpus/certificates, simulator, bundle and paper
 #
 # Exit 0 = all selected checks passed, 1 = at least one failed. A human-readable
 # summary goes to stdout; the last ~40 lines of any failing tool go there too.
@@ -18,7 +18,7 @@ quiet=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --quiet) quiet=1 ;;
-    --all) areas+=(lean det sim bundle tex) ;;
+    --all) areas+=(lean comparator det sim bundle tex) ;;
     --changed)
       changed="$(git status --porcelain --untracked-files=all | cut -c4-)"
       grep -qE '^(check\.sh|tools/dev-shell\.sh)$' <<<"$changed" && areas+=(lean det sim bundle tex)
@@ -27,7 +27,7 @@ while [[ $# -gt 0 ]]; do
       grep -qE '^lean/.*\.lean$|^lean/(lakefile\.toml|lean-toolchain|lake-manifest\.json)$' <<<"$changed" && areas+=(lean)
       grep -qE '^tests/|^examples/|^tools/|^(test|run)\.sh$|^lean/test\.sh$' <<<"$changed" && areas+=(det)
       ;;
-    sim|bundle|tex|lean|det) areas+=("$1") ;;
+    sim|bundle|tex|lean|comparator|det) areas+=("$1") ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
   shift
@@ -89,6 +89,18 @@ for area in "${areas[@]}"; do
         if [[ $? -eq 0 ]]; then
           report lean "lake build --wfail OK ($(grep -oE '[0-9]+ Spec statements proved by [0-9]+ theorems' <<<"$out"); $(grep -oE '[0-9]+ Spec modules import no Proof module' <<<"$out"))"
         else fail=1; report lean "lake build --wfail FAILED" "$(grep -vE '^(✔|⚠) \[' <<<"$out" | tail_of)"; fi
+      fi
+      ;;
+    comparator)
+      # Lean FRO's comparator checks the theorems of Determinize/Challenge.lean against
+      # Theorems.lean and replays their proofs through the kernel (tools/comparator.sh).
+      if [[ ! -d lean/.lake/packages/mathlib/.lake/build ]]; then
+        fail=1; report comparator "Mathlib cache not fetched: run 'cd lean && lake exe cache get' first"
+      else
+        out="$(in_shell lean comparator-check 2>&1)"
+        if [[ $? -eq 0 ]] && grep -q '^Your solution is okay!' <<<"$out"; then
+          report comparator "OK ($(grep -oE 'Checking [0-9]+ theorems' <<<"$out" | cut -d' ' -f2) theorems match Challenge.lean; Lean kernel accepts)"
+        else fail=1; report comparator "FAILED" "$(grep -vE "declaration uses .sorry.|^(✔|⚠|ℹ) \[" <<<"$out" | tail_of)"; fi
       fi
       ;;
     det)

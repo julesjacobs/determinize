@@ -41,8 +41,9 @@ From the repository root:
 `run.sh` builds and invokes the Lean CLI; arguments and relative paths are passed
 through. `test.sh` runs the full Lean test entry point, including the shared corpus
 and independent certificates. It accepts `--all` and `--statistical`.
-`check.sh --all` additionally checks theorem axioms, simulator tests, bundle freshness,
-and the paper build. Select individual areas with `./check.sh lean tex`, or use
+`check.sh --all` additionally checks theorem axioms, runs Lean FRO's comparator on the
+public theorems (`lean/Determinize/Challenge.lean`; Linux only), simulator tests, bundle
+freshness, and the paper build. Select individual areas with `./check.sh lean tex`, or use
 `./check.sh --changed` for areas affected by uncommitted changes. The scripts use
 tools on `PATH` first; Nix is optional.
 

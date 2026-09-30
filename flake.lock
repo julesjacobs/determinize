@@ -1,5 +1,22 @@
 {
   "nodes": {
+    "comparator": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1786344461,
+        "narHash": "sha256-ncjwg10TbxMn9eCrz5ruJ+jEWFTsL+K1S6ABMJGV0q0=",
+        "owner": "leanprover",
+        "repo": "comparator",
+        "rev": "3927ad383f208ae977c340a91c48ac9b497d2097",
+        "type": "github"
+      },
+      "original": {
+        "owner": "leanprover",
+        "ref": "v4.33.0",
+        "repo": "comparator",
+        "type": "github"
+      }
+    },
     "flake-parts": {
       "inputs": {
         "nixpkgs-lib": [
@@ -35,6 +52,23 @@
         "type": "github"
       }
     },
+    "lean4export": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1786343316,
+        "narHash": "sha256-7yxHyiUlXFVx4xBiSmtoKkh7FSgQrR5SXFgGj06yaaw=",
+        "owner": "leanprover",
+        "repo": "lean4export",
+        "rev": "15f6055e299ad5b89345e533cc2192f4cc00f659",
+        "type": "github"
+      },
+      "original": {
+        "owner": "leanprover",
+        "ref": "v4.33.0",
+        "repo": "lean4export",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1788881743,
@@ -53,8 +87,10 @@
     },
     "root": {
       "inputs": {
+        "comparator": "comparator",
         "flake-parts": "flake-parts",
         "import-tree": "import-tree",
+        "lean4export": "lean4export",
         "nixpkgs": "nixpkgs"
       }
     }
