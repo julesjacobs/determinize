@@ -71,8 +71,7 @@ $\Expect[|U|]=(2a)^{-1}\int_{-a}^{a}|u|\,du=a/2$.} Therefore,
 Because each conditional distribution is symmetric, $\Expect[X^+]=\Expect[X^-]=\infty$, so the global expectation $\Expect[X]$ is undefined. This thus motivates stating our primary soundness result under fixed retained randomness before deriving global soundness when the relevant expectations exist.
 \end{example}
 
-In what follows, we first formalize this characterization using traces of the retained random choices, and then derive the global soundness.
-
+In what follows, we first formalize this characterization using traces of the retained random choices, and then derive the global soundness. We state the main soundness theorems throughout this section, leaving the proof strategies to~\Cref{sec:proof} and the full proofs to~\Cref{sec:appendix}.
 
 \subsection{Tracewise Soundness}
 \label{sec:traces}
@@ -95,7 +94,16 @@ where each pair $(D,r)$ records the distribution primitive $D$ and sampled value
 When the mode is clear, we simply call these \emph{traces}. Note that $\E$-mode samples do not appear in a trace: they remain random after the trace has been fixed. A trace may contain either discrete or continuous
 values, and in the latter case an individual trace may itself have probability zero.
 
-Now, we refine the output semantics to jointly record the trace and the returned value, as shown in \cref{fig:traces}. The measure $\joint e n$ records executions returning after exactly $n$ steps: $\E$-mode samples are integrated out, whereas each $\G$-mode sample contributes its primitive distribution $D$ and sampled value $r$ to the trace $\tau$. Summing over $\joint e n$ for $n$ steps gives a joint big-step measure $J_e$ on $\Trace\times\Real$. Intuitively, $J_e(A\times B)$ is the probability mass of successfully returning executions whose trace lies in $A$ and whose return value lies in $B$.
+Now, we refine the output semantics to jointly record the trace and the
+returned value, as shown in \cref{fig:traces}. Like the original output
+measure $\law e$, this refined semantics records only executions that successfully return a real value and is therefore a subprobability measure; rejected
+or diverging executions contribute no output pair. For each $n$, the measure $\joint e n$ records executions returning after exactly $n$ steps:
+$\E$-mode samples are integrated out, whereas each $\G$-mode sample contributes
+its distribution primitive $D$ and sampled value $r$ to the trace $\tau$.
+Summing these measures over all $n$ steps gives the joint big-step
+subprobability measure $J_e$ on $\Trace\times\Real$. Intuitively, $J_e(A\times B)$ is the probability mass
+of successfully returning executions whose trace lies in $A$ and whose
+returned value lies in $B$.
 
 The two marginals of $J_e$ recover our quantities of interest. For each measurable $A\subseteq\Trace$, its trace marginal $\trlaw e(A)$ is the probability mass of successful executions whose trace lies in $A$. Similarly, for each measurable $B\subseteq\Real$, its output marginal $\law e(B)$ is the probability mass of successful executions whose returned value lies in $B$. Hence,
 \[
@@ -112,27 +120,21 @@ domain-safe and
 \]
 \end{lemma}
 
-Note that by construction, $J_e$ contains no output pair for a rejected or
-diverging execution, and $\law e$ likewise records only successfully returned
-values. Consequently, $\trlaw e$ is a subprobability measure over traces of
-successfully returning executions; any $\G$-samples made by an execution that
-fails to return contribute no mass.
-
 \paragraph{Conditioning on traces.} 
 The joint semantics not only recovers the trace and output marginals. Conditioning the joint big-step measure \(J_e\) on its trace component gives the output distribution after a trace has been fixed. We write
 \[
   \law e(\,\cdot\mid\tau)
   \quad\text{such that}\quad
-  J_e(A\times B)=\int_A\law e(B\mid\tau)\,\trlaw e(d\tau).
+  J_e(A\times B)=\int_A\law e(B\mid\tau)\,\trlaw e(d\tau)
 \]
 for this conditional output distribution, for measurable $A\subseteq\Trace$ and $B\subseteq\Real$. This measure-theoretic formulation is necessary because a trace containing continuous $\G$-samples may itself have probability zero, so conditioning cannot in general be defined by dividing by the probability of an individual trace. We write 
 \[
   \Expect[e\mid\tau] :=
   \int_{\Real}r^+\,\law e(dr\mid\tau)
   -
-  \int_{\Real}r^-\,\law e(dr\mid\tau).
+  \int_{\Real}r^-\,\law e(dr\mid\tau)
 \]
-for the expectation of $\law e(\,\cdot\mid\tau)$, which is the expected return value of the original program after fixing a trace $\tau$ and averaging over the remaining $\E$-mode randomness. We can now state the conditional characterization of determinization.
+for the expectation of $\law e(\,\cdot\mid\tau)$, which is the expected return value of the original program after fixing a trace $\tau$ and averaging over the remaining $\E$-mode randomness. We can now state tracewise soundness.
 
 \begin{theorem}[Tracewise soundness\leanref{trace-soundness}]
 \label{thm:trace-soundness}
@@ -151,122 +153,87 @@ In particular,
 \]
 \end{theorem}
 
-This tracewise statement does not require the program to have a global
+This statement does not require the program to have a global
 expectation. It states that for all traces except a set of measure zero, the transformed program returns the average output of the original program under some fixed trace. When a global expectation is defined, however, \cref{thm:trace-soundness} can be integrated
-over traces to obtain our global soundness guarantees.
+over traces to obtain our global soundness guarantees, which we discuss next.
 
 \subsection{Global Soundness}
 
-We now recover the usual global notions of expectation and variance from the
+We now recover the global notions of expectation and variance from the
 tracewise characterization.
 
-Let
+\paragraph{Conditioning on successful return.}
+Recall that $\law e$ and $\trlaw e$ are subprobability measures, since diverging or rejected executions contribute no returned value. Thus, let
 \[
-  q_e=\law e(\Real)
+q_e := \law e(\Real)=\trlaw e(\Trace)
 \]
-denote the probability that $e$ successfully returns. When $q_e>0$, we consider
-expectation and variance with respect to the output distribution conditioned on
-successful return.
+denote the probability that $e$ successfully returns. When $q_e>0$, we consider expectations and variances conditioned on successful return. In particular,
+\begin{gather*}
+\Expect_{\mathrm{ret}}[e]
+:=
+\frac{1}{q_e}
+\left(
+  \int_{\Real} r^+\,\law e(dr)
+  -
+  \int_{\Real} r^-\,\law e(dr)
+\right)
+=
+\frac{1}{q_e}
+\int_{\Trace}
+\Expect[e\mid\tau]\,\trlaw e(d\tau),
+\\
+\Var_{\mathrm{ret}}[e]
+:=
+\frac{1}{q_e}
+\int_{\Real}
+\bigl(r-\Expect_{\mathrm{ret}}[e]\bigr)^2
+\,\law e(dr).
+\end{gather*}
 
-A global expectation, however, need not always be well defined: the positive
-and negative parts of the output may both have infinite expectation. We
-therefore make precise when the expected return value is defined.
+Note that such a normalization factor was not needed in~\Cref{sec:traces} since $\trlaw e$ records only traces of successfully returning executions, so $\law e(\Real\mid\tau) = 1$ for a fixed trace $\tau$. Trace preservation immediately implies that determinization preserves the probability of successful return, meaning that the original and transformed programs are conditioned on the same returning mass:
+\[
+q_{\trans e}
+=
+\trlaw{\trans e}(\Trace)
+=
+\trlaw e(\Trace)
+=
+q_e.
+\leanref{output-mass}
+\]
 
-\begin{definition}[Defined expectation\leanref{expectation-defined}]
-Let
-\[
-  r^+=\max(r,0),
-  \qquad
-  r^-=\max(-r,0).
-\]
-For $q_e>0$, define
-\[
-  \Expect_{\mathrm{ret}}[e]
-  :=
-  \frac{1}{q_e}
-  \left(
-    \int_{\Real} r^+\,\law e(dr)
-    -
-    \int_{\Real} r^-\,\law e(dr)
-  \right)
-\]
-whenever the two integrals are not both infinite. Thus the expectation may be
-finite, $+\infty$, or $-\infty$; it is undefined only in the
-$\infty-\infty$ case. It is finite exactly when
-\[
-  \int_{\Real}|r|\,\law e(dr)<\infty.
-\]
-\end{definition}
-
-When the second moment is finite, we define the return-conditioned variance in
-the usual way:
-\[
-  \Var_{\mathrm{ret}}[e]
-  =
-  \frac1{q_e}\int_{\Real}
-  \bigl(r-\Expect_{\mathrm{ret}}[e]\bigr)^2\,\law e(dr).
-\]
-This measures the variability of returned values around their conditional
-mean, among executions that successfully return. With these notions in place, trace soundness yields the corresponding global
-guarantees.
+We can now lift the tracewise characterization to the global expected return. Since determinization preserves the trace distribution and replaces each conditional output distribution by its mean, averaging over traces preserves expectation. However, the requirement that the global expectation be well-defined is essential. Tracewise soundness guarantees a finite conditional mean for almost every fixed trace, but averaging these means over all traces need not yield a well-defined global expectation. Formally, we can state:
 
 \begin{theorem}[Expectation preservation\leanref{expectation-preservation}]
 \label{thm:expectation}
-Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe.
-
-First, determinization preserves the probability of successful return:
+Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe. If $q_e>0$ and
+$\Expect_{\mathrm{ret}}[e]$ is well-defined in the extended reals, then
+$\Expect_{\mathrm{ret}}[\trans e]$ is also well-defined and
 \[
-  \law{\trans e}(\Real)
-  =
-  \law e(\Real).
-  \leanref{output-mass}
-\]
-
-If $q_e>0$ and $\Expect_{\mathrm{ret}}[e]$ is defined, then the transformed
-program also has a defined expectation and
-\[
-  \Expect_{\mathrm{ret}}[\trans e]
-  =
-  \Expect_{\mathrm{ret}}[e].
-  \leanref{expectation-preservation}
+\Expect_{\mathrm{ret}}[\trans e]
+=
+\Expect_{\mathrm{ret}}[e].
 \]
 \end{theorem}
 
-The expectation statement is the law of total expectation: determinization
-replaces each conditional output distribution by its mean and then averages
-over the same distribution of traces.  The variance statement is the
-corresponding law of total variance.  Determinization preserves variation
-between different $\G$-traces and removes exactly the variation that remains
-after a trace has been fixed.
-
-\begin{theorem}[Trace variance decomposition\leanref{trace-variance}]
-\label{thm:trace-variance}
-Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe. If
-$q_e=\law e(\Real)>0$ and $\int_{\Real}r^2\,\law e(dr)<\infty$, then
-\[
- \underbrace{\Var_{\mathrm{ret}}[e]}_{\text{Original variance}}
- =\underbrace{\Var_{\mathrm{ret}}[\trans e]}_{\text{Variance between traces}}
-  +\underbrace{\Expect_{\tau\sim\trlaw e/q_e}
-    \!\left[\Var\bigl(\law e(\,\cdot\mid\tau)\bigr)\right]}_{\text{Average variance within a trace}}.
-\]
-\end{theorem}
-
-The last term averages the original program's variance after fixing a trace, using
-$\trlaw e/q_e$ to condition on returning. It is nonnegative and gives exactly
-the variance removed by determinization.
+Beyond preserving the global expectation, determinization also removes the variability due to $\E$-mode sampling within each trace, while retaining the variability induced by the $\G$-trace. It therefore cannot increase the variance of returned values. Consequently, it can only decrease the variance of returned values.
 
 \begin{theorem}[Variance non-increase\leanref{variance-non-increase}]
 \label{thm:variance}
 Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe. If
-$\law e(\Real)>0$ and $\int_{\Real}r^2\,\law e(dr)<\infty$, then $\trans e$
-also has positive probability of returning and a finite second moment, and
+$q_e>0$ and $\int_{\Real} r^2\,\law e(dr)<\infty$,
+then $\trans e$ has finite second moment and
 \[
- \Var_{\mathrm{ret}}[\trans e]\le\Var_{\mathrm{ret}}[e].
+\Var_{\mathrm{ret}}[\trans e]
+\leq
+\Var_{\mathrm{ret}}[e].
 \]
 \end{theorem}
 
-\todo[inline]{Jensen's inequality: Maybe we don't need this}
-\begin{theorem}[Convex-function inequality]
+This reduction in variance is one instance of a more general consequence of replacing each conditional distribution by its mean decreases every nonnegative convex function of the return value. In particular, when the second moment is finite, taking
+$\varphi(r)=(r-\Expect_{\mathrm{ret}}[e])^2$ and using expectation preservation recovers the variance non-increase above. This follows directly from Jensen's inequality applied tracewise. 
+
+\begin{theorem}[Convex function inequality]
 \label{thm:convex-function}
 Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe. Then, for every
 nonnegative convex function $\varphi:\Real\to\Real$,
@@ -281,16 +248,9 @@ where both sides are understood as nonnegative extended integrals and may
 therefore equal $+\infty$.
 \end{theorem}
 
-\paragraph{Divergence and rejection.}
-Rejection, as in a failed $\kw{observe}$, contributes no output; we model
-$\kw{reject}$ as an infinite loop.  Let $d_e$ denote the probability of
+Finally, we end with the following point regarding how determinization affects the probabilities of successful return, rejection, and divergence. The results above concern the distribution of successfully returned values, but determinization also preserves the probability of returning at all. Let $d_e$ denote the probability of
 divergence\leanref{divergence}, including rejection.  Under domain safety,
-executions cannot lose probability mass by getting stuck, and hence
-\[
-  \law e(\Real)+d_e=1.
-  \leanref{return-or-diverge}
-\]
-Together with preservation of output mass, this implies that determinization
+executions cannot lose probability mass by getting stuck. Together with preservation of output mass, this implies that determinization
 also preserves the total probability of divergence and rejection.
 
 \begin{proposition}[Probability preservation]
@@ -303,30 +263,3 @@ and
  \law{\trans e}(\Real)=\law e(\Real)\leanref{output-mass}.
 \]
 \end{proposition}
-
-\paragraph{Why domain safety is necessary.}
-Without domain safety, determinization can change which executions
-successfully return.  For example,
-\begin{lstlisting}
-let u = gaussian[E]\(0, 1) in
-uniform[E]\(0, u)
-\end{lstlisting}
-is not domain-safe: executions with $u<0$ become stuck.  Conditioning on
-successful return therefore implicitly conditions $u$ to be positive, giving
-\[
-  \Expect_{\mathrm{ret}}[e]
-  =
-  \frac{1}{\sqrt{2\pi}}.
-\]
-Determinization instead sets $u$ to its unconditional mean $0$, yielding
-\[
-  \Expect_{\mathrm{ret}}[\trans e]=0.
-\]
-Thus the domain-safety assumption prevents determinization from changing the
-set of semantically valid executions.
-
-The next section proves these results by introducing a symbolic semantics that
-delays $\E$-mode samples while executing $\G$-mode samples normally.  The key
-argument shows that symbolic execution commutes both with sampling the delayed
-variables and with replacing them by their means; trace soundness and the
-global results above then follow.
