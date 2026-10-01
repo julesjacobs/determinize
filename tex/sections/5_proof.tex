@@ -2,6 +2,8 @@
 \section{Proof Strategy}
 \label{sec:proof}
 
+\todo[inline]{Add Lean references}
+
 To motivate our proof strategy, first observe that at an $E$-mode distribution, the original program samples a value, whereas the transformed program computes the mean of the distribution. The resulting programs therefore have different output distributions. Thus, our proof relates both programs to a common symbolic semantics, after which two interpretations recover the source and determinized programs. Our proof thus proceeds in three stages:
 
 \begin{enumerate}
@@ -128,7 +130,7 @@ the unique empty valuation recovers the original expression:
   e.
 \]
 
-\subsection{Interpretations}
+\subsection{Two Interpretations of the Symbolic Semantics}
 \label{sec:symbolic-interpretations}
 
 A symbolic state admits two interpretations: the
@@ -198,18 +200,45 @@ $\E$-mode draw, extending $\sigma$ preserves the actual joint sampling law,
 while its sequential mean agrees with the corresponding $\M$-mode step in
 the transformed program.
 
-\begin{lemma}[One-step commuting]
-\label{lem:one-step-commuting}
-Let $s$ be a well-typed, domain-safe symbolic configuration. If
-$s\xrightarrow{}_{\mathrm{sym}}s'$, then, for every $n\in\Nat$,
+\begin{lemma}[Interpretations commute with a symbolic step]
+\label{lem:interpretation-commuting}
+Let $s$ be a well-typed, domain-safe symbolic state. If $s\xrightarrow{}_{\mathrm{sym}}s'$, then, for every $n\in\Nat$,
 \[
   \mathsf{Act}_{n+1}(s)=\mathsf{Act}_n(s'),
   \qquad
   \mathsf{Exp}_{n+1}(s)=\mathsf{Exp}_n(s').
 \]
-For a $\G$-mode step, both sides instead integrate their depth-$n$
-interpretation of the continuation over the same distribution and prepend
-the sampled event to its trace.
+For a $\G$-mode state $s=
+  \bigl(
+    \sigma
+    \mid
+    \widehat C[\draw D\G{\bar r}]
+    :\rho
+  \bigr)$,
+every measurable $A\subseteq\Trace$ and $B\subseteq\Real$ satisfy
+\[
+\begin{aligned}
+\mathsf{Act}_{n+1}(s)(A\times B)
+&=
+\int_{\Real}
+  \mathsf{Act}_n
+  \bigl(\sigma\mid\widehat C[r]:\rho\bigr)
+  \bigl(
+    \{(\tau,x)\mid (D,r)::\tau\in A,\ x\in B\}
+  \bigr)
+  \,D(\bar r)(dr),
+\\
+\mathsf{Exp}_{n+1}(s)(A\times B)
+&=
+\int_{\Real}
+  \mathsf{Exp}_n
+  \bigl(\sigma\mid\widehat C[r]:\rho\bigr)
+  \bigl(
+    \{(\tau,x)\mid (D,r)::\tau\in A,\ x\in B\}
+  \bigr)
+  \,D(\bar r)(dr).
+\end{aligned}
+\]
 \end{lemma}
 
 To connect symbolic configurations to ordinary programs, define
@@ -234,8 +263,8 @@ Suppose $\vdash e:\tyR\E$ and $e$ is closed. Then, for every $n\in\Nat$,
 \end{theorem}
 
 
-\begin{theorem}[Exact-depth symbolic soundness]
-\label{thm:exact-depth-symbolic-soundness}
+\begin{theorem}[Agreement of the two interpretations]
+\label{thm:interpretation-agreement}
 Let $s$ be a well-typed, domain-safe symbolic state. For every
 $n\in\Nat$, $\mathsf{Act}_n(s)$ and $\mathsf{Exp}_n(s)$ have the same
 trace marginal: for every measurable $A\subseteq\Trace$,
@@ -262,7 +291,7 @@ $\mathsf{Act}_n(s)(\,\cdot\times\Real)$-almost every trace $\tau$,
 \end{theorem}
 
 
-\subsection{Deriving the Results}
+\subsection{Deriving the Soundness Results}
 
 The commuting argument establishes symbolic soundness for every
 $n\in\Nat$. By \cref{thm:interpretation-initialization}, initializing the
