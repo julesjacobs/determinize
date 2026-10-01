@@ -1,35 +1,13 @@
-
-\begin{figure}[t]
+\begin{figure*}[t]
 \centering
 \small
 \setlength{\jot}{3pt}
 
-\textbf{Symbolic configurations}
-\[
-\begin{aligned}
-  a
-  &=
-  c_0+\sum_{i=1}^k c_i u_i,
-  \qquad c_0,\ldots,c_k\in\Real,
-  \\[2pt]
-  \sigma
-  &::=
-  \emptyset
-  \mid
-  \sigma,\ u\sim D(\bar a),
-  \\[2pt]
-  s
-  &::=
-  (\sigma\mid\widehat e:\rho).
-\end{aligned}
-\]
-Here $\widehat e$ is a symbolic residual expression, $a$ is an affine
-expression over the variables declared by $\sigma$, and symbolic evaluation
-contexts $\widehat C$ have the same grammar as the evaluation contexts $C$
-in \cref{fig:semantics}.
-
-\par\vspace{10pt}
-\textbf{Deterministic symbolic reduction}
+\begin{tabular}{@{}p{0.36\textwidth}!{\color{black!20}\vrule width 0.4pt}p{0.58\textwidth}@{}}
+\begin{minipage}[t]{\linewidth}
+\vspace{0pt}
+\centering
+\textbf{Residual expression reduction}
 \[
 \begin{aligned}
   (\lambda x.\widehat e)\,\widehat v
@@ -45,19 +23,23 @@ in \cref{fig:semantics}.
   \operatorname{Mean}^{\#}_D(\bar a).
 \end{aligned}
 \]
-The remaining deterministic rules are lifted from
-\cref{fig:semantics}. The affine expression
+\raggedright
+The remaining reduction
+rules are lifted from \cref{fig:semantics}. The affine expression
 $\operatorname{Mean}^{\#}_D(\bar a)$ represents the primitive mean at the
 symbolic arguments $\bar a$.
-
-\par\vspace{10pt}
+\end{minipage}
+&
+\begin{minipage}[t]{\linewidth}
+\vspace{0pt}
+\centering
 \textbf{Symbolic small-step semantics}
 \begin{mathpar}
   \inferrule*[right=Reduce]
     {\widehat e_1\rightsquigarrow_{\mathrm{sym}}\widehat e_2}
     {
       (\sigma\mid\widehat C[\widehat e_1]:\rho)
-      \xrightarrow{\epsilon}_{\mathrm{sym}}
+      \xrightarrow{}_{\mathrm{sym}}
       (\sigma\mid\widehat C[\widehat e_2]:\rho)
     }
   \and
@@ -65,7 +47,7 @@ symbolic arguments $\bar a$.
     {u\notin\operatorname{dom}(\sigma)}
     {
       (\sigma\mid\widehat C[\draw D\E{\bar a}]:\rho)
-      \xrightarrow{\epsilon}_{\mathrm{sym}}
+      \xrightarrow{}_{\mathrm{sym}}
       (\sigma,u\sim D(\bar a)\mid\widehat C[u]:\rho)
     }
   \and
@@ -73,19 +55,27 @@ symbolic arguments $\bar a$.
     {\operatorname{Domain}_D(\bar r)}
     {
       (\sigma\mid\widehat C[\draw D\G{\bar r}]:\rho)
-      \xrightarrow{(D,r)}_{\mathrm{sym}}
+      \xrightarrow{}_{\mathrm{sym}}
       (\sigma\mid\widehat C[r]:\rho)
     }
 \end{mathpar}
+\raggedright
+The \textsc{Reduce} rule lifts reduction of residual symbolic expressions
+to reduction of symbolic states under a symbolic evaluation context.
 In \textsc{Sample-G}, the label $r$ is distributed according to
 $D(\bar r)$. The label $\epsilon$ denotes a step that contributes no entry
 to the $\G$ trace.
+\end{minipage}
+\end{tabular}
 
-\caption{Symbolic semantics and its two exact-depth interpretations.
-Symbolic reduction determines how the environment and residual expression
-evolve. The actual interpretation samples the recorded $\E$ variables,
-whereas the expected interpretation replaces them by their sequential means.
-Both interpretations reuse the trace-refined exact-depth semantics
-$\joint{\cdot}{n}$ from \cref{fig:traces}.}
+\caption{Symbolic semantics. Symbolic expression reduction
+$\rightsquigarrow_{\mathrm{sym}}$ on residual expressions $\widehat e$ is
+shown on the left, and the corresponding small-step transition relation
+$\xrightarrow{}_{\mathrm{sym}}$ on symbolic states is shown on the right.
+The \textsc{Reduce} rule lifts residual expression reduction through a
+symbolic evaluation context, while \textsc{Sample-E} and \textsc{Sample-G}
+handle the two sampling modes directly. Symbolic evaluation contexts
+$\widehat C$ have the same grammar as the evaluation contexts $C$ in
+\cref{fig:semantics}.}
 \label{fig:symbolic-semantics}
-\end{figure}
+\end{figure*}
