@@ -46,7 +46,7 @@ theorem fresh₃ (σ : Ground) (n : Nat) (A B C : Ty) :
     fun _ h ↦ ⟨by rw [h.type (by omega)]; simp [show n ≠ n + 1 + 1 by omega],
       by rw [h.type (by omega)]; simp, by rw [h.type (by omega)]; simp⟩⟩
 
-theorem freshAffinity (σ : Ground) (n : Nat) (m : Affinity) :
+theorem fresh_affinity (σ : Ground) (n : Nat) (m : Affinity) :
     ∃ σ₀, σ.Agree n σ₀ ∧ ∀ σ', σ₀.Agree (n + 1) σ' → σ'.affinities (.generated n) = m :=
   ⟨σ.setAffinity n m, (Agree.refl _ _).setAffinity le_rfl m,
     fun _ h ↦ by rw [h.affinity (by omega)]; simp⟩
@@ -122,7 +122,7 @@ theorem generate_complete : ∀ (e : Input) (Γ : List UType) (Γ' : List Ty) (n
     invert_matches ê hm
     subst hm
     obtain ⟨m, sT⟩ := typed_real_inv ht
-    obtain ⟨σ₀, a₀, e₀⟩ := freshAffinity σ n m
+    obtain ⟨σ₀, a₀, e₀⟩ := fresh_affinity σ n m
     refine ⟨_, _, by unfold_generate; rfl, Nat.le_succ n, σ₀, a₀,
       fun σ' h' ↦ ⟨by relations, ?_, by read_back⟩⟩
     draft_type
@@ -376,7 +376,7 @@ theorem generate_complete : ∀ (e : Input) (Γ : List UType) (Γ' : List Ty) (n
     intro Γ Γ' n σ ê T hΓ hm ht
     invert_matches ê hm
     obtain ⟨m, tb, sT⟩ := typed_neg_inv ht
-    obtain ⟨σ₀, a₀, e₀⟩ := freshAffinity σ n m
+    obtain ⟨σ₀, a₀, e₀⟩ := fresh_affinity σ n m
     obtain ⟨db, n₁, hb, le₁, σ₁, a₁, F₁⟩ := ih Γ Γ' (n + 1) σ₀ _ _ (hΓ.extend a₀ (by omega)) hm tb
     refine ⟨_, _, by unfold_generate; simp only [hb, ok_bind]; rfl, by omega, σ₁,
       a₀.step a₁ (by omega), fun σ' h' ↦ ?_⟩
@@ -390,7 +390,7 @@ theorem generate_complete : ∀ (e : Input) (Γ : List UType) (Γ' : List Ty) (n
     intro Γ Γ' n σ ê T hΓ hm ht
     invert_matches ê hm
     obtain ⟨m, ta, tb, sT⟩ := typed_add_inv ht
-    obtain ⟨σ₀, a₀, e₀⟩ := freshAffinity σ n m
+    obtain ⟨σ₀, a₀, e₀⟩ := fresh_affinity σ n m
     obtain ⟨da, n₁, ha, le₁, σ₁, a₁, F₁⟩ :=
       iha Γ Γ' (n + 1) σ₀ _ _ (hΓ.extend a₀ (by omega)) hm.1 ta
     obtain ⟨db, n₂, hb, le₂, σ₂, a₂, F₂⟩ :=
@@ -409,7 +409,7 @@ theorem generate_complete : ∀ (e : Input) (Γ : List UType) (Γ' : List Ty) (n
     intro Γ Γ' n σ ê T hΓ hm ht
     invert_matches ê hm
     obtain ⟨m, ta, tb, sT⟩ := typed_mul_inv ht
-    obtain ⟨σ₀, a₀, e₀⟩ := freshAffinity σ n m
+    obtain ⟨σ₀, a₀, e₀⟩ := fresh_affinity σ n m
     obtain ⟨da, n₁, ha, le₁, σ₁, a₁, F₁⟩ :=
       iha Γ Γ' (n + 1) σ₀ _ _ (hΓ.extend a₀ (by omega)) hm.1 ta
     obtain ⟨db, n₂, hb, le₂, σ₂, a₂, F₂⟩ :=
@@ -428,7 +428,7 @@ theorem generate_complete : ∀ (e : Input) (Γ : List UType) (Γ' : List Ty) (n
     intro Γ Γ' n σ ê T hΓ hm ht
     invert_matches ê hm
     obtain ⟨m, ta, tb, sT⟩ := typed_div_inv ht
-    obtain ⟨σ₀, a₀, e₀⟩ := freshAffinity σ n m
+    obtain ⟨σ₀, a₀, e₀⟩ := fresh_affinity σ n m
     obtain ⟨da, n₁, ha, le₁, σ₁, a₁, F₁⟩ :=
       iha Γ Γ' (n + 1) σ₀ _ _ (hΓ.extend a₀ (by omega)) hm.1 ta
     obtain ⟨db, n₂, hb, le₂, σ₂, a₂, F₂⟩ :=

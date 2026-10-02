@@ -42,7 +42,8 @@ theorem completed_mean (p : List Rat) (d : Spec.Paper.FiniteDistribution)
     (completed : d.probabilities = p ++ [1 - p.sum]) :
     discreteFiber .mean (p.map (Rat.cast : Rat → ℝ)) = Measure.dirac (d.mean : ℝ) := by
   have expectation :=
-    discrete_mean (.sample .G) (p.map (Rat.cast : Rat → ℝ)) (completed_domain p d completed)
+    integral_id_discreteFiber (.sample .G) (p.map (Rat.cast : Rat → ℝ))
+      (completed_domain p d completed)
   rw [completed_sample .G p d completed, FiniteDistribution.mean] at expectation
   rw [discreteFiber, if_pos (completed_domain p d completed), ← expectation]
 

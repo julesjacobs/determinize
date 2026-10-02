@@ -9,22 +9,22 @@ def pushStack (state : State) (stack : List Frame) : State :=
   | .deliver value saved => .deliver value (saved ++ stack)
   | .rejected => .rejected
 
-theorem pushStack_expr (state : State) (stack : List Frame) (notRejected : state ≠ .rejected) :
+theorem stateExpr_pushStack (state : State) (stack : List Frame) (notRejected : state ≠ .rejected) :
     stateExpr (pushStack state stack) = stackExpr stack (stateExpr state) := by
   cases state <;> simp_all [pushStack, stateExpr, stackExpr, List.foldl_append]
 
-theorem lift_root (before after : State) (root : RootStep before after)
+theorem paperStep_pushStack (before after : State) (root : RootStep before after)
     (notValue : (stateExpr before).isValue = false)
     (beforeLive : before ≠ .rejected) (afterLive : after ≠ .rejected)
     (stack : List Frame) (shape : ∀ frame ∈ stack, FrameShape frame) :
     PaperStep (pushStack before stack) [(1, pushStack after stack)] := by
-  have context := stack_context stack shape (stateExpr before) notValue
+  have context := reduce_stackExpr stack shape (stateExpr before) notValue
   apply paperStep_next
-  · simpa [pushStack_expr before stack beforeLive] using context.1
-  · rw [pushStack_expr before stack beforeLive, context.2, root.2]
-    simp [Action.wrap, pushStack_expr after stack afterLive]
+  · simpa [stateExpr_pushStack before stack beforeLive] using context.1
+  · rw [stateExpr_pushStack before stack beforeLive, context.2, root.2]
+    simp [Action.wrap, stateExpr_pushStack after stack afterLive]
 
-theorem deliver_stepMeaning (value : Value) (stack : List Frame)
+theorem stepMeaning_deliver (value : Value) (stack : List Frame)
     (shape : ∀ frame ∈ stack, FrameShape frame) (result : Step)
     (action : step (.deliver value stack) = .ok result) :
     StepMeaning (.deliver value stack) result := by
@@ -38,7 +38,8 @@ theorem deliver_stepMeaning (value : Value) (stack : List Frame)
     cases frame with
     | left operation right environment =>
       obtain rfl := Except.ok.inj action
-      exact Or.inl ⟨_, rfl, trivial, sameObservations_of_eq _ _ (left_argument_step _ _ _ _ _).2⟩
+      exact Or.inl
+        ⟨_, rfl, trivial, sameObservations_of_eq _ _ (administrativeStep_left_argument _ _ _ _ _).2⟩
     | discrete kind =>
       cases read : value.probabilities? with
       | none =>
@@ -58,8 +59,8 @@ theorem deliver_stepMeaning (value : Value) (stack : List Frame)
           apply Or.inr
           apply paperStep_sample _ (kind, .discrete p.length) p outcomes stack law
           · simpa [stateExpr, stackExpr, List.foldl_cons, frameExpr] using
-              (stack_context stack tailShape (.discrete kind (valueExpr value)) rfl).1
-          · exact discrete_correspondence kind value p read stack outcomes law tailShape
+              (reduce_stackExpr stack tailShape (.discrete kind (valueExpr value)) rfl).1
+          · exact reduce_stateExpr_discrete kind value p read stack outcomes law tailShape
     | draw site pending environment arguments =>
       cases value <;> simp only [step, pure, bind, Except.bind, Except.pure, throw] at action
       all_goals try contradiction
@@ -68,7 +69,8 @@ theorem deliver_stepMeaning (value : Value) (stack : List Frame)
       | cons next rest =>
         obtain rfl := Except.ok.inj action
         exact Or.inl
-          ⟨_, rfl, trivial, sameObservations_of_eq _ _ (draw_argument_step _ _ _ _ _ _ _).2⟩
+          ⟨_, rfl, trivial,
+            sameObservations_of_eq _ _ (administrativeStep_draw_argument _ _ _ _ _ _ _).2⟩
       | nil =>
         change draw site (arguments ++ [x]) stack = .ok result at action
         unfold draw at action
@@ -79,12 +81,12 @@ theorem deliver_stepMeaning (value : Value) (stack : List Frame)
           obtain rfl := Except.ok.inj action
           apply Or.inr
           apply paperStep_sample _ site (arguments ++ [x]) outcomes stack law
-          · have nv := (stack_context stack tailShape
+          · have nv := (reduce_stackExpr stack tailShape
               (primitiveExpr site ((arguments ++ [x]).map fun (q : Rat) ↦ .real (q : ℝ)))
-              (primitiveExpr_notValue _ _)).1
+              (isValue_primitiveExpr _ _)).1
             simpa only [stateExpr, stackExpr, List.foldl_cons, frameExpr, valueExpr,
               List.map_append, List.map_cons, List.map_nil] using nv
-          · exact draw_correspondence site arguments x environment stack outcomes law tailShape
+          · exact reduce_stateExpr_draw site arguments x environment stack outcomes law tailShape
     | unary operation =>
       cases operation <;> cases value <;>
         simp only [step, unary, pure, bind, Except.bind, Except.pure, reduceCtorEq] at action
@@ -95,13 +97,13 @@ theorem deliver_stepMeaning (value : Value) (stack : List Frame)
         simp [stateExpr, stackExpr, frameExpr, unaryExpr, valueExpr]
       all_goals apply Or.inr
       all_goals first
-        | apply lift_root _ _ (fst_root _ _)
+        | apply paperStep_pushStack _ _ (rootStep_fst _ _)
             (by simp [stateExpr, stackExpr, frameExpr, unaryExpr, Expr.isValue])
             (by simp) (by simp) stack tailShape
-        | apply lift_root _ _ (snd_root _ _)
+        | apply paperStep_pushStack _ _ (rootStep_snd _ _)
             (by simp [stateExpr, stackExpr, frameExpr, unaryExpr, Expr.isValue])
             (by simp) (by simp) stack tailShape
-        | apply lift_root _ _ (neg_root _)
+        | apply paperStep_pushStack _ _ (rootStep_neg _)
             (by simp [stateExpr, stackExpr, frameExpr, unaryExpr, Expr.isValue])
             (by simp) (by simp) stack tailShape
     | right operation left =>
@@ -116,22 +118,22 @@ theorem deliver_stepMeaning (value : Value) (stack : List Frame)
         simp [stateExpr, stackExpr, frameExpr, binaryExpr, valueExpr]
       all_goals apply Or.inr
       all_goals first
-        | apply lift_root _ _ (closure_root _ _ _)
+        | apply paperStep_pushStack _ _ (rootStep_closure _ _ _)
             (by simp [stateExpr, stackExpr, frameExpr, binaryExpr, Expr.isValue])
             (by simp) (by simp) stack tailShape
-        | apply lift_root _ _ (recursive_root _ _ _)
+        | apply paperStep_pushStack _ _ (rootStep_recursive _ _ _)
             (by simp [stateExpr, stackExpr, frameExpr, binaryExpr, Expr.isValue])
             (by simp) (by simp) stack tailShape
-        | apply lift_root _ _ (add_root _ _)
+        | apply paperStep_pushStack _ _ (rootStep_add _ _)
             (by simp [stateExpr, stackExpr, frameExpr, binaryExpr, Expr.isValue])
             (by simp) (by simp) stack tailShape
-        | apply lift_root _ _ (mul_root _ _)
+        | apply paperStep_pushStack _ _ (rootStep_mul _ _)
             (by simp [stateExpr, stackExpr, frameExpr, binaryExpr, Expr.isValue])
             (by simp) (by simp) stack tailShape
-        | apply lift_root _ _ (div_root _ _ (by assumption))
+        | apply paperStep_pushStack _ _ (rootStep_div _ _ (by assumption))
             (by simp [stateExpr, stackExpr, frameExpr, binaryExpr, Expr.isValue])
             (by simp) (by simp) stack tailShape
-        | apply lift_root _ _ (lt_root _ _)
+        | apply paperStep_pushStack _ _ (rootStep_lt _ _)
             (by simp [stateExpr, stackExpr, frameExpr, binaryExpr, Expr.isValue])
             (by simp) (by simp) stack tailShape
     | choose yes no environment =>
@@ -139,13 +141,14 @@ theorem deliver_stepMeaning (value : Value) (stack : List Frame)
         simp only [step, pure, bind, Except.bind, Except.pure, throw, reduceCtorEq] at action
       obtain rfl := Except.ok.inj action
       apply Or.inr
-      apply lift_root _ _ (branch_root _ _ _ _)
+      apply paperStep_pushStack _ _ (rootStep_branch _ _ _ _)
         (by simp [stateExpr, stackExpr, frameExpr, Expr.isValue])
         (by simp) (by simp) stack tailShape
     | letBody body environment =>
       obtain rfl := Except.ok.inj action
       apply Or.inr
-      apply lift_root _ _ (let_root _ _ _) (by simp [stateExpr, stackExpr, frameExpr, Expr.isValue])
+      apply paperStep_pushStack _ _ (rootStep_let _ _ _)
+        (by simp [stateExpr, stackExpr, frameExpr, Expr.isValue])
         (by simp) (by simp) stack tailShape
     | matchSum left right environment =>
       cases value <;>
@@ -153,10 +156,10 @@ theorem deliver_stepMeaning (value : Value) (stack : List Frame)
       all_goals obtain rfl := Except.ok.inj action
       all_goals apply Or.inr
       all_goals first
-        | apply lift_root _ _ (sum_left_root _ _ _ _)
+        | apply paperStep_pushStack _ _ (rootStep_sum_left _ _ _ _)
             (by simp [stateExpr, stackExpr, frameExpr, Expr.isValue])
             (by simp) (by simp) stack tailShape
-        | apply lift_root _ _ (sum_right_root _ _ _ _)
+        | apply paperStep_pushStack _ _ (rootStep_sum_right _ _ _ _)
             (by simp [stateExpr, stackExpr, frameExpr, Expr.isValue])
             (by simp) (by simp) stack tailShape
     | matchList nilCase consCase environment =>
@@ -165,10 +168,10 @@ theorem deliver_stepMeaning (value : Value) (stack : List Frame)
       all_goals obtain rfl := Except.ok.inj action
       all_goals apply Or.inr
       all_goals first
-        | apply lift_root _ _ (list_nil_root _ _ _)
+        | apply paperStep_pushStack _ _ (rootStep_list_nil _ _ _)
             (by simp [stateExpr, stackExpr, frameExpr, Expr.isValue])
             (by simp) (by simp) stack tailShape
-        | apply lift_root _ _ (list_cons_root _ _ _ _ _)
+        | apply paperStep_pushStack _ _ (rootStep_list_cons _ _ _ _ _)
             (by simp [stateExpr, stackExpr, frameExpr, Expr.isValue])
             (by simp) (by simp) stack tailShape
 
@@ -176,8 +179,8 @@ theorem stepMeaning (state : State) (shape : StateShape state) (result : Step)
     (action : step state = .ok result) : StepMeaning state result := by
   cases state with
   | eval expression environment stack =>
-    exact eval_stepMeaning expression environment stack result action
-  | deliver value stack => exact deliver_stepMeaning value stack shape result action
+    exact stepMeaning_eval expression environment stack result action
+  | deliver value stack => exact stepMeaning_deliver value stack shape result action
   | rejected =>
     obtain rfl := Except.ok.inj action
     exact stepMeaning_rejected

@@ -205,7 +205,7 @@ the source and selected subject. Exported certificates prove `modelMatches`,
 The `terminationProbabilities` theorem concerns the probability controller;
 separate first-hit source rejection/divergence correspondence is not asserted.
 
-`finite_integrable` proves `Model.IntegrableMoments` for every finite reward
+`integrableMoments` proves `Model.IntegrableMoments` for every finite reward
 model, without a solution certificate, termination premise, or supplied moment
 bounds. The proof constructs a closed divergence boundary and descending paths,
 proves the remaining boundary-value operator is invertible and preserves

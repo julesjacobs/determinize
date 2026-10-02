@@ -20,7 +20,7 @@ theorem transitionMoment_le (laws : PrimitiveLaws)
     (op : Op) (affineArgs : Fin (affineArity op) → Symbolic.Affine n)
     (generalArgs : Fin (generalArity op) → ℝ)
     (expression : Symbolic.Affine (n + 1)) (environment : Env n)
-    (valid : domain op (fun i ↦ (affineArgs i).eval environment, generalArgs)) :
+    (valid : InDomain op (fun i ↦ (affineArgs i).eval environment, generalArgs)) :
     (∫ next, ‖expression.eval next‖ ∂(transitionPack laws op affineArgs generalArgs).kernel
       environment) ≤
       |(Symbolic.Affine.tail expression).eval environment| + |expression.2 0| *
@@ -30,7 +30,7 @@ theorem transitionMoment_le (laws : PrimitiveLaws)
     (show AEMeasurable (fun value : ℝ ↦ Env.cons value environment)
       (laws.kernel op (fun i ↦ (affineArgs i).eval environment, generalArgs)) from
       (measurable_envCons.comp (measurable_id.prodMk measurable_const)).aemeasurable)
-    (Symbolic.AffineExpr.affine_eval_measurable expression).norm.aestronglyMeasurable]
+    (Symbolic.AffineExpr.measurable_affine_eval expression).norm.aestronglyMeasurable]
   simp only [Affine.eval_cons, Real.norm_eq_abs]
   let params := (fun i ↦ (affineArgs i).eval environment, generalArgs)
   have mass := laws.mass_one op params valid
@@ -70,7 +70,7 @@ theorem integrable_affine (laws : PrimitiveLaws) (bounds : PrimitiveMomentBounds
     let := (transitionPack laws op affineArgs generalArgs).sfinite
     rw [actualMeasure_snoc_eq_comp]
     apply (Measure.integrable_comp_iff
-      (Symbolic.AffineExpr.affine_eval_measurable expression).aestronglyMeasurable).2
+      (Symbolic.AffineExpr.measurable_affine_eval expression).aestronglyMeasurable).2
     constructor
     · filter_upwards [safe.2] with environment valid
       exact integrable_eval_transition laws op affineArgs generalArgs expression environment valid
@@ -86,7 +86,7 @@ theorem integrable_affine (laws : PrimitiveLaws) (bounds : PrimitiveMomentBounds
           (((integrable_const (1 : ℝ)).add sumIntegrable).const_mul bound |>.const_mul _)
       have normMeasurable : AEStronglyMeasurable
           (fun environment ↦ ∫ next, ‖expression.eval next‖ ∂transition environment) prior :=
-        ((Symbolic.AffineExpr.affine_eval_measurable
+        ((Symbolic.AffineExpr.measurable_affine_eval
           expression).norm.stronglyMeasurable.integral_kernel
           (κ := transition)).aestronglyMeasurable
       apply upperIntegrable.mono' normMeasurable

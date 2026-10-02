@@ -21,7 +21,7 @@ open StepTraces (normalizedOutputGivenTrace outputGivenTraceKernel
 open scoped ProbabilityTheory
 
 /-- The compact replay is a finite kernel: its mass is at most one. -/
-instance outputGivenTraceKernel_finite (program : Expr) :
+instance isFiniteKernel_outputGivenTraceKernel (program : Expr) :
     IsFiniteKernel (outputGivenTraceKernel program) :=
   ⟨1, ENNReal.one_lt_top, fun trace ↦ by
     rw [outputGivenTraceKernel_apply]
@@ -51,7 +51,7 @@ theorem traceLaw_determinize (affinity : Affinity) (program : Expr)
     traceLaw program.determinize = traceLaw program := by
   let output := kernelMean (normalizedOutputGivenTrace program)
   obtain ⟨-, ⟨-, measurableOutput, -, targetMap, -⟩, -, -⟩ :=
-    soundnessData affinity program typed safe
+    soundness_data affinity program typed safe
   have pairMeasurable : Measurable fun trace : Trace ↦ (trace, output trace) :=
     measurable_id.prodMk measurableOutput
   calc traceLaw program.determinize
@@ -63,7 +63,7 @@ theorem traceLaw_determinize (affinity : Affinity) (program : Expr)
 
 /-- The public conditional-law theorem: both replays are versions of the regular conditional
 distributions of the outputs given the trace, and trace soundness holds for those. -/
-theorem conditionalLaw (program : Expr) (typed : Typed [] program (.float .E))
+theorem conditional_law (program : Expr) (typed : Typed [] program (.float .E))
     (safe : DomainSafe program) :
     DomainSafe program.determinize ∧
       traceLaw program.determinize = traceLaw program ∧
@@ -72,7 +72,7 @@ theorem conditionalLaw (program : Expr) (typed : Typed [] program (.float .E))
         (traceAndOutputLaw program.determinize).condKernel trace =
           Measure.dirac (∫ value : ℝ, value ∂(traceAndOutputLaw program).condKernel trace) := by
   obtain ⟨targetSafe, sourceFactor, targetFactor, ae⟩ :=
-    replaySoundness program typed safe
+    replay_soundness program typed safe
   have sameTraces := traceLaw_determinize .E program typed
     safe
   have sourceAe := outputGivenTrace_ae_eq_condKernel program sourceFactor rfl
@@ -83,19 +83,19 @@ theorem conditionalLaw (program : Expr) (typed : Typed [] program (.float .E))
   rw [← sourceEq, ← targetEq]
   exact good
 
-/-- Trace preservation: the first two clauses of `conditionalLaw`. -/
-theorem tracePreservation (program : Expr) (typed : Typed [] program (.float .E))
+/-- Trace preservation: the first two clauses of `conditional_law`. -/
+theorem trace_preservation (program : Expr) (typed : Typed [] program (.float .E))
     (safe : DomainSafe program) :
     DomainSafe program.determinize ∧ traceLaw program.determinize = traceLaw program :=
-  ⟨(conditionalLaw program typed safe).1, (conditionalLaw program typed safe).2.1⟩
+  ⟨(conditional_law program typed safe).1, (conditional_law program typed safe).2.1⟩
 
-/-- Tracewise soundness: the almost-sure clause of `conditionalLaw`. -/
-theorem tracewiseSoundness (program : Expr) (typed : Typed [] program (.float .E))
+/-- Tracewise soundness: the almost-sure clause of `conditional_law`. -/
+theorem tracewise_soundness (program : Expr) (typed : Typed [] program (.float .E))
     (safe : DomainSafe program) :
     ∀ᵐ trace ∂traceLaw program,
       Integrable id ((traceAndOutputLaw program).condKernel trace) ∧
       (traceAndOutputLaw program.determinize).condKernel trace =
         Measure.dirac (∫ value : ℝ, value ∂(traceAndOutputLaw program).condKernel trace) :=
-  (conditionalLaw program typed safe).2.2
+  (conditional_law program typed safe).2.2
 
 end Determinize.Proof.Traces

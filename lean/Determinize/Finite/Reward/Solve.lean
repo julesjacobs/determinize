@@ -6,15 +6,15 @@ import Determinize.Proof.RewardModel.Certificates
 namespace Determinize.Finite.Reward
 open Proof.FiniteModel
 
-def equations (model : Spec.FiniteModel.Model) (rhs values : Fin model.size → Rat) : Prop :=
+def Equations (model : Spec.FiniteModel.Model) (rhs values : Fin model.size → Rat) : Prop :=
   ∀ i, values i = rhs i + if model.kind i = .transient then
     ∑ j, model.transition i j * values j else 0
 
 instance (model : Spec.FiniteModel.Model) (rhs values : Fin model.size → Rat) :
-    Decidable (equations model rhs values) := inferInstanceAs (Decidable (∀ _, _))
+    Decidable (Equations model rhs values) := inferInstanceAs (Decidable (∀ _, _))
 
 private def solveRhs (model : Spec.FiniteModel.Model) (rhs : Fin model.size → Rat) :
-    Except String {values : Fin model.size → Rat // equations model rhs values} := do
+    Except String {values : Fin model.size → Rat // Equations model rhs values} := do
   let A := fun i j : Fin model.size ↦
     let identity : Rat := if i = j then 1 else 0
     if model.kind i = .transient then identity - model.transition i j else identity
@@ -48,33 +48,34 @@ def secondRhs (model : Spec.RewardModel.Model) (dead : Fin model.size → Bool)
 structure Solution (model : Spec.RewardModel.Model) where
   boundary : Boundary model.control
   paths : Paths (cut model.control boundary.dead)
-  pathsValid : paths.Valid (cut model.control boundary.dead)
+  paths_valid : paths.Valid (cut model.control boundary.dead)
   mass : Fin model.size → Rat
-  massValid : (⟨mass, 0⟩ : Spec.FiniteModel.ResultCertificate
+  mass_valid : (⟨mass, 0⟩ : Spec.FiniteModel.ResultCertificate
     (rewards (cut model.control boundary.dead) Moment.mass.rational)).Equations _
   first : Fin model.size → Rat
-  firstValid : equations (cut model.control boundary.dead) (firstRhs model boundary.dead mass) first
+  first_valid : Equations (cut model.control boundary.dead)
+    (firstRhs model boundary.dead mass) first
   second : Fin model.size → Rat
-  secondValid : equations (cut model.control boundary.dead)
+  second_valid : Equations (cut model.control boundary.dead)
     (secondRhs model boundary.dead mass first) second
   rejection : Fin model.size → Rat
-  rejectionValid : (⟨rejection, 0⟩ : Spec.FiniteModel.ResultCertificate
+  rejection_valid : (⟨rejection, 0⟩ : Spec.FiniteModel.ResultCertificate
     (rejectionQuery model.control boundary.dead)).Equations _
 
-theorem Solution.momentsValid {model : Spec.RewardModel.Model} (solution : Solution model) :
+theorem Solution.moments_valid {model : Spec.RewardModel.Model} (solution : Solution model) :
     Proof.RewardModel.MomentEquations (Proof.RewardModel.cut model solution.boundary.dead)
     (fun moment ↦ match moment with
       | .mass => solution.mass
       | .first => solution.first
       | .second => solution.second) := by
   intro moment i
-  have mass := solution.massValid i
-  have first := solution.firstValid i
-  have second := solution.secondValid i
+  have mass := solution.mass_valid i
+  have first := solution.first_valid i
+  have second := solution.second_valid i
   cases moment <;> cases dead : solution.boundary.dead i <;> cases kind : model.kind i <;>
     simp_all [Proof.RewardModel.cut, cut, rewards, Spec.RewardModel.Model.control,
       firstRhs, secondRhs, Proof.RewardModel.translatedValue,
-      Moment.rational, mul_add, List.sum_map_add, ← Proof.RewardModel.control_sum,
+      Moment.rational, mul_add, List.sum_map_add, ← Proof.RewardModel.sum_controlWeight_mul,
       pow_two, mul_assoc, add_comm, add_assoc]
 
 def solve (model : Spec.RewardModel.Model) (limits : SolveLimits := {}) :

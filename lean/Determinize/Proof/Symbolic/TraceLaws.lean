@@ -56,7 +56,7 @@ def targetTraceLaw (depth : Nat) (history : Symbolic.SampleEnv primitiveLaws n)
     (expression : AffineExpr n) : Measure (Output) :=
   exactMeasure depth (expression.realize (history.meanEnvironment primitiveLaws)).determinize
 
-theorem exact_measurable (depth : Nat) : Measurable (exactMeasure depth) := by
+theorem measurable_exactMeasure (depth : Nat) : Measurable (exactMeasure depth) := by
   have eq : exactMeasure depth = (exactKernel depth).kernel :=
     funext fun e ↦ (exactKernel_apply _ _).symm
   rw [eq]
@@ -130,9 +130,9 @@ theorem actualTraceLaw_next (depth : Nat) (history : Symbolic.SampleEnv primitiv
       (actualTraceLaw depth history next).map (prepend none) := by
   rw [actualTraceLaw, actualTraceLaw,
     map_bind_fun _ (fun env ↦ exactMeasure depth (next.realize env))
-      ((exact_measurable depth).comp next.realize_measurable) (prepend none)
+      ((measurable_exactMeasure depth).comp next.measurable_realize) (prepend none)
       (show Measurable (prepend none : Output → Output) from
-        prepend_measurable.comp (measurable_const.prodMk measurable_id))]
+        measurable_prepend.comp (measurable_const.prodMk measurable_id))]
   apply Measure.bind_congr_right
   filter_upwards [] with env
   apply exact_succ_next

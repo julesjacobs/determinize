@@ -5,7 +5,7 @@ import Determinize.Proof.Primitives.Kernels
 
 `PrimitiveMomentBounds laws` bounds the first absolute moment linearly in the affine-position
 parameters, with a bound that may depend on the general-position parameters.
-`primitiveMomentBounds` proves this for the canonical primitive kernels.
+`primitiveMomentBounds_primitiveLaws` proves this for the canonical primitive kernels.
 `Proof/Symbolic/Moments.lean` uses it to integrate affine forms along a sample history.
 -/
 
@@ -18,11 +18,11 @@ noncomputable section
 /-- First absolute moments grow at most linearly in the affine parameters. -/
 def PrimitiveMomentBounds (laws : PrimitiveLaws) : Prop :=
   ∀ op general, ∃ bound : ℝ, 0 ≤ bound ∧
-    ∀ affine, domain op (affine, general) →
+    ∀ affine, InDomain op (affine, general) →
       (∫ value : ℝ, |value| ∂laws.kernel op (affine, general)) ≤
         bound * (1 + ∑ i, |affine i|)
 
-theorem gamma_nonnegative (shape rate : ℝ) :
+theorem ae_nonneg_gammaMeasure (shape rate : ℝ) :
     ∀ᵐ value ∂gammaMeasure shape rate, 0 ≤ value := by
   rw [ae_iff]
   simp only [not_le]
@@ -30,11 +30,11 @@ theorem gamma_nonnegative (shape rate : ℝ) :
   rw [gammaMeasure, withDensity_apply _ measurableSet_Iio]
   exact lintegral_gammaPDF_of_nonpos le_rfl
 
-theorem poisson_nonnegative (rate : NNReal) :
+theorem ae_nonneg_poissonMeasure (rate : NNReal) :
     ∀ᵐ value ∂(poissonMeasure rate).map (fun n : Nat ↦ (n : ℝ)), 0 ≤ value := by
   exact ae_map_iff (by fun_prop) measurableSet_Ici |>.2 (ae_of_all _ fun _ ↦ Nat.cast_nonneg _)
 
-theorem uniform_abs_bound (lower upper : ℝ) (ordered : lower ≤ upper) :
+theorem ae_abs_le_uniformMeasure (lower upper : ℝ) (ordered : lower ≤ upper) :
     ∀ᵐ value ∂uniformMeasure lower upper, |value| ≤ |lower| + |upper| := by
   unfold uniformMeasure
   rw [dif_pos ordered]
@@ -47,7 +47,7 @@ theorem uniform_abs_bound (lower upper : ℝ) (ordered : lower ≤ upper) :
     exact abs_le.mpr ⟨by linarith [neg_abs_le lower, abs_nonneg upper, member.1],
       by linarith [le_abs_self upper, abs_nonneg lower, member.2]⟩
 
-theorem gaussian_abs_bound (mean : ℝ) (variance : NNReal) :
+theorem integral_abs_gaussianReal_le (mean : ℝ) (variance : NNReal) :
     (∫ value : ℝ, |value| ∂gaussianReal mean variance) ≤
       (∫ value : ℝ, |value| ∂gaussianReal 0 variance) + |mean| := by
   have shift : (gaussianReal 0 variance).map (fun x ↦ x + mean) =
@@ -63,7 +63,7 @@ theorem gaussian_abs_bound (mean : ℝ) (variance : NNReal) :
       · exact fun value ↦ abs_add_le value mean
     _ = _ := by rw [integral_add integrable.abs (integrable_const _), integral_const]; simp
 
-theorem primitiveMomentBounds : PrimitiveMomentBounds primitiveLaws := by
+theorem primitiveMomentBounds_primitiveLaws : PrimitiveMomentBounds primitiveLaws := by
   intro op general
   have nonnegMoment (affine) : 0 ≤ ∫ x : ℝ, |x| ∂primitiveLaws.kernel op (affine, general) :=
     integral_nonneg fun _ ↦ abs_nonneg _
@@ -91,7 +91,7 @@ theorem primitiveMomentBounds : PrimitiveMomentBounds primitiveLaws := by
     have bound : ∀ᵐ value ∂primitiveLaws.kernel .uniform (affine, general),
         |value| ≤ |affine 0| + |affine 1| := by
       rw [primitiveLaws.kernel_eq_paperMeasure]
-      exact uniform_abs_bound _ _ valid
+      exact ae_abs_le_uniformMeasure _ _ valid
     have inequality := integral_mono_ae
       (primitiveLaws.integrable_id .uniform (affine, general) valid).abs
       (integrable_const _) bound
@@ -112,7 +112,7 @@ theorem primitiveMomentBounds : PrimitiveMomentBounds primitiveLaws := by
       apply Subtype.ext
       exact max_eq_left hv
     rw [primitiveLaws.kernel_eq_paperMeasure, paperMeasure, dif_pos hv, ← eq]
-    have bound := gaussian_abs_bound (affine 0) variance
+    have bound := integral_abs_gaussianReal_le (affine 0) variance
     change _ ≤ (c + 1) * (1 + ∑ i : Fin 1, |affine i|)
     rw [Fin.sum_univ_one]
     dsimp only [c] at hc ⊢
@@ -126,7 +126,7 @@ theorem primitiveMomentBounds : PrimitiveMomentBounds primitiveLaws := by
       change ∀ᵐ value ∂(if h : 0 ≤ affine 0 then
         (poissonMeasure ⟨affine 0, h⟩).map (fun n : Nat ↦ (n : ℝ)) else 0), 0 ≤ value
       rw [dif_pos (show 0 ≤ affine 0 from valid)]
-      exact poisson_nonnegative _
+      exact ae_nonneg_poissonMeasure _
     have meanEq : meanValue .poisson (affine, general) = affine 0 := rfl
     have sumEq : (∑ i, |affine i|) = |affine 0| := Fin.sum_univ_one _
     rw [integral_congr_ae (nonnegative.mono fun value h ↦ abs_of_nonneg h),
@@ -140,7 +140,7 @@ theorem primitiveMomentBounds : PrimitiveMomentBounds primitiveLaws := by
       change ∀ᵐ value ∂(if 0 < affine 0 ∧ 0 < general 0 then
         gammaMeasure (affine 0) (general 0) else 0), 0 ≤ value
       rw [if_pos (show 0 < affine 0 ∧ 0 < general 0 from valid)]
-      exact gamma_nonnegative _ _
+      exact ae_nonneg_gammaMeasure _ _
     rw [integral_congr_ae (nonnegative.mono fun value h ↦ abs_of_nonneg h),
       primitiveLaws.mean_law .gamma (affine, general) valid]
     rw [meanValue_eq_affine]
@@ -160,17 +160,17 @@ theorem primitiveMomentBounds : PrimitiveMomentBounds primitiveLaws := by
     rw [primitiveLaws.kernel_eq_paperMeasure]
     change (∫ x : ℝ, |x| ∂bernoulliFiber (.sample .G) (affine 0)) ≤
       1 * (1 + ∑ i : Fin 1, |affine i|)
-    rw [DiscreteLaws.bernoulli_integral (affine 0) valid]
+    rw [DiscreteLaws.integral_bernoulliFiber (affine 0) valid]
     simp only [abs_zero, abs_one, mul_zero, mul_one, zero_add, one_mul,
       Fin.sum_univ_one]
     linarith [le_abs_self (affine 0)]
   | discrete n =>
     refine ⟨n, Nat.cast_nonneg _, ?_⟩
     intro affine valid
-    simp only [domain] at valid
+    simp only [InDomain] at valid
     rw [primitiveLaws.kernel_eq_paperMeasure, paperMeasure, if_pos valid]
     change (∫ x : ℝ, |x| ∂DiscreteLaws.remainderMeasure n affine) ≤ _
-    rw [DiscreteLaws.remainder_integral n affine valid]
+    rw [DiscreteLaws.integral_remainderMeasure n affine valid]
     simp only [Nat.abs_cast]
     have bound : (∑ i : Fin n, affine i * (i : ℕ)) +
         (1 - ∑ i, affine i) * (n : ℝ) ≤ n := by

@@ -69,22 +69,22 @@ theorem generationEvent_eq_entry (site : DistributionAction × Op) (value : ℝ)
   | sample affinity => cases affinity <;> rfl
   | mean => rfl
 
-theorem event_some_measurable : Measurable (some : Op × ℝ → Event) := by
+theorem measurable_event_some : Measurable (some : Op × ℝ → Event) := by
   apply measurable_comap_iff.mpr
   exact measurable_inl
 
-theorem entry_measurable : Measurable (fun pair : Option Op × ℝ ↦ entry pair.1 pair.2) := by
+theorem measurable_entry : Measurable (fun pair : Option Op × ℝ ↦ entry pair.1 pair.2) := by
   apply measurable_from_prod_countable_right
   intro op
   cases op with
   | none => exact measurable_const
-  | some op => exact event_some_measurable.comp (measurable_const.prodMk measurable_id)
+  | some op => exact measurable_event_some.comp (measurable_const.prodMk measurable_id)
 
-theorem generationEvent_measurable (site : DistributionAction × Op) :
+theorem measurable_generationEvent (site : DistributionAction × Op) :
     Measurable (generationEvent site) := by
   have eq : generationEvent site = entry (siteOp site) := funext (generationEvent_eq_entry site)
   rw [eq]
-  exact entry_measurable.comp (measurable_const.prodMk measurable_id)
+  exact measurable_entry.comp (measurable_const.prodMk measurable_id)
 
 theorem generationOp_value {skeleton : Skeleton} (value : skeleton.isValue = true) :
     generationOp skeleton = none := by

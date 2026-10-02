@@ -68,8 +68,8 @@ theorem momentCertificate_sound (model : Model) (certificate : MomentCertificate
     (valid : certificate.Valid model) :
     (certificate.statistics model).Matches model.outputMeasure := by
   refine ⟨(integrable_const_iff_isFiniteMeasure (by norm_num : (1 : ℝ) ≠ 0)).mp
-    (outputAt_integrable model model.initial (fun _ ↦ 1)),
-      outputAt_integrable model model.initial (fun x ↦ x ^ 2), ?_, ?_, ?_⟩
+    (integrable_outputAt model model.initial (fun _ ↦ 1)),
+      integrable_outputAt model model.initial (fun x ↦ x ^ 2), ?_, ?_, ?_⟩
   · simpa [Moment.real, MomentCertificate.statistics, integral_const] using
       momentCertificate_integral model certificate valid .mass
   · exact momentCertificate_integral model certificate valid .first
@@ -77,7 +77,7 @@ theorem momentCertificate_sound (model : Model) (certificate : MomentCertificate
 
 theorem outputMeasure_memLp (model : Model) : MemLp id 2 model.outputMeasure :=
   (memLp_two_iff_integrable_sq aestronglyMeasurable_id).mpr
-    (outputAt_integrable model model.initial (fun x ↦ x ^ 2))
+    (integrable_outputAt model model.initial (fun x ↦ x ^ 2))
 
 theorem statistics_conditional_mean (statistics : OutputStatistics) (law : Measure ℝ)
     (correct : statistics.Matches law) :
@@ -85,7 +85,7 @@ theorem statistics_conditional_mean (statistics : OutputStatistics) (law : Measu
         (statistics.firstMoment / statistics.returnMass : Rat) := by
   rw [correct.mass, correct.first, Rat.cast_div]
 
-theorem statistics_first_integrable (statistics : OutputStatistics) (law : Measure ℝ)
+theorem integrable_id_of_statistics (statistics : OutputStatistics) (law : Measure ℝ)
     (correct : statistics.Matches law) : Integrable id law := by
   let := correct.finite
   exact ((memLp_two_iff_integrable_sq aestronglyMeasurable_id).mpr
