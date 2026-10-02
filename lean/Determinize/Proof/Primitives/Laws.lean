@@ -107,15 +107,15 @@ def paperMeasure : (op : Op) → Params op → Measure ℝ
         ENNReal.ofReal (1 - ∑ i, params.1 i) • Measure.dirac (n : ℝ)
     else 0
 
+open scoped Classical in
 /-- The stochastic or mean fiber of a primitive at evaluated operand lists. -/
-def primitiveFiber (kind : DistributionAction) (op : Op) (affine general : List ℝ) : Measure ℝ := by
-  classical
-  exact match parseParams op affine general with
-    | none => 0
-    | some params =>
-      match kind with
-      | .sample _ => paperMeasure op params
-      | .mean => if InDomain op params then Measure.dirac (meanValue op params) else 0
+def primitiveFiber (kind : DistributionAction) (op : Op) (affine general : List ℝ) : Measure ℝ :=
+  match parseParams op affine general with
+  | none => 0
+  | some params =>
+    match kind with
+    | .sample _ => paperMeasure op params
+    | .mean => if InDomain op params then Measure.dirac (meanValue op params) else 0
 
 /-! The reviewer-facing fibers are the generic one at the primitive's operand lists. -/
 

@@ -22,10 +22,10 @@ noncomputable section
 /-- The compact replay of the realized source, averaged over the history of E draws. -/
 def compactHistoryReplay (depth : Nat) (history : Symbolic.SampleEnv primitiveLaws n)
     (safe : history.DomainSafe primitiveLaws) (expression : AffineExpr n) :
-    SFiniteKernel DrawTrace ℝ := by
-  let : IsProbabilityMeasure (history.actualMeasure primitiveLaws) :=
+    SFiniteKernel DrawTrace ℝ :=
+  letI : IsProbabilityMeasure (history.actualMeasure primitiveLaws) :=
     ⟨SymbolicSoundness.SampleEnv.actualMeasure_univ_eq_one _ history safe⟩
-  exact averageKernel (history.actualMeasure primitiveLaws)
+  averageKernel (history.actualMeasure primitiveLaws)
     (SFiniteKernel.pullback (compactReplayKernel depth)
       (fun pair : DrawTrace × Env n ↦ (pair.1, expression.realize pair.2))
       (measurable_fst.prodMk (expression.measurable_realize.comp measurable_snd)))
