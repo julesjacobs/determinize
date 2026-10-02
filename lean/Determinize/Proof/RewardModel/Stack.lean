@@ -20,7 +20,6 @@ private theorem draw_push (site : Spec.Paper.DistributionAction × Spec.Paper.Op
     obtain ⟨rfl, rfl⟩ := action
     simp [extend, List.map_map, pushStack, Function.comp_def]
 
-set_option maxHeartbeats 1600000 in
 theorem step_push (state : State) (outer : List Frame) (tag : Evidence)
     (outcomes : List (Rat × State)) (action : step state = .ok (.next tag outcomes)) :
     step (pushStack state outer) = .ok (.next tag (extend outer outcomes)) := by

@@ -145,7 +145,7 @@ theorem joint_normalized_fiberSound (source : Expr) (typed : Typed [] source (.f
       have massOne : outputGivenTraceAt depth source (retain point.1) Set.univ = 1 := by
         have h := good.1
         rwa [compactFiber_apply, compactHistoryReplay_nil] at h
-      show (normalizedFiber source).kernel point.1 = _
+      change (normalizedFiber source).kernel point.1 = _
       rw [normalizedFiber, MeasurableActionFamily.pullback_apply, compactFiber_apply,
         compactHistoryReplay_nil]
       change normalizedOutputGivenTrace source (retain point.1) = _
@@ -177,7 +177,7 @@ theorem compact_source_massOne (source : Expr) (typed : Typed [] source (.float 
   have massOne : outputGivenTraceAt depth source (retain point.1) Set.univ = 1 := by
     have h := good.1
     rwa [compactFiber_apply, compactHistoryReplay_nil] at h
-  show outputGivenTrace source (retain point.1) Set.univ = 1
+  change outputGivenTrace source (retain point.1) Set.univ = 1
   rw [outputGivenTrace_eq_ogtAt depth source _ massOne]
   exact massOne
 
@@ -191,7 +191,7 @@ theorem compact_target_selfReplay (source : Expr) (typed : Typed [] source (.flo
     Measure.ae_sum_iff]
   intro depth
   filter_upwards [StepTraces.target_selfReplay_source source typed safe depth] with point hp
-  show outputGivenTrace source.determinize (retain point.1) = Measure.dirac point.2
+  change outputGivenTrace source.determinize (retain point.1) = Measure.dirac point.2
   rw [outputGivenTrace_eq_ogtAt depth _ _ (by rw [hp]; simp), hp]
 
 /-! ### The factorization with its almost-sure identifications -/

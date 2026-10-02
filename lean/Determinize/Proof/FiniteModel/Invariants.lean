@@ -45,6 +45,7 @@ private theorem binary_shape (op : Binary) (left right : Value) (stack : List Fr
   all_goals exact shape
 
 set_option maxHeartbeats 1000000 in
+-- One case per machine state and frame, each splitting every branch of `step`.
 theorem step_shape (before : State) (shape : StateShape before)
     (evidence : Evidence) (successors : List (Rat × State))
     (action : step before = .ok (.next evidence successors))

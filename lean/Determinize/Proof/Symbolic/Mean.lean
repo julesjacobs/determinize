@@ -4,8 +4,6 @@ namespace Determinize.Proof.Paper.Symbolic.AffineExpr
 
 open MeasureTheory ProbabilityTheory Determinize.Spec.Paper
 
-open scoped Classical
-
 noncomputable section
 
 /-- The evaluated parameters of a symbolic primitive call. -/
@@ -19,6 +17,7 @@ theorem eval_meanAffine (op : Op) (affine : List (Affine n)) (general : List ℝ
       meanValue op (meanParams op affine general environment) := by
   exact Affine.eval_primitiveMean op _ _ environment
 
+open scoped Classical in
 theorem primitiveFiber_mean_formula (op : Op) (affine : List (Affine n)) (general : List ℝ)
     (ha : affine.length = affineArity op) (hg : general.length = generalArity op)
     (environment : Env n) :
