@@ -7,6 +7,9 @@
       devShells.default = pkgs.mkShell {
         name = "determinize";
 
+        # Not inherited through inputsFrom; see lean.nix.
+        hardeningDisable = [ "bindnow" ];
+
         inputsFrom = [
           config.devShells.tex
           config.devShells.sim
