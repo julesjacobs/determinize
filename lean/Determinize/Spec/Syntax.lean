@@ -50,6 +50,8 @@ deriving instance Repr, DecidableEq, Inhabited for Expr
 
 namespace Expr
 
+/-- Whether an expression is a value: a literal, a function, the empty list, or a pair,
+injection or list cell of values. -/
 def isValue {Literal : Type} : Expr Literal → Bool
   | .unit | .bool _ | .real _ | .lam _ | .fix _ | .nil => true
   | .pair left right | .cons left right => left.isValue && right.isValue
@@ -96,16 +98,22 @@ def mapVars {Literal Site : Type} (replace : Nat → Nat → Expr Literal Site) 
   | .beta k l r => .beta k (l.mapVars replace depth) (r.mapVars replace depth)
   | .gamma k l r => .gamma k (l.mapVars replace depth) (r.mapVars replace depth)
 
+/-- Add `amount` to every variable index that is at least `cutoff`. -/
 abbrev shift {Literal Site : Type} (amount cutoff : Nat) : Expr Literal Site → Expr Literal Site :=
   mapVars (fun cutoff index ↦ .bvar (if cutoff ≤ index then index + amount else index)) cutoff
 
+/-- Substitute `replacement` for the variable `depth` and lower the indices above it. -/
 abbrev substAt {Literal Site : Type} (depth : Nat) (replacement : Expr Literal Site) :
     Expr Literal Site → Expr Literal Site :=
   mapVars (fun depth index ↦ if index = depth then replacement.shift depth 0
     else .bvar (if depth < index then index - 1 else index)) depth
 
+/-- Substitute `replacement` for the innermost variable of `body`. -/
 def substHead {Literal Site : Type} (body replacement : Expr Literal Site) : Expr Literal Site :=
   substAt 0 replacement body
+
+/-- Substitute `argument` for the innermost variable of `body` and `function` for the next one,
+as when a recursive function is applied. -/
 def substTwo {Literal Site : Type} (body argument function : Expr Literal Site) :
     Expr Literal Site :=
   substAt 0 argument (substAt 1 function body)
