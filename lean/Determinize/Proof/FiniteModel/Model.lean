@@ -24,7 +24,7 @@ theorem outputWithin_mono (model : Model) (state : Fin model.size) :
   intro steps
   induction steps generalizing state with
   | zero =>
-    cases h : model.kind state <;> simp [Model.outputWithin, h]
+    cases h : model.kind state <;> simp only [Model.outputWithin, h, Std.le_refl]
     exact bot_le
   | succ steps ih =>
     cases h : model.kind state with
@@ -60,7 +60,7 @@ theorem integrable_outputWithin (model : Model) (steps : Nat) (state : Fin model
     (f : ℝ → ℝ) : Integrable f (model.outputWithin steps state) := by
   induction steps generalizing state with
   | zero =>
-    cases h : model.kind state <;> simp [Model.outputWithin, h]
+    cases h : model.kind state <;> simp only [Model.outputWithin, h, integrable_zero_measure]
     exact integrable_dirac (by simp)
   | succ steps ih =>
     cases h : model.kind state with

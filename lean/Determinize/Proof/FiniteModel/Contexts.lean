@@ -33,8 +33,14 @@ theorem reduce_frameExpr (frame : Frame) (shape : FrameShape frame) (hole : Expr
     rcases site with ⟨kind, op⟩
     rcases arguments with _ | ⟨a, _ | ⟨b, arguments⟩⟩ <;>
       rcases pending with _ | ⟨p, _ | ⟨q, pending⟩⟩ <;>
-      cases op <;> simp_all [FrameShape, primitiveArity, frameExpr, primitiveExpr,
-        Expr.isValue, reduce] <;> first | rfl | omega
+      cases op <;> simp_all only [FrameShape, List.length_nil, zero_add, add_zero, primitiveArity,
+        OfNat.one_ne_ofNat, frameExpr, primitiveExpr, List.map_nil, List.nil_append, Expr.isValue,
+        reduce, Bool.false_eq_true, ↓reduceIte, true_and, one_ne_zero, List.length_cons,
+        Nat.reduceAdd, List.map_cons, OfNat.ofNat_ne_one, OfNat.ofNat_ne_zero, Nat.add_eq_left,
+        Nat.add_eq_zero_iff, List.length_eq_zero_iff, and_false, and_self, List.cons_append,
+        Nat.succ_ne_self, Nat.reduceEqDiff, Nat.add_eq_right, List.cons.injEq,
+        List.append_eq_nil_iff, List.map_eq_nil_iff, reduceCtorEq, implies_true] <;>
+        first | rfl | omega
 
 theorem wrap_wrap (action : Action) (first second : Expr → Expr) :
     (action.wrap first).wrap second = action.wrap (second ∘ first) := by

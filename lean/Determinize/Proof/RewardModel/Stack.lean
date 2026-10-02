@@ -59,7 +59,8 @@ theorem step_pushStack (state : State) (outer : List Frame) (tag : Evidence)
           rfl
       | unary op =>
         cases op <;> cases value <;>
-          simp [step, unary, pure, bind, Except.bind, Except.pure] at action
+          simp only [step, bind, Except.bind, unary, reduceCtorEq, pure, Except.pure,
+            Except.ok.injEq, Step.next.injEq] at action
         all_goals obtain ⟨rfl, rfl⟩ := action
         all_goals rfl
       | right op left =>
@@ -67,7 +68,9 @@ theorem step_pushStack (state : State) (outer : List Frame) (tag : Evidence)
           simp only [step, binary, pure, bind, Except.bind, Except.pure] at action
         all_goals try split_ifs at action
         all_goals repeat' (split at action)
-        all_goals simp_all [step, binary, pushStack, extend, pure, bind, Except.bind, Except.pure]
+        all_goals simp_all only [reduceCtorEq, Except.ok.injEq, Step.next.injEq, step, pushStack,
+          List.cons_append, bind, Except.bind, binary, pure, Except.pure, extend, true_and,
+          beq_iff_eq, ↓reduceIte]
         all_goals obtain ⟨rfl, rfl⟩ := action
         all_goals subst_vars
         all_goals rfl
@@ -78,15 +81,18 @@ theorem step_pushStack (state : State) (outer : List Frame) (tag : Evidence)
         obtain ⟨rfl, rfl⟩ := Step.next.inj (Except.ok.inj action)
         rfl
       | choose yes no env =>
-        cases value <;> simp [step, pure, bind, Except.bind, Except.pure] at action
+        cases value <;> simp only [step, bind, Except.bind, pure, Except.pure, reduceCtorEq,
+          Except.ok.injEq, Step.next.injEq] at action
         obtain ⟨rfl, rfl⟩ := action
         rfl
       | matchSum left right env =>
-        cases value <;> simp [step, pure, bind, Except.bind, Except.pure] at action
+        cases value <;> simp only [step, bind, Except.bind, pure, Except.pure, reduceCtorEq,
+          Except.ok.injEq, Step.next.injEq] at action
         all_goals obtain ⟨rfl, rfl⟩ := action
         all_goals rfl
       | matchList nilCase consCase env =>
-        cases value <;> simp [step, pure, bind, Except.bind, Except.pure] at action
+        cases value <;> simp only [step, bind, Except.bind, pure, Except.pure, reduceCtorEq,
+          Except.ok.injEq, Step.next.injEq] at action
         all_goals obtain ⟨rfl, rfl⟩ := action
         all_goals rfl
 

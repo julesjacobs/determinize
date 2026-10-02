@@ -105,7 +105,7 @@ theorem Work.absorbing (work : Work) (complete : work.rows.size = work.table.sta
         simp only [h] at correct; simpa only [work.record_state complete i] using correct.2
       | rejected =>
         simp only [h] at correct; simpa only [work.record_state complete i] using correct.2
-      | next evidence outcomes => simp [h] at correct; exact (terminal correct.1).elim
+      | next evidence outcomes => simp only [h] at correct; exact (terminal correct.1).elim
   simp only [Work.weight, outcomes, List.map_cons, List.map_nil, List.sum_cons, List.sum_nil,
     add_zero]
   have eq : work.table.states[i.val] = work.table.states[j.val] ↔ i = j :=

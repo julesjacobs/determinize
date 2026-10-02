@@ -40,7 +40,7 @@ theorem Shape.subst_single_of_not_mem {i : Nat} {s t : Shape} (h : i ∉ s.vars)
 theorem Shape.size_le_subst {σ : Nat → Shape} {i : Nat} {t : Shape} (h : i ∈ t.vars) :
     (σ i).size ≤ (t.subst σ).size := by
   induction t with
-  | var j => simp [Shape.vars] at h; subst h; rfl
+  | var j => simp only [Shape.vars, Finset.mem_singleton] at h; subst h; rfl
   | unit | bool | float => simp [Shape.vars] at h
   | prod a b iha ihb | sum a b iha ihb | arr a b iha ihb =>
     simp only [Shape.vars, Finset.mem_union] at h
@@ -55,7 +55,7 @@ theorem Shape.size_le_subst {σ : Nat → Shape} {i : Nat} {t : Shape} (h : i �
 theorem Shape.size_lt_subst {σ : Nat → Shape} {i : Nat} {t : Shape} (h : i ∈ t.vars)
     (ne : t ≠ .var i) : (σ i).size < (t.subst σ).size := by
   cases t with
-  | var j => simp [Shape.vars] at h; exact absurd (h ▸ rfl) ne
+  | var j => simp only [Shape.vars, Finset.mem_singleton] at h; exact absurd (h ▸ rfl) ne
   | unit | bool | float => simp [Shape.vars] at h
   | prod a b | sum a b | arr a b =>
     simp only [Shape.vars, Finset.mem_union] at h

@@ -411,7 +411,10 @@ theorem typed_arr_value (typed : Typed context expression (.arr argument result)
         Ty.Sub.trans hr (by assumption), hb⟩
     · exact Or.inr ⟨a, r, body, he, Ty.Sub.trans (by assumption) ha,
         Ty.Sub.trans hr (by assumption), hb⟩
-  all_goals cases ht <;> simp_all [Expr.isValue]
+  all_goals cases ht <;> simp_all only [Expr.isValue, Bool.false_eq_true, Expr.lam.injEq,
+    exists_eq_left', exists_and_left, reduceCtorEq, false_and, exists_const, exists_false, or_false,
+    Expr.fix.injEq, false_or, not_isEmpty_of_nonempty, IsEmpty.exists_iff, exists_const_iff,
+    and_true, and_self, or_self, IsEmpty.forall_iff, implies_true]
   all_goals exact ⟨_, Ty.Sub.refl _, _, Ty.Sub.refl _, by assumption⟩
 
 theorem typed_prod_value (typed : Typed context expression (.prod leftTy rightTy))

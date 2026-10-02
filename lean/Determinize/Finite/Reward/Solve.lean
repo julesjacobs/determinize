@@ -24,7 +24,8 @@ private def solveRhs (model : Spec.FiniteModel.Model) (rhs : Fin model.size → 
     intro i
     have h := solution.property i
     by_cases transient : model.kind i = .transient
-    · simp [A, transient, sub_mul, Finset.sum_sub_distrib] at h
+    · simp only [transient, ↓reduceIte, sub_mul, ite_mul, one_mul, zero_mul,
+        Finset.sum_sub_distrib, Finset.sum_ite_eq, Finset.mem_univ, A] at h
       simp only [transient, ↓reduceIte]
       exact (sub_eq_iff_eq_add.mp h)
     · simpa [A, transient] using h⟩

@@ -44,7 +44,7 @@ theorem outputWithin_mono (model : Model) (state : Fin model.size) :
   intro n
   induction n generalizing state with
   | zero =>
-    cases h : model.kind state <;> simp [Model.outputWithin, h]
+    cases h : model.kind state <;> simp only [Model.outputWithin, h, Std.le_refl]
     exact bot_le
   | succ n ih =>
     cases h : model.kind state with

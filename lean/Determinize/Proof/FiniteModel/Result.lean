@@ -39,7 +39,7 @@ private theorem integrable_terminalBound (model : Model) (f : ℝ → ℝ) :
     Integrable f (terminalBound model) := by
   apply integrable_finsetSum_measure.mpr
   intro state _
-  cases model.kind state <;> simp
+  cases model.kind state <;> simp only [integrable_zero_measure]
   exact integrable_dirac (by simp)
 
 private theorem transition_mass (model : Model) (state : Fin model.size) :

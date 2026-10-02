@@ -17,7 +17,8 @@ private theorem splitStack_cons (frame : Frame) (stack : List Frame) :
       else (frame :: (splitStack stack).1, (splitStack stack).2) := by
   cases h : splitStack stack with
   | mk inner offsets =>
-    cases inner <;> cases frame <;> simp [splitStack, h, additive]
+    cases inner <;> cases frame <;> simp only [splitStack, h, additive, Bool.false_eq_true,
+      and_false, ↓reduceIte, true_and, reduceCtorEq, and_self, false_and]
     case nil.right op value =>
       cases op <;> cases value <;> simp
 

@@ -274,7 +274,9 @@ theorem hasVar_iff {i : Nat} {A : Ty} : HasVar Γ i A ↔ Γ[i]? = some A := by
       | tail h => exact ih.1 h
     · intro h
       cases i with
-      | zero => simp at h; subst h; exact .head
+      | zero =>
+        simp only [List.length_cons, lt_add_iff_pos_left, Order.lt_add_one_iff, zero_le,
+          getElem?_pos, List.getElem_cons_zero, Option.some.injEq] at h; subst h; exact .head
       | succ i => exact .tail (ih.2 (by simpa using h))
 
 end Determinize.Proof.Frontend

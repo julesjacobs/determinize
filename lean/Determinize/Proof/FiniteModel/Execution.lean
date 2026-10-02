@@ -42,9 +42,9 @@ theorem machineOutput_mono (state : State) : Monotone (fun fuel ↦ machineOutpu
   apply monotone_nat_of_le_succ
   intro fuel
   induction fuel generalizing state with
-  | zero => cases h : step state <;> simp [machineOutput, h]
+  | zero => cases h : step state <;> simp only [machineOutput, h, Std.le_refl]
             rename_i result
-            cases result <;> simp
+            cases result <;> simp only [Std.le_refl]
             exact bot_le
   | succ fuel ih =>
     cases h : step state with

@@ -1398,9 +1398,10 @@ theorem symbolicReduce_targetRealize
         by_cases h : y0 = 0
         · simp [affineValue?, Affine.div?, targetRealize, realize, Expr.determinize,
             Expr.isValue, realValue?, Symbolic.Affine.eval, h]
-        simp [h, affineValue?, Affine.div?, targetRealize, realize, Expr.determinize,
-          Expr.isValue, realValue?, Symbolic.Affine.eval, Finset.sum_const_zero,
-          div_eq_mul_inv]
+        simp only [targetRealize, affineValue?, Affine.div?, ↓reduceIte, h, realize, Affine.eval,
+          Prod.smul_fst, smul_eq_mul, Prod.smul_snd, Pi.smul_apply, Expr.determinize, Pi.zero_apply,
+          zero_mul, Finset.sum_const_zero, add_zero, Expr.isValue, realValue?, div_eq_mul_inv,
+          Action.next.injEq, Expr.real.injEq]
         have sumRule : (∑ i, y0⁻¹ * x.2 i * environment i) =
             y0⁻¹ * ∑ i, x.2 i * environment i := by
           rw [Finset.mul_sum]
