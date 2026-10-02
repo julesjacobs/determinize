@@ -1,6 +1,8 @@
 import Determinize.Spec.RewardModel.Model
 import Determinize.Spec.FiniteModel.Statistics
 
+/-! # Results about the output of a reward model -/
+
 namespace Determinize.Spec.RewardModel
 open MeasureTheory
 
