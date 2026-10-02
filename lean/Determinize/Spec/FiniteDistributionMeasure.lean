@@ -1,6 +1,8 @@
 import Determinize.Spec.FiniteDistribution
 import Mathlib.MeasureTheory.Integral.Bochner.Basic
 
+/-! # The measure of a finite distribution -/
+
 namespace Determinize.Spec.Paper
 open MeasureTheory
 

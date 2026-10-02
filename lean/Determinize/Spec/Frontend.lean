@@ -15,8 +15,10 @@ sites:
 
 namespace Determinize.Spec.Paper
 
+/-- A core program: the paper's syntax with rational literals. -/
 abbrev Core := Expr Rat
 
+/-- The paper program a core program denotes: every rational literal read as a real. -/
 def interpret (e : Core) : Expr := e.map (fun (q : Rat) ↦ (q : ℝ)) id
 
 /-- Resolved source syntax. A site carries its requested affinity, or `none` if the affinity is

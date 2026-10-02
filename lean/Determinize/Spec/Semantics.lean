@@ -20,11 +20,14 @@ inductive Action where
   | sample (site : DistributionAction × Op) (fiber : Measure ℝ) (continuation : ℝ → Expr)
   | stuck
 
+/-- Place the result of an action in an evaluation context: the successor expression, or every
+continuation of a sample. -/
 def Action.wrap (context : Expr → Expr) : Action → Action
   | .next expression => .next (context expression)
   | .sample site fiber continuation => .sample site fiber (context ∘ continuation)
   | .stuck => .stuck
 
+/-- The value of a real literal; `none` for any other expression. -/
 def realValue? : Expr → Option ℝ
   | .real value => some value
   | _ => none

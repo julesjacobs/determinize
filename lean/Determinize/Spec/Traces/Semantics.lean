@@ -14,7 +14,10 @@ open MeasureTheory Determinize.Spec.Paper
 
 instance : MeasurableSpace Op := ⊤
 
+/-- A generation trace: the primitive and the value of every `G` draw, in execution order. -/
 abbrev Trace := List (Op × ℝ)
+
+/-- A generation trace together with the real the program returned. -/
 abbrev Output := Trace × ℝ
 
 /-- Length and coordinates give the usual measurable structure on finite lists.
