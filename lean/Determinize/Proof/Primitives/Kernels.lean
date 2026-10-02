@@ -66,7 +66,8 @@ private theorem measurable_gamma_safe :
   rw [hFunctions]
   exact hGamma
 
-private noncomputable def gammaJointDensity (params : Determinize.Spec.Paper.Params .gamma) (value : ℝ) : ENNReal :=
+private noncomputable def gammaJointDensity (params : Determinize.Spec.Paper.Params .gamma)
+    (value : ℝ) : ENNReal :=
   ENNReal.ofReal (ProbabilityTheory.gammaPDFReal
     (safePos (params.1 0))
     (safePos (params.2 0)) value)
@@ -162,7 +163,8 @@ private theorem measurable_exponentialJointDensity :
 private noncomputable def exponentialKernel :
     ProbabilityTheory.Kernel (Determinize.Spec.Paper.Params .exponential) ℝ := by
   classical
-  exact ProbabilityTheory.Kernel.piecewise (Determinize.Proof.Paper.measurableSet_domain .exponential)
+  exact ProbabilityTheory.Kernel.piecewise
+    (Determinize.Proof.Paper.measurableSet_domain .exponential)
     (ProbabilityTheory.Kernel.withDensity
       (ProbabilityTheory.Kernel.const _ volume) exponentialJointDensity) 0
 
@@ -229,13 +231,15 @@ private theorem measurable_betaJointDensity :
     exact (hGammaAlpha.mul hGammaBeta).div hGammaSum
   have hValuePow : Measurable (fun pair : Determinize.Spec.Paper.Params .beta × ℝ ↦
       pair.2 ^ (alpha pair - 1)) := by
-    have hOne : Measurable (fun _ : Determinize.Spec.Paper.Params .beta × ℝ ↦ (1 : ℝ)) := measurable_const
+    have hOne : Measurable (fun _ : Determinize.Spec.Paper.Params .beta × ℝ ↦ (1 : ℝ)) :=
+      measurable_const
     change Measurable ((fun pair : ℝ × ℝ ↦ pair.1 ^ pair.2) ∘
       fun pair ↦ (pair.2, alpha pair - 1))
     exact measurable_rpow_uncurry.comp (measurable_snd.prodMk (hAlpha.sub hOne))
   have hOneSubPow : Measurable (fun pair : Determinize.Spec.Paper.Params .beta × ℝ ↦
       (1 - pair.2) ^ (beta pair - 1)) := by
-    have hOne : Measurable (fun _ : Determinize.Spec.Paper.Params .beta × ℝ ↦ (1 : ℝ)) := measurable_const
+    have hOne : Measurable (fun _ : Determinize.Spec.Paper.Params .beta × ℝ ↦ (1 : ℝ)) :=
+      measurable_const
     change Measurable ((fun pair : ℝ × ℝ ↦ pair.1 ^ pair.2) ∘
       fun pair ↦ (1 - pair.2, beta pair - 1))
     exact measurable_rpow_uncurry.comp
@@ -306,7 +310,8 @@ private noncomputable def uniformKernel :
     ProbabilityTheory.Kernel (Determinize.Spec.Paper.Params .uniform) ℝ := by
   classical
   let intervalKernel := ProbabilityTheory.Kernel.withDensity
-    (ProbabilityTheory.Kernel.const (Determinize.Spec.Paper.Params .uniform) volume) uniformJointDensity
+    (ProbabilityTheory.Kernel.const (Determinize.Spec.Paper.Params .uniform) volume)
+      uniformJointDensity
   let pointKernel := ProbabilityTheory.Kernel.deterministic
     (fun params : Determinize.Spec.Paper.Params .uniform ↦ params.1 0) (by fun_prop)
   let hPointSet : MeasurableSet {params : Determinize.Spec.Paper.Params .uniform |
@@ -314,7 +319,8 @@ private noncomputable def uniformKernel :
     measurableSet_eq_fun (by fun_prop) (by fun_prop)
   let domainKernel := ProbabilityTheory.Kernel.piecewise
     hPointSet pointKernel intervalKernel
-  exact ProbabilityTheory.Kernel.piecewise (Determinize.Proof.Paper.measurableSet_domain .uniform) domainKernel 0
+  exact ProbabilityTheory.Kernel.piecewise (Determinize.Proof.Paper.measurableSet_domain .uniform)
+    domainKernel 0
 
 private theorem uniformKernel_apply (params : Determinize.Spec.Paper.Params .uniform) :
     uniformKernel params = Determinize.Spec.Paper.paperMeasure .uniform params := by
@@ -356,7 +362,8 @@ private noncomputable def poissonWeight (params : Determinize.Spec.Paper.Params 
   ENNReal.ofReal (Real.exp (-rate) * rate ^ index / index.factorial)
 
 private theorem measurable_poissonWeight (index : Nat) :
-    Measurable (fun params : Determinize.Spec.Paper.Params .poisson ↦ poissonWeight params index) := by
+    Measurable
+        (fun params : Determinize.Spec.Paper.Params .poisson ↦ poissonWeight params index) := by
   unfold poissonWeight
   fun_prop
 
@@ -369,7 +376,8 @@ private noncomputable def poissonAtomKernel (index : Nat) :
 
 private theorem measurable_poissonAtomDensity (index : Nat) :
     Measurable (Function.uncurry
-      (fun params : Determinize.Spec.Paper.Params .poisson ↦ fun _ : ℝ ↦ poissonWeight params index)) := by
+      (fun params : Determinize.Spec.Paper.Params .poisson ↦ fun _ : ℝ ↦
+          poissonWeight params index)) := by
   exact (measurable_poissonWeight index).comp measurable_fst
 
 private noncomputable def poissonKernel :
@@ -416,8 +424,10 @@ private theorem poissonKernel_apply (params : Determinize.Spec.Paper.Params .poi
         (fun value : Nat ↦ (value : ℝ)) else 0
     rw [dif_neg (by simpa only [Determinize.Spec.Paper.domain] using hDomain)]
 
-private theorem paperMeasure_mass_one (op : Determinize.Spec.Paper.Op) (params : Determinize.Spec.Paper.Params op)
-    (hDomain : Determinize.Spec.Paper.domain op params) : Determinize.Spec.Paper.paperMeasure op params Set.univ = 1 := by
+private theorem paperMeasure_mass_one (op : Determinize.Spec.Paper.Op)
+    (params : Determinize.Spec.Paper.Params op)
+    (hDomain : Determinize.Spec.Paper.domain op params) :
+    Determinize.Spec.Paper.paperMeasure op params Set.univ = 1 := by
   cases op with
   | uniform =>
     change Determinize.Spec.Paper.uniformMeasure (params.1 0)
@@ -500,8 +510,10 @@ private theorem paperMeasure_mass_one (op : Determinize.Spec.Paper.Op) (params :
     rw [Determinize.Spec.Paper.paperMeasure, if_pos hDomain]
     exact DiscreteLaws.remainder_mass n params.1 hDomain
 
-private theorem paperMeasure_zero_off_domain (op : Determinize.Spec.Paper.Op) (params : Determinize.Spec.Paper.Params op)
-    (hDomain : ¬ Determinize.Spec.Paper.domain op params) : Determinize.Spec.Paper.paperMeasure op params = 0 := by
+private theorem paperMeasure_zero_off_domain (op : Determinize.Spec.Paper.Op)
+    (params : Determinize.Spec.Paper.Params op)
+    (hDomain : ¬ Determinize.Spec.Paper.domain op params) :
+    Determinize.Spec.Paper.paperMeasure op params = 0 := by
   cases op with
   | uniform =>
     change Determinize.Spec.Paper.uniformMeasure (params.1 0)
@@ -538,7 +550,8 @@ private theorem paperMeasure_zero_off_domain (op : Determinize.Spec.Paper.Op) (p
     simp only [Determinize.Spec.Paper.domain] at hDomain
     rw [Determinize.Spec.Paper.paperMeasure, if_neg hDomain]
 
-private theorem paperMeasure_mass_le_one (op : Determinize.Spec.Paper.Op) (params : Determinize.Spec.Paper.Params op) :
+private theorem paperMeasure_mass_le_one (op : Determinize.Spec.Paper.Op)
+    (params : Determinize.Spec.Paper.Params op) :
     Determinize.Spec.Paper.paperMeasure op params Set.univ ≤ 1 := by
   by_cases hDomain : Determinize.Spec.Paper.domain op params
   · rw [paperMeasure_mass_one op params hDomain]
@@ -573,7 +586,8 @@ private theorem gaussian_mean (params : Determinize.Spec.Paper.Params .gaussian)
   calc
     _ = params.1 0 := ProbabilityTheory.integral_id_gaussianReal
     _ = _ := by
-      simp only [Determinize.Proof.Paper.meanValue_eq_affine, Determinize.Proof.Paper.meanConstant, Determinize.Proof.Paper.meanCoeff,
+      simp only [Determinize.Proof.Paper.meanValue_eq_affine, Determinize.Proof.Paper.meanConstant,
+        Determinize.Proof.Paper.meanCoeff,
         Determinize.Spec.Paper.affineArity, zero_add, one_mul]
       symm
       exact Fin.sum_univ_one _
@@ -613,7 +627,8 @@ private theorem uniform_mean (params : Determinize.Spec.Paper.Params .uniform)
   · rw [dif_pos hPoint]
     simp only [integral_dirac]
     subst upper
-    simp only [Determinize.Proof.Paper.meanValue_eq_affine, Determinize.Proof.Paper.meanConstant, Determinize.Proof.Paper.meanCoeff,
+    simp only [Determinize.Proof.Paper.meanValue_eq_affine, Determinize.Proof.Paper.meanConstant,
+      Determinize.Proof.Paper.meanCoeff,
       Determinize.Spec.Paper.affineArity, zero_add]
     have hSum : (∑ i, 1 / 2 * params.1 i) =
         1 / 2 * params.1 0 + 1 / 2 * params.1 1 := by
@@ -638,7 +653,8 @@ private theorem uniform_mean (params : Determinize.Spec.Paper.Params .uniform)
       rw [ENNReal.toReal_inv]
       simp [ENNReal.toReal_ofReal hPositive.le]
     rw [hScale]
-    simp only [smul_eq_mul, Determinize.Proof.Paper.meanValue_eq_affine, Determinize.Proof.Paper.meanConstant, Determinize.Proof.Paper.meanCoeff,
+    simp only [smul_eq_mul, Determinize.Proof.Paper.meanValue_eq_affine,
+      Determinize.Proof.Paper.meanConstant, Determinize.Proof.Paper.meanCoeff,
       Determinize.Spec.Paper.affineArity, zero_add]
     have hSum : (∑ i, 1 / 2 * params.1 i) =
         1 / 2 * params.1 0 + 1 / 2 * params.1 1 := by
@@ -727,7 +743,8 @@ private theorem poisson_mean (params : Determinize.Spec.Paper.Params .poisson)
         ∑' n : Nat, Real.exp (-(rate : ℝ)) * (rate : ℝ) ^ n /
           n.factorial * (n : ℝ) by simp only [smul_eq_mul],
     (hasSum_poisson_first_moment rate).tsum_eq]
-  simp only [Determinize.Proof.Paper.meanValue_eq_affine, Determinize.Proof.Paper.meanConstant, Determinize.Proof.Paper.meanCoeff,
+  simp only [Determinize.Proof.Paper.meanValue_eq_affine, Determinize.Proof.Paper.meanConstant,
+    Determinize.Proof.Paper.meanCoeff,
     Determinize.Spec.Paper.affineArity, zero_add, one_mul]
   rw [show (rate : ℝ) = params.1 0 by
     simp [rate, Real.toNNReal_of_nonneg hd]]
@@ -849,7 +866,8 @@ private theorem gamma_mean (params : Determinize.Spec.Paper.Params .gamma)
       ProbabilityTheory.gammaMeasure (params.1 0)
         (params.2 0) else 0) = _
   rw [dif_pos ⟨hShape, hRate⟩, gamma_mean_at hShape hRate]
-  simp only [Determinize.Proof.Paper.meanValue_eq_affine, Determinize.Proof.Paper.meanConstant, Determinize.Proof.Paper.meanCoeff,
+  simp only [Determinize.Proof.Paper.meanValue_eq_affine, Determinize.Proof.Paper.meanConstant,
+    Determinize.Proof.Paper.meanCoeff,
     Determinize.Spec.Paper.affineArity, zero_add]
   change params.1 (0 : Fin 1) / params.2 (0 : Fin 1) =
     ∑ i : Fin 1, 1 / params.2 (0 : Fin 1) * params.1 i
@@ -1058,7 +1076,8 @@ noncomputable def primitiveKernel :
           fun_prop
       · exact measurable_const⟩
 
-theorem primitiveKernel_apply (op : Determinize.Spec.Paper.Op) (params : Determinize.Spec.Paper.Params op) :
+theorem primitiveKernel_apply (op : Determinize.Spec.Paper.Op)
+    (params : Determinize.Spec.Paper.Params op) :
     primitiveKernel op params = Determinize.Spec.Paper.paperMeasure op params := by
   cases op with
   | uniform => exact uniformKernel_apply params

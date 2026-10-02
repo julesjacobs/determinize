@@ -32,7 +32,8 @@ theorem paths_unique (model : Model) (paths : Paths model) (valid : paths.Valid 
           apply Finset.sum_congr rfl
           intro next _
           rw [abs_mul, abs_of_nonneg (by exact_mod_cast model.nonnegative state next)]
-    have total : ∑ next, (model.transition state next : ℝ) = 1 := by exact_mod_cast model.normalized state
+    have total : ∑ next, (model.transition state next : ℝ) = 1 := by
+      exact_mod_cast model.normalized state
     have sumDiff : (∑ next, (model.transition state next : ℝ) * (M - |d next|)) =
         M - ∑ next, (model.transition state next : ℝ) * |d next| := by
       simp only [mul_sub]
@@ -80,8 +81,10 @@ def findPaths (model : Model) (rank : Fin model.size → Nat) :
           some (⟨next, fun _ ↦ h⟩ : {next : Fin model.size // model.kind state = .transient →
             0 < model.transition state next ∧ rank next < rank state})
         else none
-    else some (⟨state, fun h ↦ (transient h).elim⟩ : {next : Fin model.size // model.kind state = .transient →
-      0 < model.transition state next ∧ rank next < rank state})
+    else some
+      (⟨state, fun h ↦ (transient h).elim⟩ :
+        {next : Fin model.size // model.kind state = .transient →
+          0 < model.transition state next ∧ rank next < rank state})
   let some selected := chooseAll model.size choices
     | throw "no descending path to a terminal boundary"
   let next := Vector.ofFn fun state ↦ (selected state).val

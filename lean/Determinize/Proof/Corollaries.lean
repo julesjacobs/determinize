@@ -452,7 +452,8 @@ theorem varianceSoundness (program : Expr) (typed : Typed [] program (.float .E)
     sourceSafe
   obtain ⟨integrable, decomposition⟩ := factor.variance_decomposition memLp
   have congr : (fun trace ↦ variance id (StepTraces.normalizedOutputGivenTrace program trace))
-      =ᵐ[traceLaw program] fun trace ↦ variance id ((traceAndOutputLaw program).condKernel trace) := by
+      =ᵐ[traceLaw program] fun trace ↦
+        variance id ((traceAndOutputLaw program).condKernel trace) := by
     filter_upwards [massAe, replayAe] with trace mass replay
     rw [← mass, replay]
   exact ⟨integrable.congr congr, by rw [decomposition, integral_congr_ae congr]⟩

@@ -5,7 +5,8 @@ import Determinize.Proof.Primitives.DiscreteLaws
 namespace Determinize.Tests
 open Checking
 
-example : (finiteDistribution [1 / 6, 1 / 3, 1 / 2]).map (·.probabilities) = .ok [1 / 6, 1 / 3, 1 / 2] := by
+example : (finiteDistribution [1 / 6, 1 / 3, 1 / 2]).map (·.probabilities) =
+    .ok [1 / 6, 1 / 3, 1 / 2] := by
   decide +kernel
 
 example : (finiteDistribution [0, 1, 0]).map (·.mean) = .ok 1 := by
@@ -21,7 +22,8 @@ example (p : ℝ) (h : 0 ≤ p ∧ p ≤ 1) :
 #print axioms Proof.DiscreteLaws.discrete_mean
 #print axioms Proof.DiscreteLaws.bernoulli_mean
 
-example : (remainderDistribution [1 / 6, 1 / 3]).map (·.probabilities) = .ok [1 / 6, 1 / 3, 1 / 2] := by
+example : (remainderDistribution [1 / 6, 1 / 3]).map (·.probabilities) =
+    .ok [1 / 6, 1 / 3, 1 / 2] := by
   decide +kernel
 
 example : (remainderDistribution []).map (·.probabilities) = .ok [1] := by

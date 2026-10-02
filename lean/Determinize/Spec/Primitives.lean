@@ -101,7 +101,8 @@ noncomputable def bernoulliFiber (action : DistributionAction) (probability : �
 /-- `discrete(p₀, …, pₙ₋₁, *)` has outcomes `0, …, n`. The last probability is
 `1 - ∑ i, pᵢ`; supplied probabilities must be nonnegative and sum to at most one.
 The same domain applies at mean sites. -/
-noncomputable def discreteFiber (action : DistributionAction) (probabilities : List ℝ) : Measure ℝ :=
+noncomputable def discreteFiber (action : DistributionAction) (probabilities : List ℝ) :
+    Measure ℝ :=
   if (∀ i : Fin probabilities.length, 0 ≤ probabilities[i]) ∧
       ∑ i : Fin probabilities.length, probabilities[i] ≤ 1 then
     match action with

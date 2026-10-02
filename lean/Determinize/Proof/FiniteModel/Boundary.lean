@@ -26,7 +26,8 @@ theorem dead_outputWithin (model : Model) (dead : Fin model.size → Bool)
     apply Finset.sum_eq_zero
     intro next _
     by_cases positive : 0 < model.transition state next
-    · rw [ih next ((closed state isDead).2 next positive) ((closed next ((closed state isDead).2 next positive)).1), smul_zero]
+    · rw [ih next ((closed state isDead).2 next positive)
+        ((closed next ((closed state isDead).2 next positive)).1), smul_zero]
     · have zero : model.transition state next = 0 :=
         le_antisymm (le_of_not_gt positive) (model.nonnegative state next)
       simp [zero]
@@ -53,7 +54,8 @@ theorem cut_outputWithin (model : Model) (dead : Fin model.size → Bool)
         simp only [ih]
 
 theorem cut_outputMeasure (model : Model) (dead : Fin model.size → Bool)
-    (closed : ClosedDivergence model dead) : (cut model dead).outputMeasure = model.outputMeasure := by
+    (closed : ClosedDivergence model dead) :
+    (cut model dead).outputMeasure = model.outputMeasure := by
   change (⨆ n, (cut model dead).outputWithin n model.initial) = _
   simp only [cut_outputWithin model dead closed, Model.outputMeasure]
 
@@ -84,9 +86,11 @@ private def findBoundary (model : Model) : Nat → Nat → Vector Bool model.siz
   | fuel + 1, level, reachable, rank =>
     let next := reachStep model reachable
     if stable : ∀ state : Fin model.size, next[state] = reachable[state] then
-      some ⟨fun state ↦ !reachable[state], stable_closed model reachable stable, fun state ↦ rank[state]⟩
+      some ⟨fun state ↦ !reachable[state], stable_closed model reachable stable,
+        fun state ↦ rank[state]⟩
     else
-      let ranks := Vector.ofFn fun state ↦ if reachable[state] then rank[state] else if next[state] then level else 0
+      let ranks := Vector.ofFn fun state ↦
+        if reachable[state] then rank[state] else if next[state] then level else 0
       findBoundary model fuel (level + 1) next ranks
 
 def analyze (model : Model) : Except String (Boundary model) :=

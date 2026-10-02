@@ -25,7 +25,8 @@ inductive Exploration (source : Core) (subject : Subject) where
 private def build (source : Core) (subject : Subject)
     (sourceScoped : Proof.FiniteModel.Binding.Scoped 0 source) (limits : Limits)
     (remaining : Nat) (work : Builder.Work)
-    (root : work.root = initialState source subject) (edgeCount : Nat) : Exploration source subject :=
+    (root : work.root = initialState source subject) (edgeCount : Nat) :
+    Exploration source subject :=
   if complete : work.rows.size = work.table.states.size then
     .complete (work.candidate complete) (work.valid complete source subject root sourceScoped)
   else match remaining with
@@ -35,10 +36,13 @@ private def build (source : Core) (subject : Subject)
     match Builder.readAction (work.table.states[work.rows.size]'pending) with
     | .error failure => .failed work.rows.size failure
     | .ok action =>
-      let outgoing := (action.successors.filterMap fun (outcome : Rat × State) ↦ if 0 < outcome.1 then some outcome.2 else none).eraseDups.length
+      let outgoing :=
+        (action.successors.filterMap fun (outcome : Rat × State) ↦
+          if 0 < outcome.1 then some outcome.2 else none).eraseDups.length
       if edgeCount + outgoing > limits.maxEdges then
         .incomplete .edges work.table.states.size work.rows.size edgeCount
-      else if action.successors.any (fun (p, s) ↦ 0 < p && (reprStr s).utf8ByteSize > limits.maxStateBytes) then
+      else if action.successors.any
+        (fun (p, s) ↦ 0 < p && (reprStr s).utf8ByteSize > limits.maxStateBytes) then
         .incomplete .stateBytes work.table.states.size work.rows.size edgeCount
       else
         let next := work.expand pending action

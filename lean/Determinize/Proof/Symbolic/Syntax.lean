@@ -275,7 +275,8 @@ inductive WellTyped : List Ty → AffineExpr sampleCount → Ty → Prop
       WellTyped context (.div left right) (.float .G)
   | lt : WellTyped context left (.float .G) → WellTyped context right (.float .G) →
       WellTyped context (.lt left right) .bool
-  | uniform : WellTyped context lower (.float affinity) → WellTyped context upper (.float affinity) →
+  | uniform : WellTyped context lower (.float affinity) →
+      WellTyped context upper (.float affinity) →
       WellTyped context (.uniform (.sample affinity) lower upper) (.float affinity)
   | gaussian : WellTyped context mean (.float affinity) → WellTyped context spread (.float .G) →
       WellTyped context (.gaussian (.sample affinity) mean spread) (.float affinity)
@@ -291,7 +292,8 @@ inductive WellTyped : List Ty → AffineExpr sampleCount → Ty → Prop
       WellTyped context (.beta (.sample affinity) alpha betaArg) (.float affinity)
   | gamma : WellTyped context shape (.float affinity) → WellTyped context rate (.float .G) →
       WellTyped context (.gamma (.sample affinity) shape rate) (.float affinity)
-  | uniformMean : WellTyped context lower (.float affinity) → WellTyped context upper (.float affinity) →
+  | uniformMean : WellTyped context lower (.float affinity) →
+      WellTyped context upper (.float affinity) →
       WellTyped context (.uniform .mean lower upper) (.float affinity)
   | gaussianMean : WellTyped context mean (.float affinity) → WellTyped context spread (.float .G) →
       WellTyped context (.gaussian .mean mean spread) (.float affinity)
@@ -329,7 +331,8 @@ theorem WellTyped.realize_typed {sampleCount : Nat} {expression : AffineExpr sam
   case snd pairValue => exact Determinize.Spec.Paper.Typed.snd pairValue
   case inl operand => exact Determinize.Spec.Paper.Typed.inl operand
   case inr operand => exact Determinize.Spec.Paper.Typed.inr operand
-  case matchSum scrutinee left right => exact Determinize.Spec.Paper.Typed.matchSum scrutinee left right
+  case matchSum scrutinee left right =>
+    exact Determinize.Spec.Paper.Typed.matchSum scrutinee left right
   case nil => exact Determinize.Spec.Paper.Typed.nil
   case cons head tail => exact Determinize.Spec.Paper.Typed.cons head tail
   case matchList scrutinee nilCase consCase =>
@@ -384,10 +387,13 @@ theorem WellTyped.weakenSamples (typed : WellTyped context expression ty) :
   rw [zero]
   exact funext (Fin.cases rfl fun _ ↦ rfl)
 
-abbrev shift (amount cutoff : Nat) (expression : AffineExpr sampleCount) := Expr.shift amount cutoff expression
-abbrev substAt (depth : Nat) (replacement expression : AffineExpr sampleCount) := Expr.substAt depth replacement expression
+abbrev shift (amount cutoff : Nat) (expression : AffineExpr sampleCount) :=
+  Expr.shift amount cutoff expression
+abbrev substAt (depth : Nat) (replacement expression : AffineExpr sampleCount) :=
+  Expr.substAt depth replacement expression
 abbrev substHead (body replacement : AffineExpr sampleCount) := Expr.substHead body replacement
-abbrev substTwo (body argument function : AffineExpr sampleCount) := Expr.substTwo body argument function
+abbrev substTwo (body argument function : AffineExpr sampleCount) :=
+  Expr.substTwo body argument function
 
 theorem wellTyped_shift (h : WellTyped (before ++ suffix) expression ty) :
     WellTyped (before ++ inserted ++ suffix)
@@ -889,7 +895,8 @@ noncomputable def constantListValue? : AffineExpr n → Option (List ℝ)
     | _, _ => none
   | _ => none
 
-noncomputable abbrev _root_.Determinize.Spec.Paper.Expr.constantListValue? := @AffineExpr.constantListValue?
+noncomputable abbrev _root_.Determinize.Spec.Paper.Expr.constantListValue? :=
+  @AffineExpr.constantListValue?
 
 /-- Realization evaluates the coordinates of a list value pointwise. -/
 theorem realListValue?_realize (expression : AffineExpr n) (environment : Env n) :
@@ -983,7 +990,8 @@ theorem wellTyped_real_value (typed : WellTyped context expression (.float affin
   all_goals cases ht <;> simp_all [Expr.isValue]
 
 theorem wellTyped_arr_value (typed : WellTyped context expression (.arr argument result))
-    (value : expression.isValue = true) : (∃ body, expression = .lam body) ∨ ∃ body, expression = .fix body := by
+    (value : expression.isValue = true) :
+    (∃ body, expression = .lam body) ∨ ∃ body, expression = .fix body := by
   rcases wellTyped_arr_value_typed typed value with ⟨a, r, b, he, _⟩ | ⟨a, r, b, he, _⟩
   · exact Or.inl ⟨b, he⟩
   · exact Or.inr ⟨b, he⟩
@@ -994,7 +1002,8 @@ theorem wellTyped_prod_value (typed : WellTyped context expression (.prod leftTy
   · exact ⟨l, r, he⟩
 
 theorem wellTyped_sum_value (typed : WellTyped context expression (.sum leftTy rightTy))
-    (value : expression.isValue = true) : (∃ body, expression = .inl body) ∨ ∃ body, expression = .inr body := by
+    (value : expression.isValue = true) :
+    (∃ body, expression = .inl body) ∨ ∃ body, expression = .inr body := by
   rcases wellTyped_sum_value_typed typed value with ⟨b, he, _⟩ | ⟨b, he, _⟩
   · exact Or.inl ⟨b, he⟩
   · exact Or.inr ⟨b, he⟩
@@ -1076,7 +1085,8 @@ noncomputable def Affine.mul? (left right : Affine n) : Option (Affine n) :=
   else if left.2 = 0 then some (left.1 • right)
   else none
 
-/-- The quotient of two affine forms when the denominator is constant and nonzero; `none` otherwise. -/
+/-- The quotient of two affine forms when the denominator is constant and nonzero; `none`
+otherwise. -/
 noncomputable def Affine.div? (left right : Affine n) : Option (Affine n) :=
   if right.2 = 0 then
     if right.1 = 0 then none else some ((right.1)⁻¹ • left)
@@ -1169,7 +1179,8 @@ def wrap (context : AffineExpr n → AffineExpr n)
   | .stuck => .stuck
 
 theorem realize_wrap (action : SymbolicAction n) (environment : Env n)
-    (context : AffineExpr n → AffineExpr n) (liftedContext : AffineExpr (n + 1) → AffineExpr (n + 1))
+    (context : AffineExpr n → AffineExpr n)
+    (liftedContext : AffineExpr (n + 1) → AffineExpr (n + 1))
     (context_realize : ∀ expression,
       (context expression).realize environment = ExprContext (expression.realize environment))
     (lifted_realize : ∀ expression value,
@@ -1204,7 +1215,8 @@ inductive WellTyped (ty : Ty) : SymbolicAction n → Prop
       general.length = Determinize.Spec.Paper.generalArity op →
       AffineExpr.WellTyped [] continuation ty →
       WellTyped ty (.sampleE op affine general continuation)
-  | mean {continuation : Affine n → AffineExpr n} : affine.length = Determinize.Spec.Paper.affineArity op →
+  | mean {continuation : Affine n → AffineExpr n} :
+      affine.length = Determinize.Spec.Paper.affineArity op →
       general.length = Determinize.Spec.Paper.generalArity op →
       AffineExpr.WellTyped [] (continuation (meanAffine op affine general)) ty →
       (∀ value environment, (continuation value).realize environment =
@@ -1930,7 +1942,8 @@ theorem symbolicReduce_realize
     rw [realize, MeasurableActionFamily.reduce_matchList_eq, realize_isValue]
     by_cases scrutineeValue : scrutinee.isValue = true
     · simp only [scrutineeValue, ↓reduceIte]
-      rcases wellTyped_list_value scrutineeTyped scrutineeValue with equality | ⟨head, tail, equality⟩
+      rcases wellTyped_list_value scrutineeTyped
+        scrutineeValue with equality | ⟨head, tail, equality⟩
       · subst scrutinee
         simp [symbolicReduce, scrutineeValue, SymbolicAction.realize, realize]
       · subst scrutinee
@@ -2922,7 +2935,8 @@ theorem symbolicReduce_wellTyped
         · rcases function with ⟨a, r, body, rfl, ha, hr, bodyTyped⟩
           exact .next ((wellTyped_substHead bodyTyped (argumentTyped.sub ha)).sub hr)
         · rcases function with ⟨a, r, body, rfl, ha, hr, bodyTyped⟩
-          exact .next ((wellTyped_substTwo bodyTyped (argumentTyped.sub ha) (.fix bodyTyped)).sub hr)
+          exact .next
+            ((wellTyped_substTwo bodyTyped (argumentTyped.sub ha) (.fix bodyTyped)).sub hr)
       · simp only [argumentValue]
         exact (iha rfl).wrap
           (fun next nextTyped ↦ .app functionTyped nextTyped)

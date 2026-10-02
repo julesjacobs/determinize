@@ -41,11 +41,14 @@ def FiberHasMean (fiber : Kernel α ℝ) (point : α × ℝ) : Prop :=
 theorem fiberHasMean_measurable (fiber : Kernel α ℝ) [IsSFiniteKernel fiber] :
     MeasurableSet {point | FiberHasMean fiber point} := by
   apply MeasurableSet.inter
-  · exact measurableSet_eq_fun ((fiber.measurable_coe MeasurableSet.univ).comp measurable_fst) measurable_const
+  · exact measurableSet_eq_fun ((fiber.measurable_coe MeasurableSet.univ).comp measurable_fst)
+      measurable_const
   · apply MeasurableSet.inter
-    · exact (ProbabilityTheory.measurableSet_integrable (κ := fiber) stronglyMeasurable_id).preimage measurable_fst
+    · exact (ProbabilityTheory.measurableSet_integrable (κ := fiber) stronglyMeasurable_id).preimage
+        measurable_fst
     · exact measurableSet_eq_fun
-        ((stronglyMeasurable_id.integral_kernel (κ := fiber)).measurable.comp measurable_fst) measurable_snd
+        ((stronglyMeasurable_id.integral_kernel (κ := fiber)).measurable.comp measurable_fst)
+          measurable_snd
 
 /-- `source` is `target` pushed through the fibers, and almost every target point carries a
 good fiber. -/
@@ -72,7 +75,8 @@ theorem mapTrace_measurable (f : α → β) (hf : Measurable f) : Measurable (ma
 
 theorem FiberSound.mapTrace_ae (fiber : SFiniteKernel α ℝ) (nextFiber : SFiniteKernel β ℝ)
     (source target : Measure (α × ℝ)) (sound : FiberSound fiber source target)
-    (f : α → β) (hf : Measurable f) (sameFiber : ∀ᵐ point ∂target, nextFiber.kernel (f point.1) = fiber.kernel point.1) :
+    (f : α → β) (hf : Measurable f)
+    (sameFiber : ∀ᵐ point ∂target, nextFiber.kernel (f point.1) = fiber.kernel point.1) :
     FiberSound nextFiber (source.map (mapTraceOutput f)) (target.map (mapTraceOutput f)) := by
   constructor
   · rw [sound.1, map_bind _ _ _ (mapTrace_measurable f hf),
@@ -80,11 +84,13 @@ theorem FiberSound.mapTrace_ae (fiber : SFiniteKernel α ℝ) (nextFiber : SFini
     apply Measure.bind_congr_right
     filter_upwards [sameFiber] with point same
     rw [fiberLift_apply, fiberLift_apply, Measure.map_map (mapTrace_measurable f hf)
-      (show Measurable (fun value : ℝ ↦ (point.1, value)) from measurable_const.prodMk measurable_id)]
+      (show Measurable (fun value : ℝ ↦ (point.1, value)) from measurable_const.prodMk
+        measurable_id)]
     simp only [mapTraceOutput, same]
     rfl
   · let := nextFiber.sfinite
-    rw [ae_map_iff (mapTrace_measurable f hf).aemeasurable (fiberHasMean_measurable nextFiber.kernel)]
+    rw [ae_map_iff (mapTrace_measurable f hf).aemeasurable
+      (fiberHasMean_measurable nextFiber.kernel)]
     filter_upwards [sound.2, sameFiber] with point good same
     simpa only [FiberHasMean, mapTraceOutput, same] using good
 
@@ -145,7 +151,8 @@ theorem FiberSound.factorization {α : Type*} [MeasurableSpace α]
     rw [Measure.map_apply measurable_fst MeasurableSet.univ]
     exact massTarget
   let : IsFiniteMeasure ν := ⟨mass.trans_lt (by simp)⟩
-  have measurableOutput : Measurable output := (stronglyMeasurable_id.integral_kernel (κ := fiber.kernel)).measurable
+  have measurableOutput : Measurable output :=
+    (stronglyMeasurable_id.integral_kernel (κ := fiber.kernel)).measurable
   refine ⟨mass, measurableOutput, ?_, ?_, ?_⟩
   · let paired := SFiniteKernel.mapWithInput fiber id measurable_id
     have pairedEq (trace : α) : paired.kernel trace =
@@ -166,12 +173,18 @@ theorem FiberSound.factorization {α : Type*} [MeasurableSpace α]
       exact Prod.ext rfl good.2.2
     have mapped : ν.map (fun trace ↦ (trace, output trace)) = target := by
       dsimp only [ν]
-      rw [Measure.map_map (show Measurable (fun trace : α ↦ (trace, output trace)) from measurable_id.prodMk measurableOutput) measurable_fst]
+      rw [Measure.map_map
+        (show Measurable (fun trace : α ↦ (trace, output trace)) from
+          measurable_id.prodMk measurableOutput) measurable_fst]
       exact (Measure.map_congr eq).trans Measure.map_id
     exact mapped.symm
   · rw [ae_map_iff measurable_fst.aemeasurable
-      (show MeasurableSet {trace : α | Integrable id (fiber.kernel trace) ∧ output trace = ∫value, value ∂fiber.kernel trace} from by
-        simpa only [output, and_true] using ProbabilityTheory.measurableSet_integrable (κ := fiber.kernel) stronglyMeasurable_id)]
+      (show MeasurableSet
+          {trace : α | Integrable id (fiber.kernel trace) ∧
+            output trace = ∫value, value ∂fiber.kernel trace} from by
+        simpa only [output, and_true]
+          using ProbabilityTheory.measurableSet_integrable (κ := fiber.kernel)
+            stronglyMeasurable_id)]
     filter_upwards [sound.2] with point good
     exact ⟨good.2.1, rfl⟩
 

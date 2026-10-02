@@ -27,7 +27,8 @@ theorem lift_root (before after : State) (root : RootStep before after)
 set_option maxHeartbeats 1200000 in
 theorem deliver_stepMeaning (value : Value) (stack : List Frame)
     (shape : ∀ frame ∈ stack, FrameShape frame) (result : Step)
-    (action : step (.deliver value stack) = .ok result) : StepMeaning (.deliver value stack) result := by
+    (action : step (.deliver value stack) = .ok result) :
+    StepMeaning (.deliver value stack) result := by
   cases stack with
   | nil =>
     cases value <;> simp only [step, reduceCtorEq, Except.ok.injEq] at action
@@ -43,7 +44,8 @@ theorem deliver_stepMeaning (value : Value) (stack : List Frame)
       cases read : value.probabilities? with
       | none =>
         simp only [step, read] at action
-        change Except.error (Failure.invalid "expected a list of probabilities") = Except.ok result at action
+        change Except.error (Failure.invalid "expected a list of probabilities") =
+          Except.ok result at action
         contradiction
       | some p =>
         simp only [step, read] at action
@@ -66,7 +68,8 @@ theorem deliver_stepMeaning (value : Value) (stack : List Frame)
       cases pending with
       | cons next rest =>
         obtain rfl := Except.ok.inj action
-        exact Or.inl ⟨_, rfl, trivial, sameObservations_of_eq _ _ (draw_argument_step _ _ _ _ _ _ _).2⟩
+        exact Or.inl
+          ⟨_, rfl, trivial, sameObservations_of_eq _ _ (draw_argument_step _ _ _ _ _ _ _).2⟩
       | nil =>
         change draw site (arguments ++ [x]) stack = .ok result at action
         unfold draw at action
@@ -93,11 +96,14 @@ theorem deliver_stepMeaning (value : Value) (stack : List Frame)
         simp [stateExpr, stackExpr, frameExpr, unaryExpr, valueExpr]
       all_goals apply Or.inr
       all_goals first
-        | apply lift_root _ _ (fst_root _ _) (by simp [stateExpr, stackExpr, frameExpr, unaryExpr, Expr.isValue])
+        | apply lift_root _ _ (fst_root _ _)
+            (by simp [stateExpr, stackExpr, frameExpr, unaryExpr, Expr.isValue])
             (by simp) (by simp) stack tailShape
-        | apply lift_root _ _ (snd_root _ _) (by simp [stateExpr, stackExpr, frameExpr, unaryExpr, Expr.isValue])
+        | apply lift_root _ _ (snd_root _ _)
+            (by simp [stateExpr, stackExpr, frameExpr, unaryExpr, Expr.isValue])
             (by simp) (by simp) stack tailShape
-        | apply lift_root _ _ (neg_root _) (by simp [stateExpr, stackExpr, frameExpr, unaryExpr, Expr.isValue])
+        | apply lift_root _ _ (neg_root _)
+            (by simp [stateExpr, stackExpr, frameExpr, unaryExpr, Expr.isValue])
             (by simp) (by simp) stack tailShape
     | right operation left =>
       cases operation <;> cases left <;> cases value <;>
@@ -111,23 +117,31 @@ theorem deliver_stepMeaning (value : Value) (stack : List Frame)
         simp [stateExpr, stackExpr, frameExpr, binaryExpr, valueExpr]
       all_goals apply Or.inr
       all_goals first
-        | apply lift_root _ _ (closure_root _ _ _) (by simp [stateExpr, stackExpr, frameExpr, binaryExpr, Expr.isValue])
+        | apply lift_root _ _ (closure_root _ _ _)
+            (by simp [stateExpr, stackExpr, frameExpr, binaryExpr, Expr.isValue])
             (by simp) (by simp) stack tailShape
-        | apply lift_root _ _ (recursive_root _ _ _) (by simp [stateExpr, stackExpr, frameExpr, binaryExpr, Expr.isValue])
+        | apply lift_root _ _ (recursive_root _ _ _)
+            (by simp [stateExpr, stackExpr, frameExpr, binaryExpr, Expr.isValue])
             (by simp) (by simp) stack tailShape
-        | apply lift_root _ _ (add_root _ _) (by simp [stateExpr, stackExpr, frameExpr, binaryExpr, Expr.isValue])
+        | apply lift_root _ _ (add_root _ _)
+            (by simp [stateExpr, stackExpr, frameExpr, binaryExpr, Expr.isValue])
             (by simp) (by simp) stack tailShape
-        | apply lift_root _ _ (mul_root _ _) (by simp [stateExpr, stackExpr, frameExpr, binaryExpr, Expr.isValue])
+        | apply lift_root _ _ (mul_root _ _)
+            (by simp [stateExpr, stackExpr, frameExpr, binaryExpr, Expr.isValue])
             (by simp) (by simp) stack tailShape
-        | apply lift_root _ _ (div_root _ _ (by assumption)) (by simp [stateExpr, stackExpr, frameExpr, binaryExpr, Expr.isValue])
+        | apply lift_root _ _ (div_root _ _ (by assumption))
+            (by simp [stateExpr, stackExpr, frameExpr, binaryExpr, Expr.isValue])
             (by simp) (by simp) stack tailShape
-        | apply lift_root _ _ (lt_root _ _) (by simp [stateExpr, stackExpr, frameExpr, binaryExpr, Expr.isValue])
+        | apply lift_root _ _ (lt_root _ _)
+            (by simp [stateExpr, stackExpr, frameExpr, binaryExpr, Expr.isValue])
             (by simp) (by simp) stack tailShape
     | choose yes no environment =>
-      cases value <;> simp only [step, pure, bind, Except.bind, Except.pure, throw, reduceCtorEq] at action
+      cases value <;>
+        simp only [step, pure, bind, Except.bind, Except.pure, throw, reduceCtorEq] at action
       obtain rfl := Except.ok.inj action
       apply Or.inr
-      apply lift_root _ _ (branch_root _ _ _ _) (by simp [stateExpr, stackExpr, frameExpr, Expr.isValue])
+      apply lift_root _ _ (branch_root _ _ _ _)
+        (by simp [stateExpr, stackExpr, frameExpr, Expr.isValue])
         (by simp) (by simp) stack tailShape
     | letBody body environment =>
       obtain rfl := Except.ok.inj action
@@ -135,28 +149,35 @@ theorem deliver_stepMeaning (value : Value) (stack : List Frame)
       apply lift_root _ _ (let_root _ _ _) (by simp [stateExpr, stackExpr, frameExpr, Expr.isValue])
         (by simp) (by simp) stack tailShape
     | matchSum left right environment =>
-      cases value <;> simp only [step, pure, bind, Except.bind, Except.pure, throw, reduceCtorEq] at action
+      cases value <;>
+        simp only [step, pure, bind, Except.bind, Except.pure, throw, reduceCtorEq] at action
       all_goals obtain rfl := Except.ok.inj action
       all_goals apply Or.inr
       all_goals first
-        | apply lift_root _ _ (sum_left_root _ _ _ _) (by simp [stateExpr, stackExpr, frameExpr, Expr.isValue])
+        | apply lift_root _ _ (sum_left_root _ _ _ _)
+            (by simp [stateExpr, stackExpr, frameExpr, Expr.isValue])
             (by simp) (by simp) stack tailShape
-        | apply lift_root _ _ (sum_right_root _ _ _ _) (by simp [stateExpr, stackExpr, frameExpr, Expr.isValue])
+        | apply lift_root _ _ (sum_right_root _ _ _ _)
+            (by simp [stateExpr, stackExpr, frameExpr, Expr.isValue])
             (by simp) (by simp) stack tailShape
     | matchList nilCase consCase environment =>
-      cases value <;> simp only [step, pure, bind, Except.bind, Except.pure, throw, reduceCtorEq] at action
+      cases value <;>
+        simp only [step, pure, bind, Except.bind, Except.pure, throw, reduceCtorEq] at action
       all_goals obtain rfl := Except.ok.inj action
       all_goals apply Or.inr
       all_goals first
-        | apply lift_root _ _ (list_nil_root _ _ _) (by simp [stateExpr, stackExpr, frameExpr, Expr.isValue])
+        | apply lift_root _ _ (list_nil_root _ _ _)
+            (by simp [stateExpr, stackExpr, frameExpr, Expr.isValue])
             (by simp) (by simp) stack tailShape
-        | apply lift_root _ _ (list_cons_root _ _ _ _ _) (by simp [stateExpr, stackExpr, frameExpr, Expr.isValue])
+        | apply lift_root _ _ (list_cons_root _ _ _ _ _)
+            (by simp [stateExpr, stackExpr, frameExpr, Expr.isValue])
             (by simp) (by simp) stack tailShape
 
 theorem stepMeaning (state : State) (shape : StateShape state) (result : Step)
     (action : step state = .ok result) : StepMeaning state result := by
   cases state with
-  | eval expression environment stack => exact eval_stepMeaning expression environment stack result action
+  | eval expression environment stack =>
+    exact eval_stepMeaning expression environment stack result action
   | deliver value stack => exact deliver_stepMeaning value stack shape result action
   | rejected =>
     obtain rfl := Except.ok.inj action

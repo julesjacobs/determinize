@@ -86,7 +86,8 @@ instance (candidate : Candidate) (source : Core) (subject : Subject) :
       Determinize.Proof.FiniteModel.Binding.Scoped 0 source ∧ Function.Injective candidate.state)
     ⟨fun ⟨a, b, c⟩ ↦ ⟨a, b, c⟩, fun ⟨a, b, c⟩ ↦ ⟨a, b, c⟩⟩
 
-structure Candidate.ReplayValid (candidate : Candidate) (source : Core) (subject : Subject) : Prop where
+structure Candidate.ReplayValid (candidate : Candidate) (source : Core) (subject : Subject) :
+    Prop where
   rows_size : candidate.rows.size = candidate.states.size
   initial_lt : candidate.initial < candidate.states.size
   aligned : candidate.Aligned source subject

@@ -284,10 +284,12 @@ run_cmd do
     reached := reached.insert name
     if (moduleOf name).any (`Determinize.Proof).isPrefixOf then
       sound := false
-      logError m!"{name} is declared in a Proof module and is not a proof, but a theorem's statement relies on it"
+      logError m!"{name} is declared in a Proof module and is not a proof, but a theorem's \
+          statement relies on it"
     let constructors := match info with | .inductInfo type => type.ctors.toArray | _ => #[]
     pending := pending ++ constructors ++ info.type.getUsedConstants ++
       ((info.value? (allowOpaque := true)).map (·.getUsedConstants)).getD #[]
   if sound then
     logInfo m!"{theorems.size} theorems proved, using only {standard}"
-    logInfo m!"Their statements rely on {reached.size} declarations other than proofs, none from Proof"
+    logInfo
+      m!"Their statements rely on {reached.size} declarations other than proofs, none from Proof"

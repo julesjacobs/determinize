@@ -91,7 +91,8 @@ theorem compactHistoryReplay_sampleE (depth : Nat) (history : Symbolic.SampleEnv
   filter_upwards [] with env
   apply ogtAt_succ_sampleE
   · simpa only [AffineExpr.realize_isValue] using notValue
-  · exact concrete_sampleE primitiveLaws expression typed op affine general continuation actionEq env
+  · exact concrete_sampleE primitiveLaws expression typed op affine general continuation
+      actionEq env
   · rfl
 
 theorem compactHistoryReplay_sampleG (depth : Nat) (history : Symbolic.SampleEnv primitiveLaws n)
@@ -400,7 +401,8 @@ theorem target_selfReplay (depth : Nat) (history : Symbolic.SampleEnv primitiveL
         have reduction :
             reduce (expression.realize (history.meanEnvironment primitiveLaws)).determinize =
               .sample site fiber (fun r ↦
-                ((continuation r).realize (history.meanEnvironment primitiveLaws)).determinize) := by
+                ((continuation r).realize
+                    (history.meanEnvironment primitiveLaws)).determinize) := by
           rw [← symbolicReduce_targetRealize typed, actionEq]
           rfl
         have siteEq : site = (.sample .G, op) := by
@@ -454,7 +456,8 @@ theorem compact_exactDepth_source_fiberSound (source : Expr) (typed : Typed [] s
       (exactMeasure depth source) (exactMeasure depth source.determinize) := by
   have sound := compact_exactDepth_fiberSound depth .nil (AffineExpr.ofExpr source)
     (safeConfig_of_source source typed sourceSafe depth)
-  have actualEq : actualTraceLaw depth .nil (AffineExpr.ofExpr source) = exactMeasure depth source := by
+  have actualEq : actualTraceLaw depth .nil (AffineExpr.ofExpr source) =
+      exactMeasure depth source := by
     unfold actualTraceLaw
     change (Measure.dirac Env.empty).bind
       (fun env ↦ exactMeasure depth ((AffineExpr.ofExpr source).realize env)) = _

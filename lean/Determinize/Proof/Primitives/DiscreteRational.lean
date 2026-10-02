@@ -29,7 +29,8 @@ theorem completed_domain (p : List Rat) (d : Spec.Paper.FiniteDistribution)
 
 theorem completed_sample (affinity : Affinity) (p : List Rat) (d : Spec.Paper.FiniteDistribution)
     (completed : d.probabilities = p ++ [1 - p.sum]) :
-    discreteFiber (.sample affinity) (p.map (Rat.cast : Rat → ℝ)) = d.measure (fun i ↦ (i : ℝ)) := by
+    discreteFiber (.sample affinity) (p.map (Rat.cast : Rat → ℝ)) =
+        d.measure (fun i ↦ (i : ℝ)) := by
   rw [discreteFiber, if_pos (completed_domain p d completed), sum_getElem,
     Spec.Paper.FiniteDistribution.measure, completed,
     List.zipIdx_append, List.map_append, List.sum_append]
@@ -40,7 +41,8 @@ theorem completed_sample (affinity : Affinity) (p : List Rat) (d : Spec.Paper.Fi
 theorem completed_mean (p : List Rat) (d : Spec.Paper.FiniteDistribution)
     (completed : d.probabilities = p ++ [1 - p.sum]) :
     discreteFiber .mean (p.map (Rat.cast : Rat → ℝ)) = Measure.dirac (d.mean : ℝ) := by
-  have expectation := discrete_mean (.sample .G) (p.map (Rat.cast : Rat → ℝ)) (completed_domain p d completed)
+  have expectation :=
+    discrete_mean (.sample .G) (p.map (Rat.cast : Rat → ℝ)) (completed_domain p d completed)
   rw [completed_sample .G p d completed, FiniteDistribution.mean] at expectation
   rw [discreteFiber, if_pos (completed_domain p d completed), ← expectation]
 

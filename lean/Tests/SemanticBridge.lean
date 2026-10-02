@@ -56,7 +56,8 @@ example : stateExpr (initialState source .source) = Subject.source.program sourc
 example : stateExpr (initialState source .determinized) =
     .app (.lam (.bvar 0)) (.uniform .mean (.real 0) (.real 2)) := by
   simpa [Subject.program, source, interpret, Expr.map, Expr.determinize,
-    DistributionAction.determinize] using typed_initial_reification source .determinized _ typed_source
+    DistributionAction.determinize]
+      using typed_initial_reification source .determinized _ typed_source
 
 example : outcomeMeasure [(1, 0), (0, 1)] = MeasureTheory.Measure.dirac (0 : ℝ) := by
   simp [outcomeMeasure]

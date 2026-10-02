@@ -23,7 +23,10 @@ private structure Options where
   subject : Spec.FiniteModel.Subject := .determinized
   limits : Finite.Limits := {}
 
-private def usage := "Usage: determinize [--check] [--samples N] [--seed N] [--fuel N] [--export PREFIX | --result PREFIX] [--additive] [--sample-sites] [--max-result-states N] [--subject source|determinized] [--max-states N] [--max-edges N] [--max-state-bytes N] FILE.det"
+private def usage :=
+  "Usage: determinize [--check] [--samples N] [--seed N] [--fuel N] \
+    [--export PREFIX | --result PREFIX] [--additive] [--sample-sites] [--max-result-states N] \
+    [--subject source|determinized] [--max-states N] [--max-edges N] [--max-state-bytes N] FILE.det"
 private def natural (s : String) : Except String Nat :=
   match s.toNat? with
   | some n => .ok n
@@ -145,30 +148,41 @@ def main (args : List String) : IO UInt32 := do
         match Finite.Reward.explore p.source o.subject o.limits with
         | .complete candidate valid =>
           if o.certifyResult then
-            let answer ← Finite.Reward.writeResult outputPath p.source o.subject candidate valid o.solveLimits
-            IO.println s!"Expected output (kernel-checkable certificate generated) ({reprStr o.subject}): {answer}"
+            let answer ← Finite.Reward.writeResult outputPath p.source o.subject candidate valid
+                o.solveLimits
+            IO.println s!"Expected output (kernel-checkable certificate generated) \
+                ({reprStr o.subject}): {answer}"
           else
             Finite.Reward.write outputPath p.source o.subject candidate valid
-          IO.println s!"Wrote additive {reprStr o.subject} model (kernel-checkable paper correspondence): {outputPath} ({candidate.states.size} states)"
+          IO.println s!"Wrote additive {reprStr o.subject} model (kernel-checkable paper \
+              correspondence): {outputPath} ({candidate.states.size} states)"
         | .incomplete limit discovered expanded edges =>
-          throw (IO.userError s!"Incomplete exploration ({reprStr limit}): {discovered} discovered, {expanded} expanded, {edges} edges. No export written.")
+          throw (IO.userError s!"Incomplete exploration ({reprStr limit}): {discovered} \
+              discovered, {expanded} expanded, {edges} edges. No export written.")
         | .failed state failure =>
-          throw (IO.userError s!"Exploration failed at state {state}: {failure.message}. No export written.")
+          throw (IO.userError
+            s!"Exploration failed at state {state}: {failure.message}. No export written.")
       else
         match Finite.explore p.source o.subject o.limits with
         | .complete candidate valid =>
           if o.certifyResult then
-            let answer ← Finite.writeResult outputPath p.source o.subject candidate valid o.solveLimits
-            IO.println s!"Expected terminal reward (kernel-checkable certificate generated) ({reprStr o.subject}): {answer}"
+            let answer ← Finite.writeResult outputPath p.source o.subject candidate valid
+                o.solveLimits
+            IO.println s!"Expected terminal reward (kernel-checkable certificate generated) \
+                ({reprStr o.subject}): {answer}"
           else
             Finite.write outputPath p.source o.subject candidate valid
-          IO.println s!"Wrote {reprStr o.subject} model (kernel-checkable paper correspondence): {outputPath} ({candidate.states.size} states)"
+          IO.println s!"Wrote {reprStr o.subject} model (kernel-checkable paper correspondence): \
+              {outputPath} ({candidate.states.size} states)"
         | .incomplete limit discovered expanded edges =>
-          throw (IO.userError s!"Incomplete exploration ({reprStr limit}): {discovered} discovered, {expanded} expanded, {edges} edges. No export written.")
+          throw (IO.userError s!"Incomplete exploration ({reprStr limit}): {discovered} \
+              discovered, {expanded} expanded, {edges} edges. No export written.")
         | .failed state failure =>
-          throw (IO.userError s!"Exploration failed at state {state}: {failure.message}. No export written.")
+          throw (IO.userError
+            s!"Exploration failed at state {state}: {failure.message}. No export written.")
     if o.samples > 0 then
-      IO.println "Numerical estimates; domain safety and integrability are not established by typing."
+      IO.println
+        "Numerical estimates; domain safety and integrability are not established by typing."
       summarize "Source" p.source o
       summarize "Determinized" p.source.determinize o
     return 0

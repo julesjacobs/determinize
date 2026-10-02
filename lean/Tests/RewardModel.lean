@@ -31,12 +31,16 @@ def rewardModels : IO Unit := do
   rewardCase "let f = rec f u => if flip(0.5) then 0 else 1 + f u in f ()" 1 1 3
   rewardCase "let f = rec f u => if flip(0.5) then -1 else 1 + f u in f ()" 1 0 2
   rewardCase "let f = rec f u => if flip(0.5) then 0 else (-1) + f u in f ()" 1 (-1) 3
-  rewardCase "let f = rec f u => if flip(0.5) then 0 else (1 + 2*bernoulli[G](0.5)) + f u in f ()" 1 2 13
-  rewardCase "let f = rec f u => if flip(0.5) then 1 + f u else if flip(0.5) then 0 else (let _ = observe(false) in 0) in f ()" (1 / 2) (1 / 2) (3 / 2)
-  rewardCase "let d = rec d u => d u in let f = rec f u => if flip(0.5) then 1 + f u else if flip(0.5) then 0 else d () in f ()" (1 / 2) (1 / 2) (3 / 2)
+  rewardCase "let f = rec f u => if flip(0.5) then 0 else (1 + 2*bernoulli[G](0.5)) + f u in f ()"
+    1 2 13
+  rewardCase "let f = rec f u => if flip(0.5) then 1 + f u else if flip(0.5) then 0 else (let _ = \
+      observe(false) in 0) in f ()" (1 / 2) (1 / 2) (3 / 2)
+  rewardCase "let d = rec d u => d u in let f = rec f u => if flip(0.5) then 1 + f u else if \
+      flip(0.5) then 0 else d () in f ()" (1 / 2) (1 / 2) (3 / 2)
   rewardCase "let f = rec f u => 1 + f u in f ()" 0 0 0
   rewardCase "1 + (-2)" 1 (-1) 1
-  rewardCase "if flip(0.5) then 1 + 0 else 3 + (let _ = observe(false) in 0)" (1 / 2) (1 / 2) (1 / 2)
+  rewardCase "if flip(0.5) then 1 + 0 else 3 + (let _ = observe(false) in 0)" (1 / 2)
+    (1 / 2) (1 / 2)
   for text in [
       "let f = rec f u => if flip(0.5) then 0 else 1 + f u in 2 * f ()",
       "let f = rec f u => if flip(0.5) then 0 else f u + 1 in f ()",

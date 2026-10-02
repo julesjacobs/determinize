@@ -30,14 +30,16 @@ def FiniteLawMatches (op : Op) (kind : DistributionAction) (arguments : List Rat
   reduce (primitiveExpr (kind, op) (arguments.map fun (q : Rat) ↦ .real (q : ℝ))) =
     .sample (kind, op) (outcomeMeasure outcomes) .real
 
-private theorem singleton_matches (op : Op) (kind : DistributionAction) (arguments : List Rat) (mean : Rat)
+private theorem singleton_matches (op : Op) (kind : DistributionAction) (arguments : List Rat)
+    (mean : Rat)
     (law : reduce (primitiveExpr (kind, op) (arguments.map fun (q : Rat) ↦ .real (q : ℝ))) =
       .sample (kind, op) (Measure.dirac (mean : ℝ)) .real) :
     FiniteLawMatches op kind arguments [(1, mean)] := by
   refine ⟨by simp, by simp, ?_⟩
   simpa [outcomeMeasure] using law
 
-theorem bernoulli_stochastic_matches {affinity : Affinity} (p : Rat) (nonnegative : 0 ≤ p) (bounded : p ≤ 1) :
+theorem bernoulli_stochastic_matches {affinity : Affinity} (p : Rat) (nonnegative : 0 ≤ p)
+    (bounded : p ≤ 1) :
     FiniteLawMatches .bernoulli (.sample affinity) [p] [(1 - p, 0), (p, 1)] := by
   have h0 : (0 : ℝ) ≤ p := by exact_mod_cast nonnegative
   have h1 : (p : ℝ) ≤ 1 := by exact_mod_cast bounded
@@ -54,7 +56,8 @@ theorem bernoulli_mean_matches (p : Rat) (nonnegative : 0 ≤ p) (bounded : p �
   simp [primitiveExpr, reduce, Expr.isValue, realValue?, bernoulliFiber, h0, h1]
 
 theorem realListValue?_fold (p : List Rat) :
-    realListValue? ((p.map fun q ↦ .real (q : ℝ)).foldr Expr.cons .nil) = some (p.map Rat.cast) := by
+    realListValue? ((p.map fun q ↦ .real (q : ℝ)).foldr Expr.cons .nil) =
+        some (p.map Rat.cast) := by
   induction p <;> simp_all [realListValue?, realValue?]
 
 theorem isValue_list_fold (p : List Rat) :
@@ -138,17 +141,20 @@ theorem finiteLaw_sound (op : Op) (kind : DistributionAction) (arguments : List 
   | discrete n =>
     by_cases arity : arguments.length = n
     · cases checked : Checking.remainderDistribution arguments with
-      | error message => simp [finiteLaw, arity, checked, Except.mapError, bind, Except.bind] at success
+      | error message =>
+        simp [finiteLaw, arity, checked, Except.mapError, bind, Except.bind] at success
       | ok d =>
         have completed := remainderDistribution_probabilities arguments d checked
         subst n
         cases kind with
         | sample affinity =>
-          simp [finiteLaw, checked, Except.mapError, bind, Except.bind, pure, Except.pure] at success
+          simp [finiteLaw, checked, Except.mapError, bind, Except.bind, pure,
+            Except.pure] at success
           subst outcomes
           exact discrete_stochastic_matches affinity arguments d completed
         | mean =>
-          simp [finiteLaw, checked, Except.mapError, bind, Except.bind, pure, Except.pure] at success
+          simp [finiteLaw, checked, Except.mapError, bind, Except.bind, pure,
+            Except.pure] at success
           subst outcomes
           exact discrete_mean_matches arguments d completed
     · simp [finiteLaw, arity, bind, Except.bind, throw] at success

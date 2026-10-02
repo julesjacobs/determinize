@@ -29,7 +29,8 @@ theorem rewardOutput_mono (state : State) : Monotone (fun n ↦ rewardOutput n s
       all_goals try exact le_rfl
       exact weightedOutput_mono _ _ _ (fun e _ _ ↦ shift_mono _ (ih _))
 
-theorem machine_le_reward (n : Nat) (state : State) : machineOutput n state ≤ rewardOutput n state := by
+theorem machine_le_reward (n : Nat) (state : State) :
+    machineOutput n state ≤ rewardOutput n state := by
   induction n generalizing state with
   | zero => rfl
   | succ n ih =>

@@ -79,7 +79,8 @@ noncomputable def outputAt (model : Model) (state : Fin model.size) : Measure �
 
 theorem outputAt_integrable (model : Model) (state : Fin model.size) (f : ℝ → ℝ := id) :
     Integrable f (outputAt model state) :=
-  (terminalBound_integrable model f).mono_measure (iSup_le (fun n ↦ outputWithin_bound model n state))
+  (terminalBound_integrable model f).mono_measure
+    (iSup_le (fun n ↦ outputWithin_bound model n state))
 
 /-- Finite terminal rewards bound the output law, including for nonabsorbing models. -/
 theorem outputMeasure_integrable (model : Model) : Integrable id model.outputMeasure :=
@@ -95,7 +96,9 @@ private theorem outputAt_transient (model : Model) (state : Fin model.size)
         (le_iSup (fun n ↦ model.outputWithin (n + 1) state) n))
     · exact iSup_le (fun n ↦ le_iSup (fun n ↦ model.outputWithin n state) (n + 1))
   ext s hs
-  rw [shift, monotone_measure_iSup_apply _ (by intro a b hab; exact outputWithin_mono model state (Nat.add_le_add_right hab 1)) s hs]
+  rw [shift,
+    monotone_measure_iSup_apply _
+      (by intro a b hab; exact outputWithin_mono model state (Nat.add_le_add_right hab 1)) s hs]
   simp only [Model.outputWithin, h, Measure.finsetSum_apply, Measure.smul_apply, smul_eq_mul]
   simp_rw [outputAt, monotone_measure_iSup_apply _ (outputWithin_mono model _) s hs,
     ENNReal.mul_iSup]

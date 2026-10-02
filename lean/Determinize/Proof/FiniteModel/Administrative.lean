@@ -13,7 +13,8 @@ theorem environmentExpr_eq_map (environment : List Value) :
 
 theorem variable_step (environment : List Value) (stack : List Frame) (index : Nat) (value : Value)
     (lookup : environment[index]? = some value) :
-    AdministrativeStep .evaluate (.eval (.bvar index) environment stack) (.deliver value stack) := by
+    AdministrativeStep .evaluate (.eval (.bvar index) environment stack)
+        (.deliver value stack) := by
   constructor
   · simp [step, lookup]; rfl
   · simp [stateExpr, interpret, close, Expr.map, Expr.mapVars,
@@ -85,12 +86,14 @@ theorem draw_argument_step (site : DistributionAction × Op) (next : Core) (rest
   simp [stateExpr, stackExpr, frameExpr, valueExpr, List.map_append, List.append_assoc]
 
 theorem number_setup (value : Rat) (environment : List Value) (stack : List Frame) :
-    AdministrativeStep .evaluate (.eval (.real value) environment stack) (.deliver (.number value) stack) := by
+    AdministrativeStep .evaluate (.eval (.real value) environment stack)
+        (.deliver (.number value) stack) := by
   refine ⟨rfl, ?_⟩
   simp [stateExpr, valueExpr, close, interpret, Expr.map, Expr.mapVars]
 
 theorem bool_setup (value : Bool) (environment : List Value) (stack : List Frame) :
-    AdministrativeStep .evaluate (.eval (.bool value) environment stack) (.deliver (.bool value) stack) := by
+    AdministrativeStep .evaluate (.eval (.bool value) environment stack)
+        (.deliver (.bool value) stack) := by
   refine ⟨rfl, ?_⟩
   simp [stateExpr, valueExpr, close, interpret, Expr.map, Expr.mapVars]
 

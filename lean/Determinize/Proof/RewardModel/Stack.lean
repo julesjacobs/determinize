@@ -15,7 +15,8 @@ private theorem draw_push (site : Spec.Paper.DistributionAction × Spec.Paper.Op
   cases law : finiteLaw site.2 site.1 args with
   | error e => simp [law, bind, Except.bind] at action
   | ok xs =>
-    simp only [law, bind, Except.bind, pure, Except.pure, Except.ok.injEq, Step.next.injEq] at action ⊢
+    simp only [law, bind, Except.bind, pure, Except.pure, Except.ok.injEq,
+      Step.next.injEq] at action ⊢
     obtain ⟨rfl, rfl⟩ := action
     simp [extend, List.map_map, pushStack, Function.comp_def]
 
