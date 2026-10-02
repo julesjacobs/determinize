@@ -32,7 +32,8 @@ private theorem typed_discreteMean_inv {Γ T} {p : Expr} (h : Typed Γ (.discret
   | _ => cases he
 
 /-- A variable of type `A` has no type that `A` is not below. -/
-private theorem not_typed_var {Γ A T} (h : Typed (A :: Γ) (.bvar 0) T) (n : ¬Ty.Sub A T) : False := by
+private theorem not_typed_var {Γ A T} (h : Typed (A :: Γ) (.bvar 0) T) (n : ¬Ty.Sub A T) :
+    False := by
   obtain ⟨_, hv, s⟩ := typed_bvar_inv h
   cases hv
   exact n s

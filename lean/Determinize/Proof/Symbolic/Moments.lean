@@ -21,9 +21,11 @@ theorem transitionMoment_le (laws : PrimitiveLaws)
     (generalArgs : Fin (generalArity op) → ℝ)
     (expression : Symbolic.Affine (n + 1)) (environment : Env n)
     (valid : domain op (fun i ↦ (affineArgs i).eval environment, generalArgs)) :
-    (∫ next, ‖expression.eval next‖ ∂(transitionPack laws op affineArgs generalArgs).kernel environment) ≤
+    (∫ next, ‖expression.eval next‖ ∂(transitionPack laws op affineArgs generalArgs).kernel
+      environment) ≤
       |(Symbolic.Affine.tail expression).eval environment| + |expression.2 0| *
-        (∫ value : ℝ, |value| ∂laws.kernel op (fun i ↦ (affineArgs i).eval environment, generalArgs)) := by
+        (∫ value : ℝ, |value| ∂laws.kernel op
+            (fun i ↦ (affineArgs i).eval environment, generalArgs)) := by
   rw [transitionPack_apply, integral_map
     (show AEMeasurable (fun value : ℝ ↦ Env.cons value environment)
       (laws.kernel op (fun i ↦ (affineArgs i).eval environment, generalArgs)) from
@@ -47,7 +49,8 @@ theorem transitionMoment_le (laws : PrimitiveLaws)
       intro x
       change |(Symbolic.Affine.tail expression).eval environment + expression.2 0 * x| ≤
         |(Symbolic.Affine.tail expression).eval environment| + |expression.2 0| * |x|
-      simpa only [abs_mul] using abs_add_le ((Symbolic.Affine.tail expression).eval environment) (expression.2 0 * x)
+      simpa only [abs_mul]
+        using abs_add_le ((Symbolic.Affine.tail expression).eval environment) (expression.2 0 * x)
     _ = _ := by
       rw [integral_add (integrable_const _) (integrable.abs.const_mul _),
         integral_const, integral_const_mul]
@@ -75,14 +78,16 @@ theorem integrable_affine (laws : PrimitiveLaws) (bounds : PrimitiveMomentBounds
       let upper : Env n → ℝ := fun environment ↦
         |(Symbolic.Affine.tail expression).eval environment| + |expression.2 0| *
           (bound * (1 + ∑ i, |(affineArgs i).eval environment|))
-      have sumIntegrable : Integrable (fun environment ↦ ∑ i, |(affineArgs i).eval environment|) prior :=
+      have sumIntegrable :
+          Integrable (fun environment ↦ ∑ i, |(affineArgs i).eval environment|) prior :=
         integrable_finsetSum _ fun i _ ↦ (ih safe.1 (affineArgs i)).abs
       have upperIntegrable : Integrable upper prior :=
         (ih safe.1 (Symbolic.Affine.tail expression)).abs.add
           (((integrable_const (1 : ℝ)).add sumIntegrable).const_mul bound |>.const_mul _)
       have normMeasurable : AEStronglyMeasurable
           (fun environment ↦ ∫ next, ‖expression.eval next‖ ∂transition environment) prior :=
-        ((Symbolic.AffineExpr.affine_eval_measurable expression).norm.stronglyMeasurable.integral_kernel
+        ((Symbolic.AffineExpr.affine_eval_measurable
+          expression).norm.stronglyMeasurable.integral_kernel
           (κ := transition)).aestronglyMeasurable
       apply upperIntegrable.mono' normMeasurable
       filter_upwards [safe.2] with environment valid

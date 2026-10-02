@@ -16,12 +16,14 @@ private theorem translated_integrable (μ : Measure ℝ) [IsFiniteMeasure μ]
     (first : Integrable (fun x : ℝ ↦ x) μ) (second : Integrable (fun x : ℝ ↦ x ^ 2) μ)
     (r : Rat) (moment : Moment) : Integrable moment.real (shift r μ) := by
   apply (integrable_map_measure (moment_measurable moment).aestronglyMeasurable
-    (show AEMeasurable (fun x : ℝ ↦ x + (r : ℝ)) μ from (measurable_id.add_const _).aemeasurable)).mpr
+    (show AEMeasurable (fun x : ℝ ↦ x + (r : ℝ))
+      μ from (measurable_id.add_const _).aemeasurable)).mpr
   cases moment with
   | mass => exact integrable_const 1
   | first => exact first.add (integrable_const (r : ℝ))
   | second =>
-    have poly : (fun x : ℝ ↦ (x + (r : ℝ)) ^ 2) = fun x ↦ (x ^ 2 + (2 * (r : ℝ)) * x) + (r : ℝ) ^ 2 := by
+    have poly : (fun x : ℝ ↦ (x + (r : ℝ)) ^ 2) = fun x ↦
+      (x ^ 2 + (2 * (r : ℝ)) * x) + (r : ℝ) ^ 2 := by
       funext x
       ring
     change Integrable (fun x : ℝ ↦ (x + (r : ℝ)) ^ 2) μ
@@ -41,9 +43,11 @@ private theorem integral_shift_moment (μ : Measure ℝ) [IsFiniteMeasure μ]
     (moment_measurable moment).aestronglyMeasurable]
   cases moment with
   | mass => rfl
-  | first => simp [Moment.real, integral_add first (integrable_const (r : ℝ)), integral_const, mul_comm]
+  | first =>
+    simp [Moment.real, integral_add first (integrable_const (r : ℝ)), integral_const, mul_comm]
   | second =>
-    have poly : (fun x : ℝ ↦ (x + (r : ℝ)) ^ 2) = fun x ↦ (x ^ 2 + (2 * (r : ℝ)) * x) + (r : ℝ) ^ 2 := by
+    have poly : (fun x : ℝ ↦ (x + (r : ℝ)) ^ 2) = fun x ↦
+      (x ^ 2 + (2 * (r : ℝ)) * x) + (r : ℝ) ^ 2 := by
       funext x
       ring
     simp only [Moment.real]
@@ -62,7 +66,8 @@ theorem momentAt_equation (model : Model) (moment : Moment)
     | .transient => ((model.edges i).map fun e ↦ (e.probability : ℝ) * match moment with
         | .mass => momentAt model .mass e.target
         | .first => momentAt model .first e.target + (e.reward : ℝ) * momentAt model .mass e.target
-        | .second => momentAt model .second e.target + 2 * (e.reward : ℝ) * momentAt model .first e.target +
+        | .second =>
+          momentAt model .second e.target + 2 * (e.reward : ℝ) * momentAt model .first e.target +
             (e.reward : ℝ) ^ 2 * momentAt model .mass e.target).sum := by
   unfold momentAt
   rw [outputAt_equation]
@@ -86,10 +91,13 @@ theorem momentAt_equation (model : Model) (moment : Moment)
         (finite_integrable model e.target).2]
     rfl
 
-theorem linear_unique (model : Spec.FiniteModel.Model) (paths : Paths model) (valid : paths.Valid model)
+theorem linear_unique (model : Spec.FiniteModel.Model) (paths : Paths model)
+    (valid : paths.Valid model)
     (rhs v w : Fin model.size → ℝ)
-    (hv : ∀ i, v i = rhs i + if model.kind i = .transient then ∑ j, (model.transition i j : ℝ) * v j else 0)
-    (hw : ∀ i, w i = rhs i + if model.kind i = .transient then ∑ j, (model.transition i j : ℝ) * w j else 0) :
+    (hv : ∀ i, v i = rhs i +
+      if model.kind i = .transient then ∑ j, (model.transition i j : ℝ) * v j else 0)
+    (hw : ∀ i, w i = rhs i +
+      if model.kind i = .transient then ∑ j, (model.transition i j : ℝ) * w j else 0) :
     ∀ i, v i = w i := by
   have zero := paths_unique model paths valid (fun i ↦ v i - w i) (by
     intro i
@@ -101,21 +109,26 @@ theorem linear_unique (model : Spec.FiniteModel.Model) (paths : Paths model) (va
   intro i
   exact sub_eq_zero.mp (zero i)
 
-private theorem edge_unique (model : Model) (paths : Paths model.control) (valid : paths.Valid model.control)
+private theorem edge_unique (model : Model) (paths : Paths model.control)
+    (valid : paths.Valid model.control)
     (terminal : Rat → ℝ) (extra : Edge model.size → ℝ) (v w : Fin model.size → ℝ)
     (hv : ∀ i, v i = match model.kind i with
       | .returned b => terminal b | .rejected => 0
-      | .transient => ((model.edges i).map fun e ↦ (e.probability : ℝ) * (v e.target + extra e)).sum)
+      | .transient =>
+        ((model.edges i).map fun e ↦ (e.probability : ℝ) * (v e.target + extra e)).sum)
     (hw : ∀ i, w i = match model.kind i with
       | .returned b => terminal b | .rejected => 0
-      | .transient => ((model.edges i).map fun e ↦ (e.probability : ℝ) * (w e.target + extra e)).sum) :
+      | .transient =>
+        ((model.edges i).map fun e ↦ (e.probability : ℝ) * (w e.target + extra e)).sum) :
     ∀ i, v i = w i := by
   let rhs := fun (i : Fin model.size) ↦ match model.kind i with
     | .returned b => terminal b | .rejected => 0
-    | .transient => ((model.edges i).map fun (e : Edge model.size) ↦ (e.probability : ℝ) * extra e).sum
+    | .transient =>
+      ((model.edges i).map fun (e : Edge model.size) ↦ (e.probability : ℝ) * extra e).sum
   have convert (u : Fin model.size → ℝ) (eqs : ∀ i, u i = match model.kind i with
       | .returned b => terminal b | .rejected => 0
-      | .transient => ((model.edges i).map fun e ↦ (e.probability : ℝ) * (u e.target + extra e)).sum) :
+      | .transient =>
+        ((model.edges i).map fun e ↦ (e.probability : ℝ) * (u e.target + extra e)).sum) :
       ∀ i, u i = rhs i + if model.control.kind i = .transient then
         ∑ j, (model.control.transition i j : ℝ) * u j else 0 := by
     intro i
@@ -132,7 +145,8 @@ private theorem equations_real (model : Model) (values : Moment → Fin model.si
     | .transient => ((model.edges i).map fun e ↦ (e.probability : ℝ) * match moment with
       | .mass => (values .mass e.target : ℝ)
       | .first => (values .first e.target : ℝ) + (e.reward : ℝ) * (values .mass e.target : ℝ)
-      | .second => (values .second e.target : ℝ) + 2 * (e.reward : ℝ) * (values .first e.target : ℝ) +
+      | .second =>
+        (values .second e.target : ℝ) + 2 * (e.reward : ℝ) * (values .first e.target : ℝ) +
           (e.reward : ℝ) ^ 2 * (values .mass e.target : ℝ)).sum := by
   have h := congrArg (fun q : Rat ↦ (q : ℝ)) (valid moment i)
   cases kind : model.kind i <;> cases moment <;>
@@ -152,7 +166,8 @@ theorem moment_values_sound (model : Model)
       have h := equations_real model values valid .mass i
       cases kind : model.kind i <;> simpa [kind, Moment.real] using h
   have first : ∀ i, momentAt model .first i = (values .first i : ℝ) := by
-    apply edge_unique model paths pathsValid (fun b ↦ (b : ℝ)) (fun e ↦ (e.reward : ℝ) * (values .mass e.target : ℝ))
+    apply edge_unique model paths pathsValid (fun b ↦ (b : ℝ))
+      (fun e ↦ (e.reward : ℝ) * (values .mass e.target : ℝ))
     · intro i
       have h := momentAt_equation model .first i
       cases kind : model.kind i <;> simpa [kind, Moment.real, mass] using h
@@ -161,7 +176,8 @@ theorem moment_values_sound (model : Model)
       cases kind : model.kind i <;> simpa [kind, Moment.real] using h
   have second : ∀ i, momentAt model .second i = (values .second i : ℝ) := by
     apply edge_unique model paths pathsValid (fun b ↦ (b : ℝ) ^ 2)
-      (fun e ↦ 2 * (e.reward : ℝ) * (values .first e.target : ℝ) + (e.reward : ℝ) ^ 2 * (values .mass e.target : ℝ))
+      (fun e ↦ 2 * (e.reward : ℝ) * (values .first e.target : ℝ) +
+        (e.reward : ℝ) ^ 2 * (values .mass e.target : ℝ))
     · intro i
       have h := momentAt_equation model .second i
       cases kind : model.kind i <;> simpa [kind, Moment.real, mass, first, add_assoc] using h
@@ -175,7 +191,8 @@ theorem moment_values_sound (model : Model)
   · exact second
 
 theorem outputMeasure_integrable (model : Model) :
-    Integrable (fun x : ℝ ↦ x) model.outputMeasure ∧ Integrable (fun x : ℝ ↦ x ^ 2) model.outputMeasure :=
+    Integrable (fun x : ℝ ↦ x) model.outputMeasure ∧
+        Integrable (fun x : ℝ ↦ x ^ 2) model.outputMeasure :=
   finite_integrable model model.initial
 
 theorem solution_statistics (model : Model) (solution : Determinize.Finite.Reward.Solution model) :
@@ -184,21 +201,26 @@ theorem solution_statistics (model : Model) (solution : Determinize.Finite.Rewar
     | .mass => solution.mass | .first => solution.first | .second => solution.second
   have correct := moment_values_sound (cut model solution.boundary.dead)
     solution.paths solution.pathsValid values solution.momentsValid
-  have moments (moment : Moment) : (∫ x, moment.real x ∂model.outputMeasure) = (values moment model.initial : ℝ) := by
+  have moments (moment : Moment) :
+      (∫ x, moment.real x ∂model.outputMeasure) = (values moment model.initial : ℝ) := by
     have h := correct moment model.initial
     unfold momentAt at h
     rwa [cut_outputAt model solution.boundary.dead solution.boundary.closed] at h
   refine ⟨inferInstanceAs (IsFiniteMeasure (model.outputAt model.initial)),
     (outputMeasure_integrable model).2, ?_, ?_, ?_⟩
-  · simpa [Moment.real, Determinize.Finite.Reward.Solution.statistics, values, integral_const] using moments .mass
+  · simpa [Moment.real, Determinize.Finite.Reward.Solution.statistics, values, integral_const]
+      using moments .mass
   · exact moments .first
   · exact moments .second
 
-theorem solution_result (model : Model) (program : Spec.Paper.Expr) (matching : model.Matches program)
-    (solution : Determinize.Finite.Reward.Solution model) : ResultMatches model program solution.statistics :=
+theorem solution_result (model : Model) (program : Spec.Paper.Expr)
+    (matching : model.Matches program)
+    (solution : Determinize.Finite.Reward.Solution model) :
+    ResultMatches model program solution.statistics :=
   ⟨matching, solution_statistics model solution⟩
 
-theorem solution_conditional_variance (model : Model) (solution : Determinize.Finite.Reward.Solution model)
+theorem solution_conditional_variance (model : Model)
+    (solution : Determinize.Finite.Reward.Solution model)
     (positive : 0 < solution.statistics.returnMass) :
     ProbabilityTheory.variance id ((model.outputMeasure Set.univ)⁻¹ • model.outputMeasure) =
       ((solution.statistics.secondMoment / solution.statistics.returnMass -
@@ -208,7 +230,8 @@ theorem solution_conditional_variance (model : Model) (solution : Determinize.Fi
 
 theorem solution_termination (model : Model) (solution : Determinize.Finite.Reward.Solution model) :
     (⟨solution.mass model.initial, solution.rejection model.initial,
-      1 - solution.mass model.initial - solution.rejection model.initial⟩ : Spec.FiniteModel.TerminationStatistics).Matches
+      1 - solution.mass model.initial - solution.rejection model.initial⟩ :
+        Spec.FiniteModel.TerminationStatistics).Matches
       model.control := by
   have output : model.control.outputMeasure.real Set.univ = (solution.mass model.initial : ℝ) := by
     have query := query_sound (FiniteModel.cut model.control solution.boundary.dead) (fun _ ↦ 1)
@@ -219,21 +242,26 @@ theorem solution_termination (model : Model) (solution : Determinize.Finite.Rewa
         cases h : model.kind state <;> cases d : solution.boundary.dead state <;> simp_all)
     rw [FiniteModel.cut_outputMeasure _ _ solution.boundary.closed] at query
     simpa [integral_const] using query
-  have rejection : model.control.rejectionProbability.toReal = (solution.rejection model.initial : ℝ) := by
-    have query := query_sound (FiniteModel.cut model.control.rejectionModel solution.boundary.dead) (fun _ ↦ 1)
+  have rejection :
+      model.control.rejectionProbability.toReal = (solution.rejection model.initial : ℝ) := by
+    have query := query_sound (FiniteModel.cut model.control.rejectionModel solution.boundary.dead)
+        (fun _ ↦ 1)
       (fun _ ↦ 1) (fun _ ↦ by simp) ⟨solution.rejection, 0⟩ solution.rejectionValid
       ⟨solution.paths.rank, solution.paths.next⟩ (by
         intro state transient
         apply solution.pathsValid state
         cases h : model.kind state <;> cases d : solution.boundary.dead state <;> simp_all)
-    rw [FiniteModel.cut_outputMeasure _ _ (rejection_closed model.control _ solution.boundary.closed)] at query
+    rw [FiniteModel.cut_outputMeasure _ _
+      (rejection_closed model.control _ solution.boundary.closed)] at query
     simpa [integral_const, Spec.FiniteModel.Model.rejectionProbability, measureReal_def] using query
   refine ⟨output, rejection, ?_⟩
   have balance := massBalance model.control
   have finiteReturn : model.control.outputMeasure Set.univ ≠ ⊤ := by
-    exact ne_top_of_le_ne_top (by simp) ((le_add_right le_rfl).trans ((le_add_right le_rfl).trans_eq balance))
+    exact ne_top_of_le_ne_top (by simp)
+      ((le_add_right le_rfl).trans ((le_add_right le_rfl).trans_eq balance))
   have finiteReject : model.control.rejectionProbability ≠ ⊤ := by
-    exact ne_top_of_le_ne_top (by simp) ((le_add_left le_rfl).trans ((le_add_right le_rfl).trans_eq balance))
+    exact ne_top_of_le_ne_top (by simp)
+      ((le_add_left le_rfl).trans ((le_add_right le_rfl).trans_eq balance))
   have finiteDiverge : model.control.divergenceProbability ≠ ⊤ := by
     exact ne_top_of_le_ne_top (by simp) ((le_add_left le_rfl).trans_eq balance)
   have realBalance := congrArg ENNReal.toReal balance

@@ -14,7 +14,9 @@ private theorem nonnegative_edge_solution (model : Model) (paths : Paths model.c
     ∃ v : Fin model.size → Rat, (∀ i, 0 ≤ v i) ∧ ∀ i, v i = match model.kind i with
       | .returned b => terminal b
       | .rejected => 0
-      | .transient => ((model.edges i).map fun (e : Edge model.size) ↦ e.probability * (v e.target + extra e)).sum := by
+      | .transient =>
+        ((model.edges i).map fun (e : Edge model.size) ↦
+            e.probability * (v e.target + extra e)).sum := by
   let rhs := fun (i : Fin model.size) ↦ match model.kind i with
     | .returned b => terminal b
     | .rejected => 0

@@ -10,7 +10,8 @@ abbrev Work.record (work : Work) (complete : work.rows.size = work.table.states.
     (i : Fin work.table.states.size) : Record := work.rows[i.val]'(by omega)
 
 theorem Work.record_state (work : Work) (complete : work.rows.size = work.table.states.size)
-    (i : Fin work.table.states.size) : (work.record complete i).state = work.table.states[i.val] := by
+    (i : Fin work.table.states.size) :
+    (work.record complete i).state = work.table.states[i.val] := by
   have h := work.aligned (⟨i.val, by omega⟩ : Fin work.rows.size)
   simpa using h.symm
 
@@ -41,25 +42,30 @@ theorem Work.weight_normalized (work : Work) (complete : work.rows.size = work.t
     · have positive : 0 < outcome.1 := lt_of_le_of_ne
         ((work.record complete i).action.nonnegative outcome member) (Ne.symm zero)
       obtain ⟨j, hj⟩ := work.closed _ (Array.getElem_mem _) outcome member positive
-      have only (k : Fin work.table.states.size) : outcome.2 = work.table.states[k.val] ↔ j = k := by
+      have only (k : Fin work.table.states.size) :
+          outcome.2 = work.table.states[k.val] ↔ j = k := by
         rw [← hj]
         exact work.table.injective.eq_iff
       simp [only]
   · exact (work.record complete i).action.normalized
 
-abbrev Work.candidate (work : Work) (complete : work.rows.size = work.table.states.size) : Candidate where
+abbrev Work.candidate (work : Work) (complete : work.rows.size = work.table.states.size) :
+    Candidate where
   initial := 0
   states := work.table.states
   rows := Array.ofFn fun i : Fin work.table.states.size ↦
     ⟨(work.record complete i).action.kind, sparseEdges (work.weight complete i)⟩
 
-@[simp] theorem Work.candidate_row (work : Work) (complete : work.rows.size = work.table.states.size)
+@[simp] theorem Work.candidate_row (work : Work)
+    (complete : work.rows.size = work.table.states.size)
     (i : Fin work.table.states.size) : (work.candidate complete).row i =
       ⟨(work.record complete i).action.kind, sparseEdges (work.weight complete i)⟩ := by
   simp [Candidate.row, Work.candidate, i.isLt]
 
-@[simp] theorem Work.candidate_weight (work : Work) (complete : work.rows.size = work.table.states.size)
-    (i j : Fin work.table.states.size) : (work.candidate complete).weight i j = work.weight complete i j := by
+@[simp] theorem Work.candidate_weight (work : Work)
+    (complete : work.rows.size = work.table.states.size)
+    (i j : Fin work.table.states.size) :
+    (work.candidate complete).weight i j = work.weight complete i j := by
   simp only [Candidate.weight, work.candidate_row]
   exact sparseEdges_weight _ (work.weight_nonnegative complete i) j
 
@@ -95,12 +101,15 @@ theorem Work.absorbing (work : Work) (complete : work.rows.size = work.table.sta
     cases h : step (work.record complete i).state with
     | error failure => simp [h] at correct
     | ok action => cases action with
-      | returned r => simp only [h] at correct; simpa only [work.record_state complete i] using correct.2
-      | rejected => simp only [h] at correct; simpa only [work.record_state complete i] using correct.2
+      | returned r =>
+        simp only [h] at correct; simpa only [work.record_state complete i] using correct.2
+      | rejected =>
+        simp only [h] at correct; simpa only [work.record_state complete i] using correct.2
       | next evidence outcomes => simp [h] at correct; exact (terminal correct.1).elim
   simp only [Work.weight, outcomes, List.map_cons, List.map_nil, List.sum_cons, List.sum_nil,
     add_zero]
-  have eq : work.table.states[i.val] = work.table.states[j.val] ↔ i = j := work.table.injective.eq_iff
+  have eq : work.table.states[i.val] = work.table.states[j.val] ↔ i = j :=
+    work.table.injective.eq_iff
   simp only [eq]
 
 theorem Work.valid (work : Work) (complete : work.rows.size = work.table.states.size)

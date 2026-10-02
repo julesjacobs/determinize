@@ -66,7 +66,8 @@ def explorer : IO Unit := do
   assert (loop.rows.all fun row ↦ row.kind == .transient) "closed nonterminating loop"
   assert (reward loop 100 == 0) "nontermination contributes zero"
   let retry ← graph "let f = rec f x => if flip(0.5) then 3 else f x in f 0"
-  assert (retry.rows.toList.zipIdx.any fun (row, i) ↦ row.edges.any fun e ↦ e.target < i) "retry graph"
+  assert (retry.rows.toList.zipIdx.any fun (row, i) ↦ row.edges.any fun e ↦ e.target < i)
+    "retry graph"
   assert (reward retry 100 > 2 && reward retry 100 < 3) "geometric retry reward bound"
   let growing ← IO.ofExcept (compile "let f = rec f x => f (x+1) in f 0")
   match explore growing.source .source {maxStates := 100} with
@@ -79,7 +80,8 @@ def explorer : IO Unit := do
     match explore (.real 3) .source limits with
     | .incomplete actual .. => assert (actual == expected) "resource limit classification"
     | _ => throw (IO.userError "expected incomplete exploration")
-  for text in ["1/0", "1/bernoulli[G](0.5)", "uniform[E](0,1)/0", "uniform[G](0,1)", "poisson[G](3)", "gauss[G](0,1)",
+  for text in ["1/0", "1/bernoulli[G](0.5)", "uniform[E](0,1)/0", "uniform[G](0,1)",
+    "poisson[G](3)", "gauss[G](0,1)",
       "uniform[E](0,uniform[G](1,2))", "uniform[E](2,1)",
       "bernoulli[G](2)", "true"] do
     let p ← IO.ofExcept (compile text)
@@ -87,13 +89,16 @@ def explorer : IO Unit := do
     | .failed .. => pure ()
     | _ => throw (IO.userError s!"expected export failure: {text}")
   let state := State.deliver (.number 1) []
-  assert (ReferenceExplorer.aggregate [(0, state), (1 / 3, state), (2 / 3, state)] == [(1, state)]) "duplicate successors"
+  assert (ReferenceExplorer.aggregate [(0, state), (1 / 3, state), (2 / 3, state)] == [(1, state)])
+    "duplicate successors"
   let terminal : Candidate := ⟨0, #[state],
     #[⟨.returned (-3), #[⟨0, 1⟩]⟩]⟩
   let files ← IO.ofExcept (render terminal)
   assert (files.transitions == "dtmc\n0 1 1\n1 1 1\n") "once-only terminal reward sink"
   assert (files.positiveRewards == "" && files.negativeRewards == "0 3\n") "signed rewards"
-  assert (files.labels == "#DECLARATION\ninit returned rejected done\n#END\n0 init returned\n1 done\n") "initial terminal labels"
+  assert
+    (files.labels == "#DECLARATION\ninit returned rejected done\n#END\n0 init returned\n1 done\n")
+    "initial terminal labels"
   for bad in [
       {terminal with rows := #[]},
       {terminal with initial := 1},

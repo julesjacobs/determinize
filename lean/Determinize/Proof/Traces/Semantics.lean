@@ -130,7 +130,8 @@ theorem recordSkeletonKernel_apply (skeleton : Skeleton) (expression : Expr) :
   unfold recordSkeletonKernel
   rw [Kernel.piecewise_apply]
   by_cases member : expression.skeleton = skeleton
-  · rw [if_pos (show expression ∈ SkeletonFiber skeleton from member), if_pos member, Kernel.comap_apply, recordKernel_apply,
+  · rw [if_pos (show expression ∈ SkeletonFiber skeleton from member), if_pos member,
+      Kernel.comap_apply, recordKernel_apply,
       MeasurableActionFamily.toSkeletonFiber_coe_of_mem _ _ member]
   · rw [if_neg (show expression ∉ SkeletonFiber skeleton from member), if_neg member]
     rfl
@@ -171,7 +172,8 @@ theorem tracedStep_erasure (expression : Expr) :
   | next next => simp [record, Action.measure, Measure.map_dirac' measurable_snd]
   | stuck => simp [record, Action.measure]
   | sample site fiber continuation =>
-    have measurable := (MeasurableActionFamily.stepKernel primitiveLaws).sample_continuation_measurable
+    have measurable :=
+      (MeasurableActionFamily.stepKernel primitiveLaws).sample_continuation_measurable
       expression fiber continuation reduction
     rw [record, Measure.map_map measurable_snd
       (show Measurable (fun value ↦ (generationEvent site value, continuation value)) from
@@ -228,7 +230,8 @@ theorem exactKernel_apply (depth : Nat) (expression : Expr) :
         rw [record, Measure.dirac_bind (successorKernel (exactKernel depth)).kernel.measurable,
           successorKernel_apply, ih]
       | sample modeTag fiber continuation =>
-        have measurable := (MeasurableActionFamily.stepKernel primitiveLaws).sample_continuation_measurable
+        have measurable :=
+          (MeasurableActionFamily.stepKernel primitiveLaws).sample_continuation_measurable
           expression fiber continuation reduction
         rw [record, bind_map _ _ ((generationEvent_measurable modeTag).prodMk measurable)]
         apply Measure.bind_congr_right
@@ -260,14 +263,16 @@ theorem exact_erasure (step : StepKernel) (depth : Nat) (expression : Expr) :
           MeasurableActionFamily.exactOutputKernel step depth := by
         funext next
         exact (MeasurableActionFamily.exactOutputKernel_apply step depth next).symm
-      rw [ordinaryEq, bind_map _ _ measurable_snd (MeasurableActionFamily.exactOutputKernel step depth)]
+      rw [ordinaryEq,
+        bind_map _ _ measurable_snd (MeasurableActionFamily.exactOutputKernel step depth)]
       apply Measure.bind_congr_right
       filter_upwards [] with next
       rw [successorKernel_apply, exactKernel_apply,
         Measure.map_map measurable_snd
           (show Measurable (prepend next.1) from
             prepend_measurable.comp (measurable_const.prodMk measurable_id))]
-      exact (ih next.2).trans (MeasurableActionFamily.exactOutputKernel_apply step depth next.2).symm
+      exact (ih next.2).trans
+        (MeasurableActionFamily.exactOutputKernel_apply step depth next.2).symm
 
 theorem correspondence : Determinize.Proof.StepTraces.correspondenceThm := by
   intro program

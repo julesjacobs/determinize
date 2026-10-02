@@ -59,7 +59,8 @@ theorem concrete_target_sampleE
         (fun i ↦ Symbolic.Affine.eval (affine.getD i.1 (0, fun _ ↦ 0)) mean,
          fun i ↦ general.getD i.1 0)))
         (fun value ↦ (continuation.realize (Env.cons value mean)).determinize) := by
-  let affineArgs : Fin (affineArity op) → Symbolic.Affine n := fun i ↦ affine.getD i.1 (0, fun _ ↦ 0)
+  let affineArgs : Fin (affineArity op) → Symbolic.Affine n :=
+    fun i ↦ affine.getD i.1 (0, fun _ ↦ 0)
   let generalArgs : Fin (generalArity op) → ℝ := fun i ↦ general.getD i.1 0
   let params : Params op := (fun i ↦ Symbolic.Affine.eval (affineArgs i) mean, generalArgs)
   have actionTyped := symbolicReduce_wellTyped typed
@@ -98,33 +99,46 @@ theorem history_bind_snoc (laws : PrimitiveLaws) (history : Symbolic.SampleEnv l
     (measurable : Measurable family) :
     ((Symbolic.SampleEnv.snoc history op affine general).actualMeasure laws).bind family =
       (history.actualMeasure laws).bind (fun env ↦
-        (laws.kernel op (fun i ↦ (affine i).eval env, general)).bind (fun value ↦ family (Env.cons value env))) := by
+        (laws.kernel op (fun i ↦ (affine i).eval env, general)).bind
+            (fun value ↦ family (Env.cons value env))) := by
   change ((history.actualMeasure laws).bind
-    (fun env ↦ (laws.kernel op (fun i ↦ (affine i).eval env, general)).map (fun v ↦ Env.cons v env))).bind family = _
+    (fun env ↦ (laws.kernel op (fun i ↦ (affine i).eval env, general)).map
+      (fun v ↦ Env.cons v env))).bind family = _
   have transitionEq :
-      (fun env ↦ (laws.kernel op (fun i ↦ (affine i).eval env, general)).map (fun v ↦ Env.cons v env)) =
+      (fun env ↦ (laws.kernel op (fun i ↦ (affine i).eval env, general)).map
+        (fun v ↦ Env.cons v env)) =
       (SymbolicSoundness.SampleEnv.transitionPack laws op affine general).kernel := by
     funext env
     exact (SymbolicSoundness.SampleEnv.transitionPack_apply laws op affine general env).symm
-  rw [transitionEq, Measure.bind_bind (SymbolicSoundness.SampleEnv.transitionPack laws op affine general).kernel.aemeasurable measurable.aemeasurable]
+  rw [transitionEq,
+    Measure.bind_bind
+      (SymbolicSoundness.SampleEnv.transitionPack laws op affine general).kernel.aemeasurable
+      measurable.aemeasurable]
   apply Measure.bind_congr_right
   filter_upwards [] with env
   rw [SymbolicSoundness.SampleEnv.transitionPack_apply]
-  exact bind_map _ _ (measurable_envCons.comp (measurable_id.prodMk measurable_const)) ⟨family, measurable⟩
+  exact bind_map _ _ (measurable_envCons.comp (measurable_id.prodMk measurable_const))
+    ⟨family, measurable⟩
 
 theorem actualTraceLaw_sampleE (depth : Nat) (history : Symbolic.SampleEnv primitiveLaws n)
-    (expression : AffineExpr n) (typed : WellTyped [] expression ty) (notValue : expression.isValue ≠ true)
-    (op : Op) (affine : List (Symbolic.Affine n)) (general : List ℝ) (continuation : AffineExpr (n + 1))
+    (expression : AffineExpr n) (typed : WellTyped [] expression ty)
+    (notValue : expression.isValue ≠ true)
+    (op : Op) (affine : List (Symbolic.Affine n)) (general : List ℝ)
+    (continuation : AffineExpr (n + 1))
     (actionEq : symbolicReduce expression = .sampleE op affine general continuation) :
     actualTraceLaw (depth + 1) history expression =
       (actualTraceLaw depth (Symbolic.SampleEnv.snoc history op
-        (fun i ↦ affine.getD i.1 (0, fun _ ↦ 0)) (fun i ↦ general.getD i.1 0)) continuation).map (prepend none) := by
+        (fun i ↦ affine.getD i.1 (0, fun _ ↦ 0))
+        (fun i ↦ general.getD i.1 0)) continuation).map (prepend none) := by
   have prefixMeasurable : Measurable (prepend none : Output → Output) :=
     prepend_measurable.comp (measurable_const.prodMk measurable_id)
   rw [actualTraceLaw, actualTraceLaw,
-    map_bind_fun _ (fun env ↦ exactMeasure depth (continuation.realize env)) ((exact_measurable depth).comp continuation.realize_measurable) _ prefixMeasurable,
-    history_bind_snoc _ _ _ _ _ (fun env ↦ (exactMeasure depth (continuation.realize env)).map (prepend none))
-      ((Measure.measurable_map _ prefixMeasurable).comp ((exact_measurable depth).comp continuation.realize_measurable))]
+    map_bind_fun _ (fun env ↦ exactMeasure depth (continuation.realize env))
+      ((exact_measurable depth).comp continuation.realize_measurable) _ prefixMeasurable,
+    history_bind_snoc _ _ _ _ _
+      (fun env ↦ (exactMeasure depth (continuation.realize env)).map (prepend none))
+      ((Measure.measurable_map _ prefixMeasurable).comp
+        ((exact_measurable depth).comp continuation.realize_measurable))]
   apply Measure.bind_congr_right
   filter_upwards [] with env
   rw [exact_succ_sample _ _ _ _ (by simpa only [AffineExpr.realize_isValue] using notValue)
@@ -134,29 +148,42 @@ theorem actualTraceLaw_sampleE (depth : Nat) (history : Symbolic.SampleEnv primi
 
 theorem targetTraceLaw_sampleE (depth : Nat) (history : Symbolic.SampleEnv primitiveLaws n)
     (safe : history.DomainSafe primitiveLaws)
-    (expression : AffineExpr n) (typed : WellTyped [] expression ty) (notValue : expression.isValue ≠ true)
-    (op : Op) (affine : List (Symbolic.Affine n)) (general : List ℝ) (continuation : AffineExpr (n + 1))
+    (expression : AffineExpr n) (typed : WellTyped [] expression ty)
+    (notValue : expression.isValue ≠ true)
+    (op : Op) (affine : List (Symbolic.Affine n)) (general : List ℝ)
+    (continuation : AffineExpr (n + 1))
     (actionEq : symbolicReduce expression = .sampleE op affine general continuation)
     (extendedSafe : (Symbolic.SampleEnv.snoc history op
-        (fun i ↦ affine.getD i.1 (0, fun _ ↦ 0)) (fun i ↦ general.getD i.1 0)).DomainSafe primitiveLaws) :
+        (fun i ↦ affine.getD i.1 (0, fun _ ↦ 0))
+        (fun i ↦ general.getD i.1 0)).DomainSafe primitiveLaws) :
     targetTraceLaw (depth + 1) history expression =
       (targetTraceLaw depth (Symbolic.SampleEnv.snoc history op
-        (fun i ↦ affine.getD i.1 (0, fun _ ↦ 0)) (fun i ↦ general.getD i.1 0)) continuation).map (prepend none) := by
-  let affineArgs : Fin (affineArity op) → Symbolic.Affine n := fun i ↦ affine.getD i.1 (0, fun _ ↦ 0)
+        (fun i ↦ affine.getD i.1 (0, fun _ ↦ 0))
+        (fun i ↦ general.getD i.1 0)) continuation).map (prepend none) := by
+  let affineArgs : Fin (affineArity op) → Symbolic.Affine n :=
+    fun i ↦ affine.getD i.1 (0, fun _ ↦ 0)
   let generalArgs : Fin (generalArity op) → ℝ := fun i ↦ general.getD i.1 0
   let mean := history.meanEnvironment primitiveLaws
-  have domainAtMean := SymbolicSoundness.SampleEnv.domain_at_meanEnvironment primitiveLaws history safe op affineArgs generalArgs extendedSafe.2
-  have reduction := concrete_target_sampleE expression typed op affine general continuation actionEq mean domainAtMean
+  have domainAtMean :=
+    SymbolicSoundness.SampleEnv.domain_at_meanEnvironment primitiveLaws history safe op affineArgs
+      generalArgs extendedSafe.2
+  have reduction :=
+    concrete_target_sampleE expression typed op affine general continuation actionEq mean
+      domainAtMean
   rw [targetTraceLaw, exact_succ_sample _ _ _ _
     (by simpa only [determinize_isValue, AffineExpr.realize_isValue] using notValue) reduction,
     generationOp_determinize, generationOp_realize, sampleE_opNone typed actionEq]
-  have contMeasurable := (MeasurableActionFamily.stepKernel primitiveLaws).sample_continuation_measurable _ _ _ reduction
+  have contMeasurable :=
+    (MeasurableActionFamily.stepKernel primitiveLaws).sample_continuation_measurable _ _ _ reduction
   have measurable : Measurable (fun value ↦
-      (exactMeasure depth (continuation.realize (Env.cons value mean)).determinize).map (prepend none)) :=
-    (Measure.measurable_map (prepend none) (prepend_measurable.comp (measurable_const.prodMk measurable_id))).comp
+      (exactMeasure depth (continuation.realize (Env.cons value mean)).determinize).map
+          (prepend none)) :=
+    (Measure.measurable_map (prepend none)
+      (prepend_measurable.comp (measurable_const.prodMk measurable_id))).comp
       ((exact_measurable depth).comp contMeasurable)
   change (Measure.dirac _).bind (fun value ↦
-      (exactMeasure depth (continuation.realize (Env.cons value mean)).determinize).map (prepend none)) = _
+      (exactMeasure depth (continuation.realize (Env.cons value mean)).determinize).map
+        (prepend none)) = _
   rw [Measure.dirac_bind measurable]
   rfl
 

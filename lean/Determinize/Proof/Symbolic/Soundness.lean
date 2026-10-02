@@ -61,7 +61,8 @@ namespace Affine
 
 open Symbolic.Affine (add smul tail primitiveMean eval_primitiveMean)
 
-noncomputable def substituteHeadMean (expression : Symbolic.Affine (n + 1)) (op : Determinize.Spec.Paper.Op)
+noncomputable def substituteHeadMean (expression : Symbolic.Affine (n + 1))
+    (op : Determinize.Spec.Paper.Op)
     (affineArgs : Fin (Determinize.Spec.Paper.affineArity op) → Symbolic.Affine n)
     (generalArgs : Fin (Determinize.Spec.Paper.generalArity op) → ℝ) : Symbolic.Affine n :=
   add (tail expression) (smul (expression.2 0) (primitiveMean op affineArgs generalArgs))
@@ -82,7 +83,8 @@ theorem eval_cons_convexCombination (expression : Symbolic.Affine (n + 1))
         b * (Symbolic.Affine.eval (tail expression) environment + expression.2 0 * right) := by
   linear_combination -(Symbolic.Affine.eval (tail expression) environment) * hSum
 
-theorem eval_substituteHeadMean (expression : Symbolic.Affine (n + 1)) (op : Determinize.Spec.Paper.Op)
+theorem eval_substituteHeadMean (expression : Symbolic.Affine (n + 1))
+    (op : Determinize.Spec.Paper.Op)
     (affineArgs : Fin (Determinize.Spec.Paper.affineArity op) → Symbolic.Affine n)
     (generalArgs : Fin (Determinize.Spec.Paper.generalArity op) → ℝ)
     (environment : Env n) :
@@ -175,7 +177,8 @@ noncomputable def transitionPack (laws : Determinize.Proof.Paper.PrimitiveLaws)
     (fun input ↦ Env.cons input.2 input.1)
     (measurable_envCons.comp (measurable_snd.prodMk measurable_fst))
 
-theorem transitionPack_apply (laws : Determinize.Proof.Paper.PrimitiveLaws) (op : Determinize.Spec.Paper.Op)
+theorem transitionPack_apply (laws : Determinize.Proof.Paper.PrimitiveLaws)
+    (op : Determinize.Spec.Paper.Op)
     (affineArgs : Fin (Determinize.Spec.Paper.affineArity op) → Symbolic.Affine n)
     (generalArgs : Fin (Determinize.Spec.Paper.generalArity op) → ℝ)
     (environment : Env n) :
@@ -269,7 +272,8 @@ theorem integrable_eval_transition (laws : Determinize.Proof.Paper.PrimitiveLaws
   rw [functionEq]
   exact affineIntegrable
 
-theorem integral_eval_transition (laws : Determinize.Proof.Paper.PrimitiveLaws) (op : Determinize.Spec.Paper.Op)
+theorem integral_eval_transition (laws : Determinize.Proof.Paper.PrimitiveLaws)
+    (op : Determinize.Spec.Paper.Op)
     (affineArgs : Fin (Determinize.Spec.Paper.affineArity op) → Symbolic.Affine n)
     (generalArgs : Fin (Determinize.Spec.Paper.generalArity op) → ℝ)
     (expression : Symbolic.Affine (n + 1)) (environment : Env n)
@@ -309,7 +313,8 @@ theorem integral_eval_transition (laws : Determinize.Proof.Paper.PrimitiveLaws) 
 theorem domain_at_meanEnvironment (laws : Determinize.Proof.Paper.PrimitiveLaws)
     (history : Symbolic.SampleEnv laws n)
     (safe : Symbolic.SampleEnv.DomainSafe laws history)
-    (op : Determinize.Spec.Paper.Op) (affineArgs : Fin (Determinize.Spec.Paper.affineArity op) → Symbolic.Affine n)
+    (op : Determinize.Spec.Paper.Op)
+    (affineArgs : Fin (Determinize.Spec.Paper.affineArity op) → Symbolic.Affine n)
     (generalArgs : Fin (Determinize.Spec.Paper.generalArity op) → ℝ)
     (domainAE : ∀ᵐ environment ∂Symbolic.SampleEnv.actualMeasure laws history,
       Determinize.Spec.Paper.domain op
@@ -364,7 +369,8 @@ theorem domain_at_meanEnvironment (laws : Determinize.Proof.Paper.PrimitiveLaws)
       rw [laws.mean_law sampledOp sampledParams sampledDomain] at meanDomain
       change Determinize.Spec.Paper.domain op
         (fun i ↦ Symbolic.Affine.eval (affineArgs i)
-          (Env.cons (Determinize.Spec.Paper.meanValue sampledOp sampledParams) environment), generalArgs)
+            (Env.cons (Determinize.Spec.Paper.meanValue sampledOp sampledParams) environment),
+          generalArgs)
         at meanDomain
       simpa only [reducedArgs, Affine.eval_substituteHeadMean, ← Affine.eval_cons]
         using meanDomain
@@ -988,8 +994,10 @@ theorem symbolicReduce_targetRealize
     targetRealize environment (symbolicReduce expression) =
       reduce ((expression.realize environment).determinize) := by
   induction typed generalizing environment with
-  | bvar hvar => simp [symbolicReduce, targetRealize, realize, Expr.determinize, Expr.determinize, reduce]
-  | reject | «unit» => simp [symbolicReduce, targetRealize, realize, Expr.determinize, Expr.determinize, reduce]
+  | bvar hvar =>
+    simp [symbolicReduce, targetRealize, realize, Expr.determinize, Expr.determinize, reduce]
+  | reject | «unit» =>
+    simp [symbolicReduce, targetRealize, realize, Expr.determinize, Expr.determinize, reduce]
   | discrete probabilitiesTyped ih =>
     rename_i context' probabilities affinity
     rw [realize, Expr.determinize, reduce, determinize_isValue, realize_isValue,
@@ -1026,9 +1034,12 @@ theorem symbolicReduce_targetRealize
         (context_realize := by intros; simp only [realize, Expr.determinize])
         (lifted_realize := by intros; simp only [realize, Expr.determinize]), ih environment]
 
-  | bool => simp [symbolicReduce, targetRealize, realize, Expr.determinize, Expr.determinize, reduce]
-  | realE => simp [symbolicReduce, targetRealize, realize, Expr.determinize, Expr.determinize, reduce]
-  | realG => simp [symbolicReduce, targetRealize, realize, Expr.determinize, Expr.determinize, reduce]
+  | bool =>
+    simp [symbolicReduce, targetRealize, realize, Expr.determinize, Expr.determinize, reduce]
+  | realE =>
+    simp [symbolicReduce, targetRealize, realize, Expr.determinize, Expr.determinize, reduce]
+  | realG =>
+    simp [symbolicReduce, targetRealize, realize, Expr.determinize, Expr.determinize, reduce]
   | lam => simp [symbolicReduce, targetRealize, realize, Expr.determinize, Expr.determinize, reduce]
   | fix => simp [symbolicReduce, targetRealize, realize, Expr.determinize, Expr.determinize, reduce]
   | nil => simp [symbolicReduce, targetRealize, realize, Expr.determinize, Expr.determinize, reduce]
@@ -1046,7 +1057,8 @@ theorem symbolicReduce_targetRealize
           (ExprContext := fun next ↦ .pair
             ((left.realize environment).determinize) next)
           (context_realize := by intros; simp only [realize, Expr.determinize])
-          (lifted_realize := by intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
+          (lifted_realize := by
+            intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
           ihr environment, determinize_isValue, realize_isValue,
           if_neg rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
@@ -1091,7 +1103,8 @@ theorem symbolicReduce_targetRealize
         rw [targetRealize_wrap
           (ExprContext := fun next ↦ .cons ((head.realize environment).determinize) next)
           (context_realize := by intros; simp only [realize, Expr.determinize])
-          (lifted_realize := by intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
+          (lifted_realize := by
+            intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
           iht environment, determinize_isValue, realize_isValue,
           if_neg tailValue]
     · simp only [headValue, Bool.false_eq_true, ↓reduceIte]
@@ -1102,7 +1115,8 @@ theorem symbolicReduce_targetRealize
         ihh environment]
   | app functionTyped operandTyped ihf iho =>
     rename_i context' function argumentTy result operand
-    rw [realize, Expr.determinize, MeasurableActionFamily.reduce_app_eq, determinize_isValue, realize_isValue]
+    rw [realize, Expr.determinize, MeasurableActionFamily.reduce_app_eq, determinize_isValue,
+      realize_isValue]
     by_cases functionValue : function.isValue = true
     · simp only [functionValue, ↓reduceIte]
       by_cases operandValue : operand.isValue = true
@@ -1119,7 +1133,8 @@ theorem symbolicReduce_targetRealize
         rw [targetRealize_wrap
           (ExprContext := fun next ↦ .app ((function.realize environment).determinize) next)
           (context_realize := by intros; simp only [realize, Expr.determinize])
-          (lifted_realize := by intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
+          (lifted_realize := by
+            intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
           iho environment, determinize_isValue, realize_isValue, if_neg operandValue]
     · rw [symbolicReduce_app_eq]
       simp only [functionValue, Bool.false_eq_true, ↓reduceIte]
@@ -1130,7 +1145,8 @@ theorem symbolicReduce_targetRealize
         ihf environment]
   | fst pairTyped ih =>
     rename_i context' pairValue leftTy rightTy
-    rw [realize, Expr.determinize, MeasurableActionFamily.reduce_fst_eq, determinize_isValue, realize_isValue]
+    rw [realize, Expr.determinize, MeasurableActionFamily.reduce_fst_eq, determinize_isValue,
+      realize_isValue]
     by_cases pairIsValue : pairValue.isValue = true
     · simp only [pairIsValue, ↓reduceIte]
       obtain ⟨left, right, rfl⟩ := wellTyped_prod_value pairTyped pairIsValue
@@ -1143,7 +1159,8 @@ theorem symbolicReduce_targetRealize
         (lifted_realize := by intros; simp only [realize, Expr.determinize]), ih environment]
   | snd pairTyped ih =>
     rename_i context' pairValue leftTy rightTy
-    rw [realize, Expr.determinize, MeasurableActionFamily.reduce_snd_eq, determinize_isValue, realize_isValue]
+    rw [realize, Expr.determinize, MeasurableActionFamily.reduce_snd_eq, determinize_isValue,
+      realize_isValue]
     by_cases pairIsValue : pairValue.isValue = true
     · simp only [pairIsValue, ↓reduceIte]
       obtain ⟨left, right, rfl⟩ := wellTyped_prod_value pairTyped pairIsValue
@@ -1156,7 +1173,8 @@ theorem symbolicReduce_targetRealize
         (lifted_realize := by intros; simp only [realize, Expr.determinize]), ih environment]
   | matchSum scrutineeTyped leftTyped rightTyped ihs ihl ihr =>
     rename_i context' scrutinee leftTy rightTy left result right
-    rw [realize, Expr.determinize, MeasurableActionFamily.reduce_matchSum_eq, determinize_isValue, realize_isValue]
+    rw [realize, Expr.determinize, MeasurableActionFamily.reduce_matchSum_eq, determinize_isValue,
+      realize_isValue]
     by_cases scrutineeValue : scrutinee.isValue = true
     · simp only [scrutineeValue, ↓reduceIte]
       rcases wellTyped_sum_value scrutineeTyped scrutineeValue with ⟨child, rfl⟩ | ⟨child, rfl⟩
@@ -1175,12 +1193,15 @@ theorem symbolicReduce_targetRealize
         ihs environment]
   | matchList scrutineeTyped nilTyped consTyped ihs ihn ihc =>
     rename_i context' scrutinee element nilCase result consCase
-    rw [realize, Expr.determinize, MeasurableActionFamily.reduce_matchList_eq, determinize_isValue, realize_isValue]
+    rw [realize, Expr.determinize, MeasurableActionFamily.reduce_matchList_eq, determinize_isValue,
+      realize_isValue]
     by_cases scrutineeValue : scrutinee.isValue = true
     · simp only [scrutineeValue, ↓reduceIte]
-      rcases wellTyped_list_value scrutineeTyped scrutineeValue with equality | ⟨head, tail, equality⟩
+      rcases wellTyped_list_value scrutineeTyped
+        scrutineeValue with equality | ⟨head, tail, equality⟩
       · subst scrutinee
-        simp [symbolicReduce, scrutineeValue, targetRealize, realize, Expr.determinize, Expr.determinize]
+        simp [symbolicReduce, scrutineeValue, targetRealize, realize, Expr.determinize,
+          Expr.determinize]
       · subst scrutinee
         simp [symbolicReduce, scrutineeValue, targetRealize, realize, Expr.determinize,
           realize_substTwo, determinize_substTwo]
@@ -1195,23 +1216,27 @@ theorem symbolicReduce_targetRealize
         ihs environment]
   | ite conditionTyped thenTyped elseTyped ihc iht ihe =>
     rename_i context' condition thenBranch result elseBranch
-    rw [realize, Expr.determinize, MeasurableActionFamily.reduce_ite_eq, determinize_isValue, realize_isValue]
+    rw [realize, Expr.determinize, MeasurableActionFamily.reduce_ite_eq, determinize_isValue,
+      realize_isValue]
     by_cases conditionValue : condition.isValue = true
     · simp only [conditionValue, ↓reduceIte]
       obtain ⟨answer, rfl⟩ := wellTyped_bool_value conditionTyped conditionValue
-      cases answer <;> simp [symbolicReduce, conditionValue, targetRealize, realize, Expr.determinize, Expr.determinize]
+      cases answer <;> simp [symbolicReduce, conditionValue, targetRealize, realize,
+        Expr.determinize, Expr.determinize]
     · rw [symbolicReduce_ite_eq]
       simp only [conditionValue,
         Bool.false_eq_true, ↓reduceIte]
       rw [targetRealize_wrap
         (ExprContext := fun next ↦ .ite next
-          ((thenBranch.realize environment).determinize) ((elseBranch.realize environment).determinize))
+          ((thenBranch.realize environment).determinize)
+          ((elseBranch.realize environment).determinize))
         (context_realize := by intros; simp only [realize, Expr.determinize])
         (lifted_realize := by intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
         ihc environment]
   | letE valueTyped bodyTyped ihv ihb =>
     rename_i context' value valueTy body result
-    rw [realize, Expr.determinize, MeasurableActionFamily.reduce_let_eq, determinize_isValue, realize_isValue]
+    rw [realize, Expr.determinize, MeasurableActionFamily.reduce_let_eq, determinize_isValue,
+      realize_isValue]
     by_cases valueIsValue : value.isValue = true
     · simp [symbolicReduce, valueIsValue, targetRealize, realize_substHead, determinize_substHead]
     · rw [symbolicReduce_let_eq]
@@ -1224,7 +1249,8 @@ theorem symbolicReduce_targetRealize
   | sub valueTyped h ih => exact ih environment
   | negE valueTyped ih =>
     rename_i context' value
-    rw [realize, Expr.determinize, MeasurableActionFamily.reduce_neg_eq, determinize_isValue, realize_isValue,
+    rw [realize, Expr.determinize, MeasurableActionFamily.reduce_neg_eq, determinize_isValue,
+      realize_isValue,
       symbolicReduce.eq_def]
     by_cases valueIsValue : value.isValue = true
     · simp only [valueIsValue, ↓reduceIte]
@@ -1237,7 +1263,8 @@ theorem symbolicReduce_targetRealize
         (lifted_realize := by intros; simp only [realize, Expr.determinize]), ih environment]
   | negG valueTyped ih =>
     rename_i context' value
-    rw [realize, Expr.determinize, MeasurableActionFamily.reduce_neg_eq, determinize_isValue, realize_isValue,
+    rw [realize, Expr.determinize, MeasurableActionFamily.reduce_neg_eq, determinize_isValue,
+      realize_isValue,
       symbolicReduce.eq_def]
     by_cases valueIsValue : value.isValue = true
     · simp only [valueIsValue, ↓reduceIte]
@@ -1250,7 +1277,8 @@ theorem symbolicReduce_targetRealize
         (lifted_realize := by intros; simp only [realize, Expr.determinize]), ih environment]
   | addE leftTyped rightTyped ihl ihr =>
     rename_i context' left right
-    rw [realize, Expr.determinize, MeasurableActionFamily.reduce_add_eq, determinize_isValue, realize_isValue,
+    rw [realize, Expr.determinize, MeasurableActionFamily.reduce_add_eq, determinize_isValue,
+      realize_isValue,
       symbolicReduce.eq_def]
     by_cases leftValue : left.isValue = true
     · simp only [leftValue, ↓reduceIte]
@@ -1264,7 +1292,8 @@ theorem symbolicReduce_targetRealize
         rw [targetRealize_wrap
           (ExprContext := fun next ↦ .add ((left.realize environment).determinize) next)
           (context_realize := by intros; simp only [realize, Expr.determinize])
-          (lifted_realize := by intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
+          (lifted_realize := by
+            intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
           ihr environment, determinize_isValue, realize_isValue, if_neg rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [targetRealize_wrap
@@ -1274,7 +1303,8 @@ theorem symbolicReduce_targetRealize
         ihl environment]
   | addG leftTyped rightTyped ihl ihr =>
     rename_i context' left right
-    rw [realize, Expr.determinize, MeasurableActionFamily.reduce_add_eq, determinize_isValue, realize_isValue,
+    rw [realize, Expr.determinize, MeasurableActionFamily.reduce_add_eq, determinize_isValue,
+      realize_isValue,
       symbolicReduce.eq_def]
     by_cases leftValue : left.isValue = true
     · simp only [leftValue, ↓reduceIte]
@@ -1288,7 +1318,8 @@ theorem symbolicReduce_targetRealize
         rw [targetRealize_wrap
           (ExprContext := fun next ↦ .add ((left.realize environment).determinize) next)
           (context_realize := by intros; simp only [realize, Expr.determinize])
-          (lifted_realize := by intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
+          (lifted_realize := by
+            intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
           ihr environment, determinize_isValue, realize_isValue, if_neg rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [targetRealize_wrap
@@ -1298,7 +1329,8 @@ theorem symbolicReduce_targetRealize
         ihl environment]
   | mulGE leftTyped rightTyped ihl ihr =>
     rename_i context' left right
-    rw [realize, Expr.determinize, MeasurableActionFamily.reduce_mul_eq, determinize_isValue, realize_isValue,
+    rw [realize, Expr.determinize, MeasurableActionFamily.reduce_mul_eq, determinize_isValue,
+      realize_isValue,
       symbolicReduce.eq_def]
     by_cases leftValue : left.isValue = true
     · simp only [leftValue, ↓reduceIte]
@@ -1316,7 +1348,8 @@ theorem symbolicReduce_targetRealize
         rw [targetRealize_wrap
           (ExprContext := fun next ↦ .mul ((left.realize environment).determinize) next)
           (context_realize := by intros; simp only [realize, Expr.determinize])
-          (lifted_realize := by intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
+          (lifted_realize := by
+            intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
           ihr environment, determinize_isValue, realize_isValue, if_neg rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [targetRealize_wrap
@@ -1326,7 +1359,8 @@ theorem symbolicReduce_targetRealize
         ihl environment]
   | mulGG leftTyped rightTyped ihl ihr =>
     rename_i context' left right
-    rw [realize, Expr.determinize, MeasurableActionFamily.reduce_mul_eq, determinize_isValue, realize_isValue,
+    rw [realize, Expr.determinize, MeasurableActionFamily.reduce_mul_eq, determinize_isValue,
+      realize_isValue,
       symbolicReduce.eq_def]
     by_cases leftValue : left.isValue = true
     · simp only [leftValue, ↓reduceIte]
@@ -1345,7 +1379,8 @@ theorem symbolicReduce_targetRealize
         rw [targetRealize_wrap
           (ExprContext := fun next ↦ .mul ((left.realize environment).determinize) next)
           (context_realize := by intros; simp only [realize, Expr.determinize])
-          (lifted_realize := by intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
+          (lifted_realize := by
+            intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
           ihr environment, determinize_isValue, realize_isValue, if_neg rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [targetRealize_wrap
@@ -1355,7 +1390,8 @@ theorem symbolicReduce_targetRealize
         ihl environment]
   | divEG leftTyped rightTyped ihl ihr =>
     rename_i context' left right
-    rw [realize, Expr.determinize, MeasurableActionFamily.reduce_div_eq, determinize_isValue, realize_isValue,
+    rw [realize, Expr.determinize, MeasurableActionFamily.reduce_div_eq, determinize_isValue,
+      realize_isValue,
       symbolicReduce.eq_def]
     by_cases leftValue : left.isValue = true
     · simp only [leftValue, ↓reduceIte]
@@ -1383,7 +1419,8 @@ theorem symbolicReduce_targetRealize
         rw [targetRealize_wrap
           (ExprContext := fun next ↦ .div ((left.realize environment).determinize) next)
           (context_realize := by intros; simp only [realize, Expr.determinize])
-          (lifted_realize := by intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
+          (lifted_realize := by
+            intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
           ihr environment, determinize_isValue, realize_isValue, if_neg rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [targetRealize_wrap
@@ -1393,7 +1430,8 @@ theorem symbolicReduce_targetRealize
         ihl environment]
   | divGG leftTyped rightTyped ihl ihr =>
     rename_i context' left right
-    rw [realize, Expr.determinize, MeasurableActionFamily.reduce_div_eq, determinize_isValue, realize_isValue,
+    rw [realize, Expr.determinize, MeasurableActionFamily.reduce_div_eq, determinize_isValue,
+      realize_isValue,
       symbolicReduce.eq_def]
     by_cases leftValue : left.isValue = true
     · simp only [leftValue, ↓reduceIte]
@@ -1416,7 +1454,8 @@ theorem symbolicReduce_targetRealize
         rw [targetRealize_wrap
           (ExprContext := fun next ↦ .div ((left.realize environment).determinize) next)
           (context_realize := by intros; simp only [realize, Expr.determinize])
-          (lifted_realize := by intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
+          (lifted_realize := by
+            intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
           ihr environment, determinize_isValue, realize_isValue, if_neg rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [targetRealize_wrap
@@ -1426,7 +1465,8 @@ theorem symbolicReduce_targetRealize
         ihl environment]
   | lt leftTyped rightTyped ihl ihr =>
     rename_i context' left right
-    rw [realize, Expr.determinize, MeasurableActionFamily.reduce_lt_eq, determinize_isValue, realize_isValue,
+    rw [realize, Expr.determinize, MeasurableActionFamily.reduce_lt_eq, determinize_isValue,
+      realize_isValue,
       symbolicReduce.eq_def]
     by_cases leftValue : left.isValue = true
     · simp only [leftValue, ↓reduceIte]
@@ -1444,7 +1484,8 @@ theorem symbolicReduce_targetRealize
         rw [targetRealize_wrap
           (ExprContext := fun next ↦ .lt ((left.realize environment).determinize) next)
           (context_realize := by intros; simp only [realize, Expr.determinize])
-          (lifted_realize := by intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
+          (lifted_realize := by
+            intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
           ihr environment, determinize_isValue, realize_isValue, if_neg rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [targetRealize_wrap
@@ -1464,21 +1505,24 @@ theorem symbolicReduce_targetRealize
         obtain ⟨y, rfl⟩ := wellTyped_real_value rightTyped rightValue
         cases affinity with
         | E =>
-          simp [affineValue?, targetRealize, realize, Expr.determinize, DistributionAction.determinize,
+          simp [affineValue?, targetRealize, realize, Expr.determinize,
+            DistributionAction.determinize,
             Expr.isValue, realValue?, uniformFiber_eq, Affine.eval_fresh]
         | G =>
           rcases x with ⟨x0, xc⟩
           rcases y with ⟨y0, yc⟩
           obtain rfl : xc = 0 := wellTyped_realG_coefficients leftTyped
           obtain rfl : yc = 0 := wellTyped_realG_coefficients rightTyped
-          simp [constantValue?, targetRealize, realize, Expr.determinize, DistributionAction.determinize,
+          simp [constantValue?, targetRealize, realize, Expr.determinize,
+            DistributionAction.determinize,
             Expr.isValue, realValue?]
       · simp only [rightValue, Bool.false_eq_true, ↓reduceIte]
         rw [targetRealize_wrap
           (ExprContext := fun next ↦ .uniform (DistributionAction.determinize (.sample affinity))
             ((left.realize environment).determinize) next)
           (context_realize := by intros; simp only [realize, Expr.determinize])
-          (lifted_realize := by intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
+          (lifted_realize := by
+            intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
           ihr environment, determinize_isValue, realize_isValue, if_neg rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [targetRealize_wrap
@@ -1505,15 +1549,21 @@ theorem symbolicReduce_targetRealize
         rw [targetRealize_wrap
           (ExprContext := fun next ↦ .uniform .mean
             ((left.realize environment).determinize) next)
-          (context_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize])
-          (lifted_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize, realize_weakenSamples]),
+          (context_realize := by
+            intros; simp only [realize, Expr.determinize, DistributionAction.determinize])
+          (lifted_realize := by
+            intros; simp only [realize, Expr.determinize, DistributionAction.determinize,
+              realize_weakenSamples]),
           ihr environment, determinize_isValue, realize_isValue, if_neg rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [targetRealize_wrap
         (ExprContext := fun next ↦ .uniform .mean next
           ((right.realize environment).determinize))
-        (context_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize])
-        (lifted_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize, realize_weakenSamples]),
+        (context_realize := by
+          intros; simp only [realize, Expr.determinize, DistributionAction.determinize])
+        (lifted_realize := by
+          intros; simp only [realize, Expr.determinize, DistributionAction.determinize,
+            realize_weakenSamples]),
         ihl environment]
   | gaussian leftTyped rightTyped ihl ihr =>
     rename_i context' left affinity right
@@ -1529,25 +1579,29 @@ theorem symbolicReduce_targetRealize
         | E =>
           rcases y with ⟨y0, yc⟩
           obtain rfl : yc = 0 := wellTyped_realG_coefficients rightTyped
-          simp [affineValue?, constantValue?, targetRealize, realize, Expr.determinize, DistributionAction.determinize,
+          simp [affineValue?, constantValue?, targetRealize, realize, Expr.determinize,
+            DistributionAction.determinize,
             Expr.isValue, realValue?, gaussianFiber_eq, Affine.eval_fresh]
         | G =>
           rcases x with ⟨x0, xc⟩
           rcases y with ⟨y0, yc⟩
           obtain rfl : xc = 0 := wellTyped_realG_coefficients leftTyped
           obtain rfl : yc = 0 := wellTyped_realG_coefficients rightTyped
-          simp [constantValue?, targetRealize, realize, Expr.determinize, DistributionAction.determinize,
+          simp [constantValue?, targetRealize, realize, Expr.determinize,
+            DistributionAction.determinize,
             Expr.isValue, realValue?]
       · simp only [rightValue, Bool.false_eq_true, ↓reduceIte]
         rw [targetRealize_wrap
           (ExprContext := fun next ↦ .gaussian (DistributionAction.determinize (.sample affinity))
             ((left.realize environment).determinize) next)
           (context_realize := by intros; simp only [realize, Expr.determinize])
-          (lifted_realize := by intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
+          (lifted_realize := by
+            intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
           ihr environment, determinize_isValue, realize_isValue, if_neg rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [targetRealize_wrap
-        (ExprContext := fun next ↦ .gaussian (DistributionAction.determinize (.sample affinity)) next
+        (ExprContext := fun next ↦
+          .gaussian (DistributionAction.determinize (.sample affinity)) next
           ((right.realize environment).determinize))
         (context_realize := by intros; simp only [realize, Expr.determinize])
         (lifted_realize := by intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
@@ -1572,15 +1626,21 @@ theorem symbolicReduce_targetRealize
         rw [targetRealize_wrap
           (ExprContext := fun next ↦ .gaussian .mean
             ((left.realize environment).determinize) next)
-          (context_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize])
-          (lifted_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize, realize_weakenSamples]),
+          (context_realize := by
+            intros; simp only [realize, Expr.determinize, DistributionAction.determinize])
+          (lifted_realize := by
+            intros; simp only [realize, Expr.determinize, DistributionAction.determinize,
+              realize_weakenSamples]),
           ihr environment, determinize_isValue, realize_isValue, if_neg rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [targetRealize_wrap
         (ExprContext := fun next ↦ .gaussian .mean next
           ((right.realize environment).determinize))
-        (context_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize])
-        (lifted_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize, realize_weakenSamples]),
+        (context_realize := by
+          intros; simp only [realize, Expr.determinize, DistributionAction.determinize])
+        (lifted_realize := by
+          intros; simp only [realize, Expr.determinize, DistributionAction.determinize,
+            realize_weakenSamples]),
         ihl environment]
   | poisson valueTyped ih =>
     rename_i context' value affinity
@@ -1591,17 +1651,20 @@ theorem symbolicReduce_targetRealize
       obtain ⟨x, rfl⟩ := wellTyped_real_value valueTyped valueIsValue
       cases affinity with
       | E =>
-        simp [affineValue?, targetRealize, realize, Expr.determinize, DistributionAction.determinize,
+        simp [affineValue?, targetRealize, realize, Expr.determinize,
+          DistributionAction.determinize,
           realValue?, poissonFiber_eq, Affine.eval_fresh]
       | G =>
         rcases x with ⟨x0, xc⟩
         obtain rfl : xc = 0 := wellTyped_realG_coefficients valueTyped
-        simp [constantValue?, targetRealize, realize, Expr.determinize, DistributionAction.determinize,
+        simp [constantValue?, targetRealize, realize, Expr.determinize,
+          DistributionAction.determinize,
           realValue?]
     · simp only [valueIsValue,
         Bool.false_eq_true, ↓reduceIte]
       rw [targetRealize_wrap
-        (ExprContext := fun next ↦ .poisson (DistributionAction.determinize (.sample affinity)) next)
+        (ExprContext := fun next ↦
+          .poisson (DistributionAction.determinize (.sample affinity)) next)
         (context_realize := by intros; simp only [realize, Expr.determinize])
         (lifted_realize := by intros; simp only [realize, Expr.determinize]), ih environment]
   | poissonMean valueTyped ih =>
@@ -1619,8 +1682,11 @@ theorem symbolicReduce_targetRealize
         Bool.false_eq_true, ↓reduceIte]
       rw [targetRealize_wrap
         (ExprContext := fun next ↦ .poisson .mean next)
-        (context_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize])
-        (lifted_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize]), ih environment]
+        (context_realize := by
+          intros; simp only [realize, Expr.determinize, DistributionAction.determinize])
+        (lifted_realize := by
+          intros; simp only [realize, Expr.determinize,
+            DistributionAction.determinize]), ih environment]
   | bernoulli valueTyped ih =>
     rename_i context' value affinity
     rw [realize, Expr.determinize, MeasurableActionFamily.reduce_bernoulli_eq, determinize_isValue,
@@ -1630,17 +1696,20 @@ theorem symbolicReduce_targetRealize
       obtain ⟨x, rfl⟩ := wellTyped_real_value valueTyped valueIsValue
       cases affinity with
       | E =>
-        simp [affineValue?, targetRealize, realize, Expr.determinize, DistributionAction.determinize,
+        simp [affineValue?, targetRealize, realize, Expr.determinize,
+          DistributionAction.determinize,
           realValue?, bernoulliFiber_eq, Affine.eval_fresh]
       | G =>
         rcases x with ⟨x0, xc⟩
         obtain rfl : xc = 0 := wellTyped_realG_coefficients valueTyped
-        simp [constantValue?, targetRealize, realize, Expr.determinize, DistributionAction.determinize,
+        simp [constantValue?, targetRealize, realize, Expr.determinize,
+          DistributionAction.determinize,
           realValue?]
     · simp only [valueIsValue,
         Bool.false_eq_true, ↓reduceIte]
       rw [targetRealize_wrap
-        (ExprContext := fun next ↦ .bernoulli (DistributionAction.determinize (.sample affinity)) next)
+        (ExprContext := fun next ↦
+          .bernoulli (DistributionAction.determinize (.sample affinity)) next)
         (context_realize := by intros; simp only [realize, Expr.determinize])
         (lifted_realize := by intros; simp only [realize, Expr.determinize]), ih environment]
   | bernoulliMean valueTyped ih =>
@@ -1658,11 +1727,15 @@ theorem symbolicReduce_targetRealize
         Bool.false_eq_true, ↓reduceIte]
       rw [targetRealize_wrap
         (ExprContext := fun next ↦ .bernoulli .mean next)
-        (context_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize])
-        (lifted_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize]), ih environment]
+        (context_realize := by
+          intros; simp only [realize, Expr.determinize, DistributionAction.determinize])
+        (lifted_realize := by
+          intros; simp only [realize, Expr.determinize,
+            DistributionAction.determinize]), ih environment]
   | exponential valueTyped ih =>
     rename_i context' value affinity
-    rw [realize, Expr.determinize, MeasurableActionFamily.reduce_exponential_eq, determinize_isValue,
+    rw [realize, Expr.determinize, MeasurableActionFamily.reduce_exponential_eq,
+      determinize_isValue,
       realize_isValue, symbolicReduce.eq_def]
     by_cases valueIsValue : value.isValue = true
     · simp only [valueIsValue, ↓reduceIte]
@@ -1671,17 +1744,20 @@ theorem symbolicReduce_targetRealize
       | E =>
         rcases x with ⟨x0, xc⟩
         obtain rfl : xc = 0 := wellTyped_realG_coefficients valueTyped
-        simp [constantValue?, targetRealize, realize, Expr.determinize, DistributionAction.determinize,
+        simp [constantValue?, targetRealize, realize, Expr.determinize,
+          DistributionAction.determinize,
           realValue?, exponentialFiber_eq, Affine.eval_fresh]
       | G =>
         rcases x with ⟨x0, xc⟩
         obtain rfl : xc = 0 := wellTyped_realG_coefficients valueTyped
-        simp [constantValue?, targetRealize, realize, Expr.determinize, DistributionAction.determinize,
+        simp [constantValue?, targetRealize, realize, Expr.determinize,
+          DistributionAction.determinize,
           realValue?]
     · simp only [valueIsValue,
         Bool.false_eq_true, ↓reduceIte]
       rw [targetRealize_wrap
-        (ExprContext := fun next ↦ .exponential (DistributionAction.determinize (.sample affinity)) next)
+        (ExprContext := fun next ↦
+          .exponential (DistributionAction.determinize (.sample affinity)) next)
         (context_realize := by intros; simp only [realize, Expr.determinize])
         (lifted_realize := by intros; simp only [realize, Expr.determinize]), ih environment]
   | exponentialMean valueTyped ih =>
@@ -1701,8 +1777,11 @@ theorem symbolicReduce_targetRealize
         Bool.false_eq_true, ↓reduceIte]
       rw [targetRealize_wrap
         (ExprContext := fun next ↦ .exponential .mean next)
-        (context_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize])
-        (lifted_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize]), ih environment]
+        (context_realize := by
+          intros; simp only [realize, Expr.determinize, DistributionAction.determinize])
+        (lifted_realize := by
+          intros; simp only [realize, Expr.determinize,
+            DistributionAction.determinize]), ih environment]
   | beta leftTyped rightTyped ihl ihr =>
     rename_i context' left right affinity
     rw [realize, Expr.determinize, MeasurableActionFamily.reduce_beta_eq, determinize_isValue,
@@ -1719,21 +1798,24 @@ theorem symbolicReduce_targetRealize
           rcases y with ⟨y0, yc⟩
           obtain rfl : xc = 0 := wellTyped_realG_coefficients leftTyped
           obtain rfl : yc = 0 := wellTyped_realG_coefficients rightTyped
-          simp [constantValue?, targetRealize, realize, Expr.determinize, DistributionAction.determinize,
+          simp [constantValue?, targetRealize, realize, Expr.determinize,
+            DistributionAction.determinize,
             Expr.isValue, realValue?, betaFiber_eq, Affine.eval_fresh]
         | G =>
           rcases x with ⟨x0, xc⟩
           rcases y with ⟨y0, yc⟩
           obtain rfl : xc = 0 := wellTyped_realG_coefficients leftTyped
           obtain rfl : yc = 0 := wellTyped_realG_coefficients rightTyped
-          simp [constantValue?, targetRealize, realize, Expr.determinize, DistributionAction.determinize,
+          simp [constantValue?, targetRealize, realize, Expr.determinize,
+            DistributionAction.determinize,
             Expr.isValue, realValue?]
       · simp only [rightValue, Bool.false_eq_true, ↓reduceIte]
         rw [targetRealize_wrap
           (ExprContext := fun next ↦ .beta (DistributionAction.determinize (.sample affinity))
             ((left.realize environment).determinize) next)
           (context_realize := by intros; simp only [realize, Expr.determinize])
-          (lifted_realize := by intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
+          (lifted_realize := by
+            intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
           ihr environment, determinize_isValue, realize_isValue, if_neg rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [targetRealize_wrap
@@ -1764,15 +1846,21 @@ theorem symbolicReduce_targetRealize
         rw [targetRealize_wrap
           (ExprContext := fun next ↦ .beta .mean
             ((left.realize environment).determinize) next)
-          (context_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize])
-          (lifted_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize, realize_weakenSamples]),
+          (context_realize := by
+            intros; simp only [realize, Expr.determinize, DistributionAction.determinize])
+          (lifted_realize := by
+            intros; simp only [realize, Expr.determinize, DistributionAction.determinize,
+              realize_weakenSamples]),
           ihr environment, determinize_isValue, realize_isValue, if_neg rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [targetRealize_wrap
         (ExprContext := fun next ↦ .beta .mean next
           ((right.realize environment).determinize))
-        (context_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize])
-        (lifted_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize, realize_weakenSamples]),
+        (context_realize := by
+          intros; simp only [realize, Expr.determinize, DistributionAction.determinize])
+        (lifted_realize := by
+          intros; simp only [realize, Expr.determinize, DistributionAction.determinize,
+            realize_weakenSamples]),
         ihl environment]
   | gamma leftTyped rightTyped ihl ihr =>
     rename_i context' left affinity right
@@ -1788,21 +1876,24 @@ theorem symbolicReduce_targetRealize
         | E =>
           rcases y with ⟨y0, yc⟩
           obtain rfl : yc = 0 := wellTyped_realG_coefficients rightTyped
-          simp [affineValue?, constantValue?, targetRealize, realize, Expr.determinize, DistributionAction.determinize,
+          simp [affineValue?, constantValue?, targetRealize, realize, Expr.determinize,
+            DistributionAction.determinize,
             Expr.isValue, realValue?, gammaFiber_eq, Affine.eval_fresh]
         | G =>
           rcases x with ⟨x0, xc⟩
           rcases y with ⟨y0, yc⟩
           obtain rfl : xc = 0 := wellTyped_realG_coefficients leftTyped
           obtain rfl : yc = 0 := wellTyped_realG_coefficients rightTyped
-          simp [constantValue?, targetRealize, realize, Expr.determinize, DistributionAction.determinize,
+          simp [constantValue?, targetRealize, realize, Expr.determinize,
+            DistributionAction.determinize,
             Expr.isValue, realValue?]
       · simp only [rightValue, Bool.false_eq_true, ↓reduceIte]
         rw [targetRealize_wrap
           (ExprContext := fun next ↦ .gamma (DistributionAction.determinize (.sample affinity))
             ((left.realize environment).determinize) next)
           (context_realize := by intros; simp only [realize, Expr.determinize])
-          (lifted_realize := by intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
+          (lifted_realize := by
+            intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
           ihr environment, determinize_isValue, realize_isValue, if_neg rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [targetRealize_wrap
@@ -1832,15 +1923,21 @@ theorem symbolicReduce_targetRealize
         rw [targetRealize_wrap
           (ExprContext := fun next ↦ .gamma .mean
             ((left.realize environment).determinize) next)
-          (context_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize])
-          (lifted_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize, realize_weakenSamples]),
+          (context_realize := by
+            intros; simp only [realize, Expr.determinize, DistributionAction.determinize])
+          (lifted_realize := by
+            intros; simp only [realize, Expr.determinize, DistributionAction.determinize,
+              realize_weakenSamples]),
           ihr environment, determinize_isValue, realize_isValue, if_neg rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [targetRealize_wrap
         (ExprContext := fun next ↦ .gamma .mean next
           ((right.realize environment).determinize))
-        (context_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize])
-        (lifted_realize := by intros; simp only [realize, Expr.determinize, DistributionAction.determinize, realize_weakenSamples]),
+        (context_realize := by
+          intros; simp only [realize, Expr.determinize, DistributionAction.determinize])
+        (lifted_realize := by
+          intros; simp only [realize, Expr.determinize, DistributionAction.determinize,
+            realize_weakenSamples]),
         ihl environment]
 
 /-- A valid mean call takes one deterministic step, using no additional sample coordinate. -/

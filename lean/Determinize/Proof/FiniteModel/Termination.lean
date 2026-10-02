@@ -26,11 +26,16 @@ theorem within_mass_balance (model : Model) (n : Nat) (state : Fin model.size) :
     | transient =>
       simp only [Model.outputWithin, Model.survivalWithin, h, ↓reduceIte, Rat.cast_sum,
         Rat.cast_mul, Measure.finsetSum_apply, Measure.smul_apply, smul_eq_mul]
-      change (∑ next, ENNReal.ofReal (model.transition state next : ℝ) * model.outputWithin n next Set.univ) +
-        (∑ next, ENNReal.ofReal (model.transition state next : ℝ) * model.rejectionModel.outputWithin n next Set.univ) +
-        ENNReal.ofReal (∑ next, (model.transition state next : ℝ) * (model.survivalWithin n next : ℝ)) = 1
+      change
+        (∑ next, ENNReal.ofReal (model.transition state next : ℝ) *
+          model.outputWithin n next Set.univ) +
+        (∑ next, ENNReal.ofReal (model.transition state next : ℝ) *
+          model.rejectionModel.outputWithin n next Set.univ) +
+        ENNReal.ofReal
+          (∑ next, (model.transition state next : ℝ) * (model.survivalWithin n next : ℝ)) = 1
       rw [ENNReal.ofReal_sum_of_nonneg (fun next _ ↦ mul_nonneg
-        (by exact_mod_cast model.nonnegative state next) (by exact_mod_cast survival_nonnegative model n next))]
+        (by exact_mod_cast model.nonnegative state next)
+        (by exact_mod_cast survival_nonnegative model n next))]
       have cast_mul (next : Fin model.size) (r : ℝ) :
           ENNReal.ofReal ((model.transition state next : ℝ) * r) =
             ENNReal.ofReal (model.transition state next : ℝ) * ENNReal.ofReal r :=
@@ -38,15 +43,18 @@ theorem within_mass_balance (model : Model) (n : Nat) (state : Fin model.size) :
       simp_rw [cast_mul]
       rw [← Finset.sum_add_distrib, ← Finset.sum_add_distrib]
       simp_rw [← mul_add, ih, mul_one]
-      rw [← ENNReal.ofReal_sum_of_nonneg (fun next _ ↦ by exact_mod_cast model.nonnegative state next)]
-      have total : ∑ next, (model.transition state next : ℝ) = 1 := by exact_mod_cast model.normalized state
+      rw [← ENNReal.ofReal_sum_of_nonneg
+        (fun next _ ↦ by exact_mod_cast model.nonnegative state next)]
+      have total : ∑ next, (model.transition state next : ℝ) = 1 := by
+        exact_mod_cast model.normalized state
       simp [total]
 
 theorem massBalance (model : Model) :
     model.outputMeasure Set.univ + model.rejectionProbability + model.divergenceProbability =
       1 := by
   have complements (n : Nat) :
-      model.outputWithin n model.initial Set.univ + model.rejectionModel.outputWithin n model.initial Set.univ =
+      model.outputWithin n model.initial Set.univ +
+        model.rejectionModel.outputWithin n model.initial Set.univ =
         1 - ENNReal.ofReal (model.survivalWithin n model.initial : ℝ) :=
     ENNReal.eq_sub_of_add_eq (by simp) (within_mass_balance model n model.initial)
   have sumMass : model.outputMeasure Set.univ + model.rejectionProbability =
@@ -77,15 +85,19 @@ structure TerminationCertificate (model : Model) where
   output : MomentCertificate model
   rejection : Fin model.size → Rat
 
-def TerminationCertificate.Valid (model : Model) (certificate : TerminationCertificate model) : Prop :=
+def TerminationCertificate.Valid (model : Model) (certificate : TerminationCertificate model) :
+    Prop :=
   certificate.output.Valid model ∧
-    (⟨certificate.rejection, 0⟩ : ResultCertificate (rejectionQuery model certificate.output.dead)).Equations
+    (⟨certificate.rejection, 0⟩ :
+      ResultCertificate (rejectionQuery model certificate.output.dead)).Equations
       (rejectionQuery model certificate.output.dead)
 
-instance (model : Model) (certificate : TerminationCertificate model) : Decidable (certificate.Valid model) :=
+instance (model : Model) (certificate : TerminationCertificate model) :
+    Decidable (certificate.Valid model) :=
   inferInstanceAs (Decidable (_ ∧ _))
 
-def TerminationCertificate.statistics (model : Model) (certificate : TerminationCertificate model) : TerminationStatistics :=
+def TerminationCertificate.statistics (model : Model) (certificate : TerminationCertificate model) :
+    TerminationStatistics :=
   let p := certificate.output.values .mass model.initial
   let r := certificate.rejection model.initial
   ⟨p, r, 1 - p - r⟩
@@ -106,7 +118,8 @@ def TerminationCertificate.StateValid (model : Model) (certificate : Termination
   ((cut model certificate.output.dead).kind state = .transient →
     0 < model.transition state (certificate.output.next state) ∧
       certificate.output.rank (certificate.output.next state) < certificate.output.rank state) ∧
-  (∀ moment, equationAt (certificate.output.model model moment) (certificate.output.values moment) state) ∧
+  (∀ moment, equationAt (certificate.output.model model moment)
+    (certificate.output.values moment) state) ∧
     equationAt (rejectionQuery model certificate.output.dead) certificate.rejection state
 
 instance (model : Model) (certificate : TerminationCertificate model) (state : Fin model.size) :
@@ -120,7 +133,8 @@ theorem terminationStates_valid (model : Model) (certificate : TerminationCertif
 theorem terminationCertificate_sound (model : Model) (certificate : TerminationCertificate model)
     (valid : certificate.Valid model) : (certificate.statistics model).Matches model := by
   have output := (momentCertificate_sound model certificate.output valid.1).mass
-  have rejection : model.rejectionProbability.toReal = (certificate.rejection model.initial : ℝ) := by
+  have rejection :
+      model.rejectionProbability.toReal = (certificate.rejection model.initial : ℝ) := by
     have query := query_sound (cut model.rejectionModel certificate.output.dead) (fun _ ↦ 1)
       (fun _ ↦ 1) (fun _ ↦ by simp) ⟨certificate.rejection, 0⟩ valid.2
       ⟨certificate.output.rank, certificate.output.next⟩ (by
@@ -132,9 +146,11 @@ theorem terminationCertificate_sound (model : Model) (certificate : TerminationC
   refine ⟨output, rejection, ?_⟩
   have balance := massBalance model
   have finiteReturn : model.outputMeasure Set.univ ≠ ⊤ := by
-    exact ne_top_of_le_ne_top (by simp) ((le_add_right le_rfl).trans ((le_add_right le_rfl).trans_eq balance))
+    exact ne_top_of_le_ne_top (by simp)
+      ((le_add_right le_rfl).trans ((le_add_right le_rfl).trans_eq balance))
   have finiteReject : model.rejectionProbability ≠ ⊤ := by
-    exact ne_top_of_le_ne_top (by simp) ((le_add_left le_rfl).trans ((le_add_right le_rfl).trans_eq balance))
+    exact ne_top_of_le_ne_top (by simp)
+      ((le_add_left le_rfl).trans ((le_add_right le_rfl).trans_eq balance))
   have finiteDiverge : model.divergenceProbability ≠ ⊤ := by
     exact ne_top_of_le_ne_top (by simp) ((le_add_left le_rfl).trans_eq balance)
   have realBalance := congrArg ENNReal.toReal balance

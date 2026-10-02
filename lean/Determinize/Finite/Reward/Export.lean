@@ -20,10 +20,13 @@ def candidateText (candidate : Candidate) : String :=
   "set_option maxRecDepth 100000\nset_option maxHeartbeats 0\nset_option Elab.async false\n\n" ++
   "def candidate : Reward.Candidate where\n" ++
   s!"  initial := {candidate.initial}\n" ++
-  "  states := #[\n    " ++ String.intercalate ",\n    " (candidate.states.toList.map Finite.stateText) ++ "\n  ]\n" ++
-  "  rows := #[\n    " ++ String.intercalate ",\n    " (candidate.rows.toList.map rowText) ++ "\n  ]\n"
+  "  states := #[\n    " ++
+    String.intercalate ",\n    " (candidate.states.toList.map Finite.stateText) ++ "\n  ]\n" ++
+  "  rows := #[\n    " ++
+    String.intercalate ",\n    " (candidate.rows.toList.map rowText) ++ "\n  ]\n"
 
-def replayCertificateText (source : Spec.Paper.Core) (subject : Subject) (candidate : Candidate) : String :=
+def replayCertificateText (source : Spec.Paper.Core) (subject : Subject) (candidate : Candidate) :
+    String :=
   (candidateText candidate).replace "import Determinize.Finite.Reward.Graph"
     "import Determinize.Proof.RewardModel.Soundness" ++
   s!"\ndef checkedSource : Expr Rat := {Frontend.leanExpression source}\n" ++
@@ -44,7 +47,8 @@ private def controlCandidate (candidate : Candidate) : Finite.Candidate :=
       let mut edges : Array Finite.Edge := #[]
       for e in row.edges do
         if let some j := edges.findIdx? (fun existing ↦ existing.target == e.target) then
-          edges := edges.modify j (fun existing ↦ {existing with probability := existing.probability + e.probability})
+          edges := edges.modify j
+            (fun existing ↦ {existing with probability := existing.probability + e.probability})
         else edges := edges.push ⟨e.target, e.probability⟩
       return edges}}
 
@@ -54,7 +58,8 @@ def write (outputPath : System.FilePath) (source : Spec.Paper.Core) (subject : S
   let mut edgeText := "additive-rewards 1\n"
   for (row, i) in candidate.rows.toList.zipIdx do
     for edge in row.edges do
-      edgeText := edgeText ++ s!"{i} {edge.target} {rational edge.probability} {rational edge.reward}\n"
+      edgeText := edgeText ++
+        s!"{i} {edge.target} {rational edge.probability} {rational edge.reward}\n"
   if let some parent := outputPath.parent then IO.FS.createDirAll parent
   for (suffix, content) in [(".candidate.lean", candidateText candidate),
       (".replay.lean", replayCertificateText source subject candidate), (".tra", files.transitions),
@@ -65,20 +70,24 @@ def write (outputPath : System.FilePath) (source : Spec.Paper.Core) (subject : S
 def resultCertificateText (source : Spec.Paper.Core) (subject : Subject) (candidate : Candidate)
     (model : Spec.RewardModel.Model) (solution : Solution model) : String :=
   let vector (name : String) (values : Fin model.size → Rat) :=
-    s!"\ndef {name} : Vector Rat model.size := ⟨#[{String.intercalate ", " ((List.ofFn values).map leanRat)}], by rfl⟩\n"
+    s!"\ndef {name} : Vector Rat model.size := ⟨#[{String.intercalate ",
+      " ((List.ofFn values).map leanRat)}], by rfl⟩\n"
   let dead := String.intercalate ", " ((List.ofFn solution.boundary.dead).map toString)
   let ranks := String.intercalate ", " ((List.ofFn solution.paths.rank).map toString)
-  let next := String.intercalate ", " ((List.ofFn solution.paths.next).map fun j ↦ s!"⟨{j.val}, by decide +kernel⟩")
+  let next := String.intercalate ", "
+      ((List.ofFn solution.paths.next).map fun j ↦ s!"⟨{j.val}, by decide +kernel⟩")
   (replayCertificateText source subject candidate).replace
     "import Determinize.Proof.RewardModel.Soundness"
-    "import Determinize.Proof.RewardModel.Soundness\nimport Determinize.Proof.RewardModel.Moments" ++
+    ("import Determinize.Proof.RewardModel.Soundness\n" ++
+      "import Determinize.Proof.RewardModel.Moments") ++
   vector "massValues" solution.mass ++ vector "firstValues" solution.first ++
   vector "secondValues" solution.second ++ vector "rejectionValues" solution.rejection ++
   s!"\ndef deadStates : Vector Bool model.size := ⟨#[{dead}], by rfl⟩\n" ++
   s!"def ranks : Vector Nat model.size := ⟨#[{ranks}], by rfl⟩\n" ++
   s!"def nextStates : Vector (Fin model.size) model.size := ⟨#[{next}], by rfl⟩\n" ++
   "\ndef boundary : Determinize.Proof.FiniteModel.Boundary model.control where\n" ++
-  "  dead := fun i => deadStates[i]\n  rank := fun i => ranks[i]\n  closed := by decide +kernel\n" ++
+  "  dead := fun i => deadStates[i]\n  rank := fun i => ranks[i]\n" ++
+  "  closed := by decide +kernel\n" ++
   "\ndef solution : Reward.Solution model where\n" ++
   "  boundary := boundary\n  paths := ⟨fun i => ranks[i], fun i => nextStates[i]⟩\n" ++
   "  pathsValid := by decide +kernel\n" ++
@@ -92,23 +101,33 @@ def resultCertificateText (source : Spec.Paper.Core) (subject : Subject) (candid
   "  Determinize.Proof.RewardModel.solution_result model _ modelMatches solution\n" ++
   "\ntheorem integrability : MeasureTheory.Integrable (fun x : ℝ => x)\n" ++
   "    (bigStepMeasure (checkedSubject.program checkedSource)) ∧\n" ++
-  "    MeasureTheory.Integrable (fun x : ℝ => x^2) (bigStepMeasure (checkedSubject.program checkedSource)) := by\n" ++
-  "  simpa only [modelMatches.2] using Determinize.Proof.RewardModel.outputMeasure_integrable model\n" ++
-  "\ntheorem outputStatistics : statistics.Matches (bigStepMeasure (checkedSubject.program checkedSource)) := by\n" ++
-  "  simpa only [modelMatches.2] using Determinize.Proof.RewardModel.solution_statistics model solution\n" ++
+  "    MeasureTheory.Integrable (fun x : ℝ => x^2) (bigStepMeasure (checkedSubject.program \
+      checkedSource)) := by\n" ++
+  "  simpa only [modelMatches.2] using Determinize.Proof.RewardModel.outputMeasure_integrable \
+      model\n" ++
+  "\ntheorem outputStatistics : statistics.Matches (bigStepMeasure (checkedSubject.program \
+      checkedSource)) := by\n" ++
+  "  simpa only [modelMatches.2] using Determinize.Proof.RewardModel.solution_statistics model \
+      solution\n" ++
   "\ntheorem conditionalVariance (positive : 0 < statistics.returnMass) :\n" ++
-  "    ProbabilityTheory.variance id ((bigStepMeasure (checkedSubject.program checkedSource) Set.univ)⁻¹ •\n" ++
+  "    ProbabilityTheory.variance id ((bigStepMeasure (checkedSubject.program checkedSource) \
+      Set.univ)⁻¹ •\n" ++
   "      bigStepMeasure (checkedSubject.program checkedSource)) =\n" ++
-  "      ((statistics.secondMoment / statistics.returnMass - (statistics.firstMoment / statistics.returnMass)^2 : Rat) : ℝ) := by\n" ++
-  "  simpa only [modelMatches.2] using Determinize.Proof.RewardModel.solution_conditional_variance model solution positive\n" ++
-  "\ntheorem terminationProbabilities : (⟨solution.mass model.initial, solution.rejection model.initial,\n" ++
-  "    1-solution.mass model.initial-solution.rejection model.initial⟩ : TerminationStatistics).Matches model.control :=\n" ++
+  "      ((statistics.secondMoment / statistics.returnMass - (statistics.firstMoment / \
+      statistics.returnMass)^2 : Rat) : ℝ) := by\n" ++
+  "  simpa only [modelMatches.2] using Determinize.Proof.RewardModel.solution_conditional_variance \
+      model solution positive\n" ++
+  "\ntheorem terminationProbabilities : (⟨solution.mass model.initial, solution.rejection \
+      model.initial,\n" ++
+  "    1-solution.mass model.initial-solution.rejection model.initial⟩ : \
+      TerminationStatistics).Matches model.control :=\n" ++
   "  Determinize.Proof.RewardModel.solution_termination model solution\n" ++
   "\n#print axioms checkedResult\n#print axioms integrability\n#print axioms outputStatistics\n" ++
   "#print axioms conditionalVariance\n#print axioms terminationProbabilities\n"
 
 def writeResult (outputPath : System.FilePath) (source : Spec.Paper.Core) (subject : Subject)
-    (candidate : Candidate) (valid : candidate.ReplayValid source subject) (limits : SolveLimits := {}) : IO Rat := do
+    (candidate : Candidate) (valid : candidate.ReplayValid source subject)
+    (limits : SolveLimits := {}) : IO Rat := do
   let model := candidate.toModel valid
   let solution ← IO.ofExcept (solve model limits)
   let statistics := solution.statistics
@@ -121,7 +140,8 @@ def writeResult (outputPath : System.FilePath) (source : Spec.Paper.Core) (subje
     ("certificate_status", Lean.toJson "generated"),
     ("termination_statistics_scope", Lean.toJson "graph"),
     ("rejection_probability", Lean.toJson (rational (solution.rejection model.initial))),
-    ("divergence_probability", Lean.toJson (rational (1 - statistics.returnMass - solution.rejection model.initial))),
+    ("divergence_probability",
+      Lean.toJson (rational (1 - statistics.returnMass - solution.rejection model.initial))),
     ("second_moment", Lean.toJson (rational statistics.secondMoment)),
     ("conditional_mean", optional statistics.conditionalMean),
     ("conditional_variance", optional statistics.conditionalVariance),
@@ -129,7 +149,8 @@ def writeResult (outputPath : System.FilePath) (source : Spec.Paper.Core) (subje
     ("mode", Lean.toJson "additive"), ("states", Lean.toJson model.size),
     ("rank_bound", Lean.toJson ((List.ofFn solution.paths.rank).foldl max 0))]
   write outputPath source subject candidate valid
-  IO.FS.writeFile (outputPath.toString ++ ".result.lean") (resultCertificateText source subject candidate model solution)
+  IO.FS.writeFile (outputPath.toString ++ ".result.lean")
+    (resultCertificateText source subject candidate model solution)
   IO.FS.writeFile (outputPath.toString ++ ".result.json") (metadata.pretty ++ "\n")
   return statistics.firstMoment
 

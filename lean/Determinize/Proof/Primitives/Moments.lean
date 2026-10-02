@@ -51,7 +51,8 @@ theorem gaussian_abs_bound (mean : ℝ) (variance : NNReal) :
     (∫ value : ℝ, |value| ∂gaussianReal mean variance) ≤
       (∫ value : ℝ, |value| ∂gaussianReal 0 variance) + |mean| := by
   have shift : (gaussianReal 0 variance).map (fun x ↦ x + mean) =
-      gaussianReal mean variance := by simpa using gaussianReal_map_add_const (μ := 0) (v := variance) mean
+      gaussianReal mean variance := by
+    simpa using gaussianReal_map_add_const (μ := 0) (v := variance) mean
   rw [← shift, integral_map (by fun_prop) (by fun_prop)]
   have integrable : Integrable (fun x : ℝ ↦ x) (gaussianReal 0 variance) := IsGaussian.integrable_id
   calc
@@ -69,7 +70,8 @@ theorem primitiveMomentBounds : PrimitiveMomentBounds primitiveLaws := by
   cases op with
   | exponential =>
     let affine : Fin (affineArity .exponential) → ℝ := Fin.elim0
-    refine ⟨(∫ x : ℝ, |x| ∂primitiveLaws.kernel .exponential (affine, general)), nonnegMoment affine, ?_⟩
+    refine ⟨(∫ x : ℝ, |x| ∂primitiveLaws.kernel .exponential (affine, general)),
+      nonnegMoment affine, ?_⟩
     intro actual _
     have eq : actual = affine := by funext i; exact Fin.elim0 i
     rw [eq]

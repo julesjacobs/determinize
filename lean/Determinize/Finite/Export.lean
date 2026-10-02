@@ -10,13 +10,17 @@ private def rational (q : Rat) : String :=
 private def leanRat (q : Rat) : String := s!"(({q.num} : Rat) / {q.den})"
 def proofTable (stem claim sizeName allName : String) (size : Nat) : String :=
   let proofs := String.join ((List.range size).map fun i ↦
-    s!"\ntheorem {stem}_{i} : {claim} (⟨{i}, by decide +kernel⟩ : Fin {sizeName}) := by\n  decide +kernel\n")
+    s!"\ntheorem {stem}_{i} : {claim} (⟨{i}, by decide +kernel⟩ : Fin {sizeName}) := by\n" ++
+      "  decide +kernel\n")
   let entries := String.intercalate ", " ((List.range size).map fun i ↦
     s!"⟨⟨{i}, by decide +kernel⟩, {stem}_{i}⟩")
   proofs ++
-    s!"\ndef {stem}Evidence : Vector (Subtype (fun i : Fin {sizeName} => {claim} i)) {sizeName} := ⟨#[{entries}], by rfl⟩\n" ++
-    s!"theorem {stem}Indices : ∀ i : Fin {sizeName}, ({stem}Evidence[i]).val = i := by decide +kernel\n" ++
-    s!"theorem {allName} (i : Fin {sizeName}) : {claim} i := ({stem}Indices i) ▸ ({stem}Evidence[i]).property\n"
+    s!"\ndef {stem}Evidence : Vector (Subtype (fun i : Fin {sizeName} => {claim} i)) {sizeName} := \
+        ⟨#[{entries}], by rfl⟩\n" ++
+    s!"theorem {stem}Indices : ∀ i : Fin {sizeName}, ({stem}Evidence[i]).val = i := \
+        by decide +kernel\n" ++
+    s!"theorem {allName} (i : Fin {sizeName}) : {claim} i := ({stem}Indices i) ▸ \
+        ({stem}Evidence[i]).property\n"
 
 private def listText {α : Type} (render : α → String) (values : List α) : String :=
   "[" ++ String.intercalate ", " (values.map render) ++ "]"
@@ -45,21 +49,26 @@ private def frameText : Frame → String
     s!"(.left {reprStr op} {Frontend.leanExpression right} {listText valueText environment})"
   | .right op left => s!"(.right {reprStr op} {valueText left})"
   | .choose yes no environment =>
-    s!"(.choose {Frontend.leanExpression yes} {Frontend.leanExpression no} {listText valueText environment})"
+    s!"(.choose {Frontend.leanExpression yes} {Frontend.leanExpression no} \
+        {listText valueText environment})"
   | .letBody body environment =>
     s!"(.letBody {Frontend.leanExpression body} {listText valueText environment})"
   | .matchSum left right environment =>
-    s!"(.matchSum {Frontend.leanExpression left} {Frontend.leanExpression right} {listText valueText environment})"
+    s!"(.matchSum {Frontend.leanExpression left} {Frontend.leanExpression right} \
+        {listText valueText environment})"
   | .matchList nilCase consCase environment =>
-    s!"(.matchList {Frontend.leanExpression nilCase} {Frontend.leanExpression consCase} {listText valueText environment})"
+    s!"(.matchList {Frontend.leanExpression nilCase} {Frontend.leanExpression consCase} \
+        {listText valueText environment})"
   | .discrete action => s!"(.discrete ({reprStr action}))"
   | .draw site pending environment arguments =>
-    s!"(.draw {siteText site} {listText Frontend.leanExpression pending} {listText valueText environment} {listText leanRat arguments})"
+    s!"(.draw {siteText site} {listText Frontend.leanExpression pending} \
+        {listText valueText environment} {listText leanRat arguments})"
 
 def stateText : State → String
   | .rejected => ".rejected"
   | .eval expression environment stack =>
-    s!"(.eval {Frontend.leanExpression expression} {listText valueText environment} {listText frameText stack})"
+    s!"(.eval {Frontend.leanExpression expression} {listText valueText environment} \
+        {listText frameText stack})"
   | .deliver value stack => s!"(.deliver {valueText value} {listText frameText stack})"
 def kindText : StateKind → String
   | .transient => ".transient" | .rejected => ".rejected"
@@ -74,11 +83,14 @@ def candidateText (candidate : Candidate) : String :=
   "set_option maxRecDepth 100000\nset_option maxHeartbeats 0\nset_option Elab.async false\n\n" ++
   "def candidate : Candidate where\n" ++
   s!"  initial := {candidate.initial}\n" ++
-  "  states := #[\n    " ++ String.intercalate ",\n    " (candidate.states.toList.map stateText) ++ "\n  ]\n" ++
-  "  rows := #[\n    " ++ String.intercalate ",\n    " (candidate.rows.toList.map rowText) ++ "\n  ]\n"
+  "  states := #[\n    " ++
+    String.intercalate ",\n    " (candidate.states.toList.map stateText) ++ "\n  ]\n" ++
+  "  rows := #[\n    " ++
+    String.intercalate ",\n    " (candidate.rows.toList.map rowText) ++ "\n  ]\n"
 
 /-- Export kernel-checkable replay and paper-semantics correspondence. -/
-def replayCertificateText (source : Spec.Paper.Core) (subject : Subject) (candidate : Candidate) : String :=
+def replayCertificateText (source : Spec.Paper.Core) (subject : Subject) (candidate : Candidate) :
+    String :=
   let indices := candidate.states.toList.map fun state ↦
     let destinations : List Nat := match step state with
       | .ok (.next _ outcomes) => outcomes.map fun (outcome : Rat × State) ↦
@@ -86,7 +98,8 @@ def replayCertificateText (source : Spec.Paper.Core) (subject : Subject) (candid
       | _ => []
     "#[" ++ String.intercalate ", " (destinations.map toString) ++ "]"
   let indices := "#[" ++ String.intercalate ", " indices ++ "]"
-  let rowProofs := proofTable "row" "rowClaim" "candidate.states.size" "allRows" candidate.states.size
+  let rowProofs :=
+    proofTable "row" "rowClaim" "candidate.states.size" "allRows" candidate.states.size
   (candidateText candidate).replace "import Determinize.Finite.Graph"
     "import Determinize.Checking.FiniteModel" ++
   s!"\ndef checkedSource : Expr Rat := {Frontend.leanExpression source}\n" ++
@@ -98,7 +111,8 @@ def replayCertificateText (source : Spec.Paper.Core) (subject : Subject) (candid
   "    (fun i k => successorIndices[i][k]!) :=\n" ++
   "  indexedStates_valid candidate checkedSource checkedSubject _ (by decide +kernel) allRows\n" ++
   "\ntheorem graphValid : candidate.GraphValid :=\n" ++
-  "  indexedReplay_valid candidate checkedSource checkedSubject _ indexedReplay\n\nabbrev model : Model := candidate.graphModel graphValid\n" ++
+  "  indexedReplay_valid candidate checkedSource checkedSubject _ indexedReplay\n\nabbrev model : \
+      Model := candidate.graphModel graphValid\n" ++
   "\ntheorem modelMatches : model.Matches (checkedSubject.program checkedSource) :=\n" ++
   "  Determinize.Proof.FiniteModel.indexedReplay_matches candidate _ indexedReplay\n" ++
   "\n#print axioms graphValid\n#print axioms modelMatches\n"
@@ -166,10 +180,13 @@ def resultCertificateText (source : Spec.Paper.Core) (subject : Subject) (candid
     (model : Model) (termination : Proof.FiniteModel.TerminationCertificate model) : String :=
   let certificate := termination.output
   let stateProofs := proofTable "result" "resultClaim" "model.size" "allResults" model.size
-  let rejection := "#[" ++ String.intercalate ", " ((List.ofFn termination.rejection).map leanRat) ++ "]"
-  let vector := fun moment ↦ "#[" ++ String.intercalate ", " ((List.ofFn (certificate.values moment)).map leanRat) ++ "]"
+  let rejection :=
+    "#[" ++ String.intercalate ", " ((List.ofFn termination.rejection).map leanRat) ++ "]"
+  let vector := fun moment ↦
+    "#[" ++ String.intercalate ", " ((List.ofFn (certificate.values moment)).map leanRat) ++ "]"
   let ranks := "#[" ++ String.intercalate ", " ((List.ofFn certificate.rank).map toString) ++ "]"
-  let next := "#[" ++ String.intercalate ", " ((List.ofFn certificate.next).map fun j ↦ s!"⟨{j.val}, by decide +kernel⟩") ++ "]"
+  let nextEntries := (List.ofFn certificate.next).map fun j ↦ s!"⟨{j.val}, by decide +kernel⟩"
+  let next := "#[" ++ String.intercalate ", " nextEntries ++ "]"
   let dead := "#[" ++ String.intercalate ", " ((List.ofFn certificate.dead).map toString) ++ "]"
   (replayCertificateText source subject candidate).replace
     "import Determinize.Checking.FiniteModel" "import Determinize.Checking.Statistics" ++
@@ -180,31 +197,43 @@ def resultCertificateText (source : Spec.Paper.Core) (subject : Subject) (candid
   s!"  rank := fun i => {ranks}[i.val]!\n" ++
   "  next := fun i => nextStates[i]\n" ++
   "  values := fun moment i => (match moment with\n" ++
-  s!"    | .mass => {vector .mass}\n    | .first => {vector .first}\n    | .second => {vector .second})[i.val]!\n" ++
-  "\ndef termination : TerminationCertificate model := ⟨result, fun i => " ++ rejection ++ "[i.val]!⟩\n" ++
-  "\nabbrev resultClaim (i : Fin model.size) : Prop := candidate.QueryStateValid graphValid termination i\n" ++ stateProofs ++
-  "\ntheorem terminationAccepted : Determinize.Checking.checkTermination model termination = true :=\n" ++
+  s!"    | .mass => {vector .mass}\n    | .first => {vector .first}\n" ++
+  s!"    | .second => {vector .second})[i.val]!\n" ++
+  "\ndef termination : TerminationCertificate model := ⟨result, fun i => " ++ rejection ++
+    "[i.val]!⟩\n" ++
+  "\nabbrev resultClaim (i : Fin model.size) : Prop := candidate.QueryStateValid graphValid \
+      termination i\n" ++ stateProofs ++
+  "\ntheorem terminationAccepted : \
+      Determinize.Checking.checkTermination model termination = true :=\n" ++
   "  (Determinize.Checking.checkTermination_valid model termination).mpr\n" ++
   "    (sparseResults_valid candidate graphValid termination allResults)\n" ++
   "\ntheorem resultAccepted : Determinize.Checking.checkStatistics model result = true := by\n" ++
-  "  exact (Determinize.Checking.checkStatistics_valid model result).mpr\n    ((Determinize.Checking.checkTermination_valid model termination).mp terminationAccepted).1\n" ++
+  "  exact (Determinize.Checking.checkStatistics_valid model result).mpr\n" ++
+  "    ((Determinize.Checking.checkTermination_valid model termination).mp \
+      terminationAccepted).1\n" ++
   "\ndef statistics := result.statistics model\n" ++
-  "\ntheorem outputStatistics : statistics.Matches (bigStepMeasure (checkedSubject.program checkedSource)) :=\n" ++
+  "\ntheorem outputStatistics : statistics.Matches (bigStepMeasure (checkedSubject.program \
+      checkedSource)) :=\n" ++
   "  Determinize.Checking.checked_statistics ⟨model, modelMatches⟩ result resultAccepted\n" ++
   "\ntheorem expectedReward :\n" ++
   "    MeasureTheory.Integrable id (bigStepMeasure (checkedSubject.program checkedSource)) ∧\n" ++
   "    (∫ value : ℝ, value ∂bigStepMeasure (checkedSubject.program checkedSource)) =\n" ++
   "      (statistics.firstMoment : ℝ) := by\n" ++
-  "  exact ⟨modelMatches.2 ▸ Determinize.Proof.FiniteModel.outputMeasure_integrable model, outputStatistics.first⟩\n" ++
+  "  exact ⟨modelMatches.2 ▸ Determinize.Proof.FiniteModel.outputMeasure_integrable model, \
+      outputStatistics.first⟩\n" ++
   "\ntheorem conditionalVariance (positive : 0 < statistics.returnMass) :\n" ++
-  "    ProbabilityTheory.variance id ((bigStepMeasure (checkedSubject.program checkedSource) Set.univ)⁻¹ •\n" ++
+  "    ProbabilityTheory.variance id ((bigStepMeasure (checkedSubject.program checkedSource) \
+      Set.univ)⁻¹ •\n" ++
   "      bigStepMeasure (checkedSubject.program checkedSource)) =\n" ++
-  "      ((statistics.secondMoment / statistics.returnMass - (statistics.firstMoment / statistics.returnMass)^2 : Rat) : ℝ) :=\n" ++
-  "  Determinize.Checking.checked_conditionalVariance ⟨model, modelMatches⟩ result resultAccepted positive\n" ++
+  "      ((statistics.secondMoment / statistics.returnMass - (statistics.firstMoment / \
+      statistics.returnMass)^2 : Rat) : ℝ) :=\n" ++
+  "  Determinize.Checking.checked_conditionalVariance ⟨model, modelMatches⟩ result resultAccepted \
+      positive\n" ++
   "\ntheorem terminationProbabilities : (termination.statistics model).Matches model :=\n" ++
   "  Determinize.Checking.checked_termination model termination terminationAccepted\n" ++
   "\n#print axioms terminationProbabilities\n" ++
-  "\n#print axioms resultAccepted\n#print axioms expectedReward\n#print axioms outputStatistics\n#print axioms conditionalVariance\n"
+  "\n#print axioms resultAccepted\n#print axioms expectedReward\n" ++
+  "#print axioms outputStatistics\n#print axioms conditionalVariance\n"
 
 def writeResult (outputPath : System.FilePath) (source : Spec.Paper.Core) (subject : Subject)
     (candidate : Candidate) (valid : candidate.ReplayValid source subject)

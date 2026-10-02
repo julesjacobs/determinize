@@ -25,7 +25,8 @@ def aggregate (successors : List (Rat × State)) : List (Rat × State) :=
 
 /-- Breadth-first exploration. Limits never produce a `Candidate`. Hash collisions
 are resolved by structural equality; rational values retain exact normalized form. -/
-def explore (source : Core) (subject : Subject := .determinized) (limits : Limits := {}) : Exploration := Id.run do
+def explore (source : Core) (subject : Subject := .determinized) (limits : Limits := {}) :
+    Exploration := Id.run do
   if limits.maxStates == 0 then return .incomplete .states 0 0 0
   let program := match subject with | .source => source | .determinized => source.determinize
   let initial := State.eval program [] []
@@ -56,7 +57,8 @@ def explore (source : Core) (subject : Subject := .determinized) (limits : Limit
       match indices[next]? with
       | some index => target := index
       | none =>
-        if states.size ≥ limits.maxStates then return .incomplete .states states.size rows.size edgeCount
+        if states.size ≥ limits.maxStates
+          then return .incomplete .states states.size rows.size edgeCount
         if (reprStr next).utf8ByteSize > limits.maxStateBytes then
           return .incomplete .stateBytes states.size rows.size edgeCount
         target := states.size

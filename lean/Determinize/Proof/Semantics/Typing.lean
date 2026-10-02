@@ -149,7 +149,8 @@ theorem typed_shift (h : Typed (before ++ suffix) expression ty) :
         (ihr (before := before) (suffix := suffix) hcontext)
     | exact .gamma (ihl (before := before) (suffix := suffix) hcontext)
         (ihr (before := before) (suffix := suffix) hcontext)
-  | uniformMean hl hr ihl ihr | gaussianMean hl hr ihl ihr | betaMean hl hr ihl ihr | gammaMean hl hr ihl ihr =>
+  | uniformMean hl hr ihl ihr | gaussianMean hl hr ihl ihr | betaMean hl hr ihl ihr
+  | gammaMean hl hr ihl ihr =>
     rw [Expr.shift, Expr.mapVars]
     first
     | exact .uniformMean (ihl (before := before) (suffix := suffix) hcontext)
@@ -330,7 +331,8 @@ theorem typed_substAt (h : Typed (before ++ binder :: suffix) expression ty)
         (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
     | exact .gamma (ihl replacementTyped (before := before) (suffix := suffix) hcontext)
         (ihr replacementTyped (before := before) (suffix := suffix) hcontext)
-  | uniformMean hl hr ihl ihr | gaussianMean hl hr ihl ihr | betaMean hl hr ihl ihr | gammaMean hl hr ihl ihr =>
+  | uniformMean hl hr ihl ihr | gaussianMean hl hr ihl ihr | betaMean hl hr ihl ihr
+  | gammaMean hl hr ihl ihr =>
     rw [Expr.substAt, Expr.mapVars]
     first
     | exact .uniformMean (ihl replacementTyped (before := before) (suffix := suffix) hcontext)

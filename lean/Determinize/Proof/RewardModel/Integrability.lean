@@ -34,7 +34,8 @@ private theorem firstCost_translate (x r : ℝ) :
   exact ENNReal.ofReal_le_ofReal (abs_add_le x r)
 
 private theorem secondCost_translate (x r : ℝ) :
-    secondCost (x + r) ≤ secondCost x + ENNReal.ofReal (2 * |r|) * firstCost x + ENNReal.ofReal (r ^ 2) := by
+    secondCost (x + r) ≤
+        secondCost x + ENNReal.ofReal (2 * |r|) * firstCost x + ENNReal.ofReal (r ^ 2) := by
   unfold secondCost firstCost
   rw [← ENNReal.ofReal_mul (by positivity : 0 ≤ 2 * |r|),
     ← ENNReal.ofReal_add (sq_nonneg x) (by positivity),
@@ -44,7 +45,9 @@ private theorem secondCost_translate (x r : ℝ) :
   nlinarith
 
 private theorem shift_mass (μ : Measure ℝ) (r : Rat) : shift r μ Set.univ = μ Set.univ := by
-  simp [shift, Measure.map_apply (show Measurable (fun x : ℝ ↦ x + (r : ℝ)) from measurable_id.add_const _) MeasurableSet.univ]
+  simp [shift,
+    Measure.map_apply (show Measurable (fun x : ℝ ↦ x + (r : ℝ)) from measurable_id.add_const _)
+      MeasurableSet.univ]
 
 private theorem shift_first_bound (μ : Measure ℝ) (r : Rat) (a : ℝ)
     (mass : μ Set.univ ≤ 1) (first : (∫⁻ x, firstCost x ∂μ) ≤ ENNReal.ofReal a) :
@@ -52,7 +55,8 @@ private theorem shift_first_bound (μ : Measure ℝ) (r : Rat) (a : ℝ)
   rw [shift, lintegral_map (by unfold firstCost; fun_prop : Measurable firstCost)
     (show Measurable (fun x : ℝ ↦ x + (r : ℝ)) from measurable_id.add_const _)]
   calc
-    _ ≤ ∫⁻ x, firstCost x + ENNReal.ofReal |(r : ℝ)| ∂μ := lintegral_mono (fun x ↦ firstCost_translate x _)
+    _ ≤ ∫⁻ x, firstCost x + ENNReal.ofReal |(r : ℝ)| ∂μ :=
+      lintegral_mono (fun x ↦ firstCost_translate x _)
     _ = (∫⁻ x, firstCost x ∂μ) + ENNReal.ofReal |(r : ℝ)| * μ Set.univ := by
       rw [lintegral_add_left (by unfold firstCost; fun_prop : Measurable firstCost)]
       simp
@@ -63,11 +67,13 @@ private theorem shift_second_bound (μ : Measure ℝ) (r : Rat) (a b : ℝ)
     (mass : μ Set.univ ≤ 1) (first : (∫⁻ x, firstCost x ∂μ) ≤ ENNReal.ofReal a)
     (second : (∫⁻ x, secondCost x ∂μ) ≤ ENNReal.ofReal b) :
     (∫⁻ x, secondCost x ∂shift r μ) ≤
-      ENNReal.ofReal b + ENNReal.ofReal (2 * |(r : ℝ)|) * ENNReal.ofReal a + ENNReal.ofReal ((r : ℝ) ^ 2) := by
+      ENNReal.ofReal b + ENNReal.ofReal (2 * |(r : ℝ)|) * ENNReal.ofReal a +
+          ENNReal.ofReal ((r : ℝ) ^ 2) := by
   rw [shift, lintegral_map (by unfold secondCost; fun_prop : Measurable secondCost)
     (show Measurable (fun x : ℝ ↦ x + (r : ℝ)) from measurable_id.add_const _)]
   calc
-    _ ≤ ∫⁻ x, secondCost x + ENNReal.ofReal (2 * |(r : ℝ)|) * firstCost x + ENNReal.ofReal ((r : ℝ) ^ 2) ∂μ :=
+    _ ≤ ∫⁻ x, secondCost x + ENNReal.ofReal (2 * |(r : ℝ)|) * firstCost x +
+        ENNReal.ofReal ((r : ℝ) ^ 2) ∂μ :=
       lintegral_mono (fun x ↦ secondCost_translate x _)
     _ = (∫⁻ x, secondCost x ∂μ) + ENNReal.ofReal (2 * |(r : ℝ)|) * (∫⁻ x, firstCost x ∂μ) +
         ENNReal.ofReal ((r : ℝ) ^ 2) * μ Set.univ := by
@@ -76,7 +82,8 @@ private theorem shift_second_bound (μ : Measure ℝ) (r : Rat) (a b : ℝ)
         lintegral_const_mul _ (by unfold firstCost; fun_prop : Measurable firstCost)]
       simp
     _ ≤ _ := by
-      simpa using add_le_add (add_le_add second (mul_le_mul' le_rfl first)) (mul_le_mul' le_rfl mass)
+      simpa using add_le_add (add_le_add second (mul_le_mul' le_rfl first))
+        (mul_le_mul' le_rfl mass)
 
 structure MomentBounds (model : Model) where
   first : Fin model.size → Rat
@@ -86,7 +93,8 @@ structure MomentBounds (model : Model) where
   first_bound : ∀ i, (match model.kind i with
     | .returned b => |b|
     | .rejected => 0
-    | .transient => ((model.edges i).map fun e ↦ e.probability * (first e.target + |e.reward|)).sum) ≤ first i
+    | .transient =>
+      ((model.edges i).map fun e ↦ e.probability * (first e.target + |e.reward|)).sum) ≤ first i
   second_bound : ∀ i, (match model.kind i with
     | .returned b => b ^ 2
     | .rejected => 0
@@ -145,13 +153,15 @@ theorem outputWithin_mass_le_one (model : Model) (n : Nat) (i : Fin model.size) 
     | returned b => simp [Model.outputWithin, h]
     | rejected => simp [Model.outputWithin, h]
     | transient =>
-      simp only [Model.outputWithin, h, measure_list_sum, Measure.smul_apply, smul_eq_mul, shift_mass]
+      simp only [Model.outputWithin, h, measure_list_sum, Measure.smul_apply, smul_eq_mul,
+        shift_mass]
       have bound := weighted_bound (model.edges i) (fun e ↦ e.probability) (fun _ ↦ 1)
         (fun e ↦ model.outputWithin n e.target Set.univ)
         (model.nonnegative i) (by simp) (by simpa using fun e (_ : e ∈ model.edges i) ↦ ih e.target)
       simpa [model.normalized] using bound
 
-theorem outputWithin_cost_bounds (model : Model) (bounds : MomentBounds model) (n : Nat) (i : Fin model.size) :
+theorem outputWithin_cost_bounds (model : Model) (bounds : MomentBounds model) (n : Nat)
+    (i : Fin model.size) :
     (∫⁻ x, firstCost x ∂model.outputWithin n i) ≤ ENNReal.ofReal (bounds.first i : ℝ) ∧
     (∫⁻ x, secondCost x ∂model.outputWithin n i) ≤ ENNReal.ofReal (bounds.second i : ℝ) := by
   have terminal (i : Fin model.size) (b : Rat) (h : model.kind i = .returned b) :
@@ -187,7 +197,10 @@ theorem outputWithin_cost_bounds (model : Model) (bounds : MomentBounds model) (
           have := shift_first_bound (model.outputWithin n e.target) e.reward (bounds.first e.target)
             (outputWithin_mass_le_one model n _) (ih e.target).1
           simpa only [Rat.cast_add, Rat.cast_abs,
-            ENNReal.ofReal_add (show 0 ≤ (bounds.first e.target : ℝ) by exact_mod_cast bounds.first_nonnegative e.target) (abs_nonneg (e.reward : ℝ))] using this
+            ENNReal.ofReal_add
+              (show 0 ≤ (bounds.first e.target : ℝ) from
+                mod_cast bounds.first_nonnegative e.target)
+              (abs_nonneg (e.reward : ℝ))] using this
       · apply le_trans (weighted_bound (model.edges i) (fun e ↦ e.probability)
           (fun e ↦ bounds.second e.target + 2 * |e.reward| * bounds.first e.target + e.reward ^ 2) _
           (model.nonnegative i) (fun e _ ↦ by
@@ -202,12 +215,16 @@ theorem outputWithin_cost_bounds (model : Model) (bounds : MomentBounds model) (
           have := shift_second_bound (model.outputWithin n e.target) e.reward
             (bounds.first e.target) (bounds.second e.target)
             (outputWithin_mass_le_one model n _) (ih e.target).1 (ih e.target).2
-          have a : 0 ≤ (bounds.first e.target : ℝ) := by exact_mod_cast bounds.first_nonnegative e.target
-          have b : 0 ≤ (bounds.second e.target : ℝ) := by exact_mod_cast bounds.second_nonnegative e.target
+          have a : 0 ≤ (bounds.first e.target : ℝ) := by
+            exact_mod_cast bounds.first_nonnegative e.target
+          have b : 0 ≤ (bounds.second e.target : ℝ) := by
+            exact_mod_cast bounds.second_nonnegative e.target
           simpa only [Rat.cast_add, Rat.cast_mul, Rat.cast_ofNat, Rat.cast_abs, Rat.cast_pow,
             ENNReal.ofReal_add (by positivity : 0 ≤ (bounds.second e.target : ℝ) +
               2 * |(e.reward : ℝ)| * (bounds.first e.target : ℝ)) (sq_nonneg _),
-            ENNReal.ofReal_add b (show 0 ≤ 2 * |(e.reward : ℝ)| * (bounds.first e.target : ℝ) by positivity), ENNReal.ofReal_mul (by positivity : 0 ≤ 2 * |(e.reward : ℝ)|)] using this
+            ENNReal.ofReal_add b
+              (show 0 ≤ 2 * |(e.reward : ℝ)| * (bounds.first e.target : ℝ) by positivity),
+            ENNReal.ofReal_mul (by positivity : 0 ≤ 2 * |(e.reward : ℝ)|)] using this
 
 theorem outputAt_integrable (model : Model) (bounds : MomentBounds model) (i : Fin model.size) :
     Integrable (fun x : ℝ ↦ x) (model.outputAt i) ∧
@@ -216,7 +233,8 @@ theorem outputAt_integrable (model : Model) (bounds : MomentBounds model) (i : F
   · apply integrable_iSup_of_bound _ (outputWithin_mono model i) _ measurable_id
       (ENNReal.ofReal (bounds.first i : ℝ)) ENNReal.ofReal_lt_top
     intro n
-    simpa only [Real.norm_eq_abs, firstCost, id_eq] using (outputWithin_cost_bounds model bounds n i).1
+    simpa only [Real.norm_eq_abs, firstCost, id_eq]
+      using (outputWithin_cost_bounds model bounds n i).1
   · apply integrable_iSup_of_bound _ (outputWithin_mono model i) _ (by fun_prop)
       (ENNReal.ofReal (bounds.second i : ℝ)) ENNReal.ofReal_lt_top
     intro n

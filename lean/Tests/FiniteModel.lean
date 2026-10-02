@@ -125,7 +125,8 @@ theorem loop_outputWithin (steps : Nat) (state : Fin loop.size) :
   induction steps generalizing state with
   | zero => rfl
   | succ steps ih =>
-    change (∑ next : Fin loop.size, ENNReal.ofReal ((1 : Rat) : ℝ) • loop.outputWithin steps next) = 0
+    change
+      (∑ next : Fin loop.size, ENNReal.ofReal ((1 : Rat) : ℝ) • loop.outputWithin steps next) = 0
     simp only [ih, smul_zero, Finset.sum_const_zero]
 
 example : loop.outputMeasure = 0 := by

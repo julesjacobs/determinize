@@ -37,7 +37,8 @@ def Table.insert (before : Table) (state : State) : Extension before state :=
     ⟨before, ⟨i, h.1⟩, h.2, le_rfl, fun _ _ h ↦ h⟩
   | none =>
     let after := before.states.push state
-    have lookup : ∀ (s : State) (i : Nat), (before.indices.insert state before.states.size)[s]? = some i ↔
+    have lookup : ∀ (s : State) (i : Nat),
+        (before.indices.insert state before.states.size)[s]? = some i ↔
         after[i]? = some s := by
       intro s i
       rw [Std.HashMap.getElem?_insert]
@@ -71,7 +72,8 @@ structure Expansion (before : Table) (successors : List (Rat × State)) where
   covered : ∀ outcome ∈ successors, 0 < outcome.1 →
     ∃ i : Fin table.states.size, table.states[i] = outcome.2
 
-def Table.insertMany (before : Table) : (successors : List (Rat × State)) → Expansion before successors
+def Table.insertMany (before : Table) :
+    (successors : List (Rat × State)) → Expansion before successors
   | [] => ⟨before, le_rfl, fun _ _ h ↦ h, by simp⟩
   | (p, s) :: rest =>
     if positive : 0 < p then
@@ -82,7 +84,8 @@ def Table.insertMany (before : Table) : (successors : List (Rat × State)) → E
           intro outcome member hp
           rcases List.mem_cons.mp member with eq | member
           · subst outcome
-            have found := tail.preserves inserted.index s (Array.getElem?_eq_some_iff.mpr ⟨inserted.index.isLt, inserted.located⟩)
+            have found := tail.preserves inserted.index s
+                (Array.getElem?_eq_some_iff.mpr ⟨inserted.index.isLt, inserted.located⟩)
             obtain ⟨lt, eq⟩ := Array.getElem?_eq_some_iff.mp found
             exact ⟨⟨inserted.index, lt⟩, eq⟩
           · exact tail.covered outcome member hp⟩
@@ -135,13 +138,15 @@ def Work.expand (before : Work) (pending : before.rows.size < before.table.state
     (action : Action before.table.states[before.rows.size]) : Work :=
   let grown := before.table.insertMany action.successors
   let record : Record := ⟨before.table.states[before.rows.size], action⟩
-  ⟨before.root, grown.table, grown.preserves 0 before.root before.initial, before.rows.push record, by
+  ⟨before.root, grown.table, grown.preserves 0 before.root before.initial,
+      before.rows.push record, by
     simp only [Array.size_push]
     exact (Nat.succ_le_of_lt pending).trans grown.size_le, by
     intro i
     by_cases old : i.val < before.rows.size
     · simpa [Array.getElem_push, old] using grown.preserves i.val _ (before.aligned ⟨i.val, old⟩)
-    · have atEnd : i.val = before.rows.size := by have := i.isLt; simp only [Array.size_push] at this; omega
+    · have atEnd : i.val = before.rows.size := by
+        have := i.isLt; simp only [Array.size_push] at this; omega
       simpa [Array.getElem_push, old, atEnd, record] using
         grown.preserves before.rows.size _ (by simp [pending])
     , by

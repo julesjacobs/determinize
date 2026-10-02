@@ -12,7 +12,8 @@ def Scoped {α : Type} (depth : Nat) : Expr α → Prop
   | .lam body => Scoped (depth + 1) body
   | .fix body => Scoped (depth + 2) body
   | .fst body | .snd body | .inl body | .inr body | .neg body
-  | .discrete _ body | .poisson _ body | .bernoulli _ body | .exponential _ body => Scoped depth body
+  | .discrete _ body | .poisson _ body | .bernoulli _ body | .exponential _ body =>
+    Scoped depth body
   | .app a b | .pair a b | .cons a b | .add a b | .mul a b | .div a b | .lt a b
   | .uniform _ a b | .gaussian _ a b | .beta _ a b | .gamma _ a b =>
     Scoped depth a ∧ Scoped depth b
@@ -21,7 +22,8 @@ def Scoped {α : Type} (depth : Nat) : Expr α → Prop
   | .matchSum c a b => Scoped depth c ∧ Scoped (depth + 1) a ∧ Scoped (depth + 1) b
   | .matchList c a b => Scoped depth c ∧ Scoped depth a ∧ Scoped (depth + 2) b
 
-def scopedDecision {α : Type} (depth : Nat) (expression : Expr α) : Decidable (Scoped depth expression) := by
+def scopedDecision {α : Type} (depth : Nat) (expression : Expr α) :
+    Decidable (Scoped depth expression) := by
   cases expression with
   | bvar i => exact inferInstanceAs (Decidable (i < depth))
   | reject  => exact isTrue True.intro
@@ -151,8 +153,11 @@ theorem scoped_mono {α : Type} (expression : Expr α) {a b : Nat}
   | gamma k left right ihl ihr => exact ⟨ihl bounded.1 le, ihr bounded.2 le⟩
   | letE value body ihv ihb => exact ⟨ihv bounded.1 le, ihb bounded.2 (Nat.add_le_add_right le 1)⟩
   | ite c x y ihc ihx ihy => exact ⟨ihc bounded.1 le, ihx bounded.2.1 le, ihy bounded.2.2 le⟩
-  | matchSum c x y ihc ihx ihy => exact ⟨ihc bounded.1 le, ihx bounded.2.1 (Nat.add_le_add_right le 1), ihy bounded.2.2 (Nat.add_le_add_right le 1)⟩
-  | matchList c x y ihc ihx ihy => exact ⟨ihc bounded.1 le, ihx bounded.2.1 le, ihy bounded.2.2 (Nat.add_le_add_right le 2)⟩
+  | matchSum c x y ihc ihx ihy =>
+    exact ⟨ihc bounded.1 le, ihx bounded.2.1 (Nat.add_le_add_right le 1),
+      ihy bounded.2.2 (Nat.add_le_add_right le 1)⟩
+  | matchList c x y ihc ihx ihy =>
+    exact ⟨ihc bounded.1 le, ihx bounded.2.1 le, ihy bounded.2.2 (Nat.add_le_add_right le 2)⟩
 
 theorem mapVars_scoped {α : Type} (expression : Expr α) (depth : Nat)
     (replace : Nat → Nat → Expr α)
@@ -223,13 +228,19 @@ theorem close_cons_subst {α : Type} (expression : Expr α) (environment : List 
 
 theorem close_two_subst {α : Type} (expression : Expr α) (environment : List (Expr α))
     (closed : ∀ e ∈ environment, Scoped 0 e)
-    (argument function : Expr α) (argumentClosed : Scoped 0 argument) (functionClosed : Scoped 0 function) :
+    (argument function : Expr α) (argumentClosed : Scoped 0 argument)
+    (functionClosed : Scoped 0 function) :
     (close environment 2 expression).substTwo argument function =
       close (argument :: function :: environment) 0 expression := by
   unfold Expr.substTwo
-  rw [show 2 = 1 + 1 from rfl, close_cons_subst expression environment closed function functionClosed 1]
+  rw [show 2 = 1 + 1 from rfl,
+    close_cons_subst expression environment closed function functionClosed 1]
   exact close_cons_subst expression (function :: environment)
-    (by intro e he; rcases List.mem_cons.mp he with rfl | he; exact functionClosed; exact closed e he)
+    (by
+      intro e he
+      rcases List.mem_cons.mp he with rfl | he
+      · exact functionClosed
+      · exact closed e he)
     argument argumentClosed 0
 
 end Binding

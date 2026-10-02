@@ -4,8 +4,9 @@ import Mathlib.MeasureTheory.Measure.GiryMonad
 /-!
 # Paper operational semantics
 
-The reducer evaluates the operands of a primitive left to right and then draws from its fiber. Division by zero is stuck. The
-output semantics integrates sampled reals directly, without measures on expressions.
+The reducer evaluates the operands of a primitive left to right and then draws from its fiber.
+Division by zero is stuck. The output semantics integrates sampled reals directly, without
+measures on expressions.
 -/
 
 namespace Determinize.Spec.Paper

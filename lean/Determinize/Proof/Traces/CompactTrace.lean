@@ -58,7 +58,8 @@ theorem event_elim_measurable {α β : Type*} [MeasurableSpace α] [MeasurableSp
       (MeasurableEquiv.sumProdDistrib (Op × ℝ) PUnit α).measurable using 1
     funext ⟨e, a⟩
     cases e <;> rfl
-  have h := hf.comp ((comap_measurable (Equiv.optionEquivSumPUnit.{0} (Op × ℝ))).prodMap (measurable_id (α := α)))
+  have h := hf.comp
+    ((comap_measurable (Equiv.optionEquivSumPUnit.{0} (Op × ℝ))).prodMap (measurable_id (α := α)))
   convert h using 1
   funext ⟨e, a⟩
   cases e <;> rfl

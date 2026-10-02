@@ -18,7 +18,8 @@ private def discreteArguments : List String → Bool
   | "]" :: _ :: "[" :: "discrete" :: _ => true
   | _ => false
 
-private partial def tokenize (cs : List Char) (before : List String := []) : Except String (List String) := do
+private partial def tokenize (cs : List Char) (before : List String := []) :
+    Except String (List String) := do
   let emit (token : String) (tail : List Char) : Except String (List String) := do
     return token :: (← tokenize tail (token :: before))
   match cs with
@@ -92,7 +93,9 @@ private def name : P String := do
   let t ← take
   unless t.toList.head?.any identStart do throw s!"expected a name, got '{t}'"
   return t
-private def primitives := ["uniform", "gauss", "gaussian", "poisson", "exponential", "gamma", "beta", "flip", "bernoulli", "discrete", "discrete_list", "observe"]
+private def primitives :=
+  ["uniform", "gauss", "gaussian", "poisson", "exponential", "gamma", "beta", "flip", "bernoulli",
+    "discrete", "discrete_list", "observe"]
 private def startsAtom (t : String) : Bool :=
   t == "(" || t == "[" ||
   (t.toList.head?.any (fun c ↦ identStart c || c.isDigit) &&
@@ -173,7 +176,8 @@ private partial def expr (minPrec : Nat := 0) : P Surface := do
         | "gamma", [a, b] => pure (.gamma affinity a b)
         | "discrete_list", [probabilities] => pure (.discreteRemainder affinity probabilities)
         | "discrete", probabilities =>
-          if remainder then pure (.discreteRemainder affinity (probabilities.foldr Surface.cons .nil))
+          if remainder then
+            pure (.discreteRemainder affinity (probabilities.foldr Surface.cons .nil))
           else pure (.discrete affinity probabilities)
         | "flip", [a] => pure (.flip affinity a)
         | "observe", [a] =>

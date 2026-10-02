@@ -10,7 +10,8 @@ def StateShape : State → Prop
 
 private theorem singleton_shape (state : State) (shape : StateShape state)
     (tag evidence : Evidence) (successors : List (Rat × State))
-    (action : (Except.ok (.next tag [(1, state)]) : Except Failure Step) = .ok (.next evidence successors))
+    (action : (Except.ok (.next tag [(1, state)]) : Except Failure Step) =
+      .ok (.next evidence successors))
     (probability : Rat) (after : State) (member : (probability, after) ∈ successors) :
     StateShape after := by
   obtain ⟨rfl, rfl⟩ := Step.next.inj (Except.ok.inj action)

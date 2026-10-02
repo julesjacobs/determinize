@@ -23,7 +23,8 @@ theorem weightedOutput_indexed {n : Nat} (states : Fin n → State) (fallback : 
     constructor
     · simp [destination, bound]
     · simpa [destination, bound, position.2] using located
-  have law : weightedOutput outcomes output = weightedOutput indexed (fun j ↦ output (states j)) := by
+  have law : weightedOutput outcomes output =
+      weightedOutput indexed (fun j ↦ output (states j)) := by
     unfold weightedOutput indexed
     conv_lhs => rw [← List.zipIdx_map_fst 0 outcomes]
     simp only [List.map_map]
@@ -58,11 +59,13 @@ theorem weightedOutput_indexed {n : Nat} (states : Fin n → State) (fallback : 
   · intro entry _ _
     exact ⟨entry.2, rfl⟩
 
-theorem indexedReplay_machineOutput (candidate : Candidate) {source : Spec.Paper.Core} {subject : Subject}
+theorem indexedReplay_machineOutput (candidate : Candidate) {source : Spec.Paper.Core}
+    {subject : Subject}
     (indices : Fin candidate.states.size → Nat → Nat)
     (valid : candidate.IndexedReplayValid source subject indices) (fuel : Nat)
     (i : Fin candidate.states.size) :
-    (candidate.graphModel (indexedReplay_valid candidate source subject indices valid)).outputWithin fuel i =
+    (candidate.graphModel
+        (indexedReplay_valid candidate source subject indices valid)).outputWithin fuel i =
       machineOutput fuel (candidate.state i) := by
   let graph := indexedReplay_valid candidate source subject indices valid
   have replays := valid.2.2.2.2.2.2
@@ -94,7 +97,8 @@ theorem indexedReplay_machineOutput (candidate : Candidate) {source : Spec.Paper
         change (∑ j, ENNReal.ofReal (candidate.weight i j : ℝ) •
           (candidate.graphModel graph).outputWithin fuel j) = _
         simp only [machineOutput, action]
-        simp_rw [ih, indexedRow_weights candidate (indices i) i _ evidence successors action (replays i)]
+        simp_rw [ih,
+          indexedRow_weights candidate (indices i) i _ evidence successors action (replays i)]
         symm
         apply weightedOutput_indexed candidate.state i successors (indices i) row.2.1
         intro k positive
@@ -107,7 +111,8 @@ theorem indexedReplay_matches (candidate : Candidate) {source : Spec.Paper.Core}
     (candidate.graphModel (indexedReplay_valid candidate source subject indices valid)).Matches
       (subject.program source) := by
   let graph := indexedReplay_valid candidate source subject indices valid
-  have initial : candidate.state (candidate.graphModel graph).initial = initialState source subject := by
+  have initial : candidate.state (candidate.graphModel graph).initial =
+      initialState source subject := by
     simpa [Candidate.state, Candidate.graphModel, graph.initial_lt] using valid.2.2.1
   have replays := valid.2.2.2.2.2.2
   have covered : ∀ state, MachineReachable (initialState source subject) state →

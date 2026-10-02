@@ -6,7 +6,8 @@ import Determinize.Checking.Result
 namespace Determinize.Tests
 open Spec.FiniteModel
 
-example : Checking.checkResult FiniteModel.fork FiniteModel.forkCertificate = true := by decide +kernel
+example : Checking.checkResult FiniteModel.fork FiniteModel.forkCertificate = true := by
+  decide +kernel
 example : FiniteModel.fork.expectedReward = ((3 / 2 : Rat) : ℝ) :=
   (Checking.checkResult_sound FiniteModel.fork FiniteModel.forkCertificate (by decide +kernel)).2
 example : Checking.checkResult FiniteModel.loop (FiniteModel.loopCertificate 7) = false := by
@@ -50,8 +51,11 @@ def results : IO Unit := do
   expectAnswer FiniteModel.fork (3 / 2)
   expectAnswer (FiniteModel.terminal (-7 / 3)) (-7 / 3)
   expectAnswer retry (-3)
-  assert (match Finite.solve FiniteModel.loop with | .error _ => true | .ok _ => false) "solver accepted a nonabsorbing loop"
-  assert (match Finite.solve FiniteModel.fork {maxStates := 2} with | .error _ => true | .ok _ => false) "solver ignored state limit"
+  assert (match Finite.solve FiniteModel.loop with | .error _ => true | .ok _ => false)
+    "solver accepted a nonabsorbing loop"
+  assert
+    (match Finite.solve FiniteModel.fork {maxStates := 2} with | .error _ => true | .ok _ => false)
+    "solver ignored state limit"
 
 #print axioms Finite.solve_sound
 #print axioms Finite.solve_expectedReward

@@ -28,14 +28,16 @@ def inference : IO Unit := do
       "if true then (uniform[G](0,1), true) else (uniform[E](0,1), false)",
       "if true then inl uniform[G](0,1) else inl uniform[E](0,1)",
       "let f = if true then (fun x => uniform[G](0,1)) else (fun x => uniform[E](0,1)) in f 0",
-      "let f = if true then (rec f x => if x < 0 then f (x+1) else uniform[G](0,1)) else (fun x => uniform[E](0,1)) in f 0"] do
+      "let f = if true then (rec f x => if x < 0 then f (x+1) else uniform[G](0,1)) else (fun x => \
+          uniform[E](0,1)) in f 0"] do
     let p ← IO.ofExcept (compile text)
     assert (p.annotated.sites.contains .G && p.annotated.sites.contains .E)
       s!"structural subtyping changed requested affinities: {text}"
 
   for sample in ["uniform(0,1)", "uniform[E](0,1)"] do
     for calls in [s!"f x + f ({sample})", s!"f ({sample}) + f x"] do
-      let text := s!"let use = fun f => fun x => {calls} + x*x in use (fun z => z) (uniform[G](0,1))"
+      let text :=
+        s!"let use = fun f => fun x => {calls} + x*x in use (fun z => z) (uniform[G](0,1))"
       let p ← IO.ofExcept (compile text)
       assert (p.ty == .float .E && p.annotated.sites == [.E, .G])
         s!"subtype constraints lost independent affinities: {text}"
