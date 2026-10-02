@@ -20,7 +20,7 @@ accessors return `none` at mass zero.
 
 `Termination.lean` defines rejection probability by marking rejected states as
 returned and discarding successful returns. Divergence probability is the infimum
-of finite-depth survival probabilities. `Theorems.finiteMassBalance` states that return,
+of finite-depth survival probabilities. `Theorems.finite_mass_balance` states that return,
 rejection, and divergence probabilities sum to one. `TerminationStatistics.Matches`
 relates the three reported rationals to these probabilities. This distinction is
 for the finite model: the core paper semantics counts rejection among executions
@@ -211,7 +211,7 @@ bounds. The proof constructs a closed divergence boundary and descending paths,
 proves the remaining boundary-value operator is invertible and preserves
 nonnegativity, and derives finite absolute first/second moment bounds internally.
 The bounds therefore require no additional runtime solves or certificate vectors.
-`Theorems.finiteRewardIntegrability` binds the explicit specification claim.
+`Theorems.finite_reward_integrability` binds the explicit specification claim.
 The canonical reward moment equations are derived from the three checked linear
 systems; certificates no longer store or recheck both formulations.
 All moment equations, closed-class evidence and paths in result certificates are

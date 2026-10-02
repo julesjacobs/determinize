@@ -220,7 +220,7 @@ example : Determinize.Proof.Traces.MeanOnTraces affineMean affineMean.determiniz
   (Traces.meanOnTraces_determinize .E affineMean typed_affineMean domainSafe_affineMean).2
 
 example : bigStepMeasure affineMean.determinize Set.univ = bigStepMeasure affineMean Set.univ :=
-  Determinize.Theorems.outputMassPreservation affineMean typed_affineMean
+  Determinize.Theorems.output_mass_preservation affineMean typed_affineMean
     domainSafe_affineMean
 
 def meanDenominator : Expr := .div (uniform .E) (.uniform .mean (.real 1) (.real 3))

@@ -29,7 +29,7 @@ example (law : MeasureTheory.Measure ℝ) (s : OutputStatistics)
 
 example (law : MeasureTheory.Measure ℝ) (s : OutputStatistics)
     (notIntegrable : ¬ MeasureTheory.Integrable (fun x : ℝ ↦ x ^ 2) law) :
-    ¬ s.Matches law := fun h ↦ notIntegrable h.squareIntegrable
+    ¬ s.Matches law := fun h ↦ notIntegrable h.square_integrable
 
 example : Checking.checkStatistics mixedOutcomes mixedResult.val = true := by decide +kernel
 example : Checking.checkStatistics mixedOutcomes {mixedResult.val with rank := fun _ ↦ 0} =
