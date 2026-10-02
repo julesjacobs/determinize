@@ -24,14 +24,14 @@ continuation runs under the history's actual law and the draw is recorded in fro
 trace. -/
 def generatedSourceKernel (depth : Nat) (history : Symbolic.SampleEnv primitiveLaws n)
     (safe : history.DomainSafe primitiveLaws) (expression : AffineExpr n) (op : Op) :
-    SFiniteKernel ℝ (Output) := by
-  let : IsProbabilityMeasure (history.actualMeasure primitiveLaws) :=
+    SFiniteKernel ℝ (Output) :=
+  letI : IsProbabilityMeasure (history.actualMeasure primitiveLaws) :=
     ⟨SymbolicSoundness.SampleEnv.actualMeasure_univ_eq_one _ history safe⟩
   let output := SFiniteKernel.pullback (exactKernel depth)
     (fun pair : ℝ × Env n ↦ sampleContinuation (expression.realize pair.2) pair.1)
     (measurable_sampleContinuation.comp
       ((expression.measurable_realize.comp measurable_snd).prodMk measurable_fst))
-  exact SFiniteKernel.mapWithInput (averageKernel (history.actualMeasure primitiveLaws) output)
+  SFiniteKernel.mapWithInput (averageKernel (history.actualMeasure primitiveLaws) output)
     (fun pair : ℝ × Output ↦ prepend (entry (some op) pair.1) pair.2)
     (measurable_prepend.comp
       ((measurable_entry.comp ((measurable_const (a := some op)).prodMk measurable_fst)).prodMk

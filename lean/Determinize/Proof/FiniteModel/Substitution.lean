@@ -22,90 +22,42 @@ def Scoped {α : Type} (depth : Nat) : Expr α → Prop
   | .matchSum c a b => Scoped depth c ∧ Scoped (depth + 1) a ∧ Scoped (depth + 1) b
   | .matchList c a b => Scoped depth c ∧ Scoped depth a ∧ Scoped (depth + 2) b
 
-def scopedDecision {α : Type} (depth : Nat) (expression : Expr α) :
-    Decidable (Scoped depth expression) := by
-  cases expression with
-  | bvar i => exact inferInstanceAs (Decidable (i < depth))
-  | reject  => exact isTrue True.intro
-  | unit  => exact isTrue True.intro
-  | bool v => exact isTrue True.intro
-  | real v => exact isTrue True.intro
-  | nil  => exact isTrue True.intro
-  | discrete k d => exact scopedDecision depth d
-  | lam body => exact scopedDecision (depth + 1) body
-  | fix body => exact scopedDecision (depth + 2) body
-  | fst body => exact scopedDecision depth body
-  | snd body => exact scopedDecision depth body
-  | inl body => exact scopedDecision depth body
-  | inr body => exact scopedDecision depth body
-  | neg body => exact scopedDecision depth body
-  | poisson k body => exact scopedDecision depth body
-  | bernoulli k body => exact scopedDecision depth body
-  | exponential k body => exact scopedDecision depth body
-  | app left right =>
+def scopedDecision {α : Type} :
+    (depth : Nat) → (expression : Expr α) → Decidable (Scoped depth expression)
+  | depth, .bvar i => inferInstanceAs (Decidable (i < depth))
+  | _, .reject | _, .unit | _, .bool _ | _, .real _ | _, .nil => isTrue True.intro
+  | depth, .lam body => scopedDecision (depth + 1) body
+  | depth, .fix body => scopedDecision (depth + 2) body
+  | depth, .fst body | depth, .snd body | depth, .inl body | depth, .inr body
+  | depth, .neg body | depth, .discrete _ body | depth, .poisson _ body
+  | depth, .bernoulli _ body | depth, .exponential _ body =>
+    scopedDecision depth body
+  | depth, .app left right | depth, .pair left right | depth, .cons left right
+  | depth, .add left right | depth, .mul left right | depth, .div left right
+  | depth, .lt left right | depth, .uniform _ left right | depth, .gaussian _ left right
+  | depth, .beta _ left right | depth, .gamma _ left right =>
     letI := scopedDecision depth left
     letI := scopedDecision depth right
-    exact inferInstanceAs (Decidable (_ ∧ _))
-  | pair left right =>
-    letI := scopedDecision depth left
-    letI := scopedDecision depth right
-    exact inferInstanceAs (Decidable (_ ∧ _))
-  | cons left right =>
-    letI := scopedDecision depth left
-    letI := scopedDecision depth right
-    exact inferInstanceAs (Decidable (_ ∧ _))
-  | add left right =>
-    letI := scopedDecision depth left
-    letI := scopedDecision depth right
-    exact inferInstanceAs (Decidable (_ ∧ _))
-  | mul left right =>
-    letI := scopedDecision depth left
-    letI := scopedDecision depth right
-    exact inferInstanceAs (Decidable (_ ∧ _))
-  | div left right =>
-    letI := scopedDecision depth left
-    letI := scopedDecision depth right
-    exact inferInstanceAs (Decidable (_ ∧ _))
-  | lt left right =>
-    letI := scopedDecision depth left
-    letI := scopedDecision depth right
-    exact inferInstanceAs (Decidable (_ ∧ _))
-  | uniform k left right =>
-    letI := scopedDecision depth left
-    letI := scopedDecision depth right
-    exact inferInstanceAs (Decidable (_ ∧ _))
-  | gaussian k left right =>
-    letI := scopedDecision depth left
-    letI := scopedDecision depth right
-    exact inferInstanceAs (Decidable (_ ∧ _))
-  | beta k left right =>
-    letI := scopedDecision depth left
-    letI := scopedDecision depth right
-    exact inferInstanceAs (Decidable (_ ∧ _))
-  | gamma k left right =>
-    letI := scopedDecision depth left
-    letI := scopedDecision depth right
-    exact inferInstanceAs (Decidable (_ ∧ _))
-  | letE left right =>
+    inferInstanceAs (Decidable (_ ∧ _))
+  | depth, .letE left right =>
     letI := scopedDecision depth left
     letI := scopedDecision (depth + 1) right
-    exact inferInstanceAs (Decidable (_ ∧ _))
-  | ite c x y =>
+    inferInstanceAs (Decidable (_ ∧ _))
+  | depth, .ite c x y =>
     letI := scopedDecision depth c
     letI := scopedDecision depth x
     letI := scopedDecision depth y
-    exact inferInstanceAs (Decidable (_ ∧ _ ∧ _))
-  | matchSum c x y =>
+    inferInstanceAs (Decidable (_ ∧ _ ∧ _))
+  | depth, .matchSum c x y =>
     letI := scopedDecision depth c
     letI := scopedDecision (depth + 1) x
     letI := scopedDecision (depth + 1) y
-    exact inferInstanceAs (Decidable (_ ∧ _ ∧ _))
-  | matchList c x y =>
+    inferInstanceAs (Decidable (_ ∧ _ ∧ _))
+  | depth, .matchList c x y =>
     letI := scopedDecision depth c
     letI := scopedDecision depth x
     letI := scopedDecision (depth + 2) y
-    exact inferInstanceAs (Decidable (_ ∧ _ ∧ _))
-termination_by sizeOf expression
+    inferInstanceAs (Decidable (_ ∧ _ ∧ _))
 
 instance {α : Type} (depth : Nat) (expression : Expr α) : Decidable (Scoped depth expression) :=
   scopedDecision depth expression
