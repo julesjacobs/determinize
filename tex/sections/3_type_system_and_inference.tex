@@ -43,32 +43,3 @@ $e'$ of $e$. Otherwise, inference fails.
 
 \input{figures/inference}
 \input{figures/inference-solving}
-
-\begin{remark}[Domain safety\leanref{domain-safety}]
-We assume programs are \emph{domain-safe}: almost surely, every executed
-distribution has parameters in its domain and every executed division has a
-nonzero divisor.  Thus execution cannot become stuck because a primitive
-operation is undefined.  We show below that this assumption is necessary.
-\end{remark}
-
-\paragraph{Why domain safety is necessary.}
-The preceding guarantees rely essentially on domain safety. Without it, replacing an $\E$-mode sample by its mean can change whether a later operation is defined, and therefore change which executions contribute to the return-conditioned distribution.
-
-For example,
-\begin{lstlisting}
-let u = gaussian[E]\(0, 1) in
-uniform[E]\(0, u)
-\end{lstlisting}
-is not domain-safe: executions with $u<0$ become stuck. Conditioning on successful return therefore implicitly conditions $u$ to be positive, giving
-\[
-\Expect_{\mathrm{ret}}[e]
-=
-\frac{1}{2}\Expect[u\mid u>0]
-=
-\frac{1}{\sqrt{2\pi}}.
-\]
-Determinization instead replaces $u$ by its unconditional mean $0$, yielding
-\[
-\Expect_{\mathrm{ret}}[\trans e]=0.
-\]
-Thus domain safety prevents determinization from changing which executions are semantically valid and, consequently, which executions contribute to the return-conditioned output distribution.

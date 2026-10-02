@@ -3,6 +3,8 @@
 \section{Soundness}
 \label{sec:soundness}
 
+\todo[inline]{A program is domain-safe if, almost surely, etc...}
+
 Although determinization is a syntactic transformation, its semantic effect
 can be characterized by conditioning on the random choices that it retains,
 namely, the samples annotated with $\G$. Intuitively, once the outcomes of
@@ -46,7 +48,7 @@ The expectation is \emph{well-defined in the extended reals} when the two terms 
 
 The distinction is important even for simple programs, as the following example illustrates.
 
-\begin{example}[Undefined Global Expectation]
+\begin{example}[Undefined Global Expectation]\label{ex:coin-flip}
 Consider a program that flips a fair coin until tails and, after $n$ preceding heads, returns a sample from $\draw{uniform}\E{-2^n,2^n}$:
 
 \begin{lstlisting}
@@ -105,11 +107,21 @@ subprobability measure $J_e$ on $\Trace\times\Real$. Intuitively, $J_e(A\times B
 of successfully returning executions whose trace lies in $A$ and whose
 returned value lies in $B$.
 
-The two marginals of $J_e$ recover our quantities of interest. For each measurable $A\subseteq\Trace$, its trace marginal $\trlaw e(A)$ is the probability mass of successful executions whose trace lies in $A$. Similarly, for each measurable $B\subseteq\Real$, its output marginal $\law e(B)$ is the probability mass of successful executions whose returned value lies in $B$. Hence,
+The two marginals of $J_e$ recover our quantities of interest. For each measurable $A\subseteq\Trace$, its trace marginal $\trlaw e(A)$ is the probability mass of successful executions whose trace lies in $A$. Similarly, for each measurable $B\subseteq\Real$, its output marginal $\law e(B)$ is the probability mass of successful executions whose returned value lies in $B$. Evaluating both marginals on their full spaces gives
 \[
-\trlaw e(\Trace)=\law e(\Real),
+  \trlaw e(\Trace)
+  =
+  J_e(\Trace\times\Real)
+  =
+  \law e(\Real).
 \]
-so both carry the same total mass: the probability of successful return. 
+Thus both marginals have the same total mass: the probability that $e$
+successfully returns.
+
+We first consider how determinization affects the trace marginal $\trlaw e$. Recall a program is \emph{domain-safe}\leanref{domain-safety} if,
+almost surely, every executed distribution has parameters in its domain and
+every executed division has a nonzero divisor; this condition rules out loss of probability mass through invalid
+operations. Determinization preserves both domain safety and this trace marginal:
 
 \begin{lemma}[Trace preservation]
 \label{lem:trace-preservation}
@@ -122,18 +134,18 @@ domain-safe and
 
 \paragraph{Conditioning on traces.} 
 The joint semantics not only recovers the trace and output marginals. Conditioning the joint big-step measure \(J_e\) on its trace component gives the output distribution after a trace has been fixed. We write
-\[
+\begin{align}\label{eq:disintegration}
   \law e(\,\cdot\mid\tau)
   \quad\text{such that}\quad
   J_e(A\times B)=\int_A\law e(B\mid\tau)\,\trlaw e(d\tau)
-\]
+\end{align}
 for this conditional output distribution, for measurable $A\subseteq\Trace$ and $B\subseteq\Real$. This measure-theoretic formulation is necessary because a trace containing continuous $\G$-samples may itself have probability zero, so conditioning cannot in general be defined by dividing by the probability of an individual trace. We write 
-\[
+\begin{align*}\label{eq:conditional-expectation}
   \Expect[e\mid\tau] :=
   \int_{\Real}r^+\,\law e(dr\mid\tau)
   -
   \int_{\Real}r^-\,\law e(dr\mid\tau)
-\]
+\end{align*}
 for the expectation of $\law e(\,\cdot\mid\tau)$, which is the expected return value of the original program after fixing a trace $\tau$ and averaging over the remaining $\E$-mode randomness. We can now state tracewise soundness.
 
 \begin{theorem}[Tracewise soundness\leanref{trace-soundness}]
@@ -202,13 +214,12 @@ q_e.
 \leanref{output-mass}
 \]
 
-We can now lift the tracewise characterization to the global expected return. Since determinization preserves the trace distribution and replaces each conditional output distribution by its mean, averaging over traces preserves expectation. However, the requirement that the global expectation be well-defined is essential. Tracewise soundness guarantees a finite conditional mean for almost every fixed trace, but averaging these means over all traces need not yield a well-defined global expectation. Formally, we can state:
+Now, since determinization preserves the trace distribution and replaces each conditional output distribution by its mean, averaging over traces preserves expectation. However, the requirement that the global expectation be well-defined is essential. Tracewise soundness guarantees a finite conditional mean for almost every fixed trace, but averaging these means over all traces need not yield a well-defined global expectation. Formally, we can state:
 
 \begin{theorem}[Expectation preservation\leanref{expectation-preservation}]
 \label{thm:expectation}
 Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe. If $q_e>0$ and
-$\Expect_{\mathrm{ret}}[e]$ is well-defined in the extended reals, then
-$\Expect_{\mathrm{ret}}[\trans e]$ is also well-defined and
+$\Expect_{\mathrm{ret}}[e]$ is well-defined in the extended reals, then $q_{\trans{e}} > 0$ and $\Expect_{\mathrm{ret}}[\trans e]$ is also well-defined, and
 \[
 \Expect_{\mathrm{ret}}[\trans e]
 =
@@ -216,13 +227,12 @@ $\Expect_{\mathrm{ret}}[\trans e]$ is also well-defined and
 \]
 \end{theorem}
 
-Beyond preserving the global expectation, determinization also removes the variability due to $\E$-mode sampling within each trace, while retaining the variability induced by the $\G$-trace. It therefore cannot increase the variance of returned values. Consequently, it can only decrease the variance of returned values.
+Beyond preserving the global expectation, determinization also removes the variability due to $\E$-mode sampling within each trace, while retaining the variability induced by the $\G$-trace. It therefore cannot increase the variance of returned values.
 
 \begin{theorem}[Variance non-increase\leanref{variance-non-increase}]
 \label{thm:variance}
-Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe. If
-$q_e>0$ and $\int_{\Real} r^2\,\law e(dr)<\infty$,
-then $\trans e$ has finite second moment and
+Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe. If $q_e > 0$ and $\int_{\Real} r^2\,\law e(dr)<\infty$,
+then $q_{\trans e} > 0$ and $\trans e$ has a finite second moment, and
 \[
 \Var_{\mathrm{ret}}[\trans e]
 \leq
@@ -230,8 +240,8 @@ then $\trans e$ has finite second moment and
 \]
 \end{theorem}
 
-This reduction in variance is one instance of a more general consequence of replacing each conditional distribution by its mean decreases every nonnegative convex function of the return value. In particular, when the second moment is finite, taking
-$\varphi(r)=(r-\Expect_{\mathrm{ret}}[e])^2$ and using expectation preservation recovers the variance non-increase above. This follows directly from Jensen's inequality applied tracewise. 
+This variance reduction is a special case of a more general fact: determinization cannot increase the expected value of any nonnegative convex function of the program's return value. This follows by applying Jensen's inequality tracewise. In particular, when the second moment is finite, choosing
+$\varphi(r)=(r-\Expect_{\mathrm{ret}}[e])^2$ and using expectation preservation yields the variance non-increase result above.
 
 \begin{theorem}[Convex function inequality]
 \label{thm:convex-function}

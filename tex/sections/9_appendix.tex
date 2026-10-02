@@ -7,7 +7,86 @@
     \item Maybe more benchmark tables
 \end{itemize}
 
-\todo[inline]{Add full programs here}
+\todo[inline]{Add full benchmark programs here}
+
+\section{Miscellaneous}
+\paragraph{When Expectations Are Undefined}
+\begin{example}
+In the coin-flipping example (cf. \Cref{ex:coin-flip}), each terminating $\G$-trace has positive probability. A trace can also contain continuous draws:
+\begin{lstlisting}
+let u = uniform[G](-1, 1) in
+uniform[E](0, 2) / u
+\end{lstlisting}
+This program has an undefined global expectation. Yet for each fixed $u\ne0$,
+the remaining expression has mean $1/u$, exactly the value returned by the
+transformed program. Thus determinization is tracewise sound for this program, but the global expectation preservation theorem does not apply. 
+
+Moreover, note that every individual value of $u$ has probability zero, so conditioning on a trace cannot simply mean dividing by its probability, hence the disintegration-based definition of conditional output distributions in~\Cref{eq:disintegration}.
+\end{example}
+
+\begin{example}
+Consider
+\begin{lstlisting}
+let u = uniform[G](0, 1) in
+let s = 2 * bernoulli[G](1/2) - 1 in
+s / u + uniform[E](-1, 1)
+\end{lstlisting}
+The program returns almost surely and is domain-safe: although division is
+undefined when $u=0$, this event has probability zero under the
+continuous uniform distribution. However,
+\[
+  \int_0^1 \frac{1}{u}\,du=\infty.
+\]
+When $s=1$, the term $s/u$ gives the return value an infinite positive part;
+when $s=-1$, it gives the return value an infinite negative part. Since each
+sign occurs with probability $1/2$, both parts have infinite expectation, so
+the program's global expectation is undefined.
+
+Determinization is nevertheless valid and tracewise sound for this program. Determinization replaces the final uniform draw by its mean zero and therefore
+returns exactly $s/u$ for some fixed $\G$-trace. The global expectation preservation theorem does not
+apply because its hypothesis requires the source expectation to be
+well-defined in the extended reals. Likewise, the variance theorem does not
+apply because the program has an infinite second moment.
+\end{example}
+
+\paragraph{Domain safety and missing probability.}
+\begin{example}
+The following program is not domain-safe:
+\begin{lstlisting}
+let x = bernoulli[G](1/2) in
+1 / x
+\end{lstlisting}
+With probability $1/2$, the sample is $x=0$, at which point division by zero
+causes execution to get stuck. Because this invalid operation occurs with
+positive probability, it cannot be ignored by the almost-sure condition in
+domain safety. When $x=1$, the program successfully returns $1$, so
+\[
+  \law e=\frac12\delta_1,
+  \qquad
+  \law e(\Real)=\frac12.
+\]
+The missing probability mass comes from an invalid operation rather than
+rejection or divergence.
+\end{example}
+
+\begin{example}
+The following well-typed program $e$ is not domain-safe:
+\begin{lstlisting}
+let u = gaussian[E](0, 1) in uniform[E](0, u)
+\end{lstlisting}
+When $u<0$, the uniform distribution's parameters are invalid and execution gets
+stuck. The program returns with probability $1/2$; conditioned on returning,
+its expected output is half the mean of a standard Gaussian conditioned to be
+positive. Determinization sets $u=0$ and returns the mean of
+$\kw{uniform}(0,0)$, which is zero.
+Thus the domain-safety assumption is necessary, because:
+\[
+ \Expect_{\mathrm{ret}}[e]=\frac{1}{\sqrt{2\pi}}
+ \qquad\text{but}\qquad
+ \Expect_{\mathrm{ret}}[\trans e]=0.
+\]
+\end{example}
+
 
 \subsection{Formal Definitions for Symbolic Execution}
 \label{sec:appendix-symbolic-definitions}
@@ -714,24 +793,26 @@ where both sides are nonnegative extended integrals and may equal
 $+\infty$.
 \end{theorem}
 
+\paragraph{Variance decomposition.}
+The transformed program retains only variation between the conditional means.
+The original program's output can also vary after the $\G$ trace is fixed,
+due to the $\E$-samples.
+
 \begin{theorem}[Trace variance decomposition\leanref{trace-variance}]
 \label{thm:trace-variance}
-Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe. If $q_e>0$ and
+Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe. If
+$q_e=\law e(\Real)>0$ and $\int_{\Real}r^2\,\law e(dr)<\infty$, then
 \[
-  \int_{\Real}r^2\,\law e(dr)<\infty,
-\]
-then
-\[
-  \Var_{\mathrm{ret}}[e]
-  =
-  \Var_{\mathrm{ret}}[\trans e]
-  +
-  \frac{1}{q_e}
-  \int_{\Trace}
-    \Var\bigl(\law e(\,\cdot\mid\tau)\bigr)\,
-    \trlaw e(d\tau).
+ \underbrace{\Var_{\mathrm{ret}}[e]}_{\text{Original variance}}
+ =\underbrace{\Var_{\mathrm{ret}}[\trans e]}_{\text{Variance between traces}}
+  +\underbrace{\Expect_{\tau\sim\trlaw e/q_e}
+    \!\left[\Var\bigl(\law e(\,\cdot\mid\tau)\bigr)\right]}_{\text{Average variance within a trace}}.
 \]
 \end{theorem}
+
+The last term averages the original program's variance after fixing a trace, using
+$\trlaw e/q_e$ to condition on returning. It is nonnegative and gives exactly
+the variance removed by determinization.
 
 \begin{theorem}[Variance non-increase]
 Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe. If $q_e>0$ and
