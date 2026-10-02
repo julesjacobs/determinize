@@ -15,7 +15,7 @@ open Determinize.Frontend Spec.Paper Ground
 /-- Lemma S. -/
 theorem generate_sound (σ : Ground) : ∀ (e : Input) (Γ : List UType) (n : Nat) (d : Draft)
     (n' : Nat), (generate Γ e).run n = .ok (d, n') → σ.Solves d.relations →
-      e.matches (d.program σ.affinities) ∧
+      e.Matches (d.program σ.affinities) ∧
         Typed (Γ.map σ.inst) (interpret (d.program σ.affinities)) (σ.inst d.ty) := by
   intro e
   induction e with

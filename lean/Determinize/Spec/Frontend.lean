@@ -63,7 +63,7 @@ def Expr.Sitewise {Literal Site Site' : Type} (R : Site → Site' → Prop) :
 
 /-- `program` keeps every constructor, literal, variable index and requested affinity of
 `input`, and fills its placeholders. -/
-def Input.matches (input : Input) (program : Annotated) : Prop :=
+def Input.Matches (input : Input) (program : Annotated) : Prop :=
   input.Sitewise (fun requested affinity ↦ requested = none ∨ requested = some affinity) program
 
 end Determinize.Spec.Paper

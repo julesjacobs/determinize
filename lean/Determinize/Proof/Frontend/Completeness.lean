@@ -75,11 +75,11 @@ macro "draft_type" : tactic => `(tactic|
 
 /-- Split a completion that matches the input node. -/
 macro "invert_matches" ê:ident hm:ident : tactic => `(tactic|
-  (cases $ê:ident <;> simp only [Input.matches, Expr.Sitewise] at $hm:ident))
+  (cases $ê:ident <;> simp only [Input.Matches, Expr.Sitewise] at $hm:ident))
 
 /-- Lemma C. -/
 theorem generate_complete : ∀ (e : Input) (Γ : List UType) (Γ' : List Ty) (n : Nat) (σ : Ground)
-    (ê : Annotated) (T : Ty), Robust n σ (Context Γ Γ') → e.matches ê →
+    (ê : Annotated) (T : Ty), Robust n σ (Context Γ Γ') → e.Matches ê →
     Typed Γ' (interpret ê) T →
     ∃ d n', (generate Γ e).run n = .ok (d, n') ∧ n ≤ n' ∧
       ∃ σ₁, σ.Agree n σ₁ ∧ Robust n' σ₁ (Fits d ê T) := by

@@ -40,11 +40,11 @@ open scoped ENNReal
 
 /-- Inference correctness. Inference fails only when the input has no completion. Otherwise it
 returns a completion, typed at the returned type, and every completion lies below it. -/
-theorem inferenceCorrectness (input : Input) :
+theorem inference_correctness (input : Input) :
     match Frontend.infer input with
     | .error _ => ¬ ∃ program : Annotated, Completion input program
     | .ok (program, ty) =>
-      input.matches program ∧
+      input.Matches program ∧
       Typed [] (interpret program) ty ∧
       ∀ completion : Annotated, Completion input completion → AffinityLE completion program :=
   Proof.Frontend.infer_correct input
@@ -53,13 +53,13 @@ theorem inferenceCorrectness (input : Input) :
 
 /-- The output marginal of the joint law: erasing terminating traces recovers the ordinary
 output semantics. -/
-theorem traceErasure (program : Expr) :
+theorem trace_erasure (program : Expr) :
     (traceAndOutputLaw program).map Prod.snd = bigStepMeasure program :=
   Proof.Traces.correspondence program
 
 /-- Trace preservation. Determinization preserves domain safety and the law of terminating
 G traces. -/
-theorem tracePreservation (program : Expr)
+theorem trace_preservation (program : Expr)
     (typed : Typed [] program (.float .E)) (safe : DomainSafe program) :
     DomainSafe program.determinize ∧ traceLaw program.determinize = traceLaw program :=
   Proof.Traces.trace_preservation program typed safe
@@ -68,7 +68,7 @@ theorem tracePreservation (program : Expr)
 law has a finite mean and the target's conditional output law is the Dirac mass at that mean.
 These are Mathlib's regular conditional distributions of the joint laws over their trace
 marginals, unique up to null sets. No global integrability assumption is required. -/
-theorem tracewiseSoundness (program : Expr)
+theorem tracewise_soundness (program : Expr)
     (typed : Typed [] program (.float .E)) (safe : DomainSafe program) :
     ∀ᵐ trace ∂traceLaw program,
       Integrable id ((traceAndOutputLaw program).condKernel trace) ∧
@@ -79,7 +79,7 @@ theorem tracewiseSoundness (program : Expr)
 /-! ## Global soundness (paper, Section 4.2 and the appendix) -/
 
 /-- Output-mass preservation. The source and the target return with the same probability. -/
-theorem outputMassPreservation (program : Expr)
+theorem output_mass_preservation (program : Expr)
     (typed : Typed [] program (.float .E)) (safe : DomainSafe program) :
     returnProbability program.determinize = returnProbability program :=
   Proof.Paper.output_mass_soundness program typed safe
@@ -87,7 +87,7 @@ theorem outputMassPreservation (program : Expr)
 /-- Expectation preservation. If the source returns with positive probability and its
 expectation conditioned on returning is well-defined in the extended reals, then the same holds
 for the target, and the two expectations agree. They may be infinite. -/
-theorem expectationPreservation (program : Expr)
+theorem expectation_preservation (program : Expr)
     (typed : Typed [] program (.float .E)) (safe : DomainSafe program)
     (positive : 0 < returnProbability program)
     (defined : HasExpectation (bigStepMeasure program)) :
@@ -99,7 +99,7 @@ theorem expectationPreservation (program : Expr)
 /-- Variance non-increase. If the source returns with positive probability and its output law
 has a finite second moment, then the same holds for the target, and the target's variance
 conditioned on returning is at most the source's. -/
-theorem varianceNonIncrease (program : Expr)
+theorem variance_non_increase (program : Expr)
     (typed : Typed [] program (.float .E)) (safe : DomainSafe program)
     (positive : 0 < returnProbability program)
     (moment : MemLp id 2 (bigStepMeasure program)) :
@@ -110,7 +110,7 @@ theorem varianceNonIncrease (program : Expr)
 
 /-- Convex function inequality. Every nonnegative convex function integrates to at most as much
 under the target's output law as under the source's. Both sides may be `+∞`. -/
-theorem convexFunctionInequality (program : Expr)
+theorem convex_function_inequality (program : Expr)
     (typed : Typed [] program (.float .E)) (safe : DomainSafe program)
     (φ : ℝ → ℝ) (convex : ConvexOn ℝ Set.univ φ) (nonneg : ∀ value, 0 ≤ φ value) :
     ∫⁻ value, ENNReal.ofReal (φ value) ∂bigStepMeasure program.determinize ≤
@@ -120,7 +120,7 @@ theorem convexFunctionInequality (program : Expr)
 /-- Probability preservation. The target is domain-safe, the source either returns or diverges
 (rejection counts as divergence), and the target returns with the same probability as the
 source. -/
-theorem probabilityPreservation (program : Expr)
+theorem probability_preservation (program : Expr)
     (typed : Typed [] program (.float .E)) (safe : DomainSafe program) :
     DomainSafe program.determinize ∧
       returnProbability program + divergenceProbability program = 1 ∧
@@ -131,7 +131,7 @@ theorem probabilityPreservation (program : Expr)
 output law has a finite second moment, then its variance conditioned on returning is the
 target's plus the average, over the trace law normalized by the return probability, of the
 variance of the source's output given the trace. That average is finite. -/
-theorem traceVarianceDecomposition (program : Expr)
+theorem trace_variance_decomposition (program : Expr)
     (typed : Typed [] program (.float .E)) (safe : DomainSafe program)
     (positive : 0 < returnProbability program)
     (moment : MemLp id 2 (bigStepMeasure program)) :
@@ -145,17 +145,17 @@ theorem traceVarianceDecomposition (program : Expr)
 
 /-! ## Further results on returned values (not stated in the paper) -/
 
-/-- The first equation of `probabilityPreservation` at either affinity: a domain-safe,
+/-- The first equation of `probability_preservation` at either affinity: a domain-safe,
 real-typed program either returns or continues forever. Rejection counts as divergence. -/
-theorem returnOrDiverge (affinity : Affinity) (program : Expr)
+theorem return_or_diverge (affinity : Affinity) (program : Expr)
     (typed : Typed [] program (.float affinity)) (safe : DomainSafe program) :
     returnProbability program + divergenceProbability program = 1 :=
   Proof.Paper.return_or_diverge affinity program typed safe
 
-/-- `expectationPreservation` for finite expectations. If the source returns with positive
+/-- `expectation_preservation` for finite expectations. If the source returns with positive
 probability and its output law is integrable, then the returned laws of source and target are
 probability laws with finite, equal means. -/
-theorem finiteExpectationPreservation (program : Expr)
+theorem finite_expectation_preservation (program : Expr)
     (typed : Typed [] program (.float .E)) (safe : DomainSafe program)
     (positive : 0 < returnProbability program)
     (integrable : Integrable id (bigStepMeasure program)) :
@@ -172,10 +172,10 @@ theorem finiteExpectationPreservation (program : Expr)
 expectation. An observation that fails contributes no output mass, so the return probability
 is the probability of terminating with a real value and every observation on the way
 succeeding. Because every Boolean is G information, the same traces are rejected in the source
-and in the target, and both the unnormalized mean (`unnormalizedExpectationPreservation`) and
-the return probability (`outputMassPreservation`) are preserved; hence so is their quotient
+and in the target, and both the unnormalized mean (`unnormalized_expectation_preservation`) and
+the return probability (`output_mass_preservation`) are preserved; hence so is their quotient
 (`0` for a program that is always rejected, as `0 / 0 = 0`). -/
-theorem conditionalExpectationPreservation (program : Expr)
+theorem conditional_expectation_preservation (program : Expr)
     (typed : Typed [] program (.float .E)) (safe : DomainSafe program)
     (integrable : Integrable id (bigStepMeasure program)) :
     (∫ value : ℝ, value ∂bigStepMeasure program.determinize) /
@@ -188,7 +188,7 @@ theorem conditionalExpectationPreservation (program : Expr)
 The same results without dividing by the return probability. -/
 
 /-- Determinization preserves finite expectations and operation-domain safety. -/
-theorem unnormalizedExpectationPreservation (program : Expr)
+theorem unnormalized_expectation_preservation (program : Expr)
     (typed : Typed [] program (.float .E)) (safe : DomainSafe program)
     (integrable : Integrable id (bigStepMeasure program)) :
     DomainSafe program.determinize ∧
@@ -199,7 +199,7 @@ theorem unnormalizedExpectationPreservation (program : Expr)
 
 /-- Determinization preserves expectations in the extended reals: whenever the source
 expectation is well-defined, possibly infinite, so is the target's, and they agree. -/
-theorem unnormalizedExtendedExpectationPreservation (program : Expr)
+theorem unnormalized_extended_expectation_preservation (program : Expr)
     (typed : Typed [] program (.float .E)) (safe : DomainSafe program)
     (defined : HasExpectation (bigStepMeasure program)) :
     HasExpectation (bigStepMeasure program.determinize) ∧
@@ -209,13 +209,13 @@ theorem unnormalizedExtendedExpectationPreservation (program : Expr)
 
 /-- Determinization does not increase the variance: whenever the source output law has a
 finite second moment, so does the target output law (first conjunct). The second conjunct
-is the raw second moment, `∫ v²` as a Bochner integral, and is `convexFunctionInequality` for
+is the raw second moment, `∫ v²` as a Bochner integral, and is `convex_function_inequality` for
 the square; the third is Mathlib's `variance` (`∫ (v - ∫ v)²`, with the unnormalized mean). The
-output laws have equal mass (`outputMassPreservation`) and equal mean
-(`unnormalizedExpectationPreservation`), so their variances differ from their second moments by
+output laws have equal mass (`output_mass_preservation`) and equal mean
+(`unnormalized_expectation_preservation`), so their variances differ from their second moments by
 a term the two laws share and the third conjunct follows from the second; it is kept as a
 separate conjunct so that the statement reads off directly. -/
-theorem unnormalizedVarianceNonIncrease (program : Expr)
+theorem unnormalized_variance_non_increase (program : Expr)
     (typed : Typed [] program (.float .E)) (safe : DomainSafe program)
     (moment : MemLp id 2 (bigStepMeasure program)) :
     MemLp id 2 (bigStepMeasure program.determinize) ∧
@@ -228,9 +228,9 @@ theorem unnormalizedVarianceNonIncrease (program : Expr)
 moment, the variances of the source's output laws given the traces are integrable over the
 trace law and the source output variance is the target output variance plus their mean: trace
 by trace, determinization discards exactly the variance of the output given the trace. The
-output laws have the same mass and, by `tracewiseSoundness`, the same mean, so the identity
+output laws have the same mass and, by `tracewise_soundness`, the same mean, so the identity
 holds for Mathlib's `variance` (`∫ (v - ∫ v)²`) without normalization. -/
-theorem unnormalizedTraceVarianceDecomposition (program : Expr)
+theorem unnormalized_trace_variance_decomposition (program : Expr)
     (typed : Typed [] program (.float .E)) (safe : DomainSafe program)
     (moment : MemLp id 2 (bigStepMeasure program)) :
     Integrable (fun trace ↦ variance id ((traceAndOutputLaw program).condKernel trace))
@@ -243,12 +243,12 @@ theorem unnormalizedTraceVarianceDecomposition (program : Expr)
 /-! ## Finite models (not stated in the paper) -/
 
 /-- Return, rejection and divergence probabilities of a finite model sum to one. -/
-theorem finiteMassBalance (model : Spec.FiniteModel.Model) :
+theorem finite_mass_balance (model : Spec.FiniteModel.Model) :
     model.outputMeasure Set.univ + model.rejectionProbability + model.divergenceProbability = 1 :=
   Proof.FiniteModel.mass_balance model
 
 /-- Every finite reward model has finite output moments, without extra premises. -/
-theorem finiteRewardIntegrability (model : Spec.RewardModel.Model) : model.IntegrableMoments :=
+theorem finite_reward_integrability (model : Spec.RewardModel.Model) : model.IntegrableMoments :=
   Proof.RewardModel.integrableMoments model
 
 end Determinize.Theorems

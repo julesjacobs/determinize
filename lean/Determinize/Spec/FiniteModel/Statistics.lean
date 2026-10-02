@@ -28,7 +28,7 @@ def OutputStatistics.conditionalVariance (statistics : OutputStatistics) : Optio
 /-- Finite mass and genuine first and second moments of the complete output law. -/
 structure OutputStatistics.Matches (statistics : OutputStatistics) (law : Measure ℝ) : Prop where
   finite : IsFiniteMeasure law
-  squareIntegrable : Integrable (fun x : ℝ ↦ x ^ 2) law
+  square_integrable : Integrable (fun x : ℝ ↦ x ^ 2) law
   mass : law.real Set.univ = (statistics.returnMass : ℝ)
   first : (∫ x : ℝ, x ∂law) = (statistics.firstMoment : ℝ)
   second : (∫ x : ℝ, x ^ 2 ∂law) = (statistics.secondMoment : ℝ)
