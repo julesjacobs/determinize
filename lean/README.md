@@ -28,30 +28,60 @@ The default build checks mean sites with affine-dependent operands, invalid mean
 
 ## Deviations from the paper
 
-These notes compare the Lean development with the paper in `tex/`. The previous draft in
-`tex/archive/` is no longer compared.
+These notes compare the Lean development with the paper in `tex/` as of `976ef7c`. The previous
+draft in `tex/archive/` is no longer compared.
 
 - **Names.** The paper's modes are affinities here: `real^m` is `Ty.float m`, the mean
   annotation `M` is `DistributionAction.mean`, and `Determinize(e)` is `Expr.determinize`.
-  The paper's `μ_e^(n)`, `μ_e`, `d_e`, `J_e` and `η_e` are `outputMeasureAt n`,
-  `bigStepMeasure`, `divergenceProbability`, `traceAndOutputLaw` and `traceLaw`. The
-  conditional law `μ_e(· | τ)` is Mathlib's `condKernel` of `traceAndOutputLaw`, and the law
-  conditioned on returning is `returnedLaw`. The return probability `q_e` is
-  `returnProbability`, and `𝔼_ret[e]` and `Var_ret[e]` are `returnedExpectation` and
-  `returnedVariance`.
+  The paper's `μ_e^(n)`, `μ_e`, `d_e`, `J_e^(n)`, `J_e` and `η_e` are `outputMeasureAt n`,
+  `bigStepMeasure`, `divergenceProbability`, `traceAndOutputLawAt n`, `traceAndOutputLaw` and
+  `traceLaw`. The conditional law `μ_e(· | τ)` is Mathlib's `condKernel` of
+  `traceAndOutputLaw`, and the law conditioned on returning is `returnedLaw`. The return
+  probability `q_e` is `returnProbability`, and `𝔼_ret[e]` and `Var_ret[e]` are
+  `returnedExpectation` and `returnedVariance`.
+- **Syntax.** Variables are de Bruijn indices. `rec f x. e` is `Expr.fix`, whose body sees the
+  argument at index 0 and the function at index 1; a `case` on a list binds the head at index
+  0 and the tail at index 1.
+  `Expr` takes the type of its literals and of its sites as parameters; the paper's syntax is
+  the default, with real literals and `DistributionAction` sites.
 - **Theorems.** `Theorems.lean` states the paper's theorems under the paper's names:
   `inferenceCorrectness` (Section 3), `tracePreservation`, `tracewiseSoundness`,
   `outputMassPreservation`, `expectationPreservation`, `varianceNonIncrease`,
   `convexFunctionInequality`, `probabilityPreservation` (Section 4) and
-  `traceVarianceDecomposition` (appendix). Where the paper says that `𝔼_ret[e]` is
-  well-defined, Lean says `HasExpectation (bigStepMeasure program)`, which is the same when
-  the return probability is positive. A finite second moment is `MemLp id 2`, and `Var_ret[e]`
-  is Mathlib's `variance` of `returnedLaw`. `traceVarianceDecomposition` also states that the
-  average variance within a trace is finite. The paper does not state `returnOrDiverge` at
-  affinity G, `finiteExpectationPreservation`, `conditionalExpectationPreservation`, the
-  unnormalized versions (`unnormalizedExpectationPreservation`,
-  `unnormalizedExtendedExpectationPreservation`, `unnormalizedVarianceNonIncrease`,
-  `unnormalizedTraceVarianceDecomposition`), or the finite-model and reward-model theorems.
+  `traceVarianceDecomposition` (appendix). They follow the statements of Section 4, and differ
+  from them as follows.
+  - The paper's definition of expectation is for probability distributions. `HasExpectation`
+    and `extendedExpectation` take any measure on the reals and are used at the unnormalized
+    output law. Where the paper says that `𝔼_ret[e]` is well-defined, Lean says
+    `HasExpectation (bigStepMeasure program)`, which is the same when the return probability
+    is positive.
+  - `tracewiseSoundness` does not go through `𝔼[e | τ]` in the extended reals. It states that
+    the source's conditional law is integrable and that the target's is the Dirac mass at its
+    Bochner integral, which is the paper's equation together with its "in particular" clause.
+  - A finite second moment is `MemLp id 2`, and `Var_ret[e]` is Mathlib's `variance` of
+    `returnedLaw`. `traceVarianceDecomposition` also states that the average variance within
+    a trace is finite.
+  - The appendix restates the theorems, not always as Section 4 does. Its probability
+    preservation adds `d_Determinize(e) = d_e`, which no Lean theorem states; it follows from
+    `probabilityPreservation` and `returnOrDiverge` for the target, which is typed by
+    `typed_determinize`. Its expectation preservation and variance non-increase omit
+    `q_Determinize(e) > 0`, which Section 4 and Lean conclude.
+  - The theorems are about closed programs of type `real^E`, and an output law has mass only
+    at real results. The introduction's Gaussian random walk returns a list of pairs: the
+    front end infers and determinizes it, but no theorem applies to it as written.
+
+  The paper does not state `returnOrDiverge` at affinity G, `finiteExpectationPreservation`,
+  `conditionalExpectationPreservation`, the unnormalized versions
+  (`unnormalizedExpectationPreservation`, `unnormalizedExtendedExpectationPreservation`,
+  `unnormalizedVarianceNonIncrease`, `unnormalizedTraceVarianceDecomposition`), or the
+  finite-model and reward-model theorems.
+- **Domain safety.** The paper's remark in Section 2 is informal and carries a note to define
+  it. `DomainSafe` is the definition: for every depth, almost every execution reaches no stuck
+  state within that many steps, and every sampling or mean site it reaches has parameters in
+  its domain. This excludes every stuck state, also an ill-typed one or a free variable. For a
+  typed closed program the only stuck states are the paper's two: distribution parameters
+  outside the domain and division by zero. The build checks that `1 / bernoulli[G](1/2)`, the
+  appendix's example without its `let`, is not domain-safe (`Proof/InterfaceChecks.lean`).
 - **Evaluation contexts and mean steps.** `Spec` has no evaluation contexts: `reduce` recurses
   into the leftmost unevaluated operand and wraps the result (`Action.wrap`), which realizes
   the contexts of the paper's semantics figure. That figure's evaluation-context link points to
@@ -59,11 +89,16 @@ These notes compare the Lean development with the paper in `tex/`. The previous 
   deterministic reduction, as in the paper, but a sampling action whose fiber is the Dirac mass
   at the mean, or the zero measure outside the domain. The output law, the reduction depth and
   the G trace are the same as under the paper's rule.
-- **Primitive distributions.** Domains and means agree with the paper's table. The paper leaves
-  the law at degenerate parameters implicit: `uniform(a, a)` is the Dirac mass at `a`, and so is
-  Mathlib's Gaussian with variance 0. A trace entry records an `Op`, whose discrete label also
-  records the number of supplied probabilities (`Op.discrete arity`); the paper's entry records
-  only the distribution.
+- **Primitive distributions.** Domains and means agree with the paper's table. Lean has no
+  separate `Domain_D` and `Mean_D`: each primitive has one fiber (`uniformFiber` and so on),
+  which is its law at a sampling site, the Dirac mass at its mean at a mean site, and the zero
+  measure outside the domain. The paper leaves the law at degenerate parameters implicit:
+  `uniform(a, a)` is the Dirac mass at `a`, and so is Mathlib's Gaussian with variance 0.
+- **Traces.** A trace entry records an `Op`, whose discrete label also records the number of
+  supplied probabilities (`Op.discrete arity`); the paper's entry records only the
+  distribution. The paper does not say which measurable sets `Trace` has. Lean generates them
+  from the length of a trace and its entries (`Spec/Traces/Semantics.lean`), with every set of
+  primitive labels measurable.
 - **Subtyping.** The paper lists reflexivity and transitivity as rules. `Ty.Sub` has the
   structural rules and reflexivity at base types only; general reflexivity and transitivity are
   lemmas (`Ty.Sub.refl` and `Ty.Sub.trans` in `Proof/Semantics/Subtyping.lean`).
@@ -78,33 +113,63 @@ These notes compare the Lean development with the paper in `tex/`. The previous 
   compute the greatest completion, and inference correctness speaks only about the result.
   Inference takes an `Input`, a program with rational literals and no mean sites, and
   `interpret` embeds the result into the real-literal `Expr` of the theorems.
-- **Proof structure.** Section 5's actual and expected interpretations `Act_n` and `Exp_n` are
-  `actualTraceLaw` and `targetTraceLaw` (`Proof/Symbolic/TraceLaws.lean`). Lean's invariant at
-  each depth is not a statement about conditional laws but `FiberSound`
-  (`Proof/Traces/Fibers.lean`), with the compact replay of a G trace as an explicit fiber. It
-  identifies that fiber with Mathlib's `condKernel` only for the laws summed over all depths
-  (`Proof/Traces/ConditionalLaw.lean`). Section 5 assumes integrable symbolic configurations;
-  Lean derives the integrability of affine forms from finite primitive moments
-  (`primitiveMomentBounds`).
-- **Surface syntax.** The paper's examples use `fun`, `rec f x =>`, `flip` and subtraction,
-  and its prose mentions `observe`; its grammar has none of these. The unverified front end
-  desugars them, for example `flip(p)` into `0 < bernoulli[G](p)` and `a - b` into `a + -b`.
-  It also accepts `<=`, moves a literal right factor to the left of a multiplication, and reads
+- **Proof structure.** Section 5's symbolic state `(σ | ê : τ)` is a `Symbolic.SampleEnv` for
+  `σ` and an `AffineExpr n` for `ê`: an `Expr` whose literals are affine expressions in `n`
+  samples. `lift`, `realize_ρ`, `A_σ` and the sequential mean `ρ̄_σ` are `AffineExpr.ofExpr`,
+  `AffineExpr.realize`, `SampleEnv.actualMeasure` and `SampleEnv.meanEnvironment`; the typing
+  of residual expressions is `AffineExpr.WellTyped`, and a well-typed state that is domain-safe
+  through a given depth is a `SafeConfigAt`. The differences:
+  - The symbolic step is not a relation but a function, `symbolicReduce`, which returns a
+    `SymbolicAction`. A mean site is an action of its own there, not a residual reduction.
+  - `Act_n` and `Exp_n` are `actualTraceLaw` and `targetTraceLaw`
+    (`Proof/Symbolic/TraceLaws.lean`), but over detailed traces with one entry per reduction
+    step (`Proof/Traces/Detailed.lean`). The G trace is read off a detailed trace by `retain`.
+  - The paper's agreement theorems speak of conditional laws at each depth. Lean's invariant
+    at each depth is `FiberSound` (`Proof/Traces/Fibers.lean`), with the compact replay of a
+    G trace as an explicit fiber (`compact_exactDepth_fiberSound`). It identifies that fiber
+    with Mathlib's `condKernel` only for the laws summed over all depths
+    (`Proof/Traces/ConditionalLaw.lean`).
+  - The appendix's affine-means lemma is `SampleEnv.integral_affine`. It takes finite
+    moments of the primitives as a premise, which `primitiveMomentBounds` proves.
+- **Surface syntax.** The paper's examples use `fun`, `rec f x =>`, `flip`, subtraction,
+  tuples and `match … with` on lists; its grammar has `λ`, `rec`, pairs and `case` instead, and
+  no `flip` or subtraction. The unverified front end desugars them, for example `flip(p)` into
+  `0 < bernoulli[G](p)` and `a - b` into `a + -b`. The grammar has `reject` but no `observe`;
+  the front end lowers `observe(c)` to `if c then () else reject`. The front end also accepts
+  `<=`, moves a literal right factor to the left of a multiplication, and reads
   `discrete(p0, …, pn)` with all n + 1 probabilities, dropping the last. The CLI prints `gauss`
-  for `gaussian` and `discrete_list` for `discrete`.
+  for `gaussian` and `discrete_list` for `discrete`. The introduction's random-walk figure
+  calls a `reduce` that it does not define (`examples/paper/gauss-random-walk.det` does), and
+  its right-hand program is simplified by hand: the CLI prints mean sites such as
+  `mean_gauss(…)` and removes nothing.
 - **Implementation (Section 6).** The trust list places the parser and the floating-point
-  interpreter in the trusted surface. The trusted `Spec` contains neither: they live in
-  `Frontend/` and `Runtime/`, and no theorem depends on the interpreter. Storm does not produce
+  interpreter in the trusted surface. The trusted Lean sources, `Spec/` and the statements of
+  `Theorems.lean`, contain neither: they live in `Frontend/` and `Runtime/`, and no theorem
+  depends on the interpreter. Storm does not produce
   a certificate: it returns exact value vectors, and `tools/storm.py` adds the divergent states
   and a rank and next-state witness, then writes a `MomentCertificate` that Lean's kernel checks.
   The checked result covers return mass, first and second moments and rejection probability
   (`checked_statistics`, `checked_conditionalVariance`), not only the expected value. The
   paper does not describe the additive reward models (`--additive`, `Spec/RewardModel`) that
   Section 7 relies on.
-- **Lean links.** `tex/lean-links.tex` pins the paper's GitHub links to `29ee1e7`, and their
-  line ranges match that revision. The anonymous review build links to a snapshot on apndx.org
-  instead. That snapshot predates the verified inference (it has no `Spec/Inference.lean`), so
-  the review build's links are off until the snapshot is regenerated from the pinned revision.
+- **Lean links.** `tex/lean-links.tex` pins the paper's GitHub links to `29ee1e7`. They
+  resolve, but ten of them show sources that have since moved, and four of those show a
+  statement that has since been reworded:
+  - `expectation-defined`, `trace-law`: the definitions are now in `Spec/Expectation.lean`
+    and `Spec/Traces/Semantics.lean`.
+  - `return-or-diverge`, `output-mass`, `trace-erasure`, `inference`: the statements are now
+    theorems in `Theorems.lean` (`returnOrDiverge`, `outputMassPreservation`, `traceErasure`,
+    `inferenceCorrectness`).
+  - `expectation-preservation`, `variance-non-increase`, `trace-soundness`, `trace-variance`:
+    also in `Theorems.lean` (`expectationPreservation`, `varianceNonIncrease`,
+    `tracewiseSoundness`, `traceVarianceDecomposition`), and no longer worded as at the pinned
+    revision.
+
+  The trace-preservation lemma, the convex function inequality and Section 5 have no link
+  yet. The anonymous review build links to a snapshot on
+  apndx.org instead. That snapshot predates the verified inference (it has no
+  `Spec/Inference.lean`), so the review build's links are off until the snapshot is
+  regenerated.
 
 ## Lean command-line implementation
 
