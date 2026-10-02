@@ -1,4 +1,5 @@
 import Determinize.Proof.Corollaries
+import Determinize.Proof.Semantics.Termination
 
 namespace Determinize.Proof
 open MeasureTheory ProbabilityTheory Spec Spec.Paper
@@ -27,46 +28,49 @@ local instance (program : Expr) : IsFiniteMeasure (Spec.Paper.bigStepMeasure pro
 namespace Paper
 
 theorem returnedExpectationSoundness (program : Expr) (typed : Typed [] program (.float .E))
-    (safe : DomainSafe program) (positive : Spec.Paper.bigStepMeasure program Set.univ ≠ 0)
+    (safe : DomainSafe program) (positive : 0 < Spec.Paper.bigStepMeasure program Set.univ)
     (integrable : Integrable id (Spec.Paper.bigStepMeasure program)) :
-    Spec.Paper.bigStepMeasure program.determinize Set.univ ≠ 0 ∧
+    0 < Spec.Paper.bigStepMeasure program.determinize Set.univ ∧
       IsProbabilityMeasure (returnedLaw program) ∧
       IsProbabilityMeasure (returnedLaw program.determinize) ∧
       Integrable id (returnedLaw program) ∧
       Integrable id (returnedLaw program.determinize) ∧
       (∫ x, x ∂returnedLaw program.determinize) = ∫ x, x ∂returnedLaw program := by
+  have positive := positive.ne'
   have mass := outputMassSoundness program typed safe
   have targetPositive : Spec.Paper.bigStepMeasure program.determinize Set.univ ≠ 0 := by
     rwa [mass]
   obtain ⟨_, targetIntegrable, mean⟩ := finiteExpectationSoundness program typed safe integrable
-  refine ⟨targetPositive, normalized_probability _ positive,
+  refine ⟨pos_iff_ne_zero.mpr targetPositive, normalized_probability _ positive,
     normalized_probability _ targetPositive,
     integrable.smul_measure (ENNReal.inv_ne_top.mpr positive),
     targetIntegrable.smul_measure (ENNReal.inv_ne_top.mpr targetPositive), ?_⟩
-  simp only [returnedLaw, integral_smul_measure, mass, ← mean]
+  simp only [returnedLaw, returnProbability, integral_smul_measure, mass, ← mean]
 
 theorem conditionalVarianceSoundness (program : Expr) (typed : Typed [] program (.float .E))
-    (safe : DomainSafe program) (positive : Spec.Paper.bigStepMeasure program Set.univ ≠ 0)
+    (safe : DomainSafe program) (positive : 0 < Spec.Paper.bigStepMeasure program Set.univ)
     (moment : MemLp id 2 (Spec.Paper.bigStepMeasure program)) :
-    Spec.Paper.bigStepMeasure program.determinize Set.univ ≠ 0 ∧
-      MemLp id 2 (returnedLaw program.determinize) ∧
+    0 < Spec.Paper.bigStepMeasure program.determinize Set.univ ∧
+      MemLp id 2 (Spec.Paper.bigStepMeasure program.determinize) ∧
       variance id (returnedLaw program.determinize) ≤ variance id (returnedLaw program) := by
+  have positive := positive.ne'
   have mass := outputMassSoundness program typed safe
   have targetPositive : Spec.Paper.bigStepMeasure program.determinize Set.univ ≠ 0 := by
     rwa [mass]
   obtain ⟨targetMoment, second, -⟩ := varianceSoundness program typed safe moment
   obtain ⟨-, -, mean⟩ := finiteExpectationSoundness program typed safe
     (moment.integrable one_le_two)
-  refine ⟨targetPositive, targetMoment.smul_measure (ENNReal.inv_ne_top.mpr targetPositive), ?_⟩
-  rw [returnedLaw, returnedLaw, normalized_variance _ targetPositive targetMoment,
+  refine ⟨pos_iff_ne_zero.mpr targetPositive, targetMoment, ?_⟩
+  unfold returnedLaw returnProbability
+  rw [normalized_variance _ targetPositive targetMoment,
     normalized_variance _ positive moment, mass, ← mean]
   exact sub_le_sub_right (div_le_div_of_nonneg_right second ENNReal.toReal_nonneg) _
 
 theorem conditionalExtendedExpectationSoundness (program : Expr)
     (typed : Typed [] program (.float .E)) (safe : DomainSafe program)
-    (positive : Spec.Paper.bigStepMeasure program Set.univ ≠ 0)
+    (positive : 0 < Spec.Paper.bigStepMeasure program Set.univ)
     (defined : HasExpectation (Spec.Paper.bigStepMeasure program)) :
-    Spec.Paper.bigStepMeasure program.determinize Set.univ ≠ 0 ∧
+    0 < Spec.Paper.bigStepMeasure program.determinize Set.univ ∧
       HasExpectation (Spec.Paper.bigStepMeasure program.determinize) ∧
       ((Spec.Paper.bigStepMeasure program.determinize Set.univ).toReal⁻¹ : EReal) *
           extendedExpectation (Spec.Paper.bigStepMeasure program.determinize) =
@@ -76,12 +80,23 @@ theorem conditionalExtendedExpectationSoundness (program : Expr)
   obtain ⟨targetDefined, expectation⟩ := extendedExpectationSoundness program typed safe defined
   exact ⟨by rwa [mass], targetDefined, by rw [mass, ← expectation]⟩
 
+/-- Probability preservation: the target is domain-safe, the source returns or diverges, and
+both return with the same probability. -/
+theorem probabilityPreservation (program : Expr) (typed : Typed [] program (.float .E))
+    (safe : DomainSafe program) :
+    DomainSafe program.determinize ∧
+      Spec.Paper.bigStepMeasure program Set.univ + divergenceProbability program = 1 ∧
+      Spec.Paper.bigStepMeasure program.determinize Set.univ =
+        Spec.Paper.bigStepMeasure program Set.univ :=
+  ⟨(Traces.meanOnTraces .E program typed safe).1, returnOrDiverge .E program typed safe,
+    outputMassSoundness program typed safe⟩
+
 end Paper
 
 namespace Traces
 
 theorem conditionalVarianceSoundness (program : Expr) (typed : Typed [] program (.float .E))
-    (safe : DomainSafe program) (positive : Spec.Paper.bigStepMeasure program Set.univ ≠ 0)
+    (safe : DomainSafe program) (positive : 0 < Spec.Paper.bigStepMeasure program Set.univ)
     (moment : MemLp id 2 (Spec.Paper.bigStepMeasure program)) :
     Integrable
         (fun trace => variance id ((Spec.Traces.traceAndOutputLaw program).condKernel trace))
@@ -90,6 +105,7 @@ theorem conditionalVarianceSoundness (program : Expr) (typed : Typed [] program 
         variance id (returnedLaw program.determinize) +
           ∫ trace, variance id ((Spec.Traces.traceAndOutputLaw program).condKernel trace)
             ∂((Spec.Paper.bigStepMeasure program Set.univ)⁻¹ • Spec.Traces.traceLaw program) := by
+  have positive := positive.ne'
   have mass := Paper.outputMassSoundness program typed safe
   have targetPositive : Spec.Paper.bigStepMeasure program.determinize Set.univ ≠ 0 := by rwa [mass]
   obtain ⟨targetMoment, -, -⟩ := Paper.varianceSoundness program typed safe moment
@@ -99,7 +115,8 @@ theorem conditionalVarianceSoundness (program : Expr) (typed : Typed [] program 
   refine ⟨integrable.smul_measure (ENNReal.inv_ne_top.mpr positive), ?_⟩
   rw [variance_id_eq_moments moment, variance_id_eq_moments targetMoment,
     ← mean, measureReal_def, measureReal_def, mass] at decomposition
-  rw [returnedLaw, returnedLaw, normalized_variance _ positive moment,
+  unfold returnedLaw returnProbability
+  rw [normalized_variance _ positive moment,
     normalized_variance _ targetPositive targetMoment, mass, ← mean,
     integral_smul_measure, ENNReal.toReal_inv, smul_eq_mul]
   have second : (∫ x : ℝ, x ^ 2 ∂Spec.Paper.bigStepMeasure program) =
