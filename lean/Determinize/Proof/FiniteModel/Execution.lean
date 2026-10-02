@@ -79,7 +79,8 @@ theorem machineOutput_le_paper (initial : State)
       | rejected => simpa only [machineOutput, action] using (Measure.zero_le _)
       | next evidence successors =>
         rcases localMeaning with ⟨after, rfl, _, same⟩ | advance
-        · have nextReach : MachineReachable initial after := MachineReachable.next reachable action (by simp) (by norm_num : (0 : Rat) < 1)
+        · have nextReach : MachineReachable initial after :=
+            MachineReachable.next reachable action (by simp) (by norm_num : (0 : Rat) < 1)
           have bound := ih after nextReach
           rw [← same.1 fuel] at bound
           simpa [machineOutput, action, weightedOutput] using
@@ -106,7 +107,8 @@ theorem execution_safe (initial : State)
       | rejected => exact localMeaning.2 (fuel + 1)
       | next evidence successors =>
         rcases localMeaning with ⟨after, rfl, bookkeeping, same⟩ | advance
-        · have nextReach : MachineReachable initial after := MachineReachable.next reachable action (by simp) (by norm_num : (0 : Rat) < 1)
+        · have nextReach : MachineReachable initial after :=
+            MachineReachable.next reachable action (by simp) (by norm_num : (0 : Rat) < 1)
           have decrease := bookkeeping_decreases state bookkeeping _ _ action 1 after (by simp)
           exact (same.2 (fuel + 1)).mpr
             (execution_safe initial meaning noFailure (fuel + 1) after nextReach)
@@ -132,21 +134,25 @@ theorem paper_le_machine_horizon (initial : State)
     | rejected => exact ⟨0, by simp [machineOutput, action, localMeaning.1 fuel]⟩
     | next evidence successors =>
       rcases localMeaning with ⟨after, rfl, bookkeeping, same⟩ | advance
-      · have nextReach : MachineReachable initial after := MachineReachable.next reachable action (by simp) (by norm_num : (0 : Rat) < 1)
+      · have nextReach : MachineReachable initial after :=
+          MachineReachable.next reachable action (by simp) (by norm_num : (0 : Rat) < 1)
         have decrease := bookkeeping_decreases state bookkeeping _ _ action 1 after (by simp)
-        obtain ⟨horizon, bound⟩ := paper_le_machine_horizon initial meaning noFailure fuel after nextReach
+        obtain ⟨horizon, bound⟩ :=
+          paper_le_machine_horizon initial meaning noFailure fuel after nextReach
         refine ⟨horizon + 1, ?_⟩
         simpa [machineOutput, action, weightedOutput, same.1 fuel] using bound
       · cases fuel with
         | zero => exact ⟨0, by rw [advance.1]; exact bot_le⟩
         | succ fuel =>
           have bounds : ∀ entry ∈ successors, 0 < entry.1 → ∃ horizon,
-              Cumulative.outputMeasure fuel (stateExpr entry.2) ≤ machineOutput horizon entry.2 := by
+              Cumulative.outputMeasure fuel (stateExpr entry.2) ≤
+                  machineOutput horizon entry.2 := by
             intro entry member positive
             exact paper_le_machine_horizon initial meaning noFailure fuel entry.2
               (.next reachable action member positive)
           obtain ⟨horizon, bound⟩ := weightedOutput_uniform_bound successors
-            (fun after ↦ Cumulative.outputMeasure fuel (stateExpr after)) machineOutput machineOutput_mono bounds
+            (fun after ↦ Cumulative.outputMeasure fuel (stateExpr after)) machineOutput
+              machineOutput_mono bounds
           exact ⟨horizon + 1, by simpa [machineOutput, action, advance.2.1 fuel] using bound⟩
 termination_by (fuel, bookkeepingRank state)
 decreasing_by all_goals omega
@@ -162,10 +168,12 @@ theorem execution_output_eq (initial : State)
   apply le_antisymm
   · apply iSup_le
     intro fuel
-    exact (machineOutput_le_paper initial meaning fuel state reachable).trans (le_iSup (fun n ↦ Cumulative.outputMeasure n (stateExpr state)) fuel)
+    exact (machineOutput_le_paper initial meaning fuel state reachable).trans
+      (le_iSup (fun n ↦ Cumulative.outputMeasure n (stateExpr state)) fuel)
   · apply iSup_le
     intro fuel
-    obtain ⟨horizon, bound⟩ := paper_le_machine_horizon initial meaning noFailure fuel state reachable
+    obtain ⟨horizon, bound⟩ :=
+      paper_le_machine_horizon initial meaning noFailure fuel state reachable
     exact bound.trans (le_iSup (fun n ↦ machineOutput n state) horizon)
 
 end Determinize.Proof.FiniteModel

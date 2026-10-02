@@ -8,7 +8,8 @@ open scoped ENNReal
 
 private noncomputable abbrev paperStepKernel := MeasurableActionFamily.stepKernel primitiveLaws
 
-private theorem returned_add_running_eq_step_mass (depth : Nat) (typed : Typed [] expression (.float affinity)) :
+private theorem returned_add_running_eq_step_mass (depth : Nat)
+    (typed : Typed [] expression (.float affinity)) :
     Cumulative.outputMeasure depth expression Set.univ + runningProbabilityAt depth expression =
       nStepMeasure paperStepKernel depth expression Set.univ := by
   induction depth generalizing expression with
@@ -16,7 +17,8 @@ private theorem returned_add_running_eq_step_mass (depth : Nat) (typed : Typed [
     by_cases value : expression.isValue = true
     · obtain ⟨r, rfl⟩ := Typing.typed_real_value typed value
       simp [Cumulative.outputMeasure, runningProbabilityAt, nStepMeasure, Expr.isValue]
-    · cases expression <;> simp_all [Cumulative.outputMeasure, runningProbabilityAt, nStepMeasure, Expr.isValue]
+    · cases expression <;> simp_all [Cumulative.outputMeasure, runningProbabilityAt, nStepMeasure,
+        Expr.isValue]
   | succ depth ih =>
     by_cases value : expression.isValue = true
     · rw [nStepMeasure_univ_eq_one_of_value paperStepKernel _ _ value]
@@ -50,7 +52,8 @@ private theorem returned_add_running_eq_step_mass (depth : Nat) (typed : Typed [
             (∫⁻ r, runningProbabilityAt depth (continuation r) ∂fiber) = _
           rw [Cumulative.outputMeasure, reduction,
             Measure.bind_apply MeasurableSet.univ
-              (measurable_sample_cumulative depth expression site fiber continuation reduction).aemeasurable,
+              (measurable_sample_cumulative depth expression site fiber continuation
+                reduction).aemeasurable,
             ← lintegral_add_left hm,
             nStepMeasure_succ_sample_univ paperStepKernel _ _ _ _ reduction]
           exact lintegral_congr fun r ↦ ih (continuationTyped r)
@@ -61,7 +64,8 @@ private theorem total_antitone (expression : Expr) :
   intro n
   rw [nStepMeasure, Measure.bind_apply MeasurableSet.univ paperStepKernel.kernel.aemeasurable]
   calc
-    (∫⁻ current, paperStepKernel.kernel current Set.univ ∂nStepMeasure paperStepKernel n expression) ≤
+    (∫⁻ current, paperStepKernel.kernel current Set.univ
+        ∂nStepMeasure paperStepKernel n expression) ≤
         ∫⁻ _, 1 ∂nStepMeasure paperStepKernel n expression :=
       lintegral_mono fun current ↦ paperStepKernel.mass_le_one current
     _ = _ := lintegral_one
@@ -89,7 +93,8 @@ private theorem running_eq_sub (depth : Nat) (typed : Typed [] expression (.floa
     (by simpa only [add_comm] using returned_add_running depth typed (safe depth))
 
 theorem runningProbabilityAt_antitone (typed : Typed [] expression (.float affinity))
-    (safe : DomainSafe expression) : Antitone (fun depth ↦ runningProbabilityAt depth expression) := by
+    (safe : DomainSafe expression) :
+    Antitone (fun depth ↦ runningProbabilityAt depth expression) := by
   intro n m h
   change runningProbabilityAt m expression ≤ runningProbabilityAt n expression
   rw [running_eq_sub m typed safe, running_eq_sub n typed safe]
@@ -97,15 +102,16 @@ theorem runningProbabilityAt_antitone (typed : Typed [] expression (.float affin
 
 theorem returnOrDiverge (affinity : Affinity) (expression : Expr)
     (typed : Typed [] expression (.float affinity)) (safe : DomainSafe expression) :
-    Determinize.Spec.Paper.bigStepMeasure expression Set.univ + divergenceProbability expression =
-      1 := by
+    Determinize.Spec.Paper.bigStepMeasure expression Set.univ +
+      divergenceProbability expression = 1 := by
   have bounded : Determinize.Spec.Paper.bigStepMeasure expression Set.univ ≤ 1 := by
     rw [output_mass_eq_iSup_cumulative]
     apply iSup_le
     intro depth
     calc
       Cumulative.outputMeasure depth expression Set.univ ≤
-          Cumulative.outputMeasure depth expression Set.univ + runningProbabilityAt depth expression :=
+          Cumulative.outputMeasure depth expression Set.univ +
+              runningProbabilityAt depth expression :=
         le_self_add
       _ = 1 := returned_add_running depth typed (safe depth)
   rw [divergenceProbability]
@@ -121,14 +127,16 @@ private theorem return_diverge_le_total (typed : Typed [] expression (.float aff
   intro k
   calc
     Cumulative.outputMeasure k expression Set.univ + divergenceProbability expression ≤
-        Cumulative.outputMeasure (max k n) expression Set.univ + runningProbabilityAt (max k n) expression :=
+        Cumulative.outputMeasure (max k n) expression Set.univ +
+            runningProbabilityAt (max k n) expression :=
       add_le_add ((direct_cumulative_mono expression (Nat.le_max_left k n)) Set.univ) (iInf_le _ _)
     _ = _ := returned_add_running_eq_step_mass _ typed
     _ ≤ _ := total_antitone expression (Nat.le_max_right k n)
 
 theorem domainSafe_iff_return_or_diverge (typed : Typed [] expression (.float affinity)) :
     DomainSafe expression ↔
-      Determinize.Spec.Paper.bigStepMeasure expression Set.univ + divergenceProbability expression = 1 := by
+      Determinize.Spec.Paper.bigStepMeasure expression Set.univ + divergenceProbability expression =
+          1 := by
   constructor
   · exact returnOrDiverge affinity expression typed
   · intro conserved n

@@ -81,7 +81,8 @@ theorem exactOutputMeasure_eq (depth : Nat) (expression : Expr) :
       cases reduction : reduce expression with
       | next next =>
         simp only [Action.measure,
-          Measure.dirac_bind (MeasurableActionFamily.exactOutputKernel paperStepKernel depth).measurable]
+          Measure.dirac_bind
+            (MeasurableActionFamily.exactOutputKernel paperStepKernel depth).measurable]
         exact ih next
       | sample site fiber continuation =>
         simp only [Action.measure]
@@ -89,19 +90,24 @@ theorem exactOutputMeasure_eq (depth : Nat) (expression : Expr) :
         have measurable := paperStepKernel.sample_continuation_measurable
           expression fiber continuation reduction
         ext set hs
-        change (fiber.bind ((MeasurableActionFamily.exactOutputKernel paperStepKernel depth) ∘ continuation)) set = _
+        change (fiber.bind
+          ((MeasurableActionFamily.exactOutputKernel paperStepKernel depth) ∘ continuation)) set = _
         rw [Measure.bind_apply hs
-            ((MeasurableActionFamily.exactOutputKernel paperStepKernel depth).measurable.comp measurable).aemeasurable,
+            ((MeasurableActionFamily.exactOutputKernel paperStepKernel depth).measurable.comp
+              measurable).aemeasurable,
           Measure.bind_apply hs
-            (MeasurableActionFamily.exactOutputKernel paperStepKernel depth).measurable.aemeasurable,
+            (MeasurableActionFamily.exactOutputKernel paperStepKernel
+              depth).measurable.aemeasurable,
           lintegral_map
-            ((MeasurableActionFamily.exactOutputKernel paperStepKernel depth).measurable_coe hs) measurable]
+            ((MeasurableActionFamily.exactOutputKernel paperStepKernel depth).measurable_coe hs)
+              measurable]
         rfl
       | stuck => simp [Action.measure]
 
 theorem cumulativeOutputMeasure_eq_sum (fuel : Nat) (expression : Expr) :
     Cumulative.outputMeasure fuel expression =
-      ∑ depth ∈ Finset.range (fuel + 1), Determinize.Spec.Paper.outputMeasureAt depth expression := by
+      ∑ depth ∈ Finset.range (fuel + 1),
+          Determinize.Spec.Paper.outputMeasureAt depth expression := by
   rw [← cumulativeOutputMeasure_eq,
     MeasurableActionFamily.cumulativeOutputMeasure_eq_finsetSum]
   simp_rw [exactOutputMeasure_eq]

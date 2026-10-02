@@ -13,12 +13,15 @@ def failureWithin : Nat → State → Prop
 private theorem numeric_no_failure (offsets : List Rat) (b : Rat) (n : Nat) :
     ¬ failureWithin n (.deliver (.number b) (additionStack offsets)) := by
   induction n generalizing b offsets with
-  | zero => cases offsets <;> simp [failureWithin, additionStack, step, binary, pure, bind, Except.bind, Except.pure]
+  | zero =>
+    cases offsets <;> simp [failureWithin, additionStack, step, binary, pure, bind, Except.bind,
+      Except.pure]
   | succ n ih =>
     cases offsets with
     | nil => simp [failureWithin, additionStack, step]
     | cons c cs =>
-      simpa [failureWithin, additionStack, step, binary, pure, bind, Except.bind, Except.pure] using ih cs (c + b)
+      simpa [failureWithin, additionStack, step, binary, pure, bind, Except.bind, Except.pure]
+        using ih cs (c + b)
 
 theorem addition_failure_iff (offsets : List Rat) (n : Nat) (state : State) :
     failureWithin n (pushStack state (additionStack offsets)) ↔ failureWithin n state := by
@@ -40,7 +43,8 @@ theorem addition_failure_iff (offsets : List Rat) (n : Nat) (state : State) :
       simp [failureWithin, action, herr]
     | ok result =>
       rcases step_terminal state result action with ⟨tag, xs, rfl⟩ | ⟨b, rfl, rfl⟩ | ⟨rfl, rfl⟩
-      · simp [failureWithin, action, step_push state (additionStack offsets) tag xs action, extend, ih]
+      · simp [failureWithin, action, step_push state (additionStack offsets) tag xs action, extend,
+          ih]
       · simpa [pushStack, failureWithin, step] using numeric_no_failure offsets b (n + 1)
       · simp [pushStack, failureWithin, step]
 
@@ -55,8 +59,10 @@ theorem normalize_failure_iff (state : State) (n : Nat) :
     have reconstructed := RewardModel.splitStack_reconstruct stack
     simp only [pushStack, base, additionStack, reconstructed] at original
     by_cases empty : (Reward.splitStack stack).2 = []
-    · simpa [Reward.normalize, Reward.normalizeStack, empty, base, pushStack, additionStack] using original.symm
-    · simpa [Reward.normalize, Reward.normalizeStack, empty, base, pushStack, additionStack, Reward.guard] using
+    · simpa [Reward.normalize, Reward.normalizeStack, empty, base, pushStack, additionStack]
+        using original.symm
+    · simpa [Reward.normalize, Reward.normalizeStack, empty, base, pushStack, additionStack,
+        Reward.guard] using
         canonical.trans original.symm
   | deliver v stack =>
     let base := State.deliver v (Reward.splitStack stack).1
@@ -65,8 +71,10 @@ theorem normalize_failure_iff (state : State) (n : Nat) :
     have reconstructed := RewardModel.splitStack_reconstruct stack
     simp only [pushStack, base, additionStack, reconstructed] at original
     by_cases empty : (Reward.splitStack stack).2 = []
-    · simpa [Reward.normalize, Reward.normalizeStack, empty, base, pushStack, additionStack] using original.symm
-    · simpa [Reward.normalize, Reward.normalizeStack, empty, base, pushStack, additionStack, Reward.guard] using
+    · simpa [Reward.normalize, Reward.normalizeStack, empty, base, pushStack, additionStack]
+        using original.symm
+    · simpa [Reward.normalize, Reward.normalizeStack, empty, base, pushStack, additionStack,
+        Reward.guard] using
         canonical.trans original.symm
 
 def rewardFailureWithin : Nat → State → Prop

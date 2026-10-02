@@ -35,7 +35,8 @@ theorem valueExpr_closed (value : Value) : Scoped 0 (valueExpr value) := by
     simpa only [valueExpr, Scoped] using And.intro (valueExpr_closed a) (valueExpr_closed b)
   | inl a | inr a => simpa only [valueExpr, Scoped] using valueExpr_closed a
   | closure body environment | recursive body environment =>
-    simpa only [valueExpr, Scoped, Nat.zero_add] using close_scoped (interpret body) (environmentExpr environment)
+    simpa only [valueExpr, Scoped, Nat.zero_add]
+      using close_scoped (interpret body) (environmentExpr environment)
       (environmentExpr_closed environment) _
 termination_by sizeOf value
 
@@ -67,7 +68,8 @@ def binaryExpr {α : Type} : Binary → Expr α → Expr α → Expr α
   | .app => .app | .pair => .pair | .cons => .cons
   | .add => .add | .mul => .mul | .div => .div | .lt => .lt
 
-def primitiveExpr {α : Type} (site : DistributionAction × Op) (arguments : List (Expr α)) : Expr α :=
+def primitiveExpr {α : Type} (site : DistributionAction × Op) (arguments : List (Expr α)) :
+    Expr α :=
   match site.2, arguments with
   | .uniform, [a, b] => .uniform site.1 a b
   | .gaussian, [a, b] => .gaussian site.1 a b
@@ -82,7 +84,8 @@ def primitiveExpr {α : Type} (site : DistributionAction × Op) (arguments : Lis
 def frameExpr (frame : Frame) (hole : Expr) : Expr :=
   match frame with
   | .unary op => unaryExpr op hole
-  | .left op right environment => binaryExpr op hole (close (environmentExpr environment) 0 (interpret right))
+  | .left op right environment =>
+    binaryExpr op hole (close (environmentExpr environment) 0 (interpret right))
   | .right op left => binaryExpr op (valueExpr left) hole
   | .choose yes no environment =>
     .ite hole (close (environmentExpr environment) 0 (interpret yes))
@@ -103,7 +106,8 @@ def stackExpr (stack : List Frame) (hole : Expr) : Expr :=
   stack.foldl (fun expression frame ↦ frameExpr frame expression) hole
 
 def stateExpr : State → Expr
-  | .eval expression environment stack => stackExpr stack (close (environmentExpr environment) 0 (interpret expression))
+  | .eval expression environment stack =>
+    stackExpr stack (close (environmentExpr environment) 0 (interpret expression))
   | .deliver value stack => stackExpr stack (valueExpr value)
   | .rejected => .reject
 
@@ -112,16 +116,19 @@ theorem closure_substitution (body : Core) (environment : List Value) (argument 
       close (environmentExpr (argument :: environment)) 0 (interpret body) :=
   by
     simpa only [environmentExpr, Expr.substHead] using
-      close_cons_subst (interpret body) (environmentExpr environment) (environmentExpr_closed environment)
+      close_cons_subst (interpret body) (environmentExpr environment)
+        (environmentExpr_closed environment)
         (valueExpr argument) (valueExpr_closed argument) 0
 
 theorem recursive_substitution (body : Core) (environment : List Value) (argument : Value) :
     (close (environmentExpr environment) 2 (interpret body)).substTwo
         (valueExpr argument) (valueExpr (.recursive body environment)) =
-      close (environmentExpr (argument :: .recursive body environment :: environment)) 0 (interpret body) :=
+      close (environmentExpr (argument :: .recursive body environment :: environment)) 0
+          (interpret body) :=
   by
     simpa only [environmentExpr] using
-      close_two_subst (interpret body) (environmentExpr environment) (environmentExpr_closed environment)
+      close_two_subst (interpret body) (environmentExpr environment)
+        (environmentExpr_closed environment)
         (valueExpr argument) (valueExpr (.recursive body environment))
         (valueExpr_closed argument) (valueExpr_closed (.recursive body environment))
 
@@ -133,7 +140,8 @@ theorem closure_beta (body : Core) (environment : List Value) (argument : Value)
 
 theorem recursive_beta (body : Core) (environment : List Value) (argument : Value) :
     reduce (.app (valueExpr (.recursive body environment)) (valueExpr argument)) =
-      .next (stateExpr (.eval body (argument :: .recursive body environment :: environment) [])) := by
+      .next (stateExpr
+        (.eval body (argument :: .recursive body environment :: environment) [])) := by
   simp only [valueExpr, reduce, Expr.isValue, valueExpr_isValue, ↓reduceIte]
   simpa only [stateExpr, stackExpr, List.foldl_nil, valueExpr] using
     congrArg Action.next (recursive_substitution body environment argument)

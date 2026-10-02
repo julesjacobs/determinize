@@ -54,7 +54,8 @@ theorem list_cons_root (nilCase consCase : Core) (environment : List Value) (hea
     valueExpr, reduce, Expr.isValue, valueExpr_isValue, Bool.and_self, ↓reduceIte]
   congr 1
   simpa only [environmentExpr] using
-    close_two_subst (interpret consCase) (environmentExpr environment) (environmentExpr_closed environment)
+    close_two_subst (interpret consCase) (environmentExpr environment)
+      (environmentExpr_closed environment)
       (valueExpr head) (valueExpr tail) (valueExpr_closed head) (valueExpr_closed tail)
 
 theorem branch_root (yes no : Core) (environment : List Value) (condition : Bool) :
@@ -66,12 +67,14 @@ theorem branch_root (yes no : Core) (environment : List Value) (condition : Bool
 theorem fst_root (left right : Value) :
     RootStep (.deliver (.pair left right) [.unary .fst]) (.deliver left []) := by
   refine ⟨rfl, ?_⟩
-  simp [stateExpr, stackExpr, frameExpr, unaryExpr, valueExpr, reduce, Expr.isValue, valueExpr_isValue]
+  simp [stateExpr, stackExpr, frameExpr, unaryExpr, valueExpr, reduce, Expr.isValue,
+    valueExpr_isValue]
 
 theorem snd_root (left right : Value) :
     RootStep (.deliver (.pair left right) [.unary .snd]) (.deliver right []) := by
   refine ⟨rfl, ?_⟩
-  simp [stateExpr, stackExpr, frameExpr, unaryExpr, valueExpr, reduce, Expr.isValue, valueExpr_isValue]
+  simp [stateExpr, stackExpr, frameExpr, unaryExpr, valueExpr, reduce, Expr.isValue,
+    valueExpr_isValue]
 
 theorem pair_root (left right : Value) :
     RootStep (.deliver right [.right .pair left]) (.deliver (.pair left right) []) := by
@@ -106,7 +109,8 @@ theorem mul_root (a b : Rat) :
 theorem div_root (a b : Rat) (nonzero : b ≠ 0) :
     RootStep (.deliver (.number b) [.right .div (.number a)]) (.deliver (.number (a / b)) []) := by
   refine ⟨by simp [step, binary, nonzero, pure, bind, Except.bind, Except.pure], ?_⟩
-  simp [stateExpr, stackExpr, frameExpr, binaryExpr, valueExpr, reduce, Expr.isValue, realValue?, nonzero]
+  simp [stateExpr, stackExpr, frameExpr, binaryExpr, valueExpr, reduce, Expr.isValue, realValue?,
+    nonzero]
 
 theorem neg_root (a : Rat) :
     RootStep (.deliver (.number a) [.unary .neg]) (.deliver (.number (-a)) []) := by

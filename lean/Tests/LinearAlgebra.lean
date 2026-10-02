@@ -3,7 +3,8 @@ import Tests.Parsing
 
 namespace Determinize.Tests
 
-private def solveEquations {n : Nat} (A : Fin n → Fin n → Rat) (b : Fin n → Rat) : Option (List Rat) :=
+private def solveEquations {n : Nat} (A : Fin n → Fin n → Rat) (b : Fin n → Rat) :
+    Option (List Rat) :=
   (Proof.LinearAlgebra.solve n A b).map fun solution ↦ List.ofFn solution.val
 
 example : solveEquations (n := 0) Fin.elim0 Fin.elim0 = some [] := by decide +kernel

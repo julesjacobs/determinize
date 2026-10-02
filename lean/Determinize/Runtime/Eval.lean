@@ -141,7 +141,8 @@ def runOutcome (e : Core) (seed : UInt64 := 0) (fuel : Nat := 100000) : Except S
   | .error (.failure message) => .error message
 
 /-- Compatibility interface for callers requiring a returned value. -/
-def run (e : Core) (seed : UInt64 := 0) (fuel : Nat := 100000) : Except String (Value × EvalState) := do
+def run (e : Core) (seed : UInt64 := 0) (fuel : Nat := 100000) :
+    Except String (Value × EvalState) := do
   match ← runOutcome e seed fuel with
   | .returned value state => return (value, state)
   | .rejected => throw "observation rejected"

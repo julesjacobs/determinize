@@ -55,13 +55,18 @@ structure Solution (model : Spec.RewardModel.Model) where
   first : Fin model.size → Rat
   firstValid : equations (cut model.control boundary.dead) (firstRhs model boundary.dead mass) first
   second : Fin model.size → Rat
-  secondValid : equations (cut model.control boundary.dead) (secondRhs model boundary.dead mass first) second
+  secondValid : equations (cut model.control boundary.dead)
+    (secondRhs model boundary.dead mass first) second
   rejection : Fin model.size → Rat
   rejectionValid : (⟨rejection, 0⟩ : Spec.FiniteModel.ResultCertificate
     (rejectionQuery model.control boundary.dead)).Equations _
 
-theorem Solution.momentsValid {model : Spec.RewardModel.Model} (solution : Solution model) : Proof.RewardModel.MomentEquations (Proof.RewardModel.cut model solution.boundary.dead)
-    (fun moment ↦ match moment with | .mass => solution.mass | .first => solution.first | .second => solution.second) := by
+theorem Solution.momentsValid {model : Spec.RewardModel.Model} (solution : Solution model) :
+    Proof.RewardModel.MomentEquations (Proof.RewardModel.cut model solution.boundary.dead)
+    (fun moment ↦ match moment with
+      | .mass => solution.mass
+      | .first => solution.first
+      | .second => solution.second) := by
   intro moment i
   have mass := solution.massValid i
   have first := solution.firstValid i
@@ -72,7 +77,8 @@ theorem Solution.momentsValid {model : Spec.RewardModel.Model} (solution : Solut
       Moment.rational, mul_add, List.sum_map_add, ← Proof.RewardModel.control_sum,
       pow_two, mul_assoc, add_comm, add_assoc]
 
-def solve (model : Spec.RewardModel.Model) (limits : SolveLimits := {}) : Except String (Solution model) := do
+def solve (model : Spec.RewardModel.Model) (limits : SolveLimits := {}) :
+    Except String (Solution model) := do
   if model.size > limits.maxStates then
     throw s!"exact solver state limit exceeded ({model.size} > {limits.maxStates})"
   let boundary ← analyze model.control

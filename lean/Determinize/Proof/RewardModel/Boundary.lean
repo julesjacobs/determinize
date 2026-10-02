@@ -21,9 +21,11 @@ private theorem dead_outputWithin (model : Model) (dead : Fin model.size → Boo
     intro x hx
     obtain ⟨e, he, rfl⟩ := List.mem_map.mp hx
     by_cases positive : 0 < e.probability
-    · have target := (closed i isDead).2 e.target (positive.trans_le (edge_le_controlWeight model i e he))
+    · have target := (closed i isDead).2 e.target
+          (positive.trans_le (edge_le_controlWeight model i e he))
       rw [ih e.target target (by exact (closed e.target target).1), shift_zero_measure, smul_zero]
-    · have zero : e.probability = 0 := le_antisymm (le_of_not_gt positive) (model.nonnegative i e he)
+    · have zero : e.probability = 0 :=
+        le_antisymm (le_of_not_gt positive) (model.nonnegative i e he)
       simp [zero]
 
 theorem cut_outputWithin (model : Model) (dead : Fin model.size → Bool)

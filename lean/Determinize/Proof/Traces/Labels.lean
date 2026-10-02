@@ -80,7 +80,8 @@ theorem entry_measurable : Measurable (fun pair : Option Op × ℝ ↦ entry pai
   | none => exact measurable_const
   | some op => exact event_some_measurable.comp (measurable_const.prodMk measurable_id)
 
-theorem generationEvent_measurable (site : DistributionAction × Op) : Measurable (generationEvent site) := by
+theorem generationEvent_measurable (site : DistributionAction × Op) :
+    Measurable (generationEvent site) := by
   have eq : generationEvent site = entry (siteOp site) := funext (generationEvent_eq_entry site)
   rw [eq]
   exact entry_measurable.comp (measurable_const.prodMk measurable_id)

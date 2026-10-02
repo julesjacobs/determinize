@@ -30,7 +30,9 @@ def solveValues (model : Model) (limits : SolveLimits := {}) :
     throw s!"exact solver state limit exceeded ({model.size} > {limits.maxStates})"
   let A := fun state next : Fin model.size ↦
     let identity : Rat := if state = next then 1 else 0
-    if model.kind state = StateKind.transient then identity - model.transition state next else identity
+    if model.kind state = StateKind.transient then
+      identity - model.transition state next
+    else identity
   let b := fun state ↦ match model.kind state with | .returned reward => reward | _ => 0
   let some solution := Proof.LinearAlgebra.solve model.size A b
     | throw "singular value equations; no absorption certificate"
@@ -47,7 +49,8 @@ def solveValues (model : Model) (limits : SolveLimits := {}) :
 
 def absorptionBound (model : Model) :
     Option {n : Nat // ∀ state, model.survivalWithin n state < 1} :=
-  let initial := Vector.ofFn fun state ↦ if model.kind state = StateKind.transient then (1 : Rat) else 0
+  let initial := Vector.ofFn fun state ↦
+    if model.kind state = StateKind.transient then (1 : Rat) else 0
   absorption model model.size 0 initial (by simp [initial, Model.survivalWithin])
 
 def solveCertified (model : Model) (limits : SolveLimits := {}) :

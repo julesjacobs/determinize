@@ -39,7 +39,8 @@ def parsing : IO Unit := do
   let categorical ← IO.ofExcept (compile "discrete[E](0.25,0.25,0.5)")
   match categorical.source with
   | .discrete (.sample .E) d =>
-    assert (d == .cons (.real (1 / 4)) (.cons (.real (1 / 4)) .nil)) "discrete probabilities changed"
+    assert (d == .cons (.real (1 / 4)) (.cons (.real (1 / 4)) .nil))
+      "discrete probabilities changed"
     assert (categorical.source.determinize == .discrete .mean d)
       "discrete determinization changed its weights"
   | _ => throw (IO.userError "elaboration replaced a discrete source draw")
@@ -53,7 +54,10 @@ def parsing : IO Unit := do
     (.letE (.app (.lam (.add (.bvar 2) (.bvar 0))) (.bernoulli none (.real (1 / 2))))
       (.ite (.lt (.bvar 0) (.bvar 1)) (.bool false) (.bool true)))))
     "comparison desugaring changed binders or affinities"
-  for text in ["let x = discrete[E](*) in discrete[E](0,*)", "let x = uniform(0,1) in x + x", "fun x => x", "uniform[G](0,1)", "observe(false)", "observe(true)", "bernoulli[E](0.25)", "bernoulli[G](0.25)", "flip(0.25)", "bernoulli[E](0.00125)", "uniform[E](0.2,0.375)", "discrete[E](0.25,0.25,0.5)", "discrete[G](0,0.25,0.75)", "discrete[E](0,1,0)"] do
+  for text in ["let x = discrete[E](*) in discrete[E](0,*)", "let x = uniform(0,1) in x + x",
+      "fun x => x", "uniform[G](0,1)", "observe(false)", "observe(true)", "bernoulli[E](0.25)",
+      "bernoulli[G](0.25)", "flip(0.25)", "bernoulli[E](0.00125)", "uniform[E](0.2,0.375)",
+      "discrete[E](0.25,0.25,0.5)", "discrete[G](0,0.25,0.75)", "discrete[E](0,1,0)"] do
     let p ← IO.ofExcept (compile text)
     let q ← IO.ofExcept (compile (pretty p.source))
     assert (p.source == q.source)

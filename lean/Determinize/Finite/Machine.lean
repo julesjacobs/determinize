@@ -157,9 +157,11 @@ def step : State → Except Failure Step
           | .fst .. => Unary.fst | .snd .. => .snd | .inl .. => .inl
           | .inr .. => .inr | _ => .neg
         pure (.eval x environment (.unary op :: stack))
-      | .ite condition yes no => pure (.eval condition environment (.choose yes no environment :: stack))
+      | .ite condition yes no =>
+        pure (.eval condition environment (.choose yes no environment :: stack))
       | .letE value body => pure (.eval value environment (.letBody body environment :: stack))
-      | .matchSum value left right => pure (.eval value environment (.matchSum left right environment :: stack))
+      | .matchSum value left right =>
+        pure (.eval value environment (.matchSum left right environment :: stack))
       | .matchList value nilCase consCase =>
         pure (.eval value environment (.matchList nilCase consCase environment :: stack))
       | .uniform k a b | .gaussian k a b | .beta k a b | .gamma k a b =>
@@ -193,12 +195,14 @@ def step : State → Except Failure Step
           | .cons head tail => pure (.eval consCase (head :: tail :: saved) stack)
           | _ => throw (.invalid "list match operand")
       | .discrete action => match value.probabilities? with
-          | some probabilities => return ← draw (action, .discrete probabilities.length) probabilities stack
+          | some probabilities =>
+            return ← draw (action, .discrete probabilities.length) probabilities stack
           | none => throw (.invalid "expected a list of probabilities")
       | .draw site pending saved arguments => match value with
           | .number x => match pending with
               | [] => return ← draw site (arguments ++ [x]) stack
-              | next :: rest => pure (.eval next saved (.draw site rest saved (arguments ++ [x]) :: stack))
+              | next :: rest =>
+                pure (.eval next saved (.draw site rest saved (arguments ++ [x]) :: stack))
           | _ => throw (.invalid "nonnumeric primitive parameter")
       return .next .continue [(1, state)]
 
