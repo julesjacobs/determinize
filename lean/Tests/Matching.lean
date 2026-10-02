@@ -26,7 +26,8 @@ def matching : IO Unit := do
   let d : Annotated := .cons (.real (1 / 6)) (.cons (.real (1 / 3)) .nil)
   let changed : Annotated := .cons (.real (1 / 2)) (.cons (.real (1 / 3)) .nil)
   let categorical : Annotated := .discrete .E d
-  let categoricalInput : Input := .discrete (some .E) (.cons (.real (1 / 6)) (.cons (.real (1 / 3)) .nil))
+  let categoricalInput : Input :=
+    .discrete (some .E) (.cons (.real (1 / 6)) (.cons (.real (1 / 3)) .nil))
   assert (inferred categoricalInput == some (categorical, floatE)) "discrete draw not inferred"
   assert (!categoricalInput.matches (.discrete .E changed))
     "changed discrete weights accepted"

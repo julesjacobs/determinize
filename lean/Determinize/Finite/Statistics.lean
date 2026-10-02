@@ -17,7 +17,8 @@ def solveStatistics (model : Model) (limits : SolveLimits := {}) :
   let second ← solveValues (rewards stopped Moment.second.rational) limits
   let values := fun moment ↦ match moment with
     | .mass => mass.val | .first => first.val | .second => second.val
-  return ⟨⟨boundary.dead, paths.val.rank, paths.val.next, values⟩, boundary.closed, paths.property, by
+  return ⟨⟨boundary.dead, paths.val.rank, paths.val.next, values⟩, boundary.closed,
+      paths.property, by
     intro moment
     cases moment
     · exact mass.property

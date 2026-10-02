@@ -65,6 +65,7 @@ def explore (source : Core) (subject : Subject := .determinized) (limits : Limit
     .failed 0 (.invalid "source contains an unbound variable")
   else if (reprStr root).utf8ByteSize > limits.maxStateBytes then
     .incomplete .stateBytes 0 0 0
-  else build source subject limits limits.maxStates #[root] (({} : Std.HashMap State Nat).insert root 0) #[] 0
+  else build source subject limits limits.maxStates #[root]
+    (({} : Std.HashMap State Nat).insert root 0) #[] 0
 
 end Determinize.Finite.Reward

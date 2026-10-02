@@ -8,7 +8,8 @@ def sparseEdges {n : Nat} (weight : Fin n → Rat) : Array Edge :=
 
 theorem sparseEdges_weight {n : Nat} (weight : Fin n → Rat) (nonnegative : ∀ j, 0 ≤ weight j)
     (j : Fin n) :
-    ((sparseEdges weight).toList.map fun edge ↦ if edge.target = j.val then edge.probability else 0).sum =
+    ((sparseEdges weight).toList.map fun edge ↦
+      if edge.target = j.val then edge.probability else 0).sum =
       weight j := by
   simp only [sparseEdges, List.toList_toArray, List.map_map]
   rw [← List.sum_toFinset _ ((List.nodup_finRange n).filter _), List.toFinset_filter]

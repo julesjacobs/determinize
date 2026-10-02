@@ -6,7 +6,8 @@ open Spec.Paper (Core)
 deriving instance DecidableEq for Edge
 
 private def rowMass (candidate : Candidate) (i : Fin candidate.states.size) (target : Nat) : Rat :=
-  ((candidate.row i).edges.toList.map fun edge ↦ if edge.target = target then edge.probability else 0).sum
+  ((candidate.row i).edges.toList.map fun edge ↦
+    if edge.target = target then edge.probability else 0).sum
 
 def indexedMass (outcomes : List (Rat × State)) (indices : Nat → Nat) (target : Nat) : Rat :=
   (outcomes.zipIdx.map fun (outcome, k) ↦ if indices k = target then outcome.1 else 0).sum
@@ -128,7 +129,8 @@ instance (candidate : Candidate) (indices : Fin candidate.states.size → Nat �
 
 theorem indexedStates_valid (candidate : Candidate) (source : Core) (subject : Subject)
     (indices : Fin candidate.states.size → Nat → Nat)
-    (initial : candidate.rows.size = candidate.states.size ∧ candidate.initial < candidate.states.size ∧
+    (initial : candidate.rows.size = candidate.states.size ∧
+      candidate.initial < candidate.states.size ∧
       candidate.states[candidate.initial]? = some (initialState source subject) ∧
       Proof.FiniteModel.Binding.Scoped 0 source)
     (rows : ∀ i, candidate.IndexedStateValid indices i) :

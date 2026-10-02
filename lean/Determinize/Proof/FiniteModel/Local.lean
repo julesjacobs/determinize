@@ -57,7 +57,8 @@ theorem reject_same (environment : List Value) (stack : List Frame) :
     exact iff_of_true ((equality ▸ absorbing_safe _ left.1 left.2) fuel)
       (absorbing_safe _ right.1 right.2 fuel)
 
-theorem stepMeaning_returned (reward : Rat) : StepMeaning (.deliver (.number reward) []) (.returned reward) := by
+theorem stepMeaning_returned (reward : Rat) :
+    StepMeaning (.deliver (.number reward) []) (.returned reward) := by
   have realState : stateExpr (.deliver (.number reward) []) = .real (reward : ℝ) := by
     simp [stateExpr, stackExpr, valueExpr]
   constructor

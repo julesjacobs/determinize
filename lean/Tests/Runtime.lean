@@ -37,7 +37,8 @@ def runtime : IO Unit := do
       "gamma(2,3)", "beta(2,3)", "flip(0.4)", "bernoulli(0.6)", "discrete(0.25,0.25,0.5)"] do
     let a ← value text false; let b ← value text false
     assert (a == b) s!"seed replay changed: {text}"
-  for text in ["1/0", "uniform[E](0,1)/0", "1/uniform[G](0,0)", "discrete(-0.1,*)", "discrete(0.6,0.6,*)", "uniform(2,1)", "gauss(1,-1)", "poisson(-1)", "beta(0,1)",
+  for text in ["1/0", "uniform[E](0,1)/0", "1/uniform[G](0,0)", "discrete(-0.1,*)",
+    "discrete(0.6,0.6,*)", "uniform(2,1)", "gauss(1,-1)", "poisson(-1)", "beta(0,1)",
       "exponential(0)", "gamma(1,0)", "flip(2)", "observe(false)",
       "(rec f x => f x) ()"] do
     let p ← IO.ofExcept (compile text)

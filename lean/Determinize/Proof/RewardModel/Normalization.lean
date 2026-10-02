@@ -22,7 +22,8 @@ private theorem splitStack_cons (frame : Frame) (stack : List Frame) :
       cases op <;> cases value <;> simp
 
 theorem splitStack_reconstruct (stack : List Frame) :
-    (splitStack stack).1 ++ ((splitStack stack).2.map fun c ↦ Frame.right .add (.number c)) = stack := by
+    (splitStack stack).1 ++ ((splitStack stack).2.map fun c ↦ Frame.right .add (.number c)) =
+        stack := by
   induction stack with
   | nil => rfl
   | cons frame stack ih =>

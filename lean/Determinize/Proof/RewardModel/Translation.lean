@@ -41,7 +41,8 @@ theorem step_terminal (state : State) (result : Finite.Step)
     (∃ b, state = .deliver (.number b) [] ∧ result = .returned b) ∨
     (state = .rejected ∧ result = .rejected) := by
   cases state with
-  | rejected => simp only [step, Except.ok.injEq] at action; exact Or.inr (Or.inr ⟨rfl, action.symm⟩)
+  | rejected =>
+    simp only [step, Except.ok.injEq] at action; exact Or.inr (Or.inr ⟨rfl, action.symm⟩)
   | eval expression env stack =>
     apply Or.inl
     cases expression <;>
@@ -170,7 +171,8 @@ theorem addition_failure (state : State) (offsets : List Rat) (failure : Failure
         | some ps =>
           simp only [step, pv] at action
           simpa [pushStack, step, pv, bind, Except.bind, Except.pure] using
-            draw_error_push (kind, .discrete ps.length) ps stack (additionStack offsets) failure action
+            draw_error_push (kind, .discrete ps.length) ps stack (additionStack offsets)
+              failure action
       | draw site pending env args =>
         cases value <;> simp only [step, pure, bind, Except.bind, Except.pure] at action
         all_goals try (simpa [pushStack, step, pure, bind, Except.bind, Except.pure] using action)
@@ -205,7 +207,8 @@ theorem numeric_addition_upper (offsets : List Rat) (b : Rat) (n : Nat) :
   | nil => cases n <;> simp [additionStack, machineOutput, step]
   | cons c cs ih =>
     cases n with
-    | zero => simp [additionStack, machineOutput, step, binary, pure, bind, Except.bind, Except.pure,
+    | zero =>
+      simp [additionStack, machineOutput, step, binary, pure, bind, Except.bind, Except.pure,
         Measure.zero_le]
     | succ n =>
       simp only [additionStack, List.map_cons, machineOutput, step, binary,
@@ -240,7 +243,8 @@ theorem addition_output_upper (offsets : List Rat) (n : Nat) (state : State) :
       · simp only [machineOutput, action, step_push state (additionStack offsets) tag xs action]
         rw [shift_weighted, weighted_extend]
         exact weightedOutput_mono _ _ _ (fun e _ _ ↦ ih e.2)
-      · simpa [pushStack, machineOutput, step, shift_dirac] using numeric_addition_upper offsets b (n + 1)
+      · simpa [pushStack, machineOutput, step, shift_dirac]
+          using numeric_addition_upper offsets b (n + 1)
       · simp [pushStack, machineOutput, step]
 
 theorem numeric_addition_exact (offsets : List Rat) (b : Rat) (n : Nat) :
@@ -250,7 +254,8 @@ theorem numeric_addition_exact (offsets : List Rat) (b : Rat) (n : Nat) :
   | nil => cases n <;> simp [additionStack, machineOutput, step]
   | cons c cs ih =>
     cases n with
-    | zero => simp [additionStack, machineOutput, step, binary, pure, bind, Except.bind, Except.pure]
+    | zero =>
+      simp [additionStack, machineOutput, step, binary, pure, bind, Except.bind, Except.pure]
     | succ n =>
       simp only [additionStack, List.map_cons, machineOutput, step, binary,
         pure, bind, Except.bind, Except.pure]
@@ -269,7 +274,8 @@ theorem addition_guard_upper (offsets : List Rat) (nonempty : offsets ≠ [])
       shift offsets.sum (machineOutput n (pushStack state (additionStack [0]))) := by
   have numeric (b : Rat) (n : Nat) :
       machineOutput n (pushStack (.deliver (.number b) []) (additionStack offsets)) ≤
-        shift offsets.sum (machineOutput n (pushStack (.deliver (.number b) []) (additionStack [0]))) := by
+        shift offsets.sum
+            (machineOutput n (pushStack (.deliver (.number b) []) (additionStack [0]))) := by
     simp only [pushStack, List.nil_append, numeric_addition_exact]
     by_cases enough : offsets.length ≤ n
     · have one : 1 ≤ n := by

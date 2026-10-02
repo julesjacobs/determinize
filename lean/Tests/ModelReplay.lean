@@ -24,16 +24,19 @@ example : (duplicateLabels.graphModel (indexedReplay_valid _ _ _ _ duplicateRepl
 example : ¬ duplicateLabels.IndexedReplayValid (.real 3) .source (fun _ _ ↦ 0) := by
   decide +kernel
 
-private def candidateFor (text : String) (subject : Subject := .source) : IO (Core × Candidate) := do
+private def candidateFor (text : String) (subject : Subject := .source) :
+    IO (Core × Candidate) := do
   let p ← IO.ofExcept (compile text)
   match ReferenceExplorer.explore p.source subject with
   | .complete candidate => return (p.source, candidate)
   | result => throw (IO.userError s!"expected complete graph: {reprStr result}")
 
-private def accepted (source : Core) (candidate : Candidate) (subject : Subject := .source) : Bool :=
+private def accepted (source : Core) (candidate : Candidate) (subject : Subject := .source) :
+    Bool :=
   (checkModel source subject candidate).isSome
 
-private def indexedAccepted (source : Core) (candidate : Candidate) (subject : Subject := .source) : Bool :=
+private def indexedAccepted (source : Core) (candidate : Candidate) (subject : Subject := .source) :
+    Bool :=
   let indices := candidate.states.map fun state ↦ match step state with
     | .ok (.next _ outcomes) => (outcomes.map fun (outcome : Rat × State) ↦
         (candidate.states.toList.findIdx? fun s ↦ decide (s = outcome.2)).getD 0).toArray
@@ -51,7 +54,8 @@ def modelReplay : IO Unit := do
       "let f = rec f x => if flip(0.5) then 3 else f x in f 0",
       "discrete[G](0,0.25,0,0.75)", "discrete[E](*)",
       "let p = bernoulli[E](0.5) in discrete[E](p/2,0.25,*)",
-      "let f = fun p => p :: 0.25 :: [] in discrete_list[E](f 0.25)", "bernoulli[G](0)", "bernoulli[G](1)",
+      "let f = fun p => p :: 0.25 :: [] in discrete_list[E](f 0.25)",
+      "bernoulli[G](0)", "bernoulli[G](1)",
       "let _ = observe(flip(0.5)) in 3",
       "match 2::[] with [] => 0 | x::xs => x",
       "let fact = rec f n => if n < 1 then 1 else n * f (n-1) in fact 4"] do
@@ -101,7 +105,8 @@ def modelReplay : IO Unit := do
   for candidate in [coin, oneExtra,
       {coin with initial := 1}, {coin with rows := coin.rows.pop},
       {coin with states := coin.states.pop, rows := coin.rows.pop}] do
-    assert (indexedAccepted coinSource candidate == accepted candidate) "indexed replay agrees with full replay"
+    assert (indexedAccepted coinSource candidate == accepted candidate)
+      "indexed replay agrees with full replay"
   assert (!indexedAccepted targetSource target .source) "indexed wrong subject"
   assert (!indexedAccepted (.real 7) target .determinized) "indexed wrong source"
   let mut sampled := false
@@ -115,11 +120,13 @@ def modelReplay : IO Unit := do
       for replacement in [
           {row with edges := #[⟨first.target, 1⟩]},
           {row with edges := #[⟨first.target, 1 / 2⟩, ⟨second.target, 1 / 2⟩]},
-          {row with edges := #[⟨first.target, first.probability⟩, ⟨first.target, second.probability⟩]},
+          {row with edges :=
+            #[⟨first.target, first.probability⟩, ⟨first.target, second.probability⟩]},
           {row with edges := #[⟨coin.states.size, 1⟩]},
           {row with kind := .returned 99}] do
         assert (!accepted (setRow coin i replacement)) "mutated sampled row"
-        assert (!indexedAccepted coinSource (setRow coin i replacement)) "indexed mutated sampled row"
+        assert (!indexedAccepted coinSource (setRow coin i replacement))
+          "indexed mutated sampled row"
     match row.kind with
     | .returned reward =>
       terminal := true
@@ -132,11 +139,15 @@ def modelReplay : IO Unit := do
   assert (!accepted {coin with states := coin.states.pop, rows := coin.rows.pop}) "truncated graph"
   assert (!accepted {coin with initial := coin.states.size}) "invalid initial index"
   assert (!accepted {coin with initial := 1}) "wrong initial state"
-  assert (!accepted {coin with states := coin.states.set! 0 (.eval (.real 7) [] [])}) "changed initial expression"
-  assert (!accepted {coin with states := coin.states.set! 1 (.eval (.bvar 99) [] [])}) "malformed reachable state"
+  assert (!accepted {coin with states := coin.states.set! 0 (.eval (.real 7) [] [])})
+    "changed initial expression"
+  assert (!accepted {coin with states := coin.states.set! 1 (.eval (.bvar 99) [] [])})
+    "malformed reachable state"
   let unusedFreeVariable : Core := .letE (.lam (.bvar 2)) (.real 3)
   match ReferenceExplorer.explore unusedFreeVariable .source with
-  | .complete candidate => assert (!(checkModel unusedFreeVariable .source candidate).isSome) "free variable in unused closure"
+  | .complete candidate =>
+    assert (!(checkModel unusedFreeVariable .source candidate).isSome)
+      "free variable in unused closure"
   | _ => throw (IO.userError "scope fixture must finish exploration")
   let broken : Candidate := ⟨0, #[.eval (.bvar 0) [] []],
     #[⟨.rejected, #[⟨0, 1⟩]⟩]⟩

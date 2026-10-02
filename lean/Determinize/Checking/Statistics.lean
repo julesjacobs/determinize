@@ -8,7 +8,9 @@ open Spec.Paper (Core)
 /-- Check external values against the original model, including the divergent boundary. -/
 def checkStatistics (model : Model) (certificate : MomentCertificate model) : Bool :=
   decide (ClosedDivergence model certificate.dead) &&
-    decide ((⟨certificate.rank, certificate.next⟩ : Paths (cut model certificate.dead)).Valid (cut model certificate.dead)) &&
+    decide
+      ((⟨certificate.rank, certificate.next⟩ : Paths (cut model certificate.dead)).Valid
+        (cut model certificate.dead)) &&
     decide (∀ moment, (certificate.result model moment).Equations (certificate.model model moment))
 
 theorem checkStatistics_valid (model : Model) (certificate : MomentCertificate model) :
@@ -19,7 +21,8 @@ theorem checkStatistics_valid (model : Model) (certificate : MomentCertificate m
 theorem checked_statistics {source : Core} {subject : Subject}
     (checked : CheckedModel source subject) (certificate : MomentCertificate checked.model)
     (accepted : checkStatistics checked.model certificate = true) :
-    (certificate.statistics checked.model).Matches (Spec.Paper.bigStepMeasure (subject.program source)) := by
+    (certificate.statistics checked.model).Matches
+        (Spec.Paper.bigStepMeasure (subject.program source)) := by
   rw [← checked.correct.2]
   exact momentCertificate_sound checked.model certificate ((checkStatistics_valid _ _).mp accepted)
 
@@ -29,15 +32,18 @@ theorem checked_conditionalVariance {source : Core} {subject : Subject}
     (positive : 0 < (certificate.statistics checked.model).returnMass) :
     variance id (((Spec.Paper.bigStepMeasure (subject.program source)) Set.univ)⁻¹ •
       Spec.Paper.bigStepMeasure (subject.program source)) =
-      (((certificate.statistics checked.model).secondMoment / (certificate.statistics checked.model).returnMass -
-        ((certificate.statistics checked.model).firstMoment / (certificate.statistics checked.model).returnMass) ^ 2 : Rat) : ℝ) := by
+      (((certificate.statistics checked.model).secondMoment /
+          (certificate.statistics checked.model).returnMass -
+        ((certificate.statistics checked.model).firstMoment /
+          (certificate.statistics checked.model).returnMass) ^ 2 : Rat) : ℝ) := by
   rw [← checked.correct.2]
   exact statistics_conditional_variance checked.model.outputMeasure _
     (momentCertificate_sound _ _ ((checkStatistics_valid _ _).mp accepted)) positive
 
 def checkTermination (model : Model) (certificate : TerminationCertificate model) : Bool :=
   checkStatistics model certificate.output && decide
-    ((⟨certificate.rejection, 0⟩ : ResultCertificate (rejectionQuery model certificate.output.dead)).Equations
+    ((⟨certificate.rejection, 0⟩ :
+      ResultCertificate (rejectionQuery model certificate.output.dead)).Equations
       (rejectionQuery model certificate.output.dead))
 
 theorem checkTermination_valid (model : Model) (certificate : TerminationCertificate model) :

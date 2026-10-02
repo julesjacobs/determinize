@@ -6,8 +6,10 @@ import Mathlib.Probability.Kernel.Composition.MeasureCompProd
 # Trace factorizations
 
 The proof-internal form of trace soundness: the source and target joint laws factor over the
-source trace law through a Markov kernel and a measurable output function. The corollaries in `Proof/Corollaries.lean` are proved for an arbitrary factorization.
-`Proof/Traces/ConditionalLaw.lean` identifies the replay kernel with Mathlib’s conditional distribution.
+source trace law through a Markov kernel and a measurable output function. The corollaries in
+`Proof/Corollaries.lean` are proved for an arbitrary factorization.
+`Proof/Traces/ConditionalLaw.lean` identifies the replay kernel with Mathlib’s conditional
+distribution.
 -/
 
 namespace Determinize.Proof.Traces

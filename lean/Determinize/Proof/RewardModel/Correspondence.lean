@@ -54,6 +54,7 @@ theorem normalize_output_lower (state : State) (n : Nat) :
     have upper := addition_output_upper [0] n (residual state)
     simp only [List.sum_cons, List.sum_nil, add_zero, shift_zero] at upper
     exact (shift_mono _ upper).trans (by
-      simpa only [state_decomposition] using addition_output_lower (offsets state) n (residual state))
+      simpa only [state_decomposition]
+        using addition_output_lower (offsets state) n (residual state))
 
 end Determinize.Proof.RewardModel

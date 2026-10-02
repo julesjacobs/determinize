@@ -43,7 +43,8 @@ private theorem list_integral (weights : List Rat) (value : Nat → ℝ) (index 
     (nonnegative : ∀ p ∈ weights, 0 ≤ p) (f : ℝ → ℝ) :
     (∫ x, f x ∂((weights.zipIdx index).map fun entry : Rat × Nat ↦
       ENNReal.ofReal (entry.1 : ℝ) • Measure.dirac (value entry.2)).sum) =
-        ((weights.zipIdx index).map fun entry : Rat × Nat ↦ (entry.1 : ℝ) * f (value entry.2)).sum := by
+        ((weights.zipIdx index).map fun entry : Rat × Nat ↦
+            (entry.1 : ℝ) * f (value entry.2)).sum := by
   induction weights generalizing index with
   | nil => simp
   | cons p ps ih =>

@@ -48,7 +48,8 @@ theorem Shape.size_le_subst {σ : Nat → Shape} {i : Nat} {t : Shape} (h : i �
     rcases h with h | h
     · have := iha h; omega
     · have := ihb h; omega
-  | list a ih => simp only [Shape.vars] at h; simp only [Shape.subst, Shape.size]; have := ih h; omega
+  | list a ih =>
+    simp only [Shape.vars] at h; simp only [Shape.subst, Shape.size]; have := ih h; omega
 
 /-- The occurs check: a variable is strictly smaller than any other shape it occurs in. -/
 theorem Shape.size_lt_subst {σ : Nat → Shape} {i : Nat} {t : Shape} (h : i ∈ t.vars)

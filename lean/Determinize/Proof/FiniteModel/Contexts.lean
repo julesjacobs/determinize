@@ -23,7 +23,8 @@ theorem frame_context (frame : Frame) (shape : FrameShape frame) (hole : Expr)
   | left op right environment =>
     cases op <;> simp [frameExpr, binaryExpr, Expr.isValue, reduce, notValue] <;> rfl
   | right op left =>
-    cases op <;> simp [frameExpr, binaryExpr, Expr.isValue, reduce, notValue, valueExpr_isValue] <;> rfl
+    cases op <;> simp [frameExpr, binaryExpr, Expr.isValue, reduce, notValue, valueExpr_isValue] <;>
+      rfl
   | discrete action | choose yes no environment | letBody body environment
   | matchSum left right environment | matchList nilCase consCase environment =>
     simp [frameExpr, Expr.isValue, reduce, notValue]
@@ -59,7 +60,8 @@ theorem stack_context (stack : List Frame) (shape : ∀ frame ∈ stack, FrameSh
 
 private theorem list_prefix_absorbing (supplied : List Rat) (tail : Expr)
     (notValue : tail.isValue = false) (absorbing : reduce tail = .next tail) :
-    (supplied.foldr (fun (p : Rat) (rest : Expr) ↦ .cons (.real (p : ℝ)) rest) tail).isValue = false ∧
+    (supplied.foldr (fun (p : Rat) (rest : Expr) ↦ .cons (.real (p : ℝ)) rest) tail).isValue =
+      false ∧
       reduce (supplied.foldr (fun (p : Rat) (rest : Expr) ↦ .cons (.real (p : ℝ)) rest) tail) =
         .next (supplied.foldr (fun (p : Rat) (rest : Expr) ↦ .cons (.real (p : ℝ)) rest) tail) := by
   induction supplied with
@@ -77,7 +79,8 @@ theorem frame_absorbing (frame : Frame) (hole : Expr)
   | unary op =>
     cases op <;> simp [frameExpr, unaryExpr, Expr.isValue, reduce, notValue, absorbing, Action.wrap]
   | left op right environment =>
-    cases op <;> simp [frameExpr, binaryExpr, Expr.isValue, reduce, notValue, absorbing, Action.wrap]
+    cases op <;> simp [frameExpr, binaryExpr, Expr.isValue, reduce, notValue, absorbing,
+      Action.wrap]
   | right op left =>
     cases op <;> simp [frameExpr, binaryExpr, Expr.isValue, reduce, notValue, absorbing,
       valueExpr_isValue, Action.wrap]

@@ -72,11 +72,13 @@ private def render {Site : Type} [PrettySite Site] (env : List String) (depth : 
   | .inl a => s!"(inl {render env depth a})"
   | .inr a => s!"(inr {render env depth a})"
   | .matchSum e a b => let x := s!"x{depth}";
-      s!"(match {render env depth e} with inl {x} => {render (x :: env) (depth + 1) a} | inr {x} => {render (x :: env) (depth + 1) b})"
+      s!"(match {render env depth e} with inl {x} => {render (x :: env) (depth + 1) a} \
+          | inr {x} => {render (x :: env) (depth + 1) b})"
   | .nil => "[]"
   | .cons h t => s!"({render env depth h} :: {render env depth t})"
   | .matchList e n c => let x := s!"x{depth}"; let xs := s!"xs{depth}";
-      s!"(match {render env depth e} with [] => {render env depth n} | {x} :: {xs} => {render (x :: xs :: env) (depth + 1) c})"
+      s!"(match {render env depth e} with [] => {render env depth n} | {x} :: {xs} => \
+          {render (x :: xs :: env) (depth + 1) c})"
   | .ite c .unit .reject => s!"observe({render env depth c})"
   | .ite c a b => s!"(if {render env depth c} then {render env depth a} else {render env depth b})"
   | .letE a b => let x := s!"x{depth}";
@@ -113,24 +115,32 @@ def leanExpression : Core → String
   | .snd pairValue => s!"(.snd {leanExpression pairValue})"
   | .inl value => s!"(.inl {leanExpression value})"
   | .inr value => s!"(.inr {leanExpression value})"
-  | .matchSum scrutinee left right => s!"(.matchSum {leanExpression scrutinee} {leanExpression left} {leanExpression right})"
+  | .matchSum scrutinee left right =>
+    s!"(.matchSum {leanExpression scrutinee} {leanExpression left} {leanExpression right})"
   | .nil  => s!"(.nil)"
   | .cons head tail => s!"(.cons {leanExpression head} {leanExpression tail})"
-  | .matchList scrutinee nilCase consCase => s!"(.matchList {leanExpression scrutinee} {leanExpression nilCase} {leanExpression consCase})"
-  | .ite condition thenBranch elseBranch => s!"(.ite {leanExpression condition} {leanExpression thenBranch} {leanExpression elseBranch})"
+  | .matchList scrutinee nilCase consCase =>
+    s!"(.matchList {leanExpression scrutinee} {leanExpression nilCase} {leanExpression consCase})"
+  | .ite condition thenBranch elseBranch =>
+    s!"(.ite {leanExpression condition} {leanExpression thenBranch} {leanExpression elseBranch})"
   | .letE value body => s!"(.letE {leanExpression value} {leanExpression body})"
   | .neg body => s!"(.neg {leanExpression body})"
   | .add left right => s!"(.add {leanExpression left} {leanExpression right})"
   | .mul left right => s!"(.mul {leanExpression left} {leanExpression right})"
   | .div left right => s!"(.div {leanExpression left} {leanExpression right})"
   | .lt left right => s!"(.lt {leanExpression left} {leanExpression right})"
-  | .uniform action lower upper => s!"(.uniform {leanAction action} {leanExpression lower} {leanExpression upper})"
-  | .gaussian action mean variance => s!"(.gaussian {leanAction action} {leanExpression mean} {leanExpression variance})"
+  | .uniform action lower upper =>
+    s!"(.uniform {leanAction action} {leanExpression lower} {leanExpression upper})"
+  | .gaussian action mean variance =>
+    s!"(.gaussian {leanAction action} {leanExpression mean} {leanExpression variance})"
   | .poisson action rate => s!"(.poisson {leanAction action} {leanExpression rate})"
   | .discrete action p => s!"(.discrete {leanAction action} {leanExpression p})"
-  | .bernoulli action probability => s!"(.bernoulli {leanAction action} {leanExpression probability})"
+  | .bernoulli action probability =>
+    s!"(.bernoulli {leanAction action} {leanExpression probability})"
   | .exponential action rate => s!"(.exponential {leanAction action} {leanExpression rate})"
-  | .beta action alpha betaArg => s!"(.beta {leanAction action} {leanExpression alpha} {leanExpression betaArg})"
-  | .gamma action shape rate => s!"(.gamma {leanAction action} {leanExpression shape} {leanExpression rate})"
+  | .beta action alpha betaArg =>
+    s!"(.beta {leanAction action} {leanExpression alpha} {leanExpression betaArg})"
+  | .gamma action shape rate =>
+    s!"(.gamma {leanAction action} {leanExpression shape} {leanExpression rate})"
 
 end Determinize.Frontend

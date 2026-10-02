@@ -55,12 +55,16 @@ theorem outputAt_equation (model : Model) (i : Fin model.size) :
       (fun n m h ↦ outputWithin_mono model i (Nat.add_le_add_right h 1)) s hs]
     simp only [Model.outputWithin, kind, list_measure_apply, Measure.smul_apply, smul_eq_mul]
     simp_rw [Model.outputAt, shift_iSup _ _ (outputWithin_mono model _),
-      FiniteModel.monotone_measure_iSup_apply _ (fun _ _ h ↦ shift_mono _ (outputWithin_mono model _ h)) s hs,
+      FiniteModel.monotone_measure_iSup_apply _
+        (fun _ _ h ↦ shift_mono _ (outputWithin_mono model _ h)) s hs,
       ENNReal.mul_iSup]
-    exact list_sum_iSup _ _ (fun e _ _ h ↦ mul_le_mul' le_rfl (shift_mono _ (outputWithin_mono model _ h) s))
+    exact list_sum_iSup _ _
+      (fun e _ _ h ↦ mul_le_mul' le_rfl (shift_mono _ (outputWithin_mono model _ h) s))
 
-theorem outputAt_mass_le_one (model : Model) (i : Fin model.size) : model.outputAt i Set.univ ≤ 1 := by
-  rw [Model.outputAt, FiniteModel.monotone_measure_iSup_apply _ (outputWithin_mono model i) _ MeasurableSet.univ]
+theorem outputAt_mass_le_one (model : Model) (i : Fin model.size) :
+    model.outputAt i Set.univ ≤ 1 := by
+  rw [Model.outputAt,
+    FiniteModel.monotone_measure_iSup_apply _ (outputWithin_mono model i) _ MeasurableSet.univ]
   exact iSup_le (fun n ↦ outputWithin_mass_le_one model n i)
 
 instance (model : Model) (i : Fin model.size) : IsFiniteMeasure (model.outputAt i) :=

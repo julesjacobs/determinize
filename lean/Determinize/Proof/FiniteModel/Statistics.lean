@@ -21,7 +21,8 @@ def Moment.real : Moment → ℝ → ℝ
   | .first => id
   | .second => fun x ↦ x ^ 2
 
-theorem Moment.agree (moment : Moment) (q : Rat) : moment.real (q : ℝ) = (moment.rational q : ℝ) := by
+theorem Moment.agree (moment : Moment) (q : Rat) :
+    moment.real (q : ℝ) = (moment.rational q : ℝ) := by
   cases moment <;> simp [Moment.real, Moment.rational]
 
 structure MomentCertificate (model : Model) where
@@ -30,21 +31,26 @@ structure MomentCertificate (model : Model) where
   next : Fin model.size → Fin model.size
   values : Moment → Fin model.size → Rat
 
-abbrev MomentCertificate.model (model : Model) (certificate : MomentCertificate model) (moment : Moment) :=
+abbrev MomentCertificate.model (model : Model) (certificate : MomentCertificate model)
+    (moment : Moment) :=
   rewards (cut model certificate.dead) moment.rational
 
-def MomentCertificate.result (model : Model) (certificate : MomentCertificate model) (moment : Moment) :
+def MomentCertificate.result (model : Model) (certificate : MomentCertificate model)
+    (moment : Moment) :
     ResultCertificate (certificate.model model moment) := ⟨certificate.values moment, 0⟩
 
 def MomentCertificate.Valid (model : Model) (certificate : MomentCertificate model) : Prop :=
   ClosedDivergence model certificate.dead ∧
-    (⟨certificate.rank, certificate.next⟩ : Paths (cut model certificate.dead)).Valid (cut model certificate.dead) ∧
+    (⟨certificate.rank, certificate.next⟩ : Paths (cut model certificate.dead)).Valid
+      (cut model certificate.dead) ∧
     ∀ moment, (certificate.result model moment).Equations (certificate.model model moment)
 
-instance (model : Model) (certificate : MomentCertificate model) : Decidable (certificate.Valid model) :=
+instance (model : Model) (certificate : MomentCertificate model) :
+    Decidable (certificate.Valid model) :=
   inferInstanceAs (Decidable (_ ∧ _ ∧ _))
 
-def MomentCertificate.statistics (model : Model) (certificate : MomentCertificate model) : OutputStatistics :=
+def MomentCertificate.statistics (model : Model) (certificate : MomentCertificate model) :
+    OutputStatistics :=
   ⟨certificate.values .mass model.initial, certificate.values .first model.initial,
     certificate.values .second model.initial⟩
 
@@ -59,9 +65,11 @@ theorem momentCertificate_integral (model : Model) (certificate : MomentCertific
   cases h : (cut model certificate.dead).kind state <;> simp_all
 
 theorem momentCertificate_sound (model : Model) (certificate : MomentCertificate model)
-    (valid : certificate.Valid model) : (certificate.statistics model).Matches model.outputMeasure := by
+    (valid : certificate.Valid model) :
+    (certificate.statistics model).Matches model.outputMeasure := by
   refine ⟨(integrable_const_iff_isFiniteMeasure (by norm_num : (1 : ℝ) ≠ 0)).mp
-    (outputAt_integrable model model.initial (fun _ ↦ 1)), outputAt_integrable model model.initial (fun x ↦ x ^ 2), ?_, ?_, ?_⟩
+    (outputAt_integrable model model.initial (fun _ ↦ 1)),
+      outputAt_integrable model model.initial (fun x ↦ x ^ 2), ?_, ?_, ?_⟩
   · simpa [Moment.real, MomentCertificate.statistics, integral_const] using
       momentCertificate_integral model certificate valid .mass
   · exact momentCertificate_integral model certificate valid .first
@@ -73,7 +81,8 @@ theorem outputMeasure_memLp (model : Model) : MemLp id 2 model.outputMeasure :=
 
 theorem statistics_conditional_mean (statistics : OutputStatistics) (law : Measure ℝ)
     (correct : statistics.Matches law) :
-    (∫ x : ℝ, x ∂law) / law.real Set.univ = (statistics.firstMoment / statistics.returnMass : Rat) := by
+    (∫ x : ℝ, x ∂law) / law.real Set.univ =
+        (statistics.firstMoment / statistics.returnMass : Rat) := by
   rw [correct.mass, correct.first, Rat.cast_div]
 
 theorem statistics_first_integrable (statistics : OutputStatistics) (law : Measure ℝ)

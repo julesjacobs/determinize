@@ -34,7 +34,8 @@ example : reduce nestedGeneral =
 example : reduce nestedGeneral.determinize =
     .sample (.sample .G, .uniform) (uniformFiber (.sample .G) 0 1)
       (fun value ↦ .gaussian .mean (.real 0) (.real value)) := by
-  simp [nestedGeneral, uniform, Expr.determinize, DistributionAction.determinize, reduce, Expr.isValue,
+  simp [nestedGeneral, uniform, Expr.determinize, DistributionAction.determinize, reduce,
+    Expr.isValue,
     realValue?, Action.wrap, Function.comp_def]
 
 example : reduce nestedAffine =
@@ -176,7 +177,8 @@ example : Typed [] loop (.float .E) :=
   .app (.fix (.app (.bvar (.tail .head)) (.bvar .head))) .unit
 
 theorem loop_reduction : reduce loop = .next loop := by
-  simp [loop, loopFunction, reduce, Expr.isValue, Expr.substTwo, Expr.substAt, Expr.shift, Expr.mapVars]
+  simp [loop, loopFunction, reduce, Expr.isValue, Expr.substTwo, Expr.substAt, Expr.shift,
+    Expr.mapVars]
 
 example : DomainSafe loop := by
   intro fuel
