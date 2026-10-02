@@ -178,7 +178,7 @@ theorem measurableSet_matchesHead : MeasurableSet {pair : DrawTrace × Expr | Ma
 /-- One replay step: a deterministic step or an expectation-affinity draw leaves the tape alone;
 a general-affinity draw consumes the head of the tape when its primitive fits, and stops
 otherwise. -/
-def compactReplayStep : SFiniteKernel (DrawTrace × Expr) (DrawTrace × Expr) := by
+def compactReplayStep : SFiniteKernel (DrawTrace × Expr) (DrawTrace × Expr) :=
   let step := MeasurableActionFamily.stepKernel primitiveLaws
   let sampled := SFiniteKernel.mapWithInput
     (SFiniteKernel.pullback ⟨step.kernel, step.kernel_sfinite⟩ Prod.snd measurable_snd)
@@ -194,7 +194,7 @@ def compactReplayStep : SFiniteKernel (DrawTrace × Expr) (DrawTrace × Expr) :=
   have measurableRegion : MeasurableSet region :=
     (measurable_skeleton.comp measurable_snd)
       (show MeasurableSet {s | generationOp s = none} from trivial)
-  exact SFiniteKernel.piecewise measurableRegion sampled
+  SFiniteKernel.piecewise measurableRegion sampled
     (SFiniteKernel.piecewise measurableSet_matchesHead forced SFiniteKernel.zero)
 
 open scoped Classical in

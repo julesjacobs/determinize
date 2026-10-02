@@ -47,20 +47,20 @@ noncomputable def zero : SFiniteKernel α β := ⟨0, inferInstance⟩
 noncomputable def deterministic (function : α → β) (measurable : Measurable function) :
     SFiniteKernel α β := ⟨Kernel.deterministic function measurable, inferInstance⟩
 
+open scoped Classical in
 noncomputable def piecewise {set : Set α} (measurableSet : MeasurableSet set)
-    (thenKernel elseKernel : SFiniteKernel α β) : SFiniteKernel α β := by
-  classical
+    (thenKernel elseKernel : SFiniteKernel α β) : SFiniteKernel α β :=
   letI := thenKernel.sfinite
   letI := elseKernel.sfinite
-  exact ⟨Kernel.piecewise measurableSet thenKernel.kernel elseKernel.kernel, inferInstance⟩
+  ⟨Kernel.piecewise measurableSet thenKernel.kernel elseKernel.kernel, inferInstance⟩
 
 noncomputable def mapWithInput (draw : SFiniteKernel α β)
     (transform : α × β → γ) (measurableTransform : Measurable transform) :
-    SFiniteKernel α γ := by
+    SFiniteKernel α γ :=
   letI := draw.sfinite
   let transformed := Kernel.deterministic transform measurableTransform
   let paired := draw.kernel ⊗ₖ transformed
-  exact ⟨paired.map Prod.snd, inferInstance⟩
+  ⟨paired.map Prod.snd, inferInstance⟩
 
 theorem mapWithInput_apply (draw : SFiniteKernel α β)
     (transform : α × β → γ) (measurableTransform : Measurable transform) (parameter : α) :
@@ -82,9 +82,9 @@ theorem mapWithInput_apply (draw : SFiniteKernel α β)
   rw [lintegral_indicator_one (measurableSet.preimage sectionMeasurable)]
 
 noncomputable def pullback (draw : SFiniteKernel β γ) (parameters : α → β)
-    (measurableParameters : Measurable parameters) : SFiniteKernel α γ := by
+    (measurableParameters : Measurable parameters) : SFiniteKernel α γ :=
   letI := draw.sfinite
-  exact ⟨draw.kernel ∘ₖ Kernel.deterministic parameters measurableParameters, inferInstance⟩
+  ⟨draw.kernel ∘ₖ Kernel.deterministic parameters measurableParameters, inferInstance⟩
 
 end SFiniteKernel
 
@@ -1254,8 +1254,8 @@ def MeasurableFamily.substHead {α : Type*} [MeasurableSpace α]
     {body replacement : α → Expr} (bodyFamily : MeasurableFamily α body)
     (replacementFamily : MeasurableFamily α replacement) :
     MeasurableFamily α
-      (fun parameter ↦ Expr.substHead (body parameter) (replacement parameter)) := by
-  simpa only [Expr.substHead] using bodyFamily.substAt 0 replacementFamily
+      (fun parameter ↦ Expr.substHead (body parameter) (replacement parameter)) :=
+  bodyFamily.substAt 0 replacementFamily
 
 def MeasurableFamily.substTwo {α : Type*} [MeasurableSpace α]
     {body argument function : α → Expr} (bodyFamily : MeasurableFamily α body)
@@ -1263,9 +1263,8 @@ def MeasurableFamily.substTwo {α : Type*} [MeasurableSpace α]
     (functionFamily : MeasurableFamily α function) :
     MeasurableFamily α
       (fun parameter ↦ Expr.substTwo (body parameter) (argument parameter)
-        (function parameter)) := by
-  simpa only [Expr.substTwo] using
-    (bodyFamily.substAt 1 functionFamily).substAt 0 argumentFamily
+        (function parameter)) :=
+  (bodyFamily.substAt 1 functionFamily).substAt 0 argumentFamily
 
 theorem isValue_eq_skeletonIsValue : ∀ expression : Expr,
     expression.isValue = Expr.isValue expression.skeleton
@@ -1424,33 +1423,32 @@ def congr {α : Type*} [MeasurableSpace α] {first second : α → Action}
     (family : MeasurableActionFamily α first) (equal : first = second) :
     MeasurableActionFamily α second := equal ▸ family
 
+open scoped Classical in
 def comp {α β : Type*} [MeasurableSpace α] [MeasurableSpace β]
     {action : α → Action} (family : MeasurableActionFamily α action)
     (function : β → α) (measurableFunction : Measurable function) :
-    MeasurableActionFamily β (action ∘ function) := by
-  induction family with
-  | next successorMeasurable =>
-    exact .next (successorMeasurable.comp measurableFunction)
-  | sample draw continuationMeasurable =>
-    let pulled : SFiniteKernel β ℝ :=
-      SFiniteKernel.pullback draw function measurableFunction
-    have firstMeasurable : Measurable (fun pair : β × ℝ ↦ pair.1) := measurable_fst
-    have secondMeasurable : Measurable (fun pair : β × ℝ ↦ pair.2) := measurable_snd
+    MeasurableActionFamily β (action ∘ function) :=
+  match family with
+  | .next successorMeasurable => .next (successorMeasurable.comp measurableFunction)
+  | .sample (site := site) draw continuationMeasurable =>
     have pairMeasurable : Measurable (fun pair : β × ℝ ↦ (function pair.1, pair.2)) :=
-      Measurable.prod (measurableFunction.comp firstMeasurable) secondMeasurable
-    apply congr (.sample pulled <| continuationMeasurable.comp pairMeasurable)
-    · funext parameter
-      rw [pullback_apply]
-      rfl
-  | stuck => exact .stuck
-  | @piecewise region _ measurableRegion whenTrue whenFalse trueFamily falseFamily
-      trueResult falseResult =>
-    classical
-    apply congr (.piecewise (measurableRegion.preimage measurableFunction)
-      trueResult falseResult)
-    funext parameter
-    by_cases member : function parameter ∈ region <;>
-      simp [Set.piecewise, member]
+      Measurable.prod (measurableFunction.comp measurable_fst) measurable_snd
+    congr
+      (.sample (site := site) (SFiniteKernel.pullback draw function measurableFunction)
+        (continuationMeasurable.comp pairMeasurable))
+      (by
+        funext parameter
+        rw [pullback_apply]
+        rfl)
+  | .stuck => .stuck
+  | @piecewise _ _ region decidable measurableRegion _ _ trueFamily falseFamily =>
+    congr
+      (.piecewise (measurableRegion.preimage measurableFunction)
+        (trueFamily.comp function measurableFunction)
+        (falseFamily.comp function measurableFunction))
+      (by
+        funext parameter
+        by_cases member : function parameter ∈ region <;> simp [Set.piecewise, member])
 
 /-- Map every successor and sample continuation through a jointly measurable
 parameter-dependent one-hole context. -/
@@ -1460,20 +1458,20 @@ def map {α : Type*} [MeasurableSpace α] {action : α → Action}
       Measurable fun input ↦ context input (body input))
     (sampleMeasurable : ∀ {body : α × ℝ → Expr}, Measurable body →
       Measurable fun input ↦ context input.1 (body input)) :
-    MeasurableActionFamily α (fun parameter ↦ (action parameter).wrap (context parameter)) := by
-  induction family with
-  | next successorIsMeasurable =>
-    exact .next (nextMeasurable successorIsMeasurable)
-  | sample draw continuationIsMeasurable =>
-    exact .sample draw (sampleMeasurable continuationIsMeasurable)
-  | stuck => exact .stuck
-  | @piecewise region _ measurableRegion whenTrue whenFalse trueFamily falseFamily
-      trueResult falseResult =>
-    classical
-    apply congr (.piecewise measurableRegion trueResult falseResult)
-    funext parameter
-    by_cases member : parameter ∈ region <;>
-      simp [Set.piecewise, member]
+    MeasurableActionFamily α (fun parameter ↦ (action parameter).wrap (context parameter)) :=
+  match family with
+  | .next successorIsMeasurable => .next (nextMeasurable successorIsMeasurable)
+  | .sample draw continuationIsMeasurable =>
+    .sample draw (sampleMeasurable continuationIsMeasurable)
+  | .stuck => .stuck
+  | @piecewise _ _ region decidable measurableRegion _ _ trueFamily falseFamily =>
+    congr
+      (.piecewise measurableRegion
+        (trueFamily.map context nextMeasurable sampleMeasurable)
+        (falseFamily.map context nextMeasurable sampleMeasurable))
+      (by
+        funext parameter
+        by_cases member : parameter ∈ region <;> simp [Set.piecewise, member])
 
 theorem measurable_getD_pair (index : Nat) :
     Measurable fun pair : ℝ × ℝ ↦ [pair.1, pair.2].getD index 0 := by
@@ -1638,14 +1636,12 @@ def wrapUnary {α : Type*} [MeasurableSpace α] {action : α → Action}
     (coordinates_rule : ∀ expression, (constructor expression).realCoordinates =
       expression.realCoordinates) :
     MeasurableActionFamily α
-      (fun parameter ↦ (action parameter).wrap constructor) := by
-  apply family.map (fun _ ↦ constructor)
-  · intro body bodyMeasurable
-    exact measurable_unaryConstructor bodyMeasurable constructor skeletonConstructor
-      skeleton_rule coordinates_rule
-  · intro body bodyMeasurable
-    exact measurable_unaryConstructor bodyMeasurable constructor skeletonConstructor
-      skeleton_rule coordinates_rule
+      (fun parameter ↦ (action parameter).wrap constructor) :=
+  family.map (fun _ ↦ constructor)
+    (fun bodyMeasurable ↦ measurable_unaryConstructor bodyMeasurable constructor
+      skeletonConstructor skeleton_rule coordinates_rule)
+    (fun bodyMeasurable ↦ measurable_unaryConstructor bodyMeasurable constructor
+      skeletonConstructor skeleton_rule coordinates_rule)
 
 def wrapBinaryLeft {α : Type*} [MeasurableSpace α] {action : α → Action}
     (family : MeasurableActionFamily α action) (right : α → Expr)
@@ -1657,15 +1653,13 @@ def wrapBinaryLeft {α : Type*} [MeasurableSpace α] {action : α → Action}
       left.realCoordinates ++ right.realCoordinates) :
     MeasurableActionFamily α
       (fun parameter ↦ (action parameter).wrap
-        (fun next ↦ constructor next (right parameter))) := by
-  apply family.map (fun parameter next ↦ constructor next (right parameter))
-  · intro body bodyMeasurable
-    exact measurable_binaryConstructor bodyMeasurable rightMeasurable constructor
-      skeletonConstructor skeleton_rule coordinates_rule
-  · intro body bodyMeasurable
-    exact measurable_binaryConstructor bodyMeasurable
+        (fun next ↦ constructor next (right parameter))) :=
+  family.map (fun parameter next ↦ constructor next (right parameter))
+    (fun bodyMeasurable ↦ measurable_binaryConstructor bodyMeasurable rightMeasurable
+      constructor skeletonConstructor skeleton_rule coordinates_rule)
+    (fun bodyMeasurable ↦ measurable_binaryConstructor bodyMeasurable
       (rightMeasurable.comp measurable_fst) constructor skeletonConstructor
-      skeleton_rule coordinates_rule
+      skeleton_rule coordinates_rule)
 
 def wrapBinaryRight {α : Type*} [MeasurableSpace α] {action : α → Action}
     (family : MeasurableActionFamily α action) (left : α → Expr)
@@ -1677,14 +1671,12 @@ def wrapBinaryRight {α : Type*} [MeasurableSpace α] {action : α → Action}
       left.realCoordinates ++ right.realCoordinates) :
     MeasurableActionFamily α
       (fun parameter ↦ (action parameter).wrap
-        (fun next ↦ constructor (left parameter) next)) := by
-  apply family.map (fun parameter next ↦ constructor (left parameter) next)
-  · intro body bodyMeasurable
-    exact measurable_binaryConstructor leftMeasurable bodyMeasurable constructor
-      skeletonConstructor skeleton_rule coordinates_rule
-  · intro body bodyMeasurable
-    exact measurable_binaryConstructor (leftMeasurable.comp measurable_fst)
-      bodyMeasurable constructor skeletonConstructor skeleton_rule coordinates_rule
+        (fun next ↦ constructor (left parameter) next)) :=
+  family.map (fun parameter next ↦ constructor (left parameter) next)
+    (fun bodyMeasurable ↦ measurable_binaryConstructor leftMeasurable bodyMeasurable
+      constructor skeletonConstructor skeleton_rule coordinates_rule)
+    (fun bodyMeasurable ↦ measurable_binaryConstructor (leftMeasurable.comp measurable_fst)
+      bodyMeasurable constructor skeletonConstructor skeleton_rule coordinates_rule)
 
 theorem measurable_ternaryConstructor {α : Type*} [MeasurableSpace α]
     {first second third : α → Expr} (firstMeasurable : Measurable first)
@@ -1752,16 +1744,14 @@ def wrapTernaryFirst {α : Type*} [MeasurableSpace α] {action : α → Action}
       (constructor first second third).realCoordinates =
         first.realCoordinates ++ second.realCoordinates ++ third.realCoordinates) :
     MeasurableActionFamily α (fun parameter ↦ (action parameter).wrap
-      (fun next ↦ constructor next (second parameter) (third parameter))) := by
-  apply family.map
+      (fun next ↦ constructor next (second parameter) (third parameter))) :=
+  family.map
     (fun parameter next ↦ constructor next (second parameter) (third parameter))
-  · intro body bodyMeasurable
-    exact measurable_ternaryConstructor bodyMeasurable secondMeasurable thirdMeasurable
-      constructor skeletonConstructor skeleton_rule coordinates_rule
-  · intro body bodyMeasurable
-    exact measurable_ternaryConstructor bodyMeasurable
+    (fun bodyMeasurable ↦ measurable_ternaryConstructor bodyMeasurable secondMeasurable
+      thirdMeasurable constructor skeletonConstructor skeleton_rule coordinates_rule)
+    (fun bodyMeasurable ↦ measurable_ternaryConstructor bodyMeasurable
       (secondMeasurable.comp measurable_fst) (thirdMeasurable.comp measurable_fst)
-      constructor skeletonConstructor skeleton_rule coordinates_rule
+      constructor skeletonConstructor skeleton_rule coordinates_rule)
 
 def nextFamily {α : Type*} [MeasurableSpace α] {expression : α → Expr}
     (family : MeasurableFamily α expression) :
@@ -3530,19 +3520,14 @@ noncomputable def reduceFamily {α : Type u} [MeasurableSpace α]
 
 noncomputable def kernel {α : Type*} [MeasurableSpace α] {action : α → Action}
     (family : MeasurableActionFamily α action) :
-    SFiniteKernel α Expr := by
-  induction family with
-  | next successorMeasurable =>
-    exact SFiniteKernel.deterministic _
-      successorMeasurable
-  | sample draw continuationMeasurable =>
-    exact SFiniteKernel.mapWithInput draw _
-      continuationMeasurable
-  | stuck => exact SFiniteKernel.zero
-  | @piecewise region _ measurableRegion whenTrue whenFalse trueFamily falseFamily
-      trueKernel falseKernel =>
-    exact SFiniteKernel.piecewise
-      measurableRegion trueKernel falseKernel
+    SFiniteKernel α Expr :=
+  match family with
+  | .next successorMeasurable => SFiniteKernel.deterministic _ successorMeasurable
+  | .sample draw continuationMeasurable =>
+    SFiniteKernel.mapWithInput draw _ continuationMeasurable
+  | .stuck => SFiniteKernel.zero
+  | @piecewise _ _ _ _ measurableRegion _ _ trueFamily falseFamily =>
+    SFiniteKernel.piecewise measurableRegion trueFamily.kernel falseFamily.kernel
 
 theorem kernel_apply {α : Type*} [MeasurableSpace α] {action : α → Action}
     (family : MeasurableActionFamily α action) (parameter : α) :
@@ -3588,16 +3573,16 @@ theorem kernel_apply {α : Type*} [MeasurableSpace α] {action : α → Action}
       change falseFamily.kernel.kernel parameter = _
       exact falseApply
 
+open scoped Classical in
 noncomputable def toSkeletonFiber (skeleton : Skeleton) (expression : Expr) :
-    SkeletonFiber skeleton := by
-  classical
+    SkeletonFiber skeleton :=
   let base := (SkeletonFiber skeleton).piecewise id (fun _ ↦ zeroFill skeleton)
-  refine ⟨base expression, ?_⟩
-  by_cases member : expression ∈ SkeletonFiber skeleton
-  · simp [base, member]
-  · have different : expression.skeleton ≠ skeleton := by
-      simpa [SkeletonFiber] using member
-    simp [base, Set.piecewise, different, SkeletonFiber]
+  ⟨base expression, by
+    by_cases member : expression ∈ SkeletonFiber skeleton
+    · simp [base, member]
+    · have different : expression.skeleton ≠ skeleton := by
+        simpa [SkeletonFiber] using member
+      simp [base, Set.piecewise, different, SkeletonFiber]⟩
 
 @[simp] theorem toSkeletonFiber_coe_of_mem (skeleton : Skeleton) (expression : Expr)
     (member : expression ∈ SkeletonFiber skeleton) :
@@ -3629,15 +3614,15 @@ theorem measurable_toSkeletonFiber (skeleton : Skeleton) :
   rw [equality]
   exact lifted
 
+open scoped Classical in
 noncomputable def skeletonKernel
     (laws : Determinize.Proof.Paper.PrimitiveLaws)
-    (skeleton : Skeleton) : Kernel Expr Expr := by
-  classical
+    (skeleton : Skeleton) : Kernel Expr Expr :=
   let actionFamily := reduceFamily laws (MeasurableFamily.skeletonFiber skeleton)
   let localKernel := actionFamily.kernel
   let pulled := localKernel.kernel.comap (toSkeletonFiber skeleton)
     (measurable_toSkeletonFiber skeleton)
-  exact Kernel.piecewise (measurableSet_skeletonFiber skeleton) pulled 0
+  Kernel.piecewise (measurableSet_skeletonFiber skeleton) pulled 0
 
 theorem skeletonKernel_apply_of_mem
     (laws : Determinize.Proof.Paper.PrimitiveLaws)
