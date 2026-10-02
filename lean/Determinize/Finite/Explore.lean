@@ -15,7 +15,7 @@ inductive Limit where
   | states | edges | stateBytes
 deriving Repr, BEq
 
-instance : Hashable State := ⟨fun state => hash (reprStr state)⟩
+instance : Hashable State := ⟨fun state ↦ hash (reprStr state)⟩
 
 inductive Exploration (source : Core) (subject : Subject) where
   | complete (candidate : Candidate) (valid : candidate.ReplayValid source subject)
@@ -35,10 +35,10 @@ private def build (source : Core) (subject : Subject)
     match Builder.readAction (work.table.states[work.rows.size]'pending) with
     | .error failure => .failed work.rows.size failure
     | .ok action =>
-      let outgoing := (action.successors.filterMap fun (outcome : Rat × State) => if 0 < outcome.1 then some outcome.2 else none).eraseDups.length
+      let outgoing := (action.successors.filterMap fun (outcome : Rat × State) ↦ if 0 < outcome.1 then some outcome.2 else none).eraseDups.length
       if edgeCount + outgoing > limits.maxEdges then
         .incomplete .edges work.table.states.size work.rows.size edgeCount
-      else if action.successors.any (fun (p,s) => 0 < p && (reprStr s).utf8ByteSize > limits.maxStateBytes) then
+      else if action.successors.any (fun (p, s) ↦ 0 < p && (reprStr s).utf8ByteSize > limits.maxStateBytes) then
         .incomplete .stateBytes work.table.states.size work.rows.size edgeCount
       else
         let next := work.expand pending action

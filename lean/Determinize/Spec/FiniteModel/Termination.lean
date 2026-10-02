@@ -5,7 +5,7 @@ open MeasureTheory
 
 /-- Record rejection as the output 1 and discard successful returns. -/
 abbrev Model.rejectionModel (model : Model) : Model :=
-  {model with kind := fun state => match model.kind state with
+  {model with kind := fun state ↦ match model.kind state with
     | .transient => .transient | .returned _ => .rejected | .rejected => .returned 1}
 
 noncomputable def Model.rejectionProbability (model : Model) : ENNReal :=

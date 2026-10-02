@@ -25,10 +25,10 @@ variable {α β γ : Type*} [MeasurableSpace α] [MeasurableSpace β] [Measurabl
 /-- Replace the output of a point by a draw from `fiber` at its trace. -/
 def fiberLift (fiber : SFiniteKernel α ℝ) : SFiniteKernel (α × ℝ) (α × ℝ) :=
   SFiniteKernel.mapWithInput (SFiniteKernel.pullback fiber Prod.fst measurable_fst)
-    (fun pair => (pair.1.1, pair.2)) ((measurable_fst.comp measurable_fst).prodMk measurable_snd)
+    (fun pair ↦ (pair.1.1, pair.2)) ((measurable_fst.comp measurable_fst).prodMk measurable_snd)
 
 theorem fiberLift_apply (fiber : SFiniteKernel α ℝ) (point : α × ℝ) :
-    (fiberLift fiber).kernel point = (fiber.kernel point.1).map (fun x => (point.1, x)) := by
+    (fiberLift fiber).kernel point = (fiber.kernel point.1).map (fun x ↦ (point.1, x)) := by
   rw [fiberLift, SFiniteKernel.mapWithInput_apply,
     MeasurableActionFamily.pullback_apply]
 
@@ -57,7 +57,7 @@ theorem FiberSound.zero (fiber : SFiniteKernel α ℝ) : FiberSound fiber 0 0 :=
 
 theorem FiberSound.terminal (fiber : SFiniteKernel α ℝ) (trace : α) (output : ℝ)
     (good : FiberHasMean fiber.kernel (trace, output)) :
-    FiberSound fiber ((fiber.kernel trace).map (fun value => (trace, value)))
+    FiberSound fiber ((fiber.kernel trace).map (fun value ↦ (trace, value)))
       (Measure.dirac (trace, output)) := by
   let := fiber.sfinite
   constructor
@@ -80,7 +80,7 @@ theorem FiberSound.mapTrace_ae (fiber : SFiniteKernel α ℝ) (nextFiber : SFini
     apply Measure.bind_congr_right
     filter_upwards [sameFiber] with point same
     rw [fiberLift_apply, fiberLift_apply, Measure.map_map (mapTrace_measurable f hf)
-      (show Measurable (fun value : ℝ => (point.1, value)) from measurable_const.prodMk measurable_id)]
+      (show Measurable (fun value : ℝ ↦ (point.1, value)) from measurable_const.prodMk measurable_id)]
     simp only [mapTraceOutput, same]
     rfl
   · let := nextFiber.sfinite
@@ -95,7 +95,7 @@ theorem FiberSound.mapTrace (fiber : SFiniteKernel α ℝ) (nextFiber : SFiniteK
     (sameFiber : ∀ trace, nextFiber.kernel (f trace) = fiber.kernel trace) :
     FiberSound nextFiber (source.map (mapTraceOutput f)) (target.map (mapTraceOutput f)) :=
   sound.mapTrace_ae fiber nextFiber source target f hf
-    (Filter.Eventually.of_forall fun point => sameFiber point.1)
+    (Filter.Eventually.of_forall fun point ↦ sameFiber point.1)
 
 theorem FiberSound.mix (fiber : SFiniteKernel α ℝ) (outer : Measure β)
     (source target : Kernel β (α × ℝ))
@@ -103,10 +103,10 @@ theorem FiberSound.mix (fiber : SFiniteKernel α ℝ) (outer : Measure β)
     FiberSound fiber (outer.bind source) (outer.bind target) := by
   constructor
   · rw [Measure.bind_bind target.aemeasurable (fiberLift fiber).kernel.aemeasurable]
-    exact Measure.bind_congr_right (sound.mono fun _ valid => valid.1)
+    exact Measure.bind_congr_right (sound.mono fun _ valid ↦ valid.1)
   · let := fiber.sfinite
     rw [Measure.ae_comp_iff (fiberHasMean_measurable fiber.kernel)]
-    exact sound.mono fun _ valid => valid.2
+    exact sound.mono fun _ valid ↦ valid.2
 
 theorem FiberSound.sum {ι : Type*} [Countable ι] (fiber : SFiniteKernel α ℝ)
     (source target : ι → Measure (α × ℝ)) (sound : ∀ i, FiberSound fiber (source i) (target i)) :
@@ -117,13 +117,13 @@ theorem FiberSound.sum {ι : Type*} [Countable ι] (fiber : SFiniteKernel α ℝ
     funext i
     exact (sound i).1
   · rw [Measure.ae_sum_iff]
-    exact fun i => (sound i).2
+    exact fun i ↦ (sound i).2
 
 /-- Composing a measure with a kernel pairs each point with its draw: Mathlib's
 `μ ⊗ₘ κ = (Kernel.id ×ₖ κ) ∘ₘ μ`, pointwise. -/
 theorem compProd_eq_bind_pair (ν : Measure α) [SFinite ν] (κ : Kernel α β)
     [IsSFiniteKernel κ] :
-    ν ⊗ₘ κ = ν.bind fun point => (κ point).map fun value => (point, value) := by
+    ν ⊗ₘ κ = ν.bind fun point ↦ (κ point).map fun value ↦ (point, value) := by
   rw [Measure.compProd_eq_comp_prod]
   congr 1
   funext point
@@ -135,12 +135,12 @@ theorem FiberSound.factorization {α : Type*} [MeasurableSpace α]
     [IsMarkovKernel fiber.kernel] (sound : FiberSound fiber source target)
     (massTarget : target Set.univ ≤ 1) :
     let ν := target.map Prod.fst
-    let output := fun trace => ∫ value : ℝ, value ∂fiber.kernel trace
+    let output := fun trace ↦ ∫ value : ℝ, value ∂fiber.kernel trace
     ν Set.univ ≤ 1 ∧ Measurable output ∧
-      source = ν ⊗ₘ fiber.kernel ∧ target = ν.map (fun t => (t, output t)) ∧
+      source = ν ⊗ₘ fiber.kernel ∧ target = ν.map (fun t ↦ (t, output t)) ∧
       ∀ᵐ t ∂ν, Integrable id (fiber.kernel t) ∧ output t = ∫ r : ℝ, r ∂fiber.kernel t := by
   let ν := (target).map Prod.fst
-  let output : α → ℝ := fun trace => ∫ value : ℝ, value ∂fiber.kernel trace
+  let output : α → ℝ := fun trace ↦ ∫ value : ℝ, value ∂fiber.kernel trace
   have mass : ν Set.univ ≤ 1 := by
     rw [Measure.map_apply measurable_fst MeasurableSet.univ]
     exact massTarget
@@ -149,7 +149,7 @@ theorem FiberSound.factorization {α : Type*} [MeasurableSpace α]
   refine ⟨mass, measurableOutput, ?_, ?_, ?_⟩
   · let paired := SFiniteKernel.mapWithInput fiber id measurable_id
     have pairedEq (trace : α) : paired.kernel trace =
-        (fiber.kernel trace).map (fun value => (trace,value)) := by
+        (fiber.kernel trace).map (fun value ↦ (trace, value)) := by
       rw [SFiniteKernel.mapWithInput_apply]
       rfl
     have eq : (target).bind (fiberLift fiber).kernel = ν.bind paired.kernel := by
@@ -161,12 +161,12 @@ theorem FiberSound.factorization {α : Type*} [MeasurableSpace α]
     congr 1
     funext trace
     exact pairedEq trace
-  · have eq : (fun point : α × ℝ => (point.1, output point.1)) =ᵐ[target] id := by
+  · have eq : (fun point : α × ℝ ↦ (point.1, output point.1)) =ᵐ[target] id := by
       filter_upwards [sound.2] with point good
       exact Prod.ext rfl good.2.2
-    have mapped : ν.map (fun trace => (trace,output trace)) = target := by
+    have mapped : ν.map (fun trace ↦ (trace, output trace)) = target := by
       dsimp only [ν]
-      rw [Measure.map_map (show Measurable (fun trace : α => (trace,output trace)) from measurable_id.prodMk measurableOutput) measurable_fst]
+      rw [Measure.map_map (show Measurable (fun trace : α ↦ (trace, output trace)) from measurable_id.prodMk measurableOutput) measurable_fst]
       exact (Measure.map_congr eq).trans Measure.map_id
     exact mapped.symm
   · rw [ae_map_iff measurable_fst.aemeasurable

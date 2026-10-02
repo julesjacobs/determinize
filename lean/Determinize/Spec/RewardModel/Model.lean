@@ -18,10 +18,10 @@ structure Model where
   normalized : ∀ i, ((edges i).map Edge.probability).sum = 1
 
 def controlWeight (model : Model) (i j : Fin model.size) : Rat :=
-  ((model.edges i).map fun e => if e.target = j then e.probability else 0).sum
+  ((model.edges i).map fun e ↦ if e.target = j then e.probability else 0).sum
 
 noncomputable def shift (reward : Rat) (law : Measure ℝ) : Measure ℝ :=
-  law.map (fun x => x + (reward : ℝ))
+  law.map (fun x ↦ x + (reward : ℝ))
 
 noncomputable def Model.outputWithin (model : Model) : Nat → Fin model.size → Measure ℝ
   | 0, state => match model.kind state with
@@ -30,7 +30,7 @@ noncomputable def Model.outputWithin (model : Model) : Nat → Fin model.size �
   | steps + 1, state => match model.kind state with
       | .returned value => Measure.dirac (value : ℝ)
       | .rejected => 0
-      | .transient => ((model.edges state).map fun edge =>
+      | .transient => ((model.edges state).map fun edge ↦
           ENNReal.ofReal (edge.probability : ℝ) •
             shift edge.reward (model.outputWithin steps edge.target)).sum
 

@@ -11,7 +11,7 @@ open MeasureTheory
 
 private theorem measurable_paperMeasure_gaussian :
     Measurable (Determinize.Spec.Paper.paperMeasure .gaussian) := by
-  let fiber := fun params : Determinize.Spec.Paper.Params .gaussian =>
+  let fiber := fun params : Determinize.Spec.Paper.Params .gaussian ↦
     if h : 0 ≤ params.2 0 then
       ProbabilityTheory.gaussianReal (params.1 0)
         (params.2 0).toNNReal else 0
@@ -27,7 +27,7 @@ private theorem measurable_paperMeasure_gaussian :
     · rfl
   rw [hFiber]
   apply Measurable.ite (measurableSet_le measurable_const (by fun_prop))
-  · have hPair : Measurable (fun x : Determinize.Spec.Paper.Params .gaussian =>
+  · have hPair : Measurable (fun x : Determinize.Spec.Paper.Params .gaussian ↦
         (x.1 0, (x.2 0).toNNReal)) :=
       Measurable.prod (by fun_prop) (by fun_prop)
     convert ProbabilityTheory.measurable_gaussianReal.comp hPair using 1
@@ -36,7 +36,7 @@ private theorem measurable_paperMeasure_gaussian :
   · exact measurable_const
 
 private theorem measurable_rpow_uncurry :
-    Measurable (fun pair : ℝ × ℝ => pair.1 ^ pair.2) := by
+    Measurable (fun pair : ℝ × ℝ ↦ pair.1 ^ pair.2) := by
   fun_prop
 
 private noncomputable def safePos (value : ℝ) : ℝ := if 0 < value then value else 1
@@ -54,13 +54,13 @@ private theorem measurable_safePos : Measurable safePos := by
     measurable_id measurable_const
 
 private theorem measurable_gamma_safe :
-    Measurable (fun value : ℝ => Real.Gamma (safePos value)) := by
+    Measurable (fun value : ℝ ↦ Real.Gamma (safePos value)) := by
   have hGamma : Measurable ((Set.Ioi (0 : ℝ)).piecewise Real.Gamma
-      (fun _ => Real.Gamma 1)) :=
+      (fun _ ↦ Real.Gamma 1)) :=
     Real.differentiableOn_Gamma_Ioi.continuousOn.measurable_piecewise
       continuousOn_const measurableSet_Ioi
-  have hFunctions : (fun value : ℝ => Real.Gamma (safePos value)) =
-      (Set.Ioi (0 : ℝ)).piecewise Real.Gamma (fun _ => Real.Gamma 1) := by
+  have hFunctions : (fun value : ℝ ↦ Real.Gamma (safePos value)) =
+      (Set.Ioi (0 : ℝ)).piecewise Real.Gamma (fun _ ↦ Real.Gamma 1) := by
     funext value
     by_cases hValue : 0 < value <;> simp [Set.piecewise, safePos, hValue]
   rw [hFunctions]
@@ -73,29 +73,29 @@ private noncomputable def gammaJointDensity (params : Determinize.Spec.Paper.Par
 
 private theorem measurable_gammaJointDensity :
     Measurable (Function.uncurry gammaJointDensity) := by
-  let shape := fun pair : Determinize.Spec.Paper.Params .gamma × ℝ =>
+  let shape := fun pair : Determinize.Spec.Paper.Params .gamma × ℝ ↦
     safePos (pair.1.1 0)
-  let rate := fun pair : Determinize.Spec.Paper.Params .gamma × ℝ =>
+  let rate := fun pair : Determinize.Spec.Paper.Params .gamma × ℝ ↦
     safePos (pair.1.2 0)
   have hShape : Measurable shape := measurable_safePos.comp (by fun_prop)
   have hRate : Measurable rate := measurable_safePos.comp (by fun_prop)
-  have hGamma : Measurable (fun pair : Determinize.Spec.Paper.Params .gamma × ℝ =>
+  have hGamma : Measurable (fun pair : Determinize.Spec.Paper.Params .gamma × ℝ ↦
       Real.Gamma (shape pair)) := measurable_gamma_safe.comp (by fun_prop)
-  have hRatePow : Measurable (fun pair : Determinize.Spec.Paper.Params .gamma × ℝ =>
+  have hRatePow : Measurable (fun pair : Determinize.Spec.Paper.Params .gamma × ℝ ↦
       rate pair ^ shape pair) := by
-    change Measurable ((fun pair : ℝ × ℝ => pair.1 ^ pair.2) ∘
-      fun pair => (rate pair, shape pair))
+    change Measurable ((fun pair : ℝ × ℝ ↦ pair.1 ^ pair.2) ∘
+      fun pair ↦ (rate pair, shape pair))
     exact measurable_rpow_uncurry.comp (hRate.prodMk hShape)
-  have hValuePow : Measurable (fun pair : Determinize.Spec.Paper.Params .gamma × ℝ =>
+  have hValuePow : Measurable (fun pair : Determinize.Spec.Paper.Params .gamma × ℝ ↦
       pair.2 ^ (shape pair - 1)) :=
     by
-      have hOne : Measurable (fun _ : Determinize.Spec.Paper.Params .gamma × ℝ => (1 : ℝ)) :=
+      have hOne : Measurable (fun _ : Determinize.Spec.Paper.Params .gamma × ℝ ↦ (1 : ℝ)) :=
         measurable_const
-      change Measurable ((fun pair : ℝ × ℝ => pair.1 ^ pair.2) ∘
-        fun pair => (pair.2, shape pair - 1))
+      change Measurable ((fun pair : ℝ × ℝ ↦ pair.1 ^ pair.2) ∘
+        fun pair ↦ (pair.2, shape pair - 1))
       exact measurable_rpow_uncurry.comp (measurable_snd.prodMk (hShape.sub hOne))
   apply Measurable.ennreal_ofReal
-  change Measurable (fun pair : Determinize.Spec.Paper.Params .gamma × ℝ =>
+  change Measurable (fun pair : Determinize.Spec.Paper.Params .gamma × ℝ ↦
     ProbabilityTheory.gammaPDFReal (shape pair) (rate pair) pair.2)
   unfold ProbabilityTheory.gammaPDFReal
   apply Measurable.ite (measurableSet_le measurable_const measurable_snd)
@@ -147,11 +147,11 @@ private noncomputable def exponentialJointDensity
 
 private theorem measurable_exponentialJointDensity :
     Measurable (Function.uncurry exponentialJointDensity) := by
-  let rate := fun pair : Determinize.Spec.Paper.Params .exponential × ℝ =>
+  let rate := fun pair : Determinize.Spec.Paper.Params .exponential × ℝ ↦
     safePos (pair.1.2 0)
   have hRate : Measurable rate := measurable_safePos.comp (by fun_prop)
   apply Measurable.ennreal_ofReal
-  change Measurable (fun pair : Determinize.Spec.Paper.Params .exponential × ℝ =>
+  change Measurable (fun pair : Determinize.Spec.Paper.Params .exponential × ℝ ↦
     ProbabilityTheory.exponentialPDFReal (rate pair) pair.2)
   unfold ProbabilityTheory.exponentialPDFReal ProbabilityTheory.gammaPDFReal
   simp only [Real.rpow_one, Real.Gamma_one, div_one, sub_self, Real.rpow_zero, mul_one]
@@ -184,7 +184,7 @@ private theorem exponentialKernel_apply (params : Determinize.Spec.Paper.Params 
       rw [if_pos hRate]
     rw [hPaper, ProbabilityTheory.expMeasure, ProbabilityTheory.gammaMeasure]
     apply withDensity_congr_ae
-    exact ae_of_all _ fun value => by
+    exact ae_of_all _ fun value ↦ by
       unfold exponentialJointDensity ProbabilityTheory.exponentialPDFReal
         ProbabilityTheory.gammaPDF
       rw [safePos_of_pos hRate]
@@ -203,45 +203,45 @@ private noncomputable def betaJointDensity (params : Determinize.Spec.Paper.Para
 
 private theorem measurable_betaJointDensity :
     Measurable (Function.uncurry betaJointDensity) := by
-  let alpha := fun pair : Determinize.Spec.Paper.Params .beta × ℝ =>
+  let alpha := fun pair : Determinize.Spec.Paper.Params .beta × ℝ ↦
     safePos (pair.1.2 0)
-  let beta := fun pair : Determinize.Spec.Paper.Params .beta × ℝ =>
+  let beta := fun pair : Determinize.Spec.Paper.Params .beta × ℝ ↦
     safePos (pair.1.2 1)
   have hAlpha : Measurable alpha := measurable_safePos.comp (by fun_prop)
   have hBeta : Measurable beta := measurable_safePos.comp (by fun_prop)
-  have hGammaAlpha : Measurable (fun pair : Determinize.Spec.Paper.Params .beta × ℝ =>
+  have hGammaAlpha : Measurable (fun pair : Determinize.Spec.Paper.Params .beta × ℝ ↦
       Real.Gamma (alpha pair)) := measurable_gamma_safe.comp (by fun_prop)
-  have hGammaBeta : Measurable (fun pair : Determinize.Spec.Paper.Params .beta × ℝ =>
+  have hGammaBeta : Measurable (fun pair : Determinize.Spec.Paper.Params .beta × ℝ ↦
       Real.Gamma (beta pair)) := measurable_gamma_safe.comp (by fun_prop)
-  have hGammaSum : Measurable (fun pair : Determinize.Spec.Paper.Params .beta × ℝ =>
+  have hGammaSum : Measurable (fun pair : Determinize.Spec.Paper.Params .beta × ℝ ↦
       Real.Gamma (alpha pair + beta pair)) := by
     have hSafe := measurable_gamma_safe.comp (hAlpha.add hBeta)
-    have hFunctions : (fun pair : Determinize.Spec.Paper.Params .beta × ℝ =>
+    have hFunctions : (fun pair : Determinize.Spec.Paper.Params .beta × ℝ ↦
         Real.Gamma (alpha pair + beta pair)) =
-        (fun pair => Real.Gamma (safePos (alpha pair + beta pair))) := by
+        (fun pair ↦ Real.Gamma (safePos (alpha pair + beta pair))) := by
       funext pair
       rw [safePos_of_pos (add_pos (safePos_pos _) (safePos_pos _))]
     rw [hFunctions]
     exact hSafe
-  have hNorm : Measurable (fun pair : Determinize.Spec.Paper.Params .beta × ℝ =>
+  have hNorm : Measurable (fun pair : Determinize.Spec.Paper.Params .beta × ℝ ↦
       ProbabilityTheory.beta (alpha pair) (beta pair)) := by
     unfold ProbabilityTheory.beta
     exact (hGammaAlpha.mul hGammaBeta).div hGammaSum
-  have hValuePow : Measurable (fun pair : Determinize.Spec.Paper.Params .beta × ℝ =>
+  have hValuePow : Measurable (fun pair : Determinize.Spec.Paper.Params .beta × ℝ ↦
       pair.2 ^ (alpha pair - 1)) := by
-    have hOne : Measurable (fun _ : Determinize.Spec.Paper.Params .beta × ℝ => (1 : ℝ)) := measurable_const
-    change Measurable ((fun pair : ℝ × ℝ => pair.1 ^ pair.2) ∘
-      fun pair => (pair.2, alpha pair - 1))
+    have hOne : Measurable (fun _ : Determinize.Spec.Paper.Params .beta × ℝ ↦ (1 : ℝ)) := measurable_const
+    change Measurable ((fun pair : ℝ × ℝ ↦ pair.1 ^ pair.2) ∘
+      fun pair ↦ (pair.2, alpha pair - 1))
     exact measurable_rpow_uncurry.comp (measurable_snd.prodMk (hAlpha.sub hOne))
-  have hOneSubPow : Measurable (fun pair : Determinize.Spec.Paper.Params .beta × ℝ =>
+  have hOneSubPow : Measurable (fun pair : Determinize.Spec.Paper.Params .beta × ℝ ↦
       (1 - pair.2) ^ (beta pair - 1)) := by
-    have hOne : Measurable (fun _ : Determinize.Spec.Paper.Params .beta × ℝ => (1 : ℝ)) := measurable_const
-    change Measurable ((fun pair : ℝ × ℝ => pair.1 ^ pair.2) ∘
-      fun pair => (1 - pair.2, beta pair - 1))
+    have hOne : Measurable (fun _ : Determinize.Spec.Paper.Params .beta × ℝ ↦ (1 : ℝ)) := measurable_const
+    change Measurable ((fun pair : ℝ × ℝ ↦ pair.1 ^ pair.2) ∘
+      fun pair ↦ (1 - pair.2, beta pair - 1))
     exact measurable_rpow_uncurry.comp
       ((hOne.sub measurable_snd).prodMk (hBeta.sub hOne))
   apply Measurable.ennreal_ofReal
-  change Measurable (fun pair : Determinize.Spec.Paper.Params .beta × ℝ =>
+  change Measurable (fun pair : Determinize.Spec.Paper.Params .beta × ℝ ↦
     ProbabilityTheory.betaPDFReal (alpha pair) (beta pair) pair.2)
   unfold ProbabilityTheory.betaPDFReal
   apply Measurable.ite
@@ -276,7 +276,7 @@ private theorem betaKernel_apply (params : Determinize.Spec.Paper.Params .beta) 
       rw [if_pos ⟨hAlpha, hBeta⟩]
     rw [hPaper, ProbabilityTheory.betaMeasure]
     apply withDensity_congr_ae
-    exact ae_of_all _ fun value => by
+    exact ae_of_all _ fun value ↦ by
       unfold betaJointDensity ProbabilityTheory.betaPDF
       rw [safePos_of_pos hAlpha, safePos_of_pos hBeta]
   · rw [betaKernel, ProbabilityTheory.Kernel.piecewise_apply]
@@ -290,7 +290,7 @@ private theorem betaKernel_apply (params : Determinize.Spec.Paper.Params .beta) 
 private noncomputable def uniformJointDensity (params : Determinize.Spec.Paper.Params .uniform)
     (value : ℝ) : ENNReal :=
   (Set.Icc (params.1 0) (params.1 1)).indicator
-    (fun _ => (ENNReal.ofReal
+    (fun _ ↦ (ENNReal.ofReal
       (params.1 1 - params.1 0))⁻¹) value
 
 private theorem measurable_uniformJointDensity :
@@ -308,7 +308,7 @@ private noncomputable def uniformKernel :
   let intervalKernel := ProbabilityTheory.Kernel.withDensity
     (ProbabilityTheory.Kernel.const (Determinize.Spec.Paper.Params .uniform) volume) uniformJointDensity
   let pointKernel := ProbabilityTheory.Kernel.deterministic
-    (fun params : Determinize.Spec.Paper.Params .uniform => params.1 0) (by fun_prop)
+    (fun params : Determinize.Spec.Paper.Params .uniform ↦ params.1 0) (by fun_prop)
   let hPointSet : MeasurableSet {params : Determinize.Spec.Paper.Params .uniform |
       params.1 0 = params.1 1} :=
     measurableSet_eq_fun (by fun_prop) (by fun_prop)
@@ -337,7 +337,7 @@ private theorem uniformKernel_apply (params : Determinize.Spec.Paper.Params .uni
         ProbabilityTheory.Kernel.const_apply]
       change volume.withDensity
         ((Set.Icc lower upper).indicator
-          (fun _ => (ENNReal.ofReal (upper - lower))⁻¹)) =
+          (fun _ ↦ (ENNReal.ofReal (upper - lower))⁻¹)) =
         Determinize.Spec.Paper.uniformMeasure lower upper
       unfold Determinize.Spec.Paper.uniformMeasure
       rw [dif_pos hle, dif_neg hPoint, withDensity_indicator measurableSet_Icc,
@@ -356,7 +356,7 @@ private noncomputable def poissonWeight (params : Determinize.Spec.Paper.Params 
   ENNReal.ofReal (Real.exp (-rate) * rate ^ index / index.factorial)
 
 private theorem measurable_poissonWeight (index : Nat) :
-    Measurable (fun params : Determinize.Spec.Paper.Params .poisson => poissonWeight params index) := by
+    Measurable (fun params : Determinize.Spec.Paper.Params .poisson ↦ poissonWeight params index) := by
   unfold poissonWeight
   fun_prop
 
@@ -364,12 +364,12 @@ private noncomputable def poissonAtomKernel (index : Nat) :
     ProbabilityTheory.Kernel (Determinize.Spec.Paper.Params .poisson) ℝ :=
   ProbabilityTheory.Kernel.withDensity
     (ProbabilityTheory.Kernel.deterministic
-      (fun _ : Determinize.Spec.Paper.Params .poisson => (index : ℝ)) measurable_const)
-    (fun params _ => poissonWeight params index)
+      (fun _ : Determinize.Spec.Paper.Params .poisson ↦ (index : ℝ)) measurable_const)
+    (fun params _ ↦ poissonWeight params index)
 
 private theorem measurable_poissonAtomDensity (index : Nat) :
     Measurable (Function.uncurry
-      (fun params : Determinize.Spec.Paper.Params .poisson => fun _ : ℝ => poissonWeight params index)) := by
+      (fun params : Determinize.Spec.Paper.Params .poisson ↦ fun _ : ℝ ↦ poissonWeight params index)) := by
   exact (measurable_poissonWeight index).comp measurable_fst
 
 private noncomputable def poissonKernel :
@@ -389,23 +389,23 @@ private theorem poissonKernel_apply (params : Determinize.Spec.Paper.Params .poi
       simpa only [Determinize.Spec.Paper.domain] using hDomain
     let rate : NNReal := (params.1 0).toNNReal
     have hPaper : Determinize.Spec.Paper.paperMeasure .poisson params =
-        (ProbabilityTheory.poissonMeasure rate).map (fun value : Nat => (value : ℝ)) := by
+        (ProbabilityTheory.poissonMeasure rate).map (fun value : Nat ↦ (value : ℝ)) := by
       change (if h : 0 ≤ params.1 0 then
         (ProbabilityTheory.poissonMeasure ⟨params.1 0, h⟩).map
-          (fun value : Nat => (value : ℝ)) else 0) = _
+          (fun value : Nat ↦ (value : ℝ)) else 0) = _
       rw [dif_pos hRate]
       congr 2
       exact Subtype.ext (by simp [rate, Real.toNNReal_of_nonneg hRate])
     rw [hPaper, ProbabilityTheory.poissonMeasure,
       Measure.map_sum
-        (measurable_of_countable (fun value : Nat => (value : ℝ))).aemeasurable]
+        (measurable_of_countable (fun value : Nat ↦ (value : ℝ))).aemeasurable]
     congr 1
     funext index
     rw [poissonAtomKernel,
       ProbabilityTheory.Kernel.withDensity_apply _ (measurable_poissonAtomDensity index),
       ProbabilityTheory.Kernel.deterministic_apply, withDensity_const,
       Measure.map_smul,
-      Measure.map_dirac' (measurable_of_countable (fun value : Nat => (value : ℝ)))]
+      Measure.map_dirac' (measurable_of_countable (fun value : Nat ↦ (value : ℝ)))]
     unfold poissonWeight
     rw [show ((params.1 0).toNNReal : ℝ) = (rate : ℝ) by rfl]
   · rw [poissonKernel, ProbabilityTheory.Kernel.piecewise_apply]
@@ -413,130 +413,130 @@ private theorem poissonKernel_apply (params : Determinize.Spec.Paper.Params .poi
     rw [if_neg hDomain]
     change 0 = if h : 0 ≤ params.1 0 then
       (ProbabilityTheory.poissonMeasure ⟨params.1 0, h⟩).map
-        (fun value : Nat => (value : ℝ)) else 0
+        (fun value : Nat ↦ (value : ℝ)) else 0
     rw [dif_neg (by simpa only [Determinize.Spec.Paper.domain] using hDomain)]
 
 private theorem paperMeasure_mass_one (op : Determinize.Spec.Paper.Op) (params : Determinize.Spec.Paper.Params op)
     (hDomain : Determinize.Spec.Paper.domain op params) : Determinize.Spec.Paper.paperMeasure op params Set.univ = 1 := by
   cases op with
   | uniform =>
-      change Determinize.Spec.Paper.uniformMeasure (params.1 0)
-        (params.1 1) Set.univ = 1
-      unfold Determinize.Spec.Paper.uniformMeasure
-      have hd : params.1 0 ≤ params.1 1 := by
-        simpa only [Determinize.Spec.Paper.domain] using hDomain
-      rw [dif_pos hd]
-      split <;> rename_i hPoint
-      · simp
-      · rw [Measure.smul_apply, Measure.restrict_apply_univ,
-          Real.volume_Icc]
-        have hPositive : 0 < params.1 1 - params.1 0 :=
-          sub_pos.mpr (lt_of_le_of_ne hd hPoint)
-        apply ENNReal.inv_mul_cancel
-        · exact (ENNReal.ofReal_pos.mpr hPositive).ne'
-        · exact ENNReal.ofReal_ne_top
+    change Determinize.Spec.Paper.uniformMeasure (params.1 0)
+      (params.1 1) Set.univ = 1
+    unfold Determinize.Spec.Paper.uniformMeasure
+    have hd : params.1 0 ≤ params.1 1 := by
+      simpa only [Determinize.Spec.Paper.domain] using hDomain
+    rw [dif_pos hd]
+    split <;> rename_i hPoint
+    · simp
+    · rw [Measure.smul_apply, Measure.restrict_apply_univ,
+        Real.volume_Icc]
+      have hPositive : 0 < params.1 1 - params.1 0 :=
+        sub_pos.mpr (lt_of_le_of_ne hd hPoint)
+      apply ENNReal.inv_mul_cancel
+      · exact (ENNReal.ofReal_pos.mpr hPositive).ne'
+      · exact ENNReal.ofReal_ne_top
   | gaussian =>
-      change (if h : 0 ≤ params.2 0 then
-        ProbabilityTheory.gaussianReal (params.1 0)
-          ⟨params.2 0, h⟩ else 0) Set.univ = 1
-      have hd : 0 ≤ params.2 0 := by
-        simpa only [Determinize.Spec.Paper.domain] using hDomain
-      rw [dif_pos hd]
-      let := ProbabilityTheory.instIsProbabilityMeasureGaussianReal
-        (params.1 0) ⟨params.2 0, hd⟩
-      exact measure_univ
+    change (if h : 0 ≤ params.2 0 then
+      ProbabilityTheory.gaussianReal (params.1 0)
+        ⟨params.2 0, h⟩ else 0) Set.univ = 1
+    have hd : 0 ≤ params.2 0 := by
+      simpa only [Determinize.Spec.Paper.domain] using hDomain
+    rw [dif_pos hd]
+    let := ProbabilityTheory.instIsProbabilityMeasureGaussianReal
+      (params.1 0) ⟨params.2 0, hd⟩
+    exact measure_univ
   | poisson =>
-      change (if h : 0 ≤ params.1 0 then
-        (ProbabilityTheory.poissonMeasure ⟨params.1 0, h⟩).map
-          (fun value : Nat => (value : ℝ)) else 0) Set.univ = 1
-      have hd : 0 ≤ params.1 0 := by
-        simpa only [Determinize.Spec.Paper.domain] using hDomain
-      rw [dif_pos hd]
-      have hRate : (⟨params.1 0, hd⟩ : NNReal) =
-          (params.1 0).toNNReal := by
-        ext
-        exact (Real.coe_toNNReal _ hd).symm
-      rw [hRate]
-      let : IsProbabilityMeasure
-          ((ProbabilityTheory.poissonMeasure
-              (params.1 0).toNNReal).map
-            (fun value : Nat => (value : ℝ))) :=
-        Measure.isProbabilityMeasure_map .of_discrete
-      exact measure_univ
+    change (if h : 0 ≤ params.1 0 then
+      (ProbabilityTheory.poissonMeasure ⟨params.1 0, h⟩).map
+        (fun value : Nat ↦ (value : ℝ)) else 0) Set.univ = 1
+    have hd : 0 ≤ params.1 0 := by
+      simpa only [Determinize.Spec.Paper.domain] using hDomain
+    rw [dif_pos hd]
+    have hRate : (⟨params.1 0, hd⟩ : NNReal) =
+        (params.1 0).toNNReal := by
+      ext
+      exact (Real.coe_toNNReal _ hd).symm
+    rw [hRate]
+    let : IsProbabilityMeasure
+        ((ProbabilityTheory.poissonMeasure
+            (params.1 0).toNNReal).map
+          (fun value : Nat ↦ (value : ℝ))) :=
+      Measure.isProbabilityMeasure_map .of_discrete
+    exact measure_univ
   | exponential =>
-      change (if 0 < params.2 0 then
-        ProbabilityTheory.expMeasure (params.2 0) else 0) Set.univ = 1
-      have hd : 0 < params.2 0 := by
-        simpa only [Determinize.Spec.Paper.domain] using hDomain
-      rw [if_pos hd]
-      let := ProbabilityTheory.isProbabilityMeasure_expMeasure hd
-      exact measure_univ
+    change (if 0 < params.2 0 then
+      ProbabilityTheory.expMeasure (params.2 0) else 0) Set.univ = 1
+    have hd : 0 < params.2 0 := by
+      simpa only [Determinize.Spec.Paper.domain] using hDomain
+    rw [if_pos hd]
+    let := ProbabilityTheory.isProbabilityMeasure_expMeasure hd
+    exact measure_univ
   | beta =>
-      change (if 0 < params.2 0 ∧ 0 < params.2 1 then
-        ProbabilityTheory.betaMeasure (params.2 0)
-          (params.2 1) else 0) Set.univ = 1
-      have hd : 0 < params.2 0 ∧
-          0 < params.2 1 := by
-        simpa only [Determinize.Spec.Paper.domain] using hDomain
-      rw [if_pos hd]
-      let := ProbabilityTheory.isProbabilityMeasureBeta hd.1 hd.2
-      exact measure_univ
+    change (if 0 < params.2 0 ∧ 0 < params.2 1 then
+      ProbabilityTheory.betaMeasure (params.2 0)
+        (params.2 1) else 0) Set.univ = 1
+    have hd : 0 < params.2 0 ∧
+        0 < params.2 1 := by
+      simpa only [Determinize.Spec.Paper.domain] using hDomain
+    rw [if_pos hd]
+    let := ProbabilityTheory.isProbabilityMeasureBeta hd.1 hd.2
+    exact measure_univ
   | gamma =>
-      change (if 0 < params.1 0 ∧ 0 < params.2 0 then
-        ProbabilityTheory.gammaMeasure (params.1 0)
-          (params.2 0) else 0) Set.univ = 1
-      have hd : 0 < params.1 0 ∧
-          0 < params.2 0 := by
-        simpa only [Determinize.Spec.Paper.domain] using hDomain
-      rw [if_pos hd]
-      let := ProbabilityTheory.isProbabilityMeasure_gammaMeasure hd.1 hd.2
-      exact measure_univ
+    change (if 0 < params.1 0 ∧ 0 < params.2 0 then
+      ProbabilityTheory.gammaMeasure (params.1 0)
+        (params.2 0) else 0) Set.univ = 1
+    have hd : 0 < params.1 0 ∧
+        0 < params.2 0 := by
+      simpa only [Determinize.Spec.Paper.domain] using hDomain
+    rw [if_pos hd]
+    let := ProbabilityTheory.isProbabilityMeasure_gammaMeasure hd.1 hd.2
+    exact measure_univ
 
   | bernoulli =>
-      let := DiscreteLaws.bernoulli_probability (.sample .G) (params.1 0) hDomain
-      exact measure_univ (μ := Determinize.Spec.Paper.bernoulliFiber (.sample .G) (params.1 0))
+    let := DiscreteLaws.bernoulli_probability (.sample .G) (params.1 0) hDomain
+    exact measure_univ (μ := Determinize.Spec.Paper.bernoulliFiber (.sample .G) (params.1 0))
   | discrete n =>
-      simp only [Determinize.Spec.Paper.domain] at hDomain
-      rw [Determinize.Spec.Paper.paperMeasure, if_pos hDomain]
-      exact DiscreteLaws.remainder_mass n params.1 hDomain
+    simp only [Determinize.Spec.Paper.domain] at hDomain
+    rw [Determinize.Spec.Paper.paperMeasure, if_pos hDomain]
+    exact DiscreteLaws.remainder_mass n params.1 hDomain
 
 private theorem paperMeasure_zero_off_domain (op : Determinize.Spec.Paper.Op) (params : Determinize.Spec.Paper.Params op)
     (hDomain : ¬ Determinize.Spec.Paper.domain op params) : Determinize.Spec.Paper.paperMeasure op params = 0 := by
   cases op with
   | uniform =>
-      change Determinize.Spec.Paper.uniformMeasure (params.1 0)
-        (params.1 1) = 0
-      unfold Determinize.Spec.Paper.uniformMeasure
-      rw [dif_neg (by simpa only [Determinize.Spec.Paper.domain] using hDomain)]
+    change Determinize.Spec.Paper.uniformMeasure (params.1 0)
+      (params.1 1) = 0
+    unfold Determinize.Spec.Paper.uniformMeasure
+    rw [dif_neg (by simpa only [Determinize.Spec.Paper.domain] using hDomain)]
   | gaussian =>
-      change (if h : 0 ≤ params.2 0 then
-        ProbabilityTheory.gaussianReal (params.1 0)
-          ⟨params.2 0, h⟩ else 0) = 0
-      rw [dif_neg (by simpa only [Determinize.Spec.Paper.domain] using hDomain)]
+    change (if h : 0 ≤ params.2 0 then
+      ProbabilityTheory.gaussianReal (params.1 0)
+        ⟨params.2 0, h⟩ else 0) = 0
+    rw [dif_neg (by simpa only [Determinize.Spec.Paper.domain] using hDomain)]
   | poisson =>
-      change (if h : 0 ≤ params.1 0 then
-        (ProbabilityTheory.poissonMeasure ⟨params.1 0, h⟩).map
-          (fun value : Nat => (value : ℝ)) else 0) = 0
-      rw [dif_neg (by simpa only [Determinize.Spec.Paper.domain] using hDomain)]
+    change (if h : 0 ≤ params.1 0 then
+      (ProbabilityTheory.poissonMeasure ⟨params.1 0, h⟩).map
+        (fun value : Nat ↦ (value : ℝ)) else 0) = 0
+    rw [dif_neg (by simpa only [Determinize.Spec.Paper.domain] using hDomain)]
   | exponential =>
-      change (if 0 < params.2 0 then
-        ProbabilityTheory.expMeasure (params.2 0) else 0) = 0
-      rw [if_neg (by simpa only [Determinize.Spec.Paper.domain] using hDomain)]
+    change (if 0 < params.2 0 then
+      ProbabilityTheory.expMeasure (params.2 0) else 0) = 0
+    rw [if_neg (by simpa only [Determinize.Spec.Paper.domain] using hDomain)]
   | beta =>
-      change (if 0 < params.2 0 ∧ 0 < params.2 1 then
-        ProbabilityTheory.betaMeasure (params.2 0)
-          (params.2 1) else 0) = 0
-      rw [if_neg (by simpa only [Determinize.Spec.Paper.domain] using hDomain)]
+    change (if 0 < params.2 0 ∧ 0 < params.2 1 then
+      ProbabilityTheory.betaMeasure (params.2 0)
+        (params.2 1) else 0) = 0
+    rw [if_neg (by simpa only [Determinize.Spec.Paper.domain] using hDomain)]
   | gamma =>
-      change (if 0 < params.1 0 ∧ 0 < params.2 0 then
-        ProbabilityTheory.gammaMeasure (params.1 0)
-          (params.2 0) else 0) = 0
-      rw [if_neg (by simpa only [Determinize.Spec.Paper.domain] using hDomain)]
+    change (if 0 < params.1 0 ∧ 0 < params.2 0 then
+      ProbabilityTheory.gammaMeasure (params.1 0)
+        (params.2 0) else 0) = 0
+    rw [if_neg (by simpa only [Determinize.Spec.Paper.domain] using hDomain)]
 
   | bernoulli => exact DiscreteLaws.bernoulli_off_domain (.sample .G) (params.1 0) hDomain
   | discrete _ =>
-      simp only [Determinize.Spec.Paper.domain] at hDomain
-      rw [Determinize.Spec.Paper.paperMeasure, if_neg hDomain]
+    simp only [Determinize.Spec.Paper.domain] at hDomain
+    rw [Determinize.Spec.Paper.paperMeasure, if_neg hDomain]
 
 private theorem paperMeasure_mass_le_one (op : Determinize.Spec.Paper.Op) (params : Determinize.Spec.Paper.Params op) :
     Determinize.Spec.Paper.paperMeasure op params Set.univ ≤ 1 := by
@@ -655,15 +655,15 @@ private theorem uniform_mean (params : Determinize.Spec.Paper.Params .uniform)
       _ = _ := hSum.symm
 
 private theorem hasSum_poisson_first_moment (rate : NNReal) :
-    HasSum (fun n : Nat => Real.exp (-(rate : ℝ)) * (rate : ℝ) ^ n /
+    HasSum (fun n : Nat ↦ Real.exp (-(rate : ℝ)) * (rate : ℝ) ^ n /
       n.factorial * (n : ℝ)) (rate : ℝ) := by
-  let term := fun n : Nat => Real.exp (-(rate : ℝ)) * (rate : ℝ) ^ n /
+  let term := fun n : Nat ↦ Real.exp (-(rate : ℝ)) * (rate : ℝ) ^ n /
     n.factorial * (n : ℝ)
   have hSeries := (NormedSpace.expSeries_div_hasSum_exp (rate : ℝ)).mul_left
     (Real.exp (-(rate : ℝ)) * (rate : ℝ))
-  have hTail : HasSum (fun n : Nat => term (n + 1)) (rate : ℝ) := by
-    have hTerms : (fun n : Nat => term (n + 1)) =
-        fun n : Nat => Real.exp (-(rate : ℝ)) * (rate : ℝ) *
+  have hTail : HasSum (fun n : Nat ↦ term (n + 1)) (rate : ℝ) := by
+    have hTerms : (fun n : Nat ↦ term (n + 1)) =
+        fun n : Nat ↦ Real.exp (-(rate : ℝ)) * (rate : ℝ) *
           ((rate : ℝ) ^ n / n.factorial) := by
       funext n
       dsimp only [term]
@@ -693,10 +693,10 @@ private theorem poisson_integrable_id (params : Determinize.Spec.Paper.Params .p
     simp [rate, Real.toNNReal_of_nonneg hd]
   change Integrable id (if h : 0 ≤ params.1 0 then
     (ProbabilityTheory.poissonMeasure ⟨params.1 0, h⟩).map
-      (fun value : Nat => (value : ℝ)) else 0)
+      (fun value : Nat ↦ (value : ℝ)) else 0)
   rw [dif_pos hd, hRate,
     integrable_map_measure continuous_id.aestronglyMeasurable
-      (measurable_of_countable (fun value : Nat => (value : ℝ))).aemeasurable,
+      (measurable_of_countable (fun value : Nat ↦ (value : ℝ))).aemeasurable,
     ProbabilityTheory.integrable_poissonMeasure_iff]
   simpa [Function.comp_apply, Real.norm_eq_abs] using
     (hasSum_poisson_first_moment rate).summable
@@ -713,13 +713,13 @@ private theorem poisson_mean (params : Determinize.Spec.Paper.Params .poisson)
     simp [rate, Real.toNNReal_of_nonneg hd]
   change (∫ value : ℝ, value ∂if h : 0 ≤ params.1 0 then
     (ProbabilityTheory.poissonMeasure ⟨params.1 0, h⟩).map
-      (fun value : Nat => (value : ℝ)) else 0) = _
+      (fun value : Nat ↦ (value : ℝ)) else 0) = _
   rw [dif_pos hd, hRate]
   have hMap : (∫ value : ℝ, value ∂
-      (ProbabilityTheory.poissonMeasure rate).map (fun value : Nat => (value : ℝ))) =
+      (ProbabilityTheory.poissonMeasure rate).map (fun value : Nat ↦ (value : ℝ))) =
       ∫ value : Nat, (value : ℝ) ∂ProbabilityTheory.poissonMeasure rate := by
     exact integral_map_of_stronglyMeasurable
-      (measurable_of_countable (fun value : Nat => (value : ℝ)))
+      (measurable_of_countable (fun value : Nat ↦ (value : ℝ)))
       continuous_id.stronglyMeasurable
   rw [hMap, ProbabilityTheory.integral_poissonMeasure rate,
     show (∑' n : Nat, (Real.exp (-(rate : ℝ)) * (rate : ℝ) ^ n /
@@ -758,14 +758,14 @@ private theorem gamma_pdf_integrable {shape rate : ℝ} (hShape : 0 < shape)
     Integrable (ProbabilityTheory.gammaPDFReal shape rate) volume := by
   let : IsProbabilityMeasure (ProbabilityTheory.gammaMeasure shape rate) :=
     ProbabilityTheory.isProbabilityMeasure_gammaMeasure hShape hRate
-  have hOne : Integrable (fun _ : ℝ => (1 : ℝ))
+  have hOne : Integrable (fun _ : ℝ ↦ (1 : ℝ))
       (ProbabilityTheory.gammaMeasure shape rate) := integrable_const _
   rw [ProbabilityTheory.gammaMeasure] at hOne
   have hWeighted := (integrable_withDensity_iff (μ := volume)
     (ProbabilityTheory.measurable_gammaPDFReal shape rate).ennreal_ofReal
     (by simp)).mp hOne
   apply hWeighted.congr
-  exact ae_of_all _ fun value => by
+  exact ae_of_all _ fun value ↦ by
     simp only [one_mul]
     rw [ENNReal.toReal_ofReal
       (ProbabilityTheory.gammaPDFReal_nonneg hShape hRate value)]
@@ -781,7 +781,7 @@ private theorem integral_gamma_pdf_eq_one {shape rate : ℝ} (hShape : 0 < shape
     (∫ value : ℝ, ProbabilityTheory.gammaPDFReal shape rate value) =
         ∫ value : ℝ, (ProbabilityTheory.gammaPDF shape rate value).toReal • (1 : ℝ) := by
           apply integral_congr_ae
-          exact ae_of_all _ fun value => by
+          exact ae_of_all _ fun value ↦ by
             simp only [smul_eq_mul, mul_one, ProbabilityTheory.gammaPDF]
             rw [ENNReal.toReal_ofReal
               (ProbabilityTheory.gammaPDFReal_nonneg hShape hRate value)]
@@ -933,14 +933,14 @@ private theorem beta_pdf_integrable {alpha beta : ℝ} (hAlpha : 0 < alpha)
     Integrable (ProbabilityTheory.betaPDFReal alpha beta) volume := by
   let : IsProbabilityMeasure (ProbabilityTheory.betaMeasure alpha beta) :=
     ProbabilityTheory.isProbabilityMeasureBeta hAlpha hBeta
-  have hOne : Integrable (fun _ : ℝ => (1 : ℝ))
+  have hOne : Integrable (fun _ : ℝ ↦ (1 : ℝ))
       (ProbabilityTheory.betaMeasure alpha beta) := integrable_const _
   rw [ProbabilityTheory.betaMeasure] at hOne
   have hWeighted := (integrable_withDensity_iff (μ := volume)
     (ProbabilityTheory.measurable_betaPDFReal alpha beta).ennreal_ofReal
     (by simp)).mp hOne
   apply hWeighted.congr
-  exact ae_of_all _ fun value => by
+  exact ae_of_all _ fun value ↦ by
     simp only [one_mul]
     rw [ENNReal.toReal_ofReal (beta_pdf_nonneg alpha beta hAlpha hBeta value)]
 
@@ -955,7 +955,7 @@ private theorem integral_beta_pdf_eq_one {alpha beta : ℝ} (hAlpha : 0 < alpha)
     (∫ value : ℝ, ProbabilityTheory.betaPDFReal alpha beta value) =
         ∫ value : ℝ, (ProbabilityTheory.betaPDF alpha beta value).toReal • (1 : ℝ) := by
           apply integral_congr_ae
-          exact ae_of_all _ fun value => by
+          exact ae_of_all _ fun value ↦ by
             simp only [smul_eq_mul, mul_one, ProbabilityTheory.betaPDF]
             rw [ENNReal.toReal_ofReal (beta_pdf_nonneg alpha beta hAlpha hBeta value)]
     _ = ∫ _value : ℝ, (1 : ℝ) ∂ProbabilityTheory.betaMeasure alpha beta := by
@@ -975,7 +975,7 @@ private theorem beta_integrable_id_at {alpha beta : ℝ} (hAlpha : 0 < alpha)
   have hShift := (beta_pdf_integrable (add_pos hAlpha zero_lt_one) hBeta).const_mul
     (alpha / (alpha + beta))
   apply hShift.congr
-  exact ae_of_all _ fun value => by
+  exact ae_of_all _ fun value ↦ by
     simpa only [id_eq, ProbabilityTheory.betaPDF,
       ENNReal.toReal_ofReal (beta_pdf_nonneg alpha beta hAlpha hBeta value)] using
       (beta_mul_pdf alpha beta hAlpha hBeta value).symm
@@ -994,7 +994,7 @@ private theorem beta_mean_at {alpha beta : ℝ} (hAlpha : 0 < alpha)
     _ = ∫ value : ℝ, (alpha / (alpha + beta)) *
         ProbabilityTheory.betaPDFReal (alpha + 1) beta value := by
           apply integral_congr_ae
-          exact ae_of_all _ fun value => by
+          exact ae_of_all _ fun value ↦ by
             simpa only [smul_eq_mul, ProbabilityTheory.betaPDF, mul_comm,
               ENNReal.toReal_ofReal (beta_pdf_nonneg alpha beta hAlpha hBeta value)] using
               beta_mul_pdf alpha beta hAlpha hBeta value
@@ -1046,12 +1046,12 @@ noncomputable def primitiveKernel :
   | .gamma => gammaKernel
   | .bernoulli => ⟨Determinize.Spec.Paper.paperMeasure .bernoulli,
       DiscreteLaws.bernoulli_measurable (.sample .G) |>.comp
-        (show Measurable (fun params : Determinize.Spec.Paper.Params .bernoulli =>
+        (show Measurable (fun params : Determinize.Spec.Paper.Params .bernoulli ↦
           params.1 0) by fun_prop)⟩
   | .discrete n => ⟨Determinize.Spec.Paper.paperMeasure (.discrete n), by
       apply Measurable.ite (measurableSet_domain (.discrete n))
       · apply Measurable.add
-        · exact Finset.measurable_sum _ fun i _ =>
+        · exact Finset.measurable_sum _ fun i _ ↦
             ((measurable_pi_apply i).comp measurable_fst).ennreal_ofReal.smul_measure _
         · apply Measurable.smul_measure
           apply Measurable.ennreal_ofReal
@@ -1073,7 +1073,7 @@ theorem primitiveKernel_apply (op : Determinize.Spec.Paper.Op) (params : Determi
 theorem primitiveKernel_finite (op : Determinize.Spec.Paper.Op) :
     ProbabilityTheory.IsFiniteKernel (primitiveKernel op) := by
   constructor
-  exact ⟨1, ENNReal.one_lt_top, fun params => by
+  exact ⟨1, ENNReal.one_lt_top, fun params ↦ by
     rw [primitiveKernel_apply]
     exact paperMeasure_mass_le_one op params⟩
 
@@ -1105,9 +1105,9 @@ noncomputable def primitiveLaws : Determinize.Proof.Paper.PrimitiveLaws where
     | gamma => exact gamma_integrable_id params hDomain
     | bernoulli => exact DiscreteLaws.bernoulli_integrable (.sample .G) (params.1 0) _
     | discrete n =>
-        simp only [Determinize.Spec.Paper.domain] at hDomain
-        rw [Determinize.Spec.Paper.paperMeasure, if_pos hDomain]
-        exact DiscreteLaws.remainder_integrable n params.1 (fun x => x)
+      simp only [Determinize.Spec.Paper.domain] at hDomain
+      rw [Determinize.Spec.Paper.paperMeasure, if_pos hDomain]
+      exact DiscreteLaws.remainder_integrable n params.1 (fun x ↦ x)
   mean_law := by
     intro op params hDomain
     rw [primitiveKernel_apply]
@@ -1120,8 +1120,8 @@ noncomputable def primitiveLaws : Determinize.Proof.Paper.PrimitiveLaws where
     | gamma => exact gamma_mean params hDomain
     | bernoulli => exact DiscreteLaws.bernoulli_mean (.sample .G) (params.1 0) hDomain
     | discrete n =>
-        simp only [Determinize.Spec.Paper.domain] at hDomain
-        rw [Determinize.Spec.Paper.paperMeasure, if_pos hDomain]
-        exact DiscreteLaws.remainder_mean n params.1 hDomain
+      simp only [Determinize.Spec.Paper.domain] at hDomain
+      rw [Determinize.Spec.Paper.paperMeasure, if_pos hDomain]
+      exact DiscreteLaws.remainder_mean n params.1 hDomain
 
 end Determinize.Proof.Paper

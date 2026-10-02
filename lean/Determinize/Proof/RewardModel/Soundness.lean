@@ -10,8 +10,8 @@ private theorem row_next (c : Reward.Candidate) {source : Spec.Paper.Core} {subj
     (valid : c.ReplayValid source subject) (i : Fin c.states.size) (tag : Evidence)
     (xs : List (Rat × State)) (action : step c.states[i] = .ok (.next tag xs)) :
     (c.row i).kind = .transient ∧
-    ((c.row i).edges.map fun e => (e.probability, c.states[e.target]?.getD .rejected, e.reward)) =
-      ((xs.filter fun x => 0 < x.1).map fun x =>
+    ((c.row i).edges.map fun e ↦ (e.probability, c.states[e.target]?.getD .rejected, e.reward)) =
+      ((xs.filter fun x ↦ 0 < x.1).map fun x ↦
         (x.1, (Reward.normalize x.2).2, (Reward.normalize x.2).1)) := by
   have h := (valid.2.2.2.2.2 i).2.2
   simp only [Reward.step, action, bind, Except.bind, pure, Except.pure] at h
@@ -32,20 +32,20 @@ private theorem row_covered (c : Reward.Candidate) {source : Spec.Paper.Core} {s
     ∃ j : Fin c.states.size, c.states[j] = (Reward.normalize x.2).2 := by
   have encoded := (row_next c valid i tag xs action).2
   have hm : (x.1, (Reward.normalize x.2).2, (Reward.normalize x.2).1) ∈
-      (c.row i).edges.map (fun e => (e.probability, c.states[e.target]?.getD .rejected, e.reward)) := by
+      (c.row i).edges.map (fun e ↦ (e.probability, c.states[e.target]?.getD .rejected, e.reward)) := by
     rw [encoded]
     exact List.mem_map.mpr ⟨x, by simp [member, positive], rfl⟩
   obtain ⟨edge, he, eq⟩ := List.mem_map.mp hm
   have bound := ((valid.2.2.2.2.2 i).1 edge he).1
   refine ⟨⟨edge.target, bound⟩, ?_⟩
-  have same := congrArg (fun t : Rat × State × Rat => t.2.1) eq
+  have same := congrArg (fun t : Rat × State × Rat ↦ t.2.1) eq
   simpa [bound] using same
 
 private theorem replay_no_rewardFailure (c : Reward.Candidate) {source : Spec.Paper.Core} {subject : Spec.FiniteModel.Subject}
     (valid : c.ReplayValid source subject) (n : Nat) (i : Fin c.states.size) :
     ¬ rewardFailureWithin n c.states[i] := by
   induction n generalizing i with
-  | zero => exact fun ⟨e, h⟩ => row_no_failure c valid i e h
+  | zero => exact fun ⟨e, h⟩ ↦ row_no_failure c valid i e h
   | succ n ih =>
     cases action : step c.states[i] with
     | error e => exact (row_no_failure c valid i e action).elim
@@ -64,7 +64,7 @@ private theorem reachable_failure {root state : State} (reachable : MachineReach
   induction reachable generalizing n with
   | initial => exact ⟨n, failed⟩
   | next prev action member positive ih =>
-      exact ih (n+1) (by simp only [failureWithin, action]; exact ⟨_, member, positive, failed⟩)
+    exact ih (n + 1) (by simp only [failureWithin, action]; exact ⟨_, member, positive, failed⟩)
 
 theorem replay_reachable_no_failure (c : Reward.Candidate) {source : Spec.Paper.Core} {subject : Spec.FiniteModel.Subject}
     (valid : c.ReplayValid source subject) {state : State}
@@ -80,12 +80,12 @@ theorem replay_reachable_no_failure (c : Reward.Candidate) {source : Spec.Paper.
   exact failure_implies_rewardFailure n _ hn
 
 private theorem weighted_filter (xs : List (Rat × State)) (f : State → Measure ℝ) :
-    weightedOutput (xs.filter fun x => 0 < x.1) f = weightedOutput xs f := by
+    weightedOutput (xs.filter fun x ↦ 0 < x.1) f = weightedOutput xs f := by
   induction xs with
   | nil => rfl
   | cons x xs ih =>
     by_cases positive : 0 < x.1
-    · simpa [weightedOutput, positive] using congrArg (fun μ => ENNReal.ofReal (x.1 : ℝ) • f x.2 + μ) ih
+    · simpa [weightedOutput, positive] using congrArg (fun μ ↦ ENNReal.ofReal (x.1 : ℝ) • f x.2 + μ) ih
     · have zero : ENNReal.ofReal (x.1 : ℝ) = 0 :=
         ENNReal.ofReal_eq_zero.mpr (by exact_mod_cast le_of_not_gt positive)
       simpa [List.filter_cons, positive, weightedOutput, zero] using ih
@@ -94,16 +94,16 @@ private theorem replay_row_sum (c : Reward.Candidate) {source : Spec.Paper.Core}
     (valid : c.ReplayValid source subject) (i : Fin c.states.size) (tag : Evidence)
     (xs : List (Rat × State)) (action : step c.states[i] = .ok (.next tag xs))
     (f : State → Measure ℝ) :
-    (((c.toModel valid).edges i).map fun e => ENNReal.ofReal (e.probability : ℝ) •
+    (((c.toModel valid).edges i).map fun e ↦ ENNReal.ofReal (e.probability : ℝ) •
       shift e.reward (f c.states[e.target])).sum =
-      weightedOutput xs (fun s => shift (Reward.normalize s).1 (f (Reward.normalize s).2)) := by
+      weightedOutput xs (fun s ↦ shift (Reward.normalize s).1 (f (Reward.normalize s).2)) := by
   have encoded := (row_next c valid i tag xs action).2
-  have mapped := congrArg (fun ys : List (Rat × State × Rat) =>
-    (ys.map fun x => ENNReal.ofReal (x.1 : ℝ) • shift x.2.2 (f x.2.1)).sum) encoded
+  have mapped := congrArg (fun ys : List (Rat × State × Rat) ↦
+    (ys.map fun x ↦ ENNReal.ofReal (x.1 : ℝ) • shift x.2.2 (f x.2.1)).sum) encoded
   simp only [List.map_map, Function.comp_def] at mapped
-  have left : (((c.toModel valid).edges i).map fun e => ENNReal.ofReal (e.probability : ℝ) •
+  have left : (((c.toModel valid).edges i).map fun e ↦ ENNReal.ofReal (e.probability : ℝ) •
       shift e.reward (f c.states[e.target])).sum =
-      ((c.row i).edges.map fun e => ENNReal.ofReal (e.probability : ℝ) •
+      ((c.row i).edges.map fun e ↦ ENNReal.ofReal (e.probability : ℝ) •
         shift e.reward (f (c.states[e.target]?.getD .rejected))).sum := by
     change ((c.modelEdges valid i).map _).sum = _
     unfold Reward.Candidate.modelEdges
@@ -115,7 +115,7 @@ private theorem replay_row_sum (c : Reward.Candidate) {source : Spec.Paper.Core}
     simp [((valid.2.2.2.2.2 i).1 e.val e.property).1]
   rw [left, mapped]
   simpa only [weightedOutput] using weighted_filter xs
-    (fun s => shift (Reward.normalize s).1 (f (Reward.normalize s).2))
+    (fun s ↦ shift (Reward.normalize s).1 (f (Reward.normalize s).2))
 
 theorem replay_outputWithin (c : Reward.Candidate) {source : Spec.Paper.Core} {subject : Spec.FiniteModel.Subject}
     (valid : c.ReplayValid source subject) (n : Nat) (i : Fin c.states.size) :
@@ -159,15 +159,15 @@ theorem replay_matches (c : Reward.Candidate) {source : Spec.Paper.Core} {subjec
     (c.toModel valid).Matches (subject.program source) := by
   have meaning : ∀ state, MachineReachable (initialState source subject) state → ∀ result,
       step state = .ok result → StepMeaning state result :=
-    fun state reachable result action => stepMeaning state
+    fun state reachable result action ↦ stepMeaning state
       (program_reachable_shape source subject state reachable) result action
-  have noFailure := fun state reachable failure => replay_reachable_no_failure c valid
+  have noFailure := fun state reachable failure ↦ replay_reachable_no_failure c valid
     (state := state) reachable failure
   have initial : c.states[c.initial]'valid.2.1 = initialState source subject := by
     simpa [valid.2.1] using valid.2.2.1
   have initialEqual : stateExpr (initialState source subject) = subject.program source :=
     initial_reification source subject
-      ((Binding.scoped_map source (fun q : Rat => (q : ℝ)) 0).mpr valid.2.2.2.1)
+      ((Binding.scoped_map source (fun q : Rat ↦ (q : ℝ)) 0).mpr valid.2.2.2.1)
   constructor
   · intro fuel
     rw [← initialEqual]

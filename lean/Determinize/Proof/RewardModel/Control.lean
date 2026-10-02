@@ -13,7 +13,7 @@ theorem controlWeight_nonnegative (model : Model) (i j : Fin model.size) :
   · rfl
 
 private theorem sum_weights {n : Nat} (edges : List (Edge n)) :
-    (∑ j : Fin n, (edges.map fun e => if e.target = j then e.probability else 0).sum) =
+    (∑ j : Fin n, (edges.map fun e ↦ if e.target = j then e.probability else 0).sum) =
       (edges.map Edge.probability).sum := by
   induction edges with
   | nil => simp
@@ -38,7 +38,7 @@ theorem edge_le_controlWeight (model : Model) (i : Fin model.size) (e : Edge mod
 
 theorem control_sum (model : Model) (i : Fin model.size) (v : Fin model.size → Rat) :
     (∑ j, controlWeight model i j * v j) =
-      ((model.edges i).map fun e => e.probability * v e.target).sum := by
+      ((model.edges i).map fun e ↦ e.probability * v e.target).sum := by
   unfold controlWeight
   generalize model.edges i = edges
   induction edges with
@@ -50,7 +50,7 @@ theorem control_sum (model : Model) (i : Fin model.size) (v : Fin model.size →
 
 theorem control_sum_real (model : Model) (i : Fin model.size) (v : Fin model.size → ℝ) :
     (∑ j, (controlWeight model i j : ℝ) * v j) =
-      ((model.edges i).map fun e => (e.probability : ℝ) * v e.target).sum := by
+      ((model.edges i).map fun e ↦ (e.probability : ℝ) * v e.target).sum := by
   unfold controlWeight
   generalize model.edges i = edges
   induction edges with

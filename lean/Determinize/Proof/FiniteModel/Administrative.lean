@@ -5,7 +5,7 @@ open Spec.Paper Determinize.Finite Checking Binding
 
 /-- Machine bookkeeping may leave the represented paper expression unchanged. -/
 def AdministrativeStep (evidence : Evidence) (before after : State) : Prop :=
-  step before = .ok (.next evidence [(1,after)]) ∧ stateExpr before = stateExpr after
+  step before = .ok (.next evidence [(1, after)]) ∧ stateExpr before = stateExpr after
 
 theorem environmentExpr_eq_map (environment : List Value) :
     environmentExpr environment = environment.map valueExpr := by
@@ -94,12 +94,12 @@ theorem bool_setup (value : Bool) (environment : List Value) (stack : List Frame
   refine ⟨rfl, ?_⟩
   simp [stateExpr, valueExpr, close, interpret, Expr.map, Expr.mapVars]
 
-theorem unit_setup  (environment : List Value) (stack : List Frame) :
+theorem unit_setup (environment : List Value) (stack : List Frame) :
     AdministrativeStep .evaluate (.eval .unit environment stack) (.deliver .unit stack) := by
   refine ⟨rfl, ?_⟩
   simp [stateExpr, valueExpr, close, interpret, Expr.map, Expr.mapVars]
 
-theorem nil_setup  (environment : List Value) (stack : List Frame) :
+theorem nil_setup (environment : List Value) (stack : List Frame) :
     AdministrativeStep .evaluate (.eval .nil environment stack) (.deliver .nil stack) := by
   refine ⟨rfl, ?_⟩
   simp [stateExpr, valueExpr, close, interpret, Expr.map, Expr.mapVars]

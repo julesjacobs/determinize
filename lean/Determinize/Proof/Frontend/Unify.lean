@@ -19,7 +19,7 @@ def Unifies (θ : Nat → Shape) (equations : List (Shape × Shape)) : Prop :=
 /-! ## Substitutions -/
 
 theorem Shape.subst_subst (σ τ : Nat → Shape) (s : Shape) :
-    (s.subst σ).subst τ = s.subst fun i => (σ i).subst τ := by
+    (s.subst σ).subst τ = s.subst fun i ↦ (σ i).subst τ := by
   induction s <;> simp_all [Shape.subst]
 
 theorem Shape.subst_congr {σ τ : Nat → Shape} {s : Shape} (h : ∀ i ∈ s.vars, σ i = τ i) :
@@ -32,8 +32,8 @@ theorem Shape.subst_var (s : Shape) : s.subst .var = s := by
 theorem Shape.subst_single_of_not_mem {i : Nat} {s t : Shape} (h : i ∉ s.vars) :
     s.subst (Shape.single i t) = s := by
   rw [← Shape.subst_var s, Shape.subst_subst]
-  refine Shape.subst_congr fun j hj => ?_
-  have : j ≠ i := fun e => h (e ▸ hj)
+  refine Shape.subst_congr fun j hj ↦ ?_
+  have : j ≠ i := fun e ↦ h (e ▸ hj)
   simp [Shape.single, this, Shape.subst]
 
 /-- A variable is no larger than any shape it occurs in, after any substitution. -/
@@ -76,11 +76,11 @@ theorem unifies_cons {θ : Nat → Shape} {s t : Shape} {rest : List (Shape × S
 theorem unifies_append {θ : Nat → Shape} {front rest : List (Shape × Shape)} :
     Unifies θ (front ++ rest) ↔ Unifies θ front ∧ Unifies θ rest := by
   simp only [Unifies, List.mem_append]
-  exact ⟨fun h => ⟨fun e m => h e (.inl m), fun e m => h e (.inr m)⟩,
-    fun h e m => m.elim (h.1 e) (h.2 e)⟩
+  exact ⟨fun h ↦ ⟨fun e m ↦ h e (.inl m), fun e m ↦ h e (.inr m)⟩,
+    fun h e m ↦ m.elim (h.1 e) (h.2 e)⟩
 
 theorem unifies_substEquations {θ σ : Nat → Shape} {equations : List (Shape × Shape)} :
-    Unifies θ (substEquations σ equations) ↔ Unifies (fun i => (σ i).subst θ) equations := by
+    Unifies θ (substEquations σ equations) ↔ Unifies (fun i ↦ (σ i).subst θ) equations := by
   simp only [Unifies, substEquations, List.forall_mem_map, Shape.subst_subst]
 
 theorem unifies_children {s t : Shape} {children : List (Shape × Shape)}
@@ -112,9 +112,9 @@ theorem unifies_var_cons {θ : Nat → Shape} {i : Nat} {t : Shape} {rest : List
 the substitution of `t` for `i`, is one of the original equations. -/
 private theorem eliminate_sound {i : Nat} {t : Shape} {rest : List (Shape × Shape)}
     (fresh : i ∉ t.vars) {θ : Nat → Shape} (h : Unifies θ (substEquations (.single i t) rest)) :
-    Unifies (fun j => (Shape.single i t j).subst θ) ((.var i, t) :: rest) := by
+    Unifies (fun j ↦ (Shape.single i t j).subst θ) ((.var i, t) :: rest) := by
   refine unifies_cons.2 ⟨?_, unifies_substEquations.1 h⟩
-  show (Shape.single i t i).subst θ = t.subst fun j => (Shape.single i t j).subst θ
+  show (Shape.single i t i).subst θ = t.subst fun j ↦ (Shape.single i t j).subst θ
   rw [← Shape.subst_subst, Shape.subst_single_of_not_mem fresh, Shape.single, if_pos rfl]
 
 theorem unify_sound {equations : List (Shape × Shape)} {θ : Nat → Shape}
@@ -193,7 +193,7 @@ theorem unify_complete {equations : List (Shape × Shape)} {δ : Nat → Shape}
     rw [unify.eq_2, if_pos rfl]
     exact ih (unifies_cons.1 hδ).2
   | case3 i t rest ne occurs =>
-    exact absurd (unifies_cons.1 hδ).1 fun e => by
+    exact absurd (unifies_cons.1 hδ).1 fun e ↦ by
       have := Shape.size_lt_subst (σ := δ) occurs ne
       simp only [Shape.subst] at e; rw [e] at this; exact lt_irrefl _ this
   | case4 i t rest ne fresh ih =>
@@ -201,7 +201,7 @@ theorem unify_complete {equations : List (Shape × Shape)} {δ : Nat → Shape}
     obtain ⟨θ', h'⟩ := ih (eliminate_preserves hδ)
     exact ⟨_, by rw [h']; rfl⟩
   | case6 t i rest notVar ne occurs =>
-    exact absurd (unifies_cons.1 (unifies_var_cons.1 hδ)).1 fun e => by
+    exact absurd (unifies_cons.1 (unifies_var_cons.1 hδ)).1 fun e ↦ by
       have := Shape.size_lt_subst (σ := δ) occurs ne
       simp only [Shape.subst] at e; rw [e] at this; exact lt_irrefl _ this
   | case7 t i rest notVar ne fresh ih =>
@@ -222,7 +222,7 @@ theorem unify_idempotent {equations : List (Shape × Shape)} {θ : Nat → Shape
 
 /-- `unify` fails only on equations without a unifier. -/
 theorem unify_eq_none {equations : List (Shape × Shape)} (h : unify equations = none)
-    (δ : Nat → Shape) : ¬ Unifies δ equations := fun hδ => by
+    (δ : Nat → Shape) : ¬ Unifies δ equations := fun hδ ↦ by
   obtain ⟨θ, h'⟩ := unify_complete hδ
   rw [h] at h'; cases h'
 
@@ -232,7 +232,7 @@ theorem unify_mgu (equations : List (Shape × Shape)) :
     ((∃ δ, Unifies δ equations) ↔ ∃ θ, unify equations = some θ) ∧
       ∀ θ, unify equations = some θ →
         Unifies θ equations ∧ ∀ δ, Unifies δ equations → ∀ i, (θ i).subst δ = δ i :=
-  ⟨⟨fun ⟨_, hδ⟩ => unify_complete hδ, fun ⟨θ, h⟩ => ⟨θ, unify_sound h⟩⟩,
-    fun _ h => ⟨unify_sound h, fun _ hδ => unify_mostGeneral h hδ⟩⟩
+  ⟨⟨fun ⟨_, hδ⟩ ↦ unify_complete hδ, fun ⟨θ, h⟩ ↦ ⟨θ, unify_sound h⟩⟩,
+    fun _ h ↦ ⟨unify_sound h, fun _ hδ ↦ unify_mostGeneral h hδ⟩⟩
 
 end Determinize.Proof.Frontend

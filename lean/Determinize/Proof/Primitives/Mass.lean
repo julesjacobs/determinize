@@ -83,9 +83,9 @@ theorem Action.wrap_eq_sample {context : Expr → Expr} {action : Action}
   | next expression => simp [Action.wrap] at equality
   | stuck => simp [Action.wrap] at equality
   | sample actualSite actualFiber inner =>
-      simp only [Action.wrap, Action.sample.injEq] at equality
-      rcases equality with ⟨rfl, rfl, continuationEq⟩
-      exact ⟨inner, rfl, continuationEq.symm⟩
+    simp only [Action.wrap, Action.sample.injEq] at equality
+    rcases equality with ⟨rfl, rfl, continuationEq⟩
+    exact ⟨inner, rfl, continuationEq.symm⟩
 
 /-- Every fiber a reduction step draws from is one of the eight primitive fibers, so its mass
 is at most one (`PrimitiveMass.lean`). -/

@@ -16,7 +16,7 @@ theorem Work.record_state (work : Work) (complete : work.rows.size = work.table.
 
 def Work.weight (work : Work) (complete : work.rows.size = work.table.states.size)
     (i j : Fin work.table.states.size) : Rat :=
-  ((work.record complete i).action.successors.map fun outcome =>
+  ((work.record complete i).action.successors.map fun outcome ↦
     if outcome.2 = work.table.states[j.val] then outcome.1 else 0).sum
 
 theorem Work.weight_nonnegative (work : Work) (complete : work.rows.size = work.table.states.size)
@@ -50,7 +50,7 @@ theorem Work.weight_normalized (work : Work) (complete : work.rows.size = work.t
 abbrev Work.candidate (work : Work) (complete : work.rows.size = work.table.states.size) : Candidate where
   initial := 0
   states := work.table.states
-  rows := Array.ofFn fun i : Fin work.table.states.size =>
+  rows := Array.ofFn fun i : Fin work.table.states.size ↦
     ⟨(work.record complete i).action.kind, sparseEdges (work.weight complete i)⟩
 
 @[simp] theorem Work.candidate_row (work : Work) (complete : work.rows.size = work.table.states.size)
@@ -91,7 +91,7 @@ theorem Work.absorbing (work : Work) (complete : work.rows.size = work.table.sta
     (i : Fin work.table.states.size) (terminal : (work.record complete i).action.kind ≠ .transient)
     (j : Fin work.table.states.size) : work.weight complete i j = if i = j then 1 else 0 := by
   have correct := (work.record complete i).action.correct
-  have outcomes : (work.record complete i).action.successors = [(1,work.table.states[i.val])] := by
+  have outcomes : (work.record complete i).action.successors = [(1, work.table.states[i.val])] := by
     cases h : step (work.record complete i).state with
     | error failure => simp [h] at correct
     | ok action => cases action with

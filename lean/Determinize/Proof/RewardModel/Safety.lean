@@ -5,7 +5,7 @@ open Determinize.Finite Determinize.Proof.FiniteModel
 
 def failureWithin : Nat → State → Prop
   | 0, s => ∃ e, step s = .error e
-  | n+1, s => match step s with
+  | n + 1, s => match step s with
       | .error _ => True
       | .ok (.next _ xs) => ∃ x ∈ xs, 0 < x.1 ∧ failureWithin n x.2
       | _ => False
@@ -18,7 +18,7 @@ private theorem numeric_no_failure (offsets : List Rat) (b : Rat) (n : Nat) :
     cases offsets with
     | nil => simp [failureWithin, additionStack, step]
     | cons c cs =>
-      simpa [failureWithin, additionStack, step, binary, pure, bind, Except.bind, Except.pure] using ih cs (c+b)
+      simpa [failureWithin, additionStack, step, binary, pure, bind, Except.bind, Except.pure] using ih cs (c + b)
 
 theorem addition_failure_iff (offsets : List Rat) (n : Nat) (state : State) :
     failureWithin n (pushStack state (additionStack offsets)) ↔ failureWithin n state := by
@@ -41,7 +41,7 @@ theorem addition_failure_iff (offsets : List Rat) (n : Nat) (state : State) :
     | ok result =>
       rcases step_terminal state result action with ⟨tag, xs, rfl⟩ | ⟨b, rfl, rfl⟩ | ⟨rfl, rfl⟩
       · simp [failureWithin, action, step_push state (additionStack offsets) tag xs action, extend, ih]
-      · simpa [pushStack, failureWithin, step] using numeric_no_failure offsets b (n+1)
+      · simpa [pushStack, failureWithin, step] using numeric_no_failure offsets b (n + 1)
       · simp [pushStack, failureWithin, step]
 
 theorem normalize_failure_iff (state : State) (n : Nat) :
@@ -71,7 +71,7 @@ theorem normalize_failure_iff (state : State) (n : Nat) :
 
 def rewardFailureWithin : Nat → State → Prop
   | 0, s => ∃ e, step s = .error e
-  | n+1, s => match step s with
+  | n + 1, s => match step s with
       | .error _ => True
       | .ok (.next _ xs) => ∃ x ∈ xs, 0 < x.1 ∧ rewardFailureWithin n (Reward.normalize x.2).2
       | _ => False

@@ -9,9 +9,9 @@ private def rational (q : Rat) : String :=
   if q.den == 1 then toString q.num else s!"{q.num}/{q.den}"
 private def leanRat (q : Rat) : String := s!"(({q.num} : Rat) / {q.den})"
 def proofTable (stem claim sizeName allName : String) (size : Nat) : String :=
-  let proofs := String.join ((List.range size).map fun i =>
+  let proofs := String.join ((List.range size).map fun i ↦
     s!"\ntheorem {stem}_{i} : {claim} (⟨{i}, by decide +kernel⟩ : Fin {sizeName}) := by\n  decide +kernel\n")
-  let entries := String.intercalate ", " ((List.range size).map fun i =>
+  let entries := String.intercalate ", " ((List.range size).map fun i ↦
     s!"⟨⟨{i}, by decide +kernel⟩, {stem}_{i}⟩")
   proofs ++
     s!"\ndef {stem}Evidence : Vector (Subtype (fun i : Fin {sizeName} => {claim} i)) {sizeName} := ⟨#[{entries}], by rfl⟩\n" ++
@@ -35,37 +35,37 @@ private partial def valueText : Value → String
   | .inl a => s!"(.inl {valueText a})"
   | .inr a => s!"(.inr {valueText a})"
   | .closure body environment =>
-      s!"(.closure {Frontend.leanExpression body} {listText valueText environment})"
+    s!"(.closure {Frontend.leanExpression body} {listText valueText environment})"
   | .recursive body environment =>
-      s!"(.recursive {Frontend.leanExpression body} {listText valueText environment})"
+    s!"(.recursive {Frontend.leanExpression body} {listText valueText environment})"
 
 private def frameText : Frame → String
   | .unary op => s!"(.unary {reprStr op})"
   | .left op right environment =>
-      s!"(.left {reprStr op} {Frontend.leanExpression right} {listText valueText environment})"
+    s!"(.left {reprStr op} {Frontend.leanExpression right} {listText valueText environment})"
   | .right op left => s!"(.right {reprStr op} {valueText left})"
   | .choose yes no environment =>
-      s!"(.choose {Frontend.leanExpression yes} {Frontend.leanExpression no} {listText valueText environment})"
+    s!"(.choose {Frontend.leanExpression yes} {Frontend.leanExpression no} {listText valueText environment})"
   | .letBody body environment =>
-      s!"(.letBody {Frontend.leanExpression body} {listText valueText environment})"
+    s!"(.letBody {Frontend.leanExpression body} {listText valueText environment})"
   | .matchSum left right environment =>
-      s!"(.matchSum {Frontend.leanExpression left} {Frontend.leanExpression right} {listText valueText environment})"
+    s!"(.matchSum {Frontend.leanExpression left} {Frontend.leanExpression right} {listText valueText environment})"
   | .matchList nilCase consCase environment =>
-      s!"(.matchList {Frontend.leanExpression nilCase} {Frontend.leanExpression consCase} {listText valueText environment})"
+    s!"(.matchList {Frontend.leanExpression nilCase} {Frontend.leanExpression consCase} {listText valueText environment})"
   | .discrete action => s!"(.discrete ({reprStr action}))"
   | .draw site pending environment arguments =>
-      s!"(.draw {siteText site} {listText Frontend.leanExpression pending} {listText valueText environment} {listText leanRat arguments})"
+    s!"(.draw {siteText site} {listText Frontend.leanExpression pending} {listText valueText environment} {listText leanRat arguments})"
 
 def stateText : State → String
   | .rejected => ".rejected"
   | .eval expression environment stack =>
-      s!"(.eval {Frontend.leanExpression expression} {listText valueText environment} {listText frameText stack})"
+    s!"(.eval {Frontend.leanExpression expression} {listText valueText environment} {listText frameText stack})"
   | .deliver value stack => s!"(.deliver {valueText value} {listText frameText stack})"
 def kindText : StateKind → String
   | .transient => ".transient" | .rejected => ".rejected"
   | .returned reward => s!"(.returned {leanRat reward})"
 private def rowText (row : Row) : String :=
-  let edges := row.edges.toList.map fun e => s!"⟨{e.target}, {leanRat e.probability}⟩"
+  let edges := row.edges.toList.map fun e ↦ s!"⟨{e.target}, {leanRat e.probability}⟩"
   s!"⟨{kindText row.kind}, #[{String.intercalate ", " edges}]⟩"
 
 def candidateText (candidate : Candidate) : String :=
@@ -79,10 +79,10 @@ def candidateText (candidate : Candidate) : String :=
 
 /-- Export kernel-checkable replay and paper-semantics correspondence. -/
 def replayCertificateText (source : Spec.Paper.Core) (subject : Subject) (candidate : Candidate) : String :=
-  let indices := candidate.states.toList.map fun state =>
+  let indices := candidate.states.toList.map fun state ↦
     let destinations : List Nat := match step state with
-      | .ok (.next _ outcomes) => outcomes.map fun (outcome : Rat × State) =>
-          (candidate.states.toList.findIdx? fun s => decide (s = outcome.2)).getD 0
+      | .ok (.next _ outcomes) => outcomes.map fun (outcome : Rat × State) ↦
+          (candidate.states.toList.findIdx? fun s ↦ decide (s = outcome.2)).getD 0
       | _ => []
     "#[" ++ String.intercalate ", " (destinations.map toString) ++ "]"
   let indices := "#[" ++ String.intercalate ", " indices ++ "]"
@@ -133,17 +133,17 @@ def render (candidate : Candidate) : Except String Files := do
     let mut names := if i == candidate.initial then ["init"] else []
     match row.kind with
     | .transient =>
-        for edge in row.edges do
-          transitions := transitions ++ s!"{i} {edge.target} {rational edge.probability}\n"
+      for edge in row.edges do
+        transitions := transitions ++ s!"{i} {edge.target} {rational edge.probability}\n"
     | terminal =>
-        unless row.edges == #[⟨i,1⟩] do throw "candidate terminal state is not absorbing"
-        transitions := transitions ++ s!"{i} {size} 1\n"
-        match terminal with
-        | .returned reward =>
-            names := names ++ ["returned"]
-            if reward > 0 then positiveRewards := positiveRewards ++ s!"{i} {rational reward}\n"
-            if reward < 0 then negativeRewards := negativeRewards ++ s!"{i} {rational (-reward)}\n"
-        | _ => names := names ++ ["rejected"]
+      unless row.edges == #[⟨i, 1⟩] do throw "candidate terminal state is not absorbing"
+      transitions := transitions ++ s!"{i} {size} 1\n"
+      match terminal with
+      | .returned reward =>
+        names := names ++ ["returned"]
+        if reward > 0 then positiveRewards := positiveRewards ++ s!"{i} {rational reward}\n"
+        if reward < 0 then negativeRewards := negativeRewards ++ s!"{i} {rational (-reward)}\n"
+      | _ => names := names ++ ["rejected"]
     if !names.isEmpty then labels := labels ++ s!"{i} {String.intercalate " " names}\n"
   transitions := transitions ++ s!"{size} {size} 1\n"
   labels := labels ++ s!"{size} done\n"
@@ -167,9 +167,9 @@ def resultCertificateText (source : Spec.Paper.Core) (subject : Subject) (candid
   let certificate := termination.output
   let stateProofs := proofTable "result" "resultClaim" "model.size" "allResults" model.size
   let rejection := "#[" ++ String.intercalate ", " ((List.ofFn termination.rejection).map leanRat) ++ "]"
-  let vector := fun moment => "#[" ++ String.intercalate ", " ((List.ofFn (certificate.values moment)).map leanRat) ++ "]"
+  let vector := fun moment ↦ "#[" ++ String.intercalate ", " ((List.ofFn (certificate.values moment)).map leanRat) ++ "]"
   let ranks := "#[" ++ String.intercalate ", " ((List.ofFn certificate.rank).map toString) ++ "]"
-  let next := "#[" ++ String.intercalate ", " ((List.ofFn certificate.next).map fun j => s!"⟨{j.val}, by decide +kernel⟩") ++ "]"
+  let next := "#[" ++ String.intercalate ", " ((List.ofFn certificate.next).map fun j ↦ s!"⟨{j.val}, by decide +kernel⟩") ++ "]"
   let dead := "#[" ++ String.intercalate ", " ((List.ofFn certificate.dead).map toString) ++ "]"
   (replayCertificateText source subject candidate).replace
     "import Determinize.Checking.FiniteModel" "import Determinize.Checking.Statistics" ++
@@ -216,7 +216,7 @@ def writeResult (outputPath : System.FilePath) (source : Spec.Paper.Core) (subje
   let certificate := certified.val
   let statistics := certificate.statistics model
   let rankBound := (List.ofFn certificate.rank).foldl max 0
-  let optional := fun value : Option Rat => match value with
+  let optional := fun value : Option Rat ↦ match value with
     | none => Lean.Json.null | some q => Lean.toJson (rational q)
   let metadata := Lean.Json.mkObj [
     ("answer", Lean.toJson (rational statistics.firstMoment)),

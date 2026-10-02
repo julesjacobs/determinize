@@ -61,13 +61,13 @@ private def finite (x : Float) : Bool := !x.isNaN && !x.isInf
 def sample (op : Op) (action : DistributionAction) (args : List Float) : RandomM Float := do
   unless args.all finite do throw "nonfinite distribution parameter"
   let mean := action == .mean
-  let result ← match op,args with
-    | .uniform,[a,b] =>
+  let result ← match op, args with
+    | .uniform, [a, b] =>
       if a > b then throw "uniform requires lower ≤ upper"
       else if mean then pure (a / 2.0 + b / 2.0)
       else if a == b then pure a
       else do let u ← uniform01; pure (a * (1.0 - u) + b * u)
-    | .gaussian,[a,v] =>
+    | .gaussian, [a, v] =>
       if v < 0 then throw "gaussian requires variance ≥ 0"
       else if mean || v == 0 then pure a
       else do pure (a + Float.sqrt v * (← normal))
@@ -80,38 +80,38 @@ def sample (op : Op) (action : DistributionAction) (args : List Float) : RandomM
       if total > 1.0 + tolerance then throw "discrete probabilities sum to more than one"
       if mean then
         let supplied := probabilities.zipIdx.foldl
-          (fun acc (p,i) => acc + Float.ofNat i * p) 0.0
+          (fun acc (p, i) ↦ acc + Float.ofNat i * p) 0.0
         pure (supplied + Float.ofNat n * max 0.0 (1.0 - total))
       else
         let u ← uniform01
         let mut cumulative := 0.0
         let mut selected := none
-        for (p,i) in probabilities.zipIdx do
+        for (p, i) in probabilities.zipIdx do
           cumulative := cumulative + p
           if selected.isNone && u < cumulative then selected := some i
         pure (Float.ofNat (selected.getD n))
-    | .bernoulli,[a] =>
+    | .bernoulli, [a] =>
       if a < 0 || a > 1 then throw "bernoulli requires probability in [0,1]"
       else if mean then pure a
       else do pure (if (← uniform01) < a then 1 else 0)
-    | .poisson,[a] =>
+    | .poisson, [a] =>
       if a < 0 then throw "poisson requires rate ≥ 0"
       else if mean then pure a else poissonDraw a
-    | .exponential,[a] =>
+    | .exponential, [a] =>
       if a ≤ 0 then throw "exponential requires rate > 0"
       else if mean then pure (1.0 / a)
       else do pure (-Float.log (← uniform01) / a)
-    | .gamma,[a,b] =>
+    | .gamma, [a, b] =>
       if a ≤ 0 || b ≤ 0 then throw "gamma requires positive shape and rate"
       else if mean then pure (a / b)
       else do pure ((← gammaDraw a) / b)
-    | .beta,[a,b] =>
+    | .beta, [a, b] =>
       if a ≤ 0 || b ≤ 0 then throw "beta requires positive parameters"
       else if mean then pure (a / (a + b))
       else do
         let x ← gammaDraw a; let y ← gammaDraw b
         pure (x / (x + y))
-    | _,_ => throw "invalid primitive arity"
+    | _, _ => throw "invalid primitive arity"
   unless finite result do throw "nonfinite numerical sampling result"
   return result
 

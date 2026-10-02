@@ -22,7 +22,7 @@ private theorem splitStack_cons (frame : Frame) (stack : List Frame) :
       cases op <;> cases value <;> simp
 
 theorem splitStack_reconstruct (stack : List Frame) :
-    (splitStack stack).1 ++ ((splitStack stack).2.map fun c => Frame.right .add (.number c)) = stack := by
+    (splitStack stack).1 ++ ((splitStack stack).2.map fun c ↦ Frame.right .add (.number c)) = stack := by
   induction stack with
   | nil => rfl
   | cons frame stack ih =>
@@ -49,15 +49,15 @@ private theorem splitStack_inner (stack : List Frame) :
 
 private theorem splitStack_append (inner : List Frame) (offsets : List Rat)
     (clean : splitStack inner = (inner, [])) :
-    splitStack (inner ++ offsets.map (fun c => Frame.right .add (.number c))) =
+    splitStack (inner ++ offsets.map (fun c ↦ Frame.right .add (.number c))) =
       (inner, offsets) := by
   induction inner with
   | nil =>
     induction offsets with
     | nil => rfl
     | cons c cs ih =>
-        simp only [List.nil_append] at ih ⊢
-        simp [splitStack, ih]
+      simp only [List.nil_append] at ih ⊢
+      simp [splitStack, ih]
   | cons frame inner ih =>
     rw [splitStack_cons] at clean
     split_ifs at clean with h
@@ -82,9 +82,9 @@ theorem normalize_idempotent (state : State) :
     Reward.normalize (Reward.normalize state).2 = (0, (Reward.normalize state).2) := by
   cases state with
   | eval expression environment stack =>
-      simp only [Reward.normalize, normalizeStack_idempotent]
+    simp only [Reward.normalize, normalizeStack_idempotent]
   | deliver value stack =>
-      simp only [Reward.normalize, normalizeStack_idempotent]
+    simp only [Reward.normalize, normalizeStack_idempotent]
   | rejected => rfl
 
 end Determinize.Proof.RewardModel

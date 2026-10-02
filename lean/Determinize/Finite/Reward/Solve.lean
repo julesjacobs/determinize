@@ -15,7 +15,7 @@ instance (model : Spec.FiniteModel.Model) (rhs values : Fin model.size → Rat) 
 
 private def solveRhs (model : Spec.FiniteModel.Model) (rhs : Fin model.size → Rat) :
     Except String {values : Fin model.size → Rat // equations model rhs values} := do
-  let A := fun i j : Fin model.size =>
+  let A := fun i j : Fin model.size ↦
     let identity : Rat := if i = j then 1 else 0
     if model.kind i = .transient then identity - model.transition i j else identity
   let some solution := Proof.LinearAlgebra.solve model.size A rhs
@@ -34,15 +34,15 @@ def firstRhs (model : Spec.RewardModel.Model) (dead : Fin model.size → Bool)
   if dead i then 0 else match model.kind i with
   | .returned b => b
   | .rejected => 0
-  | .transient => ((model.edges i).map fun e => e.probability * e.reward * mass e.target).sum
+  | .transient => ((model.edges i).map fun e ↦ e.probability * e.reward * mass e.target).sum
 
 def secondRhs (model : Spec.RewardModel.Model) (dead : Fin model.size → Bool)
     (mass first : Fin model.size → Rat) (i : Fin model.size) : Rat :=
   if dead i then 0 else match model.kind i with
-  | .returned b => b*b
+  | .returned b => b * b
   | .rejected => 0
-  | .transient => ((model.edges i).map fun e =>
-      e.probability * (2*e.reward*first e.target + e.reward*e.reward*mass e.target)).sum
+  | .transient => ((model.edges i).map fun e ↦
+      e.probability * (2 * e.reward * first e.target + e.reward * e.reward * mass e.target)).sum
 
 /-- Checked linear equations; source correspondence and integral interpretation are separate. -/
 structure Solution (model : Spec.RewardModel.Model) where
@@ -61,7 +61,7 @@ structure Solution (model : Spec.RewardModel.Model) where
     (rejectionQuery model.control boundary.dead)).Equations _
 
 theorem Solution.momentsValid {model : Spec.RewardModel.Model} (solution : Solution model) : Proof.RewardModel.MomentEquations (Proof.RewardModel.cut model solution.boundary.dead)
-    (fun moment => match moment with | .mass => solution.mass | .first => solution.first | .second => solution.second) := by
+    (fun moment ↦ match moment with | .mass => solution.mass | .first => solution.first | .second => solution.second) := by
   intro moment i
   have mass := solution.massValid i
   have first := solution.firstValid i

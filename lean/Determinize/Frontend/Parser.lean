@@ -83,7 +83,7 @@ private abbrev P := StateT ParserState (Except String)
 private def peek : P String := do return ((← get).tokens[(← get).pos]?).getD "<end>"
 private def take : P String := do
   let t ← peek
-  modify fun s => {s with pos := s.pos + 1}
+  modify fun s ↦ {s with pos := s.pos + 1}
   return t
 private def expect (t : String) : P Unit := do
   let got ← take
@@ -95,7 +95,7 @@ private def name : P String := do
 private def primitives := ["uniform", "gauss", "gaussian", "poisson", "exponential", "gamma", "beta", "flip", "bernoulli", "discrete", "discrete_list", "observe"]
 private def startsAtom (t : String) : Bool :=
   t == "(" || t == "[" ||
-  (t.toList.head?.any (fun c => identStart c || c.isDigit) &&
+  (t.toList.head?.any (fun c ↦ identStart c || c.isDigit) &&
     !(["in", "then", "else", "with", "let", "if", "match", "fun", "rec"].contains t))
 
 private partial def expr (minPrec : Nat := 0) : P Surface := do
@@ -164,13 +164,13 @@ private partial def expr (minPrec : Nat := 0) : P Surface := do
             args := args ++ [← expr]
         expect ")"
         match t, args with
-        | "uniform", [a,b] => pure (.uniform affinity a b)
-        | "gauss", [a,b] | "gaussian", [a,b] => pure (.gaussian affinity a b)
+        | "uniform", [a, b] => pure (.uniform affinity a b)
+        | "gauss", [a, b] | "gaussian", [a, b] => pure (.gaussian affinity a b)
         | "poisson", [a] => pure (.poisson affinity a)
         | "exponential", [a] => pure (.exponential affinity a)
         | "bernoulli", [a] => pure (.bernoulli affinity a)
-        | "beta", [a,b] => pure (.beta affinity a b)
-        | "gamma", [a,b] => pure (.gamma affinity a b)
+        | "beta", [a, b] => pure (.beta affinity a b)
+        | "gamma", [a, b] => pure (.gamma affinity a b)
         | "discrete_list", [probabilities] => pure (.discreteRemainder affinity probabilities)
         | "discrete", probabilities =>
           if remainder then pure (.discreteRemainder affinity (probabilities.foldr Surface.cons .nil))
@@ -193,7 +193,7 @@ private partial def expr (minPrec : Nat := 0) : P Surface := do
       | "*" | "/" => some (60, 61)
       | _ => none
     match infixInfo with
-    | some (l,r) =>
+    | some (l, r) =>
       if l < minPrec then break
       discard take
       let right ← expr r

@@ -75,7 +75,7 @@ theorem MeanOnTraces.lintegral_convex_le {source target : Expr}
     output trace = ∫ value : ℝ, value ∂fiber trace at valid
   have := markov
   have continuous : Continuous φ := continuousOn_univ.1 (convex.continuousOn isOpen_univ)
-  have measurableφ : Measurable fun value => ENNReal.ofReal (φ value) :=
+  have measurableφ : Measurable fun value ↦ ENNReal.ofReal (φ value) :=
     continuous.measurable.ennreal_ofReal
   rw [sourceEq, targetEq, lintegral_map measurableφ measurableOutput,
     Measure.lintegral_bind fiber.measurable.aemeasurable measurableφ.aemeasurable]
@@ -92,23 +92,23 @@ theorem MeanOnTraces.lintegral_convex_le {source target : Expr}
       (Filter.Eventually.of_forall nonneg)]
     apply ENNReal.ofReal_le_ofReal
     have jensen := convex.map_integral_le (μ := fiber trace) (f := id) continuous.continuousOn
-      isClosed_univ (Filter.Eventually.of_forall fun _ => Set.mem_univ _) good.1 integrable
+      isClosed_univ (Filter.Eventually.of_forall fun _ ↦ Set.mem_univ _) good.1 integrable
     simpa using jensen
 
 /-- `∫⁻ (a - b)⁺ ≤ ∫⁻ a⁺` when `b` is nonnegative. -/
 theorem lintegral_ofReal_sub_le {α : Type*} [MeasurableSpace α] (ν : Measure α) (a b : α → ℝ)
     (hb0 : ∀ x, 0 ≤ b x) :
     ∫⁻ x, ENNReal.ofReal (a x - b x) ∂ν ≤ ∫⁻ x, ENNReal.ofReal (a x) ∂ν :=
-  lintegral_mono fun x => ENNReal.ofReal_le_ofReal (by linarith [hb0 x])
+  lintegral_mono fun x ↦ ENNReal.ofReal_le_ofReal (by linarith [hb0 x])
 
 /-- `∫⁻ a⁺ ≤ ∫⁻ (a - b)⁺ + ∫⁻ b⁺`. -/
 theorem lintegral_ofReal_le_sub_add {α : Type*} [MeasurableSpace α] (ν : Measure α)
     {a b : α → ℝ} (ha : Measurable a) (hb : Measurable b) :
     ∫⁻ x, ENNReal.ofReal (a x) ∂ν ≤
       ∫⁻ x, ENNReal.ofReal (a x - b x) ∂ν + ∫⁻ x, ENNReal.ofReal (b x) ∂ν := by
-  have hab : Measurable fun x => ENNReal.ofReal (a x - b x) := (ha.sub hb).ennreal_ofReal
+  have hab : Measurable fun x ↦ ENNReal.ofReal (a x - b x) := (ha.sub hb).ennreal_ofReal
   rw [← lintegral_add_left hab]
-  refine lintegral_mono fun x => ?_
+  refine lintegral_mono fun x ↦ ?_
   calc ENNReal.ofReal (a x) = ENNReal.ofReal ((a x - b x) + b x) := by rw [sub_add_cancel]
     _ ≤ ENNReal.ofReal (a x - b x) + ENNReal.ofReal (b x) := ENNReal.ofReal_add_le
 
@@ -130,7 +130,7 @@ theorem ereal_sub_lintegral_eq {α : Type*} [MeasurableSpace α] (ν : Measure �
   have ACB : A ≤ C + B := lintegral_ofReal_le_sub_add ν ha hb
   have BDA : B ≤ D + A := lintegral_ofReal_le_sub_add ν hb ha
   have coe_ne_top {x : ℝ≥0∞} (hx : x ≠ ⊤) : (x : EReal) ≠ ⊤ :=
-    fun h => hx (EReal.coe_ennreal_eq_top_iff.1 h)
+    fun h ↦ hx (EReal.coe_ennreal_eq_top_iff.1 h)
   by_cases hAtop : A = ⊤
   · have hBne : B ≠ ⊤ := finite.resolve_left (not_not.2 hAtop)
     have hCtop : C = ⊤ := by
@@ -158,7 +158,7 @@ theorem ereal_sub_lintegral_eq {α : Type*} [MeasurableSpace α] (ν : Measure �
         ⟨hb.aestronglyMeasurable,
           (hasFiniteIntegral_iff_ofReal (Filter.Eventually.of_forall hb0)).2
             (lt_top_iff_ne_top.2 hBtop)⟩
-      have iab : Integrable (fun x => a x - b x) ν := ia.sub ib
+      have iab : Integrable (fun x ↦ a x - b x) ν := ia.sub ib
       have real : A.toReal - B.toReal = C.toReal - D.toReal := by
         have hAr : A.toReal = ∫ x, a x ∂ν :=
           (integral_eq_lintegral_of_nonneg_ae (Filter.Eventually.of_forall ha0)
@@ -191,15 +191,15 @@ theorem MeanOnTraces.extended_expectation {source target : Expr}
     output trace = ∫ value : ℝ, value ∂fiber trace at valid
   have := markov
   -- the positive and negative parts of the fibers, as real functions of the trace
-  let a : Trace → ℝ := fun trace => (∫⁻ value, ENNReal.ofReal value ∂fiber trace).toReal
-  let b : Trace → ℝ := fun trace => (∫⁻ value, ENNReal.ofReal (-value) ∂fiber trace).toReal
+  let a : Trace → ℝ := fun trace ↦ (∫⁻ value, ENNReal.ofReal value ∂fiber trace).toReal
+  let b : Trace → ℝ := fun trace ↦ (∫⁻ value, ENNReal.ofReal (-value) ∂fiber trace).toReal
   have ha : Measurable a :=
     ((Measure.measurable_lintegral ENNReal.measurable_ofReal).comp fiber.measurable).ennreal_toReal
   have hb : Measurable b :=
     ((Measure.measurable_lintegral measurable_neg.ennreal_ofReal).comp
       fiber.measurable).ennreal_toReal
-  have ha0 : ∀ trace, 0 ≤ a trace := fun _ => ENNReal.toReal_nonneg
-  have hb0 : ∀ trace, 0 ≤ b trace := fun _ => ENNReal.toReal_nonneg
+  have ha0 : ∀ trace, 0 ≤ a trace := fun _ ↦ ENNReal.toReal_nonneg
+  have hb0 : ∀ trace, 0 ≤ b trace := fun _ ↦ ENNReal.toReal_nonneg
   have good : ∀ᵐ trace ∂ν,
       ∫⁻ value, ENNReal.ofReal value ∂fiber trace = ENNReal.ofReal (a trace) ∧
       ∫⁻ value, ENNReal.ofReal (-value) ∂fiber trace = ENNReal.ofReal (b trace) ∧
@@ -210,7 +210,7 @@ theorem MeanOnTraces.extended_expectation {source target : Expr}
     have posNe : ∫⁻ value, ENNReal.ofReal value ∂fiber trace ≠ ⊤ :=
       ne_top_of_le_ne_top finiteNorm (lintegral_ofReal_le_lintegral_enorm id)
     have negNe : ∫⁻ value, ENNReal.ofReal (-value) ∂fiber trace ≠ ⊤ := by
-      have h := lintegral_ofReal_le_lintegral_enorm (μ := fiber trace) fun value : ℝ => -value
+      have h := lintegral_ofReal_le_lintegral_enorm (μ := fiber trace) fun value : ℝ ↦ -value
       simp only [enorm_neg] at h
       exact ne_top_of_le_ne_top finiteNorm h
     refine ⟨(ENNReal.ofReal_toReal posNe).symm, (ENNReal.ofReal_toReal negNe).symm, ?_⟩
@@ -222,20 +222,20 @@ theorem MeanOnTraces.extended_expectation {source target : Expr}
       ∫⁻ trace, ENNReal.ofReal (a trace) ∂ν := by
     rw [posPartIntegral, sourceEq, Measure.lintegral_bind fiber.measurable.aemeasurable
       ENNReal.measurable_ofReal.aemeasurable]
-    exact lintegral_congr_ae (good.mono fun trace h => h.1)
+    exact lintegral_congr_ae (good.mono fun trace h ↦ h.1)
   have negSource : negPartIntegral (bigStepMeasure source) =
       ∫⁻ trace, ENNReal.ofReal (b trace) ∂ν := by
     rw [negPartIntegral, sourceEq, Measure.lintegral_bind fiber.measurable.aemeasurable
       measurable_neg.ennreal_ofReal.aemeasurable]
-    exact lintegral_congr_ae (good.mono fun trace h => h.2.1)
+    exact lintegral_congr_ae (good.mono fun trace h ↦ h.2.1)
   have posTarget : posPartIntegral (bigStepMeasure target) =
       ∫⁻ trace, ENNReal.ofReal (a trace - b trace) ∂ν := by
     rw [posPartIntegral, targetEq, lintegral_map ENNReal.measurable_ofReal measurableOutput]
-    exact lintegral_congr_ae (good.mono fun trace h => by simp only [h.2.2])
+    exact lintegral_congr_ae (good.mono fun trace h ↦ by simp only [h.2.2])
   have negTarget : negPartIntegral (bigStepMeasure target) =
       ∫⁻ trace, ENNReal.ofReal (b trace - a trace) ∂ν := by
     rw [negPartIntegral, targetEq, lintegral_map measurable_neg.ennreal_ofReal measurableOutput]
-    exact lintegral_congr_ae (good.mono fun trace h => by simp only [h.2.2, neg_sub])
+    exact lintegral_congr_ae (good.mono fun trace h ↦ by simp only [h.2.2, neg_sub])
   rw [HasExpectation, posSource, negSource] at defined
   refine ⟨?_, ?_⟩
   · rw [HasExpectation, posTarget, negTarget]
@@ -252,12 +252,12 @@ theorem integral_sub_sq_eq_moments {μ : Measure ℝ} [IsFiniteMeasure μ] (memL
     (m : ℝ) :
     ∫ value, (value - m) ^ 2 ∂μ =
       ∫ value, value ^ 2 ∂μ - 2 * m * ∫ value, value ∂μ + μ.real Set.univ * m ^ 2 := by
-  have sq : Integrable (fun value : ℝ => value ^ 2) μ := memLp.integrable_sq
-  have lin : Integrable (fun value : ℝ => value) μ := memLp.integrable one_le_two
-  have scaled : Integrable (fun value : ℝ => 2 * m * value) μ := lin.const_mul _
-  have shifted : Integrable (fun value : ℝ => value ^ 2 - 2 * m * value) μ := sq.sub scaled
+  have sq : Integrable (fun value : ℝ ↦ value ^ 2) μ := memLp.integrable_sq
+  have lin : Integrable (fun value : ℝ ↦ value) μ := memLp.integrable one_le_two
+  have scaled : Integrable (fun value : ℝ ↦ 2 * m * value) μ := lin.const_mul _
+  have shifted : Integrable (fun value : ℝ ↦ value ^ 2 - 2 * m * value) μ := sq.sub scaled
   have expand : ∀ value : ℝ, (value - m) ^ 2 = (value ^ 2 - 2 * m * value) + m ^ 2 :=
-    fun value => by ring
+    fun value ↦ by ring
   simp only [expand]
   rw [integral_add shifted (integrable_const _), integral_sub sq scaled, integral_const_mul,
     integral_const, smul_eq_mul]
@@ -280,7 +280,7 @@ theorem TraceFactorization.second_moment {source target : Expr} {fiber : Kernel 
     {output : Trace → ℝ} (factor : TraceFactorization source target fiber output)
     (memLp : MemLp id 2 (bigStepMeasure source)) :
     MemLp id 2 (bigStepMeasure target) ∧
-      Integrable (fun trace => variance id (fiber trace)) (traceLaw source) ∧
+      Integrable (fun trace ↦ variance id (fiber trace)) (traceLaw source) ∧
       ∫ value, value ^ 2 ∂bigStepMeasure source =
         ∫ value, value ^ 2 ∂bigStepMeasure target +
           ∫ trace, variance id (fiber trace) ∂traceLaw source := by
@@ -288,16 +288,16 @@ theorem TraceFactorization.second_moment {source target : Expr} {fiber : Kernel 
   have targetEq := factor.target_law
   obtain ⟨markov, measurableOutput, -, -, valid⟩ := factor
   have := markov
-  have sqMeasurable : Measurable fun value : ℝ => value ^ 2 := measurable_id.pow_const 2
+  have sqMeasurable : Measurable fun value : ℝ ↦ value ^ 2 := measurable_id.pow_const 2
   -- the source second moment is the mixture of the fiber second moments
-  have sqSource : Integrable (fun value : ℝ => value ^ 2) (fiber ∘ₘ traceLaw source) := by
+  have sqSource : Integrable (fun value : ℝ ↦ value ^ 2) (fiber ∘ₘ traceLaw source) := by
     rw [← sourceEq]
     exact memLp.integrable_sq
   have fiberSq : ∀ᵐ trace ∂traceLaw source,
-      Integrable (fun value : ℝ => value ^ 2) (fiber trace) :=
+      Integrable (fun value : ℝ ↦ value ^ 2) (fiber trace) :=
     Measure.ae_integrable_of_integrable_comp sqSource
   have secondMoment :
-      Integrable (fun trace => ∫ value, value ^ 2 ∂fiber trace) (traceLaw source) := by
+      Integrable (fun trace ↦ ∫ value, value ^ 2 ∂fiber trace) (traceLaw source) := by
     simpa only [norm_pow, Real.norm_eq_abs, sq_abs] using
       Measure.integrable_integral_norm_of_integrable_comp sqSource
   have sourceSecond : ∫ value, value ^ 2 ∂bigStepMeasure source =
@@ -315,7 +315,7 @@ theorem TraceFactorization.second_moment {source target : Expr} {fiber : Kernel 
     rw [variance_eq_sub memLpFiber, good.2]
     rfl
   -- the squared target output is dominated by the fiber second moment
-  have outputSq : Integrable (fun trace => output trace ^ 2) (traceLaw source) := by
+  have outputSq : Integrable (fun trace ↦ output trace ^ 2) (traceLaw source) := by
     refine secondMoment.mono' (measurableOutput.pow_const 2).aestronglyMeasurable ?_
     filter_upwards [fiberVariance] with trace h
     rw [Real.norm_eq_abs, abs_of_nonneg (sq_nonneg _)]
@@ -327,9 +327,9 @@ theorem TraceFactorization.second_moment {source target : Expr} {fiber : Kernel 
       ∫ trace, output trace ^ 2 ∂traceLaw source := by
     rw [targetEq, integral_map measurableOutput.aemeasurable sqMeasurable.aestronglyMeasurable]
   refine ⟨memLpTarget, ?_, ?_⟩
-  · have sub : Integrable (fun trace => ∫ value, value ^ 2 ∂fiber trace - output trace ^ 2)
+  · have sub : Integrable (fun trace ↦ ∫ value, value ^ 2 ∂fiber trace - output trace ^ 2)
         (traceLaw source) := secondMoment.sub outputSq
-    exact sub.congr (fiberVariance.mono fun trace h => h.symm)
+    exact sub.congr (fiberVariance.mono fun trace h ↦ h.symm)
   · rw [sourceSecond, targetSecond, integral_congr_ae fiberVariance,
       integral_sub secondMoment outputSq]
     ring
@@ -342,7 +342,7 @@ theorem TraceFactorization.variance_decomposition {source target : Expr}
     {fiber : Kernel Trace ℝ} {output : Trace → ℝ}
     (factor : TraceFactorization source target fiber output)
     (memLp : MemLp id 2 (bigStepMeasure source)) :
-    Integrable (fun trace => variance id (fiber trace)) (traceLaw source) ∧
+    Integrable (fun trace ↦ variance id (fiber trace)) (traceLaw source) ∧
       variance id (bigStepMeasure source) =
         variance id (bigStepMeasure target) +
           ∫ trace, variance id (fiber trace) ∂traceLaw source := by
@@ -372,7 +372,7 @@ theorem MeanOnTraces.variance_le {source target : Expr} (sound : MeanOnTraces so
   obtain ⟨memLpTarget, -, second⟩ := factor.second_moment memLp
   obtain ⟨-, decomposition⟩ := factor.variance_decomposition memLp
   have nonneg : 0 ≤ ∫ trace, variance id (fiber trace) ∂traceLaw source :=
-    integral_nonneg fun trace => variance_nonneg id (fiber trace)
+    integral_nonneg fun trace ↦ variance_nonneg id (fiber trace)
   exact ⟨memLpTarget, by linarith, by linarith⟩
 
 end Determinize.Proof.Traces
@@ -440,7 +440,7 @@ open MeasureTheory ProbabilityTheory Determinize.Spec.Paper Determinize.Spec.Tra
 /-- The law of total variance along traces, stated with regular conditional distributions. -/
 theorem varianceSoundness (program : Expr) (typed : Typed [] program (.float .E))
     (sourceSafe : DomainSafe program) (memLp : MemLp id 2 (bigStepMeasure program)) :
-    Integrable (fun trace => variance id ((traceAndOutputLaw program).condKernel trace))
+    Integrable (fun trace ↦ variance id ((traceAndOutputLaw program).condKernel trace))
         (traceLaw program) ∧
       variance id (bigStepMeasure program) =
         variance id (bigStepMeasure program.determinize) +
@@ -451,8 +451,8 @@ theorem varianceSoundness (program : Expr) (typed : Typed [] program (.float .E)
   obtain ⟨_, factor, massAe, _⟩ := soundnessData .E program typed
     sourceSafe
   obtain ⟨integrable, decomposition⟩ := factor.variance_decomposition memLp
-  have congr : (fun trace => variance id (StepTraces.normalizedOutputGivenTrace program trace))
-      =ᵐ[traceLaw program] fun trace => variance id ((traceAndOutputLaw program).condKernel trace) := by
+  have congr : (fun trace ↦ variance id (StepTraces.normalizedOutputGivenTrace program trace))
+      =ᵐ[traceLaw program] fun trace ↦ variance id ((traceAndOutputLaw program).condKernel trace) := by
     filter_upwards [massAe, replayAe] with trace mass replay
     rw [← mass, replay]
   exact ⟨integrable.congr congr, by rw [decomposition, integral_congr_ae congr]⟩

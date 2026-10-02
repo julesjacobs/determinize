@@ -17,7 +17,7 @@ namespace Determinize.Spec.Paper
 
 abbrev Core := Expr Rat
 
-def interpret (e : Core) : Expr := e.map (fun (q : Rat) => (q : ℝ)) id
+def interpret (e : Core) : Expr := e.map (fun (q : Rat) ↦ (q : ℝ)) id
 
 /-- Resolved source syntax. A site carries its requested affinity, or `none` if the affinity is
 to be inferred. -/
@@ -43,25 +43,25 @@ def Expr.Sitewise {Literal Site Site' : Type} (R : Site → Site' → Prop) :
   | .lam body, .lam body' | .fix body, .fix body' | .fst body, .fst body'
   | .snd body, .snd body' | .inl body, .inl body' | .inr body, .inr body'
   | .neg body, .neg body' =>
-      Sitewise R body body'
+    Sitewise R body body'
   | .app a b, .app a' b' | .pair a b, .pair a' b' | .cons a b, .cons a' b'
   | .letE a b, .letE a' b' | .add a b, .add a' b' | .mul a b, .mul a' b'
   | .div a b, .div a' b' | .lt a b, .lt a' b' =>
-      Sitewise R a a' ∧ Sitewise R b b'
+    Sitewise R a a' ∧ Sitewise R b b'
   | .matchSum a b c, .matchSum a' b' c' | .matchList a b c, .matchList a' b' c'
   | .ite a b c, .ite a' b' c' =>
-      Sitewise R a a' ∧ Sitewise R b b' ∧ Sitewise R c c'
+    Sitewise R a a' ∧ Sitewise R b b' ∧ Sitewise R c c'
   | .poisson s a, .poisson s' a' | .discrete s a, .discrete s' a'
   | .bernoulli s a, .bernoulli s' a' | .exponential s a, .exponential s' a' =>
-      R s s' ∧ Sitewise R a a'
+    R s s' ∧ Sitewise R a a'
   | .uniform s a b, .uniform s' a' b' | .gaussian s a b, .gaussian s' a' b'
   | .beta s a b, .beta s' a' b' | .gamma s a b, .gamma s' a' b' =>
-      R s s' ∧ Sitewise R a a' ∧ Sitewise R b b'
+    R s s' ∧ Sitewise R a a' ∧ Sitewise R b b'
   | _, _ => False
 
 /-- `program` keeps every constructor, literal, variable index and requested affinity of
 `input`, and fills its placeholders. -/
 def Input.matches (input : Input) (program : Annotated) : Prop :=
-  input.Sitewise (fun requested affinity => requested = none ∨ requested = some affinity) program
+  input.Sitewise (fun requested affinity ↦ requested = none ∨ requested = some affinity) program
 
 end Determinize.Spec.Paper

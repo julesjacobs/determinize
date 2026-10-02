@@ -15,7 +15,7 @@ open Determinize.Proof.Paper
 noncomputable section
 
 instance : MeasurableSpace (Option Op) := ⊤
-instance : MeasurableSingletonClass (Option Op) := ⟨fun _ => trivial⟩
+instance : MeasurableSingletonClass (Option Op) := ⟨fun _ ↦ trivial⟩
 
 /-- The primitive a site records: a general-affinity stochastic draw and nothing else. -/
 def siteOp : DistributionAction × Op → Option Op
@@ -32,35 +32,35 @@ def siteOp : DistributionAction × Op → Option Op
 def generationOp : Skeleton → Option Op
   | .pair l r | .cons l r | .app l r
   | .add l r | .mul l r | .div l r | .lt l r =>
-      if l.isValue then generationOp r else generationOp l
+    if l.isValue then generationOp r else generationOp l
   | .fst x | .snd x | .inl x | .inr x
   | .neg x => generationOp x
   | .matchSum x _ _ | .matchList x _ _ | .ite x _ _
   | .letE x _ => generationOp x
   | .uniform kind l r =>
-      if l.isValue then if r.isValue then siteOp (kind, .uniform) else generationOp r
-      else generationOp l
+    if l.isValue then if r.isValue then siteOp (kind, .uniform) else generationOp r
+    else generationOp l
   | .gaussian kind l r =>
-      if l.isValue then if r.isValue then siteOp (kind, .gaussian) else generationOp r
-      else generationOp l
+    if l.isValue then if r.isValue then siteOp (kind, .gaussian) else generationOp r
+    else generationOp l
   | .poisson kind x => if x.isValue then siteOp (kind, .poisson) else generationOp x
   | .discrete kind probabilities =>
-      if probabilities.isValue then
-        probabilities.literalListArity?.bind (fun n => siteOp (kind, .discrete n))
-      else generationOp probabilities
+    if probabilities.isValue then
+      probabilities.literalListArity?.bind (fun n ↦ siteOp (kind, .discrete n))
+    else generationOp probabilities
   | .bernoulli kind x => if x.isValue then siteOp (kind, .bernoulli) else generationOp x
   | .exponential kind x =>
-      if x.isValue then siteOp (kind, .exponential) else generationOp x
+    if x.isValue then siteOp (kind, .exponential) else generationOp x
   | .beta kind l r =>
-      if l.isValue then if r.isValue then siteOp (kind, .beta) else generationOp r
-      else generationOp l
+    if l.isValue then if r.isValue then siteOp (kind, .beta) else generationOp r
+    else generationOp l
   | .gamma kind l r =>
-      if l.isValue then if r.isValue then siteOp (kind, .gamma) else generationOp r
-      else generationOp l
+    if l.isValue then if r.isValue then siteOp (kind, .gamma) else generationOp r
+    else generationOp l
   | _ => none
 
 /-- The event recording `value` at a site labelled `op`; `none` when the site records nothing. -/
-def entry (op : Option Op) (value : ℝ) : Event := op.map (fun op => (op, value))
+def entry (op : Option Op) (value : ℝ) : Event := op.map (fun op ↦ (op, value))
 
 theorem generationEvent_eq_entry (site : DistributionAction × Op) (value : ℝ) :
     generationEvent site value = entry (siteOp site) value := by
@@ -73,7 +73,7 @@ theorem event_some_measurable : Measurable (some : Op × ℝ → Event) := by
   apply measurable_comap_iff.mpr
   exact measurable_inl
 
-theorem entry_measurable : Measurable (fun pair : Option Op × ℝ => entry pair.1 pair.2) := by
+theorem entry_measurable : Measurable (fun pair : Option Op × ℝ ↦ entry pair.1 pair.2) := by
   apply measurable_from_prod_countable_right
   intro op
   cases op with

@@ -16,7 +16,7 @@ private def absorption (model : Model) (remaining : Nat) (horizon : Nat)
   else match remaining with
     | 0 => none
     | remaining + 1 =>
-      let next := Vector.ofFn fun state => if model.kind state = StateKind.transient then
+      let next := Vector.ofFn fun state ↦ if model.kind state = StateKind.transient then
         ∑ successor, model.transition state successor * survival[successor] else 0
       absorption model remaining (horizon + 1) next (by
         intro state
@@ -28,10 +28,10 @@ def solveValues (model : Model) (limits : SolveLimits := {}) :
       (⟨values, 0⟩ : ResultCertificate model).Equations model} := do
   if model.size > limits.maxStates then
     throw s!"exact solver state limit exceeded ({model.size} > {limits.maxStates})"
-  let A := fun state next : Fin model.size =>
+  let A := fun state next : Fin model.size ↦
     let identity : Rat := if state = next then 1 else 0
     if model.kind state = StateKind.transient then identity - model.transition state next else identity
-  let b := fun state => match model.kind state with | .returned reward => reward | _ => 0
+  let b := fun state ↦ match model.kind state with | .returned reward => reward | _ => 0
   let some solution := Proof.LinearAlgebra.solve model.size A b
     | throw "singular value equations; no absorption certificate"
   have equations : ∀ state, solution.val state = match model.kind state with
@@ -47,7 +47,7 @@ def solveValues (model : Model) (limits : SolveLimits := {}) :
 
 def absorptionBound (model : Model) :
     Option {n : Nat // ∀ state, model.survivalWithin n state < 1} :=
-  let initial := Vector.ofFn fun state => if model.kind state = StateKind.transient then (1 : Rat) else 0
+  let initial := Vector.ofFn fun state ↦ if model.kind state = StateKind.transient then (1 : Rat) else 0
   absorption model model.size 0 initial (by simp [initial, Model.survivalWithin])
 
 def solveCertified (model : Model) (limits : SolveLimits := {}) :
@@ -66,8 +66,8 @@ theorem solve_sound (model : Model) (limits : SolveLimits) (certificate : Result
   cases h : solveCertified model limits with
   | error message => simp [h, Except.map] at success
   | ok result =>
-      simp [h, Except.map] at success
-      exact success ▸ result.property
+    simp [h, Except.map] at success
+    exact success ▸ result.property
 
 theorem solve_expectedReward (model : Model) (limits : SolveLimits)
     (certificate : ResultCertificate model) (success : solve model limits = .ok certificate) :

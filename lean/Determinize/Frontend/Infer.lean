@@ -133,10 +133,10 @@ variable. -/
 abbrev Generate := StateT Nat (Except String)
 
 def fresh : Generate UType :=
-  modifyGet fun n => (.var n, n + 1)
+  modifyGet fun n ↦ (.var n, n + 1)
 
 def freshFloat : Generate UType :=
-  modifyGet fun n => (.float (.var (.generated n)), n + 1)
+  modifyGet fun n ↦ (.float (.var (.generated n)), n + 1)
 
 /-- The type of an operand that the typing rules require to be G. -/
 def general : UType := .float (.fixed .G)
@@ -148,7 +148,7 @@ def site : Option Affinity → Generate UType
 
 /-- Phase 1: the draft of `e` in the context `Γ`. -/
 def generate (Γ : List UType) (e : Input) : Generate Draft := do
-  let node := fun t children => Draft.node e t children
+  let node := fun t children ↦ Draft.node e t children
   match e with
   | .bvar i =>
     let some t := Γ[i]? | throw s!"unbound core variable {i}"
@@ -299,17 +299,17 @@ structure Solution where
 /-- The type of a draft type in the solution. The shape variables left after decoration are
 unconstrained and become `unit`. -/
 def Solution.type (s : Solution) (t : UType) : Ty :=
-  (t.decorate s.shapes).instantiate (fun _ => .unit) s.affinities
+  (t.decorate s.shapes).instantiate (fun _ ↦ .unit) s.affinities
 
 /-- Phases 1 to 5. Fails on an unbound variable, if the shapes have no unifier, or if the affinity
 constraints have no solution. -/
 def solveInput (input : Input) : Except String Solution := do
   let (draft, _) ← (generate [] input).run 0
   let relations := draft.relations
-  let some shapes := unify (relations.map fun (s, t) => (s.shape, t.shape))
+  let some shapes := unify (relations.map fun (s, t) ↦ (s.shape, t.shape))
     | throw "incompatible or infinite type shapes"
   let constraints :=
-    relations.flatMap fun (s, t) => decompose (s.decorate shapes) (t.decorate shapes)
+    relations.flatMap fun (s, t) ↦ decompose (s.decorate shapes) (t.decorate shapes)
   let some affinities := solveAffinities constraints
     | throw "inconsistent E/G constraints"
   return { draft, shapes, affinities }

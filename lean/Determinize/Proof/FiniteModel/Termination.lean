@@ -11,7 +11,7 @@ theorem survival_nonnegative (model : Model) (n : Nat) (state : Fin model.size) 
   | succ n ih =>
     simp only [Model.survivalWithin]
     split
-    · exact Finset.sum_nonneg fun next _ => mul_nonneg (model.nonnegative state next) (ih next)
+    · exact Finset.sum_nonneg fun next _ ↦ mul_nonneg (model.nonnegative state next) (ih next)
     · exact le_rfl
 
 theorem within_mass_balance (model : Model) (n : Nat) (state : Fin model.size) :
@@ -29,7 +29,7 @@ theorem within_mass_balance (model : Model) (n : Nat) (state : Fin model.size) :
       change (∑ next, ENNReal.ofReal (model.transition state next : ℝ) * model.outputWithin n next Set.univ) +
         (∑ next, ENNReal.ofReal (model.transition state next : ℝ) * model.rejectionModel.outputWithin n next Set.univ) +
         ENNReal.ofReal (∑ next, (model.transition state next : ℝ) * (model.survivalWithin n next : ℝ)) = 1
-      rw [ENNReal.ofReal_sum_of_nonneg (fun next _ => mul_nonneg
+      rw [ENNReal.ofReal_sum_of_nonneg (fun next _ ↦ mul_nonneg
         (by exact_mod_cast model.nonnegative state next) (by exact_mod_cast survival_nonnegative model n next))]
       have cast_mul (next : Fin model.size) (r : ℝ) :
           ENNReal.ofReal ((model.transition state next : ℝ) * r) =
@@ -38,7 +38,7 @@ theorem within_mass_balance (model : Model) (n : Nat) (state : Fin model.size) :
       simp_rw [cast_mul]
       rw [← Finset.sum_add_distrib, ← Finset.sum_add_distrib]
       simp_rw [← mul_add, ih, mul_one]
-      rw [← ENNReal.ofReal_sum_of_nonneg (fun next _ => by exact_mod_cast model.nonnegative state next)]
+      rw [← ENNReal.ofReal_sum_of_nonneg (fun next _ ↦ by exact_mod_cast model.nonnegative state next)]
       have total : ∑ next, (model.transition state next : ℝ) = 1 := by exact_mod_cast model.normalized state
       simp [total]
 
@@ -55,12 +55,12 @@ theorem massBalance (model : Model) :
       monotone_measure_iSup_apply _ (outputWithin_mono model _) _ MeasurableSet.univ,
       monotone_measure_iSup_apply _ (outputWithin_mono model.rejectionModel _) _ MeasurableSet.univ,
       ENNReal.iSup_add_iSup_of_monotone
-        (fun a b h => outputWithin_mono model model.initial h Set.univ)
-        (fun a b h => outputWithin_mono model.rejectionModel model.initial h Set.univ)]
+        (fun a b h ↦ outputWithin_mono model model.initial h Set.univ)
+        (fun a b h ↦ outputWithin_mono model.rejectionModel model.initial h Set.univ)]
     simp only [complements, Model.divergenceProbability, ENNReal.sub_iInf]
   rw [sumMass]
   apply tsub_add_cancel_of_le
-  apply (iInf_le (fun n => ENNReal.ofReal (model.survivalWithin n model.initial : ℝ)) 0).trans
+  apply (iInf_le (fun n ↦ ENNReal.ofReal (model.survivalWithin n model.initial : ℝ)) 0).trans
   simp only [Model.survivalWithin]
   split <;> norm_num
 
@@ -71,7 +71,7 @@ theorem rejection_closed (model : Model) (dead : Fin model.size → Bool)
   simp [(closed state h).1]
 
 abbrev rejectionQuery (model : Model) (dead : Fin model.size → Bool) :=
-  rewards (cut model.rejectionModel dead) (fun _ => 1)
+  rewards (cut model.rejectionModel dead) (fun _ ↦ 1)
 
 structure TerminationCertificate (model : Model) where
   output : MomentCertificate model
@@ -88,7 +88,7 @@ instance (model : Model) (certificate : TerminationCertificate model) : Decidabl
 def TerminationCertificate.statistics (model : Model) (certificate : TerminationCertificate model) : TerminationStatistics :=
   let p := certificate.output.values .mass model.initial
   let r := certificate.rejection model.initial
-  ⟨p, r, 1-p-r⟩
+  ⟨p, r, 1 - p - r⟩
 
 private def equationAt (model : Model) (values : Fin model.size → Rat)
     (state : Fin model.size) : Prop :=
@@ -114,15 +114,15 @@ instance (model : Model) (certificate : TerminationCertificate model) (state : F
 
 theorem terminationStates_valid (model : Model) (certificate : TerminationCertificate model)
     (states : ∀ state, certificate.StateValid model state) : certificate.Valid model := by
-  exact ⟨⟨fun state => (states state).1, fun state => (states state).2.1,
-    fun moment state => (states state).2.2.1 moment⟩, fun state => (states state).2.2.2⟩
+  exact ⟨⟨fun state ↦ (states state).1, fun state ↦ (states state).2.1,
+    fun moment state ↦ (states state).2.2.1 moment⟩, fun state ↦ (states state).2.2.2⟩
 
 theorem terminationCertificate_sound (model : Model) (certificate : TerminationCertificate model)
     (valid : certificate.Valid model) : (certificate.statistics model).Matches model := by
   have output := (momentCertificate_sound model certificate.output valid.1).mass
   have rejection : model.rejectionProbability.toReal = (certificate.rejection model.initial : ℝ) := by
-    have query := query_sound (cut model.rejectionModel certificate.output.dead) (fun _ => 1)
-      (fun _ => 1) (fun _ => by simp) ⟨certificate.rejection, 0⟩ valid.2
+    have query := query_sound (cut model.rejectionModel certificate.output.dead) (fun _ ↦ 1)
+      (fun _ ↦ 1) (fun _ ↦ by simp) ⟨certificate.rejection, 0⟩ valid.2
       ⟨certificate.output.rank, certificate.output.next⟩ (by
         intro state transient
         apply valid.1.2.1 state

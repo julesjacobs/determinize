@@ -28,7 +28,7 @@ def TraceFactorization (source target : Expr) (fiber : Kernel Trace ℝ) (output
   IsMarkovKernel fiber ∧
   Measurable output ∧
   traceAndOutputLaw source = traceLaw source ⊗ₘ fiber ∧
-  traceAndOutputLaw target = (traceLaw source).map (fun trace => (trace, output trace)) ∧
+  traceAndOutputLaw target = (traceLaw source).map (fun trace ↦ (trace, output trace)) ∧
   ∀ᵐ trace ∂traceLaw source,
     Integrable id (fiber trace) ∧ output trace = ∫ value : ℝ, value ∂fiber trace
 
@@ -42,8 +42,8 @@ theorem TraceFactorization.canonical {source target : Expr} {fiber : Kernel Trac
     sourceEq, targetEq.trans ?_, ?_⟩
   · apply Measure.map_congr
     filter_upwards [meanEq] with trace good
-    exact congrArg (fun value => (trace, value)) good.2
-  · exact meanEq.mono fun _ good => ⟨good.1, rfl⟩
+    exact congrArg (fun value ↦ (trace, value)) good.2
+  · exact meanEq.mono fun _ good ↦ ⟨good.1, rfl⟩
 
 /-- Some trace factorization of the source and target joint laws exists. -/
 def MeanOnTraces (source target : Expr) : Prop :=

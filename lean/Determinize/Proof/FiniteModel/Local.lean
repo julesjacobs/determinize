@@ -10,7 +10,7 @@ theorem sameObservations_of_eq (before after : State) (equal : stateExpr before 
 
 theorem paperStep_next (before after : State) (notValue : (stateExpr before).isValue = false)
     (reduction : reduce (stateExpr before) = .next (stateExpr after)) :
-    PaperStep before [(1,after)] := by
+    PaperStep before [(1, after)] := by
   refine ⟨?_, ?_, ?_⟩
   · cases h : stateExpr before <;> simp_all [Cumulative.outputMeasure, Expr.isValue]
   · intro fuel
@@ -23,8 +23,8 @@ theorem paperStep_sample (before : State) (site : DistributionAction × Op) (arg
     (success : finiteLaw site.2 site.1 arguments = .ok outcomes)
     (notValue : (stateExpr before).isValue = false)
     (reduction : reduce (stateExpr before) =
-      .sample site (outcomeMeasure outcomes) (fun x => stackExpr stack (.real x))) :
-    PaperStep before (outcomes.map fun (p,x) => (p, .deliver (.number x) stack)) := by
+      .sample site (outcomeMeasure outcomes) (fun x ↦ stackExpr stack (.real x))) :
+    PaperStep before (outcomes.map fun (p, x) ↦ (p, .deliver (.number x) stack)) := by
   refine ⟨?_, ?_, ?_⟩
   · cases h : stateExpr before <;> simp_all [Cumulative.outputMeasure, Expr.isValue]
   · intro fuel
@@ -37,8 +37,8 @@ theorem paperStep_sample (before : State) (site : DistributionAction × Op) (arg
       mass, true_and, outcomeMeasure_ae, List.mem_map]
     constructor
     · intro safety entry member positive
-      obtain ⟨⟨p,x⟩, member, rfl⟩ := member
-      simpa only [stateExpr, valueExpr] using safety (p,x) member positive
+      obtain ⟨⟨p, x⟩, member, rfl⟩ := member
+      simpa only [stateExpr, valueExpr] using safety (p, x) member positive
     · intro safety entry member positive
       simpa only [stateExpr, valueExpr] using safety (entry.1, .deliver (.number entry.2) stack)
         ⟨entry, member, rfl⟩ positive

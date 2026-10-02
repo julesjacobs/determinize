@@ -15,9 +15,9 @@ deriving DecidableEq, Repr, Countable
 
 /-- Rational expectation of a numeric function of the outcome index. -/
 def FiniteDistribution.expectation (d : FiniteDistribution) (value : Nat → Rat) : Rat :=
-  (d.probabilities.zipIdx.map fun (p, i) => p * value i).sum
+  (d.probabilities.zipIdx.map fun (p, i) ↦ p * value i).sum
 
 def FiniteDistribution.mean (d : FiniteDistribution) : Rat :=
-  d.expectation (fun i => (i : Rat))
+  d.expectation (fun i ↦ (i : Rat))
 
 end Determinize.Spec.Paper
