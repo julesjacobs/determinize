@@ -58,7 +58,7 @@ theorem checked_sourceExpectedReward {source : Core}
     (accepted : checkResult checked.model certificate = true) :
     (∫ value : ℝ, value ∂Spec.Paper.bigStepMeasure (Subject.source.program source)) =
       (certificate.values checked.model.initial : ℝ) := by
-  have preservation := Theorems.expectationPreservation (Subject.source.program source)
+  have preservation := Theorems.unnormalizedExpectationPreservation (Subject.source.program source)
     typed safe integrable
   exact preservation.2.2.trans (checked_expectedReward checked certificate accepted).2
 

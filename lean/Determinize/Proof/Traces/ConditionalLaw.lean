@@ -83,4 +83,19 @@ theorem conditionalLaw (program : Expr) (typed : Typed [] program (.float .E))
   rw [← sourceEq, ← targetEq]
   exact good
 
+/-- Trace preservation: the first two clauses of `conditionalLaw`. -/
+theorem tracePreservation (program : Expr) (typed : Typed [] program (.float .E))
+    (safe : DomainSafe program) :
+    DomainSafe program.determinize ∧ traceLaw program.determinize = traceLaw program :=
+  ⟨(conditionalLaw program typed safe).1, (conditionalLaw program typed safe).2.1⟩
+
+/-- Tracewise soundness: the almost-sure clause of `conditionalLaw`. -/
+theorem tracewiseSoundness (program : Expr) (typed : Typed [] program (.float .E))
+    (safe : DomainSafe program) :
+    ∀ᵐ trace ∂traceLaw program,
+      Integrable id ((traceAndOutputLaw program).condKernel trace) ∧
+      (traceAndOutputLaw program.determinize).condKernel trace =
+        Measure.dirac (∫ value : ℝ, value ∂(traceAndOutputLaw program).condKernel trace) :=
+  (conditionalLaw program typed safe).2.2
+
 end Determinize.Proof.Traces

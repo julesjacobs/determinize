@@ -4,7 +4,7 @@ import Determinize.Spec.Expectation
 /-!
 # The expectation theorem
 
-`Theorems.expectationPreservation` follows from trace
+`Theorems.unnormalizedExpectationPreservation` follows from trace
 soundness. Under a `TraceFactorization`, the source output law is the mixture of the fibers
 over the trace law (`TraceFactorization.source_law`) and the target output law is the
 pushforward of the trace law along the fiber means (`TraceFactorization.target_law`), so
