@@ -36,7 +36,7 @@ theorem edge_le_controlWeight (model : Model) (i : Fin model.size) (e : Edge mod
     · rfl
   · exact List.mem_map.mpr ⟨e, member, by simp⟩
 
-theorem control_sum (model : Model) (i : Fin model.size) (v : Fin model.size → Rat) :
+theorem sum_controlWeight_mul (model : Model) (i : Fin model.size) (v : Fin model.size → Rat) :
     (∑ j, controlWeight model i j * v j) =
       ((model.edges i).map fun e ↦ e.probability * v e.target).sum := by
   unfold controlWeight
@@ -48,7 +48,7 @@ theorem control_sum (model : Model) (i : Fin model.size) (v : Fin model.size →
     congr 1
     simp
 
-theorem control_sum_real (model : Model) (i : Fin model.size) (v : Fin model.size → ℝ) :
+theorem sum_controlWeight_mul_real (model : Model) (i : Fin model.size) (v : Fin model.size → ℝ) :
     (∑ j, (controlWeight model i j : ℝ) * v j) =
       ((model.edges i).map fun e ↦ (e.probability : ℝ) * v e.target).sum := by
   unfold controlWeight

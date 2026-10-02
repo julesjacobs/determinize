@@ -22,7 +22,7 @@ theorem primitiveFiber_mean_formula (op : Op) (affine : List (Affine n)) (genera
     (ha : affine.length = affineArity op) (hg : general.length = generalArity op)
     (environment : Env n) :
     primitiveFiber .mean op (affine.map (Affine.eval · environment)) general =
-      if domain op (meanParams op affine general environment) then
+      if InDomain op (meanParams op affine general environment) then
         Measure.dirac ((meanAffine op affine general).eval environment) else 0 := by
   have ha' : (affine.map (Affine.eval · environment)).length = affineArity op := by simpa using ha
   unfold primitiveFiber parseParams
@@ -41,7 +41,7 @@ theorem primitiveFiber_mean_mass (op : Op) (affine : List (Affine n)) (general :
     (ha : affine.length = affineArity op) (hg : general.length = generalArity op)
     (environment : Env n) :
     primitiveFiber .mean op (affine.map (Affine.eval · environment)) general Set.univ = 1 ↔
-      domain op (meanParams op affine general environment) := by
+      InDomain op (meanParams op affine general environment) := by
   rw [primitiveFiber_mean_formula op affine general ha hg environment]
   split_ifs <;> simp_all
 

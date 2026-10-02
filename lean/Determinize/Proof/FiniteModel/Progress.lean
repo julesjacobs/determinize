@@ -32,7 +32,7 @@ def Bookkeeping : State → Prop
   | .deliver _ (.draw _ (_ :: _) _ _ :: _) => True
   | _ => False
 
-private theorem singleton_decreases (before state : State)
+private theorem bookkeepingRank_lt_of_singleton (before state : State)
     (decrease : bookkeepingRank state < bookkeepingRank before)
     (tag evidence : Evidence) (successors : List (Rat × State))
     (action : (Except.ok (.next tag [(1, state)]) : Except Failure Step) =
@@ -43,7 +43,7 @@ private theorem singleton_decreases (before state : State)
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (List.mem_singleton.mp member)
   exact decrease
 
-theorem bookkeeping_decreases (before : State) (bookkeeping : Bookkeeping before)
+theorem bookkeepingRank_lt (before : State) (bookkeeping : Bookkeeping before)
     (evidence : Evidence) (successors : List (Rat × State))
     (action : step before = .ok (.next evidence successors))
     (probability : Rat) (after : State) (member : (probability, after) ∈ successors) :
@@ -56,7 +56,7 @@ theorem bookkeeping_decreases (before : State) (bookkeeping : Bookkeeping before
     all_goals repeat' (split at action)
     all_goals first
       | contradiction
-      | apply singleton_decreases _ _ ?_ _ _ _ action _ _ member
+      | apply bookkeepingRank_lt_of_singleton _ _ ?_ _ _ _ action _ _ member
         simp [bookkeepingRank, expressionWork, frameWork] <;> omega
   | deliver value stack =>
     cases stack with
@@ -64,16 +64,16 @@ theorem bookkeeping_decreases (before : State) (bookkeeping : Bookkeeping before
     | cons frame stack =>
       cases frame <;> simp only [Bookkeeping] at bookkeeping
       case left =>
-        apply singleton_decreases _ _ ?_ _ _ _ action _ _ member
+        apply bookkeepingRank_lt_of_singleton _ _ ?_ _ _ _ action _ _ member
         simp [bookkeepingRank, frameWork]
         omega
       case unary operation =>
         cases operation <;> simp only at bookkeeping
-        all_goals apply singleton_decreases _ _ ?_ _ _ _ action _ _ member
+        all_goals apply bookkeepingRank_lt_of_singleton _ _ ?_ _ _ _ action _ _ member
         all_goals simp [bookkeepingRank, frameWork]
       case right operation left =>
         cases operation <;> simp only at bookkeeping
-        all_goals apply singleton_decreases _ _ ?_ _ _ _ action _ _ member
+        all_goals apply bookkeepingRank_lt_of_singleton _ _ ?_ _ _ _ action _ _ member
         all_goals simp [bookkeepingRank, frameWork]
       case draw site pending environment arguments =>
         cases pending with
@@ -82,7 +82,7 @@ theorem bookkeeping_decreases (before : State) (bookkeeping : Bookkeeping before
           cases value <;> simp only [step, pure, bind, Except.bind, Except.pure, throw] at action
           all_goals first
             | contradiction
-            | apply singleton_decreases _ _ ?_ _ _ _ action _ _ member
+            | apply bookkeepingRank_lt_of_singleton _ _ ?_ _ _ _ action _ _ member
               simp [bookkeepingRank, frameWork]
               omega
 
@@ -90,26 +90,26 @@ def BookkeepingTransition (before after : State) : Prop :=
   Bookkeeping before ∧ ∃ evidence successors probability,
     step before = .ok (.next evidence successors) ∧ (probability, after) ∈ successors
 
-theorem bookkeeping_transition_decreases (before after : State)
+theorem bookkeepingRank_lt_of_transition (before after : State)
     (transition : BookkeepingTransition before after) :
     bookkeepingRank after < bookkeepingRank before := by
   obtain ⟨bookkeeping, evidence, successors, probability, action, member⟩ := transition
-  exact bookkeeping_decreases before bookkeeping evidence successors action probability after member
+  exact bookkeepingRank_lt before bookkeeping evidence successors action probability after member
 
-theorem bookkeeping_path_bound (path : Nat → State) (length : Nat)
+theorem bookkeepingRank_path_add_le (path : Nat → State) (length : Nat)
     (steps : ∀ i < length, BookkeepingTransition (path i) (path (i + 1))) :
     bookkeepingRank (path length) + length ≤ bookkeepingRank (path 0) := by
   induction length with
   | zero => simp
   | succ n ih =>
     have previous := ih (fun i hi ↦ steps i (by omega))
-    have decrease := bookkeeping_transition_decreases _ _ (steps n (by omega))
+    have decrease := bookkeepingRank_lt_of_transition _ _ (steps n (by omega))
     omega
 
-theorem no_infinite_bookkeeping (path : Nat → State) :
+theorem not_forall_bookkeepingTransition (path : Nat → State) :
     ¬∀ i, BookkeepingTransition (path i) (path (i + 1)) := by
   intro steps
-  have bound := bookkeeping_path_bound path (bookkeepingRank (path 0) + 1) (fun i _ ↦ steps i)
+  have bound := bookkeepingRank_path_add_le path (bookkeepingRank (path 0) + 1) (fun i _ ↦ steps i)
   omega
 
 end Determinize.Proof.FiniteModel

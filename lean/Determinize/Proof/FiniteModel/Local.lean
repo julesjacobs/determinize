@@ -32,7 +32,7 @@ theorem paperStep_sample (before : State) (site : DistributionAction × Op) (arg
     rw [outcomeMeasure_bind _ _ (Proof.Paper.measurable_sample_cumulative fuel _ _ _ _ reduction)]
     simp only [weightedOutput, List.map_map, Function.comp_def, stateExpr, valueExpr]
   · intro fuel
-    have mass := (finiteLaw_probability _ _ _ _ success).measure_univ
+    have mass := (isProbabilityMeasure_outcomeMeasure _ _ _ _ success).measure_univ
     simp only [DomainSafeAt, notValue, Bool.false_eq_true, ↓reduceIte, reduction,
       mass, true_and, outcomeMeasure_ae, List.mem_map]
     constructor
@@ -43,10 +43,10 @@ theorem paperStep_sample (before : State) (site : DistributionAction × Op) (arg
       simpa only [stateExpr, valueExpr] using safety (entry.1, .deliver (.number entry.2) stack)
         ⟨entry, member, rfl⟩ positive
 
-theorem reject_same (environment : List Value) (stack : List Frame) :
+theorem sameObservations_reject (environment : List Value) (stack : List Frame) :
     SameObservations (.eval .reject environment stack) .rejected := by
-  have left := stack_absorbing stack .reject rfl rfl
-  have right := stack_absorbing [] .reject rfl rfl
+  have left := reduce_stackExpr_of_absorbing stack .reject rfl rfl
+  have right := reduce_stackExpr_of_absorbing [] .reject rfl rfl
   have equality : stateExpr (.eval .reject environment stack) = stackExpr stack .reject := by
     simp [stateExpr, close, interpret, Expr.map, Expr.mapVars]
   refine ⟨?_, ?_⟩
@@ -54,8 +54,8 @@ theorem reject_same (environment : List Value) (stack : List Frame) :
     rw [equality, Cumulative.absorbing_zero _ left.1 left.2]
     exact (Cumulative.absorbing_zero _ right.1 right.2 fuel).symm
   · intro fuel
-    exact iff_of_true ((equality ▸ absorbing_safe _ left.1 left.2) fuel)
-      (absorbing_safe _ right.1 right.2 fuel)
+    exact iff_of_true ((equality ▸ domainSafe_of_absorbing _ left.1 left.2) fuel)
+      (domainSafe_of_absorbing _ right.1 right.2 fuel)
 
 theorem stepMeaning_returned (reward : Rat) :
     StepMeaning (.deliver (.number reward) []) (.returned reward) := by
@@ -72,6 +72,6 @@ theorem stepMeaning_returned (reward : Rat) :
     cases fuel <;> trivial
 
 theorem stepMeaning_rejected : StepMeaning .rejected .rejected := by
-  exact ⟨Cumulative.absorbing_zero .reject rfl rfl, absorbing_safe .reject rfl rfl⟩
+  exact ⟨Cumulative.absorbing_zero .reject rfl rfl, domainSafe_of_absorbing .reject rfl rfl⟩
 
 end Determinize.Proof.FiniteModel

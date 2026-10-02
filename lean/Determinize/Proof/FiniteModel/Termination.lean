@@ -49,7 +49,7 @@ theorem within_mass_balance (model : Model) (n : Nat) (state : Fin model.size) :
         exact_mod_cast model.normalized state
       simp [total]
 
-theorem massBalance (model : Model) :
+theorem mass_balance (model : Model) :
     model.outputMeasure Set.univ + model.rejectionProbability + model.divergenceProbability =
       1 := by
   have complements (n : Nat) :
@@ -102,14 +102,14 @@ def TerminationCertificate.statistics (model : Model) (certificate : Termination
   let r := certificate.rejection model.initial
   ⟨p, r, 1 - p - r⟩
 
-private def equationAt (model : Model) (values : Fin model.size → Rat)
+private def EquationAt (model : Model) (values : Fin model.size → Rat)
     (state : Fin model.size) : Prop :=
   values state = match model.kind state with
     | .returned r => r | .rejected => 0
     | .transient => ∑ next, model.transition state next * values next
 
 private instance (model : Model) (values : Fin model.size → Rat) (state : Fin model.size) :
-    Decidable (equationAt model values state) := inferInstanceAs (Decidable (_ = _))
+    Decidable (EquationAt model values state) := inferInstanceAs (Decidable (_ = _))
 
 def TerminationCertificate.StateValid (model : Model) (certificate : TerminationCertificate model)
     (state : Fin model.size) : Prop :=
@@ -118,9 +118,9 @@ def TerminationCertificate.StateValid (model : Model) (certificate : Termination
   ((cut model certificate.output.dead).kind state = .transient →
     0 < model.transition state (certificate.output.next state) ∧
       certificate.output.rank (certificate.output.next state) < certificate.output.rank state) ∧
-  (∀ moment, equationAt (certificate.output.model model moment)
+  (∀ moment, EquationAt (certificate.output.model model moment)
     (certificate.output.values moment) state) ∧
-    equationAt (rejectionQuery model certificate.output.dead) certificate.rejection state
+    EquationAt (rejectionQuery model certificate.output.dead) certificate.rejection state
 
 instance (model : Model) (certificate : TerminationCertificate model) (state : Fin model.size) :
     Decidable (certificate.StateValid model state) := inferInstanceAs (Decidable (_ ∧ _ ∧ _ ∧ _))
@@ -144,7 +144,7 @@ theorem terminationCertificate_sound (model : Model) (certificate : TerminationC
     rw [cut_outputMeasure _ _ (rejection_closed model _ valid.1.1)] at query
     simpa [integral_const, Model.rejectionProbability, measureReal_def] using query
   refine ⟨output, rejection, ?_⟩
-  have balance := massBalance model
+  have balance := mass_balance model
   have finiteReturn : model.outputMeasure Set.univ ≠ ⊤ := by
     exact ne_top_of_le_ne_top (by simp)
       ((le_add_right le_rfl).trans ((le_add_right le_rfl).trans_eq balance))

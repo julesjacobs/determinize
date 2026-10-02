@@ -140,7 +140,7 @@ noncomputable def DomainSafe (laws : Determinize.Proof.Paper.PrimitiveLaws) :
   | _ + 1, .snoc history op affineArgs generalArgs =>
     DomainSafe laws history ∧
       ∀ᵐ environment ∂actualMeasure laws history,
-        Determinize.Spec.Paper.domain op (fun i ↦ (affineArgs i).eval environment, generalArgs)
+        Determinize.Spec.Paper.InDomain op (fun i ↦ (affineArgs i).eval environment, generalArgs)
 
 noncomputable def meanEnvironment (laws : Determinize.Proof.Paper.PrimitiveLaws) :
     {n : Nat} → SampleEnv laws n → Env n

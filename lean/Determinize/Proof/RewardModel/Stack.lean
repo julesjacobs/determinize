@@ -7,7 +7,7 @@ open Determinize.Finite Determinize.Proof.FiniteModel MeasureTheory
 def extend (stack : List Frame) (outcomes : List (Rat × State)) : List (Rat × State) :=
   outcomes.map fun (p, s) ↦ (p, pushStack s stack)
 
-private theorem draw_push (site : Spec.Paper.DistributionAction × Spec.Paper.Op)
+private theorem draw_append (site : Spec.Paper.DistributionAction × Spec.Paper.Op)
     (args : List Rat) (inner outer : List Frame) (tag : Evidence) (outcomes : List (Rat × State))
     (action : draw site args inner = .ok (.next tag outcomes)) :
     draw site args (inner ++ outer) = .ok (.next tag (extend outer outcomes)) := by
@@ -20,7 +20,7 @@ private theorem draw_push (site : Spec.Paper.DistributionAction × Spec.Paper.Op
     obtain ⟨rfl, rfl⟩ := action
     simp [extend, List.map_map, pushStack, Function.comp_def]
 
-theorem step_push (state : State) (outer : List Frame) (tag : Evidence)
+theorem step_pushStack (state : State) (outer : List Frame) (tag : Evidence)
     (outcomes : List (Rat × State)) (action : step state = .ok (.next tag outcomes)) :
     step (pushStack state outer) = .ok (.next tag (extend outer outcomes)) := by
   cases state with
@@ -45,7 +45,7 @@ theorem step_push (state : State) (outer : List Frame) (tag : Evidence)
         | some ps =>
           simp only [step, pv] at action
           simpa [pushStack, step, pv, bind, Except.bind, Except.pure] using
-            draw_push (kind, .discrete ps.length) ps stack outer tag outcomes action
+            draw_append (kind, .discrete ps.length) ps stack outer tag outcomes action
       | draw site pending env args =>
         cases value <;> simp only [step, pure, bind, Except.bind, Except.pure] at action
         all_goals try contradiction
@@ -53,7 +53,7 @@ theorem step_push (state : State) (outer : List Frame) (tag : Evidence)
         cases pending with
         | nil =>
           simpa [pushStack, step, bind, Except.bind, Except.pure] using
-            draw_push site (args ++ [x]) stack outer tag outcomes action
+            draw_append site (args ++ [x]) stack outer tag outcomes action
         | cons next rest =>
           obtain ⟨rfl, rfl⟩ := Step.next.inj (Except.ok.inj action)
           rfl

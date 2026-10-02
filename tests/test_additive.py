@@ -36,7 +36,7 @@ class AdditiveTests(unittest.TestCase):
             text = certificate.read_text()
             self.assertNotIn("boundFirstValues", text)
             self.assertNotIn("bounds :=", text)
-            self.assertNotIn("momentsValid :=", text)
+            self.assertNotIn("moments_valid :=", text)
             for old, new in [
                 ('first := fun i => firstValues[i]', 'first := fun _ => 12345'),
                 ('mass := fun i => massValues[i]', 'mass := fun _ => 0'),

@@ -5,7 +5,7 @@ import Determinize.Proof.Traces.Semantics
 
 `sampleContinuation` feeds a recorded value to the sampling step of an expression; the compact
 replay (`Proof/Traces/CompactReplay.lean`) and the symbolic trace generation use it to read a
-G-affinity draw from a trace, and `sampleContinuation_measurable` makes that step a
+G-affinity draw from a trace, and `measurable_sampleContinuation` makes that step a
 measurable function of the expression and the value.
 -/
 
@@ -23,7 +23,7 @@ def sampleContinuation (expression : Expr) (value : ℝ) : Expr :=
   | .sample _ _ continuation => continuation value
   | _ => .unit
 
-theorem actionContinuation_measurable {α : Type*} [MeasurableSpace α]
+theorem measurable_actionContinuation {α : Type*} [MeasurableSpace α]
     {action : α → Action} (family : MeasurableActionFamily α action) :
     Measurable (fun pair : α × ℝ ↦ match action pair.1 with
       | .sample _ _ continuation => continuation pair.2
@@ -39,12 +39,12 @@ theorem actionContinuation_measurable {α : Type*} [MeasurableSpace α]
       by_cases h : pair.1 ∈ region <;> simp [Set.piecewise, h]
     · infer_instance
 
-theorem sampleContinuation_measurable :
+theorem measurable_sampleContinuation :
     Measurable (fun pair : Expr × ℝ ↦ sampleContinuation pair.1 pair.2) := by
   have localMeasurable (skeleton : Skeleton) :
       Measurable (fun pair : SkeletonFiber skeleton × ℝ ↦
         sampleContinuation pair.1.val pair.2) :=
-    actionContinuation_measurable
+    measurable_actionContinuation
       (MeasurableActionFamily.reduceFamily primitiveLaws (MeasurableFamily.skeletonFiber skeleton))
   let selected : Expr × ℝ → Expr := fun pair ↦
     sampleContinuation (MeasurableActionFamily.toSkeletonFiber pair.1.skeleton pair.1).val pair.2

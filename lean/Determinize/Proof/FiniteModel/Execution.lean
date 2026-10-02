@@ -109,7 +109,7 @@ theorem execution_safe (initial : State)
         rcases localMeaning with ⟨after, rfl, bookkeeping, same⟩ | advance
         · have nextReach : MachineReachable initial after :=
             MachineReachable.next reachable action (by simp) (by norm_num : (0 : Rat) < 1)
-          have decrease := bookkeeping_decreases state bookkeeping _ _ action 1 after (by simp)
+          have decrease := bookkeepingRank_lt state bookkeeping _ _ action 1 after (by simp)
           exact (same.2 (fuel + 1)).mpr
             (execution_safe initial meaning noFailure (fuel + 1) after nextReach)
         · apply (advance.2.2 fuel).mpr
@@ -136,7 +136,7 @@ theorem paper_le_machine_horizon (initial : State)
       rcases localMeaning with ⟨after, rfl, bookkeeping, same⟩ | advance
       · have nextReach : MachineReachable initial after :=
           MachineReachable.next reachable action (by simp) (by norm_num : (0 : Rat) < 1)
-        have decrease := bookkeeping_decreases state bookkeeping _ _ action 1 after (by simp)
+        have decrease := bookkeepingRank_lt state bookkeeping _ _ action 1 after (by simp)
         obtain ⟨horizon, bound⟩ :=
           paper_le_machine_horizon initial meaning noFailure fuel after nextReach
         refine ⟨horizon + 1, ?_⟩

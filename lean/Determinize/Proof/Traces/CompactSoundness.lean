@@ -14,26 +14,26 @@ on the target `outputGivenTrace` is the Dirac mass at the target output.
 namespace Determinize.Proof.Traces
 open MeasureTheory ProbabilityTheory Determinize.Spec.Paper Determinize.Spec.Traces
 open Determinize.Proof.Paper
-open StepTraces (retain retain_measurable FiberSound mapTraceOutput mapTrace_measurable
+open StepTraces (retain measurable_retain FiberSound mapTraceOutput measurable_mapTraceOutput
   normalizedOutputGivenTrace normalizedOutputGivenTrace_eq outputGivenTraceKernel
-  outputGivenTraceKernel_apply outputGivenTrace_eq_ogtAt
+  outputGivenTraceKernel_apply outputGivenTrace_eq_outputGivenTraceAt
   compactFiber_apply compactHistoryReplay_nil measurableSet_kernel_eq_dirac)
 open scoped ProbabilityTheory
 noncomputable section
 
 abbrev eraseOutput : StepTraces.Output → Output := mapTraceOutput retain
 
-theorem eraseOutput_measurable : Measurable eraseOutput :=
-  mapTrace_measurable retain retain_measurable
+theorem measurable_eraseOutput : Measurable eraseOutput :=
+  measurable_mapTraceOutput retain measurable_retain
 
-theorem record_measurable (site : DistributionAction × Op) (value : ℝ) :
+theorem measurable_record (site : DistributionAction × Op) (value : ℝ) :
     Measurable (record site value) := by
   rcases site with ⟨kind, op⟩
   cases kind with
   | sample affinity =>
     cases affinity with
     | E => exact measurable_id
-    | G => exact (StepTraces.draw_cons_measurable.comp
+    | G => exact (StepTraces.measurable_draw_cons.comp
         (measurable_const.prodMk measurable_fst)).prodMk measurable_snd
   | mean => exact measurable_id
 
@@ -43,7 +43,7 @@ theorem exact_eq_detailed (depth : Nat) (e : Expr) :
   | zero =>
     cases e <;> try simp [traceAndOutputLawAt, StepTraces.exactMeasure]
     case real r =>
-      simp [Measure.map_dirac' eraseOutput_measurable, eraseOutput, mapTraceOutput, retain]
+      simp [Measure.map_dirac' measurable_eraseOutput, eraseOutput, mapTraceOutput, retain]
   | succ depth ih =>
     by_cases value : e.isValue = true
     · simp [traceAndOutputLawAt, StepTraces.exactMeasure, value]
@@ -52,25 +52,25 @@ theorem exact_eq_detailed (depth : Nat) (e : Expr) :
       | stuck => simp
       | next next =>
         simp only [ih]
-        rw [Measure.map_map eraseOutput_measurable
+        rw [Measure.map_map measurable_eraseOutput
           (show Measurable (StepTraces.prepend none) from
-            StepTraces.prepend_measurable.comp (measurable_const.prodMk measurable_id))]
+            StepTraces.measurable_prepend.comp (measurable_const.prodMk measurable_id))]
         congr 1
       | sample site fiber cont =>
         have hc := (MeasurableActionFamily.stepKernel primitiveLaws).sample_continuation_measurable
           e fiber cont reduction
         have hm :=
           (StepTraces.successorKernel (StepTraces.exactKernel depth)).kernel.measurable.comp
-          ((StepTraces.generationEvent_measurable site).prodMk hc)
+          ((StepTraces.measurable_generationEvent site).prodMk hc)
         simp only [Function.comp_def] at hm
         simp_rw [StepTraces.successorKernel_apply, StepTraces.exactKernel_apply] at hm
-        rw [StepTraces.map_bind_fun _ _ hm _ eraseOutput_measurable]
+        rw [StepTraces.map_bind_fun _ _ hm _ measurable_eraseOutput]
         apply Measure.bind_congr_right
         filter_upwards [] with r
-        rw [ih, Measure.map_map (record_measurable site r) eraseOutput_measurable,
-          Measure.map_map eraseOutput_measurable
+        rw [ih, Measure.map_map (measurable_record site r) measurable_eraseOutput,
+          Measure.map_map measurable_eraseOutput
             (show Measurable (StepTraces.prepend (StepTraces.generationEvent site r)) from
-              StepTraces.prepend_measurable.comp (measurable_const.prodMk measurable_id))]
+              StepTraces.measurable_prepend.comp (measurable_const.prodMk measurable_id))]
         congr 1
         funext p
         rcases site with ⟨kind, op⟩
@@ -81,12 +81,12 @@ theorem exact_eq_detailed (depth : Nat) (e : Expr) :
 theorem joint_eq_detailed (e : Expr) :
     traceAndOutputLaw e = (StepTraces.jointMeasure e).map eraseOutput := by
   rw [traceAndOutputLaw, StepTraces.jointMeasure,
-    Measure.map_sum eraseOutput_measurable.aemeasurable]
+    Measure.map_sum measurable_eraseOutput.aemeasurable]
   simp_rw [exact_eq_detailed]
 
 theorem correspondence (e : Expr) :
     (traceAndOutputLaw e).map Prod.snd = Determinize.Spec.Paper.bigStepMeasure e := by
-  rw [joint_eq_detailed, Measure.map_map measurable_snd eraseOutput_measurable]
+  rw [joint_eq_detailed, Measure.map_map measurable_snd measurable_eraseOutput]
   exact StepTraces.correspondence e
 
 theorem exact_succ_next (depth : Nat) (e next : Expr) (nv : e.isValue ≠ true)
@@ -106,9 +106,9 @@ instance normalizedKernel_markov (source : Expr) :
 
 /-- The normalized compact replay read through the retained draws of a detailed trace. -/
 def normalizedFiber (source : Expr) : SFiniteKernel StepTraces.Trace ℝ :=
-  SFiniteKernel.pullback (normalizedKernel source) retain retain_measurable
+  SFiniteKernel.pullback (normalizedKernel source) retain measurable_retain
 
-theorem selfReplay_compact_measurable (target : Expr) :
+theorem measurableSet_selfReplay_compact (target : Expr) :
     MeasurableSet {q : Output | outputGivenTrace target q.1 = Measure.dirac q.2} := by
   let κ := SFiniteKernel.pullback ⟨outputGivenTraceKernel target, inferInstance⟩
     (Prod.fst : Output → Trace) measurable_fst
@@ -121,7 +121,7 @@ theorem selfReplay_compact_measurable (target : Expr) :
   rw [eq]
   exact measurableSet_kernel_eq_dirac κ.kernel measurable_snd
 
-theorem massOne_compact_measurable (source : Expr) :
+theorem measurableSet_massOne_compact (source : Expr) :
     MeasurableSet {q : Output | outputGivenTrace source q.1 Set.univ = 1} := by
   have eq : {q : Output | outputGivenTrace source q.1 Set.univ = 1} =
       Prod.fst ⁻¹' {trace | outputGivenTraceKernel source trace Set.univ = 1} := by
@@ -150,8 +150,8 @@ theorem joint_normalized_fiberSound (source : Expr) (typed : Typed [] source (.f
         compactHistoryReplay_nil]
       change normalizedOutputGivenTrace source (retain point.1) = _
       rw [normalizedOutputGivenTrace_eq _ _ (by
-        rw [outputGivenTrace_eq_ogtAt depth source _ massOne]
-        exact massOne), outputGivenTrace_eq_ogtAt depth source _ massOne])
+        rw [outputGivenTrace_eq_outputGivenTraceAt depth source _ massOne]
+        exact massOne), outputGivenTrace_eq_outputGivenTraceAt depth source _ massOne])
   simpa only [show mapTraceOutput (id : StepTraces.Trace → StepTraces.Trace) = id from rfl,
     Measure.map_id] using transported
 
@@ -162,15 +162,15 @@ theorem compact_normalized_fiberSound (source : Expr) (typed : Typed [] source (
         (traceAndOutputLaw source.determinize) := by
   rw [joint_eq_detailed, joint_eq_detailed]
   exact StepTraces.FiberSound.mapTrace _ _ _ _ (joint_normalized_fiberSound source typed safe)
-    retain retain_measurable
+    retain measurable_retain
     (fun trace ↦ by rw [normalizedFiber, MeasurableActionFamily.pullback_apply])
 
 /-- Almost every terminating target trace gives the source replay mass one. -/
 theorem compact_source_massOne (source : Expr) (typed : Typed [] source (.float .E))
     (safe : DomainSafe source) :
     ∀ᵐ q ∂traceAndOutputLaw source.determinize, outputGivenTrace source q.1 Set.univ = 1 := by
-  rw [joint_eq_detailed, ae_map_iff eraseOutput_measurable.aemeasurable
-    (massOne_compact_measurable source), StepTraces.jointMeasure, Measure.ae_sum_iff]
+  rw [joint_eq_detailed, ae_map_iff measurable_eraseOutput.aemeasurable
+    (measurableSet_massOne_compact source), StepTraces.jointMeasure, Measure.ae_sum_iff]
   intro depth
   filter_upwards [(StepTraces.compact_exactDepth_source_fiberSound source typed safe depth).2]
     with point good
@@ -178,7 +178,7 @@ theorem compact_source_massOne (source : Expr) (typed : Typed [] source (.float 
     have h := good.1
     rwa [compactFiber_apply, compactHistoryReplay_nil] at h
   change outputGivenTrace source (retain point.1) Set.univ = 1
-  rw [outputGivenTrace_eq_ogtAt depth source _ massOne]
+  rw [outputGivenTrace_eq_outputGivenTraceAt depth source _ massOne]
   exact massOne
 
 /-- Replaying the target along its own compact trace returns its output. -/
@@ -186,13 +186,13 @@ theorem compact_target_selfReplay (source : Expr) (typed : Typed [] source (.flo
     (safe : DomainSafe source) :
     ∀ᵐ q ∂traceAndOutputLaw source.determinize,
       outputGivenTrace source.determinize q.1 = Measure.dirac q.2 := by
-  rw [joint_eq_detailed, ae_map_iff eraseOutput_measurable.aemeasurable
-    (selfReplay_compact_measurable source.determinize), StepTraces.jointMeasure,
+  rw [joint_eq_detailed, ae_map_iff measurable_eraseOutput.aemeasurable
+    (measurableSet_selfReplay_compact source.determinize), StepTraces.jointMeasure,
     Measure.ae_sum_iff]
   intro depth
   filter_upwards [StepTraces.target_selfReplay_source source typed safe depth] with point hp
   change outputGivenTrace source.determinize (retain point.1) = Measure.dirac point.2
-  rw [outputGivenTrace_eq_ogtAt depth _ _ (by rw [hp]; simp), hp]
+  rw [outputGivenTrace_eq_outputGivenTraceAt depth _ _ (by rw [hp]; simp), hp]
 
 /-! ### The factorization with its almost-sure identifications -/
 
@@ -200,7 +200,7 @@ theorem compact_target_selfReplay (source : Expr) (typed : Typed [] source (.flo
 compact replay together with the identifications that give the public statement: almost
 surely the source fiber is `outputGivenTrace` itself, and the target replay is the Dirac mass
 at the target output. -/
-theorem soundnessDataE (source : Expr) (typed : Typed [] source (.float .E))
+theorem soundness_data_of_E (source : Expr) (typed : Typed [] source (.float .E))
     (safe : DomainSafe source) :
     DomainSafe source.determinize ∧
       TraceFactorization source source.determinize (normalizedOutputGivenTrace source)
@@ -235,7 +235,7 @@ theorem soundnessDataE (source : Expr) (typed : Typed [] source (.float .E))
     exact ae_of_ae_map pairMeasurable.aemeasurable dirac
 
 /-- Apply expectation-affinity soundness using silent subtyping for general-affinity programs. -/
-theorem soundnessData (affinity : Affinity) (program : Expr)
+theorem soundness_data (affinity : Affinity) (program : Expr)
     (typed : Typed [] program (.float affinity))
     (safe : DomainSafe program) :
     DomainSafe program.determinize ∧
@@ -247,15 +247,15 @@ theorem soundnessData (affinity : Affinity) (program : Expr)
         outputGivenTrace program.determinize trace =
             Measure.dirac (kernelMean (normalizedOutputGivenTrace program) trace) := by
   cases affinity with
-  | E => exact soundnessDataE program typed safe
-  | G => exact soundnessDataE program (.sub typed .general) safe
+  | E => exact soundness_data_of_E program typed safe
+  | G => exact soundness_data_of_E program (.sub typed .general) safe
 
 /-- Some trace factorization exists: the input of the corollaries. -/
-theorem meanOnTraces (affinity : Affinity) (program : Expr)
+theorem meanOnTraces_determinize (affinity : Affinity) (program : Expr)
     (typed : Typed [] program (.float affinity))
     (safe : DomainSafe program) :
     DomainSafe program.determinize ∧ MeanOnTraces program program.determinize :=
-  let ⟨targetSafe, factor, _, _⟩ := soundnessData affinity program typed safe
+  let ⟨targetSafe, factor, _, _⟩ := soundness_data affinity program typed safe
   ⟨targetSafe, _, factor⟩
 
 /-- A measure composed with a kernel is the bind that pairs each point with its draw. -/
@@ -265,18 +265,18 @@ theorem compProd_eq_traceThenOutput (traces : Measure Trace) [SFinite traces]
   StepTraces.compProd_eq_bind_pair traces fiber
 
 /-- Determinization returns the canonical replay mean on each terminating trace. -/
-theorem targetLaw (program : Expr) (typed : Typed [] program (.float .E))
+theorem traceAndOutputLaw_determinize (program : Expr) (typed : Typed [] program (.float .E))
     (safe : DomainSafe program) :
     traceAndOutputLaw program.determinize =
       (traceLaw program).map (fun trace ↦ (trace, replayMean program trace)) := by
-  obtain ⟨_, factor, sameFiber, _⟩ := soundnessDataE program typed safe
+  obtain ⟨_, factor, sameFiber, _⟩ := soundness_data_of_E program typed safe
   refine factor.2.2.2.1.trans (Measure.map_congr ?_)
   filter_upwards [sameFiber] with trace same
   simp only [kernelMean, replayMean, same]
 
 /-- Replay factorization and its conditional-mean property, used to identify the conditional
 laws. -/
-theorem replaySoundness :
+theorem replay_soundness :
   ∀ (program : Expr),
     Typed [] program (.float .E) → DomainSafe program →
       DomainSafe program.determinize ∧
@@ -290,7 +290,7 @@ theorem replaySoundness :
   intro program typed safe
   let f := kernelMean (normalizedOutputGivenTrace program)
   obtain ⟨targetSafe, factor, massAe, diracAe⟩ :=
-    soundnessData .E program typed safe
+    soundness_data .E program typed safe
   obtain ⟨markov, hf, hs, ht, hmean⟩ := factor
   have := markov
   refine ⟨targetSafe, ?_, ?_, ?_⟩

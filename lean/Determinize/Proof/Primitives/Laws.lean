@@ -55,7 +55,7 @@ def parseParams (op : Op) (affine general : List ℝ) : Option (Params op) :=
     else none
   else none
 
-def domain : (op : Op) → Params op → Prop
+def InDomain : (op : Op) → Params op → Prop
   | .uniform, (a, _) => a 0 ≤ a 1
   | .gaussian, (_, g) => 0 ≤ g 0
   | .poisson, (a, _) => 0 ≤ a 0
@@ -115,52 +115,52 @@ def primitiveFiber (kind : DistributionAction) (op : Op) (affine general : List 
     | some params =>
       match kind with
       | .sample _ => paperMeasure op params
-      | .mean => if domain op params then Measure.dirac (meanValue op params) else 0
+      | .mean => if InDomain op params then Measure.dirac (meanValue op params) else 0
 
 /-! The reviewer-facing fibers are the generic one at the primitive's operand lists. -/
 
 theorem uniformFiber_eq (kind : DistributionAction) (lower upper : ℝ) :
     uniformFiber kind lower upper = primitiveFiber kind .uniform [lower, upper] [] := by
   cases kind <;> by_cases h : lower ≤ upper <;>
-    simp [uniformFiber, primitiveFiber, parseParams, paperMeasure, domain, meanValue,
+    simp [uniformFiber, primitiveFiber, parseParams, paperMeasure, InDomain, meanValue,
       uniformMeasure, h]
 
 theorem gaussianFiber_eq (kind : DistributionAction) (mean variance : ℝ) :
     gaussianFiber kind mean variance = primitiveFiber kind .gaussian [mean] [variance] := by
   cases kind <;> by_cases h : 0 ≤ variance <;>
-    simp [gaussianFiber, primitiveFiber, parseParams, paperMeasure, domain, meanValue, h]
+    simp [gaussianFiber, primitiveFiber, parseParams, paperMeasure, InDomain, meanValue, h]
 
 theorem poissonFiber_eq (kind : DistributionAction) (rate : ℝ) :
     poissonFiber kind rate = primitiveFiber kind .poisson [rate] [] := by
   cases kind <;> by_cases h : 0 ≤ rate <;>
-    simp [poissonFiber, primitiveFiber, parseParams, paperMeasure, domain, meanValue, h]
+    simp [poissonFiber, primitiveFiber, parseParams, paperMeasure, InDomain, meanValue, h]
 
 theorem exponentialFiber_eq (kind : DistributionAction) (rate : ℝ) :
     exponentialFiber kind rate = primitiveFiber kind .exponential [] [rate] := by
   cases kind <;> by_cases h : 0 < rate <;>
-    simp [exponentialFiber, primitiveFiber, parseParams, paperMeasure, domain, meanValue, h]
+    simp [exponentialFiber, primitiveFiber, parseParams, paperMeasure, InDomain, meanValue, h]
 
 theorem betaFiber_eq (kind : DistributionAction) (alpha beta : ℝ) :
     betaFiber kind alpha beta = primitiveFiber kind .beta [] [alpha, beta] := by
   cases kind <;> by_cases h : 0 < alpha ∧ 0 < beta <;>
-    simp [betaFiber, primitiveFiber, parseParams, paperMeasure, domain, meanValue, h]
+    simp [betaFiber, primitiveFiber, parseParams, paperMeasure, InDomain, meanValue, h]
 
 theorem gammaFiber_eq (kind : DistributionAction) (shape rate : ℝ) :
     gammaFiber kind shape rate = primitiveFiber kind .gamma [shape] [rate] := by
   cases kind <;> by_cases h : 0 < shape ∧ 0 < rate <;>
-    simp [gammaFiber, primitiveFiber, parseParams, paperMeasure, domain, meanValue, h]
+    simp [gammaFiber, primitiveFiber, parseParams, paperMeasure, InDomain, meanValue, h]
 
 
 theorem bernoulliFiber_eq (kind : DistributionAction) (p : ℝ) :
     bernoulliFiber kind p = primitiveFiber kind .bernoulli [p] [] := by
   cases kind <;> by_cases h : 0 ≤ p ∧ p ≤ 1 <;>
-    simp [bernoulliFiber, primitiveFiber, parseParams, paperMeasure, domain, meanValue, h]
+    simp [bernoulliFiber, primitiveFiber, parseParams, paperMeasure, InDomain, meanValue, h]
 
 theorem discreteFiber_eq (kind : DistributionAction) (probabilities : List ℝ) :
     discreteFiber kind probabilities =
       primitiveFiber kind (.discrete probabilities.length) probabilities [] := by
   cases kind <;>
-    simp [discreteFiber, primitiveFiber, parseParams, paperMeasure, domain, meanValue]
+    simp [discreteFiber, primitiveFiber, parseParams, paperMeasure, InDomain, meanValue]
 
 end
 
@@ -207,8 +207,8 @@ theorem meanValue_eq_affine (op : Op) (params : Params op) :
   cases op <;> simp [meanValue, meanConstant, meanCoeff, affineArity,
     Fin.sum_univ_two] <;> ring
 
-theorem measurableSet_domain (op : Op) :
-    MeasurableSet {params | domain op params} := by
+theorem measurableSet_inDomain (op : Op) :
+    MeasurableSet {params | InDomain op params} := by
   cases op
   · change MeasurableSet {params : Params .uniform | params.1 0 ≤ params.1 1}
     apply measurableSet_le <;> fun_prop
@@ -247,11 +247,11 @@ structure PrimitiveLaws where
   kernel : (op : Op) → Kernel (Params op) ℝ
   kernel_eq_paperMeasure : ∀ op params, kernel op params = paperMeasure op params
   kernel_sfinite : ∀ op, IsSFiniteKernel (kernel op)
-  kernel_zero_off_domain : ∀ op params, ¬ domain op params → kernel op params = 0
-  mass_one : ∀ op params, domain op params → kernel op params Set.univ = 1
-  integrable_id : ∀ op params, domain op params →
+  kernel_zero_off_domain : ∀ op params, ¬ InDomain op params → kernel op params = 0
+  mass_one : ∀ op params, InDomain op params → kernel op params Set.univ = 1
+  integrable_id : ∀ op params, InDomain op params →
     Integrable (fun value : ℝ ↦ value) (kernel op params)
-  mean_law : ∀ op params, domain op params →
+  mean_law : ∀ op params, InDomain op params →
     (∫ value : ℝ, value ∂kernel op params) = meanValue op params
 
 end

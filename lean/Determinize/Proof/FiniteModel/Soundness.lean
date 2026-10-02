@@ -11,7 +11,7 @@ theorem replay_matches (candidate : Candidate) {source : Spec.Paper.Core} {subje
   have meaning : ∀ state, MachineReachable (initialState source subject) state → ∀ result,
       step state = .ok result → StepMeaning state result :=
     fun state reachable result action ↦ stepMeaning state
-      (program_reachable_shape source subject state reachable) result action
+      (stateShape_of_reachable_initialState source subject state reachable) result action
   have noFailure := fun state reachable failure ↦ replay_reachable_no_failure candidate valid
     (state := state) reachable failure
   have initialEqual : stateExpr (initialState source subject) = subject.program source := by

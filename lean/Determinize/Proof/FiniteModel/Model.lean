@@ -56,7 +56,7 @@ theorem rejected_output (model : Model)
   simp [Model.outputMeasure, rejected_outputWithin model model.initial rejected]
 
 /-- Every finite-horizon output law has finite support. -/
-theorem outputWithin_integrable (model : Model) (steps : Nat) (state : Fin model.size)
+theorem integrable_outputWithin (model : Model) (steps : Nat) (state : Fin model.size)
     (f : ℝ → ℝ) : Integrable f (model.outputWithin steps state) := by
   induction steps generalizing state with
   | zero =>
@@ -90,7 +90,7 @@ theorem rewardWithin_integral (model : Model) (steps : Nat) (state : Fin model.s
       rw [integral_finsetSum_measure (s := Finset.univ)
         (μ := fun next ↦ ENNReal.ofReal (model.transition state next : ℝ) •
           model.outputWithin steps next)
-        (fun next _ ↦ (outputWithin_integrable model steps next (fun x ↦ x)).smul_measure
+        (fun next _ ↦ (integrable_outputWithin model steps next (fun x ↦ x)).smul_measure
           (by simp))]
       simp only [integral_smul_measure, ih, Rat.cast_sum, Rat.cast_mul, smul_eq_mul]
       apply Finset.sum_congr rfl

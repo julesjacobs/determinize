@@ -382,53 +382,53 @@ namespace Determinize.Proof.Paper
 open MeasureTheory ProbabilityTheory Determinize.Spec Determinize.Spec.Paper
 
 /-- Extended-real expectation preservation, from operational trace soundness. -/
-theorem extendedExpectationSoundness (program : Expr) (typed : Typed [] program (.float .E))
+theorem extended_expectation_soundness (program : Expr) (typed : Typed [] program (.float .E))
     (sourceSafe : DomainSafe program)
     (defined : HasExpectation (Spec.Paper.bigStepMeasure program)) :
     HasExpectation (Spec.Paper.bigStepMeasure program.determinize) ∧
       extendedExpectation (Spec.Paper.bigStepMeasure program) =
         extendedExpectation (Spec.Paper.bigStepMeasure program.determinize) :=
-  (Determinize.Proof.Traces.meanOnTraces .E program typed
+  (Determinize.Proof.Traces.meanOnTraces_determinize .E program typed
     sourceSafe).2.extended_expectation defined
 
 /-- Jensen's inequality between the two output laws, from operational trace soundness. -/
-theorem jensenSoundness (program : Expr) (typed : Typed [] program (.float .E))
+theorem jensen_soundness (program : Expr) (typed : Typed [] program (.float .E))
     (sourceSafe : DomainSafe program) (φ : ℝ → ℝ) (convex : ConvexOn ℝ Set.univ φ)
     (nonneg : ∀ value, 0 ≤ φ value) :
     ∫⁻ value, ENNReal.ofReal (φ value) ∂Spec.Paper.bigStepMeasure program.determinize ≤
       ∫⁻ value, ENNReal.ofReal (φ value) ∂Spec.Paper.bigStepMeasure program :=
-  (Determinize.Proof.Traces.meanOnTraces .E program typed
+  (Determinize.Proof.Traces.meanOnTraces_determinize .E program typed
     sourceSafe).2.lintegral_convex_le convex nonneg
 
 /-- Output mass preservation, from operational trace soundness. -/
-theorem outputMassSoundness (program : Expr) (typed : Typed [] program (.float .E))
+theorem output_mass_soundness (program : Expr) (typed : Typed [] program (.float .E))
     (sourceSafe : DomainSafe program) :
     Spec.Paper.bigStepMeasure program.determinize Set.univ =
       Spec.Paper.bigStepMeasure program Set.univ :=
-  (Determinize.Proof.Traces.meanOnTraces .E program typed
+  (Determinize.Proof.Traces.meanOnTraces_determinize .E program typed
     sourceSafe).2.output_mass
 
 /-- Variance non-increase, from operational trace soundness. -/
-theorem varianceSoundness (program : Expr) (typed : Typed [] program (.float .E))
+theorem variance_soundness (program : Expr) (typed : Typed [] program (.float .E))
     (sourceSafe : DomainSafe program) (memLp : MemLp id 2 (Spec.Paper.bigStepMeasure program)) :
     MemLp id 2 (Spec.Paper.bigStepMeasure program.determinize) ∧
       (∫ value : ℝ, value ^ 2 ∂Spec.Paper.bigStepMeasure program.determinize) ≤
         ∫ value : ℝ, value ^ 2 ∂Spec.Paper.bigStepMeasure program ∧
       variance id (Spec.Paper.bigStepMeasure program.determinize) ≤
         variance id (Spec.Paper.bigStepMeasure program) :=
-  (Determinize.Proof.Traces.meanOnTraces .E program typed
+  (Determinize.Proof.Traces.meanOnTraces_determinize .E program typed
     sourceSafe).2.variance_le memLp
 
 /-- Preservation of the expectation conditioned on acceptance, from operational trace
 soundness. -/
-theorem conditionalExpectationSoundness (program : Expr) (typed : Typed [] program (.float .E))
+theorem conditional_expectation_soundness (program : Expr) (typed : Typed [] program (.float .E))
     (sourceSafe : DomainSafe program)
     (integrable : Integrable id (Spec.Paper.bigStepMeasure program)) :
     (∫ value : ℝ, value ∂Spec.Paper.bigStepMeasure program.determinize) /
         (Spec.Paper.bigStepMeasure program.determinize Set.univ).toReal =
       (∫ value : ℝ, value ∂Spec.Paper.bigStepMeasure program) /
         (Spec.Paper.bigStepMeasure program Set.univ).toReal :=
-  (Determinize.Proof.Traces.meanOnTraces .E program typed
+  (Determinize.Proof.Traces.meanOnTraces_determinize .E program typed
     sourceSafe).2.conditional_expectation integrable
 
 end Determinize.Proof.Paper
@@ -438,7 +438,7 @@ namespace Determinize.Proof.Traces
 open MeasureTheory ProbabilityTheory Determinize.Spec.Paper Determinize.Spec.Traces
 
 /-- The law of total variance along traces, stated with regular conditional distributions. -/
-theorem varianceSoundness (program : Expr) (typed : Typed [] program (.float .E))
+theorem variance_soundness (program : Expr) (typed : Typed [] program (.float .E))
     (sourceSafe : DomainSafe program) (memLp : MemLp id 2 (bigStepMeasure program)) :
     Integrable (fun trace ↦ variance id ((traceAndOutputLaw program).condKernel trace))
         (traceLaw program) ∧
@@ -447,8 +447,8 @@ theorem varianceSoundness (program : Expr) (typed : Typed [] program (.float .E)
           ∫ trace, variance id ((traceAndOutputLaw program).condKernel trace)
             ∂traceLaw program := by
   have replayAe := outputGivenTrace_ae_eq_condKernel program
-    (replaySoundness program typed sourceSafe).2.1 rfl
-  obtain ⟨_, factor, massAe, _⟩ := soundnessData .E program typed
+    (replay_soundness program typed sourceSafe).2.1 rfl
+  obtain ⟨_, factor, massAe, _⟩ := soundness_data .E program typed
     sourceSafe
   obtain ⟨integrable, decomposition⟩ := factor.variance_decomposition memLp
   have congr : (fun trace ↦ variance id (StepTraces.normalizedOutputGivenTrace program trace))

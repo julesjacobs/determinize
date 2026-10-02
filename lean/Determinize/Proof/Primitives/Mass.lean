@@ -71,7 +71,7 @@ theorem bernoulliFiber_mass_le_one (kind : DistributionAction) (probability : �
 theorem discreteFiber_mass_le_one (action : DistributionAction) (p : List ℝ) :
     discreteFiber action p Set.univ ≤ 1 := by
   by_cases valid : (∀ i : Fin p.length, 0 ≤ p[i]) ∧ ∑ i : Fin p.length, p[i] ≤ 1
-  · let := DiscreteLaws.discrete_probability action p valid
+  · let := DiscreteLaws.isProbabilityMeasure_discreteFiber action p valid
     exact prob_le_one
   · unfold discreteFiber; rw [if_neg valid]; simp
 

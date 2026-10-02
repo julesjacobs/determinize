@@ -129,7 +129,7 @@ theorem solveInput_complete {input : Input} {completion : Annotated} {T : Ty}
 
 /-! ## The statement -/
 
-theorem inferCorrect (input : Input) :
+theorem infer_correct (input : Input) :
     match infer input with
     | .error _ => ¬ ∃ program : Annotated, Completion input program
     | .ok (program, ty) =>

@@ -19,43 +19,43 @@ open scoped ProbabilityTheory
 
 noncomputable section
 
-theorem trace_length_measurable : Measurable (List.length : Trace → Nat) :=
+theorem measurable_trace_length : Measurable (List.length : Trace → Nat) :=
   measurable_fst.comp (comap_measurable _)
 
-theorem trace_event_measurable (index : Nat) :
+theorem measurable_trace_event (index : Nat) :
     Measurable (fun trace : Trace ↦ trace.getD index none) := by
   have coordinates : Measurable (fun trace : Trace ↦
       (trace.length, fun i : Nat ↦ trace.getD i none)) := comap_measurable _
   exact (measurable_pi_apply index).comp (measurable_snd.comp coordinates)
 
-theorem trace_cons_measurable :
+theorem measurable_trace_cons :
     Measurable (fun pair : Event × Trace ↦ pair.1 :: pair.2) := by
   apply measurable_comap_iff.mpr
   apply Measurable.prodMk
-  · exact (trace_length_measurable.comp measurable_snd).add_const 1
+  · exact (measurable_trace_length.comp measurable_snd).add_const 1
   · apply measurable_pi_lambda
     intro index
     cases index with
     | zero => exact measurable_fst
-    | succ index => exact (trace_event_measurable index).comp measurable_snd
+    | succ index => exact (measurable_trace_event index).comp measurable_snd
 
-theorem trace_tail_measurable : Measurable (List.tail : Trace → Trace) := by
+theorem measurable_trace_tail : Measurable (List.tail : Trace → Trace) := by
   apply measurable_comap_iff.mpr
   apply Measurable.prodMk
-  · simpa using trace_length_measurable.sub_const 1
+  · simpa using measurable_trace_length.sub_const 1
   · apply measurable_pi_lambda
     intro index
-    simpa using trace_event_measurable (index + 1)
+    simpa using measurable_trace_event (index + 1)
 
-theorem trace_head_measurable : Measurable (fun trace : Trace ↦ trace.headD none) := by
+theorem measurable_trace_head : Measurable (fun trace : Trace ↦ trace.headD none) := by
   have same : (fun trace : Trace ↦ trace.headD none) =
       fun trace ↦ trace.getD 0 none := by funext trace; cases trace <;> rfl
   rw [same]
-  exact trace_event_measurable 0
+  exact measurable_trace_event 0
 
-theorem prepend_measurable :
+theorem measurable_prepend :
     Measurable (fun pair : Event × Output ↦ prepend pair.1 pair.2) :=
-  (trace_cons_measurable.comp (measurable_fst.prodMk
+  (measurable_trace_cons.comp (measurable_fst.prodMk
     (measurable_fst.comp measurable_snd))).prodMk (measurable_snd.comp measurable_snd)
 
 theorem map_bind {α β γ : Type*} [MeasurableSpace α] [MeasurableSpace β]
@@ -89,7 +89,7 @@ def recordKernel {α : Type*} [MeasurableSpace α] {action : α → Action}
   | @sample site draw continuation measurable =>
     exact SFiniteKernel.mapWithInput draw
       (fun pair ↦ (generationEvent site pair.2, continuation pair))
-      (((generationEvent_measurable site).comp measurable_snd).prodMk measurable)
+      (((measurable_generationEvent site).comp measurable_snd).prodMk measurable)
   | stuck => exact SFiniteKernel.zero
   | piecewise measurableRegion _ _ ihTrue ihFalse =>
     exact SFiniteKernel.piecewise measurableRegion ihTrue ihFalse
@@ -118,7 +118,7 @@ def recordSkeletonKernel (skeleton : Skeleton) : Kernel Expr (Event × Expr) := 
   let family := MeasurableActionFamily.reduceFamily primitiveLaws
     (MeasurableFamily.skeletonFiber skeleton)
   let localKernel := recordKernel family
-  exact Kernel.piecewise (skeletonFiber_measurable skeleton)
+  exact Kernel.piecewise (measurableSet_skeletonFiber skeleton)
     (localKernel.kernel.comap (MeasurableActionFamily.toSkeletonFiber skeleton)
       (MeasurableActionFamily.measurable_toSkeletonFiber skeleton)) 0
 
@@ -135,7 +135,7 @@ theorem recordSkeletonKernel_apply (skeleton : Skeleton) (expression : Expr) :
   · rw [if_neg (show expression ∉ SkeletonFiber skeleton from member), if_neg member]
     rfl
 
-theorem recordSkeletonKernel_sfinite (skeleton : Skeleton) :
+theorem isSFiniteKernel_recordSkeletonKernel (skeleton : Skeleton) :
     IsSFiniteKernel (recordSkeletonKernel skeleton) := by
   classical
   unfold recordSkeletonKernel
@@ -147,7 +147,7 @@ theorem recordSkeletonKernel_sfinite (skeleton : Skeleton) :
 /-- One reduction step with its recorded event, `record (reduce expression)`, as a measurable
 kernel (`tracedStepKernel_apply`). -/
 def tracedStepKernel : SFiniteKernel Expr (Event × Expr) := by
-  let _ (skeleton : Skeleton) := recordSkeletonKernel_sfinite skeleton
+  let _ (skeleton : Skeleton) := isSFiniteKernel_recordSkeletonKernel skeleton
   exact ⟨Kernel.sum recordSkeletonKernel, inferInstance⟩
 
 theorem tracedStepKernel_apply (expression : Expr) :
@@ -176,7 +176,7 @@ theorem tracedStep_erasure (expression : Expr) :
       expression fiber continuation reduction
     rw [record, Measure.map_map measurable_snd
       (show Measurable (fun value ↦ (generationEvent site value, continuation value)) from
-        (generationEvent_measurable site).prodMk measurable)]
+        (measurable_generationEvent site).prodMk measurable)]
     rfl
 
 /-- Extend an exact-depth kernel by one recorded step: run `previous` on the successor and put
@@ -186,7 +186,7 @@ def successorKernel (previous : SFiniteKernel Expr (Output)) :
   SFiniteKernel.mapWithInput
     (SFiniteKernel.pullback previous Prod.snd measurable_snd)
     (fun pair ↦ prepend pair.1.1 pair.2)
-    (prepend_measurable.comp ((measurable_fst.comp measurable_fst).prodMk measurable_snd))
+    (measurable_prepend.comp ((measurable_fst.comp measurable_fst).prodMk measurable_snd))
 
 theorem successorKernel_apply (previous : SFiniteKernel Expr (Output))
     (entry : Event) (expression : Expr) :
@@ -197,15 +197,15 @@ theorem successorKernel_apply (previous : SFiniteKernel Expr (Output))
 
 /-- `exactMeasure depth` as a measurable kernel (`exactKernel_apply`). -/
 def exactKernel : (depth : Nat) → SFiniteKernel Expr (Output)
-  | 0 => SFiniteKernel.piecewise terminalFloatSet_measurable
+  | 0 => SFiniteKernel.piecewise measurableSet_terminalFloatSet
       (SFiniteKernel.deterministic (fun e ↦ ([], terminalFloatValue e))
-        (measurable_const.prodMk terminalFloatValue_measurable)) SFiniteKernel.zero
+        (measurable_const.prodMk measurable_terminalFloatValue)) SFiniteKernel.zero
   | depth + 1 => by
       let previous := exactKernel depth
       let next := successorKernel previous
       let := next.sfinite
       let := tracedStepKernel.sfinite
-      exact SFiniteKernel.piecewise MeasurableActionFamily.valueSet_measurable
+      exact SFiniteKernel.piecewise MeasurableActionFamily.measurableSet_valueSet
         SFiniteKernel.zero ⟨next.kernel ∘ₖ tracedStepKernel.kernel, inferInstance⟩
 
 theorem exactKernel_apply (depth : Nat) (expression : Expr) :
@@ -232,7 +232,7 @@ theorem exactKernel_apply (depth : Nat) (expression : Expr) :
         have measurable :=
           (MeasurableActionFamily.stepKernel primitiveLaws).sample_continuation_measurable
           expression fiber continuation reduction
-        rw [record, bind_map _ _ ((generationEvent_measurable modeTag).prodMk measurable)]
+        rw [record, bind_map _ _ ((measurable_generationEvent modeTag).prodMk measurable)]
         apply Measure.bind_congr_right
         filter_upwards [] with value
         rw [successorKernel_apply, ih]
@@ -270,11 +270,11 @@ theorem exact_erasure (step : StepKernel) (depth : Nat) (expression : Expr) :
       rw [successorKernel_apply, exactKernel_apply,
         Measure.map_map measurable_snd
           (show Measurable (prepend next.1) from
-            prepend_measurable.comp (measurable_const.prodMk measurable_id))]
+            measurable_prepend.comp (measurable_const.prodMk measurable_id))]
       exact (ih next.2).trans
         (MeasurableActionFamily.exactOutputKernel_apply step depth next.2).symm
 
-theorem correspondence : Determinize.Proof.StepTraces.correspondenceThm := by
+theorem correspondence : Determinize.Proof.StepTraces.Correspondence := by
   intro program
   let step := MeasurableActionFamily.stepKernel primitiveLaws
   rw [jointMeasure, Measure.map_sum measurable_snd.aemeasurable]

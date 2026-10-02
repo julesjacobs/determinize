@@ -6,7 +6,7 @@ open Determinize.Proof.Paper Symbolic Symbolic.AffineExpr
 open SymbolicSoundness.TargetSafety
 noncomputable section
 
-theorem sampleG_joint_measurable (expression : AffineExpr n) (typed : WellTyped [] expression ty)
+theorem measurable_sampleG_joint (expression : AffineExpr n) (typed : WellTyped [] expression ty)
     (actionEq : symbolicReduce expression = .sampleG site fiber continuation) :
     Measurable (fun pair : Env n × ℝ ↦ (continuation pair.2).realize pair.1) := by
   have eq : (fun pair : Env n × ℝ ↦ (continuation pair.2).realize pair.1) =
@@ -16,8 +16,8 @@ theorem sampleG_joint_measurable (expression : AffineExpr n) (typed : WellTyped 
     rw [← symbolicReduce_realize typed pair.1, actionEq]
     rfl
   rw [eq]
-  exact sampleContinuation_measurable.comp
-    ((expression.realize_measurable.comp measurable_fst).prodMk measurable_snd)
+  exact measurable_sampleContinuation.comp
+    ((expression.measurable_realize.comp measurable_fst).prodMk measurable_snd)
 
 /-- The exact-depth law of the source after a G-affinity draw at `op` is supplied: the
 continuation runs under the history's actual law and the draw is recorded in front of the
@@ -29,12 +29,12 @@ def generatedSourceKernel (depth : Nat) (history : Symbolic.SampleEnv primitiveL
     ⟨SymbolicSoundness.SampleEnv.actualMeasure_univ_eq_one _ history safe⟩
   let output := SFiniteKernel.pullback (exactKernel depth)
     (fun pair : ℝ × Env n ↦ sampleContinuation (expression.realize pair.2) pair.1)
-    (sampleContinuation_measurable.comp
-      ((expression.realize_measurable.comp measurable_snd).prodMk measurable_fst))
+    (measurable_sampleContinuation.comp
+      ((expression.measurable_realize.comp measurable_snd).prodMk measurable_fst))
   exact SFiniteKernel.mapWithInput (averageKernel (history.actualMeasure primitiveLaws) output)
     (fun pair : ℝ × Output ↦ prepend (entry (some op) pair.1) pair.2)
-    (prepend_measurable.comp
-      ((entry_measurable.comp ((measurable_const (a := some op)).prodMk measurable_fst)).prodMk
+    (measurable_prepend.comp
+      ((measurable_entry.comp ((measurable_const (a := some op)).prodMk measurable_fst)).prodMk
         measurable_snd))
 
 /-- The exact-depth law of the target after a G-affinity draw at `op` is supplied: the
@@ -46,10 +46,10 @@ def generatedTargetKernel (depth : Nat) (history : Symbolic.SampleEnv primitiveL
     (SFiniteKernel.pullback (exactKernel depth)
       (fun value ↦ sampleContinuation
         (expression.realize (history.meanEnvironment primitiveLaws)).determinize value)
-      (sampleContinuation_measurable.comp (measurable_const.prodMk measurable_id)))
+      (measurable_sampleContinuation.comp (measurable_const.prodMk measurable_id)))
     (fun pair : ℝ × Output ↦ prepend (entry (some op) pair.1) pair.2)
-    (prepend_measurable.comp
-      ((entry_measurable.comp ((measurable_const (a := some op)).prodMk measurable_fst)).prodMk
+    (measurable_prepend.comp
+      ((measurable_entry.comp ((measurable_const (a := some op)).prodMk measurable_fst)).prodMk
         measurable_snd))
 
 theorem generatedSourceKernel_apply (depth : Nat) (history : Symbolic.SampleEnv primitiveLaws n)
@@ -96,10 +96,10 @@ theorem actualTraceLaw_sampleG (depth : Nat) (history : Symbolic.SampleEnv primi
   let : IsProbabilityMeasure fiber := ⟨fiberMass⟩
   let next := SFiniteKernel.pullback (exactKernel depth)
     (fun pair : Env n × ℝ ↦ (continuation pair.2).realize pair.1)
-    (sampleG_joint_measurable expression typed actionEq)
+    (measurable_sampleG_joint expression typed actionEq)
   let joint := SFiniteKernel.mapWithInput next
     (fun pair : (Env n × ℝ) × Output ↦ prepend (entry (some op) pair.1.2) pair.2)
-    (prepend_measurable.comp ((entry_measurable.comp
+    (measurable_prepend.comp ((measurable_entry.comp
       ((measurable_const (a := some op)).prodMk (measurable_snd.comp measurable_fst))).prodMk
         measurable_snd))
   have jointEq (env : Env n) (v : ℝ) : joint.kernel (env, v) =
@@ -125,9 +125,9 @@ theorem actualTraceLaw_sampleG (depth : Nat) (history : Symbolic.SampleEnv primi
   filter_upwards [] with v
   rw [generatedSourceKernel_apply _ _ _ _ typed actionEq, actualTraceLaw,
     map_bind_fun _ (fun env ↦ exactMeasure depth ((continuation v).realize env))
-      ((exact_measurable depth).comp (continuation v).realize_measurable) _
+      ((measurable_exactMeasure depth).comp (continuation v).measurable_realize) _
       (show Measurable (prepend (entry (some op) v) : Output → Output) from
-        prepend_measurable.comp (measurable_const.prodMk measurable_id))]
+        measurable_prepend.comp (measurable_const.prodMk measurable_id))]
   simp_rw [jointEq]
 
 theorem targetTraceLaw_sampleG (depth : Nat) (history : Symbolic.SampleEnv primitiveLaws n)
