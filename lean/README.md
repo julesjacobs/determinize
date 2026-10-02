@@ -171,6 +171,27 @@ draft in `tex/archive/` is no longer compared.
   `Spec/Inference.lean`), so the review build's links are off until the snapshot is
   regenerated.
 
+## Style
+
+The Lean sources follow Mathlib's conventions for naming and layout. The deliberate exceptions:
+
+- **Paper theorems.** The theorems in `Theorems.lean` are named after the paper's theorems, in
+  `snake_case`, and not after the shape of their statements. Each states the conclusions of
+  its paper theorem as one conjunction.
+- **Hypotheses and variables.** A hypothesis is named after what it says (`typed`, `safe`,
+  `notValue`) and a variable is written out (`program`, `expression`), where Mathlib writes
+  `h`, `ht` and `e`.
+- **Explicit arguments.** A theorem takes the program it is about as an explicit argument,
+  also when a later hypothesis determines it.
+- **Affinities.** The constructors `Affinity.E` and `Affinity.G` are capitalised as in the
+  paper.
+- **Headers.** Files carry no copyright or author header.
+
+Three things do not follow Mathlib and are not deliberate: definitions outside `Spec` are
+not all documented; the `reduce…` families in `Proof/Semantics/Measurability.lean` and the
+equality deciders in `Proof/FiniteModel/Equality.lean` are built by tactics; and some
+proofs and files are much longer than Mathlib allows.
+
 ## Lean command-line implementation
 
 Build with `lake build --wfail`, then run from `lean/`:
