@@ -97,7 +97,10 @@ theorem Shape.children_vars {s t : Shape} {equations : List (Shape × Shape)}
     (h : s.children t = some equations) :
     equationVars equations = s.vars ∪ t.vars ∧ equationSize equations < s.size + t.size := by
   cases s <;> cases t <;> simp only [children, Option.some.injEq, reduceCtorEq] at h <;> subst h <;>
-    refine ⟨?_, ?_⟩ <;> simp [equationVars, equationSize, vars, size] <;>
+    refine ⟨?_, ?_⟩ <;> simp only [equationVars, Finset.union_assoc, List.foldr_nil, vars,
+      Finset.union_idempotent, equationSize, List.map_nil, List.sum_nil, size, Nat.reduceAdd,
+      Nat.zero_lt_succ, List.foldr_cons, Finset.union_empty, List.map_cons, List.sum_cons,
+      Nat.add_zero] <;>
     first | omega | (ext; simp; tauto)
 
 private theorem equationVars_map_single {i : Nat} {t : Shape} (fresh : i ∉ t.vars)

@@ -59,9 +59,9 @@ example : Typed [] capturedSample (.float .E) := by
 
 example : outputMeasureAt 4 capturedSample =
     (uniformFiber (.sample .G) 0 1).map (fun value ↦ value + 2) := by
-  simp [capturedSample, outputMeasureAt, reduce, Expr.isValue,
-    realValue?, Action.wrap, Function.comp_def,
-    Expr.substHead, Expr.substAt, Expr.shift, Expr.mapVars]
+  simp only [outputMeasureAt, capturedSample, Expr.isValue, Bool.false_eq_true, ↓reduceIte, reduce,
+    Action.wrap, realValue?, Function.comp_def, Expr.substHead, Expr.substAt, Expr.mapVars,
+    zero_add, Expr.shift, zero_ne_one, not_lt_zero]
   exact Measure.bind_dirac_eq_map _ (measurable_id.add_const 2)
 
 example (trace : Spec.Traces.Trace) (result value : ℝ) :
@@ -77,9 +77,9 @@ example (trace : Spec.Traces.Trace) (result value : ℝ) :
 example : Spec.Traces.traceAndOutputLawAt 4 capturedSample =
     (uniformFiber (.sample .G) 0 1).map
       (fun value ↦ ([], value + 2)) := by
-  simp [capturedSample, Spec.Traces.traceAndOutputLawAt, reduce, Expr.isValue,
-    realValue?, Action.wrap, Function.comp_def,
-    Expr.substHead, Expr.substAt, Expr.shift, Expr.mapVars, realValue?]
+  simp only [Spec.Traces.traceAndOutputLawAt, capturedSample, Expr.isValue, Bool.false_eq_true,
+    ↓reduceIte, reduce, Action.wrap, realValue?, Function.comp_def, Expr.substHead, Expr.substAt,
+    Expr.mapVars, zero_add, Expr.shift, zero_ne_one, not_lt_zero]
   change ((uniformFiber (.sample .G) 0 1).bind
     fun value ↦ (Measure.dirac ([], value + 2)).map id) = _
   simp only [Measure.map_id]

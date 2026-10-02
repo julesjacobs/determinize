@@ -43,7 +43,8 @@ def solveValues (model : Model) (limits : SolveLimits := {}) :
     intro state
     have h := solution.property state
     cases kind : model.kind state <;>
-      simp [A, b, kind, sub_mul, Finset.sum_sub_distrib] at h ⊢
+      simp only [kind, ↓reduceIte, sub_mul, ite_mul, one_mul, zero_mul,
+        Finset.sum_sub_distrib, Finset.sum_ite_eq, Finset.mem_univ, A, b, reduceCtorEq] at h ⊢
     all_goals first | exact sub_eq_zero.mp h | exact h
   return ⟨solution.val, equations⟩
 
@@ -69,7 +70,7 @@ theorem solve_sound (model : Model) (limits : SolveLimits) (certificate : Result
   cases h : solveCertified model limits with
   | error message => simp [h, Except.map] at success
   | ok result =>
-    simp [h, Except.map] at success
+    simp only [Except.map, h, Except.ok.injEq] at success
     exact success ▸ result.property
 
 theorem solve_expectedReward (model : Model) (limits : SolveLimits)
