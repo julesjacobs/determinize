@@ -16,7 +16,6 @@ namespace Determinize.Proof.StepTraces
 open MeasureTheory ProbabilityTheory Determinize.Spec.Paper Determinize.Proof.StepTraces
 open Determinize.Proof.Paper
 open scoped ProbabilityTheory
-open Classical
 
 noncomputable section
 
@@ -243,6 +242,7 @@ theorem exact_succ_kernel (depth : Nat) (expression : Expr)
     (notValue : expression.isValue ≠ true) :
     exactMeasure (depth + 1) expression =
       (record (reduce expression)).bind (successorKernel (exactKernel depth)).kernel := by
+  classical
   rw [← exactKernel_apply, exactKernel, SFiniteKernel.piecewise, Kernel.piecewise_apply,
     if_neg (show expression ∉ MeasurableActionFamily.valueSet from notValue),
     Kernel.comp_apply, tracedStepKernel_apply]

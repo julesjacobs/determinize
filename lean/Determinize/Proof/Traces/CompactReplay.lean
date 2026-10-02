@@ -18,7 +18,6 @@ open Determinize.Proof.Paper
 open Determinize.Proof.Traces (outputGivenTraceAt outputGivenTrace)
 open scoped ProbabilityTheory ENNReal
 noncomputable section
-open Classical
 
 /-! ### Unfolding lemmas -/
 
@@ -113,7 +112,6 @@ theorem not_isValue_of_generationOp_some {expression : Expr} {op : Op}
     (active : generationOp expression.skeleton = some op) : expression.isValue ≠ true :=
   fun value ↦ by simp [generationOp_of_isValue value] at active
 
-set_option maxHeartbeats 1600000 in
 /-- When the skeleton names an active general-affinity site, reduction samples at it with that
 primitive, or is stuck on operands that are values but not reals. -/
 theorem generationOp_some_reduce {expression : Expr} {op : Op}
@@ -196,6 +194,7 @@ def compactReplayStep : SFiniteKernel (DrawTrace × Expr) (DrawTrace × Expr) :=
   exact SFiniteKernel.piecewise measurableRegion sampled
     (SFiniteKernel.piecewise matchesHead_measurable forced SFiniteKernel.zero)
 
+open scoped Classical in
 theorem compactReplayStep_apply (tape : DrawTrace) (expression : Expr) :
     compactReplayStep.kernel (tape, expression) =
       if generationOp expression.skeleton = none then

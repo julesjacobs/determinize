@@ -35,9 +35,9 @@ theorem actionContinuation_measurable {α : Type*} [MeasurableSpace α]
   | @piecewise region _ measurableRegion whenTrue whenFalse trueFamily falseFamily ihTrue ihFalse =>
     classical
     convert ihTrue.piecewise (measurableRegion.preimage measurable_fst) ihFalse using 1
-    funext pair
-    by_cases h : pair.1 ∈ region <;> simp [Set.piecewise, h]
-    all_goals infer_instance
+    · funext pair
+      by_cases h : pair.1 ∈ region <;> simp [Set.piecewise, h]
+    · infer_instance
 
 theorem sampleContinuation_measurable :
     Measurable (fun pair : Expr × ℝ ↦ sampleContinuation pair.1 pair.2) := by

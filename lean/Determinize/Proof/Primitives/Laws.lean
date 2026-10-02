@@ -100,7 +100,6 @@ def paperMeasure : (op : Op) → Params op → Measure ℝ
     let shape := params.1 0
     let rate := params.2 0
     if 0 < shape ∧ 0 < rate then gammaMeasure shape rate else 0
-
   | .bernoulli, params => bernoulliFiber (.sample .G) (params.1 0)
   | .discrete n, params =>
     if (∀ i, 0 ≤ params.1 i) ∧ ∑ i, params.1 i ≤ 1 then
@@ -229,7 +228,6 @@ theorem measurableSet_domain (op : Op) :
         measurableSet_Ioi)
       ((show Measurable (fun params : Params .gamma ↦ params.2 0) by fun_prop)
         measurableSet_Ioi)
-
   · change MeasurableSet {params : Params .bernoulli | 0 ≤ params.1 0 ∧ params.1 0 ≤ 1}
     have hp : Measurable (fun params : Params .bernoulli ↦ params.1 0) := by fun_prop
     exact (measurableSet_le measurable_const hp).inter

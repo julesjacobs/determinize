@@ -186,3 +186,5 @@ noncomputable def cumulativeOutputMeasure (stepKernel : StepKernel)
 noncomputable def bigStepMeasure (stepKernel : StepKernel)
     (program : Expr) : Measure ℝ :=
   ⨆ fuel, cumulativeOutputMeasure stepKernel fuel program
+
+end Determinize.Proof.Paper

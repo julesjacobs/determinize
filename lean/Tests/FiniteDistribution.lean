@@ -32,7 +32,6 @@ example : (remainderDistribution []).map (·.probabilities) = .ok [1] := by
 def finiteDistributions : IO Unit := do
   for probabilities in [[(-1 : Rat)], [3 / 4, 1 / 2]] do
     assert (!(remainderDistribution probabilities).isOk) "invalid remainder probabilities accepted"
-
   for weights in [[], [0], [0, 0], [-1, 2], [2, -1], [1, 2, 3], [1 / 4, 1 / 4]] do
     assert (!(finiteDistribution weights).isOk) s!"invalid weights accepted: {weights}"
   for p in [(-1 : Rat), 2] do

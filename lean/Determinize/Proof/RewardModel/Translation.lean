@@ -34,7 +34,6 @@ private theorem draw_not_terminal (site : Spec.Paper.DistributionAction × Spec.
     simp only [law, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at action
     exact ⟨_, _, action.symm⟩
 
-set_option maxHeartbeats 1600000 in
 theorem step_terminal (state : State) (result : Finite.Step)
     (action : step state = .ok result) :
     (∃ tag outcomes, result = .next tag outcomes) ∨
@@ -140,7 +139,6 @@ private theorem draw_error_push (site : Spec.Paper.DistributionAction × Spec.Pa
     simp [law, bind, Except.bind, pure, Except.pure] at action ⊢
   exact action
 
-set_option maxHeartbeats 1600000 in
 theorem addition_failure (state : State) (offsets : List Rat) (failure : Failure)
     (action : step state = .error failure) :
     ∃ error, step (pushStack state (additionStack offsets)) = .error error := by

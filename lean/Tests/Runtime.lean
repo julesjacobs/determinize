@@ -50,7 +50,6 @@ def runtime : IO Unit := do
   let p ← IO.ofExcept (compile "gauss[E](1,uniform[G](1,2))")
   let (_, stats) ← IO.ofExcept (Runtime.run p.source.determinize)
   assert (stats.draws == 1) "atomic mean skipped a sampled variance operand"
-
   let rejected ← IO.ofExcept (compile "let _ = observe(false) in 42")
   for e in [rejected.source, rejected.source.determinize] do
     match ← IO.ofExcept (Runtime.runOutcome e 42 10) with

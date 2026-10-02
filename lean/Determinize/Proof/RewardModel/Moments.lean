@@ -57,7 +57,6 @@ private theorem integral_shift_moment (μ : Measure ℝ) [IsFiniteMeasure μ]
       integral_add second linear, integral_const_mul]
     simp [integral_const, mul_comm]
 
-set_option maxHeartbeats 1200000 in
 theorem momentAt_equation (model : Model) (moment : Moment)
     (i : Fin model.size) :
     momentAt model moment i = match model.kind i with

@@ -100,8 +100,8 @@ private theorem measurable_gammaJointDensity :
     ProbabilityTheory.gammaPDFReal (shape pair) (rate pair) pair.2)
   unfold ProbabilityTheory.gammaPDFReal
   apply Measurable.ite (measurableSet_le measurable_const measurable_snd)
-  exact (((hRatePow.div hGamma).mul hValuePow).mul (by fun_prop))
-  exact measurable_const
+  · exact (((hRatePow.div hGamma).mul hValuePow).mul (by fun_prop))
+  · exact measurable_const
 
 private noncomputable def gammaKernel :
     ProbabilityTheory.Kernel (Determinize.Spec.Paper.Params .gamma) ℝ := by
@@ -501,7 +501,6 @@ private theorem paperMeasure_mass_one (op : Determinize.Spec.Paper.Op)
     rw [if_pos hd]
     let := ProbabilityTheory.isProbabilityMeasure_gammaMeasure hd.1 hd.2
     exact measure_univ
-
   | bernoulli =>
     let := DiscreteLaws.bernoulli_probability (.sample .G) (params.1 0) hDomain
     exact measure_univ (μ := Determinize.Spec.Paper.bernoulliFiber (.sample .G) (params.1 0))
@@ -544,7 +543,6 @@ private theorem paperMeasure_zero_off_domain (op : Determinize.Spec.Paper.Op)
       ProbabilityTheory.gammaMeasure (params.1 0)
         (params.2 0) else 0) = 0
     rw [if_neg (by simpa only [Determinize.Spec.Paper.domain] using hDomain)]
-
   | bernoulli => exact DiscreteLaws.bernoulli_off_domain (.sample .G) (params.1 0) hDomain
   | discrete _ =>
     simp only [Determinize.Spec.Paper.domain] at hDomain
@@ -640,7 +638,6 @@ private theorem uniform_mean (params : Determinize.Spec.Paper.Params .uniform)
             dsimp [lower]
             ring
       _ = _ := hSum.symm
-
   · rw [dif_neg hPoint, integral_smul_measure]
     have hPositive : 0 < upper - lower := sub_pos.mpr (lt_of_le_of_ne hle hPoint)
     have hSetIntegral : (∫ value : ℝ in Set.Icc lower upper, value) =

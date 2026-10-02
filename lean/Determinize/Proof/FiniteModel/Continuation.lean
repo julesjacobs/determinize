@@ -24,7 +24,6 @@ theorem lift_root (before after : State) (root : RootStep before after)
   · rw [pushStack_expr before stack beforeLive, context.2, root.2]
     simp [Action.wrap, pushStack_expr after stack afterLive]
 
-set_option maxHeartbeats 1200000 in
 theorem deliver_stepMeaning (value : Value) (stack : List Frame)
     (shape : ∀ frame ∈ stack, FrameShape frame) (result : Step)
     (action : step (.deliver value stack) = .ok result) :
