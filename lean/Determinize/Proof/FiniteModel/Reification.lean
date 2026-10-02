@@ -28,19 +28,19 @@ termination_by environment => sizeOf environment
 end
 
 mutual
-theorem valueExpr_closed (value : Value) : Scoped 0 (valueExpr value) := by
+theorem scoped_valueExpr (value : Value) : Scoped 0 (valueExpr value) := by
   cases value with
   | unit | bool _ | number _ | nil => simp [valueExpr, Scoped]
   | pair a b | cons a b =>
-    simpa only [valueExpr, Scoped] using And.intro (valueExpr_closed a) (valueExpr_closed b)
-  | inl a | inr a => simpa only [valueExpr, Scoped] using valueExpr_closed a
+    simpa only [valueExpr, Scoped] using And.intro (scoped_valueExpr a) (scoped_valueExpr b)
+  | inl a | inr a => simpa only [valueExpr, Scoped] using scoped_valueExpr a
   | closure body environment | recursive body environment =>
     simpa only [valueExpr, Scoped, Nat.zero_add]
       using close_scoped (interpret body) (environmentExpr environment)
-      (environmentExpr_closed environment) _
+      (scoped_environmentExpr environment) _
 termination_by sizeOf value
 
-theorem environmentExpr_closed (environment : List Value) :
+theorem scoped_environmentExpr (environment : List Value) :
     ∀ e ∈ environmentExpr environment, Scoped 0 e := by
   cases environment with
   | nil => simp [environmentExpr]
@@ -48,17 +48,17 @@ theorem environmentExpr_closed (environment : List Value) :
     intro e member
     simp only [environmentExpr, List.mem_cons] at member
     rcases member with rfl | member
-    · exact valueExpr_closed value
-    · exact environmentExpr_closed rest e member
+    · exact scoped_valueExpr value
+    · exact scoped_environmentExpr rest e member
 termination_by sizeOf environment
 end
 
-theorem valueExpr_isValue (value : Value) : (valueExpr value).isValue = true := by
+theorem isValue_valueExpr (value : Value) : (valueExpr value).isValue = true := by
   cases value with
   | unit | bool _ | number _ | nil | closure _ _ | recursive _ _ => simp [valueExpr, Expr.isValue]
   | pair a b | cons a b =>
-    simp only [valueExpr, Expr.isValue, valueExpr_isValue a, valueExpr_isValue b, Bool.and_self]
-  | inl a | inr a => simpa only [valueExpr, Expr.isValue] using valueExpr_isValue a
+    simp only [valueExpr, Expr.isValue, isValue_valueExpr a, isValue_valueExpr b, Bool.and_self]
+  | inl a | inr a => simpa only [valueExpr, Expr.isValue] using isValue_valueExpr a
 termination_by sizeOf value
 
 def unaryExpr {α : Type} : Unary → Expr α → Expr α
@@ -111,16 +111,16 @@ def stateExpr : State → Expr
   | .deliver value stack => stackExpr stack (valueExpr value)
   | .rejected => .reject
 
-theorem closure_substitution (body : Core) (environment : List Value) (argument : Value) :
+theorem substHead_close (body : Core) (environment : List Value) (argument : Value) :
     (close (environmentExpr environment) 1 (interpret body)).substHead (valueExpr argument) =
       close (environmentExpr (argument :: environment)) 0 (interpret body) :=
   by
     simpa only [environmentExpr, Expr.substHead] using
       close_cons_subst (interpret body) (environmentExpr environment)
-        (environmentExpr_closed environment)
-        (valueExpr argument) (valueExpr_closed argument) 0
+        (scoped_environmentExpr environment)
+        (valueExpr argument) (scoped_valueExpr argument) 0
 
-theorem recursive_substitution (body : Core) (environment : List Value) (argument : Value) :
+theorem substTwo_close (body : Core) (environment : List Value) (argument : Value) :
     (close (environmentExpr environment) 2 (interpret body)).substTwo
         (valueExpr argument) (valueExpr (.recursive body environment)) =
       close (environmentExpr (argument :: .recursive body environment :: environment)) 0
@@ -128,23 +128,23 @@ theorem recursive_substitution (body : Core) (environment : List Value) (argumen
   by
     simpa only [environmentExpr] using
       close_two_subst (interpret body) (environmentExpr environment)
-        (environmentExpr_closed environment)
+        (scoped_environmentExpr environment)
         (valueExpr argument) (valueExpr (.recursive body environment))
-        (valueExpr_closed argument) (valueExpr_closed (.recursive body environment))
+        (scoped_valueExpr argument) (scoped_valueExpr (.recursive body environment))
 
-theorem closure_beta (body : Core) (environment : List Value) (argument : Value) :
+theorem reduce_app_closure (body : Core) (environment : List Value) (argument : Value) :
     reduce (.app (valueExpr (.closure body environment)) (valueExpr argument)) =
       .next (stateExpr (.eval body (argument :: environment) [])) := by
-  simp [valueExpr, reduce, Expr.isValue, valueExpr_isValue, closure_substitution,
+  simp [valueExpr, reduce, Expr.isValue, isValue_valueExpr, substHead_close,
     stateExpr, stackExpr]
 
-theorem recursive_beta (body : Core) (environment : List Value) (argument : Value) :
+theorem reduce_app_recursive (body : Core) (environment : List Value) (argument : Value) :
     reduce (.app (valueExpr (.recursive body environment)) (valueExpr argument)) =
       .next (stateExpr
         (.eval body (argument :: .recursive body environment :: environment) [])) := by
-  simp only [valueExpr, reduce, Expr.isValue, valueExpr_isValue, ↓reduceIte]
+  simp only [valueExpr, reduce, Expr.isValue, isValue_valueExpr, ↓reduceIte]
   simpa only [stateExpr, stackExpr, List.foldl_nil, valueExpr] using
-    congrArg Action.next (recursive_substitution body environment argument)
+    congrArg Action.next (substTwo_close body environment argument)
 
 end
 end Determinize.Proof.FiniteModel

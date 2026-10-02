@@ -54,7 +54,7 @@ noncomputable def jointMeasure (program : Expr) : Measure (Trace × ℝ) :=
   Measure.sum fun depth ↦ exactMeasure depth program
 
 /-- Erasing terminating traces recovers the ordinary output semantics. -/
-def correspondenceThm : Prop :=
+def Correspondence : Prop :=
   ∀ program : Expr, (jointMeasure program).map Prod.snd = bigStepMeasure program
 
 end Determinize.Proof.StepTraces

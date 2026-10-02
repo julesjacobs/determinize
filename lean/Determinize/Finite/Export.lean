@@ -219,7 +219,7 @@ def resultCertificateText (source : Spec.Paper.Core) (subject : Subject) (candid
   "    MeasureTheory.Integrable id (bigStepMeasure (checkedSubject.program checkedSource)) ∧\n" ++
   "    (∫ value : ℝ, value ∂bigStepMeasure (checkedSubject.program checkedSource)) =\n" ++
   "      (statistics.firstMoment : ℝ) := by\n" ++
-  "  exact ⟨modelMatches.2 ▸ Determinize.Proof.FiniteModel.outputMeasure_integrable model, \
+  "  exact ⟨modelMatches.2 ▸ Determinize.Proof.FiniteModel.integrable_outputMeasure model, \
       outputStatistics.first⟩\n" ++
   "\ntheorem conditionalVariance (positive : 0 < statistics.returnMass) :\n" ++
   "    ProbabilityTheory.variance id ((bigStepMeasure (checkedSubject.program checkedSource) \

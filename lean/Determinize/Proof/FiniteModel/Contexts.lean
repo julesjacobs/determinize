@@ -13,7 +13,7 @@ def FrameShape : Frame → Prop
     arguments.length + 1 + pending.length = primitiveArity site.2
   | _ => True
 
-theorem frame_context (frame : Frame) (shape : FrameShape frame) (hole : Expr)
+theorem reduce_frameExpr (frame : Frame) (shape : FrameShape frame) (hole : Expr)
     (notValue : hole.isValue = false) :
     (frameExpr frame hole).isValue = false ∧
       reduce (frameExpr frame hole) = (reduce hole).wrap (frameExpr frame) := by
@@ -23,7 +23,7 @@ theorem frame_context (frame : Frame) (shape : FrameShape frame) (hole : Expr)
   | left op right environment =>
     cases op <;> simp [frameExpr, binaryExpr, Expr.isValue, reduce, notValue] <;> rfl
   | right op left =>
-    cases op <;> simp [frameExpr, binaryExpr, Expr.isValue, reduce, notValue, valueExpr_isValue] <;>
+    cases op <;> simp [frameExpr, binaryExpr, Expr.isValue, reduce, notValue, isValue_valueExpr] <;>
       rfl
   | discrete action | choose yes no environment | letBody body environment
   | matchSum left right environment | matchList nilCase consCase environment =>
@@ -40,7 +40,7 @@ theorem wrap_wrap (action : Action) (first second : Expr → Expr) :
     (action.wrap first).wrap second = action.wrap (second ∘ first) := by
   cases action <;> rfl
 
-theorem stack_context (stack : List Frame) (shape : ∀ frame ∈ stack, FrameShape frame)
+theorem reduce_stackExpr (stack : List Frame) (shape : ∀ frame ∈ stack, FrameShape frame)
     (hole : Expr) (notValue : hole.isValue = false) :
     (stackExpr stack hole).isValue = false ∧
       reduce (stackExpr stack hole) = (reduce hole).wrap (stackExpr stack) := by
@@ -51,14 +51,14 @@ theorem stack_context (stack : List Frame) (shape : ∀ frame ∈ stack, FrameSh
     rfl
   | cons frame stack ih =>
     have outerShape : ∀ f ∈ stack, FrameShape f := fun f hf ↦ shape f (by simp [hf])
-    have inner := frame_context frame (shape frame (by simp)) hole notValue
+    have inner := reduce_frameExpr frame (shape frame (by simp)) hole notValue
     have outer := ih outerShape (frameExpr frame hole) inner.1
     refine ⟨outer.1, ?_⟩
     change reduce (stackExpr stack (frameExpr frame hole)) = _
     rw [outer.2, inner.2, wrap_wrap]
     rfl
 
-private theorem list_prefix_absorbing (supplied : List Rat) (tail : Expr)
+private theorem reduce_list_prefix_of_absorbing (supplied : List Rat) (tail : Expr)
     (notValue : tail.isValue = false) (absorbing : reduce tail = .next tail) :
     (supplied.foldr (fun (p : Rat) (rest : Expr) ↦ .cons (.real (p : ℝ)) rest) tail).isValue =
       false ∧
@@ -71,7 +71,7 @@ private theorem list_prefix_absorbing (supplied : List Rat) (tail : Expr)
       ↓reduceIte, ih.2, Action.wrap, and_self]
 
 /-- Evaluation frames preserve an absorbing nonvalue, including a rejection. -/
-theorem frame_absorbing (frame : Frame) (hole : Expr)
+theorem reduce_frameExpr_of_absorbing (frame : Frame) (hole : Expr)
     (notValue : hole.isValue = false) (absorbing : reduce hole = .next hole) :
     (frameExpr frame hole).isValue = false ∧
       reduce (frameExpr frame hole) = .next (frameExpr frame hole) := by
@@ -83,7 +83,7 @@ theorem frame_absorbing (frame : Frame) (hole : Expr)
       Action.wrap]
   | right op left =>
     cases op <;> simp [frameExpr, binaryExpr, Expr.isValue, reduce, notValue, absorbing,
-      valueExpr_isValue, Action.wrap]
+      isValue_valueExpr, Action.wrap]
   | discrete action | choose yes no environment | letBody body environment
   | matchSum left right environment | matchList nilCase consCase environment =>
     simp [frameExpr, Expr.isValue, reduce, notValue, absorbing, Action.wrap]
@@ -91,7 +91,7 @@ theorem frame_absorbing (frame : Frame) (hole : Expr)
     rcases site with ⟨kind, op⟩
     cases op with
     | discrete n =>
-      have inner := list_prefix_absorbing arguments
+      have inner := reduce_list_prefix_of_absorbing arguments
         (.cons hole (pending.foldr
           (fun e rest ↦ .cons (close (environmentExpr environment) 0 (interpret e)) rest) .nil))
         (by simp [Expr.isValue, notValue])
@@ -105,24 +105,24 @@ theorem frame_absorbing (frame : Frame) (hole : Expr)
         simp [frameExpr, primitiveExpr, Expr.isValue, reduce,
           notValue, absorbing, Action.wrap]
 
-theorem stack_absorbing (stack : List Frame) (hole : Expr)
+theorem reduce_stackExpr_of_absorbing (stack : List Frame) (hole : Expr)
     (notValue : hole.isValue = false) (absorbing : reduce hole = .next hole) :
     (stackExpr stack hole).isValue = false ∧
       reduce (stackExpr stack hole) = .next (stackExpr stack hole) := by
   induction stack generalizing hole with
   | nil => exact ⟨notValue, absorbing⟩
   | cons frame stack ih =>
-    have frameResult := frame_absorbing frame hole notValue absorbing
+    have frameResult := reduce_frameExpr_of_absorbing frame hole notValue absorbing
     exact ih (frameExpr frame hole) frameResult.1 frameResult.2
 
-theorem absorbing_output_at_zero (expression : Expr)
+theorem outputMeasureAt_eq_zero_of_absorbing (expression : Expr)
     (notValue : expression.isValue = false) (absorbing : reduce expression = .next expression)
     (fuel : Nat) : outputMeasureAt fuel expression = 0 := by
   induction fuel with
   | zero => cases expression <;> simp_all [Expr.isValue, outputMeasureAt]
   | succ fuel ih => simpa [outputMeasureAt, notValue, absorbing] using ih
 
-theorem absorbing_safe (expression : Expr)
+theorem domainSafe_of_absorbing (expression : Expr)
     (notValue : expression.isValue = false) (absorbing : reduce expression = .next expression) :
     DomainSafe expression := by
   intro fuel
@@ -130,26 +130,27 @@ theorem absorbing_safe (expression : Expr)
   | zero => trivial
   | succ fuel ih => simpa [DomainSafeAt, notValue, absorbing] using ih
 
-theorem stack_reject_zero (stack : List Frame) :
+theorem bigStepMeasure_stackExpr_reject (stack : List Frame) :
     bigStepMeasure (stackExpr stack .reject) = 0 := by
-  have absorbing := stack_absorbing stack .reject rfl rfl
-  simp [bigStepMeasure, absorbing_output_at_zero _ absorbing.1 absorbing.2]
+  have absorbing := reduce_stackExpr_of_absorbing stack .reject rfl rfl
+  simp [bigStepMeasure, outputMeasureAt_eq_zero_of_absorbing _ absorbing.1 absorbing.2]
 
-theorem stack_reject_safe (stack : List Frame) :
+theorem domainSafe_stackExpr_reject (stack : List Frame) :
     DomainSafe (stackExpr stack .reject) := by
-  have absorbing := stack_absorbing stack .reject rfl rfl
-  exact absorbing_safe _ absorbing.1 absorbing.2
+  have absorbing := reduce_stackExpr_of_absorbing stack .reject rfl rfl
+  exact domainSafe_of_absorbing _ absorbing.1 absorbing.2
 
 /-- Dropping a machine stack on rejection agrees with the paper output law.
 The paper expression need not reduce to a bare rejection. -/
-theorem rejection_step (environment : List Value) (stack : List Frame) :
+theorem step_eval_reject (environment : List Value) (stack : List Frame) :
     step (.eval .reject environment stack) = .ok (.next .evaluate [(1, .rejected)]) ∧
     bigStepMeasure (stateExpr (.eval .reject environment stack)) =
       bigStepMeasure (stateExpr .rejected) ∧
     DomainSafe (stateExpr (.eval .reject environment stack)) := by
   refine ⟨rfl, ?_, ?_⟩
-  · simp [stateExpr, interpret, close, Expr.map, Expr.mapVars, stack_reject_zero,
-      show bigStepMeasure (.reject : Expr) = 0 from stack_reject_zero []]
-  · simpa [stateExpr, interpret, close, Expr.map, Expr.mapVars] using stack_reject_safe stack
+  · simp [stateExpr, interpret, close, Expr.map, Expr.mapVars, bigStepMeasure_stackExpr_reject,
+      show bigStepMeasure (.reject : Expr) = 0 from bigStepMeasure_stackExpr_reject []]
+  · simpa [stateExpr, interpret, close, Expr.map, Expr.mapVars]
+      using domainSafe_stackExpr_reject stack
 
 end Determinize.Proof.FiniteModel

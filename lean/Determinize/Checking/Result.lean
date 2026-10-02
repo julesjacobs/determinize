@@ -44,7 +44,7 @@ theorem checked_expectedReward {source : Core} {subject : Subject}
       (∫ value : ℝ, value ∂Spec.Paper.bigStepMeasure (subject.program source)) =
         (certificate.values checked.model.initial : ℝ) := by
   rw [← checked.correct.2]
-  exact ⟨Proof.FiniteModel.outputMeasure_integrable checked.model,
+  exact ⟨Proof.FiniteModel.integrable_outputMeasure checked.model,
     (checkResult_sound checked.model certificate accepted).2⟩
 
 /-- Transfer a checked determinized answer under the source theorem's premises. -/

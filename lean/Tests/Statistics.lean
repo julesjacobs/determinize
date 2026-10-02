@@ -25,7 +25,7 @@ example : mixedStatistics.Matches mixedOutcomes.outputMeasure :=
 
 example (law : MeasureTheory.Measure ℝ) (s : OutputStatistics)
     (h : s.Matches law) : MeasureTheory.Integrable id law :=
-  statistics_first_integrable s law h
+  integrable_id_of_statistics s law h
 
 example (law : MeasureTheory.Measure ℝ) (s : OutputStatistics)
     (notIntegrable : ¬ MeasureTheory.Integrable (fun x : ℝ ↦ x ^ 2) law) :
@@ -76,7 +76,7 @@ def statistics : IO Unit := do
     | .error _ => true | _ => false) "statistics state limit"
 
 #print axioms Finite.sparseResults_valid
-#print axioms massBalance
+#print axioms mass_balance
 #print axioms terminationCertificate_sound
 #print axioms Checking.checked_termination
 #print axioms cut_outputMeasure

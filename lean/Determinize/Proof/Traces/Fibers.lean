@@ -38,7 +38,7 @@ def FiberHasMean (fiber : Kernel α ℝ) (point : α × ℝ) : Prop :=
   fiber point.1 Set.univ = 1 ∧ Integrable id (fiber point.1) ∧
     (∫ value : ℝ, value ∂fiber point.1) = point.2
 
-theorem fiberHasMean_measurable (fiber : Kernel α ℝ) :
+theorem measurableSet_fiberHasMean (fiber : Kernel α ℝ) :
     MeasurableSet {point | FiberHasMean fiber point} := by
   apply MeasurableSet.inter
   · exact measurableSet_eq_fun ((fiber.measurable_coe MeasurableSet.univ).comp measurable_fst)
@@ -65,12 +65,12 @@ theorem FiberSound.terminal (fiber : SFiniteKernel α ℝ) (trace : α) (output 
   let := fiber.sfinite
   constructor
   · rw [Measure.dirac_bind (fiberLift fiber).kernel.measurable, fiberLift_apply]
-  · exact (ae_dirac_iff (fiberHasMean_measurable fiber.kernel)).2 good
+  · exact (ae_dirac_iff (measurableSet_fiberHasMean fiber.kernel)).2 good
 
 /-- Apply `f` to the trace component of a point. -/
 def mapTraceOutput (f : α → β) (point : α × ℝ) : β × ℝ := (f point.1, point.2)
 
-theorem mapTrace_measurable (f : α → β) (hf : Measurable f) : Measurable (mapTraceOutput f) :=
+theorem measurable_mapTraceOutput (f : α → β) (hf : Measurable f) : Measurable (mapTraceOutput f) :=
   (hf.comp measurable_fst).prodMk measurable_snd
 
 theorem FiberSound.mapTrace_ae (fiber : SFiniteKernel α ℝ) (nextFiber : SFiniteKernel β ℝ)
@@ -79,18 +79,18 @@ theorem FiberSound.mapTrace_ae (fiber : SFiniteKernel α ℝ) (nextFiber : SFini
     (sameFiber : ∀ᵐ point ∂target, nextFiber.kernel (f point.1) = fiber.kernel point.1) :
     FiberSound nextFiber (source.map (mapTraceOutput f)) (target.map (mapTraceOutput f)) := by
   constructor
-  · rw [sound.1, map_bind _ _ _ (mapTrace_measurable f hf),
-      bind_map _ _ (mapTrace_measurable f hf)]
+  · rw [sound.1, map_bind _ _ _ (measurable_mapTraceOutput f hf),
+      bind_map _ _ (measurable_mapTraceOutput f hf)]
     apply Measure.bind_congr_right
     filter_upwards [sameFiber] with point same
-    rw [fiberLift_apply, fiberLift_apply, Measure.map_map (mapTrace_measurable f hf)
+    rw [fiberLift_apply, fiberLift_apply, Measure.map_map (measurable_mapTraceOutput f hf)
       (show Measurable (fun value : ℝ ↦ (point.1, value)) from measurable_const.prodMk
         measurable_id)]
     simp only [mapTraceOutput, same]
     rfl
   · let := nextFiber.sfinite
-    rw [ae_map_iff (mapTrace_measurable f hf).aemeasurable
-      (fiberHasMean_measurable nextFiber.kernel)]
+    rw [ae_map_iff (measurable_mapTraceOutput f hf).aemeasurable
+      (measurableSet_fiberHasMean nextFiber.kernel)]
     filter_upwards [sound.2, sameFiber] with point good same
     simpa only [FiberHasMean, mapTraceOutput, same] using good
 
@@ -111,7 +111,7 @@ theorem FiberSound.mix (fiber : SFiniteKernel α ℝ) (outer : Measure β)
   · rw [Measure.bind_bind target.aemeasurable (fiberLift fiber).kernel.aemeasurable]
     exact Measure.bind_congr_right (sound.mono fun _ valid ↦ valid.1)
   · let := fiber.sfinite
-    rw [Measure.ae_comp_iff (fiberHasMean_measurable fiber.kernel)]
+    rw [Measure.ae_comp_iff (measurableSet_fiberHasMean fiber.kernel)]
     exact sound.mono fun _ valid ↦ valid.2
 
 theorem FiberSound.sum {ι : Type*} [Countable ι] (fiber : SFiniteKernel α ℝ)

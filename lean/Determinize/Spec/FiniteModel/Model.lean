@@ -58,7 +58,7 @@ noncomputable def Model.outputMeasure (model : Model) : Measure ℝ :=
   ⨆ steps, model.outputWithin steps model.initial
 
 /-- The expected terminal reward. Every finite model has an integrable output law;
-`Proof.FiniteModel.outputMeasure_integrable` establishes this independently of certificates. -/
+`Proof.FiniteModel.integrable_outputMeasure` establishes this independently of certificates. -/
 noncomputable def Model.expectedReward (model : Model) : ℝ :=
   ∫ value : ℝ, value ∂model.outputMeasure
 

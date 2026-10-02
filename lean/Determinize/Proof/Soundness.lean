@@ -9,8 +9,8 @@ soundness. Under a `TraceFactorization`, the source output law is the mixture of
 over the trace law (`TraceFactorization.source_law`) and the target output law is the
 pushforward of the trace law along the fiber means (`TraceFactorization.target_law`), so
 integrating the fibers preserves a finite expectation (`MeanOnTraces.finite_expectation`);
-`finiteExpectationSoundness` instantiates this with the factorization that `meanOnTraces`
-provides for a typed source that does not get stuck.
+`finite_expectation_soundness` instantiates this with the factorization that
+`meanOnTraces_determinize` provides for a typed source that does not get stuck.
 -/
 
 namespace Determinize.Proof.Traces
@@ -73,14 +73,14 @@ namespace Determinize.Proof.Paper
 open MeasureTheory Determinize.Spec.Paper
 
 /-- The public expectation theorem follows from operational trace soundness. -/
-theorem finiteExpectationSoundness (program : Expr) (typed : Typed [] program (.float .E))
+theorem finite_expectation_soundness (program : Expr) (typed : Typed [] program (.float .E))
     (sourceSafe : DomainSafe program)
     (sourceIntegrable : Integrable id (Spec.Paper.bigStepMeasure program)) :
     DomainSafe program.determinize ∧
       Integrable id (Spec.Paper.bigStepMeasure program.determinize) ∧
       (∫ value : ℝ, value ∂Spec.Paper.bigStepMeasure program) =
         ∫ value : ℝ, value ∂Spec.Paper.bigStepMeasure program.determinize := by
-  rcases Determinize.Proof.Traces.meanOnTraces .E program typed
+  rcases Determinize.Proof.Traces.meanOnTraces_determinize .E program typed
     sourceSafe with ⟨targetSafe, traces⟩
   rcases traces.finite_expectation sourceIntegrable with ⟨targetIntegrable, expectation⟩
   exact ⟨targetSafe,

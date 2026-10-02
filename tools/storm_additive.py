@@ -76,15 +76,15 @@ def boundary : Determinize.Proof.FiniteModel.Boundary model.control where
 def solution : Reward.Solution model where
   boundary := boundary
   paths := ⟨fun i => ranks[i], fun i => nextStates[i]⟩
-  pathsValid := by decide +kernel
+  paths_valid := by decide +kernel
   mass := fun i => massValues[i]
-  massValid := by decide +kernel
+  mass_valid := by decide +kernel
   first := fun i => firstValues[i]
-  firstValid := by decide +kernel
+  first_valid := by decide +kernel
   second := fun i => secondValues[i]
-  secondValid := by decide +kernel
+  second_valid := by decide +kernel
   rejection := fun i => rejectionValues[i]
-  rejectionValid := by decide +kernel
+  rejection_valid := by decide +kernel
 
 abbrev statistics := solution.statistics
 
@@ -95,7 +95,7 @@ theorem checkedResult : Determinize.Spec.RewardModel.ResultMatches model
 theorem integrability : MeasureTheory.Integrable (fun x : ℝ => x)
     (bigStepMeasure (checkedSubject.program checkedSource)) ∧
     MeasureTheory.Integrable (fun x : ℝ => x^2) (bigStepMeasure (checkedSubject.program checkedSource)) := by
-  simpa only [modelMatches.2] using Determinize.Proof.RewardModel.outputMeasure_integrable model
+  simpa only [modelMatches.2] using Determinize.Proof.RewardModel.integrable_outputMeasure model
 
 theorem outputStatistics : statistics.Matches (bigStepMeasure (checkedSubject.program checkedSource)) := by
   simpa only [modelMatches.2] using Determinize.Proof.RewardModel.solution_statistics model solution

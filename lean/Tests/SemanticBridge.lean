@@ -10,21 +10,21 @@ example :
     reduce (stateExpr (.deliver (.number 3)
       [.right .app (.closure (.lam (.add (.bvar 1) (.bvar 2))) [.number 7])])) =
     .next (.lam (.add (.real 3) (.real 7))) := by
-  rw [(closure_root _ _ _).2]
+  rw [(rootStep_closure _ _ _).2]
   simp [stateExpr, stackExpr, environmentExpr, valueExpr, close, interpret, Expr.map, Expr.mapVars]
 
 example :
     reduce (stateExpr (.deliver (.number 5)
       [.right .app (.recursive (.app (.bvar 1) (.bvar 0)) [])])) =
     .next (.app (.fix (.app (.bvar 1) (.bvar 0))) (.real 5)) := by
-  rw [(recursive_root _ _ _).2]
+  rw [(rootStep_recursive _ _ _).2]
   simp [stateExpr, stackExpr, environmentExpr, valueExpr, close, interpret, Expr.map, Expr.mapVars]
 
 example :
     reduce (stateExpr (.deliver (.cons (.number 2) (.cons (.number 3) .nil))
       [.matchList (.real 0) (.pair (.bvar 0) (.bvar 1)) []])) =
     .next (.pair (.real 2) (.cons (.real 3) .nil)) := by
-  rw [(list_cons_root _ _ _ _ _).2]
+  rw [(rootStep_list_cons _ _ _ _ _).2]
   simp [stateExpr, stackExpr, environmentExpr, valueExpr, close, interpret, Expr.map, Expr.mapVars]
 
 example :
@@ -35,13 +35,13 @@ example :
     bigStepMeasure (.letE (.gaussian (.sample .G) (.real 2) .reject) (.real 7)) = 0 := by
   simpa [stackExpr, frameExpr, primitiveExpr, environmentExpr, close, interpret,
     Expr.map, Expr.mapVars] using
-    stack_reject_zero [.draw (.sample .G, .gaussian) [] [] [2], .letBody (.real 7) []]
+    bigStepMeasure_stackExpr_reject [.draw (.sample .G, .gaussian) [] [] [2], .letBody (.real 7) []]
 
 example :
     DomainSafe (.letE (.gaussian (.sample .G) (.real 2) .reject) (.real 7)) := by
   simpa [stackExpr, frameExpr, primitiveExpr, environmentExpr, close, interpret,
     Expr.map, Expr.mapVars] using
-    stack_reject_safe [.draw (.sample .G, .gaussian) [] [] [2], .letBody (.real 7) []]
+    domainSafe_stackExpr_reject [.draw (.sample .G, .gaussian) [] [] [2], .letBody (.real 7) []]
 
 example : ¬Scoped 0 (.lam (.bvar 1) : Expr) := by simp [Scoped]
 
@@ -87,12 +87,12 @@ example : reduce (stateExpr (.deliver (.number (1 / 3))
       .sample (.sample .G, .bernoulli) (outcomeMeasure [(2 / 3, 0), (1 / 3, 1)])
         (fun y ↦ .letE (.real y) .reject) := by
   simpa [stackExpr, frameExpr, Binding.close, interpret, Expr.map, Expr.mapVars] using
-    draw_correspondence (.sample .G, .bernoulli) [] (1 / 3) [] [.letBody .reject []]
+    reduce_stateExpr_draw (.sample .G, .bernoulli) [] (1 / 3) [] [.letBody .reject []]
       [(2 / 3, 0), (1 / 3, 1)] (by decide +kernel) (by simp [FrameShape])
 
 example (initial state : State) (shape : StateShape initial)
     (reachable : MachineReachable initial state) : StateShape state :=
-  reachable_shape initial shape state reachable
+  stateShape_of_reachable initial shape state reachable
 
 example : ¬StateShape (.deliver (.number 1)
     [.draw (.sample .G, .bernoulli) [.real 2] [] []]) := by
@@ -114,7 +114,7 @@ example : BookkeepingTransition
 
 example (path : Nat → State) (steps : ∀ i < 4, BookkeepingTransition (path i) (path (i + 1)))
     (start : bookkeepingRank (path 0) = 3) : False := by
-  have bound := bookkeeping_path_bound path 4 steps
+  have bound := bookkeepingRank_path_add_le path 4 steps
   omega
 
 example : ¬Bookkeeping (.deliver (.number 1)
@@ -125,21 +125,21 @@ example : ¬Bookkeeping (.deliver .unit
     [.right .app (.recursive (.app (.bvar 1) (.bvar 0)) [])]) := by
   simp [Bookkeeping]
 
-#print axioms step_shape
-#print axioms program_reachable_shape
-#print axioms reachable_draw_correspondence
-#print axioms bookkeeping_decreases
-#print axioms no_infinite_bookkeeping
+#print axioms stateShape_step
+#print axioms stateShape_of_reachable_initialState
+#print axioms reduce_stateExpr_draw_of_reachable
+#print axioms bookkeepingRank_lt
+#print axioms not_forall_bookkeepingTransition
 
 #print axioms finiteLaw_sound
-#print axioms finiteLaw_probability
-#print axioms draw_correspondence
-#print axioms discrete_correspondence
-#print axioms closure_root
-#print axioms recursive_root
-#print axioms list_cons_root
-#print axioms rejection_step
-#print axioms stack_context
+#print axioms isProbabilityMeasure_outcomeMeasure
+#print axioms reduce_stateExpr_draw
+#print axioms reduce_stateExpr_discrete
+#print axioms rootStep_closure
+#print axioms rootStep_recursive
+#print axioms rootStep_list_cons
+#print axioms step_eval_reject
+#print axioms reduce_stackExpr
 #print axioms replay_initial_reification
 
 end Determinize.Tests.SemanticBridge

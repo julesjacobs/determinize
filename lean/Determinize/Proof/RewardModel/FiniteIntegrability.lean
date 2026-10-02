@@ -7,7 +7,7 @@ import Determinize.Spec.RewardModel.Results
 namespace Determinize.Proof.RewardModel
 open MeasureTheory Spec.RewardModel FiniteModel
 
-private theorem nonnegative_edge_solution (model : Model) (paths : Paths model.control)
+private theorem exists_nonneg_edge_solution (model : Model) (paths : Paths model.control)
     (valid : paths.Valid model.control) (terminal : Rat → Rat) (extra : Edge model.size → Rat)
     (terminal_nonnegative : ∀ b, 0 ≤ terminal b)
     (extra_nonnegative : ∀ i e, e ∈ model.edges i → 0 ≤ extra e) :
@@ -36,14 +36,15 @@ private theorem nonnegative_edge_solution (model : Model) (paths : Paths model.c
   intro i
   have h := eqs i
   cases kind : model.kind i <;>
-    simpa [rhs, Model.control, kind, mul_add, List.sum_map_add, control_sum, add_comm] using h
+    simpa [rhs, Model.control, kind, mul_add, List.sum_map_add, sum_controlWeight_mul, add_comm]
+      using h
 
 /-- Moment bounds exist for every finite reward graph with paths to a boundary. -/
-theorem momentBounds_exist (model : Model) (paths : Paths model.control)
+theorem nonempty_momentBounds (model : Model) (paths : Paths model.control)
     (valid : paths.Valid model.control) : Nonempty (MomentBounds model) := by
-  obtain ⟨a, nonnegative_a, eqs_a⟩ := nonnegative_edge_solution model paths valid
+  obtain ⟨a, nonnegative_a, eqs_a⟩ := exists_nonneg_edge_solution model paths valid
     (fun b ↦ |b|) (fun e ↦ |e.reward|) abs_nonneg (fun _ _ _ ↦ abs_nonneg _)
-  obtain ⟨b, nonnegative_b, eqs_b⟩ := nonnegative_edge_solution model paths valid
+  obtain ⟨b, nonnegative_b, eqs_b⟩ := exists_nonneg_edge_solution model paths valid
     (fun b ↦ b ^ 2) (fun e ↦ 2 * |e.reward| * a e.target + e.reward ^ 2) sq_nonneg
     (fun _ e _ ↦ add_nonneg (mul_nonneg (mul_nonneg (by norm_num) (abs_nonneg _))
       (nonnegative_a e.target)) (sq_nonneg _))
@@ -55,11 +56,11 @@ theorem momentBounds_exist (model : Model) (paths : Paths model.control)
     cases kind : model.kind i <;> simpa [kind, ← add_assoc] using (eqs_b i).symm
 
 /-- Finiteness alone suffices: no moment bounds or termination assumptions are required. -/
-theorem finite_integrable (model : Model) : model.IntegrableMoments := by
+theorem integrableMoments (model : Model) : model.IntegrableMoments := by
   obtain ⟨dead, closed, paths, valid⟩ := boundary_paths_exist model.control
-  obtain ⟨bounds⟩ := momentBounds_exist (cut model dead) paths valid
+  obtain ⟨bounds⟩ := nonempty_momentBounds (cut model dead) paths valid
   intro i
-  have h := outputAt_integrable (cut model dead) bounds i
+  have h := integrable_outputAt (cut model dead) bounds i
   rwa [cut_outputAt model dead closed] at h
 
 end Determinize.Proof.RewardModel

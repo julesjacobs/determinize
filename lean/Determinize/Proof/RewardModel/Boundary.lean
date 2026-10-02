@@ -8,7 +8,7 @@ open MeasureTheory Spec.RewardModel
 abbrev cut (model : Model) (dead : Fin model.size → Bool) : Model :=
   {model with kind := fun state ↦ if dead state then .rejected else model.kind state}
 
-private theorem dead_outputWithin (model : Model) (dead : Fin model.size → Bool)
+private theorem outputWithin_eq_zero_of_dead (model : Model) (dead : Fin model.size → Bool)
     (closed : FiniteModel.ClosedDivergence model.control dead) (n : Nat) (i : Fin model.size)
     (isDead : dead i = true) : model.outputWithin n i = 0 := by
   have transient := (closed i isDead).1
@@ -38,7 +38,7 @@ theorem cut_outputWithin (model : Model) (dead : Fin model.size → Bool)
     · simp [Model.outputWithin, isDead]
   | succ n ih =>
     by_cases isDead : dead i = true
-    · rw [dead_outputWithin model dead closed _ i isDead]
+    · rw [outputWithin_eq_zero_of_dead model dead closed _ i isDead]
       simp [Model.outputWithin, isDead]
     · simp only [Model.outputWithin, cut, isDead, Bool.false_eq_true, ↓reduceIte]
       cases model.kind i with

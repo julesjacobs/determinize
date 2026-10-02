@@ -90,11 +90,11 @@ def resultCertificateText (source : Spec.Paper.Core) (subject : Subject) (candid
   "  closed := by decide +kernel\n" ++
   "\ndef solution : Reward.Solution model where\n" ++
   "  boundary := boundary\n  paths := ⟨fun i => ranks[i], fun i => nextStates[i]⟩\n" ++
-  "  pathsValid := by decide +kernel\n" ++
-  "  mass := fun i => massValues[i]\n  massValid := by decide +kernel\n" ++
-  "  first := fun i => firstValues[i]\n  firstValid := by decide +kernel\n" ++
-  "  second := fun i => secondValues[i]\n  secondValid := by decide +kernel\n" ++
-  "  rejection := fun i => rejectionValues[i]\n  rejectionValid := by decide +kernel\n" ++
+  "  paths_valid := by decide +kernel\n" ++
+  "  mass := fun i => massValues[i]\n  mass_valid := by decide +kernel\n" ++
+  "  first := fun i => firstValues[i]\n  first_valid := by decide +kernel\n" ++
+  "  second := fun i => secondValues[i]\n  second_valid := by decide +kernel\n" ++
+  "  rejection := fun i => rejectionValues[i]\n  rejection_valid := by decide +kernel\n" ++
   "\nabbrev statistics := solution.statistics\n" ++
   "\ntheorem checkedResult : Determinize.Spec.RewardModel.ResultMatches model\n" ++
   "    (checkedSubject.program checkedSource) statistics :=\n" ++
@@ -103,7 +103,7 @@ def resultCertificateText (source : Spec.Paper.Core) (subject : Subject) (candid
   "    (bigStepMeasure (checkedSubject.program checkedSource)) ∧\n" ++
   "    MeasureTheory.Integrable (fun x : ℝ => x^2) (bigStepMeasure (checkedSubject.program \
       checkedSource)) := by\n" ++
-  "  simpa only [modelMatches.2] using Determinize.Proof.RewardModel.outputMeasure_integrable \
+  "  simpa only [modelMatches.2] using Determinize.Proof.RewardModel.integrable_outputMeasure \
       model\n" ++
   "\ntheorem outputStatistics : statistics.Matches (bigStepMeasure (checkedSubject.program \
       checkedSource)) := by\n" ++
