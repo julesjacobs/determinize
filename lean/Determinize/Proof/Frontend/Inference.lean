@@ -6,7 +6,7 @@ import Determinize.Proof.Frontend.Unify
 /-!
 # Soundness, optimality, and completeness of affinity inference
 
-The proof of `Theorems.inferenceCorrectness`, assembled from the lemmas of the other files in
+The proof of `Theorems.inference_correctness`, assembled from the lemmas of the other files in
 `Proof/Frontend/`:
 
 * `solveInput_typed` (soundness): the most general shapes and the greatest solution of the
@@ -73,7 +73,7 @@ theorem infer_ok {input : Input} {program : Annotated} {ty : Ty} :
 /-- The inferred program is typed at every instance of the decorated type of the draft. -/
 theorem solveInput_typed {input : Input} {s : Solution} (h : solveInput input = .ok s)
     (v : Nat → Ty) :
-    input.matches (s.draft.program s.affinities) ∧
+    input.Matches (s.draft.program s.affinities) ∧
       Typed [] (interpret (s.draft.program s.affinities))
         ((s.draft.ty.decorate s.shapes).instantiate v s.affinities) := by
   obtain ⟨n', hg, hu, ha⟩ := solveInput_ok h
@@ -96,7 +96,7 @@ theorem solveInput_typed {input : Input} {s : Solution} (h : solveInput input = 
 
 /-- A typed completion determines a solution of inference above it. -/
 theorem solveInput_complete {input : Input} {completion : Annotated} {T : Ty}
-    (hm : input.matches completion) (ht : Typed [] (interpret completion) T) :
+    (hm : input.Matches completion) (ht : Typed [] (interpret completion) T) :
     ∃ s, solveInput input = .ok s ∧ AffinityLE completion (s.draft.program s.affinities) := by
   -- Lemma C: the completion solves the subtyping constraints.
   obtain ⟨d, n', hg, -, σ₁, -, F⟩ := generate_complete input [] [] 0 ⟨fun _ ↦ .unit, fun _ ↦ .G⟩
@@ -133,7 +133,7 @@ theorem infer_correct (input : Input) :
     match infer input with
     | .error _ => ¬ ∃ program : Annotated, Completion input program
     | .ok (program, ty) =>
-      input.matches program ∧
+      input.Matches program ∧
       Typed [] (interpret program) ty ∧
       ∀ completion : Annotated, Completion input completion → AffinityLE completion program := by
   split
