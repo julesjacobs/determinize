@@ -29,12 +29,12 @@ theorem map_bind_fun (law : Measure α) (family : α → Measure β) (hm : Measu
 
 /-- Average `body` over a draw from `law` paired with the parameter (`averageKernel_apply`). -/
 def averageKernel (law : Measure β) [SFinite law] (body : SFiniteKernel (α × β) γ) :
-    SFiniteKernel α γ := by
+    SFiniteKernel α γ :=
   let draw : SFiniteKernel α β := ⟨Kernel.const α law, inferInstance⟩
   let paired := SFiniteKernel.mapWithInput draw id measurable_id
-  let := paired.sfinite
-  let := body.sfinite
-  exact ⟨body.kernel ∘ₖ paired.kernel, inferInstance⟩
+  letI := paired.sfinite
+  letI := body.sfinite
+  ⟨body.kernel ∘ₖ paired.kernel, inferInstance⟩
 
 theorem averageKernel_apply (law : Measure β) [SFinite law]
     (body : SFiniteKernel (α × β) γ) (parameter : α) :

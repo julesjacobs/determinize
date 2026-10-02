@@ -103,10 +103,10 @@ private theorem measurable_gammaJointDensity :
   · exact (((hRatePow.div hGamma).mul hValuePow).mul (by fun_prop))
   · exact measurable_const
 
+open scoped Classical in
 private noncomputable def gammaKernel :
-    ProbabilityTheory.Kernel (Determinize.Spec.Paper.Params .gamma) ℝ := by
-  classical
-  exact ProbabilityTheory.Kernel.piecewise (Determinize.Proof.Paper.measurableSet_inDomain .gamma)
+    ProbabilityTheory.Kernel (Determinize.Spec.Paper.Params .gamma) ℝ :=
+  ProbabilityTheory.Kernel.piecewise (Determinize.Proof.Paper.measurableSet_inDomain .gamma)
     (ProbabilityTheory.Kernel.withDensity
       (ProbabilityTheory.Kernel.const _ volume) gammaJointDensity) 0
 
@@ -160,10 +160,10 @@ private theorem measurable_exponentialJointDensity :
   · exact hRate.mul ((hRate.mul measurable_snd).neg.exp)
   · exact measurable_const
 
+open scoped Classical in
 private noncomputable def exponentialKernel :
-    ProbabilityTheory.Kernel (Determinize.Spec.Paper.Params .exponential) ℝ := by
-  classical
-  exact ProbabilityTheory.Kernel.piecewise
+    ProbabilityTheory.Kernel (Determinize.Spec.Paper.Params .exponential) ℝ :=
+  ProbabilityTheory.Kernel.piecewise
     (Determinize.Proof.Paper.measurableSet_inDomain .exponential)
     (ProbabilityTheory.Kernel.withDensity
       (ProbabilityTheory.Kernel.const _ volume) exponentialJointDensity) 0
@@ -254,10 +254,10 @@ private theorem measurable_betaJointDensity :
   · exact (((measurable_const.div hNorm).mul hValuePow).mul hOneSubPow)
   · exact measurable_const
 
+open scoped Classical in
 private noncomputable def betaKernel :
-    ProbabilityTheory.Kernel (Determinize.Spec.Paper.Params .beta) ℝ := by
-  classical
-  exact ProbabilityTheory.Kernel.piecewise (Determinize.Proof.Paper.measurableSet_inDomain .beta)
+    ProbabilityTheory.Kernel (Determinize.Spec.Paper.Params .beta) ℝ :=
+  ProbabilityTheory.Kernel.piecewise (Determinize.Proof.Paper.measurableSet_inDomain .beta)
     (ProbabilityTheory.Kernel.withDensity
       (ProbabilityTheory.Kernel.const _ volume) betaJointDensity) 0
 
@@ -306,9 +306,9 @@ private theorem measurable_uniformJointDensity :
   · fun_prop
   · exact measurable_const
 
+open scoped Classical in
 private noncomputable def uniformKernel :
-    ProbabilityTheory.Kernel (Determinize.Spec.Paper.Params .uniform) ℝ := by
-  classical
+    ProbabilityTheory.Kernel (Determinize.Spec.Paper.Params .uniform) ℝ :=
   let intervalKernel := ProbabilityTheory.Kernel.withDensity
     (ProbabilityTheory.Kernel.const (Determinize.Spec.Paper.Params .uniform) volume)
       uniformJointDensity
@@ -319,7 +319,7 @@ private noncomputable def uniformKernel :
     measurableSet_eq_fun (by fun_prop) (by fun_prop)
   let domainKernel := ProbabilityTheory.Kernel.piecewise
     hPointSet pointKernel intervalKernel
-  exact ProbabilityTheory.Kernel.piecewise (Determinize.Proof.Paper.measurableSet_inDomain .uniform)
+  ProbabilityTheory.Kernel.piecewise (Determinize.Proof.Paper.measurableSet_inDomain .uniform)
     domainKernel 0
 
 private theorem uniformKernel_apply (params : Determinize.Spec.Paper.Params .uniform) :
@@ -381,10 +381,10 @@ private theorem measurable_poissonAtomDensity (index : Nat) :
           poissonWeight params index)) := by
   exact (measurable_poissonWeight index).comp measurable_fst
 
+open scoped Classical in
 private noncomputable def poissonKernel :
-    ProbabilityTheory.Kernel (Determinize.Spec.Paper.Params .poisson) ℝ := by
-  classical
-  exact ProbabilityTheory.Kernel.piecewise (Determinize.Proof.Paper.measurableSet_inDomain .poisson)
+    ProbabilityTheory.Kernel (Determinize.Spec.Paper.Params .poisson) ℝ :=
+  ProbabilityTheory.Kernel.piecewise (Determinize.Proof.Paper.measurableSet_inDomain .poisson)
     (ProbabilityTheory.Kernel.sum poissonAtomKernel) 0
 
 private theorem poissonKernel_apply (params : Determinize.Spec.Paper.Params .poisson) :

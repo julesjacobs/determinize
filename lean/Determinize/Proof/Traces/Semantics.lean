@@ -81,18 +81,18 @@ def record : Action → Measure (Event × Expr)
   | .stuck => 0
 
 def recordKernel {α : Type*} [MeasurableSpace α] {action : α → Action}
-    (family : MeasurableActionFamily α action) : SFiniteKernel α (Event × Expr) := by
-  induction family with
-  | @next successor measurable =>
-    exact SFiniteKernel.deterministic (fun a ↦ (none, successor a))
+    (family : MeasurableActionFamily α action) : SFiniteKernel α (Event × Expr) :=
+  match family with
+  | .next (successor := successor) measurable =>
+    SFiniteKernel.deterministic (fun a ↦ (none, successor a))
       (measurable_const.prodMk measurable)
-  | @sample site draw continuation measurable =>
-    exact SFiniteKernel.mapWithInput draw
+  | .sample (site := site) (continuation := continuation) draw measurable =>
+    SFiniteKernel.mapWithInput draw
       (fun pair ↦ (generationEvent site pair.2, continuation pair))
       (((measurable_generationEvent site).comp measurable_snd).prodMk measurable)
-  | stuck => exact SFiniteKernel.zero
-  | piecewise measurableRegion _ _ ihTrue ihFalse =>
-    exact SFiniteKernel.piecewise measurableRegion ihTrue ihFalse
+  | .stuck => SFiniteKernel.zero
+  | @MeasurableActionFamily.piecewise _ _ _ _ measurableRegion _ _ trueFamily falseFamily =>
+    SFiniteKernel.piecewise measurableRegion (recordKernel trueFamily) (recordKernel falseFamily)
 
 theorem recordKernel_apply {α : Type*} [MeasurableSpace α] {action : α → Action}
     (family : MeasurableActionFamily α action) (parameter : α) :
@@ -113,12 +113,12 @@ theorem recordKernel_apply {α : Type*} [MeasurableSpace α] {action : α → Ac
         · simpa only [Set.piecewise, if_pos member] using ihTrue
         · simpa only [Set.piecewise, if_neg member] using ihFalse
 
-def recordSkeletonKernel (skeleton : Skeleton) : Kernel Expr (Event × Expr) := by
-  classical
+open scoped Classical in
+def recordSkeletonKernel (skeleton : Skeleton) : Kernel Expr (Event × Expr) :=
   let family := MeasurableActionFamily.reduceFamily primitiveLaws
     (MeasurableFamily.skeletonFiber skeleton)
   let localKernel := recordKernel family
-  exact Kernel.piecewise (measurableSet_skeletonFiber skeleton)
+  Kernel.piecewise (measurableSet_skeletonFiber skeleton)
     (localKernel.kernel.comap (MeasurableActionFamily.toSkeletonFiber skeleton)
       (MeasurableActionFamily.measurable_toSkeletonFiber skeleton)) 0
 
@@ -146,9 +146,9 @@ theorem isSFiniteKernel_recordSkeletonKernel (skeleton : Skeleton) :
 
 /-- One reduction step with its recorded event, `record (reduce expression)`, as a measurable
 kernel (`tracedStepKernel_apply`). -/
-def tracedStepKernel : SFiniteKernel Expr (Event × Expr) := by
-  let _ (skeleton : Skeleton) := isSFiniteKernel_recordSkeletonKernel skeleton
-  exact ⟨Kernel.sum recordSkeletonKernel, inferInstance⟩
+def tracedStepKernel : SFiniteKernel Expr (Event × Expr) :=
+  haveI := isSFiniteKernel_recordSkeletonKernel
+  ⟨Kernel.sum recordSkeletonKernel, inferInstance⟩
 
 theorem tracedStepKernel_apply (expression : Expr) :
     tracedStepKernel.kernel expression = record (reduce expression) := by
