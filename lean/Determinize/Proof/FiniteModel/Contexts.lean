@@ -10,7 +10,7 @@ def primitiveArity : Op → Nat
 
 def FrameShape : Frame → Prop
   | .draw site pending _ arguments =>
-      arguments.length + 1 + pending.length = primitiveArity site.2
+    arguments.length + 1 + pending.length = primitiveArity site.2
   | _ => True
 
 theorem frame_context (frame : Frame) (shape : FrameShape frame) (hole : Expr)
@@ -19,21 +19,21 @@ theorem frame_context (frame : Frame) (shape : FrameShape frame) (hole : Expr)
       reduce (frameExpr frame hole) = (reduce hole).wrap (frameExpr frame) := by
   cases frame with
   | unary op =>
-      cases op <;> simp [frameExpr, unaryExpr, Expr.isValue, reduce, notValue] <;> rfl
+    cases op <;> simp [frameExpr, unaryExpr, Expr.isValue, reduce, notValue] <;> rfl
   | left op right environment =>
-      cases op <;> simp [frameExpr, binaryExpr, Expr.isValue, reduce, notValue] <;> rfl
+    cases op <;> simp [frameExpr, binaryExpr, Expr.isValue, reduce, notValue] <;> rfl
   | right op left =>
-      cases op <;> simp [frameExpr, binaryExpr, Expr.isValue, reduce, notValue, valueExpr_isValue] <;> rfl
+    cases op <;> simp [frameExpr, binaryExpr, Expr.isValue, reduce, notValue, valueExpr_isValue] <;> rfl
   | discrete action | choose yes no environment | letBody body environment
   | matchSum left right environment | matchList nilCase consCase environment =>
-      simp [frameExpr, Expr.isValue, reduce, notValue]
-      rfl
+    simp [frameExpr, Expr.isValue, reduce, notValue]
+    rfl
   | draw site pending environment arguments =>
-      rcases site with ⟨kind,op⟩
-      rcases arguments with _ | ⟨a, _ | ⟨b, arguments⟩⟩ <;>
-        rcases pending with _ | ⟨p, _ | ⟨q, pending⟩⟩ <;>
-        cases op <;> simp_all [FrameShape, primitiveArity, frameExpr, primitiveExpr,
-          Expr.isValue, reduce] <;> first | rfl | omega
+    rcases site with ⟨kind, op⟩
+    rcases arguments with _ | ⟨a, _ | ⟨b, arguments⟩⟩ <;>
+      rcases pending with _ | ⟨p, _ | ⟨q, pending⟩⟩ <;>
+      cases op <;> simp_all [FrameShape, primitiveArity, frameExpr, primitiveExpr,
+        Expr.isValue, reduce] <;> first | rfl | omega
 
 theorem wrap_wrap (action : Action) (first second : Expr → Expr) :
     (action.wrap first).wrap second = action.wrap (second ∘ first) := by
@@ -45,28 +45,28 @@ theorem stack_context (stack : List Frame) (shape : ∀ frame ∈ stack, FrameSh
       reduce (stackExpr stack hole) = (reduce hole).wrap (stackExpr stack) := by
   induction stack generalizing hole with
   | nil =>
-      refine ⟨notValue, ?_⟩
-      cases h : reduce hole <;> simp [stackExpr, Action.wrap, h]
-      rfl
+    refine ⟨notValue, ?_⟩
+    cases h : reduce hole <;> simp [stackExpr, Action.wrap, h]
+    rfl
   | cons frame stack ih =>
-      have outerShape : ∀ f ∈ stack, FrameShape f := fun f hf => shape f (by simp [hf])
-      have inner := frame_context frame (shape frame (by simp)) hole notValue
-      have outer := ih outerShape (frameExpr frame hole) inner.1
-      refine ⟨outer.1, ?_⟩
-      change reduce (stackExpr stack (frameExpr frame hole)) = _
-      rw [outer.2, inner.2, wrap_wrap]
-      rfl
+    have outerShape : ∀ f ∈ stack, FrameShape f := fun f hf ↦ shape f (by simp [hf])
+    have inner := frame_context frame (shape frame (by simp)) hole notValue
+    have outer := ih outerShape (frameExpr frame hole) inner.1
+    refine ⟨outer.1, ?_⟩
+    change reduce (stackExpr stack (frameExpr frame hole)) = _
+    rw [outer.2, inner.2, wrap_wrap]
+    rfl
 
 private theorem list_prefix_absorbing (supplied : List Rat) (tail : Expr)
     (notValue : tail.isValue = false) (absorbing : reduce tail = .next tail) :
-    (supplied.foldr (fun (p : Rat) (rest : Expr) => .cons (.real (p : ℝ)) rest) tail).isValue = false ∧
-      reduce (supplied.foldr (fun (p : Rat) (rest : Expr) => .cons (.real (p : ℝ)) rest) tail) =
-        .next (supplied.foldr (fun (p : Rat) (rest : Expr) => .cons (.real (p : ℝ)) rest) tail) := by
+    (supplied.foldr (fun (p : Rat) (rest : Expr) ↦ .cons (.real (p : ℝ)) rest) tail).isValue = false ∧
+      reduce (supplied.foldr (fun (p : Rat) (rest : Expr) ↦ .cons (.real (p : ℝ)) rest) tail) =
+        .next (supplied.foldr (fun (p : Rat) (rest : Expr) ↦ .cons (.real (p : ℝ)) rest) tail) := by
   induction supplied with
   | nil => exact ⟨notValue, absorbing⟩
   | cons p ps ih =>
-      simp only [List.foldr_cons, Expr.isValue, Bool.true_and, ih.1, reduce, Bool.false_eq_true,
-        ↓reduceIte, ih.2, Action.wrap, and_self]
+    simp only [List.foldr_cons, Expr.isValue, Bool.true_and, ih.1, reduce, Bool.false_eq_true,
+      ↓reduceIte, ih.2, Action.wrap, and_self]
 
 /-- Evaluation frames preserve an absorbing nonvalue, including a rejection. -/
 theorem frame_absorbing (frame : Frame) (hole : Expr)
@@ -75,32 +75,32 @@ theorem frame_absorbing (frame : Frame) (hole : Expr)
       reduce (frameExpr frame hole) = .next (frameExpr frame hole) := by
   cases frame with
   | unary op =>
-      cases op <;> simp [frameExpr, unaryExpr, Expr.isValue, reduce, notValue, absorbing, Action.wrap]
+    cases op <;> simp [frameExpr, unaryExpr, Expr.isValue, reduce, notValue, absorbing, Action.wrap]
   | left op right environment =>
-      cases op <;> simp [frameExpr, binaryExpr, Expr.isValue, reduce, notValue, absorbing, Action.wrap]
+    cases op <;> simp [frameExpr, binaryExpr, Expr.isValue, reduce, notValue, absorbing, Action.wrap]
   | right op left =>
-      cases op <;> simp [frameExpr, binaryExpr, Expr.isValue, reduce, notValue, absorbing,
-        valueExpr_isValue, Action.wrap]
+    cases op <;> simp [frameExpr, binaryExpr, Expr.isValue, reduce, notValue, absorbing,
+      valueExpr_isValue, Action.wrap]
   | discrete action | choose yes no environment | letBody body environment
   | matchSum left right environment | matchList nilCase consCase environment =>
-      simp [frameExpr, Expr.isValue, reduce, notValue, absorbing, Action.wrap]
+    simp [frameExpr, Expr.isValue, reduce, notValue, absorbing, Action.wrap]
   | draw site pending environment arguments =>
-      rcases site with ⟨kind,op⟩
-      cases op with
-      | discrete n =>
-          have inner := list_prefix_absorbing arguments
-            (.cons hole (pending.foldr
-              (fun e rest => .cons (close (environmentExpr environment) 0 (interpret e)) rest) .nil))
-            (by simp [Expr.isValue, notValue])
-            (by simp [reduce, notValue, absorbing, Action.wrap])
-          simp only [frameExpr, primitiveExpr, List.foldr_append, List.foldr_cons, List.foldr_map,
-            Expr.isValue, reduce, inner.1, Bool.false_eq_true, ↓reduceIte, inner.2, Action.wrap,
-            and_self]
-      | _ =>
-          rcases arguments with _ | ⟨a, _ | ⟨b, arguments⟩⟩ <;>
-            rcases pending with _ | ⟨p, _ | ⟨q, pending⟩⟩ <;>
-            simp [frameExpr, primitiveExpr, Expr.isValue, reduce,
-              notValue, absorbing, Action.wrap]
+    rcases site with ⟨kind, op⟩
+    cases op with
+    | discrete n =>
+      have inner := list_prefix_absorbing arguments
+        (.cons hole (pending.foldr
+          (fun e rest ↦ .cons (close (environmentExpr environment) 0 (interpret e)) rest) .nil))
+        (by simp [Expr.isValue, notValue])
+        (by simp [reduce, notValue, absorbing, Action.wrap])
+      simp only [frameExpr, primitiveExpr, List.foldr_append, List.foldr_cons, List.foldr_map,
+        Expr.isValue, reduce, inner.1, Bool.false_eq_true, ↓reduceIte, inner.2, Action.wrap,
+        and_self]
+    | _ =>
+      rcases arguments with _ | ⟨a, _ | ⟨b, arguments⟩⟩ <;>
+        rcases pending with _ | ⟨p, _ | ⟨q, pending⟩⟩ <;>
+        simp [frameExpr, primitiveExpr, Expr.isValue, reduce,
+          notValue, absorbing, Action.wrap]
 
 theorem stack_absorbing (stack : List Frame) (hole : Expr)
     (notValue : hole.isValue = false) (absorbing : reduce hole = .next hole) :
@@ -109,8 +109,8 @@ theorem stack_absorbing (stack : List Frame) (hole : Expr)
   induction stack generalizing hole with
   | nil => exact ⟨notValue, absorbing⟩
   | cons frame stack ih =>
-      have frameResult := frame_absorbing frame hole notValue absorbing
-      exact ih (frameExpr frame hole) frameResult.1 frameResult.2
+    have frameResult := frame_absorbing frame hole notValue absorbing
+    exact ih (frameExpr frame hole) frameResult.1 frameResult.2
 
 theorem absorbing_output_at_zero (expression : Expr)
     (notValue : expression.isValue = false) (absorbing : reduce expression = .next expression)
@@ -140,7 +140,7 @@ theorem stack_reject_safe (stack : List Frame) :
 /-- Dropping a machine stack on rejection agrees with the paper output law.
 The paper expression need not reduce to a bare rejection. -/
 theorem rejection_step (environment : List Value) (stack : List Frame) :
-    step (.eval .reject environment stack) = .ok (.next .evaluate [(1,.rejected)]) ∧
+    step (.eval .reject environment stack) = .ok (.next .evaluate [(1, .rejected)]) ∧
     bigStepMeasure (stateExpr (.eval .reject environment stack)) =
       bigStepMeasure (stateExpr .rejected) ∧
     DomainSafe (stateExpr (.eval .reject environment stack)) := by

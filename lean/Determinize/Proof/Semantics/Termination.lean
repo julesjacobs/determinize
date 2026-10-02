@@ -13,57 +13,57 @@ private theorem returned_add_running_eq_step_mass (depth : Nat) (typed : Typed [
       nStepMeasure paperStepKernel depth expression Set.univ := by
   induction depth generalizing expression with
   | zero =>
-      by_cases value : expression.isValue = true
-      · obtain ⟨r, rfl⟩ := Typing.typed_real_value typed value
-        simp [Cumulative.outputMeasure, runningProbabilityAt, nStepMeasure, Expr.isValue]
-      · cases expression <;> simp_all [Cumulative.outputMeasure, runningProbabilityAt, nStepMeasure, Expr.isValue]
+    by_cases value : expression.isValue = true
+    · obtain ⟨r, rfl⟩ := Typing.typed_real_value typed value
+      simp [Cumulative.outputMeasure, runningProbabilityAt, nStepMeasure, Expr.isValue]
+    · cases expression <;> simp_all [Cumulative.outputMeasure, runningProbabilityAt, nStepMeasure, Expr.isValue]
   | succ depth ih =>
-      by_cases value : expression.isValue = true
-      · rw [nStepMeasure_univ_eq_one_of_value paperStepKernel _ _ value]
-        obtain ⟨r, rfl⟩ := Typing.typed_real_value typed value
-        have output : ∀ n, Cumulative.outputMeasure n (.real r) = Measure.dirac r := by
-          intro n
-          induction n with
-          | zero => rfl
-          | succ n ih => simpa [Cumulative.outputMeasure, reduce] using ih
-        simp [output, runningProbabilityAt, Expr.isValue]
-      · simp only [runningProbabilityAt, value, Bool.false_eq_true, ↓reduceIte]
-        have actionTyped := Typing.reduce_typed_closed typed
-        cases reduction : reduce expression with
-        | stuck =>
-            rw [nStepMeasure_succ_eq_firstStep, paperStepKernel.kernel_eq_stepMeasure]
-            simp [stepMeasure, reduction, Action.measure, Cumulative.outputMeasure]
-        | next next =>
-            rw [reduction] at actionTyped
-            cases actionTyped with
-            | next nextTyped =>
-                rw [nStepMeasure_succ_next_univ paperStepKernel _ _ _ reduction]
-                simpa [Cumulative.outputMeasure, reduction] using ih nextTyped
-        | sample site fiber continuation =>
-            rw [reduction] at actionTyped
-            cases actionTyped with
-            | sample continuationTyped =>
-                have hm : Measurable (fun r => Cumulative.outputMeasure depth (continuation r) Set.univ) :=
-                  (Measure.measurable_coe MeasurableSet.univ).comp
-                    (measurable_sample_cumulative depth expression site fiber continuation reduction)
-                change Cumulative.outputMeasure (depth + 1) expression Set.univ +
-                  (∫⁻ r, runningProbabilityAt depth (continuation r) ∂fiber) = _
-                rw [Cumulative.outputMeasure, reduction,
-                  Measure.bind_apply MeasurableSet.univ
-                    (measurable_sample_cumulative depth expression site fiber continuation reduction).aemeasurable,
-                  ← lintegral_add_left hm,
-                  nStepMeasure_succ_sample_univ paperStepKernel _ _ _ _ reduction]
-                exact lintegral_congr fun r => ih (continuationTyped r)
+    by_cases value : expression.isValue = true
+    · rw [nStepMeasure_univ_eq_one_of_value paperStepKernel _ _ value]
+      obtain ⟨r, rfl⟩ := Typing.typed_real_value typed value
+      have output : ∀ n, Cumulative.outputMeasure n (.real r) = Measure.dirac r := by
+        intro n
+        induction n with
+        | zero => rfl
+        | succ n ih => simpa [Cumulative.outputMeasure, reduce] using ih
+      simp [output, runningProbabilityAt, Expr.isValue]
+    · simp only [runningProbabilityAt, value, Bool.false_eq_true, ↓reduceIte]
+      have actionTyped := Typing.reduce_typed_closed typed
+      cases reduction : reduce expression with
+      | stuck =>
+        rw [nStepMeasure_succ_eq_firstStep, paperStepKernel.kernel_eq_stepMeasure]
+        simp [stepMeasure, reduction, Action.measure, Cumulative.outputMeasure]
+      | next next =>
+        rw [reduction] at actionTyped
+        cases actionTyped with
+        | next nextTyped =>
+          rw [nStepMeasure_succ_next_univ paperStepKernel _ _ _ reduction]
+          simpa [Cumulative.outputMeasure, reduction] using ih nextTyped
+      | sample site fiber continuation =>
+        rw [reduction] at actionTyped
+        cases actionTyped with
+        | sample continuationTyped =>
+          have hm : Measurable (fun r ↦ Cumulative.outputMeasure depth (continuation r) Set.univ) :=
+            (Measure.measurable_coe MeasurableSet.univ).comp
+              (measurable_sample_cumulative depth expression site fiber continuation reduction)
+          change Cumulative.outputMeasure (depth + 1) expression Set.univ +
+            (∫⁻ r, runningProbabilityAt depth (continuation r) ∂fiber) = _
+          rw [Cumulative.outputMeasure, reduction,
+            Measure.bind_apply MeasurableSet.univ
+              (measurable_sample_cumulative depth expression site fiber continuation reduction).aemeasurable,
+            ← lintegral_add_left hm,
+            nStepMeasure_succ_sample_univ paperStepKernel _ _ _ _ reduction]
+          exact lintegral_congr fun r ↦ ih (continuationTyped r)
 
 private theorem total_antitone (expression : Expr) :
-    Antitone (fun n => nStepMeasure paperStepKernel n expression Set.univ) := by
+    Antitone (fun n ↦ nStepMeasure paperStepKernel n expression Set.univ) := by
   apply antitone_nat_of_succ_le
   intro n
   rw [nStepMeasure, Measure.bind_apply MeasurableSet.univ paperStepKernel.kernel.aemeasurable]
   calc
     (∫⁻ current, paperStepKernel.kernel current Set.univ ∂nStepMeasure paperStepKernel n expression) ≤
         ∫⁻ _, 1 ∂nStepMeasure paperStepKernel n expression :=
-      lintegral_mono fun current => paperStepKernel.mass_le_one current
+      lintegral_mono fun current ↦ paperStepKernel.mass_le_one current
     _ = _ := lintegral_one
 
 /-- At finite depth, returned and still-running probability exhaust all mass. -/
@@ -89,7 +89,7 @@ private theorem running_eq_sub (depth : Nat) (typed : Typed [] expression (.floa
     (by simpa only [add_comm] using returned_add_running depth typed (safe depth))
 
 theorem runningProbabilityAt_antitone (typed : Typed [] expression (.float affinity))
-    (safe : DomainSafe expression) : Antitone (fun depth => runningProbabilityAt depth expression) := by
+    (safe : DomainSafe expression) : Antitone (fun depth ↦ runningProbabilityAt depth expression) := by
   intro n m h
   change runningProbabilityAt m expression ≤ runningProbabilityAt n expression
   rw [running_eq_sub m typed safe, running_eq_sub n typed safe]

@@ -5,7 +5,7 @@ namespace Determinize.Proof.RewardModel
 open Determinize.Finite Determinize.Proof.FiniteModel MeasureTheory
 
 def extend (stack : List Frame) (outcomes : List (Rat × State)) : List (Rat × State) :=
-  outcomes.map fun (p,s) => (p, pushStack s stack)
+  outcomes.map fun (p, s) ↦ (p, pushStack s stack)
 
 private theorem draw_push (site : Spec.Paper.DistributionAction × Spec.Paper.Op)
     (args : List Rat) (inner outer : List Frame) (tag : Evidence) (outcomes : List (Rat × State))

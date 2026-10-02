@@ -34,7 +34,7 @@ theorem TraceFactorization.target_law {source target : Expr} {fiber : Kernel Tra
     bigStepMeasure target = (traceLaw source).map output := by
   obtain ⟨-, measurableOutput, -, targetJoint, -⟩ := factor
   rw [← Proof.Traces.correspondence target, targetJoint,
-    Measure.map_map measurable_snd (show Measurable (fun trace => (trace, output trace)) from
+    Measure.map_map measurable_snd (show Measurable (fun trace ↦ (trace, output trace)) from
       measurable_id.prodMk measurableOutput)]
   rfl
 
@@ -65,7 +65,7 @@ theorem MeanOnTraces.finite_expectation {source target : Expr} (sound : MeanOnTr
   rw [Measure.comp_eq_comp_const_apply] at integrable ⊢
   rw [Kernel.integral_comp integrable]
   simp only [Kernel.const_apply]
-  exact integral_congr_ae (valid.mono fun _ good => good.2.symm)
+  exact integral_congr_ae (valid.mono fun _ good ↦ good.2.symm)
 
 end Determinize.Proof.Traces
 

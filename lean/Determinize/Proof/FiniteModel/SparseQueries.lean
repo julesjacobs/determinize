@@ -5,17 +5,17 @@ namespace Determinize.Finite
 open Spec.FiniteModel Proof.FiniteModel
 
 def edgeValues {n : Nat} (edges : List Edge) (values : Fin n → Rat) : Rat :=
-  (edges.map fun edge => if h : edge.target < n then edge.probability * values ⟨edge.target,h⟩ else 0).sum
+  (edges.map fun edge ↦ if h : edge.target < n then edge.probability * values ⟨edge.target, h⟩ else 0).sum
 
 private theorem sum_edge_values {n : Nat} (edges : List Edge) (values : Fin n → Rat)
     (bounded : ∀ edge ∈ edges, edge.target < n) :
-    (∑ j : Fin n, (edges.map fun edge => if edge.target = j.val then edge.probability else 0).sum * values j) =
+    (∑ j : Fin n, (edges.map fun edge ↦ if edge.target = j.val then edge.probability else 0).sum * values j) =
       edgeValues edges values := by
   induction edges with
   | nil => simp [edgeValues]
   | cons edge edges ih =>
     have bound := bounded edge (by simp)
-    have rest := ih (fun e h => bounded e (by simp [h]))
+    have rest := ih (fun e h ↦ bounded e (by simp [h]))
     simp only [List.map_cons, List.sum_cons, add_mul, Finset.sum_add_distrib, rest,
       edgeValues, List.map_cons, List.sum_cons, dif_pos bound]
     congr 1
@@ -29,7 +29,7 @@ private theorem sum_edge_values {n : Nat} (edges : List Edge) (values : Fin n �
 theorem Candidate.weighted_sum (candidate : Candidate) (i : Fin candidate.states.size)
     (edges : candidate.EdgesValid i) (values : Fin candidate.states.size → Rat) :
     (∑ j, candidate.weight i j * values j) = edgeValues (candidate.row i).edges.toList values :=
-  sum_edge_values _ _ (fun edge present => (edges.2 edge present).1)
+  sum_edge_values _ _ (fun edge present ↦ (edges.2 edge present).1)
 
 private def sparseEquation (candidate : Candidate) (kind : Fin candidate.states.size → StateKind)
     (values : Fin candidate.states.size → Rat) (state : Fin candidate.states.size) : Prop :=

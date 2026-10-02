@@ -10,31 +10,31 @@ private def graph (text : String) (subject : Subject := .source) : IO Candidate 
   let p ← IO.ofExcept (compile text)
   match explore p.source subject with
   | .complete candidate _ =>
-      let .complete previous := ReferenceExplorer.explore p.source subject
-        | throw (IO.userError s!"reference exploration failed: {text}")
-      assert (candidate.states == previous.states) s!"changed state numbering: {text}"
-      assert (candidate.rows.size == previous.rows.size) s!"changed row count: {text}"
-      for (currentRow, previousRow) in candidate.rows.toList.zip previous.rows.toList do
-        assert (currentRow.kind == previousRow.kind) s!"changed state kind: {text}"
-        let weights := fun (row : Row) => (row.edges.toList.map fun edge =>
-          (edge.target, edge.probability)).mergeSort (fun a b => a.1 ≤ b.1)
-        assert (weights currentRow == weights previousRow) s!"changed weights: {text}"
-      return candidate
+    let .complete previous := ReferenceExplorer.explore p.source subject
+      | throw (IO.userError s!"reference exploration failed: {text}")
+    assert (candidate.states == previous.states) s!"changed state numbering: {text}"
+    assert (candidate.rows.size == previous.rows.size) s!"changed row count: {text}"
+    for (currentRow, previousRow) in candidate.rows.toList.zip previous.rows.toList do
+      assert (currentRow.kind == previousRow.kind) s!"changed state kind: {text}"
+      let weights := fun (row : Row) ↦ (row.edges.toList.map fun edge ↦
+        (edge.target, edge.probability)).mergeSort (fun a b ↦ a.1 ≤ b.1)
+      assert (weights currentRow == weights previousRow) s!"changed weights: {text}"
+    return candidate
   | _ => throw (IO.userError s!"exploration failed: {text}")
 
 private def reward (candidate : Candidate) (steps : Nat) : Rat := Id.run do
   let mut values := Array.replicate candidate.states.size (0 : Rat)
   for _ in [:steps] do
-    values := candidate.rows.map fun row => match row.kind with
+    values := candidate.rows.map fun row ↦ match row.kind with
       | .returned r => r
       | .rejected => 0
-      | .transient => row.edges.foldl (fun total edge =>
+      | .transient => row.edges.foldl (fun total edge ↦
           total + edge.probability * values[edge.target]!) 0
   return values[candidate.initial]!
 
 def explorer : IO Unit := do
   for (text, expected) in [
-      ("0.1 + 0.2", (3/10 : Rat)), ("6 / 2", 3), ("if false then 1/0 else 7", 7),
+      ("0.1 + 0.2", (3 / 10 : Rat)), ("6 / 2", 3), ("if false then 1/0 else 7", 7),
       ("let x = 4 in let f = fun y => x + y in let x = 100 in f 3", 7),
       ("let fact = rec f n => if n < 1 then 1 else n * f (n-1) in fact 5", 120),
       ("match 2::3::[] with [] => 0 | x::xs => match xs with [] => 0 | y::ys => x*10+y", 23),
@@ -42,31 +42,31 @@ def explorer : IO Unit := do
       ("match inl 9 with inl x => x | inr y => 0", 9),
       ("fst (2,3) + snd (4,5)", 7),
       ("if flip(0.25) then 8 else -4", -1),
-      ("let _ = observe(flip(0.5)) in 3", 3/2),
+      ("let _ = observe(flip(0.5)) in 3", 3 / 2),
       ("let _ = observe(false) in uniform[G](0,1)", 0),
       ("if flip(0) then uniform[G](0,1) else 7", 7),
-      ("discrete[G](0,0.25,0,0.75)", 5/2),
+      ("discrete[G](0,0.25,0,0.75)", 5 / 2),
       ("discrete[G](*)", 0),
-      ("let p = bernoulli[E](0.5) in discrete[E](p/2,0.25,*)", 5/4),
-      ("let f = fun p => p :: 0.25 :: [] in discrete_list[E](f 0.25)", 5/4),
+      ("let p = bernoulli[E](0.5) in discrete[E](p/2,0.25,*)", 5 / 4),
+      ("let f = fun p => p :: 0.25 :: [] in discrete_list[E](f 0.25)", 5 / 4),
       ("bernoulli[G](1)", 1), ("bernoulli[G](0)", 0)] do
     let candidate ← graph text
-    assert (reward candidate (candidate.states.size+1) == expected) s!"exact reward: {text}"
+    assert (reward candidate (candidate.states.size + 1) == expected) s!"exact reward: {text}"
     let files ← IO.ofExcept (render candidate)
     let again ← graph text
     assert (files.candidate == candidateText again) "stable state numbering"
   for (text, expected) in [
-      ("uniform[E](0,3)", (3/2 : Rat)), ("gauss[E](3,2)", 3),
-      ("poisson[E](4)", 4), ("exponential[E](2)", 1/2),
-      ("gamma[E](6,2)", 3), ("beta[E](1,3)", 1/4),
-      ("bernoulli[E](0.3)", 3/10), ("discrete[E](0,0.25,0,0.75)", 5/2)] do
+      ("uniform[E](0,3)", (3 / 2 : Rat)), ("gauss[E](3,2)", 3),
+      ("poisson[E](4)", 4), ("exponential[E](2)", 1 / 2),
+      ("gamma[E](6,2)", 3), ("beta[E](1,3)", 1 / 4),
+      ("bernoulli[E](0.3)", 3 / 10), ("discrete[E](0,0.25,0,0.75)", 5 / 2)] do
     let candidate ← graph text .determinized
-    assert (reward candidate (candidate.states.size+1) == expected) s!"exact mean: {text}"
+    assert (reward candidate (candidate.states.size + 1) == expected) s!"exact mean: {text}"
   let loop ← graph "let f = rec f x => f x in f 0"
-  assert (loop.rows.all fun row => row.kind == .transient) "closed nonterminating loop"
+  assert (loop.rows.all fun row ↦ row.kind == .transient) "closed nonterminating loop"
   assert (reward loop 100 == 0) "nontermination contributes zero"
   let retry ← graph "let f = rec f x => if flip(0.5) then 3 else f x in f 0"
-  assert (retry.rows.toList.zipIdx.any fun (row,i) => row.edges.any fun e => e.target < i) "retry graph"
+  assert (retry.rows.toList.zipIdx.any fun (row, i) ↦ row.edges.any fun e ↦ e.target < i) "retry graph"
   assert (reward retry 100 > 2 && reward retry 100 < 3) "geometric retry reward bound"
   let growing ← IO.ofExcept (compile "let f = rec f x => f (x+1) in f 0")
   match explore growing.source .source {maxStates := 100} with
@@ -87,9 +87,9 @@ def explorer : IO Unit := do
     | .failed .. => pure ()
     | _ => throw (IO.userError s!"expected export failure: {text}")
   let state := State.deliver (.number 1) []
-  assert (ReferenceExplorer.aggregate [(0,state),(1/3,state),(2/3,state)] == [(1,state)]) "duplicate successors"
+  assert (ReferenceExplorer.aggregate [(0, state), (1 / 3, state), (2 / 3, state)] == [(1, state)]) "duplicate successors"
   let terminal : Candidate := ⟨0, #[state],
-    #[⟨.returned (-3), #[⟨0,1⟩]⟩]⟩
+    #[⟨.returned (-3), #[⟨0, 1⟩]⟩]⟩
   let files ← IO.ofExcept (render terminal)
   assert (files.transitions == "dtmc\n0 1 1\n1 1 1\n") "once-only terminal reward sink"
   assert (files.positiveRewards == "" && files.negativeRewards == "0 3\n") "signed rewards"
@@ -97,9 +97,9 @@ def explorer : IO Unit := do
   for bad in [
       {terminal with rows := #[]},
       {terminal with initial := 1},
-      {terminal with rows := #[⟨.transient,#[⟨0,1/2⟩]⟩]},
-      {terminal with rows := #[⟨.transient,#[⟨0,1/2⟩,⟨0,1/2⟩]⟩]},
-      {terminal with rows := #[⟨.returned 3,#[⟨1,1⟩]⟩]}] do
+      {terminal with rows := #[⟨.transient, #[⟨0, 1 / 2⟩]⟩]},
+      {terminal with rows := #[⟨.transient, #[⟨0, 1 / 2⟩, ⟨0, 1 / 2⟩]⟩]},
+      {terminal with rows := #[⟨.returned 3, #[⟨1, 1⟩]⟩]}] do
     assert (match render bad with | .error _ => true | .ok _ => false) "malformed export rejected"
 
 end Determinize.Tests

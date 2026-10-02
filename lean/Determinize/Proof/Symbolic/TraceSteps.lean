@@ -17,7 +17,7 @@ noncomputable section
 
 theorem symbolic_skeleton_isValue (expression : AffineExpr n) :
     expression.skeleton.isValue = expression.isValue := by
-  rw [← expression.realize_skeleton (fun _ => 0), ← isValue_eq_skeletonIsValue,
+  rw [← expression.realize_skeleton (fun _ ↦ 0), ← isValue_eq_skeletonIsValue,
     AffineExpr.realize_isValue]
 
 def generationDraw : SymbolicAction n → Bool
@@ -50,285 +50,285 @@ theorem symbolic_generationDraw
     (generationOp expression.skeleton).isSome = generationDraw (symbolicReduce expression) := by
   induction typed with
   | uniform lowerTyped upperTyped ihl ihr =>
-      rename_i context' lower affinity upper
-      simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
-      rw [symbolicReduce_uniform_eq]
-      by_cases lowerValue : lower.isValue = true
-      · simp only [lowerValue, ↓reduceIte]
-        by_cases upperValue : upper.isValue = true
-        · simp only [upperValue, ↓reduceIte]
-          obtain ⟨x, rfl⟩ := wellTyped_real_value lowerTyped lowerValue
-          obtain ⟨y, rfl⟩ := wellTyped_real_value upperTyped upperValue
-          cases affinity with
-          | E => simp [affineValue?, siteOp]
-          | G =>
-              rcases x with ⟨x0, xc⟩
-              rcases y with ⟨y0, yc⟩
-              obtain rfl : xc = 0 := wellTyped_realG_coefficients lowerTyped
-              obtain rfl : yc = 0 := wellTyped_realG_coefficients upperTyped
-              simp [constantValue?, siteOp]
-        · simp only [upperValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
-          exact ihr
-      · simp only [lowerValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
-        exact ihl
+    rename_i context' lower affinity upper
+    simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
+    rw [symbolicReduce_uniform_eq]
+    by_cases lowerValue : lower.isValue = true
+    · simp only [lowerValue, ↓reduceIte]
+      by_cases upperValue : upper.isValue = true
+      · simp only [upperValue, ↓reduceIte]
+        obtain ⟨x, rfl⟩ := wellTyped_real_value lowerTyped lowerValue
+        obtain ⟨y, rfl⟩ := wellTyped_real_value upperTyped upperValue
+        cases affinity with
+        | E => simp [affineValue?, siteOp]
+        | G =>
+          rcases x with ⟨x0, xc⟩
+          rcases y with ⟨y0, yc⟩
+          obtain rfl : xc = 0 := wellTyped_realG_coefficients lowerTyped
+          obtain rfl : yc = 0 := wellTyped_realG_coefficients upperTyped
+          simp [constantValue?, siteOp]
+      · simp only [upperValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
+        exact ihr
+    · simp only [lowerValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
+      exact ihl
   | uniformMean lowerTyped upperTyped ihl ihr =>
-      rename_i context' lower affinity upper
-      simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
-      rw [symbolicReduce_uniform_eq]
-      by_cases lowerValue : lower.isValue = true
-      · simp only [lowerValue, ↓reduceIte]
-        by_cases upperValue : upper.isValue = true
-        · simp only [upperValue, ↓reduceIte]
-          obtain ⟨x, rfl⟩ := wellTyped_real_value lowerTyped lowerValue
-          obtain ⟨y, rfl⟩ := wellTyped_real_value upperTyped upperValue
-          simp [affineValue?, siteOp]
-        · simp only [upperValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
-          exact ihr
-      · simp only [lowerValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
-        exact ihl
+    rename_i context' lower affinity upper
+    simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
+    rw [symbolicReduce_uniform_eq]
+    by_cases lowerValue : lower.isValue = true
+    · simp only [lowerValue, ↓reduceIte]
+      by_cases upperValue : upper.isValue = true
+      · simp only [upperValue, ↓reduceIte]
+        obtain ⟨x, rfl⟩ := wellTyped_real_value lowerTyped lowerValue
+        obtain ⟨y, rfl⟩ := wellTyped_real_value upperTyped upperValue
+        simp [affineValue?, siteOp]
+      · simp only [upperValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
+        exact ihr
+    · simp only [lowerValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
+      exact ihl
   | gaussian lowerTyped upperTyped ihl ihr =>
-      rename_i context' lower affinity upper
-      simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
-      rw [symbolicReduce_gaussian_eq]
-      by_cases lowerValue : lower.isValue = true
-      · simp only [lowerValue, ↓reduceIte]
-        by_cases upperValue : upper.isValue = true
-        · simp only [upperValue, ↓reduceIte]
-          obtain ⟨x, rfl⟩ := wellTyped_real_value lowerTyped lowerValue
-          obtain ⟨y, rfl⟩ := wellTyped_real_value upperTyped upperValue
-          cases affinity with
-          | E =>
-              rcases y with ⟨y0, yc⟩
-              obtain rfl : yc = 0 := wellTyped_realG_coefficients upperTyped
-              simp [affineValue?, constantValue?, siteOp]
-          | G =>
-              rcases x with ⟨x0, xc⟩
-              rcases y with ⟨y0, yc⟩
-              obtain rfl : xc = 0 := wellTyped_realG_coefficients lowerTyped
-              obtain rfl : yc = 0 := wellTyped_realG_coefficients upperTyped
-              simp [constantValue?, siteOp]
-        · simp only [upperValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
-          exact ihr
-      · simp only [lowerValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
-        exact ihl
-  | gaussianMean lowerTyped upperTyped ihl ihr =>
-      rename_i context' lower affinity upper
-      simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
-      rw [symbolicReduce_gaussian_eq]
-      by_cases lowerValue : lower.isValue = true
-      · simp only [lowerValue, ↓reduceIte]
-        by_cases upperValue : upper.isValue = true
-        · simp only [upperValue, ↓reduceIte]
-          obtain ⟨x, rfl⟩ := wellTyped_real_value lowerTyped lowerValue
-          obtain ⟨y, rfl⟩ := wellTyped_real_value upperTyped upperValue
+    rename_i context' lower affinity upper
+    simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
+    rw [symbolicReduce_gaussian_eq]
+    by_cases lowerValue : lower.isValue = true
+    · simp only [lowerValue, ↓reduceIte]
+      by_cases upperValue : upper.isValue = true
+      · simp only [upperValue, ↓reduceIte]
+        obtain ⟨x, rfl⟩ := wellTyped_real_value lowerTyped lowerValue
+        obtain ⟨y, rfl⟩ := wellTyped_real_value upperTyped upperValue
+        cases affinity with
+        | E =>
           rcases y with ⟨y0, yc⟩
           obtain rfl : yc = 0 := wellTyped_realG_coefficients upperTyped
           simp [affineValue?, constantValue?, siteOp]
-        · simp only [upperValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
-          exact ihr
-      · simp only [lowerValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
-        exact ihl
+        | G =>
+          rcases x with ⟨x0, xc⟩
+          rcases y with ⟨y0, yc⟩
+          obtain rfl : xc = 0 := wellTyped_realG_coefficients lowerTyped
+          obtain rfl : yc = 0 := wellTyped_realG_coefficients upperTyped
+          simp [constantValue?, siteOp]
+      · simp only [upperValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
+        exact ihr
+    · simp only [lowerValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
+      exact ihl
+  | gaussianMean lowerTyped upperTyped ihl ihr =>
+    rename_i context' lower affinity upper
+    simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
+    rw [symbolicReduce_gaussian_eq]
+    by_cases lowerValue : lower.isValue = true
+    · simp only [lowerValue, ↓reduceIte]
+      by_cases upperValue : upper.isValue = true
+      · simp only [upperValue, ↓reduceIte]
+        obtain ⟨x, rfl⟩ := wellTyped_real_value lowerTyped lowerValue
+        obtain ⟨y, rfl⟩ := wellTyped_real_value upperTyped upperValue
+        rcases y with ⟨y0, yc⟩
+        obtain rfl : yc = 0 := wellTyped_realG_coefficients upperTyped
+        simp [affineValue?, constantValue?, siteOp]
+      · simp only [upperValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
+        exact ihr
+    · simp only [lowerValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
+      exact ihl
   | poisson rateTyped ih =>
-      rename_i context' rate affinity
-      simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
-      rw [symbolicReduce_poisson_eq]
-      by_cases rateValue : rate.isValue = true
-      · simp only [rateValue, ↓reduceIte]
-        obtain ⟨x, rfl⟩ := wellTyped_real_value rateTyped rateValue
-        cases affinity with
-        | E => simp [affineValue?, siteOp]
-        | G =>
-            rcases x with ⟨x0, xc⟩
-            obtain rfl : xc = 0 := wellTyped_realG_coefficients rateTyped
-            simp [constantValue?, siteOp]
-      · simp only [rateValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
-        exact ih
-  | poissonMean rateTyped ih =>
-      rename_i context' rate affinity
-      simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
-      rw [symbolicReduce_poisson_eq]
-      by_cases rateValue : rate.isValue = true
-      · simp only [rateValue, ↓reduceIte]
-        obtain ⟨x, rfl⟩ := wellTyped_real_value rateTyped rateValue
-        simp [affineValue?, siteOp]
-      · simp only [rateValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
-        exact ih
-  | discrete probabilitiesTyped ih =>
-      rename_i context' probabilities affinity
-      simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue,
-        skeleton_literalListArity?, symbolicReduce]
-      by_cases value : probabilities.isValue = true
-      · simp only [value, ↓reduceIte]
-        cases affinity with
-        | E =>
-            obtain ⟨coordinates, eq⟩ := wellTyped_list_value_affine probabilitiesTyped value
-            simp [eq, siteOp]
-        | G =>
-            obtain ⟨constants, ceq, aeq⟩ := wellTyped_list_value_constant probabilitiesTyped value
-            simp [ceq, aeq, siteOp]
-      · simpa [value, generationDraw_wrap] using ih
-
-  | bernoulli probabilityTyped ih =>
-      rename_i context' probability affinity
-      simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
-      rw [symbolicReduce_bernoulli_eq]
-      by_cases probabilityValue : probability.isValue = true
-      · simp only [probabilityValue, ↓reduceIte]
-        obtain ⟨x, rfl⟩ := wellTyped_real_value probabilityTyped probabilityValue
-        cases affinity with
-        | E => simp [affineValue?, siteOp]
-        | G =>
-            rcases x with ⟨x0, xc⟩
-            obtain rfl : xc = 0 := wellTyped_realG_coefficients probabilityTyped
-            simp [constantValue?, siteOp]
-      · simp only [probabilityValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
-        exact ih
-  | bernoulliMean probabilityTyped ih =>
-      rename_i context' probability affinity
-      simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
-      rw [symbolicReduce_bernoulli_eq]
-      by_cases probabilityValue : probability.isValue = true
-      · simp only [probabilityValue, ↓reduceIte]
-        obtain ⟨x, rfl⟩ := wellTyped_real_value probabilityTyped probabilityValue
-        simp [affineValue?, siteOp]
-      · simp only [probabilityValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
-        exact ih
-  | exponential rateTyped ih =>
-      rename_i context' rate affinity
-      simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
-      rw [symbolicReduce_exponential_eq]
-      by_cases rateValue : rate.isValue = true
-      · simp only [rateValue, ↓reduceIte]
-        obtain ⟨x, rfl⟩ := wellTyped_real_value rateTyped rateValue
-        cases affinity with
-        | E =>
-            rcases x with ⟨x0, xc⟩
-            obtain rfl : xc = 0 := wellTyped_realG_coefficients rateTyped
-            simp [constantValue?, siteOp]
-        | G =>
-            rcases x with ⟨x0, xc⟩
-            obtain rfl : xc = 0 := wellTyped_realG_coefficients rateTyped
-            simp [constantValue?, siteOp]
-      · simp only [rateValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
-        exact ih
-  | exponentialMean rateTyped ih =>
-      rename_i context' rate affinity
-      simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
-      rw [symbolicReduce_exponential_eq]
-      by_cases rateValue : rate.isValue = true
-      · simp only [rateValue, ↓reduceIte]
-        obtain ⟨x, rfl⟩ := wellTyped_real_value rateTyped rateValue
+    rename_i context' rate affinity
+    simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
+    rw [symbolicReduce_poisson_eq]
+    by_cases rateValue : rate.isValue = true
+    · simp only [rateValue, ↓reduceIte]
+      obtain ⟨x, rfl⟩ := wellTyped_real_value rateTyped rateValue
+      cases affinity with
+      | E => simp [affineValue?, siteOp]
+      | G =>
         rcases x with ⟨x0, xc⟩
         obtain rfl : xc = 0 := wellTyped_realG_coefficients rateTyped
         simp [constantValue?, siteOp]
-      · simp only [rateValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
-        exact ih
+    · simp only [rateValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
+      exact ih
+  | poissonMean rateTyped ih =>
+    rename_i context' rate affinity
+    simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
+    rw [symbolicReduce_poisson_eq]
+    by_cases rateValue : rate.isValue = true
+    · simp only [rateValue, ↓reduceIte]
+      obtain ⟨x, rfl⟩ := wellTyped_real_value rateTyped rateValue
+      simp [affineValue?, siteOp]
+    · simp only [rateValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
+      exact ih
+  | discrete probabilitiesTyped ih =>
+    rename_i context' probabilities affinity
+    simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue,
+      skeleton_literalListArity?, symbolicReduce]
+    by_cases value : probabilities.isValue = true
+    · simp only [value, ↓reduceIte]
+      cases affinity with
+      | E =>
+        obtain ⟨coordinates, eq⟩ := wellTyped_list_value_affine probabilitiesTyped value
+        simp [eq, siteOp]
+      | G =>
+        obtain ⟨constants, ceq, aeq⟩ := wellTyped_list_value_constant probabilitiesTyped value
+        simp [ceq, aeq, siteOp]
+    · simpa [value, generationDraw_wrap] using ih
+
+  | bernoulli probabilityTyped ih =>
+    rename_i context' probability affinity
+    simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
+    rw [symbolicReduce_bernoulli_eq]
+    by_cases probabilityValue : probability.isValue = true
+    · simp only [probabilityValue, ↓reduceIte]
+      obtain ⟨x, rfl⟩ := wellTyped_real_value probabilityTyped probabilityValue
+      cases affinity with
+      | E => simp [affineValue?, siteOp]
+      | G =>
+        rcases x with ⟨x0, xc⟩
+        obtain rfl : xc = 0 := wellTyped_realG_coefficients probabilityTyped
+        simp [constantValue?, siteOp]
+    · simp only [probabilityValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
+      exact ih
+  | bernoulliMean probabilityTyped ih =>
+    rename_i context' probability affinity
+    simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
+    rw [symbolicReduce_bernoulli_eq]
+    by_cases probabilityValue : probability.isValue = true
+    · simp only [probabilityValue, ↓reduceIte]
+      obtain ⟨x, rfl⟩ := wellTyped_real_value probabilityTyped probabilityValue
+      simp [affineValue?, siteOp]
+    · simp only [probabilityValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
+      exact ih
+  | exponential rateTyped ih =>
+    rename_i context' rate affinity
+    simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
+    rw [symbolicReduce_exponential_eq]
+    by_cases rateValue : rate.isValue = true
+    · simp only [rateValue, ↓reduceIte]
+      obtain ⟨x, rfl⟩ := wellTyped_real_value rateTyped rateValue
+      cases affinity with
+      | E =>
+        rcases x with ⟨x0, xc⟩
+        obtain rfl : xc = 0 := wellTyped_realG_coefficients rateTyped
+        simp [constantValue?, siteOp]
+      | G =>
+        rcases x with ⟨x0, xc⟩
+        obtain rfl : xc = 0 := wellTyped_realG_coefficients rateTyped
+        simp [constantValue?, siteOp]
+    · simp only [rateValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
+      exact ih
+  | exponentialMean rateTyped ih =>
+    rename_i context' rate affinity
+    simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
+    rw [symbolicReduce_exponential_eq]
+    by_cases rateValue : rate.isValue = true
+    · simp only [rateValue, ↓reduceIte]
+      obtain ⟨x, rfl⟩ := wellTyped_real_value rateTyped rateValue
+      rcases x with ⟨x0, xc⟩
+      obtain rfl : xc = 0 := wellTyped_realG_coefficients rateTyped
+      simp [constantValue?, siteOp]
+    · simp only [rateValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
+      exact ih
   | beta lowerTyped upperTyped ihl ihr =>
-      rename_i context' lower upper affinity
-      simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
-      rw [symbolicReduce_beta_eq]
-      by_cases lowerValue : lower.isValue = true
-      · simp only [lowerValue, ↓reduceIte]
-        by_cases upperValue : upper.isValue = true
-        · simp only [upperValue, ↓reduceIte]
-          obtain ⟨x, rfl⟩ := wellTyped_real_value lowerTyped lowerValue
-          obtain ⟨y, rfl⟩ := wellTyped_real_value upperTyped upperValue
-          cases affinity with
-          | E =>
-              rcases x with ⟨x0, xc⟩
-              rcases y with ⟨y0, yc⟩
-              obtain rfl : xc = 0 := wellTyped_realG_coefficients lowerTyped
-              obtain rfl : yc = 0 := wellTyped_realG_coefficients upperTyped
-              simp [constantValue?, siteOp]
-          | G =>
-              rcases x with ⟨x0, xc⟩
-              rcases y with ⟨y0, yc⟩
-              obtain rfl : xc = 0 := wellTyped_realG_coefficients lowerTyped
-              obtain rfl : yc = 0 := wellTyped_realG_coefficients upperTyped
-              simp [constantValue?, siteOp]
-        · simp only [upperValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
-          exact ihr
-      · simp only [lowerValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
-        exact ihl
-  | betaMean lowerTyped upperTyped ihl ihr =>
-      rename_i context' lower upper affinity
-      simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
-      rw [symbolicReduce_beta_eq]
-      by_cases lowerValue : lower.isValue = true
-      · simp only [lowerValue, ↓reduceIte]
-        by_cases upperValue : upper.isValue = true
-        · simp only [upperValue, ↓reduceIte]
-          obtain ⟨x, rfl⟩ := wellTyped_real_value lowerTyped lowerValue
-          obtain ⟨y, rfl⟩ := wellTyped_real_value upperTyped upperValue
-          rcases y with ⟨y0, yc⟩
-          obtain rfl : yc = 0 := wellTyped_realG_coefficients upperTyped
+    rename_i context' lower upper affinity
+    simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
+    rw [symbolicReduce_beta_eq]
+    by_cases lowerValue : lower.isValue = true
+    · simp only [lowerValue, ↓reduceIte]
+      by_cases upperValue : upper.isValue = true
+      · simp only [upperValue, ↓reduceIte]
+        obtain ⟨x, rfl⟩ := wellTyped_real_value lowerTyped lowerValue
+        obtain ⟨y, rfl⟩ := wellTyped_real_value upperTyped upperValue
+        cases affinity with
+        | E =>
           rcases x with ⟨x0, xc⟩
+          rcases y with ⟨y0, yc⟩
           obtain rfl : xc = 0 := wellTyped_realG_coefficients lowerTyped
+          obtain rfl : yc = 0 := wellTyped_realG_coefficients upperTyped
           simp [constantValue?, siteOp]
-        · simp only [upperValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
-          exact ihr
-      · simp only [lowerValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
-        exact ihl
+        | G =>
+          rcases x with ⟨x0, xc⟩
+          rcases y with ⟨y0, yc⟩
+          obtain rfl : xc = 0 := wellTyped_realG_coefficients lowerTyped
+          obtain rfl : yc = 0 := wellTyped_realG_coefficients upperTyped
+          simp [constantValue?, siteOp]
+      · simp only [upperValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
+        exact ihr
+    · simp only [lowerValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
+      exact ihl
+  | betaMean lowerTyped upperTyped ihl ihr =>
+    rename_i context' lower upper affinity
+    simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
+    rw [symbolicReduce_beta_eq]
+    by_cases lowerValue : lower.isValue = true
+    · simp only [lowerValue, ↓reduceIte]
+      by_cases upperValue : upper.isValue = true
+      · simp only [upperValue, ↓reduceIte]
+        obtain ⟨x, rfl⟩ := wellTyped_real_value lowerTyped lowerValue
+        obtain ⟨y, rfl⟩ := wellTyped_real_value upperTyped upperValue
+        rcases y with ⟨y0, yc⟩
+        obtain rfl : yc = 0 := wellTyped_realG_coefficients upperTyped
+        rcases x with ⟨x0, xc⟩
+        obtain rfl : xc = 0 := wellTyped_realG_coefficients lowerTyped
+        simp [constantValue?, siteOp]
+      · simp only [upperValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
+        exact ihr
+    · simp only [lowerValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
+      exact ihl
   | gamma lowerTyped upperTyped ihl ihr =>
-      rename_i context' lower affinity upper
-      simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
-      rw [symbolicReduce_gamma_eq]
-      by_cases lowerValue : lower.isValue = true
-      · simp only [lowerValue, ↓reduceIte]
-        by_cases upperValue : upper.isValue = true
-        · simp only [upperValue, ↓reduceIte]
-          obtain ⟨x, rfl⟩ := wellTyped_real_value lowerTyped lowerValue
-          obtain ⟨y, rfl⟩ := wellTyped_real_value upperTyped upperValue
-          cases affinity with
-          | E =>
-              rcases y with ⟨y0, yc⟩
-              obtain rfl : yc = 0 := wellTyped_realG_coefficients upperTyped
-              simp [affineValue?, constantValue?, siteOp]
-          | G =>
-              rcases x with ⟨x0, xc⟩
-              rcases y with ⟨y0, yc⟩
-              obtain rfl : xc = 0 := wellTyped_realG_coefficients lowerTyped
-              obtain rfl : yc = 0 := wellTyped_realG_coefficients upperTyped
-              simp [constantValue?, siteOp]
-        · simp only [upperValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
-          exact ihr
-      · simp only [lowerValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
-        exact ihl
-  | gammaMean lowerTyped upperTyped ihl ihr =>
-      rename_i context' lower affinity upper
-      simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
-      rw [symbolicReduce_gamma_eq]
-      by_cases lowerValue : lower.isValue = true
-      · simp only [lowerValue, ↓reduceIte]
-        by_cases upperValue : upper.isValue = true
-        · simp only [upperValue, ↓reduceIte]
-          obtain ⟨x, rfl⟩ := wellTyped_real_value lowerTyped lowerValue
-          obtain ⟨y, rfl⟩ := wellTyped_real_value upperTyped upperValue
+    rename_i context' lower affinity upper
+    simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
+    rw [symbolicReduce_gamma_eq]
+    by_cases lowerValue : lower.isValue = true
+    · simp only [lowerValue, ↓reduceIte]
+      by_cases upperValue : upper.isValue = true
+      · simp only [upperValue, ↓reduceIte]
+        obtain ⟨x, rfl⟩ := wellTyped_real_value lowerTyped lowerValue
+        obtain ⟨y, rfl⟩ := wellTyped_real_value upperTyped upperValue
+        cases affinity with
+        | E =>
           rcases y with ⟨y0, yc⟩
           obtain rfl : yc = 0 := wellTyped_realG_coefficients upperTyped
           simp [affineValue?, constantValue?, siteOp]
-        · simp only [upperValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
-          exact ihr
-      · simp only [lowerValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
-        exact ihl
+        | G =>
+          rcases x with ⟨x0, xc⟩
+          rcases y with ⟨y0, yc⟩
+          obtain rfl : xc = 0 := wellTyped_realG_coefficients lowerTyped
+          obtain rfl : yc = 0 := wellTyped_realG_coefficients upperTyped
+          simp [constantValue?, siteOp]
+      · simp only [upperValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
+        exact ihr
+    · simp only [lowerValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
+      exact ihl
+  | gammaMean lowerTyped upperTyped ihl ihr =>
+    rename_i context' lower affinity upper
+    simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
+    rw [symbolicReduce_gamma_eq]
+    by_cases lowerValue : lower.isValue = true
+    · simp only [lowerValue, ↓reduceIte]
+      by_cases upperValue : upper.isValue = true
+      · simp only [upperValue, ↓reduceIte]
+        obtain ⟨x, rfl⟩ := wellTyped_real_value lowerTyped lowerValue
+        obtain ⟨y, rfl⟩ := wellTyped_real_value upperTyped upperValue
+        rcases y with ⟨y0, yc⟩
+        obtain rfl : yc = 0 := wellTyped_realG_coefficients upperTyped
+        simp [affineValue?, constantValue?, siteOp]
+      · simp only [upperValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
+        exact ihr
+    · simp only [lowerValue, Bool.false_eq_true, ↓reduceIte, generationDraw_wrap]
+      exact ihl
   | discreteMean probabilitiesTyped ih =>
-      rename_i context' probabilities affinity
-      simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue,
-        skeleton_literalListArity?, symbolicReduce]
-      by_cases value : probabilities.isValue = true
-      · simp only [value, ↓reduceIte]
-        obtain ⟨coordinates, eq⟩ := wellTyped_list_value_affine probabilitiesTyped value
-        simp [eq, siteOp]
-      · simpa [value, generationDraw_wrap] using ih
+    rename_i context' probabilities affinity
+    simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue,
+      skeleton_literalListArity?, symbolicReduce]
+    by_cases value : probabilities.isValue = true
+    · simp only [value, ↓reduceIte]
+      obtain ⟨coordinates, eq⟩ := wellTyped_list_value_affine probabilitiesTyped value
+      simp [eq, siteOp]
+    · simpa [value, generationDraw_wrap] using ih
   | sub _ _ ih => exact ih
   | _ =>
-      simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
-      rw [symbolicReduce.eq_def]
-      iterate 5
-        all_goals try split
-        all_goals try simp only [generationDraw_wrap, generationDraw_next,
-          generationDraw_stuck, Option.isSome_none] at *
-      all_goals try simp_all [generationOp_symbolic_value]
+    simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]
+    rw [symbolicReduce.eq_def]
+    iterate 5
+      all_goals try split
+      all_goals try simp only [generationDraw_wrap, generationDraw_next,
+        generationDraw_stuck, Option.isSome_none] at *
+    all_goals try simp_all [generationOp_symbolic_value]
 
 theorem literalListArity?_determinize_skeleton (expression : Expr) :
     expression.determinize.skeleton.literalListArity? = expression.skeleton.literalListArity? := by

@@ -23,7 +23,7 @@ variable {α β γ : Type*} [MeasurableSpace α] [MeasurableSpace β] [Measurabl
 
 theorem map_bind_fun (law : Measure α) (family : α → Measure β) (hm : Measurable family)
     (f : β → γ) (hf : Measurable f) :
-    (law.bind family).map f = law.bind (fun a => (family a).map f) :=
+    (law.bind family).map f = law.bind (fun a ↦ (family a).map f) :=
   map_bind law ⟨family, hm⟩ f hf
 
 
@@ -38,16 +38,16 @@ def averageKernel (law : Measure β) [SFinite law] (body : SFiniteKernel (α × 
 
 theorem averageKernel_apply (law : Measure β) [SFinite law]
     (body : SFiniteKernel (α × β) γ) (parameter : α) :
-    (averageKernel law body).kernel parameter = law.bind (fun value => body.kernel (parameter, value)) := by
+    (averageKernel law body).kernel parameter = law.bind (fun value ↦ body.kernel (parameter, value)) := by
   rw [averageKernel, Kernel.comp_apply, SFiniteKernel.mapWithInput_apply]
-  change (law.map (fun value => (parameter, value))).bind body.kernel = _
+  change (law.map (fun value ↦ (parameter, value))).bind body.kernel = _
   exact bind_map _ _ (measurable_const.prodMk measurable_id) _
 
 /-- The exact-depth trace/output law of the source: `exactMeasure` of the realization,
 integrated over the history's actual law. -/
 def actualTraceLaw (depth : Nat) (history : Symbolic.SampleEnv primitiveLaws n)
     (expression : AffineExpr n) : Measure (Output) :=
-  (history.actualMeasure primitiveLaws).bind (fun env => exactMeasure depth (expression.realize env))
+  (history.actualMeasure primitiveLaws).bind (fun env ↦ exactMeasure depth (expression.realize env))
 
 /-- The exact-depth trace/output law of the target: `exactMeasure` of the determinized
 realization at the history's mean environment. -/
@@ -56,7 +56,7 @@ def targetTraceLaw (depth : Nat) (history : Symbolic.SampleEnv primitiveLaws n)
   exactMeasure depth (expression.realize (history.meanEnvironment primitiveLaws)).determinize
 
 theorem exact_measurable (depth : Nat) : Measurable (exactMeasure depth) := by
-  have eq : exactMeasure depth = (exactKernel depth).kernel := funext fun e => (exactKernel_apply _ _).symm
+  have eq : exactMeasure depth = (exactKernel depth).kernel := funext fun e ↦ (exactKernel_apply _ _).symm
   rw [eq]
   exact (exactKernel depth).kernel.measurable
 
@@ -124,10 +124,10 @@ theorem actualTraceLaw_next (depth : Nat) (history : Symbolic.SampleEnv primitiv
     (expression next : AffineExpr n) (typed : WellTyped [] expression ty)
     (notValue : expression.isValue ≠ true)
     (actionEq : symbolicReduce expression = .next next) :
-    actualTraceLaw (depth+1) history expression =
+    actualTraceLaw (depth + 1) history expression =
       (actualTraceLaw depth history next).map (prepend none) := by
   rw [actualTraceLaw, actualTraceLaw,
-    map_bind_fun _ (fun env => exactMeasure depth (next.realize env)) ((exact_measurable depth).comp next.realize_measurable) (prepend none)
+    map_bind_fun _ (fun env ↦ exactMeasure depth (next.realize env)) ((exact_measurable depth).comp next.realize_measurable) (prepend none)
       (show Measurable (prepend none : Output → Output) from
         prepend_measurable.comp (measurable_const.prodMk measurable_id))]
   apply Measure.bind_congr_right
@@ -142,7 +142,7 @@ theorem targetTraceLaw_next (depth : Nat) (history : Symbolic.SampleEnv primitiv
     (expression next : AffineExpr n) (typed : WellTyped [] expression ty)
     (notValue : expression.isValue ≠ true)
     (actionEq : symbolicReduce expression = .next next) :
-    targetTraceLaw (depth+1) history expression =
+    targetTraceLaw (depth + 1) history expression =
       (targetTraceLaw depth history next).map (prepend none) := by
   apply exact_succ_next
   · simpa only [determinize_isValue, AffineExpr.realize_isValue] using notValue

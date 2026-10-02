@@ -41,7 +41,7 @@ example (x : ℝ) : bigStepMeasure (.div (.real x) (.real 0)) = 0 := by
     cases depth <;> simp [outputMeasureAt, reduce, Expr.isValue, realValue?]
   simp [bigStepMeasure, zeroAt]
 
-example : ¬ DomainSafe (.div (.real 1) (.bernoulli (.sample .G) (.real (1/2)))) := by
+example : ¬ DomainSafe (.div (.real 1) (.bernoulli (.sample .G) (.real (1 / 2)))) := by
   intro safe
   have h := safe 2
   norm_num [DomainSafeAt, reduce, Expr.isValue, realValue?, Action.wrap,
@@ -58,7 +58,7 @@ example : Typed [] capturedSample (.float .E) := by
   · exact .app (.lam (.add (.bvar (.tail .head)) (.bvar .head))) .real
 
 example : outputMeasureAt 4 capturedSample =
-    (uniformFiber (.sample .G) 0 1).map (fun value => value + 2) := by
+    (uniformFiber (.sample .G) 0 1).map (fun value ↦ value + 2) := by
   simp [capturedSample, outputMeasureAt, reduce, Expr.isValue,
     realValue?, Action.wrap, Function.comp_def,
     Expr.substHead, Expr.substAt, Expr.shift, Expr.mapVars]
@@ -76,12 +76,12 @@ example (trace : Spec.Traces.Trace) (result value : ℝ) :
 
 example : Spec.Traces.traceAndOutputLawAt 4 capturedSample =
     (uniformFiber (.sample .G) 0 1).map
-      (fun value => ([], value + 2)) := by
+      (fun value ↦ ([], value + 2)) := by
   simp [capturedSample, Spec.Traces.traceAndOutputLawAt, reduce, Expr.isValue,
     realValue?, Action.wrap, Function.comp_def,
     Expr.substHead, Expr.substAt, Expr.shift, Expr.mapVars, realValue?]
   change ((uniformFiber (.sample .G) 0 1).bind
-    fun value => (Measure.dirac ([], value + 2)).map id) = _
+    fun value ↦ (Measure.dirac ([], value + 2)).map id) = _
   simp only [Measure.map_id]
   exact Measure.bind_dirac_eq_map _ (measurable_const.prodMk (measurable_id.add_const 2))
 

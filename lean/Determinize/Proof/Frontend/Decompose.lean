@@ -39,7 +39,7 @@ theorem shapeOf_sub {a b : Ty} (h : Ty.Sub a b) : shapeOf a = shapeOf b := by
   induction h <;> simp_all [shapeOf]
 
 theorem shape_instantiate (types : Nat → Ty) (ρ : AffinityVar → Affinity) (u : UType) :
-    shapeOf (u.instantiate types ρ) = u.shape.subst fun α => shapeOf (types α) := by
+    shapeOf (u.instantiate types ρ) = u.shape.subst fun α ↦ shapeOf (types α) := by
   induction u <;> simp_all [UType.instantiate, UType.shape, shapeOf, Shape.subst]
 
 theorem Shape.shape_decorate (S : Shape) (leaf : List Nat → AffinityVar) :
@@ -54,20 +54,20 @@ by the instance of its decoration. -/
 theorem instantiate_decorate (θ : Nat → Shape) (types : Nat → Ty) (ρ : AffinityVar → Affinity)
     (u : UType) :
     (u.decorate θ).instantiate types ρ =
-      u.instantiate (fun α => ((UType.var α).decorate θ).instantiate types ρ) ρ := by
+      u.instantiate (fun α ↦ ((UType.var α).decorate θ).instantiate types ρ) ρ := by
   induction u <;> simp_all [UType.decorate, UType.instantiate]
 
 /-! ## Soundness of decomposition (Lemma S′) -/
 
 theorem satisfies_nil {V : Type} (ρ : V → Affinity) :
     Satisfies ρ ([] : List (AffinityConstraint V)) :=
-  fun _ h => nomatch h
+  fun _ h ↦ nomatch h
 
 theorem satisfies_append {V : Type} {ρ : V → Affinity} {front rest : List (AffinityConstraint V)} :
     Satisfies ρ (front ++ rest) ↔ Satisfies ρ front ∧ Satisfies ρ rest := by
   simp only [Satisfies, List.mem_append]
-  exact ⟨fun h => ⟨fun c m => h c (.inl m), fun c m => h c (.inr m)⟩,
-    fun h c m => m.elim (h.1 c) (h.2 c)⟩
+  exact ⟨fun h ↦ ⟨fun c m ↦ h c (.inl m), fun c m ↦ h c (.inr m)⟩,
+    fun h c m ↦ m.elim (h.1 c) (h.2 c)⟩
 
 theorem satisfies_singleton {V : Type} {ρ : V → Affinity} {c : AffinityConstraint V} :
     Satisfies ρ [c] ↔ Ty.Sub (.float (c.1.eval ρ)) (.float (c.2.eval ρ)) := by
@@ -148,27 +148,27 @@ theorem approx_shape_decorate {ρ : AffinityVar → Affinity} {δ : Nat → Shap
   | prod a b iha ihb =>
     intro T leaf shape hleaf
     cases T <;> simp [Shape.subst, shapeOf] at shape
-    exact ⟨_, _, rfl, iha _ _ shape.1 fun p => hleaf (0 :: p),
-      ihb _ _ shape.2 fun p => hleaf (1 :: p)⟩
+    exact ⟨_, _, rfl, iha _ _ shape.1 fun p ↦ hleaf (0 :: p),
+      ihb _ _ shape.2 fun p ↦ hleaf (1 :: p)⟩
   | sum a b iha ihb =>
     intro T leaf shape hleaf
     cases T <;> simp [Shape.subst, shapeOf] at shape
-    exact ⟨_, _, rfl, iha _ _ shape.1 fun p => hleaf (0 :: p),
-      ihb _ _ shape.2 fun p => hleaf (1 :: p)⟩
+    exact ⟨_, _, rfl, iha _ _ shape.1 fun p ↦ hleaf (0 :: p),
+      ihb _ _ shape.2 fun p ↦ hleaf (1 :: p)⟩
   | list a ih =>
     intro T leaf shape hleaf
     cases T <;> simp [Shape.subst, shapeOf] at shape
-    exact ⟨_, rfl, ih _ _ shape fun p => hleaf (0 :: p)⟩
+    exact ⟨_, rfl, ih _ _ shape fun p ↦ hleaf (0 :: p)⟩
   | arr a b iha ihb =>
     intro T leaf shape hleaf
     cases T <;> simp [Shape.subst, shapeOf] at shape
-    exact ⟨_, _, rfl, iha _ _ shape.1 fun p => hleaf (0 :: p),
-      ihb _ _ shape.2 fun p => hleaf (1 :: p)⟩
+    exact ⟨_, _, rfl, iha _ _ shape.1 fun p ↦ hleaf (0 :: p),
+      ihb _ _ shape.2 fun p ↦ hleaf (1 :: p)⟩
 
 /-- If the shapes `θ` factor the shapes of `types`, and the leaf variables read off the
 affinities of `types`, the decoration of every type approximates its instance. -/
 theorem approx_decorate {θ : Nat → Shape} {types : Nat → Ty} {ρ : AffinityVar → Affinity}
-    (factor : ∀ α, (θ α).subst (fun β => shapeOf (types β)) = shapeOf (types α))
+    (factor : ∀ α, (θ α).subst (fun β ↦ shapeOf (types β)) = shapeOf (types α))
     (leaves : ∀ α p, ρ (.leaf α p) = affinityAt (types α) p) :
     ∀ u : UType, Approx ρ (u.decorate θ) (u.instantiate types ρ) := by
   intro u

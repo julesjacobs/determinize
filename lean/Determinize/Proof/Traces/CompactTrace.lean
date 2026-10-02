@@ -20,13 +20,13 @@ theorem draw_length_measurable : Measurable (List.length : DrawTrace → Nat) :=
   measurable_fst.comp (comap_measurable _)
 
 theorem draw_event_measurable (i : Nat) :
-    Measurable (fun trace : DrawTrace => trace.getD i (.uniform, 0)) := by
-  have h : Measurable (fun trace : DrawTrace =>
-      (trace.length, fun j : Nat => trace.getD j (.uniform, 0))) := comap_measurable _
+    Measurable (fun trace : DrawTrace ↦ trace.getD i (.uniform, 0)) := by
+  have h : Measurable (fun trace : DrawTrace ↦
+      (trace.length, fun j : Nat ↦ trace.getD j (.uniform, 0))) := comap_measurable _
   exact (measurable_pi_apply i).comp (measurable_snd.comp h)
 
 theorem draw_cons_measurable :
-    Measurable (fun p : (Op × ℝ) × DrawTrace => p.1 :: p.2) := by
+    Measurable (fun p : (Op × ℝ) × DrawTrace ↦ p.1 :: p.2) := by
   apply measurable_comap_iff.mpr
   refine Measurable.prodMk ((draw_length_measurable.comp measurable_snd).add_const 1) ?_
   apply measurable_pi_lambda
@@ -41,7 +41,7 @@ theorem draw_tail_measurable : Measurable (List.tail : DrawTrace → DrawTrace) 
   · simpa using draw_length_measurable.sub_const 1
   · apply measurable_pi_lambda
     intro i
-    simpa using draw_event_measurable (i+1)
+    simpa using draw_event_measurable (i + 1)
 
 /-- Put an event's draw, if it has one, in front of a compact trace. -/
 def emitDraw (event : Event) (trace : DrawTrace) : DrawTrace :=
@@ -50,35 +50,35 @@ def emitDraw (event : Event) (trace : DrawTrace) : DrawTrace :=
 theorem event_elim_measurable {α β : Type*} [MeasurableSpace α] [MeasurableSpace β]
     (empty : α → β) (draw : (Op × ℝ) × α → β)
     (he : Measurable empty) (hd : Measurable draw) :
-    Measurable (fun p : Event × α => p.1.elim (empty p.2) (fun d => draw (d,p.2))) := by
-  let f : (Sum (Op × ℝ) PUnit) × α → β := fun p =>
-    match p.1 with | .inl d => draw (d,p.2) | .inr _ => empty p.2
+    Measurable (fun p : Event × α ↦ p.1.elim (empty p.2) (fun d ↦ draw (d, p.2))) := by
+  let f : (Sum (Op × ℝ) PUnit) × α → β := fun p ↦
+    match p.1 with | .inl d => draw (d, p.2) | .inr _ => empty p.2
   have hf : Measurable f := by
     convert (hd.sumElim (he.comp measurable_snd)).comp
       (MeasurableEquiv.sumProdDistrib (Op × ℝ) PUnit α).measurable using 1
-    funext ⟨e,a⟩
+    funext ⟨e, a⟩
     cases e <;> rfl
   have h := hf.comp ((comap_measurable (Equiv.optionEquivSumPUnit.{0} (Op × ℝ))).prodMap (measurable_id (α := α)))
   convert h using 1
-  funext ⟨e,a⟩
+  funext ⟨e, a⟩
   cases e <;> rfl
 
-theorem emitDraw_measurable : Measurable (fun p : Event × DrawTrace => emitDraw p.1 p.2) := by
-  convert event_elim_measurable id (fun p => p.1 :: p.2) measurable_id draw_cons_measurable using 1
-  funext ⟨e,a⟩
+theorem emitDraw_measurable : Measurable (fun p : Event × DrawTrace ↦ emitDraw p.1 p.2) := by
+  convert event_elim_measurable id (fun p ↦ p.1 :: p.2) measurable_id draw_cons_measurable using 1
+  funext ⟨e, a⟩
   cases e <;> rfl
 
 /-- The compact trace of the first `n` events of a detailed trace. -/
 def retainWithin : Nat → Trace → DrawTrace
   | 0, _ => []
-  | n+1, trace => emitDraw (trace.headD none) (retainWithin n trace.tail)
+  | n + 1, trace => emitDraw (trace.headD none) (retainWithin n trace.tail)
 
 theorem retainWithin_measurable (n : Nat) : Measurable (retainWithin n) := by
   induction n with
   | zero => exact measurable_const
   | succ n ih =>
-      exact emitDraw_measurable.comp
-        (trace_head_measurable.prodMk (ih.comp trace_tail_measurable))
+    exact emitDraw_measurable.comp
+      (trace_head_measurable.prodMk (ih.comp trace_tail_measurable))
 
 /-- The compact trace of a detailed trace: exactly its G-affinity draws, in order. -/
 def retain (trace : Trace) : DrawTrace := trace.filterMap id
@@ -90,7 +90,7 @@ theorem retain_eq (trace : Trace) : retain trace = retainWithin trace.length tra
 
 theorem retain_measurable : Measurable retain := by
   rw [funext retain_eq]
-  have h : Measurable (fun p : Nat × Trace => retainWithin p.1 p.2) :=
+  have h : Measurable (fun p : Nat × Trace ↦ retainWithin p.1 p.2) :=
     measurable_from_prod_countable_right retainWithin_measurable
   exact h.comp (trace_length_measurable.prodMk measurable_id)
 

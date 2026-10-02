@@ -65,7 +65,7 @@ theorem vars_subst_single {i : Nat} {t : Shape} (fresh : i ∉ t.vars) :
     · subst h
       intro k hk
       simp only [subst, single, if_pos] at hk
-      exact Finset.mem_erase.2 ⟨fun e => fresh (e ▸ hk), Finset.mem_union_right _ hk⟩
+      exact Finset.mem_erase.2 ⟨fun e ↦ fresh (e ▸ hk), Finset.mem_union_right _ hk⟩
     · simp [subst, single, h, vars]
   | unit | bool | float => by simp [subst, vars]
   | prod a b | sum a b | arr a b => by
@@ -82,15 +82,15 @@ end Shape
 
 /-- Apply a substitution to both sides of every equation. -/
 def substEquations (σ : Nat → Shape) (equations : List (Shape × Shape)) : List (Shape × Shape) :=
-  equations.map fun e => (e.1.subst σ, e.2.subst σ)
+  equations.map fun e ↦ (e.1.subst σ, e.2.subst σ)
 
 /-- The variables of a list of equations. -/
 def equationVars (equations : List (Shape × Shape)) : Finset Nat :=
-  equations.foldr (fun e acc => e.1.vars ∪ e.2.vars ∪ acc) ∅
+  equations.foldr (fun e acc ↦ e.1.vars ∪ e.2.vars ∪ acc) ∅
 
 /-- The total size of a list of equations. -/
 def equationSize (equations : List (Shape × Shape)) : Nat :=
-  (equations.map fun e => e.1.size + e.2.size).sum
+  (equations.map fun e ↦ e.1.size + e.2.size).sum
 
 /-- Decomposition keeps the variables and makes the equations smaller. -/
 theorem Shape.children_vars {s t : Shape} {equations : List (Shape × Shape)}
@@ -150,7 +150,7 @@ def unify (equations : List (Shape × Shape)) : Option (Nat → Shape) :=
     if t = .var i then unify rest
     else if i ∈ t.vars then none
     else
-      (unify (substEquations (.single i t) rest)).map fun θ j => (Shape.single i t j).subst θ
+      (unify (substEquations (.single i t) rest)).map fun θ j ↦ (Shape.single i t j).subst θ
   | (s, t) :: rest =>
     match _h : s.children t with
     | some children => unify (children ++ rest)
@@ -163,7 +163,7 @@ decreasing_by
         (by simp only [equationSize_cons, Shape.size]; omega)
     | -- elimination of `i`
       exact Prod.Lex.left _ _ (eliminate_decreases ‹_› (by simp [equationVars, Shape.vars])
-        (fun k => by simp only [equationVars, List.foldr_cons, Finset.mem_union]; tauto))
+        (fun k ↦ by simp only [equationVars, List.foldr_cons, Finset.mem_union]; tauto))
     | -- decomposition
       obtain ⟨vars, size⟩ := Shape.children_vars _h
       refine Prod.Lex.right' _ (le_of_eq ?_) ?_

@@ -58,36 +58,36 @@ example : stateExpr (initialState source .determinized) =
   simpa [Subject.program, source, interpret, Expr.map, Expr.determinize,
     DistributionAction.determinize] using typed_initial_reification source .determinized _ typed_source
 
-example : outcomeMeasure [(1,0),(0,1)] = MeasureTheory.Measure.dirac (0 : ℝ) := by
+example : outcomeMeasure [(1, 0), (0, 1)] = MeasureTheory.Measure.dirac (0 : ℝ) := by
   simp [outcomeMeasure]
 
-example : outcomeMeasure [(0,0),(1,1)] = MeasureTheory.Measure.dirac (1 : ℝ) := by
+example : outcomeMeasure [(0, 0), (1, 1)] = MeasureTheory.Measure.dirac (1 : ℝ) := by
   simp [outcomeMeasure]
 
-example : FiniteLawMatches .bernoulli (.sample .G) [0] [(1,0),(0,1)] :=
+example : FiniteLawMatches .bernoulli (.sample .G) [0] [(1, 0), (0, 1)] :=
   finiteLaw_sound _ _ _ _ (by decide +kernel)
 
-example : FiniteLawMatches .bernoulli (.sample .G) [1] [(0,0),(1,1)] :=
+example : FiniteLawMatches .bernoulli (.sample .G) [1] [(0, 0), (1, 1)] :=
   finiteLaw_sound _ _ _ _ (by decide +kernel)
 
-example : FiniteLawMatches .gamma .mean [3,2] [(1,3/2)] :=
+example : FiniteLawMatches .gamma .mean [3, 2] [(1, 3 / 2)] :=
   finiteLaw_sound _ _ _ _ (by decide +kernel)
 
 example : ∀ outcomes, finiteLaw .bernoulli (.sample .G) [2] ≠ .ok outcomes := by
   intro outcomes
   simp [finiteLaw, bind, Except.bind, pure, Except.pure, throw]
 
-example : ∀ outcomes, finiteLaw .uniform (.sample .G) [0,0] ≠ .ok outcomes := by
+example : ∀ outcomes, finiteLaw .uniform (.sample .G) [0, 0] ≠ .ok outcomes := by
   intro outcomes
   simp [finiteLaw, supportedDraw, bind, Except.bind, pure, Except.pure, throw]
 
-example : reduce (stateExpr (.deliver (.number (1/3))
+example : reduce (stateExpr (.deliver (.number (1 / 3))
     [.draw (.sample .G, .bernoulli) [] [] [], .letBody .reject []])) =
-      .sample (.sample .G, .bernoulli) (outcomeMeasure [(2/3,0),(1/3,1)])
-        (fun y => .letE (.real y) .reject) := by
+      .sample (.sample .G, .bernoulli) (outcomeMeasure [(2 / 3, 0), (1 / 3, 1)])
+        (fun y ↦ .letE (.real y) .reject) := by
   simpa [stackExpr, frameExpr, Binding.close, interpret, Expr.map, Expr.mapVars] using
-    draw_correspondence (.sample .G, .bernoulli) [] (1/3) [] [.letBody .reject []]
-      [(2/3,0),(1/3,1)] (by decide +kernel) (by simp [FrameShape])
+    draw_correspondence (.sample .G, .bernoulli) [] (1 / 3) [] [.letBody .reject []]
+      [(2 / 3, 0), (1 / 3, 1)] (by decide +kernel) (by simp [FrameShape])
 
 example (initial state : State) (shape : StateShape initial)
     (reachable : MachineReachable initial state) : StateShape state :=
@@ -111,7 +111,7 @@ example : BookkeepingTransition
   refine ⟨trivial, .continue, _, 1, rfl, ?_⟩
   simp
 
-example (path : Nat → State) (steps : ∀ i < 4, BookkeepingTransition (path i) (path (i+1)))
+example (path : Nat → State) (steps : ∀ i < 4, BookkeepingTransition (path i) (path (i + 1)))
     (start : bookkeepingRank (path 0) = 3) : False := by
   have bound := bookkeeping_path_bound path 4 steps
   omega

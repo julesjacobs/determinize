@@ -63,7 +63,7 @@ def inst (σ : Ground) (u : UType) : Ty := u.instantiate σ.types σ.affinities
 def Solves (σ : Ground) (relations : List (UType × UType)) : Prop :=
   ∀ p ∈ relations, Ty.Sub (σ.inst p.1) (σ.inst p.2)
 
-theorem solves_nil (σ : Ground) : σ.Solves [] := fun _ h => nomatch h
+theorem solves_nil (σ : Ground) : σ.Solves [] := fun _ h ↦ nomatch h
 
 theorem solves_cons {σ : Ground} {p : UType × UType} {rest : List (UType × UType)} :
     σ.Solves (p :: rest) ↔ Ty.Sub (σ.inst p.1) (σ.inst p.2) ∧ σ.Solves rest := by
@@ -72,8 +72,8 @@ theorem solves_cons {σ : Ground} {p : UType × UType} {rest : List (UType × UT
 theorem solves_append {σ : Ground} {front rest : List (UType × UType)} :
     σ.Solves (front ++ rest) ↔ σ.Solves front ∧ σ.Solves rest := by
   simp only [Solves, List.mem_append]
-  exact ⟨fun h => ⟨fun c m => h c (.inl m), fun c m => h c (.inr m)⟩,
-    fun h c m => m.elim (h.1 c) (h.2 c)⟩
+  exact ⟨fun h ↦ ⟨fun c m ↦ h c (.inl m), fun c m ↦ h c (.inr m)⟩,
+    fun h c m ↦ m.elim (h.1 c) (h.2 c)⟩
 
 @[simp] theorem inst_var (σ : Ground) (i : Nat) : σ.inst (.var i) = σ.types i := rfl
 @[simp] theorem inst_unit (σ : Ground) : σ.inst .unit = .unit := rfl
@@ -99,7 +99,7 @@ def setAffinity (σ : Ground) (i : Nat) (m : Affinity) : Ground :=
 def Agree (n : Nat) (σ σ' : Ground) : Prop :=
   ∀ i < n, σ'.types i = σ.types i ∧ σ'.affinities (.generated i) = σ.affinities (.generated i)
 
-theorem Agree.refl (n : Nat) (σ : Ground) : σ.Agree n σ := fun _ _ => ⟨rfl, rfl⟩
+theorem Agree.refl (n : Nat) (σ : Ground) : σ.Agree n σ := fun _ _ ↦ ⟨rfl, rfl⟩
 
 theorem Agree.type {n : Nat} {σ σ' : Ground} (h : σ.Agree n σ') {i : Nat} (hi : i < n) :
     σ'.types i = σ.types i := (h i hi).1
@@ -109,16 +109,16 @@ theorem Agree.affinity {n : Nat} {σ σ' : Ground} (h : σ.Agree n σ') {i : Nat
 
 /-- Agreement below `n` followed by agreement below a larger `n₁`. -/
 theorem Agree.step {n n₁ : Nat} {σ σ₁ σ' : Ground} (a : σ.Agree n σ₁) (h : σ₁.Agree n₁ σ')
-    (le : n ≤ n₁) : σ.Agree n σ' := fun i hi =>
+    (le : n ≤ n₁) : σ.Agree n σ' := fun i hi ↦
   ⟨(h.type (by omega)).trans (a.type hi), (h.affinity (by omega)).trans (a.affinity hi)⟩
 
 theorem Agree.setType {n i : Nat} {σ σ' : Ground} (h : σ.Agree n σ') (hi : n ≤ i) (A : Ty) :
-    σ.Agree n (σ'.setType i A) := fun j hj => by
+    σ.Agree n (σ'.setType i A) := fun j hj ↦ by
   have : j ≠ i := by omega
   simpa [Ground.setType, Function.update_of_ne this] using h j hj
 
 theorem Agree.setAffinity {n i : Nat} {σ σ' : Ground} (h : σ.Agree n σ') (hi : n ≤ i)
-    (m : Affinity) : σ.Agree n (σ'.setAffinity i m) := fun j hj => by
+    (m : Affinity) : σ.Agree n (σ'.setAffinity i m) := fun j hj ↦ by
   have : AffinityVar.generated j ≠ .generated i := by simp; omega
   simpa [Ground.setAffinity, Function.update_of_ne this] using h j hj
 
@@ -159,16 +159,16 @@ def Robust (n : Nat) (σ : Ground) (P : Ground → Prop) : Prop := ∀ σ', σ.A
 
 theorem Robust.extend {n n₁ : Nat} {σ σ₁ : Ground} {P : Ground → Prop} (h : Robust n σ P)
     (a : σ.Agree n σ₁) (le : n ≤ n₁) : Robust n₁ σ₁ P :=
-  fun σ' h' => h σ' (a.step h' le)
+  fun σ' h' ↦ h σ' (a.step h' le)
 
 /-- The instances of a context are pointwise subtypes of `Γ'`. -/
 def Context (Γ : List UType) (Γ' : List Ty) (σ : Ground) : Prop :=
   List.Forall₂ Ty.Sub (Γ.map σ.inst) Γ'
 
 theorem Robust.cons {n : Nat} {σ : Ground} {Γ : List UType} {Γ' : List Ty} {t : UType} {A : Ty}
-    (hΓ : Robust n σ (Context Γ Γ')) (ht : Robust n σ fun σ' => Ty.Sub (σ'.inst t) A) :
+    (hΓ : Robust n σ (Context Γ Γ')) (ht : Robust n σ fun σ' ↦ Ty.Sub (σ'.inst t) A) :
     Robust n σ (Context (t :: Γ) (A :: Γ')) :=
-  fun σ' h => List.Forall₂.cons (ht σ' h) (hΓ σ' h)
+  fun σ' h ↦ List.Forall₂.cons (ht σ' h) (hΓ σ' h)
 
 /-- A variable of a context is found in the corresponding position. -/
 theorem context_getElem? {Γ : List UType} {Γ' : List Ty} {σ : Ground} (h : Context Γ Γ' σ)
@@ -192,10 +192,10 @@ theorem context_getElem? {Γ : List UType} {Γ' : List Ty} {σ : Ground} (h : Co
 theorem Draft.induction {P : Draft → Prop}
     (node : ∀ e t children, (∀ c ∈ children, P c) → P (.node e t children))
     (cast : ∀ body t, P body → P (.cast body t)) (d : Draft) : P d :=
-  Draft.rec (motive_1 := P) (motive_2 := fun children => ∀ c ∈ children, P c)
-    (fun e t children ih => node e t children ih) (fun body t ih => cast body t ih)
-    (fun _ h => nomatch h)
-    (fun _ _ head tail c h => (List.mem_cons.1 h).elim (· ▸ head) (tail c)) d
+  Draft.rec (motive_1 := P) (motive_2 := fun children ↦ ∀ c ∈ children, P c)
+    (fun e t children ih ↦ node e t children ih) (fun body t ih ↦ cast body t ih)
+    (fun _ h ↦ nomatch h)
+    (fun _ _ head tail c h ↦ (List.mem_cons.1 h).elim (· ▸ head) (tail c)) d
 
 theorem affinity_le {ρ ρ' : AffinityVar → Affinity}
     (h : ∀ v, Ty.Sub (.float (ρ v)) (.float (ρ' v))) (t : UType) :

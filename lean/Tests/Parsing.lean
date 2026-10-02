@@ -9,11 +9,11 @@ def assert (b : Bool) (message : String) : IO Unit :=
 
 def parsing : IO Unit := do
   let input ← IO.ofExcept (elaborate (← IO.ofExcept (parse "(* outer (* inner *) *) 1.25e-2")))
-  assert (input == .real (1/80)) "decimal literals must remain exact"
+  assert (input == .real (1 / 80)) "decimal literals must remain exact"
   assert (parse "uniform[E](0,1)" |>.isOk) "explicit E affinity"
-  assert (parse "uniform[Q](0,1)" |> fun r => !r.isOk) "invalid affinity accepted"
-  assert (parse "1 garbage )" |> fun r => !r.isOk) "trailing input accepted"
-  assert (parse "(* unfinished" |> fun r => !r.isOk) "unterminated comment accepted"
+  assert (parse "uniform[Q](0,1)" |> fun r ↦ !r.isOk) "invalid affinity accepted"
+  assert (parse "1 garbage )" |> fun r ↦ !r.isOk) "trailing input accepted"
+  assert (parse "(* unfinished" |> fun r ↦ !r.isOk) "unterminated comment accepted"
   for text in ["uniform(0)", "poisson(1,2)", "observe[E](true)"] do
     assert (!(parse text).isOk) s!"invalid primitive syntax accepted: {text}"
   for text in ["discrete[E](*)", "discrete[E](* )", "discrete[E]( * )",
@@ -32,16 +32,16 @@ def parsing : IO Unit := do
   assert (commented.source == .discrete (.sample .E) (.cons (.real 0) .nil))
     "comment before discrete arguments changed"
   let coin ← IO.ofExcept (compile "bernoulli[E](0.25)")
-  assert (coin.source == .bernoulli (.sample .E) (.real (1/4)))
+  assert (coin.source == .bernoulli (.sample .E) (.real (1 / 4)))
     "elaboration replaced a Bernoulli source draw"
-  assert (coin.source.determinize == .bernoulli .mean (.real (1/4)))
+  assert (coin.source.determinize == .bernoulli .mean (.real (1 / 4)))
     "Bernoulli determinization did not retain its parameter"
   let categorical ← IO.ofExcept (compile "discrete[E](0.25,0.25,0.5)")
   match categorical.source with
   | .discrete (.sample .E) d =>
-      assert (d == .cons (.real (1/4)) (.cons (.real (1/4)) .nil)) "discrete probabilities changed"
-      assert (categorical.source.determinize == .discrete .mean d)
-        "discrete determinization changed its weights"
+    assert (d == .cons (.real (1 / 4)) (.cons (.real (1 / 4)) .nil)) "discrete probabilities changed"
+    assert (categorical.source.determinize == .discrete .mean d)
+      "discrete determinization changed its weights"
   | _ => throw (IO.userError "elaboration replaced a discrete source draw")
   let program ← IO.ofExcept (compile "let x = 2 in let y = 3 in x <= y")
   assert (program.ty == .bool) "comparison type"
@@ -50,7 +50,7 @@ def parsing : IO Unit := do
   let comparison ← IO.ofExcept (elaborate (← IO.ofExcept
     (parse "fun x => uniform[G](0,1) <= (fun y => x + y) (bernoulli(0.5))")))
   assert (comparison == .lam (.letE (.uniform (some .G) (.real 0) (.real 1))
-    (.letE (.app (.lam (.add (.bvar 2) (.bvar 0))) (.bernoulli none (.real (1/2))))
+    (.letE (.app (.lam (.add (.bvar 2) (.bvar 0))) (.bernoulli none (.real (1 / 2))))
       (.ite (.lt (.bvar 0) (.bvar 1)) (.bool false) (.bool true)))))
     "comparison desugaring changed binders or affinities"
   for text in ["let x = discrete[E](*) in discrete[E](0,*)", "let x = uniform(0,1) in x + x", "fun x => x", "uniform[G](0,1)", "observe(false)", "observe(true)", "bernoulli[E](0.25)", "bernoulli[G](0.25)", "flip(0.25)", "bernoulli[E](0.00125)", "uniform[E](0.2,0.375)", "discrete[E](0.25,0.25,0.5)", "discrete[G](0,0.25,0.75)", "discrete[E](0,1,0)"] do

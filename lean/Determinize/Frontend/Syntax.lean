@@ -51,7 +51,7 @@ def sites {Literal Site : Type} : Expr Literal Site → List Site
   | .bvar _ | .reject | .unit | .bool _ | .real _ | .nil => []
   | .lam a | .fix a | .fst a | .snd a | .inl a | .inr a | .neg a => a.sites
   | .app a b | .pair a b | .cons a b | .letE a b | .add a b | .mul a b | .div a b | .lt a b =>
-      a.sites ++ b.sites
+    a.sites ++ b.sites
   | .matchSum a b c | .matchList a b c | .ite a b c => a.sites ++ b.sites ++ c.sites
   | .poisson s a | .discrete s a | .bernoulli s a | .exponential s a => s :: a.sites
   | .uniform s a b | .gaussian s a b | .beta s a b | .gamma s a b => s :: (a.sites ++ b.sites)
@@ -65,26 +65,26 @@ def checkSitewise {Literal Site Site' : Type} [DecidableEq Literal] (r : Site �
   | .reject, .reject | .unit, .unit | .nil, .nil => true
   | .lam a, .lam a' | .fix a, .fix a' | .fst a, .fst a' | .snd a, .snd a' | .inl a, .inl a'
   | .inr a, .inr a' | .neg a, .neg a' =>
-      checkSitewise r a a'
+    checkSitewise r a a'
   | .app a b, .app a' b' | .pair a b, .pair a' b' | .cons a b, .cons a' b'
   | .letE a b, .letE a' b' | .add a b, .add a' b' | .mul a b, .mul a' b'
   | .div a b, .div a' b' | .lt a b, .lt a' b' =>
-      checkSitewise r a a' && checkSitewise r b b'
+    checkSitewise r a a' && checkSitewise r b b'
   | .matchSum a b c, .matchSum a' b' c' | .matchList a b c, .matchList a' b' c'
   | .ite a b c, .ite a' b' c' =>
-      checkSitewise r a a' && checkSitewise r b b' && checkSitewise r c c'
+    checkSitewise r a a' && checkSitewise r b b' && checkSitewise r c c'
   | .poisson s a, .poisson s' a' | .discrete s a, .discrete s' a'
   | .bernoulli s a, .bernoulli s' a' | .exponential s a, .exponential s' a' =>
-      r s s' && checkSitewise r a a'
+    r s s' && checkSitewise r a a'
   | .uniform s a b, .uniform s' a' b' | .gaussian s a b, .gaussian s' a' b'
   | .beta s a b, .beta s' a' b' | .gamma s a b, .gamma s' a' b' =>
-      r s s' && checkSitewise r a a' && checkSitewise r b b'
+    r s s' && checkSitewise r a a' && checkSitewise r b b'
   | _, _ => false
 
 theorem checkSitewise_iff {Literal Site Site' : Type} [DecidableEq Literal]
     (R : Site → Site' → Prop) [∀ s s', Decidable (R s s')] (e : Expr Literal Site)
     (e' : Expr Literal Site') :
-    checkSitewise (fun s s' => decide (R s s')) e e' = true ↔ Sitewise R e e' := by
+    checkSitewise (fun s s' ↦ decide (R s s')) e e' = true ↔ Sitewise R e e' := by
   induction e generalizing e' <;> cases e' <;>
     simp [checkSitewise, Sitewise, Bool.and_eq_true, and_assoc, *]
 

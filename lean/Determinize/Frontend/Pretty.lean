@@ -23,11 +23,11 @@ private def literal (q : Rat) : String :=
   else match decimalPlaces q.den with
   | none => s!"({q.num} / {q.den})"
   | some places =>
-      let scale := 10 ^ places
-      let numerator := q.num.natAbs * (scale / q.den)
-      let fraction := toString (numerator % scale)
-      let padding := String.ofList (List.replicate (places - fraction.length) '0')
-      s!"{if q.num < 0 then "-" else ""}{numerator / scale}.{padding}{fraction}"
+    let scale := 10 ^ places
+    let numerator := q.num.natAbs * (scale / q.den)
+    let fraction := toString (numerator % scale)
+    let padding := String.ofList (List.replicate (places - fraction.length) '0')
+    s!"{if q.num < 0 then "-" else ""}{numerator / scale}.{padding}{fraction}"
 def leanAction : DistributionAction → String
   | .sample affinity => s!"(.sample .{prettyAffinity affinity})"
   | .mean => ".mean"

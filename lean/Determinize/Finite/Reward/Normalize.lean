@@ -9,10 +9,10 @@ def guard : Frame := .right .add (.number 0)
 def splitStack : List Frame → List Frame × List Rat
   | [] => ([], [])
   | frame :: stack =>
-      let (inner, offsets) := splitStack stack
-      match inner, frame with
-      | [], .right .add (.number c) => ([], c :: offsets)
-      | _, _ => (frame :: inner, offsets)
+    let (inner, offsets) := splitStack stack
+    match inner, frame with
+    | [], .right .add (.number c) => ([], c :: offsets)
+    | _, _ => (frame :: inner, offsets)
 
 def normalizeStack (stack : List Frame) : Rat × List Frame :=
   let (inner, offsets) := splitStack stack
@@ -20,11 +20,11 @@ def normalizeStack (stack : List Frame) : Rat × List Frame :=
 
 def normalize : State → Rat × State
   | .eval expression environment stack =>
-      let (reward, stack) := normalizeStack stack
-      (reward, .eval expression environment stack)
+    let (reward, stack) := normalizeStack stack
+    (reward, .eval expression environment stack)
   | .deliver value stack =>
-      let (reward, stack) := normalizeStack stack
-      (reward, .deliver value stack)
+    let (reward, stack) := normalizeStack stack
+    (reward, .deliver value stack)
   | .rejected => (0, .rejected)
 
 structure Outcome where
@@ -45,8 +45,8 @@ def step (state : State) : Except Failure Step := do
   | .returned value => return .returned value
   | .rejected => return .rejected
   | .next evidence successors =>
-      return .next evidence (successors.map fun (p, state) =>
-        let (r, state) := normalize state
-        ⟨p, state, r⟩)
+    return .next evidence (successors.map fun (p, state) ↦
+      let (r, state) := normalize state
+      ⟨p, state, r⟩)
 
 end Determinize.Finite.Reward

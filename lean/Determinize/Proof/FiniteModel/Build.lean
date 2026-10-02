@@ -3,7 +3,7 @@ import Std.Data.HashMap.Lemmas
 
 namespace Determinize.Finite.Builder
 
-local instance : BEq State := ⟨fun a b => decide (a = b)⟩
+local instance : BEq State := ⟨fun a b ↦ decide (a = b)⟩
 local instance : LawfulBEq State where
   eq_of_beq := by simp
   rfl := by simp
@@ -23,7 +23,7 @@ structure Extension (before : Table) (state : State) where
   preserves : ∀ (i : Nat) (s : State), before.states[i]? = some s → table.states[i]? = some s
 
 theorem Table.injective (table : Table) :
-    Function.Injective (fun i : Fin table.states.size => table.states[i]) := by
+    Function.Injective (fun i : Fin table.states.size ↦ table.states[i]) := by
   intro i j eq
   have hi := (table.lookup table.states[i] i).mpr (by simp)
   have hj := (table.lookup table.states[i] j).mpr (by simp [eq])
@@ -33,36 +33,36 @@ theorem Table.injective (table : Table) :
 def Table.insert (before : Table) (state : State) : Extension before state :=
   match found : before.indices[state]? with
   | some i =>
-      let h := (Array.getElem?_eq_some_iff.mp ((before.lookup state i).mp found))
-      ⟨before, ⟨i, h.1⟩, h.2, le_rfl, fun _ _ h => h⟩
+    let h := (Array.getElem?_eq_some_iff.mp ((before.lookup state i).mp found))
+    ⟨before, ⟨i, h.1⟩, h.2, le_rfl, fun _ _ h ↦ h⟩
   | none =>
-      let after := before.states.push state
-      have lookup : ∀ (s : State) (i : Nat), (before.indices.insert state before.states.size)[s]? = some i ↔
-          after[i]? = some s := by
-        intro s i
-        rw [Std.HashMap.getElem?_insert]
-        by_cases eq : state = s
-        · subst s
-          simp only [beq_self_eq_true, ↓reduceIte, Option.some.injEq]
-          rw [Array.getElem?_push]
-          by_cases atEnd : i = before.states.size
-          · simp [atEnd]
-          · simp only [atEnd, ↓reduceIte]
-            constructor
-            · intro h; exact (atEnd h.symm).elim
-            · intro h
-              have := (before.lookup state i).mpr h
-              simp [found] at this
-        · simp only [beq_iff_eq, eq, ↓reduceIte]
-          rw [before.lookup, Array.getElem?_push]
-          by_cases atEnd : i = before.states.size
-          · simp [atEnd, eq]
-          · simp [atEnd]
-      ⟨⟨after, before.indices.insert state before.states.size, lookup⟩,
-        ⟨before.states.size, by simp [after]⟩, by simp [after], by simp [after], by
-          intro i s h
-          have lt := (Array.getElem?_eq_some_iff.mp h).1
-          simpa [after, Array.getElem?_push, Nat.ne_of_lt lt] using h⟩
+    let after := before.states.push state
+    have lookup : ∀ (s : State) (i : Nat), (before.indices.insert state before.states.size)[s]? = some i ↔
+        after[i]? = some s := by
+      intro s i
+      rw [Std.HashMap.getElem?_insert]
+      by_cases eq : state = s
+      · subst s
+        simp only [beq_self_eq_true, ↓reduceIte, Option.some.injEq]
+        rw [Array.getElem?_push]
+        by_cases atEnd : i = before.states.size
+        · simp [atEnd]
+        · simp only [atEnd, ↓reduceIte]
+          constructor
+          · intro h; exact (atEnd h.symm).elim
+          · intro h
+            have := (before.lookup state i).mpr h
+            simp [found] at this
+      · simp only [beq_iff_eq, eq, ↓reduceIte]
+        rw [before.lookup, Array.getElem?_push]
+        by_cases atEnd : i = before.states.size
+        · simp [atEnd, eq]
+        · simp [atEnd]
+    ⟨⟨after, before.indices.insert state before.states.size, lookup⟩,
+      ⟨before.states.size, by simp [after]⟩, by simp [after], by simp [after], by
+        intro i s h
+        have lt := (Array.getElem?_eq_some_iff.mp h).1
+        simpa [after, Array.getElem?_push, Nat.ne_of_lt lt] using h⟩
 
 structure Expansion (before : Table) (successors : List (Rat × State)) where
   table : Table
@@ -72,13 +72,13 @@ structure Expansion (before : Table) (successors : List (Rat × State)) where
     ∃ i : Fin table.states.size, table.states[i] = outcome.2
 
 def Table.insertMany (before : Table) : (successors : List (Rat × State)) → Expansion before successors
-  | [] => ⟨before, le_rfl, fun _ _ h => h, by simp⟩
-  | (p,s) :: rest =>
+  | [] => ⟨before, le_rfl, fun _ _ h ↦ h, by simp⟩
+  | (p, s) :: rest =>
     if positive : 0 < p then
       let inserted := before.insert s
       let tail := inserted.table.insertMany rest
       ⟨tail.table, inserted.size_le.trans tail.size_le,
-        fun i s h => tail.preserves i s (inserted.preserves i s h), by
+        fun i s h ↦ tail.preserves i s (inserted.preserves i s h), by
           intro outcome member hp
           rcases List.mem_cons.mp member with eq | member
           · subst outcome
@@ -99,8 +99,8 @@ structure Action (state : State) where
   successors : List (Rat × State)
   correct : match step state with
     | .error _ => False
-    | .ok (.returned reward) => kind = .returned reward ∧ successors = [(1,state)]
-    | .ok .rejected => kind = .rejected ∧ successors = [(1,state)]
+    | .ok (.returned reward) => kind = .returned reward ∧ successors = [(1, state)]
+    | .ok .rejected => kind = .rejected ∧ successors = [(1, state)]
     | .ok (.next _ outcomes) => kind = .transient ∧ successors = outcomes
   nonnegative : ∀ outcome ∈ successors, 0 ≤ outcome.1
   normalized : (successors.map Prod.fst).sum = 1
@@ -108,8 +108,8 @@ structure Action (state : State) where
 def readAction (state : State) : Except Failure (Action state) :=
   match h : step state with
   | .error failure => .error failure
-  | .ok (.returned reward) => .ok ⟨.returned reward, [(1,state)], by simp [h], by simp, by simp⟩
-  | .ok .rejected => .ok ⟨.rejected, [(1,state)], by simp [h], by simp, by simp⟩
+  | .ok (.returned reward) => .ok ⟨.returned reward, [(1, state)], by simp [h], by simp, by simp⟩
+  | .ok .rejected => .ok ⟨.rejected, [(1, state)], by simp [h], by simp, by simp⟩
   | .ok (.next _ outcomes) =>
     if nonnegative : ∀ outcome ∈ outcomes, 0 ≤ outcome.1 then
       if normalized : (outcomes.map Prod.fst).sum = 1 then
@@ -150,7 +150,7 @@ def Work.expand (before : Work) (pending : before.rows.size < before.table.state
     · obtain ⟨i, hi⟩ := before.closed row old outcome inRow positive
       have found := grown.preserves i outcome.2 (Array.getElem?_eq_some_iff.mpr ⟨i.isLt, hi⟩)
       obtain ⟨lt, eq⟩ := Array.getElem?_eq_some_iff.mp found
-      exact ⟨⟨i,lt⟩,eq⟩
+      exact ⟨⟨i, lt⟩, eq⟩
     · subst row
       exact grown.covered outcome inRow positive⟩
 

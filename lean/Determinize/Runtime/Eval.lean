@@ -54,14 +54,14 @@ private def draw (op : Op) (action : DistributionAction) (args : List Float) : E
   let s ← get
   match action with
   | .mean =>
-      let (value, _) ← (sample op action args |>.run s.eSeed).mapError EvalError.failure
-      return .number value
+    let (value, _) ← (sample op action args |>.run s.eSeed).mapError EvalError.failure
+    return .number value
   | .sample affinity =>
-      let seed := if affinity == .G then s.gSeed else s.eSeed
-      let (value, next) ← (sample op action args |>.run seed).mapError EvalError.failure
-      if affinity == .G then set {s with gSeed := next, draws := s.draws + 1}
-      else set {s with eSeed := next, draws := s.draws + 1}
-      return .number value
+    let seed := if affinity == .G then s.gSeed else s.eSeed
+    let (value, next) ← (sample op action args |>.run seed).mapError EvalError.failure
+    if affinity == .G then set {s with gSeed := next, draws := s.draws + 1}
+    else set {s with eSeed := next, draws := s.draws + 1}
+    return .number value
 
 private def numbers : Value → EvalM (List Float)
   | .nil => pure []
@@ -121,7 +121,7 @@ private partial def eval (env : List Value) (e : Expr Float) : EvalM Value := do
     let a ← number (← eval env a); let b ← number (← eval env b)
     let op := match e with
       | .uniform .. => Op.uniform | .gaussian .. => .gaussian | .beta .. => .beta | _ => .gamma
-    draw op k [a,b]
+    draw op k [a, b]
   | .discrete k p =>
     let probabilities ← numbers (← eval env p)
     draw (.discrete probabilities.length) k probabilities
@@ -134,7 +134,7 @@ private partial def eval (env : List Value) (e : Expr Float) : EvalM Value := do
 
 /-- Observation rejection is separate from invalid operations and exhausted fuel. -/
 def runOutcome (e : Core) (seed : UInt64 := 0) (fuel : Nat := 100000) : Except String Outcome :=
-  let expression := e.map (fun q => Float.ofInt q.num / Float.ofNat q.den) id
+  let expression := e.map (fun q ↦ Float.ofInt q.num / Float.ofNat q.den) id
   match (eval [] expression).run ⟨fuel, seed ^^^ 0x517cc1b727220a95, seed, 0⟩ with
   | .ok (value, state) => .ok (.returned value state)
   | .error .rejected => .ok .rejected

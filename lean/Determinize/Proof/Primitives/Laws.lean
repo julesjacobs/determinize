@@ -50,8 +50,8 @@ def parseParams (op : Op) (affine general : List ℝ) : Option (Params op) :=
   if ha : affine.length = affineArity op then
     if hg : general.length = generalArity op then
       some
-        (fun i => affine[i.1]'(ha.symm ▸ i.2),
-         fun i => general[i.1]'(hg.symm ▸ i.2))
+        (fun i ↦ affine[i.1]'(ha.symm ▸ i.2),
+         fun i ↦ general[i.1]'(hg.symm ▸ i.2))
     else none
   else none
 
@@ -79,34 +79,34 @@ def meanValue : (op : Op) → Params op → ℝ
 /-- Canonical primitive measure; an off-domain call has zero measure. -/
 def paperMeasure : (op : Op) → Params op → Measure ℝ
   | .uniform, params =>
-      uniformMeasure (params.1 0) (params.1 1)
+    uniformMeasure (params.1 0) (params.1 1)
   | .gaussian, params =>
-      let mean := params.1 0
-      let variance := params.2 0
-      if h : 0 ≤ variance then gaussianReal mean ⟨variance, h⟩ else 0
+    let mean := params.1 0
+    let variance := params.2 0
+    if h : 0 ≤ variance then gaussianReal mean ⟨variance, h⟩ else 0
   | .poisson, params =>
-      let rate := params.1 0
-      if h : 0 ≤ rate then
-        (poissonMeasure ⟨rate, h⟩).map (fun value : Nat => (value : ℝ))
-      else 0
+    let rate := params.1 0
+    if h : 0 ≤ rate then
+      (poissonMeasure ⟨rate, h⟩).map (fun value : Nat ↦ (value : ℝ))
+    else 0
   | .exponential, params =>
-      let rate := params.2 0
-      if 0 < rate then expMeasure rate else 0
+    let rate := params.2 0
+    if 0 < rate then expMeasure rate else 0
   | .beta, params =>
-      let alpha := params.2 0
-      let betaParam := params.2 1
-      if 0 < alpha ∧ 0 < betaParam then betaMeasure alpha betaParam else 0
+    let alpha := params.2 0
+    let betaParam := params.2 1
+    if 0 < alpha ∧ 0 < betaParam then betaMeasure alpha betaParam else 0
   | .gamma, params =>
-      let shape := params.1 0
-      let rate := params.2 0
-      if 0 < shape ∧ 0 < rate then gammaMeasure shape rate else 0
+    let shape := params.1 0
+    let rate := params.2 0
+    if 0 < shape ∧ 0 < rate then gammaMeasure shape rate else 0
 
   | .bernoulli, params => bernoulliFiber (.sample .G) (params.1 0)
   | .discrete n, params =>
-      if (∀ i, 0 ≤ params.1 i) ∧ ∑ i, params.1 i ≤ 1 then
-        (∑ i : Fin n, ENNReal.ofReal (params.1 i) • Measure.dirac ((i : ℕ) : ℝ)) +
-          ENNReal.ofReal (1 - ∑ i, params.1 i) • Measure.dirac (n : ℝ)
-      else 0
+    if (∀ i, 0 ≤ params.1 i) ∧ ∑ i, params.1 i ≤ 1 then
+      (∑ i : Fin n, ENNReal.ofReal (params.1 i) • Measure.dirac ((i : ℕ) : ℝ)) +
+        ENNReal.ofReal (1 - ∑ i, params.1 i) • Measure.dirac (n : ℝ)
+    else 0
 
 /-- The stochastic or mean fiber of a primitive at evaluated operand lists. -/
 def primitiveFiber (kind : DistributionAction) (op : Op) (affine general : List ℝ) : Measure ℝ := by
@@ -114,9 +114,9 @@ def primitiveFiber (kind : DistributionAction) (op : Op) (affine general : List 
   exact match parseParams op affine general with
     | none => 0
     | some params =>
-        match kind with
-        | .sample _ => paperMeasure op params
-        | .mean => if domain op params then Measure.dirac (meanValue op params) else 0
+      match kind with
+      | .sample _ => paperMeasure op params
+      | .mean => if domain op params then Measure.dirac (meanValue op params) else 0
 
 /-! The reviewer-facing fibers are the generic one at the primitive's operand lists. -/
 
@@ -182,9 +182,9 @@ def meanConstant : (op : Op) → (Fin (generalArity op) → ℝ) → ℝ
   | .exponential, general => 1 / general
       0
   | .beta, general =>
-      general 0 /
-        (general 0 +
-          general 1)
+    general 0 /
+      (general 0 +
+        general 1)
   | .gamma, _ => 0
   | .bernoulli, _ => 0
   | .discrete n, _ => (n : ℝ)
@@ -220,18 +220,18 @@ theorem measurableSet_domain (op : Op) :
   · change MeasurableSet {params : Params .exponential | 0 < params.2 0}
     apply measurableSet_lt <;> fun_prop
   · exact MeasurableSet.inter
-      ((show Measurable (fun params : Params .beta => params.2 0) by fun_prop)
+      ((show Measurable (fun params : Params .beta ↦ params.2 0) by fun_prop)
         measurableSet_Ioi)
-      ((show Measurable (fun params : Params .beta => params.2 1) by fun_prop)
+      ((show Measurable (fun params : Params .beta ↦ params.2 1) by fun_prop)
         measurableSet_Ioi)
   · exact MeasurableSet.inter
-      ((show Measurable (fun params : Params .gamma => params.1 0) by fun_prop)
+      ((show Measurable (fun params : Params .gamma ↦ params.1 0) by fun_prop)
         measurableSet_Ioi)
-      ((show Measurable (fun params : Params .gamma => params.2 0) by fun_prop)
+      ((show Measurable (fun params : Params .gamma ↦ params.2 0) by fun_prop)
         measurableSet_Ioi)
 
   · change MeasurableSet {params : Params .bernoulli | 0 ≤ params.1 0 ∧ params.1 0 ≤ 1}
-    have hp : Measurable (fun params : Params .bernoulli => params.1 0) := by fun_prop
+    have hp : Measurable (fun params : Params .bernoulli ↦ params.1 0) := by fun_prop
     exact (measurableSet_le measurable_const hp).inter
       (measurableSet_le hp measurable_const)
   · rename_i n
@@ -239,7 +239,7 @@ theorem measurableSet_domain (op : Op) :
       (∀ i, 0 ≤ params.1 i) ∧ ∑ i, params.1 i ≤ 1}
     have nonnegative : MeasurableSet {params : Params (.discrete n) | ∀ i, 0 ≤ params.1 i} := by
       rw [Set.ofPred_forall]
-      exact MeasurableSet.iInter fun i => measurableSet_le measurable_const (by fun_prop)
+      exact MeasurableSet.iInter fun i ↦ measurableSet_le measurable_const (by fun_prop)
     have bounded : MeasurableSet {params : Params (.discrete n) | ∑ i, params.1 i ≤ 1} :=
       measurableSet_le (by fun_prop) measurable_const
     exact nonnegative.inter bounded
@@ -252,7 +252,7 @@ structure PrimitiveLaws where
   kernel_zero_off_domain : ∀ op params, ¬ domain op params → kernel op params = 0
   mass_one : ∀ op params, domain op params → kernel op params Set.univ = 1
   integrable_id : ∀ op params, domain op params →
-    Integrable (fun value : ℝ => value) (kernel op params)
+    Integrable (fun value : ℝ ↦ value) (kernel op params)
   mean_law : ∀ op params, domain op params →
     (∫ value : ℝ, value ∂kernel op params) = meanValue op params
 

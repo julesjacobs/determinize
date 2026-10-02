@@ -17,7 +17,7 @@ theorem exact_succ_mean (depth : Nat) (expression : Expr) (op : Op) (value : ℝ
       (exactMeasure depth (continuation value)).map (prepend none) := by
   rw [exact_succ_sample _ _ _ _ (not_value_of_reduce_sample _ _ _ reduction) reduction,
     reduce_site reduction]
-  change (Measure.dirac value).bind (fun v =>
+  change (Measure.dirac value).bind (fun v ↦
     (exactMeasure depth (continuation v)).map (prepend none)) = _
   apply Measure.dirac_bind
   exact (Measure.measurable_map (prepend none)
@@ -40,7 +40,7 @@ theorem concrete_mean (expression : AffineExpr n) (typed : WellTyped [] expressi
     (environment : Env n) (valid : domain op (meanParams op affine general environment)) :
     reduce (expression.realize environment) =
       .sample (.mean, op) (Measure.dirac ((meanAffine op affine general).eval environment))
-        (fun value => (continuation (value, 0)).realize environment) := by
+        (fun value ↦ (continuation (value, 0)).realize environment) := by
   have actionTyped := symbolicReduce_wellTyped typed
   rw [actionEq] at actionTyped
   obtain ⟨ha, hg, _, _⟩ := SymbolicAction.wellTyped_mean_iff.mp actionTyped
@@ -53,7 +53,7 @@ theorem concrete_target_mean (expression : AffineExpr n) (typed : WellTyped [] e
     (environment : Env n) (valid : domain op (meanParams op affine general environment)) :
     reduce (expression.realize environment).determinize =
       .sample (.mean, op) (Measure.dirac ((meanAffine op affine general).eval environment))
-        (fun value => ((continuation (value, 0)).realize environment).determinize) := by
+        (fun value ↦ ((continuation (value, 0)).realize environment).determinize) := by
   have actionTyped := symbolicReduce_wellTyped typed
   rw [actionEq] at actionTyped
   obtain ⟨ha, hg, _, _⟩ := SymbolicAction.wellTyped_mean_iff.mp actionTyped
@@ -72,7 +72,7 @@ theorem actualTraceLaw_mean (depth : Nat) (history : Symbolic.SampleEnv primitiv
   have actionTyped := symbolicReduce_wellTyped typed
   rw [actionEq] at actionTyped
   rw [actualTraceLaw, actualTraceLaw, map_bind_fun (history.actualMeasure primitiveLaws)
-    (fun env => exactMeasure depth ((continuation (meanAffine op affine general)).realize env))
+    (fun env ↦ exactMeasure depth ((continuation (meanAffine op affine general)).realize env))
     ((exact_measurable depth).comp (continuation (meanAffine op affine general)).realize_measurable)
     (prepend none) (show Measurable (prepend none : Output → Output) from
       prepend_measurable.comp (measurable_const.prodMk measurable_id))]

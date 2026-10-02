@@ -6,7 +6,7 @@ open Spec.FiniteModel
 
 private def CanStop (model : Model) : Nat → Fin model.size → Prop
   | 0, i => model.kind i ≠ .transient
-  | n+1, i => ∃ j, 0 < model.transition i j ∧ CanStop model n j
+  | n + 1, i => ∃ j, 0 < model.transition i j ∧ CanStop model n j
 
 /-- Every finite model admits a closed divergence boundary and descending paths
 from the remaining transient states to a terminal boundary. -/
@@ -14,18 +14,18 @@ theorem boundary_paths_exist (model : Model) :
     ∃ dead : Fin model.size → Bool, ClosedDivergence model dead ∧
       ∃ paths : Paths (cut model dead), paths.Valid (cut model dead) := by
   classical
-  let reachable := fun i => ∃ n, CanStop model n i
-  let dead := fun i => decide (¬ reachable i)
-  let rank := fun i => if h : reachable i then Nat.find h else 0
+  let reachable := fun i ↦ ∃ n, CanStop model n i
+  let dead := fun i ↦ decide (¬ reachable i)
+  let rank := fun i ↦ if h : reachable i then Nat.find h else 0
   have terminal (i) (h : model.kind i ≠ .transient) : reachable i := ⟨0, h⟩
   have closed : ClosedDivergence model dead := by
     intro i hi
     have unreachable : ¬ reachable i := of_decide_eq_true hi
-    refine ⟨by_contra fun h => unreachable (terminal i h), ?_⟩
+    refine ⟨by_contra fun h ↦ unreachable (terminal i h), ?_⟩
     intro j positive
     apply decide_eq_true
     rintro ⟨n, hn⟩
-    exact unreachable ⟨n+1, j, positive, hn⟩
+    exact unreachable ⟨n + 1, j, positive, hn⟩
   have descend (i) (hi : (cut model dead).kind i = .transient) :
       ∃ j, 0 < model.transition i j ∧ rank j < rank i := by
     have alive : dead i = false := by
@@ -48,7 +48,7 @@ theorem boundary_paths_exist (model : Model) :
     simp only [rank, dif_pos reachable_i, dif_pos reachable_j]
     have minimal := Nat.find_min' reachable_j rest
     omega
-  let next := fun i => if h : (cut model dead).kind i = .transient then
+  let next := fun i ↦ if h : (cut model dead).kind i = .transient then
     Classical.choose (descend i h) else i
   refine ⟨dead, closed, ⟨rank, next⟩, ?_⟩
   intro i hi

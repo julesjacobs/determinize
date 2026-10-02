@@ -17,12 +17,12 @@ def Candidate.RowValid (c : Candidate) (i : Fin c.states.size) : Prop :=
   | .ok (.returned b) => (c.row i).kind = .returned b
   | .ok .rejected => (c.row i).kind = .rejected
   | .ok (.next _ outcomes) =>
-      (c.row i).kind = .transient ∧
-      (∀ o ∈ outcomes, 0 ≤ o.probability) ∧
-      ((c.row i).edges.map fun e =>
-        (e.probability, c.states[e.target]?.getD .rejected, e.reward)) =
-      ((outcomes.filter fun o => 0 < o.probability).map fun o =>
-        (o.probability, o.state, o.reward))
+    (c.row i).kind = .transient ∧
+    (∀ o ∈ outcomes, 0 ≤ o.probability) ∧
+    ((c.row i).edges.map fun e ↦
+      (e.probability, c.states[e.target]?.getD .rejected, e.reward)) =
+    ((outcomes.filter fun o ↦ 0 < o.probability).map fun o ↦
+      (o.probability, o.state, o.reward))
 
 instance (c : Candidate) (i : Fin c.states.size) : Decidable (c.RowValid i) := by
   unfold Candidate.RowValid
@@ -43,14 +43,14 @@ instance (c : Candidate) (source : Core) (subject : Subject) :
 abbrev Candidate.modelEdges (c : Candidate) {source : Core} {subject : Subject}
     (valid : c.ReplayValid source subject) (i : Fin c.states.size) :
     List (Spec.RewardModel.Edge c.states.size) :=
-  (c.row i).edges.attach.map fun ⟨e, he⟩ =>
+  (c.row i).edges.attach.map fun ⟨e, he⟩ ↦
     ⟨⟨e.target, ((valid.2.2.2.2.2 i).1 e he).1⟩, e.probability, e.reward⟩
 
 abbrev Candidate.toModel (c : Candidate) {source : Core} {subject : Subject}
     (valid : c.ReplayValid source subject) : Spec.RewardModel.Model where
   size := c.states.size
   initial := ⟨c.initial, valid.2.1⟩
-  kind := fun i => (c.row i).kind
+  kind := fun i ↦ (c.row i).kind
   edges := c.modelEdges valid
   nonnegative := by
     intro i e he

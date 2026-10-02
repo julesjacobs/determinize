@@ -37,7 +37,7 @@ variable {V : Type} [DecidableEq V]
 
 /-- The variables on the lower side of some constraint. -/
 def lowerVars (constraints : List (AffinityConstraint V)) : Finset V :=
-  (constraints.filterMap fun c => match c.1 with
+  (constraints.filterMap fun c ↦ match c.1 with
     | .var v => some v
     | .fixed _ => none).toFinset
 
@@ -48,7 +48,7 @@ def AffinityTerm.isGeneral (general : Finset V) : AffinityTerm V → Bool
 
 /-- The variables `v` with a constraint `v ≤ t` where `t` is G or a variable in `general`. -/
 def below (constraints : List (AffinityConstraint V)) (general : Finset V) : Finset V :=
-  (constraints.filterMap fun c => match c.1 with
+  (constraints.filterMap fun c ↦ match c.1 with
     | .var v => if c.2.isGeneral general then some v else none
     | .fixed _ => none).toFinset
 
@@ -77,7 +77,7 @@ decreasing_by
 `none` if that assignment, and hence every assignment, violates a constraint. -/
 def solveAffinities (constraints : List (AffinityConstraint V)) : Option (V → Affinity) :=
   let general := forcedGeneral constraints ∅
-  let ρ := fun v => if v ∈ general then Affinity.G else .E
-  if constraints.all fun c => affinityLE (c.1.eval ρ) (c.2.eval ρ) then some ρ else none
+  let ρ := fun v ↦ if v ∈ general then Affinity.G else .E
+  if constraints.all fun c ↦ affinityLE (c.1.eval ρ) (c.2.eval ρ) then some ρ else none
 
 end Determinize.Frontend

@@ -97,11 +97,11 @@ def mapVars {Literal Site : Type} (replace : Nat → Nat → Expr Literal Site) 
   | .gamma k l r => .gamma k (l.mapVars replace depth) (r.mapVars replace depth)
 
 abbrev shift {Literal Site : Type} (amount cutoff : Nat) : Expr Literal Site → Expr Literal Site :=
-  mapVars (fun cutoff index => .bvar (if cutoff ≤ index then index + amount else index)) cutoff
+  mapVars (fun cutoff index ↦ .bvar (if cutoff ≤ index then index + amount else index)) cutoff
 
 abbrev substAt {Literal Site : Type} (depth : Nat) (replacement : Expr Literal Site) :
     Expr Literal Site → Expr Literal Site :=
-  mapVars (fun depth index => if index = depth then replacement.shift depth 0
+  mapVars (fun depth index ↦ if index = depth then replacement.shift depth 0
     else .bvar (if depth < index then index - 1 else index)) depth
 
 def substHead {Literal Site : Type} (body replacement : Expr Literal Site) : Expr Literal Site :=
@@ -126,13 +126,13 @@ def determinize {Literal : Type} : Expr Literal → Expr Literal
   | .inl operand => .inl operand.determinize
   | .inr operand => .inr operand.determinize
   | .matchSum scrutinee left right =>
-      .matchSum scrutinee.determinize left.determinize right.determinize
+    .matchSum scrutinee.determinize left.determinize right.determinize
   | .nil => .nil
   | .cons head tail => .cons head.determinize tail.determinize
   | .matchList scrutinee nilCase consCase =>
-      .matchList scrutinee.determinize nilCase.determinize consCase.determinize
+    .matchList scrutinee.determinize nilCase.determinize consCase.determinize
   | .ite condition thenBranch elseBranch =>
-      .ite condition.determinize thenBranch.determinize elseBranch.determinize
+    .ite condition.determinize thenBranch.determinize elseBranch.determinize
   | .letE value body => .letE value.determinize body.determinize
   | .neg body => .neg body.determinize
   | .add left right => .add left.determinize right.determinize
@@ -140,18 +140,18 @@ def determinize {Literal : Type} : Expr Literal → Expr Literal
   | .div left right => .div left.determinize right.determinize
   | .lt left right => .lt left.determinize right.determinize
   | .uniform action lower upper =>
-      .uniform action.determinize lower.determinize upper.determinize
+    .uniform action.determinize lower.determinize upper.determinize
   | .gaussian action mean variance =>
-      .gaussian action.determinize mean.determinize variance.determinize
+    .gaussian action.determinize mean.determinize variance.determinize
   | .poisson action rate => .poisson action.determinize rate.determinize
   | .bernoulli action probability => .bernoulli action.determinize probability.determinize
   | .discrete action d => .discrete action.determinize d.determinize
   | .exponential action rate =>
-      .exponential action.determinize rate.determinize
+    .exponential action.determinize rate.determinize
   | .beta action left right =>
-      .beta action.determinize left.determinize right.determinize
+    .beta action.determinize left.determinize right.determinize
   | .gamma action shape rate =>
-      .gamma action.determinize shape.determinize rate.determinize
+    .gamma action.determinize shape.determinize rate.determinize
 
 /-- Apply `literal` to every literal and `site` to every site. -/
 def map {Literal Literal' Site Site' : Type} (literal : Literal → Literal') (site : Site → Site') :
@@ -170,13 +170,13 @@ def map {Literal Literal' Site Site' : Type} (literal : Literal → Literal') (s
   | .inl value => .inl (value.map literal site)
   | .inr value => .inr (value.map literal site)
   | .matchSum scrutinee left right =>
-      .matchSum (scrutinee.map literal site) (left.map literal site) (right.map literal site)
+    .matchSum (scrutinee.map literal site) (left.map literal site) (right.map literal site)
   | .nil => .nil
   | .cons head tail => .cons (head.map literal site) (tail.map literal site)
   | .matchList scrutinee nilCase consCase =>
-      .matchList (scrutinee.map literal site) (nilCase.map literal site) (consCase.map literal site)
+    .matchList (scrutinee.map literal site) (nilCase.map literal site) (consCase.map literal site)
   | .ite condition thenBranch elseBranch =>
-      .ite (condition.map literal site) (thenBranch.map literal site) (elseBranch.map literal site)
+    .ite (condition.map literal site) (thenBranch.map literal site) (elseBranch.map literal site)
   | .letE value body => .letE (value.map literal site) (body.map literal site)
   | .neg body => .neg (body.map literal site)
   | .add left right => .add (left.map literal site) (right.map literal site)
@@ -185,7 +185,7 @@ def map {Literal Literal' Site Site' : Type} (literal : Literal → Literal') (s
   | .lt left right => .lt (left.map literal site) (right.map literal site)
   | .uniform s lower upper => .uniform (site s) (lower.map literal site) (upper.map literal site)
   | .gaussian s mean variance =>
-      .gaussian (site s) (mean.map literal site) (variance.map literal site)
+    .gaussian (site s) (mean.map literal site) (variance.map literal site)
   | .poisson s rate => .poisson (site s) (rate.map literal site)
   | .discrete s probabilities => .discrete (site s) (probabilities.map literal site)
   | .bernoulli s probability => .bernoulli (site s) (probability.map literal site)

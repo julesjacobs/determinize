@@ -31,6 +31,6 @@ def Completion (input : Input) (program : Annotated) : Prop :=
 /-- `lower` and `upper` are the same program, except that at every site the affinity of `lower`
 is below that of `upper` in the order `G ≤ E`. -/
 def AffinityLE : Annotated → Annotated → Prop :=
-  Expr.Sitewise fun affinity affinity' => Ty.Sub (.float affinity) (.float affinity')
+  Expr.Sitewise fun affinity affinity' ↦ Ty.Sub (.float affinity) (.float affinity')
 
 end Determinize.Spec

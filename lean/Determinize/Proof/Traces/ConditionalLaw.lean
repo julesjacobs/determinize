@@ -23,7 +23,7 @@ open scoped ProbabilityTheory
 /-- The compact replay is a finite kernel: its mass is at most one. -/
 instance outputGivenTraceKernel_finite (program : Expr) :
     IsFiniteKernel (outputGivenTraceKernel program) :=
-  ⟨1, ENNReal.one_lt_top, fun trace => by
+  ⟨1, ENNReal.one_lt_top, fun trace ↦ by
     rw [outputGivenTraceKernel_apply]
     exact outputGivenTrace_mass_le_one program trace⟩
 
@@ -52,10 +52,10 @@ theorem traceLaw_determinize (affinity : Affinity) (program : Expr)
   let output := kernelMean (normalizedOutputGivenTrace program)
   obtain ⟨-, ⟨-, measurableOutput, -, targetMap, -⟩, -, -⟩ :=
     soundnessData affinity program typed safe
-  have pairMeasurable : Measurable fun trace : Trace => (trace, output trace) :=
+  have pairMeasurable : Measurable fun trace : Trace ↦ (trace, output trace) :=
     measurable_id.prodMk measurableOutput
   calc traceLaw program.determinize
-      = ((traceLaw program).map fun trace => (trace, output trace)).map Prod.fst := by
+      = ((traceLaw program).map fun trace ↦ (trace, output trace)).map Prod.fst := by
         rw [traceLaw, targetMap]
     _ = traceLaw program := by
         rw [Measure.map_map measurable_fst pairMeasurable]

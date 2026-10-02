@@ -10,9 +10,9 @@ theorem replay_matches (candidate : Candidate) {source : Spec.Paper.Core} {subje
     (candidate.toModel valid).Matches (subject.program source) := by
   have meaning : ∀ state, MachineReachable (initialState source subject) state → ∀ result,
       step state = .ok result → StepMeaning state result :=
-    fun state reachable result action => stepMeaning state
+    fun state reachable result action ↦ stepMeaning state
       (program_reachable_shape source subject state reachable) result action
-  have noFailure := fun state reachable failure => replay_reachable_no_failure candidate valid
+  have noFailure := fun state reachable failure ↦ replay_reachable_no_failure candidate valid
     (state := state) reachable failure
   have initialEqual : stateExpr (initialState source subject) = subject.program source := by
     simpa only [replay_initial candidate valid] using replay_initial_reification source subject candidate valid

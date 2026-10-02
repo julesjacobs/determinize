@@ -27,11 +27,11 @@ open Determinize.Frontend Spec Spec.Paper Ground
 
 /-- The shape equations of a draft. -/
 abbrev shapeEquations (d : Draft) : List (Shape × Shape) :=
-  d.relations.map fun x => (x.1.shape, x.2.shape)
+  d.relations.map fun x ↦ (x.1.shape, x.2.shape)
 
 /-- The atomic affinity constraints of a draft under the shapes `θ`. -/
 abbrev affinityConstraints (d : Draft) (θ : Nat → Shape) : List (AffinityConstraint AffinityVar) :=
-  d.relations.flatMap fun x => decompose (x.1.decorate θ) (x.2.decorate θ)
+  d.relations.flatMap fun x ↦ decompose (x.1.decorate θ) (x.2.decorate θ)
 
 theorem solveInput_ok {input : Input} {s : Solution} (h : solveInput input = .ok s) :
     ∃ n', (generate [] input).run 0 = .ok (s.draft, n') ∧
@@ -65,8 +65,8 @@ theorem infer_ok {input : Input} {program : Annotated} {ty : Ty} :
     Frontend.infer input = .ok (program, ty) ↔ ∃ s, solveInput input = .ok s ∧
       program = s.draft.program s.affinities ∧ ty = s.type s.draft.ty := by
   simp only [Frontend.infer, bind_eq_ok, pure_eq_ok, Prod.mk.injEq]
-  exact ⟨fun ⟨s, hs, h₁, h₂⟩ => ⟨s, hs, h₁.symm, h₂.symm⟩,
-    fun ⟨s, hs, h₁, h₂⟩ => ⟨s, hs, h₁.symm, h₂.symm⟩⟩
+  exact ⟨fun ⟨s, hs, h₁, h₂⟩ ↦ ⟨s, hs, h₁.symm, h₂.symm⟩,
+    fun ⟨s, hs, h₁, h₂⟩ ↦ ⟨s, hs, h₁.symm, h₂.symm⟩⟩
 
 /-! ## Soundness -/
 
@@ -77,17 +77,17 @@ theorem solveInput_typed {input : Input} {s : Solution} (h : solveInput input = 
       Typed [] (interpret (s.draft.program s.affinities))
         ((s.draft.ty.decorate s.shapes).instantiate v s.affinities) := by
   obtain ⟨n', hg, hu, ha⟩ := solveInput_ok h
-  let σ : Ground := ⟨fun α => ((UType.var α).decorate s.shapes).instantiate v s.affinities,
+  let σ : Ground := ⟨fun α ↦ ((UType.var α).decorate s.shapes).instantiate v s.affinities,
     s.affinities⟩
   have inst : ∀ u, σ.inst u = (u.decorate s.shapes).instantiate v s.affinities :=
-    fun u => (instantiate_decorate _ _ _ u).symm
+    fun u ↦ (instantiate_decorate _ _ _ u).symm
   have solves : σ.Solves s.draft.relations := by
     intro p mem
     rw [inst, inst]
     refine decompose_sound v s.affinities _ _ ?_ ?_
     · rw [shape_decorate, shape_decorate]
       exact unify_sound hu (p.1.shape, p.2.shape) (List.mem_map.2 ⟨p, mem, rfl⟩)
-    · exact fun c hc => solveAffinities_sound ha c (List.mem_flatMap.2 ⟨p, mem, hc⟩)
+    · exact fun c hc ↦ solveAffinities_sound ha c (List.mem_flatMap.2 ⟨p, mem, hc⟩)
   have := generate_sound σ input [] 0 s.draft n' hg solves
   rw [inst] at this
   exact this
@@ -99,10 +99,10 @@ theorem solveInput_complete {input : Input} {completion : Annotated} {T : Ty}
     (hm : input.matches completion) (ht : Typed [] (interpret completion) T) :
     ∃ s, solveInput input = .ok s ∧ AffinityLE completion (s.draft.program s.affinities) := by
   -- Lemma C: the completion solves the subtyping constraints.
-  obtain ⟨d, n', hg, -, σ₁, -, F⟩ := generate_complete input [] [] 0 ⟨fun _ => .unit, fun _ => .G⟩
-    completion T (fun _ _ => List.Forall₂.nil) hm ht
+  obtain ⟨d, n', hg, -, σ₁, -, F⟩ := generate_complete input [] [] 0 ⟨fun _ ↦ .unit, fun _ ↦ .G⟩
+    completion T (fun _ _ ↦ List.Forall₂.nil) hm ht
   -- Its shapes unify the shape equations.
-  let δ : Nat → Shape := fun α => shapeOf (σ₁.types α)
+  let δ : Nat → Shape := fun α ↦ shapeOf (σ₁.types α)
   obtain ⟨S₁, -, -⟩ := F σ₁ (Agree.refl _ _)
   have unifies : Unifies δ (shapeEquations d) := by
     intro e he
@@ -116,11 +116,11 @@ theorem solveInput_complete {input : Input} {completion : Annotated} {T : Ty}
     | .generated j => σ₁.affinities (.generated j)
     | .leaf α p => affinityAt (σ₁.types α) p
   let σ₂ : Ground := ⟨σ₁.types, ρ⟩
-  obtain ⟨S₂, -, program⟩ := F σ₂ fun _ _ => ⟨rfl, rfl⟩
+  obtain ⟨S₂, -, program⟩ := F σ₂ fun _ _ ↦ ⟨rfl, rfl⟩
   have satisfies : Satisfies ρ (affinityConstraints d θ) := by
     intro c hc'
     obtain ⟨p, mem, hc⟩ := List.mem_flatMap.1 hc'
-    have approx := approx_decorate (θ := θ) (types := σ₁.types) (ρ := ρ) factor fun _ _ => rfl
+    have approx := approx_decorate (θ := θ) (types := σ₁.types) (ρ := ρ) factor fun _ _ ↦ rfl
     exact decompose_complete (S₂ p mem) _ _ (approx p.1) (approx p.2) c hc
   obtain ⟨ρmax, ha⟩ := solveAffinities_complete satisfies
   refine ⟨_, solveInput_of hg hu ha, ?_⟩
@@ -133,9 +133,9 @@ theorem inferCorrect (input : Input) :
     match infer input with
     | .error _ => ¬ ∃ program : Annotated, Completion input program
     | .ok (program, ty) =>
-        input.matches program ∧
-        Typed [] (interpret program) ty ∧
-        ∀ completion : Annotated, Completion input completion → AffinityLE completion program := by
+      input.matches program ∧
+      Typed [] (interpret program) ty ∧
+      ∀ completion : Annotated, Completion input completion → AffinityLE completion program := by
   split
   · rintro ⟨completion, hm, T, ht⟩
     obtain ⟨s, hs, -⟩ := solveInput_complete hm ht
@@ -144,7 +144,7 @@ theorem inferCorrect (input : Input) :
     cases h
   · rename_i program ty h
     obtain ⟨s, hs, rfl, rfl⟩ := infer_ok.1 h
-    obtain ⟨hm, ht⟩ := solveInput_typed hs fun _ => .unit
+    obtain ⟨hm, ht⟩ := solveInput_typed hs fun _ ↦ .unit
     refine ⟨hm, ht, ?_⟩
     rintro completion ⟨hm', T, ht'⟩
     obtain ⟨s', hs', le⟩ := solveInput_complete hm' ht'

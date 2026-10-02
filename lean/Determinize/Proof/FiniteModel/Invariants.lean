@@ -10,7 +10,7 @@ def StateShape : State → Prop
 
 private theorem singleton_shape (state : State) (shape : StateShape state)
     (tag evidence : Evidence) (successors : List (Rat × State))
-    (action : (Except.ok (.next tag [(1,state)]) : Except Failure Step) = .ok (.next evidence successors))
+    (action : (Except.ok (.next tag [(1, state)]) : Except Failure Step) = .ok (.next evidence successors))
     (probability : Rat) (after : State) (member : (probability, after) ∈ successors) :
     StateShape after := by
   obtain ⟨rfl, rfl⟩ := Step.next.inj (Except.ok.inj action)
@@ -27,11 +27,11 @@ private theorem draw_shape (site : DistributionAction × Op) (arguments : List R
   cases law : finiteLaw site.2 site.1 arguments with
   | error failure => simp [law, bind, Except.bind] at action
   | ok outcomes =>
-      simp only [law, bind, Except.bind, pure, Except.pure] at action
-      obtain ⟨rfl, rfl⟩ := Step.next.inj (Except.ok.inj action)
-      obtain ⟨⟨p,x⟩, _, equal⟩ := List.mem_map.mp member
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj equal
-      exact shape
+    simp only [law, bind, Except.bind, pure, Except.pure] at action
+    obtain ⟨rfl, rfl⟩ := Step.next.inj (Except.ok.inj action)
+    obtain ⟨⟨p, x⟩, _, equal⟩ := List.mem_map.mp member
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj equal
+    exact shape
 
 private theorem binary_shape (op : Binary) (left right : Value) (stack : List Frame)
     (shape : ∀ frame ∈ stack, FrameShape frame) (result : State)
@@ -52,33 +52,33 @@ theorem step_shape (before : State) (shape : StateShape before)
   cases before with
   | rejected => simp [step] at action
   | eval expression environment stack =>
-      cases expression <;>
-        simp only [step, pure, bind, Except.bind, Except.pure, throw] at action
+    cases expression <;>
+      simp only [step, pure, bind, Except.bind, Except.pure, throw] at action
+    all_goals repeat' (split at action)
+    all_goals try first
+      | contradiction
+      | apply singleton_shape _ ?_ _ _ _ action _ _ member
+        clear action member
+        simp_all [StateShape, FrameShape, primitiveArity]
+  | deliver value stack =>
+    cases stack with
+    | nil => cases value <;> simp [step] at action
+    | cons frame stack =>
+      have tailShape : ∀ frame ∈ stack, FrameShape frame :=
+        fun f hf ↦ shape f (by simp [hf])
+      cases frame <;> cases value <;>
+        simp only [step, unary, pure, bind, Except.bind, Except.pure, throw] at action
       all_goals repeat' (split at action)
       all_goals try first
         | contradiction
         | apply singleton_shape _ ?_ _ _ _ action _ _ member
           clear action member
           simp_all [StateShape, FrameShape, primitiveArity]
-  | deliver value stack =>
-      cases stack with
-      | nil => cases value <;> simp [step] at action
-      | cons frame stack =>
-          have tailShape : ∀ frame ∈ stack, FrameShape frame :=
-            fun f hf => shape f (by simp [hf])
-          cases frame <;> cases value <;>
-            simp only [step, unary, pure, bind, Except.bind, Except.pure, throw] at action
-          all_goals repeat' (split at action)
-          all_goals try first
-            | contradiction
-            | apply singleton_shape _ ?_ _ _ _ action _ _ member
-              clear action member
-              simp_all [StateShape, FrameShape, primitiveArity]
-              all_goals omega
-          all_goals try exact draw_shape _ _ _ tailShape _ _ action _ _ member
-          all_goals try
-            apply singleton_shape _ ?_ _ _ _ action _ _ member
-            exact binary_shape _ _ _ _ tailShape _ (by assumption)
+          all_goals omega
+      all_goals try exact draw_shape _ _ _ tailShape _ _ action _ _ member
+      all_goals try
+        apply singleton_shape _ ?_ _ _ _ action _ _ member
+        exact binary_shape _ _ _ _ tailShape _ (by assumption)
 
 theorem reachable_shape (initial : State) (shape : StateShape initial) (state : State)
     (reachable : MachineReachable initial state) : StateShape state := by
@@ -101,9 +101,9 @@ theorem reachable_draw_correspondence (source : Core) (subject : Subject)
       (.deliver (.number x) (.draw site [] environment arguments :: stack)))
     (success : finiteLaw site.2 site.1 (arguments ++ [x]) = .ok outcomes) :
     reduce (stateExpr (.deliver (.number x) (.draw site [] environment arguments :: stack))) =
-      .sample site (outcomeMeasure outcomes) (fun y => stackExpr stack (.real y)) := by
+      .sample site (outcomeMeasure outcomes) (fun y ↦ stackExpr stack (.real y)) := by
   apply draw_correspondence site arguments x environment stack outcomes success
   have shape := program_reachable_shape source subject _ reachable
-  exact fun frame member => shape frame (by simp [member])
+  exact fun frame member ↦ shape frame (by simp [member])
 
 end Determinize.Proof.FiniteModel

@@ -29,31 +29,31 @@ theorem cumulativeKernel_apply (fuel : Nat) (expression : Expr) :
   symm
   induction fuel generalizing expression with
   | zero =>
-      simp only [cumulativeKernel, MeasurableActionFamily.nStepKernelPack_zero_kernel,
-        Kernel.comp_id, MeasurableActionFamily.exactOutputKernel_apply]
-      cases expression <;> try rfl
+    simp only [cumulativeKernel, MeasurableActionFamily.nStepKernelPack_zero_kernel,
+      Kernel.comp_id, MeasurableActionFamily.exactOutputKernel_apply]
+    cases expression <;> try rfl
   | succ fuel ih =>
-      rw [cumulativeKernel, MeasurableActionFamily.cumulativeKernel_succ,
-        Kernel.comp_apply, paperStepKernel.kernel_eq_stepMeasure]
-      change Determinize.Proof.Cumulative.outputMeasure (fuel + 1) expression =
-        (reduce expression).measure.bind (cumulativeKernel fuel)
-      cases reduction : reduce expression with
-      | next next =>
-          simp only [Determinize.Proof.Cumulative.outputMeasure, reduction,
-            Action.measure, Measure.dirac_bind (cumulativeKernel fuel).measurable]
-          exact ih next
-      | sample modeTag fiber continuation =>
-          simp only [Determinize.Proof.Cumulative.outputMeasure, reduction, Action.measure]
-          simp_rw [ih]
-          have measurable := paperStepKernel.sample_continuation_measurable
-            expression fiber continuation reduction
-          ext set hs
-          change (fiber.bind ((cumulativeKernel fuel) ∘ continuation)) set = _
-          rw [Measure.bind_apply hs ((cumulativeKernel fuel).measurable.comp measurable).aemeasurable,
-            Measure.bind_apply hs (cumulativeKernel fuel).aemeasurable,
-            lintegral_map ((cumulativeKernel fuel).measurable_coe hs) measurable]
-          rfl
-      | stuck => simp [Determinize.Proof.Cumulative.outputMeasure, reduction, Action.measure]
+    rw [cumulativeKernel, MeasurableActionFamily.cumulativeKernel_succ,
+      Kernel.comp_apply, paperStepKernel.kernel_eq_stepMeasure]
+    change Determinize.Proof.Cumulative.outputMeasure (fuel + 1) expression =
+      (reduce expression).measure.bind (cumulativeKernel fuel)
+    cases reduction : reduce expression with
+    | next next =>
+      simp only [Determinize.Proof.Cumulative.outputMeasure, reduction,
+        Action.measure, Measure.dirac_bind (cumulativeKernel fuel).measurable]
+      exact ih next
+    | sample modeTag fiber continuation =>
+      simp only [Determinize.Proof.Cumulative.outputMeasure, reduction, Action.measure]
+      simp_rw [ih]
+      have measurable := paperStepKernel.sample_continuation_measurable
+        expression fiber continuation reduction
+      ext set hs
+      change (fiber.bind ((cumulativeKernel fuel) ∘ continuation)) set = _
+      rw [Measure.bind_apply hs ((cumulativeKernel fuel).measurable.comp measurable).aemeasurable,
+        Measure.bind_apply hs (cumulativeKernel fuel).aemeasurable,
+        lintegral_map ((cumulativeKernel fuel).measurable_coe hs) measurable]
+      rfl
+    | stuck => simp [Determinize.Proof.Cumulative.outputMeasure, reduction, Action.measure]
 
 theorem cumulativeOutputMeasure_eq (fuel : Nat) (expression : Expr) :
     Determinize.Proof.Paper.cumulativeOutputMeasure paperStepKernel fuel expression =
@@ -68,36 +68,36 @@ theorem exactOutputMeasure_eq (depth : Nat) (expression : Expr) :
   symm
   induction depth generalizing expression with
   | zero =>
-      rw [MeasurableActionFamily.exactOutputKernel_apply]
-      cases expression <;> rfl
+    rw [MeasurableActionFamily.exactOutputKernel_apply]
+    cases expression <;> rfl
   | succ depth ih =>
-      by_cases value : expression.isValue = true
-      · simp [Determinize.Spec.Paper.outputMeasureAt, value,
-          MeasurableActionFamily.exactOutputKernel_succ_apply_of_value]
-      · rw [Determinize.Spec.Paper.outputMeasureAt, if_neg value,
-          MeasurableActionFamily.exactOutputKernel_succ_apply_of_not_value
-            paperStepKernel depth expression value,
-          Kernel.comp_apply, paperStepKernel.kernel_eq_stepMeasure, stepMeasure]
-        cases reduction : reduce expression with
-        | next next =>
-            simp only [Action.measure,
-              Measure.dirac_bind (MeasurableActionFamily.exactOutputKernel paperStepKernel depth).measurable]
-            exact ih next
-        | sample site fiber continuation =>
-            simp only [Action.measure]
-            simp_rw [ih]
-            have measurable := paperStepKernel.sample_continuation_measurable
-              expression fiber continuation reduction
-            ext set hs
-            change (fiber.bind ((MeasurableActionFamily.exactOutputKernel paperStepKernel depth) ∘ continuation)) set = _
-            rw [Measure.bind_apply hs
-                ((MeasurableActionFamily.exactOutputKernel paperStepKernel depth).measurable.comp measurable).aemeasurable,
-              Measure.bind_apply hs
-                (MeasurableActionFamily.exactOutputKernel paperStepKernel depth).measurable.aemeasurable,
-              lintegral_map
-                ((MeasurableActionFamily.exactOutputKernel paperStepKernel depth).measurable_coe hs) measurable]
-            rfl
-        | stuck => simp [Action.measure]
+    by_cases value : expression.isValue = true
+    · simp [Determinize.Spec.Paper.outputMeasureAt, value,
+        MeasurableActionFamily.exactOutputKernel_succ_apply_of_value]
+    · rw [Determinize.Spec.Paper.outputMeasureAt, if_neg value,
+        MeasurableActionFamily.exactOutputKernel_succ_apply_of_not_value
+          paperStepKernel depth expression value,
+        Kernel.comp_apply, paperStepKernel.kernel_eq_stepMeasure, stepMeasure]
+      cases reduction : reduce expression with
+      | next next =>
+        simp only [Action.measure,
+          Measure.dirac_bind (MeasurableActionFamily.exactOutputKernel paperStepKernel depth).measurable]
+        exact ih next
+      | sample site fiber continuation =>
+        simp only [Action.measure]
+        simp_rw [ih]
+        have measurable := paperStepKernel.sample_continuation_measurable
+          expression fiber continuation reduction
+        ext set hs
+        change (fiber.bind ((MeasurableActionFamily.exactOutputKernel paperStepKernel depth) ∘ continuation)) set = _
+        rw [Measure.bind_apply hs
+            ((MeasurableActionFamily.exactOutputKernel paperStepKernel depth).measurable.comp measurable).aemeasurable,
+          Measure.bind_apply hs
+            (MeasurableActionFamily.exactOutputKernel paperStepKernel depth).measurable.aemeasurable,
+          lintegral_map
+            ((MeasurableActionFamily.exactOutputKernel paperStepKernel depth).measurable_coe hs) measurable]
+        rfl
+      | stuck => simp [Action.measure]
 
 theorem cumulativeOutputMeasure_eq_sum (fuel : Nat) (expression : Expr) :
     Cumulative.outputMeasure fuel expression =
@@ -118,11 +118,11 @@ theorem bigStepMeasure_eq_iSup_cumulative (expression : Expr) :
       ⨆ fuel, Cumulative.outputMeasure fuel expression := by
   rw [← bigStepMeasure_eq]
   unfold Determinize.Proof.Paper.bigStepMeasure
-  exact iSup_congr fun fuel => cumulativeOutputMeasure_eq fuel expression
+  exact iSup_congr fun fuel ↦ cumulativeOutputMeasure_eq fuel expression
 
 theorem measurable_direct_cumulative (fuel : Nat) :
     Measurable (Determinize.Proof.Cumulative.outputMeasure fuel) := by
-  have equality : (fun expression => cumulativeKernel fuel expression) =
+  have equality : (fun expression ↦ cumulativeKernel fuel expression) =
       Determinize.Proof.Cumulative.outputMeasure fuel := funext (cumulativeKernel_apply fuel)
   rw [← equality]
   exact (cumulativeKernel fuel).measurable
@@ -130,12 +130,12 @@ theorem measurable_direct_cumulative (fuel : Nat) :
 theorem measurable_sample_cumulative (fuel : Nat) (expression : Expr)
     (site : DistributionAction × Op) (fiber : Measure ℝ) (continuation : ℝ → Expr)
     (action : reduce expression = .sample site fiber continuation) :
-    Measurable (fun x => Determinize.Proof.Cumulative.outputMeasure fuel (continuation x)) :=
+    Measurable (fun x ↦ Determinize.Proof.Cumulative.outputMeasure fuel (continuation x)) :=
   (measurable_direct_cumulative fuel).comp
     (paperStepKernel.sample_continuation_measurable expression fiber continuation action)
 
 theorem direct_cumulative_mono (expression : Expr) :
-    Monotone (fun fuel => Determinize.Proof.Cumulative.outputMeasure fuel expression) := by
+    Monotone (fun fuel ↦ Determinize.Proof.Cumulative.outputMeasure fuel expression) := by
   apply monotone_nat_of_le_succ
   intro fuel
   rw [← cumulativeOutputMeasure_eq, ← cumulativeOutputMeasure_eq,
@@ -150,9 +150,9 @@ theorem typed_determinize
   induction typed with
   | sub _ h ih => exact ih.sub h
   | _ =>
-      simp only [Expr.determinize, DistributionAction.determinize]
-      try cases ‹Affinity›
-      all_goals aesop (add unsafe constructors Determinize.Spec.Paper.Typed)
+    simp only [Expr.determinize, DistributionAction.determinize]
+    try cases ‹Affinity›
+    all_goals aesop (add unsafe constructors Determinize.Spec.Paper.Typed)
 
 /-- Typing preservation's companion for validity: the determinization of a well-typed source that
 does not get stuck does not get stuck either. -/
