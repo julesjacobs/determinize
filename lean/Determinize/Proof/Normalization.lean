@@ -26,8 +26,15 @@ local instance (program : Expr) : IsFiniteMeasure (Spec.Paper.bigStepMeasure pro
 
 namespace Paper
 
-theorem returnedExpectationSoundness : Spec.returnedExpectationThm := by
-  intro program typed safe positive integrable
+theorem returnedExpectationSoundness (program : Expr) (typed : Typed [] program (.float .E))
+    (safe : DomainSafe program) (positive : Spec.Paper.bigStepMeasure program Set.univ ≠ 0)
+    (integrable : Integrable id (Spec.Paper.bigStepMeasure program)) :
+    Spec.Paper.bigStepMeasure program.determinize Set.univ ≠ 0 ∧
+      IsProbabilityMeasure (returnedLaw program) ∧
+      IsProbabilityMeasure (returnedLaw program.determinize) ∧
+      Integrable id (returnedLaw program) ∧
+      Integrable id (returnedLaw program.determinize) ∧
+      (∫ x, x ∂returnedLaw program.determinize) = ∫ x, x ∂returnedLaw program := by
   have mass := outputMassSoundness program typed safe
   have targetPositive : Spec.Paper.bigStepMeasure program.determinize Set.univ ≠ 0 := by
     rwa [mass]
@@ -38,8 +45,12 @@ theorem returnedExpectationSoundness : Spec.returnedExpectationThm := by
     targetIntegrable.smul_measure (ENNReal.inv_ne_top.mpr targetPositive), ?_⟩
   simp only [returnedLaw, integral_smul_measure, mass, ← mean]
 
-theorem conditionalVarianceSoundness : Spec.conditionalVarianceThm := by
-  intro program typed safe positive moment
+theorem conditionalVarianceSoundness (program : Expr) (typed : Typed [] program (.float .E))
+    (safe : DomainSafe program) (positive : Spec.Paper.bigStepMeasure program Set.univ ≠ 0)
+    (moment : MemLp id 2 (Spec.Paper.bigStepMeasure program)) :
+    Spec.Paper.bigStepMeasure program.determinize Set.univ ≠ 0 ∧
+      MemLp id 2 (returnedLaw program.determinize) ∧
+      variance id (returnedLaw program.determinize) ≤ variance id (returnedLaw program) := by
   have mass := outputMassSoundness program typed safe
   have targetPositive : Spec.Paper.bigStepMeasure program.determinize Set.univ ≠ 0 := by
     rwa [mass]
@@ -51,8 +62,16 @@ theorem conditionalVarianceSoundness : Spec.conditionalVarianceThm := by
     normalized_variance _ positive moment, mass, ← mean]
   exact sub_le_sub_right (div_le_div_of_nonneg_right second ENNReal.toReal_nonneg) _
 
-theorem conditionalExtendedExpectationSoundness : Spec.conditionalExtendedExpectationThm := by
-  intro program typed safe positive defined
+theorem conditionalExtendedExpectationSoundness (program : Expr)
+    (typed : Typed [] program (.float .E)) (safe : DomainSafe program)
+    (positive : Spec.Paper.bigStepMeasure program Set.univ ≠ 0)
+    (defined : HasExpectation (Spec.Paper.bigStepMeasure program)) :
+    Spec.Paper.bigStepMeasure program.determinize Set.univ ≠ 0 ∧
+      HasExpectation (Spec.Paper.bigStepMeasure program.determinize) ∧
+      ((Spec.Paper.bigStepMeasure program.determinize Set.univ).toReal⁻¹ : EReal) *
+          extendedExpectation (Spec.Paper.bigStepMeasure program.determinize) =
+        ((Spec.Paper.bigStepMeasure program Set.univ).toReal⁻¹ : EReal) *
+          extendedExpectation (Spec.Paper.bigStepMeasure program) := by
   have mass := outputMassSoundness program typed safe
   obtain ⟨targetDefined, expectation⟩ := extendedExpectationSoundness program typed safe defined
   exact ⟨by rwa [mass], targetDefined, by rw [mass, ← expectation]⟩
@@ -61,8 +80,16 @@ end Paper
 
 namespace Traces
 
-theorem conditionalVarianceSoundness : Spec.Traces.conditionalVarianceThm := by
-  intro program typed safe positive moment
+theorem conditionalVarianceSoundness (program : Expr) (typed : Typed [] program (.float .E))
+    (safe : DomainSafe program) (positive : Spec.Paper.bigStepMeasure program Set.univ ≠ 0)
+    (moment : MemLp id 2 (Spec.Paper.bigStepMeasure program)) :
+    Integrable
+        (fun trace => variance id ((Spec.Traces.traceAndOutputLaw program).condKernel trace))
+        ((Spec.Paper.bigStepMeasure program Set.univ)⁻¹ • Spec.Traces.traceLaw program) ∧
+      variance id (returnedLaw program) =
+        variance id (returnedLaw program.determinize) +
+          ∫ trace, variance id ((Spec.Traces.traceAndOutputLaw program).condKernel trace)
+            ∂((Spec.Paper.bigStepMeasure program Set.univ)⁻¹ • Spec.Traces.traceLaw program) := by
   have mass := Paper.outputMassSoundness program typed safe
   have targetPositive : Spec.Paper.bigStepMeasure program.determinize Set.univ ≠ 0 := by rwa [mass]
   obtain ⟨targetMoment, -, -⟩ := Paper.varianceSoundness program typed safe moment

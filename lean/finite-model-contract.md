@@ -20,7 +20,7 @@ accessors return `none` at mass zero.
 
 `Termination.lean` defines rejection probability by marking rejected states as
 returned and discarding successful returns. Divergence probability is the infimum
-of finite-depth survival probabilities. `massBalanceThm` states that return,
+of finite-depth survival probabilities. `Theorems.finiteMassBalance` states that return,
 rejection, and divergence probabilities sum to one. `TerminationStatistics.Matches`
 relates the three reported rationals to these probabilities. This distinction is
 for the finite model: the core paper semantics counts rejection among executions

@@ -6,7 +6,7 @@ import Determinize.Proof.Frontend.Unify
 /-!
 # Soundness, optimality, and completeness of affinity inference
 
-The statement of `Spec/Inference.lean`, assembled from the lemmas of the other files in
+The proof of `Theorems.inferenceCorrectness`, assembled from the lemmas of the other files in
 `Proof/Frontend/`:
 
 * `solveInput_typed` (soundness): the most general shapes and the greatest solution of the
@@ -129,8 +129,13 @@ theorem solveInput_complete {input : Input} {completion : Annotated} {T : Ty}
 
 /-! ## The statement -/
 
-theorem inferCorrect : inferCorrectThm := by
-  intro input
+theorem inferCorrect (input : Input) :
+    match infer input with
+    | .error _ => ¬ ∃ program : Annotated, Completion input program
+    | .ok (program, ty) =>
+        input.matches program ∧
+        Typed [] (interpret program) ty ∧
+        ∀ completion : Annotated, Completion input completion → AffinityLE completion program := by
   split
   · rintro ⟨completion, hm, T, ht⟩
     obtain ⟨s, hs, -⟩ := solveInput_complete hm ht

@@ -70,9 +70,12 @@ theorem traceAndOutputLaw_mass_le_one (program : Expr) :
     traceAndOutputLawAt_partial_mass_le_one bound program
 
 /-- The joint law of trace and output is a finite measure, as Mathlib's disintegration
-`Measure.condKernel` requires of it (`Traces/Main.lean`). -/
+`Measure.condKernel` requires of it (`Theorems.lean`). -/
 instance isFiniteMeasure_traceAndOutputLaw (program : Expr) :
     IsFiniteMeasure (traceAndOutputLaw program) :=
   ⟨(traceAndOutputLaw_mass_le_one program).trans_lt ENNReal.one_lt_top⟩
+
+instance isFiniteMeasure_traceLaw (program : Expr) : IsFiniteMeasure (traceLaw program) :=
+  inferInstanceAs (IsFiniteMeasure ((traceAndOutputLaw program).map Prod.fst))
 
 end Determinize.Proof.Traces

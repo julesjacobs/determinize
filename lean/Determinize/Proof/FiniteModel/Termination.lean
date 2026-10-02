@@ -42,8 +42,9 @@ theorem within_mass_balance (model : Model) (n : Nat) (state : Fin model.size) :
       have total : ∑ next, (model.transition state next : ℝ) = 1 := by exact_mod_cast model.normalized state
       simp [total]
 
-theorem massBalance : Spec.FiniteModel.massBalanceThm := by
-  intro model
+theorem massBalance (model : Model) :
+    model.outputMeasure Set.univ + model.rejectionProbability + model.divergenceProbability =
+      1 := by
   have complements (n : Nat) :
       model.outputWithin n model.initial Set.univ + model.rejectionModel.outputWithin n model.initial Set.univ =
         1 - ENNReal.ofReal (model.survivalWithin n model.initial : ℝ) :=

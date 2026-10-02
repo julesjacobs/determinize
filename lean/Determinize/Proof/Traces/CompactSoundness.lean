@@ -1,5 +1,6 @@
 import Determinize.Proof.Traces.CompactFiberSoundness
 import Determinize.Proof.Traces.Factorization
+import Determinize.Proof.Traces.Mass
 
 /-!
 # Compact trace soundness
@@ -80,8 +81,8 @@ theorem joint_eq_detailed (e : Expr) :
   rw [traceAndOutputLaw, StepTraces.jointMeasure, Measure.map_sum eraseOutput_measurable.aemeasurable]
   simp_rw [exact_eq_detailed]
 
-theorem correspondence : Determinize.Spec.Traces.correspondenceThm := by
-  intro e
+theorem correspondence (e : Expr) :
+    (traceAndOutputLaw e).map Prod.snd = Determinize.Spec.Paper.bigStepMeasure e := by
   rw [joint_eq_detailed, Measure.map_map measurable_snd eraseOutput_measurable]
   exact StepTraces.correspondence e
 

@@ -1,4 +1,5 @@
 import Determinize.Spec.Inference
+import Determinize.Frontend.Infer
 import Determinize.Proof.Semantics.Subtyping
 
 /-!

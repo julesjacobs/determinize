@@ -1,5 +1,5 @@
-import Determinize.Spec.Main
-import Determinize.Spec.Traces.Main
+import Determinize.Spec.Expectation
+import Determinize.Spec.Traces.Semantics
 
 /-! These checks use only the public definitions, before expression measurability is available. -/
 

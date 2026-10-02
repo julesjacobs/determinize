@@ -1,5 +1,5 @@
 import Determinize.Proof.Symbolic.TraceGeneration
-import Determinize.Spec.Traces.Main
+import Determinize.Spec.Traces.Semantics
 
 /-!
 # Compact traces

@@ -1,10 +1,10 @@
 import Determinize.Proof.Traces.CompactSoundness
-import Determinize.Spec.Main
+import Determinize.Spec.Expectation
 
 /-!
 # The expectation theorem
 
-`Spec.mainThm` (exported as `Theorems.expectationPreservation`) follows from trace
+`Theorems.expectationPreservation` follows from trace
 soundness. Under a `TraceFactorization`, the source output law is the mixture of the fibers
 over the trace law (`TraceFactorization.source_law`) and the target output law is the
 pushforward of the trace law along the fiber means (`TraceFactorization.target_law`), so
@@ -70,10 +70,16 @@ theorem MeanOnTraces.finite_expectation {source target : Expr} (sound : MeanOnTr
 end Determinize.Proof.Traces
 
 namespace Determinize.Proof.Paper
+open MeasureTheory Determinize.Spec.Paper
 
 /-- The public expectation theorem follows from operational trace soundness. -/
-theorem finiteExpectationSoundness : Determinize.Spec.mainThm := by
-  intro program typed sourceSafe sourceIntegrable
+theorem finiteExpectationSoundness (program : Expr) (typed : Typed [] program (.float .E))
+    (sourceSafe : DomainSafe program)
+    (sourceIntegrable : Integrable id (Spec.Paper.bigStepMeasure program)) :
+    DomainSafe program.determinize ∧
+      Integrable id (Spec.Paper.bigStepMeasure program.determinize) ∧
+      (∫ value : ℝ, value ∂Spec.Paper.bigStepMeasure program) =
+        ∫ value : ℝ, value ∂Spec.Paper.bigStepMeasure program.determinize := by
   rcases Determinize.Proof.Traces.meanOnTraces .E program typed
     sourceSafe with ⟨targetSafe, traces⟩
   rcases traces.finite_expectation sourceIntegrable with ⟨targetIntegrable, expectation⟩

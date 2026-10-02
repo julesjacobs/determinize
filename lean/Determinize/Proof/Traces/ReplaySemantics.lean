@@ -1,4 +1,4 @@
-import Determinize.Spec.Traces.Main
+import Determinize.Spec.Traces.Semantics
 
 namespace Determinize.Proof.Traces
 

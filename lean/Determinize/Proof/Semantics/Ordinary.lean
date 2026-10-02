@@ -1,4 +1,4 @@
-import Determinize.Spec.Main
+import Determinize.Spec.Expectation
 import Determinize.Proof.Semantics.Cumulative
 import Determinize.Proof.Primitives.Kernels
 import Determinize.Proof.Symbolic.Soundness
