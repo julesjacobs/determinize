@@ -10,7 +10,7 @@ of their free sample sites; they are compared site by site in the order `G ≤ E
 `Ty.Sub.general`. The greatest completion has the most E sites, which determinization replaces
 by the most means.
 
-`Theorems.inferenceCorrectness` states that `infer` fails only on inputs without a completion, and
+`Theorems.inference_correctness` states that `infer` fails only on inputs without a completion, and
 otherwise returns a completion, typed at the returned type, that lies above every completion: the
 greatest completion.
 
@@ -26,7 +26,7 @@ open Paper
 The type is existential: a completion counts even when it is typed only at a type other than
 the one `infer` returns. -/
 def Completion (input : Input) (program : Annotated) : Prop :=
-  input.matches program ∧ ∃ ty, Typed [] (interpret program) ty
+  input.Matches program ∧ ∃ ty, Typed [] (interpret program) ty
 
 /-- `lower` and `upper` are the same program, except that at every site the affinity of `lower`
 is below that of `upper` in the order `G ≤ E`. -/

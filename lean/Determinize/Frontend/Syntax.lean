@@ -5,7 +5,7 @@ import Determinize.Spec.Frontend
 
 `Surface` is what the parser produces, with names and surface-only constructs; `elaborate`
 resolves it to an `Input`. The rest of the file lists the sites of a program and decides
-`Expr.Sitewise`, so that `Input.matches` can be evaluated.
+`Expr.Sitewise`, so that `Input.Matches` can be evaluated.
 -/
 
 namespace Determinize.Frontend
@@ -97,7 +97,7 @@ end Determinize.Spec.Paper.Expr
 
 namespace Determinize.Spec.Paper
 
-instance (input : Input) (program : Annotated) : Decidable (input.matches program) :=
+instance (input : Input) (program : Annotated) : Decidable (input.Matches program) :=
   inferInstanceAs (Decidable (Expr.Sitewise _ input program))
 
 end Determinize.Spec.Paper

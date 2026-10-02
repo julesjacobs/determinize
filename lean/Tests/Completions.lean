@@ -54,7 +54,7 @@ example : ¬ ∃ program, Completion comparison program := by
   -- Alignment fixes the head of `program` and the affinity of its sample site.
   obtain ⟨lower, upper, right, rfl⟩ :
       ∃ lower upper right, program = .lt (.uniform .E lower upper) right := by
-    cases program <;> simp only [comparison, Input.matches, Expr.Sitewise] at aligned
+    cases program <;> simp only [comparison, Input.Matches, Expr.Sitewise] at aligned
     rename_i left right
     obtain ⟨aligned, -⟩ := aligned
     cases left <;> simp [Expr.Sitewise] at aligned

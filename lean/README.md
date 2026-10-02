@@ -1,12 +1,12 @@
 Review these entry points and the definitions they import:
 
-- `Determinize/Theorems.lean` states every theorem in full and proves it by one term from `Proof`. The paper's theorems come first, under the paper's names and with the paper's hypotheses and conclusions: `inferenceCorrectness`, `tracePreservation`, `tracewiseSoundness`, `outputMassPreservation`, `expectationPreservation`, `varianceNonIncrease`, `convexFunctionInequality`, `probabilityPreservation` and `traceVarianceDecomposition`. Expectation and variance are those of the output conditioned on returning. `tracewiseSoundness` and `traceVarianceDecomposition` use Mathlib's `Measure.condKernel`. The results the paper does not state follow: `returnOrDiverge` at either affinity, `finiteExpectationPreservation`, `conditionalExpectationPreservation` (equal expectations conditioned on acceptance, the statement behind `observe`), and the versions for the unnormalized output laws, `unnormalizedExpectationPreservation` (finite expectations), `unnormalizedExtendedExpectationPreservation` (expectations in the extended reals, infinite values included), `unnormalizedVarianceNonIncrease` (non-increasing second moment and variance) and `unnormalizedTraceVarianceDecomposition` (the law of total variance along traces). The file's last command fails the build unless each theorem depends only on `propext`, `Classical.choice`, and `Quot.sound`. It also fails if a theorem's statement relies on a declaration from a `Proof` module that is not a proof, following the statements through every definition they use.
+- `Determinize/Theorems.lean` states every theorem in full and proves it by one term from `Proof`. The paper's theorems come first, under the paper's names and with the paper's hypotheses and conclusions: `inference_correctness`, `trace_preservation`, `tracewise_soundness`, `output_mass_preservation`, `expectation_preservation`, `variance_non_increase`, `convex_function_inequality`, `probability_preservation` and `trace_variance_decomposition`. Expectation and variance are those of the output conditioned on returning. `tracewise_soundness` and `trace_variance_decomposition` use Mathlib's `Measure.condKernel`. The results the paper does not state follow: `return_or_diverge` at either affinity, `finite_expectation_preservation`, `conditional_expectation_preservation` (equal expectations conditioned on acceptance, the statement behind `observe`), and the versions for the unnormalized output laws, `unnormalized_expectation_preservation` (finite expectations), `unnormalized_extended_expectation_preservation` (expectations in the extended reals, infinite values included), `unnormalized_variance_non_increase` (non-increasing second moment and variance) and `unnormalized_trace_variance_decomposition` (the law of total variance along traces). The file's last command fails the build unless each theorem depends only on `propext`, `Classical.choice`, and `Quot.sound`. It also fails if a theorem's statement relies on a declaration from a `Proof` module that is not a proof, following the statements through every definition they use.
 - `Determinize/Spec/` contains the definitions the theorems are about: ordinary syntax, typing, primitive distributions and means, determinization, and semantics. `Spec/Expectation.lean` defines expectations in the extended reals (`HasExpectation`, `extendedExpectation`), the return probability (`returnProbability`), the output law conditioned on returning (`returnedLaw`), and the expectation and variance conditioned on returning (`returnedExpectation`, `returnedVariance`). `Spec/Traces/Semantics.lean` defines the operational traces, the joint law `traceAndOutputLaw` of a program's trace and output, and its trace marginal `traceLaw`; operational replay lives in `Proof/Traces/ReplaySemantics.lean`.
-- `Determinize/Spec/Inference.lean` defines what affinity inference is measured against. `Frontend.infer` fills the omitted sample affinities of a resolved program `input : Input`. A *completion* of `input` fills exactly those affinities (`Input.matches`) and is closed and typed at some type; `AffinityLE` compares programs site by site in the order G ≤ E. `Theorems.inferenceCorrectness`: if `infer` fails, no completion exists; if it succeeds, its program is a completion, typed at the returned type, and every completion lies below it, so it is the greatest completion. `Theorems.lean` imports `Frontend/Infer.lean` because `infer` is the subject of that statement; its body need not be read. `Spec/Inference.lean` reuses the program types and `Input.matches` from `Spec/Frontend.lean`: `Input` and `Annotated` are `Expr` with rational literals, whose sites carry a requested affinity or `none` (a placeholder), respectively an affinity. `Input.matches` and `AffinityLE` are both `Expr.Sitewise`, which relates two programs with the same constructors, literals and indices site by site. An annotated program is coerced to a `Core` program (`Annotated.toCore`) where `interpret` expects one.
+- `Determinize/Spec/Inference.lean` defines what affinity inference is measured against. `Frontend.infer` fills the omitted sample affinities of a resolved program `input : Input`. A *completion* of `input` fills exactly those affinities (`Input.Matches`) and is closed and typed at some type; `AffinityLE` compares programs site by site in the order G ≤ E. `Theorems.inference_correctness`: if `infer` fails, no completion exists; if it succeeds, its program is a completion, typed at the returned type, and every completion lies below it, so it is the greatest completion. `Theorems.lean` imports `Frontend/Infer.lean` because `infer` is the subject of that statement; its body need not be read. `Spec/Inference.lean` reuses the program types and `Input.Matches` from `Spec/Frontend.lean`: `Input` and `Annotated` are `Expr` with rational literals, whose sites carry a requested affinity or `none` (a placeholder), respectively an affinity. `Input.Matches` and `AffinityLE` are both `Expr.Sitewise`, which relates two programs with the same constructors, literals and indices site by site. An annotated program is coerced to a `Core` program (`Annotated.toCore`) where `interpret` expects one.
 
-For normalized output laws, `finiteExpectationPreservation` states positive target return probability, probability-law and integrability facts for both `returnedLaw`s, and equality of their finite means. `expectationPreservation`, `varianceNonIncrease`, and `traceVarianceDecomposition` cover extended means and normalized variance results.
+For normalized output laws, `finite_expectation_preservation` states positive target return probability, probability-law and integrability facts for both `returnedLaw`s, and equality of their finite means. `expectation_preservation`, `variance_non_increase`, and `trace_variance_decomposition` cover extended means and normalized variance results.
 
-For the executable backend, also review `Spec/Frontend.lean` (the rational core `Core`, with sample and mean sites, and its embedding `interpret` into real-literal expressions), `Spec/FiniteModel/Model.lean`, `Spec/FiniteModel/Statistics.lean`, `Spec/RewardModel/Model.lean`, and `Spec/RewardModel/Results.lean`. The general `MomentCertificate` and reward `Solution` routes handle closed divergent regions; the older absorption certificate is a sufficient special case. `finiteRewardIntegrability` derives finite moments for every finite additive model without user-supplied integrability bounds. Applying determinization to infer source expectations still requires the source hypotheses; finite target exploration does not establish source integrability.
+For the executable backend, also review `Spec/Frontend.lean` (the rational core `Core`, with sample and mean sites, and its embedding `interpret` into real-literal expressions), `Spec/FiniteModel/Model.lean`, `Spec/FiniteModel/Statistics.lean`, `Spec/RewardModel/Model.lean`, and `Spec/RewardModel/Results.lean`. The general `MomentCertificate` and reward `Solution` routes handle closed divergent regions; the older absorption certificate is a sufficient special case. `finite_reward_integrability` derives finite moments for every finite additive model without user-supplied integrability bounds. Applying determinization to infer source expectations still requires the source hypotheses; finite target exploration does not establish source integrability.
 
 Run `lake build --wfail` from this directory; the build is warning-free and contains no `sorry`, and it checks the public theorems' axioms. With Lean's kernel and these standard axioms trusted, reviewers can omit the proof bodies in `Proof`. `Theorems.lean` and `Spec` are the specification. A theorem cannot be stated in `Theorems.lean` without being proved, so no separate check that every statement has a proof is needed. No `Spec` file imports a `Proof` module or the front end. `Theorems.lean` imports `Proof`, but its statements may use it only for proofs: Lean treats any two proofs of a proposition as equal, so they cannot change what a statement means, and the build fails if a statement relies on anything else declared in `Proof`. The one proof the statements themselves use is finiteness evidence from `Proof/Traces/Mass.lean`: Mathlib defines `condKernel` only for finite measures, and the joint law of trace and output is one. The check sees what the statements use, not how an import changes the way `Theorems.lean` elaborates: a coercion, a notation or a changed instance priority from `Proof` could do that without leaving anything from `Proof` in a statement. `Theorems.lean` also imports the front end: `Frontend/Infer.lean`, and through it `Frontend/Syntax.lean`, the shape unifier `Frontend/Unify.lean` and the affinity solver `Frontend/Affinity.lean`.
 
@@ -20,7 +20,7 @@ python3 -m http.server -d .lake/build/doc
 
 The first build also documents Lean and the imported part of Mathlib, which takes about two CPU-hours. `docbuild` pins doc-gen4 and shares `.lake/packages` with this directory. After changing `lean-toolchain` or a dependency, set doc-gen4's `rev` in `docbuild/lakefile.toml` to the new Lean version and run `MATHLIB_NO_CACHE_ON_UPDATE=1 lake update` in `docbuild`; CI fails while the two directories pin different revisions.
 
-The typed determinization theorems assume `DomainSafe`: every reached operation has valid arguments almost surely at every finite execution depth. For typed programs, this requires valid distribution parameters and nonzero divisors. Rejection and divergence remain possible. `returnOrDiverge` proves that returned mass plus divergence probability is one for domain-safe programs of real type. Divergence is defined as the infimum of finite-depth running probabilities and includes rejection. `Proof.Paper.domainSafe_iff_return_or_diverge` proves the converse under real typing, so the mass-balance equation characterizes domain safety. `tracePreservation`, `probabilityPreservation` and `unnormalizedExpectationPreservation` also establish target domain safety. Finite replay certificates use the same predicate, defined in `Spec/Semantics.lean`.
+The typed determinization theorems assume `DomainSafe`: every reached operation has valid arguments almost surely at every finite execution depth. For typed programs, this requires valid distribution parameters and nonzero divisors. Rejection and divergence remain possible. `return_or_diverge` proves that returned mass plus divergence probability is one for domain-safe programs of real type. Divergence is defined as the infimum of finite-depth running probabilities and includes rejection. `Proof.Paper.domainSafe_iff_return_or_diverge` proves the converse under real typing, so the mass-balance equation characterizes domain safety. `trace_preservation`, `probability_preservation` and `unnormalized_expectation_preservation` also establish target domain safety. Finite replay certificates use the same predicate, defined in `Spec/Semantics.lean`.
 
 Source expressions need not be in ANF. Each primitive distribution is its own constructor with the paper's operands (`uniform action lower upper`, `gaussian action mean variance`, and so on). `DistributionAction` is either `sample affinity` or `mean`, where `Affinity` is E or G. Mean expressions carry no affinity annotation; their result affinity follows the operand typing rules. Operands may contain nested sampling and are evaluated left to right; a mean site also evaluates every operand exactly once, including a Gaussian's variance. The soundness theorems also cover source expressions containing mean sites. `Spec/Primitives.lean` gives each primitive one fiber: its law at a stochastic site, the Dirac mass at its mean at a mean site, and the zero measure outside the parameter domain. Expressions have no type annotations; `Typed` assigns types separately. Expressions carry E/G labels only on sample sites; literals and arithmetic are unannotated and a literal types at either affinity, as in the paper's rule Real; subtyping is silent; variables are de Bruijn indices. `Typed` enforces the affinity restrictions: E multiplication requires a G left operand, division a G denominator, and comparisons G operands. Arithmetic uses real numbers; division by zero gets stuck. The theorems quantify over closed float programs of either affinity; the proof uses subsumption to assign an E result type to the same program.
 
@@ -55,35 +55,35 @@ draft in `tex/archive/` is no longer compared.
   `Expr` takes the type of its literals and of its sites as parameters; the paper's syntax is
   the default, with real literals and `DistributionAction` sites.
 - **Theorems.** `Theorems.lean` states the paper's theorems under the paper's names:
-  `inferenceCorrectness` (Section 3), `tracePreservation`, `tracewiseSoundness`,
-  `outputMassPreservation`, `expectationPreservation`, `varianceNonIncrease`,
-  `convexFunctionInequality`, `probabilityPreservation` (Section 4) and
-  `traceVarianceDecomposition` (appendix). They follow the statements of Section 4, and differ
+  `inference_correctness` (Section 3), `trace_preservation`, `tracewise_soundness`,
+  `output_mass_preservation`, `expectation_preservation`, `variance_non_increase`,
+  `convex_function_inequality`, `probability_preservation` (Section 4) and
+  `trace_variance_decomposition` (appendix). They follow the statements of Section 4, and differ
   from them as follows.
   - The paper's definition of expectation is for probability distributions. `HasExpectation`
     and `extendedExpectation` take any measure on the reals and are used at the unnormalized
     output law. Where the paper says that `𝔼_ret[e]` is well-defined, Lean says
     `HasExpectation (bigStepMeasure program)`, which is the same when the return probability
     is positive.
-  - `tracewiseSoundness` does not go through `𝔼[e | τ]` in the extended reals. It states that
+  - `tracewise_soundness` does not go through `𝔼[e | τ]` in the extended reals. It states that
     the source's conditional law is integrable and that the target's is the Dirac mass at its
     Bochner integral, which is the paper's equation together with its "in particular" clause.
   - A finite second moment is `MemLp id 2`, and `Var_ret[e]` is Mathlib's `variance` of
-    `returnedLaw`. `traceVarianceDecomposition` also states that the average variance within
+    `returnedLaw`. `trace_variance_decomposition` also states that the average variance within
     a trace is finite.
   - The appendix restates the theorems, not always as Section 4 does. Its probability
     preservation adds `d_Determinize(e) = d_e`, which no Lean theorem states; it follows from
-    `probabilityPreservation` and `returnOrDiverge` for the target, which is typed by
+    `probability_preservation` and `return_or_diverge` for the target, which is typed by
     `typed_determinize`. Its expectation preservation and variance non-increase omit
     `q_Determinize(e) > 0`, which Section 4 and Lean conclude.
   - The theorems are about closed programs of type `real^E`, and an output law has mass only
     at real results. The introduction's Gaussian random walk returns a list of pairs: the
     front end infers and determinizes it, but no theorem applies to it as written.
 
-  The paper does not state `returnOrDiverge` at affinity G, `finiteExpectationPreservation`,
-  `conditionalExpectationPreservation`, the unnormalized versions
-  (`unnormalizedExpectationPreservation`, `unnormalizedExtendedExpectationPreservation`,
-  `unnormalizedVarianceNonIncrease`, `unnormalizedTraceVarianceDecomposition`), or the
+  The paper does not state `return_or_diverge` at affinity G, `finite_expectation_preservation`,
+  `conditional_expectation_preservation`, the unnormalized versions
+  (`unnormalized_expectation_preservation`, `unnormalized_extended_expectation_preservation`,
+  `unnormalized_variance_non_increase`, `unnormalized_trace_variance_decomposition`), or the
   finite-model and reward-model theorems.
 - **Domain safety.** The paper's remark in Section 2 is informal and carries a note to define
   it. `DomainSafe` is the definition: for every depth, almost every execution reaches no stuck
@@ -168,11 +168,11 @@ draft in `tex/archive/` is no longer compared.
   - `expectation-defined`, `trace-law`: the definitions are now in `Spec/Expectation.lean`
     and `Spec/Traces/Semantics.lean`.
   - `return-or-diverge`, `output-mass`, `trace-erasure`, `inference`: the statements are now
-    theorems in `Theorems.lean` (`returnOrDiverge`, `outputMassPreservation`, `traceErasure`,
-    `inferenceCorrectness`).
+    theorems in `Theorems.lean` (`return_or_diverge`, `output_mass_preservation`, `trace_erasure`,
+    `inference_correctness`).
   - `expectation-preservation`, `variance-non-increase`, `trace-soundness`, `trace-variance`:
-    also in `Theorems.lean` (`expectationPreservation`, `varianceNonIncrease`,
-    `tracewiseSoundness`, `traceVarianceDecomposition`), and no longer worded as at the pinned
+    also in `Theorems.lean` (`expectation_preservation`, `variance_non_increase`,
+    `tracewise_soundness`, `trace_variance_decomposition`), and no longer worded as at the pinned
     revision.
 
   The trace-preservation lemma, the convex function inequality and Section 5 have no link
@@ -223,7 +223,7 @@ Under `Determinize/`:
     program (`generate_sound`).
   - `Completeness.lean`: every typed completion comes from a solution of the generated
     constraints (`generate_complete`).
-  - `Inference.lean`: the proof of `Theorems.inferenceCorrectness`.
+  - `Inference.lean`: the proof of `Theorems.inference_correctness`.
 - `Proof/Soundness.lean`, `Proof/Corollaries.lean`: global results derived from traces.
 - `Theorems.lean`: the theorems, each stated in full and proved by a term from `Proof/`.
 
@@ -260,13 +260,13 @@ list. `compile` converts the annotated program once into a `Core` program
 (`Program.source`) for the runtime and the finite models, which also run determinized
 programs with mean sites.
 
-`Theorems.inferenceCorrectness` holds for every `Input`. The returned program
+`Theorems.inference_correctness` holds for every `Input`. The returned program
 keeps every constructor, payload, and requested sampling affinity of the input at the
-same AST node (`Input.matches`), so inference cannot silently change literals,
+same AST node (`Input.Matches`), so inference cannot silently change literals,
 operators, binders, or distribution kinds. It is typed at the returned type, it has
 the most E sites among all completions, and `infer` rejects an input only if no
 completion exists. `compile` takes the typing and input-preservation proofs of its
-`Program` from `Theorems.inferenceCorrectness`; no checker runs afterwards. The
+`Program` from `Theorems.inference_correctness`; no checker runs afterwards. The
 guarantees start at the **resolved input expression**: parsing, name resolution, and
 desugaring from source bytes are outside the verified boundary, and so is the Lean
 compiler that runs `infer` in the executable.
@@ -317,7 +317,7 @@ has zero output mass: formally it is an absorbing non-value, as proved in
 `Proof/Semantics/Rejection.lean`. The numerical runtime returns a distinct rejection outcome
 immediately; ordinary divergence still exhausts fuel. Conditions are evaluated once,
 and rejected executions do not evaluate their continuation. The CLI reports rejected
-observations separately from execution failures. `conditionalExpectationPreservation`
+observations separately from execution failures. `conditional_expectation_preservation`
 proves equality of the normalized expectations under its stated premises;
 empirical means use returned values and differ from unnormalized expectations.
 
@@ -327,7 +327,7 @@ Products, sums, and lists are covariant; function arguments are contravariant an
 results covariant. `Float[G]` is a subtype of `Float[E]`; the reverse is not allowed.
 Using a G draw at type E leaves its sample annotation G, so determinization still
 retains the draw. Subsumption appears in typing derivations, never in the expression.
-Inference is sound, optimal, and complete (`Theorems.inferenceCorrectness`): it rejects a
+Inference is sound, optimal, and complete (`Theorems.inference_correctness`): it rejects a
 program only if no assignment of its unannotated affinities is typable, and otherwise
 returns the typable assignment with the most E sites.
 

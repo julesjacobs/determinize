@@ -89,7 +89,7 @@ theorem integrable_id_of_statistics (statistics : OutputStatistics) (law : Measu
     (correct : statistics.Matches law) : Integrable id law := by
   let := correct.finite
   exact ((memLp_two_iff_integrable_sq aestronglyMeasurable_id).mpr
-    correct.squareIntegrable).integrable (by norm_num)
+    correct.square_integrable).integrable (by norm_num)
 
 theorem statistics_conditional_variance (law : Measure ℝ) (statistics : OutputStatistics)
     (correct : statistics.Matches law) (positive : 0 < statistics.returnMass) :
@@ -104,7 +104,7 @@ theorem statistics_conditional_variance (law : Measure ℝ) (statistics : Output
     have : (0 : ℝ) < (statistics.returnMass : ℝ) := by exact_mod_cast positive
     linarith
   have mem : MemLp id 2 law :=
-    (memLp_two_iff_integrable_sq aestronglyMeasurable_id).mpr correct.squareIntegrable
+    (memLp_two_iff_integrable_sq aestronglyMeasurable_id).mpr correct.square_integrable
   rw [normalized_variance _ nonzero mem]
   change (∫ x : ℝ, x ^ 2 ∂law) / law.real Set.univ -
     ((∫ x : ℝ, x ∂law) / law.real Set.univ) ^ 2 = _
