@@ -1,0 +1,132 @@
+# Builds and tests the Lean development on pull requests and on main, and publishes its API
+# documentation from main to GitHub Pages.
+#
+# Every `run` step executes inside the flake's `lean` dev shell, so elan, git, curl, Python and
+# the C compiler are the versions flake.lock pins. Lean and Mathlib are pinned by
+# lean/lean-toolchain and lean/lake-manifest.json, doc-gen4 by lean/docbuild/lake-manifest.json.
+name: Lean
+
+on:
+  push:
+    branches: [main]
+    paths: &lean-paths
+      - lean/**
+      - tests/**
+      - examples/**
+      - tools/**
+      - "*.sh"
+      - flake.nix
+      - flake.lock
+      - flake-modules/**
+      - .github/workflows/lean.yml
+  pull_request:
+    paths: *lean-paths
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lean-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: nix develop .#lean --command bash -euo pipefail {0}
+    working-directory: lean
+
+jobs:
+  check:
+    name: Build and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+      # lean/docbuild keeps its dependencies in lean/.lake/packages too, so a revision it pins
+      # differently would be checked out over the one the main build uses.
+      - name: Check that lean/docbuild pins the same toolchain and dependencies
+        run: |
+          python3 - <<'EOF'
+          import json, pathlib, sys
+          def revisions(path):
+              return {p["name"]: p["rev"] for p in json.load(open(path))["packages"] if "rev" in p}
+          main, docs = revisions("lake-manifest.json"), revisions("docbuild/lake-manifest.json")
+          stale = sorted(name for name in main if docs.get(name) != main[name])
+          toolchain, docs_toolchain = (pathlib.Path(p).read_text().strip()
+                                       for p in ("lean-toolchain", "docbuild/lean-toolchain"))
+          if toolchain != docs_toolchain:
+              stale.insert(0, f"Lean ({docs_toolchain} instead of {toolchain})")
+          if stale:
+              sys.exit("lean/docbuild is out of date for: " + ", ".join(stale) + ".\n"
+                       "Set doc-gen4's `rev` in lean/docbuild/lakefile.toml to the Lean version, then "
+                       "run `MATHLIB_NO_CACHE_ON_UPDATE=1 lake update` in lean/docbuild.")
+          EOF
+      # Only this repository's own build outputs (about 1 GB) are kept in the Actions cache.
+      # Mathlib's prebuilt files (8 GB) are downloaded by `lake exe cache get` instead.
+      - name: Restore the previous build
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: lean/.lake/build
+          key: lean-build-${{ hashFiles('lean/lean-toolchain', 'lean/lake-manifest.json') }}-${{ github.sha }}
+          restore-keys: lean-build-${{ hashFiles('lean/lean-toolchain', 'lean/lake-manifest.json') }}-
+      - name: Fetch the Mathlib cache
+        run: lake exe cache get
+      # Fails on any warning (a `sorry` included), on a theorem using a non-standard axiom, and on
+      # a statement in Theorems.lean relying on Proof for anything but proofs.
+      - name: Build
+        run: lake build --wfail
+      - name: Save the build
+        if: github.event_name != 'pull_request'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: lean/.lake/build
+          key: lean-build-${{ hashFiles('lean/lean-toolchain', 'lean/lake-manifest.json') }}-${{ github.sha }}
+      - name: Test
+        run: ./test.sh --all
+
+  docs:
+    name: API documentation
+    needs: check
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+      - name: Restore this commit's build
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: lean/.lake/build
+          key: lean-build-${{ hashFiles('lean/lean-toolchain', 'lean/lake-manifest.json') }}-${{ github.sha }}
+          restore-keys: lean-build-${{ hashFiles('lean/lean-toolchain', 'lean/lake-manifest.json') }}-
+      # Documenting Lean and the imported part of Mathlib takes about two CPU-hours, so that work
+      # is saved once per set of pins. Starting from it, only this repository's modules are
+      # redone. Pages of modules deleted since it was saved stay in the published site, unlinked.
+      - name: Restore the documentation of the dependencies
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: lean/docbuild/.lake/build
+          key: lean-docs-${{ hashFiles('lean/lean-toolchain', 'lean/docbuild/lake-manifest.json') }}
+      - name: Fetch the Mathlib cache
+        run: lake exe cache get
+      - name: Build the documentation
+        working-directory: lean/docbuild
+        run: lake build Determinize:docs
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: lean/docbuild/.lake/build/doc
+
+  deploy:
+    name: Publish the documentation
+    needs: docs
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
