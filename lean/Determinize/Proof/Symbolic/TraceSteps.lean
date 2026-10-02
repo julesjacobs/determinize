@@ -45,6 +45,7 @@ def generationDraw : SymbolicAction n → Bool
   generationOp_value (by rwa [symbolic_skeleton_isValue])
 
 set_option maxHeartbeats 800000 in
+-- One case per typing rule, each splitting on which operands are values.
 theorem symbolic_generationDraw
     (typed : WellTyped context expression ty) :
     (generationOp expression.skeleton).isSome = generationDraw (symbolicReduce expression) := by
@@ -167,7 +168,6 @@ theorem symbolic_generationDraw
         obtain ⟨constants, ceq, aeq⟩ := wellTyped_list_value_constant probabilitiesTyped value
         simp [ceq, aeq, siteOp]
     · simpa [value, generationDraw_wrap] using ih
-
   | bernoulli probabilityTyped ih =>
     rename_i context' probability affinity
     simp only [Expr.skeleton, generationOp, symbolic_skeleton_isValue]

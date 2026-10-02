@@ -154,7 +154,6 @@ theorem primitiveMomentBounds : PrimitiveMomentBounds primitiveLaws := by
     change 1 / general 0 * affine 0 ≤
       (|1 / general 0| + 1) * (1 + |affine 0|)
     nlinarith [abs_nonneg (1 / general 0), abs_nonneg (affine 0)]
-
   | bernoulli =>
     refine ⟨1, zero_le_one, ?_⟩
     intro affine valid

@@ -62,7 +62,6 @@ def parsing : IO Unit := do
     let q ← IO.ofExcept (compile (pretty p.source))
     assert (p.source == q.source)
       s!"pretty-printed source changed program: {text} -> {pretty p.source}"
-
   for text in ["2 * 3", "uniform[E](0,1) * 3", "(2 * 3) * (uniform[G](0,1) * 4)"] do
     let mut p ← IO.ofExcept (compile text)
     for _ in [:3] do

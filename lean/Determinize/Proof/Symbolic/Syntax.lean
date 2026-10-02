@@ -363,7 +363,6 @@ theorem WellTyped.realize_typed {sampleCount : Nat} {expression : AffineExpr sam
   case beta alpha betaTyped => exact Determinize.Spec.Paper.Typed.beta alpha betaTyped
   case betaMean alpha betaTyped => exact Determinize.Spec.Paper.Typed.betaMean alpha betaTyped
   case gamma shape rate => exact Determinize.Spec.Paper.Typed.gamma shape rate
-
   case gammaMean shape rate => exact Determinize.Spec.Paper.Typed.gammaMean shape rate
 
 theorem WellTyped.mapAffine {n m : Nat} {expression : AffineExpr n}
@@ -548,7 +547,6 @@ theorem wellTyped_shift (h : WellTyped (before ++ suffix) expression ty) :
   | exponential hv ih =>
     simp only [Expr.mapVars, Expr.shift, shift]
     exact .exponential (ih (before := before) (suffix := suffix) hcontext)
-
   | exponentialMean hv ih =>
     simp only [Expr.mapVars, Expr.shift, shift]
     exact .exponentialMean (ih (before := before) (suffix := suffix) hcontext)
@@ -722,7 +720,6 @@ theorem wellTyped_substAt (h : WellTyped (before ++ binder :: suffix) expression
   | exponential hv ih =>
     simp only [Expr.mapVars, Expr.substAt, substAt]
     exact .exponential (ih replacementTyped (before := before) (suffix := suffix) hcontext)
-
   | exponentialMean hv ih =>
     simp only [Expr.mapVars, Expr.substAt, substAt]
     exact .exponentialMean (ih replacementTyped (before := before) (suffix := suffix) hcontext)
@@ -743,7 +740,6 @@ theorem wellTyped_substTwo
   · exact wellTyped_substAt (before := [argumentTy]) bodyTyped functionTyped
   · exact argumentTyped
 
-set_option maxHeartbeats 800000 in
 theorem realize_skeleton (expression : AffineExpr sampleCount)
     (environment : Env sampleCount) :
     (expression.realize environment).skeleton = expression.skeleton := by
@@ -757,7 +753,6 @@ theorem realize_skeleton (expression : AffineExpr sampleCount)
       simp (disch := simp_wf) only [realize, skeleton, Expr.skeleton, recurse]
       all_goals repeat' first | rfl | rw [recurse _ (by simp_wf; omega)]
 
-set_option maxHeartbeats 800000 in
 theorem realize_coordinates (expression : AffineExpr sampleCount)
     (environment : Env sampleCount) :
     (expression.realize environment).realCoordinates =
@@ -774,7 +769,6 @@ theorem realize_coordinates (expression : AffineExpr sampleCount)
         List.map_append, List.map_nil, recurse]
       all_goals repeat' first | rfl | rw [recurse _ (by simp_wf; omega)]
 
-set_option maxHeartbeats 800000 in
 theorem realize_shift (expression : AffineExpr sampleCount)
     (environment : Env sampleCount) (amount cutoff : Nat) :
     (expression.shift amount cutoff).realize environment =
@@ -782,7 +776,6 @@ theorem realize_shift (expression : AffineExpr sampleCount)
   induction expression generalizing cutoff <;>
     simp_all [realize, shift, Expr.shift, Expr.mapVars]
 
-set_option maxHeartbeats 800000 in
 theorem realize_substAt (expression replacement : AffineExpr sampleCount)
     (environment : Env sampleCount) (depth : Nat) :
     (substAt depth replacement expression).realize environment =
@@ -806,7 +799,6 @@ theorem realize_substTwo (body argument function : AffineExpr sampleCount)
         (function.realize environment) := by
   simp only [substTwo, Expr.substTwo, realize_substAt]
 
-set_option maxHeartbeats 800000 in
 theorem realize_mapAffine (expression : AffineExpr n) (transform : Affine n → Affine m)
     (sourceEnvironment : Env n) (targetEnvironment : Env m)
     (eval_transform : ∀ affine,
@@ -832,7 +824,6 @@ theorem realize_mapAffine (expression : AffineExpr n) (transform : Affine n → 
   realize_mapAffine expression Affine.weaken environment (Env.cons head environment)
     (fun affine ↦ Affine.eval_weaken affine head environment)
 
-set_option maxHeartbeats 800000 in
 @[simp] theorem realize_ofExpr (expression : Expr) :
     (ofExpr expression).realize Env.empty = expression := by
   induction sizeEq : sizeOf expression using Nat.strong_induction_on generalizing expression with
@@ -1757,7 +1748,6 @@ theorem symbolicReduce_gamma_eq
             (fun next ↦ .gamma kind next rate.weakenSamples) := by
   rw [symbolicReduce.eq_def]
 
-set_option maxHeartbeats 800000 in
 theorem symbolicReduce_realize
     {expression : AffineExpr n} (typed : WellTyped context expression ty)
     (environment : Env n) :
@@ -1797,7 +1787,6 @@ theorem symbolicReduce_realize
         (ExprContext := fun next ↦ .discrete .mean next)
         (context_realize := by intros; simp only [realize])
         (lifted_realize := by intros; simp only [realize]), ih environment]
-
   | bool => simp [symbolicReduce, SymbolicAction.realize, realize, reduce]
   | realE => simp [symbolicReduce, SymbolicAction.realize, realize, reduce]
   | realG => simp [symbolicReduce, SymbolicAction.realize, realize, reduce]
@@ -2537,7 +2526,6 @@ theorem symbolicReduce_realize
         (context_realize := by intros; simp only [realize])
         (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
         ihl environment]
-
   | gammaMean leftTyped rightTyped ihl ihr =>
     rename_i context' left affinity right
     rw [realize, MeasurableActionFamily.reduce_gamma_eq, realize_isValue,
@@ -2565,8 +2553,6 @@ theorem symbolicReduce_realize
         (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
         ihl environment]
 
-set_option maxHeartbeats 1600000 in
-set_option maxRecDepth 4000 in
 theorem symbolicReduce_wellTyped
     {expression : AffineExpr n} (typed : WellTyped [] expression ty) :
     SymbolicAction.WellTyped ty (symbolicReduce expression) := by
@@ -2893,7 +2879,6 @@ theorem symbolicReduce_wellTyped
       exact (ihLeft rfl).wrap
         (fun next nextTyped ↦ .gamma nextTyped rightTyped)
         (fun next nextTyped ↦ .gamma nextTyped rightTyped.weakenSamples)
-
   case gammaMean left affinity right leftTyped rightTyped ihLeft ihRight =>
     cases hcontext
     simp only [symbolicReduce]
@@ -2922,7 +2907,6 @@ theorem symbolicReduce_wellTyped
       exact (ihLeft rfl).wrap
         (fun next nextTyped ↦ .gammaMean nextTyped rightTyped)
         (fun next nextTyped ↦ .gammaMean nextTyped rightTyped.weakenSamples)
-
   case app functionTyped argumentTyped ihf iha =>
     cases hcontext
     rename_i function argumentTy result operand
