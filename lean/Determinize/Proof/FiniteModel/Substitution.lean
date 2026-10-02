@@ -194,7 +194,7 @@ theorem close_scoped {α : Type} (expression : Expr α) (environment : List (Exp
     (closed : ∀ e ∈ environment, Scoped 0 e) (depth : Nat) :
     Scoped depth (close environment depth expression) := by
   induction expression generalizing depth <;>
-    simp_all [close, Expr.mapVars, Scoped]
+    simp_all only [close, Expr.mapVars, Scoped, and_self]
   split
   · assumption
   · exact environment_lookup_scoped environment closed _ depth
@@ -212,7 +212,7 @@ theorem close_cons_subst {α : Type} (expression : Expr α) (environment : List 
     Expr.substAt depth value (close environment (depth + 1) expression) =
       close (value :: environment) depth expression := by
   induction expression generalizing depth <;>
-    simp_all [close, Expr.mapVars, Nat.add_assoc]
+    simp_all only [close, Expr.mapVars, Order.lt_add_one_iff, Nat.add_assoc, Nat.reduceAdd]
   rename_i i
   by_cases below : i < depth
   · simp [below, show i ≤ depth by omega, Expr.substAt, Expr.mapVars, show i ≠ depth by omega,

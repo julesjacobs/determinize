@@ -14,7 +14,8 @@ theorem hasVar_scoped {context : List Ty} {index : Nat} {ty : Ty} (h : HasVar co
 
 theorem typed_scoped {context : List Ty} {expression : Expr} {ty : Ty}
     (typed : Typed context expression ty) : Scoped context.length expression := by
-  induction typed <;> simp_all [Scoped, Nat.add_comm, Nat.add_left_comm]
+  induction typed <;> simp_all only [Scoped, List.length_cons, Nat.add_comm, Nat.add_left_comm,
+    Nat.reduceAdd, and_self]
   exact hasVar_scoped ‹HasVar _ _ _›
 
 theorem scoped_determinize {α : Type} (expression : Expr α) (depth : Nat) :

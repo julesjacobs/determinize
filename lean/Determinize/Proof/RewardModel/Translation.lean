@@ -136,7 +136,8 @@ private theorem draw_error_push (site : Spec.Paper.DistributionAction × Spec.Pa
     draw site args (inner ++ outer) = .error failure := by
   unfold draw at action ⊢
   cases law : finiteLaw site.2 site.1 args <;>
-    simp [law, bind, Except.bind, pure, Except.pure] at action ⊢
+    simp only [bind, Except.bind, law, Except.error.injEq, pure, Except.pure,
+      reduceCtorEq] at action ⊢
   exact action
 
 theorem addition_failure (state : State) (offsets : List Rat) (failure : Failure)

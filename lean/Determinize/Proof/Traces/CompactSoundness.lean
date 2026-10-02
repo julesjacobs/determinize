@@ -41,7 +41,7 @@ theorem exact_eq_detailed (depth : Nat) (e : Expr) :
     traceAndOutputLawAt depth e = (StepTraces.exactMeasure depth e).map eraseOutput := by
   induction depth generalizing e with
   | zero =>
-    cases e <;> try simp [traceAndOutputLawAt, StepTraces.exactMeasure]
+    cases e <;> try simp only [traceAndOutputLawAt, StepTraces.exactMeasure, Measure.map_zero]
     case real r =>
       simp [Measure.map_dirac' measurable_eraseOutput, eraseOutput, mapTraceOutput, retain]
   | succ depth ih =>
