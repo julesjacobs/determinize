@@ -40,7 +40,7 @@ def realArity {Literal : Type} : Expr Literal → Nat
   | .matchList x n c => x.realArity + n.realArity + c.realArity
   | .letE x b => x.realArity + b.realArity
   | .uniform _ l r | .gaussian _ l r | .beta _ l r | .gamma _ l r =>
-      l.realArity + r.realArity
+    l.realArity + r.realArity
   | .poisson _ x | .bernoulli _ x | .exponential _ x | .discrete _ x => x.realArity
   | _ => 0
 
@@ -68,13 +68,13 @@ namespace Affine
 newest sample is prepended with `Fin.cons` and dropped with `Fin.tail`. -/
 
 def neg (expression : Affine n) : Affine n :=
-  (-expression.1, fun index => -expression.2 index)
+  (-expression.1, fun index ↦ -expression.2 index)
 
 def add (left right : Affine n) : Affine n :=
-  (left.1 + right.1, fun index => left.2 index + right.2 index)
+  (left.1 + right.1, fun index ↦ left.2 index + right.2 index)
 
 def smul (scalar : ℝ) (expression : Affine n) : Affine n :=
-  (scalar * expression.1, fun index => scalar * expression.2 index)
+  (scalar * expression.1, fun index ↦ scalar * expression.2 index)
 
 /-- The same expression over one more sample, which it does not use. -/
 def weaken (expression : Affine n) : Affine (n + 1) :=
@@ -128,27 +128,27 @@ noncomputable def actualMeasure (laws : Determinize.Proof.Paper.PrimitiveLaws) :
     {n : Nat} → SampleEnv laws n → Measure (Env n)
   | 0, .nil => Measure.dirac Env.empty
   | _ + 1, .snoc history op affineArgs generalArgs =>
-      (actualMeasure laws history).bind fun environment =>
-        (laws.kernel op
-          (fun i => (affineArgs i).eval environment, generalArgs)).map
-            (fun value => Env.cons value environment)
+    (actualMeasure laws history).bind fun environment ↦
+      (laws.kernel op
+        (fun i ↦ (affineArgs i).eval environment, generalArgs)).map
+          (fun value ↦ Env.cons value environment)
 
 /-- Every recorded primitive call is in-domain almost surely under its prefix law. -/
 noncomputable def DomainSafe (laws : Determinize.Proof.Paper.PrimitiveLaws) :
     {n : Nat} → SampleEnv laws n → Prop
   | 0, .nil => True
   | _ + 1, .snoc history op affineArgs generalArgs =>
-      DomainSafe laws history ∧
-        ∀ᵐ environment ∂actualMeasure laws history,
-          Determinize.Spec.Paper.domain op (fun i => (affineArgs i).eval environment, generalArgs)
+    DomainSafe laws history ∧
+      ∀ᵐ environment ∂actualMeasure laws history,
+        Determinize.Spec.Paper.domain op (fun i ↦ (affineArgs i).eval environment, generalArgs)
 
 noncomputable def meanEnvironment (laws : Determinize.Proof.Paper.PrimitiveLaws) :
     {n : Nat} → SampleEnv laws n → Env n
   | 0, .nil => Env.empty
   | _ + 1, .snoc history op affineArgs generalArgs =>
-      let environment := meanEnvironment laws history
-      let params := (fun i => (affineArgs i).eval environment, generalArgs)
-      Env.cons (Determinize.Spec.Paper.meanValue op params) environment
+    let environment := meanEnvironment laws history
+    let params := (fun i ↦ (affineArgs i).eval environment, generalArgs)
+    Env.cons (Determinize.Spec.Paper.meanValue op params) environment
 
 end SampleEnv
 
@@ -175,8 +175,8 @@ noncomputable def exactOutputMeasure (stepKernel : StepKernel) :
   | 0, .real value => Measure.dirac value
   | 0, _ => 0
   | fuel + 1, expression =>
-      if expression.isValue then 0
-      else (stepKernel.kernel expression).bind (exactOutputMeasure stepKernel fuel)
+    if expression.isValue then 0
+    else (stepKernel.kernel expression).bind (exactOutputMeasure stepKernel fuel)
 
 noncomputable def cumulativeOutputMeasure (stepKernel : StepKernel)
     (fuel : Nat) (program : Expr) : Measure ℝ :=

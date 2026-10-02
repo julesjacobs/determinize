@@ -74,48 +74,48 @@ def finiteLaw (op : Op) (kind : DistributionAction) (arguments : List Rat) :
     unless arguments.length == n do throw (.invalid "primitive arity")
     let d ← (remainderDistribution arguments).mapError Failure.invalid
     if kind == .mean then return [(1, d.mean)]
-    return d.probabilities.zipIdx.map fun (p,i) => (p, (i : Rat))
+    return d.probabilities.zipIdx.map fun (p, i) ↦ (p, (i : Rat))
   let mean ← match op, arguments with
-    | .uniform, [a,b] =>
-        if a ≤ b then pure ((a+b)/2) else throw (.invalid "uniform bounds")
-    | .gaussian, [a,v] =>
-        if 0 ≤ v then pure a else throw (.invalid "gaussian variance")
+    | .uniform, [a, b] =>
+      if a ≤ b then pure ((a + b) / 2) else throw (.invalid "uniform bounds")
+    | .gaussian, [a, v] =>
+      if 0 ≤ v then pure a else throw (.invalid "gaussian variance")
     | .poisson, [a] =>
-        if 0 ≤ a then pure a else throw (.invalid "poisson rate")
+      if 0 ≤ a then pure a else throw (.invalid "poisson rate")
     | .exponential, [a] =>
-        if 0 < a then pure (1/a) else throw (.invalid "exponential rate")
-    | .beta, [a,b] =>
-        if 0 < a && 0 < b then pure (a/(a+b)) else throw (.invalid "beta parameters")
-    | .gamma, [a,b] =>
-        if 0 < a && 0 < b then pure (a/b) else throw (.invalid "gamma parameters")
+      if 0 < a then pure (1 / a) else throw (.invalid "exponential rate")
+    | .beta, [a, b] =>
+      if 0 < a && 0 < b then pure (a / (a + b)) else throw (.invalid "beta parameters")
+    | .gamma, [a, b] =>
+      if 0 < a && 0 < b then pure (a / b) else throw (.invalid "gamma parameters")
     | .bernoulli, [p] =>
-        if 0 ≤ p && p ≤ 1 then pure p else throw (.invalid "bernoulli probability")
+      if 0 ≤ p && p ≤ 1 then pure p else throw (.invalid "bernoulli probability")
     | _, _ => throw (.invalid "primitive arity")
   unless supportedDraw kind op do
     throw (.unsupported s!"stochastic {reprStr op}")
   if kind == .mean then return [(1, mean)]
   match op, arguments with
-  | .bernoulli, [p] => return [(1-p, 0), (p, 1)]
+  | .bernoulli, [p] => return [(1 - p, 0), (p, 1)]
   | _, _ => throw (.unsupported s!"stochastic {reprStr op}")
 
 def draw (site : DistributionAction × Op) (arguments : List Rat) (stack : List Frame) :
     Except Failure Step := do
   let outcomes ← finiteLaw site.2 site.1 arguments
-  return .next (.sample site arguments) (outcomes.map fun (p,x) => (p, .deliver (.number x) stack))
+  return .next (.sample site arguments) (outcomes.map fun (p, x) ↦ (p, .deliver (.number x) stack))
 
 def binary (op : Binary) (left right : Value) (stack : List Frame) : Except Failure State :=
   match op, left, right with
   | .app, .closure body saved, argument => .ok (.eval body (argument :: saved) stack)
   | .app, function@(.recursive body saved), argument =>
-      .ok (.eval body (argument :: function :: saved) stack)
+    .ok (.eval body (argument :: function :: saved) stack)
   | .pair, a, b => .ok (.deliver (.pair a b) stack)
   | .cons, a, b => .ok (.deliver (.cons a b) stack)
-  | .add, .number a, .number b => .ok (.deliver (.number (a+b)) stack)
-  | .mul, .number a, .number b => .ok (.deliver (.number (a*b)) stack)
+  | .add, .number a, .number b => .ok (.deliver (.number (a + b)) stack)
+  | .mul, .number a, .number b => .ok (.deliver (.number (a * b)) stack)
   | .div, .number a, .number b =>
-      if b == 0 then .error (.invalid "division by zero")
-      else .ok (.deliver (.number (a/b)) stack)
-  | .lt, .number a, .number b => .ok (.deliver (.bool (a<b)) stack)
+    if b == 0 then .error (.invalid "division by zero")
+    else .ok (.deliver (.number (a / b)) stack)
+  | .lt, .number a, .number b => .ok (.deliver (.bool (a < b)) stack)
   | _, _, _ => .error (.invalid "binary operand types")
 
 def unary (op : Unary) (value : Value) : Except Failure Value :=
@@ -148,30 +148,30 @@ def step : State → Except Failure Step
       | .lam body => pure (.deliver (.closure body environment) stack)
       | .fix body => pure (.deliver (.recursive body environment) stack)
       | .app a b | .pair a b | .cons a b | .add a b | .mul a b | .div a b | .lt a b =>
-          let op := match expression with
-            | .app .. => Binary.app | .pair .. => .pair | .cons .. => .cons
-            | .add .. => .add | .mul .. => .mul | .div .. => .div | _ => .lt
-          pure (.eval a environment (.left op b environment :: stack))
+        let op := match expression with
+          | .app .. => Binary.app | .pair .. => .pair | .cons .. => .cons
+          | .add .. => .add | .mul .. => .mul | .div .. => .div | _ => .lt
+        pure (.eval a environment (.left op b environment :: stack))
       | .fst x | .snd x | .inl x | .inr x | .neg x =>
-          let op := match expression with
-            | .fst .. => Unary.fst | .snd .. => .snd | .inl .. => .inl
-            | .inr .. => .inr | _ => .neg
-          pure (.eval x environment (.unary op :: stack))
+        let op := match expression with
+          | .fst .. => Unary.fst | .snd .. => .snd | .inl .. => .inl
+          | .inr .. => .inr | _ => .neg
+        pure (.eval x environment (.unary op :: stack))
       | .ite condition yes no => pure (.eval condition environment (.choose yes no environment :: stack))
       | .letE value body => pure (.eval value environment (.letBody body environment :: stack))
       | .matchSum value left right => pure (.eval value environment (.matchSum left right environment :: stack))
       | .matchList value nilCase consCase =>
-          pure (.eval value environment (.matchList nilCase consCase environment :: stack))
+        pure (.eval value environment (.matchList nilCase consCase environment :: stack))
       | .uniform k a b | .gaussian k a b | .beta k a b | .gamma k a b =>
-          let op := match expression with
-            | .uniform .. => Op.uniform | .gaussian .. => .gaussian | .beta .. => .beta | _ => .gamma
-          pure (.eval a environment (.draw (k, op) [b] environment [] :: stack))
+        let op := match expression with
+          | .uniform .. => Op.uniform | .gaussian .. => .gaussian | .beta .. => .beta | _ => .gamma
+        pure (.eval a environment (.draw (k, op) [b] environment [] :: stack))
       | .poisson k a | .exponential k a | .bernoulli k a =>
-          let op := match expression with
-            | .poisson .. => Op.poisson | .exponential .. => .exponential | _ => .bernoulli
-          pure (.eval a environment (.draw (k, op) [] environment [] :: stack))
+        let op := match expression with
+          | .poisson .. => Op.poisson | .exponential .. => .exponential | _ => .bernoulli
+        pure (.eval a environment (.draw (k, op) [] environment [] :: stack))
       | .discrete k p => pure (.eval p environment (.discrete k :: stack))
-      return .next .evaluate [(1,state)]
+      return .next .evaluate [(1, state)]
   | .deliver value [] => match value with
       | .number reward => .ok (.returned reward)
       | _ => .error .nonnumericResult
@@ -200,6 +200,6 @@ def step : State → Except Failure Step
               | [] => return ← draw site (arguments ++ [x]) stack
               | next :: rest => pure (.eval next saved (.draw site rest saved (arguments ++ [x]) :: stack))
           | _ => throw (.invalid "nonnumeric primitive parameter")
-      return .next .continue [(1,state)]
+      return .next .continue [(1, state)]
 
 end Determinize.Finite

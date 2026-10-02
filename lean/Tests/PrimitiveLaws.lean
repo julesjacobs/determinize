@@ -6,11 +6,11 @@ open Spec.Paper Proof.Paper MeasureTheory
 example : Countable Op := inferInstance
 
 example (p : ℝ) (h : 0 ≤ p ∧ p ≤ 1) :
-    (∫ x, x ∂primitiveLaws.kernel .bernoulli (fun _ => p, Fin.elim0)) = p :=
+    (∫ x, x ∂primitiveLaws.kernel .bernoulli (fun _ ↦ p, Fin.elim0)) = p :=
   primitiveLaws.mean_law .bernoulli _ h
 
 example (p : ℝ) (h : p < 0 ∨ 1 < p) :
-    primitiveLaws.kernel .bernoulli (fun _ => p, Fin.elim0) = 0 := by
+    primitiveLaws.kernel .bernoulli (fun _ ↦ p, Fin.elim0) = 0 := by
   apply primitiveLaws.kernel_zero_off_domain
   change ¬ (0 ≤ p ∧ p ≤ 1)
   rcases h with h | h <;> intro valid <;> linarith [valid.1, valid.2]
@@ -32,7 +32,7 @@ example (p : ℝ) (h : 0 ≤ p ∧ p ≤ 1) :
   rw [← bernoulliFiber_eq]
   simp [bernoulliFiber, h]
 
-example : primitiveFiber .mean (.discrete 2) [1/4, 1/4] [] = Measure.dirac (5/4) := by
+example : primitiveFiber .mean (.discrete 2) [1 / 4, 1 / 4] [] = Measure.dirac (5 / 4) := by
   norm_num [primitiveFiber, parseParams, domain, meanValue, Fin.sum_univ_two]
 
 example : discreteFiber .mean [] = Measure.dirac 0 := by simp [discreteFiber]

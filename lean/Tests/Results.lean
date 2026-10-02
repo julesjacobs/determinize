@@ -7,24 +7,24 @@ namespace Determinize.Tests
 open Spec.FiniteModel
 
 example : Checking.checkResult FiniteModel.fork FiniteModel.forkCertificate = true := by decide +kernel
-example : FiniteModel.fork.expectedReward = ((3/2 : Rat) : ℝ) :=
+example : FiniteModel.fork.expectedReward = ((3 / 2 : Rat) : ℝ) :=
   (Checking.checkResult_sound FiniteModel.fork FiniteModel.forkCertificate (by decide +kernel)).2
 example : Checking.checkResult FiniteModel.loop (FiniteModel.loopCertificate 7) = false := by
   decide +kernel
 example : Checking.checkResult FiniteModel.fork
-    {FiniteModel.forkCertificate with values := fun _ => 0} = false := by decide +kernel
+    {FiniteModel.forkCertificate with values := fun _ ↦ 0} = false := by decide +kernel
 example : Checking.checkResult FiniteModel.fork
     {FiniteModel.forkCertificate with horizon := 0} = false := by decide +kernel
 
 abbrev retry : Model where
   size := 2
   initial := 0
-  kind := fun i => if i = 0 then .transient else .returned (-3)
-  transition := fun i j => if i = 0 then 1/2 else if i = j then 1 else 0
+  kind := fun i ↦ if i = 0 then .transient else .returned (-3)
+  transition := fun i j ↦ if i = 0 then 1 / 2 else if i = j then 1 else 0
   nonnegative := by decide +kernel
   normalized := by decide +kernel
 
-def retryResult : ResultCertificate retry := ⟨fun _ => -3, 1⟩
+def retryResult : ResultCertificate retry := ⟨fun _ ↦ -3, 1⟩
 
 private def solvedRetry :=
   (Finite.solveCertified retry).toOption.get (by decide +kernel)
@@ -38,7 +38,7 @@ example : retry.expectedReward = ((-3 : Rat) : ℝ) :=
   (Checking.checkResult_sound retry retryResult (by decide +kernel)).2
 example : Checking.checkResult retry {retryResult with horizon := 0} = false := by decide +kernel
 
-example : Checking.checkResult (FiniteModel.terminal 3) ⟨fun _ => 3, 0⟩ = true := by
+example : Checking.checkResult (FiniteModel.terminal 3) ⟨fun _ ↦ 3, 0⟩ = true := by
   decide +kernel
 
 private def expectAnswer (model : Model) (expected : Rat) : IO Unit := do
@@ -47,8 +47,8 @@ private def expectAnswer (model : Model) (expected : Rat) : IO Unit := do
   assert (Checking.checkResult model result) "solver returned an invalid certificate"
 
 def results : IO Unit := do
-  expectAnswer FiniteModel.fork (3/2)
-  expectAnswer (FiniteModel.terminal (-7/3)) (-7/3)
+  expectAnswer FiniteModel.fork (3 / 2)
+  expectAnswer (FiniteModel.terminal (-7 / 3)) (-7 / 3)
   expectAnswer retry (-3)
   assert (match Finite.solve FiniteModel.loop with | .error _ => true | .ok _ => false) "solver accepted a nonabsorbing loop"
   assert (match Finite.solve FiniteModel.fork {maxStates := 2} with | .error _ => true | .ok _ => false) "solver ignored state limit"

@@ -22,7 +22,7 @@ theorem exact_succ_next (depth : Nat) (expression next : Expr)
 theorem exact_succ_sample (depth : Nat) (expression : Expr) (fiber : Measure ℝ)
     (continuation : ℝ → Expr) (notValue : expression.isValue ≠ true)
     (reduction : reduce expression = .sample site fiber continuation) :
-    exactMeasure (depth + 1) expression = fiber.bind fun value =>
+    exactMeasure (depth + 1) expression = fiber.bind fun value ↦
       (exactMeasure depth (continuation value)).map
         (prepend (entry (generationOp expression.skeleton) value)) := by
   simp only [exactMeasure, notValue, Bool.false_eq_true, ↓reduceIte, reduction]

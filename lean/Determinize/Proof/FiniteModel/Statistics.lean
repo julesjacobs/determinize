@@ -12,14 +12,14 @@ inductive Moment where
 instance : Fintype Moment := ⟨{.mass, .first, .second}, by intro m; cases m <;> simp⟩
 
 def Moment.rational : Moment → Rat → Rat
-  | .mass => fun _ => 1
+  | .mass => fun _ ↦ 1
   | .first => id
-  | .second => fun x => x ^ 2
+  | .second => fun x ↦ x ^ 2
 
 def Moment.real : Moment → ℝ → ℝ
-  | .mass => fun _ => 1
+  | .mass => fun _ ↦ 1
   | .first => id
-  | .second => fun x => x ^ 2
+  | .second => fun x ↦ x ^ 2
 
 theorem Moment.agree (moment : Moment) (q : Rat) : moment.real (q : ℝ) = (moment.rational q : ℝ) := by
   cases moment <;> simp [Moment.real, Moment.rational]
@@ -61,7 +61,7 @@ theorem momentCertificate_integral (model : Model) (certificate : MomentCertific
 theorem momentCertificate_sound (model : Model) (certificate : MomentCertificate model)
     (valid : certificate.Valid model) : (certificate.statistics model).Matches model.outputMeasure := by
   refine ⟨(integrable_const_iff_isFiniteMeasure (by norm_num : (1 : ℝ) ≠ 0)).mp
-    (outputAt_integrable model model.initial (fun _ => 1)), outputAt_integrable model model.initial (fun x => x ^ 2), ?_, ?_, ?_⟩
+    (outputAt_integrable model model.initial (fun _ ↦ 1)), outputAt_integrable model model.initial (fun x ↦ x ^ 2), ?_, ?_, ?_⟩
   · simpa [Moment.real, MomentCertificate.statistics, integral_const] using
       momentCertificate_integral model certificate valid .mass
   · exact momentCertificate_integral model certificate valid .first
@@ -69,7 +69,7 @@ theorem momentCertificate_sound (model : Model) (certificate : MomentCertificate
 
 theorem outputMeasure_memLp (model : Model) : MemLp id 2 model.outputMeasure :=
   (memLp_two_iff_integrable_sq aestronglyMeasurable_id).mpr
-    (outputAt_integrable model model.initial (fun x => x ^ 2))
+    (outputAt_integrable model model.initial (fun x ↦ x ^ 2))
 
 theorem statistics_conditional_mean (statistics : OutputStatistics) (law : Measure ℝ)
     (correct : statistics.Matches law) :

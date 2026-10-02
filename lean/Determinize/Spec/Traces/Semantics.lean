@@ -20,8 +20,8 @@ abbrev Output := Trace × ℝ
 /-- Length and coordinates give the usual measurable structure on finite lists.
 The padding value is irrelevant because length is recorded separately. -/
 instance : MeasurableSpace Trace :=
-  MeasurableSpace.comap (fun trace : Trace =>
-    (trace.length, fun index : Nat => trace.getD index (.uniform, 0))) inferInstance
+  MeasurableSpace.comap (fun trace : Trace ↦
+    (trace.length, fun index : Nat ↦ trace.getD index (.uniform, 0))) inferInstance
 
 /-- Record a generation draw; all other actions preserve the suffix trace. -/
 def record (site : DistributionAction × Op) (value : ℝ) (output : Output) : Output :=
@@ -36,16 +36,16 @@ noncomputable def traceAndOutputLawAt : Nat → Expr → Measure Output
   | 0, .real value => Measure.dirac ([], value)
   | 0, _ => 0
   | depth + 1, expression =>
-      if expression.isValue then 0
-      else match reduce expression with
-        | .next next => traceAndOutputLawAt depth next
-        | .sample site fiber continuation => fiber.bind fun value =>
-            (traceAndOutputLawAt depth (continuation value)).map (record site value)
-        | .stuck => 0
+    if expression.isValue then 0
+    else match reduce expression with
+      | .next next => traceAndOutputLawAt depth next
+      | .sample site fiber continuation => fiber.bind fun value ↦
+          (traceAndOutputLawAt depth (continuation value)).map (record site value)
+      | .stuck => 0
 
 /-- Joint law of terminating generation traces and returned reals. -/
 noncomputable def traceAndOutputLaw (program : Expr) : Measure Output :=
-  Measure.sum fun depth => traceAndOutputLawAt depth program
+  Measure.sum fun depth ↦ traceAndOutputLawAt depth program
 
 /-- The law of a program's terminating generation traces: the trace marginal of its joint law. -/
 noncomputable def traceLaw (program : Expr) : Measure Trace :=

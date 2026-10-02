@@ -42,7 +42,7 @@ def runtime : IO Unit := do
       "(rec f x => f x) ()"] do
     let p ← IO.ofExcept (compile text)
     for expression in [p.source, p.source.determinize] do
-      assert (Runtime.run expression 0 100 |> fun r => !r.isOk) s!"bad run returned a value: {text}"
+      assert (Runtime.run expression 0 100 |> fun r ↦ !r.isOk) s!"bad run returned a value: {text}"
   let boundary := "discrete[E](" ++ String.intercalate "+" (List.replicate 20 "0.05") ++ ",*)"
   for target in [false, true] do
     assert ((← value boundary target) == "0.000000") "rounding at probability sum one failed"

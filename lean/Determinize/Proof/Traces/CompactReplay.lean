@@ -53,7 +53,7 @@ theorem ogtAt_succ_sampleE (depth : Nat) {expression : Expr} {site : Distributio
     (reduction : reduce expression = .sample site fiber continuation)
     (notGeneration : siteOp site = none) (tape : DrawTrace) :
     outputGivenTraceAt (depth + 1) expression tape =
-      fiber.bind fun value => outputGivenTraceAt depth (continuation value) tape := by
+      fiber.bind fun value ↦ outputGivenTraceAt depth (continuation value) tape := by
   rw [outputGivenTraceAt, if_neg notValue, reduction]
   rcases site with ⟨kind, op⟩
   cases kind with
@@ -91,7 +91,7 @@ theorem ogtAt_succ_sampleG_mismatch (depth : Nat) {expression : Expr} {op op' : 
 theorem ogtAt_unit (depth : Nat) (tape : DrawTrace) :
     outputGivenTraceAt depth (.unit : Expr) tape = 0 := by
   cases depth with
-  | zero => exact ogtAt_zero_of_notReal (fun _ h => by cases h) tape
+  | zero => exact ogtAt_zero_of_notReal (fun _ h ↦ by cases h) tape
   | succ depth => exact ogtAt_succ_value depth rfl tape
 
 /-! ### The active generation site determines the reduction -/
@@ -111,7 +111,7 @@ theorem generationOp_of_isValue {expression : Expr} (value : expression.isValue 
 
 theorem not_isValue_of_generationOp_some {expression : Expr} {op : Op}
     (active : generationOp expression.skeleton = some op) : expression.isValue ≠ true :=
-  fun value => by simp [generationOp_of_isValue value] at active
+  fun value ↦ by simp [generationOp_of_isValue value] at active
 
 set_option maxHeartbeats 1600000 in
 /-- When the skeleton names an active general-affinity site, reduction samples at it with that
@@ -155,7 +155,7 @@ def matchesHead (pair : DrawTrace × Expr) : Prop :=
 
 theorem nilRegion_measurable : MeasurableSet {pair : DrawTrace × Expr | pair.1 = []} := by
   have eq : {pair : DrawTrace × Expr | pair.1 = []} =
-      (fun pair : DrawTrace × Expr => pair.1.length) ⁻¹' {0} := by
+      (fun pair : DrawTrace × Expr ↦ pair.1.length) ⁻¹' {0} := by
     ext pair
     simp
   rw [eq]
@@ -181,10 +181,10 @@ def compactReplayStep : SFiniteKernel (DrawTrace × Expr) (DrawTrace × Expr) :=
   let step := MeasurableActionFamily.stepKernel primitiveLaws
   let sampled := SFiniteKernel.mapWithInput
     (SFiniteKernel.pullback ⟨step.kernel, step.kernel_sfinite⟩ Prod.snd measurable_snd)
-    (fun pair : (DrawTrace × Expr) × Expr => (pair.1.1, pair.2))
+    (fun pair : (DrawTrace × Expr) × Expr ↦ (pair.1.1, pair.2))
     ((measurable_fst.comp measurable_fst).prodMk measurable_snd)
   let forced := SFiniteKernel.deterministic
-    (fun pair : DrawTrace × Expr =>
+    (fun pair : DrawTrace × Expr ↦
       (List.tail pair.1, sampleContinuation pair.2 (pair.1.getD 0 (.uniform, 0)).2))
     ((draw_tail_measurable.comp measurable_fst).prodMk
       (sampleContinuation_measurable.comp (measurable_snd.prodMk
@@ -199,7 +199,7 @@ def compactReplayStep : SFiniteKernel (DrawTrace × Expr) (DrawTrace × Expr) :=
 theorem compactReplayStep_apply (tape : DrawTrace) (expression : Expr) :
     compactReplayStep.kernel (tape, expression) =
       if generationOp expression.skeleton = none then
-        (Determinize.Spec.Paper.stepMeasure expression).map (fun next => (tape, next))
+        (Determinize.Spec.Paper.stepMeasure expression).map (fun next ↦ (tape, next))
       else if matchesHead (tape, expression) then
         Measure.dirac (tape.tail, sampleContinuation expression (tape.getD 0 (.uniform, 0)).2)
       else 0 := by
@@ -238,79 +238,79 @@ theorem compactReplayKernel_apply (depth : Nat) (tape : DrawTrace) (expression :
       outputGivenTraceAt depth expression tape := by
   induction depth generalizing expression tape with
   | zero =>
-      unfold compactReplayKernel SFiniteKernel.piecewise
-      simp only [Kernel.piecewise, Kernel.coe_mk, Set.mem_ofPred_eq]
-      by_cases nil : tape = []
-      · rw [if_pos nil, MeasurableActionFamily.pullback_apply]
-        subst nil
-        exact (MeasurableActionFamily.exactOutputKernel_apply _ _ _).trans
-          (by cases expression <;> rfl)
-      · rw [if_neg nil]
-        obtain ⟨head, rest, rfl⟩ := List.exists_cons_of_ne_nil nil
-        exact (ogtAt_zero_cons _ _ _).symm
+    unfold compactReplayKernel SFiniteKernel.piecewise
+    simp only [Kernel.piecewise, Kernel.coe_mk, Set.mem_ofPred_eq]
+    by_cases nil : tape = []
+    · rw [if_pos nil, MeasurableActionFamily.pullback_apply]
+      subst nil
+      exact (MeasurableActionFamily.exactOutputKernel_apply _ _ _).trans
+        (by cases expression <;> rfl)
+    · rw [if_neg nil]
+      obtain ⟨head, rest, rfl⟩ := List.exists_cons_of_ne_nil nil
+      exact (ogtAt_zero_cons _ _ _).symm
   | succ depth ih =>
-      unfold compactReplayKernel SFiniteKernel.piecewise
-      dsimp only
-      simp only [Kernel.piecewise, Kernel.coe_mk, Set.mem_ofPred_eq]
-      by_cases value : expression.isValue = true
-      · rw [if_pos value, ogtAt_succ_value depth value]
-        rfl
-      · rw [if_neg value, Kernel.comp_apply, compactReplayStep_apply]
-        let previous := SFiniteKernel.pullback (compactReplayKernel depth)
-          (fun next : Expr => (tape, next)) (measurable_const.prodMk measurable_id)
-        have previousEq : ∀ next, previous.kernel next = outputGivenTraceAt depth next tape := by
-          intro next
-          rw [MeasurableActionFamily.pullback_apply, ih]
-        have previousFun : (fun next : Expr => (compactReplayKernel depth).kernel (tape, next)) =
-            previous.kernel := by
-          funext next
-          rw [MeasurableActionFamily.pullback_apply]
-        by_cases none : generationOp expression.skeleton = none
-        · rw [if_pos none, bind_map _ (fun next : Expr => (tape, next))
-            (measurable_const.prodMk measurable_id) (compactReplayKernel depth).kernel, previousFun]
-          unfold Determinize.Spec.Paper.stepMeasure
-          cases reduction : reduce expression with
-          | next next =>
-              rw [Action.measure, Measure.dirac_bind previous.kernel.measurable, previousEq,
-                ogtAt_succ_next depth value reduction]
-          | sample site fiber continuation =>
-              rw [Action.measure, ogtAt_succ_sampleE depth value reduction
-                (by rw [← reduce_site reduction, none]),
-                bind_map _ _ (continuation_measurable reduction)]
-              simp_rw [previousEq]
-          | stuck =>
-              rw [Action.measure, Measure.bind_zero_left, ogtAt_succ_stuck depth value reduction]
-        · rw [if_neg none]
-          obtain ⟨op, active⟩ := Option.ne_none_iff_exists'.mp none
-          rcases generationOp_some_reduce active with ⟨fiber, continuation, reduction⟩ | reduction
-          · by_cases fits : matchesHead (tape, expression)
-            · rw [if_pos fits, Measure.dirac_bind (compactReplayKernel depth).kernel.measurable,
-                ih]
-              obtain ⟨⟨op', v⟩, rest, rfl⟩ := List.exists_cons_of_ne_nil fits.1
-              have opEq : op' = op := by
-                have h := fits.2
-                simp only [active, List.getD_cons_zero, Option.some.injEq] at h
-                exact h.symm
-              subst opEq
-              simp only [List.tail_cons, List.getD_cons_zero]
-              rw [ogtAt_succ_sampleG depth value reduction, sampleContinuation, reduction]
-            · rw [if_neg fits, Measure.bind_zero_left]
-              cases tape with
-              | nil => exact (ogtAt_succ_sampleG_nil depth value reduction).symm
-              | cons head rest =>
-                  obtain ⟨op', v⟩ := head
-                  have ne : op ≠ op' := fun h => fits ⟨List.cons_ne_nil _ _, by simp [active, h]⟩
-                  exact (ogtAt_succ_sampleG_mismatch depth value reduction ne v rest).symm
-          · rw [ogtAt_succ_stuck depth value reduction]
-            split_ifs with fits
-            · rw [Measure.dirac_bind (compactReplayKernel depth).kernel.measurable, ih,
-                sampleContinuation, reduction, ogtAt_unit]
-            · exact Measure.bind_zero_left _
+    unfold compactReplayKernel SFiniteKernel.piecewise
+    dsimp only
+    simp only [Kernel.piecewise, Kernel.coe_mk, Set.mem_ofPred_eq]
+    by_cases value : expression.isValue = true
+    · rw [if_pos value, ogtAt_succ_value depth value]
+      rfl
+    · rw [if_neg value, Kernel.comp_apply, compactReplayStep_apply]
+      let previous := SFiniteKernel.pullback (compactReplayKernel depth)
+        (fun next : Expr ↦ (tape, next)) (measurable_const.prodMk measurable_id)
+      have previousEq : ∀ next, previous.kernel next = outputGivenTraceAt depth next tape := by
+        intro next
+        rw [MeasurableActionFamily.pullback_apply, ih]
+      have previousFun : (fun next : Expr ↦ (compactReplayKernel depth).kernel (tape, next)) =
+          previous.kernel := by
+        funext next
+        rw [MeasurableActionFamily.pullback_apply]
+      by_cases none : generationOp expression.skeleton = none
+      · rw [if_pos none, bind_map _ (fun next : Expr ↦ (tape, next))
+          (measurable_const.prodMk measurable_id) (compactReplayKernel depth).kernel, previousFun]
+        unfold Determinize.Spec.Paper.stepMeasure
+        cases reduction : reduce expression with
+        | next next =>
+          rw [Action.measure, Measure.dirac_bind previous.kernel.measurable, previousEq,
+            ogtAt_succ_next depth value reduction]
+        | sample site fiber continuation =>
+          rw [Action.measure, ogtAt_succ_sampleE depth value reduction
+            (by rw [← reduce_site reduction, none]),
+            bind_map _ _ (continuation_measurable reduction)]
+          simp_rw [previousEq]
+        | stuck =>
+          rw [Action.measure, Measure.bind_zero_left, ogtAt_succ_stuck depth value reduction]
+      · rw [if_neg none]
+        obtain ⟨op, active⟩ := Option.ne_none_iff_exists'.mp none
+        rcases generationOp_some_reduce active with ⟨fiber, continuation, reduction⟩ | reduction
+        · by_cases fits : matchesHead (tape, expression)
+          · rw [if_pos fits, Measure.dirac_bind (compactReplayKernel depth).kernel.measurable,
+              ih]
+            obtain ⟨⟨op', v⟩, rest, rfl⟩ := List.exists_cons_of_ne_nil fits.1
+            have opEq : op' = op := by
+              have h := fits.2
+              simp only [active, List.getD_cons_zero, Option.some.injEq] at h
+              exact h.symm
+            subst opEq
+            simp only [List.tail_cons, List.getD_cons_zero]
+            rw [ogtAt_succ_sampleG depth value reduction, sampleContinuation, reduction]
+          · rw [if_neg fits, Measure.bind_zero_left]
+            cases tape with
+            | nil => exact (ogtAt_succ_sampleG_nil depth value reduction).symm
+            | cons head rest =>
+              obtain ⟨op', v⟩ := head
+              have ne : op ≠ op' := fun h ↦ fits ⟨List.cons_ne_nil _ _, by simp [active, h]⟩
+              exact (ogtAt_succ_sampleG_mismatch depth value reduction ne v rest).symm
+        · rw [ogtAt_succ_stuck depth value reduction]
+          split_ifs with fits
+          · rw [Measure.dirac_bind (compactReplayKernel depth).kernel.measurable, ih,
+              sampleContinuation, reduction, ogtAt_unit]
+          · exact Measure.bind_zero_left _
 
 theorem ogtAt_expression_measurable (depth : Nat) (tape : DrawTrace) :
-    Measurable (fun expression : Expr => outputGivenTraceAt depth expression tape) := by
-  have eq : (fun expression : Expr => outputGivenTraceAt depth expression tape) =
-      fun expression => (compactReplayKernel depth).kernel (tape, expression) := by
+    Measurable (fun expression : Expr ↦ outputGivenTraceAt depth expression tape) := by
+  have eq : (fun expression : Expr ↦ outputGivenTraceAt depth expression tape) =
+      fun expression ↦ (compactReplayKernel depth).kernel (tape, expression) := by
     funext expression
     exact (compactReplayKernel_apply _ _ _).symm
   rw [eq]
@@ -319,9 +319,9 @@ theorem ogtAt_expression_measurable (depth : Nat) (tape : DrawTrace) :
 theorem ogtAt_continuation_measurable (depth : Nat) {expression : Expr}
     {site : DistributionAction × Op} {fiber : Measure ℝ} {continuation : ℝ → Expr}
     (reduction : reduce expression = .sample site fiber continuation) (tape : DrawTrace) :
-    Measurable (fun value : ℝ => outputGivenTraceAt depth (continuation value) tape) := by
-  have eq : (fun value : ℝ => outputGivenTraceAt depth (continuation value) tape) =
-      fun value => (compactReplayKernel depth).kernel (tape, continuation value) := by
+    Measurable (fun value : ℝ ↦ outputGivenTraceAt depth (continuation value) tape) := by
+  have eq : (fun value : ℝ ↦ outputGivenTraceAt depth (continuation value) tape) =
+      fun value ↦ (compactReplayKernel depth).kernel (tape, continuation value) := by
     funext value
     exact (compactReplayKernel_apply _ _ _).symm
   rw [eq]
@@ -330,8 +330,8 @@ theorem ogtAt_continuation_measurable (depth : Nat) {expression : Expr}
 
 /-- The compact replay at every depth, summed: `Proof.Traces.outputGivenTrace` as a kernel. -/
 def outputGivenTraceKernel (program : Expr) : Kernel DrawTrace ℝ :=
-  Kernel.sum fun depth =>
-    (SFiniteKernel.pullback (compactReplayKernel depth) (fun tape : DrawTrace => (tape, program))
+  Kernel.sum fun depth ↦
+    (SFiniteKernel.pullback (compactReplayKernel depth) (fun tape : DrawTrace ↦ (tape, program))
       (measurable_id.prodMk measurable_const)).kernel
 
 theorem outputGivenTraceKernel_apply (program : Expr) (tape : DrawTrace) :
@@ -344,8 +344,8 @@ theorem outputGivenTraceKernel_apply (program : Expr) (tape : DrawTrace) :
 instance outputGivenTraceKernel_sfinite (program : Expr) :
     IsSFiniteKernel (outputGivenTraceKernel program) := by
   unfold outputGivenTraceKernel
-  have := fun depth => (SFiniteKernel.pullback (compactReplayKernel depth)
-    (fun tape : DrawTrace => (tape, program)) (measurable_id.prodMk measurable_const)).sfinite
+  have := fun depth ↦ (SFiniteKernel.pullback (compactReplayKernel depth)
+    (fun tape : DrawTrace ↦ (tape, program)) (measurable_id.prodMk measurable_const)).sfinite
   infer_instance
 
 /-! ### Total mass -/
@@ -355,55 +355,55 @@ theorem ogtAt_partial_mass_le_one (n : Nat) (expression : Expr) (tape : DrawTrac
   induction n generalizing expression tape with
   | zero => simp
   | succ n ih =>
-      rw [Finset.sum_range_succ']
-      by_cases value : expression.isValue = true
-      · simp only [ogtAt_succ_value _ value, Measure.coe_zero, Pi.zero_apply,
-          Finset.sum_const_zero, zero_add]
-        cases expression <;> cases tape <;> simp [outputGivenTraceAt]
-      · have zero : outputGivenTraceAt 0 expression tape Set.univ = 0 := by
-          rw [ogtAt_zero_of_notReal (fun v h => value (by subst h; rfl)) tape]
-          rfl
-        rw [zero, add_zero]
-        cases reduction : reduce expression with
-        | next next =>
-            simp only [ogtAt_succ_next _ value reduction]
-            exact ih next tape
-        | stuck => simp [ogtAt_succ_stuck _ value reduction]
-        | sample site fiber continuation =>
-            rcases site with ⟨kind, op⟩
-            by_cases generation : siteOp (kind, op) = none
-            · simp only [ogtAt_succ_sampleE _ value reduction generation]
-              simp_rw [Measure.bind_apply MeasurableSet.univ
-                (ogtAt_continuation_measurable _ reduction tape).aemeasurable]
-              have coeMeasurable (depth : Nat) : Measurable
-                  (fun v : ℝ => outputGivenTraceAt depth (continuation v) tape Set.univ) :=
-                Measurable.comp (MeasureTheory.Measure.measurable_coe MeasurableSet.univ)
-                  (ogtAt_continuation_measurable depth reduction tape)
-              rw [← lintegral_finsetSum _ (fun depth _ => coeMeasurable depth)]
-              calc ∫⁻ v, ∑ depth ∈ Finset.range n,
-                    outputGivenTraceAt depth (continuation v) tape Set.univ ∂fiber
-                  ≤ ∫⁻ _, 1 ∂fiber := lintegral_mono fun v => ih (continuation v) tape
-                _ = fiber Set.univ := by simp
-                _ ≤ 1 := reduce_sample_mass_le_one reduction
-            · have general : kind = .sample .G := by
-                cases kind with
-                | sample affinity => cases affinity <;> simp_all [siteOp]
-                | mean => simp_all [siteOp]
-              subst kind
-              cases tape with
-              | nil => simp [ogtAt_succ_sampleG_nil _ value reduction]
-              | cons head rest =>
-                  obtain ⟨op', v⟩ := head
-                  by_cases eq : op = op'
-                  · subst eq
-                    simp only [ogtAt_succ_sampleG _ value reduction]
-                    exact ih _ _
-                  · simp [ogtAt_succ_sampleG_mismatch _ value reduction eq]
+    rw [Finset.sum_range_succ']
+    by_cases value : expression.isValue = true
+    · simp only [ogtAt_succ_value _ value, Measure.coe_zero, Pi.zero_apply,
+        Finset.sum_const_zero, zero_add]
+      cases expression <;> cases tape <;> simp [outputGivenTraceAt]
+    · have zero : outputGivenTraceAt 0 expression tape Set.univ = 0 := by
+        rw [ogtAt_zero_of_notReal (fun v h ↦ value (by subst h; rfl)) tape]
+        rfl
+      rw [zero, add_zero]
+      cases reduction : reduce expression with
+      | next next =>
+        simp only [ogtAt_succ_next _ value reduction]
+        exact ih next tape
+      | stuck => simp [ogtAt_succ_stuck _ value reduction]
+      | sample site fiber continuation =>
+        rcases site with ⟨kind, op⟩
+        by_cases generation : siteOp (kind, op) = none
+        · simp only [ogtAt_succ_sampleE _ value reduction generation]
+          simp_rw [Measure.bind_apply MeasurableSet.univ
+            (ogtAt_continuation_measurable _ reduction tape).aemeasurable]
+          have coeMeasurable (depth : Nat) : Measurable
+              (fun v : ℝ ↦ outputGivenTraceAt depth (continuation v) tape Set.univ) :=
+            Measurable.comp (MeasureTheory.Measure.measurable_coe MeasurableSet.univ)
+              (ogtAt_continuation_measurable depth reduction tape)
+          rw [← lintegral_finsetSum _ (fun depth _ ↦ coeMeasurable depth)]
+          calc ∫⁻ v, ∑ depth ∈ Finset.range n,
+                outputGivenTraceAt depth (continuation v) tape Set.univ ∂fiber
+              ≤ ∫⁻ _, 1 ∂fiber := lintegral_mono fun v ↦ ih (continuation v) tape
+            _ = fiber Set.univ := by simp
+            _ ≤ 1 := reduce_sample_mass_le_one reduction
+        · have general : kind = .sample .G := by
+            cases kind with
+            | sample affinity => cases affinity <;> simp_all [siteOp]
+            | mean => simp_all [siteOp]
+          subst kind
+          cases tape with
+          | nil => simp [ogtAt_succ_sampleG_nil _ value reduction]
+          | cons head rest =>
+            obtain ⟨op', v⟩ := head
+            by_cases eq : op = op'
+            · subst eq
+              simp only [ogtAt_succ_sampleG _ value reduction]
+              exact ih _ _
+            · simp [ogtAt_succ_sampleG_mismatch _ value reduction eq]
 
 theorem outputGivenTrace_mass_le_one (program : Expr) (tape : DrawTrace) :
     outputGivenTrace program tape Set.univ ≤ 1 := by
   rw [outputGivenTrace, Measure.sum_apply _ MeasurableSet.univ]
-  exact ENNReal.tsum_le_of_sum_range_le fun n => ogtAt_partial_mass_le_one n program tape
+  exact ENNReal.tsum_le_of_sum_range_le fun n ↦ ogtAt_partial_mass_le_one n program tape
 
 theorem ogtAt_le_outputGivenTrace (depth : Nat) (program : Expr) (tape : DrawTrace) :
     outputGivenTraceAt depth program tape ≤ outputGivenTrace program tape :=
@@ -430,7 +430,7 @@ def normalizedOutputGivenTrace (program : Expr) : Kernel DrawTrace ℝ :=
   Kernel.piecewise
     (measurableSet_eq_fun ((outputGivenTraceKernel program).measurable_coe MeasurableSet.univ)
       (measurable_const (a := (1 : ℝ≥0∞))))
-    (outputGivenTraceKernel program) (Kernel.deterministic (fun _ => (0 : ℝ)) measurable_const)
+    (outputGivenTraceKernel program) (Kernel.deterministic (fun _ ↦ (0 : ℝ)) measurable_const)
 
 theorem normalizedOutputGivenTrace_eq (program : Expr) (tape : DrawTrace)
     (mass : outputGivenTrace program tape Set.univ = 1) :
@@ -468,7 +468,7 @@ theorem measurableSet_kernel_eq_dirac {α : Type*} [MeasurableSpace α] (κ : Ke
       exact ⟨by simp, by simp⟩
     · rintro ⟨mass, null⟩
       ext s hs
-      have diffNull : κ a (s \ {g a}) = 0 := measure_mono_null (fun v hv => hv.2) null
+      have diffNull : κ a (s \ {g a}) = 0 := measure_mono_null (fun v hv ↦ hv.2) null
       rw [← measure_inter_add_sdiff s (measurableSet_singleton (g a)), diffNull, add_zero,
         Measure.dirac_apply' _ hs]
       have singleton : κ a {g a} = 1 := by

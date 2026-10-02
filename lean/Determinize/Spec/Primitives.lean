@@ -61,7 +61,7 @@ def gaussianFiber (action : DistributionAction) (mean variance : ℝ) : Measure 
 def poissonFiber (action : DistributionAction) (rate : ℝ) : Measure ℝ :=
   if h : 0 ≤ rate then
     match action with
-    | .sample _ => (poissonMeasure ⟨rate, h⟩).map (fun value : Nat => (value : ℝ))
+    | .sample _ => (poissonMeasure ⟨rate, h⟩).map (fun value : Nat ↦ (value : ℝ))
     | .mean => Measure.dirac rate
   else 0
 
@@ -106,10 +106,10 @@ noncomputable def discreteFiber (action : DistributionAction) (probabilities : L
       ∑ i : Fin probabilities.length, probabilities[i] ≤ 1 then
     match action with
     | .sample _ =>
-        (∑ i : Fin probabilities.length,
-          ENNReal.ofReal probabilities[i] • Measure.dirac ((i : ℕ) : ℝ)) +
-        ENNReal.ofReal (1 - ∑ i : Fin probabilities.length, probabilities[i]) •
-          Measure.dirac (probabilities.length : ℝ)
+      (∑ i : Fin probabilities.length,
+        ENNReal.ofReal probabilities[i] • Measure.dirac ((i : ℕ) : ℝ)) +
+      ENNReal.ofReal (1 - ∑ i : Fin probabilities.length, probabilities[i]) •
+        Measure.dirac (probabilities.length : ℝ)
     | .mean => Measure.dirac ((probabilities.length : ℝ) +
         ∑ i : Fin probabilities.length, (((i : ℕ) : ℝ) - probabilities.length) * probabilities[i])
   else 0

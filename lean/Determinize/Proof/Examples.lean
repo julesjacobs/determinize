@@ -28,18 +28,18 @@ theorem reciprocal_typed : Typed [] reciprocal (.float .E) :=
 
 example : reduce nestedGeneral =
     .sample (.sample .G, .uniform) (uniformFiber (.sample .G) 0 1)
-      (fun value => .gaussian (.sample .E) (.real 0) (.real value)) := by
+      (fun value ↦ .gaussian (.sample .E) (.real 0) (.real value)) := by
   simp [nestedGeneral, uniform, reduce, Expr.isValue, realValue?, Action.wrap, Function.comp_def]
 
 example : reduce nestedGeneral.determinize =
     .sample (.sample .G, .uniform) (uniformFiber (.sample .G) 0 1)
-      (fun value => .gaussian .mean (.real 0) (.real value)) := by
+      (fun value ↦ .gaussian .mean (.real 0) (.real value)) := by
   simp [nestedGeneral, uniform, Expr.determinize, DistributionAction.determinize, reduce, Expr.isValue,
     realValue?, Action.wrap, Function.comp_def]
 
 example : reduce nestedAffine =
     .sample (.sample .E, .uniform) (uniformFiber (.sample .E) 0 1)
-      (fun value => .uniform (.sample .E) (.real value) (.add (.real 2) (.real 3))) := by
+      (fun value ↦ .uniform (.sample .E) (.real value) (.add (.real 2) (.real 3))) := by
   simp [nestedAffine, uniform, reduce, Expr.isValue, realValue?, Action.wrap, Function.comp_def]
 
 -- A literal takes either affinity, so a product of literals types at both affinities.
@@ -80,11 +80,11 @@ private theorem safe_next {expression next : Expr}
   cases fuel with
   | zero => trivial
   | succ fuel =>
-      rw [DomainSafeAt]
-      split
-      · trivial
-      · rw [reduction]
-        exact safe fuel
+    rw [DomainSafeAt]
+    split
+    · trivial
+    · rw [reduction]
+      exact safe fuel
 
 private theorem safe_sample {expression : Expr} {fiber : Measure ℝ} {continuation : ℝ → Expr}
     (reduction : reduce expression = .sample site fiber continuation) (mass : fiber Set.univ = 1)
@@ -93,11 +93,11 @@ private theorem safe_sample {expression : Expr} {fiber : Measure ℝ} {continuat
   cases fuel with
   | zero => trivial
   | succ fuel =>
-      rw [DomainSafeAt]
-      split
-      · trivial
-      · rw [reduction]
-        exact ⟨mass, safe.mono (fun _ h => h fuel)⟩
+    rw [DomainSafeAt]
+    split
+    · trivial
+    · rw [reduction]
+      exact ⟨mass, safe.mono (fun _ h ↦ h fuel)⟩
 
 private theorem safe_real (value : ℝ) : DomainSafe (.real value) := by
   intro fuel
@@ -110,7 +110,7 @@ private theorem safe_let_uniform (affinity : Affinity) (body : Expr)
   let μ := uniformFiber (.sample affinity) 0 1
   have reduction : reduce (.letE (uniform affinity) body) =
       .sample (.sample affinity, .uniform) μ
-        (fun value => .letE (.real value) body) := by
+        (fun value ↦ .letE (.real value) body) := by
     simp [uniform, reduce, Expr.isValue, realValue?, Action.wrap, Function.comp_def, μ]
   apply safe_sample reduction
   · simp [μ, uniformFiber, uniformMeasure, Real.volume_Icc]
@@ -154,7 +154,7 @@ theorem scaledSample_safe : DomainSafe scaledSample := by
   change DomainSafe (.mul (.real y) (uniform .E))
   let μ := uniformFiber (.sample .E) 0 1
   refine safe_sample (site := (.sample .E, .uniform)) (fiber := μ)
-    (continuation := fun value => .mul (.real y) (.real value)) ?_ ?_ ?_
+    (continuation := fun value ↦ .mul (.real y) (.real value)) ?_ ?_ ?_
   · simp [uniform, reduce, Expr.isValue, realValue?, Action.wrap, Function.comp_def, μ]
   · simp [μ, uniformFiber, uniformMeasure, Real.volume_Icc]
   · apply Filter.Eventually.of_forall
@@ -183,15 +183,15 @@ example : DomainSafe loop := by
   induction fuel with
   | zero => trivial
   | succ fuel ih =>
-      rw [DomainSafeAt, if_neg (by simp [loop, Expr.isValue]), loop_reduction]
-      exact ih
+    rw [DomainSafeAt, if_neg (by simp [loop, Expr.isValue]), loop_reduction]
+    exact ih
 
 example : traceAndOutputLaw loop = 0 := by
   have h (depth : Nat) : traceAndOutputLawAt depth loop = 0 := by
     induction depth with
     | zero => simp [loop, traceAndOutputLawAt]
     | succ depth ih =>
-        rw [Traces.exact_succ_next depth loop loop (by simp [loop, Expr.isValue]) loop_reduction, ih]
+      rw [Traces.exact_succ_next depth loop loop (by simp [loop, Expr.isValue]) loop_reduction, ih]
   simp [traceAndOutputLaw, h]
 
 def affineMean : Expr :=
@@ -234,7 +234,7 @@ example : Typed [] meanWithDraw (.float .G) := .gaussianMean .real (uniform_type
 
 example : reduce meanWithDraw =
     .sample (.sample .G, .uniform) (uniformFiber (.sample .G) 0 1)
-      (fun value => .gaussian .mean (.real 0) (.real value)) := by
+      (fun value ↦ .gaussian .mean (.real 0) (.real value)) := by
   simp [meanWithDraw, uniform, reduce, Expr.isValue, realValue?, Action.wrap, Function.comp_def]
 
 example : traceAndOutputLawAt 1 (.uniform .mean (.real 1) (.real 3)) =
@@ -243,7 +243,7 @@ example : traceAndOutputLawAt 1 (.uniform .mean (.real 1) (.real 3)) =
   have recordMean (v : ℝ) : (record (.mean, .uniform) v : Output → Output) = id := rfl
   simp_rw [recordMean, Measure.map_id]
   exact Measure.dirac_bind
-    (show Measurable (fun value : ℝ => Measure.dirac (([] : Trace), value)) from
+    (show Measurable (fun value : ℝ ↦ Measure.dirac (([] : Trace), value)) from
       Measure.measurable_dirac.comp (measurable_const.prodMk measurable_id)) 2
 
 example : traceAndOutputLawAt 1 (.uniform .mean (.real 3) (.real 1)) = 0 := by
@@ -297,8 +297,8 @@ example : divergenceProbability halfReject = 1 / 2 := by
     intro n
     match n with
     | 0 | 1 | 2 =>
-        norm_num [halfReject, runningProbabilityAt, reduce, Expr.isValue, bernoulliFiber,
-          Action.wrap, realValue?, ENNReal.ofReal_div_of_pos]
+      norm_num [halfReject, runningProbabilityAt, reduce, Expr.isValue, bernoulliFiber,
+        Action.wrap, realValue?, ENNReal.ofReal_div_of_pos]
     | n + 3 => exact (halfReject_running n).ge
 
 example : divergenceProbability loop = 1 := by
@@ -306,8 +306,8 @@ example : divergenceProbability loop = 1 := by
     induction depth with
     | zero => rfl
     | succ depth ih =>
-        simpa [runningProbabilityAt, loop, loopFunction, Expr.isValue, reduce,
-          Expr.substTwo, Expr.substAt, Expr.shift, Expr.mapVars] using ih
+      simpa [runningProbabilityAt, loop, loopFunction, Expr.isValue, reduce,
+        Expr.substTwo, Expr.substAt, Expr.shift, Expr.mapVars] using ih
   simp [divergenceProbability, running]
 
 end Determinize.Proof.Examples

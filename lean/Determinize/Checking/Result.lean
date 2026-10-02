@@ -8,11 +8,11 @@ open Spec.Paper (Core)
 
 /-- Materialize each horizon once during evaluation. -/
 def survivalVector (model : Model) : Nat → Vector Rat model.size
-  | 0 => Vector.ofFn fun state => if model.kind state = .transient then 1 else 0
+  | 0 => Vector.ofFn fun state ↦ if model.kind state = .transient then 1 else 0
   | n + 1 =>
-      let previous := survivalVector model n
-      Vector.ofFn fun state => if model.kind state = .transient then
-        ∑ next, model.transition state next * previous[next] else 0
+    let previous := survivalVector model n
+    Vector.ofFn fun state ↦ if model.kind state = .transient then
+      ∑ next, model.transition state next * previous[next] else 0
 
 theorem survivalVector_correct (model : Model) (n : Nat) (state : Fin model.size) :
     (survivalVector model n)[state] = model.survivalWithin n state := by

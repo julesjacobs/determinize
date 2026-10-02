@@ -13,14 +13,14 @@ deriving Repr
 
 private def insertSuccessor (probability : Rat) (state : State) :
     List (Rat × State) → List (Rat × State)
-  | [] => [(probability,state)]
-  | (p,s) :: rest =>
-      if s == state then (p+probability,s) :: rest
-      else (p,s) :: insertSuccessor probability state rest
+  | [] => [(probability, state)]
+  | (p, s) :: rest =>
+    if s == state then (p + probability, s) :: rest
+    else (p, s) :: insertSuccessor probability state rest
 
 /-- Preserve first-discovery order, combine equal successors, and remove zero edges. -/
 def aggregate (successors : List (Rat × State)) : List (Rat × State) :=
-  successors.foldl (fun accumulated (p,s) =>
+  successors.foldl (fun accumulated (p, s) ↦
     if p == 0 then accumulated else insertSuccessor p s accumulated) []
 
 /-- Breadth-first exploration. Limits never produce a `Candidate`. Hash collisions
@@ -41,31 +41,31 @@ def explore (source : Core) (subject : Subject := .determinized) (limits : Limit
     if let .error failure := action then return .failed cursor failure
     let .ok action := action | unreachable!
     let (kind, successors) := match action with
-      | .returned reward => (StateKind.returned reward, [(1,state)])
-      | .rejected => (.rejected, [(1,state)])
+      | .returned reward => (StateKind.returned reward, [(1, state)])
+      | .rejected => (.rejected, [(1, state)])
       | .next _ successors => (.transient, successors)
-    if successors.any (fun (p,_) => p < 0) then
+    if successors.any (fun (p, _) ↦ p < 0) then
       return .failed cursor (.invalid "negative transition probability")
     let successors := aggregate successors
     if (successors.map Prod.fst).sum != 1 then
       return .failed cursor (.invalid "transition probabilities do not sum to one")
     let mut edges : Array Edge := #[]
-    for (probability,next) in successors do
+    for (probability, next) in successors do
       if edgeCount ≥ limits.maxEdges then return .incomplete .edges states.size rows.size edgeCount
       let mut target := 0
       match indices[next]? with
       | some index => target := index
       | none =>
-          if states.size ≥ limits.maxStates then return .incomplete .states states.size rows.size edgeCount
-          if (reprStr next).utf8ByteSize > limits.maxStateBytes then
-            return .incomplete .stateBytes states.size rows.size edgeCount
-          target := states.size
-          states := states.push next
-          indices := indices.insert next target
-      edges := edges.push ⟨target,probability⟩
+        if states.size ≥ limits.maxStates then return .incomplete .states states.size rows.size edgeCount
+        if (reprStr next).utf8ByteSize > limits.maxStateBytes then
+          return .incomplete .stateBytes states.size rows.size edgeCount
+        target := states.size
+        states := states.push next
+        indices := indices.insert next target
+      edges := edges.push ⟨target, probability⟩
       edgeCount := edgeCount + 1
-    rows := rows.push ⟨kind,edges⟩
+    rows := rows.push ⟨kind, edges⟩
     cursor := cursor + 1
-  return .complete ⟨0,states,rows⟩
+  return .complete ⟨0, states, rows⟩
 
 end Determinize.Tests.ReferenceExplorer

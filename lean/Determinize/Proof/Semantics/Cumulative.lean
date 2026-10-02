@@ -11,7 +11,7 @@ noncomputable def outputMeasure : Nat → Expr → Measure ℝ
   | fuel + 1, expression => match reduce expression with
       | .next next => outputMeasure fuel next
       | .sample _ fiber continuation =>
-          fiber.bind fun value => outputMeasure fuel (continuation value)
+        fiber.bind fun value ↦ outputMeasure fuel (continuation value)
       | .stuck => 0
 
 theorem absorbing_zero (expression : Expr)

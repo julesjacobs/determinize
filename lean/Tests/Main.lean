@@ -34,8 +34,8 @@ def main (args : List String) : IO UInt32 := do
     match args with
     | [] => pure ()
     | ["--corpus", path, affinity] =>
-        Tests.assert (affinity == "fast" || affinity == "statistical") "invalid corpus affinity"
-        Tests.corpus path (affinity == "statistical")
+      Tests.assert (affinity == "fast" || affinity == "statistical") "invalid corpus affinity"
+      Tests.corpus path (affinity == "statistical")
     | _ => throw (IO.userError "usage: det-tests [--corpus manifest.json fast|statistical]")
     IO.println "All Lean front-end tests passed."
     return 0

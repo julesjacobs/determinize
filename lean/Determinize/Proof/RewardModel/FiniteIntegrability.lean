@@ -14,11 +14,11 @@ private theorem nonnegative_edge_solution (model : Model) (paths : Paths model.c
     ∃ v : Fin model.size → Rat, (∀ i, 0 ≤ v i) ∧ ∀ i, v i = match model.kind i with
       | .returned b => terminal b
       | .rejected => 0
-      | .transient => ((model.edges i).map fun (e : Edge model.size) => e.probability * (v e.target + extra e)).sum := by
-  let rhs := fun (i : Fin model.size) => match model.kind i with
+      | .transient => ((model.edges i).map fun (e : Edge model.size) ↦ e.probability * (v e.target + extra e)).sum := by
+  let rhs := fun (i : Fin model.size) ↦ match model.kind i with
     | .returned b => terminal b
     | .rejected => 0
-    | .transient => ((model.edges i).map fun (e : Edge model.size) => e.probability * extra e).sum
+    | .transient => ((model.edges i).map fun (e : Edge model.size) ↦ e.probability * extra e).sum
   obtain ⟨v, eqs⟩ := linear_exists model.control paths valid rhs
   have nonnegative : ∀ i, 0 ≤ rhs i := by
     intro i
@@ -40,10 +40,10 @@ private theorem nonnegative_edge_solution (model : Model) (paths : Paths model.c
 theorem momentBounds_exist (model : Model) (paths : Paths model.control)
     (valid : paths.Valid model.control) : Nonempty (MomentBounds model) := by
   obtain ⟨a, nonnegative_a, eqs_a⟩ := nonnegative_edge_solution model paths valid
-    (fun b => |b|) (fun e => |e.reward|) abs_nonneg (fun _ _ _ => abs_nonneg _)
+    (fun b ↦ |b|) (fun e ↦ |e.reward|) abs_nonneg (fun _ _ _ ↦ abs_nonneg _)
   obtain ⟨b, nonnegative_b, eqs_b⟩ := nonnegative_edge_solution model paths valid
-    (fun b => b^2) (fun e => 2*|e.reward| * a e.target + e.reward^2) sq_nonneg
-    (fun _ e _ => add_nonneg (mul_nonneg (mul_nonneg (by norm_num) (abs_nonneg _))
+    (fun b ↦ b ^ 2) (fun e ↦ 2 * |e.reward| * a e.target + e.reward ^ 2) sq_nonneg
+    (fun _ e _ ↦ add_nonneg (mul_nonneg (mul_nonneg (by norm_num) (abs_nonneg _))
       (nonnegative_a e.target)) (sq_nonneg _))
   refine ⟨⟨a, b, nonnegative_a, nonnegative_b, ?_, ?_⟩⟩
   · intro i

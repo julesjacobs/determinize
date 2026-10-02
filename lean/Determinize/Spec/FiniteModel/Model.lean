@@ -24,9 +24,9 @@ structure Model where
 def Model.survivalWithin (model : Model) : Nat → Fin model.size → Rat
   | 0, state => if model.kind state = .transient then 1 else 0
   | steps + 1, state =>
-      if model.kind state = .transient then
-        ∑ next, model.transition state next * model.survivalWithin steps next
-      else 0
+    if model.kind state = .transient then
+      ∑ next, model.transition state next * model.survivalWithin steps next
+    else 0
 
 /-- Unnormalized real output accumulated within `steps` transitions. -/
 noncomputable def Model.outputWithin (model : Model) : Nat → Fin model.size → Measure ℝ

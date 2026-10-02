@@ -30,51 +30,51 @@ theorem record_measurable (site : DistributionAction × Op) (value : ℝ) : Meas
   rcases site with ⟨kind, op⟩
   cases kind with
   | sample affinity =>
-      cases affinity with
-      | E => exact measurable_id
-      | G => exact (StepTraces.draw_cons_measurable.comp
-          (measurable_const.prodMk measurable_fst)).prodMk measurable_snd
+    cases affinity with
+    | E => exact measurable_id
+    | G => exact (StepTraces.draw_cons_measurable.comp
+        (measurable_const.prodMk measurable_fst)).prodMk measurable_snd
   | mean => exact measurable_id
 
 theorem exact_eq_detailed (depth : Nat) (e : Expr) :
     traceAndOutputLawAt depth e = (StepTraces.exactMeasure depth e).map eraseOutput := by
   induction depth generalizing e with
   | zero =>
-      cases e <;> try simp [traceAndOutputLawAt, StepTraces.exactMeasure]
-      case real r =>
-        simp [Measure.map_dirac' eraseOutput_measurable, eraseOutput, mapTraceOutput, retain]
+    cases e <;> try simp [traceAndOutputLawAt, StepTraces.exactMeasure]
+    case real r =>
+      simp [Measure.map_dirac' eraseOutput_measurable, eraseOutput, mapTraceOutput, retain]
   | succ depth ih =>
-      by_cases value : e.isValue = true
-      · simp [traceAndOutputLawAt, StepTraces.exactMeasure, value]
-      · rw [traceAndOutputLawAt, StepTraces.exactMeasure, if_neg value, if_neg value]
-        cases reduction : reduce e with
-        | stuck => simp
-        | next next =>
-            simp only [ih]
-            rw [Measure.map_map eraseOutput_measurable
-              (show Measurable (StepTraces.prepend none) from
-                StepTraces.prepend_measurable.comp (measurable_const.prodMk measurable_id))]
-            congr 1
-        | sample site fiber cont =>
-            have hc := (MeasurableActionFamily.stepKernel primitiveLaws).sample_continuation_measurable
-              e fiber cont reduction
-            have hm := (StepTraces.successorKernel (StepTraces.exactKernel depth)).kernel.measurable.comp
-              ((StepTraces.generationEvent_measurable site).prodMk hc)
-            simp only [Function.comp_def] at hm
-            simp_rw [StepTraces.successorKernel_apply, StepTraces.exactKernel_apply] at hm
-            rw [StepTraces.map_bind_fun _ _ hm _ eraseOutput_measurable]
-            apply Measure.bind_congr_right
-            filter_upwards [] with r
-            rw [ih, Measure.map_map (record_measurable site r) eraseOutput_measurable,
-              Measure.map_map eraseOutput_measurable
-                (show Measurable (StepTraces.prepend (StepTraces.generationEvent site r)) from
-                  StepTraces.prepend_measurable.comp (measurable_const.prodMk measurable_id))]
-            congr 1
-            funext p
-            rcases site with ⟨kind, op⟩
-            cases kind with
-            | sample affinity => cases affinity <;> rfl
-            | mean => rfl
+    by_cases value : e.isValue = true
+    · simp [traceAndOutputLawAt, StepTraces.exactMeasure, value]
+    · rw [traceAndOutputLawAt, StepTraces.exactMeasure, if_neg value, if_neg value]
+      cases reduction : reduce e with
+      | stuck => simp
+      | next next =>
+        simp only [ih]
+        rw [Measure.map_map eraseOutput_measurable
+          (show Measurable (StepTraces.prepend none) from
+            StepTraces.prepend_measurable.comp (measurable_const.prodMk measurable_id))]
+        congr 1
+      | sample site fiber cont =>
+        have hc := (MeasurableActionFamily.stepKernel primitiveLaws).sample_continuation_measurable
+          e fiber cont reduction
+        have hm := (StepTraces.successorKernel (StepTraces.exactKernel depth)).kernel.measurable.comp
+          ((StepTraces.generationEvent_measurable site).prodMk hc)
+        simp only [Function.comp_def] at hm
+        simp_rw [StepTraces.successorKernel_apply, StepTraces.exactKernel_apply] at hm
+        rw [StepTraces.map_bind_fun _ _ hm _ eraseOutput_measurable]
+        apply Measure.bind_congr_right
+        filter_upwards [] with r
+        rw [ih, Measure.map_map (record_measurable site r) eraseOutput_measurable,
+          Measure.map_map eraseOutput_measurable
+            (show Measurable (StepTraces.prepend (StepTraces.generationEvent site r)) from
+              StepTraces.prepend_measurable.comp (measurable_const.prodMk measurable_id))]
+        congr 1
+        funext p
+        rcases site with ⟨kind, op⟩
+        cases kind with
+        | sample affinity => cases affinity <;> rfl
+        | mean => rfl
 
 theorem joint_eq_detailed (e : Expr) :
     traceAndOutputLaw e = (StepTraces.jointMeasure e).map eraseOutput := by
@@ -87,7 +87,7 @@ theorem correspondence (e : Expr) :
   exact StepTraces.correspondence e
 
 theorem exact_succ_next (depth : Nat) (e next : Expr) (nv : e.isValue ≠ true)
-    (h : reduce e = .next next) : traceAndOutputLawAt (depth+1) e = traceAndOutputLawAt depth next := by
+    (h : reduce e = .next next) : traceAndOutputLawAt (depth + 1) e = traceAndOutputLawAt depth next := by
   simp [traceAndOutputLawAt, nv, h]
 
 /-! ### The compact replay as the fiber -/
@@ -157,7 +157,7 @@ theorem compact_normalized_fiberSound (source : Expr) (typed : Typed [] source (
   rw [joint_eq_detailed, joint_eq_detailed]
   exact StepTraces.FiberSound.mapTrace _ _ _ _ (joint_normalized_fiberSound source typed safe)
     retain retain_measurable
-    (fun trace => by rw [normalizedFiber, MeasurableActionFamily.pullback_apply])
+    (fun trace ↦ by rw [normalizedFiber, MeasurableActionFamily.pullback_apply])
 
 /-- Almost every terminating target trace gives the source replay mass one. -/
 theorem compact_source_massOne (source : Expr) (typed : Typed [] source (.float .E))
@@ -213,10 +213,10 @@ theorem soundnessDataE (source : Expr) (typed : Typed [] source (.float .E))
     rw [traceLaw, hs]
     exact Measure.fst_compProd ν (normalizedKernel source).kernel
   change _ = ν ⊗ₘ _ at hs
-  change _ = ν.map (fun trace => (trace, f trace)) at ht
+  change _ = ν.map (fun trace ↦ (trace, f trace)) at ht
   change ∀ᵐ trace ∂ν, _ at hmean
   rw [← hν] at hs ht hmean
-  have pairMeasurable : Measurable (fun trace : Trace => (trace, f trace)) :=
+  have pairMeasurable : Measurable (fun trace : Trace ↦ (trace, f trace)) :=
     measurable_id.prodMk hf
   refine ⟨⟨inferInstance, hf, hs, ht, hmean⟩, ?_, ?_⟩
   · have massOne := compact_source_massOne source typed safe
@@ -258,7 +258,7 @@ theorem compProd_eq_traceThenOutput (traces : Measure Trace) [SFinite traces]
 theorem targetLaw (program : Expr) (typed : Typed [] program (.float .E))
     (safe : DomainSafe program) :
     traceAndOutputLaw program.determinize =
-      (traceLaw program).map (fun trace => (trace, replayMean program trace)) := by
+      (traceLaw program).map (fun trace ↦ (trace, replayMean program trace)) := by
   obtain ⟨_, factor, sameFiber, _⟩ := soundnessDataE program typed safe
   refine factor.2.2.2.1.trans (Measure.map_congr ?_)
   filter_upwards [sameFiber] with trace same
@@ -284,12 +284,12 @@ theorem replaySoundness :
   have := markov
   refine ⟨targetSafe, ?_, ?_, ?_⟩
   · rw [hs, compProd_eq_traceThenOutput, traceThenOutput, traceThenOutput]
-    exact Measure.bind_congr_right (massAe.mono fun trace h => by simp only [h])
+    exact Measure.bind_congr_right (massAe.mono fun trace h ↦ by simp only [h])
   · rw [ht, traceThenOutput, ← Measure.bind_dirac_eq_map _
-      (show Measurable (fun trace : Trace => (trace, f trace)) from measurable_id.prodMk hf)]
+      (show Measurable (fun trace : Trace ↦ (trace, f trace)) from measurable_id.prodMk hf)]
     apply Measure.bind_congr_right
     filter_upwards [diracAe] with trace h
-    rw [h, Measure.map_dirac' (show Measurable (fun value : ℝ => (trace, value)) from
+    rw [h, Measure.map_dirac' (show Measurable (fun value : ℝ ↦ (trace, value)) from
       measurable_const.prodMk measurable_id)]
   · filter_upwards [hmean, massAe, diracAe] with trace mean mass dirac
     simp only [replayMean, mass]

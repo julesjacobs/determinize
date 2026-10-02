@@ -26,12 +26,12 @@ theorem initial_reification (source : Core) (subject : Subject)
     stateExpr (initialState source subject) = subject.program source := by
   cases subject with
   | source =>
-      simpa [stateExpr, initialState, environmentExpr, stackExpr, Subject.program, interpret] using
-        close_empty (interpret source) 0 bounded
+    simpa [stateExpr, initialState, environmentExpr, stackExpr, Subject.program, interpret] using
+      close_empty (interpret source) 0 bounded
   | determinized =>
-      simp only [stateExpr, initialState, environmentExpr, stackExpr, List.foldl_nil,
-        Subject.program, interpret_determinize]
-      exact close_empty (interpret source).determinize 0 ((scoped_determinize _ _).mpr bounded)
+    simp only [stateExpr, initialState, environmentExpr, stackExpr, List.foldl_nil,
+      Subject.program, interpret_determinize]
+    exact close_empty (interpret source).determinize 0 ((scoped_determinize _ _).mpr bounded)
 
 theorem typed_initial_reification (source : Core) (subject : Subject) (ty : Ty)
     (typed : Typed [] (interpret source) ty) :
@@ -43,6 +43,6 @@ theorem replay_initial_reification (source : Core) (subject : Subject) (candidat
     stateExpr (candidate.state (candidate.toModel valid).initial) = subject.program source := by
   rw [replay_initial candidate valid]
   apply initial_reification source subject
-  exact (scoped_map source (fun q : Rat => (q : ℝ)) 0).mpr valid.aligned.source_scoped
+  exact (scoped_map source (fun q : Rat ↦ (q : ℝ)) 0).mpr valid.aligned.source_scoped
 
 end Determinize.Proof.FiniteModel

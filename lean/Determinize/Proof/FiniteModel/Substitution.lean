@@ -9,17 +9,17 @@ namespace Binding
 def Scoped {α : Type} (depth : Nat) : Expr α → Prop
   | .bvar i => i < depth
   | .reject | .unit | .bool _ | .real _ | .nil => True
-  | .lam body => Scoped (depth+1) body
-  | .fix body => Scoped (depth+2) body
+  | .lam body => Scoped (depth + 1) body
+  | .fix body => Scoped (depth + 2) body
   | .fst body | .snd body | .inl body | .inr body | .neg body
   | .discrete _ body | .poisson _ body | .bernoulli _ body | .exponential _ body => Scoped depth body
   | .app a b | .pair a b | .cons a b | .add a b | .mul a b | .div a b | .lt a b
   | .uniform _ a b | .gaussian _ a b | .beta _ a b | .gamma _ a b =>
-      Scoped depth a ∧ Scoped depth b
-  | .letE a b => Scoped depth a ∧ Scoped (depth+1) b
+    Scoped depth a ∧ Scoped depth b
+  | .letE a b => Scoped depth a ∧ Scoped (depth + 1) b
   | .ite c a b => Scoped depth c ∧ Scoped depth a ∧ Scoped depth b
-  | .matchSum c a b => Scoped depth c ∧ Scoped (depth+1) a ∧ Scoped (depth+1) b
-  | .matchList c a b => Scoped depth c ∧ Scoped depth a ∧ Scoped (depth+2) b
+  | .matchSum c a b => Scoped depth c ∧ Scoped (depth + 1) a ∧ Scoped (depth + 1) b
+  | .matchList c a b => Scoped depth c ∧ Scoped depth a ∧ Scoped (depth + 2) b
 
 def scopedDecision {α : Type} (depth : Nat) (expression : Expr α) : Decidable (Scoped depth expression) := by
   cases expression with
@@ -30,8 +30,8 @@ def scopedDecision {α : Type} (depth : Nat) (expression : Expr α) : Decidable 
   | real v => exact isTrue True.intro
   | nil  => exact isTrue True.intro
   | discrete k d => exact scopedDecision depth d
-  | lam body => exact scopedDecision (depth+1) body
-  | fix body => exact scopedDecision (depth+2) body
+  | lam body => exact scopedDecision (depth + 1) body
+  | fix body => exact scopedDecision (depth + 2) body
   | fst body => exact scopedDecision depth body
   | snd body => exact scopedDecision depth body
   | inl body => exact scopedDecision depth body
@@ -41,68 +41,68 @@ def scopedDecision {α : Type} (depth : Nat) (expression : Expr α) : Decidable 
   | bernoulli k body => exact scopedDecision depth body
   | exponential k body => exact scopedDecision depth body
   | app left right =>
-      letI := scopedDecision depth left
-      letI := scopedDecision depth right
-      exact inferInstanceAs (Decidable (_ ∧ _))
+    letI := scopedDecision depth left
+    letI := scopedDecision depth right
+    exact inferInstanceAs (Decidable (_ ∧ _))
   | pair left right =>
-      letI := scopedDecision depth left
-      letI := scopedDecision depth right
-      exact inferInstanceAs (Decidable (_ ∧ _))
+    letI := scopedDecision depth left
+    letI := scopedDecision depth right
+    exact inferInstanceAs (Decidable (_ ∧ _))
   | cons left right =>
-      letI := scopedDecision depth left
-      letI := scopedDecision depth right
-      exact inferInstanceAs (Decidable (_ ∧ _))
+    letI := scopedDecision depth left
+    letI := scopedDecision depth right
+    exact inferInstanceAs (Decidable (_ ∧ _))
   | add left right =>
-      letI := scopedDecision depth left
-      letI := scopedDecision depth right
-      exact inferInstanceAs (Decidable (_ ∧ _))
+    letI := scopedDecision depth left
+    letI := scopedDecision depth right
+    exact inferInstanceAs (Decidable (_ ∧ _))
   | mul left right =>
-      letI := scopedDecision depth left
-      letI := scopedDecision depth right
-      exact inferInstanceAs (Decidable (_ ∧ _))
+    letI := scopedDecision depth left
+    letI := scopedDecision depth right
+    exact inferInstanceAs (Decidable (_ ∧ _))
   | div left right =>
-      letI := scopedDecision depth left
-      letI := scopedDecision depth right
-      exact inferInstanceAs (Decidable (_ ∧ _))
+    letI := scopedDecision depth left
+    letI := scopedDecision depth right
+    exact inferInstanceAs (Decidable (_ ∧ _))
   | lt left right =>
-      letI := scopedDecision depth left
-      letI := scopedDecision depth right
-      exact inferInstanceAs (Decidable (_ ∧ _))
+    letI := scopedDecision depth left
+    letI := scopedDecision depth right
+    exact inferInstanceAs (Decidable (_ ∧ _))
   | uniform k left right =>
-      letI := scopedDecision depth left
-      letI := scopedDecision depth right
-      exact inferInstanceAs (Decidable (_ ∧ _))
+    letI := scopedDecision depth left
+    letI := scopedDecision depth right
+    exact inferInstanceAs (Decidable (_ ∧ _))
   | gaussian k left right =>
-      letI := scopedDecision depth left
-      letI := scopedDecision depth right
-      exact inferInstanceAs (Decidable (_ ∧ _))
+    letI := scopedDecision depth left
+    letI := scopedDecision depth right
+    exact inferInstanceAs (Decidable (_ ∧ _))
   | beta k left right =>
-      letI := scopedDecision depth left
-      letI := scopedDecision depth right
-      exact inferInstanceAs (Decidable (_ ∧ _))
+    letI := scopedDecision depth left
+    letI := scopedDecision depth right
+    exact inferInstanceAs (Decidable (_ ∧ _))
   | gamma k left right =>
-      letI := scopedDecision depth left
-      letI := scopedDecision depth right
-      exact inferInstanceAs (Decidable (_ ∧ _))
+    letI := scopedDecision depth left
+    letI := scopedDecision depth right
+    exact inferInstanceAs (Decidable (_ ∧ _))
   | letE left right =>
-      letI := scopedDecision depth left
-      letI := scopedDecision (depth+1) right
-      exact inferInstanceAs (Decidable (_ ∧ _))
+    letI := scopedDecision depth left
+    letI := scopedDecision (depth + 1) right
+    exact inferInstanceAs (Decidable (_ ∧ _))
   | ite c x y =>
-      letI := scopedDecision depth c
-      letI := scopedDecision depth x
-      letI := scopedDecision depth y
-      exact inferInstanceAs (Decidable (_ ∧ _ ∧ _))
+    letI := scopedDecision depth c
+    letI := scopedDecision depth x
+    letI := scopedDecision depth y
+    exact inferInstanceAs (Decidable (_ ∧ _ ∧ _))
   | matchSum c x y =>
-      letI := scopedDecision depth c
-      letI := scopedDecision (depth+1) x
-      letI := scopedDecision (depth+1) y
-      exact inferInstanceAs (Decidable (_ ∧ _ ∧ _))
+    letI := scopedDecision depth c
+    letI := scopedDecision (depth + 1) x
+    letI := scopedDecision (depth + 1) y
+    exact inferInstanceAs (Decidable (_ ∧ _ ∧ _))
   | matchList c x y =>
-      letI := scopedDecision depth c
-      letI := scopedDecision depth x
-      letI := scopedDecision (depth+2) y
-      exact inferInstanceAs (Decidable (_ ∧ _ ∧ _))
+    letI := scopedDecision depth c
+    letI := scopedDecision depth x
+    letI := scopedDecision (depth + 2) y
+    exact inferInstanceAs (Decidable (_ ∧ _ ∧ _))
 termination_by sizeOf expression
 
 instance {α : Type} (depth : Nat) (expression : Expr α) : Decidable (Scoped depth expression) :=
@@ -115,8 +115,8 @@ theorem scoped_map {α β : Type} (expression : Expr α) (f : α → β) (depth 
 /-- Instantiate free variables with closed expressions; missing entries use
 rejection. For scoped source expressions no missing entry is consulted. -/
 def close {α : Type} (environment : List (Expr α)) (depth : Nat) (expression : Expr α) : Expr α :=
-  expression.mapVars (fun depth i =>
-    if i < depth then .bvar i else environment[i-depth]?.getD .reject) depth
+  expression.mapVars (fun depth i ↦
+    if i < depth then .bvar i else environment[i - depth]?.getD .reject) depth
 
 theorem scoped_mono {α : Type} (expression : Expr α) {a b : Nat}
     (bounded : Scoped a expression) (le : a ≤ b) : Scoped b expression := by
@@ -182,8 +182,8 @@ theorem environment_lookup_scoped {α : Type} (environment : List (Expr α))
   cases h : environment[i]? with
   | none => simp [Scoped]
   | some e =>
-      simp only [Option.getD_some]
-      exact scoped_mono e (closed e (List.mem_of_getElem? h)) (Nat.zero_le _)
+    simp only [Option.getD_some]
+    exact scoped_mono e (closed e (List.mem_of_getElem? h)) (Nat.zero_le _)
 
 theorem close_scoped {α : Type} (expression : Expr α) (environment : List (Expr α))
     (closed : ∀ e ∈ environment, Scoped 0 e) (depth : Nat) :
@@ -204,7 +204,7 @@ theorem close_empty {α : Type} (expression : Expr α) (depth : Nat)
 theorem close_cons_subst {α : Type} (expression : Expr α) (environment : List (Expr α))
     (closed : ∀ e ∈ environment, Scoped 0 e) (value : Expr α) (valueClosed : Scoped 0 value)
     (depth : Nat) :
-    Expr.substAt depth value (close environment (depth+1) expression) =
+    Expr.substAt depth value (close environment (depth + 1) expression) =
       close (value :: environment) depth expression := by
   induction expression generalizing depth <;>
     simp_all [close, Expr.mapVars, Nat.add_assoc]
@@ -217,7 +217,7 @@ theorem close_cons_subst {α : Type} (expression : Expr α) (environment : List 
       simp [Expr.mapVars, shift_closed value valueClosed]
     · have above : depth < i := by omega
       have notBelow : ¬i ≤ depth := by omega
-      have diff : i-depth = (i-(depth+1))+1 := by omega
+      have diff : i - depth = (i - (depth + 1)) + 1 := by omega
       simp only [notBelow, ↓reduceIte, below, diff, List.getElem?_cons_succ]
       exact subst_closed _ (environment_lookup_scoped environment closed _ 0) value depth
 
@@ -227,7 +227,7 @@ theorem close_two_subst {α : Type} (expression : Expr α) (environment : List (
     (close environment 2 expression).substTwo argument function =
       close (argument :: function :: environment) 0 expression := by
   unfold Expr.substTwo
-  rw [show 2 = 1+1 from rfl, close_cons_subst expression environment closed function functionClosed 1]
+  rw [show 2 = 1 + 1 from rfl, close_cons_subst expression environment closed function functionClosed 1]
   exact close_cons_subst expression (function :: environment)
     (by intro e he; rcases List.mem_cons.mp he with rfl | he; exact functionClosed; exact closed e he)
     argument argumentClosed 0

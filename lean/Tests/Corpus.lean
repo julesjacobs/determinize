@@ -52,8 +52,8 @@ private def observation (e : Core) (c : CorpusCase) (o : Observation) : IO Unit 
   if let some expected := o.error then
     match result with
     | .error message =>
-        assert ((message.splitOn expected).length > 1)
-          s!"expected runtime error containing '{expected}', got '{message}'"
+      assert ((message.splitOn expected).length > 1)
+        s!"expected runtime error containing '{expected}', got '{message}'"
     | .ok _ => throw (IO.userError s!"expected runtime error '{expected}', execution succeeded")
   else
     let (v, state) ← IO.ofExcept result
@@ -94,8 +94,8 @@ private def runCase (c : CorpusCase) (withStatistics : Bool) : IO Unit := do
     assert (!(compile text).isOk) "expected rejection, production compiler accepted the program"
     match compileStage text with
     | .error (stage, message) =>
-        assert (stage == c.stage)
-          s!"expected {c.stage} rejection, got {stage}: {message}"
+      assert (stage == c.stage)
+        s!"expected {c.stage} rejection, got {stage}: {message}"
     | .ok _ => throw (IO.userError "expected rejection, compilation succeeded")
   else
     let p ← IO.ofExcept (compile text)

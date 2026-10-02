@@ -25,37 +25,37 @@ private def build (source : Core) (subject : Subject) (limits : Limits)
       match Reward.step current with
       | .error failure => return .failed i failure
       | .ok (.returned value) =>
-          if edgeCount + 1 > limits.maxEdges then
-            return .incomplete .edges states.size rows.size edgeCount
-          return build source subject limits fuel states indices
-            (rows.push ⟨.returned value, [⟨i, 1, 0⟩]⟩) (edgeCount + 1)
+        if edgeCount + 1 > limits.maxEdges then
+          return .incomplete .edges states.size rows.size edgeCount
+        return build source subject limits fuel states indices
+          (rows.push ⟨.returned value, [⟨i, 1, 0⟩]⟩) (edgeCount + 1)
       | .ok .rejected =>
-          if edgeCount + 1 > limits.maxEdges then
-            return .incomplete .edges states.size rows.size edgeCount
-          return build source subject limits fuel states indices
-            (rows.push ⟨.rejected, [⟨i, 1, 0⟩]⟩) (edgeCount + 1)
+        if edgeCount + 1 > limits.maxEdges then
+          return .incomplete .edges states.size rows.size edgeCount
+        return build source subject limits fuel states indices
+          (rows.push ⟨.rejected, [⟨i, 1, 0⟩]⟩) (edgeCount + 1)
       | .ok (.next _ outcomes) =>
-          let mut states := states
-          let mut indices := indices
-          let mut edges := []
-          for o in outcomes do
-            if o.probability < 0 then return .failed i (.invalid "negative probability")
-            if 0 < o.probability then
-              if edgeCount + edges.length + 1 > limits.maxEdges then
-                return .incomplete .edges states.size rows.size (edgeCount + edges.length)
-              if (reprStr o.state).utf8ByteSize > limits.maxStateBytes then
-                return .incomplete .stateBytes states.size rows.size (edgeCount + edges.length)
-              let target := match indices[o.state]? with
-                | some j => j
-                | none => states.size
-              if target = states.size then
-                if states.size + 1 > limits.maxStates then
-                  return .incomplete .states (states.size + 1) rows.size (edgeCount + edges.length)
-                indices := indices.insert o.state target
-                states := states.push o.state
-              edges := ⟨target, o.probability, o.reward⟩ :: edges
-          return build source subject limits fuel states indices
-            (rows.push ⟨.transient, edges.reverse⟩) (edgeCount + edges.length)
+        let mut states := states
+        let mut indices := indices
+        let mut edges := []
+        for o in outcomes do
+          if o.probability < 0 then return .failed i (.invalid "negative probability")
+          if 0 < o.probability then
+            if edgeCount + edges.length + 1 > limits.maxEdges then
+              return .incomplete .edges states.size rows.size (edgeCount + edges.length)
+            if (reprStr o.state).utf8ByteSize > limits.maxStateBytes then
+              return .incomplete .stateBytes states.size rows.size (edgeCount + edges.length)
+            let target := match indices[o.state]? with
+              | some j => j
+              | none => states.size
+            if target = states.size then
+              if states.size + 1 > limits.maxStates then
+                return .incomplete .states (states.size + 1) rows.size (edgeCount + edges.length)
+              indices := indices.insert o.state target
+              states := states.push o.state
+            edges := ⟨target, o.probability, o.reward⟩ :: edges
+        return build source subject limits fuel states indices
+          (rows.push ⟨.transient, edges.reverse⟩) (edgeCount + edges.length)
 
 def explore (source : Core) (subject : Subject := .determinized) (limits : Limits := {}) :
     Exploration source subject :=

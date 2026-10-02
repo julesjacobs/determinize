@@ -39,9 +39,9 @@ def valuesDecEq (a b : List Value) : Decidable (a = b) := by
   | cons x xs => cases b with
     | nil => exact isFalse (by intro h; cases h)
     | cons y ys =>
-        letI := valueDecEq x y
-        letI := valuesDecEq xs ys
-        exact decidable_of_iff (x = y ∧ xs = ys) (by simp)
+      letI := valueDecEq x y
+      letI := valuesDecEq xs ys
+      exact decidable_of_iff (x = y ∧ xs = ys) (by simp)
 termination_by sizeOf a
 end
 instance : DecidableEq Value := valueDecEq

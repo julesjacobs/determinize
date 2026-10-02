@@ -29,12 +29,12 @@ theorem completed_domain (p : List Rat) (d : Spec.Paper.FiniteDistribution)
 
 theorem completed_sample (affinity : Affinity) (p : List Rat) (d : Spec.Paper.FiniteDistribution)
     (completed : d.probabilities = p ++ [1 - p.sum]) :
-    discreteFiber (.sample affinity) (p.map (Rat.cast : Rat → ℝ)) = d.measure (fun i => (i : ℝ)) := by
+    discreteFiber (.sample affinity) (p.map (Rat.cast : Rat → ℝ)) = d.measure (fun i ↦ (i : ℝ)) := by
   rw [discreteFiber, if_pos (completed_domain p d completed), sum_getElem,
     Spec.Paper.FiniteDistribution.measure, completed,
     List.zipIdx_append, List.map_append, List.sum_append]
   rw [← sum_zipIdx (p.map (Rat.cast : Rat → ℝ))
-    (fun entry => ENNReal.ofReal entry.1 • Measure.dirac (entry.2 : ℝ))]
+    (fun entry ↦ ENNReal.ofReal entry.1 • Measure.dirac (entry.2 : ℝ))]
   simp [List.zipIdx_map, List.map_map, Function.comp_def]
 
 theorem completed_mean (p : List Rat) (d : Spec.Paper.FiniteDistribution)

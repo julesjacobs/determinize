@@ -19,9 +19,9 @@ theorem paths_unique (model : Model) (paths : Paths model) (valid : paths.Valid 
     (eqs : ∀ state, d state = if model.kind state = .transient then
       ∑ next, (model.transition state next : ℝ) * d next else 0) : ∀ state, d state = 0 := by
   obtain ⟨largest, _, bound⟩ := Finset.exists_max_image Finset.univ
-    (fun state => |d state|) ⟨model.initial, Finset.mem_univ _⟩
+    (fun state ↦ |d state|) ⟨model.initial, Finset.mem_univ _⟩
   let M := |d largest|
-  have bounded : ∀ state, |d state| ≤ M := fun state => bound state (Finset.mem_univ _)
+  have bounded : ∀ state, |d state| ≤ M := fun state ↦ bound state (Finset.mem_univ _)
   have maximum_next (state : Fin model.size) (transient : model.kind state = .transient)
       (maximum : |d state| = M) : |d (paths.next state)| = M := by
     have triangle : |d state| ≤ ∑ next, (model.transition state next : ℝ) * |d next| := by
@@ -38,7 +38,7 @@ theorem paths_unique (model : Model) (paths : Paths model) (valid : paths.Valid 
       simp only [mul_sub]
       rw [Finset.sum_sub_distrib, ← Finset.sum_mul, total, one_mul]
     have term := Finset.single_le_sum
-      (fun next (_ : next ∈ Finset.univ) => mul_nonneg
+      (fun next (_ : next ∈ Finset.univ) ↦ mul_nonneg
         (show 0 ≤ (model.transition state next : ℝ) by exact_mod_cast model.nonnegative state next)
         (sub_nonneg.mpr (bounded next))) (Finset.mem_univ (paths.next state))
     have positive : 0 < (model.transition state (paths.next state) : ℝ) := by
@@ -63,29 +63,29 @@ theorem paths_unique (model : Model) (paths : Paths model) (valid : paths.Valid 
 
 private def chooseAll : (n : Nat) → {α : Fin n → Type} →
     ((i : Fin n) → Option (α i)) → Option ((i : Fin n) → α i)
-  | 0, _, _ => some (fun i => Fin.elim0 i)
-  | n+1, _, choices => do
+  | 0, _, _ => some (fun i ↦ Fin.elim0 i)
+  | n + 1, _, choices => do
     let head ← choices 0
-    let tail ← chooseAll n (fun i => choices i.succ)
-    return fun i => match i with
+    let tail ← chooseAll n (fun i ↦ choices i.succ)
+    return fun i ↦ match i with
       | ⟨0, _⟩ => head
-      | ⟨k+1, h⟩ => tail ⟨k, Nat.lt_of_succ_lt_succ h⟩
+      | ⟨k + 1, h⟩ => tail ⟨k, Nat.lt_of_succ_lt_succ h⟩
 
 def findPaths (model : Model) (rank : Fin model.size → Nat) :
     Except String {paths : Paths model // paths.Valid model} := do
-  let choices := fun state : Fin model.size =>
+  let choices := fun state : Fin model.size ↦
     if transient : model.kind state = .transient then
-      (List.finRange model.size).findSome? fun next =>
+      (List.finRange model.size).findSome? fun next ↦
         if h : 0 < model.transition state next ∧ rank next < rank state then
-          some (⟨next, fun _ => h⟩ : {next : Fin model.size // model.kind state = .transient →
+          some (⟨next, fun _ ↦ h⟩ : {next : Fin model.size // model.kind state = .transient →
             0 < model.transition state next ∧ rank next < rank state})
         else none
-    else some (⟨state, fun h => (transient h).elim⟩ : {next : Fin model.size // model.kind state = .transient →
+    else some (⟨state, fun h ↦ (transient h).elim⟩ : {next : Fin model.size // model.kind state = .transient →
       0 < model.transition state next ∧ rank next < rank state})
   let some selected := chooseAll model.size choices
     | throw "no descending path to a terminal boundary"
-  let next := Vector.ofFn fun state => (selected state).val
-  return ⟨⟨rank, fun state => next[state]⟩, by
+  let next := Vector.ofFn fun state ↦ (selected state).val
+  return ⟨⟨rank, fun state ↦ next[state]⟩, by
     intro state transient
     simpa [next] using (selected state).property transient⟩
 

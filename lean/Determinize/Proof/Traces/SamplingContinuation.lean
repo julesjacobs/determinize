@@ -25,7 +25,7 @@ def sampleContinuation (expression : Expr) (value : ℝ) : Expr :=
 
 theorem actionContinuation_measurable {α : Type*} [MeasurableSpace α]
     {action : α → Action} (family : MeasurableActionFamily α action) :
-    Measurable (fun pair : α × ℝ => match action pair.1 with
+    Measurable (fun pair : α × ℝ ↦ match action pair.1 with
       | .sample _ _ continuation => continuation pair.2
       | _ => .unit) := by
   induction family with
@@ -33,22 +33,22 @@ theorem actionContinuation_measurable {α : Type*} [MeasurableSpace α]
   | sample draw measurable => exact measurable
   | stuck => exact measurable_const
   | @piecewise region _ measurableRegion whenTrue whenFalse trueFamily falseFamily ihTrue ihFalse =>
-      classical
-      convert ihTrue.piecewise (measurableRegion.preimage measurable_fst) ihFalse using 1
-      funext pair
-      by_cases h : pair.1 ∈ region <;> simp [Set.piecewise, h]
-      all_goals infer_instance
+    classical
+    convert ihTrue.piecewise (measurableRegion.preimage measurable_fst) ihFalse using 1
+    funext pair
+    by_cases h : pair.1 ∈ region <;> simp [Set.piecewise, h]
+    all_goals infer_instance
 
 theorem sampleContinuation_measurable :
-    Measurable (fun pair : Expr × ℝ => sampleContinuation pair.1 pair.2) := by
+    Measurable (fun pair : Expr × ℝ ↦ sampleContinuation pair.1 pair.2) := by
   have localMeasurable (skeleton : Skeleton) :
-      Measurable (fun pair : SkeletonFiber skeleton × ℝ =>
+      Measurable (fun pair : SkeletonFiber skeleton × ℝ ↦
         sampleContinuation pair.1.val pair.2) :=
     actionContinuation_measurable
       (MeasurableActionFamily.reduceFamily primitiveLaws (MeasurableFamily.skeletonFiber skeleton))
-  let selected : Expr × ℝ → Expr := fun pair =>
+  let selected : Expr × ℝ → Expr := fun pair ↦
     sampleContinuation (MeasurableActionFamily.toSkeletonFiber pair.1.skeleton pair.1).val pair.2
-  have auxiliary : Measurable (fun pair : Skeleton × (Expr × ℝ) =>
+  have auxiliary : Measurable (fun pair : Skeleton × (Expr × ℝ) ↦
       sampleContinuation (MeasurableActionFamily.toSkeletonFiber pair.1 pair.2.1).val pair.2.2) := by
     apply measurable_from_prod_countable_right
     intro skeleton

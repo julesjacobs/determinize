@@ -6,7 +6,7 @@ open Spec.FiniteModel MeasureTheory
 
 /-- Change only the observable assigned to a successful return. -/
 abbrev rewards (model : Model) (f : Rat → Rat) : Model :=
-  {model with kind := fun state => match model.kind state with
+  {model with kind := fun state ↦ match model.kind state with
     | .returned r => .returned (f r)
     | other => other}
 
@@ -17,7 +17,7 @@ theorem query_sound (model : Model) (f : Rat → Rat) (g : ℝ → ℝ)
     (paths : Paths (rewards model f)) (valid : paths.Valid (rewards model f)) :
     (∫ x, g x ∂model.outputMeasure) = (certificate.values model.initial : ℝ) := by
   have unique := paths_unique (rewards model f) paths valid
-    (fun state => (∫ x, g x ∂outputAt model state) - (certificate.values state : ℝ))
+    (fun state ↦ (∫ x, g x ∂outputAt model state) - (certificate.values state : ℝ))
   have zero := unique (by
     intro state
     rw [outputAt_equations model state g]

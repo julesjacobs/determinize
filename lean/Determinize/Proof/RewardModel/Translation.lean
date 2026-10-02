@@ -5,7 +5,7 @@ namespace Determinize.Proof.RewardModel
 open Determinize.Finite Determinize.Proof.FiniteModel MeasureTheory Spec.RewardModel
 
 def additionStack (offsets : List Rat) : List Frame :=
-  offsets.map fun c => .right .add (.number c)
+  offsets.map fun c ↦ .right .add (.number c)
 
 theorem numeric_addition_output (offsets : List Rat) (b : Rat) (n : Nat) :
     machineOutput (n + offsets.length) (.deliver (.number b) (additionStack offsets)) =
@@ -13,15 +13,15 @@ theorem numeric_addition_output (offsets : List Rat) (b : Rat) (n : Nat) :
   induction offsets generalizing b with
   | nil => cases n <;> simp [additionStack, machineOutput, step]
   | cons c cs ih =>
-      rw [List.length_cons, Nat.add_succ]
-      simp only [additionStack, List.map_cons, machineOutput, step, binary,
-        pure, bind, Except.bind, Except.pure]
-      simp only [weightedOutput, List.map_cons, List.map_nil, List.sum_cons, List.sum_nil,
-        Rat.cast_one, ENNReal.ofReal_one, one_smul, add_zero]
-      rw [← additionStack, ih]
-      congr 1
-      simp only [Rat.cast_add]
-      ring
+    rw [List.length_cons, Nat.add_succ]
+    simp only [additionStack, List.map_cons, machineOutput, step, binary,
+      pure, bind, Except.bind, Except.pure]
+    simp only [weightedOutput, List.map_cons, List.map_nil, List.sum_cons, List.sum_nil,
+      Rat.cast_one, ENNReal.ofReal_one, one_smul, add_zero]
+    rw [← additionStack, ih]
+    congr 1
+    simp only [Rat.cast_add]
+    ring
 
 private theorem draw_not_terminal (site : Spec.Paper.DistributionAction × Spec.Paper.Op)
     (args : List Rat) (stack : List Frame) (result : Finite.Step)
@@ -31,8 +31,8 @@ private theorem draw_not_terminal (site : Spec.Paper.DistributionAction × Spec.
   cases law : finiteLaw site.2 site.1 args with
   | error e => simp [law, bind, Except.bind] at action
   | ok xs =>
-      simp only [law, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at action
-      exact ⟨_, _, action.symm⟩
+    simp only [law, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at action
+    exact ⟨_, _, action.symm⟩
 
 set_option maxHeartbeats 1600000 in
 theorem step_terminal (state : State) (result : Finite.Step)
@@ -43,11 +43,11 @@ theorem step_terminal (state : State) (result : Finite.Step)
   cases state with
   | rejected => simp only [step, Except.ok.injEq] at action; exact Or.inr (Or.inr ⟨rfl, action.symm⟩)
   | eval expression env stack =>
-      apply Or.inl
-      cases expression <;>
-        simp only [step, pure, bind, Except.bind, Except.pure] at action
-      all_goals repeat' (split at action)
-      all_goals first | contradiction | exact ⟨_, _, (Except.ok.inj action).symm⟩
+    apply Or.inl
+    cases expression <;>
+      simp only [step, pure, bind, Except.bind, Except.pure] at action
+    all_goals repeat' (split at action)
+    all_goals first | contradiction | exact ⟨_, _, (Except.ok.inj action).symm⟩
   | deliver value stack =>
     cases stack with
     | nil =>
@@ -91,16 +91,16 @@ theorem step_terminal (state : State) (result : Finite.Step)
         all_goals first | contradiction | exact ⟨_, _, (Except.ok.inj action).symm⟩
 
 private theorem shift_weighted (r : Rat) (xs : List (Rat × State)) (f : State → Measure ℝ) :
-    shift r (weightedOutput xs f) = weightedOutput xs (fun s => shift r (f s)) := by
+    shift r (weightedOutput xs f) = weightedOutput xs (fun s ↦ shift r (f s)) := by
   induction xs with
   | nil => simp [weightedOutput]
   | cons x xs ih =>
-      simp only [weightedOutput, List.map_cons, List.sum_cons] at ih ⊢
-      rw [shift_add_measure, shift_smul, ih]
+    simp only [weightedOutput, List.map_cons, List.sum_cons] at ih ⊢
+    rw [shift_add_measure, shift_smul, ih]
 
 private theorem weighted_extend (outer : List Frame) (xs : List (Rat × State))
     (f : State → Measure ℝ) :
-    weightedOutput (extend outer xs) f = weightedOutput xs (fun s => f (pushStack s outer)) := by
+    weightedOutput (extend outer xs) f = weightedOutput xs (fun s ↦ f (pushStack s outer)) := by
   simp [weightedOutput, extend, List.map_map, Function.comp_def]
 
 theorem addition_output_lower (offsets : List Rat) (n : Nat) (state : State) :
@@ -125,9 +125,9 @@ theorem addition_output_lower (offsets : List Rat) (n : Nat) (state : State) :
         rw [Nat.succ_add]
         simp only [machineOutput, action, lifted]
         rw [shift_weighted, weighted_extend]
-        exact weightedOutput_mono _ _ _ (fun e _ _ => ih e.2)
+        exact weightedOutput_mono _ _ _ (fun e _ _ ↦ ih e.2)
       · simpa [machineOutput, step, pushStack, shift_dirac, add_comm] using
-          (numeric_addition_output offsets b (n+1)).ge
+          (numeric_addition_output offsets b (n + 1)).ge
       · simp [machineOutput, step, Measure.zero_le]
 
 private theorem draw_error_push (site : Spec.Paper.DistributionAction × Spec.Paper.Op)
@@ -212,7 +212,7 @@ theorem numeric_addition_upper (offsets : List Rat) (b : Rat) (n : Nat) :
         pure, bind, Except.bind, Except.pure]
       simp only [weightedOutput, List.map_cons, List.map_nil, List.sum_cons, List.sum_nil,
         Rat.cast_one, ENNReal.ofReal_one, one_smul, add_zero]
-      convert ih (c+b) n using 1 <;> congr 1
+      convert ih (c + b) n using 1 <;> congr 1
       simp only [Rat.cast_add]
       ring
 
@@ -239,8 +239,8 @@ theorem addition_output_upper (offsets : List Rat) (n : Nat) (state : State) :
       rcases step_terminal state result action with ⟨tag, xs, rfl⟩ | ⟨b, rfl, rfl⟩ | ⟨rfl, rfl⟩
       · simp only [machineOutput, action, step_push state (additionStack offsets) tag xs action]
         rw [shift_weighted, weighted_extend]
-        exact weightedOutput_mono _ _ _ (fun e _ _ => ih e.2)
-      · simpa [pushStack, machineOutput, step, shift_dirac] using numeric_addition_upper offsets b (n+1)
+        exact weightedOutput_mono _ _ _ (fun e _ _ ↦ ih e.2)
+      · simpa [pushStack, machineOutput, step, shift_dirac] using numeric_addition_upper offsets b (n + 1)
       · simp [pushStack, machineOutput, step]
 
 theorem numeric_addition_exact (offsets : List Rat) (b : Rat) (n : Nat) :
@@ -300,8 +300,8 @@ theorem addition_guard_upper (offsets : List Rat) (nonempty : offsets ≠ [])
       · simp only [machineOutput, step_push state (additionStack offsets) tag xs action,
           step_push state (additionStack [0]) tag xs action]
         rw [shift_weighted, weighted_extend, weighted_extend]
-        exact weightedOutput_mono _ _ _ (fun e _ _ => ih e.2)
-      · exact numeric b (n+1)
+        exact weightedOutput_mono _ _ _ (fun e _ _ ↦ ih e.2)
+      · exact numeric b (n + 1)
       · simp [pushStack, machineOutput, step]
 
 end Determinize.Proof.RewardModel

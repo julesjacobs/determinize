@@ -44,9 +44,9 @@ theorem inferenceCorrectness (input : Input) :
     match Frontend.infer input with
     | .error _ => ¬ ∃ program : Annotated, Completion input program
     | .ok (program, ty) =>
-        input.matches program ∧
-        Typed [] (interpret program) ty ∧
-        ∀ completion : Annotated, Completion input completion → AffinityLE completion program :=
+      input.matches program ∧
+      Typed [] (interpret program) ty ∧
+      ∀ completion : Annotated, Completion input completion → AffinityLE completion program :=
   Proof.Frontend.inferCorrect input
 
 /-! ## Tracewise soundness (paper, Section 4.1) -/
@@ -135,7 +135,7 @@ theorem traceVarianceDecomposition (program : Expr)
     (typed : Typed [] program (.float .E)) (safe : DomainSafe program)
     (positive : 0 < returnProbability program)
     (moment : MemLp id 2 (bigStepMeasure program)) :
-    Integrable (fun trace => variance id ((traceAndOutputLaw program).condKernel trace))
+    Integrable (fun trace ↦ variance id ((traceAndOutputLaw program).condKernel trace))
         ((returnProbability program)⁻¹ • traceLaw program) ∧
       returnedVariance program =
         returnedVariance program.determinize +
@@ -233,7 +233,7 @@ holds for Mathlib's `variance` (`∫ (v - ∫ v)²`) without normalization. -/
 theorem unnormalizedTraceVarianceDecomposition (program : Expr)
     (typed : Typed [] program (.float .E)) (safe : DomainSafe program)
     (moment : MemLp id 2 (bigStepMeasure program)) :
-    Integrable (fun trace => variance id ((traceAndOutputLaw program).condKernel trace))
+    Integrable (fun trace ↦ variance id ((traceAndOutputLaw program).condKernel trace))
         (traceLaw program) ∧
       variance id (bigStepMeasure program) =
         variance id (bigStepMeasure program.determinize) +
@@ -261,7 +261,7 @@ proofs, must reach nothing declared in a `Proof` module. Otherwise the build fai
 open Lean Elab Command in
 run_cmd do
   let env ← getEnv
-  let theorems := (env.constants.fold (init := #[]) fun found name info =>
+  let theorems := (env.constants.fold (init := #[]) fun found name info ↦
     if (`Determinize.Theorems).isPrefixOf name && info.isTheorem then found.push (name, info.type)
     else found).qsort (Name.lt ·.1 ·.1)
   let standard := [``propext, ``Classical.choice, ``Quot.sound]

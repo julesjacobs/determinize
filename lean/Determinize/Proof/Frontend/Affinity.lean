@@ -50,20 +50,20 @@ def affinityMeet : Affinity → Affinity → Affinity
   | _, _ => .G
 
 theorem eval_join (ρ ρ' : V → Affinity) (t : AffinityTerm V) :
-    t.eval (fun v => affinityJoin (ρ v) (ρ' v)) = affinityJoin (t.eval ρ) (t.eval ρ') := by
+    t.eval (fun v ↦ affinityJoin (ρ v) (ρ' v)) = affinityJoin (t.eval ρ) (t.eval ρ') := by
   cases t with
   | var => rfl
   | fixed m => cases m <;> rfl
 
 theorem eval_meet (ρ ρ' : V → Affinity) (t : AffinityTerm V) :
-    t.eval (fun v => affinityMeet (ρ v) (ρ' v)) = affinityMeet (t.eval ρ) (t.eval ρ') := by
+    t.eval (fun v ↦ affinityMeet (ρ v) (ρ' v)) = affinityMeet (t.eval ρ) (t.eval ρ') := by
   cases t with
   | var => rfl
   | fixed m => cases m <;> rfl
 
 theorem satisfies_join {ρ ρ' : V → Affinity} {constraints : List (AffinityConstraint V)}
     (h : Satisfies ρ constraints) (h' : Satisfies ρ' constraints) :
-    Satisfies (fun v => affinityJoin (ρ v) (ρ' v)) constraints := by
+    Satisfies (fun v ↦ affinityJoin (ρ v) (ρ' v)) constraints := by
   intro c mem
   have hc := h c mem
   have hc' := h' c mem
@@ -74,7 +74,7 @@ theorem satisfies_join {ρ ρ' : V → Affinity} {constraints : List (AffinityCo
 
 theorem satisfies_meet {ρ ρ' : V → Affinity} {constraints : List (AffinityConstraint V)}
     (h : Satisfies ρ constraints) (h' : Satisfies ρ' constraints) :
-    Satisfies (fun v => affinityMeet (ρ v) (ρ' v)) constraints := by
+    Satisfies (fun v ↦ affinityMeet (ρ v) (ρ' v)) constraints := by
   intro c mem
   have hc := h c mem
   have hc' := h' c mem
@@ -118,7 +118,7 @@ theorem forcedGeneral_general {ρ : V → Affinity} {constraints : List (Affinit
   | case1 general stable => rw [forcedGeneral, if_pos stable]; exact h
   | case2 general unstable ih =>
     rw [forcedGeneral, if_neg unstable]
-    refine ih fun v mem => (Finset.mem_union.1 mem).elim (h v) fun mem => ?_
+    refine ih fun v mem ↦ (Finset.mem_union.1 mem).elim (h v) fun mem ↦ ?_
     obtain ⟨upper, mem, isGeneral⟩ := mem_below.1 mem
     have := hρ _ mem
     rw [eval_of_isGeneral h isGeneral] at this
@@ -137,7 +137,7 @@ private def candidate (constraints : List (AffinityConstraint V)) (v : V) : Affi
 
 private theorem solveAffinities_eq (constraints : List (AffinityConstraint V)) :
     solveAffinities constraints =
-      if constraints.all fun c =>
+      if constraints.all fun c ↦
           affinityLE (c.1.eval (candidate constraints)) (c.2.eval (candidate constraints))
       then some (candidate constraints) else none := rfl
 
@@ -146,7 +146,7 @@ theorem solveAffinities_sound {constraints : List (AffinityConstraint V)} {ρ : 
   rw [solveAffinities_eq] at h
   split at h
   · cases h
-    exact fun c mem => affinityLE_iff.1 (List.all_eq_true.1 ‹_› c mem)
+    exact fun c mem ↦ affinityLE_iff.1 (List.all_eq_true.1 ‹_› c mem)
   · cases h
 
 /-- The result of `solveAffinities` lies above every solution. -/
@@ -167,7 +167,7 @@ theorem solveAffinities_complete {constraints : List (AffinityConstraint V)} {ρ
   refine ⟨candidate constraints, ?_⟩
   suffices ∀ lower upper, (lower, upper) ∈ constraints →
       affinityLE (lower.eval (candidate constraints)) (upper.eval (candidate constraints)) by
-    rw [solveAffinities_eq, if_pos (List.all_eq_true.2 fun c mem => this c.1 c.2 mem)]
+    rw [solveAffinities_eq, if_pos (List.all_eq_true.2 fun c mem ↦ this c.1 c.2 mem)]
   intro lower upper mem
   have general := forcedGeneral_general h' (general := ∅) (by simp)
   -- An upper side that the candidate sets to E bounds everything.
@@ -199,7 +199,7 @@ theorem solveAffinities_spec (constraints : List (AffinityConstraint V)) :
       ∀ ρ, solveAffinities constraints = some ρ →
         Satisfies ρ constraints ∧
           ∀ ρ', Satisfies ρ' constraints → ∀ v, Ty.Sub (.float (ρ' v)) (.float (ρ v)) :=
-  ⟨⟨fun ⟨_, h'⟩ => solveAffinities_complete h', fun ⟨ρ, h⟩ => ⟨ρ, solveAffinities_sound h⟩⟩,
-    fun _ h => ⟨solveAffinities_sound h, fun _ h' => solveAffinities_greatest h h'⟩⟩
+  ⟨⟨fun ⟨_, h'⟩ ↦ solveAffinities_complete h', fun ⟨ρ, h⟩ ↦ ⟨ρ, solveAffinities_sound h⟩⟩,
+    fun _ h ↦ ⟨solveAffinities_sound h, fun _ h' ↦ solveAffinities_greatest h h'⟩⟩
 
 end Determinize.Proof.Frontend

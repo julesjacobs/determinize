@@ -49,11 +49,11 @@ def realCoordinates {Literal : Type} : Expr Literal → List Literal
   | .app l r | .pair l r | .cons l r | .add l r | .mul l r
   | .div l r | .lt l r => l.realCoordinates ++ r.realCoordinates
   | .matchSum x l r | .ite x l r =>
-      x.realCoordinates ++ l.realCoordinates ++ r.realCoordinates
+    x.realCoordinates ++ l.realCoordinates ++ r.realCoordinates
   | .matchList x n c => x.realCoordinates ++ n.realCoordinates ++ c.realCoordinates
   | .letE x b => x.realCoordinates ++ b.realCoordinates
   | .uniform _ l r | .gaussian _ l r | .beta _ l r | .gamma _ l r =>
-      l.realCoordinates ++ r.realCoordinates
+    l.realCoordinates ++ r.realCoordinates
   | .poisson _ x | .bernoulli _ x | .exponential _ x | .discrete _ x => x.realCoordinates
   | _ => []
 
@@ -80,8 +80,8 @@ theorem realListValue?_map_length (expression : Expr) :
     (realListValue? expression).map List.length = expression.literalListArity? := by
   induction expression with
   | cons head tail _ ih =>
-      cases head <;> simp only [realListValue?, realValue?, Expr.literalListArity?, ← ih] <;>
-        cases realListValue? tail <;> simp
+    cases head <;> simp only [realListValue?, realValue?, Expr.literalListArity?, ← ih] <;>
+      cases realListValue? tail <;> simp
   | _ => simp [realListValue?, Expr.literalListArity?]
 
 /-- The reals of a list value of literals are its real coordinates, in order. -/
@@ -90,10 +90,10 @@ theorem realCoordinates_of_realListValue? {expression : Expr} {values : List ℝ
     expression.realCoordinates = values := by
   induction expression generalizing values with
   | cons head tail _ ih =>
-      cases head <;> simp only [realListValue?, realValue?] at equation <;>
-        cases tailEq : realListValue? tail <;> simp [tailEq] at equation
-      rw [← equation, Expr.realCoordinates, Expr.realCoordinates, ih tailEq]
-      rfl
+    cases head <;> simp only [realListValue?, realValue?] at equation <;>
+      cases tailEq : realListValue? tail <;> simp [tailEq] at equation
+    rw [← equation, Expr.realCoordinates, Expr.realCoordinates, ih tailEq]
+    rfl
   | _ => simp_all [realListValue?, Expr.realCoordinates]
 
 theorem realValue?_determinize (expression : Expr) :
@@ -113,7 +113,7 @@ structure RealCoordinates where values : List ℝ
 /-- Length and zero-padded coordinates, mirroring the measurable structure of traces
 in `Determinize.Spec.Traces`. The length is recorded because padding alone is not injective. -/
 def RealCoordinates.code (coordinates : RealCoordinates) : Nat × (Nat → ℝ) :=
-  (coordinates.values.length, fun index => coordinates.values.getD index 0)
+  (coordinates.values.length, fun index ↦ coordinates.values.getD index 0)
 
 instance : MeasurableSpace RealCoordinates :=
   MeasurableSpace.comap RealCoordinates.code inferInstance

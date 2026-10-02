@@ -33,7 +33,7 @@ private def options : List String → Options → Except String Options
   | "--additive" :: rest, o => options rest {o with additive := true}
   | "--sample-sites" :: rest, o => options rest {o with sampleSites := true}
   | "--result" :: outputPath :: rest, o =>
-      options rest {o with exportPrefix := some outputPath, certifyResult := true}
+    options rest {o with exportPrefix := some outputPath, certifyResult := true}
   | "--max-result-states" :: n :: rest, o => do
       options rest {o with solveLimits.maxStates := ← natural n}
   | "--export" :: outputPath :: rest, o => options rest {o with exportPrefix := some outputPath}
@@ -53,7 +53,7 @@ private def options : List String → Options → Except String Options
   | "--samples" :: n :: rest, o => do options rest {o with samples := ← natural n}
   | "--seed" :: n :: rest, o => do
       let seed ← natural n
-      if seed ≥ 2^64 then throw "seed must fit in 64 bits"
+      if seed ≥ 2 ^ 64 then throw "seed must fit in 64 bits"
       options rest {o with seed := UInt64.ofNat seed}
   | "--fuel" :: n :: rest, o => do options rest {o with fuel := ← natural n}
   | arg :: rest, o =>
@@ -77,10 +77,10 @@ private def summarize (label : String) (e : Core) (o : Options) : IO Unit := do
       if first.isEmpty then first := v.display
       match v with
       | .number x =>
-          count := count + 1
-          let delta := x - mean
-          mean := mean + delta / Float.ofNat count
-          m2 := m2 + delta * (x - mean)
+        count := count + 1
+        let delta := x - mean
+        mean := mean + delta / Float.ofNat count
+        m2 := m2 + delta * (x - mean)
       | _ => pure ()
   IO.println s!"{label}: {o.samples - failed - rejected}/{o.samples} runs returned a value"
   if count > 0 then
@@ -110,19 +110,19 @@ private def SampleSites.sample (action : Spec.Paper.DistributionAction)
 private def sampleSites : Core → SampleSites
   | .bvar _ | .reject | .unit | .bool _ | .real _ | .nil => {}
   | .lam body | .fix body | .fst body | .snd body | .inl body | .inr body | .neg body =>
-      sampleSites body
+    sampleSites body
   | .app left right | .pair left right | .cons left right | .letE left right
   | .add left right | .mul left right | .div left right | .lt left right =>
-      (sampleSites left).add (sampleSites right)
+    (sampleSites left).add (sampleSites right)
   | .matchSum first second third | .matchList first second third | .ite first second third =>
-      ((sampleSites first).add (sampleSites second)).add (sampleSites third)
+    ((sampleSites first).add (sampleSites second)).add (sampleSites third)
   | .uniform action left right | .gaussian action left right
   | .beta action left right | .gamma action left right =>
-      ((SampleSites.sample action false).add (sampleSites left)).add (sampleSites right)
+    ((SampleSites.sample action false).add (sampleSites left)).add (sampleSites right)
   | .poisson action body | .discrete action body | .bernoulli action body =>
-      (SampleSites.sample action true).add (sampleSites body)
+    (SampleSites.sample action true).add (sampleSites body)
   | .exponential action body =>
-      (SampleSites.sample action false).add (sampleSites body)
+    (SampleSites.sample action false).add (sampleSites body)
 
 private def printSampleSites (label : String) (sites : SampleSites) : IO Unit :=
   IO.println s!"Sampling sites {label}: discrete={sites.discrete}, continuous={sites.continuous}"
@@ -144,29 +144,29 @@ def main (args : List String) : IO UInt32 := do
       if o.additive then
         match Finite.Reward.explore p.source o.subject o.limits with
         | .complete candidate valid =>
-            if o.certifyResult then
-              let answer ← Finite.Reward.writeResult outputPath p.source o.subject candidate valid o.solveLimits
-              IO.println s!"Expected output (kernel-checkable certificate generated) ({reprStr o.subject}): {answer}"
-            else
-              Finite.Reward.write outputPath p.source o.subject candidate valid
-            IO.println s!"Wrote additive {reprStr o.subject} model (kernel-checkable paper correspondence): {outputPath} ({candidate.states.size} states)"
+          if o.certifyResult then
+            let answer ← Finite.Reward.writeResult outputPath p.source o.subject candidate valid o.solveLimits
+            IO.println s!"Expected output (kernel-checkable certificate generated) ({reprStr o.subject}): {answer}"
+          else
+            Finite.Reward.write outputPath p.source o.subject candidate valid
+          IO.println s!"Wrote additive {reprStr o.subject} model (kernel-checkable paper correspondence): {outputPath} ({candidate.states.size} states)"
         | .incomplete limit discovered expanded edges =>
-            throw (IO.userError s!"Incomplete exploration ({reprStr limit}): {discovered} discovered, {expanded} expanded, {edges} edges. No export written.")
+          throw (IO.userError s!"Incomplete exploration ({reprStr limit}): {discovered} discovered, {expanded} expanded, {edges} edges. No export written.")
         | .failed state failure =>
-            throw (IO.userError s!"Exploration failed at state {state}: {failure.message}. No export written.")
+          throw (IO.userError s!"Exploration failed at state {state}: {failure.message}. No export written.")
       else
         match Finite.explore p.source o.subject o.limits with
         | .complete candidate valid =>
-            if o.certifyResult then
-              let answer ← Finite.writeResult outputPath p.source o.subject candidate valid o.solveLimits
-              IO.println s!"Expected terminal reward (kernel-checkable certificate generated) ({reprStr o.subject}): {answer}"
-            else
-              Finite.write outputPath p.source o.subject candidate valid
-            IO.println s!"Wrote {reprStr o.subject} model (kernel-checkable paper correspondence): {outputPath} ({candidate.states.size} states)"
+          if o.certifyResult then
+            let answer ← Finite.writeResult outputPath p.source o.subject candidate valid o.solveLimits
+            IO.println s!"Expected terminal reward (kernel-checkable certificate generated) ({reprStr o.subject}): {answer}"
+          else
+            Finite.write outputPath p.source o.subject candidate valid
+          IO.println s!"Wrote {reprStr o.subject} model (kernel-checkable paper correspondence): {outputPath} ({candidate.states.size} states)"
         | .incomplete limit discovered expanded edges =>
-            throw (IO.userError s!"Incomplete exploration ({reprStr limit}): {discovered} discovered, {expanded} expanded, {edges} edges. No export written.")
+          throw (IO.userError s!"Incomplete exploration ({reprStr limit}): {discovered} discovered, {expanded} expanded, {edges} edges. No export written.")
         | .failed state failure =>
-            throw (IO.userError s!"Exploration failed at state {state}: {failure.message}. No export written.")
+          throw (IO.userError s!"Exploration failed at state {state}: {failure.message}. No export written.")
     if o.samples > 0 then
       IO.println "Numerical estimates; domain safety and integrability are not established by typing."
       summarize "Source" p.source o

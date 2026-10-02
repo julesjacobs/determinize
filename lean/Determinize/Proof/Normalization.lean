@@ -99,7 +99,7 @@ theorem conditionalVarianceSoundness (program : Expr) (typed : Typed [] program 
     (safe : DomainSafe program) (positive : 0 < Spec.Paper.bigStepMeasure program Set.univ)
     (moment : MemLp id 2 (Spec.Paper.bigStepMeasure program)) :
     Integrable
-        (fun trace => variance id ((Spec.Traces.traceAndOutputLaw program).condKernel trace))
+        (fun trace ↦ variance id ((Spec.Traces.traceAndOutputLaw program).condKernel trace))
         ((Spec.Paper.bigStepMeasure program Set.univ)⁻¹ • Spec.Traces.traceLaw program) ∧
       variance id (returnedLaw program) =
         variance id (returnedLaw program.determinize) +

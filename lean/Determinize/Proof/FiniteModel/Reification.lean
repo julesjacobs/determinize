@@ -32,11 +32,11 @@ theorem valueExpr_closed (value : Value) : Scoped 0 (valueExpr value) := by
   cases value with
   | unit | bool _ | number _ | nil => simp [valueExpr, Scoped]
   | pair a b | cons a b =>
-      simpa only [valueExpr, Scoped] using And.intro (valueExpr_closed a) (valueExpr_closed b)
+    simpa only [valueExpr, Scoped] using And.intro (valueExpr_closed a) (valueExpr_closed b)
   | inl a | inr a => simpa only [valueExpr, Scoped] using valueExpr_closed a
   | closure body environment | recursive body environment =>
-      simpa only [valueExpr, Scoped, Nat.zero_add] using close_scoped (interpret body) (environmentExpr environment)
-        (environmentExpr_closed environment) _
+    simpa only [valueExpr, Scoped, Nat.zero_add] using close_scoped (interpret body) (environmentExpr environment)
+      (environmentExpr_closed environment) _
 termination_by sizeOf value
 
 theorem environmentExpr_closed (environment : List Value) :
@@ -44,11 +44,11 @@ theorem environmentExpr_closed (environment : List Value) :
   cases environment with
   | nil => simp [environmentExpr]
   | cons value rest =>
-      intro e member
-      simp only [environmentExpr, List.mem_cons] at member
-      rcases member with rfl | member
-      · exact valueExpr_closed value
-      · exact environmentExpr_closed rest e member
+    intro e member
+    simp only [environmentExpr, List.mem_cons] at member
+    rcases member with rfl | member
+    · exact valueExpr_closed value
+    · exact environmentExpr_closed rest e member
 termination_by sizeOf environment
 end
 
@@ -56,7 +56,7 @@ theorem valueExpr_isValue (value : Value) : (valueExpr value).isValue = true := 
   cases value with
   | unit | bool _ | number _ | nil | closure _ _ | recursive _ _ => simp [valueExpr, Expr.isValue]
   | pair a b | cons a b =>
-      simp only [valueExpr, Expr.isValue, valueExpr_isValue a, valueExpr_isValue b, Bool.and_self]
+    simp only [valueExpr, Expr.isValue, valueExpr_isValue a, valueExpr_isValue b, Bool.and_self]
   | inl a | inr a => simpa only [valueExpr, Expr.isValue] using valueExpr_isValue a
 termination_by sizeOf value
 
@@ -69,13 +69,13 @@ def binaryExpr {α : Type} : Binary → Expr α → Expr α → Expr α
 
 def primitiveExpr {α : Type} (site : DistributionAction × Op) (arguments : List (Expr α)) : Expr α :=
   match site.2, arguments with
-  | .uniform, [a,b] => .uniform site.1 a b
-  | .gaussian, [a,b] => .gaussian site.1 a b
+  | .uniform, [a, b] => .uniform site.1 a b
+  | .gaussian, [a, b] => .gaussian site.1 a b
   | .poisson, [a] => .poisson site.1 a
   | .bernoulli, [a] => .bernoulli site.1 a
   | .exponential, [a] => .exponential site.1 a
-  | .beta, [a,b] => .beta site.1 a b
-  | .gamma, [a,b] => .gamma site.1 a b
+  | .beta, [a, b] => .beta site.1 a b
+  | .gamma, [a, b] => .gamma site.1 a b
   | .discrete _, probabilities => .discrete site.1 (probabilities.foldr Expr.cons .nil)
   | _, _ => .reject
 
@@ -85,22 +85,22 @@ def frameExpr (frame : Frame) (hole : Expr) : Expr :=
   | .left op right environment => binaryExpr op hole (close (environmentExpr environment) 0 (interpret right))
   | .right op left => binaryExpr op (valueExpr left) hole
   | .choose yes no environment =>
-      .ite hole (close (environmentExpr environment) 0 (interpret yes))
-        (close (environmentExpr environment) 0 (interpret no))
+    .ite hole (close (environmentExpr environment) 0 (interpret yes))
+      (close (environmentExpr environment) 0 (interpret no))
   | .letBody body environment => .letE hole (close (environmentExpr environment) 1 (interpret body))
   | .matchSum left right environment =>
-      .matchSum hole (close (environmentExpr environment) 1 (interpret left))
-        (close (environmentExpr environment) 1 (interpret right))
+    .matchSum hole (close (environmentExpr environment) 1 (interpret left))
+      (close (environmentExpr environment) 1 (interpret right))
   | .matchList nilCase consCase environment =>
-      .matchList hole (close (environmentExpr environment) 0 (interpret nilCase))
-        (close (environmentExpr environment) 2 (interpret consCase))
+    .matchList hole (close (environmentExpr environment) 0 (interpret nilCase))
+      (close (environmentExpr environment) 2 (interpret consCase))
   | .discrete action => .discrete action hole
   | .draw site pending environment arguments =>
-      primitiveExpr site (arguments.map (fun q => .real (q : ℝ)) ++
-        hole :: pending.map (fun e => close (environmentExpr environment) 0 (interpret e)))
+    primitiveExpr site (arguments.map (fun q ↦ .real (q : ℝ)) ++
+      hole :: pending.map (fun e ↦ close (environmentExpr environment) 0 (interpret e)))
 
 def stackExpr (stack : List Frame) (hole : Expr) : Expr :=
-  stack.foldl (fun expression frame => frameExpr frame expression) hole
+  stack.foldl (fun expression frame ↦ frameExpr frame expression) hole
 
 def stateExpr : State → Expr
   | .eval expression environment stack => stackExpr stack (close (environmentExpr environment) 0 (interpret expression))

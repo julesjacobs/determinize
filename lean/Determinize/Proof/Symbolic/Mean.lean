@@ -11,7 +11,7 @@ noncomputable section
 /-- The evaluated parameters of a symbolic primitive call. -/
 def meanParams (op : Op) (affine : List (Affine n)) (general : List ℝ)
     (environment : Env n) : Params op :=
-  (fun i => (affine.getD i.1 0).eval environment, fun i => general.getD i.1 0)
+  (fun i ↦ (affine.getD i.1 0).eval environment, fun i ↦ general.getD i.1 0)
 
 theorem eval_meanAffine (op : Op) (affine : List (Affine n)) (general : List ℝ)
     (environment : Env n) :
@@ -29,9 +29,9 @@ theorem primitiveFiber_mean_formula (op : Op) (affine : List (Affine n)) (genera
   unfold primitiveFiber parseParams
   rw [dif_pos ha', dif_pos hg]
   simp only
-  have paramsEq : ((fun i : Fin (affineArity op) =>
+  have paramsEq : ((fun i : Fin (affineArity op) ↦
       (affine.map (Affine.eval · environment))[i.1]'(ha'.symm ▸ i.2)),
-      fun i : Fin (generalArity op) => general[i.1]'(hg.symm ▸ i.2)) =
+      fun i : Fin (generalArity op) ↦ general[i.1]'(hg.symm ▸ i.2)) =
       meanParams op affine general environment := by
     apply Prod.ext <;> funext i
     · simp [meanParams, List.getD_eq_getElem?_getD, ha]

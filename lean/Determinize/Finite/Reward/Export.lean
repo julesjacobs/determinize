@@ -11,7 +11,7 @@ private def rational (q : Rat) : String :=
 private def leanRat (q : Rat) : String := s!"(({q.num} : Rat) / {q.den})"
 
 private def rowText (row : Row) : String :=
-  let edges := row.edges.map fun e => s!"⟨{e.target}, {leanRat e.probability}, {leanRat e.reward}⟩"
+  let edges := row.edges.map fun e ↦ s!"⟨{e.target}, {leanRat e.probability}, {leanRat e.reward}⟩"
   s!"⟨{Finite.kindText row.kind}, [{String.intercalate ", " edges}]⟩"
 
 def candidateText (candidate : Candidate) : String :=
@@ -39,12 +39,12 @@ def replayCertificateText (source : Spec.Paper.Core) (subject : Subject) (candid
   "\n#print axioms machineReplay\n#print axioms modelMatches\n"
 
 private def controlCandidate (candidate : Candidate) : Finite.Candidate :=
-  {initial := candidate.initial, states := candidate.states, rows := candidate.rows.map fun row =>
+  {initial := candidate.initial, states := candidate.states, rows := candidate.rows.map fun row ↦
     {kind := row.kind, edges := Id.run do
       let mut edges : Array Finite.Edge := #[]
       for e in row.edges do
-        if let some j := edges.findIdx? (fun existing => existing.target == e.target) then
-          edges := edges.modify j (fun existing => {existing with probability := existing.probability + e.probability})
+        if let some j := edges.findIdx? (fun existing ↦ existing.target == e.target) then
+          edges := edges.modify j (fun existing ↦ {existing with probability := existing.probability + e.probability})
         else edges := edges.push ⟨e.target, e.probability⟩
       return edges}}
 
@@ -68,7 +68,7 @@ def resultCertificateText (source : Spec.Paper.Core) (subject : Subject) (candid
     s!"\ndef {name} : Vector Rat model.size := ⟨#[{String.intercalate ", " ((List.ofFn values).map leanRat)}], by rfl⟩\n"
   let dead := String.intercalate ", " ((List.ofFn solution.boundary.dead).map toString)
   let ranks := String.intercalate ", " ((List.ofFn solution.paths.rank).map toString)
-  let next := String.intercalate ", " ((List.ofFn solution.paths.next).map fun j => s!"⟨{j.val}, by decide +kernel⟩")
+  let next := String.intercalate ", " ((List.ofFn solution.paths.next).map fun j ↦ s!"⟨{j.val}, by decide +kernel⟩")
   (replayCertificateText source subject candidate).replace
     "import Determinize.Proof.RewardModel.Soundness"
     "import Determinize.Proof.RewardModel.Soundness\nimport Determinize.Proof.RewardModel.Moments" ++
@@ -112,7 +112,7 @@ def writeResult (outputPath : System.FilePath) (source : Spec.Paper.Core) (subje
   let model := candidate.toModel valid
   let solution ← IO.ofExcept (solve model limits)
   let statistics := solution.statistics
-  let optional := fun value : Option Rat => match value with
+  let optional := fun value : Option Rat ↦ match value with
     | none => Lean.Json.null | some q => Lean.toJson (rational q)
   let metadata := Lean.Json.mkObj [
     ("answer", Lean.toJson (rational statistics.firstMoment)),
@@ -121,7 +121,7 @@ def writeResult (outputPath : System.FilePath) (source : Spec.Paper.Core) (subje
     ("certificate_status", Lean.toJson "generated"),
     ("termination_statistics_scope", Lean.toJson "graph"),
     ("rejection_probability", Lean.toJson (rational (solution.rejection model.initial))),
-    ("divergence_probability", Lean.toJson (rational (1-statistics.returnMass-solution.rejection model.initial))),
+    ("divergence_probability", Lean.toJson (rational (1 - statistics.returnMass - solution.rejection model.initial))),
     ("second_moment", Lean.toJson (rational statistics.secondMoment)),
     ("conditional_mean", optional statistics.conditionalMean),
     ("conditional_variance", optional statistics.conditionalVariance),

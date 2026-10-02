@@ -5,7 +5,7 @@ namespace Determinize.Proof.RewardModel
 open Spec.RewardModel MeasureTheory
 open scoped ENNReal
 
-private theorem measurable_translation (r : Rat) : Measurable (fun x : ℝ => x + (r : ℝ)) :=
+private theorem measurable_translation (r : Rat) : Measurable (fun x : ℝ ↦ x + (r : ℝ)) :=
   measurable_id.add_const _
 
 @[simp] theorem shift_zero_measure (r : Rat) : shift r 0 = 0 := by
@@ -39,21 +39,21 @@ theorem shift_smul (r : Rat) (p : ℝ≥0∞) (μ : Measure ℝ) :
   exact Measure.map_smul p μ _
 
 theorem outputWithin_mono (model : Model) (state : Fin model.size) :
-    Monotone (fun n => model.outputWithin n state) := by
+    Monotone (fun n ↦ model.outputWithin n state) := by
   apply monotone_nat_of_le_succ
   intro n
   induction n generalizing state with
   | zero =>
-      cases h : model.kind state <;> simp [Model.outputWithin, h]
-      exact bot_le
+    cases h : model.kind state <;> simp [Model.outputWithin, h]
+    exact bot_le
   | succ n ih =>
-      cases h : model.kind state with
-      | returned value => simp [Model.outputWithin, h]
-      | rejected => simp [Model.outputWithin, h]
-      | transient =>
-        simp only [Model.outputWithin, h]
-        apply List.sum_le_sum
-        intro a ha
-        exact smul_le_smul_left _ (shift_mono _ (ih a.target))
+    cases h : model.kind state with
+    | returned value => simp [Model.outputWithin, h]
+    | rejected => simp [Model.outputWithin, h]
+    | transient =>
+      simp only [Model.outputWithin, h]
+      apply List.sum_le_sum
+      intro a ha
+      exact smul_le_smul_left _ (shift_mono _ (ih a.target))
 
 end Determinize.Proof.RewardModel

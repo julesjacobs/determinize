@@ -21,7 +21,7 @@ example : (duplicateLabels.graphModel (indexedReplay_valid _ _ _ _ duplicateRepl
     (Subject.source.program (.real 3)) :=
   Proof.FiniteModel.indexedReplay_matches _ _ duplicateReplay
 
-example : ¬ duplicateLabels.IndexedReplayValid (.real 3) .source (fun _ _ => 0) := by
+example : ¬ duplicateLabels.IndexedReplayValid (.real 3) .source (fun _ _ ↦ 0) := by
   decide +kernel
 
 private def candidateFor (text : String) (subject : Subject := .source) : IO (Core × Candidate) := do
@@ -34,12 +34,12 @@ private def accepted (source : Core) (candidate : Candidate) (subject : Subject 
   (checkModel source subject candidate).isSome
 
 private def indexedAccepted (source : Core) (candidate : Candidate) (subject : Subject := .source) : Bool :=
-  let indices := candidate.states.map fun state => match step state with
-    | .ok (.next _ outcomes) => (outcomes.map fun (outcome : Rat × State) =>
-        (candidate.states.toList.findIdx? fun s => decide (s = outcome.2)).getD 0).toArray
+  let indices := candidate.states.map fun state ↦ match step state with
+    | .ok (.next _ outcomes) => (outcomes.map fun (outcome : Rat × State) ↦
+        (candidate.states.toList.findIdx? fun s ↦ decide (s = outcome.2)).getD 0).toArray
     | _ => #[]
   decide (candidate.IndexedReplayValid source subject
-    (fun i k => (indices[i.val]!)[k]!))
+    (fun i k ↦ (indices[i.val]!)[k]!))
 
 private def setRow (candidate : Candidate) (i : Nat) (row : Row) : Candidate :=
   {candidate with rows := candidate.rows.set! i row}
@@ -65,8 +65,8 @@ def modelReplay : IO Unit := do
     .eval (.real 0) [] [.right .div (.number 7)],
     .deliver (.number 0) [.right .div (.number 7)],
     .deliver (.number 0) []],
-    (Array.range 5).map (fun i => ⟨.transient, #[⟨i+1, 1⟩]⟩) ++
-      #[⟨.returned 0, #[⟨5,1⟩]⟩]⟩
+    (Array.range 5).map (fun i ↦ ⟨.transient, #[⟨i + 1, 1⟩]⟩) ++
+      #[⟨.returned 0, #[⟨5, 1⟩]⟩]⟩
   assert (!(accepted (.div (.real 7) (.real 0)) divisionByZero))
     "certificate accepted a fabricated division-by-zero result"
   let (threeSource, three) ← candidateFor "3"
@@ -90,12 +90,12 @@ def modelReplay : IO Unit := do
   let oneExtra : Candidate :=
     { coin with
       states := coin.states.push .rejected
-      rows := coin.rows.push ⟨.rejected,#[⟨extra,1⟩]⟩ }
+      rows := coin.rows.push ⟨.rejected, #[⟨extra, 1⟩]⟩ }
   assert (accepted oneExtra) "unique unreachable state"
   let duplicate : Candidate :=
     { oneExtra with
       states := oneExtra.states.push .rejected
-      rows := oneExtra.rows.push ⟨.rejected,#[⟨extra+1,1⟩]⟩ }
+      rows := oneExtra.rows.push ⟨.rejected, #[⟨extra + 1, 1⟩]⟩ }
   assert (!accepted duplicate) "duplicate unreachable states"
   assert (indexedAccepted coinSource duplicate) "duplicate state labels in indexed replay"
   for candidate in [coin, oneExtra,
@@ -107,25 +107,25 @@ def modelReplay : IO Unit := do
   let mut sampled := false
   let mut terminal := false
   for i in [:coin.rows.size] do
-    let row := coin.rows[i]?.getD ⟨.rejected,#[]⟩
+    let row := coin.rows[i]?.getD ⟨.rejected, #[]⟩
     if row.edges.size == 2 then
       sampled := true
-      let first := row.edges[0]?.getD ⟨0,0⟩
-      let second := row.edges[1]?.getD ⟨0,0⟩
+      let first := row.edges[0]?.getD ⟨0, 0⟩
+      let second := row.edges[1]?.getD ⟨0, 0⟩
       for replacement in [
-          {row with edges := #[⟨first.target,1⟩]},
-          {row with edges := #[⟨first.target,1/2⟩,⟨second.target,1/2⟩]},
-          {row with edges := #[⟨first.target,first.probability⟩,⟨first.target,second.probability⟩]},
-          {row with edges := #[⟨coin.states.size,1⟩]},
+          {row with edges := #[⟨first.target, 1⟩]},
+          {row with edges := #[⟨first.target, 1 / 2⟩, ⟨second.target, 1 / 2⟩]},
+          {row with edges := #[⟨first.target, first.probability⟩, ⟨first.target, second.probability⟩]},
+          {row with edges := #[⟨coin.states.size, 1⟩]},
           {row with kind := .returned 99}] do
         assert (!accepted (setRow coin i replacement)) "mutated sampled row"
         assert (!indexedAccepted coinSource (setRow coin i replacement)) "indexed mutated sampled row"
     match row.kind with
     | .returned reward =>
-        terminal := true
-        assert (!accepted (setRow coin i {row with kind := .returned (reward+1)})) "changed reward"
-        assert (!accepted (setRow coin i {row with edges := #[⟨0,1⟩]})) "nonabsorbing terminal"
-        assert (!accepted (setRow coin i {row with kind := .rejected})) "changed outcome"
+      terminal := true
+      assert (!accepted (setRow coin i {row with kind := .returned (reward + 1)})) "changed reward"
+      assert (!accepted (setRow coin i {row with edges := #[⟨0, 1⟩]})) "nonabsorbing terminal"
+      assert (!accepted (setRow coin i {row with kind := .rejected})) "changed outcome"
     | _ => pure ()
   assert (sampled && terminal) "mutation fixtures exercised"
   assert (!accepted {coin with rows := coin.rows.pop}) "truncated rows"
@@ -138,8 +138,8 @@ def modelReplay : IO Unit := do
   match ReferenceExplorer.explore unusedFreeVariable .source with
   | .complete candidate => assert (!(checkModel unusedFreeVariable .source candidate).isSome) "free variable in unused closure"
   | _ => throw (IO.userError "scope fixture must finish exploration")
-  let broken : Candidate := ⟨0,#[.eval (.bvar 0) [] []],
-    #[⟨.rejected,#[⟨0,1⟩]⟩]⟩
+  let broken : Candidate := ⟨0, #[.eval (.bvar 0) [] []],
+    #[⟨.rejected, #[⟨0, 1⟩]⟩]⟩
   assert (!(checkModel (.bvar 0) .source broken).isSome) "stuck machine cannot be labeled rejected"
 
 #print axioms indexedStates_valid
