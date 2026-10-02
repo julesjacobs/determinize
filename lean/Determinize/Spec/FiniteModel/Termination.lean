@@ -15,9 +15,6 @@ noncomputable def Model.rejectionProbability (model : Model) : ENNReal :=
 noncomputable def Model.divergenceProbability (model : Model) : ENNReal :=
   ⨅ n, ENNReal.ofReal (model.survivalWithin n model.initial : ℝ)
 
-def massBalanceThm : Prop :=
-  ∀ model : Model, model.outputMeasure Set.univ + model.rejectionProbability + model.divergenceProbability = 1
-
 structure TerminationStatistics where
   returnProbability : Rat
   rejectionProbability : Rat

@@ -63,8 +63,14 @@ theorem traceLaw_determinize (affinity : Affinity) (program : Expr)
 
 /-- The public conditional-law theorem: both replays are versions of the regular conditional
 distributions of the outputs given the trace, and trace soundness holds for those. -/
-theorem conditionalLaw : Determinize.Spec.Traces.conditionalLawThm := by
-  intro program typed safe
+theorem conditionalLaw (program : Expr) (typed : Typed [] program (.float .E))
+    (safe : DomainSafe program) :
+    DomainSafe program.determinize ∧
+      traceLaw program.determinize = traceLaw program ∧
+      ∀ᵐ trace ∂traceLaw program,
+        Integrable id ((traceAndOutputLaw program).condKernel trace) ∧
+        (traceAndOutputLaw program.determinize).condKernel trace =
+          Measure.dirac (∫ value : ℝ, value ∂(traceAndOutputLaw program).condKernel trace) := by
   obtain ⟨targetSafe, sourceFactor, targetFactor, ae⟩ :=
     replaySoundness program typed safe
   have sameTraces := traceLaw_determinize .E program typed

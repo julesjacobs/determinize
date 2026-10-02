@@ -1,4 +1,4 @@
-import Determinize.Spec.Traces.Main
+import Determinize.Spec.Traces.Semantics
 import Mathlib.Probability.Kernel.MeasurableIntegral
 import Mathlib.Probability.Kernel.Composition.MeasureCompProd
 

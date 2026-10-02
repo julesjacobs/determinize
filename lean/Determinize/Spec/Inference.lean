@@ -1,5 +1,4 @@
 import Determinize.Spec.Frontend
-import Determinize.Frontend.Infer
 
 /-!
 # Affinity inference
@@ -11,9 +10,9 @@ of their free sample sites; they are compared site by site in the order `G ≤ E
 `Ty.Sub.general`. The greatest completion has the most E sites, which determinization replaces
 by the most means.
 
-`inferCorrectThm` states that `infer` fails only on inputs without a completion, and otherwise
-returns a completion, typed at the returned type, that lies above every completion: the greatest
-completion.
+`Theorems.inferenceCorrectness` states that `infer` fails only on inputs without a completion, and
+otherwise returns a completion, typed at the returned type, that lies above every completion: the
+greatest completion.
 
 The statement does not depend on how `infer` works. It determines the output program uniquely,
 but not the output type.
@@ -33,18 +32,5 @@ def Completion (input : Input) (program : Annotated) : Prop :=
 is below that of `upper` in the order `G ≤ E`. -/
 def AffinityLE : Annotated → Annotated → Prop :=
   Expr.Sitewise fun affinity affinity' => Ty.Sub (.float affinity) (.float affinity')
-
-/-- Inference fails only when the input has no completion. Otherwise it returns a completion,
-typed at the returned type, and every completion lies below it. -/
-def inferCorrectThm : Prop :=
-  ∀ input : Input,
-    match Frontend.infer input with
-    | .error _ =>
-        ¬ ∃ program : Annotated, Completion input program
-    | .ok (program, ty) =>
-        input.matches program ∧
-        Typed [] (interpret program) ty ∧
-        ∀ completion : Annotated,
-          Completion input completion → AffinityLE completion program
 
 end Determinize.Spec

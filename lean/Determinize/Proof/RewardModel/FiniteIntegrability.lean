@@ -53,8 +53,7 @@ theorem momentBounds_exist (model : Model) (paths : Paths model.control)
     cases kind : model.kind i <;> simpa [kind, ← add_assoc] using (eqs_b i).symm
 
 /-- Finiteness alone suffices: no moment bounds or termination assumptions are required. -/
-theorem finite_integrable : finiteIntegrabilityThm := by
-  intro model
+theorem finite_integrable (model : Model) : model.IntegrableMoments := by
   obtain ⟨dead, closed, paths, valid⟩ := boundary_paths_exist model.control
   obtain ⟨bounds⟩ := momentBounds_exist (cut model dead) paths valid
   intro i

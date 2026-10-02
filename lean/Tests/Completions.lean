@@ -1,4 +1,5 @@
 import Determinize.Spec.Inference
+import Determinize.Frontend.Infer
 
 /-! `Completion` and `AffinityLE` on two small inputs. For `branches`, both the program that
 `infer` returns and the all-G program are completions, and the all-G one lies strictly below.

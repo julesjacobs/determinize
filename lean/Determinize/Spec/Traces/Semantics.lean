@@ -47,4 +47,8 @@ noncomputable def traceAndOutputLawAt : Nat → Expr → Measure Output
 noncomputable def traceAndOutputLaw (program : Expr) : Measure Output :=
   Measure.sum fun depth => traceAndOutputLawAt depth program
 
+/-- The law of a program's terminating generation traces: the trace marginal of its joint law. -/
+noncomputable def traceLaw (program : Expr) : Measure Trace :=
+  (traceAndOutputLaw program).map Prod.fst
+
 end Determinize.Spec.Traces
