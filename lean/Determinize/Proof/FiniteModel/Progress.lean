@@ -43,7 +43,6 @@ private theorem singleton_decreases (before state : State)
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (List.mem_singleton.mp member)
   exact decrease
 
-set_option maxHeartbeats 600000 in
 theorem bookkeeping_decreases (before : State) (bookkeeping : Bookkeeping before)
     (evidence : Evidence) (successors : List (Rat × State))
     (action : step before = .ok (.next evidence successors))

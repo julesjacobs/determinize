@@ -137,7 +137,6 @@ theorem domain_valueSet_convex (queryOp : Determinize.Spec.Paper.Op)
       · exact add_pos_of_pos_of_nonneg (mul_pos haPos leftDomain.1)
           (mul_nonneg hb rightDomain.1.le)
     · exact leftDomain.2
-
   | bernoulli =>
     change Fin 1 → Symbolic.Affine (n + 1) at queryAffineArgs
     change Fin 0 → ℝ at queryGeneralArgs
@@ -693,7 +692,6 @@ theorem sampleG_joint_nStepMass_measurable (laws : PrimitiveLaws)
   simpa only [Determinize.Proof.Paper.MeasurableActionFamily.nStepKernelPack_apply]
     using composed
 
-set_option maxHeartbeats 800000 in
 theorem not_value_of_reduce_sample
     (expression : Expr) (fiber : Measure ℝ) (continuation : ℝ → Expr)
     (reduction : reduce expression = .sample site fiber continuation) :
@@ -921,7 +919,6 @@ theorem determinize_shift (amount cutoff : Nat) (expression : Expr) :
     all_goals
       simp (disch := simp_wf <;> omega) only [Expr.shift, Expr.mapVars, Expr.determinize, recurse]
 
-set_option maxHeartbeats 800000 in
 theorem determinize_substAt (depth : Nat) (replacement expression : Expr) :
     (Expr.substAt depth replacement expression).determinize =
       Expr.substAt depth replacement.determinize expression.determinize := by
@@ -986,8 +983,6 @@ theorem targetRealize_wrap
 
 open Symbolic Symbolic.AffineExpr
 
-set_option maxHeartbeats 1600000 in
-set_option maxRecDepth 4000 in
 theorem symbolicReduce_targetRealize
     {expression : AffineExpr n} (typed : WellTyped context expression ty)
     (environment : Env n) :
@@ -1033,7 +1028,6 @@ theorem symbolicReduce_targetRealize
         (ExprContext := fun next ↦ .discrete DistributionAction.mean.determinize next)
         (context_realize := by intros; simp only [realize, Expr.determinize])
         (lifted_realize := by intros; simp only [realize, Expr.determinize]), ih environment]
-
   | bool =>
     simp [symbolicReduce, targetRealize, realize, Expr.determinize, Expr.determinize, reduce]
   | realE =>
@@ -1902,7 +1896,6 @@ theorem symbolicReduce_targetRealize
         (context_realize := by intros; simp only [realize, Expr.determinize])
         (lifted_realize := by intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
         ihl environment]
-
   | gammaMean leftTyped rightTyped ihl ihr =>
     rename_i context' left affinity right
     rw [realize, Expr.determinize]
@@ -1982,7 +1975,6 @@ theorem source_mean_safe_step
   rw [natural]
   exact safe.2
 
-set_option maxHeartbeats 1600000 in
 theorem safeConfigAt_target
     (stepKernel : StepKernel) (fuel : Nat)
     (history : Symbolic.SampleEnv laws n) (expression : AffineExpr n)
@@ -2140,7 +2132,7 @@ theorem determinize_domainSafe_of_typed_source
 theorem bind_bind_const_swap {alpha beta gamma : Type*}
     [MeasurableSpace alpha] [MeasurableSpace beta] [MeasurableSpace gamma]
     (left : Measure alpha) (right : Measure beta) [SFinite left] [SFinite right]
-    (kernel : Kernel (alpha × beta) gamma) [IsSFiniteKernel kernel] :
+    (kernel : Kernel (alpha × beta) gamma) :
     left.bind (fun a ↦ right.bind fun b ↦ kernel (a, b)) =
       right.bind (fun b ↦ left.bind fun a ↦ kernel (a, b)) := by
   have leftFamilyMeasurable : Measurable

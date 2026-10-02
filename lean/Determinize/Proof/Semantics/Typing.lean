@@ -167,7 +167,6 @@ theorem typed_shift (h : Typed (before ++ suffix) expression ty) :
     | exact .poisson (ih (before := before) (suffix := suffix) hcontext)
     | exact .bernoulli (ih (before := before) (suffix := suffix) hcontext)
     | exact .exponential (ih (before := before) (suffix := suffix) hcontext)
-
   | poissonMean hv ih | bernoulliMean hv ih | exponentialMean hv ih =>
     rw [Expr.shift, Expr.mapVars]
     first
@@ -503,7 +502,6 @@ theorem reduce_typed_closed
     · first
       | exact (ih rfl).wrap fun next nextTyped ↦ .discrete nextTyped
       | exact (ih rfl).wrap fun next nextTyped ↦ .discreteMean nextTyped
-
   | unit => rw [reduce]; exact .next .unit
   | bool => rw [reduce]; exact .next .bool
   | real => rw [reduce]; exact .next .real

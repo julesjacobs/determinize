@@ -141,7 +141,6 @@ theorem retain_cons_some (draw : Op × ℝ) (trace : Trace) :
 
 /-! ### Fiber soundness along the symbolic action -/
 
-set_option maxHeartbeats 1200000 in
 theorem compact_exactZero_fiberSound (history : Symbolic.SampleEnv primitiveLaws n)
     (expression : AffineExpr n) (safe : SafeConfigAt primitiveLaws 0 history expression) :
     FiberSound (compactFiber 0 history safe.1 expression)
@@ -189,7 +188,6 @@ theorem compact_exactZero_fiberSound (history : Symbolic.SampleEnv primitiveLaws
       targetTraceLaw_zero_of_not_value history expression value]
     exact FiberSound.zero _
 
-set_option maxHeartbeats 1600000 in
 theorem compact_exactDepth_fiberSound (depth : Nat) (history : Symbolic.SampleEnv primitiveLaws n)
     (expression : AffineExpr n) (safe : SafeConfigAt primitiveLaws depth history expression) :
     FiberSound (compactFiber depth history safe.1 expression)
@@ -302,7 +300,6 @@ theorem selfReplay_measurable (depth : Nat) (target : Expr) :
   rw [eq]
   exact measurableSet_kernel_eq_dirac κ.kernel measurable_snd
 
-set_option maxHeartbeats 1600000 in
 /-- Replaying the determinized program along its own compact trace returns its output. -/
 theorem target_selfReplay (depth : Nat) (history : Symbolic.SampleEnv primitiveLaws n)
     (expression : AffineExpr n) (safe : SafeConfigAt primitiveLaws depth history expression) :

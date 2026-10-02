@@ -115,7 +115,7 @@ private theorem eliminate_sound {i : Nat} {t : Shape} {rest : List (Shape × Sha
     (fresh : i ∉ t.vars) {θ : Nat → Shape} (h : Unifies θ (substEquations (.single i t) rest)) :
     Unifies (fun j ↦ (Shape.single i t j).subst θ) ((.var i, t) :: rest) := by
   refine unifies_cons.2 ⟨?_, unifies_substEquations.1 h⟩
-  show (Shape.single i t i).subst θ = t.subst fun j ↦ (Shape.single i t j).subst θ
+  change (Shape.single i t i).subst θ = t.subst fun j ↦ (Shape.single i t j).subst θ
   rw [← Shape.subst_subst, Shape.subst_single_of_not_mem fresh, Shape.single, if_pos rfl]
 
 theorem unify_sound {equations : List (Shape × Shape)} {θ : Nat → Shape}

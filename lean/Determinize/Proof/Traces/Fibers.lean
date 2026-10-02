@@ -38,7 +38,7 @@ def FiberHasMean (fiber : Kernel α ℝ) (point : α × ℝ) : Prop :=
   fiber point.1 Set.univ = 1 ∧ Integrable id (fiber point.1) ∧
     (∫ value : ℝ, value ∂fiber point.1) = point.2
 
-theorem fiberHasMean_measurable (fiber : Kernel α ℝ) [IsSFiniteKernel fiber] :
+theorem fiberHasMean_measurable (fiber : Kernel α ℝ) :
     MeasurableSet {point | FiberHasMean fiber point} := by
   apply MeasurableSet.inter
   · exact measurableSet_eq_fun ((fiber.measurable_coe MeasurableSet.univ).comp measurable_fst)

@@ -21,7 +21,6 @@ def inference : IO Unit := do
       "let x = uniform[G](0,1) in x + uniform[E](0,1)",
       "flip(0.5)", "bernoulli(0.5)", "discrete(0.25,0.25,0.5)", "observe(true)"] do
     assert (compile text |>.isOk) s!"valid program rejected: {text}"
-
   for text in [
       "uniform[G](0,1) :: uniform[E](0,1) :: []",
       "uniform[E](0,1) :: uniform[G](0,1) :: []",
@@ -33,7 +32,6 @@ def inference : IO Unit := do
     let p ← IO.ofExcept (compile text)
     assert (p.annotated.sites.contains .G && p.annotated.sites.contains .E)
       s!"structural subtyping changed requested affinities: {text}"
-
   for sample in ["uniform(0,1)", "uniform[E](0,1)"] do
     for calls in [s!"f x + f ({sample})", s!"f ({sample}) + f x"] do
       let text :=
@@ -41,7 +39,6 @@ def inference : IO Unit := do
       let p ← IO.ofExcept (compile text)
       assert (p.ty == .float .E && p.annotated.sites == [.E, .G])
         s!"subtype constraints lost independent affinities: {text}"
-
   for text in [
       "fun x => let f = fun y => x :: y in f x",
       "fun x => let f = fun y => x :: y :: [] in f (x :: [])",

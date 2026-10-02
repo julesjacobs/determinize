@@ -1433,9 +1433,9 @@ def comp {α β : Type*} [MeasurableSpace α] [MeasurableSpace β]
     have pairMeasurable : Measurable (fun pair : β × ℝ ↦ (function pair.1, pair.2)) :=
       Measurable.prod (measurableFunction.comp firstMeasurable) secondMeasurable
     apply congr (.sample pulled <| continuationMeasurable.comp pairMeasurable)
-    funext parameter
-    rw [pullback_apply]
-    rfl
+    · funext parameter
+      rw [pullback_apply]
+      rfl
   | stuck => exact .stuck
   | @piecewise region _ measurableRegion whenTrue whenFalse trueFamily falseFamily
       trueResult falseResult =>
