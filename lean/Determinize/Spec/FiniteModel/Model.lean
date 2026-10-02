@@ -1,9 +1,19 @@
 import Determinize.Spec.Semantics
 import Mathlib.Algebra.BigOperators.Ring.Finset
 
+/-!
+# Finite models
+
+A finite Markov chain with rational transition probabilities. Evaluation stops at a state that
+returns a rational reward or rejects. The output law of the chain is defined here, and
+`Model.Matches` relates it to the output law of a program.
+-/
+
 namespace Determinize.Spec.FiniteModel
 open MeasureTheory
 
+/-- What happens at a state: evaluation continues from a `transient` state, stops with a reward
+at a `returned` state, and stops without output at a `rejected` state. -/
 inductive StateKind where
   | transient
   | returned (reward : Rat)
@@ -13,9 +23,13 @@ deriving DecidableEq, Repr
 /-- Evaluation stops at terminal states and rewards are paid once, on return.
 Transition rows at terminal states are ignored by the output semantics. -/
 structure Model where
+  /-- The number of states. -/
   size : Nat
+  /-- The state in which evaluation starts. -/
   initial : Fin size
+  /-- Whether each state is transient, returns a reward, or rejects. -/
   kind : Fin size → StateKind
+  /-- The probability of moving from the first state to the second in one step. -/
   transition : Fin size → Fin size → Rat
   nonnegative : ∀ i j, 0 ≤ transition i j
   normalized : ∀ i, ∑ j, transition i j = 1

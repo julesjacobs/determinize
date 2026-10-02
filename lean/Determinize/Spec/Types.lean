@@ -4,6 +4,8 @@ import Mathlib.Tactic.DeriveCountable
 
 namespace Determinize.Spec.Paper
 
+/-- The paper's modes of a real: a `G` sample must remain stochastic, an `E` sample is eligible
+for determinization, and the type system restricts how reals of affinity `E` are used. -/
 inductive Affinity where
   | E | G
 deriving DecidableEq, Repr, Countable
@@ -14,10 +16,12 @@ inductive DistributionAction where
   | mean
 deriving DecidableEq, Repr, Countable
 
+/-- Determinization of a site: an `E` sample becomes a mean; `G` samples and means are kept. -/
 def DistributionAction.determinize : DistributionAction → DistributionAction
   | .sample .E => .mean
   | action => action
 
+/-- The paper's types. `float affinity` is the type of reals of that affinity. -/
 inductive Ty where
   | unit | bool | float (affinity : Affinity)
   | prod (left right : Ty)
