@@ -123,7 +123,8 @@ theorem domainSafe_reciprocal : DomainSafe reciprocal := by
   apply domainSafe_let_uniform .E
   apply Filter.Eventually.of_forall
   intro x
-  simp [Expr.substHead, Expr.substAt, Expr.shift, Expr.mapVars, uniform]
+  simp only [Expr.substHead, Expr.substAt, Expr.mapVars, Expr.shift, uniform, zero_add, ↓reduceIte,
+    zero_ne_one, not_lt_zero]
   change DomainSafe (.letE (uniform .G)
     (.add (.real x) (.div (.real 1) (.bvar 0))))
   apply domainSafe_let_uniform .G
@@ -131,7 +132,7 @@ theorem domainSafe_reciprocal : DomainSafe reciprocal := by
     simpa [uniformFiber, uniformMeasure] using
       (ae_restrict_of_ae (s := Set.Icc (0 : ℝ) 1) (volume.ae_ne (0 : ℝ)))
   filter_upwards [nonzero] with y nonzero
-  simp [Expr.substHead, Expr.substAt, Expr.shift, Expr.mapVars]
+  simp only [Expr.substHead, Expr.substAt, Expr.mapVars, ↓reduceIte, Expr.shift]
   apply domainSafe_of_next (next := .add (.real x) (.real (1 / y)))
   · simp [reduce, Expr.isValue, realValue?, Action.wrap, nonzero]
   apply domainSafe_of_next (next := .real (x + 1 / y))
@@ -152,7 +153,7 @@ theorem domainSafe_scaledSample : DomainSafe scaledSample := by
   apply domainSafe_let_uniform .G
   apply Filter.Eventually.of_forall
   intro y
-  simp [Expr.substHead, Expr.substAt, Expr.shift, Expr.mapVars, uniform]
+  simp only [Expr.substHead, Expr.substAt, Expr.mapVars, ↓reduceIte, Expr.shift, uniform]
   change DomainSafe (.mul (.real y) (uniform .E))
   let μ := uniformFiber (.sample .E) 0 1
   refine domainSafe_of_sample (site := (.sample .E, .uniform)) (fiber := μ)

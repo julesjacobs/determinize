@@ -74,7 +74,9 @@ theorem stable_closed (model : Model) (reachable : Vector Bool model.size)
   intro state isDead
   have unreachable : reachable[state] = false := by simpa using isDead
   have h := stable state
-  simp [reachStep, unreachable] at h
+  simp only [reachStep, ne_eq, Fin.getElem_fin, Bool.decide_or, decide_not, Vector.getElem_ofFn,
+    Fin.eta, unreachable, Bool.or_eq_false_iff, Bool.not_eq_eq_eq_not, Bool.not_false,
+    decide_eq_true_eq, decide_eq_false_iff_not, not_exists, not_and, Bool.not_eq_true] at h
   refine ⟨h.1, ?_⟩
   intro next positive
   have hn := h.2 next positive

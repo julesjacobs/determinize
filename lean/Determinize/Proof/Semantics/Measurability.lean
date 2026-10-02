@@ -542,7 +542,11 @@ theorem secondChild_coordinates_decompose (expression : Expr) :
         front ++ (Expr.secondChild expression).realCoordinates ++ suffix ∧
       front.length = Skeleton.secondOffset expression.skeleton := by
   cases expression <;>
-    simp [Expr.secondChild, Expr.skeleton, Expr.realCoordinates, Skeleton.secondOffset]
+    simp only [Expr.realCoordinates, Expr.secondChild, List.append_nil, List.nil_eq,
+      List.append_eq_nil_iff, Skeleton.secondOffset, Expr.skeleton, List.length_eq_zero_iff,
+      exists_and_right, ↓existsAndEq, and_true, and_self, exists_eq, List.append_assoc,
+      List.cons_append, List.nil_append, exists_eq_right, List.cons.injEq, true_and,
+      List.self_eq_append_right]
   case app function argument | pair function argument | cons function argument |
       add function argument | mul function argument | div function argument |
       lt function argument | uniform _ function argument | gaussian _ function argument |
@@ -560,7 +564,9 @@ theorem thirdChild_coordinates_decompose (expression : Expr) :
         front ++ (Expr.thirdChild expression).realCoordinates ∧
       front.length = Skeleton.thirdOffset expression.skeleton := by
   cases expression <;>
-    simp [Expr.thirdChild, Expr.skeleton, Expr.realCoordinates, Skeleton.thirdOffset]
+    simp only [Expr.realCoordinates, Expr.thirdChild, List.append_nil, List.nil_eq,
+      Skeleton.thirdOffset, Expr.skeleton, List.length_eq_zero_iff, and_self, exists_eq,
+      List.self_eq_append_left, List.append_assoc]
   case matchSum scrutinee left right | matchList scrutinee left right |
       ite scrutinee left right =>
     exact ⟨scrutinee.realCoordinates ++ left.realCoordinates, by simp,
@@ -1471,19 +1477,32 @@ def map {α : Type*} [MeasurableSpace α] {action : α → Action}
 
 theorem measurable_getD_pair (index : Nat) :
     Measurable fun pair : ℝ × ℝ ↦ [pair.1, pair.2].getD index 0 := by
-  rcases index with _ | _ | index <;> simp [List.getD] <;> fun_prop
+  rcases index with _ | _ | index <;> simp only [List.getD, List.length_cons, List.length_nil,
+    zero_add, Nat.reduceAdd, Order.lt_two_iff, zero_le, getElem?_pos, List.getElem_cons_zero,
+    Option.getD_some, Std.le_refl, List.getElem_cons_succ, add_le_iff_nonpos_left,
+    nonpos_iff_eq_zero, Nat.add_eq_zero_iff, one_ne_zero, and_false, not_false_eq_true,
+    getElem?_neg, Option.getD_none, measurable_const] <;> fun_prop
 
 theorem measurable_getD_first (index : Nat) :
     Measurable fun pair : ℝ × ℝ ↦ [pair.1].getD index 0 := by
-  rcases index with _ | index <;> simp [List.getD]; fun_prop
+  rcases index with _ | index <;> simp only [List.getD, List.length_cons, List.length_nil, zero_add,
+    Order.lt_one_iff, getElem?_pos, List.getElem_cons_zero, Option.getD_some, Nat.add_eq_zero_iff,
+    one_ne_zero, and_false, not_false_eq_true, getElem?_neg, Option.getD_none, measurable_const];
+      fun_prop
 
 theorem measurable_getD_second (index : Nat) :
     Measurable fun pair : ℝ × ℝ ↦ [pair.2].getD index 0 := by
-  rcases index with _ | index <;> simp [List.getD]; fun_prop
+  rcases index with _ | index <;> simp only [List.getD, List.length_cons, List.length_nil, zero_add,
+    Order.lt_one_iff, getElem?_pos, List.getElem_cons_zero, Option.getD_some, Nat.add_eq_zero_iff,
+    one_ne_zero, and_false, not_false_eq_true, getElem?_neg, Option.getD_none, measurable_const];
+      fun_prop
 
 theorem measurable_getD_single (index : Nat) :
     Measurable fun value : ℝ ↦ [value].getD index 0 := by
-  rcases index with _ | index <;> simp [List.getD]; fun_prop
+  rcases index with _ | index <;> simp only [List.getD, List.length_cons, List.length_nil, zero_add,
+    Order.lt_one_iff, getElem?_pos, List.getElem_cons_zero, Option.getD_some, Nat.add_eq_zero_iff,
+    one_ne_zero, and_false, not_false_eq_true, getElem?_neg, Option.getD_none, measurable_const];
+      fun_prop
 
 theorem measurable_getD_nil {α : Type*} [MeasurableSpace α] (index : Nat) :
     Measurable fun _ : α ↦ ([] : List ℝ).getD index 0 := by

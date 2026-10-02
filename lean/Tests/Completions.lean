@@ -57,7 +57,7 @@ example : ¬ ∃ program, Completion comparison program := by
     cases program <;> simp only [comparison, Input.Matches, Expr.Sitewise] at aligned
     rename_i left right
     obtain ⟨aligned, -⟩ := aligned
-    cases left <;> simp [Expr.Sitewise] at aligned
+    cases left <;> simp only [Expr.Sitewise, reduceCtorEq, Option.some.injEq, false_or] at aligned
     obtain ⟨rfl, -⟩ := aligned
     exact ⟨_, _, _, rfl⟩
   -- A comparison needs a G operand, and an E site is not G.

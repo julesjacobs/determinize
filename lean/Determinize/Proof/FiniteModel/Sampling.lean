@@ -149,13 +149,13 @@ theorem finiteLaw_sound (op : Op) (kind : DistributionAction) (arguments : List 
         subst n
         cases kind with
         | sample affinity =>
-          simp [finiteLaw, checked, Except.mapError, bind, Except.bind, pure,
-            Except.pure] at success
+          simp only [finiteLaw, BEq.rfl, ↓reduceIte, bind, Except.bind, Except.mapError, checked,
+            beq_iff_eq, reduceCtorEq, pure, Except.pure, Except.ok.injEq] at success
           subst outcomes
           exact finiteLawMatches_discrete_sample affinity arguments d completed
         | mean =>
-          simp [finiteLaw, checked, Except.mapError, bind, Except.bind, pure,
-            Except.pure] at success
+          simp only [finiteLaw, BEq.rfl, ↓reduceIte, bind, Except.bind, Except.mapError, checked,
+            pure, Except.pure, Except.ok.injEq] at success
           subst outcomes
           exact finiteLawMatches_discrete_mean arguments d completed
     · simp [finiteLaw, arity, bind, Except.bind, throw] at success
@@ -163,7 +163,10 @@ theorem finiteLaw_sound (op : Op) (kind : DistributionAction) (arguments : List 
     rcases arguments with _ | ⟨a, _ | ⟨b, _ | ⟨c, rest⟩⟩⟩ <;>
       cases kind <;>
       simp only [finiteLaw, supportedDraw] at success
-    all_goals split_ifs at success <;> simp_all [pure, bind, Except.bind, Except.pure, throw]
+    all_goals split_ifs at success <;> simp_all only [Bool.false_eq_true, not_true_eq_false,
+      not_false_eq_true, beq_iff_eq, reduceCtorEq, bind, Except.bind, throw, BEq.rfl, pure,
+      Except.pure, not_le, Except.ok.injEq, one_div, not_lt, Bool.and_eq_true, decide_eq_true_eq,
+      not_and]
     all_goals subst outcomes
     all_goals try { simpa only [one_div] using finiteLawMatches_exponential_mean a (by assumption) }
     all_goals aesop (add safe apply [finiteLawMatches_bernoulli_sample,

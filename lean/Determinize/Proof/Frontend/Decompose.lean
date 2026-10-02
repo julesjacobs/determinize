@@ -147,21 +147,21 @@ theorem approx_shape_decorate {ρ : AffinityVar → Affinity} {δ : Nat → Shap
     simp [Shape.decorate, Approx, AffinityTerm.eval, hleaf, affinityAt]
   | prod a b iha ihb =>
     intro T leaf shape hleaf
-    cases T <;> simp [Shape.subst, shapeOf] at shape
+    cases T <;> simp only [Shape.subst, shapeOf, reduceCtorEq, Shape.prod.injEq] at shape
     exact ⟨_, _, rfl, iha _ _ shape.1 fun p ↦ hleaf (0 :: p),
       ihb _ _ shape.2 fun p ↦ hleaf (1 :: p)⟩
   | sum a b iha ihb =>
     intro T leaf shape hleaf
-    cases T <;> simp [Shape.subst, shapeOf] at shape
+    cases T <;> simp only [Shape.subst, shapeOf, reduceCtorEq, Shape.sum.injEq] at shape
     exact ⟨_, _, rfl, iha _ _ shape.1 fun p ↦ hleaf (0 :: p),
       ihb _ _ shape.2 fun p ↦ hleaf (1 :: p)⟩
   | list a ih =>
     intro T leaf shape hleaf
-    cases T <;> simp [Shape.subst, shapeOf] at shape
+    cases T <;> simp only [Shape.subst, shapeOf, reduceCtorEq, Shape.list.injEq] at shape
     exact ⟨_, rfl, ih _ _ shape fun p ↦ hleaf (0 :: p)⟩
   | arr a b iha ihb =>
     intro T leaf shape hleaf
-    cases T <;> simp [Shape.subst, shapeOf] at shape
+    cases T <;> simp only [Shape.subst, shapeOf, reduceCtorEq, Shape.arr.injEq] at shape
     exact ⟨_, _, rfl, iha _ _ shape.1 fun p ↦ hleaf (0 :: p),
       ihb _ _ shape.2 fun p ↦ hleaf (1 :: p)⟩
 

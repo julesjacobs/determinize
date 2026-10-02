@@ -251,7 +251,7 @@ theorem exact_erasure (step : StepKernel) (depth : Nat) (expression : Expr) :
     (exactMeasure depth expression).map Prod.snd = exactOutputMeasure step depth expression := by
   induction depth generalizing expression with
   | zero =>
-    cases expression <;> try simp [exactMeasure, exactOutputMeasure]
+    cases expression <;> try simp only [exactMeasure, Measure.map_zero, exactOutputMeasure]
     case real value => simp [Measure.map_dirac' measurable_snd]
   | succ depth ih =>
     by_cases value : expression.isValue = true

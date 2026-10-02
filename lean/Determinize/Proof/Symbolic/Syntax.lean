@@ -922,7 +922,10 @@ theorem wellTyped_arr_value_typed (typed : WellTyped context expression (.arr ar
         Ty.Sub.trans hr (by assumption), hb⟩
     · exact Or.inr ⟨a, r, body, he, Ty.Sub.trans (by assumption) ha,
         Ty.Sub.trans hr (by assumption), hb⟩
-  all_goals cases ht <;> simp_all [Expr.isValue]
+  all_goals cases ht <;> simp_all only [Expr.isValue, Bool.false_eq_true, Expr.lam.injEq,
+    exists_eq_left', exists_and_left, reduceCtorEq, false_and, exists_const, exists_false, or_false,
+    Expr.fix.injEq, false_or, not_isEmpty_of_nonempty, IsEmpty.exists_iff, exists_const_iff,
+    and_true, and_self, or_self, IsEmpty.forall_iff, implies_true]
   all_goals exact ⟨_, Ty.Sub.refl _, _, Ty.Sub.refl _, by assumption⟩
 
 theorem wellTyped_prod_value_typed (typed : WellTyped context expression (.prod leftTy rightTy))
@@ -2122,9 +2125,10 @@ theorem symbolicReduce_realize
         by_cases h : y0 = 0
         · simp [affineValue?, Affine.div?, SymbolicAction.realize, realize,
             Expr.isValue, realValue?, Symbolic.Affine.eval, h]
-        simp [h, affineValue?, Affine.div?, SymbolicAction.realize, realize,
-          Expr.isValue, realValue?, Symbolic.Affine.eval, Finset.sum_const_zero,
-          div_eq_mul_inv]
+        simp only [SymbolicAction.realize, affineValue?, Affine.div?, ↓reduceIte, h, realize,
+          Affine.eval, Prod.smul_fst, smul_eq_mul, Prod.smul_snd, Pi.smul_apply, Pi.zero_apply,
+          zero_mul, Finset.sum_const_zero, add_zero, Expr.isValue, realValue?, div_eq_mul_inv,
+          Action.next.injEq, Expr.real.injEq]
         have sumRule : (∑ i, y0⁻¹ * x.2 i * environment i) =
             y0⁻¹ * ∑ i, x.2 i * environment i := by
           rw [Finset.mul_sum]

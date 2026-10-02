@@ -91,7 +91,8 @@ theorem realCoordinates_of_realListValue? {expression : Expr} {values : List ℝ
   induction expression generalizing values with
   | cons head tail _ ih =>
     cases head <;> simp only [realListValue?, realValue?] at equation <;>
-      cases tailEq : realListValue? tail <;> simp [tailEq] at equation
+      cases tailEq : realListValue? tail <;>
+        simp only [reduceCtorEq, tailEq, Option.some.injEq] at equation
     rw [← equation, Expr.realCoordinates, Expr.realCoordinates, ih tailEq]
     rfl
   | _ => simp_all [realListValue?, Expr.realCoordinates]
