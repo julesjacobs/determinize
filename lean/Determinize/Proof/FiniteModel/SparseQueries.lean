@@ -33,7 +33,7 @@ theorem Candidate.weighted_sum (candidate : Candidate) (i : Fin candidate.states
     (∑ j, candidate.weight i j * values j) = edgeValues (candidate.row i).edges.toList values :=
   sum_edge_values _ _ (fun edge present ↦ (edges.2 edge present).1)
 
-private def sparseEquation (candidate : Candidate) (kind : Fin candidate.states.size → StateKind)
+private def SparseEquation (candidate : Candidate) (kind : Fin candidate.states.size → StateKind)
     (values : Fin candidate.states.size → Rat) (state : Fin candidate.states.size) : Prop :=
   values state = match kind state with
     | .returned r => r | .rejected => 0
@@ -41,7 +41,7 @@ private def sparseEquation (candidate : Candidate) (kind : Fin candidate.states.
 
 private instance (candidate : Candidate) (kind : Fin candidate.states.size → StateKind)
     (values : Fin candidate.states.size → Rat) (state : Fin candidate.states.size) :
-    Decidable (sparseEquation candidate kind values state) := inferInstanceAs (Decidable (_ = _))
+    Decidable (SparseEquation candidate kind values state) := inferInstanceAs (Decidable (_ = _))
 
 def Candidate.QueryStateValid (candidate : Candidate)
     (valid : candidate.GraphValid)
@@ -52,10 +52,10 @@ def Candidate.QueryStateValid (candidate : Candidate)
   ((cut (candidate.graphModel valid) certificate.output.dead).kind state = .transient →
     0 < candidate.weight state (certificate.output.next state) ∧
       certificate.output.rank (certificate.output.next state) < certificate.output.rank state) ∧
-  (∀ moment, sparseEquation candidate
+  (∀ moment, SparseEquation candidate
     (certificate.output.model (candidate.graphModel valid) moment).kind
     (certificate.output.values moment) state) ∧
-  sparseEquation candidate
+  SparseEquation candidate
     (rejectionQuery (candidate.graphModel valid) certificate.output.dead).kind
     certificate.rejection state
 

@@ -21,23 +21,24 @@ theorem exact_succ_mean (depth : Nat) (expression : Expr) (op : Op) (value : ℝ
     (exactMeasure depth (continuation v)).map (prepend none)) = _
   apply Measure.dirac_bind
   exact (Measure.measurable_map (prepend none)
-    (prepend_measurable.comp (measurable_const.prodMk measurable_id))).comp
-      ((exact_measurable depth).comp
+    (measurable_prepend.comp (measurable_const.prodMk measurable_id))).comp
+      ((measurable_exactMeasure depth).comp
         ((MeasurableActionFamily.stepKernel primitiveLaws).sample_continuation_measurable
           _ _ _ reduction))
 
-theorem ogtAt_succ_mean (depth : Nat) (expression : Expr) (op : Op) (value : ℝ)
+theorem outputGivenTraceAt_succ_mean (depth : Nat) (expression : Expr) (op : Op) (value : ℝ)
     (continuation : ℝ → Expr)
     (reduction : reduce expression = .sample (.mean, op) (Measure.dirac value) continuation)
     (tape : DrawTrace) :
     outputGivenTraceAt (depth + 1) expression tape =
       outputGivenTraceAt depth (continuation value) tape := by
-  rw [ogtAt_succ_sampleE depth (not_value_of_reduce_sample _ _ _ reduction) reduction rfl,
-    Measure.dirac_bind (ogtAt_continuation_measurable depth reduction tape)]
+  rw [outputGivenTraceAt_succ_sampleE depth (not_value_of_reduce_sample _ _ _ reduction)
+    reduction rfl,
+    Measure.dirac_bind (measurable_outputGivenTraceAt_continuation depth reduction tape)]
 
 theorem concrete_mean (expression : AffineExpr n) (typed : WellTyped [] expression ty)
     (actionEq : symbolicReduce expression = .mean op affine general continuation)
-    (environment : Env n) (valid : domain op (meanParams op affine general environment)) :
+    (environment : Env n) (valid : InDomain op (meanParams op affine general environment)) :
     reduce (expression.realize environment) =
       .sample (.mean, op) (Measure.dirac ((meanAffine op affine general).eval environment))
         (fun value ↦ (continuation (value, 0)).realize environment) := by
@@ -50,7 +51,7 @@ theorem concrete_mean (expression : AffineExpr n) (typed : WellTyped [] expressi
 
 theorem concrete_target_mean (expression : AffineExpr n) (typed : WellTyped [] expression ty)
     (actionEq : symbolicReduce expression = .mean op affine general continuation)
-    (environment : Env n) (valid : domain op (meanParams op affine general environment)) :
+    (environment : Env n) (valid : InDomain op (meanParams op affine general environment)) :
     reduce (expression.realize environment).determinize =
       .sample (.mean, op) (Measure.dirac ((meanAffine op affine general).eval environment))
         (fun value ↦ ((continuation (value, 0)).realize environment).determinize) := by
@@ -65,7 +66,7 @@ theorem actualTraceLaw_mean (depth : Nat) (history : Symbolic.SampleEnv primitiv
     (expression : AffineExpr n) (typed : WellTyped [] expression ty)
     (actionEq : symbolicReduce expression = .mean op affine general continuation)
     (valid : ∀ᵐ env ∂history.actualMeasure primitiveLaws,
-      domain op (meanParams op affine general env)) :
+      InDomain op (meanParams op affine general env)) :
     actualTraceLaw (depth + 1) history expression =
       (actualTraceLaw depth history (continuation (meanAffine op affine general))).map
         (prepend none) := by
@@ -73,9 +74,10 @@ theorem actualTraceLaw_mean (depth : Nat) (history : Symbolic.SampleEnv primitiv
   rw [actionEq] at actionTyped
   rw [actualTraceLaw, actualTraceLaw, map_bind_fun (history.actualMeasure primitiveLaws)
     (fun env ↦ exactMeasure depth ((continuation (meanAffine op affine general)).realize env))
-    ((exact_measurable depth).comp (continuation (meanAffine op affine general)).realize_measurable)
+    ((measurable_exactMeasure depth).comp
+      (continuation (meanAffine op affine general)).measurable_realize)
     (prepend none) (show Measurable (prepend none : Output → Output) from
-      prepend_measurable.comp (measurable_const.prodMk measurable_id))]
+      measurable_prepend.comp (measurable_const.prodMk measurable_id))]
   apply Measure.bind_congr_right
   filter_upwards [valid] with env valid
   rw [exact_succ_mean _ _ _ _ _ (concrete_mean expression typed actionEq env valid),
@@ -84,7 +86,7 @@ theorem actualTraceLaw_mean (depth : Nat) (history : Symbolic.SampleEnv primitiv
 theorem targetTraceLaw_mean (depth : Nat) (history : Symbolic.SampleEnv primitiveLaws n)
     (expression : AffineExpr n) (typed : WellTyped [] expression ty)
     (actionEq : symbolicReduce expression = .mean op affine general continuation)
-    (valid : domain op (meanParams op affine general (history.meanEnvironment primitiveLaws))) :
+    (valid : InDomain op (meanParams op affine general (history.meanEnvironment primitiveLaws))) :
     targetTraceLaw (depth + 1) history expression =
       (targetTraceLaw depth history (continuation (meanAffine op affine general))).map
         (prepend none) := by
@@ -98,7 +100,7 @@ theorem targetTraceLaw_mean (depth : Nat) (history : Symbolic.SampleEnv primitiv
 theorem targetReplay_mean (depth : Nat) (history : Symbolic.SampleEnv primitiveLaws n)
     (expression : AffineExpr n) (typed : WellTyped [] expression ty)
     (actionEq : symbolicReduce expression = .mean op affine general continuation)
-    (valid : domain op (meanParams op affine general (history.meanEnvironment primitiveLaws)))
+    (valid : InDomain op (meanParams op affine general (history.meanEnvironment primitiveLaws)))
     (tape : DrawTrace) :
     outputGivenTraceAt (depth + 1)
       (expression.realize (history.meanEnvironment primitiveLaws)).determinize tape =
@@ -107,7 +109,8 @@ theorem targetReplay_mean (depth : Nat) (history : Symbolic.SampleEnv primitiveL
         (history.meanEnvironment primitiveLaws)).determinize tape := by
   have actionTyped := symbolicReduce_wellTyped typed
   rw [actionEq] at actionTyped
-  rw [ogtAt_succ_mean _ _ _ _ _ (concrete_target_mean expression typed actionEq _ valid),
+  rw [outputGivenTraceAt_succ_mean _ _ _ _ _
+    (concrete_target_mean expression typed actionEq _ valid),
     ← mean_continuation_realize actionTyped]
 
 end

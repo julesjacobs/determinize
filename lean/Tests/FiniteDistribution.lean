@@ -17,10 +17,10 @@ example : (bernoulliDistribution (1 / 4)).map (·.mean) = .ok (1 / 4) := by
 
 example (p : ℝ) (h : 0 ≤ p ∧ p ≤ 1) :
     (∫ x, x ∂Spec.Paper.bernoulliFiber (.sample .G) p) = p :=
-  Proof.DiscreteLaws.bernoulli_mean (.sample .G) p h
+  Proof.DiscreteLaws.integral_id_bernoulliFiber (.sample .G) p h
 
-#print axioms Proof.DiscreteLaws.discrete_mean
-#print axioms Proof.DiscreteLaws.bernoulli_mean
+#print axioms Proof.DiscreteLaws.integral_id_discreteFiber
+#print axioms Proof.DiscreteLaws.integral_id_bernoulliFiber
 
 example : (remainderDistribution [1 / 6, 1 / 3]).map (·.probabilities) =
     .ok [1 / 6, 1 / 3, 1 / 2] := by

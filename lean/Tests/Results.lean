@@ -68,6 +68,6 @@ end Determinize.Tests
 #print axioms Determinize.Checking.checked_sourceExpectedReward
 
 example : MeasureTheory.Integrable id Determinize.Tests.FiniteModel.loop.outputMeasure :=
-  Determinize.Proof.FiniteModel.outputMeasure_integrable _
+  Determinize.Proof.FiniteModel.integrable_outputMeasure _
 
-#print axioms Determinize.Proof.FiniteModel.outputMeasure_integrable
+#print axioms Determinize.Proof.FiniteModel.integrable_outputMeasure

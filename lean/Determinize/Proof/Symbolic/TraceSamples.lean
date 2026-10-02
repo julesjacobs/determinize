@@ -50,7 +50,7 @@ theorem concrete_target_sampleE
     (continuation : AffineExpr (n + 1))
     (actionEq : symbolicReduce expression = .sampleE op affine general continuation)
     (mean : Env n)
-    (paramsDomain : domain op
+    (paramsDomain : InDomain op
         (fun i ↦ Symbolic.Affine.eval (affine.getD i.1 (0, fun _ ↦ 0)) mean,
          fun i ↦ general.getD i.1 0)) :
     reduce (expression.realize mean).determinize =
@@ -85,7 +85,7 @@ theorem concrete_target_sampleE
         affineLength]
     · simp [evaluatedParams, params, generalArgs, List.getD_eq_getElem?_getD,
         generalLength]
-  change (if Determinize.Spec.Paper.domain op evaluatedParams then
+  change (if Determinize.Spec.Paper.InDomain op evaluatedParams then
     Measure.dirac (Determinize.Spec.Paper.meanValue op evaluatedParams) else 0) = _
   rw [evaluatedParamsEq, if_pos paramsDomain]
 
@@ -129,14 +129,14 @@ theorem actualTraceLaw_sampleE (depth : Nat) (history : Symbolic.SampleEnv primi
         (fun i ↦ affine.getD i.1 (0, fun _ ↦ 0))
         (fun i ↦ general.getD i.1 0)) continuation).map (prepend none) := by
   have prefixMeasurable : Measurable (prepend none : Output → Output) :=
-    prepend_measurable.comp (measurable_const.prodMk measurable_id)
+    measurable_prepend.comp (measurable_const.prodMk measurable_id)
   rw [actualTraceLaw, actualTraceLaw,
     map_bind_fun _ (fun env ↦ exactMeasure depth (continuation.realize env))
-      ((exact_measurable depth).comp continuation.realize_measurable) _ prefixMeasurable,
+      ((measurable_exactMeasure depth).comp continuation.measurable_realize) _ prefixMeasurable,
     history_bind_snoc _ _ _ _ _
       (fun env ↦ (exactMeasure depth (continuation.realize env)).map (prepend none))
       ((Measure.measurable_map _ prefixMeasurable).comp
-        ((exact_measurable depth).comp continuation.realize_measurable))]
+        ((measurable_exactMeasure depth).comp continuation.measurable_realize))]
   apply Measure.bind_congr_right
   filter_upwards [] with env
   rw [exact_succ_sample _ _ _ _ (by simpa only [AffineExpr.realize_isValue] using notValue)
@@ -163,7 +163,7 @@ theorem targetTraceLaw_sampleE (depth : Nat) (history : Symbolic.SampleEnv primi
   let generalArgs : Fin (generalArity op) → ℝ := fun i ↦ general.getD i.1 0
   let mean := history.meanEnvironment primitiveLaws
   have domainAtMean :=
-    SymbolicSoundness.SampleEnv.domain_at_meanEnvironment primitiveLaws history safe op affineArgs
+    SymbolicSoundness.SampleEnv.inDomain_meanEnvironment primitiveLaws history safe op affineArgs
       generalArgs extendedSafe.2
   have reduction :=
     concrete_target_sampleE expression typed op affine general continuation actionEq mean
@@ -177,8 +177,8 @@ theorem targetTraceLaw_sampleE (depth : Nat) (history : Symbolic.SampleEnv primi
       (exactMeasure depth (continuation.realize (Env.cons value mean)).determinize).map
           (prepend none)) :=
     (Measure.measurable_map (prepend none)
-      (prepend_measurable.comp (measurable_const.prodMk measurable_id))).comp
-      ((exact_measurable depth).comp contMeasurable)
+      (measurable_prepend.comp (measurable_const.prodMk measurable_id))).comp
+      ((measurable_exactMeasure depth).comp contMeasurable)
   change (Measure.dirac _).bind (fun value ↦
       (exactMeasure depth (continuation.realize (Env.cons value mean)).determinize).map
         (prepend none)) = _

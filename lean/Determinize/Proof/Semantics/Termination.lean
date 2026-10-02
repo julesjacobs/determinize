@@ -100,7 +100,7 @@ theorem runningProbabilityAt_antitone (typed : Typed [] expression (.float affin
   rw [running_eq_sub m typed safe, running_eq_sub n typed safe]
   exact tsub_le_tsub_left ((direct_cumulative_mono expression h) Set.univ) 1
 
-theorem returnOrDiverge (affinity : Affinity) (expression : Expr)
+theorem return_or_diverge (affinity : Affinity) (expression : Expr)
     (typed : Typed [] expression (.float affinity)) (safe : DomainSafe expression) :
     Determinize.Spec.Paper.bigStepMeasure expression Set.univ +
       divergenceProbability expression = 1 := by
@@ -138,7 +138,7 @@ theorem domainSafe_iff_return_or_diverge (typed : Typed [] expression (.float af
       Determinize.Spec.Paper.bigStepMeasure expression Set.univ + divergenceProbability expression =
           1 := by
   constructor
-  · exact returnOrDiverge affinity expression typed
+  · exact return_or_diverge affinity expression typed
   · intro conserved n
     apply (domainSafeAt_iff_nStepMeasure_univ_eq_one paperStepKernel n expression typed).mpr
     apply le_antisymm (nStepMeasure_mass_le_one paperStepKernel n expression)

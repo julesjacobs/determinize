@@ -4,7 +4,7 @@ import Mathlib.Tactic
 namespace Determinize.Proof.FiniteDistribution
 open Spec.Paper MeasureTheory
 
-private theorem list_integrable (weights : List Rat) (value : Nat → ℝ) (index : Nat)
+private theorem integrable_list (weights : List Rat) (value : Nat → ℝ) (index : Nat)
     (f : ℝ → ℝ) :
     Integrable f ((weights.zipIdx index).map fun entry : Rat × Nat ↦
       ENNReal.ofReal (entry.1 : ℝ) • Measure.dirac (value entry.2)).sum := by
@@ -15,7 +15,7 @@ private theorem list_integrable (weights : List Rat) (value : Nat → ℝ) (inde
     exact ((integrable_dirac (by simp)).smul_measure (by simp)).add_measure (ih _)
 
 theorem integrable (d : Spec.Paper.FiniteDistribution) (value : Nat → ℝ) (f : ℝ → ℝ) :
-    Integrable f (d.measure value) := list_integrable _ _ _ _
+    Integrable f (d.measure value) := integrable_list _ _ _ _
 
 private theorem list_mass (weights : List Rat) (value : Nat → ℝ) (index : Nat)
     (nonnegative : ∀ p ∈ weights, 0 ≤ p) :
@@ -52,7 +52,7 @@ private theorem list_integral (weights : List Rat) (value : Nat → ℝ) (index 
     have hps : ∀ q ∈ ps, 0 ≤ q := fun q hq ↦ nonnegative q (by simp [hq])
     simp only [List.zipIdx_cons, List.map_cons, List.sum_cons]
     rw [integral_add_measure
-      ((integrable_dirac (by simp)).smul_measure (by simp)) (list_integrable _ _ _ _)]
+      ((integrable_dirac (by simp)).smul_measure (by simp)) (integrable_list _ _ _ _)]
     rw [ih _ hps]
     simp [ENNReal.toReal_ofReal hp]
 

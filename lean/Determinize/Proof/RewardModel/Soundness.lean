@@ -48,7 +48,7 @@ private theorem row_covered (c : Reward.Candidate) {source : Spec.Paper.Core}
 private theorem replay_no_rewardFailure (c : Reward.Candidate) {source : Spec.Paper.Core}
     {subject : Spec.FiniteModel.Subject}
     (valid : c.ReplayValid source subject) (n : Nat) (i : Fin c.states.size) :
-    ¬ rewardFailureWithin n c.states[i] := by
+    ¬ RewardFailureWithin n c.states[i] := by
   induction n generalizing i with
   | zero => exact fun ⟨e, h⟩ ↦ row_no_failure c valid i e h
   | succ n ih =>
@@ -56,20 +56,20 @@ private theorem replay_no_rewardFailure (c : Reward.Candidate) {source : Spec.Pa
     | error e => exact (row_no_failure c valid i e action).elim
     | ok result =>
       cases result with
-      | returned b => simp only [rewardFailureWithin, action, not_false_eq_true]
-      | rejected => simp only [rewardFailureWithin, action, not_false_eq_true]
+      | returned b => simp only [RewardFailureWithin, action, not_false_eq_true]
+      | rejected => simp only [RewardFailureWithin, action, not_false_eq_true]
       | next tag xs =>
-        simp only [rewardFailureWithin, action]
+        simp only [RewardFailureWithin, action]
         rintro ⟨x, member, positive, failed⟩
         obtain ⟨j, same⟩ := row_covered c valid i tag xs action x member positive
         exact ih j (same ▸ failed)
 
 private theorem reachable_failure {root state : State} (reachable : MachineReachable root state)
-    (n : Nat) (failed : failureWithin n state) : ∃ k, failureWithin k root := by
+    (n : Nat) (failed : FailureWithin n state) : ∃ k, FailureWithin k root := by
   induction reachable generalizing n with
   | initial => exact ⟨n, failed⟩
   | next prev action member positive ih =>
-    exact ih (n + 1) (by simp only [failureWithin, action]; exact ⟨_, member, positive, failed⟩)
+    exact ih (n + 1) (by simp only [FailureWithin, action]; exact ⟨_, member, positive, failed⟩)
 
 theorem replay_reachable_no_failure (c : Reward.Candidate) {source : Spec.Paper.Core}
     {subject : Spec.FiniteModel.Subject}
@@ -81,11 +81,11 @@ theorem replay_reachable_no_failure (c : Reward.Candidate) {source : Spec.Paper.
   have initial : c.states[c.initial]'valid.2.1 = initialState source subject := by
     simpa [valid.2.1] using valid.2.2.1
   apply replay_no_rewardFailure c valid n ⟨c.initial, valid.2.1⟩
-  change rewardFailureWithin n (c.states[c.initial]'valid.2.1)
+  change RewardFailureWithin n (c.states[c.initial]'valid.2.1)
   rw [initial]
-  exact failure_implies_rewardFailure n _ hn
+  exact rewardFailureWithin_of_failureWithin n _ hn
 
-private theorem weighted_filter (xs : List (Rat × State)) (f : State → Measure ℝ) :
+private theorem weightedOutput_filter_pos (xs : List (Rat × State)) (f : State → Measure ℝ) :
     weightedOutput (xs.filter fun x ↦ 0 < x.1) f = weightedOutput xs f := by
   induction xs with
   | nil => rfl
@@ -122,7 +122,7 @@ private theorem replay_row_sum (c : Reward.Candidate) {source : Spec.Paper.Core}
     intro e _
     simp [((valid.2.2.2.2.2 i).1 e.val e.property).1]
   rw [left, mapped]
-  simpa only [weightedOutput] using weighted_filter xs
+  simpa only [weightedOutput] using weightedOutput_filter_pos xs
     (fun s ↦ shift (Reward.normalize s).1 (f (Reward.normalize s).2))
 
 theorem replay_outputWithin (c : Reward.Candidate) {source : Spec.Paper.Core}
@@ -170,7 +170,7 @@ theorem replay_matches (c : Reward.Candidate) {source : Spec.Paper.Core}
   have meaning : ∀ state, MachineReachable (initialState source subject) state → ∀ result,
       step state = .ok result → StepMeaning state result :=
     fun state reachable result action ↦ stepMeaning state
-      (program_reachable_shape source subject state reachable) result action
+      (stateShape_of_reachable_initialState source subject state reachable) result action
   have noFailure := fun state reachable failure ↦ replay_reachable_no_failure c valid
     (state := state) reachable failure
   have initial : c.states[c.initial]'valid.2.1 = initialState source subject := by
@@ -185,7 +185,8 @@ theorem replay_matches (c : Reward.Candidate) {source : Spec.Paper.Core}
   · change (⨆ n, (c.toModel valid).outputWithin n _) = _
     simp_rw [replay_outputWithin]
     change (⨆ n, rewardOutput n (c.states[c.initial]'valid.2.1)) = _
-    rw [initial, reward_output_eq_machine, execution_output_eq _ meaning noFailure _ .initial,
+    rw [initial, iSup_rewardOutput_eq_machineOutputMeasure,
+      execution_output_eq _ meaning noFailure _ .initial,
       initialEqual]
 
 end Determinize.Proof.RewardModel

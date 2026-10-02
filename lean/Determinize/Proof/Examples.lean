@@ -5,7 +5,7 @@ open MeasureTheory Determinize.Spec.Paper Determinize.Spec.Traces
 
 def uniform (affinity : Affinity) : Expr := .uniform (.sample affinity) (.real 0) (.real 1)
 
-theorem uniform_typed (affinity : Affinity) : Typed context (uniform affinity) (.float affinity) :=
+theorem typed_uniform (affinity : Affinity) : Typed context (uniform affinity) (.float affinity) :=
   .uniform .real .real
 
 def nestedAffine : Expr := .uniform (.sample .E) (uniform .E) (.add (.real 2) (.real 3))
@@ -18,12 +18,12 @@ def reciprocal : Expr :=
       (.add (.bvar 1)
         (.div (.real 1) (.bvar 0))))
 
-example : Typed [] nestedAffine (.float .E) := .uniform (uniform_typed .E) (.add .real .real)
+example : Typed [] nestedAffine (.float .E) := .uniform (typed_uniform .E) (.add .real .real)
 
-example : Typed [] nestedGeneral (.float .E) := .gaussian .real (uniform_typed .G)
+example : Typed [] nestedGeneral (.float .E) := .gaussian .real (typed_uniform .G)
 
-theorem reciprocal_typed : Typed [] reciprocal (.float .E) :=
-  .letE (uniform_typed .E) (.letE (uniform_typed .G)
+theorem typed_reciprocal : Typed [] reciprocal (.float .E) :=
+  .letE (typed_uniform .E) (.letE (typed_uniform .G)
     (.add (.bvar (.tail .head)) (.div .real (.bvar .head))))
 
 example : reduce nestedGeneral =
@@ -49,8 +49,8 @@ example : Typed [] (.mul (.real 2) (.real 1)) (.float .G) := .mul .real .real
 
 -- The general-affinity factor of an expectation-affinity product stands on the left: an
 -- expectation-affinity draw may be scaled from the left, not from the right, and not squared.
-example : Typed [] (.mul (.real 2) (uniform .E)) (.float .E) := .mul .real (uniform_typed .E)
-private theorem uniformE_not_G : ¬ Typed context (uniform .E) (.float .G) := by
+example : Typed [] (.mul (.real 2) (uniform .E)) (.float .E) := .mul .real (typed_uniform .E)
+private theorem not_typed_uniformE_G : ¬ Typed context (uniform .E) (.float .G) := by
   intro typed
   generalize he : uniform .E = expression at typed
   generalize ht : Ty.float .G = ty at typed
@@ -60,7 +60,7 @@ private theorem uniformE_not_G : ¬ Typed context (uniform .E) (.float .G) := by
     exact ih he rfl
   all_goals cases ht <;> simp [uniform] at he
 
-private theorem mul_uniformE_not_typed (right : Expr) :
+private theorem not_typed_mul_uniformE (right : Expr) :
     ¬ Typed context (.mul (uniform .E) right) ty := by
   intro typed
   generalize he : Expr.mul (uniform .E) right = expression at typed
@@ -68,13 +68,13 @@ private theorem mul_uniformE_not_typed (right : Expr) :
   case sub h sub ih => exact ih he
   case mul left right ihl ihr =>
     cases he
-    exact uniformE_not_G left
+    exact not_typed_uniformE_G left
   all_goals cases he
 
-example : ¬ Typed [] (.mul (uniform .E) (.real 2)) (.float .E) := mul_uniformE_not_typed _
-example : ¬ Typed [] (.mul (uniform .E) (uniform .E)) (.float .E) := mul_uniformE_not_typed _
+example : ¬ Typed [] (.mul (uniform .E) (.real 2)) (.float .E) := not_typed_mul_uniformE _
+example : ¬ Typed [] (.mul (uniform .E) (uniform .E)) (.float .E) := not_typed_mul_uniformE _
 
-private theorem safe_next {expression next : Expr}
+private theorem domainSafe_of_next {expression next : Expr}
     (reduction : reduce expression = .next next) (safe : DomainSafe next) :
     DomainSafe expression := by
   intro fuel
@@ -87,7 +87,8 @@ private theorem safe_next {expression next : Expr}
     · rw [reduction]
       exact safe fuel
 
-private theorem safe_sample {expression : Expr} {fiber : Measure ℝ} {continuation : ℝ → Expr}
+private theorem domainSafe_of_sample {expression : Expr} {fiber : Measure ℝ}
+    {continuation : ℝ → Expr}
     (reduction : reduce expression = .sample site fiber continuation) (mass : fiber Set.univ = 1)
     (safe : ∀ᵐ value ∂fiber, DomainSafe (continuation value)) : DomainSafe expression := by
   intro fuel
@@ -100,11 +101,11 @@ private theorem safe_sample {expression : Expr} {fiber : Measure ℝ} {continuat
     · rw [reduction]
       exact ⟨mass, safe.mono (fun _ h ↦ h fuel)⟩
 
-private theorem safe_real (value : ℝ) : DomainSafe (.real value) := by
+private theorem domainSafe_real (value : ℝ) : DomainSafe (.real value) := by
   intro fuel
   cases fuel <;> simp [DomainSafeAt, Expr.isValue]
 
-private theorem safe_let_uniform (affinity : Affinity) (body : Expr)
+private theorem domainSafe_let_uniform (affinity : Affinity) (body : Expr)
     (safe : ∀ᵐ value ∂uniformFiber (.sample affinity) 0 1,
       DomainSafe (body.substHead (.real value))) :
     DomainSafe (.letE (uniform affinity) body) := by
@@ -113,59 +114,59 @@ private theorem safe_let_uniform (affinity : Affinity) (body : Expr)
       .sample (.sample affinity, .uniform) μ
         (fun value ↦ .letE (.real value) body) := by
     simp [uniform, reduce, Expr.isValue, realValue?, Action.wrap, Function.comp_def, μ]
-  apply safe_sample reduction
+  apply domainSafe_of_sample reduction
   · simp [μ, uniformFiber, uniformMeasure, Real.volume_Icc]
   · filter_upwards [safe] with value valueSafe
-    exact safe_next (by simp [reduce, Expr.isValue]) valueSafe
+    exact domainSafe_of_next (by simp [reduce, Expr.isValue]) valueSafe
 
-theorem reciprocal_safe : DomainSafe reciprocal := by
-  apply safe_let_uniform .E
+theorem domainSafe_reciprocal : DomainSafe reciprocal := by
+  apply domainSafe_let_uniform .E
   apply Filter.Eventually.of_forall
   intro x
   simp [Expr.substHead, Expr.substAt, Expr.shift, Expr.mapVars, uniform]
   change DomainSafe (.letE (uniform .G)
     (.add (.real x) (.div (.real 1) (.bvar 0))))
-  apply safe_let_uniform .G
+  apply domainSafe_let_uniform .G
   have nonzero : ∀ᵐ y ∂uniformFiber (.sample .G) 0 1, y ≠ 0 := by
     simpa [uniformFiber, uniformMeasure] using
       (ae_restrict_of_ae (s := Set.Icc (0 : ℝ) 1) (volume.ae_ne (0 : ℝ)))
   filter_upwards [nonzero] with y nonzero
   simp [Expr.substHead, Expr.substAt, Expr.shift, Expr.mapVars]
-  apply safe_next (next := .add (.real x) (.real (1 / y)))
+  apply domainSafe_of_next (next := .add (.real x) (.real (1 / y)))
   · simp [reduce, Expr.isValue, realValue?, Action.wrap, nonzero]
-  apply safe_next (next := .real (x + 1 / y))
+  apply domainSafe_of_next (next := .real (x + 1 / y))
   · simp [reduce, Expr.isValue, realValue?]
-  exact safe_real _
+  exact domainSafe_real _
 
 /-- This concrete trace result requires no global integrability premise. -/
 example : Determinize.Proof.Traces.MeanOnTraces reciprocal reciprocal.determinize :=
-  (Traces.meanOnTraces .E reciprocal reciprocal_typed reciprocal_safe).2
+  (Traces.meanOnTraces_determinize .E reciprocal typed_reciprocal domainSafe_reciprocal).2
 
 /-- A general-affinity draw scales an expectation-affinity draw from the left. -/
 def scaledSample : Expr := .letE (uniform .G) (.mul (.bvar 0) (uniform .E))
 
-theorem scaledSample_typed : Typed [] scaledSample (.float .E) :=
-  .letE (uniform_typed .G) (.mul (.bvar .head) (uniform_typed .E))
+theorem typed_scaledSample : Typed [] scaledSample (.float .E) :=
+  .letE (typed_uniform .G) (.mul (.bvar .head) (typed_uniform .E))
 
-theorem scaledSample_safe : DomainSafe scaledSample := by
-  apply safe_let_uniform .G
+theorem domainSafe_scaledSample : DomainSafe scaledSample := by
+  apply domainSafe_let_uniform .G
   apply Filter.Eventually.of_forall
   intro y
   simp [Expr.substHead, Expr.substAt, Expr.shift, Expr.mapVars, uniform]
   change DomainSafe (.mul (.real y) (uniform .E))
   let μ := uniformFiber (.sample .E) 0 1
-  refine safe_sample (site := (.sample .E, .uniform)) (fiber := μ)
+  refine domainSafe_of_sample (site := (.sample .E, .uniform)) (fiber := μ)
     (continuation := fun value ↦ .mul (.real y) (.real value)) ?_ ?_ ?_
   · simp [uniform, reduce, Expr.isValue, realValue?, Action.wrap, Function.comp_def, μ]
   · simp [μ, uniformFiber, uniformMeasure, Real.volume_Icc]
   · apply Filter.Eventually.of_forall
     intro value
-    apply safe_next (next := .real (y * value))
+    apply domainSafe_of_next (next := .real (y * value))
     · simp [reduce, Expr.isValue, realValue?]
-    exact safe_real _
+    exact domainSafe_real _
 
 example : Determinize.Proof.Traces.MeanOnTraces scaledSample scaledSample.determinize :=
-  (Traces.meanOnTraces .E scaledSample scaledSample_typed scaledSample_safe).2
+  (Traces.meanOnTraces_determinize .E scaledSample typed_scaledSample domainSafe_scaledSample).2
 
 def loopFunction : Expr :=
   .fix
@@ -176,7 +177,7 @@ def loop : Expr := .app loopFunction .unit
 example : Typed [] loop (.float .E) :=
   .app (.fix (.app (.bvar (.tail .head)) (.bvar .head))) .unit
 
-theorem loop_reduction : reduce loop = .next loop := by
+theorem reduce_loop : reduce loop = .next loop := by
   simp [loop, loopFunction, reduce, Expr.isValue, Expr.substTwo, Expr.substAt, Expr.shift,
     Expr.mapVars]
 
@@ -185,7 +186,7 @@ example : DomainSafe loop := by
   induction fuel with
   | zero => trivial
   | succ fuel ih =>
-    rw [DomainSafeAt, if_neg (by simp [loop, Expr.isValue]), loop_reduction]
+    rw [DomainSafeAt, if_neg (by simp [loop, Expr.isValue]), reduce_loop]
     exact ih
 
 example : traceAndOutputLaw loop = 0 := by
@@ -193,46 +194,46 @@ example : traceAndOutputLaw loop = 0 := by
     induction depth with
     | zero => simp [loop, traceAndOutputLawAt]
     | succ depth ih =>
-      rw [Traces.exact_succ_next depth loop loop (by simp [loop, Expr.isValue]) loop_reduction, ih]
+      rw [Traces.exact_succ_next depth loop loop (by simp [loop, Expr.isValue]) reduce_loop, ih]
   simp [traceAndOutputLaw, h]
 
 def affineMean : Expr :=
   .letE (uniform .E) (.uniform .mean (.bvar 0) (.add (.bvar 0) (.real 2)))
 
-theorem affineMean_typed : Typed [] affineMean (.float .E) :=
-  .letE (uniform_typed .E) (.uniformMean (.bvar .head) (.add (.bvar .head) .real))
+theorem typed_affineMean : Typed [] affineMean (.float .E) :=
+  .letE (typed_uniform .E) (.uniformMean (.bvar .head) (.add (.bvar .head) .real))
 
-theorem affineMean_safe : DomainSafe affineMean := by
-  apply safe_let_uniform .E
+theorem domainSafe_affineMean : DomainSafe affineMean := by
+  apply domainSafe_let_uniform .E
   apply Filter.Eventually.of_forall
   intro x
   simp only [Expr.substHead, Expr.substAt, Expr.mapVars, Expr.shift]
-  apply safe_next (next := .uniform .mean (.real x) (.real (x + 2)))
+  apply domainSafe_of_next (next := .uniform .mean (.real x) (.real (x + 2)))
   · simp [reduce, Expr.isValue, realValue?, Action.wrap]
-  apply safe_sample (site := (.mean, .uniform)) (fiber := uniformFiber .mean x (x + 2))
+  apply domainSafe_of_sample (site := (.mean, .uniform)) (fiber := uniformFiber .mean x (x + 2))
     (continuation := Expr.real)
   · simp [reduce, Expr.isValue, realValue?]
   · simp [uniformFiber]
-  · exact Filter.Eventually.of_forall safe_real
+  · exact Filter.Eventually.of_forall domainSafe_real
 
 example : Determinize.Proof.Traces.MeanOnTraces affineMean affineMean.determinize :=
-  (Traces.meanOnTraces .E affineMean affineMean_typed affineMean_safe).2
+  (Traces.meanOnTraces_determinize .E affineMean typed_affineMean domainSafe_affineMean).2
 
 example : bigStepMeasure affineMean.determinize Set.univ = bigStepMeasure affineMean Set.univ :=
-  Determinize.Theorems.outputMassPreservation affineMean affineMean_typed
-    affineMean_safe
+  Determinize.Theorems.outputMassPreservation affineMean typed_affineMean
+    domainSafe_affineMean
 
 def meanDenominator : Expr := .div (uniform .E) (.uniform .mean (.real 1) (.real 3))
 
 example : Typed [] meanDenominator (.float .E) :=
-  .div (uniform_typed .E) (.uniformMean .real .real)
+  .div (typed_uniform .E) (.uniformMean .real .real)
 
 example (affinity : Affinity) : Typed [] (.uniform .mean (.real 1) (.real 3)) (.float affinity) :=
   .uniformMean .real .real
 
 def meanWithDraw : Expr := .gaussian .mean (.real 0) (uniform .G)
 
-example : Typed [] meanWithDraw (.float .G) := .gaussianMean .real (uniform_typed .G)
+example : Typed [] meanWithDraw (.float .G) := .gaussianMean .real (typed_uniform .G)
 
 example : reduce meanWithDraw =
     .sample (.sample .G, .uniform) (uniformFiber (.sample .G) 0 1)
@@ -261,21 +262,21 @@ example : Typed [] (.uniform .mean (.real 3) (.real 1)) (.float .E) :=
 
 open scoped ENNReal
 
-private theorem running_real (depth : Nat) (r : ℝ) :
+private theorem runningProbabilityAt_real (depth : Nat) (r : ℝ) :
     runningProbabilityAt depth (.real r) = 0 := by
   cases depth <;> simp [runningProbabilityAt, Expr.isValue]
 
-private theorem running_reject (depth : Nat) :
+private theorem runningProbabilityAt_reject (depth : Nat) :
     runningProbabilityAt depth .reject = 1 := by
   induction depth with
   | zero => rfl
   | succ depth ih => simpa [runningProbabilityAt, reduce, Expr.isValue] using ih
 
 example (r : ℝ) : divergenceProbability (.real r) = 0 := by
-  simp [divergenceProbability, running_real]
+  simp [divergenceProbability, runningProbabilityAt_real]
 
 example : divergenceProbability .reject = 1 := by
-  simp [divergenceProbability, running_reject]
+  simp [divergenceProbability, runningProbabilityAt_reject]
 
 example : divergenceProbability (.div (.real 1) (.real 0)) = 0 := by
   apply le_antisymm _ zero_le
@@ -287,21 +288,22 @@ example : divergenceProbability (.div (.real 1) (.real 0)) = 0 := by
 private noncomputable def halfReject : Expr :=
   .ite (.lt (.bernoulli (.sample .G) (.real (1 / 2))) (.real 1)) (.real 7) .reject
 
-private theorem halfReject_running (n : Nat) :
+private theorem runningProbabilityAt_halfReject (n : Nat) :
     runningProbabilityAt (n + 3) halfReject = 1 / 2 := by
   norm_num [halfReject, runningProbabilityAt, reduce, Expr.isValue, bernoulliFiber,
-    Action.wrap, realValue?, running_real, running_reject, ENNReal.ofReal_div_of_pos]
+    Action.wrap, realValue?, runningProbabilityAt_real, runningProbabilityAt_reject,
+      ENNReal.ofReal_div_of_pos]
 
 example : divergenceProbability halfReject = 1 / 2 := by
   apply le_antisymm
-  · exact (iInf_le _ 3).trans_eq (halfReject_running 0)
+  · exact (iInf_le _ 3).trans_eq (runningProbabilityAt_halfReject 0)
   · apply le_iInf
     intro n
     match n with
     | 0 | 1 | 2 =>
       norm_num [halfReject, runningProbabilityAt, reduce, Expr.isValue, bernoulliFiber,
         Action.wrap, realValue?, ENNReal.ofReal_div_of_pos]
-    | n + 3 => exact (halfReject_running n).ge
+    | n + 3 => exact (runningProbabilityAt_halfReject n).ge
 
 example : divergenceProbability loop = 1 := by
   have running (depth : Nat) : runningProbabilityAt depth loop = 1 := by

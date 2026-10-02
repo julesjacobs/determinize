@@ -130,7 +130,7 @@ draft in `tex/archive/` is no longer compared.
     with Mathlib's `condKernel` only for the laws summed over all depths
     (`Proof/Traces/ConditionalLaw.lean`).
   - The appendix's affine-means lemma is `SampleEnv.integral_affine`. It takes finite
-    moments of the primitives as a premise, which `primitiveMomentBounds` proves.
+    moments of the primitives as a premise, which `primitiveMomentBounds_primitiveLaws` proves.
 - **Surface syntax.** The paper's examples use `fun`, `rec f x =>`, `flip`, subtraction,
   tuples and `match … with` on lists; its grammar has `λ`, `rec`, pairs and `case` instead, and
   no `flip` or subtraction. The unverified front end desugars them, for example `flip(p)` into
@@ -464,7 +464,7 @@ Lean's kernel, using per-state proofs and sparse equations. `outputStatistics` c
 law; `expectedReward` and `conditionalVariance` give its first moment and
 conditional variance. `terminationProbabilities` certifies return, rejection,
 and divergence probabilities for the finite model. These probabilities sum to
-one by `Proof.FiniteModel.massBalance`, with divergence defined as the limit of
+one by `Proof.FiniteModel.mass_balance`, with divergence defined as the limit of
 survival probabilities. The paper semantics counts rejection among executions
 with no output; the finite model distinguishes rejection from divergence.
 

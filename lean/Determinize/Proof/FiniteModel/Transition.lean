@@ -3,7 +3,7 @@ import Determinize.Proof.FiniteModel.Local
 namespace Determinize.Proof.FiniteModel
 open Spec.Paper Determinize.Finite Checking Binding MeasureTheory
 
-theorem eval_stepMeaning (expression : Core) (environment : List Value) (stack : List Frame)
+theorem stepMeaning_eval (expression : Core) (environment : List Value) (stack : List Frame)
     (result : Step)
     (action : step (.eval expression environment stack) = .ok result) :
     StepMeaning (.eval expression environment stack) result := by
@@ -16,39 +16,39 @@ theorem eval_stepMeaning (expression : Core) (environment : List Value) (stack :
     apply Or.inl
     refine ⟨_, rfl, trivial, ?_⟩
     first
-    | exact reject_same environment stack
+    | exact sameObservations_reject environment stack
     | apply sameObservations_of_eq
       first
-      | exact (variable_step _ _ _ _ (by assumption)).2
-      | exact (binary_setup .app _ _ _ _).2
-      | exact (binary_setup .pair _ _ _ _).2
-      | exact (binary_setup .cons _ _ _ _).2
-      | exact (binary_setup .add _ _ _ _).2
-      | exact (binary_setup .mul _ _ _ _).2
-      | exact (binary_setup .div _ _ _ _).2
-      | exact (binary_setup .lt _ _ _ _).2
-      | exact (unary_setup .fst _ _ _).2
-      | exact (unary_setup .snd _ _ _).2
-      | exact (unary_setup .inl _ _ _).2
-      | exact (unary_setup .inr _ _ _).2
-      | exact (unary_setup .neg _ _ _).2
-      | exact (closure_setup _ _ _ ).2
-      | exact (recursive_setup _ _ _ ).2
-      | exact (let_setup _ _ _ _ ).2
-      | exact (branch_setup _ _ _ _ _ ).2
-      | exact (sum_setup _ _ _ _ _ ).2
-      | exact (list_setup _ _ _ _ _ ).2
-      | exact (number_setup _ _ _ ).2
-      | exact (bool_setup _ _ _ ).2
-      | exact (unit_setup _ _ ).2
-      | exact (nil_setup _ _ ).2
-      | exact (uniform_setup _ _ _ _ _ ).2
-      | exact (gaussian_setup _ _ _ _ _ ).2
-      | exact (beta_setup _ _ _ _ _ ).2
-      | exact (gamma_setup _ _ _ _ _ ).2
-      | exact (poisson_setup _ _ _ _ ).2
-      | exact (bernoulli_setup _ _ _ _ ).2
-      | exact (exponential_setup _ _ _ _ ).2
-      | exact (discrete_setup _ _ _ _).2
+      | exact (administrativeStep_variable _ _ _ _ (by assumption)).2
+      | exact (administrativeStep_binary .app _ _ _ _).2
+      | exact (administrativeStep_binary .pair _ _ _ _).2
+      | exact (administrativeStep_binary .cons _ _ _ _).2
+      | exact (administrativeStep_binary .add _ _ _ _).2
+      | exact (administrativeStep_binary .mul _ _ _ _).2
+      | exact (administrativeStep_binary .div _ _ _ _).2
+      | exact (administrativeStep_binary .lt _ _ _ _).2
+      | exact (administrativeStep_unary .fst _ _ _).2
+      | exact (administrativeStep_unary .snd _ _ _).2
+      | exact (administrativeStep_unary .inl _ _ _).2
+      | exact (administrativeStep_unary .inr _ _ _).2
+      | exact (administrativeStep_unary .neg _ _ _).2
+      | exact (administrativeStep_closure _ _ _ ).2
+      | exact (administrativeStep_recursive _ _ _ ).2
+      | exact (administrativeStep_let _ _ _ _ ).2
+      | exact (administrativeStep_branch _ _ _ _ _ ).2
+      | exact (administrativeStep_sum _ _ _ _ _ ).2
+      | exact (administrativeStep_list _ _ _ _ _ ).2
+      | exact (administrativeStep_number _ _ _ ).2
+      | exact (administrativeStep_bool _ _ _ ).2
+      | exact (administrativeStep_unit _ _ ).2
+      | exact (administrativeStep_nil _ _ ).2
+      | exact (administrativeStep_uniform _ _ _ _ _ ).2
+      | exact (administrativeStep_gaussian _ _ _ _ _ ).2
+      | exact (administrativeStep_beta _ _ _ _ _ ).2
+      | exact (administrativeStep_gamma _ _ _ _ _ ).2
+      | exact (administrativeStep_poisson _ _ _ _ ).2
+      | exact (administrativeStep_bernoulli _ _ _ _ ).2
+      | exact (administrativeStep_exponential _ _ _ _ ).2
+      | exact (administrativeStep_discrete _ _ _ _).2
 
 end Determinize.Proof.FiniteModel

@@ -138,7 +138,7 @@ theorem indexedReplay_matches (candidate : Candidate) {source : Spec.Paper.Core}
   have meaning : ∀ state, MachineReachable (initialState source subject) state → ∀ result,
       step state = .ok result → StepMeaning state result :=
     fun state reachable result action ↦ stepMeaning state
-      (program_reachable_shape source subject state reachable) result action
+      (stateShape_of_reachable_initialState source subject state reachable) result action
   have initialEqual : stateExpr (initialState source subject) = subject.program source :=
     initial_reification source subject
       ((Binding.scoped_map source (fun q : Rat ↦ (q : ℝ)) 0).mpr valid.2.2.2.1)

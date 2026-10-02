@@ -3323,7 +3323,7 @@ theorem coordinate_count (expression : AffineExpr sampleCount) :
   rw [realize_coordinates, List.length_map, realize_skeleton] at lengthRule
   exact lengthRule
 
-theorem affine_eval_measurable (expression : Affine sampleCount) :
+theorem measurable_affine_eval (expression : Affine sampleCount) :
     Measurable expression.eval := by
   apply Measurable.add measurable_const
   apply Finset.measurable_sum
@@ -3344,14 +3344,14 @@ def realizeFamily (expression : AffineExpr sampleCount) :
       funext environment
       rw [realize_coordinates]]
     by_cases inBounds : index < expression.coordinates.length
-    · convert affine_eval_measurable expression.coordinates[index] using 1
+    · convert measurable_affine_eval expression.coordinates[index] using 1
       funext environment
       simp [List.getD_eq_getElem?_getD, inBounds]
     · convert (measurable_const : Measurable fun _ : Env sampleCount ↦ (0 : ℝ)) using 1
       funext environment
       simp [List.getD, inBounds]
 
-theorem realize_measurable (expression : AffineExpr sampleCount) :
+theorem measurable_realize (expression : AffineExpr sampleCount) :
     Measurable expression.realize :=
   expression.realizeFamily.measurable
 

@@ -90,7 +90,7 @@ theorem step_terminal (state : State) (result : Finite.Step)
         cases value <;> simp only [step, pure, bind, Except.bind, Except.pure] at action
         all_goals first | contradiction | exact ⟨_, _, (Except.ok.inj action).symm⟩
 
-private theorem shift_weighted (r : Rat) (xs : List (Rat × State)) (f : State → Measure ℝ) :
+private theorem shift_weightedOutput (r : Rat) (xs : List (Rat × State)) (f : State → Measure ℝ) :
     shift r (weightedOutput xs f) = weightedOutput xs (fun s ↦ shift r (f s)) := by
   induction xs with
   | nil => simp [weightedOutput]
@@ -98,7 +98,7 @@ private theorem shift_weighted (r : Rat) (xs : List (Rat × State)) (f : State �
     simp only [weightedOutput, List.map_cons, List.sum_cons] at ih ⊢
     rw [shift_add_measure, shift_smul, ih]
 
-private theorem weighted_extend (outer : List Frame) (xs : List (Rat × State))
+private theorem weightedOutput_extend (outer : List Frame) (xs : List (Rat × State))
     (f : State → Measure ℝ) :
     weightedOutput (extend outer xs) f = weightedOutput xs (fun s ↦ f (pushStack s outer)) := by
   simp [weightedOutput, extend, List.map_map, Function.comp_def]
@@ -121,10 +121,10 @@ theorem addition_output_lower (offsets : List Rat) (n : Nat) (state : State) :
     | error e => simp [machineOutput, action, Measure.zero_le]
     | ok result =>
       rcases step_terminal state result action with ⟨tag, xs, rfl⟩ | ⟨b, rfl, rfl⟩ | ⟨rfl, rfl⟩
-      · have lifted := step_push state (additionStack offsets) tag xs action
+      · have lifted := step_pushStack state (additionStack offsets) tag xs action
         rw [Nat.succ_add]
         simp only [machineOutput, action, lifted]
-        rw [shift_weighted, weighted_extend]
+        rw [shift_weightedOutput, weightedOutput_extend]
         exact weightedOutput_mono _ _ _ (fun e _ _ ↦ ih e.2)
       · simpa [machineOutput, step, pushStack, shift_dirac, add_comm] using
           (numeric_addition_output offsets b (n + 1)).ge
@@ -228,7 +228,7 @@ theorem addition_output_upper (offsets : List Rat) (n : Nat) (state : State) :
       simp [machineOutput, action, herr]
     | ok result =>
       rcases step_terminal state result action with ⟨tag, xs, rfl⟩ | ⟨b, rfl, rfl⟩ | ⟨rfl, rfl⟩
-      · simp [machineOutput, action, step_push state (additionStack offsets) tag xs action]
+      · simp [machineOutput, action, step_pushStack state (additionStack offsets) tag xs action]
       · simpa [pushStack, machineOutput, step, shift_dirac] using numeric_addition_upper offsets b 0
       · simp [pushStack, machineOutput, step]
   | succ n ih =>
@@ -238,8 +238,9 @@ theorem addition_output_upper (offsets : List Rat) (n : Nat) (state : State) :
       simp [machineOutput, action, herr]
     | ok result =>
       rcases step_terminal state result action with ⟨tag, xs, rfl⟩ | ⟨b, rfl, rfl⟩ | ⟨rfl, rfl⟩
-      · simp only [machineOutput, action, step_push state (additionStack offsets) tag xs action]
-        rw [shift_weighted, weighted_extend]
+      · simp only [machineOutput, action,
+          step_pushStack state (additionStack offsets) tag xs action]
+        rw [shift_weightedOutput, weightedOutput_extend]
         exact weightedOutput_mono _ _ _ (fun e _ _ ↦ ih e.2)
       · simpa [pushStack, machineOutput, step, shift_dirac]
           using numeric_addition_upper offsets b (n + 1)
@@ -291,7 +292,8 @@ theorem addition_guard_upper (offsets : List Rat) (nonempty : offsets ≠ [])
       simp [machineOutput, herr, Measure.zero_le]
     | ok result =>
       rcases step_terminal state result action with ⟨tag, xs, rfl⟩ | ⟨b, rfl, rfl⟩ | ⟨rfl, rfl⟩
-      · simp [machineOutput, step_push state (additionStack offsets) tag xs action, Measure.zero_le]
+      · simp [machineOutput, step_pushStack state (additionStack offsets) tag xs action,
+          Measure.zero_le]
       · exact numeric b 0
       · simp [pushStack, machineOutput, step]
   | succ n ih =>
@@ -301,9 +303,9 @@ theorem addition_guard_upper (offsets : List Rat) (nonempty : offsets ≠ [])
       simp [machineOutput, herr, Measure.zero_le]
     | ok result =>
       rcases step_terminal state result action with ⟨tag, xs, rfl⟩ | ⟨b, rfl, rfl⟩ | ⟨rfl, rfl⟩
-      · simp only [machineOutput, step_push state (additionStack offsets) tag xs action,
-          step_push state (additionStack [0]) tag xs action]
-        rw [shift_weighted, weighted_extend, weighted_extend]
+      · simp only [machineOutput, step_pushStack state (additionStack offsets) tag xs action,
+          step_pushStack state (additionStack [0]) tag xs action]
+        rw [shift_weightedOutput, weightedOutput_extend, weightedOutput_extend]
         exact weightedOutput_mono _ _ _ (fun e _ _ ↦ ih e.2)
       · exact numeric b (n + 1)
       · simp [pushStack, machineOutput, step]

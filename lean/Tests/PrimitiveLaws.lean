@@ -33,11 +33,11 @@ example (p : ℝ) (h : 0 ≤ p ∧ p ≤ 1) :
   simp [bernoulliFiber, h]
 
 example : primitiveFiber .mean (.discrete 2) [1 / 4, 1 / 4] [] = Measure.dirac (5 / 4) := by
-  norm_num [primitiveFiber, parseParams, domain, meanValue, Fin.sum_univ_two]
+  norm_num [primitiveFiber, parseParams, InDomain, meanValue, Fin.sum_univ_two]
 
 example : discreteFiber .mean [] = Measure.dirac 0 := by simp [discreteFiber]
 
 #print axioms primitiveLaws
-#print axioms primitiveMomentBounds
+#print axioms primitiveMomentBounds_primitiveLaws
 
 end Determinize.Tests

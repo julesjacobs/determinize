@@ -657,7 +657,7 @@ theorem measurable_realCoordinateAt {α : Type*} [MeasurableSpace α]
 def realCoordinatesAppend (left right : RealCoordinates) : RealCoordinates :=
   ⟨left.values ++ right.values⟩
 
-theorem realCoordinatesAppend_measurable :
+theorem measurable_realCoordinatesAppend :
     Measurable fun pair : RealCoordinates × RealCoordinates ↦
       realCoordinatesAppend pair.1 pair.2 := by
   classical
@@ -744,7 +744,7 @@ theorem measurable_binaryConstructor {α : Type*} [MeasurableSpace α]
       ((⟨(left parameter).realCoordinates⟩ : RealCoordinates),
         (⟨(right parameter).realCoordinates⟩ : RealCoordinates)) :=
     Measurable.prod leftCoordinates rightCoordinates
-  have appended := realCoordinatesAppend_measurable.comp paired
+  have appended := measurable_realCoordinatesAppend.comp paired
   convert appended using 1
   funext parameter
   simp [realCoordinatesAppend, coordinates_rule]
@@ -789,14 +789,14 @@ theorem terminalFloatSet_eq :
   cases expression <;>
     simp [terminalFloatSet, Expr.skeleton]
 
-theorem terminalFloatSet_measurable : MeasurableSet terminalFloatSet := by
+theorem measurableSet_terminalFloatSet : MeasurableSet terminalFloatSet := by
   rw [terminalFloatSet_eq]
   have singletonMeasurable : MeasurableSet ({Skeleton.real} : Set Skeleton) := by
     change True
     trivial
   exact measurable_skeleton singletonMeasurable
 
-theorem terminalFloatValue_measurable : Measurable terminalFloatValue := by
+theorem measurable_terminalFloatValue : Measurable terminalFloatValue := by
   classical
   have piecewiseEq : terminalFloatValue =
       terminalFloatSet.piecewise
@@ -806,12 +806,12 @@ theorem terminalFloatValue_measurable : Measurable terminalFloatValue := by
       simp [Set.piecewise, terminalFloatValue, terminalFloatSet,
         Expr.realCoordinates, List.getD]
   rw [piecewiseEq]
-  exact (measurable_realCoordinate 0).piecewise terminalFloatSet_measurable measurable_const
+  exact (measurable_realCoordinate 0).piecewise measurableSet_terminalFloatSet measurable_const
 
 def SkeletonFiber (skeleton : Skeleton) : Set Expr :=
   {expression | expression.skeleton = skeleton}
 
-theorem skeletonFiber_measurable (skeleton : Skeleton) :
+theorem measurableSet_skeletonFiber (skeleton : Skeleton) :
     MeasurableSet (SkeletonFiber skeleton) := by
   have singletonMeasurable : MeasurableSet ({skeleton} : Set Skeleton) := by
     change True
@@ -1314,7 +1314,7 @@ noncomputable def primitiveKernelPack
     (kind : DistributionAction) → (op : Op) → SFiniteKernel (Determinize.Spec.Paper.Params op) ℝ
   | .sample _, op => ⟨laws.kernel op, laws.kernel_sfinite op⟩
   | .mean, op => SFiniteKernel.piecewise
-      (Determinize.Proof.Paper.measurableSet_domain op)
+      (Determinize.Proof.Paper.measurableSet_inDomain op)
       (SFiniteKernel.deterministic
         (Determinize.Spec.Paper.meanValue op) (measurable_meanValue op))
       SFiniteKernel.zero
@@ -1354,11 +1354,11 @@ theorem primitiveFiber_eq_atomic
       dsimp only [actualParams]
       exact (paramsFromCoordinates_eq_getElem op affine general
         affineArity generalArity).symm
-    change (if Determinize.Spec.Paper.domain op actualParams then
+    change (if Determinize.Spec.Paper.InDomain op actualParams then
         Measure.dirac (Determinize.Spec.Paper.meanValue op actualParams)
       else 0) =
         (SFiniteKernel.piecewise
-          (Determinize.Proof.Paper.measurableSet_domain op)
+          (Determinize.Proof.Paper.measurableSet_inDomain op)
           (SFiniteKernel.deterministic
             (Determinize.Spec.Paper.meanValue op)
             (measurable_meanValue op))
@@ -1366,15 +1366,15 @@ theorem primitiveFiber_eq_atomic
     unfold SFiniteKernel.piecewise SFiniteKernel.deterministic SFiniteKernel.zero
     rw [Kernel.piecewise_apply]
     simp only [Set.mem_ofPred_eq]
-    by_cases paramsDomain : Determinize.Spec.Paper.domain op
+    by_cases paramsDomain : Determinize.Spec.Paper.InDomain op
         (paramsFromCoordinates op affine general)
-    · have actualDomain : Determinize.Spec.Paper.domain op actualParams :=
+    · have actualDomain : Determinize.Spec.Paper.InDomain op actualParams :=
         actualParamsEquality.symm ▸ paramsDomain
       rw [if_pos paramsDomain, if_pos actualDomain, Kernel.deterministic_apply]
       exact congrArg Measure.dirac
         (congrArg (Determinize.Spec.Paper.meanValue op)
           actualParamsEquality)
-    · have actualOutside : ¬ Determinize.Spec.Paper.domain op actualParams :=
+    · have actualOutside : ¬ Determinize.Spec.Paper.InDomain op actualParams :=
         fun actualDomain ↦ paramsDomain (actualParamsEquality ▸ actualDomain)
       rw [if_neg paramsDomain, if_neg actualOutside]
       simp
@@ -1667,7 +1667,7 @@ def wrapBinaryRight {α : Type*} [MeasurableSpace α] {action : α → Action}
     exact measurable_binaryConstructor (leftMeasurable.comp measurable_fst)
       bodyMeasurable constructor skeletonConstructor skeleton_rule coordinates_rule
 
-theorem measurableTernaryConstructor {α : Type*} [MeasurableSpace α]
+theorem measurable_ternaryConstructor {α : Type*} [MeasurableSpace α]
     {first second third : α → Expr} (firstMeasurable : Measurable first)
     (secondMeasurable : Measurable second) (thirdMeasurable : Measurable third)
     (constructor : Expr → Expr → Expr → Expr)
@@ -1709,14 +1709,14 @@ theorem measurableTernaryConstructor {α : Type*} [MeasurableSpace α]
         realCoordinatesAppend
           (⟨(first parameter).realCoordinates⟩ : RealCoordinates)
           (⟨(second parameter).realCoordinates⟩ : RealCoordinates) :=
-      realCoordinatesAppend_measurable.comp firstPair
+      measurable_realCoordinatesAppend.comp firstPair
     have allPair : Measurable fun parameter ↦
         (realCoordinatesAppend
             (⟨(first parameter).realCoordinates⟩ : RealCoordinates)
             (⟨(second parameter).realCoordinates⟩ : RealCoordinates),
           (⟨(third parameter).realCoordinates⟩ : RealCoordinates)) :=
       Measurable.prod firstTwo thirdCoordinates
-    have allThree := realCoordinatesAppend_measurable.comp allPair
+    have allThree := measurable_realCoordinatesAppend.comp allPair
     convert allThree using 1
     funext parameter
     simp [realCoordinatesAppend, coordinates_rule]
@@ -1737,10 +1737,10 @@ def wrapTernaryFirst {α : Type*} [MeasurableSpace α] {action : α → Action}
   apply family.map
     (fun parameter next ↦ constructor next (second parameter) (third parameter))
   · intro body bodyMeasurable
-    exact measurableTernaryConstructor bodyMeasurable secondMeasurable thirdMeasurable
+    exact measurable_ternaryConstructor bodyMeasurable secondMeasurable thirdMeasurable
       constructor skeletonConstructor skeleton_rule coordinates_rule
   · intro body bodyMeasurable
-    exact measurableTernaryConstructor bodyMeasurable
+    exact measurable_ternaryConstructor bodyMeasurable
       (secondMeasurable.comp measurable_fst) (thirdMeasurable.comp measurable_fst)
       constructor skeletonConstructor skeleton_rule coordinates_rule
 
@@ -3591,7 +3591,7 @@ theorem measurable_toSkeletonFiber (skeleton : Skeleton) :
   classical
   let base : Expr → Expr := (SkeletonFiber skeleton).piecewise id (fun _ ↦ zeroFill skeleton)
   have baseMeasurable : Measurable base :=
-    measurable_id.piecewise (skeletonFiber_measurable skeleton) measurable_const
+    measurable_id.piecewise (measurableSet_skeletonFiber skeleton) measurable_const
   have baseFixed : ∀ expression, base expression ∈ SkeletonFiber skeleton := by
     intro expression
     by_cases member : expression ∈ SkeletonFiber skeleton
@@ -3618,7 +3618,7 @@ noncomputable def skeletonKernel
   let localKernel := actionFamily.kernel
   let pulled := localKernel.kernel.comap (toSkeletonFiber skeleton)
     (measurable_toSkeletonFiber skeleton)
-  exact Kernel.piecewise (skeletonFiber_measurable skeleton) pulled 0
+  exact Kernel.piecewise (measurableSet_skeletonFiber skeleton) pulled 0
 
 theorem skeletonKernel_apply_of_mem
     (laws : Determinize.Proof.Paper.PrimitiveLaws)
@@ -3642,7 +3642,7 @@ theorem skeletonKernel_apply_of_not_mem
   classical
   simp [skeletonKernel, Kernel.piecewise_apply, notMember]
 
-theorem skeletonKernel_sfinite
+theorem isSFiniteKernel_skeletonKernel
     (laws : Determinize.Proof.Paper.PrimitiveLaws)
     (skeleton : Skeleton) : IsSFiniteKernel (skeletonKernel laws skeleton) := by
   classical
@@ -3672,12 +3672,12 @@ theorem globalKernel_apply
     · rfl
     · simpa [SkeletonFiber, eq_comm] using different
 
-theorem globalKernel_sfinite
+theorem isSFiniteKernel_globalKernel
     (laws : Determinize.Proof.Paper.PrimitiveLaws) :
     IsSFiniteKernel (globalKernel laws) := by
   classical
   let (skeleton : Skeleton) : IsSFiniteKernel (skeletonKernel laws skeleton) :=
-    skeletonKernel_sfinite laws skeleton
+    isSFiniteKernel_skeletonKernel laws skeleton
   unfold globalKernel
   infer_instance
 
@@ -3703,7 +3703,7 @@ theorem sample_continuation_measurable_of_family
     · apply falseResult
       simpa [Set.piecewise, member] using equality
 
-theorem reduce_sample_continuation_measurable
+theorem measurable_continuation_of_reduce_eq_sample
     (laws : Determinize.Proof.Paper.PrimitiveLaws)
     (expression : Expr) {site : DistributionAction × Op} (fiber : Measure ℝ)
     (continuation : ℝ → Expr)
@@ -3721,7 +3721,7 @@ theorem stepMeasure_mass_le_one
   | next successor => simp [Determinize.Spec.Paper.Action.measure]
   | stuck => simp [Determinize.Spec.Paper.Action.measure]
   | sample site fiber continuation =>
-    have continuationMeasurable := reduce_sample_continuation_measurable laws
+    have continuationMeasurable := measurable_continuation_of_reduce_eq_sample laws
       expression fiber continuation equality
     simp only [Determinize.Spec.Paper.Action.measure]
     rw [Measure.map_apply continuationMeasurable MeasurableSet.univ]
@@ -3739,15 +3739,15 @@ noncomputable def stepKernel
     StepKernel where
   kernel := globalKernel laws
   kernel_eq_stepMeasure := globalKernel_apply laws
-  kernel_sfinite := globalKernel_sfinite laws
+  kernel_sfinite := isSFiniteKernel_globalKernel laws
   mass_le_one := globalKernel_mass_le_one laws
-  sample_continuation_measurable := reduce_sample_continuation_measurable laws
-  terminal_measurable := terminalFloatSet_measurable
-  terminal_value_measurable := terminalFloatValue_measurable
+  sample_continuation_measurable := measurable_continuation_of_reduce_eq_sample laws
+  terminal_measurable := measurableSet_terminalFloatSet
+  terminal_value_measurable := measurable_terminalFloatValue
 
 def valueSet : Set Expr := {expression | expression.isValue = true}
 
-theorem valueSet_measurable : MeasurableSet valueSet := by
+theorem measurableSet_valueSet : MeasurableSet valueSet := by
   have equality : valueSet =
       Expr.skeleton ⁻¹' {skeleton | Expr.isValue skeleton = true} := by
     ext expression
@@ -3762,9 +3762,9 @@ noncomputable def exactOutputKernelPack
     (stepKernel : StepKernel) : Nat →
       SFiniteKernel Expr ℝ
   | 0 => SFiniteKernel.piecewise
-      terminalFloatSet_measurable
+      measurableSet_terminalFloatSet
       (SFiniteKernel.deterministic
-        terminalFloatValue terminalFloatValue_measurable)
+        terminalFloatValue measurable_terminalFloatValue)
       SFiniteKernel.zero
   | depth + 1 => by
       let previous := exactOutputKernelPack stepKernel depth
@@ -3773,7 +3773,7 @@ noncomputable def exactOutputKernelPack
       let composed : SFiniteKernel Expr ℝ :=
         ⟨previous.kernel ∘ₖ stepKernel.kernel, inferInstance⟩
       exact SFiniteKernel.piecewise
-        valueSet_measurable SFiniteKernel.zero composed
+        measurableSet_valueSet SFiniteKernel.zero composed
 
 noncomputable def exactOutputKernel
     (stepKernel : StepKernel) (depth : Nat) : Kernel Expr ℝ :=
@@ -3850,8 +3850,8 @@ theorem map_restrict_terminal_eq_bind_exactZero
     (measure.restrict terminalFloatSet).map terminalFloatValue =
       measure.bind (exactOutputKernel stepKernel 0) := by
   ext set measurableSet
-  rw [Measure.map_apply terminalFloatValue_measurable measurableSet,
-    Measure.restrict_apply (terminalFloatValue_measurable measurableSet)]
+  rw [Measure.map_apply measurable_terminalFloatValue measurableSet,
+    Measure.restrict_apply (measurable_terminalFloatValue measurableSet)]
   rw [Measure.bind_apply measurableSet
     (exactOutputKernel stepKernel 0).measurable.aemeasurable]
   have integrand : (fun expression ↦ exactOutputKernel stepKernel 0 expression set) =
@@ -3861,7 +3861,7 @@ theorem map_restrict_terminal_eq_bind_exactZero
     rw [exactOutputKernel_apply]
     cases expression <;> simp [exactOutputMeasure, terminalFloatSet,
       terminalFloatValue, Set.indicator]
-  rw [integrand, lintegral_indicator terminalFloatSet_measurable]
+  rw [integrand, lintegral_indicator measurableSet_terminalFloatSet]
   simp_rw [Measure.dirac_apply' _ measurableSet]
   have indicatorEquality :
       (fun expression ↦ set.indicator (1 : ℝ → ENNReal)
@@ -3870,8 +3870,8 @@ theorem map_restrict_terminal_eq_bind_exactZero
     funext expression
     rfl
   rw [indicatorEquality,
-    lintegral_indicator_one (terminalFloatValue_measurable measurableSet),
-    Measure.restrict_apply (terminalFloatValue_measurable measurableSet)]
+    lintegral_indicator_one (measurable_terminalFloatValue measurableSet),
+    Measure.restrict_apply (measurable_terminalFloatValue measurableSet)]
 
 theorem cumulativeOutputMeasure_eq_kernel
     (stepKernel : StepKernel) (fuel : Nat) (program : Expr) :
@@ -3928,7 +3928,7 @@ theorem exactOutputKernel_succ_apply_of_not_value
       ((exactOutputKernel stepKernel depth) ∘ₖ stepKernel.kernel) expression := by
   classical
   change
-    (Kernel.piecewise valueSet_measurable 0
+    (Kernel.piecewise measurableSet_valueSet 0
       ((exactOutputKernelPack stepKernel depth).kernel ∘ₖ stepKernel.kernel)) expression =
     (((exactOutputKernelPack stepKernel depth).kernel ∘ₖ stepKernel.kernel) expression)
   rw [Kernel.piecewise_apply]
@@ -3940,7 +3940,7 @@ theorem exactOutputKernel_succ_apply_of_value
     exactOutputKernel stepKernel (depth + 1) expression = 0 := by
   classical
   change
-    (Kernel.piecewise valueSet_measurable 0
+    (Kernel.piecewise measurableSet_valueSet 0
       ((exactOutputKernelPack stepKernel depth).kernel ∘ₖ stepKernel.kernel)) expression = 0
   rw [Kernel.piecewise_apply]
   simp [valueSet, isValue]

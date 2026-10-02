@@ -35,7 +35,7 @@ private noncomputable def terminalBound (model : Model) : Measure ℝ :=
     | .returned reward => Measure.dirac (reward : ℝ)
     | _ => 0
 
-private theorem terminalBound_integrable (model : Model) (f : ℝ → ℝ) :
+private theorem integrable_terminalBound (model : Model) (f : ℝ → ℝ) :
     Integrable f (terminalBound model) := by
   apply integrable_finsetSum_measure.mpr
   intro state _
@@ -77,14 +77,14 @@ private theorem outputWithin_bound (model : Model) (n : Nat) (state : Fin model.
 noncomputable def outputAt (model : Model) (state : Fin model.size) : Measure ℝ :=
   ⨆ n, model.outputWithin n state
 
-theorem outputAt_integrable (model : Model) (state : Fin model.size) (f : ℝ → ℝ := id) :
+theorem integrable_outputAt (model : Model) (state : Fin model.size) (f : ℝ → ℝ := id) :
     Integrable f (outputAt model state) :=
-  (terminalBound_integrable model f).mono_measure
+  (integrable_terminalBound model f).mono_measure
     (iSup_le (fun n ↦ outputWithin_bound model n state))
 
 /-- Finite terminal rewards bound the output law, including for nonabsorbing models. -/
-theorem outputMeasure_integrable (model : Model) : Integrable id model.outputMeasure :=
-  outputAt_integrable model model.initial
+theorem integrable_outputMeasure (model : Model) : Integrable id model.outputMeasure :=
+  integrable_outputAt model model.initial
 
 private theorem outputAt_transient (model : Model) (state : Fin model.size)
     (h : model.kind state = .transient) :
@@ -167,7 +167,7 @@ theorem outputAt_equations (model : Model) (state : Fin model.size) (f : ℝ →
     rw [integral_finsetSum_measure (f := f) (s := Finset.univ)
       (μ := fun next ↦ ENNReal.ofReal (model.transition state next : ℝ) • outputAt model next)
       (fun next _ ↦
-      (outputAt_integrable model next f).smul_measure (by simp))]
+      (integrable_outputAt model next f).smul_measure (by simp))]
     simp only [integral_smul_measure, smul_eq_mul]
     apply Finset.sum_congr rfl
     intro next _

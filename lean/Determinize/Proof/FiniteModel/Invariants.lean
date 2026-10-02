@@ -8,7 +8,7 @@ def StateShape : State → Prop
   | .eval _ _ stack | .deliver _ stack => ∀ frame ∈ stack, FrameShape frame
   | .rejected => True
 
-private theorem singleton_shape (state : State) (shape : StateShape state)
+private theorem stateShape_singleton (state : State) (shape : StateShape state)
     (tag evidence : Evidence) (successors : List (Rat × State))
     (action : (Except.ok (.next tag [(1, state)]) : Except Failure Step) =
       .ok (.next evidence successors))
@@ -18,7 +18,7 @@ private theorem singleton_shape (state : State) (shape : StateShape state)
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (List.mem_singleton.mp member)
   exact shape
 
-private theorem draw_shape (site : DistributionAction × Op) (arguments : List Rat)
+private theorem stateShape_draw (site : DistributionAction × Op) (arguments : List Rat)
     (stack : List Frame) (shape : ∀ frame ∈ stack, FrameShape frame)
     (evidence : Evidence) (successors : List (Rat × State))
     (action : draw site arguments stack = .ok (.next evidence successors))
@@ -34,7 +34,7 @@ private theorem draw_shape (site : DistributionAction × Op) (arguments : List R
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj equal
     exact shape
 
-private theorem binary_shape (op : Binary) (left right : Value) (stack : List Frame)
+private theorem stateShape_binary (op : Binary) (left right : Value) (stack : List Frame)
     (shape : ∀ frame ∈ stack, FrameShape frame) (result : State)
     (success : binary op left right stack = .ok result) : StateShape result := by
   cases op <;> cases left <;> cases right <;>
@@ -46,7 +46,7 @@ private theorem binary_shape (op : Binary) (left right : Value) (stack : List Fr
 
 set_option maxHeartbeats 1000000 in
 -- One case per machine state and frame, each splitting every branch of `step`.
-theorem step_shape (before : State) (shape : StateShape before)
+theorem stateShape_step (before : State) (shape : StateShape before)
     (evidence : Evidence) (successors : List (Rat × State))
     (action : step before = .ok (.next evidence successors))
     (probability : Rat) (after : State) (member : (probability, after) ∈ successors) :
@@ -59,7 +59,7 @@ theorem step_shape (before : State) (shape : StateShape before)
     all_goals repeat' (split at action)
     all_goals try first
       | contradiction
-      | apply singleton_shape _ ?_ _ _ _ action _ _ member
+      | apply stateShape_singleton _ ?_ _ _ _ action _ _ member
         clear action member
         simp_all [StateShape, FrameShape, primitiveArity]
   | deliver value stack =>
@@ -73,30 +73,30 @@ theorem step_shape (before : State) (shape : StateShape before)
       all_goals repeat' (split at action)
       all_goals try first
         | contradiction
-        | apply singleton_shape _ ?_ _ _ _ action _ _ member
+        | apply stateShape_singleton _ ?_ _ _ _ action _ _ member
           clear action member
           simp_all [StateShape, FrameShape, primitiveArity]
           all_goals omega
-      all_goals try exact draw_shape _ _ _ tailShape _ _ action _ _ member
+      all_goals try exact stateShape_draw _ _ _ tailShape _ _ action _ _ member
       all_goals try
-        apply singleton_shape _ ?_ _ _ _ action _ _ member
-        exact binary_shape _ _ _ _ tailShape _ (by assumption)
+        apply stateShape_singleton _ ?_ _ _ _ action _ _ member
+        exact stateShape_binary _ _ _ _ tailShape _ (by assumption)
 
-theorem reachable_shape (initial : State) (shape : StateShape initial) (state : State)
+theorem stateShape_of_reachable (initial : State) (shape : StateShape initial) (state : State)
     (reachable : MachineReachable initial state) : StateShape state := by
   induction reachable with
   | initial => exact shape
-  | next previous action member positive ih => exact step_shape _ ih _ _ action _ _ member
+  | next previous action member positive ih => exact stateShape_step _ ih _ _ action _ _ member
 
-theorem initial_shape (source : Core) (subject : Subject) :
+theorem stateShape_initialState (source : Core) (subject : Subject) :
     StateShape (initialState source subject) := by
   simp [initialState, StateShape]
 
-theorem program_reachable_shape (source : Core) (subject : Subject) (state : State)
+theorem stateShape_of_reachable_initialState (source : Core) (subject : Subject) (state : State)
     (reachable : MachineReachable (initialState source subject) state) : StateShape state :=
-  reachable_shape _ (initial_shape source subject) state reachable
+  stateShape_of_reachable _ (stateShape_initialState source subject) state reachable
 
-theorem reachable_draw_correspondence (source : Core) (subject : Subject)
+theorem reduce_stateExpr_draw_of_reachable (source : Core) (subject : Subject)
     (site : DistributionAction × Op) (arguments : List Rat) (x : Rat)
     (environment : List Value) (stack : List Frame) (outcomes : List (Rat × Rat))
     (reachable : MachineReachable (initialState source subject)
@@ -104,8 +104,8 @@ theorem reachable_draw_correspondence (source : Core) (subject : Subject)
     (success : finiteLaw site.2 site.1 (arguments ++ [x]) = .ok outcomes) :
     reduce (stateExpr (.deliver (.number x) (.draw site [] environment arguments :: stack))) =
       .sample site (outcomeMeasure outcomes) (fun y ↦ stackExpr stack (.real y)) := by
-  apply draw_correspondence site arguments x environment stack outcomes success
-  have shape := program_reachable_shape source subject _ reachable
+  apply reduce_stateExpr_draw site arguments x environment stack outcomes success
+  have shape := stateShape_of_reachable_initialState source subject _ reachable
   exact fun frame member ↦ shape frame (by simp [member])
 
 end Determinize.Proof.FiniteModel
