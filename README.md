@@ -10,6 +10,10 @@ formalization, exact expected-reward certificates, and a browser simulator.
 - `sim/`: browser visualization of ordinary, symbolic, and determinized execution.
 - `tex/`: new paper; `tex/archive/` preserves the previous draft.
 
+The theorem statements and the definitions they use can be read as
+[API documentation](https://julesjacobs.github.io/determinize/Determinize/Theorems.html),
+where every name links to its definition.
+
 ## Setup
 
 Install [elan](https://github.com/leanprover/elan) and Python 3.11 or newer. Lean
@@ -45,6 +49,10 @@ and independent certificates. It accepts `--all` and `--statistical`.
 and the paper build. Select individual areas with `./check.sh lean tex`, or use
 `./check.sh --changed` for areas affected by uncommitted changes. The scripts use
 tools on `PATH` first; Nix is optional.
+
+On GitHub, `.github/workflows/lean.yml` runs `lake build --wfail` and `./test.sh --all`
+in the `.#lean` shell for pull requests and for `main`, and publishes the API
+documentation from `main`.
 
 An E draw is replaced by its distribution's mean; a G draw remains stochastic.
 Finite-model certificates prove the selected core program's integrability and
