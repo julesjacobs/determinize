@@ -95,9 +95,19 @@ jobs:
           name: simulator
           path: _site
       # Copied, not moved: when the documentation of the dependencies was not restored, it is
-      # saved from lean/docbuild/.lake/build at the end of the job.
+      # saved from lean/docbuild/.lake/build at the end of the job. doc-gen4's index.html is a
+      # placeholder, so docs/ redirects to the root module's page.
       - name: Add the documentation under docs/
-        run: cp -R docbuild/.lake/build/doc ../_site/docs
+        run: |
+          cp -R docbuild/.lake/build/doc ../_site/docs
+          cat > ../_site/docs/index.html <<'EOF'
+          <!doctype html>
+          <meta charset="utf-8">
+          <title>Determinize</title>
+          <link rel="canonical" href="Determinize.html">
+          <meta http-equiv="refresh" content="0; url=Determinize.html">
+          <a href="Determinize.html">Determinize</a>
+          EOF
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: _site
