@@ -62,8 +62,8 @@ jobs:
                        "Set doc-gen4's `rev` in lean/docbuild/lakefile.toml to the Lean version, then "
                        "run `MATHLIB_NO_CACHE_ON_UPDATE=1 lake update` in lean/docbuild.")
           EOF
-      # Only this repository's own build outputs (about 1 GB) are kept in the Actions cache.
-      # Mathlib's prebuilt files (8 GB) are downloaded by `lake exe cache get` instead.
+      # This repository's own build outputs (about 1 GB) are kept in the Actions cache. Mathlib's
+      # prebuilt files (8 GB) are downloaded by `lake exe cache get` instead.
       - name: Restore the previous build
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -72,6 +72,15 @@ jobs:
           restore-keys: lean-build-${{ hashFiles('lean/lean-toolchain', 'lean/lake-manifest.json') }}-
       - name: Fetch the Mathlib cache
         run: lake exe cache get
+      # Linking the executables needs the object files of every module they import. Mathlib's cache
+      # does not provide them, and compiling them takes about 11 minutes, so they are kept in the
+      # Actions cache (about 250 MB) once per set of pins.
+      - name: Restore the object files of the dependencies
+        id: objects
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: lean/.lake/packages/*/.lake/build/ir/**/*.c.o*
+          key: lean-objects-${{ hashFiles('lean/lean-toolchain', 'lean/lake-manifest.json') }}
       # Fails on any warning (a `sorry` included), on a theorem using a non-standard axiom, and on
       # a statement in Theorems.lean relying on Proof for anything but proofs.
       - name: Build
@@ -82,5 +91,11 @@ jobs:
         with:
           path: lean/.lake/build
           key: lean-build-${{ hashFiles('lean/lean-toolchain', 'lean/lake-manifest.json') }}-${{ github.sha }}
+      - name: Save the object files of the dependencies
+        if: github.event_name != 'pull_request' && steps.objects.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: lean/.lake/packages/*/.lake/build/ir/**/*.c.o*
+          key: ${{ steps.objects.outputs.cache-primary-key }}
       - name: Test
         run: ./test.sh --all
