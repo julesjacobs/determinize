@@ -80,6 +80,18 @@ jobs:
             lean/.lake/packages/*/*
             !lean/.lake/packages/*/.lake
           key: lean-sources-${{ hashFiles('lean/lean-toolchain', 'lean/lake-manifest.json') }}
+      # doc-gen4 and the packages it adds, with their builds (about 360 MB), once per doc-gen4 pin.
+      - name: Restore doc-gen4
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            lean/.lake/packages/doc-gen4
+            lean/.lake/packages/leansqlite
+            lean/.lake/packages/Cli
+            lean/.lake/packages/UnicodeBasic
+            lean/.lake/packages/BibtexQuery
+            lean/.lake/packages/MD4Lean
+          key: lean-docgen-${{ hashFiles('lean/lean-toolchain', 'lean/docbuild/lake-manifest.json') }}
       - name: Fetch the Mathlib cache
         run: lake exe cache get
       # Lake starts git and doc-gen4 with fork(). Documenting the dependencies, Lake runs over a
