@@ -81,9 +81,14 @@ jobs:
       - name: Allow memory overcommit
         shell: bash
         run: sudo sysctl -w vm.overcommit_memory=1
+      # doc-gen4 marks each documented module with an empty file, so Lake does not notice when a
+      # module's documentation changes and would keep the restored pages. Removing the marker of
+      # the rendering step renders every page again from the database.
       - name: Build the documentation
         working-directory: lean/docbuild
-        run: lake build Determinize:docs
+        run: |
+          rm -f .lake/build/doc-data/*.docs_built*
+          lake build Determinize:docs
       - name: Download the simulator
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
