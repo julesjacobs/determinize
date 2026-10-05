@@ -1,16 +1,9 @@
-import Determinize.Proof.FiniteModel.Progress
-import Determinize.Proof.FiniteModel.Sampling
-import Determinize.Proof.FiniteModel.Initial
-import Determinize.Checking.Result
-import Determinize.Checking.FiniteModel
-import Determinize.Proof.FiniteModel.Model
-import Determinize.Proof.Primitives.DiscreteLaws
-import Determinize.Proof.Semantics.Rejection
+import Determinize.Checking
+import Determinize.Finite
+import Determinize.Frontend
+import Determinize.Proof
+import Determinize.Spec
 import Determinize.Theorems
-import Determinize.Proof.Examples
-import Determinize.Proof.InterfaceChecks
-import Determinize.Proof.RewardModel.Moments
-import Determinize.Proof.RewardModel.Soundness
 
 /-!
 # Determinize
@@ -22,23 +15,23 @@ A reviewer reads the statements of the theorems and the definitions they use, no
 [`lean/README.md`](https://github.com/julesjacobs/determinize/blob/main/lean/README.md) explains
 what to review and how the development differs from the paper.
 
-- `Determinize/Theorems.lean`: every theorem, stated in full over the definitions in
-  `Determinize/Spec/` and proved by one term from `Determinize/Proof/`, the paper's theorems
-  first and under the paper's names. Start here.
-- `Determinize/Spec/`: what the theorems are about, from syntax, typing, the primitive
+- `Determinize.Theorems`: every theorem, stated in full over the definitions in
+  `Determinize.Spec` and proved by one term from `Determinize.Proof`, the paper's theorems first
+  and under the paper's names. Start here.
+- `Determinize.Spec`: what the theorems are about, from syntax, typing, the primitive
   distributions and determinization to the output and trace laws
   (`Determinize.Spec.Traces.Semantics`) and expectations and variances
   (`Determinize.Spec.Expectation`).
-- `Determinize/Proof/`: the proofs. The build fails if a theorem uses an axiom other than
+- `Determinize.Proof`: the proofs. The build fails if a theorem uses an axiom other than
   `propext`, `Classical.choice` and `Quot.sound`, or if its statement relies on anything from
   these modules other than proofs.
-- `Determinize/Frontend/`: affinity inference (`Determinize.Frontend.Infer`), the subject of
-  `Determinize.Theorems.inference_correctness`.
-- `Determinize/Finite/` and `Determinize/Checking/`: exact exploration of finite-state programs,
+- `Determinize.Frontend`: parsing, name resolution and affinity inference
+  (`Determinize.Frontend.Infer`, the subject of `Determinize.Theorems.inference_correctness`).
+- `Determinize.Finite` and `Determinize.Checking`: exact exploration of finite-state programs,
   and the checks that turn an explored model and candidate results into a theorem about the
   program, checked by Lean's kernel (`Determinize.Checking.Result`).
 
 The default build also checks the coverage examples in `Determinize.Proof.Examples`. The API
-documentation covers the modules imported here; the command-line tool, its numerical evaluator
-and the tests are not among them.
+documentation covers every module except the command-line entry point `Main`, the numerical
+evaluator in `Determinize/Runtime/`, and the tests.
 -/
