@@ -1,6 +1,7 @@
-# Tests the simulator on pull requests and on main, and checks that the committed bundle is the
-# one its sources build: sim/index.html loads sim/app.bundle.js, so a change to the sources is
-# committed together with the rebuilt bundle.
+# Tests the simulator on pull requests and checks that the committed bundle is the one its
+# sources build: sim/index.html loads sim/app.bundle.js, so a change to the sources is committed
+# together with the rebuilt bundle. On main, pages.yml runs this workflow and publishes the
+# simulator it built.
 #
 # Every `run` step executes inside the flake's `sim` dev shell, so Node.js, npm and git are the
 # versions flake.lock pins. The npm packages, esbuild among them, are pinned by
@@ -8,16 +9,14 @@
 name: Simulator
 
 on:
-  push:
-    branches: [main]
-    paths: &sim-paths
+  pull_request:
+    paths:
       - sim/**
       - flake.nix
       - flake.lock
       - flake-modules/**
       - .github/workflows/sim.yml
-  pull_request:
-    paths: *sim-paths
+  workflow_call:
   workflow_dispatch:
 
 permissions:
@@ -54,3 +53,14 @@ jobs:
             echo "::error file=sim/app.bundle.js::The bundle is out of date. Run 'npm run build' in sim and commit app.bundle.js."
             exit 1
           fi
+      - name: Upload the simulator
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: simulator
+          path: |
+            sim/index.html
+            sim/styles.css
+            sim/app.bundle.js
+          if-no-files-found: error
+          retention-days: 1
