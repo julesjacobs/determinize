@@ -78,7 +78,7 @@ jobs:
       # hundred threads whose stacks merge into one mapping larger than RAM and swap together, so
       # the kernel's default heuristic overcommit refuses every fork although memory is free and
       # the build fails with "resource exhausted (error code: 12, cannot allocate memory)".
-      - name: Let Lake fork however much memory it has reserved
+      - name: Allow memory overcommit
         shell: bash
         run: sudo sysctl -w vm.overcommit_memory=1
       - name: Build the documentation
