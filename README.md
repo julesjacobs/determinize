@@ -11,7 +11,7 @@ formalization, exact expected-reward certificates, and a browser simulator.
 - `tex/`: new paper; `tex/archive/` preserves the previous draft.
 
 The theorem statements and the definitions they use can be read as
-[API documentation](https://julesjacobs.github.io/determinize/Determinize/Theorems.html),
+[API documentation](https://julesjacobs.github.io/determinize/docs/Determinize/Theorems.html),
 where every name links to its definition.
 
 ## Setup
@@ -51,9 +51,11 @@ and the paper build. Select individual areas with `./check.sh lean tex`, or use
 tools on `PATH` first; Nix is optional.
 
 On GitHub, `.github/workflows/lean.yml` runs `lake build --wfail` and `./test.sh --all`
-in the `.#lean` shell for pull requests and for `main`, and publishes the API
-documentation from `main`. `.github/workflows/sim.yml` runs the simulator tests in the
-`.#sim` shell and checks that the committed bundle is the one its sources build.
+in the `.#lean` shell, and `.github/workflows/sim.yml` runs the simulator tests in the
+`.#sim` shell and checks that the committed bundle is the one its sources build. Both run
+for pull requests. For `main`, `.github/workflows/pages.yml` runs both and then publishes
+the [simulator](https://julesjacobs.github.io/determinize/) to GitHub Pages, with the
+[API documentation](https://julesjacobs.github.io/determinize/docs/) under `docs/`.
 
 An E draw is replaced by its distribution's mean; a G draw remains stochastic.
 Finite-model certificates prove the selected core program's integrability and
@@ -118,7 +120,8 @@ To build that archived draft independently:
 (cd tex/archive && latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex)
 ```
 
-Open `sim/index.html` to explore coupled traces. The simulator has its own compiler
+Open `sim/index.html`, or [its published copy](https://julesjacobs.github.io/determinize/),
+to explore coupled traces. The simulator has its own compiler
 and numerical runtime; Lean certificates apply to the core programs produced by
 the Lean CLI. The simulator is an unverified visualization.
 

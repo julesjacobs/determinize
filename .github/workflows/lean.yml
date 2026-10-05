@@ -1,5 +1,5 @@
-# Builds and tests the Lean development on pull requests and on main, and publishes its API
-# documentation from main to GitHub Pages.
+# Builds and tests the Lean development on pull requests. On main, pages.yml runs this workflow
+# and then builds the API documentation from the build it saved.
 #
 # Every `run` step executes inside the flake's `lean` dev shell, so elan, git, curl, Python and
 # the C compiler are the versions flake.lock pins. Lean and Mathlib are pinned by
@@ -7,9 +7,8 @@
 name: Lean
 
 on:
-  push:
-    branches: [main]
-    paths: &lean-paths
+  pull_request:
+    paths:
       - lean/**
       - tests/**
       - examples/**
@@ -19,8 +18,7 @@ on:
       - flake.lock
       - flake-modules/**
       - .github/workflows/lean.yml
-  pull_request:
-    paths: *lean-paths
+  workflow_call:
   workflow_dispatch:
 
 permissions:
@@ -86,51 +84,3 @@ jobs:
           key: lean-build-${{ hashFiles('lean/lean-toolchain', 'lean/lake-manifest.json') }}-${{ github.sha }}
       - name: Test
         run: ./test.sh --all
-
-  docs:
-    name: API documentation
-    needs: check
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    timeout-minutes: 180
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
-      - name: Restore this commit's build
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: lean/.lake/build
-          key: lean-build-${{ hashFiles('lean/lean-toolchain', 'lean/lake-manifest.json') }}-${{ github.sha }}
-          restore-keys: lean-build-${{ hashFiles('lean/lean-toolchain', 'lean/lake-manifest.json') }}-
-      # Documenting Lean and the imported part of Mathlib takes about two CPU-hours, so that work
-      # is saved once per set of pins. Starting from it, only this repository's modules are
-      # redone. Pages of modules deleted since it was saved stay in the published site, unlinked.
-      - name: Restore the documentation of the dependencies
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: lean/docbuild/.lake/build
-          key: lean-docs-${{ hashFiles('lean/lean-toolchain', 'lean/docbuild/lake-manifest.json') }}
-      - name: Fetch the Mathlib cache
-        run: lake exe cache get
-      - name: Build the documentation
-        working-directory: lean/docbuild
-        run: lake build Determinize:docs
-      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
-        with:
-          path: lean/docbuild/.lake/build/doc
-
-  deploy:
-    name: Publish the documentation
-    needs: docs
-    runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
