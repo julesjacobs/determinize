@@ -74,6 +74,13 @@ jobs:
           key: lean-docs-${{ hashFiles('lean/lean-toolchain', 'lean/docbuild/lake-manifest.json') }}
       - name: Fetch the Mathlib cache
         run: lake exe cache get
+      # Lake starts git and doc-gen4 with fork(). Documenting the dependencies, Lake runs over a
+      # hundred threads whose stacks merge into one mapping larger than RAM and swap together, so
+      # the kernel's default heuristic overcommit refuses every fork although memory is free and
+      # the build fails with "resource exhausted (error code: 12, cannot allocate memory)".
+      - name: Let Lake fork however much memory it has reserved
+        shell: bash
+        run: sudo sysctl -w vm.overcommit_memory=1
       - name: Build the documentation
         working-directory: lean/docbuild
         run: lake build Determinize:docs
