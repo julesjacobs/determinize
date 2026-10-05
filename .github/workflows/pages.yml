@@ -72,6 +72,14 @@ jobs:
         with:
           path: lean/docbuild/.lake/build
           key: lean-docs-${{ hashFiles('lean/lean-toolchain', 'lean/docbuild/lake-manifest.json') }}
+      # Saved by lean.yml.
+      - name: Restore the sources of the dependencies
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            lean/.lake/packages/*/*
+            !lean/.lake/packages/*/.lake
+          key: lean-sources-${{ hashFiles('lean/lean-toolchain', 'lean/lake-manifest.json') }}
       - name: Fetch the Mathlib cache
         run: lake exe cache get
       # Lake starts git and doc-gen4 with fork(). Documenting the dependencies, Lake runs over a
