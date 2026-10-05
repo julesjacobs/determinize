@@ -3,6 +3,9 @@
 A probabilistic language with E/G sampling modes, a Lean implementation and
 formalization, exact expected-reward certificates, and a browser simulator.
 
+[Simulator](https://julesjacobs.github.io/determinize/) ·
+[API documentation](https://julesjacobs.github.io/determinize/docs/)
+
 - `lean/`: parser, verified affinity inference, determinization, numerical execution,
   exact finite-state exploration, and kernel-checkable certificates.
 - `tests/`, `examples/`: shared `.det` programs and analytical expectations.
