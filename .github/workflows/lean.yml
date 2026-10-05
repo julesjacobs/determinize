@@ -70,6 +70,16 @@ jobs:
           path: lean/.lake/build
           key: lean-build-${{ hashFiles('lean/lean-toolchain', 'lean/lake-manifest.json') }}-${{ github.sha }}
           restore-keys: lean-build-${{ hashFiles('lean/lean-toolchain', 'lean/lake-manifest.json') }}-
+      # Lake clones each dependency with its full history, which takes over three minutes for
+      # Mathlib, so the checkouts, without their build directories, are kept once per set of pins.
+      - name: Restore the sources of the dependencies
+        id: sources
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            lean/.lake/packages/*/*
+            !lean/.lake/packages/*/.lake
+          key: lean-sources-${{ hashFiles('lean/lean-toolchain', 'lean/lake-manifest.json') }}
       - name: Fetch the Mathlib cache
         run: lake exe cache get
       # Linking the executables needs the object files of every module they import. Mathlib's cache
@@ -97,5 +107,13 @@ jobs:
         with:
           path: lean/.lake/packages/*/.lake/build/ir/**/*.c.o*
           key: ${{ steps.objects.outputs.cache-primary-key }}
+      - name: Save the sources of the dependencies
+        if: github.event_name != 'pull_request' && steps.sources.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            lean/.lake/packages/*/*
+            !lean/.lake/packages/*/.lake
+          key: ${{ steps.sources.outputs.cache-primary-key }}
       - name: Test
         run: ./test.sh --all
