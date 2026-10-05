@@ -52,7 +52,8 @@ tools on `PATH` first; Nix is optional.
 
 On GitHub, `.github/workflows/lean.yml` runs `lake build --wfail` and `./test.sh --all`
 in the `.#lean` shell for pull requests and for `main`, and publishes the API
-documentation from `main`.
+documentation from `main`. `.github/workflows/sim.yml` runs the simulator tests in the
+`.#sim` shell and checks that the committed bundle is the one its sources build.
 
 An E draw is replaced by its distribution's mean; a G draw remains stochastic.
 Finite-model certificates prove the selected core program's integrability and
