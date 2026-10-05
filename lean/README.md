@@ -38,8 +38,8 @@ The default build checks mean sites with affine-dependent operands, invalid mean
 
 ## Deviations from the paper
 
-These notes compare the Lean development with the paper in `tex/` as of `976ef7c`. The previous
-draft in `tex/archive/` is no longer compared.
+These notes compare the Lean development with the paper in `tex/` as of `976ef7c`, with its
+Lean links re-pinned to `8f89190`. The previous draft in `tex/archive/` is no longer compared.
 
 - **Names.** The paper's modes are affinities here: `real^m` is `Ty.float m`, the mean
   annotation `M` is `DistributionAction.mean`, and `Determinize(e)` is `Expr.determinize`.
@@ -162,24 +162,13 @@ draft in `tex/archive/` is no longer compared.
   (`checked_statistics`, `checked_conditionalVariance`), not only the expected value. The
   paper does not describe the additive reward models (`--additive`, `Spec/RewardModel`) that
   Section 7 relies on.
-- **Lean links.** `tex/lean-links.tex` pins the paper's GitHub links to `29ee1e7`. They
-  resolve, but ten of them show sources that have since moved, and four of those show a
-  statement that has since been reworded:
-  - `expectation-defined`, `trace-law`: the definitions are now in `Spec/Expectation.lean`
-    and `Spec/Traces/Semantics.lean`.
-  - `return-or-diverge`, `output-mass`, `trace-erasure`, `inference`: the statements are now
-    theorems in `Theorems.lean` (`return_or_diverge`, `output_mass_preservation`, `trace_erasure`,
-    `inference_correctness`).
-  - `expectation-preservation`, `variance-non-increase`, `trace-soundness`, `trace-variance`:
-    also in `Theorems.lean` (`expectation_preservation`, `variance_non_increase`,
-    `tracewise_soundness`, `trace_variance_decomposition`), and no longer worded as at the pinned
-    revision.
-
-  The trace-preservation lemma, the convex function inequality and Section 5 have no link
-  yet. The anonymous review build links to a snapshot on
-  apndx.org instead. That snapshot predates the verified inference (it has no
-  `Spec/Inference.lean`), so the review build's links are off until the snapshot is
-  regenerated.
+- **Lean links.** `tex/lean-links.tex` pins the paper's GitHub links to `8f89190`, the Lean
+  development these notes describe; the theorems' links point to `Theorems.lean`. The
+  trace-preservation lemma, the convex function inequality, probability preservation as a whole
+  (only its two equations are linked) and Section 5 have no link yet. `main.tex` builds the
+  anonymous review version, which links to a snapshot on apndx.org instead. That snapshot
+  predates the verified inference (it has no `Spec/Inference.lean`), so the review build's
+  links are off until the snapshot is regenerated from `8f89190`.
 
 ## Style
 
