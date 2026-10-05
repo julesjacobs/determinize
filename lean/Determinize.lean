@@ -18,12 +18,13 @@ import Determinize.Proof.RewardModel.Soundness
 A probabilistic language whose sample sites are labelled E or G. Determinizing a program turns
 its E samples into the means of their distributions and keeps its G samples.
 
-Start with `Determinize.Theorems`. It states every theorem in full over the definitions in
-`Spec/`, the paper's theorems first and under the paper's names, and proves each by one term from
-`Proof/`. A reviewer reads the statements and the definitions they use, not the proofs.
+A reviewer reads the statements of the theorems and the definitions they use, not the proofs.
 [`lean/README.md`](https://github.com/julesjacobs/determinize/blob/main/lean/README.md) explains
 what to review and how the development differs from the paper.
 
+- `Determinize/Theorems.lean`: every theorem, stated in full over the definitions in `Spec/` and
+  proved by one term from `Proof/`, the paper's theorems first and under the paper's names.
+  Start here.
 - `Spec/`: what the theorems are about, from syntax, typing, the primitive distributions and
   determinization to the output and trace laws (`Determinize.Spec.Traces.Semantics`) and
   expectations and variances (`Determinize.Spec.Expectation`).
