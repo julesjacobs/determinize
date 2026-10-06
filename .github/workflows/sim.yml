@@ -1,10 +1,10 @@
-# Tests the simulator on pull requests and checks that the committed bundle is the one its
-# sources build: sim/index.html loads sim/app.bundle.js, so a change to the sources is committed
-# together with the rebuilt bundle. On main, pages.yml runs this workflow and publishes the
-# simulator it built.
+# Checks the simulator's formatting and lint with Biome, runs its tests on pull requests, and
+# checks that the committed bundle is the one its sources build: sim/index.html loads
+# sim/app.bundle.js, so a change to the sources is committed together with the rebuilt bundle. On
+# main, pages.yml runs this workflow and publishes the simulator it built.
 #
-# Every `run` step executes inside the flake's `sim` dev shell, so Node.js, npm and git are the
-# versions flake.lock pins. The npm packages, esbuild among them, are pinned by
+# Every `run` step executes inside the flake's `sim` dev shell, so Node.js, npm, Biome and git are
+# the versions flake.lock pins. The npm packages, esbuild among them, are pinned by
 # sim/package-lock.json.
 name: Simulator
 
@@ -41,6 +41,8 @@ jobs:
         with:
           persist-credentials: false
       - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+      - name: Check formatting and lint
+        run: biome ci .
       - name: Install the dependencies
         run: npm ci
       - name: Test
