@@ -63,13 +63,15 @@ jobs:
                        "run `MATHLIB_NO_CACHE_ON_UPDATE=1 lake update` in lean/docbuild.")
           EOF
       # This repository's own build outputs (about 1 GB) are kept in the Actions cache. Mathlib's
-      # prebuilt files (8 GB) are downloaded by `lake exe cache get` instead.
+      # prebuilt files (8 GB) are downloaded by `lake exe cache get` instead. The executables load
+      # the glibc of the dev shell by its store path, and Lake does not relink them when it
+      # changes, so the key includes flake.lock.
       - name: Restore the previous build
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: lean/.lake/build
-          key: lean-build-${{ hashFiles('lean/lean-toolchain', 'lean/lake-manifest.json') }}-${{ github.sha }}
-          restore-keys: lean-build-${{ hashFiles('lean/lean-toolchain', 'lean/lake-manifest.json') }}-
+          key: lean-build-${{ hashFiles('lean/lean-toolchain', 'lean/lake-manifest.json', 'flake.lock') }}-${{ github.sha }}
+          restore-keys: lean-build-${{ hashFiles('lean/lean-toolchain', 'lean/lake-manifest.json', 'flake.lock') }}-
       # Lake clones each dependency with its full history, which takes over three minutes for
       # Mathlib, so the checkouts, without their build directories, are kept once per set of pins.
       - name: Restore the sources of the dependencies
@@ -100,7 +102,7 @@ jobs:
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: lean/.lake/build
-          key: lean-build-${{ hashFiles('lean/lean-toolchain', 'lean/lake-manifest.json') }}-${{ github.sha }}
+          key: lean-build-${{ hashFiles('lean/lean-toolchain', 'lean/lake-manifest.json', 'flake.lock') }}-${{ github.sha }}
       - name: Save the object files of the dependencies
         if: github.event_name != 'pull_request' && steps.objects.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
