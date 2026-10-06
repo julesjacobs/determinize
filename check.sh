@@ -22,7 +22,7 @@ while [[ $# -gt 0 ]]; do
     --changed)
       changed="$(git status --porcelain --untracked-files=all | cut -c4-)"
       grep -qE '^(check\.sh|tools/dev-shell\.sh)$' <<<"$changed" && areas+=(lean det sim bundle tex)
-      grep -qE '^sim/(src|test)/|^sim/package(-lock)?\.json' <<<"$changed" && areas+=(sim bundle)
+      grep -qE '^sim/(src|test)/|^sim/(package(-lock)?|biome)\.json' <<<"$changed" && areas+=(sim bundle)
       grep -qE '^tex/.*\.(tex|bib|cls|bst|sty)$' <<<"$changed" && areas+=(tex)
       grep -qE '^lean/.*\.lean$|^lean/(lakefile\.toml|lean-toolchain|lake-manifest\.json)$' <<<"$changed" && areas+=(lean)
       grep -qE '^tests/|^examples/|^tools/|^(test|run)\.sh$|^lean/test\.sh$' <<<"$changed" && areas+=(det)
@@ -48,6 +48,9 @@ tail_of() { tail -n 40; }
 for area in "${areas[@]}"; do
   case "$area" in
     sim)
+      out="$(cd sim && in_shell sim biome ci --colors=off . 2>&1)"
+      if [[ $? -eq 0 ]]; then report sim "biome ci OK"
+      else fail=1; report sim "biome ci FAILED (cd sim && biome check --write . applies the safe fixes)" "$(tail_of <<<"$out")"; fi
       out="$(cd sim && in_shell sim npm test 2>&1)"
       if [[ $? -eq 0 ]]; then report sim "npm test OK ($(grep -oE 'pass [0-9]+' <<<"$out" | head -1))"
       else fail=1; report sim "npm test FAILED" "$(grep -vE '^\s*(at |\||ℹ (start|duration|suites|cancelled|skipped|todo))' <<<"$out" | tail_of)"; fi

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # PostToolUse (Edit|Write): fast feedback for the file that was just changed.
-#   sim/*     -> node --test
+#   sim/**    -> biome check of that file (files Biome skips pass)
+#   sim/src, sim/test -> node --test
 #   tex/*.tex -> chktex lint of that file
 #   lean/**.lean -> lake build (fails fast with a hint if the Mathlib cache is absent)
 #   toolchain files -> remind to run /learn-tool
@@ -10,6 +11,14 @@ read_hook_input
 file="$(rel_path "$(jfield tool_input.file_path)")"
 [[ -z "$file" ]] && exit 0
 cd "$ROOT"
+
+if [[ "$file" == sim/* ]]; then
+  out="$(cd sim && in_shell sim biome check --colors=off --files-ignore-unknown=true --no-errors-on-unmatched "${file#sim/}" 2>&1)" || {
+    echo "biome check failed after editing $file ('biome check --write ${file#sim/}' in sim applies the safe fixes):" >&2
+    tail -n 40 <<<"$out" >&2
+    exit 2
+  }
+fi
 
 case "$file" in
   sim/src/*|sim/test/*)
