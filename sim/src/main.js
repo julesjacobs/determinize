@@ -1,10 +1,10 @@
-import { history, historyKeymap, defaultKeymap } from "@codemirror/commands";
+import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { bracketMatching, indentOnInput } from "@codemirror/language";
 import { EditorState, Transaction } from "@codemirror/state";
 import {
-  EditorView,
   drawSelection,
   dropCursor,
+  EditorView,
   highlightActiveLine,
   highlightActiveLineGutter,
   hoverTooltip,

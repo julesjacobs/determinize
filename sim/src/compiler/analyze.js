@@ -1,5 +1,5 @@
-import { CompileError } from "./errors.js";
 import { determinize } from "./determinize.js";
+import { CompileError } from "./errors.js";
 import { collectSpans, defaultModes, inferProgram } from "./infer.js";
 import { parse } from "./parser.js";
 import { prettyExpr, prettyTyped } from "./pretty.js";
