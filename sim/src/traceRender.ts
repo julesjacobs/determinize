@@ -1,5 +1,5 @@
 import type { DistributionKind, Expr, ExprOf, MeanKind } from "./compiler/ast.ts";
-import { prettyExpr } from "./compiler/pretty.ts";
+import { listElements, prettyExpr } from "./compiler/pretty.ts";
 
 /** The fields leading from an expression to a subexpression, with indices into argument lists. */
 type Path = (string | number)[];
@@ -44,6 +44,7 @@ const distNames: Record<string, string> = {
   Bernoulli: "bernoulli",
   Poisson: "poisson",
   Discrete: "discrete",
+  DiscreteList: "discrete_list",
 };
 
 export function renderTraceExpr(expr: Expr, options: TraceOptions = {}) {
@@ -157,7 +158,7 @@ function renderExpr(
 export function renderHighlightedText(code: string, options: TraceOptions = {}) {
   const escaped = escapeHtml(code);
   return escaped.replace(
-    /\b(let|in|if|then|else|match|with|fun|rec|true|false|fst|snd|inl|inr|observe|domain_error)\b|\b(mean_(?:uniform|gauss|exponential|gamma|beta|bernoulli|poisson|discrete))\b|\b(uniform|gauss|exponential|gamma|beta|flip|bernoulli|poisson|discrete)\b|(\[[EG]\])|\b(v\d+)\b|(-?\d+(?:\.\d+)?(?:e[+-]?\d+)?)/gi,
+    /\b(let|in|if|then|else|match|with|fun|rec|true|false|fst|snd|inl|inr|observe|domain_error)\b|\b(mean_(?:uniform|gauss|exponential|gamma|beta|bernoulli|poisson|discrete(?:_list)?))\b|\b(uniform|gauss(?:ian)?|exponential|gamma|beta|flip|bernoulli|poisson|discrete(?:_list)?)\b|(\[[EG]\])|\b(v\d+)\b|(-?\d+(?:\.\d+)?(?:e[+-]?\d+)?)/gi,
     (
       match: string,
       keywordMatch: string | undefined,
@@ -208,6 +209,16 @@ function renderDistribution(
   if (expr.kind === "Discrete") {
     return `${name}${mode}(${expr.choices.map((choice) => renderHighlightedText(String(choice.probability), options)).join(", ")})`;
   }
+  if (expr.kind === "DiscreteList") {
+    const probabilities = childFocus(focusPath, "probabilities");
+    const elements = expr.form === "remainder" ? listElements(expr.probabilities) : null;
+    if (elements) {
+      const discrete = '<span class="tok-dist">discrete</span>';
+      const rendered = elements.map((element) => renderExpr(element, 0, null, options));
+      return `${discrete}${mode}(${[...rendered, "*"].join(", ")})`;
+    }
+    return `${name}${mode}(${renderExpr(expr.probabilities, 0, probabilities, options)})`;
+  }
   return `${name}${mode}(${expr.args.map((arg, index) => renderExpr(arg, 0, childFocus(focusPath, "args", index), options)).join(", ")})`;
 }
 
@@ -240,6 +251,8 @@ function meanFormula(distribution: MeanKind, args: string[]) {
       return args[0];
     case "Discrete":
       return args.map((probability, index) => `${index} * ${probability}`).join(" + ") || "0";
+    case "DiscreteList":
+      return `n + Σ (i - n) * p_i over the list ${args[0]} of length n`;
     default:
       return `mean(${args.join(", ")})`;
   }
@@ -331,6 +344,8 @@ function changedChildPath(before: Expr, after: Expr): Path | null {
       return changedIndexedPath(before, after, "args");
     case "Discrete":
       return null;
+    case "DiscreteList":
+      return changedFieldPath(before, after, "probabilities");
     case "DomainError":
       return null;
     default:

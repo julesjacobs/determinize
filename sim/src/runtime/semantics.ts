@@ -30,6 +30,7 @@ import {
 } from "./affine.ts";
 import type { DistributionDomainError } from "./distributions.ts";
 import {
+  distributionName,
   floatDistributions,
   instantiateArgs,
   isDistributionDomainError,
@@ -254,6 +255,12 @@ export function runtimeFromTyped(te: TypedExpr): Expr {
         },
         te,
       );
+    case "DiscreteList":
+      return n(
+        "DiscreteList",
+        { mode: distMode(), probabilities: runtimeFromTyped(te.probabilities), form: te.form },
+        te,
+      );
     case "Observe":
       return n("Observe", { cond: runtimeFromTyped(te.cond) }, te);
     default:
@@ -263,8 +270,9 @@ export function runtimeFromTyped(te: TypedExpr): Expr {
 
 export function runtimeFromAst(expr: Expr): Expr {
   switch (expr.kind) {
-    case "Var":
     case "Const":
+      return n("Const", { value: expr.value }, expr);
+    case "Var":
     case "Bool":
     case "Unit":
     case "Nil":
@@ -365,6 +373,28 @@ export function runtimeFromAst(expr: Expr): Expr {
             probability: choice.probability,
             value: runtimeFromAst(choice.value),
           })),
+        },
+        expr,
+      );
+    case "DiscreteWeights":
+      return n(
+        "Discrete",
+        {
+          mode: expr.mode ?? "G",
+          choices: expr.weights.map((weight, index) => {
+            if (weight.kind !== "Const") throw new Error("discrete expects literal weights");
+            return { probability: weight.value, value: n("Const", { value: index }, expr) };
+          }),
+        },
+        expr,
+      );
+    case "DiscreteList":
+      return n(
+        "DiscreteList",
+        {
+          mode: expr.mode ?? "G",
+          probabilities: runtimeFromAst(expr.probabilities),
+          form: expr.form,
         },
         expr,
       );
@@ -770,6 +800,8 @@ function step(expr: Expr, ctx: Context): StepResult {
       return stepDistribution(expr, ctx);
     case "Discrete":
       return stepDiscrete(expr, ctx);
+    case "DiscreteList":
+      return stepDiscreteList(expr, ctx);
   }
   throw new Error(`stuck expression ${expr.kind}`);
 }
@@ -779,7 +811,11 @@ function stepMean(expr: ExprOf<"Mean">, ctx: Context): StepResult {
     if (!isValue(expr.args[i])) return stepIndexedChild(expr, "args", i, ctx);
   }
   try {
-    const mean = meanDistribution(expr.distribution, expr.args.map(valueToAffine));
+    const args =
+      expr.distribution === "DiscreteList"
+        ? listValues(expr.args[0]).map(valueToAffine)
+        : expr.args.map(valueToAffine);
+    const mean = meanDistribution(expr.distribution, args);
     return out(floatResult(mean, expr), ctx);
   } catch (error) {
     if (!isDistributionDomainError(error)) throw error;
@@ -863,6 +899,47 @@ function stepDiscrete(expr: ExprOf<"Discrete">, ctx: Context): StepResult {
     if (!isDistributionDomainError(error)) throw error;
     return out(domainErrorExpr(error, expr), { ...ctx, [streamName]: rng });
   }
+}
+
+function stepDiscreteList(expr: ExprOf<"DiscreteList">, ctx: Context): StepResult {
+  if (!isValue(expr.probabilities)) return stepChild(expr, "probabilities", ctx);
+  const probabilities = listValues(expr.probabilities).map(valueToAffine);
+  if (ctx.kind === "symbolic" && expr.mode === "E") {
+    try {
+      meanDistribution("DiscreteList", probabilities);
+    } catch (error) {
+      if (!isDistributionDomainError(error)) throw error;
+      return out(domainErrorExpr(error, expr), ctx);
+    }
+    const name = `v${ctx.nextSymbol}`;
+    const binding: Binding = { name, kind: "DiscreteList", args: probabilities };
+    return out(symFloat(affineVar(name), expr.from, expr.to), {
+      ...ctx,
+      sigma: [...ctx.sigma, binding],
+      nextSymbol: ctx.nextSymbol + 1,
+    });
+  }
+  const streamName = expr.mode === "E" ? "rngE" : "rngG";
+  const rng = ctx[streamName] as Rng;
+  try {
+    const index = sampleDistribution("DiscreteList", probabilities, rng);
+    return out(n("Const", { value: index }, expr), { ...ctx, [streamName]: rng });
+  } catch (error) {
+    if (!isDistributionDomainError(error)) throw error;
+    return out(domainErrorExpr(error, expr), { ...ctx, [streamName]: rng });
+  }
+}
+
+/** The elements of a list value. */
+function listValues(list: Expr): Expr[] {
+  const elements: Expr[] = [];
+  let rest = list;
+  while (rest.kind === "Cons") {
+    elements.push(rest.head);
+    rest = rest.tail;
+  }
+  if (rest.kind !== "Nil") throw new Error("discrete probabilities are not a list");
+  return elements;
 }
 
 function advanceToTarget(state: OrdinaryState, target: Expr, maxSteps: number): Advance {
@@ -956,6 +1033,11 @@ function determinizeResidual(expr: Expr): Expr {
         );
       }
       return n("Discrete", { mode: "G", choices }, expr);
+    }
+    case "DiscreteList": {
+      const probabilities = determinizeResidual(expr.probabilities);
+      if (expr.mode === "E") return meanNode("DiscreteList", [probabilities], expr);
+      return n("DiscreteList", { mode: "G", probabilities, form: expr.form }, expr);
     }
     case "Flip":
       return n("Flip", { mode: "G", args: expr.args.map(determinizeResidual) }, expr);
@@ -1170,6 +1252,12 @@ function mapChildren(expr: Expr, f: (child: Expr) => Expr): Expr {
         },
         expr,
       );
+    case "DiscreteList":
+      return n(
+        "DiscreteList",
+        { mode: expr.mode, probabilities: f(expr.probabilities), form: expr.form },
+        expr,
+      );
     default:
       return clone(expr);
   }
@@ -1263,7 +1351,7 @@ export function prettySymbolicState(state: { sigma: Binding[]; expr: Expr }) {
       : state.sigma
           .map(
             (binding) =>
-              `${binding.name} ~ ${binding.kind.toLowerCase()}(${binding.args.map(prettyAffine).join(", ")})`,
+              `${binding.name} ~ ${distributionName(binding.kind)}(${binding.args.map(prettyAffine).join(", ")})`,
           )
           .join("; ");
   return `<${sigma} || ${prettyExpr(state.expr)}>`;

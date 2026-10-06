@@ -18,23 +18,13 @@ interface Case {
 
 /** Cases where the simulator differs from Lean, with the reason. */
 const todo: Record<string, string> = {
-  // Lexing and parsing
-  "examples/paper/noisy-iteration.det": "no `gaussian`, Lean's alias of `gauss`",
-  "examples/paper/noisy-product.det": "no `gaussian`, Lean's alias of `gauss`",
-  "examples/paper/gauss-random-walk.det": "no `|` before the first match arm",
-  "tests/execution/discrete-remainder-empty.det": "`discrete(*)` lexes `(*` as a comment",
-  "tests/execution/discrete-remainder-last.det": "no `discrete(p0, …, pn, *)`",
-  "tests/execution/discrete-remainder-domain.det": "no `discrete(p0, …, pn, *)`",
-  "tests/statistical/discrete-computed-e.det": "no `discrete(p0, …, pn, *)`",
-  "tests/statistical/discrete-computed-g.det": "no `discrete(p0, …, pn, *)`",
-  "tests/typing/reject/discrete-remainder-affinity.det": "no `discrete(p0, …, pn, *)`",
-  "tests/typing/reject/discrete-empty.det":
-    "discrete weights must be number literals when parsed; Lean checks them in elaboration",
-  "tests/typing/reject/discrete-negative.det":
-    "discrete weights must be number literals when parsed; Lean checks them in elaboration",
-  "tests/typing/reject/discrete-nonliteral.det":
-    "discrete weights must be number literals when parsed; Lean checks them in elaboration",
   // Elaboration
+  "tests/typing/reject/discrete-empty.det":
+    "the simulator's inference checks literal discrete weights; Lean's elaborator",
+  "tests/typing/reject/discrete-negative.det":
+    "the simulator's inference checks literal discrete weights; Lean's elaborator",
+  "tests/typing/reject/discrete-nonliteral.det":
+    "the simulator's inference checks literal discrete weights; Lean's elaborator",
   "tests/typing/reject/unbound.det": "names are resolved in inference, by Lean in elaboration",
   "tests/typing/reject/flip-expectation.det":
     "`flip[E]` is accepted; Lean's elaborator requires [G]",
@@ -57,6 +47,8 @@ const todo: Record<string, string> = {
     "a Bernoulli operand has the site's mode instead of a subtype of it",
   "tests/statistical/bernoulli-mixed.det":
     "a Bernoulli operand has the site's mode instead of a subtype of it",
+  "examples/paper/gauss-random-walk.det":
+    "a result type equals the first type checked against it, not the greatest one",
   "examples/loops/bounded-iteration.det":
     "a result type equals the first type checked against it, not the greatest one",
   "examples/loops/geometric-random-increment.det":

@@ -33,6 +33,8 @@ const distNames: Record<string, string> = {
   Bernoulli: "bernoulli",
   Poisson: "poisson",
   Discrete: "discrete",
+  DiscreteWeights: "discrete",
+  DiscreteList: "discrete_list",
 };
 
 export function prettyExpr(expr: Expr, prec = 0): string {
@@ -89,7 +91,8 @@ export function prettyExpr(expr: Expr, prec = 0): string {
           level,
         );
       }
-      if (expr.kind in distNames) return prettyDistribution(expr as ExprOf<DistributionKind>);
+      if (expr.kind in distNames)
+        return prettyDistribution(expr as ExprOf<DistributionKind | "DiscreteWeights">);
       return `<${expr.kind}>`;
   }
 }
@@ -147,12 +150,31 @@ export function prettyTyped(te: TypedExpr, prec = 0): string {
   }
 }
 
-function prettyDistribution(expr: ExprOf<DistributionKind>) {
+function prettyDistribution(expr: ExprOf<DistributionKind | "DiscreteWeights">) {
   const name = distNames[expr.kind];
   const mode = expr.mode ? `[${expr.mode}]` : "";
   if (expr.kind === "Discrete")
     return `${name}${mode}(${expr.choices.map((c) => formatNumber(c.probability)).join(", ")})`;
+  if (expr.kind === "DiscreteWeights")
+    return `${name}${mode}(${expr.weights.map((weight) => prettyExpr(weight)).join(", ")})`;
+  if (expr.kind === "DiscreteList") {
+    const elements = expr.form === "remainder" ? listElements(expr.probabilities) : null;
+    if (elements)
+      return `discrete${mode}(${[...elements.map((e) => prettyExpr(e)), "*"].join(", ")})`;
+    return `${name}${mode}(${prettyExpr(expr.probabilities)})`;
+  }
   return `${name}${mode}(${expr.args.map((arg) => prettyExpr(arg)).join(", ")})`;
+}
+
+/** The elements of a list built from `::` and `[]`, or null. */
+export function listElements(expr: Expr): Expr[] | null {
+  const elements: Expr[] = [];
+  let rest = expr;
+  while (rest.kind === "Cons") {
+    elements.push(rest.head);
+    rest = rest.tail;
+  }
+  return rest.kind === "Nil" ? elements : null;
 }
 
 function prettyMean(expr: ExprOf<"Mean">) {
@@ -168,6 +190,7 @@ function prettyTypedDistribution(te: TypedDist) {
   const modeText = mode ? `[${mode}]` : "";
   if (te.kind === "Discrete")
     return `${name}${modeText}(${te.choices.map((c) => formatNumber(c.probability)).join(", ")})`;
+  if (te.kind === "DiscreteList") return `${name}${modeText}(${prettyTyped(te.probabilities)})`;
   return `${name}${modeText}(${te.args.map((arg) => prettyTyped(arg)).join(", ")})`;
 }
 
