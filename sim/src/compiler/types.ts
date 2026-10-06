@@ -204,6 +204,31 @@ export function defaultModesType(type: Type) {
   }
 }
 
+/** The type as Lean's `prettyType` prints it, with `?` for an unknown type. */
+export function formatLeanType(type: Type): string {
+  const ty = zonk(type);
+  switch (ty.tag) {
+    case "Unit":
+      return "unit";
+    case "Bool":
+      return "bool";
+    case "Nat":
+      return "nat";
+    case "Float":
+      return `float[${ty.mode.mode ?? "?"}]`;
+    case "Pair":
+      return `(${formatLeanType(ty.left)} * ${formatLeanType(ty.right)})`;
+    case "Sum":
+      return `(${formatLeanType(ty.left)} + ${formatLeanType(ty.right)})`;
+    case "List":
+      return `[${formatLeanType(ty.elem)}]`;
+    case "Arrow":
+      return `(${formatLeanType(ty.arg)} -> ${formatLeanType(ty.result)})`;
+    case "MetaType":
+      return "?";
+  }
+}
+
 export function formatType(type: Type) {
   const seen = new Set<number>();
   const go = (ty: Type, prec = 0): string => {

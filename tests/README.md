@@ -2,6 +2,8 @@
 
 The programs and expected answers belong to the language. `cases.toml` is the
 authoritative test manifest; Lean runs the programs and checks their results.
+The simulator's `sim/test/conformance.test.ts` checks its front end against the
+same manifest: acceptance, rejection stage, type and affinities.
 
 From the repository root:
 

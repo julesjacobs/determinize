@@ -22,7 +22,7 @@ while [[ $# -gt 0 ]]; do
     --changed)
       changed="$(git status --porcelain --untracked-files=all | cut -c4-)"
       grep -qE '^(check\.sh|tools/dev-shell\.sh)$' <<<"$changed" && areas+=(lean det sim bundle tex)
-      grep -qE '^sim/(src|test)/|^sim/build\.|^sim/(package(-lock)?|biome|tsconfig(\.node)?)\.json' <<<"$changed" && areas+=(sim)
+      grep -qE '^sim/(src|test)/|^sim/build\.|^sim/(package(-lock)?|biome|tsconfig(\.node)?)\.json|^(tests|examples)/' <<<"$changed" && areas+=(sim)
       grep -qE '^sim/(src|test)/|^sim/build\.|^sim/(package(-lock)?|tsconfig)\.json|^sim/index\.html' <<<"$changed" && areas+=(bundle)
       grep -qE '^tex/.*\.(tex|bib|cls|bst|sty)$' <<<"$changed" && areas+=(tex)
       grep -qE '^lean/.*\.lean$|^lean/(lakefile\.toml|lean-toolchain|lake-manifest\.json)$' <<<"$changed" && areas+=(lean)
