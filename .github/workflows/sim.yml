@@ -1,6 +1,6 @@
-# Checks the simulator's formatting and lint with Biome, runs its tests, builds it into sim/dist/
-# and uploads that directory as the `simulator` artifact. On main, pages.yml runs this workflow and
-# publishes the artifact.
+# Checks the simulator's formatting and lint with Biome and its types with TypeScript, runs its
+# tests, builds it into sim/dist/ and uploads that directory as the `simulator` artifact. On main,
+# pages.yml runs this workflow and publishes the artifact.
 #
 # Every `run` step executes inside the flake's `sim` dev shell, so Node.js, npm and Biome are the
 # versions flake.lock pins. The shell also links sim/node_modules, which Nix builds from
@@ -42,6 +42,8 @@ jobs:
       - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
       - name: Check formatting and lint
         run: biome ci .
+      - name: Check types
+        run: npm run typecheck
       - name: Test
         run: npm test
       - name: Build
