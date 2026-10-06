@@ -85,7 +85,7 @@ export function normalizeDiagnostics(result, doc) {
   if (result.ok) return [];
   const docLength = typeof doc === "string" ? doc.length : doc;
   return result.diagnostics.map((diagnostic) => {
-    let from = clamp(diagnostic.from ?? 0, 0, docLength);
+    const from = clamp(diagnostic.from ?? 0, 0, docLength);
     if (from === docLength && docLength > 0) {
       return {
         from: docLength - 1,
@@ -94,7 +94,7 @@ export function normalizeDiagnostics(result, doc) {
       };
     }
     const rawTo = diagnostic.to ?? Math.min(docLength, from + 1);
-    let to = docLength === 0 ? 0 : Math.max(from + 1, clamp(rawTo, 0, docLength));
+    const to = docLength === 0 ? 0 : Math.max(from + 1, clamp(rawTo, 0, docLength));
     return {
       from,
       to: Math.min(to, docLength),
