@@ -20,10 +20,11 @@ export type MeanKind = Exclude<DistributionKind, "Flip">;
 export type BinaryKind = "Pair" | "Add" | "Sub" | "Mul" | "Div" | "Lt" | "Leq";
 export type UnaryKind = "Fst" | "Snd" | "Inl" | "Inr" | "Neg";
 
-export interface Span {
+/** A source range; a type alias, so that expressions also read as records of their fields. */
+export type Span = {
   from: number;
   to: number;
-}
+};
 
 export interface Choice<C> {
   probability: number;

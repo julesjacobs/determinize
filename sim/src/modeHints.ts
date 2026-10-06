@@ -1,6 +1,9 @@
 import { RangeSetBuilder, StateEffect, StateField } from "@codemirror/state";
+import type { DecorationSet, ViewUpdate } from "@codemirror/view";
 import { Decoration, EditorView, ViewPlugin, WidgetType } from "@codemirror/view";
 import { analyze } from "./compiler/analyze.ts";
+import type { Mode } from "./compiler/ast.ts";
+import type { SpanInfo } from "./compiler/infer.ts";
 
 const distributionNames = new Set([
   "uniform",
@@ -13,19 +16,29 @@ const distributionNames = new Set([
   "discrete",
 ]);
 
+/** The source range whose type hint the pointer or focus is on. */
+interface HintRange {
+  from: number;
+  to: number;
+}
+
 class TypeHintWidget extends WidgetType {
-  constructor(type, from, to) {
+  declare type: string;
+  declare from: number;
+  declare to: number;
+
+  constructor(type: string, from: number, to: number) {
     super();
     this.type = type;
     this.from = from;
     this.to = to;
   }
 
-  eq(other) {
+  eq(other: TypeHintWidget) {
     return other.type === this.type && other.from === this.from && other.to === this.to;
   }
 
-  toDOM(view) {
+  toDOM(view: EditorView) {
     const span = document.createElement("span");
     span.className = "type-hint";
     span.textContent = `: ${this.type}`;
@@ -53,12 +66,14 @@ class TypeHintWidget extends WidgetType {
 }
 
 class ModeHintWidget extends WidgetType {
-  constructor(mode) {
+  declare mode: Mode;
+
+  constructor(mode: Mode) {
     super();
     this.mode = mode;
   }
 
-  eq(other) {
+  eq(other: ModeHintWidget) {
     return other.mode === this.mode;
   }
 
@@ -75,11 +90,11 @@ class ModeHintWidget extends WidgetType {
   }
 }
 
-export const setTypeHints = StateEffect.define();
+export const setTypeHints = StateEffect.define<boolean>();
 
-const setHoveredTypeHint = StateEffect.define();
+const setHoveredTypeHint = StateEffect.define<HintRange | null>();
 
-export const typeHintState = StateField.define({
+export const typeHintState = StateField.define<boolean>({
   create() {
     return false;
   },
@@ -91,7 +106,7 @@ export const typeHintState = StateField.define({
   },
 });
 
-export const hoveredTypeHintState = StateField.define({
+export const hoveredTypeHintState = StateField.define<HintRange | null>({
   create() {
     return null;
   },
@@ -120,11 +135,13 @@ export const hoveredTypeHintState = StateField.define({
 
 export const modeHints = ViewPlugin.fromClass(
   class {
-    constructor(view) {
+    declare decorations: DecorationSet;
+
+    constructor(view: EditorView) {
       this.decorations = buildModeHints(view);
     }
 
-    update(update) {
+    update(update: ViewUpdate) {
       const typeHintChanged = update.transactions.some((tr) =>
         tr.effects.some((effect) => effect.is(setTypeHints)),
       );
@@ -162,8 +179,9 @@ export const modeHints = ViewPlugin.fromClass(
   },
 );
 
-function typeHintTarget(event) {
-  const target = event.target instanceof Element ? event.target.closest(".type-hint") : null;
+function typeHintTarget(event: Event): HintRange | null {
+  const target =
+    event.target instanceof Element ? event.target.closest<HTMLElement>(".type-hint") : null;
   if (!target) return null;
   const from = Number(target.dataset.from);
   const to = Number(target.dataset.to);
@@ -171,13 +189,13 @@ function typeHintTarget(event) {
   return { from, to };
 }
 
-function buildModeHints(view) {
+function buildModeHints(view: EditorView) {
   const source = view.state.doc.toString();
   const result = analyze(source);
-  const builder = new RangeSetBuilder();
+  const builder = new RangeSetBuilder<Decoration>();
   if (!result.ok) return builder.finish();
   const showTypeHints = view.state.field(typeHintState);
-  const decorations = [];
+  const decorations: { pos: number; decoration: Decoration }[] = [];
 
   for (const span of result.spans) {
     if (span.kind !== "distribution" || (span.mode !== "E" && span.mode !== "G")) continue;
@@ -194,7 +212,7 @@ function buildModeHints(view) {
   }
 
   if (showTypeHints) {
-    const seen = new Set();
+    const seen = new Set<string>();
     for (const span of result.spans) {
       if (!span.type || span.from === span.to) continue;
       const key = `${span.from}:${span.to}:${span.type}`;
@@ -216,13 +234,13 @@ function buildModeHints(view) {
   return builder.finish();
 }
 
-function cursorAtHintPosition(view, pos) {
+function cursorAtHintPosition(view: EditorView, pos: number) {
   return view.state.selection.ranges.some(
     (range) => range.empty && Math.abs(range.head - pos) <= 1,
   );
 }
 
-function hintPosition(source, span) {
+function hintPosition(source: string, span: SpanInfo) {
   const text = source.slice(span.from, span.to);
   const match = text.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)/);
   if (!match) return null;
