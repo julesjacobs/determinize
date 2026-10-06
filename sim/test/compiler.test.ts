@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { analyze } from "../src/compiler/analyze.ts";
+import type { Input } from "../src/compiler/core.ts";
+import { children } from "../src/compiler/core.ts";
+import { elaborate } from "../src/compiler/elaborate.ts";
 import { CompileError } from "../src/compiler/errors.ts";
 import { parse } from "../src/compiler/parser.ts";
 import { prettyExpr } from "../src/compiler/pretty.ts";
@@ -76,6 +79,61 @@ test("number literals are exact rationals", () => {
   assert.equal(ast.kind, "Const");
   assert.deepEqual(ast.exact, rational(1n, 80n));
   assert.equal(ast.value, 0.0125);
+});
+
+/** An elaborated program in the constructor syntax of Lean's tests. */
+function constructors(e: Input): string {
+  const head =
+    e.kind === "bvar"
+      ? `.bvar ${e.index}`
+      : e.kind === "bool"
+        ? `.bool ${e.value}`
+        : e.kind === "real"
+          ? `.real ${e.value.num}/${e.value.den}`
+          : "site" in e
+            ? `.${e.kind} ${e.site ?? "none"}`
+            : `.${e.kind}`;
+  const parts = [head, ...children(e).map(constructors)];
+  return parts.length === 1 && !head.includes(" ") ? head : `(${parts.join(" ")})`;
+}
+
+test("elaboration resolves and desugars as Lean's elaborator", () => {
+  const cases: [string, string][] = [
+    ["(* outer (* inner *) *) 1.25e-2", "(.real 1/80)"],
+    ["rec f x => f x", "(.fix (.app (.bvar 1) (.bvar 0)))"],
+    [
+      "fun x => uniform[G](0,1) <= (fun y => x + y) (bernoulli(0.5))",
+      "(.lam (.letE (.uniform G (.real 0/1) (.real 1/1)) (.letE (.app (.lam (.add (.bvar 2) (.bvar 0))) (.bernoulli none (.real 1/2))) (.ite (.lt (.bvar 0) (.bvar 1)) (.bool false) (.bool true)))))",
+    ],
+    ["discrete[E](0.25,0.25,0.5)", "(.discrete E (.cons (.real 1/4) (.cons (.real 1/4) .nil)))"],
+    ["discrete[E] (* comment *) (0,1)", "(.discrete E (.cons (.real 0/1) .nil))"],
+    ["discrete(*)", "(.discrete none .nil)"],
+    ["discrete_list(0.5 :: [])", "(.discrete none (.cons (.real 1/2) .nil))"],
+    ["fun x => x - 1", "(.lam (.add (.bvar 0) (.neg (.real 1/1))))"],
+    ["fun x => x * 2", "(.lam (.mul (.real 2/1) (.bvar 0)))"],
+    ["fun x => 2 * x", "(.lam (.mul (.real 2/1) (.bvar 0)))"],
+    ["observe(true)", "(.ite (.bool true) .unit .reject)"],
+    ["flip(0.5)", "(.lt (.real 0/1) (.bernoulli G (.real 1/2)))"],
+  ];
+  for (const [source, expected] of cases) {
+    assert.equal(constructors(elaborate(parse(source))), expected, source);
+  }
+});
+
+test("elaboration rejects what Lean's elaborator rejects", () => {
+  for (const source of [
+    "missing",
+    "fun x => y",
+    "flip[E](0.5)",
+    "discrete()",
+    "discrete(0, 0)",
+    "discrete(0.2, 0.3)",
+    "discrete(1, -1)",
+    "let w = 1 in discrete(w, 1)",
+    "discrete(missing, 1)",
+  ]) {
+    assert.throws(() => elaborate(parse(source)), CompileError, source);
+  }
 });
 
 test("pretty printer keeps short let chains compact and aligned", () => {

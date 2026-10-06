@@ -118,9 +118,9 @@ const cases = [
     highlight: "uniform[E](0, 1)",
   },
   {
-    name: "invalid discrete probability",
+    name: "discrete weights that do not sum to 1",
     source: "discrete(0.2, 1.7)",
-    message: "discrete probability must be in [0, 1]",
+    message: "discrete weights must sum to 1, not 1.9",
     from: 0,
     to: 18,
     highlight: "discrete(0.2, 1.7)",
