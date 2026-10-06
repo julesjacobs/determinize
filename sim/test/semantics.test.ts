@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { analyze } from "../src/compiler/analyze.ts";
+import type { Expr, ExprOf, MeanKind } from "../src/compiler/ast.ts";
 import { prettyExpr } from "../src/compiler/pretty.ts";
 import { examples } from "../src/examples.ts";
 import { affineConst, affineScale, affineVar } from "../src/runtime/affine.ts";
 import { meanDistribution, sampleDistribution } from "../src/runtime/distributions.ts";
 import { makeStreams } from "../src/runtime/rng.ts";
+import type { CoupledTrace, Frame } from "../src/runtime/semantics.ts";
 import {
   checkEquivalences,
   prepareRuntime,
@@ -16,6 +18,19 @@ import {
   runSymbolic,
   stepOrdinary,
 } from "../src/runtime/semantics.ts";
+
+/** The last frame of a trace; every trace has one. */
+function last(trace: CoupledTrace): Frame {
+  const frame = trace.frames.at(-1);
+  assert.ok(frame);
+  return frame;
+}
+
+/** expr, asserted to be of the given kind. */
+function expectKind<K extends Expr["kind"]>(expr: Expr | undefined, kind: K): ExprOf<K> {
+  assert.equal(expr?.kind, kind);
+  return expr as ExprOf<K>;
+}
 
 test("symbolic semantics stores E samples in sigma", () => {
   const { expr } = prepareRuntime("let u = uniform[E](0, 1) in\nu + 1");
@@ -110,28 +125,28 @@ test("distribution means check the same domains as sampling", () => {
 test("coupled trace treats shared distribution domain errors as checked terminal outcomes", () => {
   const trace = runCoupledTrace("let x = gamma[E](-1, 2) in\nx + 1", 35);
   assert.equal(trace.ok, true);
-  assert.equal(trace.frames.at(-1).original.kind, "DomainError");
-  assert.equal(trace.frames.at(-1).symbolic.kind, "DomainError");
-  assert.equal(trace.frames.at(-1).determinized.kind, "DomainError");
-  assert.equal(trace.finalOriginal.kind, "DomainError");
-  assert.equal(trace.finalDeterminized.kind, "DomainError");
-  assert.match(trace.frames.at(-1).original.message, /shape must be > 0/);
+  assert.equal(last(trace).original.kind, "DomainError");
+  assert.equal(last(trace).symbolic.kind, "DomainError");
+  assert.equal(last(trace).determinized.kind, "DomainError");
+  assert.equal(trace.finalOriginal?.kind, "DomainError");
+  assert.equal(trace.finalDeterminized?.kind, "DomainError");
+  assert.match(expectKind(last(trace).original, "DomainError").message, /shape must be > 0/);
 });
 
 test("coupled trace fails when only one side reaches a distribution domain error", () => {
   const originalErrors = runCoupledTrace("let x = uniform[E](-10, 30) in\ngamma[E](x, 1)", 1);
   assert.equal(originalErrors.ok, false);
-  assert.equal(originalErrors.frames.at(-1).original.kind, "DomainError");
-  assert.notEqual(originalErrors.frames.at(-1).determinized.kind, "DomainError");
-  assert.equal(originalErrors.frames.at(-1).consistencyOk, false);
-  assert.match(originalErrors.frames.at(-1).consistencyError, /terminal effect mismatch/);
+  assert.equal(last(originalErrors).original.kind, "DomainError");
+  assert.notEqual(last(originalErrors).determinized.kind, "DomainError");
+  assert.equal(last(originalErrors).consistencyOk, false);
+  assert.match(last(originalErrors).consistencyError ?? "", /terminal effect mismatch/);
 
   const determinizedErrors = runCoupledTrace("let x = uniform[E](-10, 30) in\nuniform[E](x, 1)", 1);
   assert.equal(determinizedErrors.ok, false);
-  assert.notEqual(determinizedErrors.frames.at(-1).original.kind, "DomainError");
-  assert.equal(determinizedErrors.frames.at(-1).determinized.kind, "DomainError");
-  assert.equal(determinizedErrors.frames.at(-1).consistencyOk, false);
-  assert.match(determinizedErrors.frames.at(-1).consistencyError, /terminal effect mismatch/);
+  assert.notEqual(last(determinizedErrors).original.kind, "DomainError");
+  assert.equal(last(determinizedErrors).determinized.kind, "DomainError");
+  assert.equal(last(determinizedErrors).consistencyOk, false);
+  assert.match(last(determinizedErrors).consistencyError ?? "", /terminal effect mismatch/);
 });
 
 test("distribution domain checks cover bernoulli probability and discrete totals", () => {
@@ -143,12 +158,15 @@ test("distribution domain checks cover bernoulli probability and discrete totals
 
   const discrete = runCoupledTrace("let x = discrete[E](0.2, 0.2) in\nx", 37);
   assert.equal(discrete.ok, true);
-  assert.equal(discrete.frames.at(-1).symbolic.kind, "DomainError");
-  assert.match(discrete.frames.at(-1).symbolic.message, /probabilities must sum to 1/);
+  assert.equal(last(discrete).symbolic.kind, "DomainError");
+  assert.match(
+    expectKind(last(discrete).symbolic, "DomainError").message,
+    /probabilities must sum to 1/,
+  );
 });
 
 test("primitive distribution samples and means reject the same invalid concrete domains", () => {
-  const cases = [
+  const cases: [MeanKind, number[], RegExp][] = [
     ["Uniform", [2, 1], /lower bound must be <= upper bound/],
     ["Gauss", [0, -1], /variance must be >= 0/],
     ["Exponential", [0], /rate must be > 0/],
@@ -215,6 +233,7 @@ test("coupled trace records sampled symbolic values for hover correspondence", (
   const trace = runCoupledTrace("let u = uniform(0, 1) in\nu + 1", 2026);
   const frame = trace.frames.find((candidate) => candidate.sampleBySymbol.v1 !== undefined);
   assert.ok(frame);
+  assert.ok(frame.originalTarget);
   assert.equal(typeof frame.sampleBySymbol.v1, "number");
   assert.match(
     prettyExpr(frame.originalTarget),
@@ -226,18 +245,18 @@ test("coupled trace treats shared observe rejection as a checked terminal outcom
   const source = "let _ = observe(false) in\n1";
   const trace = runCoupledTrace(source, 41);
   assert.equal(trace.ok, true);
-  assert.equal(trace.frames.at(-1).original.kind, "Reject");
-  assert.equal(trace.frames.at(-1).symbolic.kind, "Reject");
-  assert.equal(trace.frames.at(-1).determinized.kind, "Reject");
-  assert.equal(trace.finalOriginal.kind, "Reject");
-  assert.equal(trace.finalDeterminized.kind, "Reject");
+  assert.equal(last(trace).original.kind, "Reject");
+  assert.equal(last(trace).symbolic.kind, "Reject");
+  assert.equal(last(trace).determinized.kind, "Reject");
+  assert.equal(trace.finalOriginal?.kind, "Reject");
+  assert.equal(trace.finalDeterminized?.kind, "Reject");
 });
 
 test("coupled trace handles affine symbolic residuals at every step", () => {
   const source = "let u = uniform[E](0, 1) in\nlet y = uniform[E](u, 2) in\n2 * u + y - 1";
   const trace = runCoupledTrace(source, 42);
   assert.equal(trace.ok, true);
-  assert.match(prettyExpr(trace.frames.at(-1).symbolic), /v1/);
+  assert.match(prettyExpr(last(trace).symbolic), /v1/);
 });
 
 test("unchecked coupled trace exposes bad E/G dependencies", () => {
@@ -246,11 +265,14 @@ test("unchecked coupled trace exposes bad E/G dependencies", () => {
   const trace = runCoupledTrace(source, 42, 20, 20, { allowIllTyped: true });
   assert.equal(trace.unchecked, true);
   assert.equal(trace.ok, false);
-  assert.equal(trace.frames.at(-1).symbolicOk, false);
-  assert.match(trace.frames.at(-1).symbolicError, /concrete affine value/);
-  assert.equal(trace.finalOriginal.kind, "Const");
-  assert.equal(trace.finalDeterminized.kind, "Const");
-  assert.notEqual(trace.finalOriginal.value, trace.finalDeterminized.value);
+  assert.equal(last(trace).symbolicOk, false);
+  assert.match(last(trace).symbolicError ?? "", /concrete affine value/);
+  assert.equal(trace.finalOriginal?.kind, "Const");
+  assert.equal(trace.finalDeterminized?.kind, "Const");
+  assert.notEqual(
+    expectKind(trace.finalOriginal, "Const").value,
+    expectKind(trace.finalDeterminized, "Const").value,
+  );
 });
 
 test("recursive gamma coupling does not fail from floating-point underflow", () => {
@@ -259,7 +281,7 @@ test("recursive gamma coupling does not fail from floating-point underflow", () 
   for (const seed of [1, 2, 17, 42, 2026]) {
     const trace = runCoupledTrace(source, seed, 1000, 400);
     assert.equal(trace.ok, true, `seed ${seed}`);
-    assert.equal(trace.frames.at(-1).symbolic.kind, "SymFloat");
+    assert.equal(last(trace).symbolic.kind, "SymFloat");
   }
 });
 
@@ -283,18 +305,18 @@ test("recursive parameter shadows the recursive function name", () => {
     "let f = rec f x => if x <= 0 then 3 else f (x - 1) in f 2",
   ]) {
     const { expr } = prepareRuntime(source);
-    assert.equal(runOrdinary(expr, makeStreams(1)).value.value, 3);
+    assert.equal(expectKind(runOrdinary(expr, makeStreams(1)).value, "Const").value, 3);
   }
 });
 
 test("affine arithmetic preserves small literals and coefficients", () => {
   const { expr } = prepareRuntime("1e13 * (1e-13 * 1)");
-  assert.equal(runOrdinary(expr, makeStreams(1)).value.value, 1);
+  assert.equal(expectKind(runOrdinary(expr, makeStreams(1)).value, "Const").value, 1);
   const symbolic = runSymbolic(
     prepareRuntime("1e13 * (1e-13 * uniform[E](0, 1))").expr,
     makeStreams(1),
   );
-  assert.equal(symbolic.value.affine.terms.v1, 1);
+  assert.equal(expectKind(symbolic.value, "SymFloat").affine.terms.v1, 1);
   assert.equal(affineConst(1e-13).constant, 1e-13);
   assert.equal(affineScale(affineVar("v"), 1e-13).terms.v, 1e-13);
   const tiny = runSymbolic(prepareRuntime("1e-13 * uniform[E](0, 1)").expr, makeStreams(1));

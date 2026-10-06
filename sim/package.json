@@ -16,6 +16,7 @@
     "@lezer/highlight": "^1.2.5"
   },
   "devDependencies": {
+    "@types/node": "^24.19.1",
     "esbuild": "^0.28.2",
     "typescript": "^7.0.2"
   }

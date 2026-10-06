@@ -31,7 +31,7 @@ await build({
 });
 await copyFile("styles.css", `${outdir}/styles.css`);
 
-async function stamp(file) {
+async function stamp(file: string) {
   const hash = createHash("sha256")
     .update(await readFile(`${outdir}/${file}`))
     .digest("hex");
