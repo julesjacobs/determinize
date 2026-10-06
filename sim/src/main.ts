@@ -129,9 +129,11 @@ function updateDebugVisibility() {
 for (const [index, example] of examples.entries()) {
   const option = document.createElement("option");
   option.value = String(index);
-  option.textContent = example.name;
+  option.textContent = example.title;
+  option.title = example.explanation;
   exampleSelect.append(option);
 }
+exampleSelect.title = examples[0].explanation;
 
 const editor = new EditorView({
   parent: editorHost,
@@ -165,8 +167,10 @@ const editor = new EditorView({
 });
 
 exampleSelect.addEventListener("change", () => {
-  const source = examples[Number(exampleSelect.value)].source;
-  logDebug("example-change", { example: examples[Number(exampleSelect.value)].name });
+  const example = examples[Number(exampleSelect.value)];
+  const source = example.source;
+  exampleSelect.title = example.explanation;
+  logDebug("example-change", { example: example.id });
   editor.dispatch({ changes: { from: 0, to: editor.state.doc.length, insert: source } });
   runAnalyze();
 });
@@ -411,7 +415,7 @@ function collectEditorDebugState(label: string) {
         to: headLine.to,
         text: headLine.text,
       },
-      example: examples[Number(exampleSelect.value)]?.name ?? null,
+      example: examples[Number(exampleSelect.value)]?.id ?? null,
       typeHintsEnabled: typeHintsToggle.checked,
       status: statusEl.getAttribute("aria-label"),
       diagnostics: diagnostics.map((diagnostic) => ({

@@ -1,0 +1,3 @@
+let x = uniform[E](0, 1) in
+let y = gaussian[E](x, 1) in
+x * y

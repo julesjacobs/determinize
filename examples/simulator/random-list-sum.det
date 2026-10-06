@@ -1,0 +1,7 @@
+let sum = rec sum xs =>
+  match xs with [] => 0 | x :: rest => x + sum rest
+in
+let draw = rec draw _ =>
+  if flip(0.5) then [] else uniform(0, 1) :: draw 0
+in
+sum (draw 0)

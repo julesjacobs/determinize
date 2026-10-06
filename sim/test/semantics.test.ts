@@ -311,14 +311,15 @@ test("recursive gamma coupling does not fail from floating-point underflow", () 
 });
 
 test("bundled examples analyze and run as intended", () => {
+  const counterexamples = ["simulator/noisy-product-all-e", "simulator/bad-e-branching"];
   for (const example of examples) {
     const result = analyze(example.source);
-    const intentionallyBad = example.name === "Bad E-branching";
-    assert.equal(result.ok, !intentionallyBad, example.name);
+    const counterexample = counterexamples.includes(example.id);
+    assert.equal(result.ok, !counterexample, example.id);
     const trace = runCoupledTrace(example.source, 2026, 1000, 400);
-    assert.equal(trace.counterexample, intentionallyBad, example.name);
-    assert.equal(trace.ok, !intentionallyBad, example.name);
-    assert.ok(trace.frames.length > 0, example.name);
+    assert.equal(trace.counterexample, counterexample, example.id);
+    assert.equal(trace.ok, !counterexample, example.id);
+    assert.ok(trace.frames.length > 0, example.id);
   }
 });
 

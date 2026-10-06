@@ -360,6 +360,39 @@ expected_type = "float[E]"
 affinities = ["G", "G"]
 
 [[case]]
+file = "examples/simulator/observe.det"
+suite = "typing"
+outcome = "accept"
+expected_type = "float[E]"
+affinities = ["G", "E"]
+
+[[case]]
+file = "examples/simulator/random-list-sum.det"
+suite = "typing"
+outcome = "accept"
+expected_type = "float[E]"
+affinities = ["G", "E"]
+
+[[case]]
+file = "examples/simulator/recursive-gamma.det"
+suite = "typing"
+outcome = "accept"
+expected_type = "float[E]"
+affinities = ["E", "G"]
+
+[[case]]
+file = "examples/simulator/bad-e-branching.det"
+suite = "typing"
+outcome = "reject"
+stage = "inference"
+
+[[case]]
+file = "examples/simulator/noisy-product-all-e.det"
+suite = "typing"
+outcome = "reject"
+stage = "inference"
+
+[[case]]
 file = "tests/typing/accept/primitives.det"
 suite = "typing"
 outcome = "accept"
