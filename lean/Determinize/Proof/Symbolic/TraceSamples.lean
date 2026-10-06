@@ -35,8 +35,8 @@ theorem concrete_sampleE (laws : PrimitiveLaws)
   unfold primitiveFiber
     Determinize.Spec.Paper.parseParams
   simp only
-  rw [dif_pos (by simpa using affineLength),
-    dif_pos generalLength]
+  rw [dite_eq_left (by simpa using affineLength),
+    dite_eq_left generalLength]
   simp only
   rw [laws.kernel_eq_paperMeasure]
   congr 1
@@ -72,8 +72,8 @@ theorem concrete_target_sampleE
   unfold primitiveFiber
     Determinize.Spec.Paper.parseParams
   simp only
-  rw [dif_pos (by simpa using affineLength),
-    dif_pos generalLength]
+  rw [dite_eq_left (by simpa using affineLength),
+    dite_eq_left generalLength]
   simp only
   let evaluatedParams : Determinize.Spec.Paper.Params op :=
     (fun index ↦ (affine.map (Symbolic.Affine.eval · mean))[index.1]'(by
@@ -87,7 +87,7 @@ theorem concrete_target_sampleE
         generalLength]
   change (if Determinize.Spec.Paper.InDomain op evaluatedParams then
     Measure.dirac (Determinize.Spec.Paper.meanValue op evaluatedParams) else 0) = _
-  rw [evaluatedParamsEq, if_pos paramsDomain]
+  rw [evaluatedParamsEq, ite_eq_left paramsDomain]
 
 variable {β : Type*} [MeasurableSpace β]
 

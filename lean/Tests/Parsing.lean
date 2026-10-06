@@ -4,18 +4,18 @@ import Determinize.Frontend.Pretty
 namespace Determinize.Tests
 open Frontend Spec.Paper
 
-def assert (b : Bool) (message : String) : IO Unit :=
+def check (b : Bool) (message : String) : IO Unit :=
   unless b do throw (IO.userError message)
 
 def parsing : IO Unit := do
   let input ← IO.ofExcept (elaborate (← IO.ofExcept (parse "(* outer (* inner *) *) 1.25e-2")))
-  assert (input == .real (1 / 80)) "decimal literals must remain exact"
-  assert (parse "uniform[E](0,1)" |>.isOk) "explicit E affinity"
-  assert (parse "uniform[Q](0,1)" |> fun r ↦ !r.isOk) "invalid affinity accepted"
-  assert (parse "1 garbage )" |> fun r ↦ !r.isOk) "trailing input accepted"
-  assert (parse "(* unfinished" |> fun r ↦ !r.isOk) "unterminated comment accepted"
+  check (input == .real (1 / 80)) "decimal literals must remain exact"
+  check (parse "uniform[E](0,1)" |>.isOk) "explicit E affinity"
+  check (parse "uniform[Q](0,1)" |> fun r ↦ !r.isOk) "invalid affinity accepted"
+  check (parse "1 garbage )" |> fun r ↦ !r.isOk) "trailing input accepted"
+  check (parse "(* unfinished" |> fun r ↦ !r.isOk) "unterminated comment accepted"
   for text in ["uniform(0)", "poisson(1,2)", "observe[E](true)"] do
-    assert (!(parse text).isOk) s!"invalid primitive syntax accepted: {text}"
+    check (!(parse text).isOk) s!"invalid primitive syntax accepted: {text}"
   for text in ["discrete[E](*)", "discrete[E](* )", "discrete[E]( * )",
       "discrete[E](*\n)", "discrete(*)", "discrete[G] (* )",
       "discrete (* comment *) [E] (* )"] do
@@ -24,33 +24,33 @@ def parsing : IO Unit := do
     | .discrete (.sample _) .nil => pure ()
     | _ => throw (IO.userError s!"empty remainder syntax changed: {text}")
     let q ← IO.ofExcept (compile (pretty p.source))
-    assert (p.source == q.source) s!"empty remainder roundtrip changed: {text}"
+    check (p.source == q.source) s!"empty remainder roundtrip changed: {text}"
   for text in ["(*) comment *) 0", "(* outer (*) inner *) *) 0"] do
     let p ← IO.ofExcept (compile text)
-    assert (p.source == .real 0) s!"block comment changed: {text}"
+    check (p.source == .real 0) s!"block comment changed: {text}"
   let commented ← IO.ofExcept (compile "discrete[E] (* comment *) (0,1)")
-  assert (commented.source == .discrete (.sample .E) (.cons (.real 0) .nil))
+  check (commented.source == .discrete (.sample .E) (.cons (.real 0) .nil))
     "comment before discrete arguments changed"
   let coin ← IO.ofExcept (compile "bernoulli[E](0.25)")
-  assert (coin.source == .bernoulli (.sample .E) (.real (1 / 4)))
+  check (coin.source == .bernoulli (.sample .E) (.real (1 / 4)))
     "elaboration replaced a Bernoulli source draw"
-  assert (coin.source.determinize == .bernoulli .mean (.real (1 / 4)))
+  check (coin.source.determinize == .bernoulli .mean (.real (1 / 4)))
     "Bernoulli determinization did not retain its parameter"
   let categorical ← IO.ofExcept (compile "discrete[E](0.25,0.25,0.5)")
   match categorical.source with
   | .discrete (.sample .E) d =>
-    assert (d == .cons (.real (1 / 4)) (.cons (.real (1 / 4)) .nil))
+    check (d == .cons (.real (1 / 4)) (.cons (.real (1 / 4)) .nil))
       "discrete probabilities changed"
-    assert (categorical.source.determinize == .discrete .mean d)
+    check (categorical.source.determinize == .discrete .mean d)
       "discrete determinization changed its weights"
   | _ => throw (IO.userError "elaboration replaced a discrete source draw")
   let program ← IO.ofExcept (compile "let x = 2 in let y = 3 in x <= y")
-  assert (program.ty == .bool) "comparison type"
+  check (program.ty == .bool) "comparison type"
   let recursive ← IO.ofExcept (elaborate (← IO.ofExcept (parse "rec f x => f x")))
-  assert (recursive == .fix (.app (.bvar 1) (.bvar 0))) "recursive binder indices"
+  check (recursive == .fix (.app (.bvar 1) (.bvar 0))) "recursive binder indices"
   let comparison ← IO.ofExcept (elaborate (← IO.ofExcept
     (parse "fun x => uniform[G](0,1) <= (fun y => x + y) (bernoulli(0.5))")))
-  assert (comparison == .lam (.letE (.uniform (some .G) (.real 0) (.real 1))
+  check (comparison == .lam (.letE (.uniform (some .G) (.real 0) (.real 1))
     (.letE (.app (.lam (.add (.bvar 2) (.bvar 0))) (.bernoulli none (.real (1 / 2))))
       (.ite (.lt (.bvar 0) (.bvar 1)) (.bool false) (.bool true)))))
     "comparison desugaring changed binders or affinities"
@@ -60,13 +60,13 @@ def parsing : IO Unit := do
       "discrete[E](0.25,0.25,0.5)", "discrete[G](0,0.25,0.75)", "discrete[E](0,1,0)"] do
     let p ← IO.ofExcept (compile text)
     let q ← IO.ofExcept (compile (pretty p.source))
-    assert (p.source == q.source)
+    check (p.source == q.source)
       s!"pretty-printed source changed program: {text} -> {pretty p.source}"
   for text in ["2 * 3", "uniform[E](0,1) * 3", "(2 * 3) * (uniform[G](0,1) * 4)"] do
     let mut p ← IO.ofExcept (compile text)
     for _ in [:3] do
       let q ← IO.ofExcept (compile (pretty p.source))
-      assert (p.source == q.source)
+      check (p.source == q.source)
         s!"multiplication roundtrip changed program: {text}"
       p := q
 

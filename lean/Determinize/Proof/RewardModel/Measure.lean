@@ -36,7 +36,7 @@ theorem shift_add_measure (r : Rat) (μ ν : Measure ℝ) :
 
 theorem shift_smul (r : Rat) (p : ℝ≥0∞) (μ : Measure ℝ) :
     shift r (p • μ) = p • shift r μ := by
-  exact Measure.map_smul p μ _
+  exact Measure.map_smul p (measurable_translation r).aemeasurable
 
 theorem outputWithin_mono (model : Model) (state : Fin model.size) :
     Monotone (fun n ↦ model.outputWithin n state) := by

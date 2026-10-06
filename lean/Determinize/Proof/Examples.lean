@@ -187,7 +187,7 @@ example : DomainSafe loop := by
   induction fuel with
   | zero => trivial
   | succ fuel ih =>
-    rw [DomainSafeAt, if_neg (by simp [loop, Expr.isValue]), reduce_loop]
+    rw [DomainSafeAt, ite_eq_right (by simp [loop, Expr.isValue]), reduce_loop]
     exact ih
 
 example : traceAndOutputLaw loop = 0 := by

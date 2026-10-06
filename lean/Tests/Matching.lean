@@ -14,43 +14,43 @@ def matching : IO Unit := do
   let draw : Annotated := .uniform .E (.real 0) (.real 1)
   let drawInput : Input := .uniform (some .E) (.real 0) (.real 1)
   let generalInput : Input := .uniform (some .G) (.real 0) (.real 1)
-  assert (inferred drawInput == some (draw, floatE)) "explicit E draw not inferred"
-  assert (!drawInput.Matches (.uniform .E (.real 0) (.real 2))) "changed literal accepted"
-  assert (!generalInput.Matches draw) "explicit sampling affinity changed"
+  check (inferred drawInput == some (draw, floatE)) "explicit E draw not inferred"
+  check (!drawInput.Matches (.uniform .E (.real 0) (.real 2))) "changed literal accepted"
+  check (!generalInput.Matches draw) "explicit sampling affinity changed"
   let coin : Annotated := .bernoulli .E (.real (1 / 4))
   let coinInput : Input := .bernoulli (some .E) (.real (1 / 4))
-  assert (inferred coinInput == some (coin, floatE)) "Bernoulli draw not inferred"
-  assert (!coinInput.Matches (.bernoulli .E (.real (1 / 2))))
+  check (inferred coinInput == some (coin, floatE)) "Bernoulli draw not inferred"
+  check (!coinInput.Matches (.bernoulli .E (.real (1 / 2))))
     "changed Bernoulli probability accepted"
-  assert (!coinInput.Matches (.poisson .E (.real (1 / 4)))) "different distribution matched"
+  check (!coinInput.Matches (.poisson .E (.real (1 / 4)))) "different distribution matched"
   let d : Annotated := .cons (.real (1 / 6)) (.cons (.real (1 / 3)) .nil)
   let changed : Annotated := .cons (.real (1 / 2)) (.cons (.real (1 / 3)) .nil)
   let categorical : Annotated := .discrete .E d
   let categoricalInput : Input :=
     .discrete (some .E) (.cons (.real (1 / 6)) (.cons (.real (1 / 3)) .nil))
-  assert (inferred categoricalInput == some (categorical, floatE)) "discrete draw not inferred"
-  assert (!categoricalInput.Matches (.discrete .E changed))
+  check (inferred categoricalInput == some (categorical, floatE)) "discrete draw not inferred"
+  check (!categoricalInput.Matches (.discrete .E changed))
     "changed discrete weights accepted"
-  assert (!Input.Matches (.discrete (some .G) (.cons (.real (1 / 6)) (.cons (.real (1 / 3)) .nil)))
+  check (!Input.Matches (.discrete (some .G) (.cons (.real (1 / 6)) (.cons (.real (1 / 3)) .nil)))
       categorical)
     "discrete sampling affinity changed"
   let nestedInput : Input := .uniform (some .E)
     (.bernoulli (some .G) (.real (1 / 4))) (.real 1)
   let nested : Annotated := .uniform .E
     (.bernoulli .G (.real (1 / 4))) (.real 1)
-  assert (inferred nestedInput == some (nested, floatE)) "nested affinities not inferred"
+  check (inferred nestedInput == some (nested, floatE)) "nested affinities not inferred"
   let swapped : Annotated := .uniform .G
     (.bernoulli .E (.real (1 / 4))) (.real 1)
-  assert (!nestedInput.Matches swapped) "nested affinities matched at the wrong sites"
+  check (!nestedInput.Matches swapped) "nested affinities matched at the wrong sites"
   let unspecified : Input := .bernoulli none (.real (1 / 4))
-  assert (unspecified.Matches coin) "omitted affinity did not accept E"
-  assert (unspecified.Matches (.bernoulli .G (.real (1 / 4)))) "omitted affinity did not accept G"
-  assert (inferred unspecified == some (coin, floatE)) "omitted affinity not inferred as E"
+  check (unspecified.Matches coin) "omitted affinity did not accept E"
+  check (unspecified.Matches (.bernoulli .G (.real (1 / 4)))) "omitted affinity did not accept G"
+  check (inferred unspecified == some (coin, floatE)) "omitted affinity not inferred as E"
   let lambdaInput : Input := .lam (.lam (.bvar 1))
-  assert (inferred lambdaInput == some (.lam (.lam (.bvar 1)), .arr .unit (.arr .unit .unit)))
+  check (inferred lambdaInput == some (.lam (.lam (.bvar 1)), .arr .unit (.arr .unit .unit)))
     "binders not inferred"
-  assert (!lambdaInput.Matches (.lam (.lam (.bvar 0)))) "changed binder reference accepted"
+  check (!lambdaInput.Matches (.lam (.lam (.bvar 0)))) "changed binder reference accepted"
   let invalidDomainProgram ← IO.ofExcept (Frontend.compile "uniform[E](2,1)")
-  assert (invalidDomainProgram.ty == floatE) "typing must not claim to establish domain safety"
+  check (invalidDomainProgram.ty == floatE) "typing must not claim to establish domain safety"
 
 end Determinize.Tests

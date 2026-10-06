@@ -116,25 +116,25 @@ private theorem eliminate_sound {i : Nat} {t : Shape} {rest : List (Shape × Sha
     Unifies (fun j ↦ (Shape.single i t j).subst θ) ((.var i, t) :: rest) := by
   refine unifies_cons.2 ⟨?_, unifies_substEquations.1 h⟩
   change (Shape.single i t i).subst θ = t.subst fun j ↦ (Shape.single i t j).subst θ
-  rw [← Shape.subst_subst, Shape.subst_single_of_not_mem fresh, Shape.single, if_pos rfl]
+  rw [← Shape.subst_subst, Shape.subst_single_of_not_mem fresh, Shape.single, ite_eq_left rfl]
 
 theorem unify_sound {equations : List (Shape × Shape)} {θ : Nat → Shape}
     (h : unify equations = some θ) : Unifies θ equations := by
   induction equations using unify.induct generalizing θ with
   | case1 => simp only [unify, Option.some.injEq] at h; subst h; exact unifies_nil _
   | case2 i rest ih | case5 i rest _ ih =>
-    rw [unify.eq_2, if_pos rfl] at h
+    rw [unify.eq_2, ite_eq_left rfl] at h
     exact unifies_cons.2 ⟨rfl, ih h⟩
   | case3 i t rest ne occurs =>
-    rw [unify.eq_2, if_neg ne, if_pos occurs] at h; cases h
+    rw [unify.eq_2, ite_eq_right ne, ite_eq_left occurs] at h; cases h
   | case4 i t rest ne fresh ih =>
-    rw [unify.eq_2, if_neg ne, if_neg fresh] at h
+    rw [unify.eq_2, ite_eq_right ne, ite_eq_right fresh] at h
     obtain ⟨θ', h', rfl⟩ := Option.map_eq_some_iff.1 h
     exact eliminate_sound fresh (ih h')
   | case6 t i rest notVar ne occurs =>
-    rw [unify.eq_3 _ _ _ notVar, if_neg ne, if_pos occurs] at h; cases h
+    rw [unify.eq_3 _ _ _ notVar, ite_eq_right ne, ite_eq_left occurs] at h; cases h
   | case7 t i rest notVar ne fresh ih =>
-    rw [unify.eq_3 _ _ _ notVar, if_neg ne, if_neg fresh] at h
+    rw [unify.eq_3 _ _ _ notVar, ite_eq_right ne, ite_eq_right fresh] at h
     obtain ⟨θ', h', rfl⟩ := Option.map_eq_some_iff.1 h
     exact unifies_var_cons.2 (eliminate_sound fresh (ih h'))
   | case8 s t rest hs ht children eq ih =>
@@ -159,20 +159,20 @@ theorem unify_mostGeneral {equations : List (Shape × Shape)} {θ δ : Nat → S
   induction equations using unify.induct generalizing θ with
   | case1 => simp only [unify, Option.some.injEq] at h; subst h; intro i; rfl
   | case2 i rest ih | case5 i rest _ ih =>
-    rw [unify.eq_2, if_pos rfl] at h
+    rw [unify.eq_2, ite_eq_left rfl] at h
     exact ih h (unifies_cons.1 hδ).2
   | case3 i t rest ne occurs =>
-    rw [unify.eq_2, if_neg ne, if_pos occurs] at h; cases h
+    rw [unify.eq_2, ite_eq_right ne, ite_eq_left occurs] at h; cases h
   | case4 i t rest ne fresh ih =>
-    rw [unify.eq_2, if_neg ne, if_neg fresh] at h
+    rw [unify.eq_2, ite_eq_right ne, ite_eq_right fresh] at h
     obtain ⟨θ', h', rfl⟩ := Option.map_eq_some_iff.1 h
     intro j
     rw [Shape.subst_subst, funext (ih h' (eliminate_preserves hδ))]
     exact single_absorbed (unifies_cons.1 hδ).1 j
   | case6 t i rest notVar ne occurs =>
-    rw [unify.eq_3 _ _ _ notVar, if_neg ne, if_pos occurs] at h; cases h
+    rw [unify.eq_3 _ _ _ notVar, ite_eq_right ne, ite_eq_left occurs] at h; cases h
   | case7 t i rest notVar ne fresh ih =>
-    rw [unify.eq_3 _ _ _ notVar, if_neg ne, if_neg fresh] at h
+    rw [unify.eq_3 _ _ _ notVar, ite_eq_right ne, ite_eq_right fresh] at h
     obtain ⟨θ', h', rfl⟩ := Option.map_eq_some_iff.1 h
     have hδ := unifies_var_cons.1 hδ
     intro j
@@ -191,14 +191,14 @@ theorem unify_complete {equations : List (Shape × Shape)} {δ : Nat → Shape}
   induction equations using unify.induct with
   | case1 => exact ⟨_, unify.eq_1⟩
   | case2 i rest ih | case5 i rest _ ih =>
-    rw [unify.eq_2, if_pos rfl]
+    rw [unify.eq_2, ite_eq_left rfl]
     exact ih (unifies_cons.1 hδ).2
   | case3 i t rest ne occurs =>
     exact absurd (unifies_cons.1 hδ).1 fun e ↦ by
       have := Shape.size_lt_subst (σ := δ) occurs ne
       simp only [Shape.subst] at e; rw [e] at this; exact lt_irrefl _ this
   | case4 i t rest ne fresh ih =>
-    rw [unify.eq_2, if_neg ne, if_neg fresh]
+    rw [unify.eq_2, ite_eq_right ne, ite_eq_right fresh]
     obtain ⟨θ', h'⟩ := ih (eliminate_preserves hδ)
     exact ⟨_, by rw [h']; rfl⟩
   | case6 t i rest notVar ne occurs =>
@@ -206,7 +206,7 @@ theorem unify_complete {equations : List (Shape × Shape)} {δ : Nat → Shape}
       have := Shape.size_lt_subst (σ := δ) occurs ne
       simp only [Shape.subst] at e; rw [e] at this; exact lt_irrefl _ this
   | case7 t i rest notVar ne fresh ih =>
-    rw [unify.eq_3 _ _ _ notVar, if_neg ne, if_neg fresh]
+    rw [unify.eq_3 _ _ _ notVar, ite_eq_right ne, ite_eq_right fresh]
     obtain ⟨θ', h'⟩ := ih (eliminate_preserves (unifies_var_cons.1 hδ))
     exact ⟨_, by rw [h']; rfl⟩
   | case8 s t rest hs ht children eq ih =>

@@ -87,7 +87,7 @@ theorem actualTraceLaw_succ_value (depth : Nat) (history : Symbolic.SampleEnv pr
   unfold actualTraceLaw
   have h : ∀ env, exactMeasure (depth + 1) (expression.realize env) = 0 := by
     intro env
-    rw [exactMeasure, if_pos (by simpa only [AffineExpr.realize_isValue] using value)]
+    rw [exactMeasure, ite_eq_left (by simpa only [AffineExpr.realize_isValue] using value)]
   simp_rw [h]
   simp
 
@@ -96,7 +96,7 @@ theorem targetTraceLaw_succ_value (depth : Nat) (history : Symbolic.SampleEnv pr
     (expression : AffineExpr n) (value : expression.isValue = true) :
     targetTraceLaw (depth + 1) history expression = 0 := by
   rw [targetTraceLaw, exactMeasure,
-    if_pos (by simpa only [determinize_isValue, AffineExpr.realize_isValue] using value)]
+    ite_eq_left (by simpa only [determinize_isValue, AffineExpr.realize_isValue] using value)]
 
 /-- An expression that is not a value has no trace at depth zero. -/
 theorem actualTraceLaw_zero_of_not_value (history : Symbolic.SampleEnv primitiveLaws n)

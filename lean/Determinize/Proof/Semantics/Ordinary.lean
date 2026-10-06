@@ -74,7 +74,7 @@ theorem exactOutputMeasure_eq (depth : Nat) (expression : Expr) :
     by_cases value : expression.isValue = true
     · simp [Determinize.Spec.Paper.outputMeasureAt, value,
         MeasurableActionFamily.exactOutputKernel_succ_apply_of_value]
-    · rw [Determinize.Spec.Paper.outputMeasureAt, if_neg value,
+    · rw [Determinize.Spec.Paper.outputMeasureAt, ite_eq_right value,
         MeasurableActionFamily.exactOutputKernel_succ_apply_of_not_value
           paperStepKernel depth expression value,
         Kernel.comp_apply, paperStepKernel.kernel_eq_stepMeasure, stepMeasure]

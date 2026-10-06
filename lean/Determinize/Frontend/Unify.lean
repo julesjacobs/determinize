@@ -64,7 +64,7 @@ theorem vars_subst_single {i : Nat} {t : Shape} (fresh : i ∉ t.vars) :
     by_cases h : j = i
     · subst h
       intro k hk
-      simp only [subst, single, if_pos] at hk
+      simp only [subst, single, ite_eq_left] at hk
       exact Finset.mem_erase.2 ⟨fun e ↦ fresh (e ▸ hk), Finset.mem_union_right _ hk⟩
     · simp [subst, single, h, vars]
   | unit | bool | float => by simp [subst, vars]

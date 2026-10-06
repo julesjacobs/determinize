@@ -23,7 +23,7 @@ def linearAlgebra : IO Unit := do
     let expected := fun i : Fin n ↦ (i.val : Rat) / 2 - 3
     let rhs := fun i ↦ ∑ j, A i j * expected j
     let some answer := solveEquations A rhs | throw (IO.userError s!"solver rejected size {n}")
-    assert (answer == List.ofFn expected) s!"incorrect solution at size {n}"
+    check (answer == List.ofFn expected) s!"incorrect solution at size {n}"
 
 #print axioms Proof.LinearAlgebra.solve
 

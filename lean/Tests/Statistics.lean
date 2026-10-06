@@ -68,11 +68,11 @@ private def chain : Model where
 
 def statistics : IO Unit := do
   let paths ← IO.ofExcept (findPaths chain (fun i ↦ 64 - i.val))
-  assert ((paths.val.next ⟨0, by decide⟩).val == 1) "path construction over a long chain"
+  check ((paths.val.next ⟨0, by decide⟩).val == 1) "path construction over a long chain"
   let result ← IO.ofExcept (Finite.solveStatistics mixedOutcomes)
-  assert (result.val.statistics mixedOutcomes == ⟨1 / 2, 1 / 2, 5⟩)
+  check (result.val.statistics mixedOutcomes == ⟨1 / 2, 1 / 2, 5⟩)
     "mixed return/rejection/divergence moments"
-  assert (match Finite.solveStatistics mixedOutcomes {maxStates := 4} with
+  check (match Finite.solveStatistics mixedOutcomes {maxStates := 4} with
     | .error _ => true | _ => false) "statistics state limit"
 
 #print axioms Finite.sparseResults_valid

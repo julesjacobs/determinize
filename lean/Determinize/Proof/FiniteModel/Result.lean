@@ -1,6 +1,6 @@
 import Determinize.Proof.FiniteModel.Model
 import Determinize.Spec.FiniteModel.Certificates
-import Mathlib.Data.ENNReal.BigOperators
+import Mathlib.Basic.ENNReal.BigOperators
 
 namespace Determinize.Proof.FiniteModel
 open Spec.FiniteModel MeasureTheory
@@ -120,7 +120,7 @@ private theorem homogeneous_bound (model : Model) (d : Fin model.size → ℝ)
       simp [Model.survivalWithin, h]
   | succ n ih =>
     by_cases h : model.kind state = .transient
-    · rw [eqs state, if_pos h]
+    · rw [eqs state, ite_eq_left h]
       calc
         _ ≤ ∑ next, |(model.transition state next : ℝ) * d next| :=
           Finset.abs_sum_le_sum_abs _ _

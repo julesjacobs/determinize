@@ -47,7 +47,7 @@ private theorem splitStack_inner (stack : List Frame) :
     · rfl
     · change splitStack (frame :: (splitStack stack).1) = _
       rw [splitStack_cons, ih]
-      rw [if_neg h]
+      rw [ite_eq_right h]
 
 private theorem splitStack_append (inner : List Frame) (offsets : List Rat)
     (clean : splitStack inner = (inner, [])) :

@@ -55,7 +55,7 @@ theorem linear_nonnegative (model : Model) (paths : Paths model) (valid : paths.
   have minimum_next (i) (transient : model.kind i = .transient) (minimum : v i = M) :
       v (paths.next i) = M := by
     have h := eqs i
-    rw [if_pos transient, minimum] at h
+    rw [ite_eq_left transient, minimum] at h
     have sumDiff : (∑ j, model.transition i j * (v j - M)) =
         (∑ j, model.transition i j * v j) - M := by
       simp only [mul_sub, Finset.sum_sub_distrib, ← Finset.sum_mul, model.normalized, one_mul]
@@ -76,7 +76,7 @@ theorem linear_nonnegative (model : Model) (paths : Paths model) (valid : paths.
       · exact ih (paths.rank (paths.next i)) (rank ▸ (valid i transient).2)
           (paths.next i) rfl (minimum_next i transient minimum)
       · have h := eqs i
-        rw [if_neg transient, add_zero, minimum] at h
+        rw [ite_eq_right transient, add_zero, minimum] at h
         exact h ▸ nonnegative i
   exact fun i ↦ (descend _ smallest rfl rfl).trans (bounded i)
 

@@ -25,7 +25,7 @@ theorem paths_unique (model : Model) (paths : Paths model) (valid : paths.Valid 
   have maximum_next (state : Fin model.size) (transient : model.kind state = .transient)
       (maximum : |d state| = M) : |d (paths.next state)| = M := by
     have triangle : |d state| ≤ ∑ next, (model.transition state next : ℝ) * |d next| := by
-      rw [eqs state, if_pos transient]
+      rw [eqs state, ite_eq_left transient]
       calc
         _ ≤ ∑ next, |(model.transition state next : ℝ) * d next| := Finset.abs_sum_le_sum_abs _ _
         _ = _ := by
@@ -55,7 +55,7 @@ theorem paths_unique (model : Model) (paths : Paths model) (valid : paths.Valid 
       by_cases transient : model.kind state = .transient
       · exact ih (paths.rank (paths.next state)) (rank ▸ (valid state transient).2)
           (paths.next state) rfl (maximum_next state transient maximum)
-      · rw [eqs state, if_neg transient, abs_zero] at maximum
+      · rw [eqs state, ite_eq_right transient, abs_zero] at maximum
         exact maximum.symm
   have zero := descend (paths.rank largest) largest rfl rfl
   intro state

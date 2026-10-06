@@ -21,63 +21,6 @@ open StepTraces (retain measurable_retain FiberSound mapTraceOutput measurable_m
 open scoped ProbabilityTheory
 noncomputable section
 
-abbrev eraseOutput : StepTraces.Output → Output := mapTraceOutput retain
-
-theorem measurable_eraseOutput : Measurable eraseOutput :=
-  measurable_mapTraceOutput retain measurable_retain
-
-theorem measurable_record (site : DistributionAction × Op) (value : ℝ) :
-    Measurable (record site value) := by
-  rcases site with ⟨kind, op⟩
-  cases kind with
-  | sample affinity =>
-    cases affinity with
-    | E => exact measurable_id
-    | G => exact (StepTraces.measurable_draw_cons.comp
-        (measurable_const.prodMk measurable_fst)).prodMk measurable_snd
-  | mean => exact measurable_id
-
-theorem exact_eq_detailed (depth : Nat) (e : Expr) :
-    traceAndOutputLawAt depth e = (StepTraces.exactMeasure depth e).map eraseOutput := by
-  induction depth generalizing e with
-  | zero =>
-    cases e <;> try simp only [traceAndOutputLawAt, StepTraces.exactMeasure, Measure.map_zero]
-    case real r =>
-      simp [Measure.map_dirac' measurable_eraseOutput, eraseOutput, mapTraceOutput, retain]
-  | succ depth ih =>
-    by_cases value : e.isValue = true
-    · simp [traceAndOutputLawAt, StepTraces.exactMeasure, value]
-    · rw [traceAndOutputLawAt, StepTraces.exactMeasure, if_neg value, if_neg value]
-      cases reduction : reduce e with
-      | stuck => simp
-      | next next =>
-        simp only [ih]
-        rw [Measure.map_map measurable_eraseOutput
-          (show Measurable (StepTraces.prepend none) from
-            StepTraces.measurable_prepend.comp (measurable_const.prodMk measurable_id))]
-        congr 1
-      | sample site fiber cont =>
-        have hc := (MeasurableActionFamily.stepKernel primitiveLaws).sample_continuation_measurable
-          e fiber cont reduction
-        have hm :=
-          (StepTraces.successorKernel (StepTraces.exactKernel depth)).kernel.measurable.comp
-          ((StepTraces.measurable_generationEvent site).prodMk hc)
-        simp only [Function.comp_def] at hm
-        simp_rw [StepTraces.successorKernel_apply, StepTraces.exactKernel_apply] at hm
-        rw [StepTraces.map_bind_fun _ _ hm _ measurable_eraseOutput]
-        apply Measure.bind_congr_right
-        filter_upwards [] with r
-        rw [ih, Measure.map_map (measurable_record site r) measurable_eraseOutput,
-          Measure.map_map measurable_eraseOutput
-            (show Measurable (StepTraces.prepend (StepTraces.generationEvent site r)) from
-              StepTraces.measurable_prepend.comp (measurable_const.prodMk measurable_id))]
-        congr 1
-        funext p
-        rcases site with ⟨kind, op⟩
-        cases kind with
-        | sample affinity => cases affinity <;> rfl
-        | mean => rfl
-
 theorem joint_eq_detailed (e : Expr) :
     traceAndOutputLaw e = (StepTraces.jointMeasure e).map eraseOutput := by
   rw [traceAndOutputLaw, StepTraces.jointMeasure,

@@ -223,12 +223,12 @@ theorem typed_substAt (h : Typed (before ++ binder :: suffix) expression ty)
     rw [← hcontext] at hvar
     rcases hasVar_subst hvar with equal | shifted
     · rcases equal with ⟨rfl, rfl⟩
-      rw [Expr.substAt, Expr.mapVars, if_pos rfl]
+      rw [Expr.substAt, Expr.mapVars, ite_eq_left rfl]
       simpa only [List.nil_append, List.append_assoc, List.length_nil] using
         (typed_shift (before := []) (suffix := suffix) (inserted := before)
           replacementTyped)
     · rcases shifted with ⟨notEqual, shifted⟩
-      rw [Expr.substAt, Expr.mapVars, if_neg notEqual]
+      rw [Expr.substAt, Expr.mapVars, ite_eq_right notEqual]
       exact .bvar shifted
   | reject => rw [Expr.substAt, Expr.mapVars]; exact .reject
   | discrete hv ih =>
@@ -824,7 +824,7 @@ theorem domainSafeAt_of_value (fuel : Nat) (value : expression.isValue = true) :
     DomainSafeAt fuel expression := by
   cases fuel with
   | zero => trivial
-  | succ fuel => rw [DomainSafeAt, if_pos value]; trivial
+  | succ fuel => rw [DomainSafeAt, ite_eq_left value]; trivial
 
 end Typing
 
