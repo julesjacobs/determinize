@@ -77,7 +77,7 @@
       "Bash(lake update)"
     ],
     "deny": [
-      "Edit(sim/app.bundle.js)",
+      "Edit(sim/dist/**)",
       "Edit(sim/package-lock.json)",
       "Edit(flake.lock)",
       "Edit(lean/lake-manifest.json)",

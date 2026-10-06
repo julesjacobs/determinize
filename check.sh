@@ -22,7 +22,8 @@ while [[ $# -gt 0 ]]; do
     --changed)
       changed="$(git status --porcelain --untracked-files=all | cut -c4-)"
       grep -qE '^(check\.sh|tools/dev-shell\.sh)$' <<<"$changed" && areas+=(lean det sim bundle tex)
-      grep -qE '^sim/(src|test)/|^sim/(package(-lock)?|biome)\.json' <<<"$changed" && areas+=(sim bundle)
+      grep -qE '^sim/(src|test)/|^sim/build\.|^sim/(package(-lock)?|biome)\.json' <<<"$changed" && areas+=(sim)
+      grep -qE '^sim/(src|test)/|^sim/build\.|^sim/package(-lock)?\.json|^sim/index\.html' <<<"$changed" && areas+=(bundle)
       grep -qE '^tex/.*\.(tex|bib|cls|bst|sty)$' <<<"$changed" && areas+=(tex)
       grep -qE '^lean/.*\.lean$|^lean/(lakefile\.toml|lean-toolchain|lake-manifest\.json)$' <<<"$changed" && areas+=(lean)
       grep -qE '^tests/|^examples/|^tools/|^(test|run)\.sh$|^lean/test\.sh$' <<<"$changed" && areas+=(det)
@@ -56,12 +57,9 @@ for area in "${areas[@]}"; do
       else fail=1; report sim "npm test FAILED" "$(grep -vE '^\s*(at |\||ℹ (start|duration|suites|cancelled|skipped|todo))' <<<"$out" | tail_of)"; fi
       ;;
     bundle)
-      # The bundle is committed: if sources changed but the bundle did not, it is stale.
-      src_changed="$(git status --porcelain --untracked-files=all -- sim/src sim/package.json sim/package-lock.json | head -1)"
-      bundle_changed="$(git status --porcelain -- sim/app.bundle.js | head -1)"
-      if [[ -n "$src_changed" && -z "$bundle_changed" ]]; then
-        fail=1; report bundle "STALE: sim/src changed but sim/app.bundle.js was not rebuilt. Run: cd sim && npm run build"
-      else report bundle "OK"; fi
+      out="$(cd sim && in_shell sim npm run build 2>&1)"
+      if [[ $? -eq 0 ]]; then report bundle "npm run build OK"
+      else fail=1; report bundle "npm run build FAILED" "$(tail_of <<<"$out")"; fi
       ;;
     tex)
       out="$(cd tex && in_shell tex latexmk -pdf -interaction=nonstopmode -file-line-error -silent main.tex 2>&1)"

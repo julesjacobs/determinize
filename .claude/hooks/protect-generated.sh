@@ -7,7 +7,7 @@ file="$(rel_path "$(jfield tool_input.file_path)")"
 
 deny() { echo "Blocked edit to $file: $1" >&2; exit 2; }
 case "$file" in
-  sim/app.bundle.js) deny "it is the esbuild output. Edit sim/src/** and run 'cd sim && npm run build'." ;;
+  sim/dist/*) deny "it is the build output. Edit the sources and run 'cd sim && npm run build'." ;;
   sim/package-lock.json) deny "lockfiles change only through npm (npm install <pkg>)." ;;
   flake.lock) deny "use 'nix flake update [input]' instead." ;;
   lean/lake-manifest.json) deny "it is written by lake ('lake update mathlib' inside lean/, which asks first); never hand-edit." ;;
