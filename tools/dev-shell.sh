@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Source after setting ROOT to the repository root.
-# Use installed tools first, then an available direnv or Nix development shell.
+# Use installed tools first, then an available direnv or Nix development shell. The command runs
+# in the caller's directory.
 
 # Directory whose .envrc loads a given devshell.
 shell_dir() {
@@ -20,7 +21,7 @@ in_shell() {
   elif command -v direnv >/dev/null 2>&1 && direnv exec "$dir" true >/dev/null 2>&1; then
     direnv exec "$dir" "$@"
   elif command -v nix >/dev/null 2>&1; then
-    (cd "$ROOT" && nix develop ".#$name" --command "$@")
+    nix develop "$ROOT#$name" --command "$@"
   else
     "$@"
   fi
