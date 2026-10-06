@@ -75,7 +75,7 @@ updateDebugVisibility();
 window.addEventListener("hashchange", updateDebugVisibility);
 
 function typeHover() {
-  return hoverTooltip((view, pos) => {
+  return hoverTooltip((_view, pos) => {
     if (!latest?.ok) return null;
     const span = latest.spans.find((candidate) => candidate.from <= pos && pos <= candidate.to);
     if (!span) return null;
