@@ -146,8 +146,8 @@ function lower(env: string[], e: Expr): Input {
       if (e.mode === "E") {
         throw new CompileError("flip produces a Boolean and requires [G]", e.from, e.to);
       }
-      const draw: Input = { kind: "bernoulli", site: "G", a: lower(env, e.args[0]), ...node };
-      return { kind: "lt", a: { kind: "real", value: rational(0n), ...at(e) }, b: draw, ...at(e) };
+      const draw: Input = { kind: "bernoulli", site: "G", a: lower(env, e.args[0]), ...at(e) };
+      return { kind: "lt", a: { kind: "real", value: rational(0n), ...at(e) }, b: draw, ...node };
     }
     case "App":
       return { kind: "app", a: lower(env, e.fn), b: lower(env, e.arg), ...node };

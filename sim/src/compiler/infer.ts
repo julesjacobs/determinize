@@ -1,445 +1,363 @@
-import type { Expr, Mode, Span, TypedExpr, TypedExprOf } from "./ast.ts";
-import { CompileError } from "./errors.ts";
-import type { FloatType, Type } from "./types.ts";
-import {
-  assertSubtype,
-  defaultModesType,
-  ensureFloat,
-  formatType,
-  freshFloat,
-  freshMeta,
-  freshModeMeta,
-  resetTypeState,
-  setMode,
-  TArrow,
-  TBool,
-  TFloat,
-  TList,
-  TMeta,
-  TPair,
-  TSum,
-  TUnit,
-  zonk,
-} from "./types.ts";
+// A port of Lean's `Frontend/Infer.lean`. `infer` fills the omitted modes of an elaborated
+// program with the greatest ones that make it typable, in Lean's phases: generation of a draft
+// with a cast wherever typing uses subsumption, unification of the shapes of every cast, decoration
+// of the type variables, decomposition into atomic constraints, the greatest solution of those, and
+// read-back. It fails on exactly the programs that Lean's `infer` rejects; the failure carries
+// the span of a cast that cannot hold.
+import type { AffinityConstraint, AffinityTerm } from "./affinity.ts";
+import { evalTerm, solveAffinities } from "./affinity.ts";
+import type { Mode, Span } from "./ast.ts";
+import type { Input } from "./core.ts";
+import type { Ty } from "./types.ts";
+import type { Shape } from "./unify.ts";
+import { unify } from "./unify.ts";
 
-type Env = Map<string, Type>;
+/** Types during inference, over type variables and mode terms. */
+type UType =
+  | { tag: "var"; index: number }
+  | { tag: "unit" | "bool" }
+  | { tag: "float"; affinity: AffinityTerm }
+  | { tag: "prod" | "sum" | "arr"; a: UType; b: UType }
+  | { tag: "list"; a: UType };
 
-/** A highlighted range of the source, with its type and its hover text. */
-export interface SpanInfo {
-  from: number;
-  to: number;
-  kind: "identifier" | "distribution" | "expr";
-  type: string;
-  mode: Mode | "?" | undefined;
-  text: string;
+/** The program with a type for every node, and a cast wherever its typing uses subsumption. */
+type Draft =
+  | { tag: "node"; expression: Input; ty: UType; children: Draft[] }
+  | { tag: "cast"; body: Draft & { tag: "node" }; ty: UType };
+
+/** A subtyping constraint: the type of a cast's body is a subtype of the cast's type. */
+interface Relation {
+  lower: UType;
+  upper: UType;
+  at: Span;
 }
 
-function typed<K extends TypedExpr["kind"]>(
-  expr: Span & { kind: K },
-  typ: Type,
-  extra = {} as Omit<TypedExprOf<K>, "kind" | "typ" | "from" | "to">,
-): TypedExprOf<K> {
-  return { kind: expr.kind, typ, from: expr.from, to: expr.to, ...extra } as TypedExprOf<K>;
+/** Why inference failed: Lean's `incompatible or infinite type shapes` (`shapes`) or
+ * `inconsistent E/G constraints` (`modes`). */
+export interface InferenceFailure {
+  kind: "shapes" | "modes";
+  message: string;
+  at: Span;
 }
 
-function lookup(env: Env, name: string, source: Span): Type {
-  if (!env.has(name))
-    throw new CompileError(`unbound variable \`${name}\``, source.from, source.to);
-  return env.get(name) as Type;
-}
+export type Inference =
+  | {
+      ok: true;
+      /** The mode of every sample site of the input. */
+      modes: Map<Input, Mode>;
+      /** The type of every node of the input. */
+      types: Map<Input, Ty>;
+      type: Ty;
+    }
+  | { ok: false; failure: InferenceFailure };
 
-function extend(env: Env, entries: [string, Type][]): Env {
-  const next = new Map(env);
-  for (const [name, typ] of entries) next.set(name, typ);
-  return next;
-}
+const unit: UType = { tag: "unit" };
+const bool: UType = { tag: "bool" };
+/** The type of an operand that the typing rules require to be G. */
+const general: UType = { tag: "float", affinity: { fixed: "G" } };
 
-function forceAnnotatedMode(expr: Span & { mode: Mode | null }, typ: Type) {
-  if (!expr.mode) return;
-  const floatTy = ensureFloat(typ, expr);
-  setMode(floatTy.mode, expr.mode, expr);
-}
+/** Phase 1, Lean's `generate`. One counter numbers type and mode variables. */
+function generate(input: Input): Draft & { tag: "node" } {
+  let counter = 0;
+  const fresh = (): UType => ({ tag: "var", index: counter++ });
+  const freshFloat = (): UType => ({ tag: "float", affinity: { var: `g${counter++}` } });
+  const site = (requested: Mode | null): UType =>
+    requested ? { tag: "float", affinity: { fixed: requested } } : freshFloat();
+  const cast = (body: Draft & { tag: "node" }, ty: UType): Draft => ({ tag: "cast", body, ty });
 
-function floatG(): FloatType {
-  const mode = freshModeMeta();
-  setMode(mode, "G");
-  return TFloat(mode);
-}
-
-export function inferProgram(expr: Expr): TypedExpr {
-  resetTypeState();
-  return infer(new Map(), expr, TMeta(freshMeta()));
-}
-
-export function infer(env: Env, expr: Expr, expected: Type): TypedExpr {
-  switch (expr.kind) {
-    case "Var": {
-      const tyVar = lookup(env, expr.name, expr);
-      assertSubtype(tyVar, expected, expr);
-      return typed(expr, expected, { name: expr.name });
-    }
-    case "Lam": {
-      const dom = TMeta(freshMeta());
-      const cod = TMeta(freshMeta());
-      const body = infer(extend(env, [[expr.param, dom]]), expr.body, cod);
-      const lamTy = TArrow(dom, cod);
-      assertSubtype(lamTy, expected, expr);
-      return typed(expr, lamTy, { param: expr.param, body });
-    }
-    case "Rec": {
-      const dom = TMeta(freshMeta());
-      const cod = TMeta(freshMeta());
-      const fnTy = TArrow(dom, cod);
-      const body = infer(
-        extend(env, [
-          [expr.name, fnTy],
-          [expr.param, dom],
-        ]),
-        expr.body,
-        cod,
-      );
-      assertSubtype(body.typ, cod, expr.body);
-      assertSubtype(fnTy, expected, expr);
-      return typed(expr, fnTy, { name: expr.name, param: expr.param, body });
-    }
-    case "App": {
-      const argTy = TMeta(freshMeta());
-      const resTy = TMeta(freshMeta());
-      const fnTy = TArrow(argTy, resTy);
-      const fn = infer(env, expr.fn, fnTy);
-      const arg = infer(env, expr.arg, argTy);
-      assertSubtype(resTy, expected, expr);
-      return typed(expr, resTy, { fn, arg });
-    }
-    case "Unit":
-      assertSubtype(TUnit, expected, expr);
-      return typed(expr, TUnit);
-    case "Nil": {
-      const elem = TMeta(freshMeta());
-      const listTy = TList(elem);
-      assertSubtype(listTy, expected, expr);
-      return typed(expr, listTy);
-    }
-    case "Cons": {
-      const elem = TMeta(freshMeta());
-      const listTy = TList(elem);
-      const head = infer(env, expr.head, elem);
-      const tail = infer(env, expr.tail, listTy);
-      assertSubtype(listTy, expected, expr);
-      return typed(expr, listTy, { head, tail });
-    }
-    case "Pair": {
-      const leftTy = TMeta(freshMeta());
-      const rightTy = TMeta(freshMeta());
-      const left = infer(env, expr.left, leftTy);
-      const right = infer(env, expr.right, rightTy);
-      const pairTy = TPair(left.typ, right.typ);
-      assertSubtype(pairTy, expected, expr);
-      return typed(expr, pairTy, { left, right });
-    }
-    case "Fst": {
-      const a = TMeta(freshMeta());
-      const b = TMeta(freshMeta());
-      const exprTyped = infer(env, expr.expr, TPair(a, b));
-      assertSubtype(a, expected, expr);
-      return typed(expr, a, { expr: exprTyped });
-    }
-    case "Snd": {
-      const a = TMeta(freshMeta());
-      const b = TMeta(freshMeta());
-      const exprTyped = infer(env, expr.expr, TPair(a, b));
-      assertSubtype(b, expected, expr);
-      return typed(expr, b, { expr: exprTyped });
-    }
-    case "Inl": {
-      const leftTy = TMeta(freshMeta());
-      const rightTy = TMeta(freshMeta());
-      const value = infer(env, expr.expr, leftTy);
-      const sumTy = TSum(value.typ, rightTy);
-      assertSubtype(sumTy, expected, expr);
-      return typed(expr, sumTy, { expr: value });
-    }
-    case "Inr": {
-      const leftTy = TMeta(freshMeta());
-      const rightTy = TMeta(freshMeta());
-      const value = infer(env, expr.expr, rightTy);
-      const sumTy = TSum(leftTy, value.typ);
-      assertSubtype(sumTy, expected, expr);
-      return typed(expr, sumTy, { expr: value });
-    }
-    case "Case": {
-      const leftTy = TMeta(freshMeta());
-      const rightTy = TMeta(freshMeta());
-      const scrutinee = infer(env, expr.scrutinee, TSum(leftTy, rightTy));
-      const left = infer(extend(env, [[expr.leftName, leftTy]]), expr.left, expected);
-      const right = infer(extend(env, [[expr.rightName, rightTy]]), expr.right, expected);
-      return typed(expr, expected, {
-        scrutinee,
-        leftName: expr.leftName,
-        left,
-        rightName: expr.rightName,
-        right,
-      });
-    }
-    case "MatchList": {
-      const elemTy = TMeta(freshMeta());
-      const listTy = TList(elemTy);
-      const scrutinee = infer(env, expr.scrutinee, listTy);
-      const nilBranch = infer(env, expr.nilBranch, expected);
-      const consBranch = infer(
-        extend(env, [
-          [expr.headName, elemTy],
-          [expr.tailName, listTy],
-        ]),
-        expr.consBranch,
-        expected,
-      );
-      return typed(expr, expected, {
-        scrutinee,
-        nilBranch,
-        headName: expr.headName,
-        tailName: expr.tailName,
-        consBranch,
-      });
-    }
-    case "Bool":
-      assertSubtype(TBool, expected, expr);
-      return typed(expr, TBool, { value: expr.value });
-    case "If": {
-      const cond = infer(env, expr.cond, TBool);
-      const thenBranch = infer(env, expr.thenBranch, expected);
-      const elseBranch = infer(env, expr.elseBranch, expected);
-      return typed(expr, expected, { cond, thenBranch, elseBranch });
-    }
-    case "Let": {
-      const valueTy = TMeta(freshMeta());
-      const value = infer(env, expr.value, valueTy);
-      const body = infer(extend(env, [[expr.name, value.typ]]), expr.body, expected);
-      return typed(expr, body.typ, { name: expr.name, value, body });
-    }
-    case "Const": {
-      const ty = freshFloat();
-      assertSubtype(ty, expected, expr);
-      return typed(expr, ty, { value: expr.value });
-    }
-    case "Neg": {
-      const ty = ensureFloat(expected, expr);
-      const value = infer(env, expr.expr, ty);
-      return typed(expr, ty, { expr: value });
-    }
-    case "Add":
-    case "Sub": {
-      const ty = ensureFloat(expected, expr);
-      const left = infer(env, expr.left, ty);
-      const right = infer(env, expr.right, ty);
-      return typed(expr, ty, { left, right });
-    }
-    case "Mul": {
-      // [Mul]: general-mode left factor, the right factor carries the result mode.
-      const resTy = ensureFloat(expected, expr);
-      const left = infer(env, expr.left, floatG());
-      const right = infer(env, expr.right, resTy);
-      return typed(expr, resTy, { left, right });
-    }
-    case "Div": {
-      const resTy = ensureFloat(expected, expr);
-      const left = infer(env, expr.left, resTy);
-      const right = infer(env, expr.right, floatG());
-      return typed(expr, resTy, { left, right });
-    }
-    case "Lt":
-    case "Leq": {
-      const gTy = floatG();
-      const left = infer(env, expr.left, gTy);
-      const right = infer(env, expr.right, gTy);
-      assertSubtype(TBool, expected, expr);
-      return typed(expr, TBool, { left, right });
-    }
-    case "Uniform": {
-      const ty = ensureFloat(expected, expr);
-      forceAnnotatedMode(expr, ty);
-      return typed(expr, ty, {
-        mode: expr.mode,
-        args: [infer(env, expr.args[0], ty), infer(env, expr.args[1], ty)],
-      });
-    }
-    case "Gauss": {
-      const meanTy = ensureFloat(expected, expr);
-      forceAnnotatedMode(expr, meanTy);
-      const args = [infer(env, expr.args[0], meanTy), infer(env, expr.args[1], floatG())];
-      return typed(expr, meanTy, { mode: expr.mode, args });
-    }
-    case "Exponential": {
-      const ty = ensureFloat(expected, expr);
-      forceAnnotatedMode(expr, ty);
-      return typed(expr, ty, { mode: expr.mode, args: [infer(env, expr.args[0], floatG())] });
-    }
-    case "Gamma": {
-      const ty = ensureFloat(expected, expr);
-      forceAnnotatedMode(expr, ty);
-      return typed(expr, ty, {
-        mode: expr.mode,
-        args: [infer(env, expr.args[0], ty), infer(env, expr.args[1], floatG())],
-      });
-    }
-    case "Beta": {
-      const ty = ensureFloat(expected, expr);
-      forceAnnotatedMode(expr, ty);
-      const paramTy = floatG();
-      return typed(expr, ty, {
-        mode: expr.mode,
-        args: [infer(env, expr.args[0], paramTy), infer(env, expr.args[1], paramTy)],
-      });
-    }
-    case "Flip": {
-      const p = infer(env, expr.args[0], floatG());
-      assertSubtype(TBool, expected, expr);
-      return typed(expr, TBool, { mode: expr.mode, args: [p] });
-    }
-    case "Bernoulli":
-    case "Poisson": {
-      const ty = ensureFloat(expected, expr);
-      forceAnnotatedMode(expr, ty);
-      return typed(expr, ty, { mode: expr.mode, args: [infer(env, expr.args[0], ty)] });
-    }
-    case "DiscreteWeights": {
-      const ty = ensureFloat(expected, expr);
-      forceAnnotatedMode(expr, ty);
-      if (expr.weights.length === 0) {
-        throw new CompileError("discrete expects at least one weight", expr.from, expr.to);
+  const go = (env: UType[], e: Input): Draft & { tag: "node" } => {
+    const node = (ty: UType, children: Draft[]) =>
+      ({ tag: "node", expression: e, ty, children }) as const;
+    switch (e.kind) {
+      case "bvar":
+        return node(env[e.index], []);
+      case "reject":
+        return node(fresh(), []);
+      case "unit":
+        return node(unit, []);
+      case "bool":
+        return node(bool, []);
+      case "real":
+        return node(freshFloat(), []);
+      case "lam": {
+        const a = fresh();
+        const body = go([a, ...env], e.a);
+        return node({ tag: "arr", a, b: body.ty }, [body]);
       }
-      const choices = expr.weights.map((weight, index) => {
-        if (weight.kind !== "Const" || weight.exact === undefined) {
-          throw new CompileError("discrete expects literal weights", weight.from, weight.to);
-        }
-        if (weight.value < 0 || weight.value > 1) {
-          throw new CompileError("discrete probability must be in [0, 1]", expr.from, expr.to);
-        }
-        const value = {
-          kind: "Const",
-          value: index,
-          typ: ty,
-          from: expr.from,
-          to: expr.to,
-        } as const;
-        return { probability: weight.value, value };
-      });
-      return { kind: "Discrete", typ: ty, from: expr.from, to: expr.to, mode: expr.mode, choices };
+      case "fix": {
+        const a = fresh();
+        const r = fresh();
+        const body = go([a, { tag: "arr", a, b: r }, ...env], e.a);
+        return node({ tag: "arr", a, b: r }, [cast(body, r)]);
+      }
+      case "app": {
+        const f = go(env, e.a);
+        const x = go(env, e.b);
+        const a = fresh();
+        const r = fresh();
+        return node(r, [cast(f, { tag: "arr", a, b: r }), cast(x, a)]);
+      }
+      case "pair": {
+        const a = go(env, e.a);
+        const b = go(env, e.b);
+        return node({ tag: "prod", a: a.ty, b: b.ty }, [a, b]);
+      }
+      case "fst":
+      case "snd": {
+        const a = fresh();
+        const b = fresh();
+        const p = go(env, e.a);
+        return node(e.kind === "fst" ? a : b, [cast(p, { tag: "prod", a, b })]);
+      }
+      case "inl":
+      case "inr": {
+        const v = go(env, e.a);
+        const other = fresh();
+        const ty: UType =
+          e.kind === "inl" ? { tag: "sum", a: v.ty, b: other } : { tag: "sum", a: other, b: v.ty };
+        return node(ty, [v]);
+      }
+      case "matchSum": {
+        const l = fresh();
+        const r = fresh();
+        const t = fresh();
+        const s = go(env, e.a);
+        const a = go([l, ...env], e.b);
+        const b = go([r, ...env], e.c);
+        return node(t, [cast(s, { tag: "sum", a: l, b: r }), cast(a, t), cast(b, t)]);
+      }
+      case "nil":
+        return node({ tag: "list", a: fresh() }, []);
+      case "cons": {
+        const a = fresh();
+        const h = go(env, e.a);
+        const t = go(env, e.b);
+        return node({ tag: "list", a }, [cast(h, a), cast(t, { tag: "list", a })]);
+      }
+      case "matchList": {
+        const a = fresh();
+        const t = fresh();
+        const s = go(env, e.a);
+        const n = go(env, e.b);
+        const c = go([a, { tag: "list", a }, ...env], e.c);
+        return node(t, [cast(s, { tag: "list", a }), cast(n, t), cast(c, t)]);
+      }
+      case "ite": {
+        const t = fresh();
+        const c = go(env, e.a);
+        const a = go(env, e.b);
+        const b = go(env, e.c);
+        return node(t, [cast(c, bool), cast(a, t), cast(b, t)]);
+      }
+      case "letE": {
+        const v = go(env, e.a);
+        const b = go([v.ty, ...env], e.b);
+        return node(b.ty, [v, b]);
+      }
+      case "neg": {
+        const t = freshFloat();
+        const b = go(env, e.a);
+        return node(t, [cast(b, t)]);
+      }
+      case "add":
+      case "mul":
+      case "div":
+      case "lt": {
+        const t = freshFloat();
+        const ta = e.kind === "mul" || e.kind === "lt" ? general : t;
+        const tb = e.kind === "div" || e.kind === "lt" ? general : t;
+        const a = go(env, e.a);
+        const b = go(env, e.b);
+        return node(e.kind === "lt" ? bool : t, [cast(a, ta), cast(b, tb)]);
+      }
+      case "uniform":
+      case "gaussian":
+      case "beta":
+      case "gamma": {
+        const t = site(e.site);
+        const ta = e.kind === "beta" ? general : t;
+        const tb = e.kind === "uniform" ? t : general;
+        const a = go(env, e.a);
+        const b = go(env, e.b);
+        return node(t, [cast(a, ta), cast(b, tb)]);
+      }
+      case "discrete": {
+        const t = site(e.site);
+        const probabilities = go(env, e.a);
+        return node(t, [cast(probabilities, { tag: "list", a: t })]);
+      }
+      case "poisson":
+      case "bernoulli":
+      case "exponential": {
+        const t = site(e.site);
+        const ta = e.kind === "exponential" ? general : t;
+        const a = go(env, e.a);
+        return node(t, [cast(a, ta)]);
+      }
     }
-    case "DiscreteList": {
-      const ty = ensureFloat(expected, expr);
-      forceAnnotatedMode(expr, ty);
-      const probabilities = infer(env, expr.probabilities, TList(ty));
-      return typed(expr, ty, { mode: expr.mode, probabilities, form: expr.form });
-    }
-    case "Observe": {
-      const cond = infer(env, expr.cond, TBool);
-      assertSubtype(TUnit, expected, expr);
-      return typed(expr, TUnit, { cond });
-    }
-    default:
-      throw new CompileError(`unsupported expression kind ${expr.kind}`, expr.from, expr.to);
-  }
-}
-
-export function defaultModes(typedExpr: TypedExpr): TypedExpr {
-  const go = (te: TypedExpr) => {
-    defaultModesType(te.typ);
-    for (const child of typedChildren(te)) go(child);
   };
-  go(typedExpr);
-  return typedExpr;
+  return go([], input);
 }
 
-export function typedChildren(te: TypedExpr): TypedExpr[] {
-  switch (te.kind) {
-    case "Lam":
-    case "Rec":
-      return [te.body];
-    case "App":
-      return [te.fn, te.arg];
-    case "Pair":
-    case "Add":
-    case "Sub":
-    case "Mul":
-    case "Div":
-    case "Lt":
-    case "Leq":
-      return [te.left, te.right];
-    case "Fst":
-    case "Snd":
-    case "Inl":
-    case "Inr":
-    case "Neg":
-      return [te.expr];
-    case "Cons":
-      return [te.head, te.tail];
-    case "Case":
-      return [te.scrutinee, te.left, te.right];
-    case "MatchList":
-      return [te.scrutinee, te.nilBranch, te.consBranch];
-    case "If":
-      return [te.cond, te.thenBranch, te.elseBranch];
-    case "Let":
-      return [te.value, te.body];
-    case "Uniform":
-    case "Gauss":
-    case "Exponential":
-    case "Gamma":
-    case "Beta":
-    case "Flip":
-    case "Bernoulli":
-    case "Poisson":
-      return te.args;
-    case "Discrete":
-      return te.choices.map((choice) => choice.value);
-    case "DiscreteList":
-      return [te.probabilities];
-    case "Observe":
-      return [te.cond];
+/** Lean's `Draft.relations`: every cast's constraint before those inside its body. */
+function relations(draft: Draft, out: Relation[] = []): Relation[] {
+  if (draft.tag === "cast") {
+    out.push({ lower: draft.body.ty, upper: draft.ty, at: draft.body.expression });
+    relations(draft.body, out);
+  } else {
+    for (const child of draft.children) relations(child, out);
+  }
+  return out;
+}
+
+function shape(t: UType): Shape {
+  switch (t.tag) {
+    case "var":
+      return t;
+    case "unit":
+    case "bool":
+      return { tag: t.tag };
+    case "float":
+      return { tag: "float" };
+    case "list":
+      return { tag: "list", a: shape(t.a) };
     default:
-      return [];
+      return { tag: t.tag, a: shape(t.a), b: shape(t.b) };
   }
 }
 
-export function collectSpans(te: TypedExpr, spans: SpanInfo[] = []): SpanInfo[] {
-  spans.push({
-    from: te.from,
-    to: te.to,
-    kind: ["Var"].includes(te.kind)
-      ? "identifier"
-      : isDistribution(te.kind)
-        ? "distribution"
-        : "expr",
-    type: formatType(te.typ),
-    mode:
-      zonk(te.typ)?.tag === "Float" ? ((zonk(te.typ) as FloatType).mode.mode ?? "?") : undefined,
-    text: hoverText(te),
-  });
-  for (const child of typedChildren(te)) collectSpans(child, spans);
-  return spans;
+/** The type of a shape, with the mode variable of type variable `alpha` at each float, named by
+ * its position: the child indices from the root (Lean's `Shape.decorate` with `leaf alpha`). */
+function decorateShape(s: Shape, alpha: number, position: string): UType {
+  switch (s.tag) {
+    case "var":
+      return s;
+    case "unit":
+    case "bool":
+      return { tag: s.tag };
+    case "float":
+      return { tag: "float", affinity: { var: `l${alpha}:${position}` } };
+    case "list":
+      return { tag: "list", a: decorateShape(s.a, alpha, `${position}0`) };
+    default:
+      return {
+        tag: s.tag,
+        a: decorateShape(s.a, alpha, `${position}0`),
+        b: decorateShape(s.b, alpha, `${position}1`),
+      };
+  }
 }
 
-function hoverText(te: TypedExpr) {
-  const base = `${te.kind}: ${formatType(te.typ)}`;
-  if (!isDistribution(te.kind)) return base;
-  const mode = te.typ.tag === "Float" ? (te.typ.mode.mode ?? "?") : "?";
-  if (mode === "E") return `${base}\ndeterminizes to its expectation`;
-  if (mode === "G") return `${base}\nsampled normally`;
-  return base;
+/** Lean's `UType.decorate`: every type variable replaced by its decorated shape. */
+function decorate(theta: (index: number) => Shape, t: UType): UType {
+  switch (t.tag) {
+    case "var":
+      return decorateShape(theta(t.index), t.index, "");
+    case "unit":
+    case "bool":
+    case "float":
+      return t;
+    case "list":
+      return { tag: "list", a: decorate(theta, t.a) };
+    default:
+      return { tag: t.tag, a: decorate(theta, t.a), b: decorate(theta, t.b) };
+  }
 }
 
-function isDistribution(kind: string) {
-  return [
-    "Uniform",
-    "Gauss",
-    "Exponential",
-    "Gamma",
-    "Beta",
-    "Flip",
-    "Bernoulli",
-    "Poisson",
-    "Discrete",
-    "DiscreteList",
-  ].includes(kind);
+/** Lean's `decompose`: the atomic constraints under which `s` is a subtype of `t`, two types of
+ * the same shape. Function arguments are contravariant. */
+function decompose(s: UType, t: UType, origin: number, out: AffinityConstraint[]): void {
+  if (s.tag === "float" && t.tag === "float") {
+    out.push({ lower: s.affinity, upper: t.affinity, origin });
+  } else if (s.tag === "arr" && t.tag === "arr") {
+    decompose(t.a, s.a, origin, out);
+    decompose(s.b, t.b, origin, out);
+  } else if ((s.tag === "prod" || s.tag === "sum") && s.tag === t.tag) {
+    decompose(s.a, t.a, origin, out);
+    decompose(s.b, t.b, origin, out);
+  } else if (s.tag === "list" && t.tag === "list") {
+    decompose(s.a, t.a, origin, out);
+  }
+}
+
+/** A type in the solution; the remaining type variables are unconstrained and become unit. */
+function instantiate(t: UType, rho: (v: string) => Mode): Ty {
+  switch (t.tag) {
+    case "var":
+    case "unit":
+      return { tag: "unit" };
+    case "bool":
+      return { tag: "bool" };
+    case "float":
+      return { tag: "float", mode: evalTerm(t.affinity, rho) };
+    case "list":
+      return { tag: "list", a: instantiate(t.a, rho) };
+    default:
+      return { tag: t.tag, a: instantiate(t.a, rho), b: instantiate(t.b, rho) };
+  }
+}
+
+/** A shape for a message. */
+function describe(s: Shape, prec = 0): string {
+  const wrap = (text: string, level: number) => (prec > level ? `(${text})` : text);
+  switch (s.tag) {
+    case "var":
+      return "unknown";
+    case "unit":
+    case "bool":
+    case "float":
+      return s.tag;
+    case "list":
+      return `[${describe(s.a)}]`;
+    case "prod":
+      return wrap(`${describe(s.a, 3)} * ${describe(s.b, 3)}`, 2);
+    case "sum":
+      return wrap(`${describe(s.a, 3)} + ${describe(s.b, 3)}`, 2);
+    case "arr":
+      return wrap(`${describe(s.a, 1)} -> ${describe(s.b, 0)}`, 0);
+  }
+}
+
+/** Lean's `infer`: the modes of the sites and the types of the nodes, or why none exist. */
+export function infer(input: Input): Inference {
+  const draft = generate(input);
+  const constraints = relations(draft);
+  const unification = unify(
+    constraints.map((r, origin) => ({ left: shape(r.lower), right: shape(r.upper), origin })),
+  );
+  if (!unification.ok) {
+    const relation = constraints[unification.origin];
+    const found = describe(unification.resolve(shape(relation.lower)));
+    const expected = describe(unification.resolve(shape(relation.upper)));
+    const message =
+      unification.reason === "infinite"
+        ? "infinite type: the type of this expression would have to contain itself"
+        : `type mismatch: expected ${expected}, found ${found}`;
+    return { ok: false, failure: { kind: "shapes", message, at: relation.at } };
+  }
+  const theta = unification.unifier;
+  const atomic: AffinityConstraint[] = [];
+  for (const [origin, r] of constraints.entries()) {
+    decompose(decorate(theta, r.lower), decorate(theta, r.upper), origin, atomic);
+  }
+  const solution = solveAffinities(atomic);
+  if (!solution.ok) {
+    const message = "mode mismatch: an [E] value is used where a G value is required";
+    return {
+      ok: false,
+      failure: { kind: "modes", message, at: constraints[solution.violated.origin].at },
+    };
+  }
+  const { rho } = solution;
+  const modes = new Map<Input, Mode>();
+  const types = new Map<Input, Ty>();
+  const readBack = (d: Draft): void => {
+    const n = d.tag === "cast" ? d.body : d;
+    const ty = instantiate(decorate(theta, n.ty), rho);
+    types.set(n.expression, ty);
+    if ("site" in n.expression) modes.set(n.expression, ty.tag === "float" ? ty.mode : "G");
+    for (const child of n.children) readBack(child);
+  };
+  readBack(draft);
+  return { ok: true, modes, types, type: instantiate(decorate(theta, draft.ty), rho) };
 }

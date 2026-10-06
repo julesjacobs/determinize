@@ -1,172 +1,124 @@
-import type { Expr, ExprOf, MeanKind, Span, TypedExpr } from "./ast.ts";
+import type { Expr, Mode } from "./ast.ts";
 import { node } from "./ast.ts";
-import { zonk } from "./types.ts";
 
-function exprNode<K extends Expr["kind"]>(
-  kind: K,
-  props: Omit<ExprOf<K>, "kind" | "from" | "to">,
-  from: number | undefined,
-  to: number | undefined,
-): ExprOf<K> {
-  return node(kind, props, from ?? 0, to ?? from ?? 0);
-}
-
-function floatMode(typedExpr: TypedExpr) {
-  const ty = zonk(typedExpr.typ);
-  return ty.tag === "Float" ? ty.mode.mode : null;
-}
-
-export function determinize(typedExpr: TypedExpr): Expr {
-  return ofTyped(typedExpr);
-}
-
-function ofTyped(te: TypedExpr): Expr {
-  switch (te.kind) {
+/**
+ * The parsed program with the mode of every sample site, in the simulator's forms: Lean's
+ * annotated program before desugaring. With `means`, every E site becomes the mean of its
+ * distribution, as Lean's `Expr.determinize` turns the annotated program into the determinized
+ * one; the draws that stay keep no annotation. Literal discrete weights become choices.
+ */
+export function annotate(e: Expr, modeOf: (site: Expr) => Mode, means = false): Expr {
+  const go = (child: Expr) => annotate(child, modeOf, means);
+  const at = [e.from, e.to] as const;
+  switch (e.kind) {
     case "Var":
-      return exprNode("Var", { name: te.name }, te.from, te.to);
-    case "Lam":
-      return exprNode("Lam", { param: te.param, body: ofTyped(te.body) }, te.from, te.to);
-    case "Rec":
-      return exprNode(
-        "Rec",
-        { name: te.name, param: te.param, body: ofTyped(te.body) },
-        te.from,
-        te.to,
-      );
-    case "App":
-      return exprNode("App", { fn: ofTyped(te.fn), arg: ofTyped(te.arg) }, te.from, te.to);
+    case "Bool":
     case "Unit":
-      return exprNode("Unit", {}, te.from, te.to);
+    case "Nil":
+      return e;
+    case "Const":
+      return node("Const", { value: e.value }, ...at);
+    case "Lam":
+      return node("Lam", { param: e.param, body: go(e.body) }, ...at);
+    case "Rec":
+      return node("Rec", { name: e.name, param: e.param, body: go(e.body) }, ...at);
+    case "App":
+      return node("App", { fn: go(e.fn), arg: go(e.arg) }, ...at);
     case "Pair":
-      return exprNode("Pair", { left: ofTyped(te.left), right: ofTyped(te.right) }, te.from, te.to);
+    case "Add":
+    case "Sub":
+    case "Mul":
+    case "Div":
+    case "Lt":
+    case "Leq":
+      return node(e.kind, { left: go(e.left), right: go(e.right) }, ...at);
     case "Fst":
     case "Snd":
     case "Inl":
     case "Inr":
     case "Neg":
-      return exprNode(te.kind, { expr: ofTyped(te.expr) }, te.from, te.to);
-    case "Nil":
-      return exprNode("Nil", {}, te.from, te.to);
+      return node(e.kind, { expr: go(e.expr) }, ...at);
     case "Cons":
-      return exprNode("Cons", { head: ofTyped(te.head), tail: ofTyped(te.tail) }, te.from, te.to);
+      return node("Cons", { head: go(e.head), tail: go(e.tail) }, ...at);
     case "Case":
-      return exprNode(
+      return node(
         "Case",
         {
-          scrutinee: ofTyped(te.scrutinee),
-          leftName: te.leftName,
-          left: ofTyped(te.left),
-          rightName: te.rightName,
-          right: ofTyped(te.right),
+          scrutinee: go(e.scrutinee),
+          leftName: e.leftName,
+          left: go(e.left),
+          rightName: e.rightName,
+          right: go(e.right),
         },
-        te.from,
-        te.to,
+        ...at,
       );
     case "MatchList":
-      return exprNode(
+      return node(
         "MatchList",
         {
-          scrutinee: ofTyped(te.scrutinee),
-          nilBranch: ofTyped(te.nilBranch),
-          headName: te.headName,
-          tailName: te.tailName,
-          consBranch: ofTyped(te.consBranch),
+          scrutinee: go(e.scrutinee),
+          nilBranch: go(e.nilBranch),
+          headName: e.headName,
+          tailName: e.tailName,
+          consBranch: go(e.consBranch),
         },
-        te.from,
-        te.to,
+        ...at,
       );
-    case "Bool":
-      return exprNode("Bool", { value: te.value }, te.from, te.to);
     case "If":
-      return exprNode(
+      return node(
         "If",
-        {
-          cond: ofTyped(te.cond),
-          thenBranch: ofTyped(te.thenBranch),
-          elseBranch: ofTyped(te.elseBranch),
-        },
-        te.from,
-        te.to,
+        { cond: go(e.cond), thenBranch: go(e.thenBranch), elseBranch: go(e.elseBranch) },
+        ...at,
       );
     case "Let":
-      return exprNode(
-        "Let",
-        { name: te.name, value: ofTyped(te.value), body: ofTyped(te.body) },
-        te.from,
-        te.to,
-      );
-    case "Const":
-      return exprNode("Const", { value: te.value }, te.from, te.to);
-    case "Add":
-    case "Mul":
-    case "Sub":
-    case "Div":
-    case "Lt":
-    case "Leq":
-      return exprNode(
-        te.kind,
-        { left: ofTyped(te.left), right: ofTyped(te.right) },
-        te.from,
-        te.to,
-      );
-    case "Uniform":
-      if (floatMode(te) === "E") return meanNode(te.kind, te.args.map(ofTyped), te);
-      return exprNode("Uniform", { mode: null, args: te.args.map(ofTyped) }, te.from, te.to);
-    case "Gauss":
-      if (floatMode(te) === "E") return meanNode(te.kind, te.args.map(ofTyped), te);
-      return exprNode("Gauss", { mode: null, args: te.args.map(ofTyped) }, te.from, te.to);
-    case "Exponential":
-      if (floatMode(te) === "E") return meanNode(te.kind, te.args.map(ofTyped), te);
-      return exprNode("Exponential", { mode: null, args: te.args.map(ofTyped) }, te.from, te.to);
-    case "Gamma":
-      if (floatMode(te) === "E") return meanNode(te.kind, te.args.map(ofTyped), te);
-      return exprNode("Gamma", { mode: null, args: te.args.map(ofTyped) }, te.from, te.to);
-    case "Beta":
-      if (floatMode(te) === "E") return meanNode(te.kind, te.args.map(ofTyped), te);
-      return exprNode("Beta", { mode: null, args: te.args.map(ofTyped) }, te.from, te.to);
-    case "Flip":
-      return exprNode("Flip", { mode: null, args: te.args.map(ofTyped) }, te.from, te.to);
-    case "Bernoulli":
-    case "Poisson":
-      if (floatMode(te) === "E") return meanNode(te.kind, te.args.map(ofTyped), te);
-      return exprNode(te.kind, { mode: null, args: te.args.map(ofTyped) }, te.from, te.to);
-    case "Discrete":
-      if (floatMode(te) === "E") {
-        return meanNode(
-          "Discrete",
-          te.choices.map((choice) =>
-            exprNode("Const", { value: choice.probability }, te.from, te.to),
-          ),
-          te,
-        );
-      }
-      return exprNode(
-        "Discrete",
-        {
-          mode: null,
-          choices: te.choices.map((choice) => ({
-            probability: choice.probability,
-            value: ofTyped(choice.value),
-          })),
-        },
-        te.from,
-        te.to,
-      );
-    case "DiscreteList":
-      if (floatMode(te) === "E") return meanNode(te.kind, [ofTyped(te.probabilities)], te);
-      return exprNode(
-        "DiscreteList",
-        { mode: null, probabilities: ofTyped(te.probabilities), form: te.form },
-        te.from,
-        te.to,
-      );
+      return node("Let", { name: e.name, value: go(e.value), body: go(e.body) }, ...at);
     case "Observe":
-      return exprNode("Observe", { cond: ofTyped(te.cond) }, te.from, te.to);
+      return node("Observe", { cond: go(e.cond) }, ...at);
+    case "Flip":
+      // flip(p) samples bernoulli[G](p).
+      return node("Flip", { mode: means ? null : "G", args: e.args.map(go) }, ...at);
+    case "Uniform":
+    case "Gauss":
+    case "Exponential":
+    case "Gamma":
+    case "Beta":
+    case "Bernoulli":
+    case "Poisson": {
+      const mode = modeOf(e);
+      const args = e.args.map(go);
+      if (!means) return node(e.kind, { mode, args }, ...at);
+      if (mode === "E") return node("Mean", { distribution: e.kind, args }, ...at);
+      return node(e.kind, { mode: null, args }, ...at);
+    }
+    case "DiscreteWeights": {
+      const mode = modeOf(e);
+      const probabilities = e.weights.map((weight) => {
+        if (weight.kind !== "Const") throw new Error("discrete weights are not literals");
+        return weight.value;
+      });
+      if (means && mode === "E") {
+        const args = probabilities.map((value) => node("Const", { value }, ...at));
+        return node("Mean", { distribution: "Discrete", args }, ...at);
+      }
+      const choices = probabilities.map((probability, index) => ({
+        probability,
+        value: node("Const", { value: index }, ...at),
+      }));
+      return node("Discrete", { mode: means ? null : mode, choices }, ...at);
+    }
+    case "DiscreteList": {
+      const mode = modeOf(e);
+      const probabilities = go(e.probabilities);
+      if (means && mode === "E") {
+        return node("Mean", { distribution: "DiscreteList", args: [probabilities] }, ...at);
+      }
+      return node(
+        "DiscreteList",
+        { mode: means ? null : mode, probabilities, form: e.form },
+        ...at,
+      );
+    }
     default:
-      throw new Error(`unsupported typed expression ${(te as TypedExpr).kind}`);
+      throw new Error(`a parsed program has no ${e.kind}`);
   }
-}
-
-function meanNode(distribution: MeanKind, args: Expr[], source: Span) {
-  return exprNode("Mean", { distribution, args }, source.from, source.to);
 }

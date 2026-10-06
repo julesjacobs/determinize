@@ -1,18 +1,9 @@
-import type {
-  Expr,
-  ExprOf,
-  MeanKind,
-  Mode,
-  ParamDistributionKind,
-  Span,
-  TypedExpr,
-} from "../compiler/ast.ts";
+import { analyze } from "../compiler/analyze.ts";
+import type { Expr, ExprOf, MeanKind, ParamDistributionKind, Span } from "../compiler/ast.ts";
 import { node } from "../compiler/ast.ts";
-import { determinize } from "../compiler/determinize.ts";
-import { defaultModes, inferProgram } from "../compiler/infer.ts";
+import { CompileError } from "../compiler/errors.ts";
 import { parse } from "../compiler/parser.ts";
 import { prettyExpr } from "../compiler/pretty.ts";
-import { zonk } from "../compiler/types.ts";
 import type { Affine } from "./affine.ts";
 import {
   affineAdd,
@@ -79,7 +70,6 @@ interface StepResult extends ContextPatch {
 export interface Prepared {
   expr: Expr;
   determinized: Expr;
-  typed: TypedExpr | null;
   unchecked?: boolean;
 }
 
@@ -134,14 +124,16 @@ type Safe<T> =
   | { ok: true; value: T; error?: undefined }
   | { ok: false; error: string; value?: undefined };
 
+/** The annotated and the determinized program that the front end produces. */
 export function prepareRuntime(source: string): Prepared {
-  const ast = parse(source);
-  const typed = inferProgram(ast);
-  defaultModes(typed);
+  const analysis = analyze(source);
+  if (!analysis.ok) {
+    const [diagnostic] = analysis.diagnostics;
+    throw new CompileError(diagnostic.message, diagnostic.from, diagnostic.to);
+  }
   return {
-    expr: runtimeFromTyped(typed),
-    determinized: runtimeFromAst(determinize(typed)),
-    typed,
+    expr: runtimeFromAst(analysis.annotated),
+    determinized: runtimeFromAst(analysis.determinized),
   };
 }
 
@@ -151,121 +143,8 @@ export function prepareRuntimeUnchecked(source: string): Prepared {
   return {
     expr,
     determinized: determinizeResidual(expr),
-    typed: null,
     unchecked: true,
   };
-}
-
-export function runtimeFromTyped(te: TypedExpr): Expr {
-  const distMode = (): Mode => {
-    if (!floatDistributions.has(te.kind)) return "G";
-    const ty = zonk(te.typ);
-    return ty?.tag === "Float" ? (ty.mode.mode ?? "E") : "G";
-  };
-  switch (te.kind) {
-    case "Var":
-      return n("Var", { name: te.name }, te);
-    case "Lam":
-      return n("Lam", { param: te.param, body: runtimeFromTyped(te.body) }, te);
-    case "Rec":
-      return n("Rec", { name: te.name, param: te.param, body: runtimeFromTyped(te.body) }, te);
-    case "App":
-      return n("App", { fn: runtimeFromTyped(te.fn), arg: runtimeFromTyped(te.arg) }, te);
-    case "Unit":
-    case "Nil":
-      return n(te.kind, {}, te);
-    case "Pair":
-    case "Add":
-    case "Sub":
-    case "Mul":
-    case "Div":
-    case "Lt":
-    case "Leq":
-      return n(te.kind, { left: runtimeFromTyped(te.left), right: runtimeFromTyped(te.right) }, te);
-    case "Fst":
-    case "Snd":
-    case "Inl":
-    case "Inr":
-    case "Neg":
-      return n(te.kind, { expr: runtimeFromTyped(te.expr) }, te);
-    case "Cons":
-      return n("Cons", { head: runtimeFromTyped(te.head), tail: runtimeFromTyped(te.tail) }, te);
-    case "Case":
-      return n(
-        "Case",
-        {
-          scrutinee: runtimeFromTyped(te.scrutinee),
-          leftName: te.leftName,
-          left: runtimeFromTyped(te.left),
-          rightName: te.rightName,
-          right: runtimeFromTyped(te.right),
-        },
-        te,
-      );
-    case "MatchList":
-      return n(
-        "MatchList",
-        {
-          scrutinee: runtimeFromTyped(te.scrutinee),
-          nilBranch: runtimeFromTyped(te.nilBranch),
-          headName: te.headName,
-          tailName: te.tailName,
-          consBranch: runtimeFromTyped(te.consBranch),
-        },
-        te,
-      );
-    case "Bool":
-      return n("Bool", { value: te.value }, te);
-    case "If":
-      return n(
-        "If",
-        {
-          cond: runtimeFromTyped(te.cond),
-          thenBranch: runtimeFromTyped(te.thenBranch),
-          elseBranch: runtimeFromTyped(te.elseBranch),
-        },
-        te,
-      );
-    case "Let":
-      return n(
-        "Let",
-        { name: te.name, value: runtimeFromTyped(te.value), body: runtimeFromTyped(te.body) },
-        te,
-      );
-    case "Const":
-      return n("Const", { value: te.value }, te);
-    case "Uniform":
-    case "Gauss":
-    case "Exponential":
-    case "Gamma":
-    case "Beta":
-    case "Flip":
-    case "Bernoulli":
-    case "Poisson":
-      return n(te.kind, { mode: distMode(), args: te.args.map(runtimeFromTyped) }, te);
-    case "Discrete":
-      return n(
-        "Discrete",
-        {
-          mode: distMode(),
-          choices: te.choices.map((choice) => ({
-            probability: choice.probability,
-            value: runtimeFromTyped(choice.value),
-          })),
-        },
-        te,
-      );
-    case "DiscreteList":
-      return n(
-        "DiscreteList",
-        { mode: distMode(), probabilities: runtimeFromTyped(te.probabilities), form: te.form },
-        te,
-      );
-    case "Observe":
-      return n("Observe", { cond: runtimeFromTyped(te.cond) }, te);
-    default:
-      throw new Error(`unsupported typed expression ${(te as TypedExpr).kind}`);
-  }
 }
 
 export function runtimeFromAst(expr: Expr): Expr {
