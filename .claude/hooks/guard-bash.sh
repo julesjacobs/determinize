@@ -39,8 +39,12 @@ if re.search(r"\bnix\s+flake\s+(update|lock)\b", cmd):
 if re.search(r"\blake\s+update\b", cmd):
     ask("This rewrites lean/lake-manifest.json (the pinned Mathlib revision); lean/lean-toolchain must then "
         "match Mathlib's, and everyone needs a fresh 'lake exe cache get'.")
-if re.search(r"\bnpm\s+(install|i|add|update|up|uninstall|rm|audit\s+fix)\b", cmd) and not re.search(r"\bnpm\s+ci\b", cmd):
-    ask("This changes sim/package.json or sim/package-lock.json.")
+if re.search(r"\bnpm\s+ci\b", cmd):
+    ask("The dev shell links sim/node_modules into the Nix store; npm ci deletes the links and, as sim/.npmrc "
+        "sets package-lock-only, installs nothing. Without Nix, use 'npm ci --package-lock-only=false'.")
+if re.search(r"\bnpm\s+(install|i|add|update|up|uninstall|rm|audit\s+fix)\b", cmd):
+    ask("This changes sim/package.json or sim/package-lock.json. Use --package-lock-only (sim/.npmrc sets it), "
+        "then reload the dev shell, which rebuilds sim/node_modules from the lockfile.")
 if re.search(r"\bgit\s+push\b", cmd):
     ask("Pushing to the shared remote.")
 PY

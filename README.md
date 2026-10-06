@@ -112,12 +112,20 @@ Evaluation examples with unbounded recursion:
 ## Simulator and paper
 
 ```sh
-(cd sim && biome ci . && npm ci && npm test && npm run build)
+(cd sim && biome ci . && npm test && npm run build)
 (cd tex && latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex)
 ```
 
 Biome formats and lints the simulator as configured in `sim/biome.json`;
 `biome check --write .` in `sim/` applies its formatting and safe fixes.
+
+The `.#sim` shell, which direnv loads in `sim/`, links `sim/node_modules` to packages that
+Nix builds from `sim/package-lock.json`; the combined shell does not. To add or update a
+dependency, run `npm install <pkg>@<version>` in `sim/`, which changes only `package.json`
+and `package-lock.json` because `sim/.npmrc` sets `package-lock-only`, and reload the
+shell. A `sim/node_modules` left by an earlier `npm ci` blocks the links: remove it once
+with `rm -rf sim/node_modules`. Without Nix, `npm ci --package-lock-only=false` installs
+the packages.
 
 The new paper starts at `tex/main.tex`, with one file per section in `tex/sections/`,
 formal figures in `tex/figures/`, and supporting material in `tex/appendix/`, following
