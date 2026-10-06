@@ -4,7 +4,7 @@
 #   sim/src, sim/test -> node --test
 #   tex/*.tex -> chktex lint of that file
 #   lean/**.lean -> lake build (fails fast with a hint if the Mathlib cache is absent)
-#   toolchain files -> remind to run /learn-tool
+#   toolchain files -> remind to git add new files
 #   *.det     -> remind to update corpus expectations
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 read_hook_input
@@ -40,7 +40,7 @@ case "$file" in
     }
     ;;
   flake.nix|flake-modules/*|sim/package.json|*.envrc|lean/lakefile.toml|lean/lean-toolchain)
-    emit_context PostToolUse "Toolchain definition changed ($file). If this adds a new tool or dependency, run the learn-tool skill for it (/learn-tool <name>) so its best practices get captured in .claude/rules/ before you rely on it. New files must be 'git add'ed before Nix can see them."
+    emit_context PostToolUse "Toolchain definition changed ($file). New files must be 'git add'ed before Nix can see them."
     ;;
   tests/*.det|tests/*/*.det|tests/*/*/*.det|tests/*/*/*/*.det|examples/*.det|examples/*/*.det)
     emit_context PostToolUse "$file changed: register its expectations in tests/cases.toml and run ./lean/test.sh (or --all for statistical cases)."
