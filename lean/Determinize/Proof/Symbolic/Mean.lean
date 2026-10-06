@@ -26,7 +26,7 @@ theorem primitiveFiber_mean_formula (op : Op) (affine : List (Affine n)) (genera
         Measure.dirac ((meanAffine op affine general).eval environment) else 0 := by
   have ha' : (affine.map (Affine.eval · environment)).length = affineArity op := by simpa using ha
   unfold primitiveFiber parseParams
-  rw [dif_pos ha', dif_pos hg]
+  rw [dite_eq_left ha', dite_eq_left hg]
   simp only
   have paramsEq : ((fun i : Fin (affineArity op) ↦
       (affine.map (Affine.eval · environment))[i.1]'(ha'.symm ▸ i.2)),

@@ -281,8 +281,8 @@ theorem addition_guard_upper (offsets : List Rat) (nonempty : offsets ≠ [])
     · have one : 1 ≤ n := by
         have := List.length_pos_iff.mpr nonempty
         omega
-      simp only [if_pos enough, List.length_singleton, if_pos one, List.sum_cons, List.sum_nil,
-        add_zero, shift_dirac]
+      simp only [ite_eq_left enough, List.length_singleton, ite_eq_left one, List.sum_cons,
+        List.sum_nil, add_zero, shift_dirac]
       rfl
     · simp [enough, Measure.zero_le]
   induction n generalizing state with

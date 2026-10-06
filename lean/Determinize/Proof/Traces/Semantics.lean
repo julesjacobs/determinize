@@ -33,7 +33,7 @@ theorem measurable_trace_cons :
   apply measurable_comap_iff.mpr
   apply Measurable.prodMk
   · exact (measurable_trace_length.comp measurable_snd).add_const 1
-  · apply measurable_pi_lambda
+  · apply Measurable.of_eval
     intro index
     cases index with
     | zero => exact measurable_fst
@@ -43,7 +43,7 @@ theorem measurable_trace_tail : Measurable (List.tail : Trace → Trace) := by
   apply measurable_comap_iff.mpr
   apply Measurable.prodMk
   · simpa using measurable_trace_length.sub_const 1
-  · apply measurable_pi_lambda
+  · apply Measurable.of_eval
     intro index
     simpa using measurable_trace_event (index + 1)
 
@@ -110,8 +110,8 @@ theorem recordKernel_apply {α : Type*} [MeasurableSpace α] {action : α → Ac
             ((recordKernel falseFamily).kernel parameter) := rfl
       _ = _ := by
         by_cases member : parameter ∈ region
-        · simpa only [Set.piecewise, if_pos member] using ihTrue
-        · simpa only [Set.piecewise, if_neg member] using ihFalse
+        · simpa only [Set.piecewise, ite_eq_left member] using ihTrue
+        · simpa only [Set.piecewise, ite_eq_right member] using ihFalse
 
 open scoped Classical in
 def recordSkeletonKernel (skeleton : Skeleton) : Kernel Expr (Event × Expr) :=
@@ -129,10 +129,10 @@ theorem recordSkeletonKernel_apply (skeleton : Skeleton) (expression : Expr) :
   unfold recordSkeletonKernel
   rw [Kernel.piecewise_apply]
   by_cases member : expression.skeleton = skeleton
-  · rw [if_pos (show expression ∈ SkeletonFiber skeleton from member), if_pos member,
+  · rw [ite_eq_left (show expression ∈ SkeletonFiber skeleton from member), ite_eq_left member,
       Kernel.comap_apply, recordKernel_apply,
       MeasurableActionFamily.toSkeletonFiber_coe_of_mem _ _ member]
-  · rw [if_neg (show expression ∉ SkeletonFiber skeleton from member), if_neg member]
+  · rw [ite_eq_right (show expression ∉ SkeletonFiber skeleton from member), ite_eq_right member]
     rfl
 
 theorem isSFiniteKernel_recordSkeletonKernel (skeleton : Skeleton) :
@@ -157,9 +157,9 @@ theorem tracedStepKernel_apply (expression : Expr) :
   rw [Kernel.sum_apply]
   ext set measurableSet
   rw [Measure.sum_apply _ measurableSet, tsum_eq_single expression.skeleton]
-  · rw [recordSkeletonKernel_apply, if_pos rfl]
+  · rw [recordSkeletonKernel_apply, ite_eq_left rfl]
   · intro skeleton different
-    rw [recordSkeletonKernel_apply, if_neg (Ne.symm different)]
+    rw [recordSkeletonKernel_apply, ite_eq_right (Ne.symm different)]
     rfl
 
 theorem tracedStep_erasure (expression : Expr) :
@@ -223,7 +223,8 @@ theorem exactKernel_apply (depth : Nat) (expression : Expr) :
     by_cases value : expression.isValue = true
     · simp [MeasurableActionFamily.valueSet, value, exactMeasure]
     · have notMember : expression ∉ MeasurableActionFamily.valueSet := value
-      rw [if_neg notMember, exactMeasure, if_neg value, Kernel.comp_apply, tracedStepKernel_apply]
+      rw [ite_eq_right notMember, exactMeasure, ite_eq_right value, Kernel.comp_apply,
+        tracedStepKernel_apply]
       cases reduction : reduce expression with
       | next next =>
         rw [record, Measure.dirac_bind (successorKernel (exactKernel depth)).kernel.measurable,
@@ -244,7 +245,7 @@ theorem exact_succ_kernel (depth : Nat) (expression : Expr)
       (record (reduce expression)).bind (successorKernel (exactKernel depth)).kernel := by
   classical
   rw [← exactKernel_apply, exactKernel, SFiniteKernel.piecewise, Kernel.piecewise_apply,
-    if_neg (show expression ∉ MeasurableActionFamily.valueSet from notValue),
+    ite_eq_right (show expression ∉ MeasurableActionFamily.valueSet from notValue),
     Kernel.comp_apply, tracedStepKernel_apply]
 
 theorem exact_erasure (step : StepKernel) (depth : Nat) (expression : Expr) :
@@ -257,7 +258,7 @@ theorem exact_erasure (step : StepKernel) (depth : Nat) (expression : Expr) :
     by_cases value : expression.isValue = true
     · simp [exactMeasure, exactOutputMeasure, value]
     · rw [exact_succ_kernel depth expression value, map_bind _ _ _ measurable_snd,
-        exactOutputMeasure, if_neg value, step.kernel_eq_stepMeasure,
+        exactOutputMeasure, ite_eq_right value, step.kernel_eq_stepMeasure,
         ← tracedStep_erasure expression]
       have ordinaryEq : exactOutputMeasure step depth =
           MeasurableActionFamily.exactOutputKernel step depth := by

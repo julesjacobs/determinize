@@ -31,7 +31,7 @@ theorem completed_sample (affinity : Affinity) (p : List Rat) (d : Spec.Paper.Fi
     (completed : d.probabilities = p ++ [1 - p.sum]) :
     discreteFiber (.sample affinity) (p.map (Rat.cast : Rat → ℝ)) =
         d.measure (fun i ↦ (i : ℝ)) := by
-  rw [discreteFiber, if_pos (completed_domain p d completed), sum_getElem,
+  rw [discreteFiber, ite_eq_left (completed_domain p d completed), sum_getElem,
     Spec.Paper.FiniteDistribution.measure, completed,
     List.zipIdx_append, List.map_append, List.sum_append]
   rw [← sum_zipIdx (p.map (Rat.cast : Rat → ℝ))
@@ -45,6 +45,6 @@ theorem completed_mean (p : List Rat) (d : Spec.Paper.FiniteDistribution)
     integral_id_discreteFiber (.sample .G) (p.map (Rat.cast : Rat → ℝ))
       (completed_domain p d completed)
   rw [completed_sample .G p d completed, FiniteDistribution.mean] at expectation
-  rw [discreteFiber, if_pos (completed_domain p d completed), ← expectation]
+  rw [discreteFiber, ite_eq_left (completed_domain p d completed), ← expectation]
 
 end Determinize.Proof.DiscreteLaws

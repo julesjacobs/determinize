@@ -29,7 +29,7 @@ theorem measurable_draw_cons :
     Measurable (fun p : (Op × ℝ) × DrawTrace ↦ p.1 :: p.2) := by
   apply measurable_comap_iff.mpr
   refine Measurable.prodMk ((measurable_draw_length.comp measurable_snd).add_const 1) ?_
-  apply measurable_pi_lambda
+  apply Measurable.of_eval
   intro i
   cases i with
   | zero => exact measurable_fst
@@ -39,7 +39,7 @@ theorem measurable_draw_tail : Measurable (List.tail : DrawTrace → DrawTrace) 
   apply measurable_comap_iff.mpr
   refine Measurable.prodMk ?_ ?_
   · simpa using measurable_draw_length.sub_const 1
-  · apply measurable_pi_lambda
+  · apply Measurable.of_eval
     intro i
     simpa using measurable_draw_event (i + 1)
 

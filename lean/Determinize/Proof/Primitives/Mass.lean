@@ -73,7 +73,7 @@ theorem discreteFiber_mass_le_one (action : DistributionAction) (p : List ℝ) :
   by_cases valid : (∀ i : Fin p.length, 0 ≤ p[i]) ∧ ∑ i : Fin p.length, p[i] ≤ 1
   · let := DiscreteLaws.isProbabilityMeasure_discreteFiber action p valid
     exact prob_le_one
-  · unfold discreteFiber; rw [if_neg valid]; simp
+  · unfold discreteFiber; rw [ite_eq_right valid]; simp
 
 theorem Action.wrap_eq_sample {context : Expr → Expr} {action : Action}
     {fiber : Measure ℝ} {continuation : ℝ → Expr}

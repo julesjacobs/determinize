@@ -1,5 +1,5 @@
 import Mathlib.Data.Fin.Basic
-import Mathlib.Data.Real.Basic
+import Mathlib.Basic.Real.Basic
 
 /-!
 # Environments of E-affinity draws

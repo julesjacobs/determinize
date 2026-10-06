@@ -33,18 +33,18 @@ theorem outputGivenTraceAt_zero_cons (expression : Expr) (head : Op × ℝ) (tap
 theorem outputGivenTraceAt_succ_value (depth : Nat) {expression : Expr}
     (value : expression.isValue = true)
     (tape : DrawTrace) : outputGivenTraceAt (depth + 1) expression tape = 0 := by
-  rw [outputGivenTraceAt, if_pos value]
+  rw [outputGivenTraceAt, ite_eq_left value]
 
 theorem outputGivenTraceAt_succ_next (depth : Nat) {expression next : Expr}
     (notValue : expression.isValue ≠ true) (reduction : reduce expression = .next next)
     (tape : DrawTrace) :
     outputGivenTraceAt (depth + 1) expression tape = outputGivenTraceAt depth next tape := by
-  rw [outputGivenTraceAt, if_neg notValue, reduction]
+  rw [outputGivenTraceAt, ite_eq_right notValue, reduction]
 
 theorem outputGivenTraceAt_succ_stuck (depth : Nat) {expression : Expr}
     (notValue : expression.isValue ≠ true) (reduction : reduce expression = .stuck)
     (tape : DrawTrace) : outputGivenTraceAt (depth + 1) expression tape = 0 := by
-  rw [outputGivenTraceAt, if_neg notValue, reduction]
+  rw [outputGivenTraceAt, ite_eq_right notValue, reduction]
 
 
 /-- An expectation-affinity draw, or a mean site, is integrated and leaves the tape alone. -/
@@ -56,7 +56,7 @@ theorem outputGivenTraceAt_succ_sampleE (depth : Nat) {expression : Expr}
     (notGeneration : siteOp site = none) (tape : DrawTrace) :
     outputGivenTraceAt (depth + 1) expression tape =
       fiber.bind fun value ↦ outputGivenTraceAt depth (continuation value) tape := by
-  rw [outputGivenTraceAt, if_neg notValue, reduction]
+  rw [outputGivenTraceAt, ite_eq_right notValue, reduction]
   rcases site with ⟨kind, op⟩
   cases kind with
   | sample affinity => cases affinity <;> simp_all [siteOp]
@@ -70,7 +70,7 @@ theorem outputGivenTraceAt_succ_sampleG (depth : Nat) {expression : Expr} {op : 
     (value : ℝ) (tape : DrawTrace) :
     outputGivenTraceAt (depth + 1) expression ((op, value) :: tape) =
       outputGivenTraceAt depth (continuation value) tape := by
-  rw [outputGivenTraceAt, if_neg notValue, reduction]
+  rw [outputGivenTraceAt, ite_eq_right notValue, reduction]
   simp
 
 theorem outputGivenTraceAt_succ_sampleG_nil (depth : Nat) {expression : Expr} {op : Op}
@@ -78,7 +78,7 @@ theorem outputGivenTraceAt_succ_sampleG_nil (depth : Nat) {expression : Expr} {o
     (notValue : expression.isValue ≠ true)
     (reduction : reduce expression = .sample (.sample .G, op) fiber continuation) :
     outputGivenTraceAt (depth + 1) expression [] = 0 := by
-  rw [outputGivenTraceAt, if_neg notValue, reduction]
+  rw [outputGivenTraceAt, ite_eq_right notValue, reduction]
 
 theorem outputGivenTraceAt_succ_sampleG_mismatch (depth : Nat) {expression : Expr} {op op' : Op}
     {fiber : Measure ℝ} {continuation : ℝ → Expr}
@@ -86,7 +86,7 @@ theorem outputGivenTraceAt_succ_sampleG_mismatch (depth : Nat) {expression : Exp
     (reduction : reduce expression = .sample (.sample .G, op) fiber continuation)
     (mismatch : op ≠ op') (value : ℝ) (tape : DrawTrace) :
     outputGivenTraceAt (depth + 1) expression ((op', value) :: tape) = 0 := by
-  rw [outputGivenTraceAt, if_neg notValue, reduction]
+  rw [outputGivenTraceAt, ite_eq_right notValue, reduction]
   simp [mismatch]
 
 /-- The value `unit`, the sink of a rejected execution, has no output at any depth. -/
@@ -208,14 +208,14 @@ theorem compactReplayStep_apply (tape : DrawTrace) (expression : Expr) :
   unfold compactReplayStep SFiniteKernel.piecewise
   simp only [Kernel.piecewise, Kernel.coe_mk, Set.mem_ofPred_eq]
   by_cases none : generationOp expression.skeleton = none
-  · rw [if_pos none, if_pos none,
+  · rw [ite_eq_left none, ite_eq_left none,
       SFiniteKernel.mapWithInput_apply,
       MeasurableActionFamily.pullback_apply, StepKernel.kernel_eq_stepMeasure]
-  · rw [if_neg none, if_neg none]
+  · rw [ite_eq_right none, ite_eq_right none]
     by_cases fits : MatchesHead (tape, expression)
-    · rw [if_pos fits, if_pos fits]
+    · rw [ite_eq_left fits, ite_eq_left fits]
       rfl
-    · rw [if_neg fits, if_neg fits]
+    · rw [ite_eq_right fits, ite_eq_right fits]
       rfl
 
 /-- The compact replay at a fixed depth, jointly measurable in the tape and the expression. -/
@@ -243,11 +243,11 @@ theorem compactReplayKernel_apply (depth : Nat) (tape : DrawTrace) (expression :
     unfold compactReplayKernel SFiniteKernel.piecewise
     simp only [Kernel.piecewise, Kernel.coe_mk, Set.mem_ofPred_eq]
     by_cases nil : tape = []
-    · rw [if_pos nil, MeasurableActionFamily.pullback_apply]
+    · rw [ite_eq_left nil, MeasurableActionFamily.pullback_apply]
       subst nil
       exact (MeasurableActionFamily.exactOutputKernel_apply _ _ _).trans
         (by cases expression <;> rfl)
-    · rw [if_neg nil]
+    · rw [ite_eq_right nil]
       obtain ⟨head, rest, rfl⟩ := List.exists_cons_of_ne_nil nil
       exact (outputGivenTraceAt_zero_cons _ _ _).symm
   | succ depth ih =>
@@ -255,9 +255,9 @@ theorem compactReplayKernel_apply (depth : Nat) (tape : DrawTrace) (expression :
     dsimp only
     simp only [Kernel.piecewise, Kernel.coe_mk, Set.mem_ofPred_eq]
     by_cases value : expression.isValue = true
-    · rw [if_pos value, outputGivenTraceAt_succ_value depth value]
+    · rw [ite_eq_left value, outputGivenTraceAt_succ_value depth value]
       rfl
-    · rw [if_neg value, Kernel.comp_apply, compactReplayStep_apply]
+    · rw [ite_eq_right value, Kernel.comp_apply, compactReplayStep_apply]
       let previous := SFiniteKernel.pullback (compactReplayKernel depth)
         (fun next : Expr ↦ (tape, next)) (measurable_const.prodMk measurable_id)
       have previousEq : ∀ next, previous.kernel next = outputGivenTraceAt depth next tape := by
@@ -268,7 +268,7 @@ theorem compactReplayKernel_apply (depth : Nat) (tape : DrawTrace) (expression :
         funext next
         rw [MeasurableActionFamily.pullback_apply]
       by_cases none : generationOp expression.skeleton = none
-      · rw [if_pos none, bind_map _ (fun next : Expr ↦ (tape, next))
+      · rw [ite_eq_left none, bind_map _ (fun next : Expr ↦ (tape, next))
           (measurable_const.prodMk measurable_id) (compactReplayKernel depth).kernel, previousFun]
         unfold Determinize.Spec.Paper.stepMeasure
         cases reduction : reduce expression with
@@ -283,11 +283,11 @@ theorem compactReplayKernel_apply (depth : Nat) (tape : DrawTrace) (expression :
         | stuck =>
           rw [Action.measure, Measure.bind_zero_left,
             outputGivenTraceAt_succ_stuck depth value reduction]
-      · rw [if_neg none]
+      · rw [ite_eq_right none]
         obtain ⟨op, active⟩ := Option.ne_none_iff_exists'.mp none
         rcases generationOp_some_reduce active with ⟨fiber, continuation, reduction⟩ | reduction
         · by_cases fits : MatchesHead (tape, expression)
-          · rw [if_pos fits, Measure.dirac_bind (compactReplayKernel depth).kernel.measurable,
+          · rw [ite_eq_left fits, Measure.dirac_bind (compactReplayKernel depth).kernel.measurable,
               ih]
             obtain ⟨⟨op', v⟩, rest, rfl⟩ := List.exists_cons_of_ne_nil fits.1
             have opEq : op' = op := by
@@ -298,7 +298,7 @@ theorem compactReplayKernel_apply (depth : Nat) (tape : DrawTrace) (expression :
             simp only [List.tail_cons, List.getD_cons_zero]
             rw [outputGivenTraceAt_succ_sampleG depth value reduction, sampleContinuation,
               reduction]
-          · rw [if_neg fits, Measure.bind_zero_left]
+          · rw [ite_eq_right fits, Measure.bind_zero_left]
             cases tape with
             | nil => exact (outputGivenTraceAt_succ_sampleG_nil depth value reduction).symm
             | cons head rest =>
@@ -412,7 +412,7 @@ theorem outputGivenTrace_mass_le_one (program : Expr) (tape : DrawTrace) :
 
 theorem outputGivenTraceAt_le_outputGivenTrace (depth : Nat) (program : Expr) (tape : DrawTrace) :
     outputGivenTraceAt depth program tape ≤ outputGivenTrace program tape :=
-  Measure.le_sum _ depth
+  Measure.le_sum (fun depth ↦ outputGivenTraceAt depth program tape) depth
 
 /-- Where a fixed-depth replay already has mass one, it is the whole replay law: a finite
 measure below another of the same total mass equals it. -/
@@ -450,7 +450,7 @@ instance normalizedOutputGivenTrace_markov (program : Expr) :
   · rw [normalizedOutputGivenTrace_eq program tape mass]
     exact ⟨mass⟩
   · simp only [normalizedOutputGivenTrace, Kernel.piecewise, Kernel.coe_mk, Set.mem_ofPred_eq,
-      outputGivenTraceKernel_apply, if_neg mass, Kernel.deterministic_apply]
+      outputGivenTraceKernel_apply, ite_eq_right mass, Kernel.deterministic_apply]
     infer_instance
 
 /-- The traces on which a kernel is the Dirac mass at a measurable function form a

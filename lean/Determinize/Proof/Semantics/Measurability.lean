@@ -158,7 +158,7 @@ theorem measurable_of_length_getD {α : Type*} [MeasurableSpace α]
     (MeasurableSpace.comap RealCoordinates.code
       (inferInstance : MeasurableSpace (Nat × (Nat → ℝ)))) ≤ _
   rw [MeasurableSpace.comap_comp]
-  exact (lengthMeasurable.prodMk (measurable_pi_lambda _ coordinateMeasurable)).comap_le
+  exact (lengthMeasurable.prodMk (Measurable.of_eval coordinateMeasurable)).comap_le
 
 end RealCoordinates
 
@@ -316,7 +316,7 @@ def combine {α : Type*} [MeasurableSpace α]
           (fun parameter ↦ (left parameter).realCoordinates.getD index 0) := by
           funext parameter
           rw [coordinates_rule, List.getD_eq_getElem?_getD, List.getElem?_append,
-            leftFamily.coordinate_count parameter, if_pos beforeRight,
+            leftFamily.coordinate_count parameter, ite_eq_left beforeRight,
             ← List.getD_eq_getElem?_getD]
       rw [functionEq]
       exact leftFamily.coordinate_measurable index
@@ -329,7 +329,7 @@ def combine {α : Type*} [MeasurableSpace α]
               (index - leftFamily.skeleton.realArity) 0) := by
           funext parameter
           rw [coordinates_rule, List.getD_eq_getElem?_getD, List.getElem?_append,
-            leftFamily.coordinate_count parameter, if_neg beforeRight,
+            leftFamily.coordinate_count parameter, ite_eq_right beforeRight,
             ← List.getD_eq_getElem?_getD]
       rw [functionEq]
       exact rightFamily.coordinate_measurable _
@@ -701,9 +701,9 @@ theorem measurable_realCoordinatesAppend :
     change (pair.1.values ++ pair.2.values).getD index 0 = _
     rw [List.getD_eq_getElem?_getD, List.getElem?_append]
     by_cases member : index < pair.1.values.length
-    · rw [if_pos member, ← List.getD_eq_getElem?_getD]
+    · rw [ite_eq_left member, ← List.getD_eq_getElem?_getD]
       simp [region, Set.piecewise, member]
-    · rw [if_neg member, ← List.getD_eq_getElem?_getD]
+    · rw [ite_eq_right member, ← List.getD_eq_getElem?_getD]
       simp [region, Set.piecewise, member]
   exact RealCoordinates.measurable_of_length_getD appendLengthMeasurable coordinatesMeasurable
 
@@ -1340,7 +1340,7 @@ theorem primitiveFiber_eq_atomic
     unfold primitiveFiber
       Determinize.Spec.Paper.parseParams
     simp only
-    rw [dif_pos affineArity, dif_pos generalArity]
+    rw [dite_eq_left affineArity, dite_eq_left generalArity]
     rw [laws.kernel_eq_paperMeasure]
     apply congrArg (Determinize.Spec.Paper.paperMeasure op)
     exact (paramsFromCoordinates_eq_getElem op affine general
@@ -1350,7 +1350,7 @@ theorem primitiveFiber_eq_atomic
     unfold primitiveFiber
       Determinize.Spec.Paper.parseParams
     simp only
-    rw [dif_pos affineArity, dif_pos generalArity]
+    rw [dite_eq_left affineArity, dite_eq_left generalArity]
     let actualParams : Determinize.Spec.Paper.Params op :=
       (fun index ↦ affine[index.1]'(by simp [affineArity]),
         fun index ↦ general[index.1]'(by simp [generalArity]))
@@ -1375,13 +1375,13 @@ theorem primitiveFiber_eq_atomic
         (paramsFromCoordinates op affine general)
     · have actualDomain : Determinize.Spec.Paper.InDomain op actualParams :=
         actualParamsEquality.symm ▸ paramsDomain
-      rw [if_pos paramsDomain, if_pos actualDomain, Kernel.deterministic_apply]
+      rw [ite_eq_left paramsDomain, ite_eq_left actualDomain, Kernel.deterministic_apply]
       exact congrArg Measure.dirac
         (congrArg (Determinize.Spec.Paper.meanValue op)
           actualParamsEquality)
     · have actualOutside : ¬ Determinize.Spec.Paper.InDomain op actualParams :=
         fun actualDomain ↦ paramsDomain (actualParamsEquality ▸ actualDomain)
-      rw [if_neg paramsDomain, if_neg actualOutside]
+      rw [ite_eq_right paramsDomain, ite_eq_right actualOutside]
       simp
 
 universe u
@@ -1512,8 +1512,8 @@ noncomputable def uniformDraw (laws : Determinize.Proof.Paper.PrimitiveLaws)
     SFiniteKernel (ℝ × ℝ) ℝ :=
   SFiniteKernel.pullback (primitiveKernelPack laws kind .uniform)
     (fun p ↦ paramsFromCoordinates .uniform [p.1, p.2] [])
-    (Measurable.prod (measurable_pi_lambda _ fun index ↦ measurable_getD_pair index.1)
-      (measurable_pi_lambda _ fun index ↦ measurable_getD_nil index.1))
+    (Measurable.prod (Measurable.of_eval fun index ↦ measurable_getD_pair index.1)
+      (Measurable.of_eval fun index ↦ measurable_getD_nil index.1))
 
 theorem uniformDraw_apply (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction)
     (lower upper : ℝ) :
@@ -1527,8 +1527,8 @@ noncomputable def gaussianDraw (laws : Determinize.Proof.Paper.PrimitiveLaws)
     SFiniteKernel (ℝ × ℝ) ℝ :=
   SFiniteKernel.pullback (primitiveKernelPack laws kind .gaussian)
     (fun p ↦ paramsFromCoordinates .gaussian [p.1] [p.2])
-    (Measurable.prod (measurable_pi_lambda _ fun index ↦ measurable_getD_first index.1)
-      (measurable_pi_lambda _ fun index ↦ measurable_getD_second index.1))
+    (Measurable.prod (Measurable.of_eval fun index ↦ measurable_getD_first index.1)
+      (Measurable.of_eval fun index ↦ measurable_getD_second index.1))
 
 theorem gaussianDraw_apply (laws : Determinize.Proof.Paper.PrimitiveLaws)
     (kind : DistributionAction) (mean variance : ℝ) :
@@ -1542,8 +1542,8 @@ noncomputable def betaDraw (laws : Determinize.Proof.Paper.PrimitiveLaws)
     SFiniteKernel (ℝ × ℝ) ℝ :=
   SFiniteKernel.pullback (primitiveKernelPack laws kind .beta)
     (fun p ↦ paramsFromCoordinates .beta [] [p.1, p.2])
-    (Measurable.prod (measurable_pi_lambda _ fun index ↦ measurable_getD_nil index.1)
-      (measurable_pi_lambda _ fun index ↦ measurable_getD_pair index.1))
+    (Measurable.prod (Measurable.of_eval fun index ↦ measurable_getD_nil index.1)
+      (Measurable.of_eval fun index ↦ measurable_getD_pair index.1))
 
 theorem betaDraw_apply (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction)
     (alpha beta : ℝ) :
@@ -1557,8 +1557,8 @@ noncomputable def gammaDraw (laws : Determinize.Proof.Paper.PrimitiveLaws)
     SFiniteKernel (ℝ × ℝ) ℝ :=
   SFiniteKernel.pullback (primitiveKernelPack laws kind .gamma)
     (fun p ↦ paramsFromCoordinates .gamma [p.1] [p.2])
-    (Measurable.prod (measurable_pi_lambda _ fun index ↦ measurable_getD_first index.1)
-      (measurable_pi_lambda _ fun index ↦ measurable_getD_second index.1))
+    (Measurable.prod (Measurable.of_eval fun index ↦ measurable_getD_first index.1)
+      (Measurable.of_eval fun index ↦ measurable_getD_second index.1))
 
 theorem gammaDraw_apply (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction)
     (shape rate : ℝ) :
@@ -1572,8 +1572,8 @@ noncomputable def poissonDraw (laws : Determinize.Proof.Paper.PrimitiveLaws)
     SFiniteKernel ℝ ℝ :=
   SFiniteKernel.pullback (primitiveKernelPack laws kind .poisson)
     (fun p ↦ paramsFromCoordinates .poisson [p] [])
-    (Measurable.prod (measurable_pi_lambda _ fun index ↦ measurable_getD_single index.1)
-      (measurable_pi_lambda _ fun index ↦ measurable_getD_nil index.1))
+    (Measurable.prod (Measurable.of_eval fun index ↦ measurable_getD_single index.1)
+      (Measurable.of_eval fun index ↦ measurable_getD_nil index.1))
 
 noncomputable def discreteDraw (laws : Determinize.Proof.Paper.PrimitiveLaws)
     (kind : DistributionAction)
@@ -1581,7 +1581,7 @@ noncomputable def discreteDraw (laws : Determinize.Proof.Paper.PrimitiveLaws)
   SFiniteKernel.pullback (primitiveKernelPack laws kind (.discrete arity))
     (fun weights ↦ (weights, fun index ↦ ([] : List ℝ).getD index.1 0))
     (Measurable.prod measurable_id
-      (measurable_pi_lambda _ fun index ↦ measurable_getD_nil index.1))
+      (Measurable.of_eval fun index ↦ measurable_getD_nil index.1))
 
 theorem discreteDraw_apply (laws : Determinize.Proof.Paper.PrimitiveLaws)
     (kind : DistributionAction)
@@ -1598,8 +1598,8 @@ noncomputable def bernoulliDraw (laws : Determinize.Proof.Paper.PrimitiveLaws)
     SFiniteKernel ℝ ℝ :=
   SFiniteKernel.pullback (primitiveKernelPack laws kind .bernoulli)
     (fun p ↦ paramsFromCoordinates .bernoulli [p] [])
-    (Measurable.prod (measurable_pi_lambda _ fun index ↦ measurable_getD_single index.1)
-      (measurable_pi_lambda _ fun index ↦ measurable_getD_nil index.1))
+    (Measurable.prod (Measurable.of_eval fun index ↦ measurable_getD_single index.1)
+      (Measurable.of_eval fun index ↦ measurable_getD_nil index.1))
 
 theorem poissonDraw_apply (laws : Determinize.Proof.Paper.PrimitiveLaws) (kind : DistributionAction)
     (rate : ℝ) :
@@ -1619,8 +1619,8 @@ noncomputable def exponentialDraw (laws : Determinize.Proof.Paper.PrimitiveLaws)
     SFiniteKernel ℝ ℝ :=
   SFiniteKernel.pullback (primitiveKernelPack laws kind .exponential)
     (fun p ↦ paramsFromCoordinates .exponential [] [p])
-    (Measurable.prod (measurable_pi_lambda _ fun index ↦ measurable_getD_nil index.1)
-      (measurable_pi_lambda _ fun index ↦ measurable_getD_single index.1))
+    (Measurable.prod (Measurable.of_eval fun index ↦ measurable_getD_nil index.1)
+      (Measurable.of_eval fun index ↦ measurable_getD_single index.1))
 
 theorem exponentialDraw_apply (laws : Determinize.Proof.Paper.PrimitiveLaws)
     (kind : DistributionAction) (rate : ℝ) :
@@ -3108,7 +3108,7 @@ noncomputable def reduceDiscrete {α : Type*} [MeasurableSpace α]
       let parameters := fun parameter ↦ fun index : Fin arity ↦
         (body parameter).realCoordinates.getD index.1 0
       have parametersMeasurable : Measurable parameters :=
-        measurable_pi_lambda _ fun index ↦ bodyFamily.coordinate_measurable index.1
+        Measurable.of_eval fun index ↦ bodyFamily.coordinate_measurable index.1
       apply congr (.sample (site := (kind, .discrete arity))
         (SFiniteKernel.pullback (discreteDraw laws kind arity) parameters parametersMeasurable)
         (measurable_realLiteral measurable_snd))
@@ -3563,12 +3563,12 @@ theorem kernel_apply {α : Type*} [MeasurableSpace α] {action : α → Action}
     classical
     by_cases member : parameter ∈ region
     · simp only [kernel, SFiniteKernel.piecewise,
-        Kernel.piecewise_apply, if_pos member]
+        Kernel.piecewise_apply, ite_eq_left member]
       simp only [Set.piecewise, member]
       change trueFamily.kernel.kernel parameter = _
       exact trueApply
     · simp only [kernel, SFiniteKernel.piecewise,
-        Kernel.piecewise_apply, if_neg member]
+        Kernel.piecewise_apply, ite_eq_right member]
       simp only [Set.piecewise, member]
       change falseFamily.kernel.kernel parameter = _
       exact falseApply
@@ -3630,7 +3630,7 @@ theorem skeletonKernel_apply_of_mem
     (member : expression ∈ SkeletonFiber skeleton) :
     skeletonKernel laws skeleton expression = stepMeasure expression := by
   classical
-  simp only [skeletonKernel, Kernel.piecewise_apply, if_pos member,
+  simp only [skeletonKernel, Kernel.piecewise_apply, ite_eq_left member,
     Kernel.comap_apply]
   let actionFamily := reduceFamily laws (MeasurableFamily.skeletonFiber skeleton)
   rw [kernel_apply actionFamily (toSkeletonFiber skeleton expression)]
@@ -3807,8 +3807,8 @@ theorem exactOutputKernel_apply
     by_cases isValue : expression.isValue = true
     · simp [valueSet, isValue]
     · have notMember : expression ∉ valueSet := isValue
-      rw [if_neg notMember]
-      rw [if_neg isValue]
+      rw [ite_eq_right notMember]
+      rw [ite_eq_right isValue]
       simp only [Kernel.comp_apply]
       congr 1
       funext successor

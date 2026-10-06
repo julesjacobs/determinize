@@ -45,7 +45,7 @@ theorem boundary_paths_exist (model : Model) :
     obtain ⟨j, edge, rest⟩ := witness
     have reachable_j : reachable j := ⟨n, rest⟩
     refine ⟨j, edge, ?_⟩
-    simp only [rank, dif_pos reachable_i, dif_pos reachable_j]
+    simp only [rank, dite_eq_left reachable_i, dite_eq_left reachable_j]
     have minimal := Nat.find_min' reachable_j rest
     omega
   let next := fun i ↦ if h : (cut model dead).kind i = .transient then
@@ -53,6 +53,6 @@ theorem boundary_paths_exist (model : Model) :
   refine ⟨dead, closed, ⟨rank, next⟩, ?_⟩
   intro i hi
   change 0 < model.transition i (next i) ∧ rank (next i) < rank i
-  simpa only [next, dif_pos hi] using Classical.choose_spec (descend i hi)
+  simpa only [next, dite_eq_left hi] using Classical.choose_spec (descend i hi)
 
 end Determinize.Proof.FiniteModel

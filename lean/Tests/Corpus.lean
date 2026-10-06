@@ -39,7 +39,7 @@ structure CorpusCase where
   deriving FromJson
 
 private def close (actual expected tolerance : Float) (label : String) : IO Unit :=
-  assert (!actual.isNaN && !actual.isInf && Float.abs (actual - expected) ≤ tolerance)
+  check (!actual.isNaN && !actual.isInf && Float.abs (actual - expected) ≤ tolerance)
     s!"{label}: expected {expected} ± {tolerance}, got {actual}"
 
 private def numeric (v : Runtime.Value) : IO Float := match v with
@@ -52,29 +52,29 @@ private def observation (e : Core) (c : CorpusCase) (o : Observation) : IO Unit 
   if let some expected := o.error then
     match result with
     | .error message =>
-      assert ((message.splitOn expected).length > 1)
+      check ((message.splitOn expected).length > 1)
         s!"expected runtime error containing '{expected}', got '{message}'"
     | .ok _ => throw (IO.userError s!"expected runtime error '{expected}', execution succeeded")
   else
     let (v, state) ← IO.ofExcept result
     if let some expected := o.number then close (← numeric v) expected o.tolerance "result"
     if let some expected := o.value then
-      assert (v.display == expected) s!"expected '{expected}', got '{v.display}'"
+      check (v.display == expected) s!"expected '{expected}', got '{v.display}'"
     if let some expected := o.draws then
-      assert (state.draws == expected) s!"expected {expected} draws, got {state.draws}"
+      check (state.draws == expected) s!"expected {expected} draws, got {state.draws}"
 
 private def statistical (e : Core) (c : CorpusCase) (m : Moments) : IO Unit := do
-  assert (c.samples ≥ 2) "statistical tests require at least two samples"
+  check (c.samples ≥ 2) "statistical tests require at least two samples"
   let mut mean := 0.0
   let mut m2 := 0.0
   for i in [:c.samples] do
     let seed := c.seed.toUInt64 + i.toUInt64 * 0x9e3779b97f4a7c15
     let (v, _) ← IO.ofExcept (Runtime.run e seed c.fuel)
     let x ← numeric v
-    assert (!x.isNaN && !x.isInf) s!"nonfinite sample at index {i}"
-    if let some lower := m.lower then assert (x ≥ lower) s!"sample {x} below support {lower}"
-    if let some upper := m.upper then assert (x ≤ upper) s!"sample {x} above support {upper}"
-    if m.integer then assert (x == Float.floor x) s!"noninteger sample {x}"
+    check (!x.isNaN && !x.isInf) s!"nonfinite sample at index {i}"
+    if let some lower := m.lower then check (x ≥ lower) s!"sample {x} below support {lower}"
+    if let some upper := m.upper then check (x ≤ upper) s!"sample {x} above support {upper}"
+    if m.integer then check (x == Float.floor x) s!"noninteger sample {x}"
     let delta := x - mean
     mean := mean + delta / Float.ofNat (i + 1)
     m2 := m2 + delta * (x - mean)
@@ -91,19 +91,19 @@ private def compileStage (text : String) : Except (String × String) Unit := do
 private def runCase (c : CorpusCase) (withStatistics : Bool) : IO Unit := do
   let text ← IO.FS.readFile c.file
   if c.outcome == "reject" then
-    assert (!(compile text).isOk) "expected rejection, production compiler accepted the program"
+    check (!(compile text).isOk) "expected rejection, production compiler accepted the program"
     match compileStage text with
     | .error (stage, message) =>
-      assert (stage == c.stage)
+      check (stage == c.stage)
         s!"expected {c.stage} rejection, got {stage}: {message}"
     | .ok _ => throw (IO.userError "expected rejection, compilation succeeded")
   else
     let p ← IO.ofExcept (compile text)
     if let some ty := c.expected_type then
-      assert (prettyType p.ty == ty) s!"expected type {ty}, got {prettyType p.ty}"
+      check (prettyType p.ty == ty) s!"expected type {ty}, got {prettyType p.ty}"
     if let some affinities := c.affinities then
       let actual := p.annotated.sites.map prettyAffinity
-      assert (actual == affinities) s!"expected affinities {affinities}, got {actual}"
+      check (actual == affinities) s!"expected affinities {affinities}, got {actual}"
     for (label, e, expectation) in [("source", p.source, c.source),
         ("target", p.source.determinize, c.target)] do
       if let some o := expectation then

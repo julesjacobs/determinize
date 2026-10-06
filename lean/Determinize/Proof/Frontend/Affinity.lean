@@ -115,9 +115,9 @@ theorem forcedGeneral_general {ρ : V → Affinity} {constraints : List (Affinit
     (hρ : Satisfies ρ constraints) {general : Finset V} (h : ∀ v ∈ general, ρ v = .G) :
     ∀ v ∈ forcedGeneral constraints general, ρ v = .G := by
   induction general using forcedGeneral.induct constraints with
-  | case1 general stable => rw [forcedGeneral, if_pos stable]; exact h
+  | case1 general stable => rw [forcedGeneral, ite_eq_left stable]; exact h
   | case2 general unstable ih =>
-    rw [forcedGeneral, if_neg unstable]
+    rw [forcedGeneral, ite_eq_right unstable]
     refine ih fun v mem ↦ (Finset.mem_union.1 mem).elim (h v) fun mem ↦ ?_
     obtain ⟨upper, mem, isGeneral⟩ := mem_below.1 mem
     have := hρ _ mem
@@ -128,8 +128,8 @@ theorem forcedGeneral_general {ρ : V → Affinity} {constraints : List (Affinit
 theorem below_forcedGeneral (constraints : List (AffinityConstraint V)) (general : Finset V) :
     below constraints (forcedGeneral constraints general) ⊆ forcedGeneral constraints general := by
   induction general using forcedGeneral.induct constraints with
-  | case1 general stable => rw [forcedGeneral, if_pos stable]; exact stable
-  | case2 general unstable ih => rw [forcedGeneral, if_neg unstable]; exact ih
+  | case1 general stable => rw [forcedGeneral, ite_eq_left stable]; exact stable
+  | case2 general unstable ih => rw [forcedGeneral, ite_eq_right unstable]; exact ih
 
 /-- The assignment that `solveAffinities` checks. -/
 private def candidate (constraints : List (AffinityConstraint V)) (v : V) : Affinity :=
@@ -167,7 +167,7 @@ theorem solveAffinities_complete {constraints : List (AffinityConstraint V)} {ρ
   refine ⟨candidate constraints, ?_⟩
   suffices ∀ lower upper, (lower, upper) ∈ constraints →
       affinityLE (lower.eval (candidate constraints)) (upper.eval (candidate constraints)) by
-    rw [solveAffinities_eq, if_pos (List.all_eq_true.2 fun c mem ↦ this c.1 c.2 mem)]
+    rw [solveAffinities_eq, ite_eq_left (List.all_eq_true.2 fun c mem ↦ this c.1 c.2 mem)]
   intro lower upper mem
   have general := forcedGeneral_general h' (general := ∅) (by simp)
   -- An upper side that the candidate sets to E bounds everything.

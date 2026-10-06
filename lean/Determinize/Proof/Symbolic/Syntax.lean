@@ -566,7 +566,7 @@ theorem wellTyped_substAt (h : WellTyped (before ++ binder :: suffix) expression
         (wellTyped_shift (before := []) (suffix := suffix) (inserted := before)
           replacementTyped)
     · rcases shifted with ⟨notEqual, shifted⟩
-      simp only [Expr.mapVars, Expr.substAt, substAt, if_neg notEqual]
+      simp only [Expr.mapVars, Expr.substAt, substAt, ite_eq_right notEqual]
       exact .bvar shifted
   | reject => simp only [Expr.mapVars, Expr.substAt, substAt]; exact .reject
   | discrete hv ih =>
@@ -1810,7 +1810,7 @@ theorem symbolicReduce_realize
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
           ihr environment, realize_isValue,
-          if_neg rightValue]
+          ite_eq_right rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [SymbolicAction.realize_wrap
         (ExprContext := fun next ↦ .pair
@@ -1851,7 +1851,7 @@ theorem symbolicReduce_realize
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
           iht environment, realize_isValue,
-          if_neg tailValue]
+          ite_eq_right tailValue]
     · simp only [headValue, Bool.false_eq_true, ↓reduceIte]
       rw [SymbolicAction.realize_wrap
         (ExprContext := fun next ↦ .cons next (tail.realize environment))
@@ -1876,7 +1876,7 @@ theorem symbolicReduce_realize
           (ExprContext := fun next ↦ .app (function.realize environment) next)
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-          iho environment, realize_isValue, if_neg operandValue]
+          iho environment, realize_isValue, ite_eq_right operandValue]
     · rw [symbolicReduce_app_eq]
       simp only [functionValue, Bool.false_eq_true, ↓reduceIte]
       rw [SymbolicAction.realize_wrap
@@ -2022,7 +2022,7 @@ theorem symbolicReduce_realize
           (ExprContext := fun next ↦ .add (left.realize environment) next)
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-          ihr environment, realize_isValue, if_neg rightValue]
+          ihr environment, realize_isValue, ite_eq_right rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [SymbolicAction.realize_wrap
         (ExprContext := fun next ↦ .add next (right.realize environment))
@@ -2046,7 +2046,7 @@ theorem symbolicReduce_realize
           (ExprContext := fun next ↦ .add (left.realize environment) next)
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-          ihr environment, realize_isValue, if_neg rightValue]
+          ihr environment, realize_isValue, ite_eq_right rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [SymbolicAction.realize_wrap
         (ExprContext := fun next ↦ .add next (right.realize environment))
@@ -2074,7 +2074,7 @@ theorem symbolicReduce_realize
           (ExprContext := fun next ↦ .mul (left.realize environment) next)
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-          ihr environment, realize_isValue, if_neg rightValue]
+          ihr environment, realize_isValue, ite_eq_right rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [SymbolicAction.realize_wrap
         (ExprContext := fun next ↦ .mul next (right.realize environment))
@@ -2103,7 +2103,7 @@ theorem symbolicReduce_realize
           (ExprContext := fun next ↦ .mul (left.realize environment) next)
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-          ihr environment, realize_isValue, if_neg rightValue]
+          ihr environment, realize_isValue, ite_eq_right rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [SymbolicAction.realize_wrap
         (ExprContext := fun next ↦ .mul next (right.realize environment))
@@ -2142,7 +2142,7 @@ theorem symbolicReduce_realize
           (ExprContext := fun next ↦ .div (left.realize environment) next)
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-          ihr environment, realize_isValue, if_neg rightValue]
+          ihr environment, realize_isValue, ite_eq_right rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [SymbolicAction.realize_wrap
         (ExprContext := fun next ↦ .div next (right.realize environment))
@@ -2175,7 +2175,7 @@ theorem symbolicReduce_realize
           (ExprContext := fun next ↦ .div (left.realize environment) next)
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-          ihr environment, realize_isValue, if_neg rightValue]
+          ihr environment, realize_isValue, ite_eq_right rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [SymbolicAction.realize_wrap
         (ExprContext := fun next ↦ .div next (right.realize environment))
@@ -2203,7 +2203,7 @@ theorem symbolicReduce_realize
           (ExprContext := fun next ↦ .lt (left.realize environment) next)
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-          ihr environment, realize_isValue, if_neg rightValue]
+          ihr environment, realize_isValue, ite_eq_right rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [SymbolicAction.realize_wrap
         (ExprContext := fun next ↦ .lt next (right.realize environment))
@@ -2235,7 +2235,7 @@ theorem symbolicReduce_realize
           (ExprContext := fun next ↦ .uniform (.sample affinity) (left.realize environment) next)
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-          ihr environment, realize_isValue, if_neg rightValue]
+          ihr environment, realize_isValue, ite_eq_right rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [SymbolicAction.realize_wrap
         (ExprContext := fun next ↦ .uniform (.sample affinity) next (right.realize environment))
@@ -2259,7 +2259,7 @@ theorem symbolicReduce_realize
           (ExprContext := fun next ↦ .uniform .mean (left.realize environment) next)
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-          ihr environment, realize_isValue, if_neg rightValue]
+          ihr environment, realize_isValue, ite_eq_right rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [SymbolicAction.realize_wrap
         (ExprContext := fun next ↦ .uniform .mean next (right.realize environment))
@@ -2293,7 +2293,7 @@ theorem symbolicReduce_realize
           (ExprContext := fun next ↦ .gaussian (.sample affinity) (left.realize environment) next)
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-          ihr environment, realize_isValue, if_neg rightValue]
+          ihr environment, realize_isValue, ite_eq_right rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [SymbolicAction.realize_wrap
         (ExprContext := fun next ↦ .gaussian (.sample affinity) next (right.realize environment))
@@ -2319,7 +2319,7 @@ theorem symbolicReduce_realize
           (ExprContext := fun next ↦ .gaussian .mean (left.realize environment) next)
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-          ihr environment, realize_isValue, if_neg rightValue]
+          ihr environment, realize_isValue, ite_eq_right rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [SymbolicAction.realize_wrap
         (ExprContext := fun next ↦ .gaussian .mean next (right.realize environment))
@@ -2461,7 +2461,7 @@ theorem symbolicReduce_realize
           (ExprContext := fun next ↦ .beta (.sample affinity) (left.realize environment) next)
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-          ihr environment, realize_isValue, if_neg rightValue]
+          ihr environment, realize_isValue, ite_eq_right rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [SymbolicAction.realize_wrap
         (ExprContext := fun next ↦ .beta (.sample affinity) next (right.realize environment))
@@ -2489,7 +2489,7 @@ theorem symbolicReduce_realize
           (ExprContext := fun next ↦ .beta .mean (left.realize environment) next)
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-          ihr environment, realize_isValue, if_neg rightValue]
+          ihr environment, realize_isValue, ite_eq_right rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [SymbolicAction.realize_wrap
         (ExprContext := fun next ↦ .beta .mean next (right.realize environment))
@@ -2523,7 +2523,7 @@ theorem symbolicReduce_realize
           (ExprContext := fun next ↦ .gamma (.sample affinity) (left.realize environment) next)
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-          ihr environment, realize_isValue, if_neg rightValue]
+          ihr environment, realize_isValue, ite_eq_right rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [SymbolicAction.realize_wrap
         (ExprContext := fun next ↦ .gamma (.sample affinity) next (right.realize environment))
@@ -2549,7 +2549,7 @@ theorem symbolicReduce_realize
           (ExprContext := fun next ↦ .gamma .mean (left.realize environment) next)
           (context_realize := by intros; simp only [realize])
           (lifted_realize := by intros; simp only [realize, realize_weakenSamples]),
-          ihr environment, realize_isValue, if_neg rightValue]
+          ihr environment, realize_isValue, ite_eq_right rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [SymbolicAction.realize_wrap
         (ExprContext := fun next ↦ .gamma .mean next (right.realize environment))

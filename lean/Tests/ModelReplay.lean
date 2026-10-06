@@ -60,8 +60,8 @@ def modelReplay : IO Unit := do
       "match 2::[] with [] => 0 | x::xs => x",
       "let fact = rec f n => if n < 1 then 1 else n * f (n-1) in fact 4"] do
     let (source, candidate) ← candidateFor text
-    assert (accepted source candidate) s!"machine replay: {text}"
-    assert (indexedAccepted source candidate) s!"indexed machine replay: {text}"
+    check (accepted source candidate) s!"machine replay: {text}"
+    check (indexedAccepted source candidate) s!"indexed machine replay: {text}"
   let divisionByZero : Candidate := ⟨0, #[
     .eval (.div (.real 7) (.real 0)) [] [],
     .eval (.real 7) [] [.left .div (.real 0) []],
@@ -71,7 +71,7 @@ def modelReplay : IO Unit := do
     .deliver (.number 0) []],
     (Array.range 5).map (fun i ↦ ⟨.transient, #[⟨i + 1, 1⟩]⟩) ++
       #[⟨.returned 0, #[⟨5, 1⟩]⟩]⟩
-  assert (!(accepted (.div (.real 7) (.real 0)) divisionByZero))
+  check (!(accepted (.div (.real 7) (.real 0)) divisionByZero))
     "certificate accepted a fabricated division-by-zero result"
   let (threeSource, three) ← candidateFor "3"
   let (sevenSource, seven) ← candidateFor "7"
@@ -79,36 +79,36 @@ def modelReplay : IO Unit := do
     | throw (IO.userError "expected checked model")
   let some checkedSeven := checkModel sevenSource .source seven
     | throw (IO.userError "expected checked model for seven")
-  assert (decide (∃ state, checkedThree.model.kind state = .returned 3)) "extracted reward three"
-  assert (decide (∃ state, checkedSeven.model.kind state = .returned 7)) "extracted reward seven"
+  check (decide (∃ state, checkedThree.model.kind state = .returned 3)) "extracted reward three"
+  check (decide (∃ state, checkedSeven.model.kind state = .returned 7)) "extracted reward seven"
   let (targetSource, target) ← candidateFor "uniform[E](0,3)" .determinized
-  assert (accepted targetSource target .determinized) "determinized mean replay"
-  assert (!(checkModelReplay targetSource .source target).isSome) "wrong subject"
-  assert (!(checkModelReplay (.real 7) .determinized target).isSome) "wrong source"
+  check (accepted targetSource target .determinized) "determinized mean replay"
+  check (!(checkModelReplay targetSource .source target).isSome) "wrong subject"
+  check (!(checkModelReplay (.real 7) .determinized target).isSome) "wrong source"
   let (coinSource, coin) ← candidateFor "bernoulli[G](0.25)"
   let some checkedCoin := checkModel coinSource .source coin
     | throw (IO.userError "expected checked coin model")
-  assert (checkedCoin.model.size == coin.states.size) "extracted model dimensions"
+  check (checkedCoin.model.size == coin.states.size) "extracted model dimensions"
   let accepted := accepted coinSource
   let extra := coin.states.size
   let oneExtra : Candidate :=
     { coin with
       states := coin.states.push .rejected
       rows := coin.rows.push ⟨.rejected, #[⟨extra, 1⟩]⟩ }
-  assert (accepted oneExtra) "unique unreachable state"
+  check (accepted oneExtra) "unique unreachable state"
   let duplicate : Candidate :=
     { oneExtra with
       states := oneExtra.states.push .rejected
       rows := oneExtra.rows.push ⟨.rejected, #[⟨extra + 1, 1⟩]⟩ }
-  assert (!accepted duplicate) "duplicate unreachable states"
-  assert (indexedAccepted coinSource duplicate) "duplicate state labels in indexed replay"
+  check (!accepted duplicate) "duplicate unreachable states"
+  check (indexedAccepted coinSource duplicate) "duplicate state labels in indexed replay"
   for candidate in [coin, oneExtra,
       {coin with initial := 1}, {coin with rows := coin.rows.pop},
       {coin with states := coin.states.pop, rows := coin.rows.pop}] do
-    assert (indexedAccepted coinSource candidate == accepted candidate)
+    check (indexedAccepted coinSource candidate == accepted candidate)
       "indexed replay agrees with full replay"
-  assert (!indexedAccepted targetSource target .source) "indexed wrong subject"
-  assert (!indexedAccepted (.real 7) target .determinized) "indexed wrong source"
+  check (!indexedAccepted targetSource target .source) "indexed wrong subject"
+  check (!indexedAccepted (.real 7) target .determinized) "indexed wrong source"
   let mut sampled := false
   let mut terminal := false
   for i in [:coin.rows.size] do
@@ -124,34 +124,34 @@ def modelReplay : IO Unit := do
             #[⟨first.target, first.probability⟩, ⟨first.target, second.probability⟩]},
           {row with edges := #[⟨coin.states.size, 1⟩]},
           {row with kind := .returned 99}] do
-        assert (!accepted (setRow coin i replacement)) "mutated sampled row"
-        assert (!indexedAccepted coinSource (setRow coin i replacement))
+        check (!accepted (setRow coin i replacement)) "mutated sampled row"
+        check (!indexedAccepted coinSource (setRow coin i replacement))
           "indexed mutated sampled row"
     match row.kind with
     | .returned reward =>
       terminal := true
-      assert (!accepted (setRow coin i {row with kind := .returned (reward + 1)})) "changed reward"
-      assert (!accepted (setRow coin i {row with edges := #[⟨0, 1⟩]})) "nonabsorbing terminal"
-      assert (!accepted (setRow coin i {row with kind := .rejected})) "changed outcome"
+      check (!accepted (setRow coin i {row with kind := .returned (reward + 1)})) "changed reward"
+      check (!accepted (setRow coin i {row with edges := #[⟨0, 1⟩]})) "nonabsorbing terminal"
+      check (!accepted (setRow coin i {row with kind := .rejected})) "changed outcome"
     | _ => pure ()
-  assert (sampled && terminal) "mutation fixtures exercised"
-  assert (!accepted {coin with rows := coin.rows.pop}) "truncated rows"
-  assert (!accepted {coin with states := coin.states.pop, rows := coin.rows.pop}) "truncated graph"
-  assert (!accepted {coin with initial := coin.states.size}) "invalid initial index"
-  assert (!accepted {coin with initial := 1}) "wrong initial state"
-  assert (!accepted {coin with states := coin.states.set! 0 (.eval (.real 7) [] [])})
+  check (sampled && terminal) "mutation fixtures exercised"
+  check (!accepted {coin with rows := coin.rows.pop}) "truncated rows"
+  check (!accepted {coin with states := coin.states.pop, rows := coin.rows.pop}) "truncated graph"
+  check (!accepted {coin with initial := coin.states.size}) "invalid initial index"
+  check (!accepted {coin with initial := 1}) "wrong initial state"
+  check (!accepted {coin with states := coin.states.set! 0 (.eval (.real 7) [] [])})
     "changed initial expression"
-  assert (!accepted {coin with states := coin.states.set! 1 (.eval (.bvar 99) [] [])})
+  check (!accepted {coin with states := coin.states.set! 1 (.eval (.bvar 99) [] [])})
     "malformed reachable state"
   let unusedFreeVariable : Core := .letE (.lam (.bvar 2)) (.real 3)
   match ReferenceExplorer.explore unusedFreeVariable .source with
   | .complete candidate =>
-    assert (!(checkModel unusedFreeVariable .source candidate).isSome)
+    check (!(checkModel unusedFreeVariable .source candidate).isSome)
       "free variable in unused closure"
   | _ => throw (IO.userError "scope fixture must finish exploration")
   let broken : Candidate := ⟨0, #[.eval (.bvar 0) [] []],
     #[⟨.rejected, #[⟨0, 1⟩]⟩]⟩
-  assert (!(checkModel (.bvar 0) .source broken).isSome) "stuck machine cannot be labeled rejected"
+  check (!(checkModel (.bvar 0) .source broken).isSome) "stuck machine cannot be labeled rejected"
 
 #print axioms indexedStates_valid
 #print axioms indexedReplay_valid

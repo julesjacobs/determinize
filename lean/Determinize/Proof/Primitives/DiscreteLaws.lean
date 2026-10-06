@@ -38,7 +38,7 @@ theorem isProbabilityMeasure_bernoulliFiber (kind : DistributionAction) (p : ℝ
   constructor
   cases kind with
   | sample affinity =>
-    simp only [bernoulliFiber, if_pos h, Measure.add_apply, Measure.smul_apply,
+    simp only [bernoulliFiber, ite_eq_left h, Measure.add_apply, Measure.smul_apply,
       Measure.dirac_apply_of_mem (Set.mem_univ _), smul_eq_mul, mul_one]
     rw [← ENNReal.ofReal_add (sub_nonneg.mpr h.2) h.1]
     simp
@@ -46,7 +46,7 @@ theorem isProbabilityMeasure_bernoulliFiber (kind : DistributionAction) (p : ℝ
 
 theorem integral_bernoulliFiber {affinity : Affinity} (p : ℝ) (h : 0 ≤ p ∧ p ≤ 1) (f : ℝ → ℝ) :
     (∫ x, f x ∂bernoulliFiber (.sample affinity) p) = (1 - p) * f 0 + p * f 1 := by
-  rw [bernoulliFiber, if_pos h]
+  rw [bernoulliFiber, ite_eq_left h]
   rw [integral_add_measure
     ((integrable_dirac (by simp)).smul_measure (by simp))
     ((integrable_dirac (by simp)).smul_measure (by simp))]
@@ -120,9 +120,9 @@ theorem isProbabilityMeasure_discreteFiber (action : DistributionAction) (p : Li
   constructor
   cases action with
   | sample affinity =>
-    rw [discreteFiber, if_pos valid]
+    rw [discreteFiber, ite_eq_left valid]
     exact remainderMeasure_univ _ _ valid
-  | mean => rw [discreteFiber, if_pos valid]; simp
+  | mean => rw [discreteFiber, ite_eq_left valid]; simp
 
 theorem integrable_discreteFiber (action : DistributionAction) (p : List ℝ) (f : ℝ → ℝ) :
     Integrable f (discreteFiber action p) := by
@@ -139,8 +139,8 @@ theorem integral_id_discreteFiber (action : DistributionAction) (p : List ℝ)
       (p.length : ℝ) + ∑ i : Fin p.length, (((i : ℕ) : ℝ) - p.length) * p[i] := by
   cases action with
   | sample affinity =>
-    rw [discreteFiber, if_pos valid]
+    rw [discreteFiber, ite_eq_left valid]
     exact integral_id_remainderMeasure p.length (fun i ↦ p[i]) valid
-  | mean => rw [discreteFiber, if_pos valid]; simp
+  | mean => rw [discreteFiber, ite_eq_left valid]; simp
 
 end Determinize.Proof.DiscreteLaws

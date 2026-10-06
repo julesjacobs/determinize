@@ -44,16 +44,16 @@ example : Checking.checkResult (FiniteModel.terminal 3) ⟨fun _ ↦ 3, 0⟩ = t
 
 private def expectAnswer (model : Model) (expected : Rat) : IO Unit := do
   let result ← IO.ofExcept (Finite.solve model)
-  assert (result.values model.initial == expected) s!"wrong certified answer: expected {expected}"
-  assert (Checking.checkResult model result) "solver returned an invalid certificate"
+  check (result.values model.initial == expected) s!"wrong certified answer: expected {expected}"
+  check (Checking.checkResult model result) "solver returned an invalid certificate"
 
 def results : IO Unit := do
   expectAnswer FiniteModel.fork (3 / 2)
   expectAnswer (FiniteModel.terminal (-7 / 3)) (-7 / 3)
   expectAnswer retry (-3)
-  assert (match Finite.solve FiniteModel.loop with | .error _ => true | .ok _ => false)
+  check (match Finite.solve FiniteModel.loop with | .error _ => true | .ok _ => false)
     "solver accepted a nonabsorbing loop"
-  assert
+  check
     (match Finite.solve FiniteModel.fork {maxStates := 2} with | .error _ => true | .ok _ => false)
     "solver ignored state limit"
 

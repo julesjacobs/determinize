@@ -32,24 +32,24 @@ def runtime : IO Unit := do
       ("6 / 2", "3.000000"),
       ("if false then 1/0 else 7", "7.000000")] do
     let actual ← value text
-    assert (actual == expected) s!"{text}: expected {expected}, got {actual}"
+    check (actual == expected) s!"{text}: expected {expected}, got {actual}"
   for text in ["uniform(0,1)", "gauss(0,1)", "poisson(3)", "exponential(2)",
       "gamma(2,3)", "beta(2,3)", "flip(0.4)", "bernoulli(0.6)", "discrete(0.25,0.25,0.5)"] do
     let a ← value text false; let b ← value text false
-    assert (a == b) s!"seed replay changed: {text}"
+    check (a == b) s!"seed replay changed: {text}"
   for text in ["1/0", "uniform[E](0,1)/0", "1/uniform[G](0,0)", "discrete(-0.1,*)",
     "discrete(0.6,0.6,*)", "uniform(2,1)", "gauss(1,-1)", "poisson(-1)", "beta(0,1)",
       "exponential(0)", "gamma(1,0)", "flip(2)", "observe(false)",
       "(rec f x => f x) ()"] do
     let p ← IO.ofExcept (compile text)
     for expression in [p.source, p.source.determinize] do
-      assert (Runtime.run expression 0 100 |> fun r ↦ !r.isOk) s!"bad run returned a value: {text}"
+      check (Runtime.run expression 0 100 |> fun r ↦ !r.isOk) s!"bad run returned a value: {text}"
   let boundary := "discrete[E](" ++ String.intercalate "+" (List.replicate 20 "0.05") ++ ",*)"
   for target in [false, true] do
-    assert ((← value boundary target) == "0.000000") "rounding at probability sum one failed"
+    check ((← value boundary target) == "0.000000") "rounding at probability sum one failed"
   let p ← IO.ofExcept (compile "gauss[E](1,uniform[G](1,2))")
   let (_, stats) ← IO.ofExcept (Runtime.run p.source.determinize)
-  assert (stats.draws == 1) "atomic mean skipped a sampled variance operand"
+  check (stats.draws == 1) "atomic mean skipped a sampled variance operand"
   let rejected ← IO.ofExcept (compile "let _ = observe(false) in 42")
   for e in [rejected.source, rejected.source.determinize] do
     match ← IO.ofExcept (Runtime.runOutcome e 42 10) with
@@ -57,13 +57,13 @@ def runtime : IO Unit := do
     | .returned .. => throw (IO.userError "failed observation returned a value")
   let division ← IO.ofExcept (compile "1/0")
   match Runtime.runOutcome division.source 42 10 with
-  | .error message => assert (message == "division by zero") "division failure diagnostic"
+  | .error message => check (message == "division by zero") "division failure diagnostic"
   | .ok _ => throw (IO.userError "division by zero was treated as a return or rejection")
   let divergent ← IO.ofExcept (compile "(rec f x => f x) ()")
-  assert (!(Runtime.runOutcome divergent.source 42 10).isOk)
+  check (!(Runtime.runOutcome divergent.source 42 10).isOk)
     "ordinary divergence was classified as observation rejection"
   let condition ← IO.ofExcept (compile "observe(uniform[G](0,1) < 2)")
   let (_, state) ← IO.ofExcept (Runtime.run condition.source)
-  assert (state.draws == 1) "observation condition was not evaluated once"
+  check (state.draws == 1) "observation condition was not evaluated once"
 
 end Determinize.Tests

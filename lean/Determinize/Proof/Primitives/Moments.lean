@@ -37,7 +37,7 @@ theorem ae_nonneg_poissonMeasure (rate : NNReal) :
 theorem ae_abs_le_uniformMeasure (lower upper : ℝ) (ordered : lower ≤ upper) :
     ∀ᵐ value ∂uniformMeasure lower upper, |value| ≤ |lower| + |upper| := by
   unfold uniformMeasure
-  rw [dif_pos ordered]
+  rw [dite_eq_left ordered]
   split
   · rename_i point
     simp only [ae_dirac_eq, Filter.eventually_pure]
@@ -111,7 +111,7 @@ theorem primitiveMomentBounds_primitiveLaws : PrimitiveMomentBounds primitiveLaw
     have eq : variance = ⟨general 0, hv⟩ := by
       apply Subtype.ext
       exact max_eq_left hv
-    rw [primitiveLaws.kernel_eq_paperMeasure, paperMeasure, dif_pos hv, ← eq]
+    rw [primitiveLaws.kernel_eq_paperMeasure, paperMeasure, dite_eq_left hv, ← eq]
     have bound := integral_abs_gaussianReal_le (affine 0) variance
     change _ ≤ (c + 1) * (1 + ∑ i : Fin 1, |affine i|)
     rw [Fin.sum_univ_one]
@@ -125,7 +125,7 @@ theorem primitiveMomentBounds_primitiveLaws : PrimitiveMomentBounds primitiveLaw
       rw [primitiveLaws.kernel_eq_paperMeasure]
       change ∀ᵐ value ∂(if h : 0 ≤ affine 0 then
         (poissonMeasure ⟨affine 0, h⟩).map (fun n : Nat ↦ (n : ℝ)) else 0), 0 ≤ value
-      rw [dif_pos (show 0 ≤ affine 0 from valid)]
+      rw [dite_eq_left (show 0 ≤ affine 0 from valid)]
       exact ae_nonneg_poissonMeasure _
     have meanEq : meanValue .poisson (affine, general) = affine 0 := rfl
     have sumEq : (∑ i, |affine i|) = |affine 0| := Fin.sum_univ_one _
@@ -139,7 +139,7 @@ theorem primitiveMomentBounds_primitiveLaws : PrimitiveMomentBounds primitiveLaw
       rw [primitiveLaws.kernel_eq_paperMeasure]
       change ∀ᵐ value ∂(if 0 < affine 0 ∧ 0 < general 0 then
         gammaMeasure (affine 0) (general 0) else 0), 0 ≤ value
-      rw [if_pos (show 0 < affine 0 ∧ 0 < general 0 from valid)]
+      rw [ite_eq_left (show 0 < affine 0 ∧ 0 < general 0 from valid)]
       exact ae_nonneg_gammaMeasure _ _
     rw [integral_congr_ae (nonnegative.mono fun value h ↦ abs_of_nonneg h),
       primitiveLaws.mean_law .gamma (affine, general) valid]
@@ -168,7 +168,7 @@ theorem primitiveMomentBounds_primitiveLaws : PrimitiveMomentBounds primitiveLaw
     refine ⟨n, Nat.cast_nonneg _, ?_⟩
     intro affine valid
     simp only [InDomain] at valid
-    rw [primitiveLaws.kernel_eq_paperMeasure, paperMeasure, if_pos valid]
+    rw [primitiveLaws.kernel_eq_paperMeasure, paperMeasure, ite_eq_left valid]
     change (∫ x : ℝ, |x| ∂DiscreteLaws.remainderMeasure n affine) ≤ _
     rw [DiscreteLaws.integral_remainderMeasure n affine valid]
     simp only [Nat.abs_cast]

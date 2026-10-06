@@ -170,7 +170,7 @@ noncomputable def transitionPack (laws : Determinize.Proof.Paper.PrimitiveLaws)
     (SFiniteKernel.pullback (primitiveKernelPack laws (.sample .E) op)
       (fun environment : Env n ↦
         (fun i ↦ Symbolic.Affine.eval (affineArgs i) environment, generalArgs))
-      ((measurable_pi_lambda _ fun i ↦
+      ((Measurable.of_eval fun i ↦
         Determinize.Proof.Paper.Symbolic.AffineExpr.measurable_affine_eval (affineArgs i)).prodMk
         measurable_const))
     (fun input ↦ Env.cons input.2 input.1)
@@ -653,12 +653,12 @@ theorem exists_jointContinuation {α : Type*} [MeasurableSpace α]
       · simp only [Set.piecewise, member, ↓reduceIte] at equality
         change (if parameter ∈ region then trueContinuation (parameter, value)
           else falseContinuation (parameter, value)) = continuation value
-        rw [if_pos member]
+        rw [ite_eq_left member]
         exact trueRule parameter fiber continuation equality value
       · simp only [Set.piecewise, member, ↓reduceIte] at equality
         change (if parameter ∈ region then trueContinuation (parameter, value)
           else falseContinuation (parameter, value)) = continuation value
-        rw [if_neg member]
+        rw [ite_eq_right member]
         exact falseRule parameter fiber continuation equality value
 
 theorem measurable_sampleG_joint_nStepMass (laws : PrimitiveLaws)
@@ -817,7 +817,7 @@ theorem source_sampleE_safe_extension
     unfold primitiveFiber
       Determinize.Spec.Paper.parseParams
     simp only
-    rw [dif_pos (by simpa using affineLength), dif_pos generalLength]
+    rw [dite_eq_left (by simpa using affineLength), dite_eq_left generalLength]
     simp only
     rw [laws.kernel_eq_paperMeasure]
     congr 1
@@ -1054,7 +1054,7 @@ theorem symbolicReduce_targetRealize
           (lifted_realize := by
             intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
           ihr environment, determinize_isValue, realize_isValue,
-          if_neg rightValue]
+          ite_eq_right rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [targetRealize_wrap
         (ExprContext := fun next ↦ .pair
@@ -1100,7 +1100,7 @@ theorem symbolicReduce_targetRealize
           (lifted_realize := by
             intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
           iht environment, determinize_isValue, realize_isValue,
-          if_neg tailValue]
+          ite_eq_right tailValue]
     · simp only [headValue, Bool.false_eq_true, ↓reduceIte]
       rw [targetRealize_wrap
         (ExprContext := fun next ↦ .cons next ((tail.realize environment).determinize))
@@ -1129,7 +1129,7 @@ theorem symbolicReduce_targetRealize
           (context_realize := by intros; simp only [realize, Expr.determinize])
           (lifted_realize := by
             intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
-          iho environment, determinize_isValue, realize_isValue, if_neg operandValue]
+          iho environment, determinize_isValue, realize_isValue, ite_eq_right operandValue]
     · rw [symbolicReduce_app_eq]
       simp only [functionValue, Bool.false_eq_true, ↓reduceIte]
       rw [targetRealize_wrap
@@ -1288,7 +1288,7 @@ theorem symbolicReduce_targetRealize
           (context_realize := by intros; simp only [realize, Expr.determinize])
           (lifted_realize := by
             intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
-          ihr environment, determinize_isValue, realize_isValue, if_neg rightValue]
+          ihr environment, determinize_isValue, realize_isValue, ite_eq_right rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [targetRealize_wrap
         (ExprContext := fun next ↦ .add next ((right.realize environment).determinize))
@@ -1314,7 +1314,7 @@ theorem symbolicReduce_targetRealize
           (context_realize := by intros; simp only [realize, Expr.determinize])
           (lifted_realize := by
             intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
-          ihr environment, determinize_isValue, realize_isValue, if_neg rightValue]
+          ihr environment, determinize_isValue, realize_isValue, ite_eq_right rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [targetRealize_wrap
         (ExprContext := fun next ↦ .add next ((right.realize environment).determinize))
@@ -1344,7 +1344,7 @@ theorem symbolicReduce_targetRealize
           (context_realize := by intros; simp only [realize, Expr.determinize])
           (lifted_realize := by
             intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
-          ihr environment, determinize_isValue, realize_isValue, if_neg rightValue]
+          ihr environment, determinize_isValue, realize_isValue, ite_eq_right rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [targetRealize_wrap
         (ExprContext := fun next ↦ .mul next ((right.realize environment).determinize))
@@ -1375,7 +1375,7 @@ theorem symbolicReduce_targetRealize
           (context_realize := by intros; simp only [realize, Expr.determinize])
           (lifted_realize := by
             intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
-          ihr environment, determinize_isValue, realize_isValue, if_neg rightValue]
+          ihr environment, determinize_isValue, realize_isValue, ite_eq_right rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [targetRealize_wrap
         (ExprContext := fun next ↦ .mul next ((right.realize environment).determinize))
@@ -1416,7 +1416,7 @@ theorem symbolicReduce_targetRealize
           (context_realize := by intros; simp only [realize, Expr.determinize])
           (lifted_realize := by
             intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
-          ihr environment, determinize_isValue, realize_isValue, if_neg rightValue]
+          ihr environment, determinize_isValue, realize_isValue, ite_eq_right rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [targetRealize_wrap
         (ExprContext := fun next ↦ .div next ((right.realize environment).determinize))
@@ -1451,7 +1451,7 @@ theorem symbolicReduce_targetRealize
           (context_realize := by intros; simp only [realize, Expr.determinize])
           (lifted_realize := by
             intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
-          ihr environment, determinize_isValue, realize_isValue, if_neg rightValue]
+          ihr environment, determinize_isValue, realize_isValue, ite_eq_right rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [targetRealize_wrap
         (ExprContext := fun next ↦ .div next ((right.realize environment).determinize))
@@ -1481,7 +1481,7 @@ theorem symbolicReduce_targetRealize
           (context_realize := by intros; simp only [realize, Expr.determinize])
           (lifted_realize := by
             intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
-          ihr environment, determinize_isValue, realize_isValue, if_neg rightValue]
+          ihr environment, determinize_isValue, realize_isValue, ite_eq_right rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [targetRealize_wrap
         (ExprContext := fun next ↦ .lt next ((right.realize environment).determinize))
@@ -1518,7 +1518,7 @@ theorem symbolicReduce_targetRealize
           (context_realize := by intros; simp only [realize, Expr.determinize])
           (lifted_realize := by
             intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
-          ihr environment, determinize_isValue, realize_isValue, if_neg rightValue]
+          ihr environment, determinize_isValue, realize_isValue, ite_eq_right rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [targetRealize_wrap
         (ExprContext := fun next ↦ .uniform (DistributionAction.determinize (.sample affinity)) next
@@ -1549,7 +1549,7 @@ theorem symbolicReduce_targetRealize
           (lifted_realize := by
             intros; simp only [realize, Expr.determinize, DistributionAction.determinize,
               realize_weakenSamples]),
-          ihr environment, determinize_isValue, realize_isValue, if_neg rightValue]
+          ihr environment, determinize_isValue, realize_isValue, ite_eq_right rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [targetRealize_wrap
         (ExprContext := fun next ↦ .uniform .mean next
@@ -1592,7 +1592,7 @@ theorem symbolicReduce_targetRealize
           (context_realize := by intros; simp only [realize, Expr.determinize])
           (lifted_realize := by
             intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
-          ihr environment, determinize_isValue, realize_isValue, if_neg rightValue]
+          ihr environment, determinize_isValue, realize_isValue, ite_eq_right rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [targetRealize_wrap
         (ExprContext := fun next ↦
@@ -1626,7 +1626,7 @@ theorem symbolicReduce_targetRealize
           (lifted_realize := by
             intros; simp only [realize, Expr.determinize, DistributionAction.determinize,
               realize_weakenSamples]),
-          ihr environment, determinize_isValue, realize_isValue, if_neg rightValue]
+          ihr environment, determinize_isValue, realize_isValue, ite_eq_right rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [targetRealize_wrap
         (ExprContext := fun next ↦ .gaussian .mean next
@@ -1811,7 +1811,7 @@ theorem symbolicReduce_targetRealize
           (context_realize := by intros; simp only [realize, Expr.determinize])
           (lifted_realize := by
             intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
-          ihr environment, determinize_isValue, realize_isValue, if_neg rightValue]
+          ihr environment, determinize_isValue, realize_isValue, ite_eq_right rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [targetRealize_wrap
         (ExprContext := fun next ↦ .beta (DistributionAction.determinize (.sample affinity)) next
@@ -1846,7 +1846,7 @@ theorem symbolicReduce_targetRealize
           (lifted_realize := by
             intros; simp only [realize, Expr.determinize, DistributionAction.determinize,
               realize_weakenSamples]),
-          ihr environment, determinize_isValue, realize_isValue, if_neg rightValue]
+          ihr environment, determinize_isValue, realize_isValue, ite_eq_right rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [targetRealize_wrap
         (ExprContext := fun next ↦ .beta .mean next
@@ -1889,7 +1889,7 @@ theorem symbolicReduce_targetRealize
           (context_realize := by intros; simp only [realize, Expr.determinize])
           (lifted_realize := by
             intros; simp only [realize, Expr.determinize, realize_weakenSamples]),
-          ihr environment, determinize_isValue, realize_isValue, if_neg rightValue]
+          ihr environment, determinize_isValue, realize_isValue, ite_eq_right rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [targetRealize_wrap
         (ExprContext := fun next ↦ .gamma (DistributionAction.determinize (.sample affinity)) next
@@ -1922,7 +1922,7 @@ theorem symbolicReduce_targetRealize
           (lifted_realize := by
             intros; simp only [realize, Expr.determinize, DistributionAction.determinize,
               realize_weakenSamples]),
-          ihr environment, determinize_isValue, realize_isValue, if_neg rightValue]
+          ihr environment, determinize_isValue, realize_isValue, ite_eq_right rightValue]
     · simp only [leftValue, Bool.false_eq_true, ↓reduceIte]
       rw [targetRealize_wrap
         (ExprContext := fun next ↦ .gamma .mean next
@@ -1967,11 +1967,11 @@ theorem source_mean_safe_step
     rw [← symbolicReduce_realize typed environment, actionEq]
     rfl
   have nv := not_value_of_reduce_sample _ _ _ reduction
-  rw [DomainSafeAt, if_neg nv, reduction] at safe
+  rw [DomainSafeAt, ite_eq_right nv, reduction] at safe
   dsimp only at safe
   have valid := (primitiveFiber_mean_mass op affine general ha hg environment).mp safe.1
   refine ⟨valid, ?_⟩
-  rw [primitiveFiber_mean_formula op affine general ha hg environment, if_pos valid,
+  rw [primitiveFiber_mean_formula op affine general ha hg environment, ite_eq_left valid,
     ae_dirac_eq] at safe
   rw [natural]
   exact safe.2
@@ -1993,7 +1993,7 @@ theorem safeConfigAt_target
     · have targetNotValue :
           (expression.realize mean).determinize.isValue ≠ true := by
         simpa only [determinize_isValue, Symbolic.AffineExpr.realize_isValue] using value
-      rw [DomainSafeAt, if_neg targetNotValue]
+      rw [DomainSafeAt, ite_eq_right targetNotValue]
       have targetStep := symbolicReduce_targetRealize typed mean
       rw [← targetStep]
       have actionTyped := Symbolic.AffineExpr.symbolicReduce_wellTyped typed
@@ -2029,7 +2029,7 @@ theorem safeConfigAt_target
         have nextSafe := ih history (continuation (meanAffine op affine general))
           ⟨historySafe, nextTyped, stepSafe.mono fun _ h ↦ h.2⟩
         simp only [targetRealize]
-        rw [primitiveFiber_mean_formula op affine general ha hg mean, if_pos valid]
+        rw [primitiveFiber_mean_formula op affine general ha hg mean, ite_eq_left valid]
         refine ⟨by simp, ?_⟩
         rw [ae_dirac_eq, Filter.eventually_pure, ← natural]
         exact nextSafe
@@ -2078,11 +2078,11 @@ theorem safeConfigAt_target
           unfold primitiveFiber
             Determinize.Spec.Paper.parseParams
           simp only
-          rw [dif_pos affineMappedLength, dif_pos generalLength]
+          rw [dite_eq_left affineMappedLength, dite_eq_left generalLength]
           simp only
           change (if Determinize.Spec.Paper.InDomain op params then
             Measure.dirac (Determinize.Spec.Paper.meanValue op params) else 0) = _
-          rw [if_pos paramsDomain]
+          rw [ite_eq_left paramsDomain]
         rw [fiberEq]
         constructor
         · simp

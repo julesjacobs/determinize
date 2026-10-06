@@ -19,7 +19,7 @@ private theorem sum_edge_values {n : Nat} (edges : List Edge) (values : Fin n �
     have bound := bounded edge (by simp)
     have rest := ih (fun e h ↦ bounded e (by simp [h]))
     simp only [List.map_cons, List.sum_cons, add_mul, Finset.sum_add_distrib, rest,
-      edgeValues, List.map_cons, List.sum_cons, dif_pos bound]
+      edgeValues, List.map_cons, List.sum_cons, dite_eq_left bound]
     congr 1
     have eq (j : Fin n) : edge.target = j.val ↔ (⟨edge.target, bound⟩ : Fin n) = j := by
       constructor

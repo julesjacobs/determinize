@@ -47,7 +47,7 @@ theorem concrete_mean (expression : AffineExpr n) (typed : WellTyped [] expressi
   obtain ⟨ha, hg, _, _⟩ := SymbolicAction.wellTyped_mean_iff.mp actionTyped
   rw [← symbolicReduce_realize typed environment, actionEq]
   simp only [SymbolicAction.realize]
-  rw [primitiveFiber_mean_formula op affine general ha hg environment, if_pos valid]
+  rw [primitiveFiber_mean_formula op affine general ha hg environment, ite_eq_left valid]
 
 theorem concrete_target_mean (expression : AffineExpr n) (typed : WellTyped [] expression ty)
     (actionEq : symbolicReduce expression = .mean op affine general continuation)
@@ -60,7 +60,7 @@ theorem concrete_target_mean (expression : AffineExpr n) (typed : WellTyped [] e
   obtain ⟨ha, hg, _, _⟩ := SymbolicAction.wellTyped_mean_iff.mp actionTyped
   rw [← symbolicReduce_targetRealize typed environment, actionEq]
   simp only [targetRealize]
-  rw [primitiveFiber_mean_formula op affine general ha hg environment, if_pos valid]
+  rw [primitiveFiber_mean_formula op affine general ha hg environment, ite_eq_left valid]
 
 theorem actualTraceLaw_mean (depth : Nat) (history : Symbolic.SampleEnv primitiveLaws n)
     (expression : AffineExpr n) (typed : WellTyped [] expression ty)

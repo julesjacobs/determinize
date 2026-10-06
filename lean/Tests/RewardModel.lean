@@ -21,13 +21,13 @@ private def rewardCase (text : String) (mass first second : Rat) : IO Unit := do
   match Reward.explore program.source .source {maxStates := 100} with
   | .complete candidate valid =>
     let solution ← IO.ofExcept (Reward.solve (candidate.toModel valid))
-    assert (solution.statistics == ⟨mass, first, second⟩) s!"additive equations: {text}"
+    check (solution.statistics == ⟨mass, first, second⟩) s!"additive equations: {text}"
   | .incomplete _ _ _ _ => throw (IO.userError s!"additive exploration did not finish: {text}")
   | .failed _ failure => throw (IO.userError s!"additive exploration failed: {failure.message}")
 
 def rewardModels : IO Unit := do
   let parallel ← IO.ofExcept (Reward.solve parallelRewards)
-  assert (parallel.statistics == ⟨1, 1, 2⟩) "distinct rewards with the same target"
+  check (parallel.statistics == ⟨1, 1, 2⟩) "distinct rewards with the same target"
   rewardCase "let f = rec f u => if flip(0.5) then 0 else 1 + f u in f ()" 1 1 3
   rewardCase "let f = rec f u => if flip(0.5) then -1 else 1 + f u in f ()" 1 0 2
   rewardCase "let f = rec f u => if flip(0.5) then 0 else (-1) + f u in f ()" 1 (-1) 3
