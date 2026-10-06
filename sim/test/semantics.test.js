@@ -5,6 +5,7 @@ import { prettyExpr } from "../src/compiler/pretty.js";
 import { examples } from "../src/examples.js";
 import { affineConst, affineScale, affineVar } from "../src/runtime/affine.js";
 import { meanDistribution, sampleDistribution } from "../src/runtime/distributions.js";
+import { makeStreams } from "../src/runtime/rng.js";
 import {
   checkEquivalences,
   prepareRuntime,
@@ -15,7 +16,6 @@ import {
   runSymbolic,
   stepOrdinary,
 } from "../src/runtime/semantics.js";
-import { makeStreams } from "../src/runtime/rng.js";
 
 test("symbolic semantics stores E samples in sigma", () => {
   const { expr } = prepareRuntime("let u = uniform[E](0, 1) in\nu + 1");

@@ -18801,6 +18801,11 @@ var DeterminizeSim = (() => {
     { key: "Ctrl-m", mac: "Shift-Alt-m", run: toggleTabFocusMode }
   ].concat(standardKeymap);
 
+  // src/compiler/ast.js
+  function node(kind, props, from, to) {
+    return { kind, ...props, from, to };
+  }
+
   // src/compiler/errors.js
   var CompileError = class extends Error {
     constructor(message, from = void 0, to = void 0) {
@@ -18810,11 +18815,6 @@ var DeterminizeSim = (() => {
       this.to = to;
     }
   };
-
-  // src/compiler/ast.js
-  function node(kind, props, from, to) {
-    return { kind, ...props, from, to };
-  }
 
   // src/compiler/types.js
   var modeCounter = 0;

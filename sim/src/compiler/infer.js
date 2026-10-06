@@ -1,13 +1,5 @@
 import { CompileError } from "./errors.js";
 import {
-  TArrow,
-  TBool,
-  TFloat,
-  TList,
-  TMeta,
-  TPair,
-  TSum,
-  TUnit,
   assertSubtype,
   defaultModesType,
   ensureFloat,
@@ -17,6 +9,14 @@ import {
   freshModeMeta,
   resetTypeState,
   setMode,
+  TArrow,
+  TBool,
+  TFloat,
+  TList,
+  TMeta,
+  TPair,
+  TSum,
+  TUnit,
   zonk,
 } from "./types.js";
 
