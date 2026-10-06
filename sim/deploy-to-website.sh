@@ -20,7 +20,7 @@ npm run build
 
 rm -rf "$TARGET_DIR"
 mkdir -p "$TARGET_DIR"
-cp index.html styles.css app.bundle.js "$TARGET_DIR/"
+cp -R dist/. "$TARGET_DIR/"
 
 if [[ "$LEGACY_TARGET_REL" != "$TARGET_REL" && -d "$LEGACY_TARGET_DIR" ]]; then
   rm -rf "$LEGACY_TARGET_DIR"
