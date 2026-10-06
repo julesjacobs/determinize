@@ -3,7 +3,7 @@
 # publishes the artifact.
 #
 # Every `run` step executes inside the flake's `sim` dev shell, so Node.js, npm and Biome are the
-# versions flake.lock pins. The npm packages, esbuild among them, are pinned by
+# versions flake.lock pins. The shell also links sim/node_modules, which Nix builds from
 # sim/package-lock.json.
 name: Simulator
 
@@ -42,8 +42,6 @@ jobs:
       - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
       - name: Check formatting and lint
         run: biome ci .
-      - name: Install the dependencies
-        run: npm ci
       - name: Test
         run: npm test
       - name: Build

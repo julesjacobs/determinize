@@ -24,6 +24,9 @@ await build({
   outfile: `${outdir}/app.js`,
   minify: options.minify,
   sourcemap: options.minify && "linked",
+  // node_modules holds links into the Nix store. Resolving packages through the links keeps the
+  // paths in the bundle's comments and source map independent of the store and the checkout.
+  preserveSymlinks: true,
   logLevel: "warning",
 });
 await copyFile("styles.css", `${outdir}/styles.css`);

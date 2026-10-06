@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Source after setting ROOT to the repository root.
 # Use installed tools first, then an available direnv or Nix development shell. The command runs
-# in the caller's directory.
+# in the caller's directory. Simulator commands also need sim/node_modules, which only the sim
+# shell links, so without it they run in that shell.
 
 # Directory whose .envrc loads a given devshell.
 shell_dir() {
@@ -16,7 +17,7 @@ shell_dir() {
 in_shell() {
   local name="$1"; shift
   local dir; dir="$(shell_dir "$name")"
-  if command -v "$1" >/dev/null 2>&1; then
+  if command -v "$1" >/dev/null 2>&1 && [[ "$name" != sim || -e "$ROOT/sim/node_modules" ]]; then
     "$@"
   elif command -v direnv >/dev/null 2>&1 && direnv exec "$dir" true >/dev/null 2>&1; then
     direnv exec "$dir" "$@"

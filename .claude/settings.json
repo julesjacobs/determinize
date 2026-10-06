@@ -6,7 +6,6 @@
       "Bash(./run.sh *)",
       "Bash(npm test *)",
       "Bash(npm run build *)",
-      "Bash(npm ci)",
       "Bash(node --test *)",
       "Bash(biome *)",
       "Bash(latexmk *)",
