@@ -1,9 +1,9 @@
 # Checks the simulator's formatting and lint with Biome, runs its tests, builds it into sim/dist/
-# and uploads that directory as the `simulator` artifact. It also checks that the committed bundle
-# is the one its sources build. On main, pages.yml runs this workflow and publishes the artifact.
+# and uploads that directory as the `simulator` artifact. On main, pages.yml runs this workflow and
+# publishes the artifact.
 #
-# Every `run` step executes inside the flake's `sim` dev shell, so Node.js, npm, Biome and git are
-# the versions flake.lock pins. The npm packages, esbuild among them, are pinned by
+# Every `run` step executes inside the flake's `sim` dev shell, so Node.js, npm and Biome are the
+# versions flake.lock pins. The npm packages, esbuild among them, are pinned by
 # sim/package-lock.json.
 name: Simulator
 
@@ -48,12 +48,6 @@ jobs:
         run: npm test
       - name: Build
         run: npm run build
-      - name: Check that the committed bundle is up to date
-        run: |
-          if ! git diff --quiet -- app.bundle.js; then
-            echo "::error file=sim/app.bundle.js::The bundle is out of date. Run 'npm run build' in sim and commit app.bundle.js."
-            exit 1
-          fi
       - name: Upload the simulator
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:

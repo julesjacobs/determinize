@@ -48,16 +48,17 @@ From the repository root:
 `run.sh` builds and invokes the Lean CLI; arguments and relative paths are passed
 through. `test.sh` runs the full Lean test entry point, including the shared corpus
 and independent certificates. It accepts `--all` and `--statistical`.
-`check.sh --all` additionally checks theorem axioms, the simulator's formatting, lint and
-tests, bundle freshness, and the paper build. Select individual areas with `./check.sh lean tex`, or use
-`./check.sh --changed` for areas affected by uncommitted changes. The scripts use
+`check.sh --all` additionally checks theorem axioms, the simulator's formatting, lint,
+tests and build, and the paper build. Select individual areas with `./check.sh lean tex`,
+or use `./check.sh --changed` for areas affected by uncommitted changes. The scripts use
 tools on `PATH` first; Nix is optional.
 
 On GitHub, `.github/workflows/lean.yml` runs `lake build --wfail` and `./test.sh --all`
 in the `.#lean` shell, and `.github/workflows/sim.yml` runs `biome ci` and the simulator
-tests in the `.#sim` shell and checks that the committed bundle is the one its sources build. Both run
-for pull requests. For `main`, `.github/workflows/pages.yml` runs both and then publishes
-the [simulator](https://julesjacobs.github.io/determinize/) to GitHub Pages, with the
+tests in the `.#sim` shell, builds the simulator into `sim/dist/` and attaches it to the run
+as the `simulator` artifact. Both run for pull requests. For `main`,
+`.github/workflows/pages.yml` runs both and then publishes that build of the
+[simulator](https://julesjacobs.github.io/determinize/) to GitHub Pages, with the
 [API documentation](https://julesjacobs.github.io/determinize/docs/) under `docs/`.
 `.github/workflows/tex.yml` builds the paper in the `.#tex` shell for pull requests and for
 `main`, fails on unresolved references and citations, and attaches `main.pdf` to the run as

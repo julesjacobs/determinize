@@ -40,7 +40,7 @@ if re.search(r"\blake\s+update\b", cmd):
     ask("This rewrites lean/lake-manifest.json (the pinned Mathlib revision); lean/lean-toolchain must then "
         "match Mathlib's, and everyone needs a fresh 'lake exe cache get'.")
 if re.search(r"\bnpm\s+(install|i|add|update|up|uninstall|rm|audit\s+fix)\b", cmd) and not re.search(r"\bnpm\s+ci\b", cmd):
-    ask("This changes sim/package.json or sim/package-lock.json; the committed bundle must then be rebuilt.")
+    ask("This changes sim/package.json or sim/package-lock.json.")
 if re.search(r"\bgit\s+push\b", cmd):
     ask("Pushing to the shared remote.")
 PY
