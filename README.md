@@ -59,6 +59,9 @@ in the `.#lean` shell, and `.github/workflows/sim.yml` runs the simulator tests 
 for pull requests. For `main`, `.github/workflows/pages.yml` runs both and then publishes
 the [simulator](https://julesjacobs.github.io/determinize/) to GitHub Pages, with the
 [API documentation](https://julesjacobs.github.io/determinize/docs/) under `docs/`.
+`.github/workflows/tex.yml` builds the paper in the `.#tex` shell for pull requests and for
+`main`, fails on unresolved references and citations, and attaches `main.pdf` to the run as
+the `paper` artifact.
 
 An E draw is replaced by its distribution's mean; a G draw remains stochastic.
 Finite-model certificates prove the selected core program's integrability and
