@@ -1,9 +1,19 @@
+import type {
+  Expr,
+  ExprOf,
+  MeanKind,
+  Mode,
+  ParamDistributionKind,
+  Span,
+  TypedExpr,
+} from "../compiler/ast.ts";
 import { node } from "../compiler/ast.ts";
 import { determinize } from "../compiler/determinize.ts";
 import { defaultModes, inferProgram } from "../compiler/infer.ts";
 import { parse } from "../compiler/parser.ts";
 import { prettyExpr } from "../compiler/pretty.ts";
 import { zonk } from "../compiler/types.ts";
+import type { Affine } from "./affine.ts";
 import {
   affineAdd,
   affineConst,
@@ -18,6 +28,7 @@ import {
   symFloat,
   valueToAffine,
 } from "./affine.ts";
+import type { DistributionDomainError } from "./distributions.ts";
 import {
   floatDistributions,
   instantiateArgs,
@@ -25,9 +36,104 @@ import {
   meanDistribution,
   sampleDistribution,
 } from "./distributions.ts";
+import type { Rng, Streams } from "./rng.ts";
 import { makeStreams } from "./rng.ts";
 
-export function prepareRuntime(source) {
+/** A symbolic E draw, name ~ kind(args). */
+export interface Binding {
+  name: string;
+  kind: MeanKind;
+  args: Affine[];
+}
+
+export interface OrdinaryState {
+  expr: Expr;
+  rngE: Rng;
+  rngG: Rng;
+}
+
+export interface SymbolicState {
+  expr: Expr;
+  sigma: Binding[];
+  rngG: Rng;
+  nextSymbol: number;
+}
+
+/** The part of a machine's state that a step reads and may change. */
+type Context =
+  | { kind: "ordinary"; rngE: Rng; rngG: Rng }
+  | { kind: "symbolic"; rngE?: undefined; sigma: Binding[]; rngG: Rng; nextSymbol: number };
+
+interface ContextPatch {
+  rngE?: Rng;
+  rngG?: Rng;
+  sigma?: Binding[];
+  nextSymbol?: number;
+}
+
+interface StepResult extends ContextPatch {
+  expr: Expr;
+}
+
+export interface Prepared {
+  expr: Expr;
+  determinized: Expr;
+  typed: TypedExpr | null;
+  unchecked?: boolean;
+}
+
+/** An ordinary run synchronized with a target expression. */
+interface Advance {
+  ok: boolean;
+  state: OrdinaryState;
+  steps: number;
+  microTrace: string[];
+  error: string | undefined;
+}
+
+/** One symbolic step, with the source and determinized runs synchronized to it. */
+export interface Frame {
+  step: number;
+  original: Expr;
+  symbolic: Expr;
+  sigma: Binding[];
+  sampleBySymbol: Record<string, number>;
+  determinized: Expr;
+  originalTarget: Expr | undefined;
+  determinizedTarget: Expr | undefined;
+  originalOk: boolean;
+  determinizedOk: boolean;
+  originalMicroSteps: number;
+  determinizedMicroSteps: number;
+  originalError: string | undefined;
+  determinizedError: string | undefined;
+  consistencyOk: boolean;
+  consistencyError: string | undefined;
+  symbolicOk: boolean;
+  symbolicError?: string;
+}
+
+export interface CoupledTrace {
+  seed: number;
+  frames: Frame[];
+  unchecked: boolean;
+  finalOriginal: Expr | undefined;
+  finalDeterminized: Expr | undefined;
+  ok: boolean;
+}
+
+type TerminalEffect = { kind: "Reject" } | { kind: "DomainError"; message: string };
+
+interface LabelledEffect {
+  label: string;
+  effect: TerminalEffect;
+}
+
+type Safe<T> =
+  | { ok: true; value: T; error?: undefined }
+  | { ok: false; error: string; value?: undefined };
+
+export function prepareRuntime(source: string): Prepared {
   const ast = parse(source);
   const typed = inferProgram(ast);
   defaultModes(typed);
@@ -38,7 +144,7 @@ export function prepareRuntime(source) {
   };
 }
 
-export function prepareRuntimeUnchecked(source) {
+export function prepareRuntimeUnchecked(source: string): Prepared {
   const ast = parse(source);
   const expr = runtimeFromAst(ast);
   return {
@@ -49,8 +155,8 @@ export function prepareRuntimeUnchecked(source) {
   };
 }
 
-export function runtimeFromTyped(te) {
-  const distMode = () => {
+export function runtimeFromTyped(te: TypedExpr): Expr {
+  const distMode = (): Mode => {
     if (!floatDistributions.has(te.kind)) return "G";
     const ty = zonk(te.typ);
     return ty?.tag === "Float" ? (ty.mode.mode ?? "E") : "G";
@@ -151,11 +257,11 @@ export function runtimeFromTyped(te) {
     case "Observe":
       return n("Observe", { cond: runtimeFromTyped(te.cond) }, te);
     default:
-      throw new Error(`unsupported typed expression ${te.kind}`);
+      throw new Error(`unsupported typed expression ${(te as TypedExpr).kind}`);
   }
 }
 
-export function runtimeFromAst(expr) {
+export function runtimeFromAst(expr: Expr): Expr {
   switch (expr.kind) {
     case "Var":
     case "Const":
@@ -269,7 +375,7 @@ export function runtimeFromAst(expr) {
   }
 }
 
-export function runOrdinary(expr, streams, maxSteps = 1000) {
+export function runOrdinary(expr: Expr, streams: Streams, maxSteps = 1000) {
   let state = { expr: clone(expr), rngE: streams.rngE.clone(), rngG: streams.rngG.clone() };
   const trace = [prettyExpr(state.expr)];
   for (let steps = 0; steps < maxSteps && !isValue(state.expr); steps++) {
@@ -280,8 +386,13 @@ export function runOrdinary(expr, streams, maxSteps = 1000) {
   return { ...state, trace, value: state.expr };
 }
 
-export function runSymbolic(expr, streams, maxSteps = 1000) {
-  let state = { expr: clone(expr), sigma: [], rngG: streams.rngG.clone(), nextSymbol: 1 };
+export function runSymbolic(expr: Expr, streams: Streams, maxSteps = 1000) {
+  let state: SymbolicState = {
+    expr: clone(expr),
+    sigma: [],
+    rngG: streams.rngG.clone(),
+    nextSymbol: 1,
+  };
   const trace = [prettySymbolicState(state)];
   for (let steps = 0; steps < maxSteps && !isValue(state.expr); steps++) {
     state = stepSymbolic(state);
@@ -291,7 +402,7 @@ export function runSymbolic(expr, streams, maxSteps = 1000) {
   return { ...state, trace, value: state.expr };
 }
 
-export function stepOrdinary(state) {
+export function stepOrdinary(state: OrdinaryState): OrdinaryState {
   const result = step(state.expr, { kind: "ordinary", rngE: state.rngE, rngG: state.rngG });
   return {
     ...state,
@@ -301,7 +412,7 @@ export function stepOrdinary(state) {
   };
 }
 
-export function stepSymbolic(state) {
+export function stepSymbolic(state: SymbolicState): SymbolicState {
   const result = step(state.expr, {
     kind: "symbolic",
     sigma: state.sigma,
@@ -317,14 +428,14 @@ export function stepSymbolic(state) {
   };
 }
 
-export function projectSample(symbolicState, rngE) {
+export function projectSample(symbolicState: SymbolicState, rngE: Rng): Expr {
   return projectSampleWithEnv(symbolicState, rngE).expr;
 }
 
-function projectSampleWithEnv(symbolicState, rngE) {
-  const env = new Map();
+function projectSampleWithEnv(symbolicState: SymbolicState, rngE: Rng) {
+  const env = new Map<string, number>();
   const rng = rngE.clone();
-  const sampleBySymbol = {};
+  const sampleBySymbol: Record<string, number> = {};
   for (const binding of symbolicState.sigma) {
     const args = instantiateArgs(binding.args, env);
     try {
@@ -345,8 +456,8 @@ function projectSampleWithEnv(symbolicState, rngE) {
   };
 }
 
-export function projectMean(symbolicState) {
-  const env = new Map();
+export function projectMean(symbolicState: SymbolicState): Expr {
+  const env = new Map<string, number>();
   for (const binding of symbolicState.sigma) {
     const args = binding.args.map((arg) => affineConst(evalAffine(arg, env)));
     try {
@@ -359,7 +470,7 @@ export function projectMean(symbolicState) {
   return concretize(symbolicState.expr, env);
 }
 
-export function projectMeanDeterminized(symbolicState) {
+export function projectMeanDeterminized(symbolicState: SymbolicState): Expr {
   try {
     const env = symbolicMeanEnv(symbolicState);
     return determinizeResidual(concretize(symbolicState.expr, env));
@@ -369,7 +480,7 @@ export function projectMeanDeterminized(symbolicState) {
   }
 }
 
-export function checkEquivalences(source, seed = 1) {
+export function checkEquivalences(source: string, seed = 1) {
   const prepared = prepareRuntime(source);
   const streams = makeStreams(seed);
   const ordinary = runOrdinary(prepared.expr, streams);
@@ -389,15 +500,15 @@ export function checkEquivalences(source, seed = 1) {
 }
 
 export function runCoupledTrace(
-  source,
+  source: string,
   seed = 1,
   maxSymbolicSteps = 1000,
   maxSyncSteps = 200,
-  options = {},
-) {
+  options: { allowIllTyped?: boolean } = {},
+): CoupledTrace {
   const prepared = options.allowIllTyped ? prepareRuntimeUnchecked(source) : prepareRuntime(source);
   const streams = makeStreams(seed);
-  let symbolic = {
+  let symbolic: SymbolicState = {
     expr: clone(prepared.expr),
     sigma: [],
     rngG: streams.rngG.clone(),
@@ -413,7 +524,7 @@ export function runCoupledTrace(
     rngE: streams.rngE.clone(),
     rngG: streams.rngG.clone(),
   };
-  const frames = [];
+  const frames: Frame[] = [];
 
   for (let stepIndex = 0; stepIndex <= maxSymbolicSteps; stepIndex++) {
     const originalProjection = safe(() => projectSampleWithEnv(symbolic, streams.rngE));
@@ -421,10 +532,10 @@ export function runCoupledTrace(
     const originalTarget = originalProjection.value?.expr;
     const determinizedTarget = determinizedProjection.value;
     const originalSync = originalProjection.ok
-      ? advanceToTarget(original, originalTarget, maxSyncSteps)
+      ? advanceToTarget(original, originalTarget as Expr, maxSyncSteps)
       : failedAdvance(original, originalProjection.error);
     const determinizedSync = determinizedProjection.ok
-      ? advanceToTarget(determinizedState, determinizedTarget, maxSyncSteps)
+      ? advanceToTarget(determinizedState, determinizedTarget as Expr, maxSyncSteps)
       : failedAdvance(determinizedState, determinizedProjection.error);
     original = originalSync.state;
     determinizedState = determinizedSync.state;
@@ -482,7 +593,7 @@ export function runCoupledTrace(
   };
 }
 
-function frameChecksOk(frame) {
+function frameChecksOk(frame: Frame) {
   return (
     frame.originalOk &&
     frame.determinizedOk &&
@@ -491,13 +602,18 @@ function frameChecksOk(frame) {
   );
 }
 
-function terminalEffectConsistency(frame) {
-  const effects = [
-    ["Original", frame.original],
-    ["Symbolic", frame.symbolic],
-    ["Determinized", frame.determinized],
-  ].map(([label, expr]) => ({ label, effect: terminalEffect(expr) }));
-  const active = effects.filter((item) => item.effect);
+function terminalEffectConsistency(frame: Pick<Frame, "original" | "symbolic" | "determinized">): {
+  ok: boolean;
+  error?: string;
+} {
+  const effects = (
+    [
+      ["Original", frame.original],
+      ["Symbolic", frame.symbolic],
+      ["Determinized", frame.determinized],
+    ] as const
+  ).map(([label, expr]) => ({ label, effect: terminalEffect(expr) }));
+  const active = effects.filter((item) => item.effect) as LabelledEffect[];
   if (active.length === 0) return { ok: true };
   if (active.length !== effects.length) {
     const errored = active.map((item) => item.label).join(", ");
@@ -519,29 +635,29 @@ function terminalEffectConsistency(frame) {
   };
 }
 
-function terminalEffect(expr) {
+function terminalEffect(expr: Expr | undefined): TerminalEffect | null {
   if (expr?.kind === "Reject") return { kind: "Reject" };
   if (expr?.kind === "DomainError") return { kind: "DomainError", message: expr.message };
   return null;
 }
 
-function sameTerminalEffect(a, b) {
-  return a.kind === b.kind && (a.kind !== "DomainError" || a.message === b.message);
+function sameTerminalEffect(a: TerminalEffect, b: TerminalEffect) {
+  return a.kind === b.kind && (a.kind !== "DomainError" || a.message === (b as typeof a).message);
 }
 
-function prettyTerminalEffect(effect) {
+function prettyTerminalEffect(effect: TerminalEffect) {
   return effect.kind === "DomainError" ? effect.message : effect.kind.toLowerCase();
 }
 
-function safe(fn) {
+function safe<T>(fn: () => T): Safe<T> {
   try {
     return { ok: true, value: fn() };
   } catch (error) {
-    return { ok: false, error: error?.message ?? String(error) };
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
   }
 }
 
-function failedAdvance(state, error) {
+function failedAdvance(state: OrdinaryState, error: string): Advance {
   return {
     ok: false,
     state,
@@ -551,7 +667,7 @@ function failedAdvance(state, error) {
   };
 }
 
-function step(expr, ctx) {
+function step(expr: Expr, ctx: Context): StepResult {
   switch (expr.kind) {
     case "Let":
       if (!isValue(expr.value)) return stepChild(expr, "value", ctx);
@@ -658,7 +774,7 @@ function step(expr, ctx) {
   throw new Error(`stuck expression ${expr.kind}`);
 }
 
-function stepMean(expr, ctx) {
+function stepMean(expr: ExprOf<"Mean">, ctx: Context): StepResult {
   for (let i = 0; i < expr.args.length; i++) {
     if (!isValue(expr.args[i])) return stepIndexedChild(expr, "args", i, ctx);
   }
@@ -671,13 +787,13 @@ function stepMean(expr, ctx) {
   }
 }
 
-function stepDistribution(expr, ctx) {
+function stepDistribution(expr: ExprOf<ParamDistributionKind>, ctx: Context): StepResult {
   for (let i = 0; i < expr.args.length; i++) {
     if (!isValue(expr.args[i])) return stepIndexedChild(expr, "args", i, ctx);
   }
   if (ctx.kind === "symbolic" && expr.mode === "E" && floatDistributions.has(expr.kind)) {
     try {
-      meanDistribution(expr.kind, expr.args.map(valueToAffine));
+      meanDistribution(expr.kind as MeanKind, expr.args.map(valueToAffine));
     } catch (error) {
       if (!isDistributionDomainError(error)) throw error;
       return out(domainErrorExpr(error, expr), ctx);
@@ -685,7 +801,7 @@ function stepDistribution(expr, ctx) {
   }
   if (ctx.kind === "symbolic" && expr.mode === "E" && floatDistributions.has(expr.kind)) {
     const name = `v${ctx.nextSymbol}`;
-    const binding = { name, kind: expr.kind, args: expr.args.map(valueToAffine) };
+    const binding = { name, kind: expr.kind as MeanKind, args: expr.args.map(valueToAffine) };
     return out(symFloat(affineVar(name), expr.from, expr.to), {
       ...ctx,
       sigma: [...ctx.sigma, binding],
@@ -694,6 +810,11 @@ function stepDistribution(expr, ctx) {
   }
   const streamName = expr.mode === "E" ? "rngE" : "rngG";
   const rng = ctx[streamName];
+  if (!rng) {
+    throw new Error(
+      `the symbolic semantics keeps E draws as symbols, but ${expr.kind.toLowerCase()}[E] has no mean`,
+    );
+  }
   try {
     const value = sampleDistribution(expr.kind, expr.args, rng);
     return out(
@@ -706,7 +827,7 @@ function stepDistribution(expr, ctx) {
   }
 }
 
-function stepDiscrete(expr, ctx) {
+function stepDiscrete(expr: ExprOf<"Discrete">, ctx: Context): StepResult {
   if (ctx.kind === "symbolic" && expr.mode === "E") {
     try {
       meanDistribution(
@@ -718,7 +839,7 @@ function stepDiscrete(expr, ctx) {
       return out(domainErrorExpr(error, expr), ctx);
     }
     const name = `v${ctx.nextSymbol}`;
-    const binding = {
+    const binding: Binding = {
       name,
       kind: "Discrete",
       args: expr.choices.map((choice) => affineConst(choice.probability)),
@@ -730,7 +851,7 @@ function stepDiscrete(expr, ctx) {
     });
   }
   const streamName = expr.mode === "E" ? "rngE" : "rngG";
-  const rng = ctx[streamName];
+  const rng = ctx[streamName] as Rng;
   try {
     const index = sampleDistribution(
       "Discrete",
@@ -744,7 +865,7 @@ function stepDiscrete(expr, ctx) {
   }
 }
 
-function advanceToTarget(state, target, maxSteps) {
+function advanceToTarget(state: OrdinaryState, target: Expr, maxSteps: number): Advance {
   let current = state;
   let steps = 0;
   const microTrace = [prettyExpr(current.expr)];
@@ -760,7 +881,7 @@ function advanceToTarget(state, target, maxSteps) {
       state: current,
       steps,
       microTrace,
-      error: error?.message ?? String(error),
+      error: error instanceof Error ? error.message : String(error),
     };
   }
   return {
@@ -774,8 +895,8 @@ function advanceToTarget(state, target, maxSteps) {
   };
 }
 
-function symbolicMeanEnv(symbolicState) {
-  const env = new Map();
+function symbolicMeanEnv(symbolicState: SymbolicState) {
+  const env = new Map<string, number>();
   for (const binding of symbolicState.sigma) {
     const args = binding.args.map((arg) => affineConst(evalAffine(arg, env)));
     env.set(binding.name, affineToNumber(meanDistribution(binding.kind, args)));
@@ -783,7 +904,7 @@ function symbolicMeanEnv(symbolicState) {
   return env;
 }
 
-function determinizeResidual(expr) {
+function determinizeResidual(expr: Expr): Expr {
   switch (expr.kind) {
     case "Mean":
       return n(
@@ -843,11 +964,11 @@ function determinizeResidual(expr) {
   }
 }
 
-function meanNode(distribution, args, source) {
+function meanNode(distribution: MeanKind, args: Expr[], source: Span) {
   return n("Mean", { distribution, args }, source);
 }
 
-function arithmetic(kind, left, right, source) {
+function arithmetic(kind: "Add" | "Sub" | "Mul" | "Div", left: Expr, right: Expr, source: Span) {
   const a = valueToAffine(left);
   const b = valueToAffine(right);
   if (kind === "Add") return floatResult(affineAdd(a, b), source);
@@ -856,18 +977,23 @@ function arithmetic(kind, left, right, source) {
   return floatResult(affineDiv(a, b), source);
 }
 
-function floatResult(affine, source) {
+function floatResult(affine: Affine, source: Span): Expr {
   if (Object.keys(affine.terms).length === 0) return n("Const", { value: affine.constant }, source);
   return symFloat(affine, source.from, source.to);
 }
 
-function stepChild(expr, key, ctx) {
+function stepChild<K extends string>(expr: Expr & Record<K, Expr>, key: K, ctx: Context) {
   const result = step(expr[key], ctx);
   if (isTerminalError(result.expr)) return out(result.expr, { ...ctx, ...contextPatch(result) });
   return rebuild(expr, { [key]: result.expr }, ctx, result);
 }
 
-function stepIndexedChild(expr, key, index, ctx) {
+function stepIndexedChild<K extends string>(
+  expr: Expr & Record<K, Expr[]>,
+  key: K,
+  index: number,
+  ctx: Context,
+) {
   const result = step(expr[key][index], ctx);
   if (isTerminalError(result.expr)) return out(result.expr, { ...ctx, ...contextPatch(result) });
   const next = expr[key].slice();
@@ -875,37 +1001,37 @@ function stepIndexedChild(expr, key, index, ctx) {
   return rebuild(expr, { [key]: next }, ctx, result);
 }
 
-function isTerminalError(expr) {
+function isTerminalError(expr: Expr) {
   return expr.kind === "Reject" || expr.kind === "DomainError";
 }
 
-function rebuild(expr, patch, ctx, result) {
+function rebuild(expr: Expr, patch: Record<string, unknown>, ctx: Context, result: StepResult) {
   return out(n(expr.kind, { ...copyProps(expr), ...patch }, expr), {
     ...ctx,
     ...contextPatch(result),
   });
 }
 
-function contextPatch(result) {
-  const patch = {};
-  for (const key of ["rngE", "rngG", "sigma", "nextSymbol"])
+function contextPatch(result: ContextPatch): ContextPatch {
+  const patch: Record<string, unknown> = {};
+  for (const key of ["rngE", "rngG", "sigma", "nextSymbol"] as const)
     if (key in result) patch[key] = result[key];
-  return patch;
+  return patch as ContextPatch;
 }
 
-function out(expr, ctx) {
+function out(expr: Expr, ctx: ContextPatch): StepResult {
   return { expr, ...contextPatch(ctx) };
 }
 
-function copyProps(expr) {
-  const props = { ...expr };
+function copyProps(expr: Expr) {
+  const props: Record<string, unknown> = { ...expr };
   delete props.kind;
   delete props.from;
   delete props.to;
   return props;
 }
 
-function subst(expr, name, replacement) {
+function subst(expr: Expr, name: string, replacement: Expr): Expr {
   switch (expr.kind) {
     case "Var":
       return expr.name === name ? clone(replacement) : clone(expr);
@@ -963,7 +1089,7 @@ function subst(expr, name, replacement) {
   }
 }
 
-function mapChildren(expr, f) {
+function mapChildren(expr: Expr, f: (child: Expr) => Expr): Expr {
   switch (expr.kind) {
     case "Lam":
       return n("Lam", { param: expr.param, body: f(expr.body) }, expr);
@@ -1049,7 +1175,7 @@ function mapChildren(expr, f) {
   }
 }
 
-function concretize(expr, env) {
+function concretize(expr: Expr, env: Map<string, number>): Expr {
   switch (expr.kind) {
     case "SymFloat":
       return n("Const", { value: evalAffine(expr.affine, env) }, expr);
@@ -1060,7 +1186,7 @@ function concretize(expr, env) {
   }
 }
 
-export function isValue(expr) {
+export function isValue(expr: Expr): boolean {
   return (
     expr.kind === "Reject" ||
     expr.kind === "DomainError" ||
@@ -1078,42 +1204,47 @@ export function isValue(expr) {
   );
 }
 
-function numberValue(expr) {
+function numberValue(expr: Expr) {
   return affineToNumber(valueToAffine(expr));
 }
 
-export function exprEqual(a, b, eps = 1e-9) {
+export function exprEqual(a: Expr, b: Expr, eps = 1e-9): boolean {
   if (a.kind !== b.kind) return false;
   switch (a.kind) {
     case "Const":
-      return Math.abs(a.value - b.value) <= eps;
+      return Math.abs(a.value - (b as typeof a).value) <= eps;
     case "Bool":
-      return a.value === b.value;
+      return a.value === (b as typeof a).value;
     case "Unit":
     case "Nil":
     case "Reject":
       return true;
     case "DomainError":
-      return a.message === b.message;
+      return a.message === (b as typeof a).message;
     case "Pair":
-      return exprEqual(a.left, b.left, eps) && exprEqual(a.right, b.right, eps);
+      return (
+        exprEqual(a.left, (b as typeof a).left, eps) &&
+        exprEqual(a.right, (b as typeof a).right, eps)
+      );
     case "Inl":
     case "Inr":
-      return exprEqual(a.expr, b.expr, eps);
+      return exprEqual(a.expr, (b as typeof a).expr, eps);
     case "Cons":
-      return exprEqual(a.head, b.head, eps) && exprEqual(a.tail, b.tail, eps);
+      return (
+        exprEqual(a.head, (b as typeof a).head, eps) && exprEqual(a.tail, (b as typeof a).tail, eps)
+      );
     case "SymFloat":
-      return prettyAffine(a.affine) === prettyAffine(b.affine);
+      return prettyAffine(a.affine) === prettyAffine((b as typeof a).affine);
     default:
       return prettyExpr(a) === prettyExpr(b);
   }
 }
 
-function valuesEqual(a, b, eps = 1e-9) {
+function valuesEqual(a: Expr, b: Expr, eps = 1e-9) {
   return exprEqual(a, b, eps);
 }
 
-function domainErrorExpr(error, source) {
+function domainErrorExpr(error: DistributionDomainError, source: Span | undefined) {
   return n(
     "DomainError",
     {
@@ -1125,7 +1256,7 @@ function domainErrorExpr(error, source) {
   );
 }
 
-export function prettySymbolicState(state) {
+export function prettySymbolicState(state: { sigma: Binding[]; expr: Expr }) {
   const sigma =
     state.sigma.length === 0
       ? "empty"
@@ -1138,15 +1269,19 @@ export function prettySymbolicState(state) {
   return `<${sigma} || ${prettyExpr(state.expr)}>`;
 }
 
-function clone(expr) {
+function clone(expr: Expr): Expr {
   if (expr.kind === "SymFloat") return symFloat(expr.affine, expr.from, expr.to);
-  return JSON.parse(JSON.stringify(expr));
+  return JSON.parse(JSON.stringify(expr)) as Expr;
 }
 
-function cloneBinding(binding) {
-  return JSON.parse(JSON.stringify(binding));
+function cloneBinding(binding: Binding) {
+  return JSON.parse(JSON.stringify(binding)) as Binding;
 }
 
-function n(kind, props, source) {
+function n<K extends Expr["kind"]>(
+  kind: K,
+  props: Omit<ExprOf<K>, "kind" | "from" | "to">,
+  source: Span,
+): ExprOf<K> {
   return node(kind, props, source.from ?? 0, source.to ?? source.from ?? 0);
 }

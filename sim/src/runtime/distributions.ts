@@ -1,3 +1,5 @@
+import type { DistributionKind, Expr, MeanKind } from "../compiler/ast.ts";
+import type { Affine } from "./affine.ts";
 import {
   affineAdd,
   affineDiv,
@@ -7,6 +9,13 @@ import {
   evalAffine,
   isConcreteAffine,
 } from "./affine.ts";
+import type { Rng } from "./rng.ts";
+
+/** A sampled parameter: a number, a Const or SymFloat node, or a concrete affine form. */
+export type SampleArg =
+  | number
+  | (Expr & { constant?: undefined })
+  | (Affine & { kind?: undefined });
 
 export const floatDistributions = new Set([
   "Uniform",
@@ -20,7 +29,7 @@ export const floatDistributions = new Set([
 ]);
 const MIN_POSITIVE_SAMPLE = Number.MIN_VALUE;
 const PROBABILITY_EPS = 1e-9;
-const ARITIES = {
+const ARITIES: Record<string, number> = {
   Uniform: 2,
   Gauss: 2,
   Exponential: 1,
@@ -32,7 +41,10 @@ const ARITIES = {
 };
 
 export class DistributionDomainError extends Error {
-  constructor(kind, message) {
+  declare kind: DistributionKind;
+  declare reason: string;
+
+  constructor(kind: DistributionKind, message: string) {
     super(`domain error in ${distributionName(kind)}: ${message}`);
     this.name = "DistributionDomainError";
     this.kind = kind;
@@ -40,11 +52,21 @@ export class DistributionDomainError extends Error {
   }
 }
 
-export function isDistributionDomainError(error) {
+export function isDistributionDomainError(error: unknown): error is DistributionDomainError {
   return error instanceof DistributionDomainError;
 }
 
-export function sampleDistribution(kind, args, rng) {
+export function sampleDistribution(kind: MeanKind, args: SampleArg[], rng: Rng): number;
+export function sampleDistribution(
+  kind: DistributionKind,
+  args: SampleArg[],
+  rng: Rng,
+): number | boolean;
+export function sampleDistribution(
+  kind: DistributionKind,
+  args: SampleArg[],
+  rng: Rng,
+): number | boolean {
   const domain = validateSampleDomain(kind, args);
   switch (kind) {
     case "Uniform": {
@@ -92,7 +114,7 @@ export function sampleDistribution(kind, args, rng) {
   }
 }
 
-export function meanDistribution(kind, args) {
+export function meanDistribution(kind: MeanKind, args: Affine[]): Affine {
   validateMeanDomain(kind, args);
   switch (kind) {
     case "Uniform":
@@ -109,7 +131,7 @@ export function meanDistribution(kind, args) {
     case "Poisson":
       return args[0];
     case "Discrete":
-      return args.reduce(
+      return args.reduce<Affine>(
         (acc, probability, index) =>
           affineAdd(acc, affineMul(probability, { constant: index, terms: {} })),
         { constant: 0, terms: {} },
@@ -119,15 +141,15 @@ export function meanDistribution(kind, args) {
   }
 }
 
-export function instantiateArgs(args, env) {
+export function instantiateArgs(args: Affine[], env: Map<string, number>): number[] {
   return args.map((arg) => evalAffine(arg, env));
 }
 
-export function meanArgs(args, env) {
+export function meanArgs(args: Affine[], env: Map<string, number>): Affine[] {
   return args.map((arg) => ({ constant: evalAffine(arg, env), terms: {} }));
 }
 
-function numberArg(arg) {
+function numberArg(arg: SampleArg): number {
   if (typeof arg === "number") return arg;
   if (arg?.kind === "Const") return arg.value;
   if (arg?.kind === "SymFloat") return affineToNumber(arg.affine);
@@ -138,19 +160,19 @@ function numberArg(arg) {
   throw new Error(`expected numeric argument, got ${JSON.stringify(arg)}`);
 }
 
-function validateSampleDomain(kind, args) {
+function validateSampleDomain(kind: DistributionKind, args: SampleArg[]) {
   const values = args.map(numberArg);
   validateConcreteDomain(kind, values);
   return values;
 }
 
-function validateMeanDomain(kind, args) {
+function validateMeanDomain(kind: MeanKind, args: Affine[]) {
   for (const arg of args) validateFiniteAffine(kind, arg);
   const values = args.map((arg) => (isConcreteAffine(arg) ? affineToNumber(arg) : null));
   validateConcreteDomain(kind, values, { skipSymbolic: true });
 }
 
-function validateFiniteAffine(kind, arg) {
+function validateFiniteAffine(kind: MeanKind, arg: Affine) {
   if (!Number.isFinite(arg.constant))
     throw new DistributionDomainError(kind, "parameters must be finite");
   for (const coeff of Object.values(arg.terms)) {
@@ -159,7 +181,11 @@ function validateFiniteAffine(kind, arg) {
   }
 }
 
-function validateConcreteDomain(kind, values, options = {}) {
+function validateConcreteDomain(
+  kind: DistributionKind,
+  values: (number | null)[],
+  options: { skipSymbolic?: boolean } = {},
+) {
   const skipSymbolic = Boolean(options.skipSymbolic);
   validateArity(kind, values.length);
   const concrete = values.filter((value) => value !== null);
@@ -168,16 +194,19 @@ function validateConcreteDomain(kind, values, options = {}) {
       throw new DistributionDomainError(kind, "parameters must be finite");
   }
 
-  const arg = (index) => values[index];
-  const check = (index, predicate, message) => {
+  const arg = (index: number) => values[index];
+  const check = (index: number, predicate: (value: number) => boolean, message: string) => {
     const value = arg(index);
     if (value === null && skipSymbolic) return;
-    if (!predicate(value)) throw new DistributionDomainError(kind, message);
+    if (!predicate(value as number)) throw new DistributionDomainError(kind, message);
   };
 
   switch (kind) {
     case "Uniform":
-      if (!(skipSymbolic && (arg(0) === null || arg(1) === null)) && arg(0) > arg(1)) {
+      if (
+        !(skipSymbolic && (arg(0) === null || arg(1) === null)) &&
+        (arg(0) as number) > (arg(1) as number)
+      ) {
         throw new DistributionDomainError(kind, "lower bound must be <= upper bound");
       }
       break;
@@ -207,11 +236,11 @@ function validateConcreteDomain(kind, values, options = {}) {
         throw new DistributionDomainError(kind, "at least one probability is required");
       for (const [index, value] of values.entries()) {
         if (value === null && skipSymbolic) continue;
-        if (value < 0 || value > 1)
+        if ((value as number) < 0 || (value as number) > 1)
           throw new DistributionDomainError(kind, `probability ${index} must be in [0, 1]`);
       }
       if (!values.includes(null)) {
-        const total = values.reduce((sum, value) => sum + value, 0);
+        const total = (values as number[]).reduce((sum, value) => sum + value, 0);
         if (Math.abs(total - 1) > PROBABILITY_EPS)
           throw new DistributionDomainError(kind, "probabilities must sum to 1");
       }
@@ -222,7 +251,7 @@ function validateConcreteDomain(kind, values, options = {}) {
   }
 }
 
-function validateArity(kind, actual) {
+function validateArity(kind: DistributionKind, actual: number) {
   if (kind === "Discrete") return;
   const expected = ARITIES[kind];
   if (expected === undefined) throw new Error(`unknown distribution ${kind}`);
@@ -232,11 +261,11 @@ function validateArity(kind, actual) {
   }
 }
 
-function distributionName(kind) {
+function distributionName(kind: string) {
   return kind === "Gauss" ? "gauss" : kind.toLowerCase();
 }
 
-function gammaSample(alpha, beta, rng) {
+function gammaSample(alpha: number, beta: number, rng: Rng): number {
   const scale = 1 / beta;
   if (alpha < 1)
     return positiveSample(gammaSample(alpha + 1, beta, rng) * rng.positive() ** (1 / alpha));
@@ -254,15 +283,15 @@ function gammaSample(alpha, beta, rng) {
   }
 }
 
-function positiveSample(value) {
+function positiveSample(value: number) {
   return Number.isFinite(value) && value > 0 ? value : MIN_POSITIVE_SAMPLE;
 }
 
-function stdNormal(rng) {
+function stdNormal(rng: Rng) {
   return Math.sqrt(-2 * Math.log(rng.positive())) * Math.cos(2 * Math.PI * rng.next());
 }
 
-function poissonSample(lambda, rng) {
+function poissonSample(lambda: number, rng: Rng) {
   if (lambda === 0) return 0;
   // Exponential arrival times avoid exp(-lambda) underflow at large rates.
   let arrival = -Math.log(rng.positive());
