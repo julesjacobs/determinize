@@ -1,3 +1,9 @@
+/** constant + Σ terms[name] · name, over symbols named v1, v2, … */
+export interface Affine {
+  constant: number;
+  terms: Record<string, number>;
+}
+
 export function affineConst(value) {
   return normalize({ constant: value, terms: {} });
 }

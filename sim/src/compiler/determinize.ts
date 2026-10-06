@@ -1,20 +1,26 @@
+import type { Expr, ExprOf, MeanKind, Span, TypedExpr } from "./ast.ts";
 import { node } from "./ast.ts";
 import { zonk } from "./types.ts";
 
-function exprNode(kind, props, from, to) {
+function exprNode<K extends Expr["kind"]>(
+  kind: K,
+  props: Omit<ExprOf<K>, "kind" | "from" | "to">,
+  from: number | undefined,
+  to: number | undefined,
+): ExprOf<K> {
   return node(kind, props, from ?? 0, to ?? from ?? 0);
 }
 
-function floatMode(typedExpr) {
+function floatMode(typedExpr: TypedExpr) {
   const ty = zonk(typedExpr.typ);
   return ty.tag === "Float" ? ty.mode.mode : null;
 }
 
-export function determinize(typedExpr) {
+export function determinize(typedExpr: TypedExpr): Expr {
   return ofTyped(typedExpr);
 }
 
-function ofTyped(te) {
+function ofTyped(te: TypedExpr): Expr {
   switch (te.kind) {
     case "Var":
       return exprNode("Var", { name: te.name }, te.from, te.to);
@@ -149,10 +155,10 @@ function ofTyped(te) {
     case "Observe":
       return exprNode("Observe", { cond: ofTyped(te.cond) }, te.from, te.to);
     default:
-      throw new Error(`unsupported typed expression ${te.kind}`);
+      throw new Error(`unsupported typed expression ${(te as TypedExpr).kind}`);
   }
 }
 
-function meanNode(distribution, args, source) {
+function meanNode(distribution: MeanKind, args: Expr[], source: Span) {
   return exprNode("Mean", { distribution, args }, source.from, source.to);
 }
