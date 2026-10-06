@@ -1,0 +1,4 @@
+let x = uniform(0, 1) in
+let y = uniform(0, x) in
+let _ = observe(x < 0.8) in
+x + y

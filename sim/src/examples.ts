@@ -1,50 +1,109 @@
-export const examples = [
+// The simulator's examples: programs from examples/, which Lean's corpus manifest
+// (tests/cases.toml) also checks, in the order the simulator lists them.
+
+import dungeon from "../../examples/paper/dungeon.det";
+import gaussRandomWalk from "../../examples/paper/gauss-random-walk.det";
+import noisyIteration from "../../examples/paper/noisy-iteration.det";
+import noisyProduct from "../../examples/paper/noisy-product.det";
+import sumOfSquares from "../../examples/paper/sum-of-squares.det";
+import badEBranching from "../../examples/simulator/bad-e-branching.det";
+import noisyProductAllE from "../../examples/simulator/noisy-product-all-e.det";
+import observe from "../../examples/simulator/observe.det";
+import randomListSum from "../../examples/simulator/random-list-sum.det";
+import recursiveGamma from "../../examples/simulator/recursive-gamma.det";
+import mixedModes from "../../examples/symbolic/mixed-affinities.det";
+import nestedUniform from "../../examples/symbolic/nested-uniform.det";
+
+export interface Example {
+  /** The file's path under examples/, without `.det`. */
+  id: string;
+  title: string;
+  explanation: string;
+  source: string;
+}
+
+export const examples: Example[] = [
   {
-    name: "Uniform mean",
-    source: "let a = uniform(0, 1) in\na + 2",
+    id: "paper/noisy-product",
+    title: "Noisy product",
+    explanation:
+      "The measurement y is replaced by its mean x, so x * y becomes x * x, with the same mean 1/3.",
+    source: noisyProduct,
   },
   {
-    name: "Dependent uniform",
-    source: "let x = uniform(0, 1) in\nlet y = uniform(x, 2) in\nx + y",
+    id: "paper/gauss-random-walk",
+    title: "Gaussian random walk",
+    explanation:
+      "Each position is drawn around the previous one inside a higher-order reduce; every draw is replaced by its mean.",
+    source: gaussRandomWalk,
   },
   {
-    name: "Symbolic affine samples",
-    source: "let u = uniform(0, 1) in\nlet v = uniform(u, 2) in\n2 * u + v - 1",
+    id: "paper/dungeon",
+    title: "Dungeon",
+    explanation:
+      "Each room is left with probability 1/4; the rare loot draw is replaced by its mean, the exits stay random.",
+    source: dungeon,
   },
   {
-    name: "Nonlinear use",
-    source: "let x = uniform(0, 1) in\nx * x + uniform(0, 1)",
+    id: "paper/noisy-iteration",
+    title: "Noisy iteration",
+    explanation:
+      "The Gaussian noise of each step is replaced by its mean 0; the coin flips that end the loop stay random.",
+    source: noisyIteration,
   },
   {
-    name: "Mixed residual randomness",
-    source: "let u = uniform(0, 1) in\nlet b = beta(9, 1) in\nlet g = gamma(u, b) in\n2 * g + 1",
+    id: "simulator/noisy-product-all-e",
+    title: "Noisy product, both draws E",
+    explanation:
+      "Lean rejects marking both draws E: replacing both by their means returns 1/4 instead of 1/3.",
+    source: noisyProductAllE,
   },
   {
-    name: "Pairs",
-    source: "let x = uniform(0, 1) in\nlet p = (x, uniform(x, 2)) in\nfst p + snd p",
+    id: "simulator/bad-e-branching",
+    title: "Branching on an E draw",
+    explanation:
+      "Lean rejects branching on an [E] draw: its mean cannot decide which branch a run takes.",
+    source: badEBranching,
   },
   {
-    name: "List sum",
-    source:
-      "let sum = rec sum xs =>\n  match xs with [] => 0 | x :: rest => x + sum rest\nin\nsum (uniform(0, 1) :: uniform(1, 2) :: gamma(1, 2) :: [])",
+    id: "simulator/observe",
+    title: "Observe",
+    explanation:
+      "observe rejects the runs with x ≥ 0.8; x stays random because the condition compares it, y is replaced by its mean.",
+    source: observe,
   },
   {
-    name: "Random list sum",
-    source:
-      "let sum = rec sum xs =>\n  match xs with [] => 0 | x :: rest => x + sum rest\nin\nlet draw = rec draw _ =>\n  if flip(0.5) then [] else uniform(0, 1) :: draw 0\nin\nsum (draw 0)",
+    id: "symbolic/nested-uniform",
+    title: "Dependent draws",
+    explanation:
+      "The lower bound of the second draw is the first; both are replaced by their means.",
+    source: nestedUniform,
   },
   {
-    name: "Observe",
-    source:
-      "let x = uniform(0, 1) in\nlet y = uniform(0, x) in\nlet _ = observe(x < 0.8) in\nx + y",
+    id: "symbolic/mixed-affinities",
+    title: "A G draw and its dependent",
+    explanation:
+      "The [G] draw stays random; the draw whose lower bound it sets is replaced by its mean.",
+    source: mixedModes,
   },
   {
-    name: "Bad E-branching",
-    source:
-      "let x = uniform[E](0, 1) in\nlet y = uniform[G](0, 1) in\nif x < 0.5 then x + y else x - y",
+    id: "paper/sum-of-squares",
+    title: "Sum of squares",
+    explanation: "x * x is not linear in x, so x stays random.",
+    source: sumOfSquares,
   },
   {
-    name: "Recursive function",
-    source: "let f = rec f n =>\n  if n <= 0 then 1 else gamma(f (n - 1), uniform(1, 2))\nin\nf 4",
+    id: "simulator/random-list-sum",
+    title: "Random list sum",
+    explanation:
+      "A recursive function builds a list of random length; its elements are replaced by their means, the flips that end it stay random.",
+    source: randomListSum,
+  },
+  {
+    id: "simulator/recursive-gamma",
+    title: "Recursive gamma",
+    explanation:
+      "Each recursive call sets the shape of a gamma draw, which is replaced by its mean; its rate stays random.",
+    source: recursiveGamma,
   },
 ];

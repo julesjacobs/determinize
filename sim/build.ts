@@ -22,6 +22,8 @@ await build({
   format: "iife",
   globalName: "DeterminizeSim",
   outfile: `${outdir}/app.js`,
+  // The examples are the programs in ../examples/, imported as text.
+  loader: { ".det": "text" },
   minify: options.minify,
   sourcemap: options.minify && "linked",
   // node_modules holds links into the Nix store. Resolving packages through the links keeps the

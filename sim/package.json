@@ -6,7 +6,7 @@
   "scripts": {
     "build": "node build.ts",
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.node.json",
-    "test": "node --test 'test/**/*.test.ts'"
+    "test": "node --import ./test/det-loader.ts --test 'test/**/*.test.ts'"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.3",

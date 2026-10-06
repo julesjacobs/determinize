@@ -3,5 +3,5 @@
   "compilerOptions": {
     "types": ["node"]
   },
-  "include": ["test", "build.ts"]
+  "include": ["test", "build.ts", "src/det.d.ts"]
 }
