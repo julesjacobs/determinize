@@ -49,14 +49,14 @@ From the repository root:
 through. `test.sh` runs the full Lean test entry point, including the shared corpus
 and independent certificates. It accepts `--all` and `--statistical`.
 `check.sh --all` additionally checks theorem axioms, the simulator's formatting, lint,
-tests and build, and the paper build. Select individual areas with `./check.sh lean tex`,
-or use `./check.sh --changed` for areas affected by uncommitted changes. The scripts use
-tools on `PATH` first; Nix is optional.
+types, tests and build, and the paper build. Select individual areas with
+`./check.sh lean tex`, or use `./check.sh --changed` for areas affected by uncommitted
+changes. The scripts use tools on `PATH` first; Nix is optional.
 
 On GitHub, `.github/workflows/lean.yml` runs `lake build --wfail` and `./test.sh --all`
-in the `.#lean` shell, and `.github/workflows/sim.yml` runs `biome ci` and the simulator
-tests in the `.#sim` shell, builds the simulator into `sim/dist/` and attaches it to the run
-as the `simulator` artifact. Both run for pull requests. For `main`,
+in the `.#lean` shell, and `.github/workflows/sim.yml` runs `biome ci`, the type check and
+the simulator tests in the `.#sim` shell, builds the simulator into `sim/dist/` and
+attaches it to the run as the `simulator` artifact. Both run for pull requests. For `main`,
 `.github/workflows/pages.yml` runs both and then publishes that build of the
 [simulator](https://julesjacobs.github.io/determinize/) to GitHub Pages, with the
 [API documentation](https://julesjacobs.github.io/determinize/docs/) under `docs/`.
@@ -112,12 +112,15 @@ Evaluation examples with unbounded recursion:
 ## Simulator and paper
 
 ```sh
-(cd sim && biome ci . && npm test && npm run build)
+(cd sim && biome ci . && npm run typecheck && npm test && npm run build)
 (cd tex && latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex)
 ```
 
 Biome formats and lints the simulator as configured in `sim/biome.json`;
-`biome check --write .` in `sim/` applies its formatting and safe fixes.
+`biome check --write .` in `sim/` applies its formatting and safe fixes. The simulator is
+written in TypeScript, whose types Node and esbuild strip. `npm run typecheck` checks
+`src/` against the browser's types (`tsconfig.json`), and the tests and the build script
+against Node's (`tsconfig.node.json`).
 
 The `.#sim` shell, which direnv loads in `sim/`, links `sim/node_modules` to packages that
 Nix builds from `sim/package-lock.json`; the combined shell does not. To add or update a
