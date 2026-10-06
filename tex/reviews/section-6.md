@@ -1,449 +1,890 @@
-# Review of Section 6 (Implementation), second round
+# Review of Section 6 (Implementation), third round
 
-Reviewed on 25 September 2026 against commit `90394b1`. Line numbers refer to
-`tex/sections/6_implementation.tex` at that commit; figure and theorem numbers refer to
-the compiled PDF. I checked every statement about the code in this review against the Lean
-sources and tools in this repository.
+Reviewed on 5 October 2026 against `main` at `96eefdd`. Line numbers refer to
+`tex/sections/6_implementation.tex` at that commit. Figure, table and theorem numbers refer
+to the PDF built from it: Section 6 is pp. 19–21 and the architecture figure is Fig. 13. I
+checked every statement about the code against the sources at `96eefdd`. Under `lean/`,
+these are identical to `8f89190`, the revision the paper's Lean links pin. Where I ran the
+tool, the program and its output are quoted.
 
 ## How to read this review
 
-It is written the way a journal referee would write it, but with more explanation than a
-referee usually gives. Each finding says what the paper claims, what the code actually does,
-why the difference matters to a reader, and what I suggest. The findings are ordered by
-importance. At the end, "Claims I checked and found accurate" lists what you do not need to
-worry about.
+The section is reviewed as one section of an OOPSLA submission, so two constraints apply.
 
-## Overall assessment
+**Page budget.** OOPSLA 2027 allows "at most 23 pages using the template. This page limit
+does not include required statements, references, or supplementary material (such as
+appendices). However, papers must be self-contained; reviewers are under no obligation to read
+the supplementary material" [1]. Round 1 closes on 14 October 2026.
 
-The first round's small problems are fixed. The section no longer says something false about
-Lean's proof checking, it states the hypotheses of the soundness theorems, it describes
-determinization correctly, and it cites Storm.
+The body now ends on p. 25, while the abstract is a placeholder, the introduction is still
+bullet points and RQ3 is unfinished. The paper is therefore over the limit and will grow.
+Section 6 cannot grow: it takes about 2 pages now (including Fig. 13), and 1.5 should be the
+target. Because the appendix is supplementary, only detail that the claims do not depend on
+can move there. Each suggestion carries its cost:
 
-The larger problems remain, and a closer look at the code turned up new ones. In short:
+- **[+]** adds main-text space;
+- **[0]** is about neutral;
+- **[−]** saves space;
+- **[A]** goes to the appendix or the artifact.
 
-1. The section still does not say precisely which code must be trusted, which is proved and
-   which is merely checked, and line 9 contradicts how the code is organized.
-2. It calls several components "verified" without saying what was proved about them.
-3. It never explains how the pieces combine into a guarantee about the user's program, or
-   that two hypotheses of that guarantee are never checked by the tool.
-4. Its description of the Storm route is inaccurate.
-5. **New:** the verified exact solver handles only 256 states by default and stores its
-   equations as a full matrix, while Table 1 reports models with up to 43,219 states. Section 7
-   also says that the timing runs skipped the certificate check. Taken together, the paper does
-   not yet show that its central claim, exact results backed by a certificate that Lean has
-   checked, holds for the benchmarks it reports.
-6. The finite-state route, the additive reward mode and the floating-point interpreter each
-   get one or two sentences, although Section 7 depends on their details.
-7. The section reads as a caption for Figure 12 rather than as a section of a journal paper.
+Where a complete fix is too long, I say what moves out of the main text.
 
-My recommendation for this section is still a major revision. None of these problems lies in
-the underlying work, which is stronger than the text suggests. They are problems of precision
-and completeness.
+**Reviewers in 2026.** An OOPSLA PC member who reads "mostly carried out by Claude … and
+GPT" is likely to ask three questions:
+
+1. Are the statements the right ones?
+2. Did a human check them?
+3. What exactly does the tool guarantee about my program?
+
+The section should answer all three explicitly. At present it answers the third only in part
+(line 23 gives the theorems' hypotheses but not what the tool's results mean) and leaves the
+first two to the reader's inference.
+
+Findings are ordered by how likely they are to change a PC decision. Each states what the
+paper says, what the code does, why it matters, and one or more ways to fix it.
+
+## Verdict
+
+Major revision.
+
+**What changed since round 2.** The section changed in one place: the description of the build
+check (line 10). The new text is mostly accurate but overclaims in one clause (M4). The rest of
+the paper moved on:
+
+- Section 3 now states inference correctness exactly (Thm. 3.1).
+- Section 4 states the theorems for expectations conditioned on returning.
+- Section 7 reports exact results computed with Storm alone.
+
+Section 6 reflects little of this. Line 23 matches Section 4's hypotheses, but line 19 still
+paraphrases inference in weaker terms, and nothing in Section 6 corresponds to Section 7's route.
+
+**Three problems are the most likely to cost the paper.** M1 and M3 need work; M2 is a
+sentence or two that changes how a reviewer reads everything else.
+
+- **M1.** Nothing in the repository shows that the certificates behind Table 1 were checked.
+  The committed results come from a related run in which they were generated but not checked,
+  and the run behind the table is not committed.
+- **M2.** The paper does not say that the specification was reviewed, by whom, or against
+  what. Next to the disclosure of LLM authorship, a skeptical reader will assume it was not.
+- **M3.** The exact result is certified for `e_det`, and the tool labels it so. But Section 6
+  never says when it carries over to `e_src`, and two concrete programs below show that it
+  can fail to.
+
+Everything else concerns precision, space and presentation. The underlying work is stronger
+than the section suggests: the build check, the embedded inference proofs and the certificate
+design are all good, and the section undersells them. One example: the explored Markov chain
+is replayed against the semantics, while the closest prior work leaves the construction of its
+model unverified [8].
+
+**If only the time until 14 October is left,** in this order:
+
+1. M1-A: check the certificates and commit the results Table 1 is built from.
+2. M3-A: state the guarantee and the transfer hypotheses.
+3. M4-A and M5-B: one table for the trust model and the architecture.
+4. M2-A: say in the paper who reviewed the specification and against which parts of it.
+5. M6-A: add the missing links and narrow the claim.
+6. Regenerate the anonymous snapshot and add the Data-Availability Statement.
+
+Everything else can wait for the revision round, which may go up to 25 pages [1].
+
+## Status of the round-2 findings
+
+| # | Round-2 finding | Status | Where now |
+|---|---|---|---|
+| 1 | Trust split; line 9 contradicts the code | Open. Line 10 is new and overclaims | M4 |
+| 2 | "Verified" without saying what was proved | Partly fixed. Thm. 3.1 now states it; line 19 still paraphrases a weaker claim; the finite route still has no stated theorem | M4, minor L19 |
+| 3 | No path from program to guarantee | Partly fixed. The introduction now names the source hypotheses; Section 6 and Fig. 13 do not | M3 |
+| 4 | Storm description inaccurate | Open; line 35 is unchanged | M7 |
+| 5 | Solver too small; certificates unchecked | Open. Section 7 no longer says the timing runs skipped the check, and says nothing instead | M1 |
+| 6 | Finite route described too briefly | Open | M7, M8 |
+| 7 | Interpreter described too briefly | Open | M8, cross-section |
+| 8 | "Every theorem … is mechanized" | Open. Section 5 was rewritten; Thm. 5.5 no longer assumes integrability | M6 |
+| 9 | Facts a journal paper reports | Open; numbers updated below | M8 |
+| 10 | Structure | Open | M8 |
+| — | Lean links in the review build | Open, and worse | Cross-section |
+
+**Obsolete round-2 statements.** These no longer describe the code:
+
+- the "every proposition in `Spec` is proved" mechanism. `Spec/Main.lean` is gone; the statements
+  now live in `Theorems.lean`, and a dependency walk checks them (M4);
+- the size of `Spec`, which is now 16 files and 1,240 lines;
+- 17 exported theorems, which are now 19;
+- the names `inferCorrectThm`/`inferenceCorrectness`, now `inference_correctness`;
+- `primitiveMomentBounds`, now `primitiveMomentBounds_primitiveLaws`;
+- the theorem numbers. Expectation is now Thm. 4.6, variance Thm. 4.7 and tracewise soundness
+  Thm. 4.5.
 
 ## Major findings
 
-### 1. What must be trusted is still unclear, and line 9 contradicts the code
+### M1. Nothing on record shows that Table 1's certificates were checked
 
-**What the paper says.** Lines 8–11 divide the code into a "trusted surface/specifications"
-and "Lean-checked proofs and procedures". Line 9 says the trusted surface holds the syntax, the
-typing rules, the semantics, determinization and the theorem statements, and "additionally ...
-the non-verified functions like the parser or floating-point interpreter." Line 17 repeats that
-the parser is "part of the trusted surface".
+**What the paper says.** Section 6 presents two exact routes: "our own verified matrix solver"
+(line 31) and Storm followed by a certificate checker (lines 33–35). The introduction lists
+"verified matrix solving" as a contribution. Section 7 (line 23) computes Table 1 with Storm
+and gives "Storm itself takes at most 2.23 seconds" (line 34). The caption of Table 1 says:
+"Runtime excludes both the initial build and Lean certificate checking."
 
-**What the code does.** The trusted part of the code is the directory `lean/Determinize/Spec`.
-It holds the definitions line 9 lists, but neither the parser (`Frontend/Parser.lean`) nor the
-floating-point interpreter (`Runtime/`). No theorem depends on the interpreter at all.
+**What the repository shows.**
 
-In the other direction, `Spec` holds things line 9 does not mention:
+- **The verified solver produced no reported number.** It stops at 256 states by default
+  (`SolveLimits.maxStates`, `Finite/Solve.lean:7-8`). It is dense Gaussian elimination over
+  `Fin n → Fin n → Rat` (`Proof/LinearAlgebra/Solve.lean:29-49`), so it needs n² memory and
+  n³ rational operations, with coefficient growth on top. Table 1 goes up to 43,219 states.
+- **No checked certificate is on record.** `tools/bench.py:288-289` passes
+  `--skip-certificate` unless `--check-certificates` is given. The committed
+  `results/finite-after-det.json` has `"check_certificates": false`, and every completed entry
+  is "generated, unchecked". Neither Section 6 nor Section 7 says whether any certificate
+  behind Table 1 was checked. The certificates may well have been checked in another run; the
+  point is that neither the paper nor the repository shows it.
+- **The committed results come from a different run than the table.** Most state counts agree,
+  but not all:
+  - In the JSON, `dreckon` fails because model export times out at 180 s. The table reports it
+    at 43,219 states and 178.001 s, 2 s under the timeout.
+  - `retransmit` has 205 states in the JSON and 182 in the table.
+  - The times for `addNoise` differ as well.
+- **Fig. 13 links a checker the evaluation did not use.** Every Table 1 run uses `--additive`
+  (`tools/bench.py:284`). That route checks a `Reward.Solution` with whole-model
+  `decide +kernel` obligations (`tools/storm_additive.py:71-88`). Fig. 13 and line 35 point to
+  the non-additive `checkStatistics` (`Checking/Statistics.lean:9-17`).
+- **"Storm" in Table 1 is more than Storm.** The column times the worker subprocess
+  (`tools/bench.py:327`, `tools/storm.py:299`): starting Python, importing stormpy and building
+  the model, as well as Storm's computation. Section 7's "Storm itself takes at most 2.23
+  seconds" should say so. Certificate generation happens after the worker and is not included.
+- **The exact values are printed as decimals.** Table 1 shows `E[sum]=6.0` and `E[x]=2.0` for
+  values the tool computes as exact rationals.
 
-- what a finite model and its certificates mean (`Spec/FiniteModel/`, `Spec/RewardModel/`);
-- the statement about inference (`Spec/Inference.lean`), which names the inference function
-  but does not require reading its body.
+**Why it matters.** A reader takes Section 6 together with Table 1 to mean "exact and certified".
+If the artifact evaluators run `bench.py` with its defaults, they get unchecked certificates,
+and at least two rows that differ from the table. A mismatch like that can cost the paper at
+artifact evaluation, and after publication it is hard to fix.
 
-These statements in turn rely on Mathlib's definitions, such as the Gaussian distribution,
-conditional distributions and variance, and a reader has to accept those as well.
+**Ways to fix it.**
 
-**Why it matters.** The split exists to tell a skeptical reader exactly which code they must
-read to believe the results. This matters all the more because the section discloses that the
-code was mostly written by language models. The current text merges three different kinds of
-code into one category:
+- **A [0]. Minimum; do it in any case.**
+  - Run `bench.py --check-certificates` for every row.
+  - Commit the results file the table is generated from, and generate the table from it with a
+    script.
+  - Report the time of kernel checking, as a column or as one sentence ("checking all
+    certificates took X s; at most Y s per benchmark").
+  - Print exact values as rationals.
+  - If some certificate does not check in reasonable time, mark that row and confine the claim
+    "certified" to the rest.
+  - Lean 4's kernel computes `Nat` arithmetic on literals with "a widely-trusted, efficient
+    arbitrary-precision integer library (usually GMP)" [4], so whole-model `decide +kernel`
+    checks may be fast enough. Measure it rather than guess. For comparison, the verified
+    Isabelle checker of [8] "completes within a few seconds on MDPs with up to ≈10^5 states".
+- **B [−]. One route instead of two.** Drop "verified matrix solver" from Fig. 13 and from the
+  contributions. Present one pipeline: an untrusted solver (Storm with exact rationals, or the
+  small built-in solver) produces a certificate, and Lean's kernel checks it. This is the
+  certifying-algorithm pattern [7]. In CompCert's words, "the combination of a verified
+  validator … with an unverified compiler … does provide formal guarantees as strong as those
+  provided by a verified compiler" [6]. It is easier to defend and shorter to explain. The
+  built-in solver can stay as a dependency-free fallback that already returns its certificate
+  together with a proof.
+- **C [+]. Make the built-in solver scale.** Options include SCC decomposition, sparse
+  elimination, or the state elimination used by parametric model checkers. This would be worth
+  doing only if the paper wants a Storm-free result. I would not do it before the deadline.
 
-- **Specification.** A human must read it and agree with it, because a theorem means only as
-  much as the definitions it is about. `Spec` is this kind.
-- **Unverified code whose output carries no guarantee.** The floating-point interpreter is this
-  kind. No theorem relies on it, and its output is simply an estimate.
-- **Untrusted code whose output is checked.** Storm and its Python wrapper are this kind. They
-  could compute a wrong answer, but the checker would then reject it.
+### M2. The section does not say that the specification was reviewed
 
-The parser does not fit neatly. It is unverified, yet any claim about the program *text* the
-user wrote depends on it, because the theorems speak about the parsed program.
+**What the paper says.** Line 6 says that the "final implementation was mostly carried out by" three
+named LLMs, and that the code was split "to make it clear which parts of the pipeline need
+human review". Line 9 says that the "trusted surface" "requires the most scrutiny".
 
-The section also leaves out one more thing a reader must trust: the Lean compiler. When the
-command-line tool runs the verified inference or the verified solver, it runs compiled code.
-The proofs are about the Lean definitions, and the compiler is trusted to execute those
-definitions faithfully. The tool can also write its result as a certificate file (`.result.lean`
-or `.storm.lean`). Lean's kernel checks such a file with `decide +kernel`, so a result obtained
-that way depends only on the kernel, not on the compiler. That distinction works in your favor
-and deserves a sentence.
+A charitable reader may infer from this that the authors reviewed the specification. The text
+does not say so, and a skeptical reader has three reasons not to infer it:
 
-**The figure has the same problem.** Figure 12 draws "Determinize" and "Measure-theoretic
-semantics" in the "Verified in Lean" style. Both are definitions, part of the specification;
-nothing about them is verified. The theorems *about* them are what is verified. A legend with
-four styles (specification, proved, checked, unverified) would make the figure accurate.
+- **The wording addresses the reader.** "Need human review" and "requires the most scrutiny"
+  say what a reader should check, not what the authors did.
+- **The LLM sentence covers the specification too.** "The final implementation" does not
+  exclude `Spec/`. Without LLMs, authors who wrote the definitions could be assumed to
+  understand them; with LLM authorship disclosed, that assumption no longer holds, and
+  reviewers know it [10].
+- **The section describes the specification inaccurately.** It places the parser and the
+  floating-point interpreter in the trusted surface, which `Spec/` does not contain (M4). A
+  reviewer who notices this may doubt that the trusted part was read closely, although the
+  error is only in the prose.
 
-**Line 6 disagrees with line 17 and the figure.** Line 6 says that "only the parser, the
-floating-point interpreter and the external Storm solver are unverified". Line 17 and the
-figure speak of parsing *and elaboration*. The pretty-printer, the command-line driver and the
-Python wrapper around Storm are unverified as well. The wrapper's output is checked, so this
-weakens no guarantee, but the sentence as written is inaccurate.
+**What the repository shows.**
 
-**Suggestion.** Replace the two-item list with a short paragraph or table that says:
+- The review of the specification is recorded nowhere a reader can see. The paper does not
+  mention it. The only trace in the repository, `tex/FIGURE_PLAN.md:20` ("- [ ] Author review
+  of the mathematical definitions and statements."), still lists it as open. Tick that item
+  so that the repository agrees with the paper.
+- **What a reader must trust:**
+  - the statements in `Theorems.lean`: 19 theorems, 10 of them the paper's;
+  - `Spec/`: 16 files. Together with `Theorems.lean` that is 1,535 lines;
+  - the Mathlib definitions those use: the Gaussian, beta, gamma and Poisson measures,
+    `Measure.condKernel` and `variance`;
+  - the type of `Frontend.infer`.
 
-- what must be read: `Spec`, about 1,300 lines, plus the Mathlib definitions it uses;
-- what must be trusted without reading: Lean's kernel and its three standard axioms, and the
-  Lean compiler for results the tool computes directly rather than writes as certificates;
-- what is untrusted but checked: Storm and its wrapper;
-- what is unverified: the parser, the elaborator and the interpreter.
+  The build reports "Their statements rely on 454 declarations other than proofs, none from
+  Proof" (`Theorems.lean:262`). That is not the reading list: it counts only `Determinize`
+  declarations, none from Mathlib, and it includes the body of `infer` and its helpers, which
+  need not be read. The doc-gen4 pages are the practical way to walk the actual list.
+- **Mitigations exist but the paper does not mention them:**
+  - the doc-gen4 API documentation, in which every name in a statement links to its
+    definition;
+  - `lean/README.md`'s list of known differences between the paper and Lean: the surface
+    syntax, `discrete` dropping its last argument, and the appendix's `d_{Det(e)} = d_e`, which
+    no theorem states.
 
-Then change the figure's legend to match.
+**Why it matters.** Kernel checking makes the *proofs* trustworthy whoever wrote them. It
+says nothing about whether the *statements and definitions* are the intended ones. Lean's
+own guide makes the distinction ("does the theorem have a valid proof" versus "what does the
+theorem statement mean"), and it lists "un-reviewed AI-generated proofs and programs" among
+the cases that need care [4].
 
-### 2. The section calls components "verified" but never says what was proved
+This gap is a documented failure mode of LLM-generated verification. An ICFP 2026
+experience report with Claude Code-written Rocq proofs found "the LLM silently modifying proof
+statements to make them easier to prove … if that statement has been weakened, the guarantee
+may be vacuous" [10]. A study of formal benchmarks finds "vacuous theorems, and unsound axioms"
+that the kernel cannot detect [11].
 
-Four places need the actual guarantee.
+A disclosure with no account of review invites a PC member to discount the mechanization.
+Even a sympathetic reviewer may ask "who read `Spec`?" Artifact evaluation
+asks the same question under the name "Fidelity: Do the mechanized definitions and theorems
+correspond precisely to those in the paper?" [3].
 
-**Inference (line 19).** The paper says: "The code is verified to produce a correct typing as
-well as mode annotation, and the program is furthermore shown to assign as many E-sites as
-possible." Theorem 3.1 (`inferCorrectThm`) says more, and the section should cite it:
+**Ways to fix it.** These can be combined.
 
-- The result is a *completion* of the input. It fills in exactly the annotations the user left
-  out, and it keeps every constructor, literal, variable and explicit annotation unchanged
-  (`Input.matches`). Inference therefore cannot silently change the program.
-- The result is well-typed at the type inference returns.
-- It is the *greatest* completion. Every other valid way of filling in the annotations is at or
-  below it at every sampling site, in the order G ≤ E. "As many E-sites as possible" undersells
-  this: "greatest" means best at every site at once, not merely best in total count.
-- Inference fails only when no completion exists.
+- **A [0 to +0.1 page]. Report the review.**
+  - One or two sentences: who read `Spec/` and the statements in `Theorems.lean` (1,535
+    lines), against which parts of the paper (Figs. 6–8, Defs. 2.1, 4.1 and 4.3), and what
+    changed as a result.
+  - Name the revision that was reviewed, or say that the artifact is that revision. A reader
+    can then tell that the reviewed specification is the one the artifact proves things about.
+  - A possible wording, if it is accurate:
 
-It is also worth saying that nothing is checked at run time. The `compile` function stores the
-proofs of typing and input preservation inside the compiled program, in the `aligned` and
-`typed` fields of `Program`, which it obtains from `Theorems.inferenceCorrectness`. The guarantee
-therefore holds by construction and costs nothing when the tool runs.
+    > We reviewed every definition in `Spec/` and every statement in `Theorems.lean` line by
+    > line against Sections 2–4; the language models wrote the proofs and the executable code.
 
-**Determinization (line 21).** The paper says the determinized program is well-typed. Lean
-proves this (`typed_determinize` in `Proof/Semantics/Ordinary.lean`), but the paper neither
-says so nor links the proof.
+    If the models also drafted parts of `Spec/`, say so and keep the first clause. That makes
+    the sentence about the review more important, not less.
+  - **Placement of the disclosure.** ACM requires that AI use "must be fully disclosed in the
+    Work" and suggests the acknowledgments [2]. OOPSLA's FAQ, however, advises suppressing
+    acknowledgments "entirely until camera-ready" in double-blind submissions [1]. ACM's FAQ
+    also allows disclosure "elsewhere in the Work prominently", at a level "commensurate with
+    the proportion of new text or content generated" [2].
 
-**Finite models and the solver (lines 29–31, and the figure).** The figure marks graph
-construction and the solver as verified, and the text speaks of "our own verified matrix
-solver". What is actually proved should appear as a numbered theorem with a Lean link, roughly:
+    So keep the disclosure in the body for submission. Section 6 is the right place, because
+    it is the only place where the disclosure connects to the trust argument. Make it say what
+    the models produced and what humans wrote or reviewed. At camera-ready, add a full
+    statement in the acknowledgments.
+  - Name the period in which the models were used. Model names alone date the paper and are
+    hard to verify.
+  - **If LLMs also drafted paper text,** the same policy applies. For whole sections, the FAQ
+    asks to "disclose which sections and which tools and tool versions" [2]. OOPSLA adds two
+    rules [1]:
+    - "citations/references to non-existed work … are grounds for desk rejection. We run
+      automated checks on references". Check every entry of `references.bib` by hand, the
+      2025–2026 ones first.
+    - Prose "so verbose and formulaic that reading it is not worth the effort, may be rejected
+      for that reason alone".
+- **B [A]. A correspondence table in the appendix.** Each paper object, its Lean name, and a
+  link. `tex/lean-links.tex` already has 32 of the entries. The proof-artifact guidelines that
+  SPLASH artifact evaluation links ask for exactly this "paper-to-artifact correspondence
+  guide" [3].
+- **C [0]. Tests of the specification in Lean, under the same build check.** The paper then needs
+  one sentence: "N further theorems check the specification against examples."
+  - *Non-vacuity:* a concrete program that is typed `real^E` and domain-safe, has `q>0` and a
+    finite second moment, and whose variance strictly decreases. For example,
+    `uniform[E](0,1)` goes from variance 1/12 to 0.
+  - *Negative examples from the paper:*
+    - `let x = uniform[E](0,1) in x*x` is not typable;
+    - the non-domain-safe `uniform[E](0, gaussian[E](0,1))` changes `E_ret`, which shows the
+      hypothesis is needed;
+    - Example 4.2 has no expectation.
+  - *Spot checks of the semantics:* `bigStepMeasure` of `uniform[G](0,1)` is Lebesgue measure on
+    [0,1], and `bernoulli` and `discrete` give the right weights.
 
-> If the checker accepts a certificate for the finite model built from a program, then the
-> program is domain-safe, its output distribution has finite mass and a finite second moment,
-> and its probability of returning, first moment and second moment are exactly the rational
-> numbers in the certificate. When the probability of returning is positive, the mean and
-> variance conditioned on returning follow.
+  These help answer "is the specification vacuous or wrong?" in the place reviewers will look,
+  at no cost in pages. There is precedent: the Liquid Tensor Experiment kept a folder of examples
+  meant to "form convincing evidence that we did not make a mistake in formalizing the
+  necessary definitions" [12].
+- **D [0]. Have the proofs re-checked independently.**
+  - `lake env leanchecker --fresh` has been part of the toolchain since v4.28. It replays the
+    environment through the kernel.
+  - Lean's `comparator` goes further. It "ensures that the proved theorem statements match
+    those in the trusted challenge file" and can use the independent Rust checker nanoda [4].
 
-In the code, `Model.Matches` (`Spec/FiniteModel/Model.lean`) states what it means for a model to
-represent a program exactly: the program is domain-safe, and the model's output distribution
-equals the program's. `checked_statistics` and `checked_conditionalVariance`
-(`Checking/Statistics.lean`) turn an accepted certificate into the statement above.
+  `Theorems.lean` is already almost a challenge file. Split it into statements, which import
+  only `Spec` and `Frontend.infer`, and proofs. Comparator would then also close the part of
+  the elaboration gap of M4 that comes from `Proof` imports. It costs one sentence in the
+  paper; the work is in CI.
+- **E [+0.3 page, optional]. Make the method a contribution.** OOPSLA readers are interested in
+  how to make LLM-written mechanizations trustworthy. Possible content:
+  - the ratio of specification to proof (1.5k to 26k lines);
+  - how the build check stops the specification drifting;
+  - any attempts by the agents to weaken a statement that the check or a review caught.
 
-This has a consequence the paper could use and currently does not. A matching model implies
-domain safety, and finite models always have finite moments. So exploring the *source*
-program with the tool's `--subject source` option proves the source domain-safe and gives its
-exact statistics. For source programs that are finite-state to begin with, the tool therefore
-discharges the soundness theorems' hypotheses itself. For the more interesting case, a source
-with continuous E draws that becomes finite only after determinization, it does not; see
-finding 3.
+  Do this only with honest data. Without data, A plus C is enough.
 
-**The certificate checker (line 35).** See finding 4.
+### M3. Section 6 never says when the certified result for `e_det` carries over to `e_src`
 
-### 3. The path from the user's program to a guarantee is never explained
+**What the paper says.** Section 6 describes "exact mean and variance" (line 31; Fig. 13). It
+never says what these mean for `e_src`. The introduction now says the exact value "equals the
+source expectation under the source safety and integrability hypotheses". Thm. 4.6 requires
+`e_src` to be domain-safe, `q_e>0` and `E_ret[e_src]` to be well-defined.
 
-A reader needs to see how the pieces fit together. In plain words:
+**What the tool does.** By default it explores `e_det`. `Model.Matches` proves that the
+*explored* program is domain-safe (`Spec/FiniteModel/Model.lean:67-68`). Nothing checks
+either hypothesis for `e_src`. Two runs of the tool show the consequence:
 
-1. The program text is parsed and elaborated. This step is unverified. The result is an
-   `Input`: a program with rational literals, in which the annotations the user omitted are
-   placeholders.
-2. Inference fills the placeholders, with the guarantee of Theorem 3.1.
-3. The annotated program is converted to a "core" program with rational literals, and the tool
-   determinizes that.
-4. The soundness theorems are stated about programs with *real* literals. The function
-   `interpret` maps rationals to reals, and the lemma `interpret_determinize`
-   (`Proof/FiniteModel/Initial.lean`) shows that converting to reals and determinizing can be
-   done in either order. The theorems therefore apply to the program the tool actually runs.
+1. **A domain-safe, typed source whose expectation is undefined:**
 
-The whole pipeline pays off in one step: "the exact answer we computed for e_det is also the
-answer for e_src." That step is Theorem 4.1, and it needs two hypotheses: the source program is
-domain-safe, and its expectation is defined (or finite, for the finite version of the theorem).
-Typing establishes neither, and the tool checks neither. The introduction and Section 7 say
-this, but Section 6, which describes the pipeline, does not. Figure 12 also has no arrow for
-this transfer, although it is the point of the pipeline.
+   ```
+   ( rec f x => if flip(0.5) then x else f (2 * gaussian(x, 1)) ) 0
+   ```
 
-**Suggestion.** Add a short paragraph, "What the pipeline guarantees", that walks through the
-four steps above and states the two hypotheses. Add an arrow in the figure from the exact result
-for e_det back to e_src, labelled with those hypotheses.
+   The tool infers `gauss[E]` and explores 30 states. It prints "Expected terminal reward
+   (kernel-checkable certificate generated) (…determinized): 0". Let N be the number of
+   rounds, so P(N=n) = 2^{-(n+1)}. Then x_N given N=n is N(0, (4^{n+1}−4)/3), so
+   E|X| = Σ 2^{-(n+1)}·Θ(2^n) = ∞. By symmetry E[X⁺] = E[X⁻] = ∞. This is the doubling
+   pattern of Example 4.2, but here the determinized program is finite-state. The certified 0
+   is the average over traces of the conditional means (Thm. 4.5). It is not an expectation of
+   the source, which has none.
+2. **A non-domain-safe source, the paper's own appendix example:**
 
-### 4. The Storm description is inaccurate (line 35)
+   ```
+   let u = gaussian(0, 1) in uniform(0, u)
+   ```
 
-**What the paper says.** "The certificate that Storm produces is checked and it is verified that
-any such certificate corresponds to the correct expected value for the input program."
+   The exact route prints "… : 0" with a certificate. The true `E_ret` is 1/√(2π) ≈ 0.399.
+   The tool's own sampling mode on the same file reports "Source: 10058/20000 runs returned a
+   value … mean 0.395854 … first failure: uniform requires lower ≤ upper".
 
-**What happens.**
+**More imprecision.** The exact result goes by four names:
 
-1. The Lean tool explores the program and writes out its finite model.
-2. `tools/storm.py` loads the model into Storm through Storm's Python interface as a Markov
-   chain with exact rational probabilities. For each quantity it asks Storm for the expected
-   total reward collected before reaching a terminal state (the property `R=? [ F "done" ]`).
-   The quantities are the probability of returning, the positive and negative parts of the
-   output (their difference is the first moment), the square of the output (the second moment)
-   and the probability of rejection. Storm returns one exact rational number per state for
-   each.
-3. The wrapper then computes two things in Python. It finds the "dead" states, which can never
-   reach a terminal state. For every other state it records a path towards a terminal, as a rank
-   and a next state.
-4. It writes all of this into a Lean file as a `MomentCertificate`, with one small theorem per
-   state, and runs Lean on the file. The kernel checks three things: that the dead states really
-   form a region the program cannot leave, that the recorded paths are valid, and that Storm's
-   numbers satisfy the model's linear equations.
+- "Expected terminal reward" (CLI);
+- "exact mean and variance" (line 31, Fig. 13);
+- "exact mean and variance conditioned on returning" (`\Description` of Fig. 13);
+- "expectation value" (introduction).
 
-The paths deserve a sentence in the paper, because they are what makes the checker sound. When
-some states can loop forever, the linear equations alone can have many solutions. The paths
-show that from every state that is not dead, the program reaches a terminal state with positive
-probability. That makes the solution unique, so numbers that satisfy the equations must be the
-true values.
+The sampling mode already prints "domain safety and integrability are not established by
+typing". The exact route prints nothing of the kind, although its output looks more
+authoritative.
 
-**So, concretely:**
+The tool is honest about what it computed: the output names the determinized subject. The
+problem is the paper. The introduction sells the number as the source's expectation, and
+Section 6 says nothing about the conditions.
 
-- Storm does not produce a certificate. The wrapper assembles one from Storm's numbers plus a
-  witness it computes itself.
-- The certificate covers more than "the correct expected value": it gives the probability of
-  returning, the first and second moments and the probability of rejection. The mean and
-  variance conditioned on returning follow from these.
-- "For the input program" is imprecise. The certificate is for whichever program was explored,
-  the source or the determinized one. The tool explores the determinized program by default.
+**Why it matters.** "Exact, kernel-checked" next to a number that is not the source's
+expectation is a bad look for a verification paper. A reviewer who tries the appendix example
+would find it in a minute.
 
-**A simpler story is available.** The built-in solver produces exactly the same kind of
-certificate: `solveStatistics` returns a `MomentCertificate` together with its proof of validity.
-So the section could say "two solvers, one kind of certificate, one checker", which is easier to
-follow than the current two unrelated paragraphs.
+**Ways to fix it.**
 
-### 5. The verified solver cannot handle the reported benchmarks, and the certificates were not all checked (new)
+- **A [+3 lines]. Minimum.** Say in Section 6:
+  - what is proved about the explored program: domain safety, and its exact return probability,
+    mean and variance conditioned on returning;
+  - that the result transfers to `e_src` under Thm. 4.6's hypotheses, which the tool does not
+    check.
 
-**The built-in solver is small by default.** `SolveLimits.maxStates` in `Finite/Solve.lean`
-defaults to 256 states; the option `--max-result-states` raises it. The solver stores the linear
-system as a full n × n matrix of rational numbers and solves it by Gaussian elimination
-(`Proof/LinearAlgebra/Solve.lean`). Its running time therefore grows roughly with the cube of the
-number of states and its memory with the square, and the rational numbers can also grow large
-along the way.
+  Add the transfer arrow to Fig. 13 and label it with those hypotheses.
+- **B [0, a Lean corollary]. A guarantee that needs only domain safety.** From Thm. 4.5 and
+  Lemma 4.4:
 
-Table 1 reports models with 43,219 states (`dreckon`), 27,836 (`workload`) and 15,192 (`pack`).
-Those results can only have come from Storm. The paper should say that the built-in solver is
-meant for small models and Storm for large ones. Otherwise a reader will assume that the
-verified solver produced the table.
+  `E_ret[e_det] = (1/q) ∫ E[e_src | τ] dμ_tr(τ)`,
 
-**Section 7 says the certificates were not all checked.** It states: "The timing runs generate
-certificates but skip independent kernel checking; they do not establish certificate coverage
-for all table entries." For the reported benchmarks, then, the one route that is verified end
-to end (Storm followed by a certificate checked by the kernel) may never have been completed.
-Checking a certificate for tens of thousands of states, with one kernel `decide` per state, may
-also be slow, and the paper gives no timing.
+  whenever the right-hand side is defined. State this in `Theorems.lean` and in the paper.
+  Then the certified number has a meaning even when `E[e_src]` is undefined, as in program 1,
+  and integrability is needed only to call it "the expectation".
+- **C [0, tool].**
+  - Print the open hypotheses next to every exact result, as sampling mode already does.
+  - When `--subject source` is used and the source is itself finite-state, both hypotheses are
+    discharged: `Model.Matches` implies `DomainSafe`, and `finite_reward_integrability`
+    supplies the finite moments. Say so in one sentence.
+  - As a cheap smoke test, run the source through the interpreter and report domain failures,
+    as the sampling mode already does. This is not a proof, but it would have caught program 2.
+- **D [future work]. Static conditions.**
+  - *Domain safety:* if every parameter with a restricted domain (the bounds of `uniform`, the
+    variance of `gaussian`, and so on) had to be G, its value could not depend on E draws. Then
+    the domain safety that exploration proves for `e_det` might carry over to `e_src`. This is
+    a conjecture to check, and it costs E-sites. An interval analysis on the values that reach
+    those parameters is an alternative.
+  - *Integrability* is harder. Program 1 breaks it with a constant factor 2 inside recursion,
+    so a sufficient condition must bound the growth of values against the probability of
+    termination. The moment-bound analyses that Section 8 cites (`kura2019`, `wang2021central`)
+    are candidates.
 
-**Why it matters.** Exact results with a Lean-checked certificate are the central selling point
-of the implementation. A reviewer will ask whether the certificates for Table 1 were checked, and
-how long checking took.
+  Mention these as limitations if they are not done.
 
-**Suggestion.** Run the kernel check for every entry of Table 1, report its time next to
-Storm's, and say in Section 6 how certificate checking scales with the number of states.
+### M4. The trust model is still described wrongly, and the new sentence about the build check overclaims
 
-### 6. The finite-state route is described too briefly
+**What the paper says.**
 
-Section 7.1 rests on this route, yet the paper gives it two sentences. It should explain:
+- Line 6 says "only the parser, the floating-point interpreter and the external Storm solver are
+  unverified".
+- Line 9 places "the parser or floating-point interpreter" in the "trusted surface".
+- Line 10 says the build fails "unless its statement uses nothing from this part except proofs",
+  where "this part" means "proofs and procedures".
 
-- **What a "machine state" is.** `Finite/Machine.lean` defines an abstract machine whose state
-  is an expression to evaluate, an environment of values and a stack of pending work (a
-  CEK-style machine), with exact rational numbers and closures. Executions that reach the same
-  machine state are merged. A program is finite-state when exploration reaches only finitely many
-  machine states.
-- **Which programs qualify.** Only Bernoulli and discrete draws may remain random. Mean sites of
-  any distribution are fine, because they are deterministic. A remaining continuous draw, or a
-  Poisson draw, which has infinitely many outcomes, stops exploration with an "unsupported"
-  error. This is the precise condition under which determinization "enables exact analysis",
-  and the paper never states it.
-- **The limits.** By default, exploration stops at 10,000 states, 100,000 edges or 1 MB per
-  state. The options `--max-states`, `--max-edges` and `--max-state-bytes` change these limits.
-- **Which program is explored.** Either the source or the determinized program (the
-  `--subject` option); the default is the determinized one.
-- **What is computed.** The output value is collected once, when the program returns.
-  Rejection is an absorbing state. States that can loop forever are identified as dead. The
-  reported mean and variance are conditioned on returning.
-- **Additive mode.** With `--additive` (specified in `Spec/RewardModel/`), the tool handles
-  additions that are waiting for the rest of the computation and whose left operand is already a
-  number, as in `x + loop …`. It moves such numbers out of the machine state and into a reward on
-  the transition. A loop that accumulates a sum this way, such as the geometric-addition example
-  in the README, then becomes finite-state. Other shapes, such as `f() + 1` or a multiplication
-  around a recursive call, are not handled (`lean/finite-model-contract.md` gives the exact
-  rule). Section 7 relies on this mode (it calls `coin_flip_unif` an "additive-extraction
-  control case"), but the paper never introduces it.
+**What the code does.**
 
-### 7. The floating-point interpreter is described too briefly
+- **Line 9.** The parser and the interpreter are in `Frontend/Parser.lean` and `Runtime/`, not in
+  `Spec/`. `Spec/` imports only `Spec` and Mathlib, and no theorem depends on the interpreter.
+  `lean/README.md` itself lists line 9 as a paper error.
+- **Line 10.** The check (`Theorems.lean:261-295`) forbids only declarations from
+  `Determinize.Proof.*`. `inference_correctness` mentions the procedure `Frontend.infer`
+  (`Theorems.lean:44`). That is the right design, because the statement is *about* `infer`
+  and its body need not be read. But the sentence as written is inaccurate.
+- **What the check does not cover.** A Lean-literate reviewer will ask about these.
+  - *The certificate route has no theorem on the reviewed surface.* Only theorems in the
+    namespace `Determinize.Theorems` are checked. `checked_statistics` and
+    `checked_conditionalVariance` (`Checking/Statistics.lean:21`, `:29`) are outside it, as are
+    `typed_determinize` and `interpret_determinize`. The statement of `checked_statistics`
+    mentions `MomentCertificate`, `checkStatistics` and `CheckedModel`, which are built from
+    `Proof` definitions. So the correctness of the certificate checker, which Fig. 13 marks
+    "Verified in Lean", is outside what the build check covers. `lean/README.md` points
+    reviewers to the `Spec` files for finite models, but the theorem that connects them to a
+    certificate is not in `Theorems.lean`. The two finite-model theorems that are in
+    `Theorems.lean` relate no model or certificate to a program:
+    - `finite_mass_balance` says that a model's return, rejection and divergence
+      probabilities sum to 1;
+    - `finite_reward_integrability` says that every reward model has finite moments.
+  - *Imports can change how statements elaborate.* Coercions, notations or instance priorities
+    from an import leave no trace in the statements. `lean/README.md` says so; the paper
+    should too, in half a sentence. M2-D removes the gap.
+  - *The Lean compiler.* When the CLI computes a result directly (inference, exploration, the
+    built-in solver), it runs compiled code, and the proofs are about the definitions. For
+    native binaries, "the TCB is extended with the Lean compiler …, the Lean runtime … and the
+    code generation backend" [5]. A certificate file checked with `decide +kernel` depends only
+    on the kernel [4]. No `native_decide`, `implemented_by`, `@[extern]` or `sorry` occurs in
+    `lean/` or `tools/`, so the repository adds no hand-written replacements of its own. Those
+    of Lean's core library remain part of the compiler's trusted base [5]. That is worth one
+    clause.
+- **Line 6's list is incomplete.** These are unverified too:
+  - the elaborator and desugarer, the pretty-printer and the CLI driver;
+  - the certificate generators (`Finite/Export.lean`, `Finite/Reward/Export.lean`);
+  - `tools/storm.py`, `tools/storm_additive.py` and `tools/bench.py`.
 
-Section 7.2 measures variances with this interpreter, so a reader needs these details:
+  Their outputs are checked, so no guarantee weakens, but "only" is inaccurate.
 
-- **Random numbers.** The generator is SplitMix64. Gaussians come from the Box–Muller method,
-  gamma draws from the Marsaglia–Tsang method (which gives up after 100,000 attempts), and
-  Poisson draws from multiplying uniform numbers in chunks of rate 20 (rates above one million
-  are rejected).
-- **Fuel.** Each run stops after 100,000 steps by default and reports "step limit reached". This
-  is what Section 7 means by "fuel-bounded executions".
-- **Failures.** A non-finite arithmetic result, such as an overflow, aborts the run. Rejection is
-  reported separately from failure.
-- **Literals.** Rational literals are converted to floating-point numbers before running.
-- **Separate random streams for G and E draws.** The interpreter keeps two generator states,
-  `gSeed` and `eSeed` in `Runtime/Eval.lean`. With the same seed, the source program and the
-  determinized program therefore see the same G draws. This is a good design, since it pairs up
-  the two runs, and it is worth mentioning. Section 7.2 should then say whether it runs both
-  programs with the same seeds, because paired runs change how differences between their
-  estimates should be read.
-- **Testing.** The interpreter is unverified, so say how it is tested. The repository has
-  statistical tests against analytical expectations (`tests/statistical/`).
+**Ways to fix it.**
 
-### 8. "Every theorem of the previous sections is mechanized" needs qualifying (line 6)
+- **A [−, recommended]. Replace lines 6–11 with a four-row table.** It is shorter than the
+  current enumerate.
 
-For Sections 3 and 4 this is true, and each theorem links to its Lean statement. Section 5 is
-different. Its lemmas and theorems are proved in Lean, but in another form, and none of them is
-linked.
+  | | What | Basis |
+  |---|---|---|
+  | Read | statements in `Theorems.lean` and definitions in `Spec/` (1,535 lines) and the Mathlib definitions they use | human review (M2) |
+  | Trusted, not read | Lean's kernel and `propext`, `Classical.choice`, `Quot.sound`; the Lean compiler for results the CLI computes directly | standard |
+  | Untrusted, checked | exploration (replayed against the semantics, `checkModel`), Storm and its wrappers (certificates checked by the kernel) | wrong output is rejected |
+  | Unverified | parser and elaborator; floating-point interpreter | no guarantee; tested statistically (`tests/statistical/`) |
 
-- Lemma 5.1 ("Realization of initialization") is `realize_ofExpr`.
-- Theorems 5.4 and 5.5 (the two interpretations of initialized symbolic execution) appear only
-  as intermediate steps inside the proof of `compact_exactDepth_source_fiberSound`. They are also
-  stated about traces that record every reduction step, not about the paper's traces, which
-  record only G draws.
-- Theorem 5.6 ("Agreement of interpretations") is proved as an invariant called `FiberSound`. It
-  describes the source's output given a trace by an explicit replay function rather than by
-  conditional distributions. The link to conditional distributions is made once, at the very
-  end (`Proof/Traces/ConditionalLaw.lean`).
-- Theorem 5.6 assumes an "integrable" symbolic configuration. In Lean this is not an assumption
-  but a lemma: every primitive distribution has finite moments (`primitiveMomentBounds`).
+  Comparable papers do the same:
+  - Zar puts "the specifications of cwp … and equidistribution" explicitly in its TCB [13].
+  - SampCert reports the size of its trusted additions ("only 57 lines of C++") [14].
 
-**Suggestion.** Either narrow the claim ("every theorem of Sections 3 and 4 is stated and proved
-in Lean, and the proof of Section 5 is mechanized in a closely related form") or bring
-Section 5 in line with the Lean proof and add links.
+  Follow the table with one exact sentence on the check:
 
-### 9. Facts a journal paper is expected to report are missing
+  > The last command of `Theorems.lean` fails the build if a theorem uses an axiom other
+  > than these three, or if its statement depends, through anything other than proofs, on a
+  > declaration in `Proof/`; statements may name the executable functions they are about,
+  > such as `infer`.
+- **B [0, Lean work]. Put the certificate guarantee on the reviewed surface.** Define certificate
+  validity in `Spec/`. `Spec/FiniteModel/Certificates.lean` already has `ResultCertificate`.
+  Then restate `checked_statistics` and its reward-model counterpart in `Theorems.lean`, so
+  that the check covers them. Fig. 13's "verified" label is then backed by a statement a
+  reviewer can read.
+- **C [0]. If B does not fit the schedule,** label the checker in Fig. 13 as "checked;
+  correctness theorem outside `Theorems.lean`". This is honest but weak.
 
-- **Size.** `Spec` has 18 files and 1,348 lines. The proofs span 103 files and 25,456 lines, with
-  about 990 theorem and lemma declarations. The executable parts are the front end (1,141
-  lines), finite exploration and solving (1,030), certificate checking (164) and the interpreter
-  (267). `Theorems.lean` exports 17 theorems. A reviewer will appreciate the ratio: about 1,300
-  lines to read against 25,000 lines checked by machine.
-- **Versions.** Lean 4.33.1 and Mathlib at commit `0df444a`.
-- **Build time.** Not reported. Measure it once and add it.
-- **Availability.** The introduction still says "[TODO]" where the link to the code should be.
-- **Design decisions.** Several interesting ones are documented in `lean/README.md` but not in
-  the paper:
-  - the semantics needs no measurable structure on expressions;
-  - the output distribution is a sum over exact termination depths;
-  - invalid parameters give the zero measure, so a program that gets stuck loses probability
-    mass instead of producing output;
-  - mean sites still check their parameters' domains;
-  - rejection is a step that loops back to itself.
-- **The disclosure about language models (line 6).** As a bare remark it invites suspicion.
-  Paired with a precise account of what must be trusted and how large it is (finding 1), and a
-  sentence on how the specification was reviewed and by whom, it becomes a strength and even a
-  methodological point. Otherwise, move it to the acknowledgments.
+### M5. Fig. 13 costs two thirds of a page, and its legend is misleading
 
-### 10. Structure
+- **Size.** About 0.65 page for a pipeline.
+- **"Verified in Lean" is applied to definitions.** "Determinize" and "Measure-theoretic
+  semantics" are part of the specification. What is proved are theorems about them, such as
+  `typed_determinize`, and the box style suggests the definitions themselves were verified.
+- **The Storm box carries a Lean logo** that links to `tools/storm.py`, a Python file.
+- **"Finite graph construction" is checked, not verified.** The explored chain is replayed and
+  accepted by `checkModel` (`Checking/FiniteModel.lean:18-21`).
+- **One arrow, "Output measure μ_e", enters "Soundness theorems"**, although the theorems relate
+  μ_{e_src} and μ_{e_det}.
+- **Missing pieces:**
+  - the transfer arrow from the exact result back to `e_src` (M3);
+  - the additive route that Section 7 uses.
+- **The caption is two words long.** The useful explanation is in `\Description`, which
+  readers of the PDF do not see.
 
-The section is still a sequence of one- or two-sentence paragraphs that walk through Figure 12.
-Two structural problems stand out:
+**Ways to fix it.**
 
-- The semantics (line 25) comes after the soundness theorems (line 23), although the theorems are
-  stated about the semantics.
-- Line 29 ends with "in two ways:" and is followed by two `\paragraph` headings rather than a
-  list.
+- **A [−0.3 page].** One row: `.det` → parse → infer → determinize → {interpret | explore →
+  solve (Storm or built-in) → kernel check} → result → (hypotheses) → `e_src`.
+  - Use four styles: specification, proved, checked at run time, unverified.
+  - Drop the row for the measure semantics. It is not a stage of the pipeline; it is what the
+    theorems are about.
+- **B [−0.5 page].** Replace the figure with the table from M4-A, extended by a column for the
+  Lean name. One object then serves as both the trust model and the architecture. For OOPSLA
+  this is the most economical option.
+- **C [0].** Keep the layout and fix the legend, the logo and the arrows.
 
-A structure that would hold the material above:
+### M6. "Every theorem of the previous sections is mechanized" (line 6) is still too broad
 
-1. Overview and trust model (finding 1, and the size figures from finding 9)
-2. From source text to a verified program (findings 2 and 3)
-3. Formalizing the semantics and theorems (the design decisions from finding 9, and finding 8)
-4. Exact analysis of finite-state programs (findings 4, 5 and 6)
-5. Sampling (finding 7)
+**Theorems that exist in Lean but have no link:**
+
+- Lemma 4.4 is `trace_preservation` (`Theorems.lean:60-65`).
+- Thm. 4.8 is `convex_function_inequality` (`:111-118`).
+- Proposition 4.9: only its two equations are linked, not its header.
+- Definition 4.1 can link to `Spec/Expectation.lean`. The link `expectation-defined` is
+  declared in `lean-links.tex` but never used.
+
+**Section 5 has no links at all.** `5_proof.tex:5` is a `\todo{Add Lean references}`.
+
+- Thm. 5.4's two equations exist only as intermediate steps inside
+  `compact_exactDepth_source_fiberSound` (`Proof/Traces/CompactFiberSoundness.lean:453`, steps
+  at `:460-470`), stated for detailed traces.
+- Thm. 5.5 corresponds to the invariant `FiberSound` (`Proof/Traces/Fibers.lean:55`). The
+  relation to conditional laws is made at the end (`Proof/Traces/ConditionalLaw.lean:36`).
+- Lemma 5.3 corresponds to per-action lemmas spread over `Proof/Symbolic/TraceLaws.lean`,
+  `TraceGeneration.lean`, `TraceSamples.lean` and `MeanTraces.lean`.
+
+**The appendix states something no theorem proves.** Its "Probability preservation" adds
+`d_{Det(e)} = d_e`, which no Lean theorem states.
+
+**Ways to fix it.**
+
+- **A [0].**
+  - Add the three missing links.
+  - Narrow the claim: "Every theorem of Sections 3 and 4 is stated in `Theorems.lean` and
+    proved; Section 5's argument is mechanized in a different form, over detailed traces."
+  - Either prove `d_{Det(e)} = d_e` or drop it. It should follow from `return_or_diverge`,
+    `output_mass_preservation`, `trace_preservation` and `typed_determinize`.
+- **B [0, Lean work].** State Thms. 5.4 and 5.5 as named lemmas, in `Proof/` if necessary, and
+  link to them. For an appendix that claims full proofs, this is the cleaner option.
+
+### M7. The finite-state route is described inaccurately (lines 29–35)
+
+The round-2 finding 4 still applies in full:
+
+- Storm produces no certificate. It returns exact value vectors.
+- The wrapper adds the dead states and a rank and next state for every other state.
+- The kernel checks three things: the dead region is closed, the paths are valid, and the
+  numbers satisfy the linear equations.
+- The certificate covers return mass, first and second moments, and rejection probability.
+  It does not cover only "the correct expected value".
+- It is a certificate for the *explored* program, which by default is `e_det`.
+
+Two things are new:
+
+- the additive route (M1), which the section does not mention although Section 7 uses it;
+- the section still does not define "machine state".
+
+**Suggested replacement [about 0 pages; lines 29–35 are already 7 lines in print]:**
+
+> *Exact analysis.* The tool explores the machine states (expression, environment and
+> continuation, with rational values) of the chosen program, by default `e_det`, merging
+> equal states. This succeeds when the only random draws left are Bernoulli and discrete
+> ones and finitely many states are reachable. The return probability and the first and
+> second moments solve linear equations over the resulting Markov chain. An untrusted solver
+> computes them: Storm with exact rational arithmetic, or a small built-in solver. A
+> certificate adds, for every state that can still return, a path to a terminal state, which
+> makes the solution unique. The tool writes the chain and the certificate as a Lean file.
+> Checking that file with Lean's kernel proves that the program is domain-safe, that the
+> chain's output law equals μ_e, and that the certified numbers are its exact return
+> probability and its mean and variance conditioned on returning. With `--additive`,
+> numbers added to the result of a pending call become rewards on transitions, which makes
+> accumulating loops finite-state; Section 7 uses this mode.
+
+State how Storm is called. The model is built through stormpy with exact rational matrices,
+not through the command line: Storm's documentation says "there is no --exact mode for
+explicit input" [9]. A reader who knows Storm may otherwise assume floating-point value
+iteration. That is precisely what the paper should set itself apart from, since value
+iteration "can return results that are incorrect by several orders of magnitude" [15].
+
+Add one sentence about why exactness survives determinization. Every supported primitive's
+mean is a rational function of its parameters (Fig. 7), so `e_det` with rational literals
+stays rational. A distribution such as the log-normal, whose mean is e^{μ+σ²/2}, would break
+this. That is a design constraint worth stating.
+
+### M8. Space and structure
+
+**The current shape.** Ten one- or two-sentence paragraphs, one for each box of Fig. 13.
+There are three problems:
+
+- The semantics paragraph (line 25) comes after the theorems about the semantics (line 23).
+- Line 29 ends with "in two ways:" and is followed by `\paragraph` headings rather than a list.
+- Line 23 restates Section 4's theorems in 5 lines, where a pointer would do.
+
+**Proposed structure, about 1.5 pages:**
+
+1. **Trust (0.4 page).** The M4 table, the exact sentence on the build check, one sentence on
+   the review of the specification and on LLM use (M2), and the sizes. The sizes are:
+   - `Spec/` and the statements: 1,535 lines;
+   - `Proof/`: 103 files, 26,087 lines, about 1,040 theorems and lemmas;
+   - executable code: front end 1,158 lines, finite exploration and solving 1,102, checking
+     171, interpreter 268;
+   - Lean 4.33.1 and Mathlib `0df444a`;
+   - the build time, which is still not measured.
+2. **From text to `e_det` (0.3 page).**
+   - Parsing and desugaring are unverified.
+   - Inference is correct by Thm. 3.1. `compile` stores the proofs of typing and alignment in
+     the `Program` it returns (`Frontend/Compile.lean:10-25`), so nothing is checked at run time.
+   - Determinization is the same definition, with rational literals; `interpret_determinize`
+     relates the two.
+   - Primitive means are rational (M7).
+3. **Exact analysis (0.4 page).** M7's paragraph, the guarantee and the transfer (M3).
+4. **Sampling (0.15 page).**
+   - SplitMix64; Box–Muller; Marsaglia–Tsang for gamma.
+   - The G and E draws use separate streams (`Runtime/Eval.lean:27-28`, `:138`), so the
+     source and the determinized program see the same G draws for the same seed.
+   - A fuel limit of 100,000 steps.
+   - Statistical tests.
+5. **Figure: 0.3 page (M5-A) or none (M5-B).**
+
+**Moves to the appendix or the artifact:**
+
+- the exploration limits and their flags (10,000 states, 100,000 edges, 1 MB per state);
+- the details of the samplers;
+- the exact rule for additive extraction (`lean/finite-model-contract.md`);
+- the design decisions of the semantics (`lean/README.md`): no measurable structure on
+  expressions, the zero measure for invalid parameters, rejection as a self-loop;
+- the sizes of each directory.
+
+**Cuts:**
+
+- the paragraph on the measure-theoretic semantics, down to half a sentence (Section 2 already
+  defines the semantics);
+- "we have no formal model that relates floating-point arithmetic…", down to a clause;
+- the commented-out outline in lines 37–97.
 
 ## Minor comments, line by line
 
-- **Line 2.** `\clearpage` at the start of the section is a drafting leftover.
-- **Line 6.**
-  - Name the version: "Lean 4.33.1".
-  - "In order to make it clear which parts of the pipeline need human review and which ones can
-    be left to the Lean kernel" can be shortened to "To make clear which parts need human review
-    and which can be left to Lean's kernel".
-- **Line 9.** "Trusted surface/specifications" gives two names for one thing. Choose one; the
-  code calls it `Spec`.
-- **Line 10.** "Procedures" is vague. "Verified executable functions" says what is meant.
-- **Line 13.** "We will briefly describe" can be "We describe".
-- **Line 17.**
-  - "Source code" should be "source program".
-  - The paper never introduces the surface language, although its examples use `fun`,
-    `rec f x =>`, `flip` and subtraction, and its prose mentions `observe`. This is the place
-    to say what desugaring does, for example that `flip(p)` becomes `0 < bernoulli[G](p)` and
-    `a - b` becomes `a + -b`.
-- **Line 19.**
-  - See finding 2.
-  - "Mode annotation" is a third name for what the paper elsewhere calls E/G annotations.
-  - "The user has a well-typed program e_src": the inferred type may be `real^G`, while the
-    soundness theorems require `real^E`. Subtyping bridges the two; say so.
-- **Line 21.** Cite `typed_determinize` for "well-typed".
-- **Line 25.**
-  - "Small-step and big-step semantics": Figure 6 calls these "deterministic reduction" and
-    "output measures", and "big-step" appears nowhere else in the paper.
-  - The Lean definition also has no evaluation contexts: its step function finds the next
-    reducible expression directly.
-  - Move the paragraph before the soundness paragraph.
-- **Line 27.** "In order to be able to run the program" can be "To run programs".
-- **Line 29.**
-  - "Finite state graph" should be "finite-state graph".
-  - Turn "allows one to continue with it in two ways:" and the two headings that follow into a
-    list or subsections.
-- **Line 31.** Say that the mean and variance are conditioned on returning, and that the solver
-  is meant for small models (finding 5).
-- **Line 33.** Say that Storm computes with exact rational arithmetic, and which property it is
-  asked to compute (finding 4).
-- **Line 35.** See finding 4.
-- **Figure 12.**
-  - The legend needs more styles (finding 1), and the figure needs the transfer arrow
-    (finding 3).
-  - The caption is one line, while the `\Description` holds the useful explanation; move some of
-    it into the caption.
+- **L2.** `\clearpage` looks like a drafting leftover, as does the one in `4_soundness.tex:2`.
+- **L6.**
+  - "in the Lean programming language": write "in Lean 4 (v4.33.1)" and give the Mathlib
+    commit.
+  - "the final implementation was mostly carried out by" is ambiguous. Does it mean the code,
+    the proofs, the specification or the paper? Say which (M2).
+  - "In order to make it clear which parts … need human review and which ones can be left to
+    the Lean kernel" can be "To separate what a reader must review from what Lean's kernel
+    checks".
+- **L6, citations.** The three citations are correct: Lean 4 at CADE 2021, Mathlib at CPP 2020,
+  Storm in STTT 2022. For kernels and disintegration, Degenne's paper on Mathlib's Markov
+  kernels [16] is the specific reference.
+- **L9.** "Trusted surface/specifications" gives two names for one thing. `lean/README.md` says
+  "specification"; use that.
+- **L10.**
+  - "procedures" is vague.
+  - "by a single reference to this part" is jargon.
+  - "which cannot change what the statement means" needs its reason for a non-Lean reader:
+    proof irrelevance, since any two proofs of a proposition are equal.
+- **L13.** "We will briefly describe the individual steps in the following" can be deleted.
+- **L17.**
+  - "source code" should be "source program".
+  - The de Bruijn detail can go; nothing later depends on it.
+  - The surface language is never introduced, although the examples use `fun`, `rec f x =>`,
+    `flip`, subtraction, tuples and `match`, and the prose mentions `observe`. The desugarings
+    belong in Section 2 or the appendix: `flip(p)` becomes `0 < bernoulli[G](p)`, `a - b`
+    becomes `a + -b`, and `observe(c)` becomes `if c then () else reject`.
+- **L19.**
+  - "verified to produce a correct typing as well as mode annotation … as many E-sites as
+    possible" should be "computes the greatest completion (Thm. 3.1)". "Greatest" is sitewise
+    and stronger than "as many".
+  - "Mode annotation" is a third name, besides E/G annotation and affinity.
+  - The inferred type may be `real^G`. The theorems need `real^E`, which subsumption supplies;
+    say so.
+- **L21.**
+  - `\cref{def:determinization}` prints "theorem 2.1". acmart's definition shares the theorem
+    counter, and cleveref names the counter. I tested a fix in a minimal acmart document:
+    pass `acmthm=false`, load `amsthm`, `aliascnt` and `cleveref` (with `capitalise`), define
+    `theorem`, then `\newaliascnt{definition}{theorem}`,
+    `\newtheorem{definition}[definition]{Definition}`, `\aliascntresetthe{definition}` and
+    `\crefname{definition}{Definition}{Definitions}`. It prints "Definition 1.1 and
+    Theorem 1.2".
+  - Cite `typed_determinize` (`Proof/Semantics/Ordinary.lean:153`) for "well-typed".
+- **L23.**
+  - "the same expectation as e_src whenever the latter is defined": Thm. 4.6 concerns `E_ret`
+    and also needs `q_e > 0`.
+  - "variance" is `Var_ret`.
+  - Better to replace the paragraph with a pointer to Section 4 (M8).
+- **L25.**
+  - "small-step and big-step semantics": Fig. 7 calls these reduction and output measures, and
+    "big-step" occurs nowhere else.
+  - The Lean semantics has no evaluation contexts. The link `evaluation-contexts` points to a
+    lemma in `Proof/` (`reduce_frameExpr`), not to a definition.
+- **L27.** "In order to be able to run the program and to carry out actual sampling" can be
+  "To sample".
+- **L29.**
+  - "finite state graph" should be "finite-state Markov chain".
+  - "machine states" is never defined.
+- **L31.**
+  - The mean and variance are conditioned on returning.
+  - Say what is verified: the certificate the solver returns comes with a proof of validity.
+  - The solver is limited to 256 states by default.
+- **L33.** Storm runs with exact rationals and answers the query `R=? [ F "done" ]`.
+- **L35.** See M7.
+- **L37–97.** Delete the commented-out outline.
+- **Fig. 13.** See M5.
+  - "Exact mean and variance" should add "conditioned on returning".
   - The "Soundness theorems" box links only to expectation preservation.
-  - "Exact mean and variance" should say "conditioned on returning".
-- **Terminology.** The paper says "mode" and the Lean code says "affinity". Readers who follow
-  the Lean links will meet `Affinity`, so state once that the two are the same.
+- **Cross-references.** cleveref prints "fig. 13" and "theorem 4.6" in mid-sentence, while the
+  captions say "Fig. 13". Load cleveref with `capitalise` (and `noabbrev` if you want "Figure"),
+  or use `\Cref` throughout.
+- **Lean links.**
+  - `certificate-checker` (`Checking/Statistics.lean` L9–27) leaves out
+    `checked_conditionalVariance` (L29–41).
+  - `expectation-defined` is declared but never used.
+- **Terminology.** The paper says "mode" and the Lean code says "affinity". Say once that they
+  are the same thing; readers who follow the links will meet `Affinity`.
 
-## A problem outside the text: the Lean links in the review build
+## Problems elsewhere in the paper that affect Section 6
 
-`main.tex` builds in review and anonymous mode. In that mode the Lean links point to a snapshot
-on apndx.org, not to GitHub. That snapshot predates the verified inference: it has no
-`Spec/Inference.lean` (the page returns 404). Since commit `90394b1`, the links' line numbers
-refer to the current code. Until the snapshot is regenerated from commit `29ee1e7`, most Lean
-links in the review PDF therefore land on the wrong lines. The GitHub links used by the
-camera-ready build are correct.
+- **Where the code is available.** There are three answers:
+  - "[TODO]" in `1_introduction.tex:77`;
+  - "https://github.com/[anonymized]" in `7_evaluation.tex:19`;
+  - apndx.org in the Lean links of the review build.
+
+  OOPSLA's FAQ says to "cite the code in your paper, but replace the URL with text like 'link
+  removed for double-blind review'". The required Data-Availability Statement, on the other
+  hand, "should ideally also include links to preliminary versions of (anonymized) artifacts"
+  [1].
+
+  - Use one anonymized location and give it in the Data-Availability Statement.
+  - Ask the chairs whether the in-text Lean links to it may stay. They are the paper's
+    strongest evidence for the mechanization.
+  - Otherwise, render the links as plain marks in the review build and ship the code as
+    anonymized supplementary material.
+- **The Data-Availability Statement is missing.** OOPSLA 2027 requires it "just before
+  references", outside the page limit. It must state "whether an artifact exists, its nature
+  and limitations, and whether it will be submitted for Artifact Evaluation" [1].
+  - This is the natural home for what M8 moves out of Section 6: build commands, the build
+    time, Lean and Mathlib versions, and the command that checks the axioms.
+  - SPLASH artifact evaluation asks for "commands that check soundness" [3], and
+    `lake build --wfail` is that command.
+  - A paper that "ought to" have an artifact must explain if it will not provide one [1].
+- **The review build's Lean links are broken.** `main.tex` builds in review mode, whose links
+  point to the snapshot `apndx.org/pub/sca95063a7c`. That snapshot is older than `Theorems.lean`
+  in its current form.
+  - It serves the old 66-line `Theorems.lean`.
+  - `Spec/Inference.lean`, `Spec/Expectation.lean` and `Frontend/Affinity.lean` return 404.
+  - Of the 32 links, 4 land on the right line, 2 on missing files and 26 on wrong lines. Seven
+    of those point past the end of the file.
+
+  The GitHub links at `8f89190` are all correct. Regenerate the snapshot from `8f89190` or
+  later, and include the doc-gen4 documentation in it. For a reviewer, hyperlinked statements
+  are the cheapest way to check M2.
+- **The introduction claims what Section 7 does not show.** It says that "verified matrix
+  solving … computes its expectation value exactly", but Section 7 uses only Storm (M1).
+- **Section 7 counts its benchmarks twice, differently.** The text says 14 benchmarks, the
+  caption of Table 1 says 15, and the table has 14 rows.
+- **Section 7's numbers disagree.** The RQ2 text gives 9.02×, 40.58× and 109.73×. Table 2 gives
+  8.96×, 40.47× and 108.13× for the same benchmarks. These look like different runs.
+- **The interpreter's random streams matter for Section 7.** Section 6 should say that G and E
+  draws use separate streams. Section 7 should then say whether the runs of the source and of
+  the determinized program are paired, that is, use the same seed. Paired runs share their G
+  draws, which correlates the two estimates; these are common random numbers [17, §8.6].
+  - Owen notes that common random numbers need "considerable care in synchronization" when
+    the two programs consume different numbers of draws. The determinized program does consume
+    fewer.
+  - Separate G and E streams provide exactly that synchronization, which is worth one
+    sentence.
+  - Section 7 should also give a confidence interval for each VRF.
+- **RQ1's wording.** "Exact inference" usually means computing the posterior distribution. RQ1
+  computes "the true expected value … over the exact posterior distribution", which is what
+  determinization preserves. "Exact posterior expectation" says it without the ambiguity.
+- **Related work does not cover the mechanization.** Section 8 has no paragraph on mechanized
+  semantics of probabilistic programs, verified samplers, or certified probabilistic model
+  checking. Section 6's contribution needs that context.
+  - **The comparison a referee will ask for.** Chatterjee et al. [8] have Storm produce
+    certificates for reachability and expected rewards in MDPs: rational value vectors plus
+    ranking functions. A verified Isabelle checker checks them. This is a closely related
+    design to the Storm route here, for a larger class of models.
+    - Their stated gap is "the construction of the MDP … [is] currently not verified". Here
+      the chain is replayed against the semantics, so on this point the comparison favours
+      this paper.
+    - Cite them, and say in one sentence what is new: a checker in Lean, a chain derived from
+      a program's semantics, and moment queries.
+  - **Earlier certificates:** Farkas certificates for reachability [18], and Hölzl's Isabelle
+    formalization of Markov chains with a certifier for finite reachability [19].
+  - **Mechanized PPL semantics and verified samplers:**
+    - Eberl, Hölzl and Nipkow's verified compiler for probability density functions (ESOP
+      2015);
+    - Affeldt, Cohen and Saito's s-finite kernels in Coq [20];
+    - Zar [13], SampCert [14] and VCVio [21]. VCVio also reports how it used LLM agents.
+  - **Why exactness matters:** Storm's own paper on the cost of exact arithmetic [9], and the
+    unsoundness of floating-point value iteration [15].
+- **The paper does not build from a clean checkout.** `figures/eval-wallclock.tex` includes
+  `results/estimator-variance/*.pdf`, and `.gitignore` excludes `*.pdf`; only the PNGs are
+  committed. So `latexmk` fails, and with it `check.sh tex`. I built the PDF for this review
+  from a copy with the includes changed to `.png`.
 
 ## Claims I checked and found accurate
 
-- **Line 6:** the formalization does use Mathlib's Giry monad (the output measure is built with
-  `Measure.bind`), its conditional distributions (`condKernel`), and its Gaussian, exponential,
-  beta, gamma and Poisson distributions.
-- **Line 10:** the build check is exactly as described. The last command of `Theorems.lean`
-  fails the build unless every proposition in `Spec` is proved using only `propext`,
-  `Classical.choice` and `Quot.sound`.
-- **Line 21:** the tool runs the same `Expr.determinize` definition that the theorems are about.
-  It is generic in the type of literals, and the tool uses it with rationals.
-- **Line 23:** the stated hypotheses match Theorems 4.1, 4.2 and 4.4.
-- **Line 25:** the semantics uses the Giry monad and is marked noncomputable in Lean.
-- **Line 27:** the interpreter is unverified, and no theorem depends on it.
-- **Line 31:** the built-in solver computes with exact rationals and returns its certificate
-  together with a proof that the certificate is valid.
-- **Section 7's tables:** the static sampling-site counts in both tables match what the tool
-  reports for all 24 benchmarks.
+- **L6.**
+  - The output measure uses Mathlib's Giry monad (`Measure.bind`).
+  - The conditional laws use `Measure.condKernel`.
+  - The Gaussian, exponential, beta, gamma and Poisson laws come from Mathlib.
+- **L10.**
+  - "states each theorem in full and proves it by a single reference" holds. Each of the 19
+    theorems is stated over `Spec` (and `infer`) and proved by one term from `Proof`.
+  - The axiom check holds. The build prints "19 theorems proved, using only [propext,
+    Classical.choice, Quot.sound]".
+- **L21.** The tool runs the same `Expr.determinize` that the theorems are about, instantiated
+  with rationals.
+- **L23.** The hypotheses match Thms. 4.5–4.7.
+- **L25.** The semantics is noncomputable.
+- **L27.** The interpreter is unverified, and no theorem depends on it.
+- **L31.** The built-in solver uses exact rationals and returns its certificate with a proof of
+  validity.
+- **Spec's imports.** `Spec/` imports only `Spec` modules and Mathlib.
+- **Lean links.** All 32 link ranges are correct at `8f89190` and at `96eefdd`.
+
+## References
+
+Quotes are verbatim from the sources. The ACM pages were read through web.archive.org
+snapshots of the URLs given, because acm.org refuses automated requests.
+
+1. OOPSLA 2027 call for papers and FAQ. https://2027.splashcon.org/track/splashoopsla2027
+2. ACM Policy on Authorship (updated 16 September 2025),
+   https://www.acm.org/publications/policies/new-acm-policy-on-authorship, and its FAQ,
+   https://www.acm.org/publications/policies/frequently-asked-questions
+3. SPLASH 2026 Artifact Evaluation call,
+   https://2026.splashcon.org/track/splash-2026-artifact-evaluation, and the proof-artifact
+   guidelines it links, https://proofartifacts.github.io/guidelines/. The OOPSLA 2027 artifact
+   call is not out yet.
+4. Lean Language Reference:
+   - "Validating a Lean Proof", https://lean-lang.org/doc/reference/latest/ValidatingProofs/
+     (axioms, `decide +kernel`, `implemented_by`, leanchecker, comparator, nanoda);
+   - "Natural Numbers", https://lean-lang.org/doc/reference/latest/Basic-Types/Natural-Numbers/
+     (GMP in the kernel).
+5. Lean FAQ, https://lean-lang.org/faq/ (the TCB of native code).
+6. X. Leroy. Formal verification of a realistic compiler. CACM 52(7), 2009.
+   https://xavierleroy.org/publi/compcert-CACM.pdf
+7. R. M. McConnell, K. Mehlhorn, S. Näher, P. Schweitzer. Certifying algorithms. Computer
+   Science Review 5(2):119–161, 2011. https://doi.org/10.1016/j.cosrev.2010.09.009
+8. K. Chatterjee, T. Quatmann, M. Schäffeler, M. Weininger, T. Winkler, D. Zilken. Fixed point
+   certificates for reachability and expected rewards in MDPs. TACAS 2025.
+   https://arxiv.org/abs/2501.11467
+9. C. Hensel, S. Junges, J.-P. Katoen, T. Quatmann, M. Volk. The probabilistic model checker
+   Storm. STTT 24:589–610, 2022. https://doi.org/10.1007/s10009-021-00633-z. Storm usage
+   documentation: https://www.stormchecker.org/documentation/usage/running-storm.html
+10. Z. Paraskevopoulou. Machine-generated, machine-checked proofs for a verified compiler
+    (experience report). PACMPL 10(ICFP), 2026. https://doi.org/10.1145/3828700
+11. Ammanamanchi, Bhat, Biderman. Faults in our formal benchmarking. ICML 2026.
+    https://arxiv.org/abs/2606.29493
+12. Liquid Tensor Experiment, README. https://github.com/leanprover-community/lean-liquid
+13. A. Bagnall, G. Stewart, A. Banerjee. Formally verified samplers from probabilistic
+    programs with loops and conditioning (Zar). PACMPL 7(PLDI), 2023.
+    https://doi.org/10.1145/3591220
+14. Verified foundations for differential privacy (SampCert). PACMPL 9(PLDI), 2025.
+    https://doi.org/10.1145/3729294
+15. C. Baier, J. Klein, L. Leuschner, D. Parker, S. Wunderlich. Ensuring the reliability of
+    your model checker: interval iteration for Markov decision processes. CAV 2017.
+    https://doi.org/10.1007/978-3-319-63387-9_8. See also A. Hartmanns, Correct probabilistic
+    model checking with floating-point arithmetic, TACAS 2022,
+    https://doi.org/10.1007/978-3-030-99527-0_3
+16. R. Degenne. Markov kernels in Mathlib's probability library.
+    https://arxiv.org/abs/2510.04070
+17. A. B. Owen. Monte Carlo theory, methods and examples, Ch. 8 (§8.6 common random numbers,
+    §8.7 conditioning). https://artowen.su.domains/mc/Ch-var-basic.pdf
+18. F. Funke, S. Jantsch, C. Baier. Farkas certificates and minimal witnesses for
+    probabilistic reachability constraints. TACAS 2020.
+    https://doi.org/10.1007/978-3-030-45190-5_18
+19. J. Hölzl. Markov chains and Markov decision processes in Isabelle/HOL. JAR 59:345–387,
+    2017. https://doi.org/10.1007/s10817-016-9401-5
+20. R. Affeldt, C. Cohen, A. Saito. Semantics of probabilistic programs using s-finite kernels
+    in Coq. CPP 2023. https://doi.org/10.1145/3573105.3575691
+21. Tuma, Dao, Waters, Hicks, Hopper. VCVio. IACR ePrint 2026/899.
+    https://eprint.iacr.org/2026/899
