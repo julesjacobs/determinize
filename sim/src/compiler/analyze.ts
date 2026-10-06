@@ -1,5 +1,6 @@
 import type { Expr, Mode, TypedExpr } from "./ast.ts";
 import { determinize } from "./determinize.ts";
+import { elaborate } from "./elaborate.ts";
 import { CompileError } from "./errors.ts";
 import type { SpanInfo } from "./infer.ts";
 import { collectSpans, defaultModes, inferProgram, typedChildren } from "./infer.ts";
@@ -43,6 +44,8 @@ export function analyze(source: string): Analysis {
   let stage: Stage = "parse";
   try {
     const ast = parse(source);
+    stage = "elaboration";
+    elaborate(ast);
     stage = "inference";
     const typedAstRaw = inferProgram(ast);
     const elaboratedRaw = prettyTyped(typedAstRaw);

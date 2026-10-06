@@ -37,6 +37,18 @@ export function toNumber(q: Rational): number {
   return Number(q.num) / Number(q.den);
 }
 
-export function format(q: Rational): string {
-  return q.den === 1n ? String(q.num) : `${q.num}/${q.den}`;
+/** A terminating decimal when there is one, as Lean's `Pretty` prints literals, else `num/den`. */
+export function formatDecimal(q: Rational): string {
+  let places = 0;
+  let den = q.den;
+  while (den % 10n === 0n || den % 2n === 0n || den % 5n === 0n) {
+    den /= den % 10n === 0n ? 10n : den % 2n === 0n ? 2n : 5n;
+    places++;
+  }
+  if (den !== 1n) return `${q.num}/${q.den}`;
+  if (q.den === 1n) return String(q.num);
+  const scaled = (q.num < 0n ? -q.num : q.num) * (10n ** BigInt(places) / q.den);
+  const digits = scaled.toString().padStart(places + 1, "0");
+  const sign = q.num < 0n ? "-" : "";
+  return `${sign}${digits.slice(0, -places)}.${digits.slice(-places)}`;
 }

@@ -19,19 +19,10 @@ interface Case {
 /** Cases where the simulator differs from Lean, with the reason. */
 const todo: Record<string, string> = {
   // Elaboration
-  "tests/typing/reject/discrete-empty.det":
-    "the simulator's inference checks literal discrete weights; Lean's elaborator",
-  "tests/typing/reject/discrete-negative.det":
-    "the simulator's inference checks literal discrete weights; Lean's elaborator",
-  "tests/typing/reject/discrete-nonliteral.det":
-    "the simulator's inference checks literal discrete weights; Lean's elaborator",
-  "tests/typing/reject/unbound.det": "names are resolved in inference, by Lean in elaboration",
-  "tests/typing/reject/flip-expectation.det":
-    "`flip[E]` is accepted; Lean's elaborator requires [G]",
-  "tests/typing/reject/discrete-all-zero.det": "literal discrete weights need not sum exactly to 1",
-  "tests/typing/reject/discrete-nonunit.det": "literal discrete weights need not sum exactly to 1",
-  "tests/typing/accept/gauss.det": "no rewriting of `e * literal` to `literal * e`",
-  "tests/typing/accept/mult.det": "no rewriting of `e * literal` to `literal * e`",
+  "tests/typing/accept/gauss.det":
+    "the checker types the parsed `e * literal`, not the elaborated `literal * e`",
+  "tests/typing/accept/mult.det":
+    "the checker types the parsed `e * literal`, not the elaborated `literal * e`",
   // Inference
   "tests/typing/accept/subtyping.det":
     "an annotated site fixes the mode of its context instead of being a subtype of it",
