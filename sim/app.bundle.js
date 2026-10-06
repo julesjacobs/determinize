@@ -21015,7 +21015,8 @@ ${indent(elseBranch)}`;
       return new _Rng(this.seed);
     }
     next() {
-      let t2 = this.seed += 1831565813;
+      this.seed += 1831565813;
+      let t2 = this.seed;
       t2 = Math.imul(t2 ^ t2 >>> 15, t2 | 1);
       t2 ^= t2 + Math.imul(t2 ^ t2 >>> 7, t2 | 61);
       return ((t2 ^ t2 >>> 14) >>> 0) / 4294967296;
