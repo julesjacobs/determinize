@@ -129,10 +129,11 @@ To build that archived draft independently:
 (cd tex/archive && latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex)
 ```
 
-Open `sim/index.html`, or [its published copy](https://julesjacobs.github.io/determinize/),
-to explore coupled traces. The simulator has its own compiler
-and numerical runtime; Lean certificates apply to the core programs produced by
-the Lean CLI. The simulator is an unverified visualization.
+After `npm run build` in `sim/`, open `sim/dist/index.html`, or
+[its published copy](https://julesjacobs.github.io/determinize/), to explore coupled
+traces. The simulator has its own compiler and numerical runtime; Lean certificates
+apply to the core programs produced by the Lean CLI. The simulator is an unverified
+visualization.
 
 See the [Lean documentation](lean/README.md) for the language, theorem premises,
 and implementation limits, and the [test guide](tests/README.md) for analytical

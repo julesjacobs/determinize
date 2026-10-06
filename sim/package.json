@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "esbuild src/main.js --bundle --format=iife --global-name=DeterminizeSim --outfile=app.bundle.js --log-level=warning",
+    "build": "node build.mjs",
     "test": "node --test"
   },
   "dependencies": {

@@ -1,7 +1,6 @@
-# Checks the simulator's formatting and lint with Biome, runs its tests on pull requests, and
-# checks that the committed bundle is the one its sources build: sim/index.html loads
-# sim/app.bundle.js, so a change to the sources is committed together with the rebuilt bundle. On
-# main, pages.yml runs this workflow and publishes the simulator it built.
+# Checks the simulator's formatting and lint with Biome, runs its tests, builds it into sim/dist/
+# and uploads that directory as the `simulator` artifact. It also checks that the committed bundle
+# is the one its sources build. On main, pages.yml runs this workflow and publishes the artifact.
 #
 # Every `run` step executes inside the flake's `sim` dev shell, so Node.js, npm, Biome and git are
 # the versions flake.lock pins. The npm packages, esbuild among them, are pinned by
@@ -56,13 +55,9 @@ jobs:
             exit 1
           fi
       - name: Upload the simulator
-        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: simulator
-          path: |
-            sim/index.html
-            sim/styles.css
-            sim/app.bundle.js
+          path: sim/dist/
           if-no-files-found: error
           retention-days: 1
