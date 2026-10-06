@@ -1,9 +1,32 @@
 import { StreamLanguage, HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { tags as t } from "@lezer/highlight";
 
-const keywords = new Set(["let", "in", "if", "then", "else", "match", "with", "fun", "lambda", "rec", "true", "false"]);
+const keywords = new Set([
+  "let",
+  "in",
+  "if",
+  "then",
+  "else",
+  "match",
+  "with",
+  "fun",
+  "lambda",
+  "rec",
+  "true",
+  "false",
+]);
 const constructors = new Set(["inl", "inr", "fst", "snd", "observe"]);
-const distributions = new Set(["uniform", "gauss", "exponential", "gamma", "beta", "flip", "bernoulli", "poisson", "discrete"]);
+const distributions = new Set([
+  "uniform",
+  "gauss",
+  "exponential",
+  "gamma",
+  "beta",
+  "flip",
+  "bernoulli",
+  "poisson",
+  "discrete",
+]);
 
 export const detLanguage = StreamLanguage.define({
   token(stream) {

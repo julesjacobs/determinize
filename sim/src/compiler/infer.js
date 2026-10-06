@@ -25,7 +25,8 @@ function typed(expr, typ, extra = {}) {
 }
 
 function lookup(env, name, source) {
-  if (!env.has(name)) throw new CompileError(`unbound variable \`${name}\``, source.from, source.to);
+  if (!env.has(name))
+    throw new CompileError(`unbound variable \`${name}\``, source.from, source.to);
   return env.get(name);
 }
 
@@ -71,7 +72,14 @@ export function infer(env, expr, expected) {
       const dom = TMeta(freshMeta());
       const cod = TMeta(freshMeta());
       const fnTy = TArrow(dom, cod);
-      const body = infer(extend(env, [[expr.name, fnTy], [expr.param, dom]]), expr.body, cod);
+      const body = infer(
+        extend(env, [
+          [expr.name, fnTy],
+          [expr.param, dom],
+        ]),
+        expr.body,
+        cod,
+      );
       assertSubtype(body.typ, cod, expr.body);
       assertSubtype(fnTy, expected, expr);
       return typed(expr, fnTy, { name: expr.name, param: expr.param, body });
@@ -160,7 +168,14 @@ export function infer(env, expr, expected) {
       const listTy = TList(elemTy);
       const scrutinee = infer(env, expr.scrutinee, listTy);
       const nilBranch = infer(env, expr.nilBranch, expected);
-      const consBranch = infer(extend(env, [[expr.headName, elemTy], [expr.tailName, listTy]]), expr.consBranch, expected);
+      const consBranch = infer(
+        extend(env, [
+          [expr.headName, elemTy],
+          [expr.tailName, listTy],
+        ]),
+        expr.consBranch,
+        expected,
+      );
       return typed(expr, expected, {
         scrutinee,
         nilBranch,
@@ -225,7 +240,10 @@ export function infer(env, expr, expected) {
     case "Uniform": {
       const ty = ensureFloat(expected, expr);
       forceAnnotatedMode(expr, ty);
-      return typed(expr, ty, { mode: expr.mode, args: [infer(env, expr.args[0], ty), infer(env, expr.args[1], ty)] });
+      return typed(expr, ty, {
+        mode: expr.mode,
+        args: [infer(env, expr.args[0], ty), infer(env, expr.args[1], ty)],
+      });
     }
     case "Gauss": {
       const meanTy = ensureFloat(expected, expr);
@@ -241,13 +259,19 @@ export function infer(env, expr, expected) {
     case "Gamma": {
       const ty = ensureFloat(expected, expr);
       forceAnnotatedMode(expr, ty);
-      return typed(expr, ty, { mode: expr.mode, args: [infer(env, expr.args[0], ty), infer(env, expr.args[1], floatG())] });
+      return typed(expr, ty, {
+        mode: expr.mode,
+        args: [infer(env, expr.args[0], ty), infer(env, expr.args[1], floatG())],
+      });
     }
     case "Beta": {
       const ty = ensureFloat(expected, expr);
       forceAnnotatedMode(expr, ty);
       const paramTy = floatG();
-      return typed(expr, ty, { mode: expr.mode, args: [infer(env, expr.args[0], paramTy), infer(env, expr.args[1], paramTy)] });
+      return typed(expr, ty, {
+        mode: expr.mode,
+        args: [infer(env, expr.args[0], paramTy), infer(env, expr.args[1], paramTy)],
+      });
     }
     case "Flip": {
       const p = infer(env, expr.args[0], floatG());
@@ -343,7 +367,11 @@ export function collectSpans(te, spans = []) {
   spans.push({
     from: te.from,
     to: te.to,
-    kind: ["Var"].includes(te.kind) ? "identifier" : isDistribution(te.kind) ? "distribution" : "expr",
+    kind: ["Var"].includes(te.kind)
+      ? "identifier"
+      : isDistribution(te.kind)
+        ? "distribution"
+        : "expr",
     type: formatType(te.typ),
     mode: zonk(te.typ)?.tag === "Float" ? (zonk(te.typ).mode.mode ?? "?") : undefined,
     text: hoverText(te),
@@ -355,12 +383,22 @@ export function collectSpans(te, spans = []) {
 function hoverText(te) {
   const base = `${te.kind}: ${formatType(te.typ)}`;
   if (!isDistribution(te.kind)) return base;
-  const mode = te.typ.tag === "Float" ? te.typ.mode.mode ?? "?" : "?";
+  const mode = te.typ.tag === "Float" ? (te.typ.mode.mode ?? "?") : "?";
   if (mode === "E") return `${base}\ndeterminizes to its expectation`;
   if (mode === "G") return `${base}\nsampled normally`;
   return base;
 }
 
 function isDistribution(kind) {
-  return ["Uniform", "Gauss", "Exponential", "Gamma", "Beta", "Flip", "Bernoulli", "Poisson", "Discrete"].includes(kind);
+  return [
+    "Uniform",
+    "Gauss",
+    "Exponential",
+    "Gamma",
+    "Beta",
+    "Flip",
+    "Bernoulli",
+    "Poisson",
+    "Discrete",
+  ].includes(kind);
 }

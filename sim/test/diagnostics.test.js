@@ -158,7 +158,9 @@ test("editor diagnostics clear immediately when the document changes", () => {
     extensions: [diagnosticsState],
   });
   const withDiagnostic = state.update({
-    effects: setDiagnostics.of([{ from: 26, to: 27, message: "expected expression before end of input" }]),
+    effects: setDiagnostics.of([
+      { from: 26, to: 27, message: "expected expression before end of input" },
+    ]),
   }).state;
 
   assert.equal(withDiagnostic.field(diagnosticsState).length, 1);

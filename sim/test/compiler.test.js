@@ -20,10 +20,7 @@ test("parser accepts comments and explicit distribution modes", () => {
 
 test("pretty printer keeps short let chains compact and aligned", () => {
   const ast = parse("let x = uniform[E](0, 1) in let y = uniform[G](0, 1) in x + y");
-  assert.equal(
-    prettyExpr(ast),
-    "let x = uniform[E](0, 1) in\nlet y = uniform[G](0, 1) in\nx + y",
-  );
+  assert.equal(prettyExpr(ast), "let x = uniform[E](0, 1) in\nlet y = uniform[G](0, 1) in\nx + y");
 });
 
 test("pretty printer keeps short conditionals on one line", () => {

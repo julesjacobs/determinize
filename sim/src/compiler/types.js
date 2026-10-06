@@ -35,7 +35,11 @@ export function setMode(mvar, mode, source = undefined) {
     return;
   }
   if (mvar.mode !== mode) {
-    throw new CompileError(`mode mismatch: expected ${mvar.mode}-mode sample, found ${mode}-mode sample`, source?.from, source?.to);
+    throw new CompileError(
+      `mode mismatch: expected ${mvar.mode}-mode sample, found ${mode}-mode sample`,
+      source?.from,
+      source?.to,
+    );
   }
 }
 
@@ -43,7 +47,11 @@ function propagateSubmode(lhs, rhs, source = undefined) {
   if (lhs.mode === "E" && rhs.mode == null) setMode(rhs, "E", source);
   else if (lhs.mode == null && rhs.mode === "G") setMode(lhs, "G", source);
   else if (lhs.mode === "E" && rhs.mode === "G") {
-    throw new CompileError("mode mismatch: E-mode value cannot be used where G-mode sampling is required", source?.from, source?.to);
+    throw new CompileError(
+      "mode mismatch: E-mode value cannot be used where G-mode sampling is required",
+      source?.from,
+      source?.to,
+    );
   }
 }
 
@@ -96,7 +104,11 @@ export function assertSubtype(left, right, source = undefined) {
   if (a.tag === "MetaType" && b.tag === "MetaType" && a.meta.id === b.meta.id) return;
   if (a.tag === "MetaType") return setType(a.meta, b, source);
   if (b.tag === "MetaType") return setType(b.meta, a, source);
-  throw new CompileError(`type mismatch: expected ${formatTypeForError(b)}, found ${formatTypeForError(a)}`, source?.from, source?.to);
+  throw new CompileError(
+    `type mismatch: expected ${formatTypeForError(b)}, found ${formatTypeForError(a)}`,
+    source?.from,
+    source?.to,
+  );
 }
 
 export function ensureFloat(expected, source = undefined) {
@@ -108,7 +120,11 @@ export function ensureFloat(expected, source = undefined) {
     setType(ty.meta, floatTy, source);
     return floatTy;
   }
-  throw new CompileError(`expected float, found ${formatTypeForError(ty)}`, source?.from, source?.to);
+  throw new CompileError(
+    `expected float, found ${formatTypeForError(ty)}`,
+    source?.from,
+    source?.to,
+  );
 }
 
 function formatTypeForError(type) {

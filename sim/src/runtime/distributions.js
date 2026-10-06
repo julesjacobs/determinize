@@ -1,6 +1,23 @@
-import { affineAdd, affineDiv, affineMul, affineScale, affineToNumber, evalAffine, isConcreteAffine } from "./affine.js";
+import {
+  affineAdd,
+  affineDiv,
+  affineMul,
+  affineScale,
+  affineToNumber,
+  evalAffine,
+  isConcreteAffine,
+} from "./affine.js";
 
-export const floatDistributions = new Set(["Uniform", "Gauss", "Exponential", "Gamma", "Beta", "Bernoulli", "Poisson", "Discrete"]);
+export const floatDistributions = new Set([
+  "Uniform",
+  "Gauss",
+  "Exponential",
+  "Gamma",
+  "Beta",
+  "Bernoulli",
+  "Poisson",
+  "Discrete",
+]);
 const MIN_POSITIVE_SAMPLE = Number.MIN_VALUE;
 const PROBABILITY_EPS = 1e-9;
 const ARITIES = {
@@ -92,7 +109,11 @@ export function meanDistribution(kind, args) {
     case "Poisson":
       return args[0];
     case "Discrete":
-      return args.reduce((acc, probability, index) => affineAdd(acc, affineMul(probability, { constant: index, terms: {} })), { constant: 0, terms: {} });
+      return args.reduce(
+        (acc, probability, index) =>
+          affineAdd(acc, affineMul(probability, { constant: index, terms: {} })),
+        { constant: 0, terms: {} },
+      );
     default:
       throw new Error(`no symbolic mean for ${kind}`);
   }
@@ -130,9 +151,11 @@ function validateMeanDomain(kind, args) {
 }
 
 function validateFiniteAffine(kind, arg) {
-  if (!Number.isFinite(arg.constant)) throw new DistributionDomainError(kind, "parameters must be finite");
+  if (!Number.isFinite(arg.constant))
+    throw new DistributionDomainError(kind, "parameters must be finite");
   for (const coeff of Object.values(arg.terms)) {
-    if (!Number.isFinite(coeff)) throw new DistributionDomainError(kind, "parameters must be finite");
+    if (!Number.isFinite(coeff))
+      throw new DistributionDomainError(kind, "parameters must be finite");
   }
 }
 
@@ -141,7 +164,8 @@ function validateConcreteDomain(kind, values, options = {}) {
   validateArity(kind, values.length);
   const concrete = values.filter((value) => value !== null);
   for (const value of concrete) {
-    if (!Number.isFinite(value)) throw new DistributionDomainError(kind, "parameters must be finite");
+    if (!Number.isFinite(value))
+      throw new DistributionDomainError(kind, "parameters must be finite");
   }
 
   const arg = (index) => values[index];
@@ -179,14 +203,17 @@ function validateConcreteDomain(kind, values, options = {}) {
       check(0, (value) => value >= 0, "lambda must be >= 0");
       break;
     case "Discrete": {
-      if (values.length === 0) throw new DistributionDomainError(kind, "at least one probability is required");
+      if (values.length === 0)
+        throw new DistributionDomainError(kind, "at least one probability is required");
       for (const [index, value] of values.entries()) {
         if (value === null && skipSymbolic) continue;
-        if (value < 0 || value > 1) throw new DistributionDomainError(kind, `probability ${index} must be in [0, 1]`);
+        if (value < 0 || value > 1)
+          throw new DistributionDomainError(kind, `probability ${index} must be in [0, 1]`);
       }
       if (!values.includes(null)) {
         const total = values.reduce((sum, value) => sum + value, 0);
-        if (Math.abs(total - 1) > PROBABILITY_EPS) throw new DistributionDomainError(kind, "probabilities must sum to 1");
+        if (Math.abs(total - 1) > PROBABILITY_EPS)
+          throw new DistributionDomainError(kind, "probabilities must sum to 1");
       }
       break;
     }
@@ -211,7 +238,8 @@ function distributionName(kind) {
 
 function gammaSample(alpha, beta, rng) {
   const scale = 1 / beta;
-  if (alpha < 1) return positiveSample(gammaSample(alpha + 1, beta, rng) * rng.positive() ** (1 / alpha));
+  if (alpha < 1)
+    return positiveSample(gammaSample(alpha + 1, beta, rng) * rng.positive() ** (1 / alpha));
   const d = alpha - 1 / 3;
   const c = 1 / Math.sqrt(9 * d);
   for (;;) {
@@ -221,7 +249,8 @@ function gammaSample(alpha, beta, rng) {
     const v3 = v * v * v;
     const u = rng.positive();
     if (u < 1 - 0.0331 * x ** 4) return positiveSample(scale * d * v3);
-    if (Math.log(u) < 0.5 * x * x + d * (1 - v3 + Math.log(v3))) return positiveSample(scale * d * v3);
+    if (Math.log(u) < 0.5 * x * x + d * (1 - v3 + Math.log(v3)))
+      return positiveSample(scale * d * v3);
   }
 }
 

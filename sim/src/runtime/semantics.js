@@ -4,8 +4,27 @@ import { defaultModes, inferProgram } from "../compiler/infer.js";
 import { parse } from "../compiler/parser.js";
 import { prettyExpr } from "../compiler/pretty.js";
 import { zonk } from "../compiler/types.js";
-import { affineAdd, affineConst, affineDiv, affineMul, affineNeg, affineSub, affineToNumber, affineVar, evalAffine, prettyAffine, symFloat, valueToAffine } from "./affine.js";
-import { floatDistributions, instantiateArgs, isDistributionDomainError, meanDistribution, sampleDistribution } from "./distributions.js";
+import {
+  affineAdd,
+  affineConst,
+  affineDiv,
+  affineMul,
+  affineNeg,
+  affineSub,
+  affineToNumber,
+  affineVar,
+  evalAffine,
+  prettyAffine,
+  symFloat,
+  valueToAffine,
+} from "./affine.js";
+import {
+  floatDistributions,
+  instantiateArgs,
+  isDistributionDomainError,
+  meanDistribution,
+  sampleDistribution,
+} from "./distributions.js";
 import { makeStreams } from "./rng.js";
 
 export function prepareRuntime(source) {
@@ -34,7 +53,7 @@ export function runtimeFromTyped(te) {
   const distMode = () => {
     if (!floatDistributions.has(te.kind)) return "G";
     const ty = zonk(te.typ);
-    return ty?.tag === "Float" ? ty.mode.mode ?? "E" : "G";
+    return ty?.tag === "Float" ? (ty.mode.mode ?? "E") : "G";
   };
   switch (te.kind) {
     case "Var":
@@ -65,15 +84,47 @@ export function runtimeFromTyped(te) {
     case "Cons":
       return n("Cons", { head: runtimeFromTyped(te.head), tail: runtimeFromTyped(te.tail) }, te);
     case "Case":
-      return n("Case", { scrutinee: runtimeFromTyped(te.scrutinee), leftName: te.leftName, left: runtimeFromTyped(te.left), rightName: te.rightName, right: runtimeFromTyped(te.right) }, te);
+      return n(
+        "Case",
+        {
+          scrutinee: runtimeFromTyped(te.scrutinee),
+          leftName: te.leftName,
+          left: runtimeFromTyped(te.left),
+          rightName: te.rightName,
+          right: runtimeFromTyped(te.right),
+        },
+        te,
+      );
     case "MatchList":
-      return n("MatchList", { scrutinee: runtimeFromTyped(te.scrutinee), nilBranch: runtimeFromTyped(te.nilBranch), headName: te.headName, tailName: te.tailName, consBranch: runtimeFromTyped(te.consBranch) }, te);
+      return n(
+        "MatchList",
+        {
+          scrutinee: runtimeFromTyped(te.scrutinee),
+          nilBranch: runtimeFromTyped(te.nilBranch),
+          headName: te.headName,
+          tailName: te.tailName,
+          consBranch: runtimeFromTyped(te.consBranch),
+        },
+        te,
+      );
     case "Bool":
       return n("Bool", { value: te.value }, te);
     case "If":
-      return n("If", { cond: runtimeFromTyped(te.cond), thenBranch: runtimeFromTyped(te.thenBranch), elseBranch: runtimeFromTyped(te.elseBranch) }, te);
+      return n(
+        "If",
+        {
+          cond: runtimeFromTyped(te.cond),
+          thenBranch: runtimeFromTyped(te.thenBranch),
+          elseBranch: runtimeFromTyped(te.elseBranch),
+        },
+        te,
+      );
     case "Let":
-      return n("Let", { name: te.name, value: runtimeFromTyped(te.value), body: runtimeFromTyped(te.body) }, te);
+      return n(
+        "Let",
+        { name: te.name, value: runtimeFromTyped(te.value), body: runtimeFromTyped(te.body) },
+        te,
+      );
     case "Const":
       return n("Const", { value: te.value }, te);
     case "Uniform":
@@ -86,7 +137,17 @@ export function runtimeFromTyped(te) {
     case "Poisson":
       return n(te.kind, { mode: distMode(), args: te.args.map(runtimeFromTyped) }, te);
     case "Discrete":
-      return n("Discrete", { mode: distMode(), choices: te.choices.map((choice) => ({ probability: choice.probability, value: runtimeFromTyped(choice.value) })) }, te);
+      return n(
+        "Discrete",
+        {
+          mode: distMode(),
+          choices: te.choices.map((choice) => ({
+            probability: choice.probability,
+            value: runtimeFromTyped(choice.value),
+          })),
+        },
+        te,
+      );
     case "Observe":
       return n("Observe", { cond: runtimeFromTyped(te.cond) }, te);
     default:
@@ -105,11 +166,19 @@ export function runtimeFromAst(expr) {
     case "DomainError":
       return clone(expr);
     case "Mean":
-      return n("Mean", { distribution: expr.distribution, args: expr.args.map(runtimeFromAst) }, expr);
+      return n(
+        "Mean",
+        { distribution: expr.distribution, args: expr.args.map(runtimeFromAst) },
+        expr,
+      );
     case "Lam":
       return n("Lam", { param: expr.param, body: runtimeFromAst(expr.body) }, expr);
     case "Rec":
-      return n("Rec", { name: expr.name, param: expr.param, body: runtimeFromAst(expr.body) }, expr);
+      return n(
+        "Rec",
+        { name: expr.name, param: expr.param, body: runtimeFromAst(expr.body) },
+        expr,
+      );
     case "App":
       return n("App", { fn: runtimeFromAst(expr.fn), arg: runtimeFromAst(expr.arg) }, expr);
     case "Pair":
@@ -119,7 +188,11 @@ export function runtimeFromAst(expr) {
     case "Div":
     case "Lt":
     case "Leq":
-      return n(expr.kind, { left: runtimeFromAst(expr.left), right: runtimeFromAst(expr.right) }, expr);
+      return n(
+        expr.kind,
+        { left: runtimeFromAst(expr.left), right: runtimeFromAst(expr.right) },
+        expr,
+      );
     case "Fst":
     case "Snd":
     case "Inl":
@@ -129,13 +202,45 @@ export function runtimeFromAst(expr) {
     case "Cons":
       return n("Cons", { head: runtimeFromAst(expr.head), tail: runtimeFromAst(expr.tail) }, expr);
     case "Case":
-      return n("Case", { scrutinee: runtimeFromAst(expr.scrutinee), leftName: expr.leftName, left: runtimeFromAst(expr.left), rightName: expr.rightName, right: runtimeFromAst(expr.right) }, expr);
+      return n(
+        "Case",
+        {
+          scrutinee: runtimeFromAst(expr.scrutinee),
+          leftName: expr.leftName,
+          left: runtimeFromAst(expr.left),
+          rightName: expr.rightName,
+          right: runtimeFromAst(expr.right),
+        },
+        expr,
+      );
     case "MatchList":
-      return n("MatchList", { scrutinee: runtimeFromAst(expr.scrutinee), nilBranch: runtimeFromAst(expr.nilBranch), headName: expr.headName, tailName: expr.tailName, consBranch: runtimeFromAst(expr.consBranch) }, expr);
+      return n(
+        "MatchList",
+        {
+          scrutinee: runtimeFromAst(expr.scrutinee),
+          nilBranch: runtimeFromAst(expr.nilBranch),
+          headName: expr.headName,
+          tailName: expr.tailName,
+          consBranch: runtimeFromAst(expr.consBranch),
+        },
+        expr,
+      );
     case "If":
-      return n("If", { cond: runtimeFromAst(expr.cond), thenBranch: runtimeFromAst(expr.thenBranch), elseBranch: runtimeFromAst(expr.elseBranch) }, expr);
+      return n(
+        "If",
+        {
+          cond: runtimeFromAst(expr.cond),
+          thenBranch: runtimeFromAst(expr.thenBranch),
+          elseBranch: runtimeFromAst(expr.elseBranch),
+        },
+        expr,
+      );
     case "Let":
-      return n("Let", { name: expr.name, value: runtimeFromAst(expr.value), body: runtimeFromAst(expr.body) }, expr);
+      return n(
+        "Let",
+        { name: expr.name, value: runtimeFromAst(expr.value), body: runtimeFromAst(expr.body) },
+        expr,
+      );
     case "Uniform":
     case "Gauss":
     case "Exponential":
@@ -146,7 +251,17 @@ export function runtimeFromAst(expr) {
     case "Poisson":
       return n(expr.kind, { mode: expr.mode ?? "G", args: expr.args.map(runtimeFromAst) }, expr);
     case "Discrete":
-      return n("Discrete", { mode: expr.mode ?? "G", choices: expr.choices.map((choice) => ({ probability: choice.probability, value: runtimeFromAst(choice.value) })) }, expr);
+      return n(
+        "Discrete",
+        {
+          mode: expr.mode ?? "G",
+          choices: expr.choices.map((choice) => ({
+            probability: choice.probability,
+            value: runtimeFromAst(choice.value),
+          })),
+        },
+        expr,
+      );
     case "Observe":
       return n("Observe", { cond: runtimeFromAst(expr.cond) }, expr);
     default:
@@ -178,11 +293,21 @@ export function runSymbolic(expr, streams, maxSteps = 1000) {
 
 export function stepOrdinary(state) {
   const result = step(state.expr, { kind: "ordinary", rngE: state.rngE, rngG: state.rngG });
-  return { ...state, expr: result.expr, rngE: result.rngE ?? state.rngE, rngG: result.rngG ?? state.rngG };
+  return {
+    ...state,
+    expr: result.expr,
+    rngE: result.rngE ?? state.rngE,
+    rngG: result.rngG ?? state.rngG,
+  };
 }
 
 export function stepSymbolic(state) {
-  const result = step(state.expr, { kind: "symbolic", sigma: state.sigma, rngG: state.rngG, nextSymbol: state.nextSymbol });
+  const result = step(state.expr, {
+    kind: "symbolic",
+    sigma: state.sigma,
+    rngG: state.rngG,
+    nextSymbol: state.nextSymbol,
+  });
   return {
     ...state,
     expr: result.expr,
@@ -263,12 +388,31 @@ export function checkEquivalences(source, seed = 1) {
   };
 }
 
-export function runCoupledTrace(source, seed = 1, maxSymbolicSteps = 1000, maxSyncSteps = 200, options = {}) {
+export function runCoupledTrace(
+  source,
+  seed = 1,
+  maxSymbolicSteps = 1000,
+  maxSyncSteps = 200,
+  options = {},
+) {
   const prepared = options.allowIllTyped ? prepareRuntimeUnchecked(source) : prepareRuntime(source);
   const streams = makeStreams(seed);
-  let symbolic = { expr: clone(prepared.expr), sigma: [], rngG: streams.rngG.clone(), nextSymbol: 1 };
-  let original = { expr: clone(prepared.expr), rngE: streams.rngE.clone(), rngG: streams.rngG.clone() };
-  let determinizedState = { expr: clone(prepared.determinized), rngE: streams.rngE.clone(), rngG: streams.rngG.clone() };
+  let symbolic = {
+    expr: clone(prepared.expr),
+    sigma: [],
+    rngG: streams.rngG.clone(),
+    nextSymbol: 1,
+  };
+  let original = {
+    expr: clone(prepared.expr),
+    rngE: streams.rngE.clone(),
+    rngG: streams.rngG.clone(),
+  };
+  let determinizedState = {
+    expr: clone(prepared.determinized),
+    rngE: streams.rngE.clone(),
+    rngG: streams.rngG.clone(),
+  };
   const frames = [];
 
   for (let stepIndex = 0; stepIndex <= maxSymbolicSteps; stepIndex++) {
@@ -339,7 +483,12 @@ export function runCoupledTrace(source, seed = 1, maxSymbolicSteps = 1000, maxSy
 }
 
 function frameChecksOk(frame) {
-  return frame.originalOk && frame.determinizedOk && frame.symbolicOk !== false && frame.consistencyOk !== false;
+  return (
+    frame.originalOk &&
+    frame.determinizedOk &&
+    frame.symbolicOk !== false &&
+    frame.consistencyOk !== false
+  );
 }
 
 function terminalEffectConsistency(frame) {
@@ -352,8 +501,14 @@ function terminalEffectConsistency(frame) {
   if (active.length === 0) return { ok: true };
   if (active.length !== effects.length) {
     const errored = active.map((item) => item.label).join(", ");
-    const succeeded = effects.filter((item) => !item.effect).map((item) => item.label).join(", ");
-    return { ok: false, error: `terminal effect mismatch: ${errored} errored, but ${succeeded} did not` };
+    const succeeded = effects
+      .filter((item) => !item.effect)
+      .map((item) => item.label)
+      .join(", ");
+    return {
+      ok: false,
+      error: `terminal effect mismatch: ${errored} errored, but ${succeeded} did not`,
+    };
   }
   const [first] = active;
   const mismatch = active.find((item) => !sameTerminalEffect(first.effect, item.effect));
@@ -428,8 +583,10 @@ function step(expr, ctx) {
       break;
     case "Case":
       if (!isValue(expr.scrutinee)) return stepChild(expr, "scrutinee", ctx);
-      if (expr.scrutinee.kind === "Inl") return out(subst(expr.left, expr.leftName, expr.scrutinee.expr), ctx);
-      if (expr.scrutinee.kind === "Inr") return out(subst(expr.right, expr.rightName, expr.scrutinee.expr), ctx);
+      if (expr.scrutinee.kind === "Inl")
+        return out(subst(expr.left, expr.leftName, expr.scrutinee.expr), ctx);
+      if (expr.scrutinee.kind === "Inr")
+        return out(subst(expr.right, expr.rightName, expr.scrutinee.expr), ctx);
       throw new Error("match on non-sum");
     case "Cons":
       if (!isValue(expr.head)) return stepChild(expr, "head", ctx);
@@ -438,7 +595,15 @@ function step(expr, ctx) {
     case "MatchList":
       if (!isValue(expr.scrutinee)) return stepChild(expr, "scrutinee", ctx);
       if (expr.scrutinee.kind === "Nil") return out(expr.nilBranch, ctx);
-      if (expr.scrutinee.kind === "Cons") return out(subst(subst(expr.consBranch, expr.headName, expr.scrutinee.head), expr.tailName, expr.scrutinee.tail), ctx);
+      if (expr.scrutinee.kind === "Cons")
+        return out(
+          subst(
+            subst(expr.consBranch, expr.headName, expr.scrutinee.head),
+            expr.tailName,
+            expr.scrutinee.tail,
+          ),
+          ctx,
+        );
       throw new Error("match on non-list");
     case "If":
       if (!isValue(expr.cond)) return stepChild(expr, "cond", ctx);
@@ -458,7 +623,19 @@ function step(expr, ctx) {
     case "Leq":
       if (!isValue(expr.left)) return stepChild(expr, "left", ctx);
       if (!isValue(expr.right)) return stepChild(expr, "right", ctx);
-      return out(n("Bool", { value: expr.kind === "Lt" ? numberValue(expr.left) < numberValue(expr.right) : numberValue(expr.left) <= numberValue(expr.right) }, expr), ctx);
+      return out(
+        n(
+          "Bool",
+          {
+            value:
+              expr.kind === "Lt"
+                ? numberValue(expr.left) < numberValue(expr.right)
+                : numberValue(expr.left) <= numberValue(expr.right),
+          },
+          expr,
+        ),
+        ctx,
+      );
     case "Observe":
       if (!isValue(expr.cond)) return stepChild(expr, "cond", ctx);
       if (expr.cond.kind !== "Bool") throw new Error("observe: expected bool");
@@ -509,13 +686,20 @@ function stepDistribution(expr, ctx) {
   if (ctx.kind === "symbolic" && expr.mode === "E" && floatDistributions.has(expr.kind)) {
     const name = `v${ctx.nextSymbol}`;
     const binding = { name, kind: expr.kind, args: expr.args.map(valueToAffine) };
-    return out(symFloat(affineVar(name), expr.from, expr.to), { ...ctx, sigma: [...ctx.sigma, binding], nextSymbol: ctx.nextSymbol + 1 });
+    return out(symFloat(affineVar(name), expr.from, expr.to), {
+      ...ctx,
+      sigma: [...ctx.sigma, binding],
+      nextSymbol: ctx.nextSymbol + 1,
+    });
   }
   const streamName = expr.mode === "E" ? "rngE" : "rngG";
   const rng = ctx[streamName];
   try {
     const value = sampleDistribution(expr.kind, expr.args, rng);
-    return out(typeof value === "boolean" ? n("Bool", { value }, expr) : n("Const", { value }, expr), { ...ctx, [streamName]: rng });
+    return out(
+      typeof value === "boolean" ? n("Bool", { value }, expr) : n("Const", { value }, expr),
+      { ...ctx, [streamName]: rng },
+    );
   } catch (error) {
     if (!isDistributionDomainError(error)) throw error;
     return out(domainErrorExpr(error, expr), { ...ctx, [streamName]: rng });
@@ -525,19 +709,34 @@ function stepDistribution(expr, ctx) {
 function stepDiscrete(expr, ctx) {
   if (ctx.kind === "symbolic" && expr.mode === "E") {
     try {
-      meanDistribution("Discrete", expr.choices.map((choice) => affineConst(choice.probability)));
+      meanDistribution(
+        "Discrete",
+        expr.choices.map((choice) => affineConst(choice.probability)),
+      );
     } catch (error) {
       if (!isDistributionDomainError(error)) throw error;
       return out(domainErrorExpr(error, expr), ctx);
     }
     const name = `v${ctx.nextSymbol}`;
-    const binding = { name, kind: "Discrete", args: expr.choices.map((choice) => affineConst(choice.probability)) };
-    return out(symFloat(affineVar(name), expr.from, expr.to), { ...ctx, sigma: [...ctx.sigma, binding], nextSymbol: ctx.nextSymbol + 1 });
+    const binding = {
+      name,
+      kind: "Discrete",
+      args: expr.choices.map((choice) => affineConst(choice.probability)),
+    };
+    return out(symFloat(affineVar(name), expr.from, expr.to), {
+      ...ctx,
+      sigma: [...ctx.sigma, binding],
+      nextSymbol: ctx.nextSymbol + 1,
+    });
   }
   const streamName = expr.mode === "E" ? "rngE" : "rngG";
   const rng = ctx[streamName];
   try {
-    const index = sampleDistribution("Discrete", expr.choices.map((choice) => n("Const", { value: choice.probability }, expr)), rng);
+    const index = sampleDistribution(
+      "Discrete",
+      expr.choices.map((choice) => n("Const", { value: choice.probability }, expr)),
+      rng,
+    );
     return out(expr.choices[index].value, { ...ctx, [streamName]: rng });
   } catch (error) {
     if (!isDistributionDomainError(error)) throw error;
@@ -569,7 +768,9 @@ function advanceToTarget(state, target, maxSteps) {
     state: current,
     steps,
     microTrace,
-    error: exprEqual(current.expr, target) ? undefined : "ordinary trace did not reach the projected target",
+    error: exprEqual(current.expr, target)
+      ? undefined
+      : "ordinary trace did not reach the projected target",
   };
 }
 
@@ -585,7 +786,11 @@ function symbolicMeanEnv(symbolicState) {
 function determinizeResidual(expr) {
   switch (expr.kind) {
     case "Mean":
-      return n("Mean", { distribution: expr.distribution, args: expr.args.map(determinizeResidual) }, expr);
+      return n(
+        "Mean",
+        { distribution: expr.distribution, args: expr.args.map(determinizeResidual) },
+        expr,
+      );
     case "Uniform": {
       const args = expr.args.map(determinizeResidual);
       if (expr.mode === "E") return meanNode(expr.kind, args, expr);
@@ -618,9 +823,16 @@ function determinizeResidual(expr) {
       return n(expr.kind, { mode: "G", args }, expr);
     }
     case "Discrete": {
-      const choices = expr.choices.map((choice) => ({ probability: choice.probability, value: determinizeResidual(choice.value) }));
+      const choices = expr.choices.map((choice) => ({
+        probability: choice.probability,
+        value: determinizeResidual(choice.value),
+      }));
       if (expr.mode === "E") {
-        return meanNode("Discrete", choices.map((choice) => n("Const", { value: choice.probability }, expr)), expr);
+        return meanNode(
+          "Discrete",
+          choices.map((choice) => n("Const", { value: choice.probability }, expr)),
+          expr,
+        );
       }
       return n("Discrete", { mode: "G", choices }, expr);
     }
@@ -668,12 +880,16 @@ function isTerminalError(expr) {
 }
 
 function rebuild(expr, patch, ctx, result) {
-  return out(n(expr.kind, { ...copyProps(expr), ...patch }, expr), { ...ctx, ...contextPatch(result) });
+  return out(n(expr.kind, { ...copyProps(expr), ...patch }, expr), {
+    ...ctx,
+    ...contextPatch(result),
+  });
 }
 
 function contextPatch(result) {
   const patch = {};
-  for (const key of ["rngE", "rngG", "sigma", "nextSymbol"]) if (key in result) patch[key] = result[key];
+  for (const key of ["rngE", "rngG", "sigma", "nextSymbol"])
+    if (key in result) patch[key] = result[key];
   return patch;
 }
 
@@ -694,15 +910,54 @@ function subst(expr, name, replacement) {
     case "Var":
       return expr.name === name ? clone(replacement) : clone(expr);
     case "Lam":
-      return expr.param === name ? clone(expr) : n("Lam", { param: expr.param, body: subst(expr.body, name, replacement) }, expr);
+      return expr.param === name
+        ? clone(expr)
+        : n("Lam", { param: expr.param, body: subst(expr.body, name, replacement) }, expr);
     case "Rec":
-      return expr.name === name || expr.param === name ? clone(expr) : n("Rec", { name: expr.name, param: expr.param, body: subst(expr.body, name, replacement) }, expr);
+      return expr.name === name || expr.param === name
+        ? clone(expr)
+        : n(
+            "Rec",
+            { name: expr.name, param: expr.param, body: subst(expr.body, name, replacement) },
+            expr,
+          );
     case "Let":
-      return n("Let", { name: expr.name, value: subst(expr.value, name, replacement), body: expr.name === name ? clone(expr.body) : subst(expr.body, name, replacement) }, expr);
+      return n(
+        "Let",
+        {
+          name: expr.name,
+          value: subst(expr.value, name, replacement),
+          body: expr.name === name ? clone(expr.body) : subst(expr.body, name, replacement),
+        },
+        expr,
+      );
     case "Case":
-      return n("Case", { scrutinee: subst(expr.scrutinee, name, replacement), leftName: expr.leftName, left: expr.leftName === name ? clone(expr.left) : subst(expr.left, name, replacement), rightName: expr.rightName, right: expr.rightName === name ? clone(expr.right) : subst(expr.right, name, replacement) }, expr);
+      return n(
+        "Case",
+        {
+          scrutinee: subst(expr.scrutinee, name, replacement),
+          leftName: expr.leftName,
+          left: expr.leftName === name ? clone(expr.left) : subst(expr.left, name, replacement),
+          rightName: expr.rightName,
+          right: expr.rightName === name ? clone(expr.right) : subst(expr.right, name, replacement),
+        },
+        expr,
+      );
     case "MatchList":
-      return n("MatchList", { scrutinee: subst(expr.scrutinee, name, replacement), nilBranch: subst(expr.nilBranch, name, replacement), headName: expr.headName, tailName: expr.tailName, consBranch: expr.headName === name || expr.tailName === name ? clone(expr.consBranch) : subst(expr.consBranch, name, replacement) }, expr);
+      return n(
+        "MatchList",
+        {
+          scrutinee: subst(expr.scrutinee, name, replacement),
+          nilBranch: subst(expr.nilBranch, name, replacement),
+          headName: expr.headName,
+          tailName: expr.tailName,
+          consBranch:
+            expr.headName === name || expr.tailName === name
+              ? clone(expr.consBranch)
+              : subst(expr.consBranch, name, replacement),
+        },
+        expr,
+      );
     default:
       return mapChildren(expr, (child) => subst(child, name, replacement));
   }
@@ -735,11 +990,35 @@ function mapChildren(expr, f) {
     case "Cons":
       return n("Cons", { head: f(expr.head), tail: f(expr.tail) }, expr);
     case "If":
-      return n("If", { cond: f(expr.cond), thenBranch: f(expr.thenBranch), elseBranch: f(expr.elseBranch) }, expr);
+      return n(
+        "If",
+        { cond: f(expr.cond), thenBranch: f(expr.thenBranch), elseBranch: f(expr.elseBranch) },
+        expr,
+      );
     case "Case":
-      return n("Case", { scrutinee: f(expr.scrutinee), leftName: expr.leftName, left: f(expr.left), rightName: expr.rightName, right: f(expr.right) }, expr);
+      return n(
+        "Case",
+        {
+          scrutinee: f(expr.scrutinee),
+          leftName: expr.leftName,
+          left: f(expr.left),
+          rightName: expr.rightName,
+          right: f(expr.right),
+        },
+        expr,
+      );
     case "MatchList":
-      return n("MatchList", { scrutinee: f(expr.scrutinee), nilBranch: f(expr.nilBranch), headName: expr.headName, tailName: expr.tailName, consBranch: f(expr.consBranch) }, expr);
+      return n(
+        "MatchList",
+        {
+          scrutinee: f(expr.scrutinee),
+          nilBranch: f(expr.nilBranch),
+          headName: expr.headName,
+          tailName: expr.tailName,
+          consBranch: f(expr.consBranch),
+        },
+        expr,
+      );
     case "Observe":
       return n("Observe", { cond: f(expr.cond) }, expr);
     case "Mean":
@@ -754,7 +1033,17 @@ function mapChildren(expr, f) {
     case "Poisson":
       return n(expr.kind, { mode: expr.mode, args: expr.args.map(f) }, expr);
     case "Discrete":
-      return n("Discrete", { mode: expr.mode, choices: expr.choices.map((choice) => ({ probability: choice.probability, value: f(choice.value) })) }, expr);
+      return n(
+        "Discrete",
+        {
+          mode: expr.mode,
+          choices: expr.choices.map((choice) => ({
+            probability: choice.probability,
+            value: f(choice.value),
+          })),
+        },
+        expr,
+      );
     default:
       return clone(expr);
   }
@@ -772,7 +1061,21 @@ function concretize(expr, env) {
 }
 
 export function isValue(expr) {
-  return expr.kind === "Reject" || expr.kind === "DomainError" || expr.kind === "Const" || expr.kind === "SymFloat" || expr.kind === "Bool" || expr.kind === "Unit" || expr.kind === "Lam" || expr.kind === "Rec" || expr.kind === "Nil" || (expr.kind === "Pair" && isValue(expr.left) && isValue(expr.right)) || (expr.kind === "Inl" && isValue(expr.expr)) || (expr.kind === "Inr" && isValue(expr.expr)) || (expr.kind === "Cons" && isValue(expr.head) && isValue(expr.tail));
+  return (
+    expr.kind === "Reject" ||
+    expr.kind === "DomainError" ||
+    expr.kind === "Const" ||
+    expr.kind === "SymFloat" ||
+    expr.kind === "Bool" ||
+    expr.kind === "Unit" ||
+    expr.kind === "Lam" ||
+    expr.kind === "Rec" ||
+    expr.kind === "Nil" ||
+    (expr.kind === "Pair" && isValue(expr.left) && isValue(expr.right)) ||
+    (expr.kind === "Inl" && isValue(expr.expr)) ||
+    (expr.kind === "Inr" && isValue(expr.expr)) ||
+    (expr.kind === "Cons" && isValue(expr.head) && isValue(expr.tail))
+  );
 }
 
 function numberValue(expr) {
@@ -811,13 +1114,27 @@ function valuesEqual(a, b, eps = 1e-9) {
 }
 
 function domainErrorExpr(error, source) {
-  return n("DomainError", { message: error.message, distribution: error.kind ?? null, reason: error.reason ?? error.message }, source ?? { from: 0, to: 0 });
+  return n(
+    "DomainError",
+    {
+      message: error.message,
+      distribution: error.kind ?? null,
+      reason: error.reason ?? error.message,
+    },
+    source ?? { from: 0, to: 0 },
+  );
 }
 
 export function prettySymbolicState(state) {
-  const sigma = state.sigma.length === 0
-    ? "empty"
-    : state.sigma.map((binding) => `${binding.name} ~ ${binding.kind.toLowerCase()}(${binding.args.map(prettyAffine).join(", ")})`).join("; ");
+  const sigma =
+    state.sigma.length === 0
+      ? "empty"
+      : state.sigma
+          .map(
+            (binding) =>
+              `${binding.name} ~ ${binding.kind.toLowerCase()}(${binding.args.map(prettyAffine).join(", ")})`,
+          )
+          .join("; ");
   return `<${sigma} || ${prettyExpr(state.expr)}>`;
 }
 

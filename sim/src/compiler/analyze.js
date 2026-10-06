@@ -15,7 +15,7 @@ export function analyze(source) {
     const determinized = prettyExpr(determinizedAst);
     const spans = collectSpans(typedAstRaw)
       .filter((span) => span.from != null && span.to != null && span.to >= span.from)
-      .sort((a, b) => (a.to - a.from) - (b.to - b.from));
+      .sort((a, b) => a.to - a.from - (b.to - b.from));
 
     return {
       ok: true,
@@ -33,7 +33,10 @@ export function analyze(source) {
     };
   } catch (error) {
     if (error instanceof CompileError) {
-      return { ok: false, diagnostics: [{ from: error.from, to: error.to, message: error.message }] };
+      return {
+        ok: false,
+        diagnostics: [{ from: error.from, to: error.to, message: error.message }],
+      };
     }
     return { ok: false, diagnostics: [{ message: error?.message ?? String(error) }] };
   }

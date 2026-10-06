@@ -33,7 +33,8 @@ class TypeHintWidget extends WidgetType {
     span.tabIndex = 0;
     span.dataset.from = String(this.from);
     span.dataset.to = String(this.to);
-    const show = () => view?.dispatch?.({ effects: setHoveredTypeHint.of({ from: this.from, to: this.to }) });
+    const show = () =>
+      view?.dispatch?.({ effects: setHoveredTypeHint.of({ from: this.from, to: this.to }) });
     const hide = () => view?.dispatch?.({ effects: setHoveredTypeHint.of(null) });
     span.addEventListener("mouseenter", show);
     span.addEventListener("mouseover", show);
@@ -124,7 +125,9 @@ export const modeHints = ViewPlugin.fromClass(
     }
 
     update(update) {
-      const typeHintChanged = update.transactions.some((tr) => tr.effects.some((effect) => effect.is(setTypeHints)));
+      const typeHintChanged = update.transactions.some((tr) =>
+        tr.effects.some((effect) => effect.is(setTypeHints)),
+      );
       if (update.docChanged || update.selectionSet || update.viewportChanged || typeHintChanged) {
         this.decorations = buildModeHints(update.view);
       }
@@ -214,7 +217,9 @@ function buildModeHints(view) {
 }
 
 function cursorAtHintPosition(view, pos) {
-  return view.state.selection.ranges.some((range) => range.empty && Math.abs(range.head - pos) <= 1);
+  return view.state.selection.ranges.some(
+    (range) => range.empty && Math.abs(range.head - pos) <= 1,
+  );
 }
 
 function hintPosition(source, span) {

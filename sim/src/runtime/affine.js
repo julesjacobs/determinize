@@ -39,7 +39,9 @@ export function affineSub(a, b) {
 export function affineScale(a, scalar) {
   return normalize({
     constant: a.constant * scalar,
-    terms: Object.fromEntries(Object.entries(a.terms).map(([name, coeff]) => [name, coeff * scalar])),
+    terms: Object.fromEntries(
+      Object.entries(a.terms).map(([name, coeff]) => [name, coeff * scalar]),
+    ),
   });
 }
 
@@ -50,7 +52,8 @@ export function affineMul(a, b) {
 }
 
 export function affineDiv(a, b) {
-  if (!isConcreteAffine(b)) throw new Error("symbolic division is only affine with a concrete denominator");
+  if (!isConcreteAffine(b))
+    throw new Error("symbolic division is only affine with a concrete denominator");
   return affineScale(a, 1 / b.constant);
 }
 
@@ -59,7 +62,8 @@ export function isConcreteAffine(a) {
 }
 
 export function affineToNumber(a) {
-  if (!isConcreteAffine(a)) throw new Error(`expected concrete affine value, got ${prettyAffine(a)}`);
+  if (!isConcreteAffine(a))
+    throw new Error(`expected concrete affine value, got ${prettyAffine(a)}`);
   return a.constant;
 }
 
