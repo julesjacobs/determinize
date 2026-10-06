@@ -45,8 +45,17 @@ export type Analysis =
       pretty: { annotated: string; determinized: string };
       spans: SpanInfo[];
     }
-  /** `stage` is null when the simulator itself failed. */
-  | { ok: false; stage: Stage | null; diagnostics: Diagnostic[] };
+  /**
+   * `stage` is null when the simulator itself failed. A program whose only fault is a mode
+   * conflict (Lean's `inconsistent E/G constraints`) has a counterexample: the program with its
+   * [E] sites at E and every other site at G, and its determinization.
+   */
+  | {
+      ok: false;
+      stage: Stage | null;
+      diagnostics: Diagnostic[];
+      counterexample?: { annotated: Expr; determinized: Expr };
+    };
 
 const distributionKinds = new Set([
   "Uniform",
@@ -88,8 +97,15 @@ export function analyze(source: string): Analysis {
     stage = "inference";
     const result = infer(input);
     if (!result.ok) {
-      const { at, message } = result.failure;
-      return { ok: false, stage, diagnostics: [{ from: at.from, to: at.to, message }] };
+      const { at, message, kind } = result.failure;
+      const diagnostics = [{ from: at.from, to: at.to, message }];
+      if (kind !== "modes") return { ok: false, stage, diagnostics };
+      const requested = (site: Expr): Mode => ("mode" in site && site.mode === "E" ? "E" : "G");
+      const counterexample = {
+        annotated: annotate(ast, requested),
+        determinized: annotate(ast, requested, true),
+      };
+      return { ok: false, stage, diagnostics, counterexample };
     }
     const siteModes = new Map<Expr, Mode>();
     for (const site of sites<Mode | null>(input)) {
