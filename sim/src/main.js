@@ -1,10 +1,24 @@
 import { history, historyKeymap, defaultKeymap } from "@codemirror/commands";
 import { bracketMatching, indentOnInput } from "@codemirror/language";
 import { EditorState, Transaction } from "@codemirror/state";
-import { EditorView, drawSelection, dropCursor, highlightActiveLine, highlightActiveLineGutter, hoverTooltip, keymap, lineNumbers } from "@codemirror/view";
+import {
+  EditorView,
+  drawSelection,
+  dropCursor,
+  highlightActiveLine,
+  highlightActiveLineGutter,
+  hoverTooltip,
+  keymap,
+  lineNumbers,
+} from "@codemirror/view";
 import { analyze } from "./compiler/analyze.js";
 import { prettyExpr } from "./compiler/pretty.js";
-import { diagnosticHover, diagnosticsState, normalizeDiagnostics, setDiagnostics } from "./diagnostics.js";
+import {
+  diagnosticHover,
+  diagnosticsState,
+  normalizeDiagnostics,
+  setDiagnostics,
+} from "./diagnostics.js";
 import { examples } from "./examples.js";
 import { detHighlighting, detLanguage } from "./language.js";
 import { hoveredTypeHintState, modeHints, setTypeHints, typeHintState } from "./modeHints.js";
@@ -205,7 +219,8 @@ panels.coupling.addEventListener("pointerover", (event) => {
 panels.coupling.addEventListener("pointerout", (event) => {
   const corr = event.target instanceof Element ? event.target.closest(".corr-item") : null;
   if (corr) {
-    const next = event.relatedTarget instanceof Element ? event.relatedTarget.closest(".corr-item") : null;
+    const next =
+      event.relatedTarget instanceof Element ? event.relatedTarget.closest(".corr-item") : null;
     if (!next || next.dataset.corr !== corr.dataset.corr) hideCorrespondence();
   }
   const check = event.target instanceof Element ? event.target.closest(".step-check") : null;
@@ -232,9 +247,13 @@ panels.coupling.addEventListener("focusout", (event) => {
 
 checkPopoverPortal.addEventListener("pointerenter", cancelHideCheckPopover);
 checkPopoverPortal.addEventListener("pointerleave", scheduleHideCheckPopover);
-window.addEventListener("scroll", () => {
-  if (activeCheck) positionCheckPopover(activeCheck);
-}, true);
+window.addEventListener(
+  "scroll",
+  () => {
+    if (activeCheck) positionCheckPopover(activeCheck);
+  },
+  true,
+);
 window.addEventListener("resize", () => {
   if (activeCheck) positionCheckPopover(activeCheck);
 });
@@ -256,7 +275,11 @@ function runAnalyze() {
   editor.dispatch({ effects: setDiagnostics.of(diagnostics) });
   logDebug("run-analyze-result", {
     ok: latest.ok,
-    diagnostics: diagnostics.map((diagnostic) => ({ from: diagnostic.from, to: diagnostic.to, message: diagnostic.message })),
+    diagnostics: diagnostics.map((diagnostic) => ({
+      from: diagnostic.from,
+      to: diagnostic.to,
+      message: diagnostic.message,
+    })),
     rawDiagnostics: latest.ok ? [] : latest.diagnostics,
     ...collectEditorDebugState("after-diagnostics-dispatch"),
   });
@@ -294,12 +317,12 @@ function logEditorUpdate(update) {
       docChanged: transaction.docChanged,
       selection: transaction.selection
         ? transaction.selection.ranges.map((range) => ({
-          from: range.from,
-          to: range.to,
-          anchor: range.anchor,
-          head: range.head,
-          empty: range.empty,
-        }))
+            from: range.from,
+            to: range.to,
+            anchor: range.anchor,
+            head: range.head,
+            empty: range.empty,
+          }))
         : [],
       userEvent: transaction.annotation(Transaction.userEvent) ?? null,
       effects: transaction.effects.length,
@@ -365,7 +388,10 @@ function collectEditorDebugState(label) {
       dom: {
         activeElement: describeElement(document.activeElement),
         cursorCount: root.querySelectorAll(".cm-cursor").length,
-        cursorStyles: Array.from(root.querySelectorAll(".cm-cursor"), (el) => el.getAttribute("style") ?? ""),
+        cursorStyles: Array.from(
+          root.querySelectorAll(".cm-cursor"),
+          (el) => el.getAttribute("style") ?? "",
+        ),
         modeHints: Array.from(root.querySelectorAll(".mode-hint"), describeHint),
         typeHints: Array.from(root.querySelectorAll(".type-hint"), describeHint),
         diagnosticSquiggles: root.querySelectorAll(".diagnostic-squiggle").length,
@@ -418,20 +444,32 @@ function capDebugText(text, maxLength) {
 
 function renderSemantics(source, options = {}) {
   try {
-    logDebug("render-semantics-start", { allowIllTyped: Boolean(options.allowIllTyped), sourceLength: source.length });
+    logDebug("render-semantics-start", {
+      allowIllTyped: Boolean(options.allowIllTyped),
+      sourceLength: source.length,
+    });
     if (source !== sampleSource) resetSamples(source);
     const coupled = runCoupling(source, couplingSeed, options);
     addSampleFromCoupling(coupled, source);
     renderCoupling(coupled);
     renderDistributions();
-    logDebug("render-semantics-ok", { frames: coupled.frames.length, ok: coupled.ok, ...collectEditorDebugState("render-semantics-ok") });
+    logDebug("render-semantics-ok", {
+      frames: coupled.frames.length,
+      ok: coupled.ok,
+      ...collectEditorDebugState("render-semantics-ok"),
+    });
   } catch (error) {
     panels.coupling.innerHTML = "";
-    panels.couplingStatus.textContent = options.allowIllTyped ? "Trace unavailable" : "Coupling failed";
+    panels.couplingStatus.textContent = options.allowIllTyped
+      ? "Trace unavailable"
+      : "Coupling failed";
     panels.couplingStatus.className = "status error";
     panels.distribution.innerHTML = "";
     panels.distributionStatus.textContent = "not numeric";
-    logDebug("render-semantics-error", { message: error?.message ?? String(error), ...collectEditorDebugState("render-semantics-error") });
+    logDebug("render-semantics-error", {
+      message: error?.message ?? String(error),
+      ...collectEditorDebugState("render-semantics-error"),
+    });
   }
 }
 
@@ -446,7 +484,8 @@ function renderCoupling(coupled) {
   const terminalDomainError = coupled.frames.some(hasDomainError);
   panels.couplingStatus.textContent = `seed ${coupled.seed} - ${coupled.ok ? (terminalDomainError ? "checked domain error" : "checked") : "failed"}${coupled.unchecked ? " (unchecked)" : ""}`;
   panels.couplingStatus.className = `status ${coupled.ok ? (terminalDomainError ? "warning" : "ok") : "error"}`;
-  panels.coupling.innerHTML = `
+  panels.coupling.innerHTML =
+    `
     <div class="coupling-table-head">
       <span></span>
       <span>Original</span>
@@ -454,14 +493,15 @@ function renderCoupling(coupled) {
       <span>Determinized</span>
     </div>
     <div class="coupling-table-body">
-  ` + coupled.frames
-    .map((frame, index, frames) => {
-      const previous = index > 0 ? frames[index - 1] : null;
-      const sigma = sigmaView(frame.sigma);
-      const sigmaLines = Math.max(1, Math.min(4, sigma.lineCount));
-      const ok = frameOk(frame);
-      const domainError = hasDomainError(frame);
-      return `
+  ` +
+    coupled.frames
+      .map((frame, index, frames) => {
+        const previous = index > 0 ? frames[index - 1] : null;
+        const sigma = sigmaView(frame.sigma);
+        const sigmaLines = Math.max(1, Math.min(4, sigma.lineCount));
+        const ok = frameOk(frame);
+        const domainError = hasDomainError(frame);
+        return `
         <section class="coupling-row ${ok ? "" : "failed"} ${ok && domainError ? "domain-error-row" : ""}" style="--sigma-lines: ${sigmaLines}">
           <div class="step-rail">
             <span>${frame.step}</span>
@@ -472,23 +512,38 @@ function renderCoupling(coupled) {
           ${couplingCell(frame.determinized, "", "determinized", { focusPath: changedPath(previous?.determinized, frame.determinized), valueBySymbol: sigma.meanBySymbol, valueLabel: "mean substituted for" })}
         </section>
       `;
-    })
-    .join("") + "</div>";
+      })
+      .join("") +
+    "</div>";
 }
 
 function frameOk(frame) {
-  return frame.originalOk && frame.determinizedOk && frame.symbolicOk !== false && frame.consistencyOk !== false;
+  return (
+    frame.originalOk &&
+    frame.determinizedOk &&
+    frame.symbolicOk !== false &&
+    frame.consistencyOk !== false
+  );
 }
 
 function hasDomainError(frame) {
-  return frame.original?.kind === "DomainError" || frame.symbolic?.kind === "DomainError" || frame.determinized?.kind === "DomainError";
+  return (
+    frame.original?.kind === "DomainError" ||
+    frame.symbolic?.kind === "DomainError" ||
+    frame.determinized?.kind === "DomainError"
+  );
 }
 
 function stepCheck(frame, coupled) {
   const ok = frameOk(frame);
   const domainError = hasDomainError(frame);
   const label = domainError && ok ? "ERR" : ok ? "OK" : "FAIL";
-  const aria = domainError && ok ? "Coupling checks reached a shared domain error" : ok ? "Coupling checks passed" : "Coupling check failed";
+  const aria =
+    domainError && ok
+      ? "Coupling checks reached a shared domain error"
+      : ok
+        ? "Coupling checks passed"
+        : "Coupling check failed";
   return `
     <span class="step-check ${ok ? (domainError ? "domain" : "ok") : "fail"}" tabindex="0" aria-label="${aria}">
       ${label}
@@ -501,7 +556,9 @@ function stepCheck(frame, coupled) {
 
 function checkPopoverContent(frame, coupled, ok, domainError) {
   const originalTarget = frame.originalTarget ? prettyExpr(frame.originalTarget) : "not available";
-  const determinizedTarget = frame.determinizedTarget ? prettyExpr(frame.determinizedTarget) : "not available";
+  const determinizedTarget = frame.determinizedTarget
+    ? prettyExpr(frame.determinizedTarget)
+    : "not available";
   return `
     <strong>${domainError && ok ? "All traces reached the same domain error at this symbolic step." : ok ? "Coupling checks passed at this symbolic step." : "Coupling check failed at this symbolic step."}</strong>
     ${domainError ? `<span class="domain-error-note">${escapeHtml(domainErrorMessage(frame))}</span>` : ""}
@@ -518,7 +575,12 @@ function checkPopoverContent(frame, coupled, ok, domainError) {
 }
 
 function domainErrorMessage(frame) {
-  return frame.original?.message ?? frame.symbolic?.message ?? frame.determinized?.message ?? "domain error";
+  return (
+    frame.original?.message ??
+    frame.symbolic?.message ??
+    frame.determinized?.message ??
+    "domain error"
+  );
 }
 
 function couplingCell(expr, meta, tone, traceOptions = {}) {
@@ -546,9 +608,10 @@ function positionCheckPopover(check) {
   const popover = checkPopoverPortal.getBoundingClientRect();
   const margin = 10;
   const preferredLeft = anchor.right + 10;
-  const left = preferredLeft + popover.width <= window.innerWidth - margin
-    ? preferredLeft
-    : Math.max(margin, anchor.left - popover.width - 10);
+  const left =
+    preferredLeft + popover.width <= window.innerWidth - margin
+      ? preferredLeft
+      : Math.max(margin, anchor.left - popover.width - 10);
   const centeredTop = anchor.top + anchor.height / 2 - popover.height / 2;
   const top = clamp(centeredTop, margin, window.innerHeight - popover.height - margin);
   checkPopoverPortal.style.left = `${left}px`;
@@ -586,12 +649,15 @@ function showCorrespondence(anchor) {
 
 function hideCorrespondence() {
   if (!activeCorrespondence) return;
-  for (const item of panels.coupling.querySelectorAll(".corr-active")) item.classList.remove("corr-active");
+  for (const item of panels.coupling.querySelectorAll(".corr-active"))
+    item.classList.remove("corr-active");
   activeCorrespondence = null;
 }
 
 function rowIndex(scope) {
-  return scope instanceof HTMLElement ? String(Array.prototype.indexOf.call(scope.parentElement?.children ?? [], scope)) : "all";
+  return scope instanceof HTMLElement
+    ? String(Array.prototype.indexOf.call(scope.parentElement?.children ?? [], scope))
+    : "all";
 }
 
 function sigmaView(sigma) {
@@ -637,7 +703,8 @@ function addSampleFromCoupling(coupled, source) {
   if (key === lastSampleKey) return;
   const finalFrame = coupled.frames.at(-1);
   const originalValue = numericValue(finalFrame?.original) ?? numericValue(coupled.finalOriginal);
-  const determinizedValue = numericValue(finalFrame?.determinized) ?? numericValue(coupled.finalDeterminized);
+  const determinizedValue =
+    numericValue(finalFrame?.determinized) ?? numericValue(coupled.finalDeterminized);
   if (Number.isFinite(originalValue) && Number.isFinite(determinizedValue)) {
     samples.original.push(originalValue);
     samples.determinized.push(determinizedValue);
@@ -703,26 +770,33 @@ function distributionCard(title, values, stats, domain, tone) {
   const margin = { top: 16, right: 16, bottom: 26, left: 34 };
   const pdfBand = { top: 20, bottom: 94 };
   const cdfBand = { top: 126, bottom: 200 };
-  const x = (value) => margin.left + ((value - domain[0]) / (domain[1] - domain[0])) * (width - margin.left - margin.right);
-  const yPdf = (density, maxDensity) => pdfBand.bottom - (density / maxDensity) * (pdfBand.bottom - pdfBand.top);
+  const x = (value) =>
+    margin.left +
+    ((value - domain[0]) / (domain[1] - domain[0])) * (width - margin.left - margin.right);
+  const yPdf = (density, maxDensity) =>
+    pdfBand.bottom - (density / maxDensity) * (pdfBand.bottom - pdfBand.top);
   const yCdf = (probability) => cdfBand.top + (1 - probability) * (cdfBand.bottom - cdfBand.top);
   const sorted = [...values].sort((a, b) => a - b);
   const cdfPath = ecdfPath(sorted, domain, x, yCdf);
   const cdfArea = `${cdfPath} L ${x(domain[1]).toFixed(2)} ${yCdf(0).toFixed(2)} L ${x(domain[0]).toFixed(2)} ${yCdf(0).toFixed(2)} Z`;
   const bins = histogram(values, domain, 100);
   const maxDensity = Math.max(1e-12, ...bins.map((bin) => bin.density));
-  const pdfBars = bins.map((bin) => {
-    const left = x(bin.left);
-    const right = x(bin.right);
-    const top = yPdf(bin.density, maxDensity);
-    return `<rect class="dist-bin" x="${left.toFixed(2)}" y="${top.toFixed(2)}" width="${Math.max(0.5, right - left).toFixed(2)}" height="${(pdfBand.bottom - top).toFixed(2)}"></rect>`;
-  }).join("");
+  const pdfBars = bins
+    .map((bin) => {
+      const left = x(bin.left);
+      const right = x(bin.right);
+      const top = yPdf(bin.density, maxDensity);
+      return `<rect class="dist-bin" x="${left.toFixed(2)}" y="${top.toFixed(2)}" width="${Math.max(0.5, right - left).toFixed(2)}" height="${(pdfBand.bottom - top).toFixed(2)}"></rect>`;
+    })
+    .join("");
   const rugValues = values.slice(-180);
-  const rugs = rugValues.map((value, index) => {
-    const jitter = (index % 4) * 1.6;
-    const rx = x(value);
-    return `<line class="dist-rug" x1="${rx.toFixed(2)}" y1="${(cdfBand.bottom + 7 + jitter).toFixed(2)}" x2="${rx.toFixed(2)}" y2="${(cdfBand.bottom + 13 + jitter).toFixed(2)}"></line>`;
-  }).join("");
+  const rugs = rugValues
+    .map((value, index) => {
+      const jitter = (index % 4) * 1.6;
+      const rx = x(value);
+      return `<line class="dist-rug" x1="${rx.toFixed(2)}" y1="${(cdfBand.bottom + 7 + jitter).toFixed(2)}" x2="${rx.toFixed(2)}" y2="${(cdfBand.bottom + 13 + jitter).toFixed(2)}"></line>`;
+    })
+    .join("");
   const meanX = x(stats.mean);
   return `
     <article class="dist-card ${tone}">
@@ -795,9 +869,8 @@ function average(values) {
 function sampleStats(values) {
   const n = values.length;
   const mean = average(values);
-  const variance = n < 2
-    ? NaN
-    : values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / (n - 1);
+  const variance =
+    n < 2 ? NaN : values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / (n - 1);
   return {
     n,
     mean,
@@ -818,19 +891,22 @@ function varianceRatio(originalStats, determinizedStats) {
   if (originalVariance === 0 && determinizedVariance === 0) {
     return {
       value: NaN,
-      explanation: "Both estimators have zero observed variance, so there is no sample reduction to estimate.",
+      explanation:
+        "Both estimators have zero observed variance, so there is no sample reduction to estimate.",
     };
   }
   if (determinizedVariance === 0) {
     return {
       value: Infinity,
-      explanation: "The determinized estimator has zero observed variance, so it needs only one sample here; the sample reduction is effectively unbounded.",
+      explanation:
+        "The determinized estimator has zero observed variance, so it needs only one sample here; the sample reduction is effectively unbounded.",
     };
   }
   if (originalVariance === 0) {
     return {
       value: 0,
-      explanation: "The original estimator has zero observed variance here, so determinization shows no sample reduction on this run.",
+      explanation:
+        "The original estimator has zero observed variance here, so determinization shows no sample reduction on this run.",
     };
   }
   const ratio = originalVariance / determinizedVariance;

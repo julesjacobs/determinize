@@ -60,13 +60,22 @@ function renderExpr(expr, prec = 0, focusPath = null, options = {}) {
       html = renderIf(expr, focusPath, options);
       break;
     case "Lam":
-      html = wrap(`fun ${plain(expr.param)} =>\n${indent(renderExpr(expr.body, 0, childFocus(focusPath, "body"), options))}`, 0);
+      html = wrap(
+        `fun ${plain(expr.param)} =>\n${indent(renderExpr(expr.body, 0, childFocus(focusPath, "body"), options))}`,
+        0,
+      );
       break;
     case "Rec":
-      html = wrap(`rec ${plain(expr.name)} ${plain(expr.param)} =>\n${indent(renderExpr(expr.body, 0, childFocus(focusPath, "body"), options))}`, 0);
+      html = wrap(
+        `rec ${plain(expr.name)} ${plain(expr.param)} =>\n${indent(renderExpr(expr.body, 0, childFocus(focusPath, "body"), options))}`,
+        0,
+      );
       break;
     case "App":
-      html = wrap(`${renderExpr(expr.fn, 5, childFocus(focusPath, "fn"), options)} ${renderExpr(expr.arg, 6, childFocus(focusPath, "arg"), options)}`, 5);
+      html = wrap(
+        `${renderExpr(expr.fn, 5, childFocus(focusPath, "fn"), options)} ${renderExpr(expr.arg, 6, childFocus(focusPath, "arg"), options)}`,
+        5,
+      );
       break;
     case "Pair":
       html = `(${renderExpr(expr.left, 0, childFocus(focusPath, "left"), options)}, ${renderExpr(expr.right, 0, childFocus(focusPath, "right"), options)})`;
@@ -95,7 +104,10 @@ function renderExpr(expr, prec = 0, focusPath = null, options = {}) {
     default:
       if (expr.kind in infix) {
         const [op, level] = infix[expr.kind];
-        html = wrap(`${renderExpr(leftOf(expr), level, childFocus(focusPath, leftKey(expr)), options)} ${plain(op)} ${renderExpr(rightOf(expr), level + (expr.kind === "Cons" ? -1 : 1), childFocus(focusPath, rightKey(expr)), options)}`, level);
+        html = wrap(
+          `${renderExpr(leftOf(expr), level, childFocus(focusPath, leftKey(expr)), options)} ${plain(op)} ${renderExpr(rightOf(expr), level + (expr.kind === "Cons" ? -1 : 1), childFocus(focusPath, rightKey(expr)), options)}`,
+          level,
+        );
         break;
       }
       if (expr.kind in distNames) {
@@ -157,8 +169,13 @@ function renderDistribution(expr, focusPath, options) {
 
 function renderMean(expr, focusPath, options) {
   const name = distNames[expr.distribution] ?? expr.distribution.toLowerCase();
-  const args = expr.args.map((arg, index) => renderExpr(arg, 0, childFocus(focusPath, "args", index), options));
-  const formula = meanFormula(expr.distribution, expr.args.map((arg) => prettyExpr(arg)));
+  const args = expr.args.map((arg, index) =>
+    renderExpr(arg, 0, childFocus(focusPath, "args", index), options),
+  );
+  const formula = meanFormula(
+    expr.distribution,
+    expr.args.map((arg) => prettyExpr(arg)),
+  );
   return `<span class="mean-form" title="one-step mean redex: ${escapeHtml(formula)}"><span class="tok-mean">mean_${plain(name)}</span>(${args.join(", ")})</span>`;
 }
 
@@ -201,7 +218,9 @@ function numberSpan(text, options) {
   const symbol = symbolForNumber(Number(text), options.valueBySymbol);
   const html = `<span class="tok-number">${text}</span>`;
   const label = options.valueLabel ?? "corresponds to";
-  return symbol ? `<span class="corr-item" data-corr="${escapeHtml(symbol)}" title="${escapeHtml(label)} ${escapeHtml(symbol)}">${html}</span>` : html;
+  return symbol
+    ? `<span class="corr-item" data-corr="${escapeHtml(symbol)}" title="${escapeHtml(label)} ${escapeHtml(symbol)}">${html}</span>`
+    : html;
 }
 
 function symbolForNumber(value, valueBySymbol) {
@@ -227,13 +246,25 @@ function changedChildPath(before, after) {
     case "Neg":
       return changedFieldPath(before, after, "expr");
     case "Case":
-      return changedFieldPath(before, after, "scrutinee") ?? changedFieldPath(before, after, "left") ?? changedFieldPath(before, after, "right");
+      return (
+        changedFieldPath(before, after, "scrutinee") ??
+        changedFieldPath(before, after, "left") ??
+        changedFieldPath(before, after, "right")
+      );
     case "Cons":
       return changedFieldPath(before, after, "head") ?? changedFieldPath(before, after, "tail");
     case "MatchList":
-      return changedFieldPath(before, after, "scrutinee") ?? changedFieldPath(before, after, "nilBranch") ?? changedFieldPath(before, after, "consBranch");
+      return (
+        changedFieldPath(before, after, "scrutinee") ??
+        changedFieldPath(before, after, "nilBranch") ??
+        changedFieldPath(before, after, "consBranch")
+      );
     case "If":
-      return changedFieldPath(before, after, "cond") ?? changedFieldPath(before, after, "thenBranch") ?? changedFieldPath(before, after, "elseBranch");
+      return (
+        changedFieldPath(before, after, "cond") ??
+        changedFieldPath(before, after, "thenBranch") ??
+        changedFieldPath(before, after, "elseBranch")
+      );
     case "Add":
     case "Sub":
     case "Mul":
@@ -298,7 +329,10 @@ function plain(text) {
 }
 
 function indent(html) {
-  return html.split("\n").map((line) => (line ? `  ${line}` : line)).join("\n");
+  return html
+    .split("\n")
+    .map((line) => (line ? `  ${line}` : line))
+    .join("\n");
 }
 
 function leftOf(expr) {

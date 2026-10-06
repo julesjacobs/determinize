@@ -5,7 +5,16 @@ import { prettyExpr } from "../src/compiler/pretty.js";
 import { examples } from "../src/examples.js";
 import { affineConst, affineScale, affineVar } from "../src/runtime/affine.js";
 import { meanDistribution, sampleDistribution } from "../src/runtime/distributions.js";
-import { checkEquivalences, prepareRuntime, projectMean, projectSample, runCoupledTrace, runOrdinary, runSymbolic, stepOrdinary } from "../src/runtime/semantics.js";
+import {
+  checkEquivalences,
+  prepareRuntime,
+  projectMean,
+  projectSample,
+  runCoupledTrace,
+  runOrdinary,
+  runSymbolic,
+  stepOrdinary,
+} from "../src/runtime/semantics.js";
 import { makeStreams } from "../src/runtime/rng.js";
 
 test("symbolic semantics stores E samples in sigma", () => {
@@ -18,14 +27,18 @@ test("symbolic semantics stores E samples in sigma", () => {
 });
 
 test("symbolic arithmetic on E samples is affine", () => {
-  const { expr } = prepareRuntime("let u = uniform[E](0, 1) in\nlet y = uniform[E](u, 2) in\n2 * u + y - 1");
+  const { expr } = prepareRuntime(
+    "let u = uniform[E](0, 1) in\nlet y = uniform[E](u, 2) in\n2 * u + y - 1",
+  );
   const result = runSymbolic(expr, makeStreams(11));
   assert.equal(result.sigma.length, 2);
   assert.equal(prettyExpr(result.value), "-1 + 2*v1 + v2");
 });
 
 test("G samples are sampled during symbolic stepping", () => {
-  const { expr } = prepareRuntime("let u = uniform[E](0, 1) in\nlet g = uniform[G](0, 2) in\ng + u");
+  const { expr } = prepareRuntime(
+    "let u = uniform[E](0, 1) in\nlet g = uniform[G](0, 2) in\ng + u",
+  );
   const result = runSymbolic(expr, makeStreams(13));
   assert.equal(result.sigma.length, 1);
   assert.equal(result.value.kind, "SymFloat");
@@ -33,7 +46,8 @@ test("G samples are sampled during symbolic stepping", () => {
 });
 
 test("sampled projection equals ordinary expression semantics with split streams", () => {
-  const source = "let u = uniform[E](0, 1) in\nlet b = beta[G](3, 2) in\nlet g = gamma[E](u, b) in\n2 * g + 1";
+  const source =
+    "let u = uniform[E](0, 1) in\nlet b = beta[G](3, 2) in\nlet g = gamma[E](u, b) in\n2 * g + 1";
   for (const seed of [1, 2, 3, 99]) {
     const result = checkEquivalences(source, seed);
     assert.equal(result.sampledEquivalent, true, `seed ${seed}`);
@@ -41,7 +55,8 @@ test("sampled projection equals ordinary expression semantics with split streams
 });
 
 test("mean projection equals determinized semantics under shared G randomness", () => {
-  const source = "let u = uniform[E](0, 1) in\nlet b = beta[G](3, 2) in\nlet g = gamma[E](u, b) in\n2 * g + 1";
+  const source =
+    "let u = uniform[E](0, 1) in\nlet b = beta[G](3, 2) in\nlet g = gamma[E](u, b) in\n2 * g + 1";
   for (const seed of [4, 5, 6, 100]) {
     const result = checkEquivalences(source, seed);
     assert.equal(result.meanEquivalent, true, `seed ${seed}`);
@@ -71,7 +86,11 @@ test("determinized mean forms reduce in one primitive step", () => {
   const { determinized } = prepareRuntime("let u = uniform[E](0, 1) in\nu + 1");
   assert.equal(prettyExpr(determinized), "let u = mean_uniform(0, 1) in\nu + 1");
   const streams = makeStreams(33);
-  const afterLetValueStep = stepOrdinary({ expr: determinized, rngE: streams.rngE, rngG: streams.rngG });
+  const afterLetValueStep = stepOrdinary({
+    expr: determinized,
+    rngE: streams.rngE,
+    rngG: streams.rngG,
+  });
   assert.equal(prettyExpr(afterLetValueStep.expr), "let u = 0.5 in\nu + 1");
 });
 
@@ -142,7 +161,11 @@ test("primitive distribution samples and means reject the same invalid concrete 
   ];
 
   for (const [kind, args, message] of cases) {
-    assert.throws(() => sampleDistribution(kind, args, makeStreams(50).rngG), message, `${kind} sample`);
+    assert.throws(
+      () => sampleDistribution(kind, args, makeStreams(50).rngG),
+      message,
+      `${kind} sample`,
+    );
     assert.throws(() => meanDistribution(kind, args.map(affineConst)), message, `${kind} mean`);
   }
 });
@@ -175,12 +198,16 @@ test("observe failure rejects the trace rather than throwing", () => {
 });
 
 test("coupled trace checks sampled and mean projections at every symbolic step", () => {
-  const source = "let u = uniform[E](0, 1) in\nlet b = beta[G](3, 2) in\nlet g = gamma[E](u, b) in\n2 * g + 1";
+  const source =
+    "let u = uniform[E](0, 1) in\nlet b = beta[G](3, 2) in\nlet g = gamma[E](u, b) in\n2 * g + 1";
   for (const seed of [1, 17, 2026]) {
     const trace = runCoupledTrace(source, seed);
     assert.equal(trace.ok, true, `seed ${seed}`);
     assert.ok(trace.frames.length > 4);
-    assert.equal(trace.frames.every((frame) => frame.originalOk && frame.determinizedOk), true);
+    assert.equal(
+      trace.frames.every((frame) => frame.originalOk && frame.determinizedOk),
+      true,
+    );
   }
 });
 
@@ -189,7 +216,10 @@ test("coupled trace records sampled symbolic values for hover correspondence", (
   const frame = trace.frames.find((candidate) => candidate.sampleBySymbol.v1 !== undefined);
   assert.ok(frame);
   assert.equal(typeof frame.sampleBySymbol.v1, "number");
-  assert.match(prettyExpr(frame.originalTarget), new RegExp(String(frame.sampleBySymbol.v1).replaceAll(".", "\\.")));
+  assert.match(
+    prettyExpr(frame.originalTarget),
+    new RegExp(String(frame.sampleBySymbol.v1).replaceAll(".", "\\.")),
+  );
 });
 
 test("coupled trace treats shared observe rejection as a checked terminal outcome", () => {
@@ -211,7 +241,8 @@ test("coupled trace handles affine symbolic residuals at every step", () => {
 });
 
 test("unchecked coupled trace exposes bad E/G dependencies", () => {
-  const source = "let x = uniform[E](0, 1) in\nlet y = uniform[G](0, 1) in\nif x < 0.5 then x + y else x - y";
+  const source =
+    "let x = uniform[E](0, 1) in\nlet y = uniform[G](0, 1) in\nif x < 0.5 then x + y else x - y";
   const trace = runCoupledTrace(source, 42, 20, 20, { allowIllTyped: true });
   assert.equal(trace.unchecked, true);
   assert.equal(trace.ok, false);
@@ -223,7 +254,8 @@ test("unchecked coupled trace exposes bad E/G dependencies", () => {
 });
 
 test("recursive gamma coupling does not fail from floating-point underflow", () => {
-  const source = "let f = rec f n =>\n  if n <= 0 then 1 else gamma(f (n - 1), uniform(1, 2))\nin\nf 4";
+  const source =
+    "let f = rec f n =>\n  if n <= 0 then 1 else gamma(f (n - 1), uniform(1, 2))\nin\nf 4";
   for (const seed of [1, 2, 17, 42, 2026]) {
     const trace = runCoupledTrace(source, seed, 1000, 400);
     assert.equal(trace.ok, true, `seed ${seed}`);
@@ -236,12 +268,13 @@ test("bundled examples analyze and run as intended", () => {
     const result = analyze(example.source);
     const intentionallyBad = example.name === "Bad E-branching";
     assert.equal(result.ok, !intentionallyBad, example.name);
-    const trace = runCoupledTrace(example.source, 2026, 1000, 400, { allowIllTyped: intentionallyBad });
+    const trace = runCoupledTrace(example.source, 2026, 1000, 400, {
+      allowIllTyped: intentionallyBad,
+    });
     assert.equal(trace.ok, !intentionallyBad, example.name);
     assert.ok(trace.frames.length > 0, example.name);
   }
 });
-
 
 test("recursive parameter shadows the recursive function name", () => {
   for (const source of [
@@ -257,7 +290,10 @@ test("recursive parameter shadows the recursive function name", () => {
 test("affine arithmetic preserves small literals and coefficients", () => {
   const { expr } = prepareRuntime("1e13 * (1e-13 * 1)");
   assert.equal(runOrdinary(expr, makeStreams(1)).value.value, 1);
-  const symbolic = runSymbolic(prepareRuntime("1e13 * (1e-13 * uniform[E](0, 1))").expr, makeStreams(1));
+  const symbolic = runSymbolic(
+    prepareRuntime("1e13 * (1e-13 * uniform[E](0, 1))").expr,
+    makeStreams(1),
+  );
   assert.equal(symbolic.value.affine.terms.v1, 1);
   assert.equal(affineConst(1e-13).constant, 1e-13);
   assert.equal(affineScale(affineVar("v"), 1e-13).terms.v, 1e-13);

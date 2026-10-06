@@ -5,7 +5,10 @@ import { checkEquivalences, runCoupledTrace } from "../src/runtime/semantics.js"
 
 for (const name of ["nested", "coupling-branch", "coupling-mixed"]) {
   test(`retained coupling example: ${name}`, () => {
-    const source = readFileSync(new URL(`../../tests/statistical/${name}.det`, import.meta.url), "utf8");
+    const source = readFileSync(
+      new URL(`../../tests/statistical/${name}.det`, import.meta.url),
+      "utf8",
+    );
     for (const seed of [1, 2, 7, 31]) {
       const result = checkEquivalences(source, seed);
       assert.equal(result.sampledEquivalent, true, `sampled projection, seed ${seed}`);

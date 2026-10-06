@@ -18846,14 +18846,22 @@ var DeterminizeSim = (() => {
       return;
     }
     if (mvar.mode !== mode) {
-      throw new CompileError(`mode mismatch: expected ${mvar.mode}-mode sample, found ${mode}-mode sample`, source?.from, source?.to);
+      throw new CompileError(
+        `mode mismatch: expected ${mvar.mode}-mode sample, found ${mode}-mode sample`,
+        source?.from,
+        source?.to
+      );
     }
   }
   function propagateSubmode(lhs, rhs, source = void 0) {
     if (lhs.mode === "E" && rhs.mode == null) setMode(rhs, "E", source);
     else if (lhs.mode == null && rhs.mode === "G") setMode(lhs, "G", source);
     else if (lhs.mode === "E" && rhs.mode === "G") {
-      throw new CompileError("mode mismatch: E-mode value cannot be used where G-mode sampling is required", source?.from, source?.to);
+      throw new CompileError(
+        "mode mismatch: E-mode value cannot be used where G-mode sampling is required",
+        source?.from,
+        source?.to
+      );
     }
   }
   function submode(lhs, rhs, source = void 0) {
@@ -18902,7 +18910,11 @@ var DeterminizeSim = (() => {
     if (a.tag === "MetaType" && b.tag === "MetaType" && a.meta.id === b.meta.id) return;
     if (a.tag === "MetaType") return setType(a.meta, b, source);
     if (b.tag === "MetaType") return setType(b.meta, a, source);
-    throw new CompileError(`type mismatch: expected ${formatTypeForError(b)}, found ${formatTypeForError(a)}`, source?.from, source?.to);
+    throw new CompileError(
+      `type mismatch: expected ${formatTypeForError(b)}, found ${formatTypeForError(a)}`,
+      source?.from,
+      source?.to
+    );
   }
   function ensureFloat(expected, source = void 0) {
     const ty = zonk(expected);
@@ -18913,7 +18925,11 @@ var DeterminizeSim = (() => {
       setType(ty.meta, floatTy, source);
       return floatTy;
     }
-    throw new CompileError(`expected float, found ${formatTypeForError(ty)}`, source?.from, source?.to);
+    throw new CompileError(
+      `expected float, found ${formatTypeForError(ty)}`,
+      source?.from,
+      source?.to
+    );
   }
   function formatTypeForError(type) {
     return formatType(type).replace(/float\[\?m\d+\]/g, "float").replace(/\?t\d+/g, "unknown");
@@ -19002,7 +19018,12 @@ var DeterminizeSim = (() => {
       case "Lam":
         return exprNode("Lam", { param: te.param, body: ofTyped(te.body) }, te.from, te.to);
       case "Rec":
-        return exprNode("Rec", { name: te.name, param: te.param, body: ofTyped(te.body) }, te.from, te.to);
+        return exprNode(
+          "Rec",
+          { name: te.name, param: te.param, body: ofTyped(te.body) },
+          te.from,
+          te.to
+        );
       case "App":
         return exprNode("App", { fn: ofTyped(te.fn), arg: ofTyped(te.arg) }, te.from, te.to);
       case "Unit":
@@ -19048,9 +19069,23 @@ var DeterminizeSim = (() => {
       case "Bool":
         return exprNode("Bool", { value: te.value }, te.from, te.to);
       case "If":
-        return exprNode("If", { cond: ofTyped(te.cond), thenBranch: ofTyped(te.thenBranch), elseBranch: ofTyped(te.elseBranch) }, te.from, te.to);
+        return exprNode(
+          "If",
+          {
+            cond: ofTyped(te.cond),
+            thenBranch: ofTyped(te.thenBranch),
+            elseBranch: ofTyped(te.elseBranch)
+          },
+          te.from,
+          te.to
+        );
       case "Let":
-        return exprNode("Let", { name: te.name, value: ofTyped(te.value), body: ofTyped(te.body) }, te.from, te.to);
+        return exprNode(
+          "Let",
+          { name: te.name, value: ofTyped(te.value), body: ofTyped(te.body) },
+          te.from,
+          te.to
+        );
       case "Const":
         return exprNode("Const", { value: te.value }, te.from, te.to);
       case "Add":
@@ -19059,7 +19094,12 @@ var DeterminizeSim = (() => {
       case "Div":
       case "Lt":
       case "Leq":
-        return exprNode(te.kind, { left: ofTyped(te.left), right: ofTyped(te.right) }, te.from, te.to);
+        return exprNode(
+          te.kind,
+          { left: ofTyped(te.left), right: ofTyped(te.right) },
+          te.from,
+          te.to
+        );
       case "Uniform":
         if (floatMode(te) === "E") return meanNode(te.kind, te.args.map(ofTyped), te);
         return exprNode("Uniform", { mode: null, args: te.args.map(ofTyped) }, te.from, te.to);
@@ -19083,9 +19123,26 @@ var DeterminizeSim = (() => {
         return exprNode(te.kind, { mode: null, args: te.args.map(ofTyped) }, te.from, te.to);
       case "Discrete":
         if (floatMode(te) === "E") {
-          return meanNode("Discrete", te.choices.map((choice) => exprNode("Const", { value: choice.probability }, te.from, te.to)), te);
+          return meanNode(
+            "Discrete",
+            te.choices.map(
+              (choice) => exprNode("Const", { value: choice.probability }, te.from, te.to)
+            ),
+            te
+          );
         }
-        return exprNode("Discrete", { mode: null, choices: te.choices.map((choice) => ({ probability: choice.probability, value: ofTyped(choice.value) })) }, te.from, te.to);
+        return exprNode(
+          "Discrete",
+          {
+            mode: null,
+            choices: te.choices.map((choice) => ({
+              probability: choice.probability,
+              value: ofTyped(choice.value)
+            }))
+          },
+          te.from,
+          te.to
+        );
       case "Observe":
         return exprNode("Observe", { cond: ofTyped(te.cond) }, te.from, te.to);
       default:
@@ -19101,7 +19158,8 @@ var DeterminizeSim = (() => {
     return { kind: expr.kind, typ, from: expr.from, to: expr.to, ...extra };
   }
   function lookup(env, name2, source) {
-    if (!env.has(name2)) throw new CompileError(`unbound variable \`${name2}\``, source.from, source.to);
+    if (!env.has(name2))
+      throw new CompileError(`unbound variable \`${name2}\``, source.from, source.to);
     return env.get(name2);
   }
   function extend(env, entries) {
@@ -19142,7 +19200,14 @@ var DeterminizeSim = (() => {
         const dom = TMeta(freshMeta());
         const cod = TMeta(freshMeta());
         const fnTy = TArrow(dom, cod);
-        const body = infer(extend(env, [[expr.name, fnTy], [expr.param, dom]]), expr.body, cod);
+        const body = infer(
+          extend(env, [
+            [expr.name, fnTy],
+            [expr.param, dom]
+          ]),
+          expr.body,
+          cod
+        );
         assertSubtype(body.typ, cod, expr.body);
         assertSubtype(fnTy, expected, expr);
         return typed(expr, fnTy, { name: expr.name, param: expr.param, body });
@@ -19231,7 +19296,14 @@ var DeterminizeSim = (() => {
         const listTy = TList(elemTy);
         const scrutinee = infer(env, expr.scrutinee, listTy);
         const nilBranch = infer(env, expr.nilBranch, expected);
-        const consBranch = infer(extend(env, [[expr.headName, elemTy], [expr.tailName, listTy]]), expr.consBranch, expected);
+        const consBranch = infer(
+          extend(env, [
+            [expr.headName, elemTy],
+            [expr.tailName, listTy]
+          ]),
+          expr.consBranch,
+          expected
+        );
         return typed(expr, expected, {
           scrutinee,
           nilBranch,
@@ -19295,7 +19367,10 @@ var DeterminizeSim = (() => {
       case "Uniform": {
         const ty = ensureFloat(expected, expr);
         forceAnnotatedMode(expr, ty);
-        return typed(expr, ty, { mode: expr.mode, args: [infer(env, expr.args[0], ty), infer(env, expr.args[1], ty)] });
+        return typed(expr, ty, {
+          mode: expr.mode,
+          args: [infer(env, expr.args[0], ty), infer(env, expr.args[1], ty)]
+        });
       }
       case "Gauss": {
         const meanTy = ensureFloat(expected, expr);
@@ -19311,13 +19386,19 @@ var DeterminizeSim = (() => {
       case "Gamma": {
         const ty = ensureFloat(expected, expr);
         forceAnnotatedMode(expr, ty);
-        return typed(expr, ty, { mode: expr.mode, args: [infer(env, expr.args[0], ty), infer(env, expr.args[1], floatG())] });
+        return typed(expr, ty, {
+          mode: expr.mode,
+          args: [infer(env, expr.args[0], ty), infer(env, expr.args[1], floatG())]
+        });
       }
       case "Beta": {
         const ty = ensureFloat(expected, expr);
         forceAnnotatedMode(expr, ty);
         const paramTy = floatG();
-        return typed(expr, ty, { mode: expr.mode, args: [infer(env, expr.args[0], paramTy), infer(env, expr.args[1], paramTy)] });
+        return typed(expr, ty, {
+          mode: expr.mode,
+          args: [infer(env, expr.args[0], paramTy), infer(env, expr.args[1], paramTy)]
+        });
       }
       case "Flip": {
         const p = infer(env, expr.args[0], floatG());
@@ -19429,7 +19510,17 @@ sampled normally`;
     return base2;
   }
   function isDistribution(kind) {
-    return ["Uniform", "Gauss", "Exponential", "Gamma", "Beta", "Flip", "Bernoulli", "Poisson", "Discrete"].includes(kind);
+    return [
+      "Uniform",
+      "Gauss",
+      "Exponential",
+      "Gamma",
+      "Beta",
+      "Flip",
+      "Bernoulli",
+      "Poisson",
+      "Discrete"
+    ].includes(kind);
   }
 
   // src/compiler/lexer.js
@@ -19495,7 +19586,8 @@ sampled normally`;
         const start = i2;
         i2 += 2;
         while (i2 < source.length && !source.startsWith("*)", i2)) i2++;
-        if (i2 >= source.length) throw new CompileError("unterminated comment; expected `*)`", start, source.length);
+        if (i2 >= source.length)
+          throw new CompileError("unterminated comment; expected `*)`", start, source.length);
         i2 += 2;
         continue;
       }
@@ -19803,7 +19895,11 @@ sampled normally`;
           if (tok.kind === "EOF") {
             throw new CompileError("expected expression before end of input", tok.from, tok.to);
           }
-          throw new CompileError(`expected expression, found ${tokenLabel(tok.kind)}`, tok.from, tok.to);
+          throw new CompileError(
+            `expected expression, found ${tokenLabel(tok.kind)}`,
+            tok.from,
+            tok.to
+          );
       }
     }
     parseParen() {
@@ -19857,7 +19953,10 @@ sampled normally`;
         args.push(first.value);
         while (this.maybe("COMMA")) args.push(this.take("FLOAT").value);
         const end2 = this.take("RPAREN").to;
-        const choices = args.map((p, i2) => ({ probability: p, value: node("Const", { value: i2 }, nameTok.from, end2) }));
+        const choices = args.map((p, i2) => ({
+          probability: p,
+          value: node("Const", { value: i2 }, nameTok.from, end2)
+        }));
         return node("Discrete", { mode, choices, displayName: name2 }, nameTok.from, end2);
       }
       if (kind === "Exponential" || kind === "Flip" || kind === "Bernoulli" || kind === "Poisson") {
@@ -19953,7 +20052,10 @@ ${indent(prettyExpr(expr.consBranch))}`;
       default:
         if (expr.kind in infix) {
           const [op, level] = infix[expr.kind];
-          return wrap(`${prettyExpr(leftOf(expr), level)} ${op} ${prettyExpr(rightOf(expr), level + (expr.kind === "Cons" ? -1 : 1))}`, level);
+          return wrap(
+            `${prettyExpr(leftOf(expr), level)} ${op} ${prettyExpr(rightOf(expr), level + (expr.kind === "Cons" ? -1 : 1))}`,
+            level
+          );
         }
         if (expr.kind in distNames) return prettyDistribution(expr);
         return `<${expr.kind}>`;
@@ -20020,7 +20122,10 @@ ${indent(prettyTyped(te.consBranch))}
       default:
         if (te.kind in infix) {
           const [op, level] = infix[te.kind];
-          return withType(`${prettyTyped(leftOf(te), level)} ${op} ${prettyTyped(rightOf(te), level + 1)}`, level);
+          return withType(
+            `${prettyTyped(leftOf(te), level)} ${op} ${prettyTyped(rightOf(te), level + 1)}`,
+            level
+          );
         }
         if (te.kind in distNames) return withType(prettyTypedDistribution(te), 6);
         return withType(`<${te.kind}>`);
@@ -20029,7 +20134,8 @@ ${indent(prettyTyped(te.consBranch))}
   function prettyDistribution(expr) {
     const name2 = distNames[expr.kind];
     const mode = expr.mode ? `[${expr.mode}]` : "";
-    if (expr.kind === "Discrete") return `${name2}${mode}(${expr.choices.map((c) => formatNumber2(c.probability)).join(", ")})`;
+    if (expr.kind === "Discrete")
+      return `${name2}${mode}(${expr.choices.map((c) => formatNumber2(c.probability)).join(", ")})`;
     return `${name2}${mode}(${expr.args.map((arg) => prettyExpr(arg)).join(", ")})`;
   }
   function prettyMean(expr) {
@@ -20042,7 +20148,8 @@ ${indent(prettyTyped(te.consBranch))}
     const derivedMode = ty.tag === "Float" ? ty.mode.mode : null;
     const mode = te.mode ?? derivedMode;
     const modeText = mode ? `[${mode}]` : "";
-    if (te.kind === "Discrete") return `${name2}${modeText}(${te.choices.map((c) => formatNumber2(c.probability)).join(", ")})`;
+    if (te.kind === "Discrete")
+      return `${name2}${modeText}(${te.choices.map((c) => formatNumber2(c.probability)).join(", ")})`;
     return `${name2}${modeText}(${te.args.map((arg) => prettyTyped(arg)).join(", ")})`;
   }
   function leftOf(expr) {
@@ -20134,7 +20241,10 @@ ${indent(elseBranch)}`;
       };
     } catch (error) {
       if (error instanceof CompileError) {
-        return { ok: false, diagnostics: [{ from: error.from, to: error.to, message: error.message }] };
+        return {
+          ok: false,
+          diagnostics: [{ from: error.from, to: error.to, message: error.message }]
+        };
       }
       return { ok: false, diagnostics: [{ message: error?.message ?? String(error) }] };
     }
@@ -20289,9 +20399,32 @@ ${indent(elseBranch)}`;
   ];
 
   // src/language.js
-  var keywords2 = /* @__PURE__ */ new Set(["let", "in", "if", "then", "else", "match", "with", "fun", "lambda", "rec", "true", "false"]);
+  var keywords2 = /* @__PURE__ */ new Set([
+    "let",
+    "in",
+    "if",
+    "then",
+    "else",
+    "match",
+    "with",
+    "fun",
+    "lambda",
+    "rec",
+    "true",
+    "false"
+  ]);
   var constructors = /* @__PURE__ */ new Set(["inl", "inr", "fst", "snd", "observe"]);
-  var distributions2 = /* @__PURE__ */ new Set(["uniform", "gauss", "exponential", "gamma", "beta", "flip", "bernoulli", "poisson", "discrete"]);
+  var distributions2 = /* @__PURE__ */ new Set([
+    "uniform",
+    "gauss",
+    "exponential",
+    "gamma",
+    "beta",
+    "flip",
+    "bernoulli",
+    "poisson",
+    "discrete"
+  ]);
   var detLanguage = StreamLanguage.define({
     token(stream) {
       if (stream.eatSpace()) return null;
@@ -20441,7 +20574,9 @@ ${indent(elseBranch)}`;
         this.decorations = buildModeHints(view);
       }
       update(update) {
-        const typeHintChanged = update.transactions.some((tr) => tr.effects.some((effect) => effect.is(setTypeHints)));
+        const typeHintChanged = update.transactions.some(
+          (tr) => tr.effects.some((effect) => effect.is(setTypeHints))
+        );
         if (update.docChanged || update.selectionSet || update.viewportChanged || typeHintChanged) {
           this.decorations = buildModeHints(update.view);
         }
@@ -20524,7 +20659,9 @@ ${indent(elseBranch)}`;
     return builder.finish();
   }
   function cursorAtHintPosition(view, pos) {
-    return view.state.selection.ranges.some((range) => range.empty && Math.abs(range.head - pos) <= 1);
+    return view.state.selection.ranges.some(
+      (range) => range.empty && Math.abs(range.head - pos) <= 1
+    );
   }
   function hintPosition(source, span) {
     const text = source.slice(span.from, span.to);
@@ -20569,7 +20706,9 @@ ${indent(elseBranch)}`;
   function affineScale(a, scalar) {
     return normalize({
       constant: a.constant * scalar,
-      terms: Object.fromEntries(Object.entries(a.terms).map(([name2, coeff]) => [name2, coeff * scalar]))
+      terms: Object.fromEntries(
+        Object.entries(a.terms).map(([name2, coeff]) => [name2, coeff * scalar])
+      )
     });
   }
   function affineMul(a, b) {
@@ -20578,14 +20717,16 @@ ${indent(elseBranch)}`;
     throw new Error("symbolic multiplication is only affine when one side is concrete");
   }
   function affineDiv(a, b) {
-    if (!isConcreteAffine(b)) throw new Error("symbolic division is only affine with a concrete denominator");
+    if (!isConcreteAffine(b))
+      throw new Error("symbolic division is only affine with a concrete denominator");
     return affineScale(a, 1 / b.constant);
   }
   function isConcreteAffine(a) {
     return Object.keys(a.terms).length === 0;
   }
   function affineToNumber(a) {
-    if (!isConcreteAffine(a)) throw new Error(`expected concrete affine value, got ${prettyAffine2(a)}`);
+    if (!isConcreteAffine(a))
+      throw new Error(`expected concrete affine value, got ${prettyAffine2(a)}`);
     return a.constant;
   }
   function evalAffine(a, env) {
@@ -20623,7 +20764,16 @@ ${indent(elseBranch)}`;
   }
 
   // src/runtime/distributions.js
-  var floatDistributions = /* @__PURE__ */ new Set(["Uniform", "Gauss", "Exponential", "Gamma", "Beta", "Bernoulli", "Poisson", "Discrete"]);
+  var floatDistributions = /* @__PURE__ */ new Set([
+    "Uniform",
+    "Gauss",
+    "Exponential",
+    "Gamma",
+    "Beta",
+    "Bernoulli",
+    "Poisson",
+    "Discrete"
+  ]);
   var MIN_POSITIVE_SAMPLE = Number.MIN_VALUE;
   var PROBABILITY_EPS = 1e-9;
   var ARITIES = {
@@ -20711,7 +20861,10 @@ ${indent(elseBranch)}`;
       case "Poisson":
         return args[0];
       case "Discrete":
-        return args.reduce((acc, probability, index) => affineAdd(acc, affineMul(probability, { constant: index, terms: {} })), { constant: 0, terms: {} });
+        return args.reduce(
+          (acc, probability, index) => affineAdd(acc, affineMul(probability, { constant: index, terms: {} })),
+          { constant: 0, terms: {} }
+        );
       default:
         throw new Error(`no symbolic mean for ${kind}`);
     }
@@ -20740,9 +20893,11 @@ ${indent(elseBranch)}`;
     validateConcreteDomain(kind, values, { skipSymbolic: true });
   }
   function validateFiniteAffine(kind, arg) {
-    if (!Number.isFinite(arg.constant)) throw new DistributionDomainError(kind, "parameters must be finite");
+    if (!Number.isFinite(arg.constant))
+      throw new DistributionDomainError(kind, "parameters must be finite");
     for (const coeff of Object.values(arg.terms)) {
-      if (!Number.isFinite(coeff)) throw new DistributionDomainError(kind, "parameters must be finite");
+      if (!Number.isFinite(coeff))
+        throw new DistributionDomainError(kind, "parameters must be finite");
     }
   }
   function validateConcreteDomain(kind, values, options = {}) {
@@ -20750,7 +20905,8 @@ ${indent(elseBranch)}`;
     validateArity(kind, values.length);
     const concrete = values.filter((value) => value !== null);
     for (const value of concrete) {
-      if (!Number.isFinite(value)) throw new DistributionDomainError(kind, "parameters must be finite");
+      if (!Number.isFinite(value))
+        throw new DistributionDomainError(kind, "parameters must be finite");
     }
     const arg = (index) => values[index];
     const check = (index, predicate, message) => {
@@ -20786,14 +20942,17 @@ ${indent(elseBranch)}`;
         check(0, (value) => value >= 0, "lambda must be >= 0");
         break;
       case "Discrete": {
-        if (values.length === 0) throw new DistributionDomainError(kind, "at least one probability is required");
+        if (values.length === 0)
+          throw new DistributionDomainError(kind, "at least one probability is required");
         for (const [index, value] of values.entries()) {
           if (value === null && skipSymbolic) continue;
-          if (value < 0 || value > 1) throw new DistributionDomainError(kind, `probability ${index} must be in [0, 1]`);
+          if (value < 0 || value > 1)
+            throw new DistributionDomainError(kind, `probability ${index} must be in [0, 1]`);
         }
         if (!values.includes(null)) {
           const total = values.reduce((sum, value) => sum + value, 0);
-          if (Math.abs(total - 1) > PROBABILITY_EPS) throw new DistributionDomainError(kind, "probabilities must sum to 1");
+          if (Math.abs(total - 1) > PROBABILITY_EPS)
+            throw new DistributionDomainError(kind, "probabilities must sum to 1");
         }
         break;
       }
@@ -20815,7 +20974,8 @@ ${indent(elseBranch)}`;
   }
   function gammaSample(alpha, beta, rng) {
     const scale = 1 / beta;
-    if (alpha < 1) return positiveSample(gammaSample(alpha + 1, beta, rng) * rng.positive() ** (1 / alpha));
+    if (alpha < 1)
+      return positiveSample(gammaSample(alpha + 1, beta, rng) * rng.positive() ** (1 / alpha));
     const d = alpha - 1 / 3;
     const c = 1 / Math.sqrt(9 * d);
     for (; ; ) {
@@ -20825,7 +20985,8 @@ ${indent(elseBranch)}`;
       const v3 = v * v * v;
       const u = rng.positive();
       if (u < 1 - 0.0331 * x ** 4) return positiveSample(scale * d * v3);
-      if (Math.log(u) < 0.5 * x * x + d * (1 - v3 + Math.log(v3))) return positiveSample(scale * d * v3);
+      if (Math.log(u) < 0.5 * x * x + d * (1 - v3 + Math.log(v3)))
+        return positiveSample(scale * d * v3);
     }
   }
   function positiveSample(value) {
@@ -20926,15 +21087,47 @@ ${indent(elseBranch)}`;
       case "Cons":
         return n("Cons", { head: runtimeFromTyped(te.head), tail: runtimeFromTyped(te.tail) }, te);
       case "Case":
-        return n("Case", { scrutinee: runtimeFromTyped(te.scrutinee), leftName: te.leftName, left: runtimeFromTyped(te.left), rightName: te.rightName, right: runtimeFromTyped(te.right) }, te);
+        return n(
+          "Case",
+          {
+            scrutinee: runtimeFromTyped(te.scrutinee),
+            leftName: te.leftName,
+            left: runtimeFromTyped(te.left),
+            rightName: te.rightName,
+            right: runtimeFromTyped(te.right)
+          },
+          te
+        );
       case "MatchList":
-        return n("MatchList", { scrutinee: runtimeFromTyped(te.scrutinee), nilBranch: runtimeFromTyped(te.nilBranch), headName: te.headName, tailName: te.tailName, consBranch: runtimeFromTyped(te.consBranch) }, te);
+        return n(
+          "MatchList",
+          {
+            scrutinee: runtimeFromTyped(te.scrutinee),
+            nilBranch: runtimeFromTyped(te.nilBranch),
+            headName: te.headName,
+            tailName: te.tailName,
+            consBranch: runtimeFromTyped(te.consBranch)
+          },
+          te
+        );
       case "Bool":
         return n("Bool", { value: te.value }, te);
       case "If":
-        return n("If", { cond: runtimeFromTyped(te.cond), thenBranch: runtimeFromTyped(te.thenBranch), elseBranch: runtimeFromTyped(te.elseBranch) }, te);
+        return n(
+          "If",
+          {
+            cond: runtimeFromTyped(te.cond),
+            thenBranch: runtimeFromTyped(te.thenBranch),
+            elseBranch: runtimeFromTyped(te.elseBranch)
+          },
+          te
+        );
       case "Let":
-        return n("Let", { name: te.name, value: runtimeFromTyped(te.value), body: runtimeFromTyped(te.body) }, te);
+        return n(
+          "Let",
+          { name: te.name, value: runtimeFromTyped(te.value), body: runtimeFromTyped(te.body) },
+          te
+        );
       case "Const":
         return n("Const", { value: te.value }, te);
       case "Uniform":
@@ -20947,7 +21140,17 @@ ${indent(elseBranch)}`;
       case "Poisson":
         return n(te.kind, { mode: distMode(), args: te.args.map(runtimeFromTyped) }, te);
       case "Discrete":
-        return n("Discrete", { mode: distMode(), choices: te.choices.map((choice) => ({ probability: choice.probability, value: runtimeFromTyped(choice.value) })) }, te);
+        return n(
+          "Discrete",
+          {
+            mode: distMode(),
+            choices: te.choices.map((choice) => ({
+              probability: choice.probability,
+              value: runtimeFromTyped(choice.value)
+            }))
+          },
+          te
+        );
       case "Observe":
         return n("Observe", { cond: runtimeFromTyped(te.cond) }, te);
       default:
@@ -20965,11 +21168,19 @@ ${indent(elseBranch)}`;
       case "DomainError":
         return clone(expr);
       case "Mean":
-        return n("Mean", { distribution: expr.distribution, args: expr.args.map(runtimeFromAst) }, expr);
+        return n(
+          "Mean",
+          { distribution: expr.distribution, args: expr.args.map(runtimeFromAst) },
+          expr
+        );
       case "Lam":
         return n("Lam", { param: expr.param, body: runtimeFromAst(expr.body) }, expr);
       case "Rec":
-        return n("Rec", { name: expr.name, param: expr.param, body: runtimeFromAst(expr.body) }, expr);
+        return n(
+          "Rec",
+          { name: expr.name, param: expr.param, body: runtimeFromAst(expr.body) },
+          expr
+        );
       case "App":
         return n("App", { fn: runtimeFromAst(expr.fn), arg: runtimeFromAst(expr.arg) }, expr);
       case "Pair":
@@ -20979,7 +21190,11 @@ ${indent(elseBranch)}`;
       case "Div":
       case "Lt":
       case "Leq":
-        return n(expr.kind, { left: runtimeFromAst(expr.left), right: runtimeFromAst(expr.right) }, expr);
+        return n(
+          expr.kind,
+          { left: runtimeFromAst(expr.left), right: runtimeFromAst(expr.right) },
+          expr
+        );
       case "Fst":
       case "Snd":
       case "Inl":
@@ -20989,13 +21204,45 @@ ${indent(elseBranch)}`;
       case "Cons":
         return n("Cons", { head: runtimeFromAst(expr.head), tail: runtimeFromAst(expr.tail) }, expr);
       case "Case":
-        return n("Case", { scrutinee: runtimeFromAst(expr.scrutinee), leftName: expr.leftName, left: runtimeFromAst(expr.left), rightName: expr.rightName, right: runtimeFromAst(expr.right) }, expr);
+        return n(
+          "Case",
+          {
+            scrutinee: runtimeFromAst(expr.scrutinee),
+            leftName: expr.leftName,
+            left: runtimeFromAst(expr.left),
+            rightName: expr.rightName,
+            right: runtimeFromAst(expr.right)
+          },
+          expr
+        );
       case "MatchList":
-        return n("MatchList", { scrutinee: runtimeFromAst(expr.scrutinee), nilBranch: runtimeFromAst(expr.nilBranch), headName: expr.headName, tailName: expr.tailName, consBranch: runtimeFromAst(expr.consBranch) }, expr);
+        return n(
+          "MatchList",
+          {
+            scrutinee: runtimeFromAst(expr.scrutinee),
+            nilBranch: runtimeFromAst(expr.nilBranch),
+            headName: expr.headName,
+            tailName: expr.tailName,
+            consBranch: runtimeFromAst(expr.consBranch)
+          },
+          expr
+        );
       case "If":
-        return n("If", { cond: runtimeFromAst(expr.cond), thenBranch: runtimeFromAst(expr.thenBranch), elseBranch: runtimeFromAst(expr.elseBranch) }, expr);
+        return n(
+          "If",
+          {
+            cond: runtimeFromAst(expr.cond),
+            thenBranch: runtimeFromAst(expr.thenBranch),
+            elseBranch: runtimeFromAst(expr.elseBranch)
+          },
+          expr
+        );
       case "Let":
-        return n("Let", { name: expr.name, value: runtimeFromAst(expr.value), body: runtimeFromAst(expr.body) }, expr);
+        return n(
+          "Let",
+          { name: expr.name, value: runtimeFromAst(expr.value), body: runtimeFromAst(expr.body) },
+          expr
+        );
       case "Uniform":
       case "Gauss":
       case "Exponential":
@@ -21006,7 +21253,17 @@ ${indent(elseBranch)}`;
       case "Poisson":
         return n(expr.kind, { mode: expr.mode ?? "G", args: expr.args.map(runtimeFromAst) }, expr);
       case "Discrete":
-        return n("Discrete", { mode: expr.mode ?? "G", choices: expr.choices.map((choice) => ({ probability: choice.probability, value: runtimeFromAst(choice.value) })) }, expr);
+        return n(
+          "Discrete",
+          {
+            mode: expr.mode ?? "G",
+            choices: expr.choices.map((choice) => ({
+              probability: choice.probability,
+              value: runtimeFromAst(choice.value)
+            }))
+          },
+          expr
+        );
       case "Observe":
         return n("Observe", { cond: runtimeFromAst(expr.cond) }, expr);
       default:
@@ -21025,10 +21282,20 @@ ${indent(elseBranch)}`;
   }
   function stepOrdinary(state) {
     const result = step(state.expr, { kind: "ordinary", rngE: state.rngE, rngG: state.rngG });
-    return { ...state, expr: result.expr, rngE: result.rngE ?? state.rngE, rngG: result.rngG ?? state.rngG };
+    return {
+      ...state,
+      expr: result.expr,
+      rngE: result.rngE ?? state.rngE,
+      rngG: result.rngG ?? state.rngG
+    };
   }
   function stepSymbolic(state) {
-    const result = step(state.expr, { kind: "symbolic", sigma: state.sigma, rngG: state.rngG, nextSymbol: state.nextSymbol });
+    const result = step(state.expr, {
+      kind: "symbolic",
+      sigma: state.sigma,
+      rngG: state.rngG,
+      nextSymbol: state.nextSymbol
+    });
     return {
       ...state,
       expr: result.expr,
@@ -21072,9 +21339,22 @@ ${indent(elseBranch)}`;
   function runCoupledTrace(source, seed = 1, maxSymbolicSteps = 1e3, maxSyncSteps = 200, options = {}) {
     const prepared = options.allowIllTyped ? prepareRuntimeUnchecked(source) : prepareRuntime(source);
     const streams = makeStreams(seed);
-    let symbolic = { expr: clone(prepared.expr), sigma: [], rngG: streams.rngG.clone(), nextSymbol: 1 };
-    let original = { expr: clone(prepared.expr), rngE: streams.rngE.clone(), rngG: streams.rngG.clone() };
-    let determinizedState = { expr: clone(prepared.determinized), rngE: streams.rngE.clone(), rngG: streams.rngG.clone() };
+    let symbolic = {
+      expr: clone(prepared.expr),
+      sigma: [],
+      rngG: streams.rngG.clone(),
+      nextSymbol: 1
+    };
+    let original = {
+      expr: clone(prepared.expr),
+      rngE: streams.rngE.clone(),
+      rngG: streams.rngG.clone()
+    };
+    let determinizedState = {
+      expr: clone(prepared.determinized),
+      rngE: streams.rngE.clone(),
+      rngG: streams.rngG.clone()
+    };
     const frames = [];
     for (let stepIndex = 0; stepIndex <= maxSymbolicSteps; stepIndex++) {
       const originalProjection = safe(() => projectSampleWithEnv(symbolic, streams.rngE));
@@ -21147,7 +21427,10 @@ ${indent(elseBranch)}`;
     if (active.length !== effects.length) {
       const errored = active.map((item) => item.label).join(", ");
       const succeeded = effects.filter((item) => !item.effect).map((item) => item.label).join(", ");
-      return { ok: false, error: `terminal effect mismatch: ${errored} errored, but ${succeeded} did not` };
+      return {
+        ok: false,
+        error: `terminal effect mismatch: ${errored} errored, but ${succeeded} did not`
+      };
     }
     const [first] = active;
     const mismatch = active.find((item) => !sameTerminalEffect(first.effect, item.effect));
@@ -21216,8 +21499,10 @@ ${indent(elseBranch)}`;
         break;
       case "Case":
         if (!isValue(expr.scrutinee)) return stepChild(expr, "scrutinee", ctx);
-        if (expr.scrutinee.kind === "Inl") return out(subst(expr.left, expr.leftName, expr.scrutinee.expr), ctx);
-        if (expr.scrutinee.kind === "Inr") return out(subst(expr.right, expr.rightName, expr.scrutinee.expr), ctx);
+        if (expr.scrutinee.kind === "Inl")
+          return out(subst(expr.left, expr.leftName, expr.scrutinee.expr), ctx);
+        if (expr.scrutinee.kind === "Inr")
+          return out(subst(expr.right, expr.rightName, expr.scrutinee.expr), ctx);
         throw new Error("match on non-sum");
       case "Cons":
         if (!isValue(expr.head)) return stepChild(expr, "head", ctx);
@@ -21226,7 +21511,15 @@ ${indent(elseBranch)}`;
       case "MatchList":
         if (!isValue(expr.scrutinee)) return stepChild(expr, "scrutinee", ctx);
         if (expr.scrutinee.kind === "Nil") return out(expr.nilBranch, ctx);
-        if (expr.scrutinee.kind === "Cons") return out(subst(subst(expr.consBranch, expr.headName, expr.scrutinee.head), expr.tailName, expr.scrutinee.tail), ctx);
+        if (expr.scrutinee.kind === "Cons")
+          return out(
+            subst(
+              subst(expr.consBranch, expr.headName, expr.scrutinee.head),
+              expr.tailName,
+              expr.scrutinee.tail
+            ),
+            ctx
+          );
         throw new Error("match on non-list");
       case "If":
         if (!isValue(expr.cond)) return stepChild(expr, "cond", ctx);
@@ -21246,7 +21539,16 @@ ${indent(elseBranch)}`;
       case "Leq":
         if (!isValue(expr.left)) return stepChild(expr, "left", ctx);
         if (!isValue(expr.right)) return stepChild(expr, "right", ctx);
-        return out(n("Bool", { value: expr.kind === "Lt" ? numberValue(expr.left) < numberValue(expr.right) : numberValue(expr.left) <= numberValue(expr.right) }, expr), ctx);
+        return out(
+          n(
+            "Bool",
+            {
+              value: expr.kind === "Lt" ? numberValue(expr.left) < numberValue(expr.right) : numberValue(expr.left) <= numberValue(expr.right)
+            },
+            expr
+          ),
+          ctx
+        );
       case "Observe":
         if (!isValue(expr.cond)) return stepChild(expr, "cond", ctx);
         if (expr.cond.kind !== "Bool") throw new Error("observe: expected bool");
@@ -21295,13 +21597,20 @@ ${indent(elseBranch)}`;
     if (ctx.kind === "symbolic" && expr.mode === "E" && floatDistributions.has(expr.kind)) {
       const name2 = `v${ctx.nextSymbol}`;
       const binding = { name: name2, kind: expr.kind, args: expr.args.map(valueToAffine) };
-      return out(symFloat(affineVar(name2), expr.from, expr.to), { ...ctx, sigma: [...ctx.sigma, binding], nextSymbol: ctx.nextSymbol + 1 });
+      return out(symFloat(affineVar(name2), expr.from, expr.to), {
+        ...ctx,
+        sigma: [...ctx.sigma, binding],
+        nextSymbol: ctx.nextSymbol + 1
+      });
     }
     const streamName = expr.mode === "E" ? "rngE" : "rngG";
     const rng = ctx[streamName];
     try {
       const value = sampleDistribution(expr.kind, expr.args, rng);
-      return out(typeof value === "boolean" ? n("Bool", { value }, expr) : n("Const", { value }, expr), { ...ctx, [streamName]: rng });
+      return out(
+        typeof value === "boolean" ? n("Bool", { value }, expr) : n("Const", { value }, expr),
+        { ...ctx, [streamName]: rng }
+      );
     } catch (error) {
       if (!isDistributionDomainError(error)) throw error;
       return out(domainErrorExpr(error, expr), { ...ctx, [streamName]: rng });
@@ -21310,19 +21619,34 @@ ${indent(elseBranch)}`;
   function stepDiscrete(expr, ctx) {
     if (ctx.kind === "symbolic" && expr.mode === "E") {
       try {
-        meanDistribution("Discrete", expr.choices.map((choice) => affineConst(choice.probability)));
+        meanDistribution(
+          "Discrete",
+          expr.choices.map((choice) => affineConst(choice.probability))
+        );
       } catch (error) {
         if (!isDistributionDomainError(error)) throw error;
         return out(domainErrorExpr(error, expr), ctx);
       }
       const name2 = `v${ctx.nextSymbol}`;
-      const binding = { name: name2, kind: "Discrete", args: expr.choices.map((choice) => affineConst(choice.probability)) };
-      return out(symFloat(affineVar(name2), expr.from, expr.to), { ...ctx, sigma: [...ctx.sigma, binding], nextSymbol: ctx.nextSymbol + 1 });
+      const binding = {
+        name: name2,
+        kind: "Discrete",
+        args: expr.choices.map((choice) => affineConst(choice.probability))
+      };
+      return out(symFloat(affineVar(name2), expr.from, expr.to), {
+        ...ctx,
+        sigma: [...ctx.sigma, binding],
+        nextSymbol: ctx.nextSymbol + 1
+      });
     }
     const streamName = expr.mode === "E" ? "rngE" : "rngG";
     const rng = ctx[streamName];
     try {
-      const index = sampleDistribution("Discrete", expr.choices.map((choice) => n("Const", { value: choice.probability }, expr)), rng);
+      const index = sampleDistribution(
+        "Discrete",
+        expr.choices.map((choice) => n("Const", { value: choice.probability }, expr)),
+        rng
+      );
       return out(expr.choices[index].value, { ...ctx, [streamName]: rng });
     } catch (error) {
       if (!isDistributionDomainError(error)) throw error;
@@ -21367,7 +21691,11 @@ ${indent(elseBranch)}`;
   function determinizeResidual(expr) {
     switch (expr.kind) {
       case "Mean":
-        return n("Mean", { distribution: expr.distribution, args: expr.args.map(determinizeResidual) }, expr);
+        return n(
+          "Mean",
+          { distribution: expr.distribution, args: expr.args.map(determinizeResidual) },
+          expr
+        );
       case "Uniform": {
         const args = expr.args.map(determinizeResidual);
         if (expr.mode === "E") return meanNode2(expr.kind, args, expr);
@@ -21400,9 +21728,16 @@ ${indent(elseBranch)}`;
         return n(expr.kind, { mode: "G", args }, expr);
       }
       case "Discrete": {
-        const choices = expr.choices.map((choice) => ({ probability: choice.probability, value: determinizeResidual(choice.value) }));
+        const choices = expr.choices.map((choice) => ({
+          probability: choice.probability,
+          value: determinizeResidual(choice.value)
+        }));
         if (expr.mode === "E") {
-          return meanNode2("Discrete", choices.map((choice) => n("Const", { value: choice.probability }, expr)), expr);
+          return meanNode2(
+            "Discrete",
+            choices.map((choice) => n("Const", { value: choice.probability }, expr)),
+            expr
+          );
         }
         return n("Discrete", { mode: "G", choices }, expr);
       }
@@ -21443,11 +21778,15 @@ ${indent(elseBranch)}`;
     return expr.kind === "Reject" || expr.kind === "DomainError";
   }
   function rebuild(expr, patch, ctx, result) {
-    return out(n(expr.kind, { ...copyProps(expr), ...patch }, expr), { ...ctx, ...contextPatch(result) });
+    return out(n(expr.kind, { ...copyProps(expr), ...patch }, expr), {
+      ...ctx,
+      ...contextPatch(result)
+    });
   }
   function contextPatch(result) {
     const patch = {};
-    for (const key of ["rngE", "rngG", "sigma", "nextSymbol"]) if (key in result) patch[key] = result[key];
+    for (const key of ["rngE", "rngG", "sigma", "nextSymbol"])
+      if (key in result) patch[key] = result[key];
     return patch;
   }
   function out(expr, ctx) {
@@ -21467,13 +21806,45 @@ ${indent(elseBranch)}`;
       case "Lam":
         return expr.param === name2 ? clone(expr) : n("Lam", { param: expr.param, body: subst(expr.body, name2, replacement) }, expr);
       case "Rec":
-        return expr.name === name2 || expr.param === name2 ? clone(expr) : n("Rec", { name: expr.name, param: expr.param, body: subst(expr.body, name2, replacement) }, expr);
+        return expr.name === name2 || expr.param === name2 ? clone(expr) : n(
+          "Rec",
+          { name: expr.name, param: expr.param, body: subst(expr.body, name2, replacement) },
+          expr
+        );
       case "Let":
-        return n("Let", { name: expr.name, value: subst(expr.value, name2, replacement), body: expr.name === name2 ? clone(expr.body) : subst(expr.body, name2, replacement) }, expr);
+        return n(
+          "Let",
+          {
+            name: expr.name,
+            value: subst(expr.value, name2, replacement),
+            body: expr.name === name2 ? clone(expr.body) : subst(expr.body, name2, replacement)
+          },
+          expr
+        );
       case "Case":
-        return n("Case", { scrutinee: subst(expr.scrutinee, name2, replacement), leftName: expr.leftName, left: expr.leftName === name2 ? clone(expr.left) : subst(expr.left, name2, replacement), rightName: expr.rightName, right: expr.rightName === name2 ? clone(expr.right) : subst(expr.right, name2, replacement) }, expr);
+        return n(
+          "Case",
+          {
+            scrutinee: subst(expr.scrutinee, name2, replacement),
+            leftName: expr.leftName,
+            left: expr.leftName === name2 ? clone(expr.left) : subst(expr.left, name2, replacement),
+            rightName: expr.rightName,
+            right: expr.rightName === name2 ? clone(expr.right) : subst(expr.right, name2, replacement)
+          },
+          expr
+        );
       case "MatchList":
-        return n("MatchList", { scrutinee: subst(expr.scrutinee, name2, replacement), nilBranch: subst(expr.nilBranch, name2, replacement), headName: expr.headName, tailName: expr.tailName, consBranch: expr.headName === name2 || expr.tailName === name2 ? clone(expr.consBranch) : subst(expr.consBranch, name2, replacement) }, expr);
+        return n(
+          "MatchList",
+          {
+            scrutinee: subst(expr.scrutinee, name2, replacement),
+            nilBranch: subst(expr.nilBranch, name2, replacement),
+            headName: expr.headName,
+            tailName: expr.tailName,
+            consBranch: expr.headName === name2 || expr.tailName === name2 ? clone(expr.consBranch) : subst(expr.consBranch, name2, replacement)
+          },
+          expr
+        );
       default:
         return mapChildren(expr, (child) => subst(child, name2, replacement));
     }
@@ -21505,11 +21876,35 @@ ${indent(elseBranch)}`;
       case "Cons":
         return n("Cons", { head: f(expr.head), tail: f(expr.tail) }, expr);
       case "If":
-        return n("If", { cond: f(expr.cond), thenBranch: f(expr.thenBranch), elseBranch: f(expr.elseBranch) }, expr);
+        return n(
+          "If",
+          { cond: f(expr.cond), thenBranch: f(expr.thenBranch), elseBranch: f(expr.elseBranch) },
+          expr
+        );
       case "Case":
-        return n("Case", { scrutinee: f(expr.scrutinee), leftName: expr.leftName, left: f(expr.left), rightName: expr.rightName, right: f(expr.right) }, expr);
+        return n(
+          "Case",
+          {
+            scrutinee: f(expr.scrutinee),
+            leftName: expr.leftName,
+            left: f(expr.left),
+            rightName: expr.rightName,
+            right: f(expr.right)
+          },
+          expr
+        );
       case "MatchList":
-        return n("MatchList", { scrutinee: f(expr.scrutinee), nilBranch: f(expr.nilBranch), headName: expr.headName, tailName: expr.tailName, consBranch: f(expr.consBranch) }, expr);
+        return n(
+          "MatchList",
+          {
+            scrutinee: f(expr.scrutinee),
+            nilBranch: f(expr.nilBranch),
+            headName: expr.headName,
+            tailName: expr.tailName,
+            consBranch: f(expr.consBranch)
+          },
+          expr
+        );
       case "Observe":
         return n("Observe", { cond: f(expr.cond) }, expr);
       case "Mean":
@@ -21524,7 +21919,17 @@ ${indent(elseBranch)}`;
       case "Poisson":
         return n(expr.kind, { mode: expr.mode, args: expr.args.map(f) }, expr);
       case "Discrete":
-        return n("Discrete", { mode: expr.mode, choices: expr.choices.map((choice) => ({ probability: choice.probability, value: f(choice.value) })) }, expr);
+        return n(
+          "Discrete",
+          {
+            mode: expr.mode,
+            choices: expr.choices.map((choice) => ({
+              probability: choice.probability,
+              value: f(choice.value)
+            }))
+          },
+          expr
+        );
       default:
         return clone(expr);
     }
@@ -21572,7 +21977,15 @@ ${indent(elseBranch)}`;
     }
   }
   function domainErrorExpr(error, source) {
-    return n("DomainError", { message: error.message, distribution: error.kind ?? null, reason: error.reason ?? error.message }, source ?? { from: 0, to: 0 });
+    return n(
+      "DomainError",
+      {
+        message: error.message,
+        distribution: error.kind ?? null,
+        reason: error.reason ?? error.message
+      },
+      source ?? { from: 0, to: 0 }
+    );
   }
   function clone(expr) {
     if (expr.kind === "SymFloat") return symFloat(expr.affine, expr.from, expr.to);
@@ -21641,15 +22054,24 @@ ${indent(elseBranch)}`;
         html = renderIf(expr, focusPath, options);
         break;
       case "Lam":
-        html = wrap(`fun ${plain(expr.param)} =>
-${indent2(renderExpr(expr.body, 0, childFocus(focusPath, "body"), options))}`, 0);
+        html = wrap(
+          `fun ${plain(expr.param)} =>
+${indent2(renderExpr(expr.body, 0, childFocus(focusPath, "body"), options))}`,
+          0
+        );
         break;
       case "Rec":
-        html = wrap(`rec ${plain(expr.name)} ${plain(expr.param)} =>
-${indent2(renderExpr(expr.body, 0, childFocus(focusPath, "body"), options))}`, 0);
+        html = wrap(
+          `rec ${plain(expr.name)} ${plain(expr.param)} =>
+${indent2(renderExpr(expr.body, 0, childFocus(focusPath, "body"), options))}`,
+          0
+        );
         break;
       case "App":
-        html = wrap(`${renderExpr(expr.fn, 5, childFocus(focusPath, "fn"), options)} ${renderExpr(expr.arg, 6, childFocus(focusPath, "arg"), options)}`, 5);
+        html = wrap(
+          `${renderExpr(expr.fn, 5, childFocus(focusPath, "fn"), options)} ${renderExpr(expr.arg, 6, childFocus(focusPath, "arg"), options)}`,
+          5
+        );
         break;
       case "Pair":
         html = `(${renderExpr(expr.left, 0, childFocus(focusPath, "left"), options)}, ${renderExpr(expr.right, 0, childFocus(focusPath, "right"), options)})`;
@@ -21684,7 +22106,10 @@ ${indent2(renderExpr(expr.consBranch, 0, childFocus(focusPath, "consBranch"), op
       default:
         if (expr.kind in infix2) {
           const [op, level] = infix2[expr.kind];
-          html = wrap(`${renderExpr(leftOf2(expr), level, childFocus(focusPath, leftKey(expr)), options)} ${plain(op)} ${renderExpr(rightOf2(expr), level + (expr.kind === "Cons" ? -1 : 1), childFocus(focusPath, rightKey(expr)), options)}`, level);
+          html = wrap(
+            `${renderExpr(leftOf2(expr), level, childFocus(focusPath, leftKey(expr)), options)} ${plain(op)} ${renderExpr(rightOf2(expr), level + (expr.kind === "Cons" ? -1 : 1), childFocus(focusPath, rightKey(expr)), options)}`,
+            level
+          );
           break;
         }
         if (expr.kind in distNames2) {
@@ -21748,8 +22173,13 @@ ${indent2(elseBranch)}`;
   }
   function renderMean(expr, focusPath, options) {
     const name2 = distNames2[expr.distribution] ?? expr.distribution.toLowerCase();
-    const args = expr.args.map((arg, index) => renderExpr(arg, 0, childFocus(focusPath, "args", index), options));
-    const formula = meanFormula(expr.distribution, expr.args.map((arg) => prettyExpr(arg)));
+    const args = expr.args.map(
+      (arg, index) => renderExpr(arg, 0, childFocus(focusPath, "args", index), options)
+    );
+    const formula = meanFormula(
+      expr.distribution,
+      expr.args.map((arg) => prettyExpr(arg))
+    );
     return `<span class="mean-form" title="one-step mean redex: ${escapeHtml(formula)}"><span class="tok-mean">mean_${plain(name2)}</span>(${args.join(", ")})</span>`;
   }
   function meanFormula(distribution, args) {
@@ -22093,9 +22523,13 @@ ${indent2(elseBranch)}`;
   });
   checkPopoverPortal.addEventListener("pointerenter", cancelHideCheckPopover);
   checkPopoverPortal.addEventListener("pointerleave", scheduleHideCheckPopover);
-  window.addEventListener("scroll", () => {
-    if (activeCheck) positionCheckPopover(activeCheck);
-  }, true);
+  window.addEventListener(
+    "scroll",
+    () => {
+      if (activeCheck) positionCheckPopover(activeCheck);
+    },
+    true
+  );
   window.addEventListener("resize", () => {
     if (activeCheck) positionCheckPopover(activeCheck);
   });
@@ -22115,7 +22549,11 @@ ${indent2(elseBranch)}`;
     editor.dispatch({ effects: setDiagnostics.of(diagnostics) });
     logDebug("run-analyze-result", {
       ok: latest.ok,
-      diagnostics: diagnostics.map((diagnostic) => ({ from: diagnostic.from, to: diagnostic.to, message: diagnostic.message })),
+      diagnostics: diagnostics.map((diagnostic) => ({
+        from: diagnostic.from,
+        to: diagnostic.to,
+        message: diagnostic.message
+      })),
       rawDiagnostics: latest.ok ? [] : latest.diagnostics,
       ...collectEditorDebugState("after-diagnostics-dispatch")
     });
@@ -22215,7 +22653,10 @@ ${indent2(elseBranch)}`;
         dom: {
           activeElement: describeElement(document.activeElement),
           cursorCount: root.querySelectorAll(".cm-cursor").length,
-          cursorStyles: Array.from(root.querySelectorAll(".cm-cursor"), (el) => el.getAttribute("style") ?? ""),
+          cursorStyles: Array.from(
+            root.querySelectorAll(".cm-cursor"),
+            (el) => el.getAttribute("style") ?? ""
+          ),
           modeHints: Array.from(root.querySelectorAll(".mode-hint"), describeHint),
           typeHints: Array.from(root.querySelectorAll(".type-hint"), describeHint),
           diagnosticSquiggles: root.querySelectorAll(".diagnostic-squiggle").length,
@@ -22263,20 +22704,30 @@ ${indent2(elseBranch)}`;
   }
   function renderSemantics(source, options = {}) {
     try {
-      logDebug("render-semantics-start", { allowIllTyped: Boolean(options.allowIllTyped), sourceLength: source.length });
+      logDebug("render-semantics-start", {
+        allowIllTyped: Boolean(options.allowIllTyped),
+        sourceLength: source.length
+      });
       if (source !== sampleSource) resetSamples(source);
       const coupled = runCoupling(source, couplingSeed, options);
       addSampleFromCoupling(coupled, source);
       renderCoupling(coupled);
       renderDistributions();
-      logDebug("render-semantics-ok", { frames: coupled.frames.length, ok: coupled.ok, ...collectEditorDebugState("render-semantics-ok") });
+      logDebug("render-semantics-ok", {
+        frames: coupled.frames.length,
+        ok: coupled.ok,
+        ...collectEditorDebugState("render-semantics-ok")
+      });
     } catch (error) {
       panels.coupling.innerHTML = "";
       panels.couplingStatus.textContent = options.allowIllTyped ? "Trace unavailable" : "Coupling failed";
       panels.couplingStatus.className = "status error";
       panels.distribution.innerHTML = "";
       panels.distributionStatus.textContent = "not numeric";
-      logDebug("render-semantics-error", { message: error?.message ?? String(error), ...collectEditorDebugState("render-semantics-error") });
+      logDebug("render-semantics-error", {
+        message: error?.message ?? String(error),
+        ...collectEditorDebugState("render-semantics-error")
+      });
     }
   }
   function runCoupling(source, seed, options = {}) {
@@ -22412,7 +22863,8 @@ ${indent2(elseBranch)}`;
   }
   function hideCorrespondence() {
     if (!activeCorrespondence) return;
-    for (const item of panels.coupling.querySelectorAll(".corr-active")) item.classList.remove("corr-active");
+    for (const item of panels.coupling.querySelectorAll(".corr-active"))
+      item.classList.remove("corr-active");
     activeCorrespondence = null;
   }
   function rowIndex(scope) {

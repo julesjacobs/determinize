@@ -305,7 +305,11 @@ class Parser {
         if (tok.kind === "EOF") {
           throw new CompileError("expected expression before end of input", tok.from, tok.to);
         }
-        throw new CompileError(`expected expression, found ${tokenLabel(tok.kind)}`, tok.from, tok.to);
+        throw new CompileError(
+          `expected expression, found ${tokenLabel(tok.kind)}`,
+          tok.from,
+          tok.to,
+        );
     }
   }
 
@@ -363,7 +367,10 @@ class Parser {
       args.push(first.value);
       while (this.maybe("COMMA")) args.push(this.take("FLOAT").value);
       const end = this.take("RPAREN").to;
-      const choices = args.map((p, i) => ({ probability: p, value: node("Const", { value: i }, nameTok.from, end) }));
+      const choices = args.map((p, i) => ({
+        probability: p,
+        value: node("Const", { value: i }, nameTok.from, end),
+      }));
       return node("Discrete", { mode, choices, displayName: name }, nameTok.from, end);
     }
 

@@ -21,7 +21,12 @@ function ofTyped(te) {
     case "Lam":
       return exprNode("Lam", { param: te.param, body: ofTyped(te.body) }, te.from, te.to);
     case "Rec":
-      return exprNode("Rec", { name: te.name, param: te.param, body: ofTyped(te.body) }, te.from, te.to);
+      return exprNode(
+        "Rec",
+        { name: te.name, param: te.param, body: ofTyped(te.body) },
+        te.from,
+        te.to,
+      );
     case "App":
       return exprNode("App", { fn: ofTyped(te.fn), arg: ofTyped(te.arg) }, te.from, te.to);
     case "Unit":
@@ -67,9 +72,23 @@ function ofTyped(te) {
     case "Bool":
       return exprNode("Bool", { value: te.value }, te.from, te.to);
     case "If":
-      return exprNode("If", { cond: ofTyped(te.cond), thenBranch: ofTyped(te.thenBranch), elseBranch: ofTyped(te.elseBranch) }, te.from, te.to);
+      return exprNode(
+        "If",
+        {
+          cond: ofTyped(te.cond),
+          thenBranch: ofTyped(te.thenBranch),
+          elseBranch: ofTyped(te.elseBranch),
+        },
+        te.from,
+        te.to,
+      );
     case "Let":
-      return exprNode("Let", { name: te.name, value: ofTyped(te.value), body: ofTyped(te.body) }, te.from, te.to);
+      return exprNode(
+        "Let",
+        { name: te.name, value: ofTyped(te.value), body: ofTyped(te.body) },
+        te.from,
+        te.to,
+      );
     case "Const":
       return exprNode("Const", { value: te.value }, te.from, te.to);
     case "Add":
@@ -78,7 +97,12 @@ function ofTyped(te) {
     case "Div":
     case "Lt":
     case "Leq":
-      return exprNode(te.kind, { left: ofTyped(te.left), right: ofTyped(te.right) }, te.from, te.to);
+      return exprNode(
+        te.kind,
+        { left: ofTyped(te.left), right: ofTyped(te.right) },
+        te.from,
+        te.to,
+      );
     case "Uniform":
       if (floatMode(te) === "E") return meanNode(te.kind, te.args.map(ofTyped), te);
       return exprNode("Uniform", { mode: null, args: te.args.map(ofTyped) }, te.from, te.to);
@@ -102,9 +126,26 @@ function ofTyped(te) {
       return exprNode(te.kind, { mode: null, args: te.args.map(ofTyped) }, te.from, te.to);
     case "Discrete":
       if (floatMode(te) === "E") {
-        return meanNode("Discrete", te.choices.map((choice) => exprNode("Const", { value: choice.probability }, te.from, te.to)), te);
+        return meanNode(
+          "Discrete",
+          te.choices.map((choice) =>
+            exprNode("Const", { value: choice.probability }, te.from, te.to),
+          ),
+          te,
+        );
       }
-      return exprNode("Discrete", { mode: null, choices: te.choices.map((choice) => ({ probability: choice.probability, value: ofTyped(choice.value) })) }, te.from, te.to);
+      return exprNode(
+        "Discrete",
+        {
+          mode: null,
+          choices: te.choices.map((choice) => ({
+            probability: choice.probability,
+            value: ofTyped(choice.value),
+          })),
+        },
+        te.from,
+        te.to,
+      );
     case "Observe":
       return exprNode("Observe", { cond: ofTyped(te.cond) }, te.from, te.to);
     default:

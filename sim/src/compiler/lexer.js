@@ -68,7 +68,8 @@ export function lex(source) {
       const start = i;
       i += 2;
       while (i < source.length && !source.startsWith("*)", i)) i++;
-      if (i >= source.length) throw new CompileError("unterminated comment; expected `*)`", start, source.length);
+      if (i >= source.length)
+        throw new CompileError("unterminated comment; expected `*)`", start, source.length);
       i += 2;
       continue;
     }

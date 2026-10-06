@@ -71,7 +71,10 @@ export function prettyExpr(expr, prec = 0) {
     default:
       if (expr.kind in infix) {
         const [op, level] = infix[expr.kind];
-        return wrap(`${prettyExpr(leftOf(expr), level)} ${op} ${prettyExpr(rightOf(expr), level + (expr.kind === "Cons" ? -1 : 1))}`, level);
+        return wrap(
+          `${prettyExpr(leftOf(expr), level)} ${op} ${prettyExpr(rightOf(expr), level + (expr.kind === "Cons" ? -1 : 1))}`,
+          level,
+        );
       }
       if (expr.kind in distNames) return prettyDistribution(expr);
       return `<${expr.kind}>`;
@@ -80,7 +83,8 @@ export function prettyExpr(expr, prec = 0) {
 
 export function prettyTyped(te, prec = 0) {
   const typeText = formatType(te.typ);
-  const withType = (body, level = 0) => (prec > level ? `(${body} : ${typeText})` : `${body} : ${typeText}`);
+  const withType = (body, level = 0) =>
+    prec > level ? `(${body} : ${typeText})` : `${body} : ${typeText}`;
   switch (te.kind) {
     case "Var":
       return withType(te.name, 6);
@@ -120,7 +124,10 @@ export function prettyTyped(te, prec = 0) {
     default:
       if (te.kind in infix) {
         const [op, level] = infix[te.kind];
-        return withType(`${prettyTyped(leftOf(te), level)} ${op} ${prettyTyped(rightOf(te), level + 1)}`, level);
+        return withType(
+          `${prettyTyped(leftOf(te), level)} ${op} ${prettyTyped(rightOf(te), level + 1)}`,
+          level,
+        );
       }
       if (te.kind in distNames) return withType(prettyTypedDistribution(te), 6);
       return withType(`<${te.kind}>`);
@@ -130,7 +137,8 @@ export function prettyTyped(te, prec = 0) {
 function prettyDistribution(expr) {
   const name = distNames[expr.kind];
   const mode = expr.mode ? `[${expr.mode}]` : "";
-  if (expr.kind === "Discrete") return `${name}${mode}(${expr.choices.map((c) => formatNumber(c.probability)).join(", ")})`;
+  if (expr.kind === "Discrete")
+    return `${name}${mode}(${expr.choices.map((c) => formatNumber(c.probability)).join(", ")})`;
   return `${name}${mode}(${expr.args.map((arg) => prettyExpr(arg)).join(", ")})`;
 }
 
@@ -145,7 +153,8 @@ function prettyTypedDistribution(te) {
   const derivedMode = ty.tag === "Float" ? ty.mode.mode : null;
   const mode = te.mode ?? derivedMode;
   const modeText = mode ? `[${mode}]` : "";
-  if (te.kind === "Discrete") return `${name}${modeText}(${te.choices.map((c) => formatNumber(c.probability)).join(", ")})`;
+  if (te.kind === "Discrete")
+    return `${name}${modeText}(${te.choices.map((c) => formatNumber(c.probability)).join(", ")})`;
   return `${name}${modeText}(${te.args.map((arg) => prettyTyped(arg)).join(", ")})`;
 }
 
@@ -170,7 +179,12 @@ function prettyIf(expr) {
   const cond = prettyExpr(expr.cond);
   const thenBranch = prettyExpr(expr.thenBranch);
   const elseBranch = prettyExpr(expr.elseBranch);
-  if (!hasLineBreak(cond) && !hasLineBreak(thenBranch) && !hasLineBreak(elseBranch) && lineLength(`if ${cond} then ${thenBranch} else ${elseBranch}`) <= 80) {
+  if (
+    !hasLineBreak(cond) &&
+    !hasLineBreak(thenBranch) &&
+    !hasLineBreak(elseBranch) &&
+    lineLength(`if ${cond} then ${thenBranch} else ${elseBranch}`) <= 80
+  ) {
     return `if ${cond} then ${thenBranch} else ${elseBranch}`;
   }
   return `if ${cond}\nthen\n${indent(thenBranch)}\nelse\n${indent(elseBranch)}`;
@@ -185,7 +199,10 @@ function lineLength(text) {
 }
 
 function indent(text) {
-  return text.split("\n").map((line) => (line ? `  ${line}` : line)).join("\n");
+  return text
+    .split("\n")
+    .map((line) => (line ? `  ${line}` : line))
+    .join("\n");
 }
 
 function formatNumber(value) {
@@ -194,7 +211,9 @@ function formatNumber(value) {
 }
 
 function domainErrorSummary(expr) {
-  const distribution = expr.distribution ? `${distNames[expr.distribution] ?? expr.distribution.toLowerCase()}: ` : "";
+  const distribution = expr.distribution
+    ? `${distNames[expr.distribution] ?? expr.distribution.toLowerCase()}: `
+    : "";
   return `${distribution}${expr.reason ?? expr.message}`;
 }
 
