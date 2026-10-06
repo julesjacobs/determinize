@@ -1,6 +1,5 @@
 import type { Affine } from "../runtime/affine.ts";
 import type { Rational } from "./rational.ts";
-import type { Type } from "./types.ts";
 
 export type Mode = "E" | "G";
 
@@ -89,51 +88,9 @@ export type Expr = Span &
       }
   );
 
-/** A source program with the type inferred for every subexpression. */
-export type TypedExpr = Span & { typ: Type } & (
-    | { kind: "Var"; name: string }
-    | { kind: "Const"; value: number }
-    | { kind: "Bool"; value: boolean }
-    | { kind: "Unit" | "Nil" }
-    | { kind: "Lam"; param: string; body: TypedExpr }
-    | { kind: "Rec"; name: string; param: string; body: TypedExpr }
-    | { kind: "App"; fn: TypedExpr; arg: TypedExpr }
-    | { kind: BinaryKind; left: TypedExpr; right: TypedExpr }
-    | { kind: UnaryKind; expr: TypedExpr }
-    | { kind: "Cons"; head: TypedExpr; tail: TypedExpr }
-    | {
-        kind: "Case";
-        scrutinee: TypedExpr;
-        leftName: string;
-        left: TypedExpr;
-        rightName: string;
-        right: TypedExpr;
-      }
-    | {
-        kind: "MatchList";
-        scrutinee: TypedExpr;
-        nilBranch: TypedExpr;
-        headName: string;
-        tailName: string;
-        consBranch: TypedExpr;
-      }
-    | { kind: "If"; cond: TypedExpr; thenBranch: TypedExpr; elseBranch: TypedExpr }
-    | { kind: "Let"; name: string; value: TypedExpr; body: TypedExpr }
-    | { kind: "Observe"; cond: TypedExpr }
-    | { kind: ParamDistributionKind; mode: Mode | null; args: TypedExpr[] }
-    | { kind: "Discrete"; mode: Mode | null; choices: Choice<TypedExpr>[] }
-    | {
-        kind: "DiscreteList";
-        mode: Mode | null;
-        probabilities: TypedExpr;
-        form: "remainder" | "list";
-      }
-  );
-
 /** The members of the union U whose kind admits K. */
 export type OfKind<U, K> = U extends { kind: infer UK } ? (K extends UK ? U : never) : never;
 export type ExprOf<K extends Expr["kind"]> = OfKind<Expr, K>;
-export type TypedExprOf<K extends TypedExpr["kind"]> = OfKind<TypedExpr, K>;
 
 export function node<K extends Expr["kind"]>(
   kind: K,

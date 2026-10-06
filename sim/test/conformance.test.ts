@@ -17,41 +17,7 @@ interface Case {
 }
 
 /** Cases where the simulator differs from Lean, with the reason. */
-const todo: Record<string, string> = {
-  // Elaboration
-  "tests/typing/accept/gauss.det":
-    "the checker types the parsed `e * literal`, not the elaborated `literal * e`",
-  "tests/typing/accept/mult.det":
-    "the checker types the parsed `e * literal`, not the elaborated `literal * e`",
-  // Inference
-  "tests/typing/accept/subtyping.det":
-    "an annotated site fixes the mode of its context instead of being a subtype of it",
-  "tests/typing/accept/mixed-list.det":
-    "an annotated site fixes the mode of its context instead of being a subtype of it",
-  "tests/typing/accept/mixed-pair.det":
-    "an annotated site fixes the mode of its context instead of being a subtype of it",
-  "tests/typing/accept/mixed-sum.det":
-    "an annotated site fixes the mode of its context instead of being a subtype of it",
-  "tests/statistical/mixed.det":
-    "an annotated site fixes the mode of its context instead of being a subtype of it",
-  "tests/execution/bernoulli-general-operand.det":
-    "a Bernoulli operand has the site's mode instead of a subtype of it",
-  "tests/statistical/bernoulli-mixed.det":
-    "a Bernoulli operand has the site's mode instead of a subtype of it",
-  "examples/paper/gauss-random-walk.det":
-    "a result type equals the first type checked against it, not the greatest one",
-  "examples/loops/bounded-iteration.det":
-    "a result type equals the first type checked against it, not the greatest one",
-  "examples/loops/geometric-random-increment.det":
-    "a result type equals the first type checked against it, not the greatest one",
-  "examples/while.det":
-    "a result type equals the first type checked against it, not the greatest one",
-  "tests/execution/flip-prob.det":
-    "a result type equals the first type checked against it, not the greatest one",
-  "tests/typing/accept/identity.det": "unconstrained type variables are not read back as unit",
-  "tests/execution/divergence.det": "unconstrained type variables are not read back as unit",
-  "tests/typing/reject/infinite-type.det": "no occurs check, so unification overflows the stack",
-};
+const todo: Record<string, string> = {};
 
 const root = new URL("../../", import.meta.url);
 

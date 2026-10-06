@@ -1,9 +1,9 @@
 import { RangeSetBuilder, StateEffect, StateField } from "@codemirror/state";
 import type { DecorationSet, ViewUpdate } from "@codemirror/view";
 import { Decoration, EditorView, ViewPlugin, WidgetType } from "@codemirror/view";
+import type { SpanInfo } from "./compiler/analyze.ts";
 import { analyze } from "./compiler/analyze.ts";
 import type { Mode } from "./compiler/ast.ts";
-import type { SpanInfo } from "./compiler/infer.ts";
 
 const distributionNames = new Set([
   "uniform",

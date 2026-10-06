@@ -136,6 +136,86 @@ test("elaboration rejects what Lean's elaborator rejects", () => {
   }
 });
 
+// The cases of Lean's lean/Tests/Inference.lean and lean/Tests/Completions.lean.
+test("inference chooses Lean's greatest modes", () => {
+  const cases: [string, string[]][] = [
+    ["uniform(0,1) + gauss(2,1)", ["E", "E"]],
+    ["let x = uniform(0,1) in if x < 0.5 then x else 0", ["G"]],
+    ["uniform[G](1,2) * uniform[E](0,1)", ["G", "E"]],
+    ["uniform[E](0,1) / uniform[G](1,2)", ["E", "G"]],
+    ["if true then uniform(0,1) else uniform(0,1) * uniform(0,1)", ["E", "G", "E"]],
+  ];
+  for (const [source, affinities] of cases) {
+    const result = analyze(source);
+    assert.ok(result.ok, source);
+    assert.deepEqual(result.affinities, affinities, source);
+  }
+});
+
+test("inference accepts and rejects as Lean's inference", () => {
+  for (const source of [
+    "let x = uniform[E](0,1) in x*x",
+    "uniform[E](0,1) < 0.5",
+    "uniform[G](0,uniform[E](0,1))",
+    "fun x => x x",
+    "true + 1",
+    "missing",
+    "flip(uniform[E](0,1))",
+    "discrete(1,2,3)",
+    "discrete(0.2,0.3)",
+    "discrete(-0.5,1.5)",
+    "fun x => let f = fun y => x :: y in f x",
+    "fun x => let f = fun y => x :: y :: [] in f (x :: [])",
+    "fun f => let g = fun x => f x in g f",
+    "fun x => let f = fun y => x :: y :: [] in let a = f true in f 0",
+  ]) {
+    assert.equal(analyze(source).ok, false, source);
+  }
+  for (const source of [
+    "fun x => x",
+    "[]",
+    "inl 1",
+    "(1,true)",
+    "let x = uniform[G](0,1) in x + uniform[E](0,1)",
+    "flip(0.5)",
+    "bernoulli(0.5)",
+    "discrete(0.25,0.25,0.5)",
+    "observe(true)",
+  ]) {
+    assert.equal(analyze(source).ok, true, source);
+  }
+});
+
+test("explicit modes are subtypes, not equalities", () => {
+  for (const source of [
+    "uniform[G](0,1) :: uniform[E](0,1) :: []",
+    "uniform[E](0,1) :: uniform[G](0,1) :: []",
+    "if true then (uniform[G](0,1), true) else (uniform[E](0,1), false)",
+    "if true then inl uniform[G](0,1) else inl uniform[E](0,1)",
+    "let f = if true then (fun x => uniform[G](0,1)) else (fun x => uniform[E](0,1)) in f 0",
+    "let f = if true then (rec f x => if x < 0 then f (x+1) else uniform[G](0,1)) else (fun x => uniform[E](0,1)) in f 0",
+  ]) {
+    const result = analyze(source);
+    assert.ok(result.ok, source);
+    assert.ok(result.affinities.includes("G") && result.affinities.includes("E"), source);
+  }
+  for (const sample of ["uniform(0,1)", "uniform[E](0,1)"]) {
+    for (const calls of [`f x + f (${sample})`, `f (${sample}) + f x`]) {
+      const source = `let use = fun f => fun x => ${calls} + x*x in use (fun z => z) (uniform[G](0,1))`;
+      const result = analyze(source);
+      assert.ok(result.ok, source);
+      assert.equal(result.type, "float[E]", source);
+      assert.deepEqual(result.affinities, ["E", "G"], source);
+    }
+  }
+});
+
+test("unconstrained types read back as unit", () => {
+  const result = analyze("fun x => x");
+  assert.ok(result.ok);
+  assert.equal(result.type, "(unit -> unit)");
+});
+
 test("pretty printer keeps short let chains compact and aligned", () => {
   const ast = parse("let x = uniform[E](0, 1) in let y = uniform[G](0, 1) in x + y");
   assert.equal(prettyExpr(ast), "let x = uniform[E](0, 1) in\nlet y = uniform[G](0, 1) in\nx + y");
@@ -155,8 +235,7 @@ test("uniform determinizes to its mean by default", () => {
 test("multiplication keeps one sample symbolic and samples the other operand", () => {
   const result = analyze("uniform(0, 1) * uniform(1, 2)");
   assert.equal(result.ok, true);
-  assert.match(result.pretty.elaboratedDefaulted, /uniform\[E\]/);
-  assert.match(result.pretty.elaboratedDefaulted, /uniform\[G\]/);
+  assert.deepEqual(result.affinities, ["G", "E"]);
   assert.match(result.pretty.determinized, /uniform\(0, 1\) \* mean_uniform\(1, 2\)/);
 });
 
@@ -169,8 +248,8 @@ test("multiplication is asymmetric, so users commute to keep the symbolic operan
 test("nonlinear variable use forces operand G but not result G", () => {
   const result = analyze("let x = uniform(0, 1) in\nx * x");
   assert.equal(result.ok, true);
-  assert.match(result.pretty.elaboratedDefaulted, /let x : float\[G\]/);
-  assert.match(result.pretty.elaboratedDefaulted, /\*.*: float\[E\]/s);
+  assert.deepEqual(result.affinities, ["G"]);
+  assert.equal(result.type, "float[E]");
   assert.equal(result.pretty.determinized, "let x = uniform(0, 1) in\nx * x");
 });
 

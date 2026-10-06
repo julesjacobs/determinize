@@ -1,270 +1,47 @@
-import type { Mode, Span } from "./ast.ts";
-import { CompileError } from "./errors.ts";
+import type { Mode } from "./ast.ts";
 
-/** A mode variable, with the submode constraints that mention it. */
-export interface ModeMeta {
-  tag: "ModeMeta";
-  id: number;
-  mode: Mode | null;
-  constraints: Submode[];
-}
+/** Lean's `Ty` (`Spec/Types.lean`): `float[G]` is a subtype of `float[E]`. */
+export type Ty =
+  | { tag: "unit" | "bool" }
+  | { tag: "float"; mode: Mode }
+  | { tag: "prod" | "sum" | "arr"; a: Ty; b: Ty }
+  | { tag: "list"; a: Ty };
 
-/** A value of mode lhs is used where mode rhs is expected: if rhs is G, so is lhs. */
-interface Submode {
-  lhs: ModeMeta;
-  rhs: ModeMeta;
-}
-
-/** A type variable. */
-export interface Meta {
-  tag: "Meta";
-  id: number;
-  value: Type | null;
-}
-
-export type FloatType = { tag: "Float"; mode: ModeMeta };
-
-export type Type =
-  | { tag: "Unit" }
-  | { tag: "Bool" }
-  | { tag: "Nat" }
-  | FloatType
-  | { tag: "Pair"; left: Type; right: Type }
-  | { tag: "Sum"; left: Type; right: Type }
-  | { tag: "List"; elem: Type }
-  | { tag: "Arrow"; arg: Type; result: Type }
-  | { tag: "MetaType"; meta: Meta };
-
-let modeCounter = 0;
-let tyCounter = 0;
-
-export function resetTypeState() {
-  modeCounter = 0;
-  tyCounter = 0;
-}
-
-export function freshModeMeta(): ModeMeta {
-  modeCounter += 1;
-  return { tag: "ModeMeta", id: modeCounter, mode: null, constraints: [] };
-}
-
-export function freshMeta(): Meta {
-  tyCounter += 1;
-  return { tag: "Meta", id: tyCounter, value: null };
-}
-
-export const TUnit: Type = { tag: "Unit" };
-export const TBool: Type = { tag: "Bool" };
-export const TNat: Type = { tag: "Nat" };
-export const TFloat = (mode = freshModeMeta()): FloatType => ({ tag: "Float", mode });
-export const TPair = (left: Type, right: Type): Type => ({ tag: "Pair", left, right });
-export const TSum = (left: Type, right: Type): Type => ({ tag: "Sum", left, right });
-export const TList = (elem: Type): Type => ({ tag: "List", elem });
-export const TArrow = (arg: Type, result: Type): Type => ({ tag: "Arrow", arg, result });
-export const TMeta = (meta = freshMeta()): Type => ({ tag: "MetaType", meta });
-
-export function setMode(mvar: ModeMeta, mode: Mode, source: Span | undefined = undefined) {
-  if (mvar.mode == null) {
-    mvar.mode = mode;
-    for (const c of [...mvar.constraints]) propagateSubmode(c.lhs, c.rhs, source);
-    return;
-  }
-  if (mvar.mode !== mode) {
-    throw new CompileError(
-      `mode mismatch: expected ${mvar.mode}-mode sample, found ${mode}-mode sample`,
-      source?.from,
-      source?.to,
-    );
-  }
-}
-
-function propagateSubmode(lhs: ModeMeta, rhs: ModeMeta, source: Span | undefined = undefined) {
-  if (lhs.mode === "E" && rhs.mode == null) setMode(rhs, "E", source);
-  else if (lhs.mode == null && rhs.mode === "G") setMode(lhs, "G", source);
-  else if (lhs.mode === "E" && rhs.mode === "G") {
-    throw new CompileError(
-      "mode mismatch: E-mode value cannot be used where G-mode sampling is required",
-      source?.from,
-      source?.to,
-    );
-  }
-}
-
-export function submode(
-  lhs: ModeMeta,
-  rhs: ModeMeta,
-  source: Span | undefined = undefined,
-): undefined {
-  const c = { lhs, rhs };
-  lhs.constraints.push(c);
-  rhs.constraints.push(c);
-  propagateSubmode(lhs, rhs, source);
-}
-
-export function zonk(type: Type, seen = new Set<number>()): Type {
-  if (type.tag !== "MetaType") return type;
-  const meta = type.meta;
-  if (seen.has(meta.id)) return type;
-  if (!meta.value) return type;
-  seen.add(meta.id);
-  const value = zonk(meta.value, seen);
-  meta.value = value;
-  return value;
-}
-
-export function setType(meta: Meta, type: Type, source: Span | undefined = undefined): undefined {
-  const value = zonk(type);
-  if (!meta.value) {
-    if (value.tag === "MetaType" && value.meta.id === meta.id) return;
-    meta.value = value;
-    return;
-  }
-  assertSubtype(value, zonk(meta.value), source);
-}
-
-export function assertSubtype(
-  left: Type,
-  right: Type,
-  source: Span | undefined = undefined,
-): undefined {
-  const a = zonk(left);
-  const b = zonk(right);
-  if (a.tag === "Float" && b.tag === "Float") return submode(a.mode, b.mode, source);
-  if ((a.tag === "Pair" && b.tag === "Pair") || (a.tag === "Sum" && b.tag === "Sum")) {
-    assertSubtype(a.left, b.left, source);
-    assertSubtype(a.right, b.right, source);
-    return;
-  }
-  if (a.tag === "List" && b.tag === "List") return assertSubtype(a.elem, b.elem, source);
-  if (a.tag === "Arrow" && b.tag === "Arrow") {
-    assertSubtype(b.arg, a.arg, source);
-    assertSubtype(a.result, b.result, source);
-    return;
-  }
-  if (a.tag === "Unit" && b.tag === "Unit") return;
-  if (a.tag === "Bool" && b.tag === "Bool") return;
-  if (a.tag === "Nat" && b.tag === "Nat") return;
-  if (a.tag === "MetaType" && b.tag === "MetaType" && a.meta.id === b.meta.id) return;
-  if (a.tag === "MetaType") return setType(a.meta, b, source);
-  if (b.tag === "MetaType") return setType(b.meta, a, source);
-  throw new CompileError(
-    `type mismatch: expected ${formatTypeForError(b)}, found ${formatTypeForError(a)}`,
-    source?.from,
-    source?.to,
-  );
-}
-
-export function ensureFloat(expected: Type, source: Span | undefined = undefined): FloatType {
-  const ty = zonk(expected);
-  if (ty.tag === "Float") return ty;
-  if (ty.tag === "MetaType") {
-    const mode = freshModeMeta();
-    const floatTy = TFloat(mode);
-    setType(ty.meta, floatTy, source);
-    return floatTy;
-  }
-  throw new CompileError(
-    `expected float, found ${formatTypeForError(ty)}`,
-    source?.from,
-    source?.to,
-  );
-}
-
-function formatTypeForError(type: Type) {
-  return formatType(type)
-    .replace(/float\[\?m\d+\]/g, "float")
-    .replace(/\?t\d+/g, "unknown");
-}
-
-export function freshFloat() {
-  return TFloat(freshModeMeta());
-}
-
-export function defaultModesType(type: Type) {
-  const ty = zonk(type);
+/** The type as Lean's `prettyType` prints it. */
+export function prettyType(ty: Ty): string {
   switch (ty.tag) {
-    case "Float":
-      if (ty.mode.mode == null) setMode(ty.mode, "E");
-      break;
-    case "Pair":
-    case "Sum":
-      defaultModesType(ty.left);
-      defaultModesType(ty.right);
-      break;
-    case "List":
-      defaultModesType(ty.elem);
-      break;
-    case "Arrow":
-      defaultModesType(ty.arg);
-      defaultModesType(ty.result);
-      break;
-    case "MetaType":
-      if (ty.meta.value) defaultModesType(ty.meta.value);
-      break;
+    case "unit":
+    case "bool":
+      return ty.tag;
+    case "float":
+      return `float[${ty.mode}]`;
+    case "prod":
+      return `(${prettyType(ty.a)} * ${prettyType(ty.b)})`;
+    case "sum":
+      return `(${prettyType(ty.a)} + ${prettyType(ty.b)})`;
+    case "list":
+      return `[${prettyType(ty.a)}]`;
+    case "arr":
+      return `(${prettyType(ty.a)} -> ${prettyType(ty.b)})`;
   }
 }
 
-/** The type as Lean's `prettyType` prints it, with `?` for an unknown type. */
-export function formatLeanType(type: Type): string {
-  const ty = zonk(type);
+/** The type with only the parentheses that products, sums and arrows need. */
+export function formatType(ty: Ty, prec = 0): string {
+  const wrap = (text: string, level: number) => (prec > level ? `(${text})` : text);
   switch (ty.tag) {
-    case "Unit":
-      return "unit";
-    case "Bool":
-      return "bool";
-    case "Nat":
-      return "nat";
-    case "Float":
-      return `float[${ty.mode.mode ?? "?"}]`;
-    case "Pair":
-      return `(${formatLeanType(ty.left)} * ${formatLeanType(ty.right)})`;
-    case "Sum":
-      return `(${formatLeanType(ty.left)} + ${formatLeanType(ty.right)})`;
-    case "List":
-      return `[${formatLeanType(ty.elem)}]`;
-    case "Arrow":
-      return `(${formatLeanType(ty.arg)} -> ${formatLeanType(ty.result)})`;
-    case "MetaType":
-      return "?";
+    case "unit":
+    case "bool":
+      return ty.tag;
+    case "float":
+      return `float[${ty.mode}]`;
+    case "prod":
+      return wrap(`${formatType(ty.a, 3)} * ${formatType(ty.b, 3)}`, 2);
+    case "sum":
+      return wrap(`${formatType(ty.a, 3)} + ${formatType(ty.b, 3)}`, 2);
+    case "list":
+      return `[${formatType(ty.a)}]`;
+    case "arr":
+      return wrap(`${formatType(ty.a, 1)} -> ${formatType(ty.b, 0)}`, 0);
   }
-}
-
-export function formatType(type: Type) {
-  const seen = new Set<number>();
-  const go = (ty: Type, prec = 0): string => {
-    ty = zonk(ty);
-    switch (ty.tag) {
-      case "Unit":
-        return "unit";
-      case "Bool":
-        return "bool";
-      case "Nat":
-        return "nat";
-      case "Float":
-        return `float[${ty.mode.mode ?? `?m${ty.mode.id}`}]`;
-      case "Pair": {
-        const s = `${go(ty.left, 2)} * ${go(ty.right, 2)}`;
-        return prec > 2 ? `(${s})` : s;
-      }
-      case "Sum": {
-        const s = `${go(ty.left, 2)} + ${go(ty.right, 2)}`;
-        return prec > 2 ? `(${s})` : s;
-      }
-      case "List":
-        return `[${go(ty.elem, 0)}]`;
-      case "Arrow": {
-        const s = `${go(ty.arg, 1)} -> ${go(ty.result, 0)}`;
-        return prec > 1 ? `(${s})` : s;
-      }
-      case "MetaType":
-        if (ty.meta.value && !seen.has(ty.meta.id)) {
-          seen.add(ty.meta.id);
-          return go(ty.meta.value, prec);
-        }
-        return `?t${ty.meta.id}`;
-      default:
-        return (ty as Type).tag;
-    }
-  };
-  return go(type);
 }

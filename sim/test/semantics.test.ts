@@ -156,12 +156,12 @@ test("distribution domain checks cover bernoulli probability and discrete totals
   assert.equal(bernoulli.ordinary.value.kind, "DomainError");
   assert.match(bernoulli.ordinary.value.message, /probability must be in \[0, 1\]/);
 
-  const discrete = runCoupledTrace("let x = discrete[E](0.2, 0.2) in\nx", 37);
+  const discrete = runCoupledTrace("let x = discrete[E](0.6, 0.6, *) in\nx", 37);
   assert.equal(discrete.ok, true);
   assert.equal(last(discrete).symbolic.kind, "DomainError");
   assert.match(
     expectKind(last(discrete).symbolic, "DomainError").message,
-    /probabilities must sum to 1/,
+    /probabilities must sum to at most 1/,
   );
 });
 

@@ -1,8 +1,5 @@
 import type { Affine } from "../runtime/affine.ts";
-import type { DistributionKind, Expr, ExprOf, TypedExpr, TypedExprOf } from "./ast.ts";
-import { formatType, zonk } from "./types.ts";
-
-type TypedDist = TypedExprOf<DistributionKind>;
+import type { DistributionKind, Expr, ExprOf } from "./ast.ts";
 
 /** The operands of an infix node: left and right, or head and tail of a Cons. */
 interface Operands<E> {
@@ -97,59 +94,6 @@ export function prettyExpr(expr: Expr, prec = 0): string {
   }
 }
 
-export function prettyTyped(te: TypedExpr, prec = 0): string {
-  const typeText = formatType(te.typ);
-  const withType = (body: string, level = 0) =>
-    prec > level ? `(${body} : ${typeText})` : `${body} : ${typeText}`;
-  switch (te.kind) {
-    case "Var":
-      return withType(te.name, 6);
-    case "Const":
-      return withType(formatNumber(te.value), 6);
-    case "Bool":
-      return withType(te.value ? "true" : "false", 6);
-    case "Unit":
-      return withType("()", 6);
-    case "Nil":
-      return withType("[]", 6);
-    case "Let":
-      return `let ${te.name} : ${formatType(te.value.typ)} =\n${indent(prettyTyped(te.value))}\nin\n${indent(prettyTyped(te.body))}\n: ${typeText}`;
-    case "Lam":
-      return withType(`fun ${te.param} =>\n${indent(prettyTyped(te.body))}`);
-    case "Rec":
-      return withType(`rec ${te.name} ${te.param} =>\n${indent(prettyTyped(te.body))}`);
-    case "App":
-      return withType(`${prettyTyped(te.fn, 5)} ${prettyTyped(te.arg, 6)}`, 5);
-    case "Pair":
-      return withType(`(${prettyTyped(te.left)}, ${prettyTyped(te.right)})`, 6);
-    case "Fst":
-    case "Snd":
-    case "Inl":
-    case "Inr":
-      return withType(`${te.kind.toLowerCase()} ${prettyTyped(te.expr, 6)}`, 6);
-    case "Neg":
-      return withType(`-${prettyTyped(te.expr, 6)}`, 6);
-    case "If":
-      return `if ${prettyTyped(te.cond)}\nthen\n${indent(prettyTyped(te.thenBranch))}\nelse\n${indent(prettyTyped(te.elseBranch))}\n: ${typeText}`;
-    case "Case":
-      return `match ${prettyTyped(te.scrutinee)} with inl ${te.leftName} =>\n${indent(prettyTyped(te.left))}\n| inr ${te.rightName} =>\n${indent(prettyTyped(te.right))}\n: ${typeText}`;
-    case "MatchList":
-      return `match ${prettyTyped(te.scrutinee)} with [] =>\n${indent(prettyTyped(te.nilBranch))}\n| ${te.headName} :: ${te.tailName} =>\n${indent(prettyTyped(te.consBranch))}\n: ${typeText}`;
-    case "Observe":
-      return withType(`observe(${prettyTyped(te.cond)})`, 6);
-    default:
-      if (te.kind in infix) {
-        const [op, level] = infix[te.kind];
-        return withType(
-          `${prettyTyped(leftOf(te), level)} ${op} ${prettyTyped(rightOf(te), level + 1)}`,
-          level,
-        );
-      }
-      if (te.kind in distNames) return withType(prettyTypedDistribution(te as TypedDist), 6);
-      return withType(`<${te.kind}>`);
-  }
-}
-
 function prettyDistribution(expr: ExprOf<DistributionKind | "DiscreteWeights">) {
   const name = distNames[expr.kind];
   const mode = expr.mode ? `[${expr.mode}]` : "";
@@ -180,18 +124,6 @@ export function listElements(expr: Expr): Expr[] | null {
 function prettyMean(expr: ExprOf<"Mean">) {
   const name = distNames[expr.distribution] ?? expr.distribution.toLowerCase();
   return `mean_${name}(${expr.args.map((arg) => prettyExpr(arg)).join(", ")})`;
-}
-
-function prettyTypedDistribution(te: TypedDist) {
-  const name = distNames[te.kind];
-  const ty = zonk(te.typ);
-  const derivedMode = ty.tag === "Float" ? ty.mode.mode : null;
-  const mode = te.mode ?? derivedMode;
-  const modeText = mode ? `[${mode}]` : "";
-  if (te.kind === "Discrete")
-    return `${name}${modeText}(${te.choices.map((c) => formatNumber(c.probability)).join(", ")})`;
-  if (te.kind === "DiscreteList") return `${name}${modeText}(${prettyTyped(te.probabilities)})`;
-  return `${name}${modeText}(${te.args.map((arg) => prettyTyped(arg)).join(", ")})`;
 }
 
 function leftOf<E>(expr: Operands<E>): E {
