@@ -1,9 +1,9 @@
-import { node } from "../compiler/ast.js";
-import { determinize } from "../compiler/determinize.js";
-import { defaultModes, inferProgram } from "../compiler/infer.js";
-import { parse } from "../compiler/parser.js";
-import { prettyExpr } from "../compiler/pretty.js";
-import { zonk } from "../compiler/types.js";
+import { node } from "../compiler/ast.ts";
+import { determinize } from "../compiler/determinize.ts";
+import { defaultModes, inferProgram } from "../compiler/infer.ts";
+import { parse } from "../compiler/parser.ts";
+import { prettyExpr } from "../compiler/pretty.ts";
+import { zonk } from "../compiler/types.ts";
 import {
   affineAdd,
   affineConst,
@@ -17,15 +17,15 @@ import {
   prettyAffine,
   symFloat,
   valueToAffine,
-} from "./affine.js";
+} from "./affine.ts";
 import {
   floatDistributions,
   instantiateArgs,
   isDistributionDomainError,
   meanDistribution,
   sampleDistribution,
-} from "./distributions.js";
-import { makeStreams } from "./rng.js";
+} from "./distributions.ts";
+import { makeStreams } from "./rng.ts";
 
 export function prepareRuntime(source) {
   const ast = parse(source);

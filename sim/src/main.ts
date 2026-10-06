@@ -11,21 +11,21 @@ import {
   keymap,
   lineNumbers,
 } from "@codemirror/view";
-import { analyze } from "./compiler/analyze.js";
-import { prettyExpr } from "./compiler/pretty.js";
+import { analyze } from "./compiler/analyze.ts";
+import { prettyExpr } from "./compiler/pretty.ts";
 import {
   diagnosticHover,
   diagnosticsState,
   normalizeDiagnostics,
   setDiagnostics,
-} from "./diagnostics.js";
-import { examples } from "./examples.js";
-import { detHighlighting, detLanguage } from "./language.js";
-import { hoveredTypeHintState, modeHints, setTypeHints, typeHintState } from "./modeHints.js";
-import { affineConst, affineToNumber, evalAffine, prettyAffine } from "./runtime/affine.js";
-import { meanDistribution } from "./runtime/distributions.js";
-import { runCoupledTrace } from "./runtime/semantics.js";
-import { changedPath, renderHighlightedText, renderTraceExpr } from "./traceRender.js";
+} from "./diagnostics.ts";
+import { examples } from "./examples.ts";
+import { detHighlighting, detLanguage } from "./language.ts";
+import { hoveredTypeHintState, modeHints, setTypeHints, typeHintState } from "./modeHints.ts";
+import { affineConst, affineToNumber, evalAffine, prettyAffine } from "./runtime/affine.ts";
+import { meanDistribution } from "./runtime/distributions.ts";
+import { runCoupledTrace } from "./runtime/semantics.ts";
+import { changedPath, renderHighlightedText, renderTraceExpr } from "./traceRender.ts";
 
 const editorHost = document.querySelector("#editor");
 const exampleSelect = document.querySelector("#example-select");

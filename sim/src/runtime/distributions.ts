@@ -6,7 +6,7 @@ import {
   affineToNumber,
   evalAffine,
   isConcreteAffine,
-} from "./affine.js";
+} from "./affine.ts";
 
 export const floatDistributions = new Set([
   "Uniform",

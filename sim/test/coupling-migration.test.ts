@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { checkEquivalences, runCoupledTrace } from "../src/runtime/semantics.js";
+import { checkEquivalences, runCoupledTrace } from "../src/runtime/semantics.ts";
 
 for (const name of ["nested", "coupling-branch", "coupling-mixed"]) {
   test(`retained coupling example: ${name}`, () => {

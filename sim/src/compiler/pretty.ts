@@ -1,4 +1,4 @@
-import { formatType, zonk } from "./types.js";
+import { formatType, zonk } from "./types.ts";
 
 const infix = {
   Lt: ["<", 1],

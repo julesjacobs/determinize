@@ -1,4 +1,4 @@
-import { CompileError } from "./errors.js";
+import { CompileError } from "./errors.ts";
 
 let modeCounter = 0;
 let tyCounter = 0;

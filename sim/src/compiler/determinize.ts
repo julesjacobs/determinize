@@ -1,5 +1,5 @@
-import { node } from "./ast.js";
-import { zonk } from "./types.js";
+import { node } from "./ast.ts";
+import { zonk } from "./types.ts";
 
 function exprNode(kind, props, from, to) {
   return node(kind, props, from ?? 0, to ?? from ?? 0);

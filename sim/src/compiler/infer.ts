@@ -1,4 +1,4 @@
-import { CompileError } from "./errors.js";
+import { CompileError } from "./errors.ts";
 import {
   assertSubtype,
   defaultModesType,
@@ -18,7 +18,7 @@ import {
   TSum,
   TUnit,
   zonk,
-} from "./types.js";
+} from "./types.ts";
 
 function typed(expr, typ, extra = {}) {
   return { kind: expr.kind, typ, from: expr.from, to: expr.to, ...extra };

@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { analyze } from "../src/compiler/analyze.js";
-import { parse } from "../src/compiler/parser.js";
-import { prettyExpr } from "../src/compiler/pretty.js";
+import { analyze } from "../src/compiler/analyze.ts";
+import { parse } from "../src/compiler/parser.ts";
+import { prettyExpr } from "../src/compiler/pretty.ts";
 
 test("parser preserves arithmetic precedence", () => {
   const ast = parse("uniform(0, 1) * 2 + 3");

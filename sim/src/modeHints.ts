@@ -1,6 +1,6 @@
 import { RangeSetBuilder, StateEffect, StateField } from "@codemirror/state";
 import { Decoration, EditorView, ViewPlugin, WidgetType } from "@codemirror/view";
-import { analyze } from "./compiler/analyze.js";
+import { analyze } from "./compiler/analyze.ts";
 
 const distributionNames = new Set([
   "uniform",

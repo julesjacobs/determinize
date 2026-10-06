@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { analyze } from "../src/compiler/analyze.js";
-import { prettyExpr } from "../src/compiler/pretty.js";
-import { examples } from "../src/examples.js";
-import { affineConst, affineScale, affineVar } from "../src/runtime/affine.js";
-import { meanDistribution, sampleDistribution } from "../src/runtime/distributions.js";
-import { makeStreams } from "../src/runtime/rng.js";
+import { analyze } from "../src/compiler/analyze.ts";
+import { prettyExpr } from "../src/compiler/pretty.ts";
+import { examples } from "../src/examples.ts";
+import { affineConst, affineScale, affineVar } from "../src/runtime/affine.ts";
+import { meanDistribution, sampleDistribution } from "../src/runtime/distributions.ts";
+import { makeStreams } from "../src/runtime/rng.ts";
 import {
   checkEquivalences,
   prepareRuntime,
@@ -15,7 +15,7 @@ import {
   runOrdinary,
   runSymbolic,
   stepOrdinary,
-} from "../src/runtime/semantics.js";
+} from "../src/runtime/semantics.ts";
 
 test("symbolic semantics stores E samples in sigma", () => {
   const { expr } = prepareRuntime("let u = uniform[E](0, 1) in\nu + 1");
