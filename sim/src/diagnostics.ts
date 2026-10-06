@@ -1,9 +1,17 @@
 import { RangeSetBuilder, StateEffect, StateField } from "@codemirror/state";
 import { Decoration, EditorView, hoverTooltip, WidgetType } from "@codemirror/view";
+import type { Analysis } from "./compiler/analyze.ts";
 
-export const setDiagnostics = StateEffect.define();
+/** A diagnostic with a range clamped to the document. */
+export interface EditorDiagnostic {
+  from: number;
+  to: number;
+  message: string;
+}
 
-export const diagnosticsState = StateField.define({
+export const setDiagnostics = StateEffect.define<EditorDiagnostic[]>();
+
+export const diagnosticsState = StateField.define<EditorDiagnostic[]>({
   create() {
     return [];
   },
@@ -16,7 +24,7 @@ export const diagnosticsState = StateField.define({
   },
   provide(field) {
     return EditorView.decorations.from(field, (diagnostics) => {
-      const builder = new RangeSetBuilder();
+      const builder = new RangeSetBuilder<Decoration>();
       const sorted = [...diagnostics].sort((a, b) => a.from - b.from || a.to - b.to);
       for (const diagnostic of sorted) {
         if (diagnostic.from === diagnostic.to) {
@@ -44,12 +52,14 @@ export const diagnosticsState = StateField.define({
 });
 
 class DiagnosticPointWidget extends WidgetType {
-  constructor(message) {
+  declare message: string;
+
+  constructor(message: string) {
     super();
     this.message = message;
   }
 
-  eq(other) {
+  eq(other: DiagnosticPointWidget) {
     return other.message === this.message;
   }
 
@@ -81,7 +91,7 @@ export function diagnosticHover() {
   });
 }
 
-export function normalizeDiagnostics(result, doc) {
+export function normalizeDiagnostics(result: Analysis, doc: string | number): EditorDiagnostic[] {
   if (result.ok) return [];
   const docLength = typeof doc === "string" ? doc.length : doc;
   return result.diagnostics.map((diagnostic) => {
@@ -103,6 +113,6 @@ export function normalizeDiagnostics(result, doc) {
   });
 }
 
-function clamp(value, min, max) {
+function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }

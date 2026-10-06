@@ -1,6 +1,30 @@
+import type { DistributionKind, Expr, ExprOf, MeanKind } from "./compiler/ast.ts";
 import { prettyExpr } from "./compiler/pretty.ts";
 
-const infix = {
+/** The fields leading from an expression to a subexpression, with indices into argument lists. */
+type Path = (string | number)[];
+
+export interface TraceOptions {
+  /** The subexpression that the last step produced. */
+  focusPath?: Path | null;
+  /** Values to link to the symbols they correspond to. */
+  valueBySymbol?: Record<string, number>;
+  valueLabel?: string;
+}
+
+/** An expression as a record of its fields, for fields named at run time. */
+type Fields = Readonly<Record<string, unknown>>;
+
+/** The operands of an infix node: left and right, or head and tail of a Cons. */
+interface Operands {
+  kind: string;
+  left?: Expr;
+  right?: Expr;
+  head?: Expr;
+  tail?: Expr;
+}
+
+const infix: Record<string, [string, number]> = {
   Lt: ["<", 1],
   Leq: ["<=", 1],
   Cons: ["::", 2],
@@ -10,7 +34,7 @@ const infix = {
   Div: ["/", 4],
 };
 
-const distNames = {
+const distNames: Record<string, string> = {
   Uniform: "uniform",
   Gauss: "gauss",
   Exponential: "exponential",
@@ -22,20 +46,28 @@ const distNames = {
   Discrete: "discrete",
 };
 
-export function renderTraceExpr(expr, options = {}) {
+export function renderTraceExpr(expr: Expr, options: TraceOptions = {}) {
   return renderExpr(expr, 0, options.focusPath ?? null, options);
 }
 
-export function changedPath(before, after) {
+export function changedPath(
+  before: Expr | null | undefined,
+  after: Expr | null | undefined,
+): Path | null {
   if (!before || !after || sameExpr(before, after)) return null;
   if (before.kind !== after.kind) return [];
   const child = changedChildPath(before, after);
   return child ?? [];
 }
 
-function renderExpr(expr, prec = 0, focusPath = null, options = {}) {
+function renderExpr(
+  expr: Expr,
+  prec = 0,
+  focusPath: Path | null = null,
+  options: TraceOptions = {},
+): string {
   const focused = focusPath && focusPath.length === 0;
-  const wrap = (html, level) => (prec > level ? `(${html})` : html);
+  const wrap = (html: string, level: number) => (prec > level ? `(${html})` : html);
   let html: string;
 
   switch (expr.kind) {
@@ -111,7 +143,7 @@ function renderExpr(expr, prec = 0, focusPath = null, options = {}) {
         break;
       }
       if (expr.kind in distNames) {
-        html = renderDistribution(expr, focusPath, options);
+        html = renderDistribution(expr as ExprOf<DistributionKind>, focusPath, options);
         break;
       }
       html = renderHighlightedText(prettyExpr(expr), options);
@@ -122,11 +154,19 @@ function renderExpr(expr, prec = 0, focusPath = null, options = {}) {
   return html;
 }
 
-export function renderHighlightedText(code, options = {}) {
+export function renderHighlightedText(code: string, options: TraceOptions = {}) {
   const escaped = escapeHtml(code);
   return escaped.replace(
     /\b(let|in|if|then|else|match|with|fun|rec|true|false|fst|snd|inl|inr|observe|domain_error)\b|\b(mean_(?:uniform|gauss|exponential|gamma|beta|bernoulli|poisson|discrete))\b|\b(uniform|gauss|exponential|gamma|beta|flip|bernoulli|poisson|discrete)\b|(\[[EG]\])|\b(v\d+)\b|(-?\d+(?:\.\d+)?(?:e[+-]?\d+)?)/gi,
-    (match, keywordMatch, mean, dist, mode, sym, number) => {
+    (
+      match: string,
+      keywordMatch: string | undefined,
+      mean: string | undefined,
+      dist: string | undefined,
+      mode: string | undefined,
+      sym: string | undefined,
+      number: string | undefined,
+    ) => {
       if (keywordMatch) return `<span class="tok-keyword">${match}</span>`;
       if (mean) return `<span class="tok-mean">${match}</span>`;
       if (dist) return `<span class="tok-dist">${match}</span>`;
@@ -138,7 +178,7 @@ export function renderHighlightedText(code, options = {}) {
   );
 }
 
-function renderLet(expr, focusPath, options) {
+function renderLet(expr: ExprOf<"Let">, focusPath: Path | null, options: TraceOptions) {
   const value = renderExpr(expr.value, 0, childFocus(focusPath, "value"), options);
   const body = renderExpr(expr.body, 0, childFocus(focusPath, "body"), options);
   if (!prettyExpr(expr.value).includes("\n")) {
@@ -147,7 +187,7 @@ function renderLet(expr, focusPath, options) {
   return `${keyword("let")} ${plain(expr.name)} =\n${indent(value)}\n${keyword("in")}\n${indent(body)}`;
 }
 
-function renderIf(expr, focusPath, options) {
+function renderIf(expr: ExprOf<"If">, focusPath: Path | null, options: TraceOptions) {
   const cond = renderExpr(expr.cond, 0, childFocus(focusPath, "cond"), options);
   const thenBranch = renderExpr(expr.thenBranch, 0, childFocus(focusPath, "thenBranch"), options);
   const elseBranch = renderExpr(expr.elseBranch, 0, childFocus(focusPath, "elseBranch"), options);
@@ -158,7 +198,11 @@ function renderIf(expr, focusPath, options) {
   return `${keyword("if")} ${cond}\n${keyword("then")}\n${indent(thenBranch)}\n${keyword("else")}\n${indent(elseBranch)}`;
 }
 
-function renderDistribution(expr, focusPath, options) {
+function renderDistribution(
+  expr: ExprOf<DistributionKind>,
+  focusPath: Path | null,
+  options: TraceOptions,
+) {
   const name = `<span class="tok-dist">${distNames[expr.kind]}</span>`;
   const mode = expr.mode ? `<span class="tok-mode">[${plain(expr.mode)}]</span>` : "";
   if (expr.kind === "Discrete") {
@@ -167,7 +211,7 @@ function renderDistribution(expr, focusPath, options) {
   return `${name}${mode}(${expr.args.map((arg, index) => renderExpr(arg, 0, childFocus(focusPath, "args", index), options)).join(", ")})`;
 }
 
-function renderMean(expr, focusPath, options) {
+function renderMean(expr: ExprOf<"Mean">, focusPath: Path | null, options: TraceOptions) {
   const name = distNames[expr.distribution] ?? expr.distribution.toLowerCase();
   const args = expr.args.map((arg, index) =>
     renderExpr(arg, 0, childFocus(focusPath, "args", index), options),
@@ -179,7 +223,7 @@ function renderMean(expr, focusPath, options) {
   return `<span class="mean-form" title="one-step mean redex: ${escapeHtml(formula)}"><span class="tok-mean">mean_${plain(name)}</span>(${args.join(", ")})</span>`;
 }
 
-function meanFormula(distribution, args) {
+function meanFormula(distribution: MeanKind, args: string[]) {
   switch (distribution) {
     case "Uniform":
       return `(${args[0]} + ${args[1]}) * 0.5`;
@@ -201,20 +245,20 @@ function meanFormula(distribution, args) {
   }
 }
 
-function valueSpan(html) {
+function valueSpan(html: string) {
   return `<span class="trace-value symbolic-value" title="symbolic affine value">${html}</span>`;
 }
 
-function stepSpan(html) {
+function stepSpan(html: string) {
   return `<span class="trace-step" title="result of previous small-step">${html}</span>`;
 }
 
-function corrSpan(text, className, symbol) {
+function corrSpan(text: string, className: string, symbol: string) {
   const escaped = escapeHtml(text);
   return `<span class="corr-item ${className}" data-corr="${escapeHtml(symbol)}" title="corresponds to ${escapeHtml(symbol)}">${escaped}</span>`;
 }
 
-function numberSpan(text, options) {
+function numberSpan(text: string, options: TraceOptions) {
   const symbol = symbolForNumber(Number(text), options.valueBySymbol);
   const html = `<span class="tok-number">${text}</span>`;
   const label = options.valueLabel ?? "corresponds to";
@@ -223,7 +267,7 @@ function numberSpan(text, options) {
     : html;
 }
 
-function symbolForNumber(value, valueBySymbol) {
+function symbolForNumber(value: number, valueBySymbol: Record<string, number> | undefined) {
   if (!Number.isFinite(value) || !valueBySymbol) return null;
   for (const [symbol, target] of Object.entries(valueBySymbol)) {
     if (Number.isFinite(target) && Math.abs(value - target) <= 1e-9) return symbol;
@@ -231,7 +275,7 @@ function symbolForNumber(value, valueBySymbol) {
   return null;
 }
 
-function changedChildPath(before, after) {
+function changedChildPath(before: Expr, after: Expr): Path | null {
   switch (after.kind) {
     case "Let":
       return changedFieldPath(before, after, "value") ?? changedFieldPath(before, after, "body");
@@ -294,12 +338,16 @@ function changedChildPath(before, after) {
   }
 }
 
-function changedFieldPath(before, after, key) {
+function changedFieldPath(before: Fields, after: Fields, key: string): Path | null {
   if (!(key in before) || !(key in after) || sameExpr(before[key], after[key])) return null;
-  return [key, ...(changedPath(before[key], after[key]) ?? [])];
+  return [key, ...(changedPath(before[key] as Expr, after[key] as Expr) ?? [])];
 }
 
-function changedIndexedPath(before, after, key) {
+function changedIndexedPath<K extends string>(
+  before: Fields & Partial<Record<K, Expr[]>>,
+  after: Fields & Partial<Record<K, Expr[]>>,
+  key: K,
+): Path | null {
   if (!Array.isArray(before[key]) || !Array.isArray(after[key])) return null;
   const count = Math.min(before[key].length, after[key].length);
   for (let index = 0; index < count; index++) {
@@ -310,48 +358,48 @@ function changedIndexedPath(before, after, key) {
   return before[key].length === after[key].length ? null : [];
 }
 
-function sameExpr(before, after) {
-  return prettyExpr(before) === prettyExpr(after);
+function sameExpr(before: unknown, after: unknown) {
+  return prettyExpr(before as Expr) === prettyExpr(after as Expr);
 }
 
-function childFocus(focusPath, key, index = null) {
+function childFocus(focusPath: Path | null, key: string, index: number | null = null) {
   if (!focusPath || focusPath.length === 0 || focusPath[0] !== key) return null;
   if (index === null) return focusPath.slice(1);
   return focusPath[1] === index ? focusPath.slice(2) : null;
 }
 
-function keyword(text) {
+function keyword(text: string) {
   return `<span class="tok-keyword">${escapeHtml(text)}</span>`;
 }
 
-function plain(text) {
+function plain(text: string) {
   return escapeHtml(text);
 }
 
-function indent(html) {
+function indent(html: string) {
   return html
     .split("\n")
     .map((line) => (line ? `  ${line}` : line))
     .join("\n");
 }
 
-function leftOf(expr) {
-  return expr.left ?? expr.head;
+function leftOf(expr: Operands) {
+  return (expr.left ?? expr.head) as Expr;
 }
 
-function rightOf(expr) {
-  return expr.right ?? expr.tail;
+function rightOf(expr: Operands) {
+  return (expr.right ?? expr.tail) as Expr;
 }
 
-function leftKey(expr) {
+function leftKey(expr: Operands) {
   return "left" in expr ? "left" : "head";
 }
 
-function rightKey(expr) {
+function rightKey(expr: Operands) {
   return "right" in expr ? "right" : "tail";
 }
 
-function escapeHtml(text) {
+function escapeHtml(text: string) {
   return String(text)
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")

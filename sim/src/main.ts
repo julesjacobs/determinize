@@ -1,6 +1,7 @@
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { bracketMatching, indentOnInput } from "@codemirror/language";
 import { EditorState, Transaction } from "@codemirror/state";
+import type { ViewUpdate } from "@codemirror/view";
 import {
   drawSelection,
   dropCursor,
@@ -11,8 +12,11 @@ import {
   keymap,
   lineNumbers,
 } from "@codemirror/view";
+import type { Analysis } from "./compiler/analyze.ts";
 import { analyze } from "./compiler/analyze.ts";
+import type { Expr } from "./compiler/ast.ts";
 import { prettyExpr } from "./compiler/pretty.ts";
+import type { EditorDiagnostic } from "./diagnostics.ts";
 import {
   diagnosticHover,
   diagnosticsState,
@@ -24,28 +28,40 @@ import { detHighlighting, detLanguage } from "./language.ts";
 import { hoveredTypeHintState, modeHints, setTypeHints, typeHintState } from "./modeHints.ts";
 import { affineConst, affineToNumber, evalAffine, prettyAffine } from "./runtime/affine.ts";
 import { meanDistribution } from "./runtime/distributions.ts";
+import type { Binding, CoupledTrace, Frame } from "./runtime/semantics.ts";
 import { runCoupledTrace } from "./runtime/semantics.ts";
+import type { TraceOptions } from "./traceRender.ts";
 import { changedPath, renderHighlightedText, renderTraceExpr } from "./traceRender.ts";
 
-const editorHost = document.querySelector("#editor");
-const exampleSelect = document.querySelector("#example-select");
-const statusEl = document.querySelector("#status");
-const typeHintsToggle = document.querySelector("#type-hints-toggle");
-const debugToggle = document.querySelector("#debug-toggle");
-const debugToggleControl = document.querySelector(".debug-toggle");
-const editorDiagnostics = document.querySelector("#editor-diagnostics");
-const debugPanel = document.querySelector("#debug-panel");
-const debugLogEl = document.querySelector("#debug-log");
-const debugCopyButton = document.querySelector("#debug-copy");
-const debugClearButton = document.querySelector("#debug-clear");
+/** A message that a DomainError node carries. */
+type MaybeMessage = { message?: string } | undefined;
+
+interface Stats {
+  n: number;
+  mean: number;
+  variance: number;
+  standardError: number;
+}
+
+const editorHost = document.querySelector("#editor") as HTMLElement;
+const exampleSelect = document.querySelector("#example-select") as HTMLSelectElement;
+const statusEl = document.querySelector("#status") as HTMLElement;
+const typeHintsToggle = document.querySelector("#type-hints-toggle") as HTMLInputElement;
+const debugToggle = document.querySelector("#debug-toggle") as HTMLInputElement;
+const debugToggleControl = document.querySelector(".debug-toggle") as HTMLElement;
+const editorDiagnostics = document.querySelector("#editor-diagnostics") as HTMLElement;
+const debugPanel = document.querySelector("#debug-panel") as HTMLElement;
+const debugLogEl = document.querySelector("#debug-log") as HTMLElement;
+const debugCopyButton = document.querySelector("#debug-copy") as HTMLButtonElement;
+const debugClearButton = document.querySelector("#debug-clear") as HTMLButtonElement;
 const panels = {
-  coupling: document.querySelector("#coupling-trace"),
-  couplingStatus: document.querySelector("#coupling-status"),
-  distribution: document.querySelector("#distribution-view"),
-  distributionStatus: document.querySelector("#distribution-status"),
+  coupling: document.querySelector("#coupling-trace") as HTMLElement,
+  couplingStatus: document.querySelector("#coupling-status") as HTMLElement,
+  distribution: document.querySelector("#distribution-view") as HTMLElement,
+  distributionStatus: document.querySelector("#distribution-status") as HTMLElement,
 };
-const rerunButton = document.querySelector("#rerun-coupling");
-const manyButton = document.querySelector("#many-coupling");
+const rerunButton = document.querySelector("#rerun-coupling") as HTMLButtonElement;
+const manyButton = document.querySelector("#many-coupling") as HTMLButtonElement;
 typeHintsToggle.checked = false;
 
 const ANALYZE_IDLE_MS = 500;
@@ -55,18 +71,18 @@ checkPopoverPortal.className = "floating-check-popover";
 checkPopoverPortal.setAttribute("role", "tooltip");
 document.body.append(checkPopoverPortal);
 
-let latest = null;
-let debounce = null;
+let latest: Analysis | null = null;
+let debounce: number | null = null;
 let couplingSeed = 2026;
 let sampleSource = "";
 let lastSampleKey = "";
-let activeCheck = null;
-let hideCheckPopoverTimer = null;
-let activeCorrespondence = null;
+let activeCheck: Element | null = null;
+let hideCheckPopoverTimer: number | null = null;
+let activeCorrespondence: string | null = null;
 let debugEnabled = false;
 let debugSeq = 0;
-const debugLog = [];
-const samples = {
+const debugLog: Record<string, unknown>[] = [];
+const samples: { original: number[]; determinized: number[] } = {
   original: [],
   determinized: [],
 };
@@ -159,7 +175,7 @@ rerunButton.addEventListener("click", () => {
 manyButton.addEventListener("click", () => {
   const source = editor.state.doc.toString();
   if (source !== sampleSource) resetSamples(source);
-  let latestCoupled = null;
+  let latestCoupled: CoupledTrace | null = null;
   for (let i = 0; i < 200; i++) {
     const seed = Math.floor(1 + Math.random() * 0xffffffff);
     try {
@@ -210,17 +226,21 @@ debugClearButton.addEventListener("click", () => {
 });
 
 panels.coupling.addEventListener("pointerover", (event) => {
-  const corr = event.target instanceof Element ? event.target.closest(".corr-item") : null;
+  const corr =
+    event.target instanceof Element ? event.target.closest<HTMLElement>(".corr-item") : null;
   if (corr) showCorrespondence(corr);
   const check = event.target instanceof Element ? event.target.closest(".step-check") : null;
   if (check) showCheckPopover(check);
 });
 
 panels.coupling.addEventListener("pointerout", (event) => {
-  const corr = event.target instanceof Element ? event.target.closest(".corr-item") : null;
+  const corr =
+    event.target instanceof Element ? event.target.closest<HTMLElement>(".corr-item") : null;
   if (corr) {
     const next =
-      event.relatedTarget instanceof Element ? event.relatedTarget.closest(".corr-item") : null;
+      event.relatedTarget instanceof Element
+        ? event.relatedTarget.closest<HTMLElement>(".corr-item")
+        : null;
     if (!next || next.dataset.corr !== corr.dataset.corr) hideCorrespondence();
   }
   const check = event.target instanceof Element ? event.target.closest(".step-check") : null;
@@ -231,7 +251,8 @@ panels.coupling.addEventListener("pointerout", (event) => {
 });
 
 panels.coupling.addEventListener("focusin", (event) => {
-  const corr = event.target instanceof Element ? event.target.closest(".corr-item") : null;
+  const corr =
+    event.target instanceof Element ? event.target.closest<HTMLElement>(".corr-item") : null;
   if (corr) showCorrespondence(corr);
   const check = event.target instanceof Element ? event.target.closest(".step-check") : null;
   if (check) showCheckPopover(check);
@@ -262,7 +283,7 @@ document.addEventListener("keydown", (event) => {
 });
 
 function scheduleAnalyze() {
-  clearTimeout(debounce);
+  clearTimeout(debounce as number);
   logDebug("schedule-analyze", { idleMs: ANALYZE_IDLE_MS, ...collectEditorDebugState("schedule") });
   debounce = setTimeout(runAnalyze, ANALYZE_IDLE_MS);
 }
@@ -286,7 +307,7 @@ function runAnalyze() {
   renderResult(latest);
 }
 
-function renderResult(result) {
+function renderResult(result: Analysis) {
   logDebug("render-result", { ok: result.ok, ...collectEditorDebugState("render-result") });
   if (result.ok) {
     setEditorStatus("ok", "Parsed and checked", "✓");
@@ -302,14 +323,14 @@ function renderResult(result) {
   renderSemantics(editor.state.doc.toString(), { allowIllTyped: true });
 }
 
-function setEditorStatus(kind, label, glyph) {
+function setEditorStatus(kind: string, label: string, glyph: string) {
   statusEl.textContent = glyph;
   statusEl.title = label;
   statusEl.setAttribute("aria-label", label);
   statusEl.className = `status editor-status ${kind}`;
 }
 
-function logEditorUpdate(update) {
+function logEditorUpdate(update: ViewUpdate) {
   logDebug("editor-update", {
     docChanged: update.docChanged,
     selectionSet: update.selectionSet,
@@ -331,7 +352,7 @@ function logEditorUpdate(update) {
   });
 }
 
-function logDebug(event, data = {}) {
+function logDebug(event: string, data: Record<string, unknown> = {}) {
   if (!debugEnabled && event !== "debug-enabled") return;
   debugLog.push({
     seq: ++debugSeq,
@@ -349,7 +370,7 @@ function renderDebugLog() {
   debugLogEl.scrollTop = debugLogEl.scrollHeight;
 }
 
-function collectEditorDebugState(label) {
+function collectEditorDebugState(label: string) {
   try {
     const doc = editor.state.doc.toString();
     const selection = editor.state.selection.ranges.map((range) => ({
@@ -396,18 +417,21 @@ function collectEditorDebugState(label) {
         typeHints: Array.from(root.querySelectorAll(".type-hint"), describeHint),
         diagnosticSquiggles: root.querySelectorAll(".diagnostic-squiggle").length,
         diagnosticPoints: root.querySelectorAll(".diagnostic-point").length,
-        contentText: capDebugText(editorHost.querySelector(".cm-content")?.innerText ?? "", 2000),
+        contentText: capDebugText(
+          editorHost.querySelector<HTMLElement>(".cm-content")?.innerText ?? "",
+          2000,
+        ),
       },
     };
   } catch (error) {
     return {
       label,
-      collectError: error?.message ?? String(error),
+      collectError: error instanceof Error ? error.message : String(error),
     };
   }
 }
 
-function readDiagnosticsForDebug() {
+function readDiagnosticsForDebug(): EditorDiagnostic[] {
   try {
     return editor.state.field(diagnosticsState);
   } catch {
@@ -415,7 +439,7 @@ function readDiagnosticsForDebug() {
   }
 }
 
-function describeHint(element) {
+function describeHint(element: Element) {
   const rect = element.getBoundingClientRect();
   return {
     text: element.textContent,
@@ -427,7 +451,7 @@ function describeHint(element) {
   };
 }
 
-function describeElement(element) {
+function describeElement(element: Element | null) {
   if (!(element instanceof Element)) return null;
   return {
     tag: element.tagName.toLowerCase(),
@@ -437,12 +461,12 @@ function describeElement(element) {
   };
 }
 
-function capDebugText(text, maxLength) {
+function capDebugText(text: string, maxLength: number) {
   if (text.length <= maxLength) return text;
   return `${text.slice(0, maxLength)}...<truncated ${text.length - maxLength} chars>`;
 }
 
-function renderSemantics(source, options = {}) {
+function renderSemantics(source: string, options: { allowIllTyped?: boolean } = {}) {
   try {
     logDebug("render-semantics-start", {
       allowIllTyped: Boolean(options.allowIllTyped),
@@ -467,19 +491,19 @@ function renderSemantics(source, options = {}) {
     panels.distribution.innerHTML = "";
     panels.distributionStatus.textContent = "not numeric";
     logDebug("render-semantics-error", {
-      message: error?.message ?? String(error),
+      message: error instanceof Error ? error.message : String(error),
       ...collectEditorDebugState("render-semantics-error"),
     });
   }
 }
 
-function runCoupling(source, seed, options = {}) {
+function runCoupling(source: string, seed: number, options: { allowIllTyped?: boolean } = {}) {
   return runCoupledTrace(source, seed, 1000, 200, {
     allowIllTyped: Boolean(options.allowIllTyped || !latest?.ok),
   });
 }
 
-function renderCoupling(coupled) {
+function renderCoupling(coupled: CoupledTrace) {
   hideCheckPopover();
   const terminalDomainError = coupled.frames.some(hasDomainError);
   panels.couplingStatus.textContent = `seed ${coupled.seed} - ${coupled.ok ? (terminalDomainError ? "checked domain error" : "checked") : "failed"}${coupled.unchecked ? " (unchecked)" : ""}`;
@@ -517,7 +541,7 @@ function renderCoupling(coupled) {
     "</div>";
 }
 
-function frameOk(frame) {
+function frameOk(frame: Frame) {
   return (
     frame.originalOk &&
     frame.determinizedOk &&
@@ -526,7 +550,7 @@ function frameOk(frame) {
   );
 }
 
-function hasDomainError(frame) {
+function hasDomainError(frame: Frame) {
   return (
     frame.original?.kind === "DomainError" ||
     frame.symbolic?.kind === "DomainError" ||
@@ -534,7 +558,7 @@ function hasDomainError(frame) {
   );
 }
 
-function stepCheck(frame, coupled) {
+function stepCheck(frame: Frame, coupled: CoupledTrace) {
   const ok = frameOk(frame);
   const domainError = hasDomainError(frame);
   const label = domainError && ok ? "ERR" : ok ? "OK" : "FAIL";
@@ -554,7 +578,12 @@ function stepCheck(frame, coupled) {
   `;
 }
 
-function checkPopoverContent(frame, coupled, ok, domainError) {
+function checkPopoverContent(
+  frame: Frame,
+  coupled: CoupledTrace,
+  ok: boolean,
+  domainError: boolean,
+) {
   const originalTarget = frame.originalTarget ? prettyExpr(frame.originalTarget) : "not available";
   const determinizedTarget = frame.determinizedTarget
     ? prettyExpr(frame.determinizedTarget)
@@ -574,16 +603,16 @@ function checkPopoverContent(frame, coupled, ok, domainError) {
   `;
 }
 
-function domainErrorMessage(frame) {
+function domainErrorMessage(frame: Frame) {
   return (
-    frame.original?.message ??
-    frame.symbolic?.message ??
-    frame.determinized?.message ??
+    (frame.original as MaybeMessage)?.message ??
+    (frame.symbolic as MaybeMessage)?.message ??
+    (frame.determinized as MaybeMessage)?.message ??
     "domain error"
   );
 }
 
-function couplingCell(expr, meta, tone, traceOptions = {}) {
+function couplingCell(expr: Expr, meta: string, tone: string, traceOptions: TraceOptions = {}) {
   return `
     <article class="coupling-cell ${tone}">
       <div class="sigma-strip ${meta ? "" : "blank"}">${meta || "&nbsp;"}</div>
@@ -592,7 +621,7 @@ function couplingCell(expr, meta, tone, traceOptions = {}) {
   `;
 }
 
-function showCheckPopover(check) {
+function showCheckPopover(check: Element) {
   const source = check.querySelector(".check-popover-source");
   if (!source) return;
   cancelHideCheckPopover();
@@ -603,7 +632,7 @@ function showCheckPopover(check) {
   positionCheckPopover(check);
 }
 
-function positionCheckPopover(check) {
+function positionCheckPopover(check: Element) {
   const anchor = check.getBoundingClientRect();
   const popover = checkPopoverPortal.getBoundingClientRect();
   const margin = 10;
@@ -619,22 +648,22 @@ function positionCheckPopover(check) {
 }
 
 function scheduleHideCheckPopover() {
-  clearTimeout(hideCheckPopoverTimer);
+  clearTimeout(hideCheckPopoverTimer as number);
   hideCheckPopoverTimer = setTimeout(hideCheckPopover, 120);
 }
 
 function cancelHideCheckPopover() {
-  clearTimeout(hideCheckPopoverTimer);
+  clearTimeout(hideCheckPopoverTimer as number);
 }
 
 function hideCheckPopover() {
-  clearTimeout(hideCheckPopoverTimer);
+  clearTimeout(hideCheckPopoverTimer as number);
   if (activeCheck) activeCheck.classList.remove("popover-open");
   activeCheck = null;
   checkPopoverPortal.classList.remove("visible");
 }
 
-function showCorrespondence(anchor) {
+function showCorrespondence(anchor: HTMLElement) {
   const symbol = anchor.dataset.corr;
   if (!symbol) return;
   const scope = anchor.closest(".coupling-row") ?? panels.coupling;
@@ -654,26 +683,26 @@ function hideCorrespondence() {
   activeCorrespondence = null;
 }
 
-function rowIndex(scope) {
+function rowIndex(scope: Element) {
   return scope instanceof HTMLElement
     ? String(Array.prototype.indexOf.call(scope.parentElement?.children ?? [], scope))
     : "all";
 }
 
-function sigmaView(sigma) {
+function sigmaView(sigma: Binding[]) {
   if (sigma.length === 0) return { html: "", lineCount: 0, meanBySymbol: {} };
-  const env = new Map();
-  const meanBySymbol = {};
+  const env = new Map<string, number>();
+  const meanBySymbol: Record<string, number> = {};
   const lines = sigma.map((binding) => {
     let mean = NaN;
-    let meanError = null;
+    let meanError: string | null = null;
     try {
       const meanArgs = binding.args.map((arg) => affineConst(evalAffine(arg, env)));
       mean = affineToNumber(meanDistribution(binding.kind, meanArgs));
       env.set(binding.name, mean);
       meanBySymbol[binding.name] = mean;
     } catch (error) {
-      meanError = error?.message ?? String(error);
+      meanError = error instanceof Error ? error.message : String(error);
       env.set(binding.name, NaN);
       meanBySymbol[binding.name] = NaN;
     }
@@ -683,7 +712,7 @@ function sigmaView(sigma) {
   return { html: lines.join("\n"), lineCount: lines.length, meanBySymbol };
 }
 
-function meanMarkup(symbol, mean, error = null) {
+function meanMarkup(symbol: string, mean: number, error: string | null = null) {
   if (error) {
     return `<span class="sigma-mean-error" title="${escapeHtml(error)}">domain error</span>`;
   }
@@ -691,14 +720,14 @@ function meanMarkup(symbol, mean, error = null) {
   return `<span class="corr-item sigma-mean-value" data-corr="${escapeHtml(symbol)}" title="mean substituted for ${escapeHtml(symbol)}">${escapeHtml(value)}</span>`;
 }
 
-function resetSamples(source) {
+function resetSamples(source: string) {
   sampleSource = source;
   lastSampleKey = "";
   samples.original = [];
   samples.determinized = [];
 }
 
-function addSampleFromCoupling(coupled, source) {
+function addSampleFromCoupling(coupled: CoupledTrace, source: string) {
   const key = `${source}:${coupled.seed}`;
   if (key === lastSampleKey) return;
   const finalFrame = coupled.frames.at(-1);
@@ -706,13 +735,13 @@ function addSampleFromCoupling(coupled, source) {
   const determinizedValue =
     numericValue(finalFrame?.determinized) ?? numericValue(coupled.finalDeterminized);
   if (Number.isFinite(originalValue) && Number.isFinite(determinizedValue)) {
-    samples.original.push(originalValue);
-    samples.determinized.push(determinizedValue);
+    samples.original.push(originalValue as number);
+    samples.determinized.push(determinizedValue as number);
     lastSampleKey = key;
   }
 }
 
-function numericValue(expr) {
+function numericValue(expr: Expr | undefined) {
   return expr?.kind === "Const" ? expr.value : undefined;
 }
 
@@ -737,7 +766,7 @@ function renderDistributions() {
   `;
 }
 
-function comparisonCard(originalStats, determinizedStats) {
+function comparisonCard(originalStats: Stats, determinizedStats: Stats) {
   const ratio = varianceRatio(originalStats, determinizedStats);
   return `
     <div class="symbolic-distribution-note">
@@ -750,7 +779,7 @@ function comparisonCard(originalStats, determinizedStats) {
   `;
 }
 
-function metricBlock(label, value, caption, suffix = "") {
+function metricBlock(label: string, value: number, caption: string, suffix = "") {
   return `
     <div class="metric-block">
       <span>${label}</span>
@@ -760,22 +789,29 @@ function metricBlock(label, value, caption, suffix = "") {
   `;
 }
 
-function metricValue(value, suffix = "") {
+function metricValue(value: number, suffix = "") {
   return `<strong class="metric-value">${escapeHtml(formatNumber(value))}${suffix}</strong>`;
 }
 
-function distributionCard(title, values, stats, domain, tone) {
+function distributionCard(
+  title: string,
+  values: number[],
+  stats: Stats,
+  domain: number[],
+  tone: string,
+) {
   const width = 520;
   const height = 230;
   const margin = { top: 16, right: 16, bottom: 26, left: 34 };
   const pdfBand = { top: 20, bottom: 94 };
   const cdfBand = { top: 126, bottom: 200 };
-  const x = (value) =>
+  const x = (value: number) =>
     margin.left +
     ((value - domain[0]) / (domain[1] - domain[0])) * (width - margin.left - margin.right);
-  const yPdf = (density, maxDensity) =>
+  const yPdf = (density: number, maxDensity: number) =>
     pdfBand.bottom - (density / maxDensity) * (pdfBand.bottom - pdfBand.top);
-  const yCdf = (probability) => cdfBand.top + (1 - probability) * (cdfBand.bottom - cdfBand.top);
+  const yCdf = (probability: number) =>
+    cdfBand.top + (1 - probability) * (cdfBand.bottom - cdfBand.top);
   const sorted = [...values].sort((a, b) => a - b);
   const cdfPath = ecdfPath(sorted, domain, x, yCdf);
   const cdfArea = `${cdfPath} L ${x(domain[1]).toFixed(2)} ${yCdf(0).toFixed(2)} L ${x(domain[0]).toFixed(2)} ${yCdf(0).toFixed(2)} Z`;
@@ -831,7 +867,7 @@ function distributionCard(title, values, stats, domain, tone) {
   `;
 }
 
-function histogram(values, domain, count) {
+function histogram(values: number[], domain: number[], count: number) {
   const width = domain[1] - domain[0];
   const binWidth = width / count;
   const bins = Array.from({ length: count }, (_, index) => ({
@@ -849,7 +885,12 @@ function histogram(values, domain, count) {
   return bins;
 }
 
-function ecdfPath(sorted, domain, x, y) {
+function ecdfPath(
+  sorted: number[],
+  domain: number[],
+  x: (value: number) => number,
+  y: (probability: number) => number,
+) {
   if (sorted.length === 0) return "";
   const n = sorted.length;
   const parts = [`M ${x(domain[0]).toFixed(2)} ${y(0).toFixed(2)}`];
@@ -862,11 +903,11 @@ function ecdfPath(sorted, domain, x, y) {
   return parts.join(" ");
 }
 
-function average(values) {
+function average(values: number[]) {
   return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
 
-function sampleStats(values) {
+function sampleStats(values: number[]): Stats {
   const n = values.length;
   const mean = average(values);
   const variance =
@@ -879,7 +920,7 @@ function sampleStats(values) {
   };
 }
 
-function varianceRatio(originalStats, determinizedStats) {
+function varianceRatio(originalStats: Stats, determinizedStats: Stats) {
   const originalVariance = originalStats.variance;
   const determinizedVariance = determinizedStats.variance;
   if (!Number.isFinite(originalVariance) || !Number.isFinite(determinizedVariance)) {
@@ -916,7 +957,7 @@ function varianceRatio(originalStats, determinizedStats) {
   };
 }
 
-function formatNumber(value) {
+function formatNumber(value: number) {
   if (value === Infinity) return "∞";
   if (value === -Infinity) return "-∞";
   if (!Number.isFinite(value)) return "n/a";
@@ -925,16 +966,16 @@ function formatNumber(value) {
   return Number(value.toFixed(4)).toString();
 }
 
-function clamp(value, min, max) {
+function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
 
-function cssEscape(value) {
+function cssEscape(value: string) {
   if (window.CSS?.escape) return window.CSS.escape(value);
   return String(value).replace(/["\\]/g, "\\$&");
 }
 
-function escapeHtml(text) {
+function escapeHtml(text: string | undefined) {
   return String(text)
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
