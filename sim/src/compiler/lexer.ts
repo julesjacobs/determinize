@@ -1,4 +1,4 @@
-import { CompileError } from "./errors.js";
+import { CompileError } from "./errors.ts";
 
 const keywords = new Map([
   ["true", "TRUE"],

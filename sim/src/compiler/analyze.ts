@@ -1,8 +1,8 @@
-import { determinize } from "./determinize.js";
-import { CompileError } from "./errors.js";
-import { collectSpans, defaultModes, inferProgram } from "./infer.js";
-import { parse } from "./parser.js";
-import { prettyExpr, prettyTyped } from "./pretty.js";
+import { determinize } from "./determinize.ts";
+import { CompileError } from "./errors.ts";
+import { collectSpans, defaultModes, inferProgram } from "./infer.ts";
+import { parse } from "./parser.ts";
+import { prettyExpr, prettyTyped } from "./pretty.ts";
 
 export function analyze(source) {
   try {

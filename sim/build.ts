@@ -17,7 +17,7 @@ await rm(outdir, { recursive: true, force: true });
 await mkdir(outdir);
 
 await build({
-  entryPoints: ["src/main.js"],
+  entryPoints: ["src/main.ts"],
   bundle: true,
   format: "iife",
   globalName: "DeterminizeSim",

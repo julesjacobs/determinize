@@ -1,6 +1,6 @@
-import { distributions, node } from "./ast.js";
-import { CompileError } from "./errors.js";
-import { lex } from "./lexer.js";
+import { distributions, node } from "./ast.ts";
+import { CompileError } from "./errors.ts";
+import { lex } from "./lexer.ts";
 
 const distTokenToKind = {
   UNIFORM: "Uniform",

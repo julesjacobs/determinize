@@ -1,4 +1,4 @@
-import { prettyExpr } from "./compiler/pretty.js";
+import { prettyExpr } from "./compiler/pretty.ts";
 
 const infix = {
   Lt: ["<", 1],
@@ -36,7 +36,7 @@ export function changedPath(before, after) {
 function renderExpr(expr, prec = 0, focusPath = null, options = {}) {
   const focused = focusPath && focusPath.length === 0;
   const wrap = (html, level) => (prec > level ? `(${html})` : html);
-  let html;
+  let html: string;
 
   switch (expr.kind) {
     case "Var":
