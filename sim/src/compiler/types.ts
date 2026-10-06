@@ -1,4 +1,39 @@
+import type { Mode, Span } from "./ast.ts";
 import { CompileError } from "./errors.ts";
+
+/** A mode variable, with the submode constraints that mention it. */
+export interface ModeMeta {
+  tag: "ModeMeta";
+  id: number;
+  mode: Mode | null;
+  constraints: Submode[];
+}
+
+/** A value of mode lhs is used where mode rhs is expected: if rhs is G, so is lhs. */
+interface Submode {
+  lhs: ModeMeta;
+  rhs: ModeMeta;
+}
+
+/** A type variable. */
+export interface Meta {
+  tag: "Meta";
+  id: number;
+  value: Type | null;
+}
+
+export type FloatType = { tag: "Float"; mode: ModeMeta };
+
+export type Type =
+  | { tag: "Unit" }
+  | { tag: "Bool" }
+  | { tag: "Nat" }
+  | FloatType
+  | { tag: "Pair"; left: Type; right: Type }
+  | { tag: "Sum"; left: Type; right: Type }
+  | { tag: "List"; elem: Type }
+  | { tag: "Arrow"; arg: Type; result: Type }
+  | { tag: "MetaType"; meta: Meta };
 
 let modeCounter = 0;
 let tyCounter = 0;
@@ -8,27 +43,27 @@ export function resetTypeState() {
   tyCounter = 0;
 }
 
-export function freshModeMeta() {
+export function freshModeMeta(): ModeMeta {
   modeCounter += 1;
   return { tag: "ModeMeta", id: modeCounter, mode: null, constraints: [] };
 }
 
-export function freshMeta() {
+export function freshMeta(): Meta {
   tyCounter += 1;
   return { tag: "Meta", id: tyCounter, value: null };
 }
 
-export const TUnit = { tag: "Unit" };
-export const TBool = { tag: "Bool" };
-export const TNat = { tag: "Nat" };
-export const TFloat = (mode = freshModeMeta()) => ({ tag: "Float", mode });
-export const TPair = (left, right) => ({ tag: "Pair", left, right });
-export const TSum = (left, right) => ({ tag: "Sum", left, right });
-export const TList = (elem) => ({ tag: "List", elem });
-export const TArrow = (arg, result) => ({ tag: "Arrow", arg, result });
-export const TMeta = (meta = freshMeta()) => ({ tag: "MetaType", meta });
+export const TUnit: Type = { tag: "Unit" };
+export const TBool: Type = { tag: "Bool" };
+export const TNat: Type = { tag: "Nat" };
+export const TFloat = (mode = freshModeMeta()): FloatType => ({ tag: "Float", mode });
+export const TPair = (left: Type, right: Type): Type => ({ tag: "Pair", left, right });
+export const TSum = (left: Type, right: Type): Type => ({ tag: "Sum", left, right });
+export const TList = (elem: Type): Type => ({ tag: "List", elem });
+export const TArrow = (arg: Type, result: Type): Type => ({ tag: "Arrow", arg, result });
+export const TMeta = (meta = freshMeta()): Type => ({ tag: "MetaType", meta });
 
-export function setMode(mvar, mode, source = undefined) {
+export function setMode(mvar: ModeMeta, mode: Mode, source: Span | undefined = undefined) {
   if (mvar.mode == null) {
     mvar.mode = mode;
     for (const c of [...mvar.constraints]) propagateSubmode(c.lhs, c.rhs, source);
@@ -43,7 +78,7 @@ export function setMode(mvar, mode, source = undefined) {
   }
 }
 
-function propagateSubmode(lhs, rhs, source = undefined) {
+function propagateSubmode(lhs: ModeMeta, rhs: ModeMeta, source: Span | undefined = undefined) {
   if (lhs.mode === "E" && rhs.mode == null) setMode(rhs, "E", source);
   else if (lhs.mode == null && rhs.mode === "G") setMode(lhs, "G", source);
   else if (lhs.mode === "E" && rhs.mode === "G") {
@@ -55,14 +90,18 @@ function propagateSubmode(lhs, rhs, source = undefined) {
   }
 }
 
-export function submode(lhs, rhs, source = undefined) {
+export function submode(
+  lhs: ModeMeta,
+  rhs: ModeMeta,
+  source: Span | undefined = undefined,
+): undefined {
   const c = { lhs, rhs };
   lhs.constraints.push(c);
   rhs.constraints.push(c);
   propagateSubmode(lhs, rhs, source);
 }
 
-export function zonk(type, seen = new Set()) {
+export function zonk(type: Type, seen = new Set<number>()): Type {
   if (type.tag !== "MetaType") return type;
   const meta = type.meta;
   if (seen.has(meta.id)) return type;
@@ -73,7 +112,7 @@ export function zonk(type, seen = new Set()) {
   return value;
 }
 
-export function setType(meta, type, source = undefined) {
+export function setType(meta: Meta, type: Type, source: Span | undefined = undefined): undefined {
   const value = zonk(type);
   if (!meta.value) {
     if (value.tag === "MetaType" && value.meta.id === meta.id) return;
@@ -83,7 +122,11 @@ export function setType(meta, type, source = undefined) {
   assertSubtype(value, zonk(meta.value), source);
 }
 
-export function assertSubtype(left, right, source = undefined) {
+export function assertSubtype(
+  left: Type,
+  right: Type,
+  source: Span | undefined = undefined,
+): undefined {
   const a = zonk(left);
   const b = zonk(right);
   if (a.tag === "Float" && b.tag === "Float") return submode(a.mode, b.mode, source);
@@ -111,7 +154,7 @@ export function assertSubtype(left, right, source = undefined) {
   );
 }
 
-export function ensureFloat(expected, source = undefined) {
+export function ensureFloat(expected: Type, source: Span | undefined = undefined): FloatType {
   const ty = zonk(expected);
   if (ty.tag === "Float") return ty;
   if (ty.tag === "MetaType") {
@@ -127,7 +170,7 @@ export function ensureFloat(expected, source = undefined) {
   );
 }
 
-function formatTypeForError(type) {
+function formatTypeForError(type: Type) {
   return formatType(type)
     .replace(/float\[\?m\d+\]/g, "float")
     .replace(/\?t\d+/g, "unknown");
@@ -137,7 +180,7 @@ export function freshFloat() {
   return TFloat(freshModeMeta());
 }
 
-export function defaultModesType(type) {
+export function defaultModesType(type: Type) {
   const ty = zonk(type);
   switch (ty.tag) {
     case "Float":
@@ -161,9 +204,9 @@ export function defaultModesType(type) {
   }
 }
 
-export function formatType(type) {
-  const seen = new Set();
-  const go = (ty, prec = 0) => {
+export function formatType(type: Type) {
+  const seen = new Set<number>();
+  const go = (ty: Type, prec = 0): string => {
     ty = zonk(ty);
     switch (ty.tag) {
       case "Unit":
@@ -195,7 +238,7 @@ export function formatType(type) {
         }
         return `?t${ty.meta.id}`;
       default:
-        return ty.tag;
+        return (ty as Type).tag;
     }
   };
   return go(type);

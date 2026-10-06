@@ -1,5 +1,12 @@
 export class CompileError extends Error {
-  constructor(message, from = undefined, to = undefined) {
+  declare from: number | undefined;
+  declare to: number | undefined;
+
+  constructor(
+    message: string,
+    from: number | undefined = undefined,
+    to: number | undefined = undefined,
+  ) {
     super(message);
     this.name = "CompileError";
     this.from = from;

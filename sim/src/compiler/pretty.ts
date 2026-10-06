@@ -1,6 +1,19 @@
+import type { Affine } from "../runtime/affine.ts";
+import type { DistributionKind, Expr, ExprOf, TypedExpr, TypedExprOf } from "./ast.ts";
 import { formatType, zonk } from "./types.ts";
 
-const infix = {
+type TypedDist = TypedExprOf<DistributionKind>;
+
+/** The operands of an infix node: left and right, or head and tail of a Cons. */
+interface Operands<E> {
+  kind: string;
+  left?: E;
+  right?: E;
+  head?: E;
+  tail?: E;
+}
+
+const infix: Record<string, [string, number]> = {
   Lt: ["<", 1],
   Leq: ["<=", 1],
   Cons: ["::", 2],
@@ -10,7 +23,7 @@ const infix = {
   Div: ["/", 4],
 };
 
-const distNames = {
+const distNames: Record<string, string> = {
   Uniform: "uniform",
   Gauss: "gauss",
   Exponential: "exponential",
@@ -22,8 +35,8 @@ const distNames = {
   Discrete: "discrete",
 };
 
-export function prettyExpr(expr, prec = 0) {
-  const wrap = (s, level) => (prec > level ? `(${s})` : s);
+export function prettyExpr(expr: Expr, prec = 0): string {
+  const wrap = (s: string, level: number) => (prec > level ? `(${s})` : s);
   switch (expr.kind) {
     case "Var":
       return expr.name;
@@ -76,14 +89,14 @@ export function prettyExpr(expr, prec = 0) {
           level,
         );
       }
-      if (expr.kind in distNames) return prettyDistribution(expr);
+      if (expr.kind in distNames) return prettyDistribution(expr as ExprOf<DistributionKind>);
       return `<${expr.kind}>`;
   }
 }
 
-export function prettyTyped(te, prec = 0) {
+export function prettyTyped(te: TypedExpr, prec = 0): string {
   const typeText = formatType(te.typ);
-  const withType = (body, level = 0) =>
+  const withType = (body: string, level = 0) =>
     prec > level ? `(${body} : ${typeText})` : `${body} : ${typeText}`;
   switch (te.kind) {
     case "Var":
@@ -129,12 +142,12 @@ export function prettyTyped(te, prec = 0) {
           level,
         );
       }
-      if (te.kind in distNames) return withType(prettyTypedDistribution(te), 6);
+      if (te.kind in distNames) return withType(prettyTypedDistribution(te as TypedDist), 6);
       return withType(`<${te.kind}>`);
   }
 }
 
-function prettyDistribution(expr) {
+function prettyDistribution(expr: ExprOf<DistributionKind>) {
   const name = distNames[expr.kind];
   const mode = expr.mode ? `[${expr.mode}]` : "";
   if (expr.kind === "Discrete")
@@ -142,12 +155,12 @@ function prettyDistribution(expr) {
   return `${name}${mode}(${expr.args.map((arg) => prettyExpr(arg)).join(", ")})`;
 }
 
-function prettyMean(expr) {
+function prettyMean(expr: ExprOf<"Mean">) {
   const name = distNames[expr.distribution] ?? expr.distribution.toLowerCase();
   return `mean_${name}(${expr.args.map((arg) => prettyExpr(arg)).join(", ")})`;
 }
 
-function prettyTypedDistribution(te) {
+function prettyTypedDistribution(te: TypedDist) {
   const name = distNames[te.kind];
   const ty = zonk(te.typ);
   const derivedMode = ty.tag === "Float" ? ty.mode.mode : null;
@@ -158,15 +171,15 @@ function prettyTypedDistribution(te) {
   return `${name}${modeText}(${te.args.map((arg) => prettyTyped(arg)).join(", ")})`;
 }
 
-function leftOf(expr) {
-  return expr.left ?? expr.head;
+function leftOf<E>(expr: Operands<E>): E {
+  return (expr.left ?? expr.head) as E;
 }
 
-function rightOf(expr) {
-  return expr.right ?? expr.tail;
+function rightOf<E>(expr: Operands<E>): E {
+  return (expr.right ?? expr.tail) as E;
 }
 
-function prettyLet(expr) {
+function prettyLet(expr: ExprOf<"Let">) {
   const value = prettyExpr(expr.value);
   const body = prettyExpr(expr.body);
   if (!hasLineBreak(value)) {
@@ -175,7 +188,7 @@ function prettyLet(expr) {
   return `let ${expr.name} =\n${indent(value)}\nin\n${indent(body)}`;
 }
 
-function prettyIf(expr) {
+function prettyIf(expr: ExprOf<"If">) {
   const cond = prettyExpr(expr.cond);
   const thenBranch = prettyExpr(expr.thenBranch);
   const elseBranch = prettyExpr(expr.elseBranch);
@@ -190,35 +203,35 @@ function prettyIf(expr) {
   return `if ${cond}\nthen\n${indent(thenBranch)}\nelse\n${indent(elseBranch)}`;
 }
 
-function hasLineBreak(text) {
+function hasLineBreak(text: string) {
   return text.includes("\n");
 }
 
-function lineLength(text) {
+function lineLength(text: string) {
   return Math.max(...text.split("\n").map((line) => line.length));
 }
 
-function indent(text) {
+function indent(text: string) {
   return text
     .split("\n")
     .map((line) => (line ? `  ${line}` : line))
     .join("\n");
 }
 
-function formatNumber(value) {
+function formatNumber(value: number) {
   if (Object.is(value, -0)) return "0";
   return Number.isInteger(value) ? String(value) : String(value);
 }
 
-function domainErrorSummary(expr) {
+function domainErrorSummary(expr: ExprOf<"DomainError">) {
   const distribution = expr.distribution
     ? `${distNames[expr.distribution] ?? expr.distribution.toLowerCase()}: `
     : "";
   return `${distribution}${expr.reason ?? expr.message}`;
 }
 
-function prettyAffine(affine) {
-  const terms = [];
+function prettyAffine(affine: Affine) {
+  const terms: string[] = [];
   if ((affine.constant ?? 0) !== 0 || Object.keys(affine.terms ?? {}).length === 0) {
     terms.push(formatNumber(affine.constant ?? 0));
   }

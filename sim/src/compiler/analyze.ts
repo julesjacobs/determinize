@@ -1,10 +1,35 @@
+import type { Expr, TypedExpr } from "./ast.ts";
 import { determinize } from "./determinize.ts";
 import { CompileError } from "./errors.ts";
+import type { SpanInfo } from "./infer.ts";
 import { collectSpans, defaultModes, inferProgram } from "./infer.ts";
 import { parse } from "./parser.ts";
 import { prettyExpr, prettyTyped } from "./pretty.ts";
 
-export function analyze(source) {
+export interface Diagnostic {
+  from?: number;
+  to?: number;
+  message: string;
+}
+
+export type Analysis =
+  | {
+      ok: true;
+      ast: Expr;
+      typedAstRaw: TypedExpr;
+      typedAstDefaulted: TypedExpr;
+      determinizedAst: Expr;
+      pretty: {
+        parsed: string;
+        elaboratedRaw: string;
+        elaboratedDefaulted: string;
+        determinized: string;
+      };
+      spans: SpanInfo[];
+    }
+  | { ok: false; diagnostics: Diagnostic[] };
+
+export function analyze(source: string): Analysis {
   try {
     const ast = parse(source);
     const typedAstRaw = inferProgram(ast);
@@ -38,6 +63,9 @@ export function analyze(source) {
         diagnostics: [{ from: error.from, to: error.to, message: error.message }],
       };
     }
-    return { ok: false, diagnostics: [{ message: error?.message ?? String(error) }] };
+    return {
+      ok: false,
+      diagnostics: [{ message: error instanceof Error ? error.message : String(error) }],
+    };
   }
 }

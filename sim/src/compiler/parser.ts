@@ -1,8 +1,10 @@
+import type { DistributionKind, Expr, Mode, UnaryKind } from "./ast.ts";
 import { distributions, node } from "./ast.ts";
 import { CompileError } from "./errors.ts";
+import type { Token, TokenKind, TokenOf } from "./lexer.ts";
 import { lex } from "./lexer.ts";
 
-const distTokenToKind = {
+const distTokenToKind: Record<string, DistributionKind> = {
   UNIFORM: "Uniform",
   GAUSS: "Gauss",
   EXPONENTIAL: "Exponential",
@@ -18,7 +20,7 @@ const distKindToName = Object.fromEntries(
   Object.entries(distTokenToKind).map(([token, kind]) => [kind, token.toLowerCase()]),
 );
 
-const tokenLabels = {
+const tokenLabels: Record<string, string> = {
   EOF: "end of input",
   IDENT: "identifier",
   FLOAT: "number",
@@ -59,52 +61,56 @@ for (const token of Object.keys(distTokenToKind)) {
   tokenLabels[token] = `\`${token.toLowerCase()}\``;
 }
 
-function tokenLabel(kind) {
+function tokenLabel(kind: string) {
   return tokenLabels[kind] ?? kind;
 }
 
-function expectedMessage(expected, found) {
+function expectedMessage(expected: string, found: Token) {
   const expectedText = tokenLabel(expected);
   if (found.kind === "EOF") return `expected ${expectedText} before end of input`;
   return `expected ${expectedText}, found ${tokenLabel(found.kind)}`;
 }
 
 class Parser {
-  constructor(source) {
+  declare source: string;
+  declare tokens: Token[];
+  declare pos: number;
+
+  constructor(source: string) {
     this.source = source;
     this.tokens = lex(source);
     this.pos = 0;
   }
 
-  current() {
+  current(): Token {
     return this.tokens[this.pos];
   }
 
-  at(kind) {
+  at(kind: TokenKind) {
     return this.current().kind === kind;
   }
 
-  take(kind) {
+  take<K extends TokenKind>(kind: K): TokenOf<K> {
     const tok = this.current();
     if (tok.kind !== kind) {
       throw new CompileError(expectedMessage(kind, tok), tok.from, tok.to);
     }
     this.pos++;
-    return tok;
+    return tok as TokenOf<K>;
   }
 
-  maybe(kind) {
+  maybe<K extends TokenKind>(kind: K): TokenOf<K> | null {
     if (!this.at(kind)) return null;
     return this.take(kind);
   }
 
-  parseMain() {
+  parseMain(): Expr {
     const expr = this.parseExpr();
     this.take("EOF");
     return expr;
   }
 
-  parseExpr() {
+  parseExpr(): Expr {
     if (this.at("IF")) {
       const start = this.take("IF").from;
       const cond = this.parseExpr();
@@ -129,7 +135,7 @@ class Parser {
     return this.parseFun();
   }
 
-  parseMatch() {
+  parseMatch(): Expr {
     const start = this.take("MATCH").from;
     const scrutinee = this.parseExpr();
     this.take("WITH");
@@ -175,7 +181,7 @@ class Parser {
     );
   }
 
-  parseFun() {
+  parseFun(): Expr {
     if (this.at("FUN")) {
       const start = this.take("FUN").from;
       const param = this.take("IDENT");
@@ -196,7 +202,7 @@ class Parser {
     return this.parseCmp();
   }
 
-  parseCmp() {
+  parseCmp(): Expr {
     let left = this.parseCons();
     while (this.at("LT") || this.at("LEQ")) {
       const op = this.current();
@@ -207,7 +213,7 @@ class Parser {
     return left;
   }
 
-  parseCons() {
+  parseCons(): Expr {
     const head = this.parseAdd();
     if (this.maybe("CONS")) {
       const tail = this.parseCons();
@@ -216,7 +222,7 @@ class Parser {
     return head;
   }
 
-  parseAdd() {
+  parseAdd(): Expr {
     let left = this.parseMul();
     while (this.at("PLUS") || this.at("MINUS")) {
       const op = this.current();
@@ -227,7 +233,7 @@ class Parser {
     return left;
   }
 
-  parseMul() {
+  parseMul(): Expr {
     let left = this.parseUnary();
     while (this.at("TIMES") || this.at("DIVIDE")) {
       const op = this.current();
@@ -238,7 +244,7 @@ class Parser {
     return left;
   }
 
-  parseUnary() {
+  parseUnary(): Expr {
     if (this.at("MINUS")) {
       const start = this.take("MINUS").from;
       const expr = this.parseUnary();
@@ -247,7 +253,7 @@ class Parser {
     return this.parseApp();
   }
 
-  parseApp() {
+  parseApp(): Expr {
     let fn = this.parseAtom();
     while (this.startsAtom()) {
       const arg = this.parseAtom();
@@ -273,7 +279,7 @@ class Parser {
     ].includes(this.current().kind);
   }
 
-  parseAtom() {
+  parseAtom(): Expr {
     const tok = this.current();
     switch (tok.kind) {
       case "IDENT":
@@ -313,7 +319,7 @@ class Parser {
     }
   }
 
-  parseParen() {
+  parseParen(): Expr {
     const start = this.take("LPAREN").from;
     if (this.at("RPAREN")) {
       const end = this.take("RPAREN").to;
@@ -329,15 +335,15 @@ class Parser {
     return { ...first, from: start, to: this.tokens[this.pos - 1].to };
   }
 
-  parseUnaryKeyword() {
+  parseUnaryKeyword(): Expr {
     const keyword = this.current();
     this.pos++;
     const expr = this.parseAtom();
-    const map = { FST: "Fst", SND: "Snd", INL: "Inl", INR: "Inr" };
+    const map: Record<string, UnaryKind> = { FST: "Fst", SND: "Snd", INL: "Inl", INR: "Inr" };
     return node(map[keyword.kind], { expr }, keyword.from, expr.to);
   }
 
-  parseObserve() {
+  parseObserve(): Expr {
     const start = this.take("OBSERVE").from;
     this.take("LPAREN");
     const cond = this.parseExpr();
@@ -345,12 +351,12 @@ class Parser {
     return node("Observe", { cond }, start, end);
   }
 
-  parseDistribution() {
+  parseDistribution(): Expr {
     const nameTok = this.current();
     this.pos++;
     const kind = distTokenToKind[nameTok.kind];
     const name = distKindToName[kind];
-    let mode = null;
+    let mode: Mode | null = null;
     if (this.at("LBRACK")) {
       this.take("LBRACK");
       const modeTok = this.take("IDENT");
@@ -361,14 +367,14 @@ class Parser {
       this.take("RBRACK");
     }
     this.take("LPAREN");
-    const args = [];
+    const args: (number | Expr)[] = [];
     if (kind === "Discrete") {
       const first = this.take("FLOAT");
       args.push(first.value);
       while (this.maybe("COMMA")) args.push(this.take("FLOAT").value);
       const end = this.take("RPAREN").to;
       const choices = args.map((p, i) => ({
-        probability: p,
+        probability: p as number,
         value: node("Const", { value: i }, nameTok.from, end),
       }));
       return node("Discrete", { mode, choices, displayName: name }, nameTok.from, end);
@@ -382,11 +388,11 @@ class Parser {
       args.push(this.parseExpr());
     }
     const end = this.take("RPAREN").to;
-    return node(kind, { mode, args, displayName: name }, nameTok.from, end);
+    return node(kind, { mode, args: args as Expr[], displayName: name }, nameTok.from, end);
   }
 }
 
-export function parse(source) {
+export function parse(source: string): Expr {
   return new Parser(source).parseMain();
 }
 

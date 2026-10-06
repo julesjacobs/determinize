@@ -1,6 +1,62 @@
+import type { OfKind, Span } from "./ast.ts";
 import { CompileError } from "./errors.ts";
 
-const keywords = new Map([
+/** The kinds of tokens whose value is their text. */
+export type TextTokenKind =
+  | "IDENT"
+  | "TRUE"
+  | "FALSE"
+  | "FUN"
+  | "REC"
+  | "LET"
+  | "IN"
+  | "IF"
+  | "THEN"
+  | "ELSE"
+  | "MATCH"
+  | "WITH"
+  | "INL"
+  | "INR"
+  | "FST"
+  | "SND"
+  | "UNIFORM"
+  | "GAUSS"
+  | "EXPONENTIAL"
+  | "GAMMA"
+  | "BETA"
+  | "FLIP"
+  | "BERNOULLI"
+  | "POISSON"
+  | "DISCRETE"
+  | "OBSERVE"
+  | "DARROW"
+  | "LEQ"
+  | "CONS"
+  | "LPAREN"
+  | "RPAREN"
+  | "LBRACK"
+  | "RBRACK"
+  | "LT"
+  | "GT"
+  | "COMMA"
+  | "BAR"
+  | "EQ"
+  | "DOT"
+  | "PLUS"
+  | "TIMES"
+  | "MINUS"
+  | "DIVIDE";
+
+export type Token = Span &
+  (
+    | { kind: TextTokenKind; value: string }
+    | { kind: "FLOAT"; value: number }
+    | { kind: "EOF"; value: null }
+  );
+export type TokenKind = Token["kind"];
+export type TokenOf<K extends TokenKind> = OfKind<Token, K>;
+
+const keywords = new Map<string, TextTokenKind>([
   ["true", "TRUE"],
   ["false", "FALSE"],
   ["fun", "FUN"],
@@ -29,7 +85,7 @@ const keywords = new Map([
   ["observe", "OBSERVE"],
 ]);
 
-const punct = [
+const punct: [string, TextTokenKind][] = [
   ["=>", "DARROW"],
   ["<=", "LEQ"],
   ["::", "CONS"],
@@ -50,11 +106,12 @@ const punct = [
   ["\\", "FUN"],
 ];
 
-export function lex(source) {
-  const tokens = [];
+export function lex(source: string): Token[] {
+  const tokens: Token[] = [];
   let i = 0;
 
-  const push = (kind, value, from, to) => tokens.push({ kind, value, from, to });
+  const push = (kind: TextTokenKind | "FLOAT", value: string | number, from: number, to: number) =>
+    tokens.push({ kind, value, from, to } as Token);
 
   while (i < source.length) {
     const ch = source[i];

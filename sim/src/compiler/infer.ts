@@ -1,4 +1,6 @@
+import type { Expr, Mode, Span, TypedExpr, TypedExprOf } from "./ast.ts";
 import { CompileError } from "./errors.ts";
+import type { FloatType, Type } from "./types.ts";
 import {
   assertSubtype,
   defaultModesType,
@@ -20,40 +22,56 @@ import {
   zonk,
 } from "./types.ts";
 
-function typed(expr, typ, extra = {}) {
-  return { kind: expr.kind, typ, from: expr.from, to: expr.to, ...extra };
+type Env = Map<string, Type>;
+
+/** A highlighted range of the source, with its type and its hover text. */
+export interface SpanInfo {
+  from: number;
+  to: number;
+  kind: "identifier" | "distribution" | "expr";
+  type: string;
+  mode: Mode | "?" | undefined;
+  text: string;
 }
 
-function lookup(env, name, source) {
+function typed<K extends TypedExpr["kind"]>(
+  expr: Span & { kind: K },
+  typ: Type,
+  extra = {} as Omit<TypedExprOf<K>, "kind" | "typ" | "from" | "to">,
+): TypedExprOf<K> {
+  return { kind: expr.kind, typ, from: expr.from, to: expr.to, ...extra } as TypedExprOf<K>;
+}
+
+function lookup(env: Env, name: string, source: Span): Type {
   if (!env.has(name))
     throw new CompileError(`unbound variable \`${name}\``, source.from, source.to);
-  return env.get(name);
+  return env.get(name) as Type;
 }
 
-function extend(env, entries) {
+function extend(env: Env, entries: [string, Type][]): Env {
   const next = new Map(env);
   for (const [name, typ] of entries) next.set(name, typ);
   return next;
 }
 
-function forceAnnotatedMode(expr, typ) {
+function forceAnnotatedMode(expr: Span & { mode: Mode | null }, typ: Type) {
   if (!expr.mode) return;
   const floatTy = ensureFloat(typ, expr);
   setMode(floatTy.mode, expr.mode, expr);
 }
 
-function floatG() {
+function floatG(): FloatType {
   const mode = freshModeMeta();
   setMode(mode, "G");
   return TFloat(mode);
 }
 
-export function inferProgram(expr) {
+export function inferProgram(expr: Expr): TypedExpr {
   resetTypeState();
   return infer(new Map(), expr, TMeta(freshMeta()));
 }
 
-export function infer(env, expr, expected) {
+export function infer(env: Env, expr: Expr, expected: Type): TypedExpr {
   switch (expr.kind) {
     case "Var": {
       const tyVar = lookup(env, expr.name, expr);
@@ -305,8 +323,8 @@ export function infer(env, expr, expected) {
   }
 }
 
-export function defaultModes(typedExpr) {
-  const go = (te) => {
+export function defaultModes(typedExpr: TypedExpr): TypedExpr {
+  const go = (te: TypedExpr) => {
     defaultModesType(te.typ);
     for (const child of typedChildren(te)) go(child);
   };
@@ -314,7 +332,7 @@ export function defaultModes(typedExpr) {
   return typedExpr;
 }
 
-export function typedChildren(te) {
+export function typedChildren(te: TypedExpr): TypedExpr[] {
   switch (te.kind) {
     case "Lam":
     case "Rec":
@@ -363,7 +381,7 @@ export function typedChildren(te) {
   }
 }
 
-export function collectSpans(te, spans = []) {
+export function collectSpans(te: TypedExpr, spans: SpanInfo[] = []): SpanInfo[] {
   spans.push({
     from: te.from,
     to: te.to,
@@ -373,14 +391,15 @@ export function collectSpans(te, spans = []) {
         ? "distribution"
         : "expr",
     type: formatType(te.typ),
-    mode: zonk(te.typ)?.tag === "Float" ? (zonk(te.typ).mode.mode ?? "?") : undefined,
+    mode:
+      zonk(te.typ)?.tag === "Float" ? ((zonk(te.typ) as FloatType).mode.mode ?? "?") : undefined,
     text: hoverText(te),
   });
   for (const child of typedChildren(te)) collectSpans(child, spans);
   return spans;
 }
 
-function hoverText(te) {
+function hoverText(te: TypedExpr) {
   const base = `${te.kind}: ${formatType(te.typ)}`;
   if (!isDistribution(te.kind)) return base;
   const mode = te.typ.tag === "Float" ? (te.typ.mode.mode ?? "?") : "?";
@@ -389,7 +408,7 @@ function hoverText(te) {
   return base;
 }
 
-function isDistribution(kind) {
+function isDistribution(kind: string) {
   return [
     "Uniform",
     "Gauss",
