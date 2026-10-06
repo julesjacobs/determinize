@@ -8,12 +8,14 @@ import type { SpanInfo } from "./compiler/infer.ts";
 const distributionNames = new Set([
   "uniform",
   "gauss",
+  "gaussian",
   "exponential",
   "gamma",
   "beta",
   "bernoulli",
   "poisson",
   "discrete",
+  "discrete_list",
 ]);
 
 /** The source range whose type hint the pointer or focus is on. */

@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { analyze } from "../src/compiler/analyze.ts";
+import { CompileError } from "../src/compiler/errors.ts";
 import { parse } from "../src/compiler/parser.ts";
 import { prettyExpr } from "../src/compiler/pretty.ts";
+import { rational } from "../src/compiler/rational.ts";
 
 test("parser preserves arithmetic precedence", () => {
   const ast = parse("uniform(0, 1) * 2 + 3");
@@ -16,6 +18,64 @@ test("parser accepts comments and explicit distribution modes", () => {
   assert.equal(ast.kind, "Uniform");
   assert.equal(ast.mode, "E");
   assert.equal(prettyExpr(ast), "uniform[E](0, 1)");
+});
+
+test("parser accepts what Lean's parser accepts", () => {
+  for (const source of [
+    "(* outer (* inner *) *) 1.25e-2",
+    "(*) comment *) 0",
+    "(* outer (*) inner *) *) 0",
+    "discrete[E](*)",
+    "discrete[E]( * )",
+    "discrete[E](*\n)",
+    "discrete[G] (* )",
+    "discrete (* comment *) [E] (* )",
+    "discrete[E] (* comment *) (0,1)",
+    "discrete(0.25, x, *)",
+    "discrete_list(0.5 :: [])",
+    "discrete()",
+    "let x' = gaussian(0, 1) in x'",
+    "match [] with | [] => 0 | x :: xs => x",
+    "1 + if true then 1 else 2",
+    "2 * let x = 1 in x",
+    "(fun f => f 1) lambda x => x",
+    "let fun = 1 in 2",
+    "fst inl 1",
+    "1. + 1e10000 + 1E-10000",
+    "flip[E](0.5)",
+  ]) {
+    assert.doesNotThrow(() => parse(source), source);
+  }
+});
+
+test("parser rejects what Lean's parser rejects", () => {
+  for (const source of [
+    "uniform[Q](0,1)",
+    "1 garbage )",
+    "(* unfinished",
+    "(* outer (* inner *) 0",
+    "uniform(0)",
+    "poisson(1,2)",
+    "observe[E](true)",
+    "discrete_list(*)",
+    "uniform(0, *)",
+    "1e10001",
+    "2e",
+    "2else",
+    ".5",
+    "f fun x => x",
+    "1 > 0",
+    "match [] with x :: xs => x | [] => 0",
+  ]) {
+    assert.throws(() => parse(source), CompileError, source);
+  }
+});
+
+test("number literals are exact rationals", () => {
+  const ast = parse("1.25e-2");
+  assert.equal(ast.kind, "Const");
+  assert.deepEqual(ast.exact, rational(1n, 80n));
+  assert.equal(ast.value, 0.0125);
 });
 
 test("pretty printer keeps short let chains compact and aligned", () => {

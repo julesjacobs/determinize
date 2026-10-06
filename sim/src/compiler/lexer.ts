@@ -1,163 +1,111 @@
-import type { OfKind, Span } from "./ast.ts";
+// A port of the tokenizer of Lean's `Frontend/Parser.lean`, with source spans.
+import type { Span } from "./ast.ts";
 import { CompileError } from "./errors.ts";
 
-/** The kinds of tokens whose value is their text. */
-export type TextTokenKind =
-  | "IDENT"
-  | "TRUE"
-  | "FALSE"
-  | "FUN"
-  | "REC"
-  | "LET"
-  | "IN"
-  | "IF"
-  | "THEN"
-  | "ELSE"
-  | "MATCH"
-  | "WITH"
-  | "INL"
-  | "INR"
-  | "FST"
-  | "SND"
-  | "UNIFORM"
-  | "GAUSS"
-  | "EXPONENTIAL"
-  | "GAMMA"
-  | "BETA"
-  | "FLIP"
-  | "BERNOULLI"
-  | "POISSON"
-  | "DISCRETE"
-  | "OBSERVE"
-  | "DARROW"
-  | "LEQ"
-  | "CONS"
-  | "LPAREN"
-  | "RPAREN"
-  | "LBRACK"
-  | "RBRACK"
-  | "LT"
-  | "GT"
-  | "COMMA"
-  | "BAR"
-  | "EQ"
-  | "DOT"
-  | "PLUS"
-  | "TIMES"
-  | "MINUS"
-  | "DIVIDE";
+/** A token: a word (identifier or keyword), a decimal number, a symbol, or the end of input. */
+export type Token = Span & { kind: "word" | "number" | "symbol" | "end"; text: string };
 
-export type Token = Span &
-  (
-    | { kind: TextTokenKind; value: string }
-    | { kind: "FLOAT"; value: number }
-    | { kind: "EOF"; value: null }
-  );
-export type TokenKind = Token["kind"];
-export type TokenOf<K extends TokenKind> = OfKind<Token, K>;
+const isDigit = (c: string) => c >= "0" && c <= "9";
+const isAlpha = (c: string) => (c >= "a" && c <= "z") || (c >= "A" && c <= "Z");
+export const identStart = (c: string) => isAlpha(c) || c === "_";
+const identRest = (c: string) => identStart(c) || isDigit(c) || c === "'";
+/** Lean's `Char.isWhitespace`. */
+const isWhitespace = (c: string) => c === " " || c === "\t" || c === "\r" || c === "\n";
+const symbols = "()[],|=+-*/<>\\";
 
-const keywords = new Map<string, TextTokenKind>([
-  ["true", "TRUE"],
-  ["false", "FALSE"],
-  ["fun", "FUN"],
-  ["lambda", "FUN"],
-  ["rec", "REC"],
-  ["let", "LET"],
-  ["in", "IN"],
-  ["if", "IF"],
-  ["then", "THEN"],
-  ["else", "ELSE"],
-  ["match", "MATCH"],
-  ["with", "WITH"],
-  ["inl", "INL"],
-  ["inr", "INR"],
-  ["fst", "FST"],
-  ["snd", "SND"],
-  ["uniform", "UNIFORM"],
-  ["gauss", "GAUSS"],
-  ["exponential", "EXPONENTIAL"],
-  ["gamma", "GAMMA"],
-  ["beta", "BETA"],
-  ["flip", "FLIP"],
-  ["bernoulli", "BERNOULLI"],
-  ["poisson", "POISSON"],
-  ["discrete", "DISCRETE"],
-  ["observe", "OBSERVE"],
-]);
+/** The end of the comment that opens at `start`; comments nest. */
+function commentEnd(source: string, start: number): number {
+  let depth = 1;
+  let i = start + 2;
+  while (i < source.length) {
+    if (source.startsWith("(*", i)) {
+      depth += 1;
+      i += 2;
+    } else if (source.startsWith("*)", i)) {
+      i += 2;
+      depth -= 1;
+      if (depth === 0) return i;
+    } else {
+      i += 1;
+    }
+  }
+  throw new CompileError("unterminated comment; expected `*)`", start, source.length);
+}
 
-const punct: [string, TextTokenKind][] = [
-  ["=>", "DARROW"],
-  ["<=", "LEQ"],
-  ["::", "CONS"],
-  ["(", "LPAREN"],
-  [")", "RPAREN"],
-  ["[", "LBRACK"],
-  ["]", "RBRACK"],
-  ["<", "LT"],
-  [">", "GT"],
-  [",", "COMMA"],
-  ["|", "BAR"],
-  ["=", "EQ"],
-  [".", "DOT"],
-  ["+", "PLUS"],
-  ["*", "TIMES"],
-  ["-", "MINUS"],
-  ["/", "DIVIDE"],
-  ["\\", "FUN"],
-];
+/** `(*` after `discrete` or `discrete[m]` opens the remainder form `discrete(*)`. */
+function discreteArguments(tokens: Token[]): boolean {
+  const back = (k: number) => tokens[tokens.length - 1 - k]?.text;
+  return back(0) === "discrete" || (back(0) === "]" && back(2) === "[" && back(3) === "discrete");
+}
 
 export function lex(source: string): Token[] {
   const tokens: Token[] = [];
+  const push = (kind: Token["kind"], from: number, to: number) =>
+    tokens.push({ kind, text: source.slice(from, to), from, to });
   let i = 0;
-
-  const push = (kind: TextTokenKind | "FLOAT", value: string | number, from: number, to: number) =>
-    tokens.push({ kind, value, from, to } as Token);
-
   while (i < source.length) {
-    const ch = source[i];
-
-    if (/\s/.test(ch)) {
+    const c = source[i];
+    if (source.startsWith("(*", i)) {
+      if (discreteArguments(tokens)) {
+        let close = i + 2;
+        while (close < source.length && isWhitespace(source[close])) close++;
+        if (source[close] === ")") {
+          push("symbol", i, i + 1);
+          push("symbol", i + 1, i + 2);
+          push("symbol", close, close + 1);
+          i = close + 1;
+          continue;
+        }
+      }
+      i = commentEnd(source, i);
+      continue;
+    }
+    if (isWhitespace(c)) {
       i++;
       continue;
     }
-
-    if (source.startsWith("(*", i)) {
-      const start = i;
+    if (identStart(c)) {
+      let end = i + 1;
+      while (end < source.length && identRest(source[end])) end++;
+      push("word", i, end);
+      i = end;
+      continue;
+    }
+    if (isDigit(c)) {
+      let end = i;
+      while (end < source.length && isDigit(source[end])) end++;
+      if (source[end] === ".") {
+        end++;
+        while (end < source.length && isDigit(source[end])) end++;
+      }
+      if (source[end] === "e" || source[end] === "E") {
+        let digits = end + 1;
+        if (source[digits] === "+" || source[digits] === "-") digits++;
+        let exponentEnd = digits;
+        while (exponentEnd < source.length && isDigit(source[exponentEnd])) exponentEnd++;
+        if (exponentEnd === digits) {
+          throw new CompileError("missing decimal exponent", i, exponentEnd);
+        }
+        end = exponentEnd;
+      }
+      push("number", i, end);
+      i = end;
+      continue;
+    }
+    const pair = source.slice(i, i + 2);
+    if (pair === "=>" || pair === "::" || pair === "<=") {
+      push("symbol", i, i + 2);
       i += 2;
-      while (i < source.length && !source.startsWith("*)", i)) i++;
-      if (i >= source.length)
-        throw new CompileError("unterminated comment; expected `*)`", start, source.length);
-      i += 2;
       continue;
     }
-
-    const num = source.slice(i).match(/^[0-9]+(?:\.[0-9]*)?(?:[eE][+-]?[0-9]+)?/);
-    if (num) {
-      const text = num[0];
-      push("FLOAT", Number(text), i, i + text.length);
-      i += text.length;
+    if (symbols.includes(c)) {
+      push("symbol", i, i + 1);
+      i++;
       continue;
     }
-
-    const ident = source.slice(i).match(/^[A-Za-z_][A-Za-z0-9_]*/);
-    if (ident) {
-      const text = ident[0];
-      push(keywords.get(text) ?? "IDENT", text, i, i + text.length);
-      i += text.length;
-      continue;
-    }
-
-    const matched = punct.find(([text]) => source.startsWith(text, i));
-    if (matched) {
-      const [text, kind] = matched;
-      push(kind, text, i, i + text.length);
-      i += text.length;
-      continue;
-    }
-
-    throw new CompileError(`unexpected character \`${ch}\``, i, i + 1);
+    const char = String.fromCodePoint(source.codePointAt(i) ?? 0);
+    throw new CompileError(`unexpected character \`${char}\``, i, i + char.length);
   }
-
-  tokens.push({ kind: "EOF", value: null, from: source.length, to: source.length });
+  tokens.push({ kind: "end", text: "", from: source.length, to: source.length });
   return tokens;
 }

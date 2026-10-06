@@ -19,6 +19,7 @@ const constructors = new Set(["inl", "inr", "fst", "snd", "observe"]);
 const distributions = new Set([
   "uniform",
   "gauss",
+  "gaussian",
   "exponential",
   "gamma",
   "beta",
@@ -26,6 +27,7 @@ const distributions = new Set([
   "bernoulli",
   "poisson",
   "discrete",
+  "discrete_list",
 ]);
 
 export const detLanguage = StreamLanguage.define({
@@ -41,7 +43,7 @@ export const detLanguage = StreamLanguage.define({
     }
 
     if (stream.match(/^[0-9]+(?:\.[0-9]*)?(?:[eE][+-]?[0-9]+)?/)) return "number";
-    if (stream.match(/^[A-Za-z_][A-Za-z0-9_]*/)) {
+    if (stream.match(/^[A-Za-z_][A-Za-z0-9_']*/)) {
       const word = stream.current();
       if (keywords.has(word)) return "keyword";
       if (distributions.has(word)) return "variableName.special";

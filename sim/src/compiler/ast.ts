@@ -1,4 +1,5 @@
 import type { Affine } from "../runtime/affine.ts";
+import type { Rational } from "./rational.ts";
 import type { Type } from "./types.ts";
 
 export type Mode = "E" | "G";
@@ -13,7 +14,9 @@ export type ParamDistributionKind =
   | "Flip"
   | "Bernoulli"
   | "Poisson";
-export type DistributionKind = ParamDistributionKind | "Discrete";
+/** `Discrete` has literal choices; `DiscreteList` draws an index from a list of probabilities
+ * whose last outcome takes the remainder, as Lean's `Expr.discrete` does. */
+export type DistributionKind = ParamDistributionKind | "Discrete" | "DiscreteList";
 /** The distributions over floats, which have a mean. */
 export type MeanKind = Exclude<DistributionKind, "Flip">;
 
@@ -33,12 +36,15 @@ export interface Choice<C> {
 
 /**
  * A source program, a determinized one, which adds the mean of a distribution, or a state of the
- * runtime, which adds rejection, a symbolic affine float and a domain error.
+ * runtime, which adds rejection, a symbolic affine float and a domain error. The parser produces
+ * `DiscreteWeights` and the `remainder` and `list` forms of `DiscreteList`; the front end replaces
+ * `DiscreteWeights` by `Discrete` once it has checked the weights.
  */
 export type Expr = Span &
   (
     | { kind: "Var"; name: string }
-    | { kind: "Const"; value: number }
+    /** `exact` is the value of a number literal. */
+    | { kind: "Const"; value: number; exact?: Rational }
     | { kind: "Bool"; value: boolean }
     | { kind: "Unit" | "Nil" }
     | { kind: "Reject" }
@@ -67,8 +73,12 @@ export type Expr = Span &
     | { kind: "If"; cond: Expr; thenBranch: Expr; elseBranch: Expr }
     | { kind: "Let"; name: string; value: Expr; body: Expr }
     | { kind: "Observe"; cond: Expr }
-    | { kind: ParamDistributionKind; mode: Mode | null; args: Expr[]; displayName?: string }
-    | { kind: "Discrete"; mode: Mode | null; choices: Choice<Expr>[]; displayName?: string }
+    | { kind: ParamDistributionKind; mode: Mode | null; args: Expr[] }
+    | { kind: "Discrete"; mode: Mode | null; choices: Choice<Expr>[] }
+    /** `discrete(w0, …, wn)`. */
+    | { kind: "DiscreteWeights"; mode: Mode | null; weights: Expr[] }
+    /** `discrete(p0, …, pn, *)` and `discrete(*)` (`remainder`), or `discrete_list(e)` (`list`). */
+    | { kind: "DiscreteList"; mode: Mode | null; probabilities: Expr; form: "remainder" | "list" }
     | { kind: "Mean"; distribution: MeanKind; args: Expr[] }
     | { kind: "SymFloat"; affine: Affine }
     | {
@@ -112,6 +122,12 @@ export type TypedExpr = Span & { typ: Type } & (
     | { kind: "Observe"; cond: TypedExpr }
     | { kind: ParamDistributionKind; mode: Mode | null; args: TypedExpr[] }
     | { kind: "Discrete"; mode: Mode | null; choices: Choice<TypedExpr>[] }
+    | {
+        kind: "DiscreteList";
+        mode: Mode | null;
+        probabilities: TypedExpr;
+        form: "remainder" | "list";
+      }
   );
 
 /** The members of the union U whose kind admits K. */
@@ -128,9 +144,11 @@ export function node<K extends Expr["kind"]>(
   return { kind, ...props, from, to } as ExprOf<K>;
 }
 
+/** The names of the primitives in programs, as in Lean's parser. */
 export const distributions = new Set([
   "uniform",
   "gauss",
+  "gaussian",
   "exponential",
   "gamma",
   "beta",
@@ -138,6 +156,7 @@ export const distributions = new Set([
   "bernoulli",
   "poisson",
   "discrete",
+  "discrete_list",
 ]);
 
 export function stripSpans(expr: unknown): unknown {

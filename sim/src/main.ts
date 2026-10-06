@@ -27,7 +27,7 @@ import { examples } from "./examples.ts";
 import { detHighlighting, detLanguage } from "./language.ts";
 import { hoveredTypeHintState, modeHints, setTypeHints, typeHintState } from "./modeHints.ts";
 import { affineConst, affineToNumber, evalAffine, prettyAffine } from "./runtime/affine.ts";
-import { meanDistribution } from "./runtime/distributions.ts";
+import { distributionName, meanDistribution } from "./runtime/distributions.ts";
 import type { Binding, CoupledTrace, Frame } from "./runtime/semantics.ts";
 import { runCoupledTrace } from "./runtime/semantics.ts";
 import type { TraceOptions } from "./traceRender.ts";
@@ -707,7 +707,7 @@ function sigmaView(sigma: Binding[]) {
       meanBySymbol[binding.name] = NaN;
     }
     const args = binding.args.map((arg) => renderHighlightedText(prettyAffine(arg))).join(", ");
-    return `<span class="sigma-binding corr-item" data-corr="${escapeHtml(binding.name)}" tabindex="0"><span class="sigma-definition"><span class="tok-sym">${escapeHtml(binding.name)}</span> ~ <span class="tok-dist">${binding.kind.toLowerCase()}</span>(${args})</span><span class="sigma-mean">E[<span class="tok-sym">${escapeHtml(binding.name)}</span>] = ${meanMarkup(binding.name, mean, meanError)}</span></span>`;
+    return `<span class="sigma-binding corr-item" data-corr="${escapeHtml(binding.name)}" tabindex="0"><span class="sigma-definition"><span class="tok-sym">${escapeHtml(binding.name)}</span> ~ <span class="tok-dist">${distributionName(binding.kind)}</span>(${args})</span><span class="sigma-mean">E[<span class="tok-sym">${escapeHtml(binding.name)}</span>] = ${meanMarkup(binding.name, mean, meanError)}</span></span>`;
   });
   return { html: lines.join("\n"), lineCount: lines.length, meanBySymbol };
 }

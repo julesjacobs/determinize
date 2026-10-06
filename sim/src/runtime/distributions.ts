@@ -26,6 +26,7 @@ export const floatDistributions = new Set([
   "Bernoulli",
   "Poisson",
   "Discrete",
+  "DiscreteList",
 ]);
 const MIN_POSITIVE_SAMPLE = Number.MIN_VALUE;
 const PROBABILITY_EPS = 1e-9;
@@ -109,6 +110,16 @@ export function sampleDistribution(
       }
       return probabilities.length - 1;
     }
+    case "DiscreteList": {
+      // The first index whose cumulative probability exceeds the draw; the remainder otherwise.
+      const u = rng.next();
+      let cumulative = 0;
+      for (const [index, probability] of domain.entries()) {
+        cumulative += probability;
+        if (u < cumulative) return index;
+      }
+      return domain.length;
+    }
     default:
       throw new Error(`unknown distribution ${kind}`);
   }
@@ -136,6 +147,15 @@ export function meanDistribution(kind: MeanKind, args: Affine[]): Affine {
           affineAdd(acc, affineMul(probability, { constant: index, terms: {} })),
         { constant: 0, terms: {} },
       );
+    case "DiscreteList": {
+      // n + Σ (i - n) p_i: outcome n takes the remainder 1 - Σ p_i.
+      const n = args.length;
+      return args.reduce<Affine>(
+        (acc, probability, index) =>
+          affineAdd(acc, affineMul(probability, { constant: index - n, terms: {} })),
+        { constant: n, terms: {} },
+      );
+    }
     default:
       throw new Error(`no symbolic mean for ${kind}`);
   }
@@ -246,13 +266,27 @@ function validateConcreteDomain(
       }
       break;
     }
+    case "DiscreteList": {
+      for (const value of values) {
+        if (value !== null && value < 0)
+          throw new DistributionDomainError(kind, "probabilities must be >= 0");
+      }
+      if (!values.includes(null)) {
+        // Lean's runtime allows the rounding of the sum at the domain boundary.
+        const total = (values as number[]).reduce((sum, value) => sum + value, 0);
+        const tolerance = 8 * Number.EPSILON * (values.length + 1);
+        if (total > 1 + tolerance)
+          throw new DistributionDomainError(kind, "probabilities must sum to at most 1");
+      }
+      break;
+    }
     default:
       throw new Error(`unknown distribution ${kind}`);
   }
 }
 
 function validateArity(kind: DistributionKind, actual: number) {
-  if (kind === "Discrete") return;
+  if (kind === "Discrete" || kind === "DiscreteList") return;
   const expected = ARITIES[kind];
   if (expected === undefined) throw new Error(`unknown distribution ${kind}`);
   if (actual !== expected) {
@@ -261,7 +295,8 @@ function validateArity(kind: DistributionKind, actual: number) {
   }
 }
 
-function distributionName(kind: string) {
+export function distributionName(kind: string) {
+  if (kind === "DiscreteList") return "discrete_list";
   return kind === "Gauss" ? "gauss" : kind.toLowerCase();
 }
 

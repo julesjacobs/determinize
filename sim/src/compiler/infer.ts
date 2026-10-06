@@ -302,16 +302,35 @@ export function infer(env: Env, expr: Expr, expected: Type): TypedExpr {
       forceAnnotatedMode(expr, ty);
       return typed(expr, ty, { mode: expr.mode, args: [infer(env, expr.args[0], ty)] });
     }
-    case "Discrete": {
+    case "DiscreteWeights": {
       const ty = ensureFloat(expected, expr);
       forceAnnotatedMode(expr, ty);
-      const choices = expr.choices.map((choice) => {
-        if (choice.probability < 0 || choice.probability > 1) {
+      if (expr.weights.length === 0) {
+        throw new CompileError("discrete expects at least one weight", expr.from, expr.to);
+      }
+      const choices = expr.weights.map((weight, index) => {
+        if (weight.kind !== "Const" || weight.exact === undefined) {
+          throw new CompileError("discrete expects literal weights", weight.from, weight.to);
+        }
+        if (weight.value < 0 || weight.value > 1) {
           throw new CompileError("discrete probability must be in [0, 1]", expr.from, expr.to);
         }
-        return { probability: choice.probability, value: infer(env, choice.value, ty) };
+        const value = {
+          kind: "Const",
+          value: index,
+          typ: ty,
+          from: expr.from,
+          to: expr.to,
+        } as const;
+        return { probability: weight.value, value };
       });
-      return typed(expr, ty, { mode: expr.mode, choices });
+      return { kind: "Discrete", typ: ty, from: expr.from, to: expr.to, mode: expr.mode, choices };
+    }
+    case "DiscreteList": {
+      const ty = ensureFloat(expected, expr);
+      forceAnnotatedMode(expr, ty);
+      const probabilities = infer(env, expr.probabilities, TList(ty));
+      return typed(expr, ty, { mode: expr.mode, probabilities, form: expr.form });
     }
     case "Observe": {
       const cond = infer(env, expr.cond, TBool);
@@ -374,6 +393,8 @@ export function typedChildren(te: TypedExpr): TypedExpr[] {
       return te.args;
     case "Discrete":
       return te.choices.map((choice) => choice.value);
+    case "DiscreteList":
+      return [te.probabilities];
     case "Observe":
       return [te.cond];
     default:
@@ -419,5 +440,6 @@ function isDistribution(kind: string) {
     "Bernoulli",
     "Poisson",
     "Discrete",
+    "DiscreteList",
   ].includes(kind);
 }

@@ -152,6 +152,14 @@ function ofTyped(te: TypedExpr): Expr {
         te.from,
         te.to,
       );
+    case "DiscreteList":
+      if (floatMode(te) === "E") return meanNode(te.kind, [ofTyped(te.probabilities)], te);
+      return exprNode(
+        "DiscreteList",
+        { mode: null, probabilities: ofTyped(te.probabilities), form: te.form },
+        te.from,
+        te.to,
+      );
     case "Observe":
       return exprNode("Observe", { cond: ofTyped(te.cond) }, te.from, te.to);
     default:
