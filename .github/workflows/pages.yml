@@ -62,8 +62,8 @@ jobs:
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: lean/.lake/build
-          key: lean-build-${{ hashFiles('lean/lean-toolchain', 'lean/lake-manifest.json') }}-${{ github.sha }}
-          restore-keys: lean-build-${{ hashFiles('lean/lean-toolchain', 'lean/lake-manifest.json') }}-
+          key: lean-build-${{ hashFiles('lean/lean-toolchain', 'lean/lake-manifest.json', 'flake.lock') }}-${{ github.sha }}
+          restore-keys: lean-build-${{ hashFiles('lean/lean-toolchain', 'lean/lake-manifest.json', 'flake.lock') }}-
       # Documenting Lean and the imported part of Mathlib takes about two CPU-hours, so that work
       # is saved once per set of pins. Starting from it, only this repository's modules are
       # redone. Pages of modules deleted since it was saved stay in the published site, unlinked.
@@ -80,7 +80,8 @@ jobs:
             lean/.lake/packages/*/*
             !lean/.lake/packages/*/.lake
           key: lean-sources-${{ hashFiles('lean/lean-toolchain', 'lean/lake-manifest.json') }}
-      # doc-gen4 and the packages it adds, with their builds (about 360 MB), once per doc-gen4 pin.
+      # doc-gen4 and the packages it adds, with their builds (about 360 MB), once per doc-gen4 pin
+      # and flake.lock, whose glibc the doc-gen4 executable loads (see lean.yml).
       - name: Restore doc-gen4
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -91,7 +92,7 @@ jobs:
             lean/.lake/packages/UnicodeBasic
             lean/.lake/packages/BibtexQuery
             lean/.lake/packages/MD4Lean
-          key: lean-docgen-${{ hashFiles('lean/lean-toolchain', 'lean/docbuild/lake-manifest.json') }}
+          key: lean-docgen-${{ hashFiles('lean/lean-toolchain', 'lean/docbuild/lake-manifest.json', 'flake.lock') }}
       - name: Fetch the Mathlib cache
         run: lake exe cache get
       # Lake starts git and doc-gen4 with fork(). Documenting the dependencies, Lake runs over a
