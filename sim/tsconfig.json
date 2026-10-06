@@ -3,6 +3,7 @@
     "target": "esnext",
     "module": "nodenext",
     "lib": ["esnext", "dom"],
+    "types": [],
     "strict": true,
     "erasableSyntaxOnly": true,
     "verbatimModuleSyntax": true,
