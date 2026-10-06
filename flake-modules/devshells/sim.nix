@@ -1,4 +1,5 @@
-# Toolchain for ./sim: Node.js (node --test) and npm (esbuild is an npm devDependency).
+# Toolchain for ./sim: Node.js 24 (node --test), npm (esbuild is an npm devDependency) and Biome
+# (formatter and linter, configured in sim/biome.json).
 # git lets CI check that the committed app.bundle.js is the one the sources build.
 {
   perSystem =
@@ -8,7 +9,8 @@
         name = "determinize-sim";
 
         packages = [
-          pkgs.nodejs
+          pkgs.nodejs_24
+          pkgs.biome
           pkgs.git
         ];
       };
