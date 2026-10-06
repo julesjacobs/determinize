@@ -1002,6 +1002,17 @@ button:active {
   color: var(--red);
 }
 
+.counterexample-label {
+  grid-column: 1 / -1;
+  margin: 0 0 8px;
+  border-radius: 8px;
+  background: #fffaeb;
+  color: var(--amber);
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .debug-panel {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);

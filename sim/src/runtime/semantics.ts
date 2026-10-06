@@ -2,7 +2,6 @@ import { analyze } from "../compiler/analyze.ts";
 import type { Expr, ExprOf, MeanKind, ParamDistributionKind, Span } from "../compiler/ast.ts";
 import { node } from "../compiler/ast.ts";
 import { CompileError } from "../compiler/errors.ts";
-import { parse } from "../compiler/parser.ts";
 import { prettyExpr } from "../compiler/pretty.ts";
 import type { Affine } from "./affine.ts";
 import {
@@ -70,7 +69,8 @@ interface StepResult extends ContextPatch {
 export interface Prepared {
   expr: Expr;
   determinized: Expr;
-  unchecked?: boolean;
+  /** Lean rejects the program for a mode conflict; this is the counterexample. */
+  counterexample: boolean;
 }
 
 /** An ordinary run synchronized with a target expression. */
@@ -107,7 +107,7 @@ export interface Frame {
 export interface CoupledTrace {
   seed: number;
   frames: Frame[];
-  unchecked: boolean;
+  counterexample: boolean;
   finalOriginal: Expr | undefined;
   finalDeterminized: Expr | undefined;
   ok: boolean;
@@ -124,27 +124,29 @@ type Safe<T> =
   | { ok: true; value: T; error?: undefined }
   | { ok: false; error: string; value?: undefined };
 
-/** The annotated and the determinized program that the front end produces. */
+/**
+ * The annotated and the determinized program that the front end produces. For a program that
+ * Lean rejects only for a mode conflict, the counterexample: exactly the [E] draws replaced by
+ * their means, every other draw random. Any other rejection throws.
+ */
 export function prepareRuntime(source: string): Prepared {
   const analysis = analyze(source);
-  if (!analysis.ok) {
-    const [diagnostic] = analysis.diagnostics;
-    throw new CompileError(diagnostic.message, diagnostic.from, diagnostic.to);
+  if (analysis.ok) {
+    return {
+      expr: runtimeFromAst(analysis.annotated),
+      determinized: runtimeFromAst(analysis.determinized),
+      counterexample: false,
+    };
   }
-  return {
-    expr: runtimeFromAst(analysis.annotated),
-    determinized: runtimeFromAst(analysis.determinized),
-  };
-}
-
-export function prepareRuntimeUnchecked(source: string): Prepared {
-  const ast = parse(source);
-  const expr = runtimeFromAst(ast);
-  return {
-    expr,
-    determinized: determinizeResidual(expr),
-    unchecked: true,
-  };
+  if (analysis.counterexample) {
+    return {
+      expr: runtimeFromAst(analysis.counterexample.annotated),
+      determinized: runtimeFromAst(analysis.counterexample.determinized),
+      counterexample: true,
+    };
+  }
+  const [diagnostic] = analysis.diagnostics;
+  throw new CompileError(diagnostic.message, diagnostic.from, diagnostic.to);
 }
 
 export function runtimeFromAst(expr: Expr): Expr {
@@ -413,9 +415,8 @@ export function runCoupledTrace(
   seed = 1,
   maxSymbolicSteps = 1000,
   maxSyncSteps = 200,
-  options: { allowIllTyped?: boolean } = {},
 ): CoupledTrace {
-  const prepared = options.allowIllTyped ? prepareRuntimeUnchecked(source) : prepareRuntime(source);
+  const prepared = prepareRuntime(source);
   const streams = makeStreams(seed);
   let symbolic: SymbolicState = {
     expr: clone(prepared.expr),
@@ -495,7 +496,7 @@ export function runCoupledTrace(
   return {
     seed,
     frames,
-    unchecked: prepared.unchecked ?? false,
+    counterexample: prepared.counterexample,
     finalOriginal: safe(() => runOrdinary(prepared.expr, streams).value).value,
     finalDeterminized: safe(() => runOrdinary(prepared.determinized, streams).value).value,
     ok: frames.every(frameChecksOk),

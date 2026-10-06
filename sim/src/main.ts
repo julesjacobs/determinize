@@ -33,6 +33,10 @@ import { runCoupledTrace } from "./runtime/semantics.ts";
 import type { TraceOptions } from "./traceRender.ts";
 import { changedPath, renderHighlightedText, renderTraceExpr } from "./traceRender.ts";
 
+/** The label of the run of a program that Lean rejects only for a mode conflict. */
+const counterexampleLabel =
+  "Lean rejects this program; this is what replacing its [E] draws anyway does";
+
 /** A message that a DomainError node carries. */
 type MaybeMessage = { message?: string } | undefined;
 
@@ -313,14 +317,23 @@ function renderResult(result: Analysis) {
     setEditorStatus("ok", "Parsed and checked", "✓");
     editorDiagnostics.textContent = "No diagnostics.";
     editorDiagnostics.className = "editor-diagnostics ok";
-    renderSemantics(editor.state.doc.toString(), { allowIllTyped: false });
+    renderSemantics(editor.state.doc.toString());
     return;
   }
 
   setEditorStatus("error", "Diagnostics", "!");
   editorDiagnostics.textContent = result.diagnostics.map((diag) => diag.message).join("\n");
   editorDiagnostics.className = "editor-diagnostics error";
-  renderSemantics(editor.state.doc.toString(), { allowIllTyped: true });
+  if (result.counterexample) {
+    renderSemantics(editor.state.doc.toString());
+    return;
+  }
+  // Lean rejects the program for a reason other than a mode conflict: there is nothing to run.
+  resetSamples(editor.state.doc.toString());
+  panels.coupling.innerHTML = "";
+  panels.couplingStatus.textContent = "Not run";
+  panels.couplingStatus.className = "status error";
+  renderDistributions();
 }
 
 function setEditorStatus(kind: string, label: string, glyph: string) {
@@ -466,14 +479,11 @@ function capDebugText(text: string, maxLength: number) {
   return `${text.slice(0, maxLength)}...<truncated ${text.length - maxLength} chars>`;
 }
 
-function renderSemantics(source: string, options: { allowIllTyped?: boolean } = {}) {
+function renderSemantics(source: string) {
   try {
-    logDebug("render-semantics-start", {
-      allowIllTyped: Boolean(options.allowIllTyped),
-      sourceLength: source.length,
-    });
+    logDebug("render-semantics-start", { sourceLength: source.length });
     if (source !== sampleSource) resetSamples(source);
-    const coupled = runCoupling(source, couplingSeed, options);
+    const coupled = runCoupling(source, couplingSeed);
     addSampleFromCoupling(coupled, source);
     renderCoupling(coupled);
     renderDistributions();
@@ -484,9 +494,7 @@ function renderSemantics(source: string, options: { allowIllTyped?: boolean } = 
     });
   } catch (error) {
     panels.coupling.innerHTML = "";
-    panels.couplingStatus.textContent = options.allowIllTyped
-      ? "Trace unavailable"
-      : "Coupling failed";
+    panels.couplingStatus.textContent = "Trace unavailable";
     panels.couplingStatus.className = "status error";
     panels.distribution.innerHTML = "";
     panels.distributionStatus.textContent = "not numeric";
@@ -497,18 +505,22 @@ function renderSemantics(source: string, options: { allowIllTyped?: boolean } = 
   }
 }
 
-function runCoupling(source: string, seed: number, options: { allowIllTyped?: boolean } = {}) {
-  return runCoupledTrace(source, seed, 1000, 200, {
-    allowIllTyped: Boolean(options.allowIllTyped || !latest?.ok),
-  });
+function runCoupling(source: string, seed: number) {
+  return runCoupledTrace(source, seed, 1000, 200);
 }
 
 function renderCoupling(coupled: CoupledTrace) {
   hideCheckPopover();
   const terminalDomainError = coupled.frames.some(hasDomainError);
-  panels.couplingStatus.textContent = `seed ${coupled.seed} - ${coupled.ok ? (terminalDomainError ? "checked domain error" : "checked") : "failed"}${coupled.unchecked ? " (unchecked)" : ""}`;
-  panels.couplingStatus.className = `status ${coupled.ok ? (terminalDomainError ? "warning" : "ok") : "error"}`;
+  if (coupled.counterexample) {
+    panels.couplingStatus.textContent = `seed ${coupled.seed} - counterexample`;
+    panels.couplingStatus.className = "status warning";
+  } else {
+    panels.couplingStatus.textContent = `seed ${coupled.seed} - ${coupled.ok ? (terminalDomainError ? "checked domain error" : "checked") : "failed"}`;
+    panels.couplingStatus.className = `status ${coupled.ok ? (terminalDomainError ? "warning" : "ok") : "error"}`;
+  }
   panels.coupling.innerHTML =
+    (coupled.counterexample ? `<p class="counterexample-label">${counterexampleLabel}</p>` : "") +
     `
     <div class="coupling-table-head">
       <span></span>
@@ -599,7 +611,7 @@ function checkPopoverContent(
     <span>Determinized sync: ${frame.determinizedOk ? `${frame.determinizedMicroSteps} step${frame.determinizedMicroSteps === 1 ? "" : "s"}` : `failed${frame.determinizedError ? `: ${escapeHtml(frame.determinizedError)}` : ""}`}</span>
     ${frame.consistencyOk === false ? `<span>Terminal consistency: failed: ${escapeHtml(frame.consistencyError)}</span>` : ""}
     ${frame.symbolicOk === false ? `<span>Symbolic next step failed: ${escapeHtml(frame.symbolicError)}</span>` : ""}
-    ${coupled.unchecked ? "<em>This trace is running despite type/mode diagnostics, so failures show why the theorem needs the type system.</em>" : ""}
+    ${coupled.counterexample ? `<em>${counterexampleLabel}</em>` : ""}
   `;
 }
 
@@ -759,7 +771,9 @@ function renderDistributions() {
   const domain = [min - pad, max + pad];
   const originalStats = sampleStats(samples.original);
   const determinizedStats = sampleStats(samples.determinized);
+  const counterexample = latest && !latest.ok && latest.counterexample;
   panels.distribution.innerHTML = `
+    ${counterexample ? `<p class="counterexample-label">${counterexampleLabel}</p>` : ""}
     ${distributionCard("Original", samples.original, originalStats, domain, "original")}
     ${comparisonCard(originalStats, determinizedStats)}
     ${distributionCard("Determinized", samples.determinized, determinizedStats, domain, "determinized")}

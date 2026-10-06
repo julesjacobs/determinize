@@ -259,11 +259,11 @@ test("coupled trace handles affine symbolic residuals at every step", () => {
   assert.match(prettyExpr(last(trace).symbolic), /v1/);
 });
 
-test("unchecked coupled trace exposes bad E/G dependencies", () => {
+test("a mode conflict runs as a counterexample that exposes the bad E/G dependency", () => {
   const source =
     "let x = uniform[E](0, 1) in\nlet y = uniform[G](0, 1) in\nif x < 0.5 then x + y else x - y";
-  const trace = runCoupledTrace(source, 42, 20, 20, { allowIllTyped: true });
-  assert.equal(trace.unchecked, true);
+  const trace = runCoupledTrace(source, 42, 20, 20);
+  assert.equal(trace.counterexample, true);
   assert.equal(trace.ok, false);
   assert.equal(last(trace).symbolicOk, false);
   assert.match(last(trace).symbolicError ?? "", /concrete affine value/);
@@ -273,6 +273,31 @@ test("unchecked coupled trace exposes bad E/G dependencies", () => {
     expectKind(trace.finalOriginal, "Const").value,
     expectKind(trace.finalDeterminized, "Const").value,
   );
+});
+
+test("only mode conflicts run as counterexamples, with exactly the [E] draws at their means", () => {
+  // The paper's signal example with both draws marked E: replacing them returns 1/4.
+  const signal = "let x = uniform[E](0, 1) in\nlet y = gaussian[E](x, 1) in\nx * y";
+  const analysis = analyze(signal);
+  assert.equal(analysis.ok, false);
+  assert.ok(!analysis.ok && analysis.stage === "inference" && analysis.counterexample);
+  const prepared = prepareRuntime(signal);
+  assert.equal(prepared.counterexample, true);
+  for (const seed of [1, 2, 3]) {
+    const value = runOrdinary(prepared.determinized, makeStreams(seed)).value;
+    assert.equal(expectKind(value, "Const").value, 0.25);
+  }
+  // Unannotated sites stay random in the counterexample.
+  const mixed = prepareRuntime("let x = uniform[E](0, 1) in\nlet y = uniform(0, 1) in\nx * y");
+  assert.equal(
+    prettyExpr(mixed.determinized),
+    "let x = mean_uniform(0, 1) in\nlet y = uniform[G](0, 1) in\nx * y",
+  );
+  for (const source of ["true+1", "missing", "fun x => x x", "flip[E](0.5)", "1 +"]) {
+    const result = analyze(source);
+    assert.ok(!result.ok && !result.counterexample, source);
+    assert.throws(() => prepareRuntime(source), source);
+  }
 });
 
 test("recursive gamma coupling does not fail from floating-point underflow", () => {
@@ -290,9 +315,8 @@ test("bundled examples analyze and run as intended", () => {
     const result = analyze(example.source);
     const intentionallyBad = example.name === "Bad E-branching";
     assert.equal(result.ok, !intentionallyBad, example.name);
-    const trace = runCoupledTrace(example.source, 2026, 1000, 400, {
-      allowIllTyped: intentionallyBad,
-    });
+    const trace = runCoupledTrace(example.source, 2026, 1000, 400);
+    assert.equal(trace.counterexample, intentionallyBad, example.name);
     assert.equal(trace.ok, !intentionallyBad, example.name);
     assert.ok(trace.frames.length > 0, example.name);
   }
