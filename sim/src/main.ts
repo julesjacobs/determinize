@@ -1,19 +1,8 @@
-import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
-import { bracketMatching, indentOnInput } from "@codemirror/language";
-import { EditorState, Transaction } from "@codemirror/state";
+import { StateEffect, Transaction } from "@codemirror/state";
 import type { ViewUpdate } from "@codemirror/view";
-import {
-  drawSelection,
-  dropCursor,
-  EditorView,
-  highlightActiveLine,
-  highlightActiveLineGutter,
-  hoverTooltip,
-  keymap,
-  lineNumbers,
-} from "@codemirror/view";
+import { EditorView } from "@codemirror/view";
+import { batch, effect } from "@preact/signals-core";
 import type { Analysis } from "./core/compiler/analyze.ts";
-import { analyze } from "./core/compiler/analyze.ts";
 import type { Expr } from "./core/compiler/ast.ts";
 import { prettyExpr } from "./core/compiler/pretty.ts";
 import { examples } from "./core/examples.ts";
@@ -22,27 +11,14 @@ import { prettyAffine } from "./core/runtime/affine.ts";
 import { distributionName } from "./core/runtime/distributions.ts";
 import type { Binding, CoupledTrace, Frame } from "./core/runtime/semantics.ts";
 import type { Stats } from "./core/statistics.ts";
-import { sampleStats, varianceRatio } from "./core/statistics.ts";
-import {
-  domainErrorMessage,
-  frameOk,
-  hasDomainError,
-  runBatch,
-  runCoupling,
-  sampleOf,
-  sigmaMeans,
-} from "./core/trace.ts";
-import type { EditorDiagnostic } from "./diagnostics.ts";
-import {
-  diagnosticHover,
-  diagnosticsState,
-  normalizeDiagnostics,
-  setDiagnostics,
-} from "./diagnostics.ts";
-import { detHighlighting, detLanguage } from "./language.ts";
-import { hoveredTypeHintState, modeHints, setTypeHints, typeHintState } from "./modeHints.ts";
+import { varianceRatio } from "./core/statistics.ts";
+import { domainErrorMessage, frameOk, hasDomainError, sigmaMeans } from "./core/trace.ts";
 import type { TraceOptions } from "./traceRender.ts";
 import { changedPath, renderHighlightedText, renderTraceExpr } from "./traceRender.ts";
+import type { EditorDiagnostic } from "./ui/editor.ts";
+import { createEditor, diagnosticsField, replaceDoc } from "./ui/editor.ts";
+import type { Samples, TraceState } from "./ui/store.ts";
+import { createStore } from "./ui/store.ts";
 
 /** The label of the run of a program that Lean rejects only for a mode conflict. */
 const counterexampleLabel =
@@ -67,52 +43,21 @@ const panels = {
 };
 const rerunButton = document.querySelector("#rerun-coupling") as HTMLButtonElement;
 const manyButton = document.querySelector("#many-coupling") as HTMLButtonElement;
-typeHintsToggle.checked = false;
-
-const ANALYZE_IDLE_MS = 500;
 
 const checkPopoverPortal = document.createElement("div");
 checkPopoverPortal.className = "floating-check-popover";
 checkPopoverPortal.setAttribute("role", "tooltip");
 document.body.append(checkPopoverPortal);
 
-let latest: Analysis | null = null;
-let debounce: number | null = null;
-let couplingSeed = 2026;
-let sampleSource = "";
-let lastSampleKey = "";
 let activeCheck: Element | null = null;
 let hideCheckPopoverTimer: number | null = null;
 let activeCorrespondence: string | null = null;
 let debugEnabled = false;
 let debugSeq = 0;
 const debugLog: Record<string, unknown>[] = [];
-const samples: { original: number[]; determinized: number[] } = {
-  original: [],
-  determinized: [],
-};
 
 updateDebugVisibility();
 window.addEventListener("hashchange", updateDebugVisibility);
-
-function typeHover() {
-  return hoverTooltip((_view, pos) => {
-    if (!latest?.ok) return null;
-    const span = latest.spans.find((candidate) => candidate.from <= pos && pos <= candidate.to);
-    if (!span) return null;
-    return {
-      pos: span.from,
-      end: span.to,
-      above: true,
-      create() {
-        const dom = document.createElement("div");
-        dom.className = "type-tooltip";
-        dom.textContent = span.text;
-        return { dom };
-      },
-    };
-  });
-}
 
 function updateDebugVisibility() {
   const params = new URLSearchParams(window.location.search);
@@ -136,69 +81,52 @@ for (const [index, example] of examples.entries()) {
 }
 exampleSelect.title = examples[0].explanation;
 
-const editor = new EditorView({
-  parent: editorHost,
-  state: EditorState.create({
-    doc: examples[0].source,
-    extensions: [
-      lineNumbers(),
-      highlightActiveLineGutter(),
-      history(),
-      drawSelection(),
-      dropCursor(),
-      indentOnInput(),
-      bracketMatching(),
-      highlightActiveLine(),
-      detLanguage,
-      detHighlighting,
-      typeHintState,
-      hoveredTypeHintState,
-      diagnosticsState,
-      modeHints,
-      typeHover(),
-      diagnosticHover(),
-      keymap.of([...defaultKeymap, ...historyKeymap]),
-      EditorView.lineWrapping,
-      EditorView.updateListener.of((update) => {
-        if (update.docChanged || update.selectionSet) logEditorUpdate(update);
-        if (update.docChanged) scheduleAnalyze();
-      }),
-    ],
-  }),
+const store = createStore({ source: examples[0].source, seed: 2026, exampleId: examples[0].id });
+const editor = createEditor(editorHost, store.source.peek(), {
+  analysis: store.analysis,
+  commits: store.commits,
+  typeHints: store.typeHints,
+  hoveredSpan: store.hoveredSpan,
+  onChange: (doc) => {
+    store.source.value = doc;
+  },
 });
+typeHintsToggle.checked = store.typeHints.peek();
+editor.dispatch({
+  effects: StateEffect.appendConfig.of(
+    EditorView.updateListener.of((update) => {
+      if (update.docChanged || update.selectionSet) logEditorUpdate(update);
+    }),
+  ),
+});
+
+/** A seed for a run, drawn as the simulator always has. */
+function randomSeed() {
+  return Math.floor(1 + Math.random() * 0xffffffff);
+}
 
 exampleSelect.addEventListener("change", () => {
   const example = examples[Number(exampleSelect.value)];
-  const source = example.source;
   exampleSelect.title = example.explanation;
   logDebug("example-change", { example: example.id });
-  editor.dispatch({ changes: { from: 0, to: editor.state.doc.length, insert: source } });
-  runAnalyze();
+  batch(() => {
+    store.exampleId.value = example.id;
+    replaceDoc(editor, example.source);
+    store.commitSource();
+  });
 });
 
 rerunButton.addEventListener("click", () => {
-  couplingSeed = Math.floor(1 + Math.random() * 0xffffffff);
-  runAnalyze();
+  store.rerun(randomSeed());
 });
 
 manyButton.addEventListener("click", () => {
-  const source = editor.state.doc.toString();
-  if (source !== sampleSource) resetSamples(source);
-  const seeds = Array.from({ length: 200 }, () => Math.floor(1 + Math.random() * 0xffffffff));
-  const batch = runBatch(source, seeds);
-  samples.original.push(...batch.original);
-  samples.determinized.push(...batch.determinized);
-  if (batch.last) {
-    couplingSeed = batch.last.seed;
-    if (sampleOf(batch.last)) lastSampleKey = `${source}:${batch.last.seed}`;
-    renderCoupling(batch.last);
-  }
-  renderDistributions();
+  store.runMany(Array.from({ length: store.sampleCount.peek() }, randomSeed));
 });
 
 typeHintsToggle.addEventListener("change", () => {
   logDebug("type-hints-toggle", { checked: typeHintsToggle.checked });
-  editor.dispatch({ effects: setTypeHints.of(typeHintsToggle.checked) });
+  store.typeHints.value = typeHintsToggle.checked;
 });
 
 debugToggle.addEventListener("change", () => {
@@ -287,54 +215,39 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") hideCheckPopover();
 });
 
-function scheduleAnalyze() {
-  clearTimeout(debounce as number);
-  logDebug("schedule-analyze", { idleMs: ANALYZE_IDLE_MS, ...collectEditorDebugState("schedule") });
-  debounce = setTimeout(runAnalyze, ANALYZE_IDLE_MS);
-}
-
-function runAnalyze() {
-  const source = editor.state.doc.toString();
-  logDebug("run-analyze-start", collectEditorDebugState("before-analyze"));
-  latest = analyze(source);
-  const diagnostics = normalizeDiagnostics(latest, source);
-  editor.dispatch({ effects: setDiagnostics.of(diagnostics) });
-  logDebug("run-analyze-result", {
-    ok: latest.ok,
-    diagnostics: diagnostics.map((diagnostic) => ({
-      from: diagnostic.from,
-      to: diagnostic.to,
-      message: diagnostic.message,
-    })),
-    rawDiagnostics: latest.ok ? [] : latest.diagnostics,
-    ...collectEditorDebugState("after-diagnostics-dispatch"),
-  });
-  renderResult(latest);
-}
+effect(() => {
+  manyButton.textContent = `Run ${store.sampleCount.value}`;
+});
+effect(() => {
+  renderResult(store.analysis.value);
+});
+effect(() => {
+  renderTrace(store.trace.value);
+});
+effect(() => {
+  if (store.trace.value.kind === "unavailable") {
+    panels.distribution.innerHTML = "";
+    panels.distributionStatus.textContent = "not numeric";
+    return;
+  }
+  renderDistributions(store.samples.value, store.stats.value);
+});
 
 function renderResult(result: Analysis) {
-  logDebug("render-result", { ok: result.ok, ...collectEditorDebugState("render-result") });
+  logDebug("analysis", {
+    ok: result.ok,
+    diagnostics: result.ok ? [] : result.diagnostics,
+    ...collectEditorDebugState("analysis"),
+  });
   if (result.ok) {
     setEditorStatus("ok", "Parsed and checked", "✓");
     editorDiagnostics.textContent = "No diagnostics.";
     editorDiagnostics.className = "editor-diagnostics ok";
-    renderSemantics(editor.state.doc.toString());
     return;
   }
-
   setEditorStatus("error", "Diagnostics", "!");
   editorDiagnostics.textContent = result.diagnostics.map((diag) => diag.message).join("\n");
   editorDiagnostics.className = "editor-diagnostics error";
-  if (result.counterexample) {
-    renderSemantics(editor.state.doc.toString());
-    return;
-  }
-  // Lean rejects the program for a reason other than a mode conflict: there is nothing to run.
-  resetSamples(editor.state.doc.toString());
-  panels.coupling.innerHTML = "";
-  panels.couplingStatus.textContent = "Not run";
-  panels.couplingStatus.className = "status error";
-  renderDistributions();
 }
 
 function setEditorStatus(kind: string, label: string, glyph: string) {
@@ -342,6 +255,18 @@ function setEditorStatus(kind: string, label: string, glyph: string) {
   statusEl.title = label;
   statusEl.setAttribute("aria-label", label);
   statusEl.className = `status editor-status ${kind}`;
+}
+
+function renderTrace(state: TraceState) {
+  if (state.kind === "run") {
+    renderCoupling(state.trace);
+    return;
+  }
+  // Lean rejects the program for a reason other than a mode conflict, or the run failed.
+  hideCheckPopover();
+  panels.coupling.innerHTML = "";
+  panels.couplingStatus.textContent = state.kind === "not run" ? "Not run" : "Trace unavailable";
+  panels.couplingStatus.className = "status error";
 }
 
 function logEditorUpdate(update: ViewUpdate) {
@@ -447,7 +372,7 @@ function collectEditorDebugState(label: string) {
 
 function readDiagnosticsForDebug(): EditorDiagnostic[] {
   try {
-    return editor.state.field(diagnosticsState);
+    return editor.state.field(diagnosticsField);
   } catch {
     return [];
   }
@@ -478,32 +403,6 @@ function describeElement(element: Element | null) {
 function capDebugText(text: string, maxLength: number) {
   if (text.length <= maxLength) return text;
   return `${text.slice(0, maxLength)}...<truncated ${text.length - maxLength} chars>`;
-}
-
-function renderSemantics(source: string) {
-  try {
-    logDebug("render-semantics-start", { sourceLength: source.length });
-    if (source !== sampleSource) resetSamples(source);
-    const coupled = runCoupling(source, couplingSeed);
-    addSampleFromCoupling(coupled, source);
-    renderCoupling(coupled);
-    renderDistributions();
-    logDebug("render-semantics-ok", {
-      frames: coupled.frames.length,
-      ok: coupled.ok,
-      ...collectEditorDebugState("render-semantics-ok"),
-    });
-  } catch (error) {
-    panels.coupling.innerHTML = "";
-    panels.couplingStatus.textContent = "Trace unavailable";
-    panels.couplingStatus.className = "status error";
-    panels.distribution.innerHTML = "";
-    panels.distributionStatus.textContent = "not numeric";
-    logDebug("render-semantics-error", {
-      message: error instanceof Error ? error.message : String(error),
-      ...collectEditorDebugState("render-semantics-error"),
-    });
-  }
 }
 
 function renderCoupling(coupled: CoupledTrace) {
@@ -691,25 +590,7 @@ function meanMarkup(symbol: string, mean: number, error: string | null = null) {
   return `<span class="corr-item sigma-mean-value" data-corr="${escapeHtml(symbol)}" title="mean substituted for ${escapeHtml(symbol)}">${escapeHtml(value)}</span>`;
 }
 
-function resetSamples(source: string) {
-  sampleSource = source;
-  lastSampleKey = "";
-  samples.original = [];
-  samples.determinized = [];
-}
-
-function addSampleFromCoupling(coupled: CoupledTrace, source: string) {
-  const key = `${source}:${coupled.seed}`;
-  if (key === lastSampleKey) return;
-  const sample = sampleOf(coupled);
-  if (sample) {
-    samples.original.push(sample.original);
-    samples.determinized.push(sample.determinized);
-    lastSampleKey = key;
-  }
-}
-
-function renderDistributions() {
+function renderDistributions(samples: Samples, stats: { original: Stats; determinized: Stats }) {
   const count = Math.min(samples.original.length, samples.determinized.length);
   panels.distributionStatus.textContent = `${count} sample${count === 1 ? "" : "s"}`;
   if (count === 0) {
@@ -721,9 +602,10 @@ function renderDistributions() {
   const max = Math.max(...all);
   const pad = Math.max((max - min) * 0.08, 1e-6);
   const domain = [min - pad, max + pad];
-  const originalStats = sampleStats(samples.original);
-  const determinizedStats = sampleStats(samples.determinized);
-  const counterexample = latest && !latest.ok && latest.counterexample;
+  const originalStats = stats.original;
+  const determinizedStats = stats.determinized;
+  const analysis = store.analysis.peek();
+  const counterexample = !analysis.ok && analysis.counterexample;
   panels.distribution.innerHTML = `
     ${counterexample ? `<p class="counterexample-label">${counterexampleLabel}</p>` : ""}
     ${distributionCard("Original", samples.original, originalStats, domain, "original")}
@@ -886,5 +768,3 @@ function escapeHtml(text: string | undefined) {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 }
-
-runAnalyze();
