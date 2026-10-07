@@ -123,7 +123,8 @@ def resultCertificateText (source : Spec.Paper.Core) (subject : Subject) (candid
       TerminationStatistics).Matches model.control :=\n" ++
   "  Determinize.Proof.RewardModel.solution_termination model solution\n" ++
   "\n#print axioms checkedResult\n#print axioms integrability\n#print axioms outputStatistics\n" ++
-  "#print axioms conditionalVariance\n#print axioms terminationProbabilities\n"
+  "#print axioms conditionalVariance\n#print axioms terminationProbabilities\n" ++
+  Finite.printedText solution.statistics
 
 def writeResult (outputPath : System.FilePath) (source : Spec.Paper.Core) (subject : Subject)
     (candidate : Candidate) (valid : candidate.ReplayValid source subject)
