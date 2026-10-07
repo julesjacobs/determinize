@@ -1,5 +1,6 @@
 // The step table: the step table's run, frame by frame, with each frame's checks in a popover and
-// the symbols and values that correspond to each other highlighted together.
+// the symbols and values that correspond to each other highlighted together. A long run shows a
+// page of frames at a time.
 import { effect } from "@preact/signals-core";
 import type { Expr } from "../core/compiler/ast.ts";
 import { prettyExpr } from "../core/compiler/pretty.ts";
@@ -7,7 +8,14 @@ import { formatNumber } from "../core/format.ts";
 import { prettyAffine } from "../core/runtime/affine.ts";
 import { distributionName } from "../core/runtime/distributions.ts";
 import type { Binding, CoupledTrace, Frame } from "../core/runtime/semantics.ts";
-import { domainErrorMessage, frameOk, hasDomainError, sigmaMeans } from "../core/trace.ts";
+import {
+  domainErrorMessage,
+  frameOk,
+  hasDomainError,
+  maxSymbolicSteps,
+  sigmaMeans,
+  stoppedAtLimit,
+} from "../core/trace.ts";
 import { counterexampleLabel, escapeHtml } from "./html.ts";
 import type { Store } from "./store.ts";
 import type { TraceOptions } from "./trace-expr.ts";
@@ -17,6 +25,9 @@ export interface TraceViewElements {
   table: HTMLElement;
   status: HTMLElement;
 }
+
+/** The number of frames on a page of the step table. */
+const pageSize = 200;
 
 export function mountTraceView(
   elements: TraceViewElements,
@@ -34,9 +45,22 @@ export function mountTraceView(
 
   /** The step of the row that holds `check`. */
   function stepOf(check: Element) {
-    const row = check.closest(".coupling-row");
-    return row?.parentElement ? Array.prototype.indexOf.call(row.parentElement.children, row) : -1;
+    const row = check.closest<HTMLElement>(".coupling-row");
+    return row ? Number(row.dataset.step) : -1;
   }
+
+  /** The run shown, and the index of its page that is shown. */
+  let shown: { trace: CoupledTrace; page: number } | null = null;
+
+  elements.table.addEventListener("click", (event) => {
+    const button =
+      event.target instanceof Element ? event.target.closest<HTMLElement>("[data-page]") : null;
+    if (!button || !shown) return;
+    shown.page = Number(button.dataset.page);
+    store.activeStep.value = null;
+    renderCoupling(elements, shown.trace, shown.page);
+    elements.table.querySelector<HTMLElement>(`[data-page="${button.dataset.page}"]`)?.focus();
+  });
 
   function showStep(check: Element) {
     clearTimeout(hideTimer);
@@ -112,9 +136,11 @@ export function mountTraceView(
     const state = store.trace.value;
     store.activeStep.value = null;
     if (state.kind === "run") {
-      renderCoupling(elements, state.trace);
+      shown = { trace: state.trace, page: 0 };
+      renderCoupling(elements, state.trace, 0);
       return;
     }
+    shown = null;
     // Lean rejects the program for a reason other than a mode conflict, or the run failed.
     elements.table.innerHTML = "";
     elements.status.textContent = state.kind === "not run" ? "Not run" : "Trace unavailable";
@@ -129,7 +155,7 @@ export function mountTraceView(
     const check =
       step === null
         ? null
-        : elements.table.querySelectorAll(".coupling-row")[step]?.querySelector(".step-check");
+        : elements.table.querySelector(`.coupling-row[data-step="${step}"] .step-check`);
     const source = check?.querySelector(".check-popover-source");
     if (!check || !source) {
       portal.classList.remove("visible");
@@ -169,10 +195,15 @@ export function mountTraceView(
   }
 }
 
-function renderCoupling(elements: TraceViewElements, coupled: CoupledTrace) {
+function renderCoupling(elements: TraceViewElements, coupled: CoupledTrace, page: number) {
   const terminalDomainError = coupled.frames.some(hasDomainError);
+  const first = page * pageSize;
+  const frames = coupled.frames.slice(first, first + pageSize);
   if (coupled.counterexample) {
     elements.status.textContent = `seed ${coupled.seed} - counterexample`;
+    elements.status.className = "status warning";
+  } else if (stoppedAtLimit(coupled)) {
+    elements.status.textContent = `seed ${coupled.seed} - stopped after ${maxSymbolicSteps} steps`;
     elements.status.className = "status warning";
   } else {
     elements.status.textContent = `seed ${coupled.seed} - ${coupled.ok ? (terminalDomainError ? "checked domain error" : "checked") : "failed"}`;
@@ -189,15 +220,15 @@ function renderCoupling(elements: TraceViewElements, coupled: CoupledTrace) {
     </div>
     <div class="coupling-table-body">
   ` +
-    coupled.frames
-      .map((frame, index, frames) => {
-        const previous = index > 0 ? frames[index - 1] : null;
+    frames
+      .map((frame) => {
+        const previous = coupled.frames[frame.step - 1] ?? null;
         const sigma = sigmaView(frame.sigma);
         const sigmaLines = Math.max(1, Math.min(4, sigma.lineCount));
         const ok = frameOk(frame);
         const domainError = hasDomainError(frame);
         return `
-        <section class="coupling-row ${ok ? "" : "failed"} ${ok && domainError ? "domain-error-row" : ""}" style="--sigma-lines: ${sigmaLines}">
+        <section class="coupling-row ${ok ? "" : "failed"} ${ok && domainError ? "domain-error-row" : ""}" data-step="${frame.step}" style="--sigma-lines: ${sigmaLines}">
           <div class="step-rail">
             <span>${frame.step}</span>
             ${stepCheck(frame, coupled)}
@@ -209,7 +240,27 @@ function renderCoupling(elements: TraceViewElements, coupled: CoupledTrace) {
       `;
       })
       .join("") +
-    "</div>";
+    "</div>" +
+    pager(page, coupled.frames.length);
+}
+
+/** Buttons to the other pages of a run with `count` frames, if it has more than one page. */
+function pager(page: number, count: number) {
+  const last = Math.ceil(count / pageSize) - 1;
+  if (last === 0) return "";
+  const button = (label: string, target: number) =>
+    `<button type="button" data-page="${target}" ${target === page ? "disabled" : ""}>${label}</button>`;
+  const from = page * pageSize;
+  const to = Math.min(count, from + pageSize) - 1;
+  return `
+    <nav class="trace-pager" aria-label="Pages of the step table">
+      ${button("First", 0)}
+      ${button("Previous", Math.max(0, page - 1))}
+      <span>Steps ${from}–${to} of ${count}</span>
+      ${button("Next", Math.min(last, page + 1))}
+      ${button("Last", last)}
+    </nav>
+  `;
 }
 
 function stepCheck(frame: Frame, coupled: CoupledTrace) {

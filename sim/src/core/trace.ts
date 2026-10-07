@@ -6,8 +6,14 @@ import type { Binding, CoupledTrace, Frame } from "./runtime/semantics.ts";
 import { isValue, runCoupledTrace } from "./runtime/semantics.ts";
 import type { RunOutcome } from "./statistics.ts";
 
-/** The step table's limits: symbolic steps, and steps of either program per symbolic step. */
-export const maxSymbolicSteps = 1000;
+/**
+ * The step table's limits. A run stops after `maxSymbolicSteps` symbolic steps, as Lean's
+ * evaluator stops after its fuel of 100000 evaluated subexpressions. Every program of
+ * examples/loops/ ends within it at seeds 1-20; the random walk takes up to 12994 steps there.
+ */
+export const maxSymbolicSteps = 20000;
+/** The steps of either program towards each symbolic step; every program of the corpus needs at
+ * most one. */
 export const maxSyncSteps = 200;
 
 /**
@@ -16,6 +22,12 @@ export const maxSyncSteps = 200;
  */
 export function runCoupling(source: string, seed: number): CoupledTrace {
   return runCoupledTrace(source, seed, maxSymbolicSteps, maxSyncSteps);
+}
+
+/** Whether the run stopped at `maxSymbolicSteps` before the program ended. */
+export function stoppedAtLimit(trace: CoupledTrace) {
+  const last = trace.frames.at(-1);
+  return trace.ok && last !== undefined && !isValue(last.symbolic);
 }
 
 /** Whether every check of a frame passed. */

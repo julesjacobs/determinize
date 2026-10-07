@@ -79,7 +79,6 @@ interface Advance {
   ok: boolean;
   state: OrdinaryState;
   steps: number;
-  microTrace: string[];
   error: string | undefined;
 }
 
@@ -351,26 +350,47 @@ export function projectSample(symbolicState: SymbolicState, rngE: Rng): Expr {
   return projectSampleWithEnv(symbolicState, rngE).expr;
 }
 
-function projectSampleWithEnv(symbolicState: SymbolicState, rngE: Rng) {
-  const env = new Map<string, number>();
-  const rng = rngE.clone();
-  const sampleBySymbol: Record<string, number> = {};
-  for (const binding of symbolicState.sigma) {
-    const args = instantiateArgs(binding.args, env);
+/**
+ * The draws of σ's bindings from the E stream, in σ's order. σ only grows during a run, so a
+ * replay extends the draws of its previous call; `sampleBySymbol` is a new object only when
+ * a draw was added.
+ */
+interface Replay {
+  count: number;
+  env: Map<string, number>;
+  rng: Rng;
+  sampleBySymbol: Record<string, number>;
+  error: DistributionDomainError | null;
+}
+
+function newReplay(rngE: Rng): Replay {
+  return { count: 0, env: new Map(), rng: rngE.clone(), sampleBySymbol: {}, error: null };
+}
+
+function replay(state: Replay, sigma: Binding[]): Replay {
+  if (state.error || state.count === sigma.length) return state;
+  const sampleBySymbol = { ...state.sampleBySymbol };
+  for (const binding of sigma.slice(state.count)) {
+    state.count += 1;
+    const args = instantiateArgs(binding.args, state.env);
     try {
-      const value = sampleDistribution(binding.kind, args, rng);
-      env.set(binding.name, value);
+      const value = sampleDistribution(binding.kind, args, state.rng);
+      state.env.set(binding.name, value);
       sampleBySymbol[binding.name] = value;
     } catch (error) {
       if (!isDistributionDomainError(error)) throw error;
-      return {
-        expr: domainErrorExpr(error, symbolicState.expr),
-        sampleBySymbol,
-      };
+      state.error = error;
+      break;
     }
   }
+  state.sampleBySymbol = sampleBySymbol;
+  return state;
+}
+
+function projectSampleWithEnv(symbolicState: SymbolicState, rngE: Rng, cache = newReplay(rngE)) {
+  const { env, sampleBySymbol, error } = replay(cache, symbolicState.sigma);
   return {
-    expr: concretize(symbolicState.expr, env),
+    expr: error ? domainErrorExpr(error, symbolicState.expr) : concretize(symbolicState.expr, env),
     sampleBySymbol,
   };
 }
@@ -426,26 +446,28 @@ export function runCoupledTrace(
 ): CoupledTrace {
   const prepared = prepareRuntime(source);
   const streams = makeStreams(seed);
+  // The machines' expressions are never changed in place, so frames share them.
   let symbolic: SymbolicState = {
-    expr: clone(prepared.expr),
+    expr: prepared.expr,
     sigma: [],
     rngG: streams.rngG.clone(),
     nextSymbol: 1,
   };
   let original = {
-    expr: clone(prepared.expr),
+    expr: prepared.expr,
     rngE: streams.rngE.clone(),
     rngG: streams.rngG.clone(),
   };
   let determinizedState = {
-    expr: clone(prepared.determinized),
+    expr: prepared.determinized,
     rngE: streams.rngE.clone(),
     rngG: streams.rngG.clone(),
   };
   const frames: Frame[] = [];
+  const draws = newReplay(streams.rngE);
 
   for (let stepIndex = 0; stepIndex <= maxSymbolicSteps; stepIndex++) {
-    const originalProjection = safe(() => projectSampleWithEnv(symbolic, streams.rngE));
+    const originalProjection = safe(() => projectSampleWithEnv(symbolic, streams.rngE, draws));
     const determinizedProjection = safe(() => projectMeanDeterminized(symbolic));
     const originalTarget = originalProjection.value?.expr;
     const determinizedTarget = determinizedProjection.value;
@@ -460,11 +482,11 @@ export function runCoupledTrace(
 
     const frame = {
       step: stepIndex,
-      original: clone(original.expr),
-      symbolic: clone(symbolic.expr),
-      sigma: symbolic.sigma.map(cloneBinding),
+      original: original.expr,
+      symbolic: symbolic.expr,
+      sigma: symbolic.sigma,
       sampleBySymbol: originalProjection.value?.sampleBySymbol ?? {},
-      determinized: clone(determinizedState.expr),
+      determinized: determinizedState.expr,
       originalTarget,
       determinizedTarget,
       originalOk: originalSync.ok,
@@ -501,14 +523,31 @@ export function runCoupledTrace(
     if (!originalSync.ok || !determinizedSync.ok || isValue(symbolic.expr)) break;
   }
 
+  // A failed check ends the frames before the end of the run; the run then goes on by itself.
+  const last = frames.at(-1);
+  const final = (state: Expr | undefined, program: Expr) =>
+    state && isValue(state) ? state : finalValue(program, streams, maxSymbolicSteps);
   return {
     seed,
     frames,
     counterexample: prepared.counterexample,
-    finalOriginal: safe(() => runOrdinary(prepared.expr, streams).value).value,
-    finalDeterminized: safe(() => runOrdinary(prepared.determinized, streams).value).value,
+    finalOriginal: final(last?.original, prepared.expr),
+    finalDeterminized: final(last?.determinized, prepared.determinized),
     ok: frames.every(frameChecksOk),
   };
+}
+
+/** The value that an ordinary run of `expr` ends in within `maxSteps` steps, if any. */
+function finalValue(expr: Expr, streams: Streams, maxSteps: number): Expr | undefined {
+  let state: OrdinaryState = { expr, rngE: streams.rngE.clone(), rngG: streams.rngG.clone() };
+  try {
+    for (let steps = 0; steps < maxSteps && !isValue(state.expr); steps++) {
+      state = stepOrdinary(state);
+    }
+  } catch {
+    return undefined;
+  }
+  return isValue(state.expr) ? state.expr : undefined;
 }
 
 function frameChecksOk(frame: Frame) {
@@ -576,13 +615,7 @@ function safe<T>(fn: () => T): Safe<T> {
 }
 
 function failedAdvance(state: OrdinaryState, error: string): Advance {
-  return {
-    ok: false,
-    state,
-    steps: 0,
-    microTrace: [prettyExpr(state.expr)],
-    error,
-  };
+  return { ok: false, state, steps: 0, error };
 }
 
 function step(expr: Expr, ctx: Context): StepResult {
@@ -836,30 +869,26 @@ function listValues(list: Expr): Expr[] {
 function advanceToTarget(state: OrdinaryState, target: Expr, maxSteps: number): Advance {
   let current = state;
   let steps = 0;
-  const microTrace = [prettyExpr(current.expr)];
+  let reached = exprEqual(current.expr, target);
   try {
-    while (!exprEqual(current.expr, target) && steps < maxSteps && !isValue(current.expr)) {
+    while (!reached && steps < maxSteps && !isValue(current.expr)) {
       current = stepOrdinary(current);
       steps += 1;
-      microTrace.push(prettyExpr(current.expr));
+      reached = exprEqual(current.expr, target);
     }
   } catch (error) {
     return {
       ok: false,
       state: current,
       steps,
-      microTrace,
       error: error instanceof Error ? error.message : String(error),
     };
   }
   return {
-    ok: exprEqual(current.expr, target),
+    ok: reached,
     state: current,
     steps,
-    microTrace,
-    error: exprEqual(current.expr, target)
-      ? undefined
-      : "ordinary trace did not reach the projected target",
+    error: reached ? undefined : "ordinary trace did not reach the projected target",
   };
 }
 
@@ -874,67 +903,41 @@ function symbolicMeanEnv(symbolicState: SymbolicState) {
 
 function determinizeResidual(expr: Expr): Expr {
   switch (expr.kind) {
-    case "Mean":
-      return n(
-        "Mean",
-        { distribution: expr.distribution, args: expr.args.map(determinizeResidual) },
-        expr,
-      );
-    case "Uniform": {
-      const args = expr.args.map(determinizeResidual);
-      if (expr.mode === "E") return meanNode(expr.kind, args, expr);
-      return n("Uniform", { mode: "G", args }, expr);
-    }
-    case "Gauss": {
-      const args = expr.args.map(determinizeResidual);
-      if (expr.mode === "E") return meanNode(expr.kind, args, expr);
-      return n("Gauss", { mode: "G", args }, expr);
-    }
-    case "Exponential": {
-      const args = expr.args.map(determinizeResidual);
-      if (expr.mode === "E") return meanNode(expr.kind, args, expr);
-      return n("Exponential", { mode: "G", args }, expr);
-    }
-    case "Gamma": {
-      const args = expr.args.map(determinizeResidual);
-      if (expr.mode === "E") return meanNode(expr.kind, args, expr);
-      return n("Gamma", { mode: "G", args }, expr);
-    }
-    case "Beta": {
-      const args = expr.args.map(determinizeResidual);
-      if (expr.mode === "E") return meanNode(expr.kind, args, expr);
-      return n("Beta", { mode: "G", args }, expr);
-    }
+    case "Uniform":
+    case "Gauss":
+    case "Exponential":
+    case "Gamma":
+    case "Beta":
     case "Bernoulli":
-    case "Poisson": {
-      const args = expr.args.map(determinizeResidual);
-      if (expr.mode === "E") return meanNode(expr.kind, args, expr);
-      return n(expr.kind, { mode: "G", args }, expr);
-    }
-    case "Discrete": {
-      const choices = expr.choices.map((choice) => ({
-        probability: choice.probability,
-        value: determinizeResidual(choice.value),
-      }));
+    case "Poisson":
+      if (expr.mode === "E") return meanNode(expr.kind, expr.args.map(determinizeResidual), expr);
+      break;
+    case "Discrete":
       if (expr.mode === "E") {
-        return meanNode(
-          "Discrete",
-          choices.map((choice) => n("Const", { value: choice.probability }, expr)),
-          expr,
+        const weights = expr.choices.map((choice) =>
+          n("Const", { value: choice.probability }, expr),
         );
+        return meanNode("Discrete", weights, expr);
       }
-      return n("Discrete", { mode: "G", choices }, expr);
-    }
-    case "DiscreteList": {
-      const probabilities = determinizeResidual(expr.probabilities);
-      if (expr.mode === "E") return meanNode("DiscreteList", [probabilities], expr);
-      return n("DiscreteList", { mode: "G", probabilities, form: expr.form }, expr);
-    }
-    case "Flip":
-      return n("Flip", { mode: "G", args: expr.args.map(determinizeResidual) }, expr);
-    default:
-      return mapChildren(expr, determinizeResidual);
+      break;
+    case "DiscreteList":
+      if (expr.mode === "E") {
+        return meanNode("DiscreteList", [determinizeResidual(expr.probabilities)], expr);
+      }
+      break;
   }
+  return mapShared(expr, determinizeResidual);
+}
+
+/** `expr` with `f` applied to its children, or `expr` itself if `f` changed none of them. */
+function mapShared(expr: Expr, f: (child: Expr) => Expr): Expr {
+  let changed = false;
+  const mapped = mapChildren(expr, (child) => {
+    const next = f(child);
+    if (next !== child) changed = true;
+    return next;
+  });
+  return changed ? mapped : expr;
 }
 
 function meanNode(distribution: MeanKind, args: Expr[], source: Span) {
@@ -1185,14 +1188,8 @@ function mapChildren(expr: Expr, f: (child: Expr) => Expr): Expr {
 }
 
 function concretize(expr: Expr, env: Map<string, number>): Expr {
-  switch (expr.kind) {
-    case "SymFloat":
-      return n("Const", { value: evalAffine(expr.affine, env) }, expr);
-    case "DomainError":
-      return clone(expr);
-    default:
-      return mapChildren(expr, (child) => concretize(child, env));
-  }
+  if (expr.kind === "SymFloat") return n("Const", { value: evalAffine(expr.affine, env) }, expr);
+  return mapShared(expr, (child) => concretize(child, env));
 }
 
 export function isValue(expr: Expr): boolean {
@@ -1291,10 +1288,6 @@ function deepCopy<T>(value: T): T {
 function clone(expr: Expr): Expr {
   if (expr.kind === "SymFloat") return symFloat(expr.affine, expr.from, expr.to);
   return deepCopy(expr);
-}
-
-function cloneBinding(binding: Binding) {
-  return deepCopy(binding);
 }
 
 function n<K extends Expr["kind"]>(

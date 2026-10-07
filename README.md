@@ -147,7 +147,8 @@ start, as when `sim/dist/index.html` is opened from disk, on its own thread in s
 `Runtime/Sampling.lean`): run i of a program and of its determinization starts at seed s + i, so
 its statistics are those of `./run.sh --seed s --samples N`. `sim/test/fixtures/lean-cli.json`
 records what the Lean CLI prints for every case of `tests/cases.toml`, and the tests compare the
-ports with it; `node scripts/lean-fixtures.ts` in `sim/` records it again.
+ports with it; `node scripts/lean-fixtures.ts` in `sim/` records it again. The step table follows
+run 0 for at most 20000 symbolic steps and shows 200 at a time.
 
 The `.#sim` shell, which direnv loads in `sim/`, links `sim/node_modules` to packages that
 Nix builds from `sim/package-lock.json`; the combined shell does not. To add or update a
