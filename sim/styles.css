@@ -109,10 +109,6 @@ pre {
   margin: 0;
 }
 
-.debug-toggle[hidden] {
-  display: none;
-}
-
 select {
   height: 38px;
   min-width: 0;
@@ -1011,58 +1007,6 @@ button:active {
   padding: 8px 12px;
   font-size: 13px;
   font-weight: 800;
-}
-
-.debug-panel {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  max-height: 190px;
-  border-top: 1px solid #101828;
-  background: #111827;
-  color: #e5e7eb;
-  min-height: 0;
-}
-
-.debug-panel[hidden] {
-  display: none;
-}
-
-.debug-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  min-height: 34px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-  padding: 0 10px;
-  color: #f9fafb;
-  font-size: 12px;
-}
-
-.debug-toolbar div {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.debug-toolbar button {
-  min-height: 24px;
-  border-color: rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.08);
-  color: #f9fafb;
-  padding: 0 8px;
-  font-size: 11px;
-}
-
-.debug-panel pre {
-  min-height: 0;
-  margin: 0;
-  overflow: auto;
-  background: #111827;
-  color: #d1d5db;
-  padding: 8px 10px;
-  white-space: pre-wrap;
-  font: 11px/1.45 "SF Mono", Menlo, Monaco, Consolas, monospace;
 }
 
 .mode-hint {
