@@ -97,11 +97,11 @@ function start(decoded: Decoded): Store {
   effect(() => {
     manyButton.textContent = `Run ${store.sampleCount.value}`;
   });
+  // A link may name an example that the gallery doesn't have; then none is selected.
   effect(() => {
     const index = examples.findIndex((example) => example.id === store.exampleId.value);
-    if (index < 0) return;
-    exampleSelect.value = String(index);
-    exampleSelect.title = examples[index].explanation;
+    exampleSelect.selectedIndex = index;
+    exampleSelect.title = examples[index]?.explanation ?? "";
   });
   effect(() => {
     renderResult(store.analysis.value);
