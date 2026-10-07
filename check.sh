@@ -22,9 +22,11 @@ while [[ $# -gt 0 ]]; do
     --changed)
       changed="$(git status --porcelain --untracked-files=all | cut -c4-)"
       grep -qE '^(check\.sh|tools/dev-shell\.sh)$' <<<"$changed" && areas+=(lean det sim bundle site tex)
-      grep -qE '^sim/(src|test)/|^sim/build\.|^sim/(package(-lock)?|biome|tsconfig(\.node)?)\.json|^(tests|examples)/' <<<"$changed" && areas+=(sim)
-      grep -qE '^sim/(src|test)/|^sim/build\.|^sim/(package(-lock)?|tsconfig)\.json|^sim/index\.html|^examples/' <<<"$changed" && areas+=(bundle)
-      grep -qE '^site/|^sim/|^examples/|^flake-modules/devshells/(sim|site)\.nix$|^lean/Determinize/Theorems\.lean$' <<<"$changed" && areas+=(site)
+      # The simulator's toolchain: the flake, which pins Node.js, and the sim shell.
+      toolchain='^flake\.(nix|lock)$|^flake-modules/(systems|devshells/sim)\.nix$'
+      grep -qE "^sim/(src|test)/|^sim/build\.|^sim/(package(-lock)?|biome|tsconfig(\.node)?)\.json|^(tests|examples)/|$toolchain" <<<"$changed" && areas+=(sim)
+      grep -qE "^sim/(src|test)/|^sim/build\.|^sim/(package(-lock)?|tsconfig)\.json|^sim/index\.html|^examples/|$toolchain" <<<"$changed" && areas+=(bundle)
+      grep -qE "^site/|^sim/|^examples/|^flake-modules/devshells/site\.nix$|^lean/Determinize/Theorems\.lean$|$toolchain" <<<"$changed" && areas+=(site)
       grep -qE '^tex/.*\.(tex|bib|cls|bst|sty)$' <<<"$changed" && areas+=(tex)
       grep -qE '^lean/.*\.lean$|^lean/(lakefile\.toml|lean-toolchain|lake-manifest\.json)$' <<<"$changed" && areas+=(lean)
       grep -qE '^tests/|^examples/|^tools/|^(test|run)\.sh$|^lean/test\.sh$' <<<"$changed" && areas+=(det)
