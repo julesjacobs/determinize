@@ -6,9 +6,11 @@ import type { Analysis } from "../core/compiler/analyze.ts";
 import { analyze } from "../core/compiler/analyze.ts";
 import type { Request, Response } from "../core/protocol.ts";
 import type { CoupledTrace } from "../core/runtime/semantics.ts";
+import type { Runner } from "../core/sampler.ts";
+import { runIndex, runnerOf } from "../core/sampler.ts";
 import type { Runs, Stats, Summary } from "../core/statistics.ts";
-import { addRuns, noRuns, statsOf } from "../core/statistics.ts";
-import { outcomesOf, runCoupling, runsOf } from "../core/trace.ts";
+import { addRuns, noRuns, runsOf, statsOf } from "../core/statistics.ts";
+import { runCoupling } from "../core/trace.ts";
 
 /** A range of the source. */
 export interface Span {
@@ -16,19 +18,20 @@ export interface Span {
   to: number;
 }
 
-/** The runs of one program: what Lean's CLI reports about them, and the numbers they returned. */
+/** The runs of one program: what Lean's CLI reports about them, and the numbers they returned.
+ * Later runs of the same program and seed append to `values` in place. */
 export interface ProgramRuns {
   summary: Summary;
-  values: number[];
+  values: readonly number[];
 }
 
-/** The runs of a program and of its determinization. */
+/** The runs of a program and of its determinization from a seed: run i at the seed plus i, as
+ * Lean's CLI runs them. Run 0 is the step table's run. */
 export interface Samples {
   source: string;
+  seed: number;
   original: ProgramRuns;
   determinized: ProgramRuns;
-  /** The last run that was added, as `source:seed`. */
-  lastKey: string;
 }
 
 /** The step table's run of the checked program. */
@@ -44,7 +47,7 @@ export interface Store {
   checkedSource: ReadonlySignal<string>;
   /** Counts the times the editor's text was analyzed and run, also when it hadn't changed. */
   commits: ReadonlySignal<number>;
-  /** The seed of the step table's run. */
+  /** The seed of the step table's run, which is run 0 of the runs. */
   seed: ReadonlySignal<number>;
   /** The example chosen last. */
   exampleId: Signal<string>;
@@ -56,8 +59,8 @@ export interface Store {
   /** The step of the step table whose checks are shown. */
   activeStep: Signal<number | null>;
   samples: ReadonlySignal<Samples>;
-  /** The batch of runs in progress, of `source`. */
-  running: ReadonlySignal<{ generation: number; source: string } | null>;
+  /** The batch of runs in progress, of `source` at `seed`, up to run `end`. */
+  running: ReadonlySignal<{ generation: number; source: string; seed: number; end: number } | null>;
   analysis: ReadonlySignal<Analysis>;
   trace: ReadonlySignal<TraceState>;
   stats: ReadonlySignal<{ original: Stats; determinized: Stats }>;
@@ -65,11 +68,8 @@ export interface Store {
   commitSource: () => void;
   /** Analyzes the editor's text now and runs it at `seed`. */
   runAt: (seed: number) => void;
-  /**
-   * Starts a batch of runs at `seeds`, after the remaining runs of a batch in progress; the last
-   * run is shown in the step table.
-   */
-  runMany: (seeds: number[]) => void;
+  /** Starts a batch of `count` more runs, after the remaining runs of a batch in progress. */
+  runMany: (count: number) => void;
   /** Takes in what the sampler reports about a batch. */
   receive: (response: Response) => void;
 }
@@ -85,14 +85,27 @@ export function analyzeSource(source: string): Analysis {
   return lastAnalysis.analysis;
 }
 
-const noProgramRuns: ProgramRuns = { summary: noRuns, values: [] };
+function noSamples(source: string, seed: number): Samples {
+  return {
+    source,
+    seed,
+    original: { summary: noRuns, values: [] },
+    determinized: { summary: noRuns, values: [] },
+  };
+}
 
-function noSamples(source: string): Samples {
-  return { source, original: noProgramRuns, determinized: noProgramRuns, lastKey: "" };
+/** Run 0 of `program` at `seed`, the step table's run, as the evaluator runs it. */
+function firstRun(program: string, seed: number, runner: Runner | null): Samples {
+  const samples = noSamples(program, seed);
+  if (!runner) return samples;
+  const first = runIndex(runner, seed, 0);
+  samples.original = addTo(samples.original, runsOf([first.source]));
+  samples.determinized = addTo(samples.determinized, runsOf([first.determinized]));
+  return samples;
 }
 
 function addTo(runs: ProgramRuns, more: Runs): ProgramRuns {
-  const values = runs.values.slice();
+  const values = runs.values as number[];
   for (const x of more.values) if (!Number.isNaN(x)) values.push(x);
   return { summary: addRuns(runs.summary, more), values };
 }
@@ -118,28 +131,18 @@ export function createStore(
   const typeHints = signal(false);
   const hoveredSpan = signal<Span | null>(null);
   const activeStep = signal<number | null>(null);
-  const samples = signal(noSamples(initial.source));
-  const running = signal<{ generation: number; source: string } | null>(null);
-  let generation = 0;
-  // The seeds of the batch in progress, and how many of them have reported.
-  let batchSeeds = new Float64Array(0);
-  let reported = 0;
-
-  // A run that was already computed elsewhere, so that showing it in the step table doesn't
-  // repeat it; runs are determined by their source and seed.
-  let knownRun: { source: string; trace: CoupledTrace } | null = null;
-
   const analysis = computed(() => analyzeSource(checkedSource.value));
+  const runner = computed(() => runnerOf(analysis.value));
+  const samples = signal(firstRun(initial.source, initial.seed, runner.peek()));
+  const running = signal<{ generation: number; source: string; seed: number; end: number } | null>(
+    null,
+  );
+  let generation = 0;
   const trace = computed((): TraceState => {
     const result = analysis.value;
     if (!result.ok && !result.counterexample) return { kind: "not run" };
-    const program = checkedSource.value;
-    const at = seed.value;
-    if (knownRun?.source === program && knownRun.trace.seed === at) {
-      return { kind: "run", trace: knownRun.trace };
-    }
     try {
-      return { kind: "run", trace: runCoupling(program, at) };
+      return { kind: "run", trace: runCoupling(checkedSource.value, seed.value) };
     } catch (error) {
       return { kind: "unavailable", message: errorMessage(error) };
     }
@@ -149,31 +152,21 @@ export function createStore(
     determinized: statsOf(samples.value.determinized.summary),
   }));
 
-  /** The samples so far if they are of `program`, otherwise none. */
-  function samplesOf(program: string) {
-    const current = samples.peek();
-    return current.source === program ? current : noSamples(program);
+  /** The runs of the checked program at the seed so far, from run 0. */
+  function currentSamples(): Samples {
+    const program = checkedSource.peek();
+    const at = seed.peek();
+    const existing = samples.peek();
+    if (existing.source === program && existing.seed === at) return existing;
+    const next = firstRun(program, at, runner.peek());
+    samples.value = next;
+    return next;
   }
 
-  // The step table's run adds its outcomes, once for each source and seed.
   effect(() => {
-    const state = trace.value;
-    const program = checkedSource.value;
-    untracked(() => {
-      const base = samplesOf(program);
-      const key = state.kind === "run" ? `${program}:${state.trace.seed}` : "";
-      if (state.kind === "run" && key !== base.lastKey) {
-        const outcomes = outcomesOf(state.trace);
-        samples.value = {
-          source: program,
-          original: addTo(base.original, runsOf([outcomes.source])),
-          determinized: addTo(base.determinized, runsOf([outcomes.determinized])),
-          lastKey: key,
-        };
-      } else if (base !== samples.value) {
-        samples.value = base;
-      }
-    });
+    checkedSource.value;
+    seed.value;
+    untracked(currentSamples);
   });
 
   let pending: ReturnType<typeof setTimeout> | undefined;
@@ -200,19 +193,16 @@ export function createStore(
     seed.value = next;
   });
 
-  const runMany = action((seeds: number[]) => {
+  const runMany = action((count: number) => {
     commitSource();
-    const program = checkedSource.value;
-    // A batch in progress goes on with its remaining seeds, followed by the new ones.
-    const left =
-      running.value?.source === program ? batchSeeds.subarray(reported) : new Float64Array(0);
-    batchSeeds = new Float64Array(left.length + seeds.length);
-    batchSeeds.set(left);
-    batchSeeds.set(seeds, left.length);
-    reported = 0;
+    const { source: program, seed: at, original } = currentSamples();
+    // A batch in progress goes on with its remaining runs, followed by the new ones.
+    const current = running.value;
+    const from = original.summary.runs;
+    const end = (current?.source === program && current.seed === at ? current.end : from) + count;
     generation += 1;
-    running.value = { generation, source: program };
-    send({ type: "run", generation, source: program, seeds: batchSeeds });
+    running.value = { generation, source: program, seed: at, end };
+    send({ type: "run", generation, source: program, seed: at, from, count: end - from });
   });
 
   // Another program or seed makes the batch in progress stale.
@@ -230,23 +220,17 @@ export function createStore(
   const receive = action((response: Response) => {
     const current = running.value;
     if (current?.generation !== response.generation) return;
-    const base = samplesOf(current.source);
-    if (response.type === "batch") {
-      reported += response.source.values.length;
-      samples.value = {
-        source: current.source,
-        original: addTo(base.original, response.source),
-        determinized: addTo(base.determinized, response.determinized),
-        lastKey: base.lastKey,
-      };
+    if (response.type === "done") {
+      running.value = null;
       return;
     }
-    running.value = null;
-    const last = response.last;
-    if (!last) return;
-    samples.value = { ...base, lastKey: `${current.source}:${last.seed}` };
-    knownRun = { source: current.source, trace: last };
-    seed.value = last.seed;
+    const base = samples.peek();
+    if (base.source !== current.source || base.seed !== current.seed) return;
+    samples.value = {
+      ...base,
+      original: addTo(base.original, response.source),
+      determinized: addTo(base.determinized, response.determinized),
+    };
   });
 
   return {

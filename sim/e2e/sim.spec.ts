@@ -91,8 +91,9 @@ test("runs every example", async ({ page }) => {
     const before = await status(page).textContent();
     await page.getByRole("button", { name: "Run 20" }).click();
     await settled(page);
-    // The step table shows the batch's last run.
-    await expect(status(page)).not.toHaveText(before ?? "");
+    // Runs 1 to 20 follow run 0, which the step table keeps showing.
+    await expect(samples(page)).toHaveText("21 runs");
+    await expect(status(page)).toHaveText(before ?? "");
   }
 });
 
@@ -129,10 +130,11 @@ test("Run 200 and a 5000-run batch leave no long task over 200 ms", async ({ pag
 test("a second Run during a batch adds its runs as well", async ({ page }) => {
   test.setTimeout(60_000);
   await page.goto(simulator);
-  // 1000 runs of the dungeon take seconds, so the first batch is still running at the second click.
-  await page.getByLabel("Example").selectOption({ label: "Dungeon" });
-  await setRunCount(page, 1000);
-  const run = page.getByRole("button", { name: "Run 1000" });
+  // 100000 runs of the Gaussian random walk take seconds, so the first batch is still running at
+  // the second click.
+  await page.getByLabel("Example").selectOption({ label: "Gaussian random walk" });
+  await setRunCount(page, 100000);
+  const run = page.getByRole("button", { name: "Run 100000" });
   await run.click();
   await expect(page.locator("[aria-busy=true]")).toHaveCount(1);
   const runningAtSecondClick = await page.evaluate(async () => {
@@ -142,14 +144,14 @@ test("a second Run during a batch adds its runs as well", async ({ page }) => {
   });
   expect(runningAtSecondClick).toBe(true);
   await settled(page, 50_000);
-  await expect(samples(page)).toHaveText("2001 runs");
+  await expect(samples(page)).toHaveText("200001 runs");
 });
 
 test("editing during a run discards its stale batches", async ({ page }) => {
   await page.goto(simulator);
-  await page.getByLabel("Example").selectOption({ label: "Dungeon" });
-  await setRunCount(page, 5000);
-  await page.getByRole("button", { name: "Run 5000" }).click();
+  await page.getByLabel("Example").selectOption({ label: "Gaussian random walk" });
+  await setRunCount(page, 100000);
+  await page.getByRole("button", { name: "Run 100000" }).click();
   await expect(samples(page)).not.toHaveText("1 run");
   await page.locator(".cm-content").click();
   await page.keyboard.press("Control+End");

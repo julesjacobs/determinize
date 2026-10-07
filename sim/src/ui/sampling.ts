@@ -12,7 +12,7 @@ export interface Sampling {
 }
 
 export function createSampling(receive: (response: Response) => void): Sampling {
-  // The latest run and how many of its seeds have run, to resume it if the worker fails.
+  // The latest run and how many of its runs have reported, to resume it if the worker fails.
   let active: { request: Request & { type: "run" }; runs: number } | null = null;
   let send: (request: Request) => void;
 
@@ -44,7 +44,7 @@ export function createSampling(receive: (response: Response) => void): Sampling 
       send = inThread();
       if (active) {
         const { request, runs } = active;
-        send({ ...request, seeds: request.seeds.subarray(runs) });
+        send({ ...request, from: request.from + runs, count: request.count - runs });
       }
     });
     send = (request) => worker.postMessage(request);

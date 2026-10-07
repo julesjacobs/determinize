@@ -1,0 +1,6247 @@
+{
+  "runs": [
+    {
+      "seed": "1",
+      "samples": 500
+    },
+    {
+      "seed": "18446744073709551614",
+      "samples": 4
+    }
+  ],
+  "accepted": [
+    {
+      "file": "examples/paper/noisy-iteration.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 1,
+          "continuous": 1
+        },
+        "after": {
+          "discrete": 1,
+          "continuous": 0
+        }
+      },
+      "annotated": "((rec f0 x0 => (if (0 < bernoulli[G](0.5)) then x0 else (f0 ((1 + (-x0)) + gauss[E](0, 1))))) 0)",
+      "determinized": "((rec f0 x0 => (if (0 < bernoulli[G](0.5)) then x0 else (f0 ((1 + (-x0)) + mean_gauss(0, 1))))) 0)",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.298726",
+            "variance": "1.274468"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.314000",
+            "variance": "0.215404"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "1.615872",
+            "variance": "1.378573"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.750000",
+            "variance": "0.187500"
+          }
+        }
+      ]
+    },
+    {
+      "file": "examples/paper/noisy-product.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 2
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 1
+        }
+      },
+      "annotated": "(let x0 = uniform[G](0, 1) in (let x1 = gauss[E](x0, 1) in (x0 * x1)))",
+      "determinized": "(let x0 = uniform[G](0, 1) in (let x1 = mean_gauss(x0, 1) in (x0 * x1)))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.284520",
+            "variance": "0.403722"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.340348",
+            "variance": "0.086306"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "1.247761",
+            "variance": "0.561225"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.700579",
+            "variance": "0.050174"
+          }
+        }
+      ]
+    },
+    {
+      "file": "examples/paper/dungeon.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 2,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 1,
+          "continuous": 0
+        }
+      },
+      "annotated": "(let x0 = (fun x0 => ((rec f1 x1 => (if (0 < bernoulli[G](0.25)) then 0 else ((x0 x1) + (f1 (x1 + 1))))) 1)) in (x0 (fun x1 => ((200 * x1) * bernoulli[E](0.01)))))",
+      "determinized": "(let x0 = (fun x0 => ((rec f1 x1 => (if (0 < bernoulli[G](0.25)) then 0 else ((x0 x1) + (f1 (x1 + 1))))) 1)) in (x0 (fun x1 => ((200 * x1) * mean_bernoulli(0.01)))))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "21.200000",
+            "variance": "32750.560000"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "29.688000",
+            "variance": "3369.694656"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "66.000000",
+            "variance": "10098.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/apply.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "(let x0 = (fun x0 => (x0 + 1)) in (x0 (x0 3)))",
+      "determinized": "(let x0 = (fun x0 => (x0 + 1)) in (x0 (x0 3)))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "5.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "5.000000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "5.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "5.000000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/arith.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "(1 + (2 * 3))",
+      "determinized": "(1 + (2 * 3))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "7.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "7.000000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "7.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "7.000000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/typing/accept/beta.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 2
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 1
+        }
+      },
+      "annotated": "(let x0 = beta[G](1, 2) in (let x1 = beta[E](x0, 8) in x1))",
+      "determinized": "(let x0 = beta[G](1, 2) in (let x1 = mean_beta(x0, 8) in x1))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.035343",
+            "variance": "0.003983"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.038940",
+            "variance": "0.000709"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.049085",
+            "variance": "0.001828"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.056270",
+            "variance": "0.000611"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/case-gauss.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 1
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "(match (inl gauss[E](0, 1)) with inl x0 => x0 | inr x0 => x0)",
+      "determinized": "(match (inl mean_gauss(0, 1)) with inl x0 => x0 | inr x0 => x0)",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "-0.101382",
+            "variance": "0.954450"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.000000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.604351",
+            "variance": "0.497438"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.000000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/typing/accept/exponential.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 2
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 1
+        }
+      },
+      "annotated": "(let x0 = exponential[G](2) in (let x1 = exponential[E](x0) in x1))",
+      "determinized": "(let x0 = exponential[G](2) in (let x1 = mean_exponential(x0) in x1))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "17.956319",
+            "variance": "45031.427697"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "16.600113",
+            "variance": "29230.133144"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "7.992485",
+            "variance": "104.713481"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "19.059844",
+            "variance": "159.943218"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/factorial.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "(let x0 = (rec f0 x0 => (if (x0 < 1) then 1 else (x0 * (f0 (x0 + (-1)))))) in (x0 4))",
+      "determinized": "(let x0 = (rec f0 x0 => (if (x0 < 1) then 1 else (x0 * (f0 (x0 + (-1)))))) in (x0 4))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "24.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "24.000000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "24.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "24.000000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/foldr.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 3
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "(let x0 = (fun x0 => (fun x1 => (rec f2 x2 => (match x2 with [] => x1 | x3 :: xs3 => ((x0 x3) (f2 xs3)))))) in (let x1 = (fun x1 => (((x0 (fun x2 => (fun x3 => (x2 + x3)))) 0) x1)) in (let x2 = (uniform[E](0, 1) :: (gauss[E](1, 0.2) :: (2.5 :: (gauss[E](0.5, 0.05) :: [])))) in (x1 x2))))",
+      "determinized": "(let x0 = (fun x0 => (fun x1 => (rec f2 x2 => (match x2 with [] => x1 | x3 :: xs3 => ((x0 x3) (f2 xs3)))))) in (let x1 = (fun x1 => (((x0 (fun x2 => (fun x3 => (x2 + x3)))) 0) x1)) in (let x2 = (mean_uniform(0, 1) :: (mean_gauss(1, 0.2) :: (2.5 :: (mean_gauss(0.5, 0.05) :: [])))) in (x1 x2))))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "4.483509",
+            "variance": "0.282661"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "4.500000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "4.766663",
+            "variance": "0.078921"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "4.500000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/typing/accept/funny.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 5
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "(let x0 = (fun x0 => (fun x1 => (rec f2 x2 => (match x2 with [] => x1 | x3 :: xs3 => ((x0 x3) (f2 xs3)))))) in (let x1 = (fun x1 => (((x0 (fun x2 => (fun x3 => uniform[E](x2, (x2 + gamma[E]((1 + x3), 2)))))) 0) x1)) in (let x2 = (uniform[E](0, 1) :: (gauss[E](1, 0.2) :: (2.5 :: (gauss[E](0.5, 0.05) :: [])))) in (x1 x2))))",
+      "determinized": "(let x0 = (fun x0 => (fun x1 => (rec f2 x2 => (match x2 with [] => x1 | x3 :: xs3 => ((x0 x3) (f2 xs3)))))) in (let x1 = (fun x1 => (((x0 (fun x2 => (fun x3 => mean_uniform(x2, (x2 + mean_gamma((1 + x3), 2)))))) 0) x1)) in (let x2 = (mean_uniform(0, 1) :: (mean_gauss(1, 0.2) :: (2.5 :: (mean_gauss(0.5, 0.05) :: [])))) in (x1 x2))))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.273079",
+            "variance": "0.673351"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.246094",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "1.252637",
+            "variance": "0.520120"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "1.246094",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/gamma.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 2
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "(let x0 = gamma[E](1, 2) in (let x1 = gamma[E](x0, 8) in (x1 + 1)))",
+      "determinized": "(let x0 = mean_gamma(1, 2) in (let x1 = mean_gamma(x0, 8) in (x1 + 1)))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.051246",
+            "variance": "0.008147"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.062500",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "1.220917",
+            "variance": "0.018952"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "1.062500",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/typing/accept/gauss.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 1
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "(let x0 = gauss[E](0, 1) in (2 * x0))",
+      "determinized": "(let x0 = mean_gauss(0, 1) in (2 * x0))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "-0.202764",
+            "variance": "3.817798"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.000000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "1.208703",
+            "variance": "1.989751"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.000000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/if.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "(if true then 1 else 0)",
+      "determinized": "(if true then 1 else 0)",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.000000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "1.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "1.000000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/lambda.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "((fun x0 => (x0 + 1)) 5)",
+      "determinized": "((fun x0 => (x0 + 1)) 5)",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "6.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "6.000000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "6.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "6.000000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/let.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "(let x0 = 1 in (let x1 = 2 in (x0 + x1)))",
+      "determinized": "(let x0 = 1 in (let x1 = 2 in (x0 + x1)))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "3.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "3.000000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "3.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "3.000000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/lists.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "(let x0 = (rec f0 x0 => (match x0 with [] => 0 | x1 :: xs1 => (x1 + (f0 xs1)))) in (let x1 = (1 :: (2 :: (3 :: []))) in (x0 x1)))",
+      "determinized": "(let x0 = (rec f0 x0 => (match x0 with [] => 0 | x1 :: xs1 => (x1 + (f0 xs1)))) in (let x1 = (1 :: (2 :: (3 :: []))) in (x0 x1)))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "6.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "6.000000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "6.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "6.000000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/typing/accept/mult.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 3
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 1
+        }
+      },
+      "annotated": "((uniform[G](0, 1) * uniform[E](1, 2)) + (3 * uniform[E](2, 3)))",
+      "determinized": "((uniform[G](0, 1) * mean_uniform(1, 2)) + (3 * mean_uniform(2, 3)))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "8.249604",
+            "variance": "0.863048"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "8.262037",
+            "variance": "0.185083"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "9.833209",
+            "variance": "1.198703"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "8.735072",
+            "variance": "0.050898"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/typing/accept/observe.det",
+      "checked": "float[G]",
+      "sites": {
+        "before": {
+          "discrete": 1,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 1,
+          "continuous": 0
+        }
+      },
+      "annotated": "(let x0 = discrete_list[G]((0.1 :: (0.2 :: []))) in (let x1 = observe((x0 < 2)) in x0))",
+      "determinized": "(let x0 = discrete_list[G]((0.1 :: (0.2 :: []))) in (let x1 = observe((x0 < 2)) in x0))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 148,
+            "samples": 500,
+            "rejected": 352,
+            "mean": "0.662162",
+            "variance": "0.223703"
+          },
+          "determinized": {
+            "returned": 148,
+            "samples": 500,
+            "rejected": 352,
+            "mean": "0.662162",
+            "variance": "0.223703"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 0,
+            "samples": 4,
+            "rejected": 4
+          },
+          "determinized": {
+            "returned": 0,
+            "samples": 4,
+            "rejected": 4
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/pairs.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "(let x0 = (1, 2) in ((fst x0) + (snd x0)))",
+      "determinized": "(let x0 = (1, 2) in ((fst x0) + (snd x0)))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "3.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "3.000000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "3.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "3.000000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/partial.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "(let x0 = 4 in (let x1 = 5 in (let x2 = 6 in (x0 + x2))))",
+      "determinized": "(let x0 = 4 in (let x1 = 5 in (let x2 = 6 in (x0 + x2))))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "10.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "10.000000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "10.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "10.000000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/rec.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "((rec f0 x0 => x0) 3)",
+      "determinized": "((rec f0 x0 => x0) 3)",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "3.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "3.000000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "3.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "3.000000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/typing/accept/retry.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 1,
+          "continuous": 1
+        },
+        "after": {
+          "discrete": 1,
+          "continuous": 0
+        }
+      },
+      "annotated": "(let x0 = (rec f0 x0 => (fun x1 => (if (0 < bernoulli[G](0.7)) then (x0 x1) else ((f0 x0) x1)))) in (let x1 = (fun x1 => (x1 + uniform[E](0, 1))) in ((x0 x1) 5)))",
+      "determinized": "(let x0 = (rec f0 x0 => (fun x1 => (if (0 < bernoulli[G](0.7)) then (x0 x1) else ((f0 x0) x1)))) in (let x1 = (fun x1 => (x1 + mean_uniform(0, 1))) in ((x0 x1) 5)))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "5.497485",
+            "variance": "0.085085"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "5.500000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "5.757070",
+            "variance": "0.103038"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "5.500000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/sums.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "(match (inl 3) with inl x0 => (x0 + 1) | inr x0 => x0)",
+      "determinized": "(match (inl 3) with inl x0 => (x0 + 1) | inr x0 => x0)",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "4.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "4.000000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "4.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "4.000000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/uniform.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 1
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "(let x0 = uniform[E](0, 1) in (x0 + 2))",
+      "determinized": "(let x0 = mean_uniform(0, 1) in (x0 + 2))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "2.497485",
+            "variance": "0.085085"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "2.500000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "2.757070",
+            "variance": "0.103038"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "2.500000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "examples/baselines/clickGraph.det",
+      "checked": "float[G]",
+      "sites": {
+        "before": {
+          "discrete": 10,
+          "continuous": 16
+        },
+        "after": {
+          "discrete": 10,
+          "continuous": 1
+        }
+      },
+      "annotated": "(let x0 = uniform[G](0, 1) in (let x1 = (if (0 < bernoulli[G](x0)) then uniform[E](0, 1) else uniform[E](0, 1)) in (let x2 = (if (0 < bernoulli[G](x0)) then x1 else uniform[E](0, 1)) in (let x3 = (if (0 < bernoulli[G](x0)) then uniform[E](0, 1) else uniform[E](0, 1)) in (let x4 = (if (0 < bernoulli[G](x0)) then x3 else uniform[E](0, 1)) in (let x5 = (if (0 < bernoulli[G](x0)) then uniform[E](0, 1) else uniform[E](0, 1)) in (let x6 = (if (0 < bernoulli[G](x0)) then x5 else uniform[E](0, 1)) in (let x7 = (if (0 < bernoulli[G](x0)) then uniform[E](0, 1) else uniform[E](0, 1)) in (let x8 = (if (0 < bernoulli[G](x0)) then x7 else uniform[E](0, 1)) in (let x9 = (if (0 < bernoulli[G](x0)) then uniform[E](0, 1) else uniform[E](0, 1)) in (let x10 = (if (0 < bernoulli[G](x0)) then x9 else uniform[E](0, 1)) in x0)))))))))))",
+      "determinized": "(let x0 = uniform[G](0, 1) in (let x1 = (if (0 < bernoulli[G](x0)) then mean_uniform(0, 1) else mean_uniform(0, 1)) in (let x2 = (if (0 < bernoulli[G](x0)) then x1 else mean_uniform(0, 1)) in (let x3 = (if (0 < bernoulli[G](x0)) then mean_uniform(0, 1) else mean_uniform(0, 1)) in (let x4 = (if (0 < bernoulli[G](x0)) then x3 else mean_uniform(0, 1)) in (let x5 = (if (0 < bernoulli[G](x0)) then mean_uniform(0, 1) else mean_uniform(0, 1)) in (let x6 = (if (0 < bernoulli[G](x0)) then x5 else mean_uniform(0, 1)) in (let x7 = (if (0 < bernoulli[G](x0)) then mean_uniform(0, 1) else mean_uniform(0, 1)) in (let x8 = (if (0 < bernoulli[G](x0)) then x7 else mean_uniform(0, 1)) in (let x9 = (if (0 < bernoulli[G](x0)) then mean_uniform(0, 1) else mean_uniform(0, 1)) in (let x10 = (if (0 < bernoulli[G](x0)) then x9 else mean_uniform(0, 1)) in x0)))))))))))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.508025",
+            "variance": "0.082259"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.508025",
+            "variance": "0.082259"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.823382",
+            "variance": "0.022621"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.823382",
+            "variance": "0.022621"
+          }
+        }
+      ]
+    },
+    {
+      "file": "examples/loops/bounded-iteration.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 1,
+          "continuous": 2
+        },
+        "after": {
+          "discrete": 1,
+          "continuous": 0
+        }
+      },
+      "annotated": "(let x0 = 8 in ((rec f1 x1 => (if (x1 < x0) then (let x2 = (if (0 < bernoulli[G](0.5)) then uniform[E](0, 2) else uniform[E](0, 4)) in (f1 (x1 + 1))) else x1)) 0))",
+      "determinized": "(let x0 = 8 in ((rec f1 x1 => (if (x1 < x0) then (let x2 = (if (0 < bernoulli[G](0.5)) then mean_uniform(0, 2) else mean_uniform(0, 4)) in (f1 (x1 + 1))) else x1)) 0))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "8.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "8.000000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "8.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "8.000000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "examples/infinite.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 1
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 1
+        }
+      },
+      "annotated": "(let x0 = 100 in ((rec f1 x1 => (if (x1 < x0) then (f1 (x1 + uniform[G](0, 1))) else (x1 + (-x0)))) 0))",
+      "determinized": "(let x0 = 100 in ((rec f1 x1 => (if (x1 < x0) then (f1 (x1 + uniform[G](0, 1))) else (x1 + (-x0)))) 0))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.343194",
+            "variance": "0.053496"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.343194",
+            "variance": "0.053496"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.229034",
+            "variance": "0.028028"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.229034",
+            "variance": "0.028028"
+          }
+        }
+      ]
+    },
+    {
+      "file": "examples/loops/irwin_hall.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 1
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "(let x0 = 200 in (let x1 = (rec f1 x1 => (fun x2 => (if (let x3 = x1 in (let x4 = x0 in (if (x4 < x3) then false else true))) then (let x3 = uniform[E](0, 1) in ((f1 (x1 + 1)) (x2 + x3))) else x2))) in ((x1 1) 0)))",
+      "determinized": "(let x0 = 200 in (let x1 = (rec f1 x1 => (fun x2 => (if (let x3 = x1 in (let x4 = x0 in (if (x4 < x3) then false else true))) then (let x3 = mean_uniform(0, 1) in ((f1 (x1 + 1)) (x2 + x3))) else x2))) in ((x1 1) 0)))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "99.864982",
+            "variance": "16.454015"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "100.000000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "100.223765",
+            "variance": "6.043870"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "100.000000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "examples/loops/irwin_hall_observe.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 1
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 1
+        }
+      },
+      "annotated": "(let x0 = 5 in (let x1 = (rec f1 x1 => (fun x2 => (if (let x3 = x1 in (let x4 = x0 in (if (x4 < x3) then false else true))) then (let x3 = uniform[G](0, 1) in (let x4 = observe((let x4 = x3 in (let x5 = 0.5 in (if (x5 < x4) then false else true)))) in ((f1 (x1 + 1)) (x2 + x3)))) else x2))) in ((x1 1) 0)))",
+      "determinized": "(let x0 = 5 in (let x1 = (rec f1 x1 => (fun x2 => (if (let x3 = x1 in (let x4 = x0 in (if (x4 < x3) then false else true))) then (let x3 = uniform[G](0, 1) in (let x4 = observe((let x4 = x3 in (let x5 = 0.5 in (if (x5 < x4) then false else true)))) in ((f1 (x1 + 1)) (x2 + x3)))) else x2))) in ((x1 1) 0)))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 12,
+            "samples": 500,
+            "rejected": 488,
+            "mean": "1.186973",
+            "variance": "0.094793"
+          },
+          "determinized": {
+            "returned": 12,
+            "samples": 500,
+            "rejected": 488,
+            "mean": "1.186973",
+            "variance": "0.094793"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 0,
+            "samples": 4,
+            "rejected": 4
+          },
+          "determinized": {
+            "returned": 0,
+            "samples": 4,
+            "rejected": 4
+          }
+        }
+      ]
+    },
+    {
+      "file": "examples/loops/poisson_packet_arrival.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 1,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 1,
+          "continuous": 0
+        }
+      },
+      "annotated": "(let x0 = poisson[G](1) in (let x1 = (rec f1 x1 => (fun x2 => (if (x1 < 1) then x2 else (let x3 = 0 in ((f1 (x1 + (-1))) (x2 + x3)))))) in ((x1 x0) 0)))",
+      "determinized": "(let x0 = poisson[G](1) in (let x1 = (rec f1 x1 => (fun x2 => (if (x1 < 1) then x2 else (let x3 = 0 in ((f1 (x1 + (-1))) (x2 + x3)))))) in ((x1 x0) 0)))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.000000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.000000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "examples/loops/random_walk.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 1,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 1,
+          "continuous": 0
+        }
+      },
+      "annotated": "((rec f0 x0 => (if (let x1 = x0 in (let x2 = 0 in (if (x2 < x1) then false else true))) then 0 else (if (0 < bernoulli[G](0.5)) then (f0 (x0 + 1)) else (f0 (x0 + (-1)))))) 1)",
+      "determinized": "((rec f0 x0 => (if (let x1 = x0 in (let x2 = 0 in (if (x2 < x1) then false else true))) then 0 else (if (0 < bernoulli[G](0.5)) then (f0 (x0 + 1)) else (f0 (x0 + (-1)))))) 1)",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 495,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.000000",
+            "variance": "0.000000",
+            "firstFailure": "step limit reached"
+          },
+          "determinized": {
+            "returned": 495,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.000000",
+            "variance": "0.000000",
+            "firstFailure": "step limit reached"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.000000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "examples/loops/tortoise_hare.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 1,
+          "continuous": 1
+        },
+        "after": {
+          "discrete": 1,
+          "continuous": 1
+        }
+      },
+      "annotated": "((((rec f0 x0 => (fun x1 => (fun x2 => (if (let x3 = x0 in (let x4 = x1 in (if (x4 < x3) then false else true))) then (let x3 = (if (0 < bernoulli[G](0.5)) then (let x3 = (10 * uniform[G](0, 1)) in (x0 + x3)) else x0) in (let x4 = (x1 + 1) in (let x5 = (x2 + 1) in (((f0 x3) x4) x5)))) else x2)))) 0) 5) 0)",
+      "determinized": "((((rec f0 x0 => (fun x1 => (fun x2 => (if (let x3 = x0 in (let x4 = x1 in (if (x4 < x3) then false else true))) then (let x3 = (if (0 < bernoulli[G](0.5)) then (let x3 = (10 * uniform[G](0, 1)) in (x0 + x3)) else x0) in (let x4 = (x1 + 1) in (let x5 = (x2 + 1) in (((f0 x3) x4) x5)))) else x2)))) 0) 5) 0)",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "5.588000",
+            "variance": "28.638256"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "5.588000",
+            "variance": "28.638256"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "10.000000",
+            "variance": "15.500000"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "10.000000",
+            "variance": "15.500000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "examples/paper/nested-uniform-parameters.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 8
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 3
+        }
+      },
+      "annotated": "(let x0 = uniform[E]((uniform[G](0, 1) * uniform[E](0, 2)), 4) in (let x1 = uniform[E]((uniform[G](0, 1) * uniform[E](0, 2)), (gauss[G](0, 1) * gauss[E](0, 2))) in (x0 + x1)))",
+      "determinized": "(let x0 = mean_uniform((uniform[G](0, 1) * mean_uniform(0, 2)), 4) in (let x1 = mean_uniform((uniform[G](0, 1) * mean_uniform(0, 2)), (gauss[G](0, 1) * mean_gauss(0, 2))) in (x0 + x1)))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 136,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "2.985412",
+            "variance": "1.644519",
+            "firstFailure": "uniform requires lower ≤ upper"
+          },
+          "determinized": {
+            "returned": 0,
+            "samples": 500,
+            "rejected": 0,
+            "firstFailure": "uniform requires lower ≤ upper"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 2,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "6.413715",
+            "variance": "0.469916",
+            "firstFailure": "uniform requires lower ≤ upper"
+          },
+          "determinized": {
+            "returned": 0,
+            "samples": 4,
+            "rejected": 0,
+            "firstFailure": "uniform requires lower ≤ upper"
+          }
+        }
+      ]
+    },
+    {
+      "file": "examples/paper/squared-nested-uniform.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 2
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 2
+        }
+      },
+      "annotated": "(let x0 = uniform[G](uniform[G](0, 1), 1) in (x0 * x0))",
+      "determinized": "(let x0 = uniform[G](uniform[G](0, 1), 1) in (x0 * x0))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.632993",
+            "variance": "0.083461"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.632993",
+            "variance": "0.083461"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.904465",
+            "variance": "0.006097"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.904465",
+            "variance": "0.006097"
+          }
+        }
+      ]
+    },
+    {
+      "file": "examples/paper/sum-of-squares.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 1
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 1
+        }
+      },
+      "annotated": "(let x0 = gauss[G](0, 1) in ((x0 * x0) + (x0 * x0)))",
+      "determinized": "(let x0 = gauss[G](0, 1) in ((x0 * x0) + (x0 * x0)))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.941313",
+            "variance": "7.507402"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.941313",
+            "variance": "7.507402"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.185451",
+            "variance": "0.034246"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.185451",
+            "variance": "0.034246"
+          }
+        }
+      ]
+    },
+    {
+      "file": "examples/paper/gamma-affine-shape.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 2
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "gamma[E](uniform[E](0, 1), 1)",
+      "determinized": "mean_gamma(mean_uniform(0, 1), 1)",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.487176",
+            "variance": "0.465927"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.500000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "1.054031",
+            "variance": "0.152803"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.500000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "examples/paper/gamma-product-shape.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 3
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 1
+        }
+      },
+      "annotated": "gamma[E]((uniform[G](0, 1) * uniform[E](0, 1)), 1)",
+      "determinized": "mean_gamma((uniform[G](0, 1) * mean_uniform(0, 1)), 1)",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.257606",
+            "variance": "0.272089"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.254012",
+            "variance": "0.020565"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.931654",
+            "variance": "0.208382"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.411691",
+            "variance": "0.005655"
+          }
+        }
+      ]
+    },
+    {
+      "file": "examples/paper/beta-random-shape.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 2
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 1
+        }
+      },
+      "annotated": "(let x0 = uniform[G](0, 1) in beta[E](x0, 2))",
+      "determinized": "(let x0 = uniform[G](0, 1) in mean_beta(x0, 2))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.185614",
+            "variance": "0.045669"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.191776",
+            "variance": "0.008988"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.369537",
+            "variance": "0.037576"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.289492",
+            "variance": "0.001610"
+          }
+        }
+      ]
+    },
+    {
+      "file": "examples/paper/gauss-random-walk.det",
+      "checked": "[(float[E] * float[E])]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 1
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "(let x0 = (rec f0 x0 => (fun x1 => (fun x2 => (match x2 with [] => x1 | x3 :: xs3 => (((f0 x0) ((x0 x1) x3)) xs3))))) in (let x1 = (fun x1 => (fun x2 => (match x1 with [] => [] | x3 :: xs3 => (let x4 = (fst x3) in (let x5 = (snd x3) in (let x6 = gauss[E](x5, (x2 + (-x4))) in ((x2, x6) :: x1))))))) in (let x2 = (1 :: (2 :: (4 :: (5.5 :: (6 :: (6.25 :: [])))))) in (((x0 x1) ((0, 0) :: [])) x2))))",
+      "determinized": "(let x0 = (rec f0 x0 => (fun x1 => (fun x2 => (match x2 with [] => x1 | x3 :: xs3 => (((f0 x0) ((x0 x1) x3)) xs3))))) in (let x1 = (fun x1 => (fun x2 => (match x1 with [] => [] | x3 :: xs3 => (let x4 = (fst x3) in (let x5 = (snd x3) in (let x6 = mean_gauss(x5, (x2 + (-x4))) in ((x2, x6) :: x1))))))) in (let x2 = (1 :: (2 :: (4 :: (5.5 :: (6 :: (6.25 :: [])))))) in (((x0 x1) ((0, 0) :: [])) x2))))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "firstValue": "(6.250000, -0.421589) :: (6.000000, -0.237084) :: (5.500000, -0.736349) :: (4.000000, -0.241783) :: (2.000000, -0.905189) :: (1.000000, -0.043084) :: (0.000000, 0.000000) :: []"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "firstValue": "(6.250000, 0.000000) :: (6.000000, 0.000000) :: (5.500000, 0.000000) :: (4.000000, 0.000000) :: (2.000000, 0.000000) :: (1.000000, 0.000000) :: (0.000000, 0.000000) :: []"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "firstValue": "(6.250000, -0.318061) :: (6.000000, -0.460878) :: (5.500000, -0.456672) :: (4.000000, -0.128517) :: (2.000000, 0.196324) :: (1.000000, 0.579466) :: (0.000000, 0.000000) :: []"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "firstValue": "(6.250000, 0.000000) :: (6.000000, 0.000000) :: (5.500000, 0.000000) :: (4.000000, 0.000000) :: (2.000000, 0.000000) :: (1.000000, 0.000000) :: (0.000000, 0.000000) :: []"
+          }
+        }
+      ]
+    },
+    {
+      "file": "examples/symbolic/nested-uniform.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 2
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "(let x0 = uniform[E](0, 1) in (let x1 = uniform[E](x0, 2) in (x0 + x1)))",
+      "determinized": "(let x0 = mean_uniform(0, 1) in (let x1 = mean_uniform(x0, 2) in (x0 + x1)))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.735820",
+            "variance": "0.381586"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.750000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "2.551647",
+            "variance": "0.109161"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "1.750000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "examples/symbolic/mixed-affinities.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 2
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 1
+        }
+      },
+      "annotated": "(let x0 = uniform[G](0, 1) in (let x1 = uniform[E](x0, 2) in (x0 + x1)))",
+      "determinized": "(let x0 = uniform[G](0, 1) in (let x1 = mean_uniform(x0, 2) in (x0 + x1)))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.753796",
+            "variance": "0.401489"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.762037",
+            "variance": "0.185083"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "2.553454",
+            "variance": "0.116797"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "2.235072",
+            "variance": "0.050898"
+          }
+        }
+      ]
+    },
+    {
+      "file": "examples/symbolic/pair-sum.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 2
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "(let x0 = (uniform[E](0, 1), uniform[E](0, 2)) in ((fst x0) + (snd x0)))",
+      "determinized": "(let x0 = (mean_uniform(0, 1), mean_uniform(0, 2)) in ((fst x0) + (snd x0)))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.487056",
+            "variance": "0.396633"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.500000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "2.358656",
+            "variance": "0.285511"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "1.500000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "examples/symbolic/recursion-and-list.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 1
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "(let x0 = (rec f0 x0 => (if (let x1 = x0 in (let x2 = 0 in (if (x2 < x1) then false else true))) then 0 else (f0 (x0 + (-1))))) in (let x1 = (x0 2) in (let x2 = (uniform[E](0, 1) :: []) in (match x2 with [] => x1 | x3 :: xs3 => (x3 + x1)))))",
+      "determinized": "(let x0 = (rec f0 x0 => (if (let x1 = x0 in (let x2 = 0 in (if (x2 < x1) then false else true))) then 0 else (f0 (x0 + (-1))))) in (let x1 = (x0 2) in (let x2 = (mean_uniform(0, 1) :: []) in (match x2 with [] => x1 | x3 :: xs3 => (x3 + x1)))))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.497485",
+            "variance": "0.085085"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.500000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.757070",
+            "variance": "0.103038"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.500000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "examples/symbolic/distribution-sum.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 3,
+          "continuous": 5
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "(let x0 = (match (inl uniform[E](0, 1)) with inl x0 => (x0 + 1) | inr x0 => x0) in (((((((gauss[E](1, 2) + exponential[E](2)) + gamma[E](2, 4)) + beta[E](2, 3)) + bernoulli[E](0.25)) + poisson[E](3)) + discrete_list[E]((0.25 :: []))) + x0))",
+      "determinized": "(let x0 = (match (inl mean_uniform(0, 1)) with inl x0 => (x0 + 1) | inr x0 => x0) in (((((((mean_gauss(1, 2) + mean_exponential(2)) + mean_gamma(2, 4)) + mean_beta(2, 3)) + mean_bernoulli(0.25)) + mean_poisson(3)) + mean_discrete_list((0.25 :: []))) + x0))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "7.730688",
+            "variance": "5.726968"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "7.900000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "7.905781",
+            "variance": "2.232425"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "7.900000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "examples/uniform_sum.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 1,
+          "continuous": 1
+        },
+        "after": {
+          "discrete": 1,
+          "continuous": 0
+        }
+      },
+      "annotated": "((rec f0 x0 => (if (0 < bernoulli[G](0.5)) then (1 + uniform[E](0, 1)) else (f0 (x0 + (-1))))) 6)",
+      "determinized": "((rec f0 x0 => (if (0 < bernoulli[G](0.5)) then (1 + mean_uniform(0, 1)) else (f0 (x0 + (-1))))) 6)",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.497485",
+            "variance": "0.085085"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.500000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "1.757070",
+            "variance": "0.103038"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "1.500000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "examples/while.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 1,
+          "continuous": 1
+        },
+        "after": {
+          "discrete": 1,
+          "continuous": 1
+        }
+      },
+      "annotated": "((rec f0 x0 => (if (x0 < 5) then (if (0 < bernoulli[G](0.5)) then (f0 x0) else (let x1 = (x0 + uniform[G](0, 1)) in (f0 x1))) else x0)) 0)",
+      "determinized": "((rec f0 x0 => (if (x0 < 5) then (if (0 < bernoulli[G](0.5)) then (f0 x0) else (let x1 = (x0 + uniform[G](0, 1)) in (f0 x1))) else x0)) 0)",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "5.347430",
+            "variance": "0.057007"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "5.347430",
+            "variance": "0.057007"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "5.380188",
+            "variance": "0.046459"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "5.380188",
+            "variance": "0.046459"
+          }
+        }
+      ]
+    },
+    {
+      "file": "examples/simulator/observe.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 2
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 1
+        }
+      },
+      "annotated": "(let x0 = uniform[G](0, 1) in (let x1 = uniform[E](0, x0) in (let x2 = observe((x0 < 0.8)) in (x0 + x1))))",
+      "determinized": "(let x0 = uniform[G](0, 1) in (let x1 = mean_uniform(0, x0) in (let x2 = observe((x0 < 0.8)) in (x0 + x1))))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 399,
+            "samples": 500,
+            "rejected": 101,
+            "mean": "0.620946",
+            "variance": "0.154784"
+          },
+          "determinized": {
+            "returned": 399,
+            "samples": 500,
+            "rejected": 101,
+            "mean": "0.615700",
+            "variance": "0.124006"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 1,
+            "samples": 4,
+            "rejected": 3,
+            "mean": "1.123847",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 1,
+            "samples": 4,
+            "rejected": 3,
+            "mean": "0.849842",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "examples/simulator/random-list-sum.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 1,
+          "continuous": 1
+        },
+        "after": {
+          "discrete": 1,
+          "continuous": 0
+        }
+      },
+      "annotated": "(let x0 = (rec f0 x0 => (match x0 with [] => 0 | x1 :: xs1 => (x1 + (f0 xs1)))) in (let x1 = (rec f1 x1 => (if (0 < bernoulli[G](0.5)) then [] else (uniform[E](0, 1) :: (f1 0)))) in (x0 (x1 0))))",
+      "determinized": "(let x0 = (rec f0 x0 => (match x0 with [] => 0 | x1 :: xs1 => (x1 + (f0 xs1)))) in (let x1 = (rec f1 x1 => (if (0 < bernoulli[G](0.5)) then [] else (mean_uniform(0, 1) :: (f1 0)))) in (x0 (x1 0))))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.598335",
+            "variance": "0.784296"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.593000",
+            "variance": "0.678851"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "1.710432",
+            "variance": "0.856833"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "1.125000",
+            "variance": "0.171875"
+          }
+        }
+      ]
+    },
+    {
+      "file": "examples/simulator/recursive-gamma.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 2
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 1
+        }
+      },
+      "annotated": "(let x0 = (rec f0 x0 => (if (let x1 = x0 in (let x2 = 0 in (if (x2 < x1) then false else true))) then 1 else gamma[E]((f0 (x0 + (-1))), uniform[G](1, 2)))) in (x0 4))",
+      "determinized": "(let x0 = (rec f0 x0 => (if (let x1 = x0 in (let x2 = 0 in (if (x2 < x1) then false else true))) then 1 else mean_gamma((f0 (x0 + (-1))), uniform[G](1, 2)))) in (x0 4))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 402,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.242008",
+            "variance": "0.535257",
+            "firstFailure": "gamma requires positive shape and rate"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.221459",
+            "variance": "0.008237"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "1.150710",
+            "variance": "0.476592"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.154091",
+            "variance": "0.000401"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/typing/accept/primitives.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 1,
+          "continuous": 5
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "(let x0 = uniform[E]((-1.25), 2.75) in (((((x0 + gauss[E](1.5, 2)) + poisson[E](3)) + exponential[E](2)) + gamma[E](4, 2)) + beta[E](2, 3)))",
+      "determinized": "(let x0 = mean_uniform((-1.25), 2.75) in (((((x0 + mean_gauss(1.5, 2)) + mean_poisson(3)) + mean_exponential(2)) + mean_gamma(4, 2)) + mean_beta(2, 3)))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "8.053456",
+            "variance": "7.194763"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "8.150000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "9.794370",
+            "variance": "7.122925"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "8.150000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/typing/accept/subtyping.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 3
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 1
+        }
+      },
+      "annotated": "(let x0 = (if true then (rec f0 x0 => (if (x0 < 0) then (f0 (x0 + 1)) else uniform[G](0, 1))) else (fun x0 => uniform[E](0, 1))) in (let x1 = (rec f1 x1 => (match x1 with [] => 0 | x2 :: xs2 => (x2 + (f1 xs2)))) in (x1 ((x0 (-2)) :: (uniform[E](0, 1) :: [])))))",
+      "determinized": "(let x0 = (if true then (rec f0 x0 => (if (x0 < 0) then (f0 (x0 + 1)) else uniform[G](0, 1))) else (fun x0 => mean_uniform(0, 1))) in (let x1 = (rec f1 x1 => (match x1 with [] => 0 | x2 :: xs2 => (x2 + (f1 xs2)))) in (x1 ((x0 (-2)) :: (mean_uniform(0, 1) :: [])))))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.005509",
+            "variance": "0.176319"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.008025",
+            "variance": "0.082259"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "1.580451",
+            "variance": "0.093843"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "1.323382",
+            "variance": "0.022621"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/typing/accept/identity.det",
+      "checked": "(unit -> unit)",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "(fun x0 => x0)",
+      "determinized": "(fun x0 => x0)",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "firstValue": "<function>"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "firstValue": "<function>"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "firstValue": "<function>"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "firstValue": "<function>"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/pair.det",
+      "checked": "(float[E] * bool)",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "(1, true)",
+      "determinized": "(1, true)",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "firstValue": "(1.000000, true)"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "firstValue": "(1.000000, true)"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "firstValue": "(1.000000, true)"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "firstValue": "(1.000000, true)"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/list.det",
+      "checked": "[float[E]]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "(1 :: (2 :: []))",
+      "determinized": "(1 :: (2 :: []))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "firstValue": "1.000000 :: 2.000000 :: []"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "firstValue": "1.000000 :: 2.000000 :: []"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "firstValue": "1.000000 :: 2.000000 :: []"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "firstValue": "1.000000 :: 2.000000 :: []"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/sum.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "(match (inr 7) with inl x0 => 0 | inr x0 => x0)",
+      "determinized": "(match (inr 7) with inl x0 => 0 | inr x0 => x0)",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "7.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "7.000000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "7.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "7.000000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/closure.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "(let x0 = 2 in (let x1 = (fun x1 => (x0 + x1)) in (let x2 = 10 in (x1 3))))",
+      "determinized": "(let x0 = 2 in (let x1 = (fun x1 => (x0 + x1)) in (let x2 = 10 in (x1 3))))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "5.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "5.000000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "5.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "5.000000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/division-zero.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "(1 / 0)",
+      "determinized": "(1 / 0)",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 0,
+            "samples": 500,
+            "rejected": 0,
+            "firstFailure": "division by zero"
+          },
+          "determinized": {
+            "returned": 0,
+            "samples": 500,
+            "rejected": 0,
+            "firstFailure": "division by zero"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 0,
+            "samples": 4,
+            "rejected": 0,
+            "firstFailure": "division by zero"
+          },
+          "determinized": {
+            "returned": 0,
+            "samples": 4,
+            "rejected": 0,
+            "firstFailure": "division by zero"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/boolean.det",
+      "checked": "bool",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "(let x0 = 1 in (let x1 = 2 in (if (x1 < x0) then false else true)))",
+      "determinized": "(let x0 = 1 in (let x1 = 2 in (if (x1 < x0) then false else true)))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "firstValue": "true"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "firstValue": "true"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "firstValue": "true"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "firstValue": "true"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/unit.det",
+      "checked": "unit",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "observe(true)",
+      "determinized": "observe(true)",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "firstValue": "()"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "firstValue": "()"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "firstValue": "()"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "firstValue": "()"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/invalid-uniform.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 1
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "uniform[E](2, 1)",
+      "determinized": "mean_uniform(2, 1)",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 0,
+            "samples": 500,
+            "rejected": 0,
+            "firstFailure": "uniform requires lower ≤ upper"
+          },
+          "determinized": {
+            "returned": 0,
+            "samples": 500,
+            "rejected": 0,
+            "firstFailure": "uniform requires lower ≤ upper"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 0,
+            "samples": 4,
+            "rejected": 0,
+            "firstFailure": "uniform requires lower ≤ upper"
+          },
+          "determinized": {
+            "returned": 0,
+            "samples": 4,
+            "rejected": 0,
+            "firstFailure": "uniform requires lower ≤ upper"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/invalid-gaussian.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 1
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "gauss[E](0, (-1))",
+      "determinized": "mean_gauss(0, (-1))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 0,
+            "samples": 500,
+            "rejected": 0,
+            "firstFailure": "gaussian requires variance ≥ 0"
+          },
+          "determinized": {
+            "returned": 0,
+            "samples": 500,
+            "rejected": 0,
+            "firstFailure": "gaussian requires variance ≥ 0"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 0,
+            "samples": 4,
+            "rejected": 0,
+            "firstFailure": "gaussian requires variance ≥ 0"
+          },
+          "determinized": {
+            "returned": 0,
+            "samples": 4,
+            "rejected": 0,
+            "firstFailure": "gaussian requires variance ≥ 0"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/invalid-poisson.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 1,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "poisson[E]((-1))",
+      "determinized": "mean_poisson((-1))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 0,
+            "samples": 500,
+            "rejected": 0,
+            "firstFailure": "poisson requires rate ≥ 0"
+          },
+          "determinized": {
+            "returned": 0,
+            "samples": 500,
+            "rejected": 0,
+            "firstFailure": "poisson requires rate ≥ 0"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 0,
+            "samples": 4,
+            "rejected": 0,
+            "firstFailure": "poisson requires rate ≥ 0"
+          },
+          "determinized": {
+            "returned": 0,
+            "samples": 4,
+            "rejected": 0,
+            "firstFailure": "poisson requires rate ≥ 0"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/invalid-gamma.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 1
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "gamma[E](1, 0)",
+      "determinized": "mean_gamma(1, 0)",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 0,
+            "samples": 500,
+            "rejected": 0,
+            "firstFailure": "gamma requires positive shape and rate"
+          },
+          "determinized": {
+            "returned": 0,
+            "samples": 500,
+            "rejected": 0,
+            "firstFailure": "gamma requires positive shape and rate"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 0,
+            "samples": 4,
+            "rejected": 0,
+            "firstFailure": "gamma requires positive shape and rate"
+          },
+          "determinized": {
+            "returned": 0,
+            "samples": 4,
+            "rejected": 0,
+            "firstFailure": "gamma requires positive shape and rate"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/invalid-beta.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 1
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "beta[E](0, 1)",
+      "determinized": "mean_beta(0, 1)",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 0,
+            "samples": 500,
+            "rejected": 0,
+            "firstFailure": "beta requires positive parameters"
+          },
+          "determinized": {
+            "returned": 0,
+            "samples": 500,
+            "rejected": 0,
+            "firstFailure": "beta requires positive parameters"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 0,
+            "samples": 4,
+            "rejected": 0,
+            "firstFailure": "beta requires positive parameters"
+          },
+          "determinized": {
+            "returned": 0,
+            "samples": 4,
+            "rejected": 0,
+            "firstFailure": "beta requires positive parameters"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/invalid-exponential.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 1
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "exponential[E](0)",
+      "determinized": "mean_exponential(0)",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 0,
+            "samples": 500,
+            "rejected": 0,
+            "firstFailure": "exponential requires rate > 0"
+          },
+          "determinized": {
+            "returned": 0,
+            "samples": 500,
+            "rejected": 0,
+            "firstFailure": "exponential requires rate > 0"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 0,
+            "samples": 4,
+            "rejected": 0,
+            "firstFailure": "exponential requires rate > 0"
+          },
+          "determinized": {
+            "returned": 0,
+            "samples": 4,
+            "rejected": 0,
+            "firstFailure": "exponential requires rate > 0"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/divergence.det",
+      "checked": "unit",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "((rec f0 x0 => (f0 x0)) ())",
+      "determinized": "((rec f0 x0 => (f0 x0)) ())",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 0,
+            "samples": 500,
+            "rejected": 0,
+            "firstFailure": "step limit reached"
+          },
+          "determinized": {
+            "returned": 0,
+            "samples": 500,
+            "rejected": 0,
+            "firstFailure": "step limit reached"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 0,
+            "samples": 4,
+            "rejected": 0,
+            "firstFailure": "step limit reached"
+          },
+          "determinized": {
+            "returned": 0,
+            "samples": 4,
+            "rejected": 0,
+            "firstFailure": "step limit reached"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/rejected-observation.det",
+      "checked": "unit",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "observe(false)",
+      "determinized": "observe(false)",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 0,
+            "samples": 500,
+            "rejected": 500
+          },
+          "determinized": {
+            "returned": 0,
+            "samples": 500,
+            "rejected": 500
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 0,
+            "samples": 4,
+            "rejected": 4
+          },
+          "determinized": {
+            "returned": 0,
+            "samples": 4,
+            "rejected": 4
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/variance-operand.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 2
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 1
+        }
+      },
+      "annotated": "gauss[E](1, uniform[G](1, 2))",
+      "determinized": "mean_gauss(1, uniform[G](1, 2))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.874105",
+            "variance": "1.444420"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.000000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "1.834265",
+            "variance": "0.934158"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "1.000000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/typing/accept/mixed-list.det",
+      "checked": "[float[E]]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 2
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 1
+        }
+      },
+      "annotated": "(uniform[G](0, 1) :: (uniform[E](0, 1) :: []))",
+      "determinized": "(uniform[G](0, 1) :: (mean_uniform(0, 1) :: []))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "firstValue": "0.566562 :: 0.983628 :: []"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "firstValue": "0.566562 :: 0.500000 :: []"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "firstValue": "0.949711 :: 0.841860 :: []"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "firstValue": "0.949711 :: 0.500000 :: []"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/typing/accept/mixed-pair.det",
+      "checked": "(float[E] * bool)",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 2
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 1
+        }
+      },
+      "annotated": "(if true then (uniform[G](0, 1), true) else (uniform[E](0, 1), false))",
+      "determinized": "(if true then (uniform[G](0, 1), true) else (mean_uniform(0, 1), false))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "firstValue": "(0.566562, true)"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "firstValue": "(0.566562, true)"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "firstValue": "(0.949711, true)"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "firstValue": "(0.949711, true)"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/typing/accept/mixed-sum.det",
+      "checked": "(float[E] + unit)",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 2
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 1
+        }
+      },
+      "annotated": "(if true then (inl uniform[G](0, 1)) else (inl uniform[E](0, 1)))",
+      "determinized": "(if true then (inl uniform[G](0, 1)) else (inl mean_uniform(0, 1)))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "firstValue": "inl (0.566562)"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "firstValue": "inl (0.566562)"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "firstValue": "inl (0.949711)"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "firstValue": "inl (0.949711)"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/statistical/uniform.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 1
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "uniform[E]((-1), 3)",
+      "determinized": "mean_uniform((-1), 3)",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.989938",
+            "variance": "1.361358"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.000000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "2.028279",
+            "variance": "1.648612"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "1.000000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/statistical/gaussian.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 1
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "gauss[E](3, 4)",
+      "determinized": "mean_gauss(3, 4)",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "2.797236",
+            "variance": "3.817798"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "3.000000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "4.208703",
+            "variance": "1.989751"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "3.000000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/statistical/poisson.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 1,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "poisson[E](4)",
+      "determinized": "mean_poisson(4)",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "4.048000",
+            "variance": "4.181696"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "4.000000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "7.750000",
+            "variance": "3.687500"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "4.000000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/statistical/poisson-large.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 1,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "poisson[E](45)",
+      "determinized": "mean_poisson(45)",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "44.870000",
+            "variance": "50.113100"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "45.000000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "50.750000",
+            "variance": "30.187500"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "45.000000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/statistical/exponential.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 1
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "exponential[E](2)",
+      "determinized": "mean_exponential(2)",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.498632",
+            "variance": "0.222764"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.500000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.219203",
+            "variance": "0.105330"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.500000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/statistical/gamma.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 1
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "gamma[E](3, 2)",
+      "determinized": "mean_gamma(3, 2)",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.418103",
+            "variance": "0.669532"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.500000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "1.986583",
+            "variance": "0.662259"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "1.500000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/statistical/gamma-small.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 1
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "gamma[E](0.5, 2)",
+      "determinized": "mean_gamma(0.5, 2)",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.237308",
+            "variance": "0.122666"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.250000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.332159",
+            "variance": "0.097801"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.250000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/statistical/beta.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 1
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "beta[E](2, 3)",
+      "determinized": "mean_beta(2, 3)",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.387405",
+            "variance": "0.038215"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.400000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.439419",
+            "variance": "0.015182"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.400000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/statistical/affine.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 1
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "((2 * uniform[E](0, 1)) + 3)",
+      "determinized": "((2 * mean_uniform(0, 1)) + 3)",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "3.994969",
+            "variance": "0.340340"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "4.000000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "4.514140",
+            "variance": "0.412153"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "4.000000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/statistical/nested.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 2
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "(let x0 = uniform[E](0, 1) in (x0 + uniform[E](x0, 2)))",
+      "determinized": "(let x0 = mean_uniform(0, 1) in (x0 + mean_uniform(x0, 2)))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.735820",
+            "variance": "0.381586"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.750000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "2.551647",
+            "variance": "0.109161"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "1.750000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/statistical/mixed.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 2
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 1
+        }
+      },
+      "annotated": "(uniform[G](0, 1) + uniform[E](0, 1))",
+      "determinized": "(uniform[G](0, 1) + mean_uniform(0, 1))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.005509",
+            "variance": "0.176319"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.008025",
+            "variance": "0.082259"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "1.580451",
+            "variance": "0.093843"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "1.323382",
+            "variance": "0.022621"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/statistical/branch.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 1,
+          "continuous": 2
+        },
+        "after": {
+          "discrete": 1,
+          "continuous": 0
+        }
+      },
+      "annotated": "(if (0 < bernoulli[G](0.25)) then uniform[E](0, 2) else uniform[E](0, 1))",
+      "determinized": "(if (0 < bernoulli[G](0.25)) then mean_uniform(0, 2) else mean_uniform(0, 1))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.618272",
+            "variance": "0.188779"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.624000",
+            "variance": "0.046624"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.757070",
+            "variance": "0.103038"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.500000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/statistical/degenerate.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 1,
+          "continuous": 2
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "((uniform[E](2, 2) + gauss[E](3, 0)) + poisson[E](0))",
+      "determinized": "((mean_uniform(2, 2) + mean_gauss(3, 0)) + mean_poisson(0))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "5.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "5.000000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "5.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "5.000000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/statistical/bernoulli.det",
+      "checked": "float[G]",
+      "sites": {
+        "before": {
+          "discrete": 1,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 1,
+          "continuous": 0
+        }
+      },
+      "annotated": "bernoulli[G](0.3)",
+      "determinized": "bernoulli[G](0.3)",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.296000",
+            "variance": "0.208384"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.296000",
+            "variance": "0.208384"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.000000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/statistical/discrete.det",
+      "checked": "float[G]",
+      "sites": {
+        "before": {
+          "discrete": 1,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 1,
+          "continuous": 0
+        }
+      },
+      "annotated": "discrete_list[G]((0.25 :: (0.25 :: [])))",
+      "determinized": "discrete_list[G]((0.25 :: (0.25 :: [])))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.270000",
+            "variance": "0.693100"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.270000",
+            "variance": "0.693100"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "2.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "2.000000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/rejection-short-circuit.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 1
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "(let x0 = observe(false) in uniform[E](2, 1))",
+      "determinized": "(let x0 = observe(false) in mean_uniform(2, 1))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 0,
+            "samples": 500,
+            "rejected": 500
+          },
+          "determinized": {
+            "returned": 0,
+            "samples": 500,
+            "rejected": 500
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 0,
+            "samples": 4,
+            "rejected": 4
+          },
+          "determinized": {
+            "returned": 0,
+            "samples": 4,
+            "rejected": 4
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/observation-once.det",
+      "checked": "unit",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 1
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 1
+        }
+      },
+      "annotated": "observe((uniform[G](0, 1) < 2))",
+      "determinized": "observe((uniform[G](0, 1) < 2))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "firstValue": "()"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "firstValue": "()"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "firstValue": "()"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "firstValue": "()"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/bernoulli-zero.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 1,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "bernoulli[E](0)",
+      "determinized": "mean_bernoulli(0)",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.000000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.000000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/bernoulli-one.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 1,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "bernoulli[E](1)",
+      "determinized": "mean_bernoulli(1)",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.000000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "1.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "1.000000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/bernoulli-negative.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 1,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "bernoulli[E]((-0.1))",
+      "determinized": "mean_bernoulli((-0.1))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 0,
+            "samples": 500,
+            "rejected": 0,
+            "firstFailure": "bernoulli requires probability in [0,1]"
+          },
+          "determinized": {
+            "returned": 0,
+            "samples": 500,
+            "rejected": 0,
+            "firstFailure": "bernoulli requires probability in [0,1]"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 0,
+            "samples": 4,
+            "rejected": 0,
+            "firstFailure": "bernoulli requires probability in [0,1]"
+          },
+          "determinized": {
+            "returned": 0,
+            "samples": 4,
+            "rejected": 0,
+            "firstFailure": "bernoulli requires probability in [0,1]"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/bernoulli-above-one.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 1,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "bernoulli[E](1.1)",
+      "determinized": "mean_bernoulli(1.1)",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 0,
+            "samples": 500,
+            "rejected": 0,
+            "firstFailure": "bernoulli requires probability in [0,1]"
+          },
+          "determinized": {
+            "returned": 0,
+            "samples": 500,
+            "rejected": 0,
+            "firstFailure": "bernoulli requires probability in [0,1]"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 0,
+            "samples": 4,
+            "rejected": 0,
+            "firstFailure": "bernoulli requires probability in [0,1]"
+          },
+          "determinized": {
+            "returned": 0,
+            "samples": 4,
+            "rejected": 0,
+            "firstFailure": "bernoulli requires probability in [0,1]"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/statistical/bernoulli-e.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 1,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "bernoulli[E](0.3)",
+      "determinized": "mean_bernoulli(0.3)",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.296000",
+            "variance": "0.208384"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.300000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.250000",
+            "variance": "0.187500"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.300000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/statistical/bernoulli-nested.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 1,
+          "continuous": 1
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "bernoulli[E](uniform[E](0, 1))",
+      "determinized": "mean_bernoulli(mean_uniform(0, 1))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.492000",
+            "variance": "0.249936"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.500000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.500000",
+            "variance": "0.250000"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.500000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/bernoulli-general-operand.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 1,
+          "continuous": 1
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 1
+        }
+      },
+      "annotated": "bernoulli[E](uniform[G](0.25, 0.25))",
+      "determinized": "mean_bernoulli(uniform[G](0.25, 0.25))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.262000",
+            "variance": "0.193356"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.250000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.250000",
+            "variance": "0.187500"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.250000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/discrete-zero-weights.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 1,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "discrete_list[E]((0 :: (1 :: [])))",
+      "determinized": "mean_discrete_list((0 :: (1 :: [])))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.000000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "1.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "1.000000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/discrete-singleton.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 1,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "discrete_list[E]([])",
+      "determinized": "mean_discrete_list([])",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.000000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.000000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/discrete-last-nonzero.det",
+      "checked": "float[G]",
+      "sites": {
+        "before": {
+          "discrete": 1,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 1,
+          "continuous": 0
+        }
+      },
+      "annotated": "discrete_list[G]((0 :: (0 :: (1 :: (0 :: [])))))",
+      "determinized": "discrete_list[G]((0 :: (0 :: (1 :: (0 :: [])))))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "2.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "2.000000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "2.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "2.000000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/statistical/discrete-e.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 1,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "discrete_list[E]((0.25 :: (0.25 :: [])))",
+      "determinized": "mean_discrete_list((0.25 :: (0.25 :: [])))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.240000",
+            "variance": "0.706400"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.250000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "1.500000",
+            "variance": "0.750000"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "1.250000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/discrete-nested.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 2,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "(let x0 = (fun x0 => (x0 + discrete_list[E]((0 :: (1 :: []))))) in (x0 bernoulli[E](0.5)))",
+      "determinized": "(let x0 = (fun x0 => (x0 + mean_discrete_list((0 :: (1 :: []))))) in (x0 mean_bernoulli(0.5)))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.498000",
+            "variance": "0.249996"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.500000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "1.250000",
+            "variance": "0.187500"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "1.500000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/statistical/bernoulli-mixed.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 1,
+          "continuous": 1
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 1
+        }
+      },
+      "annotated": "bernoulli[E](uniform[G](0, 1))",
+      "determinized": "mean_bernoulli(uniform[G](0, 1))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.516000",
+            "variance": "0.249744"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.508025",
+            "variance": "0.082259"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.500000",
+            "variance": "0.250000"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.823382",
+            "variance": "0.022621"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/statistical/coupling-branch.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 1,
+          "continuous": 2
+        },
+        "after": {
+          "discrete": 1,
+          "continuous": 0
+        }
+      },
+      "annotated": "(let x0 = (0 < bernoulli[G](0.5)) in (if x0 then uniform[E](0, 1) else uniform[E](2, 4)))",
+      "determinized": "(let x0 = (0 < bernoulli[G](0.5)) in (if x0 then mean_uniform(0, 1) else mean_uniform(2, 4)))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.804880",
+            "variance": "1.876403"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.795000",
+            "variance": "1.560475"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "3.514140",
+            "variance": "0.412153"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "3.000000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/statistical/coupling-mixed.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 2
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 1
+        }
+      },
+      "annotated": "(let x0 = uniform[G](0, 1) in (let x1 = uniform[E](x0, 2) in (x0 + x1)))",
+      "determinized": "(let x0 = uniform[G](0, 1) in (let x1 = mean_uniform(x0, 2) in (x0 + x1)))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.753796",
+            "variance": "0.401489"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.762037",
+            "variance": "0.185083"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "2.553454",
+            "variance": "0.116797"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "2.235072",
+            "variance": "0.050898"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/beta-shape.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 3
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 2
+        }
+      },
+      "annotated": "(let x0 = uniform[G](0, 1) in beta[E](uniform[G](x0, 2), x0))",
+      "determinized": "(let x0 = uniform[G](0, 1) in mean_beta(uniform[G](x0, 2), x0))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.722470",
+            "variance": "0.084331"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.722660",
+            "variance": "0.015624"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.593985",
+            "variance": "0.032189"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.668448",
+            "variance": "0.002510"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/div.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 3
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 1
+        }
+      },
+      "annotated": "((uniform[E](0, 1) / uniform[G](1, 2)) + (uniform[E](2, 3) / 3))",
+      "determinized": "((mean_uniform(0, 1) / uniform[G](1, 2)) + (mean_uniform(2, 3) / 3))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.172488",
+            "variance": "0.055520"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.177948",
+            "variance": "0.004859"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "1.357442",
+            "variance": "0.022531"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "1.109610",
+            "variance": "0.000625"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/flip-prob.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 1,
+          "continuous": 1
+        },
+        "after": {
+          "discrete": 1,
+          "continuous": 1
+        }
+      },
+      "annotated": "(let x0 = uniform[G](0, 1) in (if (0 < bernoulli[G](x0)) then x0 else 0))",
+      "determinized": "(let x0 = uniform[G](0, 1) in (if (0 < bernoulli[G](x0)) then x0 else 0))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.331728",
+            "variance": "0.139525"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.331728",
+            "variance": "0.139525"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.458255",
+            "variance": "0.210549"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.458255",
+            "variance": "0.210549"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/gauss-variance.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 3
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 1
+        }
+      },
+      "annotated": "(let x0 = uniform[G](1, 2) in gauss[E](uniform[E](0, 1), (let x1 = observe((x0 < 1.5)) in x0)))",
+      "determinized": "(let x0 = uniform[G](1, 2) in mean_gauss(mean_uniform(0, 1), (let x1 = observe((x0 < 1.5)) in x0)))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 241,
+            "samples": 500,
+            "rejected": 259,
+            "mean": "0.433338",
+            "variance": "1.037245"
+          },
+          "determinized": {
+            "returned": 241,
+            "samples": 500,
+            "rejected": 259,
+            "mean": "0.500000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 0,
+            "samples": 4,
+            "rejected": 4
+          },
+          "determinized": {
+            "returned": 0,
+            "samples": 4,
+            "rejected": 4
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/statistical/discrete-computed-e.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 2,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "(let x0 = bernoulli[E](0.5) in discrete_list[E](((x0 / 2) :: (0.25 :: []))))",
+      "determinized": "(let x0 = mean_bernoulli(0.5) in mean_discrete_list(((x0 / 2) :: (0.25 :: []))))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.220000",
+            "variance": "0.703600"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.250000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "2.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "1.250000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/statistical/discrete-computed-g.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 2,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 1,
+          "continuous": 0
+        }
+      },
+      "annotated": "(let x0 = bernoulli[G](0.5) in discrete_list[E](((x0 / 2) :: (0.25 :: []))))",
+      "determinized": "(let x0 = bernoulli[G](0.5) in mean_discrete_list(((x0 / 2) :: (0.25 :: []))))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.260000",
+            "variance": "0.680400"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.268000",
+            "variance": "0.249676"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "1.750000",
+            "variance": "0.187500"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "1.750000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/discrete-remainder-empty.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 1,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "discrete_list[E]([])",
+      "determinized": "mean_discrete_list([])",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.000000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.000000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/discrete-remainder-last.det",
+      "checked": "float[G]",
+      "sites": {
+        "before": {
+          "discrete": 1,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 1,
+          "continuous": 0
+        }
+      },
+      "annotated": "discrete_list[G]((0 :: (0 :: [])))",
+      "determinized": "discrete_list[G]((0 :: (0 :: [])))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "2.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "2.000000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "2.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "2.000000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "tests/execution/discrete-remainder-domain.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 1,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "discrete_list[E]((0.6 :: (0.6 :: [])))",
+      "determinized": "mean_discrete_list((0.6 :: (0.6 :: [])))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 0,
+            "samples": 500,
+            "rejected": 0,
+            "firstFailure": "discrete probabilities sum to more than one"
+          },
+          "determinized": {
+            "returned": 0,
+            "samples": 500,
+            "rejected": 0,
+            "firstFailure": "discrete probabilities sum to more than one"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 0,
+            "samples": 4,
+            "rejected": 0,
+            "firstFailure": "discrete probabilities sum to more than one"
+          },
+          "determinized": {
+            "returned": 0,
+            "samples": 4,
+            "rejected": 0,
+            "firstFailure": "discrete probabilities sum to more than one"
+          }
+        }
+      ]
+    },
+    {
+      "file": "examples/loops/geometric-addition.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 1,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 1,
+          "continuous": 0
+        }
+      },
+      "annotated": "(let x0 = (rec f0 x0 => (if (0 < bernoulli[G](0.5)) then 0 else (1 + (f0 x0)))) in (x0 ()))",
+      "determinized": "(let x0 = (rec f0 x0 => (if (0 < bernoulli[G](0.5)) then 0 else (1 + (f0 x0)))) in (x0 ()))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.186000",
+            "variance": "2.715404"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "1.186000",
+            "variance": "2.715404"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "2.250000",
+            "variance": "0.687500"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "2.250000",
+            "variance": "0.687500"
+          }
+        }
+      ]
+    },
+    {
+      "file": "examples/loops/geometric-random-increment.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 2,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 2,
+          "continuous": 0
+        }
+      },
+      "annotated": "(let x0 = (rec f0 x0 => (if (0 < bernoulli[G](0.5)) then 0 else ((1 + (2 * bernoulli[G](0.5))) + (f0 x0)))) in (x0 ()))",
+      "determinized": "(let x0 = (rec f0 x0 => (if (0 < bernoulli[G](0.5)) then 0 else ((1 + (2 * bernoulli[G](0.5))) + (f0 x0)))) in (x0 ()))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "2.110000",
+            "variance": "10.809900"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "2.110000",
+            "variance": "10.809900"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "3.000000",
+            "variance": "1.500000"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "3.000000",
+            "variance": "1.500000"
+          }
+        }
+      ]
+    },
+    {
+      "file": "examples/loops/geometric-rejection.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 2,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 2,
+          "continuous": 0
+        }
+      },
+      "annotated": "(let x0 = (rec f0 x0 => (if (0 < bernoulli[G](0.5)) then (1 + (f0 x0)) else (if (0 < bernoulli[G](0.5)) then 0 else (let x1 = observe(false) in 0)))) in (x0 ()))",
+      "determinized": "(let x0 = (rec f0 x0 => (if (0 < bernoulli[G](0.5)) then (1 + (f0 x0)) else (if (0 < bernoulli[G](0.5)) then 0 else (let x1 = observe(false) in 0)))) in (x0 ()))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 230,
+            "samples": 500,
+            "rejected": 270,
+            "mean": "1.065217",
+            "variance": "1.913138"
+          },
+          "determinized": {
+            "returned": 230,
+            "samples": 500,
+            "rejected": 270,
+            "mean": "1.065217",
+            "variance": "1.913138"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 1,
+            "samples": 4,
+            "rejected": 3,
+            "mean": "0.000000",
+            "variance": "0.000000"
+          },
+          "determinized": {
+            "returned": 1,
+            "samples": 4,
+            "rejected": 3,
+            "mean": "0.000000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    }
+  ],
+  "rejected": [
+    {
+      "file": "examples/simulator/bad-e-branching.det",
+      "message": "inconsistent E/G constraints"
+    },
+    {
+      "file": "examples/simulator/noisy-product-all-e.det",
+      "message": "inconsistent E/G constraints"
+    },
+    {
+      "file": "tests/typing/reject/nonlinear-E.det",
+      "message": "inconsistent E/G constraints"
+    },
+    {
+      "file": "tests/typing/reject/compare-E.det",
+      "message": "inconsistent E/G constraints"
+    },
+    {
+      "file": "tests/typing/reject/infinite-type.det",
+      "message": "incompatible or infinite type shapes"
+    },
+    {
+      "file": "tests/typing/reject/wrong-type.det",
+      "message": "incompatible or infinite type shapes"
+    },
+    {
+      "file": "tests/typing/reject/unbound.det",
+      "message": "unbound variable 'missing'"
+    },
+    {
+      "file": "tests/typing/reject/bad-mode.det",
+      "message": "expected E or G, got Q"
+    },
+    {
+      "file": "tests/typing/reject/trailing-input.det",
+      "message": "unexpected trailing token )"
+    },
+    {
+      "file": "tests/typing/reject/bernoulli-general-parameter.det",
+      "message": "inconsistent E/G constraints"
+    },
+    {
+      "file": "tests/typing/reject/bernoulli-branch.det",
+      "message": "inconsistent E/G constraints"
+    },
+    {
+      "file": "tests/typing/reject/flip-expectation.det",
+      "message": "flip produces a Boolean and requires [G]"
+    },
+    {
+      "file": "tests/typing/reject/discrete-empty.det",
+      "message": "discrete weights must sum to one"
+    },
+    {
+      "file": "tests/typing/reject/discrete-all-zero.det",
+      "message": "discrete weights must sum to one"
+    },
+    {
+      "file": "tests/typing/reject/discrete-negative.det",
+      "message": "discrete expects nonnegative literal weights"
+    },
+    {
+      "file": "tests/typing/reject/discrete-nonliteral.det",
+      "message": "discrete expects nonnegative literal weights"
+    },
+    {
+      "file": "tests/typing/reject/discrete-branch.det",
+      "message": "inconsistent E/G constraints"
+    },
+    {
+      "file": "tests/typing/reject/discrete-nonunit.det",
+      "message": "discrete weights must sum to one"
+    },
+    {
+      "file": "tests/typing/reject/discrete-remainder-affinity.det",
+      "message": "inconsistent E/G constraints"
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 import type { Expr, Mode } from "./ast.ts";
-import type { Input } from "./core.ts";
-import { sites } from "./core.ts";
+import type { Input, Program } from "./core.ts";
+import { determinize, mapSites, sites } from "./core.ts";
 import { annotate } from "./determinize.ts";
 import { elaborate } from "./elaborate.ts";
 import { CompileError } from "./errors.ts";
@@ -43,6 +43,8 @@ export type Analysis =
       /** The annotated program with every E site replaced by its mean. */
       determinized: Expr;
       pretty: { annotated: string; determinized: string };
+      /** The annotated program and its determinization, as Lean's `Core`. */
+      program: Programs;
       spans: SpanInfo[];
     }
   /**
@@ -54,8 +56,18 @@ export type Analysis =
       ok: false;
       stage: Stage | null;
       diagnostics: Diagnostic[];
-      counterexample?: { annotated: Expr; determinized: Expr };
+      counterexample?: { annotated: Expr; determinized: Expr; program: Programs };
     };
+
+/** A program that the runtime runs, and its determinization. */
+export interface Programs {
+  source: Program;
+  determinized: Program;
+}
+
+function programs(source: Program): Programs {
+  return { source, determinized: determinize(source) };
+}
 
 const distributionKinds = new Set([
   "Uniform",
@@ -104,6 +116,7 @@ export function analyze(source: string): Analysis {
       const counterexample = {
         annotated: annotate(ast, requested),
         determinized: annotate(ast, requested, true),
+        program: programs(mapSites(input, (site): Mode => (site === "E" ? "E" : "G"))),
       };
       return { ok: false, stage, diagnostics, counterexample };
     }
@@ -131,6 +144,13 @@ export function analyze(source: string): Analysis {
       annotated,
       determinized,
       pretty: { annotated: prettyExpr(annotated), determinized: prettyExpr(determinized) },
+      program: programs(
+        mapSites(input, (_, site): Mode => {
+          const mode = result.modes.get(site);
+          if (!mode) throw new Error("a sample site without a mode");
+          return mode;
+        }),
+      ),
       spans,
     };
   } catch (error) {

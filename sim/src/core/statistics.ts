@@ -59,6 +59,34 @@ export function addRuns(summary: Summary, runs: Runs): Summary {
   };
 }
 
+/** How a run of one program ended: it returned a value, the number it returned if any, or it
+ * was rejected by an observation, or it failed. */
+export type RunOutcome =
+  | { kind: "returned"; number: number | null; display: string }
+  | { kind: "rejected" }
+  | { kind: "failed"; message: string };
+
+/** Outcomes of runs, in run order, as `Runs`. */
+export function runsOf(outcomes: RunOutcome[]): Runs {
+  const runs: Runs = {
+    values: new Float64Array(outcomes.length),
+    rejected: 0,
+    failed: 0,
+    firstFailure: null,
+    firstValue: null,
+  };
+  for (const [i, outcome] of outcomes.entries()) {
+    runs.values[i] = outcome.kind === "returned" && outcome.number !== null ? outcome.number : NaN;
+    if (outcome.kind === "rejected") runs.rejected += 1;
+    if (outcome.kind === "failed") {
+      runs.failed += 1;
+      runs.firstFailure ??= outcome.message;
+    }
+    if (outcome.kind === "returned") runs.firstValue ??= outcome.display;
+  }
+  return runs;
+}
+
 export interface Stats {
   /** The number of runs that returned a number. */
   n: number;

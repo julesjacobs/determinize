@@ -18,7 +18,8 @@ import {
   runSymbolic,
   stepOrdinary,
 } from "../src/core/runtime/semantics.ts";
-import { outcomesOf, runCoupling, runsOf } from "../src/core/trace.ts";
+import { runsOf } from "../src/core/statistics.ts";
+import { outcomesOf, runCoupling } from "../src/core/trace.ts";
 
 /** The last frame of a trace; every trace has one. */
 function last(trace: CoupledTrace): Frame {
