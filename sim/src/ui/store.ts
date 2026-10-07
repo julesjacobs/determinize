@@ -57,8 +57,8 @@ export interface Store {
   stats: ReadonlySignal<{ original: Stats; determinized: Stats }>;
   /** Analyzes and runs the editor's text now. */
   commitSource: () => void;
-  /** Runs the editor's text at a new seed. */
-  rerun: (seed: number) => void;
+  /** Analyzes the editor's text now and runs it at `seed`. */
+  runAt: (seed: number) => void;
   /**
    * Starts a batch of runs at `seeds`, after the remaining runs of a batch in progress; the last
    * run is shown in the step table.
@@ -181,7 +181,7 @@ export function createStore(
     pending = setTimeout(commitSource, analysisDelayMs);
   });
 
-  const rerun = action((next: number) => {
+  const runAt = action((next: number) => {
     commitSource();
     seed.value = next;
   });
@@ -252,7 +252,7 @@ export function createStore(
     trace,
     stats,
     commitSource,
-    rerun,
+    runAt,
     runMany,
     receive,
   };
