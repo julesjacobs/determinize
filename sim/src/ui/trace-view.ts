@@ -202,6 +202,9 @@ function renderCoupling(elements: TraceViewElements, coupled: CoupledTrace, page
   if (coupled.counterexample) {
     elements.status.textContent = `seed ${coupled.seed} - counterexample`;
     elements.status.className = "status warning";
+  } else if (coupled.frames.at(-1)?.domainFailure) {
+    elements.status.textContent = `seed ${coupled.seed} - domain failure`;
+    elements.status.className = "status warning";
   } else if (stoppedAtLimit(coupled)) {
     elements.status.textContent = `seed ${coupled.seed} - stopped after ${maxSymbolicSteps} steps`;
     elements.status.className = "status warning";
@@ -267,8 +270,9 @@ function stepCheck(frame: Frame, coupled: CoupledTrace) {
   const ok = frameOk(frame);
   const domainError = hasDomainError(frame);
   const label = domainError && ok ? "ERR" : ok ? "OK" : "FAIL";
-  const aria =
-    domainError && ok
+  const aria = frame.domainFailure
+    ? "A run failed outside an operation's domain"
+    : domainError && ok
       ? "Coupling checks reached a shared domain error"
       : ok
         ? "Coupling checks passed"
@@ -293,6 +297,14 @@ function checkPopoverContent(
   const determinizedTarget = frame.determinizedTarget
     ? prettyExpr(frame.determinizedTarget)
     : "not available";
+  if (frame.domainFailure) {
+    return `
+    <strong>A run failed outside an operation's domain at this symbolic step.</strong>
+    <span class="domain-error-note">${escapeHtml(frame.domainFailure)}</span>
+    <span>The program is not domain-safe at this seed, which typing does not establish, so no theorem relates the runs from here on.</span>
+    ${coupled.counterexample ? `<em>${counterexampleLabel}</em>` : ""}
+  `;
+  }
   return `
     <strong>${domainError && ok ? "All traces reached the same domain error at this symbolic step." : ok ? "Coupling checks passed at this symbolic step." : "Coupling check failed at this symbolic step."}</strong>
     ${domainError ? `<span class="domain-error-note">${escapeHtml(domainErrorMessage(frame))}</span>` : ""}

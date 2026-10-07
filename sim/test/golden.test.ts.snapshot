@@ -51,13 +51,12 @@ batch at seeds 1-200:
 `;
 
 exports[`paper/noisy-iteration 1`] = `
-seed 1: failed, 11 frames
-  checks: OK ×10, FAIL
+seed 1: checked, 22 frames
+  checks: OK ×22
   final source: 2.288119535116656
-  final determinized: (rec run x =>
-  if flip[G](0.5) then x else run (1 - x + mean_gauss(0, 1))) (0 + mean_gauss(0, 1))
+  final determinized: 1
   outcome: 2.288119535116656 | 1
-  frames: sha256 8117016db41c8a5c0f36cc3ff9635d88458ee8331ae5817b72d49ee15a6c636e
+  frames: sha256 7da23b137c8d775339b589ebc0f92811ebc4c6e2dc7f1dd2f038ee5b9cc7619a
 seed 2: checked, 28 frames
   checks: OK ×28
   final source: 0.10156350283445414
