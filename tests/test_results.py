@@ -59,6 +59,15 @@ class ResultTests(unittest.TestCase):
             for forbidden in ("sorryAx", "ofReduceBool", "trustCompiler"):
                 self.assertNotIn(forbidden, checked.stdout + checked.stderr)
 
+    def test_transfer_hypotheses(self):
+        note = "The source has the same expectation if it is domain-safe"
+        program = CASES[0][0]
+        for subject in ("determinized", "source"):
+            with self.subTest(subject=subject), tempfile.TemporaryDirectory() as tmp:
+                result, _ = generate(Path(tmp), program, subject)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(note in result.stdout, subject == "determinized", result.stdout)
+
     def test_exact_ground_truth(self):
         for program, subject, expected in CASES:
             with self.subTest(program=program), tempfile.TemporaryDirectory() as tmp:

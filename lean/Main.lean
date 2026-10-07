@@ -130,6 +130,14 @@ private def sampleSites : Core → SampleSites
 private def printSampleSites (label : String) (sites : SampleSites) : IO Unit :=
   IO.println s!"Sampling sites {label}: discrete={sites.discrete}, continuous={sites.continuous}"
 
+/-- An exact result for the determinized program is the source's only under the hypotheses of
+`Theorems.unnormalized_extended_expectation_preservation`, which the tool does not check. -/
+private def printTransferHypotheses (subject : Spec.FiniteModel.Subject) : IO Unit :=
+  if subject == .determinized then
+    IO.println "The source has the same expectation if it is domain-safe and its expectation is \
+      defined; typing establishes neither."
+  else pure ()
+
 def main (args : List String) : IO UInt32 := do
   if args == ["--help"] then IO.println usage; return 0
   try
@@ -152,6 +160,7 @@ def main (args : List String) : IO UInt32 := do
                 o.solveLimits
             IO.println s!"Expected output (kernel-checkable certificate generated) \
                 ({reprStr o.subject}): {answer}"
+            printTransferHypotheses o.subject
           else
             Finite.Reward.write outputPath p.source o.subject candidate valid
           IO.println s!"Wrote additive {reprStr o.subject} model (kernel-checkable paper \
@@ -170,6 +179,7 @@ def main (args : List String) : IO UInt32 := do
                 o.solveLimits
             IO.println s!"Expected terminal reward (kernel-checkable certificate generated) \
                 ({reprStr o.subject}): {answer}"
+            printTransferHypotheses o.subject
           else
             Finite.write outputPath p.source o.subject candidate valid
           IO.println s!"Wrote {reprStr o.subject} model (kernel-checkable paper correspondence): \
