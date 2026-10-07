@@ -7,6 +7,7 @@
   stage/.style={draw=black!45, fill=black!3, rounded corners=2pt,
     text width=.18\textwidth, minimum height=12mm, align=center, inner sep=4pt},
   verified/.style={stage, draw=teal!65!black, fill=teal!7, line width=.8pt},
+  specification/.style={stage, draw=orange!70!black, fill=orange!8, line width=.8pt},
   compilation/.style={minimum height=14mm},
   data/.style={text width=.18\textwidth, align=center, inner sep=3pt},
   flow/.style={-{Stealth[length=4pt,width=3pt]}, draw=black!65, line width=.6pt},
@@ -18,7 +19,7 @@
 \node[data, text width=.09\textwidth] (file) at (.053,.45) {\texttt{.det}\\program};
 \node[stage, compilation, text width=.15\textwidth] (front) at (.23,.45) {Parse and\\elaborate\leanref{frontend}};
 \node[verified, compilation, text width=.15\textwidth] (infer) at (.44,.45) {Infer types\\and E/G\leanref{inference}};
-\node[verified, compilation, text width=.155\textwidth] (det) at (.672,-1.05) {Determinize\leanref{determinization}};
+\node[specification, compilation, text width=.155\textwidth] (det) at (.672,-1.05) {Determinize\leanref{determinization}};
 \node[data, text width=.14\textwidth] (source) at (.88,1.95) {Annotated\\source $e_{\mathrm{src}}$};
 \node[verified, compilation, text width=.14\textwidth] (soundness) at (.88,.45)
   {Soundness theorems\leanref{expectation-preservation}};
@@ -36,7 +37,7 @@
 \draw[black!20] (0,-2.65) -- (1,-2.65);
 \node[data] (program) at (.10,-5.15) {Program $e$};
 \node[note] at (.10,-5.60) {$e\in\{e_{\mathrm{src}},e_{\mathrm{det}}\}$};
-\node[verified] (semantics) at (.365,-3.50) {Measure-theoretic\\semantics\leanref{output-measures}};
+\node[specification] (semantics) at (.365,-3.50) {Measure-theoretic\\semantics\leanref{output-measures}};
 \node[data, text width=.16\textwidth] (measure) at (.88,-3.50) {Output measure\\$\law e$};
 \draw[flow] (semantics) -- (measure);
 \draw[flow] (measure.east) -- (.99,-3.50) |- (soundness.east);
@@ -57,7 +58,7 @@
 \draw[flow] (explore) -- (solve);
 \draw[flow] (solve) -- (answer);
 
-\node[stage] (storm) at (.365,-8.50) {Storm solver\leanref{storm-solver}};
+\node[stage] (storm) at (.365,-8.50) {Storm solver};
 \node[verified] (check) at (.635,-8.50) {Certificate\\checker\leanref{certificate-checker}};
 \draw[flow] (explore.south) -- (storm.north);
 \draw[flow] (storm) -- (check);
@@ -65,23 +66,26 @@
 
 \node[inner sep=0pt] at (.50,-9.80) {
   \begin{tikzpicture}
+  \node[specification, minimum width=5mm, minimum height=3mm, text width=0pt,
+    inner sep=0pt,anchor=west] (specificationSwatch) at (0,0) {};
+  \node[note,anchor=west,inner sep=0pt] (specificationLegend) at ([xshift=5pt]specificationSwatch.east) {Specification};
   \node[verified, minimum width=5mm, minimum height=3mm, text width=0pt,
-    inner sep=0pt,anchor=west] (verifiedSwatch) at (0,0) {};
-  \node[note,anchor=west,inner sep=0pt] (verifiedLegend) at ([xshift=5pt]verifiedSwatch.east) {Verified in Lean};
+    inner sep=0pt,anchor=west] (verifiedSwatch) at ([xshift=18pt]specificationLegend.east) {};
+  \node[note,anchor=west,inner sep=0pt] (verifiedLegend) at ([xshift=5pt]verifiedSwatch.east) {Proved or checked in Lean};
   \node[stage, minimum width=5mm, minimum height=3mm, text width=0pt,
     inner sep=0pt,anchor=west] (unverifiedSwatch) at ([xshift=18pt]verifiedLegend.east) {};
-  \node[note,anchor=west,inner sep=0pt] at ([xshift=5pt]unverifiedSwatch.east) {Unverified algorithm};
+  \node[note,anchor=west,inner sep=0pt] at ([xshift=5pt]unverifiedSwatch.east) {Unverified};
   \end{tikzpicture}
 };
 \end{tikzpicture}
-\caption{Implementation architecture.}
+\caption{Implementation architecture. Box styles say how each stage is justified; Lean marks link to the code.}
 \label{fig:architecture}
 \Description{Compilation parses and elaborates the program without verification,
 then runs verified type and E/G inference, which branches up to the annotated
 source and down through determinization to the transformed program. Between
 these two programs sit the soundness theorems.
 One program branches to formal measure semantics, floating-point sampling,
-and verified finite graph construction. The measure semantics yields an output
+and finite graph construction, which is checked against the semantics. The measure semantics yields an output
 measure, which feeds back up into the soundness theorems: they relate the output
 measures of the annotated source and the transformed program. The graph feeds either a
 verified exact rational solver or Storm's exact model checking of expected
