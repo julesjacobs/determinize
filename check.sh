@@ -96,10 +96,13 @@ for area in "${areas[@]}"; do
       fi
       ;;
     det)
-      out="$(in_shell lean ./test.sh --all 2>&1)"
-      if [[ $? -ne 0 ]]; then fail=1; report det "test.sh FAILED" "$(tail_of <<<"$out")"
+      # test.sh starts with `lake build`, which must not compile Mathlib either (see lean).
+      if [[ ! -d lean/.lake/packages/mathlib/.lake/build ]]; then
+        fail=1; report det "Mathlib cache not fetched: run 'cd lean && lake exe cache get' (downloads prebuilt .olean files, once), then './test.sh --all'"
       else
-        if [[ -n "${STORM_PYTHON:-}" ]]; then
+        out="$(in_shell lean ./test.sh --all 2>&1)"
+        if [[ $? -ne 0 ]]; then fail=1; report det "test.sh FAILED" "$(tail_of <<<"$out")"
+        elif [[ -n "${STORM_PYTHON:-}" ]]; then
           report det "Lean corpus and certificate tests passed, including real Storm comparisons"
         else
           report det "Lean corpus and certificate tests passed; real Storm skipped (set STORM_PYTHON)"
