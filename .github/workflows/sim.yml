@@ -9,11 +9,16 @@ name: Simulator
 
 on:
   pull_request:
+    # The files that the checks, the tests and the build read.
     paths:
       - sim/**
+      - tests/**
+      - "!tests/**/*.md"
+      - examples/**
       - flake.nix
       - flake.lock
-      - flake-modules/**
+      - flake-modules/systems.nix
+      - flake-modules/devshells/sim.nix
       - .github/workflows/sim.yml
   workflow_call:
   workflow_dispatch:
