@@ -147,7 +147,7 @@ test("a run that fails where another doesn't ends in a domain failure", () => {
   assert.notEqual(last(originalErrors).determinized.kind, "DomainError");
   assert.equal(
     last(originalErrors).domainFailure,
-    "Original failed: gamma requires positive shape and rate",
+    "Source failed: gamma requires positive shape and rate",
   );
 
   const determinizedErrors = runCoupledTrace("let x = uniform[E](-10, 30) in\nuniform[E](x, 1)", 2);

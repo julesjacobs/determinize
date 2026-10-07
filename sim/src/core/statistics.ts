@@ -118,7 +118,8 @@ export function statsOf(summary: Summary): Stats {
   };
 }
 
-/** The source's variance over the determinized program's, and what it means for sample sizes. */
+/** The variance-reduction factor, as the paper's evaluation calls the source's variance over the
+ * determinized program's, and what it means for the number of runs. */
 export function varianceRatio(originalStats: Stats, determinizedStats: Stats) {
   const originalVariance = originalStats.variance;
   const determinizedVariance = determinizedStats.variance;
@@ -130,33 +131,33 @@ export function varianceRatio(originalStats: Stats, determinizedStats: Stats) {
   ) {
     return {
       value: NaN,
-      explanation: "Run at least two samples to estimate variance and sample savings.",
+      explanation: "Run each program at least twice to estimate the variance reduction.",
     };
   }
   if (originalVariance === 0 && determinizedVariance === 0) {
     return {
       value: NaN,
       explanation:
-        "Both estimators have zero observed variance, so there is no sample reduction to estimate.",
+        "Neither program's returned numbers vary here, so there is no variance to reduce.",
     };
   }
   if (determinizedVariance === 0) {
     return {
       value: Infinity,
       explanation:
-        "The determinized estimator has zero observed variance, so it needs only one sample here; the sample reduction is effectively unbounded.",
+        "The determinized program's returned numbers don't vary here: the variance-reduction factor is infinite, and one run gives its mean.",
     };
   }
   if (originalVariance === 0) {
     return {
       value: 0,
       explanation:
-        "The original estimator has zero observed variance here, so determinization shows no sample reduction on this run.",
+        "The source's returned numbers don't vary here, so determinization shows no variance reduction.",
     };
   }
   const ratio = originalVariance / determinizedVariance;
   return {
     value: ratio,
-    explanation: `For the same mean accuracy, the determinized program needs about ${formatNumber(1 / ratio)}x as many samples, i.e. about ${formatNumber(ratio)}x fewer samples.`,
+    explanation: `The source's variance is ${formatNumber(ratio)} times the determinized program's, so for the same accuracy of the mean the determinized program needs about ${formatNumber(1 / ratio)} times as many runs.`,
   };
 }

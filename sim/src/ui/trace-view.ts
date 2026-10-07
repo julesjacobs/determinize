@@ -249,8 +249,8 @@ function renderCoupling(elements: TraceViewElements, coupled: CoupledTrace, page
     `
     <div class="coupling-table-head">
       <span></span>
-      <span>Original</span>
-      <span>Symbolic</span>
+      <span>Source</span>
+      <span>Symbolic state</span>
       <span>Determinized</span>
     </div>
     <div class="coupling-table-body">
@@ -305,10 +305,10 @@ function stepCheck(frame: Frame, coupled: CoupledTrace) {
   const aria = frame.domainFailure
     ? "A run failed outside an operation's domain"
     : domainError && ok
-      ? "Coupling checks reached a shared domain error"
+      ? "The step checks reached a shared domain error"
       : ok
-        ? "Coupling checks passed"
-        : "Coupling check failed";
+        ? "The step checks passed"
+        : "A step check failed";
   return `
     <span class="step-check ${ok ? (domainError ? "domain" : "ok") : "fail"}" tabindex="0" aria-label="${aria}">
       ${label}
@@ -338,7 +338,7 @@ function checkPopoverContent(
   `;
   }
   return `
-    <strong>${domainError && ok ? "All traces reached the same domain error at this symbolic step." : ok ? "Coupling checks passed at this symbolic step." : "Coupling check failed at this symbolic step."}</strong>
+    <strong>${domainError && ok ? "All traces reached the same domain error at this symbolic step." : ok ? "The step checks passed at this symbolic step." : "A step check failed at this symbolic step."}</strong>
     ${domainError ? `<span class="domain-error-note">${escapeHtml(domainErrorMessage(frame))}</span>` : ""}
     <span>The source trace must match the symbolic state after sampling stored E-bindings with the same E-randomness.</span>
     <code>${escapeHtml(originalTarget)}</code>

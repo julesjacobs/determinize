@@ -88,8 +88,8 @@ function spanInfo(source: Expr, ty: Ty): SpanInfo {
   const distribution = distributionKinds.has(source.kind);
   const kindName = source.kind.startsWith("Discrete") ? "Discrete" : source.kind;
   let text = `${kindName}: ${type}`;
-  if (distribution && mode === "E") text += "\ndeterminizes to its expectation";
-  if (distribution && mode === "G") text += "\nsampled normally";
+  if (distribution && mode === "E") text += "\nmode E: replaced by its mean";
+  if (distribution && mode === "G") text += "\nmode G: kept random";
   return {
     from: source.from,
     to: source.to,

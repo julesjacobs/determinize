@@ -74,7 +74,7 @@ function renderDistributions(
   const counterexample = !analysis.ok && analysis.counterexample;
   const report = `
     <div class="run-outcomes">
-      ${outcomes("Original", samples.original.summary)}
+      ${outcomes("Source", samples.original.summary)}
       ${outcomes("Determinized", samples.determinized.summary)}
       <p>${counterexample ? "Lean rejects this program, so its CLI reports no runs." : `Lean's CLI reports these runs with ${command(samples, file)}.`}</p>
     </div>
@@ -102,7 +102,7 @@ function renderDistributions(
   elements.view.innerHTML = `
     ${report}
     ${counterexample ? `<p class="counterexample-label">${counterexampleLabel}</p>` : ""}
-    ${distributionCard("Original", all[0], originalStats, domain, "original")}
+    ${distributionCard("Source", all[0], originalStats, domain, "original")}
     ${comparisonCard(originalStats, determinizedStats)}
     ${distributionCard("Determinized", all[1], determinizedStats, domain, "determinized")}
   `;
@@ -113,7 +113,7 @@ function comparisonCard(originalStats: Stats, determinizedStats: Stats) {
   return `
     <div class="symbolic-distribution-note">
       <div class="variance-ratio-card">
-        <span>Variance ratio</span>
+        <span>Variance reduction</span>
         ${metricValue(ratio.value, "x")}
         <p>${ratio.explanation}</p>
       </div>

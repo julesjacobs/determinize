@@ -48,7 +48,7 @@
               that the <a href="https://julesjacobs.com/determinize/docs/Determinize/Theorems.html">theorems</a> also assume.
             </p>
             <h3>
-              <a href="https://julesjacobs.com/determinize/docs/Determinize/Frontend/Infer.html#Determinize.Frontend.infer" title="Lean's inference of the modes">Annotated source</a>
+              <a href="https://julesjacobs.com/determinize/docs/Determinize/Frontend/Infer.html#Determinize.Frontend.infer" title="Lean's inference of the modes (affinities in the Lean development)">Annotated source</a>
             </h3>
             <pre id="annotated-program" class="lean-program"></pre>
             <h3>
@@ -61,13 +61,18 @@
         <section class="outputs" aria-label="Compiler outputs">
           <article class="output-panel primary coupling-panel">
             <div class="coupling-heading">
-              <h2>Coupled semantics</h2>
+              <h2>Step table</h2>
               <div class="coupling-actions">
                 <span id="coupling-status" class="status">Ready</span>
                 <button id="rerun-coupling" type="button">Rerun</button>
                 <button id="many-coupling" type="button">Run 200</button>
               </div>
             </div>
+            <p class="step-note">
+              Symbolic state: the
+              <a href="https://julesjacobs.com/determinize/docs/Determinize/Proof/Symbolic/Syntax.html" title="The symbolic semantics in Lean's proof">symbolic semantics</a>
+              of the paper's proof (§5), computed by the simulator outside Lean's pipeline.
+            </p>
             <p class="g-trace">
               <a href="https://julesjacobs.com/determinize/docs/Determinize/Spec/Traces/Semantics.html#Determinize.Spec.Traces.Trace" title="Lean's trace: the G draws of a run in order">G trace</a>
               of run 0: <span id="g-trace"></span>

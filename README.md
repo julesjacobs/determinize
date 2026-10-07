@@ -185,8 +185,9 @@ To build that archived draft independently:
 ```
 
 After `npm run build` in `sim/`, open `sim/dist/index.html`, or
-[its published copy](https://julesjacobs.github.io/determinize/sim/), to explore coupled
-traces. The address's fragment holds the program, the seed and the example, so a copied link
+[its published copy](https://julesjacobs.github.io/determinize/sim/), to follow a run of a
+program and of its determinization step by step, next to the symbolic semantics of the paper's
+proof. The address's fragment holds the program, the seed and the example, so a copied link
 opens the same run. The simulator's front end and runtime are unverified ports of Lean's; Lean's
 certificates and theorems apply to the core programs that the Lean CLI produces. The simulator is
 an unverified visualization.
