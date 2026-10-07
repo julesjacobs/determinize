@@ -112,4 +112,30 @@ theorem statistics_conditional_variance (law : Measure ℝ) (statistics : Output
   push_cast
   rfl
 
+theorem statistics_returned_moments (program : Spec.Paper.Expr) (statistics : OutputStatistics)
+    (correct : statistics.Matches (Spec.Paper.bigStepMeasure program)) {mean variance : Rat}
+    (meanEq : statistics.conditionalMean = some mean)
+    (varianceEq : statistics.conditionalVariance = some variance) :
+    Spec.returnedExpectation program = ((mean : ℝ) : EReal) ∧
+      Spec.returnedVariance program = (variance : ℝ) := by
+  have nonzero : statistics.returnMass ≠ 0 := by
+    rintro zero
+    simp [OutputStatistics.conditionalMean, zero] at meanEq
+  have positive : 0 < statistics.returnMass := by
+    have : (0 : ℝ) ≤ statistics.returnMass := correct.mass ▸ measureReal_nonneg
+    exact lt_of_le_of_ne (by exact_mod_cast this) (Ne.symm nonzero)
+  simp only [OutputStatistics.conditionalMean, OutputStatistics.conditionalVariance, nonzero,
+    ite_false, Option.some.injEq] at meanEq varianceEq
+  refine ⟨?_, varianceEq ▸ statistics_conditional_variance _ statistics correct positive⟩
+  have integrable : Integrable (fun x : ℝ ↦ x) (Spec.Paper.bigStepMeasure program) :=
+    integrable_id_of_statistics statistics _ correct
+  have negated : Integrable (fun x : ℝ ↦ -x) (Spec.Paper.bigStepMeasure program) := integrable.neg
+  unfold Spec.returnedExpectation Spec.returnProbability Spec.extendedExpectation
+    Spec.posPartIntegral Spec.negPartIntegral
+  rw [← EReal.coe_ennreal_toReal integrable.lintegral_lt_top.ne,
+    ← EReal.coe_ennreal_toReal negated.lintegral_lt_top.ne, ← EReal.coe_sub,
+    ← integral_eq_lintegral_pos_part_sub_lintegral_neg_part integrable, ← EReal.coe_inv,
+    ← EReal.coe_mul, ← meanEq, ← statistics_conditional_mean statistics _ correct]
+  simp [measureReal_def, div_eq_inv_mul]
+
 end Determinize.Proof.FiniteModel
