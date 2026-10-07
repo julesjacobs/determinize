@@ -30,7 +30,9 @@ for (const [index, example] of examples.entries()) {
   exampleSelect.append(option);
 }
 
-decodeShare(window.location.hash).then(start);
+/** The page's store, once the page has opened; scripts and browser tests reach it as
+ * `DeterminizeSim.ready`. */
+export const ready = decodeShare(window.location.hash).then(start);
 
 /** A seed for a run, drawn as the simulator always has. */
 function randomSeed() {

@@ -358,6 +358,7 @@ export function createEditor(parent: HTMLElement, doc: string, bindings: EditorB
       }),
       keymap.of([...defaultKeymap, ...historyKeymap]),
       EditorView.lineWrapping,
+      EditorView.contentAttributes.of({ "aria-label": "Program" }),
       EditorView.updateListener.of((update) => {
         if (update.docChanged) bindings.onChange(update.state.doc.toString());
       }),
