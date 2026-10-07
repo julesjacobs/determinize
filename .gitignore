@@ -49,3 +49,6 @@ result
 # Claude Code: personal, machine-local files
 .claude/settings.local.json
 CLAUDE.local.md
+
+# The assembled site (site/assemble.sh --out _preview/determinize)
+_preview/
