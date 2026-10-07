@@ -183,6 +183,17 @@ theorem conditional_expectation_preservation (program : Expr)
       (∫ value : ℝ, value ∂bigStepMeasure program) / (returnProbability program).toReal :=
   Proof.Paper.conditional_expectation_soundness program typed safe integrable
 
+/-- The target's output law is the law of the source's conditional mean given the terminating
+G trace. Only typing and domain safety are assumed: the target's expectation, when defined, is
+the source's conditional mean averaged over the trace law, whether or not the source has an
+expectation. -/
+theorem determinized_output_law (program : Expr)
+    (typed : Typed [] program (.float .E)) (safe : DomainSafe program) :
+    bigStepMeasure program.determinize =
+      (traceLaw program).map fun trace ↦
+        ∫ value : ℝ, value ∂(traceAndOutputLaw program).condKernel trace :=
+  Proof.Traces.determinized_output_law program typed safe
+
 /-! ## The unnormalized output laws (not stated in the paper)
 
 The same results without dividing by the return probability. -/

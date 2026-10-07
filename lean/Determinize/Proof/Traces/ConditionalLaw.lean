@@ -98,4 +98,29 @@ theorem tracewise_soundness (program : Expr) (typed : Typed [] program (.float .
         Measure.dirac (∫ value : ℝ, value ∂(traceAndOutputLaw program).condKernel trace) :=
   (conditional_law program typed safe).2.2
 
+/-- The target's output law is the trace law pushed forward by the source's conditional mean.
+The target's joint law is the trace law followed by the Dirac mass at the replay mean, which
+agrees almost everywhere with the conditional mean because both describe the target's
+conditional law. -/
+theorem determinized_output_law (program : Expr) (typed : Typed [] program (.float .E))
+    (safe : DomainSafe program) :
+    bigStepMeasure program.determinize =
+      (traceLaw program).map fun trace ↦
+        ∫ value : ℝ, value ∂(traceAndOutputLaw program).condKernel trace := by
+  obtain ⟨-, ⟨-, measurableMean, -, targetMap, -⟩, -, targetDirac⟩ :=
+    soundness_data .E program typed safe
+  obtain ⟨-, -, targetFactor, -⟩ := replay_soundness program typed safe
+  have targetAe := outputGivenTrace_ae_eq_condKernel program.determinize targetFactor
+    (traceLaw_determinize .E program typed safe)
+  have meanAe : kernelMean (normalizedOutputGivenTrace program) =ᵐ[traceLaw program]
+      fun trace ↦ ∫ value : ℝ, value ∂(traceAndOutputLaw program).condKernel trace := by
+    filter_upwards [targetDirac, targetAe, tracewise_soundness program typed safe]
+      with trace replay conditional sound
+    rw [← dirac_eq_dirac_iff, ← replay, conditional, sound.2]
+  have pairMeasurable : Measurable fun trace : Trace ↦
+      (trace, kernelMean (normalizedOutputGivenTrace program) trace) :=
+    measurable_id.prodMk measurableMean
+  rw [← correspondence, targetMap, Measure.map_map measurable_snd pairMeasurable]
+  exact Measure.map_congr meanAe
+
 end Determinize.Proof.Traces
