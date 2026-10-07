@@ -1,6 +1,6 @@
 # Publishes the simulator and the API documentation of the Lean development from main to GitHub
 # Pages, once lean.yml and sim.yml pass on the same commit. The simulator is the front page of the
-# site and the documentation is under docs/.
+# site and the documentation, which is built while lean.yml runs, is under docs/.
 #
 # GitHub Pages serves one site per repository and each deployment replaces all of it, so both
 # parts are built and published together when either of them changes.
@@ -46,9 +46,10 @@ jobs:
     name: Simulator
     uses: $/.github/workflows/sim.yml
 
-  build:
-    name: Build the site
-    needs: [lean, sim]
+  # Runs alongside the Lean tests. It starts from the newest build that lean.yml saved and lets
+  # Lake bring it up to date, and it saves no build itself.
+  docs:
+    name: Documentation
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 180
@@ -61,7 +62,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
-      - name: Restore this commit's build
+      - name: Restore the newest build
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: lean/.lake/build
@@ -116,16 +117,12 @@ jobs:
         run: |
           rm -f .lake/build/doc-data/*.docs_built*
           lake build Determinize:docs
-      - name: Download the simulator
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: simulator
-          path: _site
       # Copied, not moved: when the documentation of the dependencies was not restored, it is
       # saved from lean/docbuild/.lake/build at the end of the job. doc-gen4's index.html is a
       # placeholder, so docs/ redirects to the root module's page.
-      - name: Add the documentation under docs/
+      - name: Collect the documentation
         run: |
+          mkdir ../_site
           cp -R docbuild/.lake/build/doc ../_site/docs
           cat > ../_site/docs/index.html <<'EOF'
           <!doctype html>
@@ -135,6 +132,30 @@ jobs:
           <meta http-equiv="refresh" content="0; url=Determinize.html">
           <a href="Determinize.html">Determinize</a>
           EOF
+      - name: Upload the documentation
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: documentation
+          path: _site/docs/
+          if-no-files-found: error
+          retention-days: 1
+
+  build:
+    name: Build the site
+    needs: [lean, sim, docs]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Download the simulator
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: simulator
+          path: _site
+      - name: Download the documentation
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: documentation
+          path: _site/docs
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: _site
