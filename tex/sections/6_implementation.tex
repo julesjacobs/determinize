@@ -1,5 +1,4 @@
 % !TeX root = ../main.tex
-\clearpage
 \section{Implementation}
 \label{sec:implementation}
 
@@ -16,15 +15,15 @@ The complete compilation, verification and execution pipeline is outlined in \cr
 
 \input{figures/architecture}
 
-\paragraph{Parse and elaborate} First, the source code is parsed, desugared and variable names are replaced by de~Bruijn indices. This part is unverified and, as such, part of the trusted surface.
+\paragraph{Parse and elaborate} First, the source code is parsed, desugared and variable names are replaced by de~Bruijn indices. This part is unverified.
 
 \paragraph{Infer types and $\E/\G$} Afterwards, the types of the program are inferred and all sampling sites are annotated with either $\E$ or $\G$. The code is verified to produce a correct typing as well as mode annotation, and the program is furthermore shown to assign as many $\E$-sites as possible. At the end of this step, the user has a well-typed program $e_{\mathrm{src}}$.
 
 \paragraph{Determinize} The determinization function of \cref{def:determinization} walks through the syntax tree and replaces every $\E$-mode sample by a mean site, marked $\M$. The pipeline runs the same Lean definition that the soundness theorems are stated about, with rational instead of real literals. The output is a well-typed, determinized program $e_{\mathrm{det}}$.
 
-\paragraph{Soundness theorems} Suppose $\vdash e_{\mathrm{src}}:\tyR\E$ and $e_{\mathrm{src}}$ is domain-safe. The formalized soundness theorems then show that $e_{\mathrm{det}}$ has the same expectation as $e_{\mathrm{src}}$ whenever the latter is defined (\cref{thm:expectation}), that its variance is no larger whenever $e_{\mathrm{src}}$ returns with positive probability and has a finite second moment (\cref{thm:variance}), and that, for almost every $\G$ trace, $e_{\mathrm{det}}$ returns the conditional mean of $e_{\mathrm{src}}$ (\cref{thm:trace-soundness}).
+\paragraph{Soundness theorems} The theorems of \cref{sec:soundness} relate the output laws of $e_{\mathrm{src}}$ and $e_{\mathrm{det}}$ under the hypotheses stated there.
 
-\paragraph{Measure-theoretic semantics} In order to state and prove exact statements like the soundness theorems, we define the small-step and big-step semantics of \cref{fig:semantics} in Lean, using the Giry monad for sampling. The big-step semantics yields a measure on the reals, which Lean cannot compute, so these semantics cannot be run to obtain actual results.
+\paragraph{Measure-theoretic semantics} These output laws are given by the semantics of \cref{fig:semantics}, which we define in Lean with the Giry monad. They are measures on the reals, which Lean cannot compute, so this semantics is not executed.
 
 \paragraph{Floating-point interpreter} In order to be able to run the program and to carry out actual sampling, we also provide an interpreter that evaluates programs with floating-point numbers and pseudo-random samplers. This part is unverified: we have no formal model that relates floating-point arithmetic and the samplers to the real-valued semantics.
 
@@ -37,65 +36,3 @@ The complete compilation, verification and execution pipeline is outlined in \cr
 \paragraph{Certificate checker} The certificate that Storm produces is checked and it is verified that any such certificate corresponds to the correct expected value for the input program.
 
 \paragraph{Exact mean and variance} Both routes compute the exact probability that the explored program returns a result, and the mean and variance of the result conditioned on that event. If the explored program is $e_{\mathrm{det}}$ and $e_{\mathrm{src}}$ is domain-safe with a defined expectation, \cref{thm:expectation} guarantees that $e_{\mathrm{src}}$ has the same mean.
-
-% \subsection{Parsing and type inference}
-
-% This part is unchecked. It consists of:
-
-% \begin{enumerate}
-% \item \verb+parse+ [TODO: Link]: tokenizes and parses the raw input string into a raw syntax tree that still has strings variables as strings
-% \item \verb+elaborate+ [TODO: Link]: converts the raw syntax tree into a de-Bruijn-indexed final syntax tree
-% \item \verb+infer+ [TODO: Link]: infers the types and sampling modes/affinities and creates a certificate
-% \end{enumerate}
-
-% The syntax tree might contain sampling mode/affinity annotations, those will be inferred later
-
-% The above steps are unverified, but produce a certificate that will be evaluated in the next step.
-
-% what is the input, refer to earlier part.
-
-% Output: typed program including modes
-
-% \subsection{Type Certification}
-
-% In this part, the compiler verifies that the certificate emitted in by the type inference step is correct. [TODO: mention translation validation]
-
-% \subsection{Determinization}
-
-% The determinization function is trivial, it just makes all $\E$-sites into $\M$-sites
-
-% [TODO: tease soundness theorems here]
-
-% \subsection{Semantics}
-
-% The syntax, typing and mode inference do not assume any particular literal type. We implement the semantics for both exact real numbers as well as floating point numbers. The former allows us to formalize the exact statements of the soundness theorems, and the latter allow us to actually compute.
-
-% \subsubsection{Measure-theoretic semantics}
-
-% cannot run
-
-% \subsubsection{Floating-point interpreter}
-
-% Not verified since floating point arithmetic is inherently imprecise
-
-% \subsection{Theorem formalization}
-
-% \subsection{Finite graph construction}
-
-% after determinization, create graph (formalized); either reference graph from an earlier section, or just paraphrase it briefly
-
-% if after determinization is finite state (probabilistic transition system, Markov chain?), in particular only discrete distributions
-
-% we have our own matrix solver (formalized)
-
-% alternative: storm, gives certificate
-
-% formalized: verify that storm's certificat is correct and that the solution is equal to our own solver.
-
-% \subsection{Exact rational solver}
-
-% \subsection{Storm solver}
-
-% \subsection{Storm certificate checker}
-
-% \subsection{Finite-state exact computation}
