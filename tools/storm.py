@@ -121,6 +121,33 @@ def storm_worker(prefix, additive=False):
     Path(str(prefix) + ".storm-values.json").write_text(json.dumps(results) + "\n")
 
 
+def printed_text(answer):
+    """The closing theorems, as `Finite.printedText` in lean/Determinize/Finite/Export.lean."""
+    mass, first, second = answer["mass"], answer["first"], answer["second"]
+    literal = f"⟨{mass}, {first}, {second}⟩"
+    program = "(checkedSubject.program checkedSource)"
+    text = f"""
+theorem printedStatistics :
+    ({literal} : Determinize.Spec.FiniteModel.OutputStatistics).Matches
+      (Determinize.Spec.Paper.bigStepMeasure {program}) :=
+  (by decide +kernel : statistics = {literal}) ▸ outputStatistics
+
+#print axioms printedStatistics
+"""
+    if mass:
+        mean, variance = first / mass, second / mass - (first / mass)**2
+        text += f"""
+theorem printedConditionalMoments :
+    Determinize.Spec.returnedExpectation {program} = (({mean} : Rat) : ℝ) ∧
+      Determinize.Spec.returnedVariance {program} = (({variance} : Rat) : ℝ) :=
+  Determinize.Proof.FiniteModel.statistics_returned_moments _ _ printedStatistics
+    (by decide +kernel) (by decide +kernel)
+
+#print axioms printedConditionalMoments
+"""
+    return text
+
+
 def bind_report(text, answer, additive):
     def rat(q):
         return f"(({q.numerator} : Rat) / {q.denominator})"
@@ -142,7 +169,7 @@ theorem reportedStatistics :
   decide +kernel
 
 #print axioms reportedStatistics
-"""
+""" + printed_text(answer)
     return text, answer
 
 
@@ -233,12 +260,13 @@ theorem terminationProbabilities : (termination.statistics model).Matches model 
     return bind_report(text, {name: vector[initial] for name, vector in values.items()}, additive)
 
 
-def checked_axioms(output, additive=False):
+def checked_axioms(output, additive=False, conditional=True):
     reports = {name: {item.strip() for item in axioms.split(",") if item.strip()}
                for name, axioms in re.findall(r"'([^']+)' depends on axioms:\s*\[([^]]*)\]", output)}
     for name in re.findall(r"'([^']+)' does not depend on any axioms", output):
         reports[name] = set()
-    required = {"outputStatistics", "terminationProbabilities", "conditionalVariance", "reportedStatistics"}
+    required = {"outputStatistics", "terminationProbabilities", "conditionalVariance", "reportedStatistics",
+                "printedStatistics", *(["printedConditionalMoments"] if conditional else [])}
     if not required <= reports.keys():
         raise ValueError("missing certificate axiom reports")
     if additive:
@@ -306,7 +334,8 @@ def run(args):
         else:
             report["stage"] = "kernel check"
             checked = command(["lake", "env", "lean", certificate], ROOT / "lean")
-            report["axioms"] = checked_axioms(checked.stdout + checked.stderr, additive=bool(mode))
+            report["axioms"] = checked_axioms(checked.stdout + checked.stderr, additive=bool(mode),
+                                              conditional=answer["mass"] != 0)
             report["kernel_checked"] = True
         report.update(storm_version=values["storm_version"],
                       storm_build_type=values["storm_build_type"],
