@@ -128,8 +128,9 @@ beta `(3 + excess-kurtosis) × variance²`.
 `test_workflows.py` checks the public `run.sh` entry points and relative paths.
 `test_export.py` checks exact model exports and independent paper-correspondence
 certificates. `test_results.py` checks exact expected rewards, malformed certificates,
-nonabsorption, resource limits, and failure reports. Set `STORM_PYTHON` to an
-interpreter with `tools/storm-requirements.txt` installed for real Storm comparisons.
+nonabsorption, resource limits, and failure reports. They compare with the real Storm when
+`STORM_PYTHON` names an interpreter with `tools/storm-requirements.txt` installed, which the
+`.#lean` shell sets on Linux.
 
 `./test.sh` delegates to the Lean suite. The corpus uses analytical expectations
 and requires no OCaml toolchain. See the [Lean documentation](../lean/README.md)

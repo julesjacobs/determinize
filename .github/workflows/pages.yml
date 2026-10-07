@@ -23,6 +23,7 @@ on:
       - examples/**
       - run.sh
       - tools/storm*.py
+      - tools/storm-requirements.txt
       - sim/**
       - site/**
       - tex/**
@@ -69,7 +70,7 @@ jobs:
       - name: Hash the inputs
         id: inputs
         run: |
-          echo "lean=${{ hashFiles('lean/**', '!lean/**/*.md', 'tests/**', '!tests/**/*.md', 'examples/**', 'run.sh', 'tools/storm*.py', 'flake.nix', 'flake.lock', 'flake-modules/systems.nix', 'flake-modules/devshells/lean.nix', '.github/workflows/**') }}" >> "$GITHUB_OUTPUT"
+          echo "lean=${{ hashFiles('lean/**', '!lean/**/*.md', 'tests/**', '!tests/**/*.md', 'examples/**', 'run.sh', 'tools/storm*.py', 'tools/storm-requirements.txt', 'flake.nix', 'flake.lock', 'flake-modules/systems.nix', 'flake-modules/devshells/lean.nix', '.github/workflows/**') }}" >> "$GITHUB_OUTPUT"
           echo "docs=${{ hashFiles('lean/Determinize.lean', 'lean/Determinize/**/*.lean', 'lean/lakefile.toml', 'lean/lake-manifest.json', 'lean/lean-toolchain', 'lean/docbuild/**', 'flake.lock', '.github/workflows/pages.yml') }}" >> "$GITHUB_OUTPUT"
       - name: Look up a passing run of the Lean tests
         id: tested

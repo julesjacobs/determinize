@@ -131,10 +131,11 @@ for area in "${areas[@]}"; do
       else
         out="$(in_shell lean ./test.sh --all 2>&1)"
         if [[ $? -ne 0 ]]; then fail=1; report det "test.sh FAILED" "$(tail_of <<<"$out")"
-        elif [[ -n "${STORM_PYTHON:-}" ]]; then
+        # Whether test.sh had STORM_PYTHON, which the lean shell sets on Linux.
+        elif [[ -n "$(in_shell lean printenv STORM_PYTHON)" ]]; then
           report det "Lean corpus and certificate tests passed, including real Storm comparisons"
         else
-          report det "Lean corpus and certificate tests passed; real Storm skipped (set STORM_PYTHON)"
+          report det "Lean corpus and certificate tests passed; real Storm skipped (STORM_PYTHON is not set)"
         fi
       fi
       ;;

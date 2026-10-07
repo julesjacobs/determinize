@@ -534,6 +534,7 @@ certificates with tampered values, boundaries, ranks, and dimensions.
 `tests/test_printed_statistics.py` checks the closing theorems on every route, including that
 a changed literal is rejected; it finds the routes by the files that generate
 `outputStatistics`.
-Set `STORM_PYTHON` to an interpreter with the pinned `stormpy` dependency to
-include real Storm integration tests. The precise contract and proof boundaries
-are described in [finite-model-contract.md](finite-model-contract.md).
+Real Storm integration tests run when `STORM_PYTHON` names an interpreter with the
+pinned `stormpy` dependency, which the `.#lean` shell sets on Linux. The precise
+contract and proof boundaries are described in
+[finite-model-contract.md](finite-model-contract.md).
