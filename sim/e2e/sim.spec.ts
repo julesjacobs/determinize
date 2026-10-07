@@ -86,7 +86,6 @@ test("runs every example", async ({ page }) => {
   expect(titles.length).toBeGreaterThan(0);
   for (const title of titles) {
     await page.getByLabel("Example").selectOption({ label: title });
-    // At some seeds the step checks raise false alarms.
     await expect(status(page)).toHaveText(/^seed \d+ - /);
     await expect(page.locator(".coupling-row").first()).toBeVisible();
     const before = await status(page).textContent();

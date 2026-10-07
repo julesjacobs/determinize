@@ -8,6 +8,7 @@ import test from "node:test";
 import { parse } from "smol-toml";
 import { analyze } from "../src/core/compiler/analyze.ts";
 import type { Expr } from "../src/core/compiler/ast.ts";
+import { sites } from "../src/core/compiler/core.ts";
 import type { Value } from "../src/core/runtime/eval.ts";
 import { prepare, run } from "../src/core/runtime/eval.ts";
 import { isValue } from "../src/core/runtime/semantics.ts";
@@ -67,7 +68,9 @@ for (const file of files) {
       source: prepare(analysis.program.source),
       determinized: prepare(analysis.program.determinized),
     };
-    for (const seed of seeds) {
+    // A program without sample sites runs alike at every seed.
+    const random = sites(analysis.program.source).length > 0;
+    for (const seed of random ? seeds : seeds.slice(0, 1)) {
       const trace = runCoupling(source, seed);
       const outcomes = outcomesOf(trace);
       const last = trace.frames.at(-1);

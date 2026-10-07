@@ -100,6 +100,8 @@ export interface Frame {
   determinizedError: string | undefined;
   consistencyOk: boolean;
   consistencyError: string | undefined;
+  /** The failures of runs that left an operation's domain, where not all three runs did. */
+  domainFailure?: string;
   symbolicOk: boolean;
   symbolicError?: string;
 }
@@ -409,14 +411,13 @@ export function projectMean(symbolicState: SymbolicState): Expr {
   return concretize(symbolicState.expr, env);
 }
 
-export function projectMeanDeterminized(symbolicState: SymbolicState): Expr {
-  try {
-    const env = symbolicMeanEnv(symbolicState);
-    return determinizeResidual(concretize(symbolicState.expr, env));
-  } catch (error) {
-    if (!isDistributionDomainError(error)) throw error;
-    return domainErrorExpr(error, symbolicState.expr);
-  }
+export function projectMeanDeterminized(
+  symbolicState: SymbolicState,
+  means: Means = { count: 0, env: new Map(), error: null },
+): Expr {
+  const { env, error } = sequentialMeans(means, symbolicState.sigma);
+  if (error) return domainErrorExpr(error, symbolicState.expr);
+  return determinizeResidual(concretize(symbolicState.expr, env));
 }
 
 export function checkEquivalences(source: string, seed = 1) {
@@ -465,10 +466,11 @@ export function runCoupledTrace(
   };
   const frames: Frame[] = [];
   const draws = newReplay(streams.rngE);
+  const means: Means = { count: 0, env: new Map(), error: null };
 
   for (let stepIndex = 0; stepIndex <= maxSymbolicSteps; stepIndex++) {
     const originalProjection = safe(() => projectSampleWithEnv(symbolic, streams.rngE, draws));
-    const determinizedProjection = safe(() => projectMeanDeterminized(symbolic));
+    const determinizedProjection = safe(() => projectMeanDeterminized(symbolic, means));
     const originalTarget = originalProjection.value?.expr;
     const determinizedTarget = determinizedProjection.value;
     const originalSync = originalProjection.ok
@@ -501,9 +503,10 @@ export function runCoupledTrace(
       ...frame,
       consistencyOk: consistency.ok,
       consistencyError: consistency.error,
+      domainFailure: consistency.domainFailure,
     };
 
-    if (!consistency.ok) {
+    if (!consistency.ok || consistency.domainFailure) {
       frames.push({ ...checkedFrame, symbolicOk: true });
       break;
     }
@@ -559,9 +562,15 @@ function frameChecksOk(frame: Frame) {
   );
 }
 
+/**
+ * Whether the three runs reached the same terminal effect, if any did. Where one of them fails
+ * outside an operation's domain and another doesn't, the program is not domain-safe at this seed
+ * and no theorem relates the runs: that is a domain failure, not a failed check.
+ */
 function terminalEffectConsistency(frame: Pick<Frame, "original" | "symbolic" | "determinized">): {
   ok: boolean;
   error?: string;
+  domainFailure?: string;
 } {
   const effects = (
     [
@@ -572,6 +581,14 @@ function terminalEffectConsistency(frame: Pick<Frame, "original" | "symbolic" | 
   ).map(([label, expr]) => ({ label, effect: terminalEffect(expr) }));
   const active = effects.filter((item) => item.effect) as LabelledEffect[];
   if (active.length === 0) return { ok: true };
+  const failures = active.filter((item) => item.effect.kind === "DomainError");
+  const agree = (item: LabelledEffect) => sameTerminalEffect(active[0].effect, item.effect);
+  if (failures.length > 0 && !(active.length === effects.length && active.every(agree))) {
+    const domainFailure = failures
+      .map(({ label, effect }) => `${label} failed: ${prettyTerminalEffect(effect)}`)
+      .join("; ");
+    return { ok: true, domainFailure };
+  }
   if (active.length !== effects.length) {
     const errored = active.map((item) => item.label).join(", ");
     const succeeded = effects
@@ -892,13 +909,27 @@ function advanceToTarget(state: OrdinaryState, target: Expr, maxSteps: number): 
   };
 }
 
-function symbolicMeanEnv(symbolicState: SymbolicState) {
-  const env = new Map<string, number>();
-  for (const binding of symbolicState.sigma) {
-    const args = binding.args.map((arg) => affineConst(evalAffine(arg, env)));
-    env.set(binding.name, affineToNumber(meanDistribution(binding.kind, args)));
+/** The means of σ's bindings in σ's order, each over the means before it; like `Replay`, a call
+ * extends the means of the previous one. */
+interface Means {
+  count: number;
+  env: Map<string, number>;
+  error: DistributionDomainError | null;
+}
+
+function sequentialMeans(state: Means, sigma: Binding[]): Means {
+  for (const binding of sigma.slice(state.count)) {
+    if (state.error) break;
+    state.count += 1;
+    const args = binding.args.map((arg) => affineConst(evalAffine(arg, state.env)));
+    try {
+      state.env.set(binding.name, affineToNumber(meanDistribution(binding.kind, args)));
+    } catch (error) {
+      if (!isDistributionDomainError(error)) throw error;
+      state.error = error;
+    }
   }
-  return env;
+  return state;
 }
 
 function determinizeResidual(expr: Expr): Expr {
@@ -1214,37 +1245,50 @@ function numberValue(expr: Expr) {
   return affineToNumber(valueToAffine(expr));
 }
 
+/**
+ * Whether two expressions are equal up to `eps` in each number they compute. The symbolic
+ * machine sums an affine form's constant first and divides through its coefficients, so a number
+ * it projects may differ from the ordinary machine's in the last bits wherever it occurs, also
+ * inside an expression that is not yet a value. Everything else must be equal.
+ */
 export function exprEqual(a: Expr, b: Expr, eps = 1e-9): boolean {
+  if (a === b) return true;
   if (a.kind !== b.kind) return false;
   switch (a.kind) {
     case "Const":
       // Equal infinities, which nonfinite literals hold, are equal too.
       return a.value === (b as typeof a).value || Math.abs(a.value - (b as typeof a).value) <= eps;
-    case "Bool":
-      return a.value === (b as typeof a).value;
-    case "Unit":
-    case "Nil":
-    case "Reject":
-      return true;
-    case "DomainError":
-      return a.message === (b as typeof a).message;
-    case "Pair":
-      return (
-        exprEqual(a.left, (b as typeof a).left, eps) &&
-        exprEqual(a.right, (b as typeof a).right, eps)
-      );
-    case "Inl":
-    case "Inr":
-      return exprEqual(a.expr, (b as typeof a).expr, eps);
-    case "Cons":
-      return (
-        exprEqual(a.head, (b as typeof a).head, eps) && exprEqual(a.tail, (b as typeof a).tail, eps)
-      );
     case "SymFloat":
       return prettyAffine(a.affine) === prettyAffine((b as typeof a).affine);
     default:
-      return prettyExpr(a) === prettyExpr(b);
+      return fieldsEqual(a, b, eps);
   }
+}
+
+/** Whether the fields of two nodes of one kind, apart from their spans, are equal: expressions
+ * by `exprEqual`, everything else exactly. */
+function fieldsEqual(a: object, b: object, eps: number): boolean {
+  const left = a as Record<string, unknown>;
+  const right = b as Record<string, unknown>;
+  for (const key of Object.keys(left)) {
+    if (key === "from" || key === "to") continue;
+    if (!valueEqual(left[key], right[key], eps)) return false;
+  }
+  return Object.keys(right).every((key) => key in left);
+}
+
+function valueEqual(a: unknown, b: unknown, eps: number): boolean {
+  if (a === b) return true;
+  if (Array.isArray(a)) {
+    return (
+      Array.isArray(b) &&
+      a.length === b.length &&
+      a.every((item, index) => valueEqual(item, b[index], eps))
+    );
+  }
+  if (typeof a !== "object" || a === null || typeof b !== "object" || b === null) return false;
+  if ("kind" in a && "kind" in b) return exprEqual(a as Expr, b as Expr, eps);
+  return fieldsEqual(a, b, eps);
 }
 
 function valuesEqual(a: Expr, b: Expr, eps = 1e-9) {

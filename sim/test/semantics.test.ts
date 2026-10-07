@@ -10,6 +10,7 @@ import { makeStreams } from "../src/core/runtime/rng.ts";
 import type { CoupledTrace, Frame } from "../src/core/runtime/semantics.ts";
 import {
   checkEquivalences,
+  exprEqual,
   prepareRuntime,
   projectMean,
   projectSample,
@@ -138,21 +139,25 @@ test("coupled trace treats shared distribution domain errors as checked terminal
   );
 });
 
-test("coupled trace fails when only one side reaches a distribution domain error", () => {
+test("a run that fails where another doesn't ends in a domain failure", () => {
   // At seed 2, the E stream's first draw is 0.113, so x is about -5.5.
   const originalErrors = runCoupledTrace("let x = uniform[E](-10, 30) in\ngamma[E](x, 1)", 2);
-  assert.equal(originalErrors.ok, false);
+  assert.equal(originalErrors.ok, true);
   assert.equal(last(originalErrors).original.kind, "DomainError");
   assert.notEqual(last(originalErrors).determinized.kind, "DomainError");
-  assert.equal(last(originalErrors).consistencyOk, false);
-  assert.match(last(originalErrors).consistencyError ?? "", /terminal effect mismatch/);
+  assert.equal(
+    last(originalErrors).domainFailure,
+    "Original failed: gamma requires positive shape and rate",
+  );
 
   const determinizedErrors = runCoupledTrace("let x = uniform[E](-10, 30) in\nuniform[E](x, 1)", 2);
-  assert.equal(determinizedErrors.ok, false);
+  assert.equal(determinizedErrors.ok, true);
   assert.notEqual(last(determinizedErrors).original.kind, "DomainError");
   assert.equal(last(determinizedErrors).determinized.kind, "DomainError");
-  assert.equal(last(determinizedErrors).consistencyOk, false);
-  assert.match(last(determinizedErrors).consistencyError ?? "", /terminal effect mismatch/);
+  assert.equal(
+    last(determinizedErrors).domainFailure,
+    "Determinized failed: uniform requires lower ≤ upper",
+  );
 });
 
 test("distribution domain checks cover bernoulli probability and discrete totals", () => {
@@ -421,4 +426,14 @@ test("a literal factor runs first, as Lean's elaborator puts it on the left", ()
     prettyExpr(prepareRuntime("let x = uniform(0, 1) in x * 3").expr).slice(-5),
     "3 * x",
   );
+});
+
+test("expressions compare numbers up to the tolerance wherever they occur", () => {
+  const expr = (text: string) => prepareRuntime(text).expr;
+  // A projected affine form sums its constant first: (2.5 + v2) + v3 for v2 + (2.5 + v3).
+  const program = "(fun acc => 0.5 + acc) 4.779884548700825";
+  assert.ok(exprEqual(expr(program), expr("(fun acc => 0.5 + acc) 4.779884548700826")));
+  assert.ok(!exprEqual(expr(program), expr("(fun acc => 0.5 + acc) 4.7798")));
+  assert.ok(!exprEqual(expr(program), expr("(fun x => 0.5 + x) 4.779884548700825")));
+  assert.ok(!exprEqual(expr("uniform[G](0, 1)"), expr("uniform[E](0, 1)")));
 });
