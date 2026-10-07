@@ -8,6 +8,7 @@ import type { Decoded } from "./core/share.ts";
 import { decodeShare } from "./core/share.ts";
 import { mountDistributionView } from "./ui/distribution-view.ts";
 import { createEditor, replaceDoc } from "./ui/editor.ts";
+import { mountLeanView } from "./ui/lean-view.ts";
 import { createSampling } from "./ui/sampling.ts";
 import type { Store } from "./ui/store.ts";
 import { createStore } from "./ui/store.ts";
@@ -56,6 +57,18 @@ function start(decoded: Decoded): Store {
       status: document.querySelector("#coupling-status") as HTMLElement,
     },
     store,
+  );
+  mountLeanView(
+    {
+      section: document.querySelector("#lean-output") as HTMLElement,
+      counterexample: document.querySelector("#lean-counterexample") as HTMLElement,
+      summary: document.querySelector("#lean-summary") as HTMLElement,
+      type: document.querySelector("#checked-type") as HTMLElement,
+      sites: document.querySelector("#sample-sites") as HTMLElement,
+      annotated: document.querySelector("#annotated-program") as HTMLElement,
+      determinized: document.querySelector("#determinized-program") as HTMLElement,
+    },
+    store.analysis,
   );
   mountDistributionView(
     {

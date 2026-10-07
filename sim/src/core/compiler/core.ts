@@ -67,3 +67,16 @@ export function mapSites<S, T>(e: Core<S>, f: (site: S, node: Core<S>) => T): Co
 export function determinize(program: Core<Action>): Program {
   return mapSites(program, (site): Action => (site === "E" ? "mean" : site));
 }
+
+/** The draws among a program's sample sites, as `--sample-sites` counts them (`sampleSites` in
+ * lean/Main.lean): Poisson, discrete and Bernoulli draws are discrete, the others continuous, and
+ * a mean is no draw. */
+export function sampleSites(program: Program): { discrete: number; continuous: number } {
+  const counts = { discrete: 0, continuous: 0 };
+  for (const site of sites(program)) {
+    if (!("site" in site) || site.site === "mean") continue;
+    if (["poisson", "discrete", "bernoulli"].includes(site.kind)) counts.discrete += 1;
+    else counts.continuous += 1;
+  }
+  return counts;
+}

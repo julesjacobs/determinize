@@ -52,3 +52,25 @@ export function formatDecimal(q: Rational): string {
   const sign = q.num < 0n ? "-" : "";
   return `${sign}${digits.slice(0, -places)}.${digits.slice(-places)}`;
 }
+
+/** The number of decimal places of 1 / `den`, if it has a terminating expansion. */
+function decimalPlaces(den: bigint): number | null {
+  let places = 0;
+  for (let rest = den; rest !== 1n; places++) {
+    const factor = rest % 10n === 0n ? 10n : rest % 2n === 0n ? 2n : rest % 5n === 0n ? 5n : 1n;
+    if (factor === 1n) return null;
+    rest /= factor;
+  }
+  return places;
+}
+
+/** A literal as Lean's `literal` prints it: a decimal, or `(num / den)` if it has none. */
+export function leanLiteral(q: Rational): string {
+  if (q.den === 1n) return String(q.num);
+  const places = decimalPlaces(q.den);
+  if (places === null) return `(${q.num} / ${q.den})`;
+  const scale = 10n ** BigInt(places);
+  const magnitude = (q.num < 0n ? -q.num : q.num) * (scale / q.den);
+  const fraction = String(magnitude % scale).padStart(places, "0");
+  return `${q.num < 0n ? "-" : ""}${magnitude / scale}.${fraction}`;
+}

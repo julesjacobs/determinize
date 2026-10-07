@@ -196,6 +196,23 @@ test("a link restores the program, the seed and the example", async ({ page, con
   );
 });
 
+test("Lean's output shows the checked type, the sample sites and both programs", async ({
+  page,
+}) => {
+  await page.goto(simulator);
+  await expect(page.locator("#checked-type")).toHaveText("float[E]");
+  await expect(page.locator("#sample-sites")).toHaveText(
+    "2 continuous and 0 discrete draws; after determinization, 1 continuous and 0 discrete",
+  );
+  await expect(page.locator("#annotated-program")).toContainText("gauss[E](x, 1)");
+  await expect(page.locator("#determinized-program")).toContainText("mean_gauss(x, 1)");
+  // Lean prints nothing for a program that it rejects for another reason than a mode conflict.
+  await page.locator(".cm-content").click();
+  await page.keyboard.press("Control+End");
+  await page.keyboard.type(" +");
+  await expect(page.locator("#lean-output")).toBeHidden();
+});
+
 /** The simulator's address for `source` at `seed`, with no example chosen. */
 function linkTo(source: string, seed: number) {
   const json = JSON.stringify({ source, seed, example: "" });

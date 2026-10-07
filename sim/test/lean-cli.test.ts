@@ -1,12 +1,16 @@
-// The port of Lean's evaluator against the Lean CLI: for every case of the corpus manifest,
-// test/fixtures/lean-cli.json records what the CLI prints (scripts/lean-fixtures.ts). The runs
-// that "Run N" adds must give the CLI's statistics of `--seed S --samples N` at its printed
-// precision, and the simulator must reject what Lean rejects.
+// The simulator against the Lean CLI: for every case of the corpus manifest,
+// test/fixtures/lean-cli.json records what the CLI prints (scripts/lean-fixtures.ts). The
+// simulator must print the checked type, the sample-site counts and the programs as the CLI
+// prints them, the runs that "Run N" adds must give the CLI's statistics of
+// `--seed S --samples N` at its printed precision, and the simulator must reject what Lean
+// rejects.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { parse } from "smol-toml";
 import { analyze } from "../src/core/compiler/analyze.ts";
+import { sampleSites } from "../src/core/compiler/core.ts";
+import { leanPretty, sourcePretty } from "../src/core/compiler/print.ts";
 import { displayFloat } from "../src/core/runtime/eval.ts";
 import type { Runner } from "../src/core/sampler.ts";
 import { runIndex, runnerOf } from "../src/core/sampler.ts";
@@ -62,17 +66,27 @@ for (const item of fixture.accepted) {
     const analysis = analyze(readFileSync(new URL(item.file, root), "utf8"));
     assert.ok(analysis.ok);
     assert.equal(analysis.type, item.checked);
+    const { source, determinized } = analysis.program;
+    assert.deepEqual(sampleSites(source), item.sites.before);
+    assert.deepEqual(sampleSites(determinized), item.sites.after);
+    assert.equal(leanPretty(source), item.annotated);
+    assert.equal(leanPretty(determinized), item.determinized);
+    // The annotated program as the page prints it reads back as the same program.
+    const reread = analyze(sourcePretty(source));
+    assert.ok(reread.ok, sourcePretty(source));
+    assert.equal(leanPretty(reread.program.source), item.annotated);
     const runner = runnerOf(analysis);
     assert.ok(runner);
-    for (const { seed, samples, source, determinized } of item.runs) {
+    for (const run of item.runs) {
+      const { seed, samples } = run;
       // The UI's seeds are safe integers; the CLI's UInt64 seeds near 2⁶⁴ are the same runs as
       // their negative two's complements.
       const at = Number(BigInt.asIntN(64, BigInt(seed)));
       const summaries = summarize(runner, at, samples);
-      assert.deepEqual(printed(summaries.source), source, `source, --seed ${seed}`);
+      assert.deepEqual(printed(summaries.source), run.source, `source, --seed ${seed}`);
       assert.deepEqual(
         printed(summaries.determinized),
-        determinized,
+        run.determinized,
         `determinized, --seed ${seed}`,
       );
     }

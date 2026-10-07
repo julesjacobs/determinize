@@ -27,6 +27,23 @@
           </div>
           <div id="editor" class="editor"></div>
           <div id="editor-diagnostics" class="editor-diagnostics">No diagnostics.</div>
+          <section id="lean-output" class="lean-output" aria-label="What Lean prints">
+            <p id="lean-counterexample" class="counterexample-label" hidden></p>
+            <p id="lean-summary">
+              <a href="https://julesjacobs.com/determinize/docs/Determinize/Spec/Syntax.html#Determinize.Spec.Paper.Typed" title="Lean's typing judgment">Checked</a>:
+              <code id="checked-type"></code>.
+              <a href="https://julesjacobs.com/determinize/docs/Determinize/Frontend/Syntax.html#Determinize.Spec.Paper.Expr.sites" title="Lean's sample sites of a program">Sample sites</a>:
+              <span id="sample-sites"></span>.
+            </p>
+            <h3>
+              <a href="https://julesjacobs.com/determinize/docs/Determinize/Frontend/Infer.html#Determinize.Frontend.infer" title="Lean's inference of the modes">Annotated source</a>
+            </h3>
+            <pre id="annotated-program" class="lean-program"></pre>
+            <h3>
+              <a href="https://julesjacobs.com/determinize/docs/Determinize/Spec/Syntax.html#Determinize.Spec.Paper.Expr.determinize" title="Lean's determinization">Determinized</a>
+            </h3>
+            <pre id="determinized-program" class="lean-program"></pre>
+          </section>
         </section>
 
         <section class="outputs" aria-label="Compiler outputs">

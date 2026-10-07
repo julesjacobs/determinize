@@ -7,6 +7,7 @@ import { elaborate } from "../src/core/compiler/elaborate.ts";
 import { CompileError } from "../src/core/compiler/errors.ts";
 import { parse } from "../src/core/compiler/parser.ts";
 import { prettyExpr } from "../src/core/compiler/pretty.ts";
+import { sourcePretty } from "../src/core/compiler/print.ts";
 import { rational } from "../src/core/compiler/rational.ts";
 
 test("parser preserves arithmetic precedence", () => {
@@ -264,4 +265,38 @@ test("syntax errors report diagnostics", () => {
   const result = analyze("let =");
   assert.equal(result.ok, false);
   assert.match(result.diagnostics[0].message, /expected identifier/);
+});
+
+test("programs print in Lean's forms with the source's names", () => {
+  const printed = (text: string) => {
+    const analysis = analyze(text);
+    assert.ok(analysis.ok);
+    const { source, determinized } = analysis.program;
+    return [sourcePretty(source), sourcePretty(determinized)];
+  };
+  assert.deepEqual(printed("let x = uniform(0, 1) in x - gauss(x, 1)"), [
+    "let x = uniform[E](0, 1) in\nx + -gauss[E](x, 1)",
+    "let x = mean_uniform(0, 1) in\nx + -mean_gauss(x, 1)",
+  ]);
+  assert.deepEqual(printed("if flip(0.5) then discrete(0.25, 0.75) else 1e21"), [
+    "if 0 < bernoulli[G](0.5)\nthen\n  discrete_list[E](0.25 :: [])\nelse\n  1000000000000000000000",
+    "if 0 < bernoulli[G](0.5)\nthen\n  mean_discrete_list(0.25 :: [])\nelse\n  1000000000000000000000",
+  ]);
+  // The binders that `<=` elaborates to avoid the source's names.
+  assert.equal(
+    printed("let x1 = 1 in x1 <= 2")[0],
+    "let x1 = 1 in\nlet x1' = x1 in\nlet x2 = 2 in\nif x2 < x1' then false else true",
+  );
+  // Parentheses where the parser would read something else.
+  assert.equal(printed("(fun x => x + 1) (-2)")[0], "(fun x =>\n  x + 1) (-2)");
+  assert.equal(
+    printed("let f = fun x => x in -(f 2)")[0],
+    "let f =\n  fun x =>\n    x\nin\n  -(f 2)",
+  );
+  assert.equal(printed("let l = (1 :: []) :: [] in 1")[0], "let l = (1 :: []) :: [] in\n1");
+  // A let as an operand is parenthesized.
+  assert.equal(
+    printed("let y = uniform(0, 1) in let _ = observe(y < 0.5) in (let z = y in z) + 1")[0],
+    "let y = uniform[G](0, 1) in\nlet _ = observe(y < 0.5) in\n(let z = y in\nz) + 1",
+  );
 });
