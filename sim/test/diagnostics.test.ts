@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { EditorState } from "@codemirror/state";
 import { analyze } from "../src/core/compiler/analyze.ts";
-import { diagnosticsState, normalizeDiagnostics, setDiagnostics } from "../src/diagnostics.ts";
+import { diagnosticsField, normalizeDiagnostics, setDiagnostics } from "../src/ui/editor.ts";
 
 const cases = [
   {
@@ -155,7 +155,7 @@ for (const item of cases) {
 test("editor diagnostics clear immediately when the document changes", () => {
   const state = EditorState.create({
     doc: "let u = uniform[E](0, 1) in",
-    extensions: [diagnosticsState],
+    extensions: [diagnosticsField],
   });
   const withDiagnostic = state.update({
     effects: setDiagnostics.of([
@@ -163,11 +163,11 @@ test("editor diagnostics clear immediately when the document changes", () => {
     ]),
   }).state;
 
-  assert.equal(withDiagnostic.field(diagnosticsState).length, 1);
+  assert.equal(withDiagnostic.field(diagnosticsField).length, 1);
 
   const edited = withDiagnostic.update({
     changes: { from: 16, to: 17, insert: "" },
   }).state;
 
-  assert.deepEqual(edited.field(diagnosticsState), []);
+  assert.deepEqual(edited.field(diagnosticsField), []);
 });
