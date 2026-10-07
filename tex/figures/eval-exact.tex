@@ -3,173 +3,108 @@
     \footnotesize
     \setlength{\tabcolsep}{2.5pt}
     \renewcommand{\arraystretch}{1.15}
-    \begin{tabular}{@{}l c l c r r r r r r@{}}
+    \begin{tabular}{@{}l c l c c c@{}}
         \toprule
-        & & &
-        \multicolumn{2}{c}{Markov chain} &
-        \multicolumn{3}{c}{Determinization (s)} &
-        \multicolumn{2}{c}{Baselines (s)} \\
-        \cmidrule(lr){4-5} \cmidrule(lr){6-8} \cmidrule(l){9-10}
         Benchmark & Det. & Expectation &
         Sites &
-        States &
-        Export &
-        Storm &
-        Total &
         POLAR &
         $\lambda$PSI \\
         \midrule
         \texttt{addNoise}
             & $\bullet\!\bullet$
-            & $\mathbb{E}[\mathit{sum}]=6.0$
+            & $\mathbb{E}[\mathit{sum}]$
             & $(0,1) \rightarrow (0,0)$
-            & 163
-            & $0.165$
-            & $0.156$
-            & $\mathbf{0.321}$
             & $\times$
             & $\times$ \\
 
         \texttt{add-uniform-counter}
             & $\bullet\!\circ$
-            & $\mathbb{E}[x]=2.0$
+            & $\mathbb{E}[x]$
             & $(1,2) \rightarrow (1,0)$
-            & 339
-            & $0.675$
-            & $0.346$
-            & $\mathbf{1.021}$
-            & $2.442$
+            & $\checkmark$
             & $\times$ \\
 
         \texttt{aggregate-rv}
             & $\bullet\!\bullet$
-            & $\mathbb{E}[x]=1.0$
+            & $\mathbb{E}[x_n]$
             & $(0,1) \rightarrow (0,0)$
-            & 90
-            & $0.067$
-            & $0.164$
-            & $0.231$
-            & $1.333$
-            & $\mathbf{0.069}$ \\
+            & $\checkmark$
+            & $\checkmark$ \\
 
         \texttt{asym-random-walk}
             & $\bullet\!\circ$
-            & $\mathbb{E}[t]=0.4$
+            & $\mathbb{E}[t]$
             & $(1,3) \rightarrow (1,0)$
-            & 200
-            & $0.185$
-            & $0.169$
-            & $\mathbf{0.354}$
-            & $1.488$
+            & $\checkmark$
             & $\times$ \\
 
         \texttt{dreckon}
             & $\bullet\!\circ$
-            & $\mathbb{E}[x]=0.0$
+            & $\mathbb{E}[x]$
             & $(1,14) \rightarrow (1,0)$
-            & 43219
-            & $175.775$
-            & $2.226$
-            & $178.001$
-            & $\mathbf{1.834}$
-            & \texttt{t.o.} \\
+            & $\checkmark$
+            & $\checkmark$ \\
 
         \texttt{gauss-random-walk}
             & $\bullet\!\bullet$
-            & $\mathbb{E}[y_6]=0.0$
+            & $\mathbb{E}[y_6]$
             & $(0,1) \rightarrow (0,0)$
-            & 237
-            & $0.198$
-            & $0.180$
-            & $\mathbf{0.378}$
             & $\times$
             & $\times$ \\
 
         \texttt{invpend}
             & $\bullet\!\bullet$
-            & $\mathbb{E}[\mathit{pAng}]=2.4$
+            & $\mathbb{E}[\mathit{pAng}_n]$
             & $(0,6) \rightarrow (0,0)$
-            & 1822
-            & $7.061$
-            & $0.245$
-            & $\mathbf{7.306}$
-            & $42.688$
-            & \texttt{t.o.} \\
+            & $\checkmark$
+            & $\checkmark$ \\
 
         \texttt{monte-carlo}
             & $\bullet\!\bullet$
-            & $\mathbb{E}[\mathit{estimate}]=2.0$
+            & $\mathbb{E}[\mathit{estimate}]$
             & $(0,1) \rightarrow (0,0)$
-            & 773
-            & $11.173$
-            & $0.180$
-            & $\mathbf{11.353}$
             & $\times$
-            & \texttt{t.o.} \\
+            & $\checkmark$ \\
 
         \texttt{pack}
             & $\bullet\!\circ$
-            & $\mathbb{E}[\mathit{weight}]=11.8$
+            & $\mathbb{E}[\mathit{weight}_n]$
             & $(1,3) \rightarrow (1,0)$
-            & 15192
-            & $37.207$
-            & $1.033$
-            & $\mathbf{38.240}$
-            & \texttt{t.o.}
+            & $\checkmark$
             & $\times$ \\
 
         \texttt{retransmit}
             & $\bullet\!\circ$
-            & $\mathbb{E}[\mathit{ret}]=0.2$
+            & $\mathbb{E}[\mathit{ret}]$
             & $(4,2) \rightarrow (4,0)$
-            & 182
-            & $0.164$
-            & $0.183$
-            & $\mathbf{0.347}$
             & $\times$
             & $\times$ \\
 
         \texttt{service\_policy}
             & $\bullet\!\circ$
-            & $\mathbb{E}[\mathit{ret}]=13.2$
+            & $\mathbb{E}[\mathit{ret}_n]$
             & $(4,4) \rightarrow (4,0)$
-            & 9491
-            & $27.198$
-            & $0.576$
-            & $\mathbf{27.774}$
             & $\times$
-            & \texttt{t.o.} \\
+            & $\checkmark$ \\
 
         \texttt{swap}
             & $\bullet\!\bullet$
-            & $\mathbb{E}[x_1]=5.5$
+            & $\mathbb{E}[x_n]$
             & $(2,2) \rightarrow (0,0)$
-            & 105
-            & $0.107$
-            & $0.168$
-            & $0.275$
-            & $1.425$
-            & $\mathbf{0.082}$ \\
+            & $\checkmark$
+            & $\checkmark$ \\
 
         \texttt{uniform\_nested}
             & $\bullet\!\bullet$
-            & $\mathbb{E}[d]=0.1$
+            & $\mathbb{E}[d]$
             & $(0,4) \rightarrow (0,0)$
-            & 31
-            & $0.040$
-            & $0.166$
-            & $0.206$
             & $\times$
-            & $\mathbf{0.064}$ \\
+            & $\checkmark$ \\
 
         \texttt{workload}
             & $\bullet\!\circ$
-            & $\mathbb{E}[\mathit{ret}]=10.0$
+            & $\mathbb{E}[\mathit{ret}_n]$
             & $(1,2) \rightarrow (1,0)$
-            & 27836
-            & $27.781$
-            & $1.401$
-            & $\mathbf{29.182}$
             & $\times$
             & $\times$ \\
         \bottomrule
@@ -178,7 +113,6 @@
     \caption{Evaluation of determinization on 15 benchmarks.
     In the determinization column, $\bullet\!\bullet$ denotes full
     determinization and $\bullet\!\circ$ denotes partial determinization. Each pair $(d,c)$ counts static
-    discrete and continuous sampling sites. Runtime excludes
-    both the initial build and Lean certificate checking. An $\times$ in the last two columns denotes a lack of support by the language. Timeout=180s, denoted as \texttt{t.o.} in the table.}
+    discrete and continuous sampling sites. In the last two columns, $\checkmark$ denotes language support, and $\times$ denotes a lack of support by the language. Several programs are parameterized by $n$: their expectations vary with the iteration of the loop.}
     \label{tab:finite-after-determinization}
 \end{table}
