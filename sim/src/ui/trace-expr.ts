@@ -1,5 +1,6 @@
-import type { DistributionKind, Expr, ExprOf, MeanKind } from "./core/compiler/ast.ts";
-import { listElements, prettyExpr } from "./core/compiler/pretty.ts";
+import type { DistributionKind, Expr, ExprOf, MeanKind } from "../core/compiler/ast.ts";
+import { listElements, prettyExpr } from "../core/compiler/pretty.ts";
+import { escapeHtml } from "./html.ts";
 
 /** The fields leading from an expression to a subexpression, with indices into argument lists. */
 type Path = (string | number)[];
@@ -412,13 +413,4 @@ function leftKey(expr: Operands) {
 
 function rightKey(expr: Operands) {
   return "right" in expr ? "right" : "tail";
-}
-
-function escapeHtml(text: string) {
-  return String(text)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
 }
