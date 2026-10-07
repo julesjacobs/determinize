@@ -59,6 +59,7 @@
       "Bash(nix develop * --command lychee *)",
       "Bash(nix develop * --command node site/theorems.mts *)",
       "Bash(nix develop * --command node site/figures.mts)",
+      "Bash(nix develop * --command node site/social/render.mts)",
       "Bash(./check.sh *)",
       "Bash(git status *)",
       "Bash(git diff *)",

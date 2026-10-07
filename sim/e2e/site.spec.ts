@@ -1,6 +1,7 @@
 // The landing page and the not-found page of the assembled site: they load, work without
-// JavaScript, fit a 390 px screen, request nothing from another origin, have no axe violations,
-// and the landing page stays within its size budget. The simulator links back to the landing page.
+// JavaScript, fit a 390 px screen, request nothing from another origin and have no axe
+// violations. The landing page stays within its size budget and has its link-preview metadata,
+// and the simulator links back to it.
 import { existsSync } from "node:fs";
 import { gzipSync } from "node:zlib";
 import { AxeBuilder } from "@axe-core/playwright";
@@ -104,6 +105,26 @@ test("the landing page stays within its size budget", async ({ page }) => {
   expect(sizes.css).toBeLessThanOrEqual(8_000);
   expect(sizes.other).toBe(0);
   expect(sizes.html + sizes.css + sizes.font).toBeLessThanOrEqual(100_000);
+});
+
+test("the landing page describes itself for link previews", async ({ page, request, baseURL }) => {
+  const canonical = "https://julesjacobs.com/determinize/";
+  await load(page, "./");
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", canonical);
+  await expect(page.locator('meta[property="og:url"]')).toHaveAttribute("content", canonical);
+  await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute(
+    "content",
+    "summary_large_image",
+  );
+  await expect(page.locator('meta[name^="citation_"]')).toHaveCount(0);
+  const image = (await page.locator('meta[property="og:image"]').getAttribute("content")) ?? "";
+  expect(image.startsWith(canonical)).toBe(true);
+  const png = await (
+    await request.get(new URL(image.slice(canonical.length), baseURL).href)
+  ).body();
+  // The PNG header's IHDR chunk holds the width and the height at bytes 16 and 20.
+  expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([1200, 630]);
+  expect(png.length).toBeLessThanOrEqual(150_000);
 });
 
 test("the simulator links back to the landing page", async ({ page }) => {

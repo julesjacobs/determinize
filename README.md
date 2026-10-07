@@ -140,7 +140,8 @@ to the simulator's shell and has no `.envrc`. It builds the simulator, assembles
 `esbuild --servedir=_preview` in the shell and open `http://127.0.0.1:8000/determinize/`.
 `node site/figures.mts` draws the landing page's figures from runs of the simulator's runtime,
 and `node site/theorems.mts` quotes the theorems from `lean/Determinize/Theorems.lean`, which
-`check.sh site` compares with the page.
+`check.sh site` compares with the page. `node site/social/render.mts` renders the link-preview
+image `site/social.png` from `site/social/card.html`.
 
 The new paper starts at `tex/main.tex`, with one file per section in `tex/sections/`,
 formal figures in `tex/figures/`, and supporting material in `tex/appendix/`, following

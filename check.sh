@@ -79,7 +79,7 @@ for area in "${areas[@]}"; do
         out="$(cd sim && in_shell site playwright test --reporter=line 2>&1)"
         if [[ $? -eq 0 ]]; then report site "playwright test OK ($(grep -oE '[0-9]+ passed' <<<"$out" | tail -1))"
         else fail=1; report site "playwright test FAILED" "$(grep -v '^\[WebServer\]' <<<"$out" | tail_of)"; fi
-        out="$(in_shell site html-validate site/*.html 2>&1)"
+        out="$(in_shell site html-validate site 2>&1)"
         if [[ $? -eq 0 ]]; then report site "html-validate OK"
         else fail=1; report site "html-validate FAILED" "$(tail_of <<<"$out")"; fi
         out="$(in_shell site lychee --offline --no-progress --include-fragments --root-dir "$ROOT/_preview" \
