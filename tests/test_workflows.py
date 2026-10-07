@@ -295,7 +295,6 @@ def samples(glob):
 
 
 class TriggerTests(unittest.TestCase):
-    @unittest.expectedFailure
     def test_pages_deploys_for_the_inputs_of_what_it_publishes(self):
         called = re.findall(r"^\s+uses: \S*/\.github/workflows/(\S+)\.yml$",
                             (WORKFLOWS / "pages.yml").read_text(), re.M)

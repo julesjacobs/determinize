@@ -9,20 +9,23 @@ name: Pages
 on:
   push:
     branches: [main]
-    # Those of lean.yml and sim.yml.
+    # The union of the pull-request filters of lean.yml and sim.yml, which cover this file too;
+    # tests/test_workflows.py checks it.
     paths:
       - lean/**
+      - "!lean/**/*.md"
       - tests/**
+      - "!tests/**/*.md"
       - examples/**
-      - tools/**
-      - "*.sh"
+      - run.sh
+      - tools/storm*.py
       - sim/**
       - flake.nix
       - flake.lock
-      - flake-modules/**
-      - .github/workflows/lean.yml
-      - .github/workflows/sim.yml
-      - .github/workflows/pages.yml
+      - flake-modules/systems.nix
+      - flake-modules/devshells/lean.nix
+      - flake-modules/devshells/sim.nix
+      - .github/workflows/**
   workflow_dispatch:
 
 permissions:
