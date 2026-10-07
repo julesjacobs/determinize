@@ -1,0 +1,50 @@
+# Checks the site with check.sh site: Biome and TypeScript for site/'s scripts and CSS, the landing
+# page's quotes of lean/Determinize/Theorems.lean, and, on the simulator built and the site
+# assembled into _preview/ as pages.yml publishes it (without the documentation and the paper),
+# the Playwright tests in sim/e2e/ (loading, JavaScript disabled, 390 px, other origins, axe, size),
+# html-validate and lychee offline. On main, pages.yml runs this workflow before publishing.
+#
+# Every `run` step executes inside the flake's `site` dev shell: the sim shell with nixpkgs'
+# headless Chromium for Playwright, and lychee.
+name: Site
+
+on:
+  pull_request:
+    # The files that the checks, the simulator's build and the assembly read.
+    paths:
+      - site/**
+      - sim/**
+      - examples/**
+      - lean/Determinize/Theorems.lean
+      - flake.nix
+      - flake.lock
+      - flake-modules/systems.nix
+      - flake-modules/devshells/sim.nix
+      - flake-modules/devshells/site.nix
+      - .github/workflows/site.yml
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: site-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: nix develop .#site --command bash -euo pipefail {0}
+
+jobs:
+  check:
+    name: Check in a browser
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+      - name: Check the site
+        run: ./check.sh site

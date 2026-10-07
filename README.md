@@ -49,7 +49,7 @@ From the repository root:
 through. `test.sh` runs the full Lean test entry point, including the shared corpus
 and independent certificates. It accepts `--all` and `--statistical`.
 `check.sh --all` additionally checks theorem axioms, the simulator's formatting, lint,
-types, tests and build, and the paper build. Select individual areas with
+types, tests and build, the site in a browser, and the paper build. Select individual areas with
 `./check.sh lean tex`, or use `./check.sh --changed` for areas affected by uncommitted
 changes. The scripts use tools on `PATH` first; Nix is optional.
 
@@ -129,6 +129,18 @@ and `package-lock.json` because `sim/.npmrc` sets `package-lock-only`, and reloa
 shell. A `sim/node_modules` left by an earlier `npm ci` blocks the links: remove it once
 with `rm -rf sim/node_modules`. Without Nix, `npm ci --package-lock-only=false` installs
 the packages.
+
+The project page is `site/`: a landing page without JavaScript, `404.html`, and
+`site/assemble.sh`, which puts it together with the built simulator under `sim/`, the API
+documentation under `docs/` and the paper as `determinize.pdf`, as GitHub Pages serves them.
+`./check.sh site` runs in the `.#site` shell, which adds nixpkgs' headless Chromium and lychee
+to the simulator's shell and has no `.envrc`. It builds the simulator, assembles the site into
+`_preview/determinize`, and runs the Playwright tests in `sim/e2e/` (axe, JavaScript disabled,
+390 px, other origins, size), html-validate and lychee. To look at that preview, run
+`esbuild --servedir=_preview` in the shell and open `http://127.0.0.1:8000/determinize/`.
+`node site/figures.mts` draws the landing page's figures from runs of the simulator's runtime,
+and `node site/theorems.mts` quotes the theorems from `lean/Determinize/Theorems.lean`, which
+`check.sh site` compares with the page.
 
 The new paper starts at `tex/main.tex`, with one file per section in `tex/sections/`,
 formal figures in `tex/figures/`, and supporting material in `tex/appendix/`, following
