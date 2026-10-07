@@ -3,15 +3,15 @@
 #
 # GitHub Pages serves one site per repository and each deployment replaces all of it, so every
 # deployment publishes both parts, once sim.yml and lean.yml have passed on the same inputs. The
-# simulator is built every time. lean.yml is skipped when its inputs passed it before on main,
-# and the documentation, built while lean.yml runs, is restored when the same sources were
-# rendered before. A manual run redoes both.
+# simulator and the paper (tex.yml) are built every time. lean.yml is skipped when its inputs
+# passed it before on main, and the documentation, built while lean.yml runs, is restored when
+# the same sources were rendered before. A manual run redoes both.
 name: Pages
 
 on:
   push:
     branches: [main]
-    # The union of the pull-request filters of lean.yml and sim.yml, which cover this file too;
+    # The union of the pull-request filters of the workflows it runs, which cover this file too;
     # tests/test_workflows.py checks it.
     paths:
       - lean/**
@@ -22,11 +22,16 @@ on:
       - run.sh
       - tools/storm*.py
       - sim/**
+      - tex/**
+      - "!tex/archive/**"
+      - "!tex/**/*.md"
+      - results/**
       - flake.nix
       - flake.lock
       - flake-modules/systems.nix
       - flake-modules/devshells/lean.nix
       - flake-modules/devshells/sim.nix
+      - flake-modules/devshells/tex.nix
       - .github/workflows/**
   workflow_dispatch:
 
@@ -142,6 +147,10 @@ jobs:
   sim:
     name: Simulator
     uses: $/.github/workflows/sim.yml
+
+  paper:
+    name: Paper
+    uses: $/.github/workflows/tex.yml
 
   # Runs alongside the Lean tests. It starts from the newest build that lean.yml saved and lets
   # Lake bring it up to date, and it saves no build itself.
