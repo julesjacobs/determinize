@@ -286,12 +286,6 @@ PULL_REQUEST_STARTS = {
     "flake-modules/systems.nix": {"lean", "sim", "tex"},
 }
 
-# Changes for which a workflow's filter is still too wide or too narrow.
-KNOWN_WRONG = {
-    "flake-modules/devshells/all.nix", "flake-modules/devshells/lean.nix",
-    "flake-modules/devshells/sim.nix",
-}
-
 
 def samples(glob):
     """Paths that a pattern selects, with `**` standing for no directory and for two."""
@@ -334,9 +328,8 @@ def check_pull_request(path, expected):
 
 
 for change, workflows_started in PULL_REQUEST_STARTS.items():
-    method = check_pull_request(change, workflows_started)
     setattr(TriggerTests, "test_pull_request_changing_" + re.sub(r"\W", "_", change),
-            unittest.expectedFailure(method) if change in KNOWN_WRONG else method)
+            check_pull_request(change, workflows_started))
 
 def check_named_paths(name):
     def test(self):
