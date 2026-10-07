@@ -148,8 +148,9 @@ The project page is `site/`: a landing page without JavaScript, `404.html`, and
 documentation under `docs/` and the paper as `determinize.pdf`, as GitHub Pages serves them.
 `./check.sh site` runs in the `.#site` shell, which adds nixpkgs' headless Chromium and lychee
 to the simulator's shell and has no `.envrc`. It builds the simulator, assembles the site into
-`_preview/determinize`, and runs the Playwright tests in `sim/e2e/` (axe, JavaScript disabled,
-390 px, other origins, size), html-validate and lychee. To look at that preview, run
+`_preview/determinize`, and runs the Playwright tests in `sim/e2e/` (for the landing page axe,
+JavaScript disabled, 390 px, other origins and size; for the simulator every example, the worker
+and `file://`, long tasks, links and axe), html-validate and lychee. To look at that preview, run
 `esbuild --servedir=_preview` in the shell and open `http://127.0.0.1:8000/determinize/`.
 `node site/figures.mts` draws the landing page's figures from runs of the simulator's runtime,
 and `node site/theorems.mts` quotes the theorems from `lean/Determinize/Theorems.lean`, which
