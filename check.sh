@@ -84,7 +84,8 @@ for area in "${areas[@]}"; do
         out="$(in_shell site html-validate site 2>&1)"
         if [[ $? -eq 0 ]]; then report site "html-validate OK"
         else fail=1; report site "html-validate FAILED" "$(tail_of <<<"$out")"; fi
-        out="$(in_shell site lychee --offline --no-progress --include-fragments --root-dir "$ROOT/_preview" \
+        out="$(in_shell site lychee --offline --no-progress --include-verbatim --include-fragments \
+          --root-dir "$ROOT/_preview" \
           --exclude '^file://.*/_preview/determinize/docs(/|$)' _preview 2>&1)"
         if [[ $? -eq 0 ]]; then report site "lychee --offline OK (docs/ excluded: the preview has none)"
         else fail=1; report site "lychee --offline FAILED" "$(tail_of <<<"$out")"; fi

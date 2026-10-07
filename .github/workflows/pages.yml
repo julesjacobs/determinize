@@ -283,11 +283,11 @@ jobs:
             --paper _paper/main.pdf
       - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
       # Links to the canonical host are checked as files of the assembled site, and relative
-      # ones as they are; anchors included. Other hosts are not contacted.
+      # ones as they are; anchors and links in code included. Other hosts are not contacted.
       - name: Check the links of the landing page and the simulator
         shell: nix develop .#site --command bash -euo pipefail {0}
         run: |
-          lychee --offline --no-progress --include-fragments --root-dir "$PWD/_pages" \
+          lychee --offline --no-progress --include-verbatim --include-fragments --root-dir "$PWD/_pages" \
             --remap "^https://julesjacobs\.com/determinize/ file://$PWD/_pages/determinize/" \
             _pages/determinize/*.html _pages/determinize/sim/*.html
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
