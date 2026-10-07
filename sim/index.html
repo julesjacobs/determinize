@@ -56,12 +56,26 @@
                 <button id="many-coupling" type="button">Run 200</button>
               </div>
             </div>
+            <p class="g-trace">
+              <a href="https://julesjacobs.com/determinize/docs/Determinize/Spec/Traces/Semantics.html#Determinize.Spec.Traces.Trace" title="Lean's trace: the G draws of a run in order">G trace</a>
+              of run 0: <span id="g-trace"></span>
+            </p>
             <div id="coupling-trace" class="coupling-trace"></div>
             <section class="distribution-panel" aria-label="Empirical result distributions">
               <div class="distribution-heading">
                 <h2>Empirical result distributions</h2>
                 <span id="distribution-status" class="status">0 samples</span>
               </div>
+              <p class="estimates">
+                The share of runs that return a value estimates
+                <a href="https://julesjacobs.com/determinize/docs/Determinize/Spec/Expectation.html#Determinize.Spec.returnProbability">returnProbability</a>,
+                and the mean and the variance of the returned numbers estimate
+                <a href="https://julesjacobs.com/determinize/docs/Determinize/Spec/Expectation.html#Determinize.Spec.returnedExpectation">returnedExpectation</a>
+                and
+                <a href="https://julesjacobs.com/determinize/docs/Determinize/Spec/Expectation.html#Determinize.Spec.returnedVariance">returnedVariance</a>.
+                The simulator is an unverified visualization; the Lean CLI and its theorems are the
+                checked artefacts.
+              </p>
               <div id="distribution-view" class="distribution-view"></div>
             </section>
           </article>

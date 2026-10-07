@@ -1,12 +1,15 @@
-// The distributions of the numbers that the runs of the source and of the determinized program
-// returned so far: histogram, empirical CDF, mean, population variance and standard error, and
-// the variance ratio.
+// The runs of the source and of the determinized program so far: how many returned a value, were
+// rejected or failed, the command with which Lean's CLI reports the same, and the distributions of
+// the numbers they returned: histogram, empirical CDF, mean, population variance and standard
+// error, and the variance ratio.
 import { effect } from "@preact/signals-core";
 import type { Analysis } from "../core/compiler/analyze.ts";
+import { examples } from "../core/examples.ts";
 import { formatNumber } from "../core/format.ts";
-import type { Stats } from "../core/statistics.ts";
+import type { Stats, Summary } from "../core/statistics.ts";
 import { varianceRatio } from "../core/statistics.ts";
 import { counterexampleLabel, escapeHtml } from "./html.ts";
+import { leanLinks } from "./links.ts";
 import type { Samples, Store } from "./store.ts";
 
 export interface DistributionViewElements {
@@ -18,7 +21,7 @@ export interface DistributionViewElements {
 
 export function mountDistributionView(
   elements: DistributionViewElements,
-  store: Pick<Store, "samples" | "stats" | "analysis" | "trace" | "running">,
+  store: Pick<Store, "samples" | "stats" | "analysis" | "trace" | "running" | "exampleId">,
 ) {
   effect(() => {
     if (store.running.value) elements.panel.setAttribute("aria-busy", "true");
@@ -30,8 +33,33 @@ export function mountDistributionView(
       elements.status.textContent = "not numeric";
       return;
     }
-    renderDistributions(elements, store.samples.value, store.stats.value, store.analysis.value);
+    const samples = store.samples.value;
+    const example = examples.find((entry) => entry.id === store.exampleId.value);
+    const file = example?.source === samples.source ? `examples/${example.id}.det` : null;
+    renderDistributions(elements, samples, store.stats.value, store.analysis.value, file);
   });
+}
+
+/** The command with which Lean's CLI reports these runs' statistics, and the file it reads. */
+function command(samples: Samples, file: string | null) {
+  // Lean's seeds are UInt64s; run i is at the seed plus i, wrapping around.
+  const seed = BigInt.asUintN(64, BigInt(samples.seed));
+  const runs = samples.original.summary.runs;
+  const line = `./run.sh --seed ${seed} --samples ${runs} ${file ?? "program.det"}`;
+  return `<code>${escapeHtml(line)}</code>${file ? "" : ", with the program saved as program.det"}`;
+}
+
+/** What the runs of one program did, as Lean's CLI reports it. */
+function outcomes(title: string, summary: Summary) {
+  const returned = summary.runs - summary.rejected - summary.failed;
+  const failure = summary.firstFailure
+    ? ` The first failure: ${escapeHtml(summary.firstFailure)}.`
+    : "";
+  const first =
+    summary.count === 0 && summary.firstValue !== null
+      ? ` The first value: <code>${escapeHtml(summary.firstValue)}</code>.`
+      : "";
+  return `<p><strong>${title}</strong>: <a href="${leanLinks.returnProbability}">${returned} of ${summary.runs} runs returned a value</a>, ${summary.rejected} were rejected by an observation, and ${summary.failed} failed.${failure}${first}</p>`;
 }
 
 function renderDistributions(
@@ -39,12 +67,24 @@ function renderDistributions(
   samples: Samples,
   stats: { original: Stats; determinized: Stats },
   analysis: Analysis,
+  file: string | null,
 ) {
   const runs = samples.original.summary.runs;
   elements.status.textContent = `${runs} run${runs === 1 ? "" : "s"}`;
-  const all = [samples.original.values, samples.determinized.values];
+  const counterexample = !analysis.ok && analysis.counterexample;
+  const report = `
+    <div class="run-outcomes">
+      ${outcomes("Original", samples.original.summary)}
+      ${outcomes("Determinized", samples.determinized.summary)}
+      <p>${counterexample ? "Lean rejects this program, so its CLI reports no runs." : `Lean's CLI reports these runs with ${command(samples, file)}.`}</p>
+    </div>
+  `;
+  const numbers = (values: readonly number[]) => values.filter((x) => !Number.isNaN(x));
+  const all = [numbers(samples.original.values), numbers(samples.determinized.values)];
   if (all.every((values) => values.length === 0)) {
-    elements.view.innerHTML = `<p class="distribution-empty">Numeric final results will appear here.</p>`;
+    const empty =
+      runs === 0 ? "Numeric final results will appear here." : "No run returned a number.";
+    elements.view.innerHTML = `${report}<p class="distribution-empty">${empty}</p>`;
     return;
   }
   let min = Infinity;
@@ -59,12 +99,12 @@ function renderDistributions(
   const domain = [min - pad, max + pad];
   const originalStats = stats.original;
   const determinizedStats = stats.determinized;
-  const counterexample = !analysis.ok && analysis.counterexample;
   elements.view.innerHTML = `
+    ${report}
     ${counterexample ? `<p class="counterexample-label">${counterexampleLabel}</p>` : ""}
-    ${distributionCard("Original", samples.original.values, originalStats, domain, "original")}
+    ${distributionCard("Original", all[0], originalStats, domain, "original")}
     ${comparisonCard(originalStats, determinizedStats)}
-    ${distributionCard("Determinized", samples.determinized.values, determinizedStats, domain, "determinized")}
+    ${distributionCard("Determinized", all[1], determinizedStats, domain, "determinized")}
   `;
 }
 
@@ -148,10 +188,10 @@ function distributionCard(
     <article class="dist-card ${tone}">
       <div class="dist-title">
         <span>${title}</span>
-        <span class="metric-pair">mean ${metricValue(stats.mean)}</span>
+        <span class="metric-pair"><a href="${leanLinks.returnedExpectation}">mean</a> ${metricValue(stats.mean)}</span>
       </div>
       <div class="dist-metrics">
-        ${metricBlock("Variance", stats.variance, "population variance, as Lean's CLI computes it")}
+        ${metricBlock(`<a href="${leanLinks.returnedVariance}">Variance</a>`, stats.variance, "population variance, as Lean's CLI computes it")}
         ${metricBlock("Std. error", stats.standardError, "mean uncertainty")}
       </div>
       <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${title} empirical PDF and CDF">

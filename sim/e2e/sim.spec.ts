@@ -213,6 +213,32 @@ test("Lean's output shows the checked type, the sample sites and both programs",
   await expect(page.locator("#lean-output")).toBeHidden();
 });
 
+test("the runs' outcomes, the command that reports them and run 0's G trace show", async ({
+  page,
+}) => {
+  await page.goto(simulator);
+  const outcomes = page.locator(".run-outcomes");
+  await expect(outcomes).toContainText("--seed 2026 --samples 1 examples/paper/noisy-product.det");
+  await expect(page.locator("#g-trace")).toHaveText(
+    /^\[\(uniform, [-0-9.e]+\)\], in both programs$/,
+  );
+  await page.getByRole("button", { name: "Run 200" }).click();
+  await settled(page);
+  await expect(outcomes).toContainText(
+    "Original: 201 of 201 runs returned a value, 0 were rejected by an observation, and 0 failed.",
+  );
+  await expect(outcomes).toContainText(
+    "./run.sh --seed 2026 --samples 201 examples/paper/noisy-product.det",
+  );
+
+  await page.goto(linkTo("1/0", 3));
+  await expect(outcomes).toContainText(
+    "Original: 0 of 1 runs returned a value, 0 were rejected by an observation, and 1 failed. " +
+      "The first failure: division by zero.",
+  );
+  await expect(outcomes).toContainText("with the program saved as program.det");
+});
+
 /** The simulator's address for `source` at `seed`, with no example chosen. */
 function linkTo(source: string, seed: number) {
   const json = JSON.stringify({ source, seed, example: "" });

@@ -109,6 +109,17 @@ export function prepare(program: Program): Node {
   return go(program);
 }
 
+/** The sample sites of a prepared program, in the order of Lean's `Expr.sites`. */
+export function siteNodes(node: Node, out: (Node & { t: "site" })[] = []) {
+  if (node.t === "site") out.push(node);
+  const children = node.t === "site" ? [...node.args] : [];
+  if ("a" in node) children.push(node.a);
+  if ("b" in node) children.push(node.b);
+  if ("c" in node) children.push(node.c);
+  for (const child of children) siteNodes(child, out);
+  return out;
+}
+
 class Failure {
   declare message: string;
   constructor(message: string) {

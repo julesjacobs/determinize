@@ -6,19 +6,21 @@
 import type { Analysis } from "./compiler/analyze.ts";
 import { analyze } from "./compiler/analyze.ts";
 import type { Request, Response } from "./protocol.ts";
-import type { Node, Outcome } from "./runtime/eval.ts";
-import { display, prepare, run } from "./runtime/eval.ts";
-import { uint64 } from "./runtime/sampling.ts";
-import type { RunOutcome } from "./statistics.ts";
+import type { GDraw, Node, Outcome } from "./runtime/eval.ts";
+import { display, prepare, run, siteNodes } from "./runtime/eval.ts";
+import { discreteOps, uint64 } from "./runtime/sampling.ts";
+import type { RunOutcome, SiteDraws } from "./statistics.ts";
 import { runsOf } from "./statistics.ts";
 
 /** How long a slice runs: about how often outcomes arrive, and how late a cancel takes effect. */
 export const sliceMs = 50;
 
-/** The programs that a run evaluates, prepared for the evaluator. */
+/** The programs that a run evaluates, prepared for the evaluator, and the indices of their
+ * continuous G sites, which determinization keeps. */
 export interface Runner {
   source: Node;
   determinized: Node;
+  gSites: number[];
 }
 
 /** The programs of an analysis: the checked program and its determinization, or a program's
@@ -26,7 +28,11 @@ export interface Runner {
 export function runnerOf(analysis: Analysis): Runner | null {
   const programs = analysis.ok ? analysis.program : analysis.counterexample?.program;
   if (!programs) return null;
-  return { source: prepare(programs.source), determinized: prepare(programs.determinized) };
+  const source = prepare(programs.source);
+  const gSites = siteNodes(source)
+    .filter((site) => site.action === "G" && !discreteOps.has(site.op))
+    .map((site) => site.index);
+  return { source, determinized: prepare(programs.determinized), gSites };
 }
 
 /** The seed of run `index` from `seed`: their sum as a UInt64, as Lean's CLI seeds its runs. */
@@ -45,13 +51,34 @@ function reported(outcome: Outcome): RunOutcome {
   };
 }
 
-/** Run `index` from `seed` of both programs. */
+/** Run `index` from `seed` of both programs, with their G traces: the G draws in order. */
 export function runIndex(runner: Runner, seed: number, index: number) {
   const at = runSeed(seed, index);
+  const traces = { source: [] as GDraw[], determinized: [] as GDraw[] };
   return {
-    source: reported(run(runner.source, at)),
-    determinized: reported(run(runner.determinized, at)),
+    source: reported(run(runner.source, at, { onGDraw: (draw) => traces.source.push(draw) })),
+    determinized: reported(
+      run(runner.determinized, at, { onGDraw: (draw) => traces.determinized.push(draw) }),
+    ),
+    traces,
   };
+}
+
+/** The draws of runs with G traces `traces` at each of `sites`. */
+export function siteDraws(sites: number[], traces: GDraw[][]): SiteDraws[] {
+  const draws = sites.map((site) => ({ site, values: new Float64Array(traces.length) }));
+  const bySite = new Map(draws.map((entry) => [entry.site, entry]));
+  for (const [run, trace] of traces.entries()) {
+    const counts = new Map<number, number>();
+    for (const { site, value } of trace) {
+      const entry = bySite.get(site);
+      if (!entry) continue;
+      counts.set(site, (counts.get(site) ?? 0) + 1);
+      entry.values[run] = value;
+    }
+    for (const entry of draws) if (counts.get(entry.site) !== 1) entry.values[run] = NaN;
+  }
+  return draws;
 }
 
 /** What the sampler needs from the thread it runs on. */
@@ -88,20 +115,27 @@ export function createSampler(host: SamplerHost) {
     const deadline = host.now() + sliceMs;
     const source: RunOutcome[] = [];
     const determinized: RunOutcome[] = [];
+    const traces = { source: [] as GDraw[][], determinized: [] as GDraw[][] };
     while (runner && current.next < current.end && (source.length === 0 || host.now() < deadline)) {
       const outcomes = runIndex(runner, current.seed, current.next);
       current.next += 1;
       source.push(outcomes.source);
       determinized.push(outcomes.determinized);
+      traces.source.push(outcomes.traces.source);
+      traces.determinized.push(outcomes.traces.determinized);
     }
-    if (source.length > 0) {
+    if (runner && source.length > 0) {
       const batch = {
         type: "batch" as const,
         generation: current.generation,
-        source: runsOf(source),
-        determinized: runsOf(determinized),
+        source: runsOf(source, siteDraws(runner.gSites, traces.source)),
+        determinized: runsOf(determinized, siteDraws(runner.gSites, traces.determinized)),
       };
-      host.post(batch, [batch.source.values.buffer, batch.determinized.values.buffer]);
+      const buffers = [batch.source, batch.determinized].flatMap((runs) => [
+        runs.values.buffer,
+        ...runs.draws.map((draws) => draws.values.buffer),
+      ]);
+      host.post(batch, buffers);
     }
     if (!runner || current.next === current.end) {
       job = null;

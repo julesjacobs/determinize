@@ -28,13 +28,23 @@ export const noRuns: Summary = {
   m2: 0,
 };
 
-/** Runs in run order: the number each returned, or NaN if it returned none. */
+/** The values that runs drew at a G site, in run order: NaN where a run didn't draw there
+ * exactly once. */
+export interface SiteDraws {
+  /** The site's index in Lean's `Expr.sites`. */
+  site: number;
+  values: Float64Array<ArrayBuffer>;
+}
+
+/** Runs in run order: the number each returned, or NaN if it returned none, and the values of
+ * their draws at the program's continuous G sites. */
 export interface Runs {
   values: Float64Array<ArrayBuffer>;
   rejected: number;
   failed: number;
   firstFailure: string | null;
   firstValue: string | null;
+  draws: SiteDraws[];
 }
 
 /** `summary` followed by `runs`. */
@@ -67,13 +77,14 @@ export type RunOutcome =
   | { kind: "failed"; message: string };
 
 /** Outcomes of runs, in run order, as `Runs`. */
-export function runsOf(outcomes: RunOutcome[]): Runs {
+export function runsOf(outcomes: RunOutcome[], draws: SiteDraws[] = []): Runs {
   const runs: Runs = {
     values: new Float64Array(outcomes.length),
     rejected: 0,
     failed: 0,
     firstFailure: null,
     firstValue: null,
+    draws,
   };
   for (const [i, outcome] of outcomes.entries()) {
     runs.values[i] = outcome.kind === "returned" && outcome.number !== null ? outcome.number : NaN;

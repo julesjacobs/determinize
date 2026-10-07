@@ -55,6 +55,7 @@ function start(decoded: Decoded): Store {
     {
       table: document.querySelector("#coupling-trace") as HTMLElement,
       status: document.querySelector("#coupling-status") as HTMLElement,
+      gTrace: document.querySelector("#g-trace") as HTMLElement,
     },
     store,
   );
