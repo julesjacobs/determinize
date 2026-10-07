@@ -307,6 +307,11 @@ class TriggerTests(unittest.TestCase):
                 self.assertEqual(starts("pages", "push", path),
                                  any(starts(name, "pull_request", path) for name in called))
 
+    def test_pages_skips_the_lean_tests_by_the_files_that_start_them(self):
+        hashed = re.search(r"lean=\$\{\{ hashFiles\((.*?)\) \}\}", (WORKFLOWS / "pages.yml").read_text())
+        self.assertIsNotNone(hashed)
+        self.assertEqual(re.findall(r"'([^']*)'", hashed[1]), triggers("lean")["pull_request"]["paths"])
+
     def test_every_workflow_has_expectations(self):
         for path in sorted(WORKFLOWS.iterdir()):
             with self.subTest(path=path.name):
