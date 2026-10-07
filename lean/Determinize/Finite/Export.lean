@@ -175,7 +175,33 @@ def write (outputPath : System.FilePath) (source : Spec.Paper.Core) (subject : S
     IO.FS.writeFile (outputPath.toString ++ suffix) content
 
 
-/-- A standalone theorem about the selected program's mass and output moments. -/
+/-- The closing theorems of a result certificate, whose statements use only `Spec` definitions,
+`checkedSource`, `checkedSubject` and rational literals. `printedStatistics` gives the return mass
+and the first and second moments of the selected program's output law; its proof decides that
+the certificate's `statistics` equal the literals. When the return mass is positive,
+`printedConditionalMoments` follows from it and gives the conditional mean and variance. -/
+def printedText (statistics : OutputStatistics) : String :=
+  let literal := s!"⟨{rational statistics.returnMass}, {rational statistics.firstMoment}, \
+      {rational statistics.secondMoment}⟩"
+  let program := "(checkedSubject.program checkedSource)"
+  let conditional := match statistics.conditionalMean, statistics.conditionalVariance with
+    | some mean, some variance =>
+      "\ntheorem printedConditionalMoments :\n" ++
+      s!"    Determinize.Spec.returnedExpectation {program} = (({rational mean} : Rat) : ℝ) ∧\n" ++
+      s!"      Determinize.Spec.returnedVariance {program} = \
+          (({rational variance} : Rat) : ℝ) :=\n" ++
+      "  Determinize.Proof.FiniteModel.statistics_returned_moments _ _ printedStatistics\n" ++
+      "    (by decide +kernel) (by decide +kernel)\n" ++
+      "\n#print axioms printedConditionalMoments\n"
+    | _, _ => ""
+  "\ntheorem printedStatistics :\n" ++
+  s!"    ({literal} : Determinize.Spec.FiniteModel.OutputStatistics).Matches\n" ++
+  s!"      (Determinize.Spec.Paper.bigStepMeasure {program}) :=\n" ++
+  s!"  (by decide +kernel : statistics = {literal}) ▸ outputStatistics\n" ++
+  "\n#print axioms printedStatistics\n" ++ conditional
+
+/-- A standalone certificate for the selected program's output moments and the model's
+termination probabilities, ending with `printedText`. -/
 def resultCertificateText (source : Spec.Paper.Core) (subject : Subject) (candidate : Candidate)
     (model : Model) (termination : Proof.FiniteModel.TerminationCertificate model) : String :=
   let certificate := termination.output
@@ -233,7 +259,8 @@ def resultCertificateText (source : Spec.Paper.Core) (subject : Subject) (candid
   "  Determinize.Checking.checked_termination model termination terminationAccepted\n" ++
   "\n#print axioms terminationProbabilities\n" ++
   "\n#print axioms resultAccepted\n#print axioms expectedReward\n" ++
-  "#print axioms outputStatistics\n#print axioms conditionalVariance\n"
+  "#print axioms outputStatistics\n#print axioms conditionalVariance\n" ++
+  printedText (certificate.statistics model)
 
 def writeResult (outputPath : System.FilePath) (source : Spec.Paper.Core) (subject : Subject)
     (candidate : Candidate) (valid : candidate.ReplayValid source subject)
