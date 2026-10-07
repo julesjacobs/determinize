@@ -1,8 +1,10 @@
 import type { Expr } from "./compiler/ast.ts";
+import { prettyExpr } from "./compiler/pretty.ts";
 import { affineConst, affineToNumber, evalAffine } from "./runtime/affine.ts";
 import { meanDistribution } from "./runtime/distributions.ts";
 import type { Binding, CoupledTrace, Frame } from "./runtime/semantics.ts";
-import { runCoupledTrace } from "./runtime/semantics.ts";
+import { isValue, runCoupledTrace } from "./runtime/semantics.ts";
+import type { Runs } from "./statistics.ts";
 
 /** The step table's limits: symbolic steps, and steps of either program per symbolic step. */
 export const maxSymbolicSteps = 1000;
@@ -65,23 +67,52 @@ export function sigmaMeans(sigma: Binding[]): SigmaMean[] {
   });
 }
 
-/** The results of a run's source and determinized program. */
-export interface Sample {
-  original: number;
-  determinized: number;
+/** How a run of one program ended: it returned a value, the number it returned if any, or it
+ * was rejected by an observation, or it failed. */
+export type RunOutcome =
+  | { kind: "returned"; number: number | null; display: string }
+  | { kind: "rejected" }
+  | { kind: "failed"; message: string };
+
+function outcomeOf(expr: Expr | undefined): RunOutcome {
+  if (!expr || !isValue(expr)) return { kind: "failed", message: "step limit reached" };
+  if (expr.kind === "Reject") return { kind: "rejected" };
+  if (expr.kind === "DomainError") return { kind: "failed", message: expr.message };
+  return {
+    kind: "returned",
+    number: expr.kind === "Const" ? expr.value : null,
+    display: prettyExpr(expr),
+  };
 }
 
-function numericValue(expr: Expr | undefined) {
-  return expr?.kind === "Const" ? expr.value : undefined;
-}
-
-/** The results that a run adds to the distributions, if both are finite numbers. */
-export function sampleOf(trace: CoupledTrace): Sample | null {
+/** How the run of the source and of the determinized program ended. */
+export function outcomesOf(trace: CoupledTrace): { source: RunOutcome; determinized: RunOutcome } {
   const finalFrame = trace.frames.at(-1);
-  const original = numericValue(finalFrame?.original) ?? numericValue(trace.finalOriginal);
-  const determinized =
-    numericValue(finalFrame?.determinized) ?? numericValue(trace.finalDeterminized);
-  if (original === undefined || determinized === undefined) return null;
-  if (!Number.isFinite(original) || !Number.isFinite(determinized)) return null;
-  return { original, determinized };
+  const final = (expr: Expr | undefined, fallback: Expr | undefined) =>
+    expr && isValue(expr) ? expr : fallback;
+  return {
+    source: outcomeOf(final(finalFrame?.original, trace.finalOriginal)),
+    determinized: outcomeOf(final(finalFrame?.determinized, trace.finalDeterminized)),
+  };
+}
+
+/** Outcomes of runs, in run order, as `Runs`. */
+export function runsOf(outcomes: RunOutcome[]): Runs {
+  const runs: Runs = {
+    values: new Float64Array(outcomes.length),
+    rejected: 0,
+    failed: 0,
+    firstFailure: null,
+    firstValue: null,
+  };
+  for (const [i, outcome] of outcomes.entries()) {
+    runs.values[i] = outcome.kind === "returned" && outcome.number !== null ? outcome.number : NaN;
+    if (outcome.kind === "rejected") runs.rejected += 1;
+    if (outcome.kind === "failed") {
+      runs.failed += 1;
+      runs.firstFailure ??= outcome.message;
+    }
+    if (outcome.kind === "returned") runs.firstValue ??= outcome.display;
+  }
+  return runs;
 }

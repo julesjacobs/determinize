@@ -18,7 +18,7 @@ export function createSampling(receive: (response: Response) => void): Sampling 
 
   function track(response: Response) {
     if (active?.request.generation === response.generation) {
-      if (response.type === "batch") active.runs += response.runs;
+      if (response.type === "batch") active.runs += response.source.values.length;
       else active = null;
     }
     receive(response);

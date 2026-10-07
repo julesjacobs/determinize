@@ -71,7 +71,7 @@ for (const [where, url, worker] of [
     await expect(status(page)).toHaveText("seed 2026 - checked");
     await page.getByRole("button", { name: "Run 200" }).click();
     await settled(page);
-    await expect(samples(page)).toHaveText("201 samples");
+    await expect(samples(page)).toHaveText("201 runs");
     expect(workers.map((started) => new URL(started).pathname.split("/").at(-1))).toEqual(
       worker ? ["worker.js"] : [],
     );
@@ -103,13 +103,13 @@ test("Run 200 and a 5000-run batch leave no long task over 200 ms", async ({ pag
   await watchLongTasks(page);
   await page.getByRole("button", { name: "Run 200" }).click();
   await settled(page);
-  await expect(samples(page)).toHaveText("201 samples");
+  await expect(samples(page)).toHaveText("201 runs");
 
   await page.getByLabel("Example").selectOption({ label: "Noisy product" });
   await setRunCount(page, 5000);
   await page.getByRole("button", { name: "Run 5000" }).click();
   await settled(page);
-  await expect(samples(page)).toHaveText("5001 samples");
+  await expect(samples(page)).toHaveText("5001 runs");
   const longTasks = await page.evaluate(() => window.longTasks);
   test.info().annotations.push({ type: "long tasks (ms)", description: JSON.stringify(longTasks) });
   expect(Math.max(0, ...longTasks)).toBeLessThanOrEqual(200);
@@ -142,7 +142,7 @@ test("a second Run during a batch adds its runs as well", async ({ page }) => {
   });
   expect(runningAtSecondClick).toBe(true);
   await settled(page, 50_000);
-  await expect(samples(page)).toHaveText("2001 samples");
+  await expect(samples(page)).toHaveText("2001 runs");
 });
 
 test("editing during a run discards its stale batches", async ({ page }) => {
@@ -150,15 +150,15 @@ test("editing during a run discards its stale batches", async ({ page }) => {
   await page.getByLabel("Example").selectOption({ label: "Dungeon" });
   await setRunCount(page, 5000);
   await page.getByRole("button", { name: "Run 5000" }).click();
-  await expect(samples(page)).not.toHaveText("1 sample");
+  await expect(samples(page)).not.toHaveText("1 run");
   await page.locator(".cm-content").click();
   await page.keyboard.press("Control+End");
   await page.keyboard.type(" ");
   await settled(page);
-  // The edited program's run in the step table is its first sample, and no other arrives.
-  await expect(samples(page)).toHaveText("1 sample");
+  // The edited program's run in the step table is its first run, and no other arrives.
+  await expect(samples(page)).toHaveText("1 run");
   await page.waitForTimeout(1000);
-  await expect(samples(page)).toHaveText("1 sample");
+  await expect(samples(page)).toHaveText("1 run");
 });
 
 test("a link restores the program, the seed and the example", async ({ page, context }) => {

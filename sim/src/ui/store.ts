@@ -6,9 +6,9 @@ import type { Analysis } from "../core/compiler/analyze.ts";
 import { analyze } from "../core/compiler/analyze.ts";
 import type { Request, Response } from "../core/protocol.ts";
 import type { CoupledTrace } from "../core/runtime/semantics.ts";
-import type { Stats } from "../core/statistics.ts";
-import { sampleStats } from "../core/statistics.ts";
-import { runCoupling, sampleOf } from "../core/trace.ts";
+import type { Runs, Stats, Summary } from "../core/statistics.ts";
+import { addRuns, noRuns, statsOf } from "../core/statistics.ts";
+import { outcomesOf, runCoupling, runsOf } from "../core/trace.ts";
 
 /** A range of the source. */
 export interface Span {
@@ -16,12 +16,18 @@ export interface Span {
   to: number;
 }
 
-/** The results of runs of one program. */
+/** The runs of one program: what Lean's CLI reports about them, and the numbers they returned. */
+export interface ProgramRuns {
+  summary: Summary;
+  values: number[];
+}
+
+/** The runs of a program and of its determinization. */
 export interface Samples {
   source: string;
-  original: number[];
-  determinized: number[];
-  /** The run that added the last sample, as `source:seed`. */
+  original: ProgramRuns;
+  determinized: ProgramRuns;
+  /** The last run that was added, as `source:seed`. */
   lastKey: string;
 }
 
@@ -79,8 +85,16 @@ export function analyzeSource(source: string): Analysis {
   return lastAnalysis.analysis;
 }
 
+const noProgramRuns: ProgramRuns = { summary: noRuns, values: [] };
+
 function noSamples(source: string): Samples {
-  return { source, original: [], determinized: [], lastKey: "" };
+  return { source, original: noProgramRuns, determinized: noProgramRuns, lastKey: "" };
+}
+
+function addTo(runs: ProgramRuns, more: Runs): ProgramRuns {
+  const values = runs.values.slice();
+  for (const x of more.values) if (!Number.isNaN(x)) values.push(x);
+  return { summary: addRuns(runs.summary, more), values };
 }
 
 function errorMessage(error: unknown) {
@@ -131,8 +145,8 @@ export function createStore(
     }
   });
   const stats = computed(() => ({
-    original: sampleStats(samples.value.original),
-    determinized: sampleStats(samples.value.determinized),
+    original: statsOf(samples.value.original.summary),
+    determinized: statsOf(samples.value.determinized.summary),
   }));
 
   /** The samples so far if they are of `program`, otherwise none. */
@@ -141,19 +155,19 @@ export function createStore(
     return current.source === program ? current : noSamples(program);
   }
 
-  // The step table's run adds its sample, once for each source and seed.
+  // The step table's run adds its outcomes, once for each source and seed.
   effect(() => {
     const state = trace.value;
     const program = checkedSource.value;
     untracked(() => {
       const base = samplesOf(program);
       const key = state.kind === "run" ? `${program}:${state.trace.seed}` : "";
-      const sample = state.kind === "run" ? sampleOf(state.trace) : null;
-      if (sample && key !== base.lastKey) {
+      if (state.kind === "run" && key !== base.lastKey) {
+        const outcomes = outcomesOf(state.trace);
         samples.value = {
           source: program,
-          original: [...base.original, sample.original],
-          determinized: [...base.determinized, sample.determinized],
+          original: addTo(base.original, runsOf([outcomes.source])),
+          determinized: addTo(base.determinized, runsOf([outcomes.determinized])),
           lastKey: key,
         };
       } else if (base !== samples.value) {
@@ -218,12 +232,11 @@ export function createStore(
     if (current?.generation !== response.generation) return;
     const base = samplesOf(current.source);
     if (response.type === "batch") {
-      reported += response.runs;
-      if (response.original.length === 0) return;
+      reported += response.source.values.length;
       samples.value = {
         source: current.source,
-        original: [...base.original, ...response.original],
-        determinized: [...base.determinized, ...response.determinized],
+        original: addTo(base.original, response.source),
+        determinized: addTo(base.determinized, response.determinized),
         lastKey: base.lastKey,
       };
       return;
@@ -231,7 +244,7 @@ export function createStore(
     running.value = null;
     const last = response.last;
     if (!last) return;
-    if (sampleOf(last)) samples.value = { ...base, lastKey: `${current.source}:${last.seed}` };
+    samples.value = { ...base, lastKey: `${current.source}:${last.seed}` };
     knownRun = { source: current.source, trace: last };
     seed.value = last.seed;
   });
