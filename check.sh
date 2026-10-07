@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Repository build, test, and theorem-axiom checks.
 #
-#   check.sh [--quiet] AREA...      AREA in: sim bundle tex lean det
+#   check.sh [--quiet] AREA...      AREA in: sim bundle site tex lean det
 #   check.sh --changed              pick areas from `git status` (what the Stop hook does)
-#   check.sh --all                  builds, full corpus/certificates, simulator, bundle and paper
+#   check.sh --all                  builds, full corpus/certificates, simulator, bundle, site and paper
 #
 # Exit 0 = all selected checks passed, 1 = at least one failed. A human-readable
 # summary goes to stdout; the last ~40 lines of any failing tool go there too.
@@ -18,17 +18,18 @@ quiet=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --quiet) quiet=1 ;;
-    --all) areas+=(lean det sim bundle tex) ;;
+    --all) areas+=(lean det sim bundle site tex) ;;
     --changed)
       changed="$(git status --porcelain --untracked-files=all | cut -c4-)"
-      grep -qE '^(check\.sh|tools/dev-shell\.sh)$' <<<"$changed" && areas+=(lean det sim bundle tex)
+      grep -qE '^(check\.sh|tools/dev-shell\.sh)$' <<<"$changed" && areas+=(lean det sim bundle site tex)
       grep -qE '^sim/(src|test)/|^sim/build\.|^sim/(package(-lock)?|biome|tsconfig(\.node)?)\.json|^(tests|examples)/' <<<"$changed" && areas+=(sim)
       grep -qE '^sim/(src|test)/|^sim/build\.|^sim/(package(-lock)?|tsconfig)\.json|^sim/index\.html|^examples/' <<<"$changed" && areas+=(bundle)
+      grep -qE '^site/|^sim/|^examples/|^flake-modules/devshells/(sim|site)\.nix$|^lean/Determinize/Theorems\.lean$' <<<"$changed" && areas+=(site)
       grep -qE '^tex/.*\.(tex|bib|cls|bst|sty)$' <<<"$changed" && areas+=(tex)
       grep -qE '^lean/.*\.lean$|^lean/(lakefile\.toml|lean-toolchain|lake-manifest\.json)$' <<<"$changed" && areas+=(lean)
       grep -qE '^tests/|^examples/|^tools/|^(test|run)\.sh$|^lean/test\.sh$' <<<"$changed" && areas+=(det)
       ;;
-    sim|bundle|tex|lean|det) areas+=("$1") ;;
+    sim|bundle|site|tex|lean|det) areas+=("$1") ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
   shift
@@ -63,6 +64,29 @@ for area in "${areas[@]}"; do
       out="$(cd sim && in_shell sim npm run build 2>&1)"
       if [[ $? -eq 0 ]]; then report bundle "npm run build OK"
       else fail=1; report bundle "npm run build FAILED" "$(tail_of <<<"$out")"; fi
+      ;;
+    site)
+      # The site's scripts and CSS, its quotes of the theorems, then the site as pages.yml
+      # assembles it, without the documentation and the paper, in a browser and for its links.
+      out="$(cd site && in_shell site biome ci --colors=off . 2>&1 && in_shell site tsc -p tsconfig.json 2>&1 \
+        && in_shell site node theorems.mts --check 2>&1)"
+      if [[ $? -eq 0 ]]; then report site "biome ci, tsc and the theorem quotes OK"
+      else fail=1; report site "biome ci, tsc or the theorem quotes FAILED" "$(tail_of <<<"$out")"; fi
+      out="$(cd sim && in_shell site npm run build 2>&1 && cd .. && rm -rf _preview \
+        && site/assemble.sh --out _preview/determinize 2>&1)"
+      if [[ $? -ne 0 ]]; then fail=1; report site "assembling _preview FAILED" "$(tail_of <<<"$out")"
+      else
+        out="$(cd sim && in_shell site playwright test --reporter=line 2>&1)"
+        if [[ $? -eq 0 ]]; then report site "playwright test OK ($(grep -oE '[0-9]+ passed' <<<"$out" | tail -1))"
+        else fail=1; report site "playwright test FAILED" "$(grep -v '^\[WebServer\]' <<<"$out" | tail_of)"; fi
+        out="$(in_shell site html-validate site/*.html 2>&1)"
+        if [[ $? -eq 0 ]]; then report site "html-validate OK"
+        else fail=1; report site "html-validate FAILED" "$(tail_of <<<"$out")"; fi
+        out="$(in_shell site lychee --offline --no-progress --include-fragments --root-dir "$ROOT/_preview" \
+          --exclude '^file://.*/_preview/determinize/docs(/|$)' _preview 2>&1)"
+        if [[ $? -eq 0 ]]; then report site "lychee --offline OK (docs/ excluded: the preview has none)"
+        else fail=1; report site "lychee --offline FAILED" "$(tail_of <<<"$out")"; fi
+      fi
       ;;
     tex)
       out="$(cd tex && in_shell tex latexmk -pdf -interaction=nonstopmode -file-line-error -silent main.tex 2>&1)"

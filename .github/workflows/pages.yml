@@ -3,10 +3,11 @@
 # determinize.pdf. site/assemble.sh puts them together.
 #
 # GitHub Pages serves one site per repository and each deployment replaces all of it, so every
-# deployment publishes every part, once sim.yml, tex.yml and lean.yml have passed on the same
-# inputs. The landing page, the simulator and the paper are built every time. lean.yml is skipped
-# when its inputs passed it before on main, and the documentation, built while lean.yml runs, is
-# restored when the same sources were rendered before. A manual run redoes both.
+# deployment publishes every part, once sim.yml, tex.yml, site.yml and lean.yml have passed on the
+# same inputs and the links of the landing page and the simulator resolve in the assembled site.
+# The landing page, the simulator and the paper are built every time. lean.yml is skipped when its
+# inputs passed it before on main, and the documentation, built while lean.yml runs, is restored
+# when the same sources were rendered before. A manual run redoes both.
 name: Pages
 
 on:
@@ -23,6 +24,7 @@ on:
       - run.sh
       - tools/storm*.py
       - sim/**
+      - site/**
       - tex/**
       - "!tex/archive/**"
       - "!tex/**/*.md"
@@ -32,6 +34,7 @@ on:
       - flake-modules/systems.nix
       - flake-modules/devshells/lean.nix
       - flake-modules/devshells/sim.nix
+      - flake-modules/devshells/site.nix
       - flake-modules/devshells/tex.nix
       - .github/workflows/**
   workflow_dispatch:
@@ -153,6 +156,10 @@ jobs:
     name: Paper
     uses: $/.github/workflows/tex.yml
 
+  site:
+    name: Site
+    uses: $/.github/workflows/site.yml
+
   # Runs alongside the Lean tests. It starts from the newest build that lean.yml saved and lets
   # Lake bring it up to date, and it saves no build itself.
   docs:
@@ -244,7 +251,7 @@ jobs:
   # Runs when no job before it failed; lean and docs are skipped when their results exist.
   build:
     name: Build the site
-    needs: [changes, lean, sim, paper, docs]
+    needs: [changes, lean, sim, paper, site, docs]
     if: ${{ !cancelled() && !failure() && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -269,11 +276,23 @@ jobs:
         with:
           name: paper
           path: _paper
+      # Under _pages/determinize/, as the site is served, so that the links from its root resolve.
       - name: Assemble the site
-        run: site/assemble.sh --out _pages --sim _simulator --docs _site/docs --paper _paper/main.pdf
+        run: |
+          site/assemble.sh --out _pages/determinize --sim _simulator --docs _site/docs \
+            --paper _paper/main.pdf
+      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+      # Links to the canonical host are checked as files of the assembled site, and relative
+      # ones as they are; anchors included. Other hosts are not contacted.
+      - name: Check the links of the landing page and the simulator
+        shell: nix develop .#site --command bash -euo pipefail {0}
+        run: |
+          lychee --offline --no-progress --include-fragments --root-dir "$PWD/_pages" \
+            --remap "^https://julesjacobs\.com/determinize/ file://$PWD/_pages/determinize/" \
+            _pages/determinize/*.html _pages/determinize/sim/*.html
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
-          path: _pages
+          path: _pages/determinize
 
   # Without a status function, the condition would also require that no earlier job was skipped.
   deploy:

@@ -17,8 +17,11 @@
     "@lezer/highlight": "^1.2.5"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "1.63.0",
     "@types/node": "^24.19.1",
     "esbuild": "^0.28.2",
+    "html-validate": "^11.16.2",
     "smol-toml": "^1.9.0",
     "typescript": "^7.0.2"
   }

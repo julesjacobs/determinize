@@ -1,0 +1,8 @@
+{
+  "extends": "../sim/tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "typeRoots": ["../sim/node_modules/@types"]
+  },
+  "include": ["*.mts"]
+}

@@ -2,6 +2,8 @@
 # PostToolUse (Edit|Write): fast feedback for the file that was just changed.
 #   sim/**    -> biome check of that file (files Biome skips pass)
 #   sim/src, sim/test, sim/build.ts, sim/tsconfig*.json -> npm run typecheck, npm test
+#   site/*.css, site/*.mts -> biome check of that file; site/*.html -> html-validate
+#   site/index.html -> its theorem quotes against lean/Determinize/Theorems.lean
 #   tex/*.tex -> chktex lint of that file
 #   lean/**.lean -> lake build (fails fast with a hint if the Mathlib cache is absent)
 #   toolchain files -> remind to git add new files
@@ -21,6 +23,26 @@ if [[ "$file" == sim/* ]]; then
 fi
 
 case "$file" in
+  site/*.css|site/*.mts)
+    out="$(cd site && in_shell sim biome check --colors=off "${file#site/}" 2>&1)" || {
+      echo "biome check failed after editing $file ('biome check --write ${file#site/}' in site applies the safe fixes):" >&2
+      tail -n 40 <<<"$out" >&2
+      exit 2
+    }
+    ;;
+  site/*.html)
+    out="$(in_shell sim html-validate "$file" 2>&1)" || {
+      echo "html-validate failed after editing $file:" >&2
+      tail -n 40 <<<"$out" >&2
+      exit 2
+    }
+    if [[ "$file" == site/index.html ]]; then
+      out="$(in_shell sim node site/theorems.mts --check 2>&1)" || {
+        echo "$out" >&2
+        exit 2
+      }
+    fi
+    ;;
   sim/src/*|sim/test/*|sim/build.ts|sim/tsconfig*.json)
     out="$(cd sim && in_shell sim npm run typecheck 2>&1)" || {
       echo "npm run typecheck failed after editing $file:" >&2
