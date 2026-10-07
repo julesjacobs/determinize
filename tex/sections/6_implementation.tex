@@ -28,13 +28,13 @@ The complete compilation, verification and execution pipeline is outlined in \cr
 
 \paragraph{Floating-point interpreter} In order to be able to run the program and to carry out actual sampling, we also provide an interpreter that evaluates programs with floating-point numbers and pseudo-random samplers. This part is unverified: we have no formal model that relates floating-point arithmetic and the samplers to the real-valued semantics.
 
-\paragraph{Finite graph construction} If the program reaches only finitely many machine states, we can compute exact results using the theory of finite Markov chains. In this case, the implementation computes the finite state graph and allows one to continue with it in two ways:
+\paragraph{Finite graph construction} The tool explores the machine states of the program, each an expression, an environment and a continuation with rational numbers, and merges equal states. Exploration succeeds if finitely many states are reachable and the only random draws left are Bernoulli and discrete ones. With \texttt{-{}-additive}, numbers added to the result of a pending call become rewards on transitions, which keeps loops that accumulate a sum finite. The return probability and the first and second moments then solve linear equations over the resulting Markov chain.
 
-\paragraph{Exact rational solver} The above graph can be used to directly compute the exact mean and variance by our own verified matrix solver.
+\paragraph{Exact rational solver} A solver written and verified in Lean solves the equations with rational arithmetic.
 
-\paragraph{Storm solver} Alternatively, the finite state graph can be passed to the external probabilistic model checker Storm~\cite{hensel2022storm}.
+\paragraph{Storm solver} Alternatively, Storm~\cite{hensel2022storm} solves them, called through its Python interface on an exact rational model.
 
-\paragraph{Certificate checker} The certificate that Storm produces is checked and it is verified that any such certificate corresponds to the correct expected value for the input program.
+\paragraph{Certificate checker} Both routes write a Lean file with the chain and a certificate that consists of the solution, the states from which the program can no longer return, and for every other state a path to a terminal or non-returning state, which makes the solution unique. For Storm, our wrapper adds the states and paths. Lean's kernel checks the file, which proves that the explored program is domain-safe, that its output law is that of the chain, and that the certified numbers are its exact return probability, first and second moments, and rejection probability.
 
 \paragraph{Exact mean and variance} Both routes compute the exact probability that the explored program returns a result, and the mean and variance of the result conditioned on that event. If the explored program is $e_{\mathrm{det}}$ and $e_{\mathrm{src}}$ is domain-safe with a defined expectation, \cref{thm:expectation} guarantees that $e_{\mathrm{src}}$ has the same mean.
 
