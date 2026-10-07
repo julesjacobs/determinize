@@ -11,13 +11,13 @@ Every theorem of the previous sections is mechanized in the Lean programming lan
 
 To trust the tool's results, one has to rely on Lean's kernel, these three axioms, the specification and the Mathlib definitions it uses, and the Lean compiler for the output of type inference. Exact results come with a certificate that the kernel checks against the specification. The parser, the elaborator and the floating-point interpreter are unverified.
 
-The complete compilation, verification and execution pipeline is outlined in \cref{fig:architecture}. We will briefly describe the individual steps in the following.
+The complete compilation, verification and execution pipeline is outlined in \cref{fig:architecture}.
 
 \input{figures/architecture}
 
-\paragraph{Parse and elaborate} First, the source code is parsed, desugared and variable names are replaced by de~Bruijn indices. This part is unverified.
+\paragraph{Parse and elaborate} First, the source program is parsed and desugared. This part is unverified.
 
-\paragraph{Infer types and $\E/\G$} Afterwards, the types of the program are inferred and all sampling sites are annotated with either $\E$ or $\G$. The code is verified to produce a correct typing as well as mode annotation, and the program is furthermore shown to assign as many $\E$-sites as possible. At the end of this step, the user has a well-typed program $e_{\mathrm{src}}$.
+\paragraph{Infer types and $\E/\G$} Type inference then fills in every omitted $\E/\G$ annotation (the Lean development calls $\E$ and $\G$ affinities). By \cref{thm:inference}, it fails only if no completion exists and otherwise returns the greatest completion, which has an $\E$ at every site where some completion has one. The result is a typed program $e_{\mathrm{src}}$.
 
 \paragraph{Determinize} The determinization function of \cref{def:determinization} walks through the syntax tree and replaces every $\E$-mode sample by a mean site, marked $\M$. The pipeline runs the same Lean definition that the soundness theorems are stated about, with rational instead of real literals. The output is a well-typed, determinized program $e_{\mathrm{det}}$.
 
@@ -25,7 +25,7 @@ The complete compilation, verification and execution pipeline is outlined in \cr
 
 \paragraph{Measure-theoretic semantics} These output laws are given by the semantics of \cref{fig:semantics}, which we define in Lean with the Giry monad. They are measures on the reals, which Lean cannot compute, so this semantics is not executed.
 
-\paragraph{Floating-point interpreter} In order to be able to run the program and to carry out actual sampling, we also provide an interpreter that evaluates programs with floating-point numbers and pseudo-random samplers. This part is unverified: we have no formal model that relates floating-point arithmetic and the samplers to the real-valued semantics.
+\paragraph{Floating-point interpreter} To sample, we also provide an interpreter that evaluates programs with floating-point numbers and pseudo-random samplers. This part is unverified: we have no formal model that relates floating-point arithmetic and the samplers to the real-valued semantics.
 
 \paragraph{Finite graph construction} The tool explores the machine states of the program, each an expression, an environment and a continuation with rational numbers, and merges equal states. Exploration succeeds if finitely many states are reachable and the only random draws left are Bernoulli and discrete ones. With \texttt{-{}-additive}, numbers added to the result of a pending call become rewards on transitions, which keeps loops that accumulate a sum finite. The return probability and the first and second moments then solve linear equations over the resulting Markov chain.
 
