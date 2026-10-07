@@ -71,11 +71,9 @@ Lean links re-pinned to `8f89190`. The previous draft in `tex/archive/` is no lo
   - A finite second moment is `MemLp id 2`, and `Var_ret[e]` is Mathlib's `variance` of
     `returnedLaw`. `trace_variance_decomposition` also states that the average variance within
     a trace is finite.
-  - The appendix restates the theorems, not always as Section 4 does. Its probability
-    preservation adds `d_Determinize(e) = d_e`, which no Lean theorem states; it follows from
-    `probability_preservation` and `return_or_diverge` for the target, which is typed by
-    `typed_determinize`. Its expectation preservation and variance non-increase omit
-    `q_Determinize(e) > 0`, which Section 4 and Lean conclude.
+  - The appendix restates the theorems, not always as Section 4 does. Its expectation
+    preservation and variance non-increase omit `q_Determinize(e) > 0`, which Section 4 and Lean
+    conclude.
   - The theorems are about closed programs of type `real^E`, and an output law has mass only
     at real results. The introduction's Gaussian random walk returns a list of pairs: the
     front end infers and determinizes it, but no theorem applies to it as written.
@@ -166,10 +164,11 @@ Lean links re-pinned to `8f89190`. The previous draft in `tex/archive/` is no lo
   [below](#certified-output-moments-and-storm)). The paper mentions the additive
   reward models (`Spec/RewardModel`, the CLI's default) that Section 7 relies on in one sentence.
 - **Lean links.** `tex/lean-links.tex` pins the paper's GitHub links to `8f89190`, the Lean
-  development these notes describe; the theorems' links point to `Theorems.lean`. `main.tex`
-  builds the anonymous review version, which links to a snapshot on apndx.org instead. That
-  snapshot predates the verified inference (it has no `Spec/Inference.lean`), so the review
-  build's links are off until the snapshot is regenerated from `8f89190`.
+  development these notes describe; the theorems' links point to `Theorems.lean`. Probability
+  preservation's divergence equation, `d_Determinize(e) = d_e`, is newer than that revision.
+  `main.tex` builds the anonymous review version, which links to a snapshot on apndx.org
+  instead. That snapshot predates the verified inference (it has no `Spec/Inference.lean`), so
+  the review build's links are off until the snapshot is regenerated from `8f89190`.
 
 ## Style
 

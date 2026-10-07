@@ -118,13 +118,14 @@ theorem convex_function_inequality (program : Expr)
   Proof.Paper.jensen_soundness program typed safe φ convex nonneg
 
 /-- Probability preservation. The target is domain-safe, the source either returns or diverges
-(rejection counts as divergence), and the target returns with the same probability as the
-source. -/
+(rejection counts as divergence), and the target returns, and diverges, with the same
+probabilities as the source. -/
 theorem probability_preservation (program : Expr)
     (typed : Typed [] program (.float .E)) (safe : DomainSafe program) :
     DomainSafe program.determinize ∧
       returnProbability program + divergenceProbability program = 1 ∧
-      returnProbability program.determinize = returnProbability program :=
+      returnProbability program.determinize = returnProbability program ∧
+      divergenceProbability program.determinize = divergenceProbability program :=
   Proof.Paper.probability_preservation program typed safe
 
 /-- Trace variance decomposition. If the source returns with positive probability and its

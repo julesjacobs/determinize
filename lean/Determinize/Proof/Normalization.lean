@@ -81,16 +81,22 @@ theorem conditional_extended_expectation_soundness (program : Expr)
   exact ⟨by rwa [mass], targetDefined, by rw [mass, ← expectation]⟩
 
 /-- Probability preservation: the target is domain-safe, the source returns or diverges, and
-both return with the same probability. -/
+both return, and diverge, with the same probabilities. -/
 theorem probability_preservation (program : Expr) (typed : Typed [] program (.float .E))
     (safe : DomainSafe program) :
     DomainSafe program.determinize ∧
       Spec.Paper.bigStepMeasure program Set.univ + divergenceProbability program = 1 ∧
       Spec.Paper.bigStepMeasure program.determinize Set.univ =
-        Spec.Paper.bigStepMeasure program Set.univ :=
-  ⟨(Traces.meanOnTraces_determinize .E program typed safe).1,
-    return_or_diverge .E program typed safe,
-    output_mass_soundness program typed safe⟩
+        Spec.Paper.bigStepMeasure program Set.univ ∧
+      divergenceProbability program.determinize = divergenceProbability program := by
+  have targetSafe := (Traces.meanOnTraces_determinize .E program typed safe).1
+  have source := return_or_diverge .E program typed safe
+  have mass := output_mass_soundness program typed safe
+  have target := return_or_diverge .E program.determinize (typed_determinize typed) targetSafe
+  rw [mass, ← source] at target
+  have finite : Spec.Paper.bigStepMeasure program Set.univ ≠ ∞ :=
+    ne_top_of_le_ne_top ENNReal.one_ne_top (source ▸ le_self_add)
+  exact ⟨targetSafe, source, mass, (ENNReal.add_right_inj finite).mp target⟩
 
 end Paper
 
