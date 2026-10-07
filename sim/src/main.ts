@@ -117,6 +117,7 @@ function start(decoded: Decoded): Store {
 function restore(store: Store, editor: EditorView, decoded: Decoded) {
   if (decoded.kind === "error") showNotice(store, decoded.message);
   if (decoded.kind !== "state") return;
+  dismissNotice();
   const { source, seed, example } = decoded.state;
   batch(() => {
     store.exampleId.value = example;
@@ -125,8 +126,13 @@ function restore(store: Store, editor: EditorView, decoded: Decoded) {
   });
 }
 
-/** Shows `message` above the diagnostics until the program changes. */
+/** Removes the notice that `showNotice` shows, if any. */
+let dismissNotice = () => {};
+
+/** Shows `message` above the diagnostics, in place of an earlier notice, until the program
+ * changes. */
 function showNotice(store: Store, message: string) {
+  dismissNotice();
   const notice = document.createElement("p");
   notice.className = "editor-diagnostics error";
   notice.setAttribute("role", "alert");
@@ -134,10 +140,13 @@ function showNotice(store: Store, message: string) {
   editorDiagnostics.before(notice);
   const shown = store.source.peek();
   const stop = store.source.subscribe((text) => {
-    if (text === shown) return;
+    if (text !== shown) dismissNotice();
+  });
+  dismissNotice = () => {
     notice.remove();
     stop();
-  });
+    dismissNotice = () => {};
+  };
 }
 
 function renderResult(result: Analysis) {

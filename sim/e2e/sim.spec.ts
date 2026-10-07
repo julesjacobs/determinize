@@ -215,6 +215,30 @@ test("a link to more than 64 KiB opens the first example and says so", async ({ 
   await expect(status(page)).toHaveText("seed 2026 - checked");
 });
 
+test("a second unreadable link replaces the first one's notice", async ({ page }) => {
+  await page.goto(`${simulator}#v1=not-a-link`);
+  await expect(page.getByRole("alert")).toHaveText(
+    "This link could not be read. The simulator opened its first example.",
+  );
+  await page.evaluate(() => {
+    window.location.hash = "#v1=still-not-a-link";
+  });
+  await expect(page.getByRole("alert")).toHaveText("This link could not be read.");
+});
+
+test("a readable link clears an unreadable one's notice", async ({ page }) => {
+  await page.goto(`${simulator}#v1=not-a-link`);
+  await expect(page.getByRole("alert")).toHaveCount(1);
+  const source = await page.evaluate(async () => (await window.DeterminizeSim.ready).source.value);
+  const json = JSON.stringify({ source, seed: 7, example: "paper/noisy-product" });
+  const hash = `#v1=${deflateRawSync(json).toString("base64url")}`;
+  await page.evaluate((next) => {
+    window.location.hash = next;
+  }, hash);
+  await expect(status(page)).toHaveText("seed 7 - checked");
+  await expect(page.getByRole("alert")).toHaveCount(0);
+});
+
 test("diagnostics return when an edit is undone before the analysis", async ({ page }) => {
   await page.goto(simulator);
   await page.getByLabel("Example").selectOption({ label: "Branching on an E draw" });
