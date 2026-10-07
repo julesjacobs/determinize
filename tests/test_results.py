@@ -183,7 +183,8 @@ class ResultTests(unittest.TestCase):
                     if stage == 4:
                         Path(str(prefix) + ".result.json").write_text('{"answer": "1/3"}')
                     output = "\n".join(f"'{name}' depends on axioms: [propext, Classical.choice, Quot.sound]"
-                                       for name in ("outputStatistics", "terminationProbabilities", "conditionalVariance", "reportedStatistics"))
+                                       for name in ("outputStatistics", "terminationProbabilities", "conditionalVariance",
+                                                    "reportedStatistics", "printedStatistics", "printedConditionalMoments"))
                     return subprocess.CompletedProcess(argv, 0, output, "")
 
                 with patch.object(adapter.importlib.metadata, "version", return_value="test"), \
@@ -203,12 +204,16 @@ class ResultTests(unittest.TestCase):
 
     def test_certificate_axioms(self):
         adapter = self.adapter()
-        output = "\n".join(f"'{name}' depends on axioms: [propext, Classical.choice, Quot.sound]"
-                           for name in ("outputStatistics", "terminationProbabilities", "conditionalVariance", "reportedStatistics"))
-        self.assertEqual(len(adapter.checked_axioms(output)), 4)
+        names = ("outputStatistics", "terminationProbabilities", "conditionalVariance", "reportedStatistics",
+                 "printedStatistics", "printedConditionalMoments")
+        lines = [f"'{name}' depends on axioms: [propext, Classical.choice, Quot.sound]" for name in names]
+        output = "\n".join(lines)
+        self.assertEqual(len(adapter.checked_axioms(output)), 6)
+        self.assertEqual(len(adapter.checked_axioms("\n".join(lines[:-1]), conditional=False)), 5)
         for invalid in ("", output.replace("Quot.sound", "sorryAx"),
                         output.replace("Quot.sound", "Lean.ofReduceBool"),
-                        output.replace("Quot.sound", "unprovedClaim")):
+                        output.replace("Quot.sound", "unprovedClaim"),
+                        "\n".join(lines[:-1]), "\n".join(lines[:-2] + lines[-1:])):
             with self.assertRaises(ValueError):
                 adapter.checked_axioms(invalid)
 
