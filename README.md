@@ -142,7 +142,12 @@ compute. A Biome override keeps it free of the DOM, CodeMirror and signals, so t
 and the sampling worker run it. The page (`sim/src/ui/`) keeps its state in signals of
 `@preact/signals-core` and samples in a worker (`sim/src/worker.ts`), or, where no worker can
 start, as when `sim/dist/index.html` is opened from disk, on its own thread in slices of about
-50 ms.
+50 ms. "Run N" evaluates with ports of Lean's evaluator and samplers, SplitMix64 included
+(`sim/src/core/runtime/eval.ts` and `sampling.ts`, after `Runtime/Eval.lean` and
+`Runtime/Sampling.lean`): run i of a program and of its determinization starts at seed s + i, so
+its statistics are those of `./run.sh --seed s --samples N`. `sim/test/fixtures/lean-cli.json`
+records what the Lean CLI prints for every case of `tests/cases.toml`, and the tests compare the
+ports with it; `node scripts/lean-fixtures.ts` in `sim/` records it again.
 
 The `.#sim` shell, which direnv loads in `sim/`, links `sim/node_modules` to packages that
 Nix builds from `sim/package-lock.json`; the combined shell does not. To add or update a
@@ -181,9 +186,9 @@ To build that archived draft independently:
 After `npm run build` in `sim/`, open `sim/dist/index.html`, or
 [its published copy](https://julesjacobs.github.io/determinize/sim/), to explore coupled
 traces. The address's fragment holds the program, the seed and the example, so a copied link
-opens the same run. The simulator has its own compiler and numerical runtime; Lean certificates
-apply to the core programs produced by the Lean CLI. The simulator is an unverified
-visualization.
+opens the same run. The simulator's front end and runtime are unverified ports of Lean's; Lean's
+certificates and theorems apply to the core programs that the Lean CLI produces. The simulator is
+an unverified visualization.
 
 See the [Lean documentation](lean/README.md) for the language, theorem premises,
 and implementation limits, and the [test guide](tests/README.md) for analytical

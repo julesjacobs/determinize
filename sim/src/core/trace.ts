@@ -4,7 +4,7 @@ import { affineConst, affineToNumber, evalAffine } from "./runtime/affine.ts";
 import { meanDistribution } from "./runtime/distributions.ts";
 import type { Binding, CoupledTrace, Frame } from "./runtime/semantics.ts";
 import { isValue, runCoupledTrace } from "./runtime/semantics.ts";
-import type { Runs } from "./statistics.ts";
+import type { RunOutcome } from "./statistics.ts";
 
 /** The step table's limits: symbolic steps, and steps of either program per symbolic step. */
 export const maxSymbolicSteps = 1000;
@@ -67,13 +67,6 @@ export function sigmaMeans(sigma: Binding[]): SigmaMean[] {
   });
 }
 
-/** How a run of one program ended: it returned a value, the number it returned if any, or it
- * was rejected by an observation, or it failed. */
-export type RunOutcome =
-  | { kind: "returned"; number: number | null; display: string }
-  | { kind: "rejected" }
-  | { kind: "failed"; message: string };
-
 function outcomeOf(expr: Expr | undefined): RunOutcome {
   if (!expr || !isValue(expr)) return { kind: "failed", message: "step limit reached" };
   if (expr.kind === "Reject") return { kind: "rejected" };
@@ -94,25 +87,4 @@ export function outcomesOf(trace: CoupledTrace): { source: RunOutcome; determini
     source: outcomeOf(final(finalFrame?.original, trace.finalOriginal)),
     determinized: outcomeOf(final(finalFrame?.determinized, trace.finalDeterminized)),
   };
-}
-
-/** Outcomes of runs, in run order, as `Runs`. */
-export function runsOf(outcomes: RunOutcome[]): Runs {
-  const runs: Runs = {
-    values: new Float64Array(outcomes.length),
-    rejected: 0,
-    failed: 0,
-    firstFailure: null,
-    firstValue: null,
-  };
-  for (const [i, outcome] of outcomes.entries()) {
-    runs.values[i] = outcome.kind === "returned" && outcome.number !== null ? outcome.number : NaN;
-    if (outcome.kind === "rejected") runs.rejected += 1;
-    if (outcome.kind === "failed") {
-      runs.failed += 1;
-      runs.firstFailure ??= outcome.message;
-    }
-    if (outcome.kind === "returned") runs.firstValue ??= outcome.display;
-  }
-  return runs;
 }

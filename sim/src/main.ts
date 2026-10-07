@@ -88,7 +88,7 @@ function start(decoded: Decoded): Store {
     store.runAt(randomSeed());
   });
   manyButton.addEventListener("click", () => {
-    store.runMany(Array.from({ length: store.sampleCount.peek() }, randomSeed));
+    store.runMany(store.sampleCount.peek());
   });
   typeHintsToggle.addEventListener("change", () => {
     store.typeHints.value = typeHintsToggle.checked;

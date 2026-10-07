@@ -11,13 +11,11 @@ import { prettyExpr } from "../src/core/compiler/pretty.ts";
 import { examples } from "../src/core/examples.ts";
 import type { CoupledTrace, Frame } from "../src/core/runtime/semantics.ts";
 import { createSampler } from "../src/core/sampler.ts";
-import type { Summary } from "../src/core/statistics.ts";
+import type { RunOutcome, Summary } from "../src/core/statistics.ts";
 import { addRuns, noRuns } from "../src/core/statistics.ts";
-import type { RunOutcome } from "../src/core/trace.ts";
 import { frameOk, hasDomainError, outcomesOf, runCoupling } from "../src/core/trace.ts";
 
 const traceSeeds = [1, 2, 3];
-const batchSeeds = Array.from({ length: 200 }, (_, index) => index + 1);
 
 /** `value` as JSON with sorted keys, nonfinite numbers as strings and undefined fields left out. */
 function canonical(value: unknown): string {
@@ -47,8 +45,8 @@ function checkLabels(frames: Frame[]) {
   return runs.map(({ label, count }) => (count === 1 ? label : `${label} ×${count}`)).join(", ");
 }
 
-/** The batch at `seeds`: the sampler's slices, run one after the other. */
-function runBatch(source: string, seeds: number[]) {
+/** The batch of 200 runs at seeds 1–200: the sampler's slices, run one after the other. */
+function runBatch(source: string) {
   const batch = { source: noRuns, determinized: noRuns };
   const tasks: (() => void)[] = [];
   const sampler = createSampler({
@@ -60,7 +58,7 @@ function runBatch(source: string, seeds: number[]) {
     defer: (task) => tasks.push(task),
     now: () => performance.now(),
   });
-  sampler.handle({ type: "run", generation: 1, source, seeds: Float64Array.from(seeds) });
+  sampler.handle({ type: "run", generation: 1, source, seed: 1, from: 0, count: 200 });
   for (let task = tasks.shift(); task; task = tasks.shift()) task();
   return batch;
 }
@@ -96,7 +94,7 @@ function describeSummary(name: string, summary: Summary) {
 for (const example of examples) {
   test(example.id, (t) => {
     const traces = traceSeeds.map((seed) => describeTrace(runCoupling(example.source, seed)));
-    const batch = runBatch(example.source, batchSeeds);
+    const batch = runBatch(example.source);
     const text = [
       ...traces,
       "batch at seeds 1-200:",

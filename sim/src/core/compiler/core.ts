@@ -42,3 +42,28 @@ export function sites<S>(e: Core<S>, out: Core<S>[] = []): Core<S>[] {
   for (const child of children(e)) sites(child, out);
   return out;
 }
+
+/** What a program does at a sample site, as Lean's `DistributionAction`: draw with a mode, or
+ * take the mean. */
+export type Action = Mode | "mean";
+
+/** A program that the runtime runs, as Lean's `Core`. */
+export type Program = Core<Action>;
+
+/** `e` with the site of every sample site replaced by `f` of it. */
+export function mapSites<S, T>(e: Core<S>, f: (site: S, node: Core<S>) => T): Core<T> {
+  const go = (child: Core<S>) => mapSites(child, f);
+  if ("site" in e) {
+    const site = f(e.site, e);
+    return "b" in e ? { ...e, site, a: go(e.a), b: go(e.b) } : { ...e, site, a: go(e.a) };
+  }
+  if ("c" in e) return { ...e, a: go(e.a), b: go(e.b), c: go(e.c) };
+  if ("b" in e) return { ...e, a: go(e.a), b: go(e.b) };
+  if ("a" in e) return { ...e, a: go(e.a) };
+  return e;
+}
+
+/** Lean's `Expr.determinize`: every E draw becomes its mean. */
+export function determinize(program: Core<Action>): Program {
+  return mapSites(program, (site): Action => (site === "E" ? "mean" : site));
+}

@@ -42,13 +42,19 @@ function renderDistributions(
 ) {
   const runs = samples.original.summary.runs;
   elements.status.textContent = `${runs} run${runs === 1 ? "" : "s"}`;
-  const all = [...samples.original.values, ...samples.determinized.values];
-  if (all.length === 0) {
+  const all = [samples.original.values, samples.determinized.values];
+  if (all.every((values) => values.length === 0)) {
     elements.view.innerHTML = `<p class="distribution-empty">Numeric final results will appear here.</p>`;
     return;
   }
-  const min = Math.min(...all);
-  const max = Math.max(...all);
+  let min = Infinity;
+  let max = -Infinity;
+  for (const values of all) {
+    for (const x of values) {
+      if (x < min) min = x;
+      if (x > max) max = x;
+    }
+  }
   const pad = Math.max((max - min) * 0.08, 1e-6);
   const domain = [min - pad, max + pad];
   const originalStats = stats.original;
@@ -91,7 +97,7 @@ function metricValue(value: number, suffix = "") {
 
 function distributionCard(
   title: string,
-  values: number[],
+  values: readonly number[],
   stats: Stats,
   domain: number[],
   tone: string,
@@ -171,7 +177,7 @@ function distributionCard(
   `;
 }
 
-function histogram(values: number[], domain: number[], count: number) {
+function histogram(values: readonly number[], domain: number[], count: number) {
   const width = domain[1] - domain[0];
   const binWidth = width / count;
   const bins = Array.from({ length: count }, (_, index) => ({
