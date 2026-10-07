@@ -12,10 +12,26 @@ import {
   keymap,
   lineNumbers,
 } from "@codemirror/view";
-import type { Analysis } from "./compiler/analyze.ts";
-import { analyze } from "./compiler/analyze.ts";
-import type { Expr } from "./compiler/ast.ts";
-import { prettyExpr } from "./compiler/pretty.ts";
+import type { Analysis } from "./core/compiler/analyze.ts";
+import { analyze } from "./core/compiler/analyze.ts";
+import type { Expr } from "./core/compiler/ast.ts";
+import { prettyExpr } from "./core/compiler/pretty.ts";
+import { examples } from "./core/examples.ts";
+import { formatNumber } from "./core/format.ts";
+import { prettyAffine } from "./core/runtime/affine.ts";
+import { distributionName } from "./core/runtime/distributions.ts";
+import type { Binding, CoupledTrace, Frame } from "./core/runtime/semantics.ts";
+import type { Stats } from "./core/statistics.ts";
+import { sampleStats, varianceRatio } from "./core/statistics.ts";
+import {
+  domainErrorMessage,
+  frameOk,
+  hasDomainError,
+  runBatch,
+  runCoupling,
+  sampleOf,
+  sigmaMeans,
+} from "./core/trace.ts";
 import type { EditorDiagnostic } from "./diagnostics.ts";
 import {
   diagnosticHover,
@@ -23,29 +39,14 @@ import {
   normalizeDiagnostics,
   setDiagnostics,
 } from "./diagnostics.ts";
-import { examples } from "./examples.ts";
 import { detHighlighting, detLanguage } from "./language.ts";
 import { hoveredTypeHintState, modeHints, setTypeHints, typeHintState } from "./modeHints.ts";
-import { affineConst, affineToNumber, evalAffine, prettyAffine } from "./runtime/affine.ts";
-import { distributionName, meanDistribution } from "./runtime/distributions.ts";
-import type { Binding, CoupledTrace, Frame } from "./runtime/semantics.ts";
-import { runCoupledTrace } from "./runtime/semantics.ts";
 import type { TraceOptions } from "./traceRender.ts";
 import { changedPath, renderHighlightedText, renderTraceExpr } from "./traceRender.ts";
 
 /** The label of the run of a program that Lean rejects only for a mode conflict. */
 const counterexampleLabel =
   "Lean rejects this program; this is what replacing its [E] draws anyway does";
-
-/** A message that a DomainError node carries. */
-type MaybeMessage = { message?: string } | undefined;
-
-interface Stats {
-  n: number;
-  mean: number;
-  variance: number;
-  standardError: number;
-}
 
 const editorHost = document.querySelector("#editor") as HTMLElement;
 const exampleSelect = document.querySelector("#example-select") as HTMLSelectElement;
@@ -183,19 +184,15 @@ rerunButton.addEventListener("click", () => {
 manyButton.addEventListener("click", () => {
   const source = editor.state.doc.toString();
   if (source !== sampleSource) resetSamples(source);
-  let latestCoupled: CoupledTrace | null = null;
-  for (let i = 0; i < 200; i++) {
-    const seed = Math.floor(1 + Math.random() * 0xffffffff);
-    try {
-      const coupled = runCoupling(source, seed);
-      addSampleFromCoupling(coupled, source);
-      couplingSeed = seed;
-      latestCoupled = coupled;
-    } catch {
-      break;
-    }
+  const seeds = Array.from({ length: 200 }, () => Math.floor(1 + Math.random() * 0xffffffff));
+  const batch = runBatch(source, seeds);
+  samples.original.push(...batch.original);
+  samples.determinized.push(...batch.determinized);
+  if (batch.last) {
+    couplingSeed = batch.last.seed;
+    if (sampleOf(batch.last)) lastSampleKey = `${source}:${batch.last.seed}`;
+    renderCoupling(batch.last);
   }
-  if (latestCoupled) renderCoupling(latestCoupled);
   renderDistributions();
 });
 
@@ -509,10 +506,6 @@ function renderSemantics(source: string) {
   }
 }
 
-function runCoupling(source: string, seed: number) {
-  return runCoupledTrace(source, seed, 1000, 200);
-}
-
 function renderCoupling(coupled: CoupledTrace) {
   hideCheckPopover();
   const terminalDomainError = coupled.frames.some(hasDomainError);
@@ -555,23 +548,6 @@ function renderCoupling(coupled: CoupledTrace) {
       })
       .join("") +
     "</div>";
-}
-
-function frameOk(frame: Frame) {
-  return (
-    frame.originalOk &&
-    frame.determinizedOk &&
-    frame.symbolicOk !== false &&
-    frame.consistencyOk !== false
-  );
-}
-
-function hasDomainError(frame: Frame) {
-  return (
-    frame.original?.kind === "DomainError" ||
-    frame.symbolic?.kind === "DomainError" ||
-    frame.determinized?.kind === "DomainError"
-  );
 }
 
 function stepCheck(frame: Frame, coupled: CoupledTrace) {
@@ -617,15 +593,6 @@ function checkPopoverContent(
     ${frame.symbolicOk === false ? `<span>Symbolic next step failed: ${escapeHtml(frame.symbolicError)}</span>` : ""}
     ${coupled.counterexample ? `<em>${counterexampleLabel}</em>` : ""}
   `;
-}
-
-function domainErrorMessage(frame: Frame) {
-  return (
-    (frame.original as MaybeMessage)?.message ??
-    (frame.symbolic as MaybeMessage)?.message ??
-    (frame.determinized as MaybeMessage)?.message ??
-    "domain error"
-  );
 }
 
 function couplingCell(expr: Expr, meta: string, tone: string, traceOptions: TraceOptions = {}) {
@@ -707,23 +674,11 @@ function rowIndex(scope: Element) {
 
 function sigmaView(sigma: Binding[]) {
   if (sigma.length === 0) return { html: "", lineCount: 0, meanBySymbol: {} };
-  const env = new Map<string, number>();
   const meanBySymbol: Record<string, number> = {};
-  const lines = sigma.map((binding) => {
-    let mean = NaN;
-    let meanError: string | null = null;
-    try {
-      const meanArgs = binding.args.map((arg) => affineConst(evalAffine(arg, env)));
-      mean = affineToNumber(meanDistribution(binding.kind, meanArgs));
-      env.set(binding.name, mean);
-      meanBySymbol[binding.name] = mean;
-    } catch (error) {
-      meanError = error instanceof Error ? error.message : String(error);
-      env.set(binding.name, NaN);
-      meanBySymbol[binding.name] = NaN;
-    }
+  const lines = sigmaMeans(sigma).map(({ binding, mean, error }) => {
+    meanBySymbol[binding.name] = mean;
     const args = binding.args.map((arg) => renderHighlightedText(prettyAffine(arg))).join(", ");
-    return `<span class="sigma-binding corr-item" data-corr="${escapeHtml(binding.name)}" tabindex="0"><span class="sigma-definition"><span class="tok-sym">${escapeHtml(binding.name)}</span> ~ <span class="tok-dist">${distributionName(binding.kind)}</span>(${args})</span><span class="sigma-mean">E[<span class="tok-sym">${escapeHtml(binding.name)}</span>] = ${meanMarkup(binding.name, mean, meanError)}</span></span>`;
+    return `<span class="sigma-binding corr-item" data-corr="${escapeHtml(binding.name)}" tabindex="0"><span class="sigma-definition"><span class="tok-sym">${escapeHtml(binding.name)}</span> ~ <span class="tok-dist">${distributionName(binding.kind)}</span>(${args})</span><span class="sigma-mean">E[<span class="tok-sym">${escapeHtml(binding.name)}</span>] = ${meanMarkup(binding.name, mean, error)}</span></span>`;
   });
   return { html: lines.join("\n"), lineCount: lines.length, meanBySymbol };
 }
@@ -746,19 +701,12 @@ function resetSamples(source: string) {
 function addSampleFromCoupling(coupled: CoupledTrace, source: string) {
   const key = `${source}:${coupled.seed}`;
   if (key === lastSampleKey) return;
-  const finalFrame = coupled.frames.at(-1);
-  const originalValue = numericValue(finalFrame?.original) ?? numericValue(coupled.finalOriginal);
-  const determinizedValue =
-    numericValue(finalFrame?.determinized) ?? numericValue(coupled.finalDeterminized);
-  if (Number.isFinite(originalValue) && Number.isFinite(determinizedValue)) {
-    samples.original.push(originalValue as number);
-    samples.determinized.push(determinizedValue as number);
+  const sample = sampleOf(coupled);
+  if (sample) {
+    samples.original.push(sample.original);
+    samples.determinized.push(sample.determinized);
     lastSampleKey = key;
   }
-}
-
-function numericValue(expr: Expr | undefined) {
-  return expr?.kind === "Const" ? expr.value : undefined;
 }
 
 function renderDistributions() {
@@ -919,69 +867,6 @@ function ecdfPath(
   }
   parts.push(`L ${x(domain[1]).toFixed(2)} ${y(1).toFixed(2)}`);
   return parts.join(" ");
-}
-
-function average(values: number[]) {
-  return values.reduce((sum, value) => sum + value, 0) / values.length;
-}
-
-function sampleStats(values: number[]): Stats {
-  const n = values.length;
-  const mean = average(values);
-  const variance =
-    n < 2 ? NaN : values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / (n - 1);
-  return {
-    n,
-    mean,
-    variance,
-    standardError: Number.isFinite(variance) ? Math.sqrt(variance / n) : NaN,
-  };
-}
-
-function varianceRatio(originalStats: Stats, determinizedStats: Stats) {
-  const originalVariance = originalStats.variance;
-  const determinizedVariance = determinizedStats.variance;
-  if (!Number.isFinite(originalVariance) || !Number.isFinite(determinizedVariance)) {
-    return {
-      value: NaN,
-      explanation: "Run at least two samples to estimate variance and sample savings.",
-    };
-  }
-  if (originalVariance === 0 && determinizedVariance === 0) {
-    return {
-      value: NaN,
-      explanation:
-        "Both estimators have zero observed variance, so there is no sample reduction to estimate.",
-    };
-  }
-  if (determinizedVariance === 0) {
-    return {
-      value: Infinity,
-      explanation:
-        "The determinized estimator has zero observed variance, so it needs only one sample here; the sample reduction is effectively unbounded.",
-    };
-  }
-  if (originalVariance === 0) {
-    return {
-      value: 0,
-      explanation:
-        "The original estimator has zero observed variance here, so determinization shows no sample reduction on this run.",
-    };
-  }
-  const ratio = originalVariance / determinizedVariance;
-  return {
-    value: ratio,
-    explanation: `For the same mean accuracy, the determinized program needs about ${formatNumber(1 / ratio)}x as many samples, i.e. about ${formatNumber(ratio)}x fewer samples.`,
-  };
-}
-
-function formatNumber(value: number) {
-  if (value === Infinity) return "∞";
-  if (value === -Infinity) return "-∞";
-  if (!Number.isFinite(value)) return "n/a";
-  if (Number.isInteger(value) && Math.abs(value) < 100000) return String(value);
-  if (Math.abs(value) >= 1000 || Math.abs(value) < 0.001) return value.toExponential(2);
-  return Number(value.toFixed(4)).toString();
 }
 
 function clamp(value: number, min: number, max: number) {

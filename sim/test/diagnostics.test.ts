@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { EditorState } from "@codemirror/state";
-import { analyze } from "../src/compiler/analyze.ts";
+import { analyze } from "../src/core/compiler/analyze.ts";
 import { diagnosticsState, normalizeDiagnostics, setDiagnostics } from "../src/diagnostics.ts";
 
 const cases = [

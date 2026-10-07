@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { parse } from "smol-toml";
-import { analyze } from "../src/compiler/analyze.ts";
+import { analyze } from "../src/core/compiler/analyze.ts";
 
 /** What the manifest expects of the front end for one program. */
 interface Case {

@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { analyze } from "../src/compiler/analyze.ts";
-import type { Expr, ExprOf, MeanKind } from "../src/compiler/ast.ts";
-import { prettyExpr } from "../src/compiler/pretty.ts";
-import { examples } from "../src/examples.ts";
-import { affineConst, affineScale, affineVar } from "../src/runtime/affine.ts";
-import { meanDistribution, sampleDistribution } from "../src/runtime/distributions.ts";
-import { makeStreams } from "../src/runtime/rng.ts";
-import type { CoupledTrace, Frame } from "../src/runtime/semantics.ts";
+import { analyze } from "../src/core/compiler/analyze.ts";
+import type { Expr, ExprOf, MeanKind } from "../src/core/compiler/ast.ts";
+import { prettyExpr } from "../src/core/compiler/pretty.ts";
+import { examples } from "../src/core/examples.ts";
+import { affineConst, affineScale, affineVar } from "../src/core/runtime/affine.ts";
+import { meanDistribution, sampleDistribution } from "../src/core/runtime/distributions.ts";
+import { makeStreams } from "../src/core/runtime/rng.ts";
+import type { CoupledTrace, Frame } from "../src/core/runtime/semantics.ts";
 import {
   checkEquivalences,
   prepareRuntime,
@@ -17,7 +17,7 @@ import {
   runOrdinary,
   runSymbolic,
   stepOrdinary,
-} from "../src/runtime/semantics.ts";
+} from "../src/core/runtime/semantics.ts";
 
 /** The last frame of a trace; every trace has one. */
 function last(trace: CoupledTrace): Frame {

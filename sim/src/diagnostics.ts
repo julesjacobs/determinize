@@ -1,6 +1,6 @@
 import { RangeSetBuilder, StateEffect, StateField } from "@codemirror/state";
 import { Decoration, EditorView, hoverTooltip, WidgetType } from "@codemirror/view";
-import type { Analysis } from "./compiler/analyze.ts";
+import type { Analysis } from "./core/compiler/analyze.ts";
 
 /** A diagnostic with a range clamped to the document. */
 export interface EditorDiagnostic {

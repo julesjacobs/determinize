@@ -20,6 +20,40 @@
       "preset": "recommended"
     }
   },
+  "overrides": [
+    {
+      "includes": ["src/core/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "@preact/signals-core": "The core holds no UI state; the UI keeps it in signals."
+                },
+                "patterns": [
+                  {
+                    "group": ["@codemirror/*", "**/ui/**"],
+                    "message": "The core runs without the UI, in Node's tests and in the worker."
+                  }
+                ]
+              }
+            },
+            "noRestrictedGlobals": {
+              "level": "error",
+              "options": {
+                "deniedGlobals": {
+                  "document": "The core runs without a page, in Node's tests and in the worker.",
+                  "window": "The core runs without a page, in Node's tests and in the worker."
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
   "css": {
     "formatter": { "enabled": false },
     "linter": { "enabled": false }

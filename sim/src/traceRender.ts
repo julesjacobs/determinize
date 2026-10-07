@@ -1,5 +1,5 @@
-import type { DistributionKind, Expr, ExprOf, MeanKind } from "./compiler/ast.ts";
-import { listElements, prettyExpr } from "./compiler/pretty.ts";
+import type { DistributionKind, Expr, ExprOf, MeanKind } from "./core/compiler/ast.ts";
+import { listElements, prettyExpr } from "./core/compiler/pretty.ts";
 
 /** The fields leading from an expression to a subexpression, with indices into argument lists. */
 type Path = (string | number)[];
