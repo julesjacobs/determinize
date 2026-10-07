@@ -225,7 +225,7 @@ test("the runs' outcomes, the command that reports them and run 0's G trace show
   await page.getByRole("button", { name: "Run 200" }).click();
   await settled(page);
   await expect(outcomes).toContainText(
-    "Original: 201 of 201 runs returned a value, 0 were rejected by an observation, and 0 failed.",
+    "Source: 201 of 201 runs returned a value, 0 were rejected by an observation, and 0 failed.",
   );
   await expect(outcomes).toContainText(
     "./run.sh --seed 2026 --samples 201 examples/paper/noisy-product.det",
@@ -233,7 +233,7 @@ test("the runs' outcomes, the command that reports them and run 0's G trace show
 
   await page.goto(linkTo("1/0", 3));
   await expect(outcomes).toContainText(
-    "Original: 0 of 1 runs returned a value, 0 were rejected by an observation, and 1 failed. " +
+    "Source: 0 of 1 runs returned a value, 0 were rejected by an observation, and 1 failed. " +
       "The first failure: division by zero.",
   );
   await expect(outcomes).toContainText("with the program saved as program.det");
@@ -349,7 +349,7 @@ test("Tab moves the focus out of the editor", async ({ page }) => {
 
 test("a frame's checks open on hover and close with Escape", async ({ page }) => {
   await page.goto(simulator);
-  const popover = page.getByRole("tooltip").filter({ hasText: "Coupling checks passed" });
+  const popover = page.getByRole("tooltip").filter({ hasText: "The step checks passed" });
   await page.locator(".step-check").nth(1).hover();
   await expect(popover).toBeVisible();
   await page.keyboard.press("Escape");

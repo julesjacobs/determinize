@@ -574,8 +574,8 @@ function terminalEffectConsistency(frame: Pick<Frame, "original" | "symbolic" | 
 } {
   const effects = (
     [
-      ["Original", frame.original],
-      ["Symbolic", frame.symbolic],
+      ["Source", frame.original],
+      ["Symbolic state", frame.symbolic],
       ["Determinized", frame.determinized],
     ] as const
   ).map(([label, expr]) => ({ label, effect: terminalEffect(expr) }));

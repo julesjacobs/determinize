@@ -104,7 +104,7 @@ class ModeHintWidget extends WidgetType {
     const span = document.createElement("span");
     span.className = `mode-hint ${this.mode === "G" ? "g-mode" : "e-mode"}`;
     span.textContent = `[${this.mode}]`;
-    span.title = `${this.mode}-mode distribution`;
+    span.title = `mode ${this.mode}: ${this.mode === "E" ? "replaced by its mean" : "kept random"}`;
     return span;
   }
 
@@ -301,12 +301,20 @@ function tooltip(from: number, to: number, className: string, text: string) {
 }
 
 function hovers(analysis: ReadonlySignal<Analysis>): Extension {
+  // The first hover that names a mode says what Lean calls it.
+  let named = false;
   return [
     hoverTooltip((_view, pos) => {
       const result = analysis.value;
       if (!result.ok) return null;
       const span = result.spans.find((candidate) => candidate.from <= pos && pos <= candidate.to);
-      return span ? tooltip(span.from, span.to, "type-tooltip", span.text) : null;
+      if (!span) return null;
+      let text = span.text;
+      if (!named && /\nmode [EG]:/.test(text)) {
+        text = text.replace(/\nmode ([EG]):/, "\nmode $1 (affinity in the Lean development):");
+        named = true;
+      }
+      return tooltip(span.from, span.to, "type-tooltip", text);
     }),
     hoverTooltip((view, pos) => {
       const diagnostic = view.state

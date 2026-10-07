@@ -38,7 +38,7 @@ test("a run that leaves an operation's domain ends in a domain failure", () => {
   assert.equal(trace.ok, true);
   assert.equal(
     last?.domainFailure,
-    "Original failed: uniform requires lower ≤ upper; " +
+    "Source failed: uniform requires lower ≤ upper; " +
       "Determinized failed: uniform requires lower ≤ upper",
   );
 });
