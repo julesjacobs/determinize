@@ -4,10 +4,11 @@ import type { ReadonlySignal, Signal } from "@preact/signals-core";
 import { action, computed, effect, signal, untracked } from "@preact/signals-core";
 import type { Analysis } from "../core/compiler/analyze.ts";
 import { analyze } from "../core/compiler/analyze.ts";
+import type { Request, Response } from "../core/protocol.ts";
 import type { CoupledTrace } from "../core/runtime/semantics.ts";
 import type { Stats } from "../core/statistics.ts";
 import { sampleStats } from "../core/statistics.ts";
-import { runBatch, runCoupling, sampleOf } from "../core/trace.ts";
+import { runCoupling, sampleOf } from "../core/trace.ts";
 
 /** A range of the source. */
 export interface Span {
@@ -49,6 +50,8 @@ export interface Store {
   /** The step of the step table whose checks are shown. */
   activeStep: Signal<number | null>;
   samples: ReadonlySignal<Samples>;
+  /** The batch of runs in progress, of `source`. */
+  running: ReadonlySignal<{ generation: number; source: string } | null>;
   analysis: ReadonlySignal<Analysis>;
   trace: ReadonlySignal<TraceState>;
   stats: ReadonlySignal<{ original: Stats; determinized: Stats }>;
@@ -56,8 +59,13 @@ export interface Store {
   commitSource: () => void;
   /** Runs the editor's text at a new seed. */
   rerun: (seed: number) => void;
-  /** Adds the runs at `seeds`, and shows the last one in the step table. */
+  /**
+   * Starts a batch of runs at `seeds`, after the remaining runs of a batch in progress; the last
+   * run is shown in the step table.
+   */
   runMany: (seeds: number[]) => void;
+  /** Takes in what the sampler reports about a batch. */
+  receive: (response: Response) => void;
 }
 
 /** The pause in typing after which the editor's text is analyzed and run. */
@@ -79,7 +87,14 @@ function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error);
 }
 
-export function createStore(initial: { source: string; seed: number; exampleId: string }): Store {
+/**
+ * The store, starting from `initial`; `send` hands a request to the sampler, whose responses go
+ * to `receive`.
+ */
+export function createStore(
+  initial: { source: string; seed: number; exampleId: string },
+  send: (request: Request) => void,
+): Store {
   const source = signal(initial.source);
   const checkedSource = signal(initial.source);
   const commits = signal(0);
@@ -90,6 +105,11 @@ export function createStore(initial: { source: string; seed: number; exampleId: 
   const hoveredSpan = signal<Span | null>(null);
   const activeStep = signal<number | null>(null);
   const samples = signal(noSamples(initial.source));
+  const running = signal<{ generation: number; source: string } | null>(null);
+  let generation = 0;
+  // The seeds of the batch in progress, and how many of them have reported.
+  let batchSeeds = new Float64Array(0);
+  let reported = 0;
 
   // A run that was already computed elsewhere, so that showing it in the step table doesn't
   // repeat it; runs are determined by their source and seed.
@@ -169,19 +189,51 @@ export function createStore(initial: { source: string; seed: number; exampleId: 
   const runMany = action((seeds: number[]) => {
     commitSource();
     const program = checkedSource.value;
-    const batch = runBatch(program, seeds);
-    const last = batch.last;
-    const base = samplesOf(program);
-    samples.value = {
-      source: program,
-      original: [...base.original, ...batch.original],
-      determinized: [...base.determinized, ...batch.determinized],
-      lastKey: last && sampleOf(last) ? `${program}:${last.seed}` : base.lastKey,
-    };
-    if (last) {
-      knownRun = { source: program, trace: last };
-      seed.value = last.seed;
+    // A batch in progress goes on with its remaining seeds, followed by the new ones.
+    const left =
+      running.value?.source === program ? batchSeeds.subarray(reported) : new Float64Array(0);
+    batchSeeds = new Float64Array(left.length + seeds.length);
+    batchSeeds.set(left);
+    batchSeeds.set(seeds, left.length);
+    reported = 0;
+    generation += 1;
+    running.value = { generation, source: program };
+    send({ type: "run", generation, source: program, seeds: batchSeeds });
+  });
+
+  // Another program or seed makes the batch in progress stale.
+  effect(() => {
+    source.value;
+    seed.value;
+    untracked(() => {
+      const current = running.value;
+      if (!current) return;
+      running.value = null;
+      send({ type: "cancel", generation: current.generation });
+    });
+  });
+
+  const receive = action((response: Response) => {
+    const current = running.value;
+    if (current?.generation !== response.generation) return;
+    const base = samplesOf(current.source);
+    if (response.type === "batch") {
+      reported += response.runs;
+      if (response.original.length === 0) return;
+      samples.value = {
+        source: current.source,
+        original: [...base.original, ...response.original],
+        determinized: [...base.determinized, ...response.determinized],
+        lastKey: base.lastKey,
+      };
+      return;
     }
+    running.value = null;
+    const last = response.last;
+    if (!last) return;
+    if (sampleOf(last)) samples.value = { ...base, lastKey: `${current.source}:${last.seed}` };
+    knownRun = { source: current.source, trace: last };
+    seed.value = last.seed;
   });
 
   return {
@@ -195,11 +247,13 @@ export function createStore(initial: { source: string; seed: number; exampleId: 
     hoveredSpan,
     activeStep,
     samples,
+    running,
     analysis,
     trace,
     stats,
     commitSource,
     rerun,
     runMany,
+    receive,
   };
 }

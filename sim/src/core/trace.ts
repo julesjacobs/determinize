@@ -85,32 +85,3 @@ export function sampleOf(trace: CoupledTrace): Sample | null {
   if (!Number.isFinite(original) || !Number.isFinite(determinized)) return null;
   return { original, determinized };
 }
-
-/** The runs of a batch: how many ran, their samples, and the last run. */
-export interface Batch {
-  runs: number;
-  original: number[];
-  determinized: number[];
-  last: CoupledTrace | null;
-}
-
-/** The runs at `seeds`, up to the first that throws. */
-export function runBatch(source: string, seeds: Iterable<number>): Batch {
-  const batch: Batch = { runs: 0, original: [], determinized: [], last: null };
-  for (const seed of seeds) {
-    let trace: CoupledTrace;
-    try {
-      trace = runCoupling(source, seed);
-    } catch {
-      break;
-    }
-    batch.runs += 1;
-    batch.last = trace;
-    const sample = sampleOf(trace);
-    if (sample) {
-      batch.original.push(sample.original);
-      batch.determinized.push(sample.determinized);
-    }
-  }
-  return batch;
-}

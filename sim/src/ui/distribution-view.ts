@@ -9,14 +9,20 @@ import { counterexampleLabel, escapeHtml } from "./html.ts";
 import type { Samples, Store } from "./store.ts";
 
 export interface DistributionViewElements {
+  /** The panel, busy while a batch runs. */
+  panel: HTMLElement;
   view: HTMLElement;
   status: HTMLElement;
 }
 
 export function mountDistributionView(
   elements: DistributionViewElements,
-  store: Pick<Store, "samples" | "stats" | "analysis" | "trace">,
+  store: Pick<Store, "samples" | "stats" | "analysis" | "trace" | "running">,
 ) {
+  effect(() => {
+    if (store.running.value) elements.panel.setAttribute("aria-busy", "true");
+    else elements.panel.removeAttribute("aria-busy");
+  });
   effect(() => {
     if (store.trace.value.kind === "unavailable") {
       elements.view.innerHTML = "";

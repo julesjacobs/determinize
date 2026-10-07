@@ -130,7 +130,10 @@ against Node's (`tsconfig.node.json`).
 
 `sim/src/core/` holds the compiler, the runtime and what the step table and the statistics
 compute. A Biome override keeps it free of the DOM, CodeMirror and signals, so that Node's tests
-run it.
+and the sampling worker run it. The page (`sim/src/ui/`) keeps its state in signals of
+`@preact/signals-core` and samples in a worker (`sim/src/worker.ts`), or, where no worker can
+start, as when `sim/dist/index.html` is opened from disk, on its own thread in slices of about
+50 ms.
 
 The `.#sim` shell, which direnv loads in `sim/`, links `sim/node_modules` to packages that
 Nix builds from `sim/package-lock.json`; the combined shell does not. To add or update a
