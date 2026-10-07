@@ -2,6 +2,7 @@
 // where it samples on the page's own thread: every example runs, batches stream without long
 // tasks and stop when the program changes, links restore the program, the seed and the example,
 // Tab leaves the editor, and axe finds only the step table's two known violations.
+import { readFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { deflateRawSync, inflateRawSync } from "node:zlib";
 import { AxeBuilder } from "@axe-core/playwright";
@@ -194,6 +195,31 @@ test("a link restores the program, the seed and the example", async ({ page, con
   expect(await opened.evaluate(async () => (await window.DeterminizeSim.ready).source.value)).toBe(
     state.source,
   );
+});
+
+/** The simulator's address for `source` at `seed`, with no example chosen. */
+function linkTo(source: string, seed: number) {
+  const json = JSON.stringify({ source, seed, example: "" });
+  return `${simulator}#v1=${deflateRawSync(json).toString("base64url")}`;
+}
+
+test("a long run shows its steps a page at a time", async ({ page }) => {
+  const irwinHall = new URL("../../examples/loops/irwin_hall.det", import.meta.url);
+  await page.goto(linkTo(readFileSync(irwinHall, "utf8"), 3));
+  const pager = page.getByRole("navigation", { name: "Pages of the step table" });
+  await expect(pager).toContainText("Steps 0–199 of 1607");
+  await expect(page.locator(".coupling-row")).toHaveCount(200);
+  await pager.getByRole("button", { name: "Next" }).click();
+  await expect(pager).toContainText("Steps 200–399 of");
+  await expect(page.locator(".coupling-row").first()).toHaveAttribute("data-step", "200");
+  await pager.getByRole("button", { name: "Last" }).click();
+  await expect(pager.getByRole("button", { name: "Last" })).toBeDisabled();
+  await expect(status(page)).toHaveText("seed 3 - checked");
+});
+
+test("a run that doesn't end stops at the step table's limit", async ({ page }) => {
+  await page.goto(linkTo("(rec f x => f x) ()", 1));
+  await expect(status(page)).toHaveText("seed 1 - stopped after 20000 steps");
 });
 
 test("a link to an example the gallery doesn't have selects none", async ({ page }) => {

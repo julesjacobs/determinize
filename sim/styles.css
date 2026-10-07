@@ -340,6 +340,16 @@ button:active {
   display: grid;
 }
 
+.trace-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .coupling-row {
   display: grid;
   grid-template-columns: 42px repeat(3, minmax(0, 1fr));
