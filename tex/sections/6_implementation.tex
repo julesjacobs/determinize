@@ -34,6 +34,8 @@ The complete compilation, verification and execution pipeline is outlined in \cr
 
 \paragraph{Certificate checker} The certificate that Storm produces is checked and it is verified that any such certificate corresponds to the correct expected value for the input program.
 
+\paragraph{Exact mean and variance} Both routes yield the exact return probability, mean and variance of the explored program, conditioned on returning. If the explored program is $e_{\mathrm{det}}$ and $e_{\mathrm{src}}$ is domain-safe with a defined expectation, \cref{thm:expectation} guarantees that $e_{\mathrm{src}}$ has the same mean.
+
 % \subsection{Parsing and type inference}
 
 % This part is unchecked. It consists of:
