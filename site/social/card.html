@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=1200">
+    <title>Determinize: social preview card</title>
+    <link rel="stylesheet" href="../tokens.css">
+    <link rel="stylesheet" href="card.css">
+  </head>
+  <body>
+    <main class="card">
+      <h1>Determinize</h1>
+      <p class="summary">Type inference finds the random draws in a probabilistic program that can be replaced by the means of their distributions.</p>
+      <div class="listings">
+        <div>
+          <p class="head">Source <span class="sub">(modes inferred)</span></p>
+<pre><code><b>let</b> x = uniform<span class="mode-g">[G]</span>(0, 1) <b>in</b>
+<b>let</b> y = gaussian<span class="mode-e">[E]</span>(x, 1) <b>in</b>
+x * y</code></pre>
+        </div>
+        <div>
+          <p class="head det">Determinized</p>
+<pre><code><b>let</b> x = uniform<span class="mode-g">[G]</span>(0, 1) <b>in</b>
+<b>let</b> y = <span class="mean-call">mean_gauss</span>(x, 1) <b>in</b>
+x * y</code></pre>
+        </div>
+      </div>
+      <p class="foot">julesjacobs.com/determinize</p>
+    </main>
+  </body>
+</html>

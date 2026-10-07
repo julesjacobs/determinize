@@ -46,7 +46,7 @@ commit="$(git -C "$site" rev-parse HEAD)"
 
 mkdir -p "$out/fonts"
 # The published files of the landing page; the scripts and sources next to them stay behind.
-cp "$site"/*.html "$site"/*.css "$out/"
+cp "$site"/*.html "$site"/*.css "$site"/*.png "$out/"
 cp "$site"/fonts/*.woff2 "$site"/fonts/*.txt "$out/fonts/"
 # The footer names the commit whose theorems and documentation the page links.
 grep -q '@commit@' "$site/index.html" || { echo "site/index.html has no @commit@ to stamp." >&2; exit 1; }

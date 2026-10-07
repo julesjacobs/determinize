@@ -2,7 +2,10 @@
   "extends": "../sim/tsconfig.json",
   "compilerOptions": {
     "types": ["node"],
-    "typeRoots": ["../sim/node_modules/@types"]
+    "typeRoots": ["../sim/node_modules/@types"],
+    "paths": {
+      "@playwright/test": ["../sim/node_modules/@playwright/test/index.d.ts"]
+    }
   },
-  "include": ["*.mts"]
+  "include": ["**/*.mts"]
 }
