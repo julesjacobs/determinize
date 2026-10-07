@@ -1,3 +1,6 @@
+// The distributions of the step table's machines. A draw and the mean of concrete parameters are
+// those of Lean's runtime (`sampling.ts`); the mean of parameters that depend on symbolic E draws
+// is an affine form, checked against the domain where its parameters are known.
 import type { DistributionKind, Expr, MeanKind } from "../compiler/ast.ts";
 import type { Affine } from "./affine.ts";
 import {
@@ -9,7 +12,8 @@ import {
   evalAffine,
   isConcreteAffine,
 } from "./affine.ts";
-import type { Rng } from "./rng.ts";
+import type { Op } from "./sampling.ts";
+import { SamplingError, SplitMix64, sample } from "./sampling.ts";
 
 /** A sampled parameter: a number, a Const or SymFloat node, or a concrete affine form. */
 export type SampleArg =
@@ -28,25 +32,14 @@ export const floatDistributions = new Set([
   "Discrete",
   "DiscreteList",
 ]);
-const MIN_POSITIVE_SAMPLE = Number.MIN_VALUE;
-const PROBABILITY_EPS = 1e-9;
-const ARITIES: Record<string, number> = {
-  Uniform: 2,
-  Gauss: 2,
-  Exponential: 1,
-  Gamma: 2,
-  Beta: 2,
-  Flip: 1,
-  Bernoulli: 1,
-  Poisson: 1,
-};
 
+/** A distribution's parameters outside its domain, with the message of Lean's runtime. */
 export class DistributionDomainError extends Error {
   declare kind: DistributionKind;
   declare reason: string;
 
   constructor(kind: DistributionKind, message: string) {
-    super(`domain error in ${distributionName(kind)}: ${message}`);
+    super(message);
     this.name = "DistributionDomainError";
     this.kind = kind;
     this.reason = message;
@@ -57,76 +50,72 @@ export function isDistributionDomainError(error: unknown): error is Distribution
   return error instanceof DistributionDomainError;
 }
 
-export function sampleDistribution(kind: MeanKind, args: SampleArg[], rng: Rng): number;
+/**
+ * The op of Lean's runtime that draws a site of `kind` with parameters `values`, and its
+ * arguments, as Lean's elaborator compiles the site: `flip(p)` draws `bernoulli(p)`, and
+ * `discrete(p0, …, pn)` draws from the list of all but the last weight, which takes the
+ * remainder.
+ */
+function leanDraw(kind: DistributionKind, values: number[]): { op: Op; args: number[] } {
+  switch (kind) {
+    case "Uniform":
+      return { op: "uniform", args: values };
+    case "Gauss":
+      return { op: "gaussian", args: values };
+    case "Exponential":
+      return { op: "exponential", args: values };
+    case "Gamma":
+      return { op: "gamma", args: values };
+    case "Beta":
+      return { op: "beta", args: values };
+    case "Flip":
+    case "Bernoulli":
+      return { op: "bernoulli", args: values };
+    case "Poisson":
+      return { op: "poisson", args: values };
+    case "Discrete":
+      return { op: "discrete", args: values.slice(0, -1) };
+    case "DiscreteList":
+      return { op: "discrete", args: values };
+  }
+}
+
+/** The mean draws nothing; Lean runs it on the E stream without advancing it. */
+const meanStream = new SplitMix64(0n);
+
+function leanSample(kind: DistributionKind, values: number[], mean: boolean, rng: SplitMix64) {
+  const { op, args } = leanDraw(kind, values);
+  try {
+    return sample(op, mean, args, rng);
+  } catch (error) {
+    if (error instanceof SamplingError) throw new DistributionDomainError(kind, error.message);
+    throw error;
+  }
+}
+
+/** A draw from `rng`: a number, a Boolean for `flip`, and an index for `discrete`. */
+export function sampleDistribution(kind: MeanKind, args: SampleArg[], rng: SplitMix64): number;
 export function sampleDistribution(
   kind: DistributionKind,
   args: SampleArg[],
-  rng: Rng,
+  rng: SplitMix64,
 ): number | boolean;
 export function sampleDistribution(
   kind: DistributionKind,
   args: SampleArg[],
-  rng: Rng,
+  rng: SplitMix64,
 ): number | boolean {
-  const domain = validateSampleDomain(kind, args);
-  switch (kind) {
-    case "Uniform": {
-      const [lo, hi] = domain;
-      return lo + rng.next() * (hi - lo);
-    }
-    case "Gauss": {
-      const [mean, variance] = domain;
-      const u1 = rng.positive();
-      const u2 = rng.next();
-      return mean + Math.sqrt(variance) * Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-    }
-    case "Exponential": {
-      const [rate] = domain;
-      return -Math.log(rng.positive()) / rate;
-    }
-    case "Gamma":
-      return gammaSample(domain[0], domain[1], rng);
-    case "Beta": {
-      const x = gammaSample(domain[0], 1, rng);
-      const y = gammaSample(domain[1], 1, rng);
-      return x / (x + y);
-    }
-    case "Flip": {
-      const [p] = domain;
-      return rng.next() < p;
-    }
-    case "Bernoulli":
-      return rng.next() < domain[0] ? 1 : 0;
-    case "Poisson":
-      return poissonSample(domain[0], rng);
-    case "Discrete": {
-      const probabilities = domain;
-      const total = probabilities.reduce((a, b) => a + b, 0);
-      const r = rng.next() * total;
-      let acc = 0;
-      for (let i = 0; i < probabilities.length; i++) {
-        acc += probabilities[i];
-        if (r <= acc) return i;
-      }
-      return probabilities.length - 1;
-    }
-    case "DiscreteList": {
-      // The first index whose cumulative probability exceeds the draw; the remainder otherwise.
-      const u = rng.next();
-      let cumulative = 0;
-      for (const [index, probability] of domain.entries()) {
-        cumulative += probability;
-        if (u < cumulative) return index;
-      }
-      return domain.length;
-    }
-    default:
-      throw new Error(`unknown distribution ${kind}`);
-  }
+  const value = leanSample(kind, args.map(numberArg), false, rng);
+  return kind === "Flip" ? 0 < value : value;
 }
 
+/** The mean of a distribution: Lean's mean of concrete parameters, and otherwise an affine form
+ * in the symbols the parameters depend on. */
 export function meanDistribution(kind: MeanKind, args: Affine[]): Affine {
-  validateMeanDomain(kind, args);
+  if (args.every(isConcreteAffine)) {
+    return { constant: leanSample(kind, args.map(affineToNumber), true, meanStream), terms: {} };
+  }
+  validateSymbolicMean(kind, args);
   switch (kind) {
     case "Uniform":
       return affineScale(affineAdd(args[0], args[1]), 0.5);
@@ -142,31 +131,21 @@ export function meanDistribution(kind: MeanKind, args: Affine[]): Affine {
     case "Poisson":
       return args[0];
     case "Discrete":
-      return args.reduce<Affine>(
-        (acc, probability, index) =>
-          affineAdd(acc, affineMul(probability, { constant: index, terms: {} })),
-        { constant: 0, terms: {} },
-      );
     case "DiscreteList": {
       // n + Σ (i - n) p_i: outcome n takes the remainder 1 - Σ p_i.
-      const n = args.length;
-      return args.reduce<Affine>(
+      const probabilities = kind === "Discrete" ? args.slice(0, -1) : args;
+      const n = probabilities.length;
+      return probabilities.reduce<Affine>(
         (acc, probability, index) =>
           affineAdd(acc, affineMul(probability, { constant: index - n, terms: {} })),
         { constant: n, terms: {} },
       );
     }
-    default:
-      throw new Error(`no symbolic mean for ${kind}`);
   }
 }
 
 export function instantiateArgs(args: Affine[], env: Map<string, number>): number[] {
   return args.map((arg) => evalAffine(arg, env));
-}
-
-export function meanArgs(args: Affine[], env: Map<string, number>): Affine[] {
-  return args.map((arg) => ({ constant: evalAffine(arg, env), terms: {} }));
 }
 
 function numberArg(arg: SampleArg): number {
@@ -180,160 +159,65 @@ function numberArg(arg: SampleArg): number {
   throw new Error(`expected numeric argument, got ${JSON.stringify(arg)}`);
 }
 
-function validateSampleDomain(kind: DistributionKind, args: SampleArg[]) {
-  const values = args.map(numberArg);
-  validateConcreteDomain(kind, values);
-  return values;
-}
-
-function validateMeanDomain(kind: MeanKind, args: Affine[]) {
-  for (const arg of args) validateFiniteAffine(kind, arg);
-  const values = args.map((arg) => (isConcreteAffine(arg) ? affineToNumber(arg) : null));
-  validateConcreteDomain(kind, values, { skipSymbolic: true });
-}
-
-function validateFiniteAffine(kind: MeanKind, arg: Affine) {
-  if (!Number.isFinite(arg.constant))
-    throw new DistributionDomainError(kind, "parameters must be finite");
-  for (const coeff of Object.values(arg.terms)) {
-    if (!Number.isFinite(coeff))
-      throw new DistributionDomainError(kind, "parameters must be finite");
+/**
+ * Lean's domain checks of `sample`, as far as they apply to the parameters that are concrete;
+ * a parameter that depends on symbols passes. Lean checks the same conditions once the symbols
+ * have values.
+ */
+function validateSymbolicMean(kind: MeanKind, args: Affine[]) {
+  const finite = (arg: Affine) =>
+    Number.isFinite(arg.constant) && Object.values(arg.terms).every(Number.isFinite);
+  if (!args.every(finite)) {
+    throw new DistributionDomainError(kind, "nonfinite distribution parameter");
   }
-}
-
-function validateConcreteDomain(
-  kind: DistributionKind,
-  values: (number | null)[],
-  options: { skipSymbolic?: boolean } = {},
-) {
-  const skipSymbolic = Boolean(options.skipSymbolic);
-  validateArity(kind, values.length);
-  const concrete = values.filter((value) => value !== null);
-  for (const value of concrete) {
-    if (!Number.isFinite(value))
-      throw new DistributionDomainError(kind, "parameters must be finite");
-  }
-
-  const arg = (index: number) => values[index];
-  const check = (index: number, predicate: (value: number) => boolean, message: string) => {
-    const value = arg(index);
-    if (value === null && skipSymbolic) return;
-    if (!predicate(value as number)) throw new DistributionDomainError(kind, message);
+  const value = (index: number) => (isConcreteAffine(args[index]) ? args[index].constant : null);
+  const fails = (index: number, outside: (x: number) => boolean) => {
+    const x = value(index);
+    return x !== null && outside(x);
   };
-
   switch (kind) {
-    case "Uniform":
-      if (
-        !(skipSymbolic && (arg(0) === null || arg(1) === null)) &&
-        (arg(0) as number) > (arg(1) as number)
-      ) {
-        throw new DistributionDomainError(kind, "lower bound must be <= upper bound");
-      }
-      break;
     case "Gauss":
-      check(1, (value) => value >= 0, "variance must be >= 0");
-      break;
-    case "Exponential":
-      check(0, (value) => value > 0, "rate must be > 0");
-      break;
-    case "Gamma":
-      check(0, (value) => value > 0, "shape must be > 0");
-      check(1, (value) => value > 0, "rate must be > 0");
-      break;
-    case "Beta":
-      check(0, (value) => value > 0, "alpha must be > 0");
-      check(1, (value) => value > 0, "beta must be > 0");
-      break;
-    case "Flip":
+      if (fails(1, (v) => v < 0)) {
+        throw new DistributionDomainError(kind, "gaussian requires variance ≥ 0");
+      }
+      return;
     case "Bernoulli":
-      check(0, (value) => value >= 0 && value <= 1, "probability must be in [0, 1]");
-      break;
+      if (fails(0, (p) => p < 0 || p > 1)) {
+        throw new DistributionDomainError(kind, "bernoulli requires probability in [0,1]");
+      }
+      return;
     case "Poisson":
-      check(0, (value) => value >= 0, "lambda must be >= 0");
-      break;
-    case "Discrete": {
-      if (values.length === 0)
-        throw new DistributionDomainError(kind, "at least one probability is required");
-      for (const [index, value] of values.entries()) {
-        if (value === null && skipSymbolic) continue;
-        if ((value as number) < 0 || (value as number) > 1)
-          throw new DistributionDomainError(kind, `probability ${index} must be in [0, 1]`);
+      if (fails(0, (rate) => rate < 0)) {
+        throw new DistributionDomainError(kind, "poisson requires rate ≥ 0");
       }
-      if (!values.includes(null)) {
-        const total = (values as number[]).reduce((sum, value) => sum + value, 0);
-        if (Math.abs(total - 1) > PROBABILITY_EPS)
-          throw new DistributionDomainError(kind, "probabilities must sum to 1");
+      return;
+    case "Exponential":
+      if (fails(0, (rate) => rate <= 0)) {
+        throw new DistributionDomainError(kind, "exponential requires rate > 0");
       }
-      break;
-    }
-    case "DiscreteList": {
-      for (const value of values) {
-        if (value !== null && value < 0)
-          throw new DistributionDomainError(kind, "probabilities must be >= 0");
+      return;
+    case "Gamma":
+      if (fails(0, (x) => x <= 0) || fails(1, (x) => x <= 0)) {
+        throw new DistributionDomainError(kind, "gamma requires positive shape and rate");
       }
-      if (!values.includes(null)) {
-        // Lean's runtime allows the rounding of the sum at the domain boundary.
-        const total = (values as number[]).reduce((sum, value) => sum + value, 0);
-        const tolerance = 8 * Number.EPSILON * (values.length + 1);
-        if (total > 1 + tolerance)
-          throw new DistributionDomainError(kind, "probabilities must sum to at most 1");
+      return;
+    case "Beta":
+      if (fails(0, (x) => x <= 0) || fails(1, (x) => x <= 0)) {
+        throw new DistributionDomainError(kind, "beta requires positive parameters");
       }
-      break;
-    }
-    default:
-      throw new Error(`unknown distribution ${kind}`);
-  }
-}
-
-function validateArity(kind: DistributionKind, actual: number) {
-  if (kind === "Discrete" || kind === "DiscreteList") return;
-  const expected = ARITIES[kind];
-  if (expected === undefined) throw new Error(`unknown distribution ${kind}`);
-  if (actual !== expected) {
-    const noun = expected === 1 ? "parameter" : "parameters";
-    throw new DistributionDomainError(kind, `expected ${expected} ${noun}, got ${actual}`);
+      return;
+    case "Discrete":
+    case "DiscreteList":
+      if (args.some((_, i) => fails(i, (p) => p < 0))) {
+        throw new DistributionDomainError(kind, "discrete requires nonnegative probabilities");
+      }
+      return;
+    case "Uniform":
+      return;
   }
 }
 
 export function distributionName(kind: string) {
   if (kind === "DiscreteList") return "discrete_list";
   return kind === "Gauss" ? "gauss" : kind.toLowerCase();
-}
-
-function gammaSample(alpha: number, beta: number, rng: Rng): number {
-  const scale = 1 / beta;
-  if (alpha < 1)
-    return positiveSample(gammaSample(alpha + 1, beta, rng) * rng.positive() ** (1 / alpha));
-  const d = alpha - 1 / 3;
-  const c = 1 / Math.sqrt(9 * d);
-  for (;;) {
-    const x = stdNormal(rng);
-    const v = 1 + c * x;
-    if (v <= 0) continue;
-    const v3 = v * v * v;
-    const u = rng.positive();
-    if (u < 1 - 0.0331 * x ** 4) return positiveSample(scale * d * v3);
-    if (Math.log(u) < 0.5 * x * x + d * (1 - v3 + Math.log(v3)))
-      return positiveSample(scale * d * v3);
-  }
-}
-
-function positiveSample(value: number) {
-  return Number.isFinite(value) && value > 0 ? value : MIN_POSITIVE_SAMPLE;
-}
-
-function stdNormal(rng: Rng) {
-  return Math.sqrt(-2 * Math.log(rng.positive())) * Math.cos(2 * Math.PI * rng.next());
-}
-
-function poissonSample(lambda: number, rng: Rng) {
-  if (lambda === 0) return 0;
-  // Exponential arrival times avoid exp(-lambda) underflow at large rates.
-  let arrival = -Math.log(rng.positive());
-  let count = 0;
-  while (arrival <= lambda) {
-    count += 1;
-    arrival -= Math.log(rng.positive());
-  }
-  return count;
 }
