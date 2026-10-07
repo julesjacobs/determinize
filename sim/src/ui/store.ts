@@ -46,6 +46,8 @@ export interface Store {
   typeHints: Signal<boolean>;
   /** The source range whose type hint the pointer or the focus is on. */
   hoveredSpan: Signal<Span | null>;
+  /** The step of the step table whose checks are shown. */
+  activeStep: Signal<number | null>;
   samples: ReadonlySignal<Samples>;
   analysis: ReadonlySignal<Analysis>;
   trace: ReadonlySignal<TraceState>;
@@ -86,6 +88,7 @@ export function createStore(initial: { source: string; seed: number; exampleId: 
   const sampleCount = signal(200);
   const typeHints = signal(false);
   const hoveredSpan = signal<Span | null>(null);
+  const activeStep = signal<number | null>(null);
   const samples = signal(noSamples(initial.source));
 
   // A run that was already computed elsewhere, so that showing it in the step table doesn't
@@ -190,6 +193,7 @@ export function createStore(initial: { source: string; seed: number; exampleId: 
     sampleCount,
     typeHints,
     hoveredSpan,
+    activeStep,
     samples,
     analysis,
     trace,
