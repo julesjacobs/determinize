@@ -34,7 +34,7 @@ for (const [index, example] of examples.entries()) {
  * `DeterminizeSim.ready`. */
 export const ready = decodeShare(window.location.hash).then(start);
 
-/** A seed for a run, drawn as the simulator always has. */
+/** A random seed for a run, from 1 to 2³² − 1. */
 function randomSeed() {
   return Math.floor(1 + Math.random() * 0xffffffff);
 }
