@@ -1,0 +1,100 @@
+/*
+ * Design tokens of the determinize site and simulator.
+ *
+ * Colours are roles: --ground, --ink, --muted, --given (G sites, the G-draw axis), --change
+ * (what determinization changes: E sites, mean_ calls, the determinized output) and --alert.
+ * Everything else is mixed from them. light-dark() follows color-scheme, which a theme control
+ * may set on :root with data-theme.
+ */
+
+@font-face {
+  font-family: "Atkinson Hyperlegible Next";
+  src: url("fonts/atkinson-next-var.woff2") format("woff2");
+  font-weight: 200 800;
+  font-display: swap;
+}
+/* JuliaMono's licence reserves its name, so the subset is renamed (fonts/README.md). */
+@font-face {
+  font-family: "Determinize Mono";
+  src: url("fonts/determinize-mono-400.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Determinize Mono";
+  src: url("fonts/determinize-mono-600.woff2") format("woff2");
+  font-weight: 600;
+  font-display: swap;
+}
+
+/* A metric-matched fallback, so that swapping in the web font doesn't move the layout. */
+@font-face {
+  font-family: "Atkinson fallback";
+  src: local("Arial"), local("DejaVu Sans");
+  size-adjust: 102%;
+}
+
+@layer tokens {
+  :root {
+    color-scheme: light dark;
+
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-5: 1.5rem;
+    --space-6: 2rem;
+    --space-7: 3rem;
+    --space-8: 4rem;
+
+    --control-height: 2rem;
+    --target-min: 1.5rem;
+    --radius-control: 2px;
+    --step-fade: 160ms;
+  }
+
+  :root[data-theme="light"] {
+    color-scheme: light;
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root {
+      --step-fade: 0ms;
+    }
+  }
+
+  /* Light and dark values of each role. */
+  :root {
+    --ground: light-dark(#f3f4f1, #151619);
+    --ink: light-dark(#16181d, #e8e9e4);
+    --muted: light-dark(#545a64, #a3a8b0);
+    --given: light-dark(#3d3a9a, #aaa7f7);
+    --change: light-dark(#7a5c00, #ddb650);
+    --alert: light-dark(#a4155c, #f290b8);
+
+    --code-fill: color-mix(in oklab, var(--ink) 6%, var(--ground));
+    --change-fill: color-mix(in oklab, var(--change) 30%, var(--ground));
+    --highlight: color-mix(in oklab, var(--ink) 10%, transparent);
+    --rule: color-mix(in oklab, var(--muted) 30%, var(--ground));
+
+    --font-text: "Atkinson Hyperlegible Next", "Atkinson fallback", Arial, sans-serif;
+    --font-code: "Determinize Mono", ui-monospace, monospace;
+
+    --size-small: 0.8125rem; /* 13 px: axis labels, glossary */
+    --size-ui: 0.9375rem; /* 15 px: interface */
+    --size-code: 0.875rem; /* 14 px */
+    --size-body: 1.0625rem; /* 17 px: landing page text */
+    --size-heading: 1.375rem; /* 22 px */
+    --size-title: 2.125rem; /* 34 px */
+    --leading-body: 1.53;
+    --leading-ui: 1.47;
+    --leading-code: 1.5;
+    --weight-heading: 600;
+    --weight-strong: 600;
+    --measure: 40rem;
+    --figure-width: 64rem;
+  }
+}
