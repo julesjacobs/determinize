@@ -288,12 +288,10 @@ PULL_REQUEST_STARTS = {
 
 # Changes for which a workflow's filter is still too wide or too narrow.
 KNOWN_WRONG = {
-    ".github/workflows/pages.yml", ".github/workflows/sim.yml", ".github/workflows/tex.yml",
-    "check.sh", "examples/baselines/clickGraph.sgcl", "examples/paper/noisy-product.det",
+    "examples/baselines/clickGraph.sgcl", "examples/paper/noisy-product.det",
     "flake-modules/devshells/all.nix", "flake-modules/devshells/lean.nix",
-    "flake-modules/devshells/sim.nix", "flake-modules/devshells/tex.nix", "lean/README.md",
-    "test.sh", "tests/README.md", "tests/cases.toml", "tests/statistical/nested.det",
-    "tests/test_results.py", "tools/bench.py", "tools/dev-shell.sh",
+    "flake-modules/devshells/sim.nix", "flake-modules/devshells/tex.nix", "tests/cases.toml",
+    "tests/statistical/nested.det", "tests/test_results.py",
 }
 
 

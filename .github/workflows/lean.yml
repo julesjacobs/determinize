@@ -8,16 +8,21 @@ name: Lean
 
 on:
   pull_request:
+    # The files that the build, the tests and the scripts they start read. The workflows are read
+    # by the trigger test in tests/test_workflows.py.
     paths:
       - lean/**
+      - "!lean/**/*.md"
       - tests/**
+      - "!tests/**/*.md"
       - examples/**
-      - tools/**
-      - "*.sh"
+      - run.sh
+      - tools/storm*.py
       - flake.nix
       - flake.lock
-      - flake-modules/**
-      - .github/workflows/lean.yml
+      - flake-modules/systems.nix
+      - flake-modules/devshells/lean.nix
+      - .github/workflows/**
   workflow_call:
   workflow_dispatch:
 
