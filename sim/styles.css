@@ -1050,6 +1050,18 @@ button:active {
   margin: 0 0 8px;
 }
 
+.premise-notice {
+  border-radius: 6px;
+  background: #fffaeb;
+  color: var(--amber);
+  padding: 6px 10px;
+  font-weight: 650;
+}
+
+.premise-notice[hidden] {
+  display: none;
+}
+
 .lean-output h3 {
   margin: 8px 0 4px;
   font-size: 13px;
