@@ -35,8 +35,8 @@ test.afterEach(({ page }) => {
 });
 
 /** Waits until no batch of runs is in progress. */
-async function settled(page: Page) {
-  await expect(page.locator("[aria-busy=true]")).toHaveCount(0);
+async function settled(page: Page, timeout?: number) {
+  await expect(page.locator("[aria-busy=true]")).toHaveCount(0, { timeout });
 }
 
 /** Sets how many runs "Run N" adds, through the page's store. */
@@ -113,16 +113,36 @@ test("Run 200 and a 5000-run batch leave no long task over 200 ms", async ({ pag
   const longTasks = await page.evaluate(() => window.longTasks);
   test.info().annotations.push({ type: "long tasks (ms)", description: JSON.stringify(longTasks) });
   expect(Math.max(0, ...longTasks)).toBeLessThanOrEqual(200);
+
+  // The observer reports a task of 300 ms, so the measurement above could have seen one.
+  await page.evaluate(() =>
+    setTimeout(() => {
+      const start = performance.now();
+      while (performance.now() - start < 300);
+    }),
+  );
+  await expect
+    .poll(() => page.evaluate(() => Math.max(0, ...window.longTasks)))
+    .toBeGreaterThan(250);
 });
 
 test("a second Run during a batch adds its runs as well", async ({ page }) => {
+  test.setTimeout(60_000);
   await page.goto(simulator);
-  await setRunCount(page, 3000);
-  const run = page.getByRole("button", { name: "Run 3000" });
+  // 1000 runs of the dungeon take seconds, so the first batch is still running at the second click.
+  await page.getByLabel("Example").selectOption({ label: "Dungeon" });
+  await setRunCount(page, 1000);
+  const run = page.getByRole("button", { name: "Run 1000" });
   await run.click();
-  await run.click();
-  await settled(page);
-  await expect(samples(page)).toHaveText("6001 samples");
+  await expect(page.locator("[aria-busy=true]")).toHaveCount(1);
+  const runningAtSecondClick = await page.evaluate(async () => {
+    const running = (await window.DeterminizeSim.ready).running.value !== null;
+    (document.querySelector("#many-coupling") as HTMLButtonElement).click();
+    return running;
+  });
+  expect(runningAtSecondClick).toBe(true);
+  await settled(page, 50_000);
+  await expect(samples(page)).toHaveText("2001 samples");
 });
 
 test("editing during a run discards its stale batches", async ({ page }) => {
