@@ -66,9 +66,10 @@ sentence or two that changes how a reviewer reads everything else.
   and the run behind the table is not committed.
 - **M2.** The paper does not say that the specification was reviewed, by whom, or against
   what. Next to the disclosure of LLM authorship, a skeptical reader will assume it was not.
-- **M3.** The exact result is certified for `e_det`, and the tool labels it so. But Section 6
-  never says when it carries over to `e_src`, and two concrete programs below show that it
-  can fail to.
+- **M3.** The exact result is certified for `e_det`, and the tool labels it so. Section 6
+  states the theorems' hypotheses (line 23) but never connects them to the exact result, nor
+  says that the tool does not check them. Two concrete programs below show that the result
+  can fail to carry over to `e_src`.
 
 Everything else concerns precision, space and presentation. The underlying work is stronger
 than the section suggests: the build check, the embedded inference proofs and the certificate
@@ -320,12 +321,15 @@ correspond precisely to those in the paper?" [3].
 
   Do this only with honest data. Without data, A plus C is enough.
 
-### M3. Section 6 never says when the certified result for `e_det` carries over to `e_src`
+### M3. Section 6 never connects the certified result for `e_det` to `e_src`
 
-**What the paper says.** Section 6 describes "exact mean and variance" (line 31; Fig. 13). It
-never says what these mean for `e_src`. The introduction now says the exact value "equals the
-source expectation under the source safety and integrability hypotheses". Thm. 4.6 requires
-`e_src` to be domain-safe, `q_e>0` and `E_ret[e_src]` to be well-defined.
+**What the paper says.** Line 23 states the soundness theorems' hypotheses: `e_src` is typed
+and domain-safe, and its expectation is defined. Lines 29–35 then describe "exact mean and
+variance" (line 31; Fig. 13) without saying that these are numbers for `e_det`, that they are
+`e_src`'s only under line 23's hypotheses, or that the tool checks neither hypothesis. The
+introduction says the exact value "equals the source expectation under the source safety and
+integrability hypotheses". Thm. 4.6 requires `e_src` to be domain-safe, `q_e>0` and
+`E_ret[e_src]` to be well-defined.
 
 **What the tool does.** By default it explores `e_det`. `Model.Matches` proves that the
 *explored* program is domain-safe (`Spec/FiniteModel/Model.lean:67-68`). Nothing checks
@@ -350,7 +354,8 @@ either hypothesis for `e_src`. Two runs of the tool show the consequence:
    let u = gaussian(0, 1) in uniform(0, u)
    ```
 
-   The exact route prints "… : 0" with a certificate. The true `E_ret` is 1/√(2π) ≈ 0.399.
+   The exact route prints "… : 0" with a certificate. The true `E_ret` is 1/√(2π) ≈ 0.399,
+   and the unnormalized first moment, which is what the CLI prints, is half of that.
    The tool's own sampling mode on the same file reports "Source: 10058/20000 runs returned a
    value … mean 0.395854 … first failure: uniform requires lower ≤ upper".
 
