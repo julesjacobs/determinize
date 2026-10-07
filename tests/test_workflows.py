@@ -208,6 +208,13 @@ def shell_paths(source):
     return set().union(*(named(source, word) for word in words))
 
 
+def nix_paths(source):
+    """The files that the words of a Nix file name, outside its `#` comments."""
+    words = re.findall(r"[^\s\"'();|&<>]+",
+                       re.sub(r"#[^\n]*", "", (ROOT / source).read_text()))
+    return set().union(*(named(source, word) for word in words))
+
+
 def script_paths(source):
     """The files that the string literals of a TypeScript file name."""
     literals = re.findall(r'"([^"\\\n]*)"|\'([^\'\\\n]*)\'|`([^`]*)`', (ROOT / source).read_text())
@@ -232,13 +239,19 @@ def tex_paths(source):
 
 # For each workflow with a pull-request filter: the code it runs, as filters over the tracked files,
 # and how to read the repository paths that this code names.
+# Each workflow's dev shell counts too: its file names the repository files it reads, such as
+# sim.nix's lockfile.
 GUARDED = {
-    "lean": [(["tests/**/*.py"], python_paths), (["lean/test.sh"], shell_paths)],
-    "sim": [(["sim/test/**", "sim/build.ts"], script_paths), (["sim/src/**"], import_paths)],
-    "tex": [(["tex/**/*.tex", "!tex/archive/**"], tex_paths)],
+    "lean": [(["tests/**/*.py"], python_paths), (["lean/test.sh"], shell_paths),
+             (["flake-modules/devshells/lean.nix"], nix_paths)],
+    "sim": [(["sim/test/**", "sim/build.ts"], script_paths), (["sim/src/**"], import_paths),
+            (["flake-modules/devshells/sim.nix"], nix_paths)],
+    "tex": [(["tex/**/*.tex", "!tex/archive/**"], tex_paths),
+            (["flake-modules/devshells/tex.nix"], nix_paths)],
     # check.sh site builds the simulator and assembles the site with site/assemble.sh.
     "site": [(["site/**/*.mts", "sim/e2e/**", "sim/playwright.config.ts", "sim/build.ts"], script_paths),
-             (["site/**/*.sh"], shell_paths), (["sim/src/**"], import_paths)],
+             (["site/**/*.sh"], shell_paths), (["sim/src/**"], import_paths),
+             (["flake-modules/devshells/site.nix", "flake-modules/devshells/sim.nix"], nix_paths)],
 }
 
 
@@ -270,6 +283,7 @@ PULL_REQUEST_STARTS = {
     "run.sh": {"lean"},
     "tools/storm.py": {"lean"},
     "tools/storm_additive.py": {"lean"},
+    "tools/storm-requirements.txt": {"lean"},
     "flake-modules/devshells/lean.nix": {"lean"},
     ".github/workflows/lean.yml": {"lean"},
     ".github/workflows/pages.yml": {"lean"},

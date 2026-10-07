@@ -3,21 +3,27 @@
 # matching subset.
 {
   perSystem =
-    { config, pkgs, ... }:
+    { config, lib, pkgs, ... }:
     {
-      devShells.default = pkgs.mkShell {
-        name = "determinize";
+      devShells.default = pkgs.mkShell (
+        {
+          name = "determinize";
 
-        # Not inherited through inputsFrom; see lean.nix.
-        hardeningDisable = [ "bindnow" ];
+          # Not inherited through inputsFrom; see lean.nix.
+          hardeningDisable = [ "bindnow" ];
 
-        # Neither is the sim shell's npmDeps, so this shell links no node_modules (see sim.nix): the
-        # sim shell, or direnv in sim/, provides sim/node_modules.
-        inputsFrom = [
-          config.devShells.tex
-          config.devShells.sim
-          config.devShells.lean
-        ];
-      };
+          # Neither is the sim shell's npmDeps, so this shell links no node_modules (see sim.nix):
+          # the sim shell, or direnv in sim/, provides sim/node_modules.
+          inputsFrom = [
+            config.devShells.tex
+            config.devShells.sim
+            config.devShells.lean
+          ];
+        }
+        # Nor the lean shell's STORM_PYTHON, which the tests use to compare with Storm.
+        // lib.optionalAttrs (config.devShells.lean ? STORM_PYTHON) {
+          inherit (config.devShells.lean) STORM_PYTHON;
+        }
+      );
     };
 }

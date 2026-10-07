@@ -57,7 +57,7 @@ changes. The scripts use tools on `PATH` first; Nix is optional.
 
 On GitHub, each workflow runs for the pull requests that change a file it reads.
 `.github/workflows/lean.yml` runs `lake build --wfail` and `./test.sh --all` in the `.#lean`
-shell. `.github/workflows/sim.yml` runs `biome ci`, the type check and the simulator tests in
+shell, the comparisons with Storm included. `.github/workflows/sim.yml` runs `biome ci`, the type check and the simulator tests in
 the `.#sim` shell, builds the simulator into `sim/dist/` and attaches it to the run as the
 `simulator` artifact. `.github/workflows/tex.yml` builds the paper in the `.#tex` shell, fails
 on unresolved references and citations, and attaches `main.pdf` as the `paper` artifact.
@@ -79,12 +79,21 @@ theorem's premises. See [the contract](lean/finite-model-contract.md).
 
 ## Storm
 
+On Linux, the `.#lean` shell sets `STORM_PYTHON` to a Python with stormpy, the version in
+`tools/storm-requirements.txt`, so `./test.sh --all` includes the comparisons with Storm, in CI
+too:
+
+```sh
+./run.sh --storm tests/statistical/discrete.det --prefix /tmp/model --subject source
+./test.sh --all
+```
+
+Elsewhere, install stormpy and point `STORM_PYTHON` at it:
+
 ```sh
 uv venv --python 3.12 /tmp/determinize-storm
 uv pip install --python /tmp/determinize-storm/bin/python -r tools/storm-requirements.txt
-STORM_PYTHON=/tmp/determinize-storm/bin/python ./run.sh --storm \
-  tests/statistical/discrete.det --prefix /tmp/model --subject source
-STORM_PYTHON=/tmp/determinize-storm/bin/python ./test.sh --all
+export STORM_PYTHON=/tmp/determinize-storm/bin/python
 ```
 
 Storm uses exact rational matrices. The wrapper checks `.result.lean` with Lean's
@@ -98,8 +107,8 @@ pending outer additions would otherwise produce infinitely many machine states:
 ```sh
 ./run.sh --check --additive --result /tmp/geometric --subject source \
   examples/loops/geometric-addition.det
-STORM_PYTHON=/tmp/determinize-storm/bin/python ./run.sh --storm \
-  examples/loops/geometric-addition.det --additive --prefix /tmp/geometric --subject source --compare
+./run.sh --storm examples/loops/geometric-addition.det --additive --prefix /tmp/geometric \
+  --subject source --compare
 ```
 
 The geometric example has 45 states, mean 1 and variance 2. Computed or random
