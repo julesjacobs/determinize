@@ -17,7 +17,7 @@ affect the results; leave routine formal details to Lean.
 - [x] Clear section bodies, retaining the outline.
 - [x] Type inference, including shape checking, subtype constraints, and affinity solving.
 - [ ] Write the general symbolic invariants and induction.
-- [ ] Author review of the mathematical definitions and statements.
+- [x] Author review of the mathematical definitions and statements.
 - [ ] Introduction, implementation, evaluation, and related work.
 - [x] Implementation architecture figure, including sampling and certified finite-state computation.
 - [x] Verify rational equation solving and show the verified solver in the architecture figure.

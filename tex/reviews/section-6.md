@@ -448,6 +448,17 @@ would find it in a minute.
     - `finite_mass_balance` says that a model's return, rejection and divergence
       probabilities sum to 1;
     - `finite_reward_integrability` says that every reward model has finite moments.
+
+    A single result does not depend on the general theorem, though. Each certificate file
+    states its result for the program it was written for, and the kernel checks it:
+    `outputStatistics` says `statistics.Matches (bigStepMeasure (checkedSubject.program
+    checkedSource))`, with `Matches`, `bigStepMeasure` and `Subject.program` from `Spec/` and
+    the program as the literal `checkedSource`. Only `statistics` is defined outside `Spec/`,
+    as the initial state's entries of the certificate's vectors. On the Storm routes,
+    `reportedStatistics` fixes its three fields to the printed rationals by `decide +kernel`.
+    The built-in solver's certificates (`Finite/Export.lean`, `Finite/Reward/Export.lean`)
+    have no such theorem, so relating the printed numbers to the theorem takes the compiled
+    CLI or an evaluation of `statistics` by hand.
   - *Imports can change how statements elaborate.* Coercions, notations or instance priorities
     from an import leave no trace in the statements. `lean/README.md` says so; the paper
     should too, in half a sentence. M2-D removes the gap.
@@ -495,6 +506,12 @@ would find it in a minute.
   reviewer can read.
 - **C [0]. If B does not fit the schedule,** label the checker in Fig. 13 as "checked;
   correctness theorem outside `Theorems.lean`". This is honest but weak.
+- **D [0, small Lean work]. End every certificate with one theorem in `Spec` terms.** For
+  example `(⟨q, m₁, m₂⟩ : OutputStatistics).Matches (bigStepMeasure (checkedSubject.program
+  checkedSource))` with the printed rationals as literals, proved from `outputStatistics`.
+  Every exact result is then a theorem whose statement uses only reviewed definitions and the
+  numbers the tool printed, on all four routes, and no checker needs to be trusted. This gives
+  a single result more than B does.
 
 ### M5. Fig. 13 costs two thirds of a page, and its legend is misleading
 
