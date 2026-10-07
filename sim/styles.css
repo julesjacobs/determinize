@@ -164,6 +164,7 @@ button:active {
 
 .editor-pane {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr) auto auto;
   min-width: 0;
   overflow: hidden;
@@ -184,9 +185,11 @@ button:active {
 
 .editor-controls {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: end;
-  gap: 8px;
+  gap: 4px 8px;
+  padding-block: 4px;
   min-width: 0;
   flex: 1;
 }
@@ -1006,6 +1009,38 @@ button:active {
 .editor-diagnostics.error {
   background: #fff5f4;
   color: var(--red);
+}
+
+.lean-output {
+  max-height: 40vh;
+  overflow: auto;
+  border-top: 1px solid var(--line);
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.lean-output[hidden] {
+  display: none;
+}
+
+.lean-output p {
+  margin: 0 0 8px;
+}
+
+.lean-output h3 {
+  margin: 8px 0 4px;
+  font-size: 13px;
+}
+
+.lean-program {
+  min-height: 0;
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel-strong);
+  white-space: pre-wrap;
+  font: 600 12px/1.45 "SF Mono", Menlo, Monaco, Consolas, monospace;
 }
 
 .counterexample-label {

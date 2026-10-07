@@ -1,5 +1,6 @@
 import type { Affine } from "../runtime/affine.ts";
 import type { DistributionKind, Expr, ExprOf } from "./ast.ts";
+import { leanLiteral } from "./rational.ts";
 
 /** The operands of an infix node: left and right, or head and tail of a Cons. */
 interface Operands<E> {
@@ -40,7 +41,8 @@ export function prettyExpr(expr: Expr, prec = 0): string {
     case "Var":
       return expr.name;
     case "Const":
-      return formatNumber(expr.value);
+      // A literal prints as Lean prints it.
+      return expr.exact ? leanLiteral(expr.exact) : formatNumber(expr.value);
     case "SymFloat":
       return prettyAffine(expr.affine);
     case "Bool":
@@ -59,10 +61,12 @@ export function prettyExpr(expr: Expr, prec = 0): string {
       return wrap(`fun ${expr.param} =>\n${indent(prettyExpr(expr.body))}`, 0);
     case "Rec":
       return wrap(`rec ${expr.name} ${expr.param} =>\n${indent(prettyExpr(expr.body))}`, 0);
+    // A let, an if and a match extend as far to the right as they can, so as an operand they need
+    // parentheses.
     case "Let":
-      return prettyLet(expr);
+      return wrap(prettyLet(expr), 0);
     case "If":
-      return prettyIf(expr);
+      return wrap(prettyIf(expr), 0);
     case "App":
       return wrap(`${prettyExpr(expr.fn, 5)} ${prettyExpr(expr.arg, 6)}`, 5);
     case "Pair":
@@ -72,19 +76,28 @@ export function prettyExpr(expr: Expr, prec = 0): string {
     case "Inl":
     case "Inr":
       return `${expr.kind.toLowerCase()} ${prettyExpr(expr.expr, 6)}`;
+    // An argument can't start with `-`, and `-f x` negates `f x`.
     case "Neg":
-      return wrap(`-${prettyExpr(expr.expr, 6)}`, 6);
+      return wrap(`-${prettyExpr(expr.expr, 6)}`, 4);
     case "Case":
-      return `match ${prettyExpr(expr.scrutinee)} with inl ${expr.leftName} =>\n${indent(prettyExpr(expr.left))}\n| inr ${expr.rightName} =>\n${indent(prettyExpr(expr.right))}`;
+      return wrap(
+        `match ${prettyExpr(expr.scrutinee, 1)} with inl ${expr.leftName} =>\n${indent(prettyExpr(expr.left))}\n| inr ${expr.rightName} =>\n${indent(prettyExpr(expr.right))}`,
+        0,
+      );
     case "MatchList":
-      return `match ${prettyExpr(expr.scrutinee)} with [] =>\n${indent(prettyExpr(expr.nilBranch))}\n| ${expr.headName} :: ${expr.tailName} =>\n${indent(prettyExpr(expr.consBranch))}`;
+      return wrap(
+        `match ${prettyExpr(expr.scrutinee, 1)} with [] =>\n${indent(prettyExpr(expr.nilBranch))}\n| ${expr.headName} :: ${expr.tailName} =>\n${indent(prettyExpr(expr.consBranch))}`,
+        0,
+      );
     case "Observe":
       return `observe(${prettyExpr(expr.cond)})`;
     default:
       if (expr.kind in infix) {
         const [op, level] = infix[expr.kind];
+        // `::` groups to the right, the other operators to the left.
+        const cons = expr.kind === "Cons" ? 1 : 0;
         return wrap(
-          `${prettyExpr(leftOf(expr), level)} ${op} ${prettyExpr(rightOf(expr), level + (expr.kind === "Cons" ? -1 : 1))}`,
+          `${prettyExpr(leftOf(expr), level + cons)} ${op} ${prettyExpr(rightOf(expr), level + 1 - cons)}`,
           level,
         );
       }
@@ -144,7 +157,8 @@ function prettyLet(expr: ExprOf<"Let">) {
 }
 
 function prettyIf(expr: ExprOf<"If">) {
-  const cond = prettyExpr(expr.cond);
+  // A condition that is itself a let, an if or a match reads better in parentheses.
+  const cond = prettyExpr(expr.cond, 1);
   const thenBranch = prettyExpr(expr.thenBranch);
   const elseBranch = prettyExpr(expr.elseBranch);
   if (
@@ -155,7 +169,8 @@ function prettyIf(expr: ExprOf<"If">) {
   ) {
     return `if ${cond} then ${thenBranch} else ${elseBranch}`;
   }
-  return `if ${cond}\nthen\n${indent(thenBranch)}\nelse\n${indent(elseBranch)}`;
+  const head = hasLineBreak(cond) ? `if\n${indent(cond)}` : `if ${cond}`;
+  return `${head}\nthen\n${indent(thenBranch)}\nelse\n${indent(elseBranch)}`;
 }
 
 function hasLineBreak(text: string) {
