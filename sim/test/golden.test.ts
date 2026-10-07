@@ -1,6 +1,6 @@
 // Golden tests of what the simulator shows for every example of the gallery: the step table's
-// frames at seeds 1–3, and the statistics of a 200-run batch at seeds 1–200, which the sampler
-// runs as the worker does. A frame is recorded
+// frames at seeds 1–3, and what Lean's CLI would report about a 200-run batch at seeds 1–200,
+// which the sampler runs as the worker does. A frame is recorded
 // in part as text and in full by the SHA-256 of a canonical serialization. When a change of the
 // simulator's semantics is intended, regenerate the snapshots with
 //
@@ -11,8 +11,10 @@ import { prettyExpr } from "../src/core/compiler/pretty.ts";
 import { examples } from "../src/core/examples.ts";
 import type { CoupledTrace, Frame } from "../src/core/runtime/semantics.ts";
 import { createSampler } from "../src/core/sampler.ts";
-import { sampleStats } from "../src/core/statistics.ts";
-import { frameOk, hasDomainError, runCoupling, sampleOf } from "../src/core/trace.ts";
+import type { Summary } from "../src/core/statistics.ts";
+import { addRuns, noRuns } from "../src/core/statistics.ts";
+import type { RunOutcome } from "../src/core/trace.ts";
+import { frameOk, hasDomainError, outcomesOf, runCoupling } from "../src/core/trace.ts";
 
 const traceSeeds = [1, 2, 3];
 const batchSeeds = Array.from({ length: 200 }, (_, index) => index + 1);
@@ -47,14 +49,13 @@ function checkLabels(frames: Frame[]) {
 
 /** The batch at `seeds`: the sampler's slices, run one after the other. */
 function runBatch(source: string, seeds: number[]) {
-  const batch = { runs: 0, original: [] as number[], determinized: [] as number[] };
+  const batch = { source: noRuns, determinized: noRuns };
   const tasks: (() => void)[] = [];
   const sampler = createSampler({
     post(response) {
       if (response.type !== "batch") return;
-      batch.runs += response.runs;
-      batch.original.push(...response.original);
-      batch.determinized.push(...response.determinized);
+      batch.source = addRuns(batch.source, response.source);
+      batch.determinized = addRuns(batch.determinized, response.determinized);
     },
     defer: (task) => tasks.push(task),
     now: () => performance.now(),
@@ -64,23 +65,32 @@ function runBatch(source: string, seeds: number[]) {
   return batch;
 }
 
+function describeOutcome(outcome: RunOutcome) {
+  if (outcome.kind === "returned") return outcome.display;
+  return outcome.kind === "rejected" ? "rejected" : `failed: ${outcome.message}`;
+}
+
 function describeTrace(trace: CoupledTrace) {
   const final = trace.frames.at(-1);
-  const sample = sampleOf(trace);
+  const outcomes = outcomesOf(trace);
   const status = trace.counterexample ? "counterexample" : trace.ok ? "checked" : "failed";
   return [
     `seed ${trace.seed}: ${status}, ${trace.frames.length} frames`,
     `  checks: ${checkLabels(trace.frames)}`,
     `  final source: ${final ? prettyExpr(final.original) : "none"}`,
     `  final determinized: ${final ? prettyExpr(final.determinized) : "none"}`,
-    `  sample: ${sample ? `${sample.original} | ${sample.determinized}` : "none"}`,
+    `  outcome: ${describeOutcome(outcomes.source)} | ${describeOutcome(outcomes.determinized)}`,
     `  frames: sha256 ${createHash("sha256").update(canonical(trace.frames)).digest("hex")}`,
   ].join("\n");
 }
 
-function describeStats(name: string, values: number[]) {
-  const { n, mean, variance, standardError } = sampleStats(values);
-  return `  ${name}: n ${n}, mean ${mean}, variance ${variance}, standard error ${standardError}`;
+function describeSummary(name: string, summary: Summary) {
+  const { runs, rejected, failed, firstFailure, count, mean, m2 } = summary;
+  const failures = failed > 0 ? ` (first: ${firstFailure})` : "";
+  return [
+    `  ${name}: ${runs} runs, ${rejected} rejected, ${failed} failed${failures}`,
+    `    returned numbers: n ${count}, mean ${count > 0 ? mean : NaN}, population variance ${count > 0 ? m2 / count : NaN}`,
+  ].join("\n");
 }
 
 for (const example of examples) {
@@ -89,9 +99,9 @@ for (const example of examples) {
     const batch = runBatch(example.source, batchSeeds);
     const text = [
       ...traces,
-      `batch at seeds 1-200: ${batch.runs} runs`,
-      describeStats("source", batch.original),
-      describeStats("determinized", batch.determinized),
+      "batch at seeds 1-200:",
+      describeSummary("source", batch.source),
+      describeSummary("determinized", batch.determinized),
     ].join("\n");
     t.assert.snapshot(text, { serializers: [String] });
   });

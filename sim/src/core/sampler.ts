@@ -1,11 +1,12 @@
-// Runs a batch of seeds in slices of about 50 ms and reports the samples of each slice, so that
+// Runs a batch of seeds in slices of about 50 ms and reports the outcomes of each slice, so that
 // the thread it runs on handles messages and input between slices. The worker runs it, and so
 // does the page where no worker can start.
 import type { Request, Response } from "./protocol.ts";
 import type { CoupledTrace } from "./runtime/semantics.ts";
-import { runCoupling, sampleOf } from "./trace.ts";
+import type { RunOutcome } from "./trace.ts";
+import { outcomesOf, runCoupling, runsOf } from "./trace.ts";
 
-/** How long a slice runs: about how often samples arrive, and how late a cancel takes effect. */
+/** How long a slice runs: about how often outcomes arrive, and how late a cancel takes effect. */
 export const sliceMs = 50;
 
 /** What the sampler needs from the thread it runs on. */
@@ -39,11 +40,10 @@ export function createSampler(host: SamplerHost) {
     const current = job;
     if (!current) return;
     const deadline = host.now() + sliceMs;
-    const original: number[] = [];
-    const determinized: number[] = [];
-    let runs = 0;
+    const source: RunOutcome[] = [];
+    const determinized: RunOutcome[] = [];
     let failed = false;
-    while (current.next < current.seeds.length && (runs === 0 || host.now() < deadline)) {
+    while (current.next < current.seeds.length && (source.length === 0 || host.now() < deadline)) {
       let trace: CoupledTrace;
       try {
         trace = runCoupling(current.source, current.seeds[current.next]);
@@ -53,21 +53,17 @@ export function createSampler(host: SamplerHost) {
       }
       current.next += 1;
       current.last = trace;
-      runs += 1;
-      const sample = sampleOf(trace);
-      if (sample) {
-        original.push(sample.original);
-        determinized.push(sample.determinized);
-      }
+      const outcomes = outcomesOf(trace);
+      source.push(outcomes.source);
+      determinized.push(outcomes.determinized);
     }
     const batch = {
       type: "batch" as const,
       generation: current.generation,
-      runs,
-      original: Float64Array.from(original),
-      determinized: Float64Array.from(determinized),
+      source: runsOf(source),
+      determinized: runsOf(determinized),
     };
-    host.post(batch, [batch.original.buffer, batch.determinized.buffer]);
+    host.post(batch, [batch.source.values.buffer, batch.determinized.values.buffer]);
     if (failed || current.next === current.seeds.length) {
       job = null;
       host.post({ type: "done", generation: current.generation, last: current.last }, []);

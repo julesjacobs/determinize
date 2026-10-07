@@ -1,24 +1,81 @@
 import { formatNumber } from "./format.ts";
 
+/**
+ * What Lean's CLI reports about the runs of one program, as `summarize` in lean/Main.lean computes
+ * it: the counts of rejected and failed runs, the first failure, the first returned value, and
+ * Welford's running mean and sum of squared deviations of the returned numbers, in run order.
+ */
+export interface Summary {
+  runs: number;
+  rejected: number;
+  failed: number;
+  firstFailure: string | null;
+  firstValue: string | null;
+  /** How many runs returned a number. */
+  count: number;
+  mean: number;
+  m2: number;
+}
+
+export const noRuns: Summary = {
+  runs: 0,
+  rejected: 0,
+  failed: 0,
+  firstFailure: null,
+  firstValue: null,
+  count: 0,
+  mean: 0,
+  m2: 0,
+};
+
+/** Runs in run order: the number each returned, or NaN if it returned none. */
+export interface Runs {
+  values: Float64Array<ArrayBuffer>;
+  rejected: number;
+  failed: number;
+  firstFailure: string | null;
+  firstValue: string | null;
+}
+
+/** `summary` followed by `runs`. */
+export function addRuns(summary: Summary, runs: Runs): Summary {
+  let { count, mean, m2 } = summary;
+  for (const x of runs.values) {
+    if (Number.isNaN(x)) continue;
+    count += 1;
+    const delta = x - mean;
+    mean = mean + delta / count;
+    m2 = m2 + delta * (x - mean);
+  }
+  return {
+    runs: summary.runs + runs.values.length,
+    rejected: summary.rejected + runs.rejected,
+    failed: summary.failed + runs.failed,
+    firstFailure: summary.firstFailure ?? runs.firstFailure,
+    firstValue: summary.firstValue ?? runs.firstValue,
+    count,
+    mean,
+    m2,
+  };
+}
+
 export interface Stats {
+  /** The number of runs that returned a number. */
   n: number;
   mean: number;
-  /** The sample variance, with n - 1 in the denominator. */
+  /** The population variance, with n in the denominator, as Lean's CLI computes it. */
   variance: number;
-  /** The standard error of the mean. */
+  /** The standard error of the mean, from the sample variance with n - 1 in the denominator. */
   standardError: number;
 }
 
-export function sampleStats(values: number[]): Stats {
-  const n = values.length;
-  const mean = values.reduce((sum, value) => sum + value, 0) / n;
-  const variance =
-    n < 2 ? NaN : values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / (n - 1);
+export function statsOf(summary: Summary): Stats {
+  const n = summary.count;
   return {
     n,
-    mean,
-    variance,
-    standardError: Number.isFinite(variance) ? Math.sqrt(variance / n) : NaN,
+    mean: n > 0 ? summary.mean : NaN,
+    variance: n > 0 ? summary.m2 / n : NaN,
+    standardError: n > 1 ? Math.sqrt(summary.m2 / (n * (n - 1))) : NaN,
   };
 }
 
@@ -26,7 +83,12 @@ export function sampleStats(values: number[]): Stats {
 export function varianceRatio(originalStats: Stats, determinizedStats: Stats) {
   const originalVariance = originalStats.variance;
   const determinizedVariance = determinizedStats.variance;
-  if (!Number.isFinite(originalVariance) || !Number.isFinite(determinizedVariance)) {
+  if (
+    originalStats.n < 2 ||
+    determinizedStats.n < 2 ||
+    !Number.isFinite(originalVariance) ||
+    !Number.isFinite(determinizedVariance)
+  ) {
     return {
       value: NaN,
       explanation: "Run at least two samples to estimate variance and sample savings.",

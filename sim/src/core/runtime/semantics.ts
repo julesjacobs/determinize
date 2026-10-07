@@ -14,6 +14,7 @@ import {
   affineToNumber,
   affineVar,
   evalAffine,
+  isConcreteAffine,
   prettyAffine,
   symFloat,
   valueToAffine,
@@ -176,10 +177,17 @@ export function runtimeFromAst(expr: Expr): Expr {
       );
     case "App":
       return n("App", { fn: runtimeFromAst(expr.fn), arg: runtimeFromAst(expr.arg) }, expr);
+    case "Mul": {
+      // A literal factor goes to the left, as Lean's elaborator puts it, and runs first.
+      const [left, right] =
+        expr.right.kind === "Const" && expr.left.kind !== "Const"
+          ? [expr.right, expr.left]
+          : [expr.left, expr.right];
+      return n("Mul", { left: runtimeFromAst(left), right: runtimeFromAst(right) }, expr);
+    }
     case "Pair":
     case "Add":
     case "Sub":
-    case "Mul":
     case "Div":
     case "Lt":
     case "Leq":
@@ -579,6 +587,9 @@ function failedAdvance(state: OrdinaryState, error: string): Advance {
 
 function step(expr: Expr, ctx: Context): StepResult {
   switch (expr.kind) {
+    case "Const":
+      // Only a nonfinite literal is not a value; Lean's runtime fails when it evaluates one.
+      return out(failure("nonfinite arithmetic result", expr), ctx);
     case "Let":
       if (!isValue(expr.value)) return stepChild(expr, "value", ctx);
       return out(subst(expr.body, expr.name, expr.value), ctx);
@@ -930,13 +941,43 @@ function meanNode(distribution: MeanKind, args: Expr[], source: Span) {
   return n("Mean", { distribution, args }, source);
 }
 
+/**
+ * The result of an arithmetic operation, or the failure of Lean's runtime: division by zero and
+ * a nonfinite result fail, as in `Runtime/Eval.lean`.
+ */
 function arithmetic(kind: "Add" | "Sub" | "Mul" | "Div", left: Expr, right: Expr, source: Span) {
   const a = valueToAffine(left);
   const b = valueToAffine(right);
-  if (kind === "Add") return floatResult(affineAdd(a, b), source);
-  if (kind === "Sub") return floatResult(affineSub(a, b), source);
-  if (kind === "Mul") return floatResult(affineMul(a, b), source);
-  return floatResult(affineDiv(a, b), source);
+  if (kind === "Div" && isConcreteAffine(b) && b.constant === 0) {
+    return failure("division by zero", source);
+  }
+  if (isConcreteAffine(a) && isConcreteAffine(b)) {
+    // Numbers combine with the operation Lean's runtime performs; a - b is its a + -b.
+    const x = a.constant;
+    const y = b.constant;
+    const value = kind === "Add" ? x + y : kind === "Sub" ? x + -y : kind === "Mul" ? x * y : x / y;
+    if (!Number.isFinite(value)) return failure("nonfinite arithmetic result", source);
+    return n("Const", { value }, source);
+  }
+  const result =
+    kind === "Add"
+      ? affineAdd(a, b)
+      : kind === "Sub"
+        ? affineSub(a, b)
+        : kind === "Mul"
+          ? affineMul(a, b)
+          : affineDiv(a, b);
+  if (!isFiniteAffine(result)) return failure("nonfinite arithmetic result", source);
+  return floatResult(result, source);
+}
+
+function isFiniteAffine(affine: Affine) {
+  return Number.isFinite(affine.constant) && Object.values(affine.terms).every(Number.isFinite);
+}
+
+/** A failure of an operation outside its domain, which ends the run as Lean's runtime does. */
+function failure(message: string, source: Span): Expr {
+  return n("DomainError", { message, distribution: null, reason: message }, source);
 }
 
 function floatResult(affine: Affine, source: Span): Expr {
@@ -1158,7 +1199,7 @@ export function isValue(expr: Expr): boolean {
   return (
     expr.kind === "Reject" ||
     expr.kind === "DomainError" ||
-    expr.kind === "Const" ||
+    (expr.kind === "Const" && Number.isFinite(expr.value)) ||
     expr.kind === "SymFloat" ||
     expr.kind === "Bool" ||
     expr.kind === "Unit" ||
@@ -1180,7 +1221,8 @@ export function exprEqual(a: Expr, b: Expr, eps = 1e-9): boolean {
   if (a.kind !== b.kind) return false;
   switch (a.kind) {
     case "Const":
-      return Math.abs(a.value - (b as typeof a).value) <= eps;
+      // Equal infinities, which nonfinite literals hold, are equal too.
+      return a.value === (b as typeof a).value || Math.abs(a.value - (b as typeof a).value) <= eps;
     case "Bool":
       return a.value === (b as typeof a).value;
     case "Unit":
@@ -1237,13 +1279,22 @@ export function prettySymbolicState(state: { sigma: Binding[]; expr: Expr }) {
   return `<${sigma} || ${prettyExpr(state.expr)}>`;
 }
 
+/** A deep copy of plain data, which keeps nonfinite numbers, -0 and BigInts. */
+function deepCopy<T>(value: T): T {
+  if (Array.isArray(value)) return value.map(deepCopy) as T;
+  if (value === null || typeof value !== "object") return value;
+  const copy: Record<string, unknown> = {};
+  for (const [key, field] of Object.entries(value)) copy[key] = deepCopy(field);
+  return copy as T;
+}
+
 function clone(expr: Expr): Expr {
   if (expr.kind === "SymFloat") return symFloat(expr.affine, expr.from, expr.to);
-  return JSON.parse(JSON.stringify(expr)) as Expr;
+  return deepCopy(expr);
 }
 
 function cloneBinding(binding: Binding) {
-  return JSON.parse(JSON.stringify(binding)) as Binding;
+  return deepCopy(binding);
 }
 
 function n<K extends Expr["kind"]>(

@@ -18,6 +18,7 @@ import {
   runSymbolic,
   stepOrdinary,
 } from "../src/core/runtime/semantics.ts";
+import { outcomesOf, runCoupling, runsOf } from "../src/core/trace.ts";
 
 /** The last frame of a trace; every trace has one. */
 function last(trace: CoupledTrace): Frame {
@@ -363,4 +364,58 @@ test("Poisson sampling preserves mean and variance above the underflow threshold
     assert.ok(Math.abs(sum / samples - rate) <= 6 * Math.sqrt(rate / samples));
     assert.ok(Math.abs(squares / samples - rate) <= 0.1 * rate);
   }
+});
+
+test("division by zero and nonfinite results fail as in Lean's runtime", () => {
+  const cases = [
+    ["1 / 0", "division by zero"],
+    ["let zero = uniform[G](0, 0) in 1 / zero", "division by zero"],
+    ["1e300 * 1e300", "nonfinite arithmetic result"],
+    ["1e400", "nonfinite arithmetic result"],
+    ["if true then 1 else 1e400", null],
+  ] as const;
+  for (const [source, message] of cases) {
+    const trace = runCoupling(source, 1);
+    const expected = message
+      ? { kind: "failed", message }
+      : { kind: "returned", number: 1, display: "1" };
+    assert.deepEqual(outcomesOf(trace), { source: expected, determinized: expected }, source);
+    assert.equal(trace.ok, true, source);
+  }
+});
+
+test("rejected and failed runs are counted apart from returned ones", () => {
+  const runs = runsOf([
+    { kind: "returned", number: 2, display: "2" },
+    { kind: "rejected" },
+    { kind: "failed", message: "division by zero" },
+    { kind: "returned", number: null, display: "()" },
+    { kind: "failed", message: "step limit reached" },
+  ]);
+  assert.deepEqual([...runs.values], [2, NaN, NaN, NaN, NaN]);
+  assert.deepEqual(
+    { ...runs, values: undefined },
+    {
+      values: undefined,
+      rejected: 1,
+      failed: 2,
+      firstFailure: "division by zero",
+      firstValue: "2",
+    },
+  );
+});
+
+test("numbers combine with the operations of Lean's runtime", () => {
+  // 5 · (1/3) is 1.6666666666666665, one ulp below 5 / 3.
+  const expected = { kind: "returned", number: 5 / 3, display: String(5 / 3) };
+  assert.deepEqual(outcomesOf(runCoupling("5 / 3", 1)).source, expected);
+});
+
+test("a literal factor runs first, as Lean's elaborator puts it on the left", () => {
+  const failed = { kind: "failed", message: "nonfinite arithmetic result" };
+  assert.deepEqual(outcomesOf(runCoupling("(1 / 0) * 1e400", 1)).source, failed);
+  assert.equal(
+    prettyExpr(prepareRuntime("let x = uniform(0, 1) in x * 3").expr).slice(-5),
+    "3 * x",
+  );
 });

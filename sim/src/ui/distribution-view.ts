@@ -1,5 +1,6 @@
-// The distributions of the source's and the determinized program's results over the samples so
-// far: histogram, empirical CDF, mean, variance and standard error, and the variance ratio.
+// The distributions of the numbers that the runs of the source and of the determinized program
+// returned so far: histogram, empirical CDF, mean, population variance and standard error, and
+// the variance ratio.
 import { effect } from "@preact/signals-core";
 import type { Analysis } from "../core/compiler/analyze.ts";
 import { formatNumber } from "../core/format.ts";
@@ -39,13 +40,13 @@ function renderDistributions(
   stats: { original: Stats; determinized: Stats },
   analysis: Analysis,
 ) {
-  const count = Math.min(samples.original.length, samples.determinized.length);
-  elements.status.textContent = `${count} sample${count === 1 ? "" : "s"}`;
-  if (count === 0) {
+  const runs = samples.original.summary.runs;
+  elements.status.textContent = `${runs} run${runs === 1 ? "" : "s"}`;
+  const all = [...samples.original.values, ...samples.determinized.values];
+  if (all.length === 0) {
     elements.view.innerHTML = `<p class="distribution-empty">Numeric final results will appear here.</p>`;
     return;
   }
-  const all = [...samples.original, ...samples.determinized];
   const min = Math.min(...all);
   const max = Math.max(...all);
   const pad = Math.max((max - min) * 0.08, 1e-6);
@@ -55,9 +56,9 @@ function renderDistributions(
   const counterexample = !analysis.ok && analysis.counterexample;
   elements.view.innerHTML = `
     ${counterexample ? `<p class="counterexample-label">${counterexampleLabel}</p>` : ""}
-    ${distributionCard("Original", samples.original, originalStats, domain, "original")}
+    ${distributionCard("Original", samples.original.values, originalStats, domain, "original")}
     ${comparisonCard(originalStats, determinizedStats)}
-    ${distributionCard("Determinized", samples.determinized, determinizedStats, domain, "determinized")}
+    ${distributionCard("Determinized", samples.determinized.values, determinizedStats, domain, "determinized")}
   `;
 }
 
@@ -95,6 +96,14 @@ function distributionCard(
   domain: number[],
   tone: string,
 ) {
+  if (values.length === 0) {
+    return `
+    <article class="dist-card ${tone}">
+      <div class="dist-title"><span>${title}</span></div>
+      <p class="distribution-empty">No run returned a number.</p>
+    </article>
+  `;
+  }
   const width = 520;
   const height = 230;
   const margin = { top: 16, right: 16, bottom: 26, left: 34 };
@@ -136,7 +145,7 @@ function distributionCard(
         <span class="metric-pair">mean ${metricValue(stats.mean)}</span>
       </div>
       <div class="dist-metrics">
-        ${metricBlock("Variance", stats.variance, "sample variance")}
+        ${metricBlock("Variance", stats.variance, "population variance, as Lean's CLI computes it")}
         ${metricBlock("Std. error", stats.standardError, "mean uncertainty")}
       </div>
       <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${title} empirical PDF and CDF">
