@@ -76,8 +76,10 @@ jobs:
       # is saved together with doc-gen4 and the packages it adds, with their builds. Starting from
       # it, only this repository's modules are redone. Lake redoes all of it whenever the hash of
       # the doc-gen4 executable changes, and that executable loads the glibc of flake.lock (see
-      # lean.yml), so the entry is kept once per doc-gen4 pin and flake.lock. Pages of modules
-      # deleted since it was saved stay in the published site, unlinked.
+      # lean.yml), so the entry is kept once per doc-gen4 pin and flake.lock. It holds the
+      # analysis (api-docs.db and the markers in doc-data) and doc/, where rendering expects the
+      # files of the earlier steps, but not this repository's pages and markers: doc-gen4 links
+      # every page it finds in doc/, so the pages of a deleted module would reappear.
       - name: Restore doc-gen4 and the documentation of the dependencies
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -88,7 +90,11 @@ jobs:
             lean/.lake/packages/UnicodeBasic
             lean/.lake/packages/BibtexQuery
             lean/.lake/packages/MD4Lean
-            lean/docbuild/.lake/build
+            lean/docbuild/.lake/build/api-docs.db
+            lean/docbuild/.lake/build/doc-data/*
+            !lean/docbuild/.lake/build/doc-data/Determinize*
+            lean/docbuild/.lake/build/doc/*
+            !lean/docbuild/.lake/build/doc/Determinize*
           key: lean-docs-${{ hashFiles('lean/lean-toolchain', 'lean/docbuild/lake-manifest.json', 'flake.lock') }}
       - name: Fetch the Mathlib cache
         run: lake exe cache get
@@ -99,8 +105,8 @@ jobs:
       - name: Allow memory overcommit
         shell: bash
         run: sudo sysctl -w vm.overcommit_memory=1
-      # doc-gen4 marks each documented module with an empty file, so Lake does not notice when a
-      # module's documentation changes and would keep the restored pages. Removing the marker of
+      # doc-gen4 marks each rendering with an empty file, so Lake does not notice when a module's
+      # documentation changes and would keep the pages of an earlier run. Removing the markers of
       # the rendering step renders every page again from the database.
       - name: Build the documentation
         working-directory: lean/docbuild
