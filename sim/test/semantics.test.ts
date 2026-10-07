@@ -409,6 +409,7 @@ test("rejected and failed runs are counted apart from returned ones", () => {
       failed: 2,
       firstFailure: "division by zero",
       firstValue: "2",
+      draws: [],
     },
   );
 });

@@ -59,7 +59,12 @@ function isRuns(value: unknown): value is Runs {
     typeof value.rejected === "number" &&
     typeof value.failed === "number" &&
     nullableString(value.firstFailure) &&
-    nullableString(value.firstValue)
+    nullableString(value.firstValue) &&
+    Array.isArray(value.draws) &&
+    value.draws.every(
+      (draws: unknown) =>
+        isRecord(draws) && typeof draws.site === "number" && draws.values instanceof Float64Array,
+    )
   );
 }
 

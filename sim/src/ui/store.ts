@@ -5,9 +5,10 @@ import { action, computed, effect, signal, untracked } from "@preact/signals-cor
 import type { Analysis } from "../core/compiler/analyze.ts";
 import { analyze } from "../core/compiler/analyze.ts";
 import type { Request, Response } from "../core/protocol.ts";
+import type { GDraw } from "../core/runtime/eval.ts";
 import type { CoupledTrace } from "../core/runtime/semantics.ts";
 import type { Runner } from "../core/sampler.ts";
-import { runIndex, runnerOf } from "../core/sampler.ts";
+import { runIndex, runnerOf, siteDraws } from "../core/sampler.ts";
 import type { Runs, Stats, Summary } from "../core/statistics.ts";
 import { addRuns, noRuns, runsOf, statsOf } from "../core/statistics.ts";
 import { runCoupling } from "../core/trace.ts";
@@ -18,20 +19,25 @@ export interface Span {
   to: number;
 }
 
-/** The runs of one program: what Lean's CLI reports about them, and the numbers they returned.
- * Later runs of the same program and seed append to `values` in place. */
+/**
+ * The runs of one program: what Lean's CLI reports about them, the number each returned (NaN if
+ * none), and the value each drew at each continuous G site (NaN unless it drew there exactly
+ * once). Later runs of the same program and seed append to the arrays in place.
+ */
 export interface ProgramRuns {
   summary: Summary;
   values: readonly number[];
+  draws: ReadonlyMap<number, readonly number[]>;
 }
 
 /** The runs of a program and of its determinization from a seed: run i at the seed plus i, as
- * Lean's CLI runs them. Run 0 is the step table's run. */
+ * Lean's CLI runs them. Run 0 is the step table's run; `traces` are its G traces. */
 export interface Samples {
   source: string;
   seed: number;
   original: ProgramRuns;
   determinized: ProgramRuns;
+  traces: { source: GDraw[]; determinized: GDraw[] } | null;
 }
 
 /** The step table's run of the checked program. */
@@ -89,8 +95,9 @@ function noSamples(source: string, seed: number): Samples {
   return {
     source,
     seed,
-    original: { summary: noRuns, values: [] },
-    determinized: { summary: noRuns, values: [] },
+    original: { summary: noRuns, values: [], draws: new Map() },
+    determinized: { summary: noRuns, values: [], draws: new Map() },
+    traces: null,
   };
 }
 
@@ -99,15 +106,40 @@ function firstRun(program: string, seed: number, runner: Runner | null): Samples
   const samples = noSamples(program, seed);
   if (!runner) return samples;
   const first = runIndex(runner, seed, 0);
-  samples.original = addTo(samples.original, runsOf([first.source]));
-  samples.determinized = addTo(samples.determinized, runsOf([first.determinized]));
+  const { gSites } = runner;
+  samples.original = addTo(
+    samples.original,
+    runsOf([first.source], siteDraws(gSites, [first.traces.source])),
+  );
+  samples.determinized = addTo(
+    samples.determinized,
+    runsOf([first.determinized], siteDraws(gSites, [first.traces.determinized])),
+  );
+  samples.traces = first.traces;
   return samples;
 }
 
+function append(target: number[], values: Float64Array) {
+  for (const value of values) target.push(value);
+}
+
 function addTo(runs: ProgramRuns, more: Runs): ProgramRuns {
-  const values = runs.values as number[];
-  for (const x of more.values) if (!Number.isNaN(x)) values.push(x);
-  return { summary: addRuns(runs.summary, more), values };
+  append(runs.values as number[], more.values);
+  const draws = runs.draws as Map<number, number[]>;
+  for (const { site, values } of more.draws) {
+    const known = draws.get(site);
+    if (known) append(known, values);
+    else draws.set(site, Array.from(values));
+  }
+  return { summary: addRuns(runs.summary, more), values: runs.values, draws };
+}
+
+/** The G sites that every run so far drew exactly once: those against whose draws its returned
+ * numbers can be plotted. */
+export function eligibleSites(runs: ProgramRuns): number[] {
+  return [...runs.draws]
+    .filter(([, values]) => values.every((value) => !Number.isNaN(value)))
+    .map(([site]) => site);
 }
 
 function errorMessage(error: unknown) {

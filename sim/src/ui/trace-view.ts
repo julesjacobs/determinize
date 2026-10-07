@@ -7,6 +7,7 @@ import { prettyExpr } from "../core/compiler/pretty.ts";
 import { formatNumber } from "../core/format.ts";
 import { prettyAffine } from "../core/runtime/affine.ts";
 import { distributionName } from "../core/runtime/distributions.ts";
+import type { GDraw } from "../core/runtime/eval.ts";
 import type { Binding, CoupledTrace, Frame } from "../core/runtime/semantics.ts";
 import {
   domainErrorMessage,
@@ -24,6 +25,8 @@ import { changedPath, renderHighlightedText, renderTraceExpr } from "./trace-exp
 export interface TraceViewElements {
   table: HTMLElement;
   status: HTMLElement;
+  /** The G trace of the run that the table shows. */
+  gTrace: HTMLElement;
 }
 
 /** The number of frames on a page of the step table. */
@@ -31,8 +34,12 @@ const pageSize = 200;
 
 export function mountTraceView(
   elements: TraceViewElements,
-  store: Pick<Store, "trace" | "activeStep">,
+  store: Pick<Store, "trace" | "activeStep" | "samples">,
 ) {
+  effect(() => {
+    elements.gTrace.textContent = describeTraces(store.samples.value.traces);
+  });
+
   const portal = document.createElement("div");
   portal.className = "floating-check-popover";
   portal.setAttribute("role", "tooltip");
@@ -193,6 +200,31 @@ export function mountTraceView(
       ? String(Array.prototype.indexOf.call(scope.parentElement?.children ?? [], scope))
       : "all";
   }
+}
+
+/** The G draws shown of a trace; the rest are counted. */
+const shownDraws = 12;
+
+/** A trace as Lean's `List (Op × ℝ)`, with its first draws. */
+function describeTrace(trace: GDraw[]) {
+  const shown = trace
+    .slice(0, shownDraws)
+    .map(({ op, value }) => `(${op}, ${formatNumber(value)})`);
+  const more = trace.length > shownDraws ? `, … ${trace.length - shownDraws} more` : "";
+  return `[${shown.join(", ")}${more}]`;
+}
+
+/** Run 0's G traces: one when the programs drew the same, as determinization keeps G draws. */
+function describeTraces(traces: { source: GDraw[]; determinized: GDraw[] } | null) {
+  if (!traces) return "none";
+  const { source, determinized } = traces;
+  const same =
+    source.length === determinized.length &&
+    source.every(
+      (draw, i) => draw.op === determinized[i].op && draw.value === determinized[i].value,
+    );
+  if (same) return `${describeTrace(source)}, in both programs`;
+  return `${describeTrace(source)} in the source, ${describeTrace(determinized)} in the determinized program`;
 }
 
 function renderCoupling(elements: TraceViewElements, coupled: CoupledTrace, page: number) {

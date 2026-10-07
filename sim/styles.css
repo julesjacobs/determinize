@@ -295,7 +295,7 @@ button:active {
 
 .coupling-panel {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
   grid-column: 1 / -1;
   height: 100%;
   min-height: 0;
@@ -641,6 +641,29 @@ button:active {
   min-height: 42px;
   border-bottom: 1px solid #e4e7ec;
   padding: 0 14px;
+}
+
+.g-trace,
+.estimates {
+  margin: 0;
+  border-bottom: 1px solid var(--line);
+  padding: 6px 14px;
+  color: var(--muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.g-trace span {
+  font-family: "SF Mono", Menlo, Monaco, Consolas, monospace;
+}
+
+.run-outcomes {
+  grid-column: 1 / -1;
+  font-size: 13px;
+}
+
+.run-outcomes p {
+  margin: 0 0 4px;
 }
 
 .distribution-view {
