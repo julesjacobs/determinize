@@ -321,8 +321,10 @@ class TriggerTests(unittest.TestCase):
                     self.assertIn(path.stem, GUARDED)
                     self.assertTrue(any(path.stem in started for started in PULL_REQUEST_STARTS.values()))
 
-    def test_paper_builds_on_main_for_its_pull_request_files(self):
-        self.assertEqual(triggers("tex")["push"]["paths"], triggers("tex")["pull_request"]["paths"])
+    def test_only_pages_runs_on_pushes_to_main(self):
+        for name in workflows():
+            with self.subTest(workflow=name):
+                self.assertEqual("push" in triggers(name), name == "pages")
 
 
 def check_pull_request(path, expected):
