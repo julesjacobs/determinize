@@ -194,6 +194,17 @@ test("a link restores the program, the seed and the example", async ({ page, con
   );
 });
 
+test("a link to an example the gallery doesn't have selects none", async ({ page }) => {
+  const shared = { source: "1 + 2", seed: 7, example: "paper/no-such-example" };
+  const json = JSON.stringify(shared);
+  await page.goto(`${simulator}#v1=${deflateRawSync(json).toString("base64url")}`);
+  await expect(status(page)).toHaveText("seed 7 - checked");
+  await expect(page.locator("#example-select option:checked")).toHaveCount(0);
+  expect(await page.evaluate(async () => (await window.DeterminizeSim.ready).source.value)).toBe(
+    shared.source,
+  );
+});
+
 test("a link to more than 64 KiB opens the first example and says so", async ({ page }) => {
   const json = JSON.stringify({ source: "x".repeat(70_000), seed: 1, example: "paper/dungeon" });
   await page.goto(`${simulator}#v1=${deflateRawSync(json).toString("base64url")}`);
