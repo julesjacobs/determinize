@@ -239,6 +239,22 @@ test("the runs' outcomes, the command that reports them and run 0's G trace show
   await expect(outcomes).toContainText("with the program saved as program.det");
 });
 
+test("notices say which premises of the theorems are not met", async ({ page }) => {
+  await page.goto(simulator);
+  const type = page.locator("#premise-type");
+  const safety = page.locator("#premise-safety");
+  await expect(safety).toContainText("Typing establishes neither the domain safety");
+  await expect(type).toBeHidden();
+  await page.getByLabel("Example").selectOption({ label: "Gaussian random walk" });
+  await expect(page.locator("#checked-type")).toHaveText("[(float[E] * float[E])]");
+  await expect(type).toContainText("Its type is not float[E]");
+  await expect(safety).toBeVisible();
+  // A counterexample shows no theorem notice.
+  await page.getByLabel("Example").selectOption({ label: "Noisy product, both draws E" });
+  await expect(type).toBeHidden();
+  await expect(safety).toBeHidden();
+});
+
 /** The simulator's address for `source` at `seed`, with no example chosen. */
 function linkTo(source: string, seed: number) {
   const json = JSON.stringify({ source, seed, example: "" });

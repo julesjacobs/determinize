@@ -66,6 +66,8 @@ function start(decoded: Decoded): Store {
       summary: document.querySelector("#lean-summary") as HTMLElement,
       type: document.querySelector("#checked-type") as HTMLElement,
       sites: document.querySelector("#sample-sites") as HTMLElement,
+      typePremise: document.querySelector("#premise-type") as HTMLElement,
+      safetyPremise: document.querySelector("#premise-safety") as HTMLElement,
       annotated: document.querySelector("#annotated-program") as HTMLElement,
       determinized: document.querySelector("#determinized-program") as HTMLElement,
     },

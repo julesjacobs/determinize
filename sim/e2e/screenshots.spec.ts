@@ -20,6 +20,7 @@ const states: { name: string; example?: string; source?: string }[] = [
   { name: "sim-dungeon-run", example: "Dungeon" },
   { name: "sim-all-e-run", example: "Noisy product, both draws E" },
   { name: "sim-observe-run", example: "Observe" },
+  { name: "sim-gauss-random-walk-run", example: "Gaussian random walk" },
   { name: "sim-division-zero-run", source: "1/0" },
 ];
 

@@ -35,6 +35,18 @@
               <a href="https://julesjacobs.com/determinize/docs/Determinize/Frontend/Syntax.html#Determinize.Spec.Paper.Expr.sites" title="Lean's sample sites of a program">Sample sites</a>:
               <span id="sample-sites"></span>.
             </p>
+            <p id="premise-type" class="premise-notice" hidden>
+              Its type is not <code>float[E]</code>, so none of the
+              <a href="https://julesjacobs.com/determinize/docs/Determinize/Theorems.html">theorems</a> about determinization applies to it: each
+              assumes a program of type <code>float[E]</code>.
+            </p>
+            <p id="premise-safety" class="premise-notice">
+              Typing establishes neither the
+              <a href="https://julesjacobs.com/determinize/docs/Determinize/Spec/Semantics.html#Determinize.Spec.Paper.DomainSafe">domain safety</a>
+              nor the
+              <a href="https://julesjacobs.com/determinize/docs/Determinize/Spec/Expectation.html#Determinize.Spec.HasExpectation">defined expectation</a>
+              that the <a href="https://julesjacobs.com/determinize/docs/Determinize/Theorems.html">theorems</a> also assume.
+            </p>
             <h3>
               <a href="https://julesjacobs.com/determinize/docs/Determinize/Frontend/Infer.html#Determinize.Frontend.infer" title="Lean's inference of the modes">Annotated source</a>
             </h3>
