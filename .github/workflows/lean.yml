@@ -1,5 +1,6 @@
 # Builds and tests the Lean development on pull requests. On main, pages.yml runs this workflow
-# and builds the API documentation alongside it, starting from the newest build it saved.
+# unless the same inputs passed it before, and builds the API documentation alongside it, starting
+# from the newest build it saved.
 #
 # Every `run` step executes inside the flake's `lean` dev shell, so elan, git, curl, Python and
 # the C compiler are the versions flake.lock pins. Lean and Mathlib are pinned by

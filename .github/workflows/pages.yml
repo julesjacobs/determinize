@@ -1,9 +1,11 @@
 # Publishes the simulator and the API documentation of the Lean development from main to GitHub
-# Pages, once lean.yml and sim.yml pass on the same commit. The simulator is the front page of the
-# site and the documentation, which is built while lean.yml runs, is under docs/.
+# Pages. The simulator is the front page of the site and the documentation is under docs/.
 #
-# GitHub Pages serves one site per repository and each deployment replaces all of it, so both
-# parts are built and published together when either of them changes.
+# GitHub Pages serves one site per repository and each deployment replaces all of it, so every
+# deployment publishes both parts, once sim.yml and lean.yml have passed on the same inputs. The
+# simulator is built every time. lean.yml is skipped when its inputs passed it before on main,
+# and the documentation, built while lean.yml runs, is restored when the same sources were
+# rendered before. A manual run redoes both.
 name: Pages
 
 on:
@@ -38,9 +40,104 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Looks up earlier results by the content of their inputs rather than by the commits of a push,
+  # which brings several at once after a rebase merge.
+  changes:
+    name: Look up earlier results
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      lean: ${{ steps.inputs.outputs.lean }}
+      docs: ${{ steps.inputs.outputs.docs }}
+      tested: ${{ steps.tested.outputs.cache-hit == 'true' }}
+      rendered: ${{ steps.rendered.outputs.cache-matched-key != '' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # lean: the files of lean.yml's pull-request filter, which tests/test_workflows.py checks.
+      # docs: the sources and pins that the documentation is built from, and this workflow.
+      - name: Hash the inputs
+        id: inputs
+        run: |
+          echo "lean=${{ hashFiles('lean/**', '!lean/**/*.md', 'tests/**', '!tests/**/*.md', 'examples/**', 'run.sh', 'tools/storm*.py', 'flake.nix', 'flake.lock', 'flake-modules/systems.nix', 'flake-modules/devshells/lean.nix', '.github/workflows/**') }}" >> "$GITHUB_OUTPUT"
+          echo "docs=${{ hashFiles('lean/Determinize.lean', 'lean/Determinize/**/*.lean', 'lean/lakefile.toml', 'lean/lake-manifest.json', 'lean/lean-toolchain', 'lean/docbuild/**', 'flake.lock', '.github/workflows/pages.yml') }}" >> "$GITHUB_OUTPUT"
+      - name: Look up a passing run of the Lean tests
+        id: tested
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: lean-tested
+          key: lean-tested-${{ steps.inputs.outputs.lean }}
+          lookup-only: true
+      - name: Look up the rendered documentation
+        id: rendered
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: _site/docs
+          key: lean-html-${{ steps.inputs.outputs.docs }}-${{ github.run_id }}
+          restore-keys: lean-html-${{ steps.inputs.outputs.docs }}-
+          lookup-only: true
+      # When lean and docs are skipped, nothing else reads the entries below, and GitHub evicts an
+      # entry after seven days without access. A lookup sends the same request as a restore, so
+      # every run looks them up, with the paths of the steps that save them.
+      - name: Keep the newest Lean build cached
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: lean/.lake/build
+          key: lean-build-${{ hashFiles('lean/lean-toolchain', 'lean/lake-manifest.json', 'flake.lock') }}-${{ github.sha }}
+          restore-keys: lean-build-${{ hashFiles('lean/lean-toolchain', 'lean/lake-manifest.json', 'flake.lock') }}-
+          lookup-only: true
+      - name: Keep the sources of the dependencies cached
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            lean/.lake/packages/*/*
+            !lean/.lake/packages/*/.lake
+          key: lean-sources-${{ hashFiles('lean/lean-toolchain', 'lean/lake-manifest.json') }}
+          lookup-only: true
+      - name: Keep the object files of the dependencies cached
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: lean/.lake/packages/*/.lake/build/ir/**/*.c.o*
+          key: lean-objects-${{ hashFiles('lean/lean-toolchain', 'lean/lake-manifest.json') }}
+          lookup-only: true
+      - name: Keep doc-gen4 and the documentation of the dependencies cached
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            lean/.lake/packages/doc-gen4
+            lean/.lake/packages/leansqlite
+            lean/.lake/packages/Cli
+            lean/.lake/packages/UnicodeBasic
+            lean/.lake/packages/BibtexQuery
+            lean/.lake/packages/MD4Lean
+            lean/docbuild/.lake/build/api-docs.db
+            lean/docbuild/.lake/build/doc-data/*
+            !lean/docbuild/.lake/build/doc-data/Determinize*
+            lean/docbuild/.lake/build/doc/*
+            !lean/docbuild/.lake/build/doc/Determinize*
+          key: lean-docs-${{ hashFiles('lean/lean-toolchain', 'lean/docbuild/lake-manifest.json', 'flake.lock') }}
+          lookup-only: true
+
   lean:
     name: Lean
+    needs: changes
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.tested != 'true'
     uses: $/.github/workflows/lean.yml
+
+  # An empty entry whose key records that the Lean inputs passed.
+  tested:
+    name: Record the passing Lean tests
+    needs: [changes, lean]
+    if: needs.changes.outputs.tested != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - run: touch lean-tested
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: lean-tested
+          key: lean-tested-${{ needs.changes.outputs.lean }}
 
   sim:
     name: Simulator
@@ -50,7 +147,10 @@ jobs:
   # Lake bring it up to date, and it saves no build itself.
   docs:
     name: Documentation
-    if: github.ref == 'refs/heads/main'
+    needs: changes
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'workflow_dispatch' || needs.changes.outputs.rendered != 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 180
     defaults:
@@ -132,37 +232,43 @@ jobs:
           <meta http-equiv="refresh" content="0; url=Determinize.html">
           <a href="Determinize.html">Determinize</a>
           EOF
-      - name: Upload the documentation
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      # Each rendering gets its own key, so the newest one of the same sources is restored, and a
+      # manual run replaces it.
+      - name: Save the documentation
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          name: documentation
-          path: _site/docs/
-          if-no-files-found: error
-          retention-days: 1
+          path: _site/docs
+          key: lean-html-${{ needs.changes.outputs.docs }}-${{ github.run_id }}
 
+  # Runs when no job before it failed; lean and docs are skipped when their results exist.
   build:
     name: Build the site
-    needs: [lean, sim, docs]
+    needs: [changes, lean, sim, docs]
+    if: ${{ !cancelled() && !failure() && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
+      - name: Restore the documentation
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: _site/docs
+          key: lean-html-${{ needs.changes.outputs.docs }}-${{ github.run_id }}
+          restore-keys: lean-html-${{ needs.changes.outputs.docs }}-
+          fail-on-cache-miss: true
       - name: Download the simulator
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: simulator
           path: _site
-      - name: Download the documentation
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: documentation
-          path: _site/docs
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: _site
 
+  # Without a status function, the condition would also require that no earlier job was skipped.
   deploy:
     name: Publish the site
     needs: build
+    if: ${{ !cancelled() && needs.build.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       pages: write # to deploy the site
