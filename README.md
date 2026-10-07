@@ -169,7 +169,8 @@ To build that archived draft independently:
 
 After `npm run build` in `sim/`, open `sim/dist/index.html`, or
 [its published copy](https://julesjacobs.github.io/determinize/sim/), to explore coupled
-traces. The simulator has its own compiler and numerical runtime; Lean certificates
+traces. The address's fragment holds the program, the seed and the example, so a copied link
+opens the same run. The simulator has its own compiler and numerical runtime; Lean certificates
 apply to the core programs produced by the Lean CLI. The simulator is an unverified
 visualization.
 
