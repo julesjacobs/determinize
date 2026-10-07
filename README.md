@@ -3,8 +3,10 @@
 A probabilistic language with E/G sampling modes, a Lean implementation and
 formalization, exact expected-reward certificates, and a browser simulator.
 
-[Simulator](https://julesjacobs.github.io/determinize/) ·
-[API documentation](https://julesjacobs.github.io/determinize/docs/)
+[Project page](https://julesjacobs.github.io/determinize/) ·
+[Simulator](https://julesjacobs.github.io/determinize/sim/) ·
+[API documentation](https://julesjacobs.github.io/determinize/docs/) ·
+[Paper (PDF)](https://julesjacobs.github.io/determinize/determinize.pdf)
 
 - `lean/`: parser, verified affinity inference, determinization, numerical execution,
   exact finite-state exploration, and kernel-checkable certificates.
@@ -53,16 +55,20 @@ types, tests and build, the site in a browser, and the paper build. Select indiv
 `./check.sh lean tex`, or use `./check.sh --changed` for areas affected by uncommitted
 changes. The scripts use tools on `PATH` first; Nix is optional.
 
-On GitHub, `.github/workflows/lean.yml` runs `lake build --wfail` and `./test.sh --all`
-in the `.#lean` shell, and `.github/workflows/sim.yml` runs `biome ci`, the type check and
-the simulator tests in the `.#sim` shell, builds the simulator into `sim/dist/` and
-attaches it to the run as the `simulator` artifact. Both run for pull requests. For `main`,
-`.github/workflows/pages.yml` runs both and then publishes that build of the
-[simulator](https://julesjacobs.github.io/determinize/) to GitHub Pages, with the
-[API documentation](https://julesjacobs.github.io/determinize/docs/) under `docs/`.
-`.github/workflows/tex.yml` builds the paper in the `.#tex` shell for pull requests and for
-`main`, fails on unresolved references and citations, and attaches `main.pdf` to the run as
-the `paper` artifact.
+On GitHub, each workflow runs for the pull requests that change a file it reads.
+`.github/workflows/lean.yml` runs `lake build --wfail` and `./test.sh --all` in the `.#lean`
+shell. `.github/workflows/sim.yml` runs `biome ci`, the type check and the simulator tests in
+the `.#sim` shell, builds the simulator into `sim/dist/` and attaches it to the run as the
+`simulator` artifact. `.github/workflows/tex.yml` builds the paper in the `.#tex` shell, fails
+on unresolved references and citations, and attaches `main.pdf` as the `paper` artifact.
+`.github/workflows/site.yml` runs `./check.sh site` in the `.#site` shell. For `main`,
+`.github/workflows/pages.yml` runs these workflows, but skips Lean's tests when their inputs
+passed them before and reuses the API documentation when the same sources were rendered
+before. It then assembles the [project page](https://julesjacobs.github.io/determinize/), the
+[simulator](https://julesjacobs.github.io/determinize/sim/), the
+[API documentation](https://julesjacobs.github.io/determinize/docs/) and the paper
+(`determinize.pdf`) with `site/assemble.sh`, checks the links of the landing page and the
+simulator against the result, and publishes it to GitHub Pages.
 
 An E draw is replaced by its distribution's mean; a G draw remains stochastic.
 Finite-model certificates prove the selected core program's integrability and
@@ -155,7 +161,7 @@ To build that archived draft independently:
 ```
 
 After `npm run build` in `sim/`, open `sim/dist/index.html`, or
-[its published copy](https://julesjacobs.github.io/determinize/), to explore coupled
+[its published copy](https://julesjacobs.github.io/determinize/sim/), to explore coupled
 traces. The simulator has its own compiler and numerical runtime; Lean certificates
 apply to the core programs produced by the Lean CLI. The simulator is an unverified
 visualization.
