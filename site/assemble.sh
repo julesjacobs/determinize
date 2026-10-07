@@ -5,7 +5,8 @@
 #   site/assemble.sh --out DIR [--sim DIR] [--docs DIR] [--paper PDF]
 #
 # --sim defaults to sim/dist, which `npm run build` in sim/ writes. Without --docs or --paper,
-# those parts are left out. pages.yml publishes the result. To preview it under the same
+# those parts are left out. The landing page's footer gets the commit that HEAD names.
+# pages.yml publishes the result. To preview it under the same
 # /determinize/ prefix as GitHub Pages, from the repository root in the sim shell:
 #
 #   rm -rf _preview && site/assemble.sh --out _preview/determinize
@@ -41,10 +42,15 @@ fi
 [[ -z "$docs" || -d "$docs" ]] || { echo "$docs is not a directory." >&2; exit 1; }
 [[ -z "$paper" || -f "$paper" ]] || { echo "$paper is not a file." >&2; exit 1; }
 
-mkdir -p "$out"
+commit="$(git -C "$site" rev-parse HEAD)"
+
+mkdir -p "$out/fonts"
 # The published files of the landing page; the scripts and sources next to them stay behind.
-shopt -s nullglob
-cp -R "$site"/*.html "$out/"
+cp "$site"/*.html "$site"/*.css "$out/"
+cp "$site"/fonts/*.woff2 "$site"/fonts/*.txt "$out/fonts/"
+# The footer names the commit whose theorems and documentation the page links.
+grep -q '@commit@' "$site/index.html" || { echo "site/index.html has no @commit@ to stamp." >&2; exit 1; }
+sed -e "s/@short-commit@/${commit:0:7}/g" -e "s/@commit@/$commit/g" "$site/index.html" >"$out/index.html"
 
 mkdir "$out/sim"
 cp -R "$sim/." "$out/sim/"

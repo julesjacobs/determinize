@@ -1,0 +1,409 @@
+/* The landing page and the not-found page. Headings sit in a margin column from 900 px. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+:root {
+  background: var(--ground);
+}
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-text);
+  font-size: var(--size-body);
+  line-height: var(--leading-body);
+  font-variant-numeric: tabular-nums;
+  -webkit-text-size-adjust: 100%;
+}
+a {
+  color: inherit;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+a:hover {
+  text-decoration-thickness: 2px;
+}
+:focus-visible {
+  outline: 2px solid var(--muted);
+  outline-offset: 2px;
+}
+code,
+pre {
+  font-family: var(--font-code);
+  font-size: var(--size-code);
+}
+var {
+  font-style: normal;
+  font-family: var(--font-code);
+  font-size: 0.92em;
+}
+.sub {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+h1 {
+  font-size: var(--size-title);
+  font-weight: var(--weight-heading);
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+}
+h2 {
+  font-size: var(--size-heading);
+  font-weight: var(--weight-heading);
+  line-height: 1.2;
+}
+.page {
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: var(--space-7) 16px var(--space-6);
+}
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3) var(--space-6);
+  padding-block: var(--space-6);
+}
+/* A rule above every band but the first. */
+.row:not(.masthead) {
+  border-top: 1px solid var(--rule);
+}
+.row > h1,
+.row > h2 {
+  margin: 0;
+}
+.body {
+  min-width: 0;
+  max-width: var(--measure);
+}
+.body.wide {
+  max-width: none;
+}
+@media (min-width: 900px) {
+  .row {
+    grid-template-columns: 14rem minmax(0, 1fr);
+  }
+}
+
+.masthead {
+  padding-top: 0;
+  align-items: baseline;
+}
+.summary {
+  margin: 0 0 var(--space-4);
+  text-wrap: pretty;
+}
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-6);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-weight: 600;
+}
+.links a {
+  display: inline-block;
+  padding-block: var(--space-1);
+}
+
+.listings {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  gap: var(--space-4) var(--space-5);
+  margin-bottom: var(--space-5);
+}
+.listings > * {
+  min-width: 0;
+}
+.listing-head {
+  margin: 0 0 var(--space-2);
+  font-size: var(--size-ui);
+  font-weight: 600;
+}
+.listing-head.det {
+  color: var(--change);
+}
+.code {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  background: var(--code-fill);
+  border-radius: 3px;
+  line-height: var(--leading-code);
+  overflow-x: auto;
+}
+.code b {
+  font-weight: 600;
+}
+.hint {
+  font-size: 0.86em;
+  user-select: none;
+}
+.mode-e {
+  color: var(--change);
+  font-weight: 600;
+  text-decoration: underline solid 1px;
+  text-underline-offset: 0.2em;
+}
+.mode-g {
+  color: var(--given);
+  text-decoration: underline dotted 1.5px;
+  text-underline-offset: 0.2em;
+}
+.mean-call {
+  color: var(--change);
+  font-weight: 600;
+}
+
+.fig {
+  margin: 0 0 var(--space-6);
+  display: grid;
+  gap: var(--space-4) var(--space-6);
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+@media (min-width: 1100px) {
+  .fig {
+    grid-template-columns: minmax(0, 40rem) minmax(0, 20rem);
+  }
+}
+.fig-chart {
+  min-width: 0;
+}
+.fig-side p {
+  margin: 0 0 var(--space-3);
+  font-size: var(--size-ui);
+  line-height: var(--leading-ui);
+}
+.fig figcaption {
+  margin: 0;
+}
+.lead {
+  margin: var(--space-6) 0 var(--space-4);
+  max-width: var(--measure);
+}
+.chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.chart.narrow {
+  display: none;
+}
+@media (max-width: 640px) {
+  .chart.wide {
+    display: none;
+  }
+  .chart.narrow {
+    display: block;
+  }
+}
+.chart text {
+  font-family: var(--font-text);
+  font-size: 12.5px;
+  fill: var(--muted);
+}
+.chart .given {
+  fill: var(--given);
+}
+.chart .axis-title {
+  font-size: 13px;
+}
+.chart .row-label {
+  font-size: 14px;
+  font-weight: 600;
+  fill: var(--ink);
+}
+.chart .row-det {
+  fill: var(--change);
+}
+.chart .row-note {
+  font-weight: 400;
+  fill: var(--muted);
+}
+.chart .grid {
+  stroke: var(--rule);
+}
+.chart .zero,
+.chart .axis,
+.chart .tick {
+  stroke: var(--muted);
+}
+.chart .axis-given,
+.chart .tick-given {
+  stroke: var(--given);
+  stroke-width: 1.5;
+}
+.chart .outline {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.5;
+}
+.chart .filled {
+  fill: var(--change-fill);
+  stroke: var(--change);
+  stroke-width: 0.8;
+}
+.chart .mean-line {
+  stroke: var(--ink);
+  stroke-width: 1.2;
+  stroke-dasharray: 4 3;
+}
+.chart .mean-label {
+  fill: var(--ink);
+  font-weight: 600;
+}
+.chart .pt-source {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1;
+}
+.chart .pt-source.in-band {
+  stroke: var(--ink);
+  stroke-width: 1.5;
+}
+.chart .pt-det {
+  fill: var(--change);
+}
+.chart .curve {
+  fill: none;
+  stroke: var(--change);
+  stroke-width: 2;
+}
+.chart .curve-label {
+  fill: var(--change);
+  font-weight: 600;
+  font-size: 13px;
+}
+.chart .halo {
+  paint-order: stroke;
+  stroke: var(--ground);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+.chart .band {
+  fill: color-mix(in oklab, var(--given) 12%, transparent);
+}
+.chart .band-label {
+  fill: var(--given);
+  font-weight: 600;
+}
+.chart .band-point {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.5;
+}
+.key {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin-right: 0.4em;
+  vertical-align: 0.05em;
+}
+.key-source {
+  border: 1.5px solid var(--muted);
+}
+.key-det {
+  background: var(--change);
+}
+.key-band {
+  border-radius: 2px;
+  width: 12px;
+  height: 12px;
+  vertical-align: -0.1em;
+  background: color-mix(in oklab, var(--given) 22%, var(--ground));
+  border: 1px solid var(--given);
+}
+.values {
+  border-collapse: collapse;
+  font-size: var(--size-ui);
+  align-self: start;
+  width: 100%;
+}
+.values th,
+.values td {
+  padding: var(--space-1) var(--space-3) var(--space-1) 0;
+  text-align: right;
+  font-weight: 400;
+}
+.values th[scope="row"] {
+  text-align: left;
+}
+.values thead th {
+  font-weight: 600;
+}
+.values .det,
+.values tbody td:last-child {
+  color: var(--change);
+}
+.values tbody tr {
+  border-top: 1px solid var(--rule);
+}
+
+.foot p {
+  margin: 0;
+  font-size: var(--size-ui);
+  color: var(--muted);
+}
+.proved p {
+  margin: 0 0 var(--space-4);
+}
+.theorems {
+  margin: 0 0 var(--space-5);
+  padding-left: 1.4em;
+}
+.theorems li {
+  margin-bottom: var(--space-5);
+}
+.theorems li p {
+  margin: 0 0 var(--space-2);
+}
+.lean {
+  margin: 0 0 var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  background: var(--code-fill);
+  border-radius: 3px;
+  overflow-x: auto;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+}
+@media (min-width: 1100px) {
+  .lean {
+    margin-right: -10rem;
+  }
+}
+.decl {
+  font-family: var(--font-code);
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+.decl:hover {
+  color: var(--ink);
+}
+p .decl {
+  font-size: 0.85em;
+}
+.honesty {
+  padding-left: var(--space-3);
+  border-left: 3px solid var(--muted);
+}
+@media (min-width: 900px) {
+  .foot p {
+    grid-column: 2;
+  }
+}
+
+@media (max-width: 600px) {
+  .links {
+    flex-direction: column;
+    gap: 0;
+  }
+  .links a {
+    padding-block: var(--space-2);
+  }
+}
