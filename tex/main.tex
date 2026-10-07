@@ -1,4 +1,4 @@
-\documentclass[acmsmall,screen,review,anonymous]{acmart}
+\documentclass[acmsmall,screen,review,anonymous,acmthm=false]{acmart}
 
 \settopmatter{printfolios=true,printacmref=false,printccs=false}
 \setcopyright{none}
@@ -9,7 +9,22 @@
 \usepackage{float}
 \usepackage{subcaption}
 \usepackage{listings}
-\usepackage[nameinlink]{cleveref}
+\usepackage[nameinlink,capitalise]{cleveref}
+\usepackage{aliascnt}
+% With acmart's own environments, which share one counter, cleveref names every one of them
+% "Theorem"; alias counters keep the shared numbering and give each environment its name.
+\newcommand{\newsharedtheorem}[2]{%
+  \newaliascnt{#1}{theorem}\newtheorem{#1}[#1]{#2}\aliascntresetthe{#1}}
+\theoremstyle{acmplain}
+\newtheorem{theorem}{Theorem}[section]
+\newsharedtheorem{conjecture}{Conjecture}
+\newsharedtheorem{proposition}{Proposition}
+\newsharedtheorem{lemma}{Lemma}
+\newsharedtheorem{corollary}{Corollary}
+\theoremstyle{acmdefinition}
+\newsharedtheorem{example}{Example}
+\newsharedtheorem{definition}{Definition}
+\crefname{conjecture}{Conjecture}{Conjectures}
 \usepackage{tikz}
 \usepackage{pgfplots}
 \usepackage{todonotes}
