@@ -160,8 +160,11 @@ Lean links re-pinned to `8f89190`. The previous draft in `tex/archive/` is no lo
   and a rank and next-state witness, then writes a `MomentCertificate` that Lean's kernel checks.
   The checked result covers return mass, first and second moments and rejection probability
   (`checked_statistics`, `checked_conditionalVariance`), not only the expected value. The
-  paper does not describe the additive reward models (`--additive`, `Spec/RewardModel`) that
-  Section 7 relies on.
+  paper does not say that every certificate of an exact result, on all four routes, ends with
+  `printedStatistics`: the reported return mass and moments as literals, in a statement that
+  names only `Spec/` definitions and the literal program (see
+  [below](#certified-output-moments-and-storm)). The paper does not describe the additive
+  reward models (`--additive`, `Spec/RewardModel`) that Section 7 relies on.
 - **Lean links.** `tex/lean-links.tex` pins the paper's GitHub links to `8f89190`, the Lean
   development these notes describe; the theorems' links point to `Theorems.lean`. The
   trace-preservation lemma, the convex function inequality, probability preservation as a whole
@@ -488,6 +491,22 @@ one by `Proof.FiniteModel.mass_balance`, with divergence defined as the limit of
 survival probabilities. The paper semantics counts rejection among executions
 with no output; the finite model distinguishes rejection from divergence.
 
+Every result certificate, built-in or Storm, additive or not, ends with the reported numbers
+as literals:
+
+```lean
+theorem printedStatistics :
+    (⟨1, 5/4, 9/4⟩ : Determinize.Spec.FiniteModel.OutputStatistics).Matches
+      (Determinize.Spec.Paper.bigStepMeasure (checkedSubject.program checkedSource)) :=
+  (by decide +kernel : statistics = ⟨1, 5/4, 9/4⟩) ▸ outputStatistics
+```
+
+The three literals are the return mass and the first and second moments. The statement names
+only `Spec/` definitions and `checkedSource` and `checkedSubject`, whose bodies are literals in
+the file. When the return mass is positive, `printedConditionalMoments` states the program's
+`returnedExpectation` and `returnedVariance` as literals, proved from `printedStatistics` by
+`Proof.FiniteModel.statistics_returned_moments`. A changed literal fails the kernel check.
+
 For an independent Storm certificate, from the repository root:
 
 ```sh
@@ -498,7 +517,7 @@ python3 -m venv /tmp/determinize-storm
 
 The adapter invokes `--export`, obtains full exact rational state-value vectors
 from Storm, and writes `.storm.lean`. Lean checks the vectors against the original
-model, including boundary conditions. `reportedStatistics` additionally binds every reported rational statistic (including optional conditional quantities) to the certified initial-state statistics; changing the exported initial label cannot silently select a different answer. This route never calls our solver unless
+model, including boundary conditions. `reportedStatistics` additionally binds every reported rational statistic (including optional conditional quantities) to the certified initial-state statistics; changing the exported initial label cannot silently select a different answer. The certificate then ends with `printedStatistics`. This route never calls our solver unless
 `--compare` is supplied and has no 256-state solver limit. Both routes certify
 the same quantities. Storm, rational decoding, and serialization are outside the
 proof; incorrect vectors fail checking.
@@ -512,6 +531,9 @@ the repository root.
 
 `lean/test.sh` includes exact ground truth, independent kernel replay, and
 certificates with tampered values, boundaries, ranks, and dimensions.
+`tests/test_printed_statistics.py` checks the closing theorems on every route, including that
+a changed literal is rejected; it finds the routes by the files that generate
+`outputStatistics`.
 Set `STORM_PYTHON` to an interpreter with the pinned `stormpy` dependency to
 include real Storm integration tests. The precise contract and proof boundaries
 are described in [finite-model-contract.md](finite-model-contract.md).

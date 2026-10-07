@@ -144,6 +144,16 @@ checked proof table. Moment and rejection equations sum over sparse edges; their
 proofs imply the full matrix equations. These checks can cost more than native
 execution.
 
+Every result certificate, from either backend and in either mode, ends with
+`printedStatistics`. It states `(⟨q, m₁, m₂⟩ : OutputStatistics).Matches (bigStepMeasure
+(checkedSubject.program checkedSource))`, where `q`, `m₁` and `m₂` are the reported return mass
+and first and second moments as rational literals. Its statement names only `Spec` definitions,
+`checkedSource` and `checkedSubject`, whose bodies are literals. The proof combines
+`outputStatistics` with an equation between the certificate's `statistics` and the literals,
+checked by `decide +kernel`. When the return mass is positive, `printedConditionalMoments`
+states `returnedExpectation` and `returnedVariance` of the program as literals; it follows from
+`printedStatistics` by `statistics_returned_moments`.
+
 The Storm encoding redirects each terminal to a synthetic zero-reward sink,
 paying its output reward once. The adapter adds D to the reward-until-target set;
 original terminals remain outside that target so their reward is paid. It asks
@@ -157,8 +167,9 @@ source/subject. Incorrect transitions, state ordering, rewards, boundary analysi
 or rational conversion cannot establish a false equation certificate. The adapter
 never invokes our solver by default; `--compare` enables a differential check.
 The result report marks `kernel_checked` only after Lean accepts the certificate
-and reports that its output-statistics, termination-probability, and conditional-
-variance theorems use only `propext`, `Classical.choice`, and `Quot.sound`.
+and reports that its output-statistics, termination-probability, conditional-variance,
+reported-statistics and printed-statistics theorems use only `propext`, `Classical.choice`,
+and `Quot.sound`.
 
 ## Limits and remaining boundaries
 
@@ -201,7 +212,8 @@ the common `OutputStatistics.Matches` contract: finite measure, square integrabi
 and the exact mass and first/second moments. First integrability is derived from
 that contract, and both backends share the same conditional-variance theorem. Local replay is checked against
 the source and selected subject. Exported certificates prove `modelMatches`,
-`checkedResult`, `integrability`, `outputStatistics` and `conditionalVariance`.
+`checkedResult`, `integrability`, `outputStatistics` and `conditionalVariance`, and end with
+`printedStatistics`.
 The `terminationProbabilities` theorem concerns the probability controller;
 separate first-hit source rejection/divergence correspondence is not asserted.
 
