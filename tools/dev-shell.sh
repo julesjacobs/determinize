@@ -14,10 +14,21 @@ shell_dir() {
   esac
 }
 
+# Whether the shell's tools are on PATH: lake for the lean shell, whose scripts (./test.sh) exist
+# without it, and the command itself for the others.
+has_shell() {
+  local name="$1" command="$2"
+  case "$name" in
+    lean) command -v lake ;;
+    sim) command -v "$command" && [[ -e "$ROOT/sim/node_modules" ]] ;;
+    *) command -v "$command" ;;
+  esac >/dev/null 2>&1
+}
+
 in_shell() {
   local name="$1"; shift
   local dir; dir="$(shell_dir "$name")"
-  if command -v "$1" >/dev/null 2>&1 && [[ "$name" != sim || -e "$ROOT/sim/node_modules" ]]; then
+  if has_shell "$name" "$1"; then
     "$@"
   elif command -v direnv >/dev/null 2>&1 && direnv exec "$dir" true >/dev/null 2>&1; then
     direnv exec "$dir" "$@"
