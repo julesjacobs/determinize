@@ -1,8 +1,9 @@
 # Checks the site with check.sh site: Biome and TypeScript for site/'s scripts and CSS, the landing
-# page's quotes of lean/Determinize/Theorems.lean, and, on the simulator built and the site
-# assembled into _preview/ as pages.yml publishes it (without the documentation and the paper),
-# the Playwright tests in sim/e2e/ (loading, JavaScript disabled, 390 px, other origins, axe, size),
-# html-validate and lychee offline. On main, pages.yml runs this workflow before publishing.
+# page's quotes of lean/Determinize/Theorems.lean and their links to what its modules outside Proof
+# declare, and, on the simulator built and the site assembled into _preview/ as pages.yml
+# publishes it (without the documentation and the paper), the Playwright tests in sim/e2e/
+# (loading, JavaScript disabled, 390 px, other origins, axe, size), html-validate and lychee
+# offline. On main, pages.yml runs this workflow before publishing.
 #
 # Every `run` step executes inside the flake's `site` dev shell: the sim shell with nixpkgs'
 # headless Chromium for Playwright, and lychee.
@@ -15,7 +16,9 @@ on:
       - site/**
       - sim/**
       - examples/**
-      - lean/Determinize/Theorems.lean
+      - lean/Determinize.lean
+      - lean/Determinize/**/*.lean
+      - "!lean/Determinize/Proof/**"
       - flake.nix
       - flake.lock
       - flake-modules/systems.nix

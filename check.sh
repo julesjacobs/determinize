@@ -26,7 +26,9 @@ while [[ $# -gt 0 ]]; do
       toolchain='^flake\.(nix|lock)$|^flake-modules/(systems|devshells/sim)\.nix$'
       grep -qE "^sim/(src|test)/|^sim/build\.|^sim/(package(-lock)?|biome|tsconfig(\.node)?)\.json|^(tests|examples)/|$toolchain" <<<"$changed" && areas+=(sim)
       grep -qE "^sim/(src|test)/|^sim/build\.|^sim/(package(-lock)?|tsconfig)\.json|^sim/index\.html|^examples/|$toolchain" <<<"$changed" && areas+=(bundle)
-      grep -qE "^site/|^sim/|^examples/|^flake-modules/devshells/site\.nix$|^lean/Determinize/Theorems\.lean$|$toolchain" <<<"$changed" && areas+=(site)
+      grep -qE "^site/|^sim/|^examples/|^flake-modules/devshells/site\.nix$|$toolchain" <<<"$changed" && areas+=(site)
+      # The landing page's quotes link names declared in the Lean modules outside Proof.
+      grep -E '^lean/Determinize(\.lean|/.*\.lean)$' <<<"$changed" | grep -qvE '^lean/Determinize/Proof/' && areas+=(site)
       grep -qE '^tex/.*\.(tex|bib|cls|bst|sty)$' <<<"$changed" && areas+=(tex)
       grep -qE '^lean/.*\.lean$|^lean/(lakefile\.toml|lean-toolchain|lake-manifest\.json)$' <<<"$changed" && areas+=(lean)
       grep -qE '^tests/|^examples/|^tools/|^(test|run)\.sh$|^lean/test\.sh$' <<<"$changed" && areas+=(det)

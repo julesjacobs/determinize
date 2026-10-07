@@ -153,8 +153,9 @@ JavaScript disabled, 390 px, other origins and size; for the simulator every exa
 and `file://`, long tasks, links and axe), html-validate and lychee. To look at that preview, run
 `esbuild --servedir=_preview` in the shell and open `http://127.0.0.1:8000/determinize/`.
 `node site/figures.mts` draws the landing page's figures from runs of the simulator's runtime,
-and `node site/theorems.mts` quotes the theorems from `lean/Determinize/Theorems.lean`, which
-`check.sh site` compares with the page. `node site/social/render.mts` renders the link-preview
+and `node site/theorems.mts` quotes the theorems from `lean/Determinize/Theorems.lean`, with links
+to the documentation of the names that its modules outside `Proof/` declare; `check.sh site` compares
+the quotes with the page. `node site/social/render.mts` renders the link-preview
 image `site/social.png` from `site/social/card.html`.
 
 The new paper starts at `tex/main.tex`, with one file per section in `tex/sections/`,

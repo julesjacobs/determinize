@@ -94,23 +94,23 @@ x * y</code></pre>
             <p>For a closed program <var>e</var> (<code>program</code> in Lean) of type <code>float[E]</code> that is domain-safe (<a class="decl" href="docs/Determinize/Spec/Semantics.html#Determinize.Spec.Paper.DomainSafe">DomainSafe</a>), and its determinization (<a class="decl" href="docs/Determinize/Spec/Syntax.html#Determinize.Spec.Paper.Expr.determinize">Expr.determinize</a>):</p>
             <ol class="theorems">
               <li><p>it returns with the same probability as <var>e</var>;</p>
-<pre class="lean"><code data-theorem="output_mass_preservation">returnProbability program.determinize = returnProbability program</code></pre>
+<pre class="lean"><code data-theorem="output_mass_preservation"><a href="docs/Determinize/Spec/Expectation.html#Determinize.Spec.returnProbability">returnProbability</a> program.<a href="docs/Determinize/Spec/Syntax.html#Determinize.Spec.Paper.Expr.determinize">determinize</a> = <a href="docs/Determinize/Spec/Expectation.html#Determinize.Spec.returnProbability">returnProbability</a> program</code></pre>
                 <a class="decl" href="docs/Determinize/Theorems.html#Determinize.Theorems.output_mass_preservation">output_mass_preservation</a></li>
               <li><p>if <var>e</var> returns with positive probability and its expectation is defined, the same holds for its determinization, and its expected output given that it returns equals <var>e</var>&rsquo;s, possibly infinite;</p>
-<pre class="lean"><code data-theorem="expectation_preservation">0 &lt; returnProbability program.determinize ∧
-  HasExpectation (bigStepMeasure program.determinize) ∧
-  returnedExpectation program.determinize = returnedExpectation program</code></pre>
+<pre class="lean"><code data-theorem="expectation_preservation">0 &lt; <a href="docs/Determinize/Spec/Expectation.html#Determinize.Spec.returnProbability">returnProbability</a> program.<a href="docs/Determinize/Spec/Syntax.html#Determinize.Spec.Paper.Expr.determinize">determinize</a> ∧
+  <a href="docs/Determinize/Spec/Expectation.html#Determinize.Spec.HasExpectation">HasExpectation</a> (<a href="docs/Determinize/Spec/Semantics.html#Determinize.Spec.Paper.bigStepMeasure">bigStepMeasure</a> program.<a href="docs/Determinize/Spec/Syntax.html#Determinize.Spec.Paper.Expr.determinize">determinize</a>) ∧
+  <a href="docs/Determinize/Spec/Expectation.html#Determinize.Spec.returnedExpectation">returnedExpectation</a> program.<a href="docs/Determinize/Spec/Syntax.html#Determinize.Spec.Paper.Expr.determinize">determinize</a> = <a href="docs/Determinize/Spec/Expectation.html#Determinize.Spec.returnedExpectation">returnedExpectation</a> program</code></pre>
                 <a class="decl" href="docs/Determinize/Theorems.html#Determinize.Theorems.expectation_preservation">expectation_preservation</a></li>
               <li><p>if <var>e</var> returns with positive probability and has a finite second moment, the same holds for its determinization, and its variance given that it returns is at most <var>e</var>&rsquo;s;</p>
-<pre class="lean"><code data-theorem="variance_non_increase">0 &lt; returnProbability program.determinize ∧
-  MemLp id 2 (bigStepMeasure program.determinize) ∧
-  returnedVariance program.determinize ≤ returnedVariance program</code></pre>
+<pre class="lean"><code data-theorem="variance_non_increase">0 &lt; <a href="docs/Determinize/Spec/Expectation.html#Determinize.Spec.returnProbability">returnProbability</a> program.<a href="docs/Determinize/Spec/Syntax.html#Determinize.Spec.Paper.Expr.determinize">determinize</a> ∧
+  MemLp id 2 (<a href="docs/Determinize/Spec/Semantics.html#Determinize.Spec.Paper.bigStepMeasure">bigStepMeasure</a> program.<a href="docs/Determinize/Spec/Syntax.html#Determinize.Spec.Paper.Expr.determinize">determinize</a>) ∧
+  <a href="docs/Determinize/Spec/Expectation.html#Determinize.Spec.returnedVariance">returnedVariance</a> program.<a href="docs/Determinize/Spec/Syntax.html#Determinize.Spec.Paper.Expr.determinize">determinize</a> ≤ <a href="docs/Determinize/Spec/Expectation.html#Determinize.Spec.returnedVariance">returnedVariance</a> program</code></pre>
                 <a class="decl" href="docs/Determinize/Theorems.html#Determinize.Theorems.variance_non_increase">variance_non_increase</a></li>
               <li><p>for almost every terminating G trace, it returns <var>e</var>&rsquo;s mean output given that trace.</p>
-<pre class="lean"><code data-theorem="tracewise_soundness">∀ᵐ trace ∂traceLaw program,
-  Integrable id ((traceAndOutputLaw program).condKernel trace) ∧
-  (traceAndOutputLaw program.determinize).condKernel trace =
-    Measure.dirac (∫ value : ℝ, value ∂(traceAndOutputLaw program).condKernel trace)</code></pre>
+<pre class="lean"><code data-theorem="tracewise_soundness">∀ᵐ trace ∂<a href="docs/Determinize/Spec/Traces/Semantics.html#Determinize.Spec.Traces.traceLaw">traceLaw</a> program,
+  Integrable id ((<a href="docs/Determinize/Spec/Traces/Semantics.html#Determinize.Spec.Traces.traceAndOutputLaw">traceAndOutputLaw</a> program).condKernel trace) ∧
+  (<a href="docs/Determinize/Spec/Traces/Semantics.html#Determinize.Spec.Traces.traceAndOutputLaw">traceAndOutputLaw</a> program.<a href="docs/Determinize/Spec/Syntax.html#Determinize.Spec.Paper.Expr.determinize">determinize</a>).condKernel trace =
+    Measure.dirac (∫ value : ℝ, value ∂(<a href="docs/Determinize/Spec/Traces/Semantics.html#Determinize.Spec.Traces.traceAndOutputLaw">traceAndOutputLaw</a> program).condKernel trace)</code></pre>
                 <a class="decl" href="docs/Determinize/Theorems.html#Determinize.Theorems.tracewise_soundness">tracewise_soundness</a></li>
             </ol>
             <p>Inference fails only when no assignment of modes agrees with the modes written in the program. Otherwise it returns the assignment with the most E draws: every draw that some valid assignment marks E is marked E (<a class="decl" href="docs/Determinize/Theorems.html#Determinize.Theorems.inference_correctness">inference_correctness</a>). Domain safety and integrability are premises; typing does not establish them.</p>
