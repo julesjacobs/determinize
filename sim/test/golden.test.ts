@@ -1,5 +1,6 @@
 // Golden tests of what the simulator shows for every example of the gallery: the step table's
-// frames at seeds 1–3, and the statistics of a 200-run batch at seeds 1–200. A frame is recorded
+// frames at seeds 1–3, and the statistics of a 200-run batch at seeds 1–200, which the sampler
+// runs as the worker does. A frame is recorded
 // in part as text and in full by the SHA-256 of a canonical serialization. When a change of the
 // simulator's semantics is intended, regenerate the snapshots with
 //
@@ -9,8 +10,9 @@ import test from "node:test";
 import { prettyExpr } from "../src/core/compiler/pretty.ts";
 import { examples } from "../src/core/examples.ts";
 import type { CoupledTrace, Frame } from "../src/core/runtime/semantics.ts";
+import { createSampler } from "../src/core/sampler.ts";
 import { sampleStats } from "../src/core/statistics.ts";
-import { frameOk, hasDomainError, runBatch, runCoupling, sampleOf } from "../src/core/trace.ts";
+import { frameOk, hasDomainError, runCoupling, sampleOf } from "../src/core/trace.ts";
 
 const traceSeeds = [1, 2, 3];
 const batchSeeds = Array.from({ length: 200 }, (_, index) => index + 1);
@@ -41,6 +43,25 @@ function checkLabels(frames: Frame[]) {
     else runs.push({ label, count: 1 });
   }
   return runs.map(({ label, count }) => (count === 1 ? label : `${label} ×${count}`)).join(", ");
+}
+
+/** The batch at `seeds`: the sampler's slices, run one after the other. */
+function runBatch(source: string, seeds: number[]) {
+  const batch = { runs: 0, original: [] as number[], determinized: [] as number[] };
+  const tasks: (() => void)[] = [];
+  const sampler = createSampler({
+    post(response) {
+      if (response.type !== "batch") return;
+      batch.runs += response.runs;
+      batch.original.push(...response.original);
+      batch.determinized.push(...response.determinized);
+    },
+    defer: (task) => tasks.push(task),
+    now: () => performance.now(),
+  });
+  sampler.handle({ type: "run", generation: 1, source, seeds: Float64Array.from(seeds) });
+  for (let task = tasks.shift(); task; task = tasks.shift()) task();
+  return batch;
 }
 
 function describeTrace(trace: CoupledTrace) {

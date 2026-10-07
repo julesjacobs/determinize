@@ -7,6 +7,7 @@ import { examples } from "./core/examples.ts";
 import { mountDistributionView } from "./ui/distribution-view.ts";
 import type { EditorDiagnostic } from "./ui/editor.ts";
 import { createEditor, diagnosticsField, replaceDoc } from "./ui/editor.ts";
+import { createSampling } from "./ui/sampling.ts";
 import { createStore } from "./ui/store.ts";
 import { mountTraceView } from "./ui/trace-view.ts";
 
@@ -53,7 +54,11 @@ for (const [index, example] of examples.entries()) {
 }
 exampleSelect.title = examples[0].explanation;
 
-const store = createStore({ source: examples[0].source, seed: 2026, exampleId: examples[0].id });
+const sampling = createSampling((response) => store.receive(response));
+const store = createStore(
+  { source: examples[0].source, seed: 2026, exampleId: examples[0].id },
+  (request) => sampling.send(request),
+);
 mountTraceView(
   {
     table: document.querySelector("#coupling-trace") as HTMLElement,
@@ -63,6 +68,7 @@ mountTraceView(
 );
 mountDistributionView(
   {
+    panel: document.querySelector(".distribution-panel") as HTMLElement,
     view: document.querySelector("#distribution-view") as HTMLElement,
     status: document.querySelector("#distribution-status") as HTMLElement,
   },
