@@ -1,0 +1,18 @@
+% !TeX root = ../main.tex
+% OOPSLA requires this section just before the references; it does not count towards the page
+% limit. In anonymous builds it names the snapshot at \leanreviewbase or, with that macro empty,
+% the supplementary material.
+\section*{Data-Availability Statement}
+
+\ifleananonymous
+  \ifleanurls
+    An anonymized snapshot of the artifact is available at \artifactlink.
+  \else
+    An anonymized copy of the artifact is provided as supplementary material.
+  \fi
+\else
+  The artifact is available at \artifactlink.
+\fi
+It contains the Lean formalization, the command-line tool, the benchmarks and scripts of \cref{sec:evaluation}, and the test suites. Running \texttt{lake build -{}-wfail} in \texttt{lean/} checks every proof with Lean~4.34.1 and Mathlib, and fails unless every theorem in \texttt{Theorems.lean} depends only on the axioms \texttt{propext}, \texttt{Classical.choice} and \texttt{Quot.sound}; with Mathlib's prebuilt cache this takes about N minutes. The exact results of \cref{sec:evaluation} also need the Storm model checker (stormpy~1.14.0); the timings depend on the machine.
+% Still open: the build time N, measured from a fresh clone, and a closing sentence on whether
+% the artifact will be submitted for Artifact Evaluation, which OOPSLA requires.

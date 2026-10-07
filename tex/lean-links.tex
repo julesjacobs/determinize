@@ -1,12 +1,24 @@
+% \ifleanlinks shows the Lean marks; \ifleanurls makes them, and \artifactlink, links.
+% Anonymous builds (the `review` or `anonymous` class option) link to the anonymized snapshot at
+% \leanreviewbase. With \leanreviewbase empty they link nowhere: the marks stay without links,
+% and \artifactlink prints the text that OOPSLA's FAQ suggests, for code submitted as
+% supplementary material instead.
 \newif\ifleanlinks
+\newif\ifleanurls
+\newif\ifleananonymous
 \newcommand{\leanrevision}{8f891906bebba949b6ca602dba8df5bd43075452}
-\newcommand{\leanpublicbase}{https://github.com/julesjacobs/determinize/blob/\leanrevision}
+\newcommand{\leanrepository}{https://github.com/julesjacobs/determinize}
+\newcommand{\leanpublicbase}{\leanrepository/blob/\leanrevision}
 \newcommand{\leanreviewbase}{https://apndx.org/pub/sca95063a7c}
 \newcommand{\leanlinkbase}{}
 \newcommand{\leansourcesuffix}{}
+\newcommand{\artifacturl}{}
 \newcommand{\leanreviewlinks}{%
-  \ifdefempty{\leanreviewbase}{\leanlinksfalse}{%
+  \leananonymoustrue
+  \ifdefempty{\leanreviewbase}{}{%
+    \leanurlstrue
     \let\leanlinkbase\leanreviewbase
+    \let\artifacturl\leanreviewbase
     \renewcommand{\leansourcesuffix}{.html}}}
 \makeatletter
 \AtBeginDocument{%
@@ -15,9 +27,19 @@
   \else\if@ACM@anonymous
     \leanreviewlinks
   \else
+    \leanurlstrue
     \let\leanlinkbase\leanpublicbase
+    \let\artifacturl\leanrepository
   \fi\fi}
 \makeatother
+% Where the code is, for the text: a link, or the text replacing it.
+\newcommand{\artifactlink}{%
+  \ifleanurls
+    \edef\artifacturlexpanded{\artifacturl}%
+    \expandafter\url\expandafter{\artifacturlexpanded}%
+  \else
+    link removed for double-blind review%
+  \fi}
 
 \newcommand{\DeclareLeanLink}[3]{%
   \expandafter\def\csname leanurl@#1\endcsname{\leanlinkbase/#2\leansourcesuffix\#L#3}}
@@ -59,7 +81,7 @@
 \NewDocumentCommand{\leanmark}{s}{%
   \IfBooleanF{#1}{\leanmarksep}\raisebox{.3ex}{\leanbadge}}
 \newcommand{\leanlink}[1]{%
-  \leanmarksep\href{\csname leanurl@#1\endcsname}{\leanmark*}}
+  \leanmarksep\ifleanurls\href{\csname leanurl@#1\endcsname}{\leanmark*}\else\leanmark*\fi}
 \DeclareRobustCommand{\leanref}[1]{%
   \ifleanlinks
     \ifcsname leanurl@#1\endcsname
