@@ -120,7 +120,7 @@ test("distribution means check the same domains as sampling", () => {
   assert.equal(ordinary.value.kind, "DomainError");
   assert.equal(mean.value.kind, "DomainError");
   assert.equal(ordinary.value.message, mean.value.message);
-  assert.match(ordinary.value.message, /variance must be >= 0/);
+  assert.equal(ordinary.value.message, "gaussian requires variance ≥ 0");
 });
 
 test("coupled trace treats shared distribution domain errors as checked terminal outcomes", () => {
@@ -131,18 +131,22 @@ test("coupled trace treats shared distribution domain errors as checked terminal
   assert.equal(last(trace).determinized.kind, "DomainError");
   assert.equal(trace.finalOriginal?.kind, "DomainError");
   assert.equal(trace.finalDeterminized?.kind, "DomainError");
-  assert.match(expectKind(last(trace).original, "DomainError").message, /shape must be > 0/);
+  assert.equal(
+    expectKind(last(trace).original, "DomainError").message,
+    "gamma requires positive shape and rate",
+  );
 });
 
 test("coupled trace fails when only one side reaches a distribution domain error", () => {
-  const originalErrors = runCoupledTrace("let x = uniform[E](-10, 30) in\ngamma[E](x, 1)", 1);
+  // At seed 2, the E stream's first draw is 0.113, so x is about -5.5.
+  const originalErrors = runCoupledTrace("let x = uniform[E](-10, 30) in\ngamma[E](x, 1)", 2);
   assert.equal(originalErrors.ok, false);
   assert.equal(last(originalErrors).original.kind, "DomainError");
   assert.notEqual(last(originalErrors).determinized.kind, "DomainError");
   assert.equal(last(originalErrors).consistencyOk, false);
   assert.match(last(originalErrors).consistencyError ?? "", /terminal effect mismatch/);
 
-  const determinizedErrors = runCoupledTrace("let x = uniform[E](-10, 30) in\nuniform[E](x, 1)", 1);
+  const determinizedErrors = runCoupledTrace("let x = uniform[E](-10, 30) in\nuniform[E](x, 1)", 2);
   assert.equal(determinizedErrors.ok, false);
   assert.notEqual(last(determinizedErrors).original.kind, "DomainError");
   assert.equal(last(determinizedErrors).determinized.kind, "DomainError");
@@ -155,31 +159,32 @@ test("distribution domain checks cover bernoulli probability and discrete totals
   assert.equal(bernoulli.sampledEquivalent, true);
   assert.equal(bernoulli.meanEquivalent, true);
   assert.equal(bernoulli.ordinary.value.kind, "DomainError");
-  assert.match(bernoulli.ordinary.value.message, /probability must be in \[0, 1\]/);
+  assert.equal(bernoulli.ordinary.value.message, "bernoulli requires probability in [0,1]");
 
   const discrete = runCoupledTrace("let x = discrete[E](0.6, 0.6, *) in\nx", 37);
   assert.equal(discrete.ok, true);
   assert.equal(last(discrete).symbolic.kind, "DomainError");
-  assert.match(
+  assert.equal(
     expectKind(last(discrete).symbolic, "DomainError").message,
-    /probabilities must sum to at most 1/,
+    "discrete probabilities sum to more than one",
   );
 });
 
 test("primitive distribution samples and means reject the same invalid concrete domains", () => {
-  const cases: [MeanKind, number[], RegExp][] = [
-    ["Uniform", [2, 1], /lower bound must be <= upper bound/],
-    ["Gauss", [0, -1], /variance must be >= 0/],
-    ["Exponential", [0], /rate must be > 0/],
-    ["Gamma", [0, 2], /shape must be > 0/],
-    ["Gamma", [1, 0], /rate must be > 0/],
-    ["Beta", [0, 2], /alpha must be > 0/],
-    ["Beta", [1, 0], /beta must be > 0/],
-    ["Bernoulli", [1.5], /probability must be in \[0, 1\]/],
-    ["Poisson", [-1], /lambda must be >= 0/],
+  const cases: [MeanKind, number[], string][] = [
+    ["Uniform", [2, 1], "uniform requires lower ≤ upper"],
+    ["Gauss", [0, -1], "gaussian requires variance ≥ 0"],
+    ["Exponential", [0], "exponential requires rate > 0"],
+    ["Gamma", [0, 2], "gamma requires positive shape and rate"],
+    ["Gamma", [1, 0], "gamma requires positive shape and rate"],
+    ["Beta", [0, 2], "beta requires positive parameters"],
+    ["Beta", [1, 0], "beta requires positive parameters"],
+    ["Bernoulli", [1.5], "bernoulli requires probability in [0,1]"],
+    ["Poisson", [-1], "poisson requires rate ≥ 0"],
   ];
 
-  for (const [kind, args, message] of cases) {
+  for (const [kind, args, text] of cases) {
+    const message = { message: text };
     assert.throws(
       () => sampleDistribution(kind, args, makeStreams(50).rngG),
       message,
@@ -190,21 +195,18 @@ test("primitive distribution samples and means reject the same invalid concrete 
 });
 
 test("primitive distribution checks reject non-finite parameters and wrong arity", () => {
-  assert.throws(
-    () => sampleDistribution("Beta", [1], makeStreams(51).rngG),
-    /domain error in beta: expected 2 parameters, got 1/,
-  );
-  assert.throws(
-    () => meanDistribution("Beta", [affineConst(1), affineConst(2), affineConst(3)]),
-    /domain error in beta: expected 2 parameters, got 3/,
-  );
-  assert.throws(
-    () => sampleDistribution("Uniform", [0, Infinity], makeStreams(52).rngG),
-    /domain error in uniform: parameters must be finite/,
-  );
+  assert.throws(() => sampleDistribution("Beta", [1], makeStreams(51).rngG), {
+    message: "invalid primitive arity",
+  });
+  assert.throws(() => meanDistribution("Beta", [affineConst(1), affineConst(2), affineConst(3)]), {
+    message: "invalid primitive arity",
+  });
+  assert.throws(() => sampleDistribution("Uniform", [0, Infinity], makeStreams(52).rngG), {
+    message: "nonfinite distribution parameter",
+  });
   assert.throws(
     () => meanDistribution("Uniform", [affineScale(affineVar("v"), Infinity), affineConst(1)]),
-    /domain error in uniform: parameters must be finite/,
+    { message: "nonfinite distribution parameter" },
   );
 });
 

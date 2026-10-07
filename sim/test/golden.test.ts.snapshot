@@ -1,48 +1,48 @@
 exports[`paper/dungeon 1`] = `
-seed 1: checked, 24 frames
-  checks: OK ×24
+seed 1: checked, 141 frames
+  checks: OK ×141
   final source: 0
-  final determinized: 6
-  outcome: 0 | 6
-  frames: sha256 b4226dd8776f459ffd38d70414d57a4307021893e5f0d90ac762db4753787491
-seed 2: checked, 6 frames
+  final determinized: 240
+  outcome: 0 | 240
+  frames: sha256 eb8cf6f455686395a724ed5f59f8fd12f2c46811c62e8834f36833ce4e2732ac
+seed 2: checked, 141 frames
+  checks: OK ×141
+  final source: 0
+  final determinized: 240
+  outcome: 0 | 240
+  frames: sha256 eb8cf6f455686395a724ed5f59f8fd12f2c46811c62e8834f36833ce4e2732ac
+seed 3: checked, 6 frames
   checks: OK ×6
   final source: 0
   final determinized: 0
   outcome: 0 | 0
   frames: sha256 2aff3df5bfe9907a47e7ccf2e6445d1f7fba9a2cb9cc54750a45c1d8cd79bb6c
-seed 3: checked, 15 frames
-  checks: OK ×15
-  final source: 0
-  final determinized: 2
-  outcome: 0 | 2
-  frames: sha256 bf20b18fcd97d5483bb329f235151aaa1816f1220a86ab20a0a568a51990d1a3
 batch at seeds 1-200:
   source: 200 runs, 0 rejected, 0 failed
-    returned numbers: n 200, mean 30.000000000000007, population variance 55899.99999999998
+    returned numbers: n 200, mean 6.0000000000000036, population variance 2763.9999999999995
   determinized: 200 runs, 0 rejected, 0 failed
-    returned numbers: n 200, mean 22.000000000000007, population variance 3196.359999999998
+    returned numbers: n 200, mean 32.949999999999996, population variance 4505.7175
 `;
 
 exports[`paper/gauss-random-walk 1`] = `
 seed 1: checked, 92 frames
   checks: OK ×92
-  final source: (6.25, -3.291235076792483) :: (6, -2.872342887027181) :: (5.5, -2.1706674666203143) :: (4, -1.8521673102114153) :: (2, -1.436159247996525) :: (1, -0.7533659309389981) :: (0, 0) :: []
+  final source: (6.25, -0.4215887484747177) :: (6, -0.23708366427086758) :: (5.5, -0.7363487074011774) :: (4, -0.24178331970480238) :: (2, -0.9051892762268049) :: (1, -0.043084295823202466) :: (0, 0) :: []
   final determinized: (6.25, 0) :: (6, 0) :: (5.5, 0) :: (4, 0) :: (2, 0) :: (1, 0) :: (0, 0) :: []
-  outcome: (6.25, -3.291235076792483) :: (6, -2.872342887027181) :: (5.5, -2.1706674666203143) :: (4, -1.8521673102114153) :: (2, -1.436159247996525) :: (1, -0.7533659309389981) :: (0, 0) :: [] | (6.25, 0) :: (6, 0) :: (5.5, 0) :: (4, 0) :: (2, 0) :: (1, 0) :: (0, 0) :: []
-  frames: sha256 aea5614af69ecfd4f2ce9430b9e67ba5f8ad4df42cd06e17bff7be942e2a2bcc
+  outcome: (6.25, -0.4215887484747177) :: (6, -0.23708366427086758) :: (5.5, -0.7363487074011774) :: (4, -0.24178331970480238) :: (2, -0.9051892762268049) :: (1, -0.043084295823202466) :: (0, 0) :: [] | (6.25, 0) :: (6, 0) :: (5.5, 0) :: (4, 0) :: (2, 0) :: (1, 0) :: (0, 0) :: []
+  frames: sha256 79d59dd43808a3052bfe798f9f397462375f4133ab2132e0204e6787b3dbca3e
 seed 2: checked, 92 frames
   checks: OK ×92
-  final source: (6.25, -2.710491101067375) :: (6, -2.8475893750865895) :: (5.5, -2.5953820117153636) :: (4, -1.3001064065921641) :: (2, -0.46689262588486413) :: (1, -0.905317856382314) :: (0, 0) :: []
+  final source: (6.25, 4.27772241435586) :: (6, 4.566962141763872) :: (5.5, 5.1736588768341) :: (4, 2.3137012407066075) :: (2, 2.0963419957639275) :: (1, 2.088113964186578) :: (0, 0) :: []
   final determinized: (6.25, 0) :: (6, 0) :: (5.5, 0) :: (4, 0) :: (2, 0) :: (1, 0) :: (0, 0) :: []
-  outcome: (6.25, -2.710491101067375) :: (6, -2.8475893750865895) :: (5.5, -2.5953820117153636) :: (4, -1.3001064065921641) :: (2, -0.46689262588486413) :: (1, -0.905317856382314) :: (0, 0) :: [] | (6.25, 0) :: (6, 0) :: (5.5, 0) :: (4, 0) :: (2, 0) :: (1, 0) :: (0, 0) :: []
-  frames: sha256 6810c6916b564ce4a764a5b33064d903eb3c8f3de833d3193a97c3e0817d7f90
+  outcome: (6.25, 4.27772241435586) :: (6, 4.566962141763872) :: (5.5, 5.1736588768341) :: (4, 2.3137012407066075) :: (2, 2.0963419957639275) :: (1, 2.088113964186578) :: (0, 0) :: [] | (6.25, 0) :: (6, 0) :: (5.5, 0) :: (4, 0) :: (2, 0) :: (1, 0) :: (0, 0) :: []
+  frames: sha256 e1ffeac1cd76a746e6ce935af9908d355e9ea0623c195627ab2c31c57d9be6f7
 seed 3: checked, 92 frames
   checks: OK ×92
-  final source: (6.25, -0.3310152245687431) :: (6, -1.2835875260353689) :: (5.5, -2.094596068576319) :: (4, -0.8092133210798482) :: (2, -0.23728498284568317) :: (1, 0.47898077405905776) :: (0, 0) :: []
+  final source: (6.25, 2.1009497469682885) :: (6, 2.3359578286430898) :: (5.5, 3.040687308365011) :: (4, 1.8125233299583898) :: (2, 0.4181174810923749) :: (1, 0.2007274333063946) :: (0, 0) :: []
   final determinized: (6.25, 0) :: (6, 0) :: (5.5, 0) :: (4, 0) :: (2, 0) :: (1, 0) :: (0, 0) :: []
-  outcome: (6.25, -0.3310152245687431) :: (6, -1.2835875260353689) :: (5.5, -2.094596068576319) :: (4, -0.8092133210798482) :: (2, -0.23728498284568317) :: (1, 0.47898077405905776) :: (0, 0) :: [] | (6.25, 0) :: (6, 0) :: (5.5, 0) :: (4, 0) :: (2, 0) :: (1, 0) :: (0, 0) :: []
-  frames: sha256 d52ebca6c37d1eedcb3e52a04bf6454b0515b9ffb93a4707545a21bd7a583bb8
+  outcome: (6.25, 2.1009497469682885) :: (6, 2.3359578286430898) :: (5.5, 3.040687308365011) :: (4, 1.8125233299583898) :: (2, 0.4181174810923749) :: (1, 0.2007274333063946) :: (0, 0) :: [] | (6.25, 0) :: (6, 0) :: (5.5, 0) :: (4, 0) :: (2, 0) :: (1, 0) :: (0, 0) :: []
+  frames: sha256 1220110727f50b50c82287c160cb564d00f3375a8b125b4d41ff3f74ce590f6f
 batch at seeds 1-200:
   source: 200 runs, 0 rejected, 0 failed
     returned numbers: n 0, mean NaN, population variance NaN
@@ -51,143 +51,144 @@ batch at seeds 1-200:
 `;
 
 exports[`paper/noisy-iteration 1`] = `
-seed 1: checked, 16 frames
-  checks: OK ×16
-  final source: 0.07057261388147107
+seed 1: failed, 11 frames
+  checks: OK ×10, FAIL
+  final source: 2.288119535116656
+  final determinized: (rec run x =>
+  if flip[G](0.5) then x else run (1 - x + mean_gauss(0, 1))) (0 + mean_gauss(0, 1))
+  outcome: 2.288119535116656 | 1
+  frames: sha256 8117016db41c8a5c0f36cc3ff9635d88458ee8331ae5817b72d49ee15a6c636e
+seed 2: checked, 28 frames
+  checks: OK ×28
+  final source: 0.10156350283445414
   final determinized: 0
-  outcome: 0.07057261388147107 | 0
-  frames: sha256 f6ddb0ee22efc7fb763b36d09ea08d94ae0dc466bb9a78d314821f8fe43ea941
-seed 2: checked, 4 frames
+  outcome: 0.10156350283445414 | 0
+  frames: sha256 b1f9adcbf9be9f7f9d61e9363b819a39e206854b8f3d3a3d838f88797b66b4c0
+seed 3: checked, 4 frames
   checks: OK ×4
   final source: 0
   final determinized: 0
   outcome: 0 | 0
   frames: sha256 ce9d95748ae0e2c0652efd99bfd1609c56dbdd135a69d26e3f92b84d387f4c7b
-seed 3: checked, 10 frames
-  checks: OK ×10
-  final source: 1.4789807740590577
-  final determinized: 1
-  outcome: 1.4789807740590577 | 1
-  frames: sha256 848f9c483c76e2ea414d548c3cd2695b767772d4d13cf3cd33b04f3aa30bac48
 batch at seeds 1-200:
   source: 200 runs, 0 rejected, 0 failed
-    returned numbers: n 200, mean 0.21984783186214005, population variance 0.9684671925840911
+    returned numbers: n 200, mean 0.37720443290842876, population variance 1.5731835165818793
   determinized: 200 runs, 0 rejected, 0 failed
-    returned numbers: n 200, mean 0.29000000000000015, population variance 0.2059
+    returned numbers: n 200, mean 0.3099999999999999, population variance 0.21389999999999987
 `;
 
 exports[`paper/noisy-product 1`] = `
 seed 1: checked, 6 frames
   checks: OK ×6
-  final source: -0.07383050890052714
-  final determinized: 0.40648940204430695
-  outcome: -0.07383050890052714 | 0.40648940204430695
-  frames: sha256 b824dc19f8e0057d42bc1dedeb105ab05ef23de84b33136b92efb5a39b472bc8
+  final source: 0.29658211195491396
+  final determinized: 0.3209920184616961
+  outcome: 0.29658211195491396 | 0.3209920184616961
+  frames: sha256 4b2de528873c5f052401d62b79999ad7cec31660304e325e5b753f0289a48f0a
 seed 2: checked, 6 frames
   checks: OK ×6
-  final source: -0.1446386695056832
-  final determinized: 0.04292225979105911
-  outcome: -0.1446386695056832 | 0.04292225979105911
-  frames: sha256 4e1799775e41968957f48499c5fd87c6e69757ee8f197aa9a22b97d1fe9570e1
+  final source: 1.5839768412839572
+  final determinized: 0.34950530182119594
+  outcome: 1.5839768412839572 | 0.34950530182119594
+  frames: sha256 9727875d8fc828ad186ef2344e059510f2c654414bb0135251cb8e6e91644329
 seed 3: checked, 6 frames
   checks: OK ×6
-  final source: 0.6528098056781212
-  final determinized: 0.363877700316036
-  outcome: 0.6528098056781212 | 0.363877700316036
-  frames: sha256 50c252cff2e7c3c94c46a6742f069a784b488978858cb694ef0481d8dd829623
+  final source: 0.03564357608175051
+  final determinized: 0.012870980112885368
+  outcome: 0.03564357608175051 | 0.012870980112885368
+  frames: sha256 992a5612476c184ea74ae34ff4ded00e532bc52bc8bc1d5988db5d57a7ad12f9
 batch at seeds 1-200:
   source: 200 runs, 0 rejected, 0 failed
-    returned numbers: n 200, mean 0.2703326767402584, population variance 0.35102902692249627
+    returned numbers: n 200, mean 0.311695345011782, population variance 0.40473571896778465
   determinized: 200 runs, 0 rejected, 0 failed
-    returned numbers: n 200, mean 0.29712241568571096, population variance 0.07955974784148206
+    returned numbers: n 200, mean 0.35150215573977045, population variance 0.08940687968926142
 `;
 
 exports[`paper/sum-of-squares 1`] = `
 seed 1: checked, 6 frames
   checks: OK ×6
-  final source: 1.4128975383525502
-  final determinized: 1.4128975383525502
-  outcome: 1.4128975383525502 | 1.4128975383525502
-  frames: sha256 945b98bc62ea45443caf6c1816a696f34092d42b5a560df17b08297f09d08500
+  final source: 0.001596096308960516
+  final determinized: 0.001596096308960516
+  outcome: 0.001596096308960516 | 0.001596096308960516
+  frames: sha256 120425cd2f1cae12b22e3282cd3cc0918931231c4fa29fc17d16381d75a4d5f8
 seed 2: checked, 6 frames
   checks: OK ×6
-  final source: 2.411311284254834
-  final determinized: 2.411311284254834
-  outcome: 2.411311284254834 | 2.411311284254834
-  frames: sha256 284bed408eda7ed4d53665f0eb55f169d5e1b23faa0c0a733c82298fe83f298d
+  final source: 0.000060013213521023
+  final determinized: 0.000060013213521023
+  outcome: 0.000060013213521023 | 0.000060013213521023
+  frames: sha256 69c3cf5c5f6e335810c37916842c62683fa918922a981bfca2af565cf997a220
 seed 3: checked, 6 frames
   checks: OK ×6
-  final source: 1.582130506431231
-  final determinized: 1.582130506431231
-  outcome: 1.582130506431231 | 1.582130506431231
-  frames: sha256 e52615a3344d0de85fec2334531465232268afde4aae1a16ad7dfa1b183d42a8
+  final source: 0.8218942295841063
+  final determinized: 0.8218942295841063
+  outcome: 0.8218942295841063 | 0.8218942295841063
+  frames: sha256 665b2671b7ee7109c5a86804b0cbe541ae79073d66d5c2a5e84752c45d1d95ea
 batch at seeds 1-200:
   source: 200 runs, 0 rejected, 0 failed
-    returned numbers: n 200, mean 2.3519760270868044, population variance 11.096000035785679
+    returned numbers: n 200, mean 1.781858816702765, population variance 6.259800157958347
   determinized: 200 runs, 0 rejected, 0 failed
-    returned numbers: n 200, mean 2.3519760270868044, population variance 11.096000035785679
+    returned numbers: n 200, mean 1.781858816702765, population variance 6.259800157958347
 `;
 
 exports[`simulator/bad-e-branching 1`] = `
 seed 1: counterexample, 5 frames
   checks: OK ×4, FAIL
-  final source: if 0.18967728852294385 < 0.5
+  final source: if 0.9836278587203701 < 0.5
 then
-  0.18967728852294385 + 0.6375652139540762
+  0.9836278587203701 + 0.5665615751722809
 else
-  0.18967728852294385 - 0.6375652139540762
-  final determinized: if 0.5 < 0.5 then 0.5 + 0.6375652139540762 else 0.5 - 0.6375652139540762
-  outcome: 0.82724250247702 | -0.13756521395407617
-  frames: sha256 969775a26d6a2678409113639c952aadd48235b692867ae383431ebd2e82dfe4
+  0.9836278587203701 - 0.5665615751722809
+  final determinized: if 0.5 < 0.5 then 0.5 + 0.5665615751722809 else 0.5 - 0.5665615751722809
+  outcome: 0.41706628354808917 | -0.0665615751722809
+  frames: sha256 9737b40a34f3206e243ba4fa125a74093256e7f231b06bb80779fee8a689dd9e
 seed 2: counterexample, 5 frames
   checks: OK ×4, FAIL
-  final source: if 0.5213967126328498 < 0.5
+  final source: if 0.11273747692122227 < 0.5
 then
-  0.5213967126328498 + 0.20717688044533134
+  0.11273747692122227 + 0.5911897341980795
 else
-  0.5213967126328498 - 0.20717688044533134
-  final determinized: if 0.5 < 0.5 then 0.5 + 0.20717688044533134 else 0.5 - 0.20717688044533134
-  outcome: 0.3142198321875185 | 0.29282311955466866
-  frames: sha256 0b1903952937c05d3a3bf31bbfc483eb063b84e0b304ee294ae4349b39b70c25
+  0.11273747692122227 - 0.5911897341980795
+  final determinized: if 0.5 < 0.5 then 0.5 + 0.5911897341980795 else 0.5 - 0.5911897341980795
+  outcome: 0.7039272111193018 | -0.09118973419807952
+  frames: sha256 e9d1a01bd360ff0d31d7024048c0fefd8a8257a804a0342a2614d83785582327
 seed 3: counterexample, 5 frames
   checks: OK ×4, FAIL
-  final source: if 0.8914504204876721 < 0.5
+  final source: if 0.2680913587344479 < 0.5
 then
-  0.8914504204876721 + 0.6032227617688477
+  0.2680913587344479 + 0.11345034205715454
 else
-  0.8914504204876721 - 0.6032227617688477
-  final determinized: if 0.5 < 0.5 then 0.5 + 0.6032227617688477 else 0.5 - 0.6032227617688477
-  outcome: 0.2882276587188244 | -0.1032227617688477
-  frames: sha256 a770c8cf60677ff33c32420a61968853dd83813459ebb81dda5a04946251c1e1
+  0.2680913587344479 - 0.11345034205715454
+  final determinized: if 0.5 < 0.5 then 0.5 + 0.11345034205715454 else 0.5 - 0.11345034205715454
+  outcome: 0.38154170079160243 | 0.38654965794284546
+  frames: sha256 8ed71619c21da54bc90ffd9aa4cbc635d7044bf1e564f7a6fbab32abef5d4929
 batch at seeds 1-200:
   source: 200 runs, 0 rejected, 0 failed
-    returned numbers: n 200, mean 0.5076916617434472, population variance 0.1558090164633022
+    returned numbers: n 200, mean 0.45230831662290993, population variance 0.17100165291408714
   determinized: 200 runs, 0 rejected, 0 failed
-    returned numbers: n 200, mean 0.032840057564899314, population variance 0.07888400386974412
+    returned numbers: n 200, mean -0.017949650792432034, population variance 0.08323031498376833
 `;
 
 exports[`simulator/noisy-product-all-e 1`] = `
 seed 1: counterexample, 5 frames
   checks: OK ×4, FAIL
-  final source: 0.18967728852294385 * 0.5021428277386556
+  final source: 0.9836278587203701 * 0.23133491033474096
   final determinized: 0.5 * 0.5
-  outcome: 0.09524509001671187 | 0.25
-  frames: sha256 1cc1a636939f7d3135a3761f83331eb4ad2208647cf64b882e515d633ef9d3f6
+  outcome: 0.22754746249983007 | 0.25
+  frames: sha256 dc24466c5a5ea44bc882679278608394753c2e2177e86fed473be95c402ee204
 seed 2: counterexample, 5 frames
   checks: OK ×4, FAIL
-  final source: 0.5213967126328498 * 0.9898861257409579
+  final source: 0.11273747692122227 * 0.10361357749166022
   final determinized: 0.5 * 0.5
-  outcome: 0.5161233718422032 | 0.25
-  frames: sha256 26f0e16ba911b0b359331000adbd2d673920ac59c479c916d691088d918ee0ba
+  outcome: 0.01168113330119132 | 0.25
+  frames: sha256 c8c62543335b348edf013148ea16451070c82df12d61bd444a0659bfa38db25b
 seed 3: counterexample, 5 frames
   checks: OK ×4, FAIL
-  final source: 0.8914504204876721 * 1.601144793006107
+  final source: 0.2680913587344479 * 1.7494294691471954
   final determinized: 0.5 * 0.5
-  outcome: 1.4273411989869407 | 0.25
-  frames: sha256 b8a1aa6a64e2ed5bf1bee7827f5862e28adcf8517fb42a4ac9daa8e21066b1e4
+  outcome: 0.4690069233937555 | 0.25
+  frames: sha256 dea6d3e86db8a1c5f9c04fbce07cf42e94e8c5c5523e6fdf4207dd4d648aa82b
 batch at seeds 1-200:
   source: 200 runs, 0 rejected, 0 failed
-    returned numbers: n 200, mean 0.25296141488556634, population variance 0.32059621025528934
+    returned numbers: n 200, mean 0.2558290383659331, population variance 0.3994435131048345
   determinized: 200 runs, 0 rejected, 0 failed
     returned numbers: n 200, mean 0.25, population variance 0
 `;
@@ -195,129 +196,129 @@ batch at seeds 1-200:
 exports[`simulator/observe 1`] = `
 seed 1: checked, 9 frames
   checks: OK ×9
-  final source: 0.7584968549934359
-  final determinized: 0.9563478209311143
-  outcome: 0.7584968549934359 | 0.9563478209311143
-  frames: sha256 234ddcd7e7657059be700ec3f2135c4d95f6a90980af21558e4e4c805aa9b9cc
+  final source: 1.1238473241922315
+  final determinized: 0.8498423627584213
+  outcome: 1.1238473241922315 | 0.8498423627584213
+  frames: sha256 7a821139573816ab4a38617e633201654c2e10a368f0cef8308a0af19edd2688
 seed 2: checked, 9 frames
   checks: OK ×9
-  final source: 0.31519822484305604
-  final determinized: 0.310765320667997
-  outcome: 0.31519822484305604 | 0.310765320667997
-  frames: sha256 e7a4de9a96074a8791bd7abeac154105a545ce23d10e8dc9256aff283aa1057c
+  final source: 0.657838973213299
+  final determinized: 0.8867846012971192
+  outcome: 0.657838973213299 | 0.8867846012971192
+  frames: sha256 a96b52028bcf86174575ebe3e2c18db3eeeb5ab776506476ca7003ae464728f9
 seed 3: checked, 9 frames
   checks: OK ×9
-  final source: 1.1409659463954218
-  final determinized: 0.9048341426532716
-  outcome: 1.1409659463954218 | 0.9048341426532716
-  frames: sha256 b38f4e0d346e2d3eb629cc92fd1e298af6d404d2ba1bb8158f75a5e41de85383
+  final source: 0.14386539840814497
+  final determinized: 0.1701755130857318
+  outcome: 0.14386539840814497 | 0.1701755130857318
+  frames: sha256 702b14b11330440405b6e3e225397380e8ebc25a37ef96b910ef3a56b5d1b79e
 batch at seeds 1-200:
-  source: 200 runs, 34 rejected, 0 failed
-    returned numbers: n 166, mean 0.5510342404246683, population variance 0.12333490743359402
-  determinized: 200 runs, 34 rejected, 0 failed
-    returned numbers: n 166, mean 0.5700409191328168, population variance 0.11256583082166002
+  source: 200 runs, 39 rejected, 0 failed
+    returned numbers: n 161, mean 0.6482015364901476, population variance 0.16751262788644064
+  determinized: 200 runs, 39 rejected, 0 failed
+    returned numbers: n 161, mean 0.6359576664127604, population variance 0.12836157188587835
 `;
 
 exports[`simulator/random-list-sum 1`] = `
-seed 1: checked, 22 frames
-  checks: OK ×22
-  final source: 0.5074649241287261
-  final determinized: 1
-  outcome: 0.5074649241287261 | 1
-  frames: sha256 62ad3e02997a408c9e42116d19843814602b8e4f53c1597554eb4e780b1c3ad3
-seed 2: checked, 8 frames
+seed 1: checked, 29 frames
+  checks: OK ×29
+  final source: 1.9426177168639072
+  final determinized: 1.5
+  outcome: 1.9426177168639072 | 1.5
+  frames: sha256 f8250256c86854b021f8badef21d2f17ff0498de5755302631102bd79c54c5f9
+seed 2: checked, 36 frames
+  checks: OK ×36
+  final source: 2.091714410086896
+  final determinized: 2
+  outcome: 2.091714410086896 | 2
+  frames: sha256 905bfd2693efaee2881422f8dafd60ef14d38a4deb19de1a0c91b1888be51d7f
+seed 3: checked, 8 frames
   checks: OK ×8
   final source: 0
   final determinized: 0
   outcome: 0 | 0
   frames: sha256 9c8d8ce105346aabcb22c2432ab91726270f7bc49d542dd12cb63c2647350eda
-seed 3: checked, 15 frames
-  checks: OK ×15
-  final source: 0.8914504204876721
-  final determinized: 0.5
-  outcome: 0.8914504204876721 | 0.5
-  frames: sha256 4459a6d17edc79bc12d213e7817c5c20fc136d8ba90c91fea5f02a51ca6fcc74
 batch at seeds 1-200:
   source: 200 runs, 0 rejected, 0 failed
-    returned numbers: n 200, mean 0.4505013016820887, population variance 0.5352092576020526
+    returned numbers: n 200, mean 0.6797302430732831, population variance 0.8727746303028907
   determinized: 200 runs, 0 rejected, 0 failed
-    returned numbers: n 200, mean 0.47500000000000003, population variance 0.5168750000000001
+    returned numbers: n 200, mean 0.6599999999999999, population variance 0.7969000000000004
 `;
 
 exports[`simulator/recursive-gamma 1`] = `
 seed 1: checked, 29 frames
   checks: OK ×29
-  final source: 1.1060250523895053e-107
-  final determinized: 0.15392954320158878
-  outcome: 1.1060250523895053e-107 | 0.15392954320158878
-  frames: sha256 749238a3ff5c598ec891da64ba6793ef49b2282d6be6eec0d9d306ad6f227bf7
+  final source: 0.0005627475497242927
+  final determinized: 0.12843995091637106
+  outcome: 0.0005627475497242927 | 0.12843995091637106
+  frames: sha256 753f955d4fa00b67d2fc6c428e2f50d6286dc6c61ee8c20c985c4c7e1769913b
 seed 2: checked, 29 frames
   checks: OK ×29
-  final source: 5e-324
-  final determinized: 0.37842458926749156
-  outcome: 5e-324 | 0.37842458926749156
-  frames: sha256 2822c93ece1da03fe0a5e9c265e07dae708118134a60e1598e02c1566d8f3115
+  final source: 0.23187545322978378
+  final determinized: 0.1275465832303633
+  outcome: 0.23187545322978378 | 0.1275465832303633
+  frames: sha256 80d30ad89e31a8ff6187867d42afe72ae8c77ac6b548d6b6ee89db3a54fbaba1
 seed 3: checked, 29 frames
   checks: OK ×29
-  final source: 5e-324
-  final determinized: 0.18286010556767965
-  outcome: 5e-324 | 0.18286010556767965
-  frames: sha256 750f54b4f10a6ce8d0c1651f688739c5da19307d85cbb1914afcc48e490064ef
+  final source: 0
+  final determinized: 0.3052333039241708
+  outcome: 0 | 0.3052333039241708
+  frames: sha256 28fd3d706cc942e2b0cfdc1045e9a5aacb709f8647ad710c80a09140d475604f
 batch at seeds 1-200:
-  source: 200 runs, 0 rejected, 0 failed
-    returned numbers: n 200, mean 0.28553990823347064, population variance 0.9689209132266121
+  source: 200 runs, 0 rejected, 30 failed (first: gamma requires positive shape and rate)
+    returned numbers: n 170, mean 0.17070743231764485, population variance 0.19047605097352077
   determinized: 200 runs, 0 rejected, 0 failed
-    returned numbers: n 200, mean 0.2415369270983987, population variance 0.010451879205967378
+    returned numbers: n 200, mean 0.2190045009759388, population variance 0.008748966162569163
 `;
 
 exports[`symbolic/mixed-affinities 1`] = `
 seed 1: checked, 6 frames
   checks: OK ×6
-  final source: 1.5335533639146803
-  final determinized: 1.9563478209311143
-  outcome: 1.5335533639146803 | 1.9563478209311143
-  frames: sha256 fbe40c69d8e9e6e243376157864e5a8c35e98e50bed70a88453ec9a51fdb0d11
+  final source: 2.543093118765351
+  final determinized: 1.8498423627584213
+  outcome: 2.543093118765351 | 1.8498423627584213
+  frames: sha256 7c7b5b9b393a5ba8ee3f97f1f5e0399697f355fbebea5a184603784015c20a86
 seed 2: checked, 6 frames
   checks: OK ×6
-  final source: 1.3491258417586376
-  final determinized: 1.310765320667997
-  outcome: 1.3491258417586376 | 1.310765320667997
-  frames: sha256 a8380d1c94d861e6e88251314534a6064b0706e10711e482cad94d0c1e1dc464
+  final source: 1.341205183223384
+  final determinized: 1.8867846012971192
+  outcome: 1.341205183223384 | 1.8867846012971192
+  frames: sha256 643507c614228e8292e0eed0542eb2cc5c639ef8afd7065db0a6313d231276b6
 seed 3: checked, 6 frames
   checks: OK ×6
-  final source: 2.4516031798864653
-  final determinized: 1.9048341426532716
-  outcome: 2.4516031798864653 | 1.9048341426532716
-  frames: sha256 3cd877e7cea8cb61008c99378f652627496c42210359317901e8293f83323cd2
+  final source: 0.7326683452322145
+  final determinized: 1.1701755130857316
+  outcome: 0.7326683452322145 | 1.1701755130857316
+  frames: sha256 0c70c6912de4d5ccff262031306dee748a878332b411449e0792839a7b06ae64
 batch at seeds 1-200:
   source: 200 runs, 0 rejected, 0 failed
-    returned numbers: n 200, mean 1.6313637304374953, population variance 0.37769571588559353
+    returned numbers: n 200, mean 1.7742181443309093, population variance 0.4203841610404125
   determinized: 200 runs, 0 rejected, 0 failed
-    returned numbers: n 200, mean 1.700739913652652, population variance 0.17748900870692427
+    returned numbers: n 200, mean 1.776924476188648, population variance 0.18726820871347868
 `;
 
 exports[`symbolic/nested-uniform 1`] = `
 seed 1: checked, 6 frames
   checks: OK ×6
-  final source: 0.9546527512096301
+  final source: 2.2600736747181664
   final determinized: 1.75
-  outcome: 0.9546527512096301 | 1.75
-  frames: sha256 72b2aa08f4fe7ba052073925519e9d5017042dfc098627d2ff5b3957d83ab1ab
+  outcome: 2.2600736747181664 | 1.75
+  frames: sha256 44a979d441ed4a47c1fd34af191b5b3f7a987357c5f27768b2a116026b5f1122
 seed 2: checked, 6 frames
   checks: OK ×6
-  final source: 1.936153284900417
+  final source: 2.102401806132729
   final determinized: 1.75
-  outcome: 1.936153284900417 | 1.75
-  frames: sha256 70783c740dfe4f046ae15e133f73b25f1f293dc82dd059e64fe21ffd3e1fe52d
+  outcome: 2.102401806132729 | 1.75
+  frames: sha256 9eb0f00c061e5af695ca7e358963b1d3e05354db527570431337d02a50dbcc75
 seed 3: checked, 6 frames
   checks: OK ×6
-  final source: 1.7901554454670159
+  final source: 0.9349735589424665
   final determinized: 1.75
-  outcome: 1.7901554454670159 | 1.75
-  frames: sha256 b0aca9f2a122c465d943cbab2b7dbb0115fca3e4d1a0a8ddac54a9b053802585
+  outcome: 0.9349735589424665 | 1.75
+  frames: sha256 7bffda171e2a5bf8b82bf6ba4c6446ff086e97ecc181653136565fb5c862e253
 batch at seeds 1-200:
   source: 200 runs, 0 rejected, 0 failed
-    returned numbers: n 200, mean 1.6871571144297919, population variance 0.33928958366183415
+    returned numbers: n 200, mean 1.7128690898255652, population variance 0.3498938906839075
   determinized: 200 runs, 0 rejected, 0 failed
     returned numbers: n 200, mean 1.75, population variance 0
 `;

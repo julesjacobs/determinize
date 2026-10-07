@@ -1,26 +1,8 @@
-export class Rng {
-  declare seed: number;
+// The random streams of a run: Lean's SplitMix64 generator (`Runtime/Sampling.lean`), one stream
+// for E draws and one for G draws, seeded as Lean's `runOutcome` (`Runtime/Eval.lean`) seeds them.
+import { SplitMix64, uint64 } from "./sampling.ts";
 
-  constructor(seed: number) {
-    this.seed = seed >>> 0;
-  }
-
-  clone(): Rng {
-    return new Rng(this.seed);
-  }
-
-  next(): number {
-    this.seed += 0x6d2b79f5;
-    let t = this.seed;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  }
-
-  positive(): number {
-    return Math.max(this.next(), 1e-12);
-  }
-}
+export type Rng = SplitMix64;
 
 /** The random streams of E draws and of G draws. */
 export interface Streams {
@@ -28,16 +10,12 @@ export interface Streams {
   rngG: Rng;
 }
 
-export function makeStreams(seed = 1): Streams {
-  return {
-    rngE: new Rng((seed ^ 0x9e3779b9) >>> 0),
-    rngG: new Rng((seed ^ 0x85ebca6b) >>> 0),
-  };
-}
+/** The E stream's seed is the run's seed with these bits flipped. */
+export const eSeedMask = 0x517cc1b727220a95n;
 
-export function splitSeeds(seed = 1) {
-  return {
-    eSeed: (seed ^ 0x9e3779b9) >>> 0,
-    gSeed: (seed ^ 0x85ebca6b) >>> 0,
-  };
+/** The streams of the run at `seed`, as a UInt64: the E stream starts at `seed xor
+ * 0x517cc1b727220a95`, the G stream at `seed`. */
+export function makeStreams(seed: number | bigint = 1): Streams {
+  const state = uint64(BigInt(seed));
+  return { rngE: new SplitMix64(state ^ eSeedMask), rngG: new SplitMix64(state) };
 }
