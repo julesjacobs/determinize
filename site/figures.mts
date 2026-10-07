@@ -6,10 +6,10 @@
 // The runs come from the simulator's runtime, which is not Lean's evaluator. Run i of both
 // programs uses seed 1 + i, so the two share the G draw x of each run.
 import { readFileSync, writeFileSync } from "node:fs";
-import type { Expr } from "../sim/src/compiler/ast.ts";
-import { makeStreams } from "../sim/src/runtime/rng.ts";
-import type { OrdinaryState } from "../sim/src/runtime/semantics.ts";
-import { isValue, prepareRuntime, stepOrdinary } from "../sim/src/runtime/semantics.ts";
+import type { Expr } from "../sim/src/core/compiler/ast.ts";
+import { makeStreams } from "../sim/src/core/runtime/rng.ts";
+import type { OrdinaryState } from "../sim/src/core/runtime/semantics.ts";
+import { isValue, prepareRuntime, stepOrdinary } from "../sim/src/core/runtime/semantics.ts";
 
 const page = new URL("index.html", import.meta.url);
 const program = readFileSync(

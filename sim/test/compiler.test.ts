@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { analyze } from "../src/compiler/analyze.ts";
-import type { Input } from "../src/compiler/core.ts";
-import { children } from "../src/compiler/core.ts";
-import { elaborate } from "../src/compiler/elaborate.ts";
-import { CompileError } from "../src/compiler/errors.ts";
-import { parse } from "../src/compiler/parser.ts";
-import { prettyExpr } from "../src/compiler/pretty.ts";
-import { rational } from "../src/compiler/rational.ts";
+import { analyze } from "../src/core/compiler/analyze.ts";
+import type { Input } from "../src/core/compiler/core.ts";
+import { children } from "../src/core/compiler/core.ts";
+import { elaborate } from "../src/core/compiler/elaborate.ts";
+import { CompileError } from "../src/core/compiler/errors.ts";
+import { parse } from "../src/core/compiler/parser.ts";
+import { prettyExpr } from "../src/core/compiler/pretty.ts";
+import { rational } from "../src/core/compiler/rational.ts";
 
 test("parser preserves arithmetic precedence", () => {
   const ast = parse("uniform(0, 1) * 2 + 3");

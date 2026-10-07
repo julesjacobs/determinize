@@ -1,18 +1,18 @@
 // The simulator's examples: programs from examples/, which Lean's corpus manifest
 // (tests/cases.toml) also checks, in the order the simulator lists them.
 
-import dungeon from "../../examples/paper/dungeon.det";
-import gaussRandomWalk from "../../examples/paper/gauss-random-walk.det";
-import noisyIteration from "../../examples/paper/noisy-iteration.det";
-import noisyProduct from "../../examples/paper/noisy-product.det";
-import sumOfSquares from "../../examples/paper/sum-of-squares.det";
-import badEBranching from "../../examples/simulator/bad-e-branching.det";
-import noisyProductAllE from "../../examples/simulator/noisy-product-all-e.det";
-import observe from "../../examples/simulator/observe.det";
-import randomListSum from "../../examples/simulator/random-list-sum.det";
-import recursiveGamma from "../../examples/simulator/recursive-gamma.det";
-import mixedModes from "../../examples/symbolic/mixed-affinities.det";
-import nestedUniform from "../../examples/symbolic/nested-uniform.det";
+import dungeon from "../../../examples/paper/dungeon.det";
+import gaussRandomWalk from "../../../examples/paper/gauss-random-walk.det";
+import noisyIteration from "../../../examples/paper/noisy-iteration.det";
+import noisyProduct from "../../../examples/paper/noisy-product.det";
+import sumOfSquares from "../../../examples/paper/sum-of-squares.det";
+import badEBranching from "../../../examples/simulator/bad-e-branching.det";
+import noisyProductAllE from "../../../examples/simulator/noisy-product-all-e.det";
+import observe from "../../../examples/simulator/observe.det";
+import randomListSum from "../../../examples/simulator/random-list-sum.det";
+import recursiveGamma from "../../../examples/simulator/recursive-gamma.det";
+import mixedModes from "../../../examples/symbolic/mixed-affinities.det";
+import nestedUniform from "../../../examples/symbolic/nested-uniform.det";
 
 export interface Example {
   /** The file's path under examples/, without `.det`. */

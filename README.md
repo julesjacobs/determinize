@@ -128,6 +128,10 @@ written in TypeScript, whose types Node and esbuild strip. `npm run typecheck` c
 `src/` against the browser's types (`tsconfig.json`), and the tests and the build script
 against Node's (`tsconfig.node.json`).
 
+`sim/src/core/` holds the compiler, the runtime and what the step table and the statistics
+compute. A Biome override keeps it free of the DOM, CodeMirror and signals, so that Node's tests
+run it.
+
 The `.#sim` shell, which direnv loads in `sim/`, links `sim/node_modules` to packages that
 Nix builds from `sim/package-lock.json`; the combined shell does not. To add or update a
 dependency, run `npm install <pkg>@<version>` in `sim/`, which changes only `package.json`
