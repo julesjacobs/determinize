@@ -288,16 +288,8 @@ PULL_REQUEST_STARTS = {
 
 # Changes for which a workflow's filter is still too wide or too narrow.
 KNOWN_WRONG = {
-    "examples/baselines/clickGraph.sgcl", "examples/paper/noisy-product.det",
     "flake-modules/devshells/all.nix", "flake-modules/devshells/lean.nix",
-    "flake-modules/devshells/sim.nix", "flake-modules/devshells/tex.nix", "tests/cases.toml",
-    "tests/statistical/nested.det", "tests/test_results.py",
-}
-
-
-# Workflows whose filter misses a path that the code they run names.
-KNOWN_UNCOVERED = {
-    "sim",
+    "flake-modules/devshells/sim.nix",
 }
 
 
@@ -357,9 +349,8 @@ def check_named_paths(name):
 
 
 for workflow in GUARDED:
-    method = check_named_paths(workflow)
     setattr(TriggerTests, f"test_paths_named_by_what_{workflow}_runs_start_it",
-            unittest.expectedFailure(method) if workflow in KNOWN_UNCOVERED else method)
+            check_named_paths(workflow))
 
 
 if __name__ == "__main__":
