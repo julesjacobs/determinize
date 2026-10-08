@@ -413,10 +413,6 @@
     margin-bottom: var(--space-3);
   }
 
-  #step-play {
-    min-width: 5.5em;
-  }
-
   /* As tall as the run, up to what fits in the viewport below the bar, but at least about one row,
      even where the bar and the region then exceed a short viewport. */
   .step-table {
@@ -446,7 +442,7 @@
   }
 
   .scrub input {
-    width: min(18rem, 60vw);
+    width: min(18rem, 45vw);
     min-height: 1.5rem;
   }
 
