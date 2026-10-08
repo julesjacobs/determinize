@@ -13,11 +13,12 @@ import type { RunOutcome } from "./statistics.ts";
  */
 export const maxSymbolicSteps = 20000;
 /**
- * The page computes the step table itself, and each step costs as much as its state is large, so
- * a run also stops once its states' sizes (nodes and affine terms) add up to `maxShownSize`; a deep
- * recursion or a long sum of draws would otherwise hold the page for seconds and exhaust its
- * memory. At seeds 1-20, the random walk's states add up to 534883, the most of examples/, and the
- * Irwin-Hall sum's to 255191.
+ * Each step costs as much as its state is large, so a run also stops once its states' sizes (nodes
+ * and affine terms) add up to `maxShownSize`. This bounds the run and the memory of the worker
+ * that computes it, which a deep recursion or a long sum of draws would otherwise exhaust; the
+ * pages that bring the run to the page have their own bound (`maxPageSize` in trace-pages.ts). At
+ * seeds 1-20, the random walk's states add up to 534883, the most of examples/, and the Irwin-Hall
+ * sum's to 255191.
  */
 export const maxShownSize = 800000;
 /** The steps of either program towards each symbolic step; every program of the corpus needs at

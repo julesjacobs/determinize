@@ -52,14 +52,50 @@ export function renderTraceExpr(expr: Expr, options: TraceOptions = {}) {
   return renderExpr(expr, 0, options.focusPath ?? null, options);
 }
 
+/** The path to the subexpression of `after` that differs from `before`, found in one descent:
+ * the node itself if its kind or its own fields changed, or else the first child that changed. */
 export function changedPath(
   before: Expr | null | undefined,
   after: Expr | null | undefined,
 ): Path | null {
-  if (!before || !after || sameExpr(before, after)) return null;
+  if (!before || !after) return null;
+  return diffPath(before, after);
+}
+
+function isExpr(value: unknown): value is Expr {
+  return typeof value === "object" && value !== null && "kind" in value && "from" in value;
+}
+
+function diffPath(before: Expr, after: Expr): Path | null {
+  if (before === after) return null;
   if (before.kind !== after.kind) return [];
-  const child = changedChildPath(before, after);
-  return child ?? [];
+  const a = before as Fields;
+  const b = after as Fields;
+  const children: string[] = [];
+  for (const key of Object.keys(b)) {
+    if (ignoredKeys.has(key)) continue;
+    const x = a[key];
+    const y = b[key];
+    const exprs =
+      (isExpr(x) && isExpr(y)) ||
+      (Array.isArray(x) && Array.isArray(y) && x.length === y.length && y.every(isExpr));
+    if (exprs) children.push(key);
+    else if (!sameExpr(x, y)) return [];
+  }
+  for (const key of children) {
+    const x = a[key];
+    const y = b[key];
+    if (isExpr(x) && isExpr(y)) {
+      const path = diffPath(x, y);
+      if (path) return [key, ...path];
+    } else if (Array.isArray(x) && Array.isArray(y)) {
+      for (const [index, item] of y.entries()) {
+        const path = diffPath(x[index] as Expr, item as Expr);
+        if (path) return [key, index, ...path];
+      }
+    }
+  }
+  return null;
 }
 
 function renderExpr(
@@ -289,94 +325,33 @@ function symbolForNumber(value: number, valueBySymbol: Record<string, number> | 
   return null;
 }
 
-function changedChildPath(before: Expr, after: Expr): Path | null {
-  switch (after.kind) {
-    case "Let":
-      return changedFieldPath(before, after, "value") ?? changedFieldPath(before, after, "body");
-    case "App":
-      return changedFieldPath(before, after, "fn") ?? changedFieldPath(before, after, "arg");
-    case "Pair":
-      return changedFieldPath(before, after, "left") ?? changedFieldPath(before, after, "right");
-    case "Fst":
-    case "Snd":
-    case "Inl":
-    case "Inr":
-    case "Neg":
-      return changedFieldPath(before, after, "expr");
-    case "Case":
-      return (
-        changedFieldPath(before, after, "scrutinee") ??
-        changedFieldPath(before, after, "left") ??
-        changedFieldPath(before, after, "right")
-      );
-    case "Cons":
-      return changedFieldPath(before, after, "head") ?? changedFieldPath(before, after, "tail");
-    case "MatchList":
-      return (
-        changedFieldPath(before, after, "scrutinee") ??
-        changedFieldPath(before, after, "nilBranch") ??
-        changedFieldPath(before, after, "consBranch")
-      );
-    case "If":
-      return (
-        changedFieldPath(before, after, "cond") ??
-        changedFieldPath(before, after, "thenBranch") ??
-        changedFieldPath(before, after, "elseBranch")
-      );
-    case "Add":
-    case "Sub":
-    case "Mul":
-    case "Div":
-    case "Lt":
-    case "Leq":
-      return changedFieldPath(before, after, "left") ?? changedFieldPath(before, after, "right");
-    case "Observe":
-      return changedFieldPath(before, after, "cond");
-    case "Mean":
-      return changedIndexedPath(before, after, "args");
-    case "Uniform":
-    case "Gauss":
-    case "Exponential":
-    case "Gamma":
-    case "Beta":
-    case "Flip":
-    case "Bernoulli":
-    case "Poisson":
-      return changedIndexedPath(before, after, "args");
-    case "Discrete":
-      return null;
-    case "DiscreteList":
-      return changedFieldPath(before, after, "probabilities");
-    case "DomainError":
-      return null;
-    default:
-      return null;
+/** Whether two states print alike: equal apart from their spans and rounding bounds. Unchanged
+ * parts of consecutive states are mostly the same objects. */
+function sameExpr(before: unknown, after: unknown): boolean {
+  if (before === after) return true;
+  if (typeof before !== "object" || typeof after !== "object" || !before || !after) return false;
+  if (Array.isArray(before) || Array.isArray(after)) {
+    return (
+      Array.isArray(before) &&
+      Array.isArray(after) &&
+      before.length === after.length &&
+      before.every((item, index) => sameExpr(item, after[index]))
+    );
   }
+  const keys = (value: object) =>
+    Object.keys(value).filter(
+      (key) => !ignoredKeys.has(key) && (value as Fields)[key] !== undefined,
+    );
+  const beforeKeys = keys(before);
+  const afterKeys = keys(after);
+  return (
+    beforeKeys.length === afterKeys.length &&
+    beforeKeys.every((key) => sameExpr((before as Fields)[key], (after as Fields)[key]))
+  );
 }
 
-function changedFieldPath(before: Fields, after: Fields, key: string): Path | null {
-  if (!(key in before) || !(key in after) || sameExpr(before[key], after[key])) return null;
-  return [key, ...(changedPath(before[key] as Expr, after[key] as Expr) ?? [])];
-}
-
-function changedIndexedPath<K extends string>(
-  before: Fields & Partial<Record<K, Expr[]>>,
-  after: Fields & Partial<Record<K, Expr[]>>,
-  key: K,
-): Path | null {
-  if (!Array.isArray(before[key]) || !Array.isArray(after[key])) return null;
-  const count = Math.min(before[key].length, after[key].length);
-  for (let index = 0; index < count; index++) {
-    if (!sameExpr(before[key][index], after[key][index])) {
-      return [key, index, ...(changedPath(before[key][index], after[key][index]) ?? [])];
-    }
-  }
-  return before[key].length === after[key].length ? null : [];
-}
-
-function sameExpr(before: unknown, after: unknown) {
-  return prettyExpr(before as Expr) === prettyExpr(after as Expr);
-}
+/** The fields that the printed form of a state doesn't show. */
+const ignoredKeys = new Set(["from", "to", "error", "errors"]);
 
 function childFocus(focusPath: Path | null, key: string, index: number | null = null) {
   if (!focusPath || focusPath.length === 0 || focusPath[0] !== key) return null;

@@ -8,7 +8,7 @@ import { formatNumber } from "../core/format.ts";
 import { prettyAffine } from "../core/runtime/affine.ts";
 import { distributionName } from "../core/runtime/distributions.ts";
 import type { GDraw } from "../core/runtime/eval.ts";
-import type { Binding, CoupledTrace, Frame } from "../core/runtime/semantics.ts";
+import type { Binding, Frame } from "../core/runtime/semantics.ts";
 import {
   domainErrorMessage,
   frameOk,
@@ -16,6 +16,7 @@ import {
   maxSymbolicSteps,
   sigmaMeans,
 } from "../core/trace.ts";
+import type { TraceOverview, TracePage } from "../core/trace-pages.ts";
 import { counterexampleLabel, escapeHtml } from "./html.ts";
 import type { Store } from "./store.ts";
 import type { TraceOptions } from "./trace-expr.ts";
@@ -28,12 +29,9 @@ export interface TraceViewElements {
   gTrace: HTMLElement;
 }
 
-/** The number of frames on a page of the step table. */
-const pageSize = 200;
-
 export function mountTraceView(
   elements: TraceViewElements,
-  store: Pick<Store, "trace" | "activeStep" | "samples">,
+  store: Pick<Store, "trace" | "activeStep" | "samples" | "showPage">,
 ) {
   effect(() => {
     elements.gTrace.textContent = describeTraces(store.samples.value.traces);
@@ -55,17 +53,15 @@ export function mountTraceView(
     return row ? Number(row.dataset.step) : -1;
   }
 
-  /** The run shown, and the index of its page that is shown. */
-  let shown: { trace: CoupledTrace; page: number } | null = null;
+  /** The pager button that asked for the page on its way, to focus it again. */
+  let pageButton: string | null = null;
 
   elements.table.addEventListener("click", (event) => {
     const button =
       event.target instanceof Element ? event.target.closest<HTMLElement>("[data-page]") : null;
-    if (!button || !shown) return;
-    shown.page = Number(button.dataset.page);
-    store.activeStep.value = null;
-    renderCoupling(elements, shown.trace, shown.page);
-    elements.table.querySelector<HTMLElement>(`[data-page="${button.dataset.page}"]`)?.focus();
+    if (!button) return;
+    pageButton = button.dataset.label ?? null;
+    store.showPage(Number(button.dataset.page));
   });
 
   function showStep(check: Element) {
@@ -141,12 +137,22 @@ export function mountTraceView(
   effect(() => {
     const state = store.trace.value;
     store.activeStep.value = null;
-    if (state.kind === "run") {
-      shown = { trace: state.trace, page: 0 };
-      renderCoupling(elements, state.trace, 0);
+    // The worker computes the table; the earlier one stays until the new one arrives.
+    if (state.kind === "computing") {
+      elements.table.setAttribute("aria-busy", "true");
+      elements.status.textContent = "Computing the steps…";
+      elements.status.className = "status";
       return;
     }
-    shown = null;
+    elements.table.removeAttribute("aria-busy");
+    if (state.kind === "run") {
+      renderCoupling(elements, state.overview, state.page);
+      if (pageButton) {
+        elements.table.querySelector<HTMLElement>(`[data-label="${pageButton}"]`)?.focus();
+        pageButton = null;
+      }
+      return;
+    }
     // Lean rejects the program for a reason other than a mode conflict, or the run failed.
     elements.table.innerHTML = "";
     elements.status.textContent = state.kind === "not run" ? "Not run" : "Trace unavailable";
@@ -226,21 +232,20 @@ function describeTraces(traces: { source: GDraw[]; determinized: GDraw[] } | nul
   return `${describeTrace(source)} in the source, ${describeTrace(determinized)} in the determinized program`;
 }
 
-function renderCoupling(elements: TraceViewElements, coupled: CoupledTrace, page: number) {
-  const terminalDomainError = coupled.frames.some(hasDomainError);
-  const first = page * pageSize;
-  const frames = coupled.frames.slice(first, first + pageSize);
+function renderCoupling(elements: TraceViewElements, coupled: TraceOverview, page: TracePage) {
+  const terminalDomainError = coupled.domainError;
+  const frames = page.frames;
   if (coupled.counterexample) {
     elements.status.textContent = `seed ${coupled.seed} - counterexample`;
     elements.status.className = "status warning";
-  } else if (coupled.frames.at(-1)?.domainFailure) {
+  } else if (coupled.domainFailure) {
     elements.status.textContent = `seed ${coupled.seed} - domain failure`;
     elements.status.className = "status warning";
   } else if (coupled.stopped === "steps") {
     elements.status.textContent = `seed ${coupled.seed} - stopped after ${maxSymbolicSteps} steps`;
     elements.status.className = "status warning";
   } else if (coupled.stopped === "size") {
-    elements.status.textContent = `seed ${coupled.seed} - stopped after ${coupled.frames.length - 1} steps: the table grew too large to show`;
+    elements.status.textContent = `seed ${coupled.seed} - stopped after ${coupled.frameCount - 1} steps: the table grew too large to show`;
     elements.status.className = "status warning";
   } else {
     elements.status.textContent = `seed ${coupled.seed} - ${coupled.ok ? (terminalDomainError ? "checked domain error" : "checked") : "failed"}`;
@@ -258,8 +263,8 @@ function renderCoupling(elements: TraceViewElements, coupled: CoupledTrace, page
     <div class="coupling-table-body">
   ` +
     frames
-      .map((frame) => {
-        const previous = coupled.frames[frame.step - 1] ?? null;
+      .map((frame, index) => {
+        const previous = index === 0 ? page.previous : frames[index - 1];
         const sigma = sigmaView(frame.sigma);
         const sigmaLines = Math.max(1, Math.min(4, sigma.lineCount));
         const ok = frameOk(frame);
@@ -278,29 +283,29 @@ function renderCoupling(elements: TraceViewElements, coupled: CoupledTrace, page
       })
       .join("") +
     "</div>" +
-    pager(page, coupled.frames.length);
+    pager(page, coupled);
 }
 
-/** Buttons to the other pages of a run with `count` frames, if it has more than one page. */
-function pager(page: number, count: number) {
-  const last = Math.ceil(count / pageSize) - 1;
+/** Buttons to the other pages of the run, if it has more than one page. */
+function pager(page: TracePage, coupled: TraceOverview) {
+  const starts = coupled.pageStarts;
+  const last = starts.length - 1;
   if (last === 0) return "";
   const button = (label: string, target: number) =>
-    `<button type="button" data-page="${target}" ${target === page ? "disabled" : ""}>${label}</button>`;
-  const from = page * pageSize;
-  const to = Math.min(count, from + pageSize) - 1;
+    `<button type="button" data-page="${target}" data-label="${label}" ${target === page.index ? "disabled" : ""}>${label}</button>`;
+  const to = page.first + page.frames.length - 1;
   return `
     <nav class="trace-pager" aria-label="Pages of the step table">
       ${button("First", 0)}
-      ${button("Previous", Math.max(0, page - 1))}
-      <span>Steps ${from}–${to} of ${count}</span>
-      ${button("Next", Math.min(last, page + 1))}
+      ${button("Previous", Math.max(0, page.index - 1))}
+      <span>Steps ${page.first}–${to} of ${coupled.frameCount}</span>
+      ${button("Next", Math.min(last, page.index + 1))}
       ${button("Last", last)}
     </nav>
   `;
 }
 
-function stepCheck(frame: Frame, coupled: CoupledTrace) {
+function stepCheck(frame: Frame, coupled: TraceOverview) {
   const ok = frameOk(frame);
   const domainError = hasDomainError(frame);
   const label = domainError && ok ? "ERR" : ok ? "OK" : "FAIL";
@@ -323,7 +328,7 @@ function stepCheck(frame: Frame, coupled: CoupledTrace) {
 
 function checkPopoverContent(
   frame: Frame,
-  coupled: CoupledTrace,
+  coupled: TraceOverview,
   ok: boolean,
   domainError: boolean,
 ) {

@@ -469,7 +469,7 @@ export function checkEquivalences(source: string, seed = 1) {
 
 /** The size of an expression: its nodes and the terms of its affine forms, which each step goes
  * through. */
-function stateSize(expr: Expr): number {
+export function stateSize(expr: Expr): number {
   let count = expr.kind === "SymFloat" ? 1 + Object.keys(expr.affine.terms).length : 1;
   for (const value of Object.values(expr)) {
     for (const child of Array.isArray(value) ? value : [value]) {

@@ -4,14 +4,19 @@ import type { ReadonlySignal, Signal } from "@preact/signals-core";
 import { action, computed, effect, signal, untracked } from "@preact/signals-core";
 import type { Analysis } from "../core/compiler/analyze.ts";
 import { analyze } from "../core/compiler/analyze.ts";
-import type { Request, Response } from "../core/protocol.ts";
+import type {
+  Request,
+  Response,
+  TracePageRequest,
+  TraceRequest,
+  TraceResponse,
+} from "../core/protocol.ts";
 import type { GDraw } from "../core/runtime/eval.ts";
-import type { CoupledTrace } from "../core/runtime/semantics.ts";
 import type { Runner } from "../core/sampler.ts";
 import { runIndex, runnerOf, siteDraws } from "../core/sampler.ts";
 import type { Runs, Stats, Summary } from "../core/statistics.ts";
 import { addRuns, noRuns, runsOf, statsOf } from "../core/statistics.ts";
-import { runCoupling } from "../core/trace.ts";
+import type { TraceOverview, TracePage } from "../core/trace-pages.ts";
 
 /** A range of the source. */
 export interface Span {
@@ -40,10 +45,12 @@ export interface Samples {
   traces: { source: GDraw[]; determinized: GDraw[] } | null;
 }
 
-/** The step table's run of the checked program. */
+/** The step table's run of the checked program, which its worker computes and sends a page at a
+ * time. */
 export type TraceState =
   | { kind: "not run" }
-  | { kind: "run"; trace: CoupledTrace }
+  | { kind: "computing" }
+  | { kind: "run"; overview: TraceOverview; page: TracePage }
   | { kind: "unavailable"; message: string };
 
 export interface Store {
@@ -65,6 +72,7 @@ export interface Store {
   /** The batch of runs in progress, of `source` at `seed`, up to run `end`. */
   running: ReadonlySignal<{ generation: number; source: string; seed: number; end: number } | null>;
   analysis: ReadonlySignal<Analysis>;
+  /** The step table's run; computing while its worker works on it. */
   trace: ReadonlySignal<TraceState>;
   stats: ReadonlySignal<{ original: Stats; determinized: Stats }>;
   /** Analyzes and runs the editor's text now. */
@@ -75,6 +83,10 @@ export interface Store {
   runMany: (count: number) => void;
   /** Takes in what the sampler reports about a batch. */
   receive: (response: Response) => void;
+  /** Asks the step table's worker for page `index` of its run. */
+  showPage: (index: number) => void;
+  /** Takes in the step table's run, or a page of it, from its worker. */
+  receiveTrace: (response: TraceResponse) => void;
 }
 
 /** The pause in typing after which the editor's text is analyzed and run. */
@@ -139,17 +151,15 @@ export function eligibleSites(runs: ProgramRuns): number[] {
     .map(([site]) => site);
 }
 
-function errorMessage(error: unknown) {
-  return error instanceof Error ? error.message : String(error);
-}
-
 /**
  * The store, starting from `initial`; `send` hands a request to the sampler, whose responses go
- * to `receive`.
+ * to `receive`, and `sendTrace` one to the step table's worker, whose responses go to
+ * `receiveTrace`.
  */
 export function createStore(
   initial: { source: string; seed: number; exampleId: string },
   send: (request: Request) => void,
+  sendTrace: (request: TraceRequest | TracePageRequest) => void,
 ): Store {
   const source = signal(initial.source);
   const checkedSource = signal(initial.source);
@@ -165,14 +175,22 @@ export function createStore(
     null,
   );
   let generation = 0;
-  const trace = computed((): TraceState => {
+  const trace = signal<TraceState>({ kind: "not run" });
+  let traceGeneration = 0;
+  // The step table's run of each new program or seed; the worker's earlier answers are stale.
+  effect(() => {
     const result = analysis.value;
-    if (!result.ok && !result.counterexample) return { kind: "not run" };
-    try {
-      return { kind: "run", trace: runCoupling(checkedSource.value, seed.value) };
-    } catch (error) {
-      return { kind: "unavailable", message: errorMessage(error) };
+    const program = checkedSource.value;
+    const at = seed.value;
+    traceGeneration += 1;
+    if (!result.ok && !result.counterexample) {
+      trace.value = { kind: "not run" };
+      return;
     }
+    trace.value = { kind: "computing" };
+    untracked(() =>
+      sendTrace({ type: "trace", generation: traceGeneration, source: program, seed: at }),
+    );
   });
   const stats = computed(() => ({
     original: statsOf(samples.value.original.summary),
@@ -260,6 +278,25 @@ export function createStore(
     };
   });
 
+  const showPage = action((index: number) => {
+    const state = trace.peek();
+    if (state.kind !== "run" || state.page.index === index) return;
+    sendTrace({ type: "trace-page", generation: traceGeneration, page: index });
+  });
+
+  const receiveTrace = action((response: TraceResponse) => {
+    if (response.generation !== traceGeneration) return;
+    if (response.type === "trace-page") {
+      const state = trace.peek();
+      if (state.kind === "run") trace.value = { ...state, page: response.page };
+      return;
+    }
+    trace.value =
+      response.type === "trace"
+        ? { kind: "run", overview: response.overview, page: response.page }
+        : { kind: "unavailable", message: response.message };
+  });
+
   return {
     source,
     checkedSource,
@@ -277,5 +314,7 @@ export function createStore(
     runAt,
     runMany,
     receive,
+    showPage,
+    receiveTrace,
   };
 }
