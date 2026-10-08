@@ -102,7 +102,9 @@ test("the landing page stays within its size budget", async ({ page }) => {
   await page.waitForLoadState("networkidle");
   await Promise.all(counted);
   test.info().annotations.push({ type: "bytes", description: JSON.stringify(sizes) });
-  expect(sizes.html).toBeLessThanOrEqual(18_000);
+  // The HTML budget leaves room for the authors and their affiliations, the BibTeX entry, its
+  // citation metadata and the links to the paper and the journal.
+  expect(sizes.html).toBeLessThanOrEqual(20_000);
   expect(sizes.css).toBeLessThanOrEqual(8_000);
   expect(sizes.other).toBe(0);
   expect(sizes.html + sizes.css + sizes.font).toBeLessThanOrEqual(100_000);
