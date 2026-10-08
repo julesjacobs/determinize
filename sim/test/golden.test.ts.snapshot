@@ -1,3 +1,29 @@
+exports[`loops/geometric-addition 1`] = `
+seed 1: checked, 17 frames
+  checks: OK ×17
+  final source: 3
+  final determinized: 3
+  outcome: 3 | 3
+  frames: sha256 3d49eb5bfe540fbbcdca7549114c02f9831c68c6a40618b96784585a5ca7ce79
+seed 2: checked, 21 frames
+  checks: OK ×21
+  final source: 4
+  final determinized: 4
+  outcome: 4 | 4
+  frames: sha256 5ec5259ea29590bddbb5b5c9d583baa2c9050923afd0f8e9e60e3f32eecd8bc2
+seed 3: checked, 5 frames
+  checks: OK ×5
+  final source: 0
+  final determinized: 0
+  outcome: 0 | 0
+  frames: sha256 62dc515ca6c09ecc7406234376baca67cb540a64af9ee99097f9d0392d7c60a5
+batch at seeds 1-200:
+  source: 200 runs, 0 rejected, 0 failed
+    returned numbers: n 200, mean 1.3199999999999998, population variance 3.1876000000000015
+  determinized: 200 runs, 0 rejected, 0 failed
+    returned numbers: n 200, mean 1.3199999999999998, population variance 3.1876000000000015
+`;
+
 exports[`paper/dungeon 1`] = `
 seed 1: checked, 141 frames
   checks: OK ×141
@@ -100,32 +126,6 @@ batch at seeds 1-200:
     returned numbers: n 200, mean 0.311695345011782, population variance 0.40473571896778465
   determinized: 200 runs, 0 rejected, 0 failed
     returned numbers: n 200, mean 0.35150215573977045, population variance 0.08940687968926142
-`;
-
-exports[`paper/sum-of-squares 1`] = `
-seed 1: checked, 6 frames
-  checks: OK ×6
-  final source: 0.001596096308960516
-  final determinized: 0.001596096308960516
-  outcome: 0.001596096308960516 | 0.001596096308960516
-  frames: sha256 9da34d53ec2bd01cb2ac9e855d2e7b941e169ef9581418afd55f2815835340e4
-seed 2: checked, 6 frames
-  checks: OK ×6
-  final source: 0.000060013213521023
-  final determinized: 0.000060013213521023
-  outcome: 0.000060013213521023 | 0.000060013213521023
-  frames: sha256 effba9c2532241c13aff7baab13a217c22ad6101cab525c16a20a2a4314e8b9f
-seed 3: checked, 6 frames
-  checks: OK ×6
-  final source: 0.8218942295841063
-  final determinized: 0.8218942295841063
-  outcome: 0.8218942295841063 | 0.8218942295841063
-  frames: sha256 bbb2bf709b10625b0c663cf1e9a88c461bbdf5449351d0f0fb1fa4e5c640c8e8
-batch at seeds 1-200:
-  source: 200 runs, 0 rejected, 0 failed
-    returned numbers: n 200, mean 1.781858816702765, population variance 6.259800157958347
-  determinized: 200 runs, 0 rejected, 0 failed
-    returned numbers: n 200, mean 1.781858816702765, population variance 6.259800157958347
 `;
 
 exports[`simulator/bad-e-branching 1`] = `
@@ -268,56 +268,4 @@ batch at seeds 1-200:
     returned numbers: n 170, mean 0.17070743231764485, population variance 0.19047605097352077
   determinized: 200 runs, 0 rejected, 0 failed
     returned numbers: n 200, mean 0.2190045009759388, population variance 0.008748966162569163
-`;
-
-exports[`symbolic/mixed-affinities 1`] = `
-seed 1: checked, 6 frames
-  checks: OK ×6
-  final source: 2.543093118765351
-  final determinized: 1.8498423627584213
-  outcome: 2.543093118765351 | 1.8498423627584213
-  frames: sha256 e97ea701bfb97faa30a0f1c62d1ccdb82fb2a2ec4a0fea6d75e4d4f756d6b9ba
-seed 2: checked, 6 frames
-  checks: OK ×6
-  final source: 1.341205183223384
-  final determinized: 1.8867846012971192
-  outcome: 1.341205183223384 | 1.8867846012971192
-  frames: sha256 c84f4d4525681b21433b93bef56687586027951b968afb2f7dab9e5a68680cb8
-seed 3: checked, 6 frames
-  checks: OK ×6
-  final source: 0.7326683452322145
-  final determinized: 1.1701755130857316
-  outcome: 0.7326683452322145 | 1.1701755130857316
-  frames: sha256 10334d18f011ce07c73841c2d608e563c8c2d846606ac7884e7677727ed57496
-batch at seeds 1-200:
-  source: 200 runs, 0 rejected, 0 failed
-    returned numbers: n 200, mean 1.7742181443309093, population variance 0.4203841610404125
-  determinized: 200 runs, 0 rejected, 0 failed
-    returned numbers: n 200, mean 1.776924476188648, population variance 0.18726820871347868
-`;
-
-exports[`symbolic/nested-uniform 1`] = `
-seed 1: checked, 6 frames
-  checks: OK ×6
-  final source: 2.2600736747181664
-  final determinized: 1.75
-  outcome: 2.2600736747181664 | 1.75
-  frames: sha256 9095cb46e0cff4cb7e70c2041407add384725978ef8e5b46c9626b43cd9a1d21
-seed 2: checked, 6 frames
-  checks: OK ×6
-  final source: 2.102401806132729
-  final determinized: 1.75
-  outcome: 2.102401806132729 | 1.75
-  frames: sha256 79dae8eb87165e87751c1a75adbab2e81d733524ba89f3b35c497b94e9e3d25c
-seed 3: checked, 6 frames
-  checks: OK ×6
-  final source: 0.9349735589424665
-  final determinized: 1.75
-  outcome: 0.9349735589424665 | 1.75
-  frames: sha256 2053bd6b67d0d1e52db4f6837ecff41d394bb65a4f3724d53a9c0303be82ec46
-batch at seeds 1-200:
-  source: 200 runs, 0 rejected, 0 failed
-    returned numbers: n 200, mean 1.7128690898255652, population variance 0.3498938906839075
-  determinized: 200 runs, 0 rejected, 0 failed
-    returned numbers: n 200, mean 1.75, population variance 0
 `;

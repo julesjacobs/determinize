@@ -5,6 +5,7 @@
 // statistics as Lean's CLI computes them, each linked to the Lean definition it estimates, the
 // variance-reduction factor, and the theorems' premises. Every number is an estimate of this
 // unverified simulator, and the command that has Lean's CLI report the same runs is shown.
+import type { ReadonlySignal } from "@preact/signals-core";
 import { computed, effect } from "@preact/signals-core";
 import type { Analysis } from "../core/compiler/analyze.ts";
 import type { Expr } from "../core/compiler/ast.ts";
@@ -96,6 +97,8 @@ function siteLabel(analysis: Analysis, site: number, source: string) {
 
 export function mountDistributionView(
   band: HTMLElement,
+  /** Whether the band asks for a guess instead of showing its empty state. */
+  predicting: ReadonlySignal<boolean>,
   store: Pick<
     Store,
     | "samples"
@@ -242,6 +245,7 @@ export function mountDistributionView(
     store.analysis.value;
     store.view.value;
     site.value;
+    predicting.value;
     redraw();
   });
   // A chart is redrawn when its width changes, not when the band grows taller.
@@ -271,7 +275,7 @@ export function mountDistributionView(
       empty.after(premises);
       listOut.hidden = true;
       asTable.hidden = true;
-      empty.hidden = false;
+      empty.hidden = predicting.peek();
       empty.textContent =
         store.checkedSource.peek().trim() === ""
           ? "Write a program or pick an example, then run both programs to compare their outputs."

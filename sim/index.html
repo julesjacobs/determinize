@@ -11,13 +11,104 @@
       <div class="title-group">
         <h1>Determinize simulator</h1>
         <a class="home" href="../">Project page</a>
+        <button
+          id="more-button"
+          class="more-button"
+          type="button"
+          aria-expanded="false"
+          aria-controls="sim-tools"
+        >
+          More
+        </button>
       </div>
-      <label class="example-picker">
-        <span>Example</span>
-        <select id="example-select"></select>
-      </label>
+      <button
+        id="example-button"
+        class="example-button"
+        type="button"
+        aria-haspopup="dialog"
+        aria-expanded="false"
+        aria-controls="gallery"
+      >
+        Example: <span id="example-title" class="example-title">Noisy product</span>
+      </button>
+      <div id="sim-tools" class="sim-tools">
+        <button id="copy-link" type="button">Copy link</button>
+        <button id="glossary-button" type="button" aria-expanded="false" aria-controls="glossary">
+          Glossary
+        </button>
+      </div>
+      <p id="copy-status" class="copy-status" role="status"></p>
     </header>
+    <dialog id="gallery" class="gallery" aria-labelledby="gallery-title">
+      <div class="gallery-head">
+        <h2 id="gallery-title" class="gallery-title">Examples</h2>
+        <button id="gallery-close" type="button">Close</button>
+      </div>
+      <ol id="gallery-list"></ol>
+      <p class="g-note">Each example is a link you can share.</p>
+    </dialog>
+    <section id="glossary" class="glossary" aria-label="Glossary" hidden>
+      <dl>
+        <div>
+          <dt>Mode</dt>
+          <dd>
+            Whether a draw is kept random or replaced by its mean; affinity in the Lean development
+            (<a
+              href="https://julesjacobs.com/determinize/docs/Determinize/Spec/Types.html#Determinize.Spec.Paper.Affinity"
+              >Affinity</a
+            >).
+          </dd>
+        </div>
+        <div>
+          <dt>E</dt>
+          <dd>Replaced by its mean in the determinized program.</dd>
+        </div>
+        <div>
+          <dt>G</dt>
+          <dd>Kept random; in one run, both programs draw the same value.</dd>
+        </div>
+        <div>
+          <dt>Sample site</dt>
+          <dd>A place in the program that draws from a distribution.</dd>
+        </div>
+        <div>
+          <dt>G trace</dt>
+          <dd>
+            The values of a run's G draws, in order (<a
+              href="https://julesjacobs.com/determinize/docs/Determinize/Spec/Traces/Semantics.html#Determinize.Spec.Traces.Trace"
+              >Trace</a
+            >).
+          </dd>
+        </div>
+        <div>
+          <dt>Returned, rejected, failed</dt>
+          <dd>
+            A run returns a value, is rejected by <code>observe</code>, or fails: division by zero,
+            a parameter outside a distribution's domain, or the step limit.
+          </dd>
+        </div>
+        <div>
+          <dt>Variance-reduction factor</dt>
+          <dd>The source's variance divided by the determinized program's, over returned runs.</dd>
+        </div>
+      </dl>
+    </section>
+    <noscript>
+      <p class="noscript">
+        The simulator needs JavaScript. The Lean command-line tool runs the same programs:
+        <code>./run.sh &lt;file&gt;</code>.
+      </p>
+    </noscript>
     <main class="sim">
+      <section id="intro" class="intro" aria-label="Introduction">
+        <p>
+          The source pane holds your program, and the determinized pane what determinization makes
+          of it. Draws marked E are replaced by their means. Draws marked G are kept random, and in
+          each run both programs draw the same values for them. Step through one run below, or run
+          both programs many times and compare their outputs.
+        </p>
+        <button id="hide-intro" class="quiet" type="button">Hide</button>
+      </section>
       <section class="band programs" aria-label="Programs">
         <div class="pane pane-source">
           <h2 class="pane-title">Source</h2>
@@ -185,6 +276,27 @@
           G draw
           <select id="plot-site"></select>
         </label>
+        <form id="predict" class="predict" hidden>
+          <p>
+            Before you run them: what will <span id="predict-runs">10 000</span> runs of each
+            program show?
+          </p>
+          <fieldset>
+            <legend>The determinized program's mean is</legend>
+            <label
+              ><input type="radio" name="predict-mean" value="same">
+              the same as the source's</label
+            >
+            <label><input type="radio" name="predict-mean" value="different"> different</label>
+          </fieldset>
+          <fieldset>
+            <legend>Its variance is</legend>
+            <label><input type="radio" name="predict-variance" value="smaller"> smaller</label>
+            <label><input type="radio" name="predict-variance" value="same"> the same</label>
+            <label><input type="radio" name="predict-variance" value="larger"> larger</label>
+          </fieldset>
+          <button type="submit" class="primary">Run both and compare</button>
+        </form>
         <p id="dist-empty" class="band-empty">Loading the simulator…</p>
         <div id="dist-grid" class="dist-grid" hidden>
           <figure id="chart" class="chart-fig">
@@ -245,6 +357,7 @@
             </table>
             <div id="first-failure" class="alert" hidden></div>
             <p id="factor" class="factor"></p>
+            <p id="prediction" class="prediction" hidden></p>
             <div id="premises" class="premises">
               <h3>When the theorems apply</h3>
               <ul id="premises-float">

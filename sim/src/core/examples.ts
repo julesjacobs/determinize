@@ -1,24 +1,28 @@
 // The simulator's examples: programs from examples/, which Lean's corpus manifest
-// (tests/cases.toml) also checks, in the order the simulator lists them.
+// (tests/cases.toml) also checks, in the order the simulator's gallery lists them. The first four
+// are the paper's introduction in its order, and the paper's own counterexample follows its source
+// program.
 
+import geometricAddition from "../../../examples/loops/geometric-addition.det";
 import dungeon from "../../../examples/paper/dungeon.det";
 import gaussRandomWalk from "../../../examples/paper/gauss-random-walk.det";
 import noisyIteration from "../../../examples/paper/noisy-iteration.det";
 import noisyProduct from "../../../examples/paper/noisy-product.det";
-import sumOfSquares from "../../../examples/paper/sum-of-squares.det";
 import badEBranching from "../../../examples/simulator/bad-e-branching.det";
 import noisyProductAllE from "../../../examples/simulator/noisy-product-all-e.det";
 import observe from "../../../examples/simulator/observe.det";
 import randomListSum from "../../../examples/simulator/random-list-sum.det";
 import recursiveGamma from "../../../examples/simulator/recursive-gamma.det";
-import mixedModes from "../../../examples/symbolic/mixed-affinities.det";
-import nestedUniform from "../../../examples/symbolic/nested-uniform.det";
 
 export interface Example {
   /** The file's path under examples/, without `.det`. */
   id: string;
   title: string;
+  /** One sentence on what the example shows. */
   explanation: string;
+  /** Whether the paper presents the program. */
+  fromPaper: boolean;
+  /** The program, without the file's final line break. */
   source: string;
 }
 
@@ -26,84 +30,75 @@ export const examples: Example[] = [
   {
     id: "paper/noisy-product",
     title: "Noisy product",
-    explanation:
-      "The measurement y is replaced by its mean x, so x * y becomes x * x, with the same mean 1/3.",
-    source: noisyProduct,
-  },
-  {
-    id: "paper/gauss-random-walk",
-    title: "Gaussian random walk",
-    explanation:
-      "Each position is drawn around the previous one inside a higher-order reduce; every draw is replaced by its mean.",
-    source: gaussRandomWalk,
-  },
-  {
-    id: "paper/dungeon",
-    title: "Dungeon",
-    explanation:
-      "Each room is left with probability 1/4; the rare loot draw is replaced by its mean, the exits stay random.",
-    source: dungeon,
-  },
-  {
-    id: "paper/noisy-iteration",
-    title: "Noisy iteration",
-    explanation:
-      "The Gaussian noise of each step is replaced by its mean 0; the coin flips that end the loop stay random.",
-    source: noisyIteration,
+    explanation: "A signal and a noisy measurement of it; the measurement becomes its mean.",
+    fromPaper: true,
+    source: noisyProduct.trimEnd(),
   },
   {
     id: "simulator/noisy-product-all-e",
     title: "Noisy product, both draws E",
     explanation:
-      "Lean rejects marking both draws E: replacing both by their means returns 1/4 instead of 1/3.",
-    source: noisyProductAllE,
+      "Lean rejects this program; replacing both draws anyway returns 1/4 instead of 1/3.",
+    fromPaper: true,
+    source: noisyProductAllE.trimEnd(),
   },
   {
-    id: "simulator/bad-e-branching",
-    title: "Branching on an E draw",
+    id: "paper/gauss-random-walk",
+    title: "Gaussian random walk",
     explanation:
-      "Lean rejects branching on an [E] draw: its mean cannot decide which branch a run takes.",
-    source: badEBranching,
+      "A step function passed to reduce; every position becomes its mean, so the path stays at zero.",
+    fromPaper: true,
+    source: gaussRandomWalk.trimEnd(),
+  },
+  {
+    id: "paper/dungeon",
+    title: "Dungeon crawl",
+    explanation:
+      "Exit coins stay random and decide the recursion; jackpots become their mean payouts.",
+    fromPaper: true,
+    source: dungeon.trimEnd(),
+  },
+  {
+    id: "paper/noisy-iteration",
+    title: "Noisy iteration",
+    explanation: "Without the Gaussian noise, the loop only visits x = 0 and x = 1.",
+    fromPaper: true,
+    source: noisyIteration.trimEnd(),
   },
   {
     id: "simulator/observe",
     title: "Observe",
     explanation:
-      "observe rejects the runs with x ≥ 0.8; x stays random because the condition compares it, y is replaced by its mean.",
-    source: observe,
+      "Runs that fail an observation are rejected; statistics are over the returned runs.",
+    fromPaper: false,
+    source: observe.trimEnd(),
   },
   {
-    id: "symbolic/nested-uniform",
-    title: "Dependent draws",
-    explanation:
-      "The lower bound of the second draw is the first; both are replaced by their means.",
-    source: nestedUniform,
-  },
-  {
-    id: "symbolic/mixed-affinities",
-    title: "A G draw and its dependent",
-    explanation:
-      "The [G] draw stays random; the draw whose lower bound it sets is replaced by its mean.",
-    source: mixedModes,
-  },
-  {
-    id: "paper/sum-of-squares",
-    title: "Sum of squares",
-    explanation: "x * x is not linear in x, so x stays random.",
-    source: sumOfSquares,
-  },
-  {
-    id: "simulator/random-list-sum",
-    title: "Random list sum",
-    explanation:
-      "A recursive function builds a list of random length; its elements are replaced by their means, the flips that end it stay random.",
-    source: randomListSum,
+    id: "simulator/bad-e-branching",
+    title: "Bad E-branching",
+    explanation: "An E draw decides a branch, and Lean rejects the program.",
+    fromPaper: false,
+    source: badEBranching.trimEnd(),
   },
   {
     id: "simulator/recursive-gamma",
     title: "Recursive gamma",
-    explanation:
-      "Each recursive call sets the shape of a gamma draw, which is replaced by its mean; its rate stays random.",
-    source: recursiveGamma,
+    explanation: "Recursion through a distribution's parameter.",
+    fromPaper: false,
+    source: recursiveGamma.trimEnd(),
+  },
+  {
+    id: "simulator/random-list-sum",
+    title: "Random list sum",
+    explanation: "A list of random length whose elements become their means.",
+    fromPaper: false,
+    source: randomListSum.trimEnd(),
+  },
+  {
+    id: "loops/geometric-addition",
+    title: "Geometric addition",
+    explanation: "A loop that runs a random number of times.",
+    fromPaper: false,
+    source: geometricAddition.trimEnd(),
   },
 ];

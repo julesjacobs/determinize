@@ -190,11 +190,12 @@ To build that archived draft independently:
 
 After `npm run build` in `sim/`, open `sim/dist/index.html`, or
 [its published copy](https://julesjacobs.github.io/determinize/sim/), to follow a run of a
-program and of its determinization step by step, next to the symbolic semantics of the paper's
-proof. The address's fragment holds the program, the seed and the example, so a copied link
-opens the same run. The simulator's front end and runtime are unverified ports of Lean's; Lean's
-certificates and theorems apply to the core programs that the Lean CLI produces. The simulator is
-an unverified visualization.
+program and of its determinization step by step, beside the G draws they share and, on request,
+the symbolic semantics of the paper's proof, and to compare the output distributions of many runs
+of both programs. The address's fragment holds the program, the seed, the example and how the page
+shows them, so a copied link opens the same run. The simulator's front end and runtime are
+unverified ports of Lean's; Lean's certificates and theorems apply to the core programs that the
+Lean CLI produces. The simulator is an unverified visualization.
 
 See the [Lean documentation](lean/README.md) for the language, theorem premises,
 and implementation limits, and the [test guide](tests/README.md) for analytical

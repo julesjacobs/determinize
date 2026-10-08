@@ -3,6 +3,7 @@ import test from "node:test";
 import { examples } from "../src/core/examples.ts";
 import type { SharedState } from "../src/core/share.ts";
 import { decodeShare, encodeShare, maxSharedBytes } from "../src/core/share.ts";
+import { sharedSource } from "../src/ui/url.ts";
 
 /** The fragment `#v1=` with `json` compressed as a link carries it. */
 async function fragmentOf(json: string) {
@@ -59,4 +60,17 @@ test("a link carries whether the symbolic state shows, and links without it stay
   assert.deepEqual(hidden, { kind: "state", state: { source: "1", seed: 3, example: "" } });
   const wrong = await decodeShare(await fragmentOf(JSON.stringify({ ...shown, symbolic: "yes" })));
   assert.equal(wrong.kind, "error");
+});
+
+test("a link to an example's text with its final line break resolves to the example", () => {
+  const [example] = examples;
+  assert.equal(
+    sharedSource({ source: `${example.source}\n`, example: example.id }),
+    example.source,
+  );
+  assert.equal(
+    sharedSource({ source: `${example.source} + 1`, example: example.id }),
+    `${example.source} + 1`,
+  );
+  assert.equal(sharedSource({ source: "1\n", example: "" }), "1\n");
 });
