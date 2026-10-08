@@ -435,6 +435,47 @@ test("the share of returned runs links returnProbability only for a float progra
   await expect(returned).toHaveCount(0);
 });
 
+test("each histogram sits under its program's column, on one axis", async ({ page }) => {
+  await page.goto(simulator);
+  await setRunCount(page, 1000);
+  await runBoth(page);
+  const layout = (width: number) =>
+    page.setViewportSize({ width, height: 900 }).then(async () => {
+      await expect(page.locator("#hist-det svg")).toBeVisible();
+      return page.evaluate(() => {
+        const box = (selector: string) =>
+          (document.querySelector(selector) as Element).getBoundingClientRect();
+        const ticks = (selector: string) =>
+          [...document.querySelectorAll(`${selector} .tick-label`)].map((tick) => tick.textContent);
+        return {
+          source: box("#hist-source svg"),
+          determinized: box("#hist-det svg"),
+          columns: [...document.querySelectorAll(".step-head span")].map(
+            (column) => column.getBoundingClientRect().left,
+          ),
+          ticks: [ticks("#hist-source"), ticks("#hist-det")],
+        };
+      });
+    });
+  // Under their columns wherever the step table has them side by side, stacked elsewhere.
+  for (const width of [768, 1440]) {
+    const wide = await layout(width);
+    expect(Math.abs(wide.source.left - wide.columns[1]), `at ${width} px`).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(wide.determinized.left - wide.columns[4]),
+      `at ${width} px`,
+    ).toBeLessThanOrEqual(1);
+    expect(Math.abs(wide.source.top - wide.determinized.top)).toBeLessThanOrEqual(1);
+    expect(wide.source.width).toBeCloseTo(wide.determinized.width, 0);
+    expect(wide.ticks[0].length).toBeGreaterThan(1);
+    expect(wide.ticks[1]).toEqual(wide.ticks[0]);
+  }
+  const stacked = await layout(390);
+  expect(stacked.determinized.top).toBeGreaterThan(stacked.source.bottom);
+  expect(stacked.determinized.left).toBeCloseTo(stacked.source.left, 0);
+  expect(stacked.ticks[1]).toEqual(stacked.ticks[0]);
+});
+
 test("a counterexample compares the means instead of the variances", async ({ page }) => {
   await page.goto(simulator);
   await pick(page, "Noisy product, both draws E");
