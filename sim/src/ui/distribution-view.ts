@@ -69,6 +69,17 @@ function command(samples: Samples, file: string | null) {
   return ` Reproduce them with <code class="cmd">${words}</code>${file ? "." : ", with the program saved as program.det."}`;
 }
 
+/** What a histogram leaves out: the runs that observe rejected and the runs that failed. */
+function notShown(summary: Summary) {
+  const left = [
+    ...(summary.rejected > 0 ? [`${thin(summary.rejected)} were rejected by observe`] : []),
+    ...(summary.failed > 0 ? [`${thin(summary.failed)} failed`] : []),
+  ];
+  if (left.length === 0) return "";
+  const returned = summary.runs - summary.rejected - summary.failed;
+  return `<p class="hist-note">Shows the ${thin(returned)} of ${thin(summary.runs)} runs that returned; ${left.join(" and ")}.</p>`;
+}
+
 function returnedText(summary: Summary) {
   const returned = summary.runs - summary.rejected - summary.failed;
   const notes = [
@@ -316,8 +327,8 @@ export function mountDistributionView(
           : runnable.peek()
             ? "Sampling both programs…"
             : result.ok || result.stage !== null
-              ? "Nothing to run: Lean rejects the program."
-              : "Nothing to run: the simulator failed on this program.";
+              ? "No distributions: Lean rejects the program, so neither program runs."
+              : "No distributions: the simulator failed on this program, so neither program runs.";
       return;
     }
     empty.hidden = true;
@@ -460,24 +471,25 @@ export function mountDistributionView(
     const variance = (stat: Stats) => `variance ${cliStat(stat.variance, stat.n)}`;
     const sideBySide = histSource.offsetTop === histDet.offsetTop;
     const programs = [
-      [histSource, source, "source", "Source", stats.original],
-      [histDet, determinized, "det", right, stats.determinized],
+      [histSource, source, "source", "Source", stats.original, samples.original.summary],
+      [histDet, determinized, "det", right, stats.determinized, samples.determinized.summary],
     ] as const;
-    for (const [slot, hist, kind, label, stat] of programs) {
-      slot.innerHTML = histogramChart({
-        hist,
-        kind,
-        label,
-        note: variance(stat),
-        mean: stat.n > 0 ? stat.mean : null,
-        meanLabel: formatStat(stat.mean),
-        ticks: axis.ticks,
-        yMax,
-        width: Math.min(900, slot.clientWidth || 320),
-        tall: sideBySide,
-        id: `outputs-${kind}`,
-        title: `Histogram of the values that the ${kind === "source" ? "source" : `${right.toLowerCase()} program`} returned, on the axis and scale of both programs' histograms.`,
-      });
+    for (const [slot, hist, kind, label, stat, summary] of programs) {
+      slot.innerHTML =
+        histogramChart({
+          hist,
+          kind,
+          label,
+          note: variance(stat),
+          mean: stat.n > 0 ? stat.mean : null,
+          meanLabel: formatStat(stat.mean),
+          ticks: axis.ticks,
+          yMax,
+          width: Math.min(900, slot.clientWidth || 320),
+          tall: sideBySide,
+          id: `outputs-${kind}`,
+          title: `Histogram of the values that the ${kind === "source" ? "source" : `${right.toLowerCase()} program`} returned, on the axis and scale of both programs' histograms.`,
+        }) + notShown(summary);
     }
     const cut = [...source.counts, ...determinized.counts].some((count) => count > yMax);
     const outside = (hist: typeof source, name: string) => {
