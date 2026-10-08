@@ -49,8 +49,10 @@ function command(samples: Samples, file: string | null) {
   return `<code>${escapeHtml(line)}</code>${file ? "" : ", with the program saved as program.det"}`;
 }
 
-/** What the runs of one program did, as Lean's CLI reports it. */
-function outcomes(title: string, summary: Summary) {
+/** What the runs of one program did, as Lean's CLI reports it. The share of runs that return a
+ * value estimates `returnProbability` only for a program of type float, whose real outputs it
+ * measures. */
+function outcomes(title: string, summary: Summary, floats: boolean) {
   const returned = summary.runs - summary.rejected - summary.failed;
   const failure = summary.firstFailure
     ? ` The first failure: ${escapeHtml(summary.firstFailure)}.`
@@ -59,7 +61,9 @@ function outcomes(title: string, summary: Summary) {
     summary.count === 0 && summary.firstValue !== null
       ? ` The first value: <code>${escapeHtml(summary.firstValue)}</code>.`
       : "";
-  return `<p><strong>${title}</strong>: <a href="${leanLinks.returnProbability}">${returned} of ${summary.runs} runs returned a value</a>, ${summary.rejected} were rejected by an observation, and ${summary.failed} failed.${failure}${first}</p>`;
+  const share = `${returned} of ${summary.runs} runs returned a value`;
+  const linked = floats ? `<a href="${leanLinks.returnProbability}">${share}</a>` : share;
+  return `<p><strong>${title}</strong>: ${linked}, ${summary.rejected} were rejected by an observation, and ${summary.failed} failed.${failure}${first}</p>`;
 }
 
 function renderDistributions(
@@ -72,10 +76,11 @@ function renderDistributions(
   const runs = samples.original.summary.runs;
   elements.status.textContent = `${runs} run${runs === 1 ? "" : "s"}`;
   const counterexample = !analysis.ok && analysis.counterexample;
+  const floats = analysis.ok && analysis.type.startsWith("float");
   const report = `
     <div class="run-outcomes">
-      ${outcomes("Source", samples.original.summary)}
-      ${outcomes("Determinized", samples.determinized.summary)}
+      ${outcomes("Source", samples.original.summary, floats)}
+      ${outcomes("Determinized", samples.determinized.summary, floats)}
       <p>${counterexample ? "Lean rejects this program, so its CLI reports no runs." : `Lean's CLI reports these runs with ${command(samples, file)}.`}</p>
     </div>
   `;
