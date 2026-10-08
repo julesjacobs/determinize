@@ -46,6 +46,9 @@ export interface Samples {
   traces: { source: GDraw[]; determinized: GDraw[] } | null;
 }
 
+/** The page's colours: the system's scheme, or light or dark. */
+export type Theme = "system" | "light" | "dark";
+
 /** The distributions band's charts: the output distributions, or each run's output against a G
  * draw. */
 export type ChartView = "outputs" | "against";
@@ -98,6 +101,7 @@ export interface Store {
   followLinked: Signal<number>;
   /** Whether the step table shows the symbolic state. */
   showSymbolic: Signal<boolean>;
+  theme: Signal<Theme>;
   samples: ReadonlySignal<Samples>;
   /** The batch of runs in progress, of `source` at `seed`, up to run `end`. */
   running: ReadonlySignal<{ generation: number; source: string; seed: number; end: number } | null>;
@@ -199,6 +203,7 @@ export function createStore(
     exampleId: string;
     showSymbolic?: boolean;
     view?: ChartView;
+    theme?: Theme;
   },
   send: (request: Request) => void,
   sendTrace: (request: TraceRequest | TracePageRequest) => void,
@@ -219,6 +224,7 @@ export function createStore(
   const linked = signal<Reduced | null>(null);
   const followLinked = signal(0);
   const showSymbolic = signal(initial.showSymbolic ?? false);
+  const theme = signal<Theme>(initial.theme ?? "system");
   const analysis = computed(() => analyzeSource(checkedSource.value));
   const runner = computed(() => runnerOf(analysis.value));
   const samples = signal(firstRun(initial.source, initial.seed, runner.peek()));
@@ -400,6 +406,7 @@ export function createStore(
     linked,
     followLinked,
     showSymbolic,
+    theme,
     samples,
     running,
     analysis,

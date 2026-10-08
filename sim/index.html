@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Determinize simulator</title>
     <link rel="stylesheet" href="./styles.css">
+    <script>
+    // The theme the viewer chose, before the first paint (src/ui/theme.ts keeps it).
+    try {
+      const theme = localStorage.getItem("determinize:theme");
+      if (theme === "light" || theme === "dark") document.documentElement.dataset.theme = theme;
+    } catch {}
+    </script>
   </head>
   <body>
     <header class="sim-header">
@@ -36,6 +43,14 @@
         <button id="glossary-button" type="button" aria-expanded="false" aria-controls="glossary">
           Glossary
         </button>
+        <label class="theme">
+          Theme
+          <select id="theme">
+            <option value="system">System</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </label>
       </div>
       <p id="copy-status" class="copy-status" role="status"></p>
     </header>

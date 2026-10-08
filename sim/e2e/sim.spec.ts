@@ -878,3 +878,19 @@ test("a first visit asks for a prediction before the first runs, and repeats it 
   await expect(page.locator("#checked-type")).toHaveText("float[E]");
   await expect(form).toBeHidden();
 });
+
+test("the theme select overrides the system's scheme, and the page remembers it", async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.goto(simulator);
+  const ground = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  expect(await ground()).toBe("rgb(243, 244, 241)");
+  await page.getByLabel("Theme").selectOption("dark");
+  expect(await ground()).toBe("rgb(21, 22, 25)");
+  await page.reload();
+  await expect(page.getByLabel("Theme")).toHaveValue("dark");
+  expect(await ground()).toBe("rgb(21, 22, 25)");
+  await page.getByLabel("Theme").selectOption("system");
+  expect(await ground()).toBe("rgb(243, 244, 241)");
+});
