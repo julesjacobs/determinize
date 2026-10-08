@@ -1,10 +1,10 @@
 // Programs as Lean's `Frontend/Pretty.lean` prints them: with an annotation at every sample site,
-// `mean_<dist>` for a mean, and the forms that elaboration desugars to (`observe` as `if`, `flip` as
-// a Bernoulli draw, `a - b` as `a + -b`, `a <= b` as a comparison of two lets, `discrete` as
-// `discrete_list`). In `lean` mode a program prints exactly as Lean prints it, binders named by
-// their depth (`x0`, `f0`) and every compound expression parenthesized. In `source` mode its
-// binders keep the source's names, and it has only the parentheses and the line breaks that the
-// simulator's printer needs.
+// `mean_<dist>` for a mean, and the forms that elaboration desugars to (`flip` as a Bernoulli
+// draw, `a - b` as `a + -b`, `a <= b` as a comparison of two lets, `discrete` as `discrete_list`).
+// In `lean` mode a program prints exactly as Lean prints it, binders named by their depth (`x0`,
+// `f0`) and every compound expression parenthesized. In `source` mode its binders keep the
+// source's names, and it has only the parentheses and the line breaks that the simulator's printer
+// needs.
 import type { Expr, MeanKind, Mode, ParamDistributionKind } from "./ast.ts";
 import { node } from "./ast.ts";
 import type { Action, Core } from "./core.ts";
