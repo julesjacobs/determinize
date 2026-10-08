@@ -1,7 +1,7 @@
 // The landing page and the not-found page of the assembled site: they load, work without
 // JavaScript, fit a 390 px screen, request nothing from another origin and have no axe
-// violations. The landing page stays within its size budget and has its link-preview metadata,
-// and the simulator links back to it.
+// violations. The landing page stays within its size budget, has its link-preview metadata and a
+// theme select whose choice both pages keep, and the simulator links back to it.
 import { existsSync } from "node:fs";
 import { gzipSync } from "node:zlib";
 import { AxeBuilder } from "@axe-core/playwright";
@@ -61,7 +61,8 @@ for (const { path, heading, figures } of pages) {
     test("shows all its content, and its links work", async ({ page, request, baseURL }) => {
       await load(page, path);
       await expect(page.getByRole("heading", { level: 1 })).toHaveText(heading);
-      expect(await page.locator("script").count()).toBe(0);
+      // The theme select is the only part that needs JavaScript.
+      await expect(page.getByLabel("Theme")).toBeHidden();
       // Each figure has a wide and a narrow chart, of which CSS shows one.
       await expect(page.locator("figure")).toHaveCount(figures);
       for (const figure of await page.locator("figure").all()) {
@@ -125,6 +126,27 @@ test("the landing page describes itself for link previews", async ({ page, reque
   // The PNG header's IHDR chunk holds the width and the height at bytes 16 and 20.
   expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([1200, 630]);
   expect(png.length).toBeLessThanOrEqual(150_000);
+});
+
+test("the theme select overrides the system's scheme, and both pages keep the choice", async ({
+  page,
+}) => {
+  const scheme = () => page.evaluate(() => getComputedStyle(document.documentElement).colorScheme);
+  await page.emulateMedia({ colorScheme: "dark" });
+  await load(page, "./");
+  const select = page.getByLabel("Theme");
+  await expect(select).toHaveValue("system");
+  expect(await scheme()).toBe("light dark");
+  await select.selectOption("light");
+  expect(await scheme()).toBe("light");
+  await page.reload();
+  await expect(select).toHaveValue("light");
+  await load(page, "404.html");
+  expect(await scheme()).toBe("light");
+  await load(page, "./");
+  await select.selectOption("system");
+  expect(await scheme()).toBe("light dark");
+  expect(await page.evaluate(() => localStorage.getItem("determinize:theme"))).toBeNull();
 });
 
 test("the simulator links back to the landing page", async ({ page }) => {

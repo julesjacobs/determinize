@@ -18,6 +18,13 @@
     <meta name="twitter:card" content="summary_large_image">
     <link rel="stylesheet" href="tokens.css">
     <link rel="stylesheet" href="site.css">
+    <script>
+    // The theme picked here or in the simulator, before the first paint.
+    try {
+      const theme = localStorage.getItem("determinize:theme");
+      if (theme === "light" || theme === "dark") document.documentElement.dataset.theme = theme;
+    } catch {}
+    </script>
   </head>
   <body>
     <div class="page">
@@ -34,6 +41,14 @@
             <!-- journal: <li><a href="">Journal</a></li> -->
           </ul>
         </div>
+        <label class="theme" hidden>
+          Theme
+          <select id="theme">
+            <option value="system">System</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </label>
       </header>
 
       <main>
@@ -121,5 +136,36 @@ x * y</code></pre>
 
       <footer class="row foot"><p>Built from commit <a href="https://github.com/julesjacobs/determinize/tree/@commit@"><code>@short-commit@</code></a>.</p></footer>
     </div>
+    <script>
+    // The theme select, shown only with JavaScript; without it the page follows the system.
+    {
+      const key = "determinize:theme";
+      const root = document.documentElement;
+      const select = document.getElementById("theme");
+      const stored = () => {
+        try {
+          return localStorage.getItem(key);
+        } catch {
+          return null;
+        }
+      };
+      const show = (theme) => {
+        if (theme === "light" || theme === "dark") root.dataset.theme = theme;
+        else delete root.dataset.theme;
+        select.value = root.dataset.theme ?? "system";
+      };
+      select.addEventListener("change", () => {
+        show(select.value);
+        try {
+          if (select.value === "system") localStorage.removeItem(key);
+          else localStorage.setItem(key, select.value);
+        } catch {}
+      });
+      // A page restored from the back-forward cache takes up a choice made since in the simulator.
+      addEventListener("pageshow", (event) => event.persisted && show(stored()));
+      show(stored());
+      select.parentElement.hidden = false;
+    }
+    </script>
   </body>
 </html>

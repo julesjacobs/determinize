@@ -8,6 +8,13 @@
     <!-- GitHub Pages serves this page at any missing path, so its links start at the site's root. -->
     <link rel="stylesheet" href="/determinize/tokens.css">
     <link rel="stylesheet" href="/determinize/site.css">
+    <script>
+    // The theme picked on the project page or in the simulator, before the first paint.
+    try {
+      const theme = localStorage.getItem("determinize:theme");
+      if (theme === "light" || theme === "dark") document.documentElement.dataset.theme = theme;
+    } catch {}
+    </script>
   </head>
   <body>
     <div class="page">
