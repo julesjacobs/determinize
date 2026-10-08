@@ -58,7 +58,7 @@ const states: { name: string; open: (page: Page) => Promise<void> }[] = [
     open: async (page) => {
       await page.goto("sim/");
       await runBoth(page);
-      await page.getByRole("button", { name: "Step", exact: true }).click();
+      await page.getByRole("button", { name: "End", exact: true }).click();
     },
   },
   {
@@ -317,7 +317,8 @@ test("with reduced motion, a step changes without a transition", async ({ page }
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("sim/");
   await settled(page);
-  await page.getByRole("button", { name: "Step", exact: true }).click();
+  await page.locator("#step-table").focus();
+  await page.keyboard.press("ArrowDown");
   const motion = await page.evaluate(() => ({
     animations: document.getAnimations().length,
     transition: getComputedStyle(document.querySelector(".step") as Element).transitionDuration,

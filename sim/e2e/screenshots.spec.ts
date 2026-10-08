@@ -115,9 +115,10 @@ for (const state of states) {
           await page.getByRole("button", { name: "Run both", exact: true }).click();
           await expect(page.locator("[aria-busy]")).toHaveCount(0, { timeout: 30_000 });
         }
-        for (let i = 0; i < (state.steps ?? 0); i++) {
-          await page.getByRole("button", { name: "Step", exact: true }).click();
-        }
+        // With the scrubber's arrow keys, so that the step region follows the current row.
+        const scrubber = page.locator("#scrubber");
+        for (let i = 0; i < (state.steps ?? 0); i++) await scrubber.press("ArrowRight");
+        await scrubber.blur();
         await state.finally?.(page);
         // No hover marks in the picture; the distributions band redraws in the next frame.
         await page.mouse.move(0, 0);

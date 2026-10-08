@@ -432,7 +432,7 @@ test("a long run shows its steps a page at a time, and the controls reach every 
   );
   const end = Number((await note.textContent())?.match(/to (\d+)/)?.[1]);
   await expect(page.locator(".step[data-step]")).toHaveCount(end + 1);
-  await page.getByRole("button", { name: "Last" }).click();
+  await page.getByRole("button", { name: "End", exact: true }).click();
   await expect(page.locator("#step-of")).toHaveText("Step 1606 of 1606");
   await expect(note).toHaveText(/^Steps \d+ to 1606 of 1606 are shown/);
   await expect(page.locator('.step[aria-current="step"]')).toHaveAttribute("data-step", "1606");
@@ -463,7 +463,7 @@ test("the region holds the flagship's run whole, and a rule shows while rows fol
     .toBe(false);
 });
 
-test("stepping, playing across pages and scrubbing move neither the bar nor the page", async ({
+test("stepping across pages, hovering and scrubbing move neither the bar nor the page", async ({
   page,
 }) => {
   test.setTimeout(60_000);
@@ -495,7 +495,10 @@ test("stepping, playing across pages and scrubbing move neither the bar nor the 
     expect(now.bar).toEqual(before.bar);
     expect(now.scrollY).toBe(before.scrollY);
   };
-  await page.getByRole("button", { name: "Step", exact: true }).click();
+  const region = page.locator("#step-table");
+  await region.evaluate((element) => (element as HTMLElement).focus({ preventScroll: true }));
+  await page.keyboard.press("ArrowDown");
+  await expect(page.locator("#step-of")).toHaveText("Step 1 of 1606");
   await unmoved();
   // Hovering a row links its span in the editors, which scroll by themselves if at all.
   const shown = await page.evaluate(() => {
@@ -515,20 +518,17 @@ test("stepping, playing across pages and scrubbing move neither the bar nor the 
     .poll(() => page.evaluate(async () => (await window.DeterminizeSim.ready).hoveredStep.value))
     .toBe(shown.step);
   await unmoved();
-  await page.evaluate(() =>
-    (document.querySelector("#step-table") as HTMLElement).focus({ preventScroll: true }),
-  );
+  await region.evaluate((element) => (element as HTMLElement).focus({ preventScroll: true }));
   await page.keyboard.press("End");
   await expect(page.locator("#step-of")).toHaveText("Step 1606 of 1606");
   await unmoved();
-  // Play from the last step of the first page goes on onto the next page.
+  // A step from the last step of the first page goes on onto the next page.
   await page.evaluate(async (step) => {
     (await window.DeterminizeSim.ready).currentStep.value = step;
   }, end);
-  await page.getByRole("button", { name: "Play" }).click();
-  await expect(page.locator("#step-of")).toHaveText(`Step ${end + 2} of 1606`, { timeout: 4000 });
-  await expect(page.getByRole("button", { name: "Pause" })).toBeVisible();
-  await page.getByRole("button", { name: "Pause" }).click();
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("ArrowDown");
+  await expect(page.locator("#step-of")).toHaveText(`Step ${end + 2} of 1606`);
   await unmoved();
   const box = await scrubber.boundingBox();
   if (!box) throw new Error("no scrubber");
@@ -791,7 +791,10 @@ test("the step controls move the current step, and both panes highlight what it 
 }) => {
   await page.goto(simulator);
   await expect(page.locator("#step-of")).toHaveText("Step 0 of 5");
-  for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "Step", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Start", exact: true })).toBeDisabled();
+  // The scrubber's arrow keys move one step, as the step region's do.
+  await page.locator("#scrubber").focus();
+  for (let i = 0; i < 3; i++) await page.keyboard.press("ArrowRight");
   await expect(page.locator("#step-of")).toHaveText("Step 3 of 5");
   await expect(page.locator('.step[aria-current="step"]')).toHaveAttribute("data-step", "3");
   // Step 3 draws y: the source's line 2 and its counterpart, the mean, are highlighted.
@@ -805,7 +808,9 @@ test("the step controls move the current step, and both panes highlight what it 
   await expect(page.locator("#step-of")).toHaveText("Step 2 of 5");
   await page.keyboard.press("End");
   await expect(page.locator("#step-of")).toHaveText("Step 5 of 5");
-  await expect(page.getByRole("button", { name: "Last" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "End", exact: true })).toBeDisabled();
+  await page.getByRole("button", { name: "Start", exact: true }).click();
+  await expect(page.locator("#step-of")).toHaveText("Step 0 of 5");
   await page.locator("#scrubber").fill("1");
   await expect(page.locator("#step-of")).toHaveText("Step 1 of 5");
   await expect(page.locator('.step[data-step="1"] .cell-draw')).toContainText("x ← ");
@@ -831,19 +836,6 @@ test("the symbolic state shows on request, and the page remembers the choice", a
   await page.reload();
   await expect(page.getByLabel("Show symbolic state")).toBeChecked();
   await expect(page.locator(".cell-sym").first()).toBeVisible();
-});
-
-test("Play advances a step per second until Pause", async ({ page }) => {
-  await page.goto(simulator);
-  await passed(page);
-  const play = page.getByRole("button", { name: "Play" });
-  await play.click();
-  await expect(page.getByRole("button", { name: "Pause" })).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator("#step-of")).toHaveText("Step 1 of 5", { timeout: 2500 });
-  await page.getByRole("button", { name: "Pause" }).click();
-  const paused = await page.locator("#step-of").textContent();
-  await page.waitForTimeout(1500);
-  await expect(page.locator("#step-of")).toHaveText(paused ?? "");
 });
 
 test("inferred modes show as hints, and hovers give each site's reason", async ({ page }) => {

@@ -1,7 +1,7 @@
 // The steps band: one run of the source and of the determinized program, step by step, beside the
-// G draws they share. A transport bar (a scrubber, step buttons, and Play at one step per second
-// until Pause) and the arrow keys move the current step. The rows scroll in a region of their own
-// below the bar, which stays in place while the region follows the current step. Rows show the
+// G draws they share. A transport bar (a scrubber between buttons to the first and the last step)
+// and the arrow keys move the current step. The rows scroll in a region of their own below the
+// bar, which stays in place while the region follows the current step. Rows show the
 // source, the G draw, optionally the symbolic state of the paper's proof, and the determinized
 // program, with notes on each step's draws and means; a long run arrives from its worker a page at
 // a time.
@@ -35,10 +35,7 @@ export interface TraceViewElements {
   /** The step controls above the rows. */
   transport: HTMLElement;
   first: HTMLButtonElement;
-  back: HTMLButtonElement;
-  next: HTMLButtonElement;
   last: HTMLButtonElement;
-  play: HTMLButtonElement;
   scrubber: HTMLInputElement;
   stepOf: HTMLOutputElement;
   symbolic: HTMLInputElement;
@@ -50,9 +47,6 @@ export interface TraceViewElements {
   /** The G trace of the run that the table shows. */
   gTrace: HTMLElement;
 }
-
-/** How long Play shows each step. */
-const playStepMs = 1000;
 
 export function mountTraceView(
   elements: TraceViewElements,
@@ -88,9 +82,6 @@ export function mountTraceView(
       ]),
     );
   });
-
-  /** Play's timer, while it plays. */
-  let playing: ReturnType<typeof setInterval> | null = null;
 
   effect(() => {
     elements.gTrace.textContent = describeTraces(store.shownTraces.value);
@@ -148,9 +139,8 @@ export function mountTraceView(
     elements.scrubber.value = String(step);
     elements.scrubber.disabled = !current;
     elements.stepOf.textContent = current ? `Step ${step} of ${last}` : "No steps";
-    elements.first.disabled = elements.back.disabled = !current || step === 0;
-    elements.next.disabled = elements.last.disabled = !current || step === last;
-    elements.play.disabled = !current || (step === last && !playing);
+    elements.first.disabled = !current || step === 0;
+    elements.last.disabled = !current || step === last;
     if (!current) return;
     const { page, overview } = current;
     if (step < page.first || step >= page.first + page.frames.length) {
@@ -213,8 +203,8 @@ export function mountTraceView(
 
   /**
    * Scrolls the rows' region, and only it, so that the current row is fully visible below the
-   * sticky headings, now and again once its page renders: at once while the scrubber is dragged
-   * or Play plays, smoothly for a single move unless the reader prefers reduced motion.
+   * sticky headings, now and again once its page renders: at once while the scrubber is dragged,
+   * smoothly for a single move unless the reader prefers reduced motion.
    */
   function follow(instant: boolean) {
     const region = elements.table;
@@ -249,39 +239,6 @@ export function mountTraceView(
     follow(instant);
   }
 
-  function pause() {
-    if (playing) clearInterval(playing);
-    playing = null;
-    elements.play.textContent = "Play";
-    elements.play.setAttribute("aria-pressed", "false");
-  }
-  elements.play.addEventListener("click", () => {
-    if (playing) {
-      pause();
-      return;
-    }
-    const current = run.peek();
-    if (!current) return;
-    if (store.currentStep.peek() >= current.overview.frameCount - 1) moveTo(0, true);
-    elements.play.textContent = "Pause";
-    elements.play.setAttribute("aria-pressed", "true");
-    playing = setInterval(() => {
-      const shown = run.peek();
-      if (!shown || store.currentStep.peek() >= shown.overview.frameCount - 1) {
-        pause();
-        return;
-      }
-      moveTo(store.currentStep.peek() + 1, true);
-    }, playStepMs);
-  });
-  // A new run, or a new program, stops Play; a page of the same run doesn't.
-  let playedRun: unknown = null;
-  effect(() => {
-    const overview = run.value?.overview ?? null;
-    if (overview !== playedRun) pause();
-    playedRun = overview;
-  });
-
   // The rows' region scrolls, so it takes the focus: the keyboard then scrolls it and moves the
   // current step with the arrow keys.
   elements.table.tabIndex = 0;
@@ -302,8 +259,6 @@ export function mountTraceView(
   }
 
   elements.first.addEventListener("click", () => moveTo(0));
-  elements.back.addEventListener("click", () => moveTo(store.currentStep.peek() - 1));
-  elements.next.addEventListener("click", () => moveTo(store.currentStep.peek() + 1));
   elements.last.addEventListener("click", () => moveTo(Number.POSITIVE_INFINITY));
   elements.scrubber.addEventListener("input", () => moveTo(Number(elements.scrubber.value), true));
   // The page remembers the reader's choice, not one that a link set.
