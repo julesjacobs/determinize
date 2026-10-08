@@ -102,7 +102,8 @@ export interface Stats {
   /** The number of runs that returned a number. */
   n: number;
   mean: number;
-  /** The population variance, with n in the denominator, as Lean's CLI computes it. */
+  /** The population variance, with n in the denominator and at least 0, as Lean's CLI computes
+   * it. */
   variance: number;
   /** The standard error of the mean, from the sample variance with n - 1 in the denominator. */
   standardError: number;
@@ -113,7 +114,7 @@ export function statsOf(summary: Summary): Stats {
   return {
     n,
     mean: n > 0 ? summary.mean : NaN,
-    variance: n > 0 ? summary.m2 / n : NaN,
+    variance: n > 0 ? Math.max(0, summary.m2 / n) : NaN,
     standardError: n > 1 ? Math.sqrt(summary.m2 / (n * (n - 1))) : NaN,
   };
 }
@@ -123,15 +124,17 @@ export function statsOf(summary: Summary): Stats {
 export function varianceRatio(originalStats: Stats, determinizedStats: Stats) {
   const originalVariance = originalStats.variance;
   const determinizedVariance = determinizedStats.variance;
-  if (
-    originalStats.n < 2 ||
-    determinizedStats.n < 2 ||
-    !Number.isFinite(originalVariance) ||
-    !Number.isFinite(determinizedVariance)
-  ) {
+  if (originalStats.n < 2 || determinizedStats.n < 2) {
     return {
       value: NaN,
       explanation: "Run each program at least twice to estimate the variance reduction.",
+    };
+  }
+  if (!Number.isFinite(originalVariance) || !Number.isFinite(determinizedVariance)) {
+    return {
+      value: NaN,
+      explanation:
+        "A variance is unavailable (floating-point overflow), so the variance reduction is too.",
     };
   }
   if (originalVariance === 0 && determinizedVariance === 0) {

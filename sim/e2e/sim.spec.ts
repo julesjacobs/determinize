@@ -196,6 +196,19 @@ test("a link restores the program, the seed and the example", async ({ page, con
   );
 });
 
+test("a variance that overflows shows as Lean's CLI prints it", async ({ page }) => {
+  await page.goto(linkTo("uniform(0, 1e200)", 1));
+  await setRunCount(page, 10);
+  await page.getByRole("button", { name: "Run 10" }).click();
+  await settled(page);
+  await expect(page.locator(".dist-card.original")).toContainText(
+    "unavailable (floating-point overflow)",
+  );
+  await expect(page.locator(".variance-ratio-card")).toContainText(
+    "A variance is unavailable (floating-point overflow)",
+  );
+});
+
 test("Lean's output shows the checked type, the sample sites and both programs", async ({
   page,
 }) => {
