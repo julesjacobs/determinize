@@ -18,6 +18,7 @@ import { mountProgramView } from "./ui/program-view.ts";
 import { createSampling } from "./ui/sampling.ts";
 import type { Store } from "./ui/store.ts";
 import { createStore } from "./ui/store.ts";
+import { mountTheme, storedTheme } from "./ui/theme.ts";
 import { createTraceClient } from "./ui/trace-client.ts";
 import { mountTraceView } from "./ui/trace-view.ts";
 import { bindUrl, sharedSource } from "./ui/url.ts";
@@ -51,6 +52,7 @@ function start(decoded: Decoded): Store {
       exampleId: initial.example,
       showSymbolic: initial.symbolic ?? readPref("symbolic") === "shown",
       view: initial.view,
+      theme: storedTheme(),
     },
     (request) => sampling.send(request),
     (request) => traces.request(request),
@@ -135,6 +137,7 @@ function start(decoded: Decoded): Store {
     store,
   );
   mountIntro($("#intro"), $("#hide-intro"));
+  mountTheme($("#theme"), store.theme);
   const editor = createEditor(editorHost, store.source.peek(), {
     onChange: (doc) => {
       // Hovered positions are of the checked text, which the edit makes stale.
