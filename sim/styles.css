@@ -1038,9 +1038,11 @@
     background: var(--change);
   }
 
+  /* Columns of fixed shares, the programs' equal, so that new runs' numbers don't move them. */
   table.stats {
     width: 100%;
     border-collapse: collapse;
+    table-layout: fixed;
   }
 
   table.stats th,
@@ -1059,6 +1061,10 @@
   table.stats thead th {
     font-size: var(--size-small);
     font-weight: var(--weight-strong);
+  }
+
+  table.stats thead td {
+    width: 20%;
   }
 
   table.stats tbody tr {

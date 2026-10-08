@@ -254,6 +254,26 @@ test("a batch moves nothing on the page at 390 px", async ({ page }) => {
   expect(shifts.reduce((sum, value) => sum + value, 0)).toBeLessThan(0.01);
 });
 
+test("the statistics' columns stay in place whatever their numbers", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("sim/");
+  await runBoth(page);
+  const table = page.locator("#stats");
+  const columns = () =>
+    table.evaluate((element) =>
+      [...(element as HTMLTableElement).rows].flatMap((row) =>
+        [...row.cells].map((cell) => Math.round(cell.getBoundingClientRect().left)),
+      ),
+    );
+  const before = await columns();
+  for (const text of ["1", "1 000 000 of 1 000 000"]) {
+    await table.evaluate((element, text) => {
+      for (const cell of element.querySelectorAll("tbody td")) cell.textContent = text;
+    }, text);
+    expect(await columns(), text).toEqual(before);
+  }
+});
+
 test("Escape, then Tab, leaves the editor", async ({ page }) => {
   await page.goto("sim/");
   await settled(page);
