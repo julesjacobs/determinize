@@ -3,13 +3,13 @@
 //
 //   node site/figures.mts
 //
-// The runs come from the simulator's runtime, which is not Lean's evaluator. Run i of both
-// programs uses seed 1 + i, so the two share the G draw x of each run.
+// The runs come from the simulator's port of Lean's evaluator: run i of both programs at seed
+// 1 + i, as `./run.sh --seed 1 --samples 10000` runs them, so the histograms are of that command's
+// runs. Both programs share the G draw x of each run.
 import { readFileSync, writeFileSync } from "node:fs";
-import type { Expr } from "../sim/src/core/compiler/ast.ts";
-import { makeStreams } from "../sim/src/core/runtime/rng.ts";
-import type { OrdinaryState } from "../sim/src/core/runtime/semantics.ts";
-import { isValue, prepareRuntime, stepOrdinary } from "../sim/src/core/runtime/semantics.ts";
+import { analyze } from "../sim/src/core/compiler/analyze.ts";
+import type { Node } from "../sim/src/core/runtime/eval.ts";
+import { prepare, run, siteNodes } from "../sim/src/core/runtime/eval.ts";
 
 const page = new URL("index.html", import.meta.url);
 const program = readFileSync(
@@ -19,55 +19,33 @@ const program = readFileSync(
 const histogramRuns = 10000;
 const plotRuns = 320;
 const firstSeed = 1;
-const fuel = 1000;
 
-/** The nodes of a runtime expression, the expression first. */
-function* nodes(expr: Expr): Generator<Expr> {
-  yield expr;
-  for (const value of Object.values(expr)) {
-    for (const child of Array.isArray(value) ? value : [value]) {
-      if (child && typeof child === "object" && "kind" in child && "from" in child) {
-        yield* nodes(child as Expr);
-      }
-    }
-  }
-}
-
-const prepared = prepareRuntime(program);
-const gSite = [...nodes(prepared.determinized)].find((e) => "mode" in e && e.mode === "G");
+const analysis = analyze(program);
+if (!analysis.ok) throw new Error("Lean's front end rejects the signal example");
+const source = prepare(analysis.program.source);
+const determinized = prepare(analysis.program.determinized);
+const gSite = siteNodes(source).find((site) => site.action === "G");
 if (!gSite) throw new Error("the program has no G draw");
 
-/** The output of one run and the value of its first G draw. */
-function run(expr: Expr, seed: number) {
-  const streams = makeStreams(seed);
-  let state: OrdinaryState = {
-    expr: structuredClone(expr),
-    rngE: streams.rngE.clone(),
-    rngG: streams.rngG.clone(),
-  };
+/** The output of run `seed` and the value of its draw at the first G site. */
+function runAt(node: Node, seed: number) {
   let x: number | undefined;
-  for (let step = 0; !isValue(state.expr); step++) {
-    if (step === fuel) throw new Error(`seed ${seed}: no value after ${fuel} steps`);
-    const before = state.rngG.seed;
-    state = stepOrdinary(state);
-    if (x === undefined && state.rngG.seed !== before) {
-      const drawn = [...nodes(state.expr)].find(
-        (e) => e.kind === "Const" && e.from === gSite?.from && e.to === gSite?.to,
-      );
-      if (drawn?.kind === "Const") x = drawn.value;
-    }
-  }
-  if (state.expr.kind !== "Const" || x === undefined) {
+  const outcome = run(node, BigInt(seed), {
+    onGDraw: (draw) => {
+      if (draw.site === gSite?.index && x === undefined) x = draw.value;
+    },
+  });
+  if (outcome.kind !== "returned" || outcome.value.tag !== "number" || x === undefined) {
     throw new Error(`seed ${seed}: the run returned no number or drew no G value`);
   }
-  return { value: state.expr.value, x };
+  return { value: outcome.value.value, x };
 }
 
 const runs = Array.from({ length: histogramRuns }, (_, i) => {
-  const source = run(prepared.expr, firstSeed + i);
-  const det = run(prepared.determinized, firstSeed + i);
-  if (source.x !== det.x) throw new Error(`seed ${firstSeed + i}: the G draws differ`);
-  return { x: det.x, source: source.value, det: det.value };
+  const ran = runAt(source, firstSeed + i);
+  const det = runAt(determinized, firstSeed + i);
+  if (ran.x !== det.x) throw new Error(`seed ${firstSeed + i}: the G draws differ`);
+  return { x: det.x, source: ran.value, det: det.value };
 });
 
 interface Histogram {
