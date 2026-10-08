@@ -15,6 +15,9 @@ on:
       - tests/**
       - "!tests/**/*.md"
       - examples/**
+      # The simulator's stylesheet imports the site's tokens, which load its fonts.
+      - site/tokens.css
+      - site/fonts/**
       - flake.nix
       - flake.lock
       - flake-modules/systems.nix

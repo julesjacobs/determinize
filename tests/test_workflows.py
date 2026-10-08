@@ -229,6 +229,19 @@ def import_paths(source):
     return {file for file in files if not file.startswith("sim/")}
 
 
+def css_paths(source, seen=None):
+    """The files that a stylesheet imports or loads with url(), and those that its imports load."""
+    seen = set() if seen is None else seen
+    references = re.findall(r"""@import\s+(?:url\()?["']([^"']+)["']|url\(["']?([^"')]+)["']?\)""",
+                            (ROOT / source).read_text())
+    files = set().union(*(named(source, text) for groups in references for text in groups if text))
+    for file in sorted(files - seen):
+        seen.add(file)
+        if file.endswith(".css"):
+            files |= css_paths(file, seen)
+    return files
+
+
 def tex_paths(source):
     """The files that a LaTeX file includes; latexmk runs in tex/."""
     command = r"\\(?:input|include|includegraphics|bibliography)\s*(?:\[[^\]]*\])?\{([^}]+)\}"
@@ -245,7 +258,7 @@ GUARDED = {
     "lean": [(["tests/**/*.py"], python_paths), (["lean/test.sh"], shell_paths),
              (["flake-modules/devshells/lean.nix"], nix_paths)],
     "sim": [(["sim/test/**", "sim/build.ts"], script_paths), (["sim/src/**"], import_paths),
-            (["flake-modules/devshells/sim.nix"], nix_paths)],
+            (["sim/*.css"], css_paths), (["flake-modules/devshells/sim.nix"], nix_paths)],
     "tex": [(["tex/**/*.tex", "!tex/archive/**"], tex_paths),
             (["flake-modules/devshells/tex.nix"], nix_paths)],
     # check.sh site builds the simulator and assembles the site with site/assemble.sh.
@@ -292,6 +305,10 @@ PULL_REQUEST_STARTS = {
     "sim/e2e/site.spec.ts": {"sim", "site"},
     "flake-modules/devshells/sim.nix": {"sim", "site"},
     "site/index.html": {"site"},
+    "site/tokens.css": {"sim", "site"},
+    "site/fonts/atkinson-next-var.woff2": {"sim", "site"},
+    "site/fonts/OFL-JuliaMono.txt": {"sim", "site"},
+    "site/site.css": {"site"},
     "site/assemble.sh": {"site"},
     "flake-modules/devshells/site.nix": {"site"},
     ".github/workflows/site.yml": {"lean", "site"},
