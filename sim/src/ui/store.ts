@@ -46,6 +46,10 @@ export interface Samples {
   traces: { source: GDraw[]; determinized: GDraw[] } | null;
 }
 
+/** The distributions band's charts: the output distributions, or each run's output against a G
+ * draw. */
+export type ChartView = "outputs" | "against";
+
 /** The step table's run of the checked program, which its worker computes and sends a page at a
  * time. */
 export type TraceState =
@@ -65,8 +69,18 @@ export interface Store {
   seed: ReadonlySignal<number>;
   /** The example chosen last. */
   exampleId: Signal<string>;
-  /** The number of runs that "Run N" adds. */
+  /** The number of runs of each program that "Run both" brings the runs to; once they have it,
+   * "Run both" adds as many again. */
   sampleCount: Signal<number>;
+  /** The index of the run that the step table shows: run i is at the seed plus i. */
+  shownRun: ReadonlySignal<number>;
+  /** The G traces of the run that the step table shows. */
+  shownTraces: ReadonlySignal<{ source: GDraw[]; determinized: GDraw[] } | null>;
+  /** Which chart the distributions band shows. */
+  view: Signal<ChartView>;
+  /** The G site whose draws the conditional-mean plot puts on its x axis, by its index in Lean's
+   * `Expr.sites`; null for the first eligible one. */
+  plotSite: Signal<number | null>;
   /** The step of the step table's run that the table shows as current. */
   currentStep: Signal<number>;
   /** The row of the step table under the pointer or the focus. */
@@ -97,6 +111,12 @@ export interface Store {
   runAt: (seed: number) => void;
   /** Starts a batch of `count` more runs, after the remaining runs of a batch in progress. */
   runMany: (count: number) => void;
+  /** Runs both programs up to `sampleCount` runs, or that many more once they have them. */
+  runBoth: () => void;
+  /** Stops the batch in progress; the runs so far stay. */
+  stop: () => void;
+  /** Shows run `index` of the runs in the step table. */
+  pickRun: (index: number) => void;
   /** Takes in what the sampler reports about a batch. */
   receive: (response: Response) => void;
   /** Asks the step table's worker for page `index` of its run. */
@@ -173,7 +193,13 @@ export function eligibleSites(runs: ProgramRuns): number[] {
  * `receiveTrace`.
  */
 export function createStore(
-  initial: { source: string; seed: number; exampleId: string; showSymbolic?: boolean },
+  initial: {
+    source: string;
+    seed: number;
+    exampleId: string;
+    showSymbolic?: boolean;
+    view?: ChartView;
+  },
   send: (request: Request) => void,
   sendTrace: (request: TraceRequest | TracePageRequest) => void,
 ): Store {
@@ -182,7 +208,10 @@ export function createStore(
   const commits = signal(0);
   const seed = signal(initial.seed);
   const exampleId = signal(initial.exampleId);
-  const sampleCount = signal(200);
+  const sampleCount = signal(10000);
+  const shownRun = signal(0);
+  const view = signal<ChartView>(initial.view ?? "outputs");
+  const plotSite = signal<number | null>(null);
   const currentStep = signal(0);
   const hoveredStep = signal<number | null>(null);
   const hoveredSite = signal<Span | null>(null);
@@ -203,17 +232,30 @@ export function createStore(
   effect(() => {
     const result = analysis.value;
     const program = checkedSource.value;
-    const at = seed.value;
+    const at = seed.value + shownRun.value;
     traceGeneration += 1;
     currentStep.value = 0;
     if (!result.ok && !result.counterexample) {
       trace.value = { kind: "not run" };
       return;
     }
+    if (!Number.isSafeInteger(at)) {
+      trace.value = {
+        kind: "unavailable",
+        message: "this run's seed is too large for the step table",
+      };
+      return;
+    }
     trace.value = { kind: "computing" };
     untracked(() =>
       sendTrace({ type: "trace", generation: traceGeneration, source: program, seed: at }),
     );
+  });
+  const shownTraces = computed(() => {
+    const index = shownRun.value;
+    if (index === 0) return samples.value.traces;
+    const at = runner.value;
+    return at ? runIndex(at, seed.value, index).traces : null;
   });
   const stats = computed(() => ({
     original: statsOf(samples.value.original.summary),
@@ -238,8 +280,10 @@ export function createStore(
   });
 
   let pending: ReturnType<typeof setTimeout> | undefined;
+  // Another program or seed shows its run 0 again.
   const commitSource = action(() => {
     clearTimeout(pending);
+    if (checkedSource.value !== source.value) shownRun.value = 0;
     checkedSource.value = source.value;
     commits.value += 1;
   });
@@ -258,6 +302,7 @@ export function createStore(
 
   const runAt = action((next: number) => {
     commitSource();
+    shownRun.value = 0;
     seed.value = next;
   });
 
@@ -271,6 +316,27 @@ export function createStore(
     generation += 1;
     running.value = { generation, source: program, seed: at, end };
     send({ type: "run", generation, source: program, seed: at, from, count: end - from });
+  });
+
+  const runBoth = action(() => {
+    commitSource();
+    const { source: program, seed: at, original } = currentSamples();
+    const current = running.value;
+    const runs =
+      current?.source === program && current.seed === at ? current.end : original.summary.runs;
+    const target = sampleCount.value;
+    runMany(runs < target ? target - runs : target);
+  });
+
+  const stop = action(() => {
+    const current = running.value;
+    if (!current) return;
+    running.value = null;
+    send({ type: "cancel", generation: current.generation });
+  });
+
+  const pickRun = action((index: number) => {
+    shownRun.value = index;
   });
 
   // Another program or seed makes the batch in progress stale.
@@ -342,6 +408,13 @@ export function createStore(
     commitSource,
     runAt,
     runMany,
+    runBoth,
+    stop,
+    pickRun,
+    shownRun,
+    shownTraces,
+    view,
+    plotSite,
     receive,
     showPage,
     receiveTrace,

@@ -55,11 +55,11 @@
     }
   ],
   "css": {
-    "formatter": { "enabled": false },
-    "linter": { "enabled": false }
+    "formatter": { "enabled": true },
+    "linter": { "enabled": true }
   },
   "html": {
-    "formatter": { "enabled": false },
-    "linter": { "enabled": false }
+    "formatter": { "enabled": true },
+    "linter": { "enabled": true }
   }
 }

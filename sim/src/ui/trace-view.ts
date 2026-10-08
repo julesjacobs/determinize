@@ -44,6 +44,8 @@ export interface TraceViewElements {
   symbolic: HTMLInputElement;
   symbolicNote: HTMLElement;
   status: HTMLElement;
+  /** Goes back to run 0 from a run picked in the conditional-mean plot. */
+  showFirst: HTMLButtonElement;
   table: HTMLElement;
   /** The G trace of the run that the table shows. */
   gTrace: HTMLElement;
@@ -64,6 +66,9 @@ export function mountTraceView(
     | "hoveredSite"
     | "linked"
     | "showSymbolic"
+    | "shownRun"
+    | "shownTraces"
+    | "pickRun"
     | "hoveredRange"
     | "followLinked"
   >,
@@ -88,18 +93,23 @@ export function mountTraceView(
   let playing: ReturnType<typeof setInterval> | null = null;
 
   effect(() => {
-    elements.gTrace.textContent = describeTraces(store.samples.value.traces);
+    elements.gTrace.textContent = describeTraces(store.shownTraces.value);
   });
 
   // The table and the status: busy while the worker computes; the earlier table stays meanwhile.
   effect(() => {
     const state = store.trace.value;
     const busy = state.kind === "computing";
-    elements.band.toggleAttribute("aria-busy", busy);
+    if (busy) elements.band.setAttribute("aria-busy", "true");
+    else elements.band.removeAttribute("aria-busy");
     if (busy) {
       elements.status.textContent = "Computing the steps of this run…";
       return;
     }
+    elements.band.classList.toggle(
+      "no-run",
+      state.kind === "not run" || state.kind === "unavailable",
+    );
     if (state.kind !== "run") {
       elements.table.replaceChildren();
       elements.status.textContent =
@@ -108,8 +118,12 @@ export function mountTraceView(
           : `The simulator couldn't compute the steps: ${state.message}`;
       return;
     }
-    elements.status.textContent = describeRun(state.overview);
+    elements.status.textContent = describeRun(state.overview, store.shownRun.peek());
   });
+  effect(() => {
+    elements.showFirst.hidden = store.shownRun.value === 0;
+  });
+  elements.showFirst.addEventListener("click", () => store.pickRun(0));
 
   effect(() => {
     const current = run.value;
@@ -331,10 +345,10 @@ export function mountTraceView(
   }
 }
 
-/** The status of a run as a whole. */
-function describeRun(run: TraceOverview) {
+/** The status of a run as a whole: run `index` of the runs, at the seed plus `index`. */
+function describeRun(run: TraceOverview, index: number) {
   const steps = run.frameCount - 1;
-  const at = `Seed ${run.seed}:`;
+  const at = index === 0 ? `Seed ${run.seed}:` : `Run ${index} of the runs, at seed ${run.seed}:`;
   if (run.domainFailure) {
     return `${at} at step ${steps} a run left an operation's domain (${run.domainFailure}). Typing doesn't establish domain safety, so no theorem relates the runs from there on.`;
   }
@@ -344,10 +358,12 @@ function describeRun(run: TraceOverview) {
   if (run.stopped === "size") {
     return `${at} the table stops after ${steps} steps; its states grew too large to show.`;
   }
-  const of = run.counterexample ? " of the counterexample" : "";
-  if (!run.ok) return `${at} ${steps} steps${of}; a step check failed.`;
+  if (run.counterexample) {
+    return `${at} ${steps} steps of the counterexample. Lean rejects the program, so the proof's step checks don't apply to it.`;
+  }
+  if (!run.ok) return `${at} ${steps} steps; a step check failed.`;
   const domain = run.domainError ? "; all three runs reached the same domain error" : "";
-  return `${at} ${steps} steps${of}${domain}, and every step check passed.`;
+  return `${at} ${steps} steps${domain}, and every step check passed.`;
 }
 
 /** The G draws shown of a trace; the rest are counted. */
@@ -362,7 +378,7 @@ function describeTrace(trace: GDraw[]) {
   return `[${shown.join(", ")}${more}]`;
 }
 
-/** Run 0's G traces: one when the programs drew the same, as determinization keeps G draws. */
+/** A run's G traces: one when the programs drew the same, as determinization keeps G draws. */
 function describeTraces(traces: { source: GDraw[]; determinized: GDraw[] } | null) {
   if (!traces) return "none";
   const { source, determinized } = traces;
@@ -483,7 +499,7 @@ function renderRows(
       <div class="cell cell-draw">${draw ? `<span class="cell-label">G draw</span>${draw}` : ""}</div>
       ${symbolicCell}
       ${cell("det", right, state(determinized) + meanNote)}
-      ${checkNote(frame)}
+      ${run.counterexample ? "" : checkNote(frame)}
     </li>`;
   });
   const last = page.frames.at(-1);

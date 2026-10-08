@@ -40,12 +40,30 @@ async function settled(page: Page, timeout?: number) {
   await expect(page.locator("[aria-busy=true]")).toHaveCount(0, { timeout });
 }
 
-/** Sets how many runs "Run N" adds, through the page's store. */
+/** Opens the example with the title `title`. */
+async function pick(page: Page, title: string) {
+  await page.locator("#example-select").selectOption({ label: title });
+}
+
+/** Sets how many runs of each program "Run both" brings the runs to, through the page's store. */
 async function setRunCount(page: Page, count: number) {
   await page.evaluate(async (n) => {
     (await window.DeterminizeSim.ready).sampleCount.value = n;
   }, count);
-  await expect(page.getByRole("button", { name: `Run ${count}` })).toBeVisible();
+  await expect(page.locator("#runs")).toHaveValue(String(count));
+}
+
+/** The number of runs of each program so far. */
+function runs(page: Page) {
+  return page.evaluate(
+    async () => (await window.DeterminizeSim.ready).samples.value.original.summary.runs,
+  );
+}
+
+/** Clicks "Run both" and waits until its runs have arrived. */
+async function runBoth(page: Page, timeout?: number) {
+  await page.getByRole("button", { name: "Run both" }).click();
+  await settled(page, timeout);
 }
 
 /** Records the duration of every long task on the page's main thread from now on. */
@@ -62,7 +80,6 @@ function observeLongTasks() {
 
 const status = (page: Page) => page.locator("#steps-status");
 const checked = /, and every step check passed\.$/;
-const samples = (page: Page) => page.locator("#distribution-status");
 
 for (const [where, url, worker] of [
   ["in the preview, with a worker", simulator, true],
@@ -73,9 +90,9 @@ for (const [where, url, worker] of [
     page.on("worker", (started) => workers.push(started.url()));
     await page.goto(url);
     await expect(status(page)).toHaveText("Seed 1: 5 steps, and every step check passed.");
-    await page.getByRole("button", { name: "Run 200" }).click();
-    await settled(page);
-    await expect(samples(page)).toHaveText("201 runs");
+    await setRunCount(page, 200);
+    await runBoth(page);
+    expect(await runs(page)).toBe(200);
     expect(workers.map((started) => new URL(started).pathname.split("/").at(-1)).sort()).toEqual(
       worker ? ["trace-worker.js", "worker.js"] : [],
     );
@@ -88,32 +105,30 @@ test("runs every example", async ({ page }) => {
   const titles = await page.locator("#example-select option").allTextContents();
   expect(titles.length).toBeGreaterThan(0);
   for (const title of titles) {
-    await page.getByLabel("Example").selectOption({ label: title });
+    await pick(page, title);
     await expect(status(page)).toHaveText(/^Seed \d+: /);
     await expect(page.locator(".step").first()).toBeVisible();
     const before = await status(page).textContent();
-    await page.getByRole("button", { name: "Run 20" }).click();
-    await settled(page);
-    // Runs 1 to 20 follow run 0, which the step table keeps showing.
-    await expect(samples(page)).toHaveText("21 runs");
+    await runBoth(page);
+    // Runs 1 to 19 follow run 0, which the step table keeps showing.
+    expect(await runs(page)).toBe(20);
     await expect(status(page)).toHaveText(before ?? "");
   }
 });
 
-test("Run 200 and a 5000-run batch leave no long task over 200 ms", async ({ page }) => {
+test("a 200-run and a 5000-run batch leave no long task over 200 ms", async ({ page }) => {
   test.setTimeout(120_000);
   await page.goto(simulator);
-  await page.getByLabel("Example").selectOption({ label: "Dungeon" });
+  await pick(page, "Dungeon");
   await watchLongTasks(page);
-  await page.getByRole("button", { name: "Run 200" }).click();
-  await settled(page);
-  await expect(samples(page)).toHaveText("201 runs");
+  await setRunCount(page, 200);
+  await runBoth(page);
+  expect(await runs(page)).toBe(200);
 
-  await page.getByLabel("Example").selectOption({ label: "Noisy product" });
+  await pick(page, "Noisy product");
   await setRunCount(page, 5000);
-  await page.getByRole("button", { name: "Run 5000" }).click();
-  await settled(page);
-  await expect(samples(page)).toHaveText("5001 runs");
+  await runBoth(page);
+  expect(await runs(page)).toBe(5000);
   const longTasks = await page.evaluate(() => window.longTasks);
   test.info().annotations.push({ type: "long tasks (ms)", description: JSON.stringify(longTasks) });
   expect(Math.max(0, ...longTasks)).toBeLessThanOrEqual(200);
@@ -135,41 +150,41 @@ test("a second Run during a batch adds its runs as well", async ({ page }) => {
   await page.goto(simulator);
   // 100000 runs of the Gaussian random walk take seconds, so the first batch is still running at
   // the second click.
-  await page.getByLabel("Example").selectOption({ label: "Gaussian random walk" });
+  await pick(page, "Gaussian random walk");
   await setRunCount(page, 100000);
-  const run = page.getByRole("button", { name: "Run 100000" });
-  await run.click();
-  await expect(page.locator("[aria-busy=true]")).toHaveCount(1);
+  await page.getByRole("button", { name: "Run both" }).click();
+  await expect(page.locator("#distributions[aria-busy=true]")).toHaveCount(1);
   const runningAtSecondClick = await page.evaluate(async () => {
     const running = (await window.DeterminizeSim.ready).running.value !== null;
-    (document.querySelector("#many-coupling") as HTMLButtonElement).click();
+    (document.querySelector("#run-both") as HTMLButtonElement).click();
     return running;
   });
   expect(runningAtSecondClick).toBe(true);
   await settled(page, 50_000);
-  await expect(samples(page)).toHaveText("200001 runs");
+  // The first click brings the runs to 100000, the second adds as many again.
+  expect(await runs(page)).toBe(200000);
 });
 
 test("editing during a run discards its stale batches", async ({ page }) => {
   await page.goto(simulator);
-  await page.getByLabel("Example").selectOption({ label: "Gaussian random walk" });
+  await pick(page, "Gaussian random walk");
   await setRunCount(page, 100000);
-  await page.getByRole("button", { name: "Run 100000" }).click();
-  await expect(samples(page)).not.toHaveText("1 run");
+  await page.getByRole("button", { name: "Run both" }).click();
+  await expect.poll(() => runs(page)).toBeGreaterThan(1);
   await page.locator(".cm-content").first().click();
   await page.keyboard.press("Control+End");
   await page.keyboard.type(" ");
   await settled(page);
   // The edited program's run in the step table is its first run, and no other arrives.
-  await expect(samples(page)).toHaveText("1 run");
+  await expect.poll(() => runs(page)).toBe(1);
   await page.waitForTimeout(1000);
-  await expect(samples(page)).toHaveText("1 run");
+  expect(await runs(page)).toBe(1);
 });
 
 test("a link restores the program, the seed and the example", async ({ page, context }) => {
   await page.goto(simulator);
   expect(new URL(page.url()).hash).toBe("");
-  await page.getByLabel("Example").selectOption({ label: "Dungeon" });
+  await pick(page, "Dungeon");
   await page.getByRole("button", { name: "New seed" }).click();
   await page.locator(".cm-content").first().click();
   await page.keyboard.press("Control+End");
@@ -204,12 +219,11 @@ test("a link restores the program, the seed and the example", async ({ page, con
 test("a variance that overflows shows as Lean's CLI prints it", async ({ page }) => {
   await page.goto(linkTo("uniform(0, 1e200)", 1));
   await setRunCount(page, 10);
-  await page.getByRole("button", { name: "Run 10" }).click();
-  await settled(page);
-  await expect(page.locator(".dist-card.original")).toContainText(
+  await runBoth(page);
+  await expect(page.locator("#variance-source")).toHaveText(
     "unavailable (floating-point overflow)",
   );
-  await expect(page.locator(".variance-ratio-card")).toContainText(
+  await expect(page.locator("#factor")).toContainText(
     "A variance is unavailable (floating-point overflow)",
   );
 });
@@ -243,7 +257,7 @@ test("a program rejected for its modes shows its counterexample in place of the 
   page,
 }) => {
   await page.goto(simulator);
-  await page.getByLabel("Example").selectOption({ label: "Noisy product, both draws E" });
+  await pick(page, "Noisy product, both draws E");
   await expect(page.locator("#source-alert")).toHaveText(
     /^Lean rejects this program at inference: inconsistent E\/G constraints\./,
   );
@@ -256,44 +270,48 @@ test("a program rejected for its modes shows its counterexample in place of the 
   );
 });
 
-test("the runs' outcomes, the command that reports them and run 0's G trace show", async ({
+test("the runs' outcomes, the command that reports them and the run's G trace show", async ({
   page,
 }) => {
   await page.goto(simulator);
-  const outcomes = page.locator(".run-outcomes");
-  await expect(outcomes).toContainText("--seed 1 --samples 1 examples/paper/noisy-product.det");
+  const honesty = page.locator("#honesty");
+  await expect(honesty).not.toContainText("--samples");
   await expect(page.locator("#g-trace")).toHaveText(
     /^\[\(uniform, [-0-9.e]+\)\], in both programs$/,
   );
-  await page.getByRole("button", { name: "Run 200" }).click();
-  await settled(page);
-  await expect(outcomes).toContainText(
-    "Source: 201 of 201 runs returned a value, 0 were rejected by an observation, and 0 failed.",
-  );
-  await expect(outcomes).toContainText(
-    "./run.sh --seed 1 --samples 201 examples/paper/noisy-product.det",
+  await setRunCount(page, 200);
+  await runBoth(page);
+  await expect(page.locator("#returned-source")).toHaveText("200 of 200");
+  await expect(honesty).toContainText(
+    "./run.sh --seed 1 --samples 200 examples/paper/noisy-product.det",
   );
 
   await page.goto(linkTo("1/0", 3));
-  await expect(outcomes).toContainText(
-    "Source: 0 of 1 runs returned a value, 0 were rejected by an observation, and 1 failed. " +
-      "The first failure: division by zero.",
+  await setRunCount(page, 10);
+  await runBoth(page);
+  await expect(page.locator("#returned-source")).toContainText("0 of 10");
+  await expect(page.locator("#returned-source")).toContainText("10 failed");
+  await expect(page.locator("#first-failure")).toContainText(
+    "First failure in the source: division by zero",
   );
-  await expect(outcomes).toContainText("with the program saved as program.det");
+  await expect(honesty).toContainText("with the program saved as program.det");
 });
 
 test("a program that Lean rejects has no runs and no command", async ({ page }) => {
   await page.goto(linkTo("let x =", 1));
-  const outcomes = page.locator(".run-outcomes");
-  await expect(outcomes).toHaveText("Lean rejects this program, so it has no runs.");
-  await expect(outcomes).not.toContainText("--samples");
+  await expect(page.locator("#dist-empty")).toHaveText("Nothing to run: Lean rejects the program.");
+  await expect(page.getByRole("button", { name: "Run both" })).toBeDisabled();
+  await expect(page.locator("#honesty")).not.toContainText("--samples");
 });
 
 test("a program the simulator fails on doesn't blame Lean", async ({ page }) => {
   // Too deeply nested for the simulator, which recurses over the program.
   await page.goto(linkTo(Array(10000).fill("1").join(" + "), 1));
-  await expect(page.locator(".run-outcomes")).toHaveText(
-    "The simulator failed on this program, so it shows no runs. ./run.sh --check program.det shows whether Lean accepts it.",
+  await expect(page.locator("#source-alert")).toContainText(
+    "The simulator failed on this program. ./run.sh --check program.det shows whether Lean accepts it.",
+  );
+  await expect(page.locator("#dist-empty")).toHaveText(
+    "Nothing to run: the simulator failed on this program.",
   );
 });
 
@@ -301,28 +319,61 @@ test("the share of returned runs links returnProbability only for a float progra
   page,
 }) => {
   await page.goto(simulator);
-  const share = page.locator(".run-outcomes").getByRole("link", { name: /runs returned a value/ });
-  await expect(share).toHaveCount(2);
-  await page.getByLabel("Example").selectOption({ label: "Gaussian random walk" });
-  await expect(page.locator("#checked-type")).toHaveText("[(float[E] * float[E])]");
-  await expect(page.locator(".run-outcomes")).toContainText("1 of 1 runs returned a value");
-  await expect(share).toHaveCount(0);
+  await setRunCount(page, 10);
+  await runBoth(page);
+  const returned = page.getByRole("link", { name: "Returned" });
+  await expect(returned).toHaveCount(1);
+  await page.goto(linkTo("let x = uniform(0, 1) in x < 0.5", 1));
+  await setRunCount(page, 10);
+  await runBoth(page);
+  await expect(page.locator("#checked-type")).toHaveText("bool");
+  await expect(page.locator("#list-source")).toContainText("10 of 10 runs returned.");
+  await expect(returned).toHaveCount(0);
 });
 
 test("notices say which premises of the theorems are not met", async ({ page }) => {
   await page.goto(simulator);
-  const type = page.locator("#premise-type");
-  const safety = page.locator("#premise-safety");
-  await expect(safety).toContainText("Typing establishes neither the domain safety");
-  await expect(type).toBeHidden();
-  await page.getByLabel("Example").selectOption({ label: "Gaussian random walk" });
+  await setRunCount(page, 10);
+  await runBoth(page);
+  const premises = page.locator("#premises");
+  await expect(premises).toContainText("Domain safety: not established by typing.");
+  await expect(page.locator("#premises-other")).toBeHidden();
+  await pick(page, "Gaussian random walk");
+  await runBoth(page);
   await expect(page.locator("#checked-type")).toHaveText("[(float[E] * float[E])]");
-  await expect(type).toContainText("Its type is not float[E]");
-  await expect(safety).toBeVisible();
-  // A counterexample shows no theorem notice.
-  await page.getByLabel("Example").selectOption({ label: "Noisy product, both draws E" });
-  await expect(type).toBeHidden();
-  await expect(safety).toBeHidden();
+  await expect(page.locator("#premises-other")).toContainText(
+    "No theorem applies to this output. Its type is [(float[E] * float[E])], not float[E]",
+  );
+  // A counterexample shows no theorem notice, and compares the means instead.
+  await pick(page, "Noisy product, both draws E");
+  await runBoth(page);
+  await expect(premises).toBeHidden();
+  await expect(page.locator("#factor")).toHaveText(/^Means differ: [0-9.]+ and 0\.2500\.$/);
+});
+
+test("the plot against a G draw shows each run, and a click steps through it", async ({ page }) => {
+  await page.goto(simulator);
+  await setRunCount(page, 1000);
+  await runBoth(page);
+  await page.getByRole("radio", { name: "Against x, the G draw" }).check();
+  await expect(page.locator(".chart.conditional")).toBeVisible();
+  await expect(page.locator("#chart-caption")).toContainText("1 000 shown");
+  const canvas = page.locator(".plot canvas");
+  await canvas.scrollIntoViewIfNeeded();
+  const box = await canvas.boundingBox();
+  if (!box) throw new Error("the plot has no canvas");
+  // The determinized runs lie on the curve x * x, so some run is near the middle of the x axis.
+  const readout = page.locator("#plot-readout");
+  let y = box.y;
+  for (; y < box.y + box.height; y += 3) {
+    await page.mouse.move(box.x + box.width / 2, y);
+    if (await readout.textContent()) break;
+  }
+  await expect(readout).toHaveText(/^Run \d+: draw /);
+  await page.mouse.click(box.x + box.width / 2, y);
+  await expect(status(page)).toHaveText(/^Run \d+ of the runs, at seed \d+: /);
+  await page.getByRole("button", { name: "Show run 0" }).click();
+  await expect(status(page)).toHaveText(/^Seed 1: /);
 });
 
 /** The simulator's address for `source` at `seed`, with no example chosen. */
@@ -429,14 +480,16 @@ test("stepping, playing across pages and scrubbing move neither the bar nor the 
   await expect(page.locator("#step-of")).toHaveText(/^Step 0 of /);
   await expect.poll(async () => (await where()).rowInRegion).toBe(true);
   expect((await where()).scrollY).toBe(before.scrollY);
-  // However long the run, the steps and the distributions stay where they are on the page: the
-  // same recursion, 2 and 2000 deep, takes the same room in the editors.
+  // However long the program and its run, the steps and the distributions stay where they are on
+  // the page: a 3-line program, the gallery's longest example and a recursion 2000 deep.
   const example = (path: string) =>
     readFileSync(new URL(`../../examples/${path}.det`, import.meta.url), "utf8");
   const longest = example("paper/gauss-random-walk");
-  const recursion = (depth: number) =>
-    `let u = uniform(0, 1) in (rec f n => if n < 1 then u else 1 + f (n - 1)) ${depth}`;
-  const programs = [recursion(2), longest, recursion(2000)];
+  const programs = [
+    example("paper/noisy-product"),
+    longest,
+    "let u = uniform(0, 1) in (rec f n => if n < 1 then u else 1 + f (n - 1)) 2000",
+  ];
   const bandTops = () =>
     page.evaluate(() =>
       ["#steps", "#distributions"].map((band) =>
@@ -476,12 +529,13 @@ test("stepping, playing across pages and scrubbing move neither the bar nor the 
     test
       .info()
       .annotations.push({ type: `band tops at ${width} px`, description: JSON.stringify(tops) });
-    const [steps, distributions] = tops[2];
-    expect(Math.abs(steps - tops[0][0]), `steps at ${width} px`).toBeLessThanOrEqual(4);
-    expect(
-      Math.abs(distributions - tops[0][1]),
-      `distributions at ${width} px`,
-    ).toBeLessThanOrEqual(4);
+    for (const [steps, distributions] of tops.slice(1)) {
+      expect(Math.abs(steps - tops[0][0]), `steps at ${width} px`).toBeLessThanOrEqual(4);
+      expect(
+        Math.abs(distributions - tops[0][1]),
+        `distributions at ${width} px`,
+      ).toBeLessThanOrEqual(4);
+    }
   }
 });
 
@@ -563,7 +617,7 @@ test("a deep recursion stops where the step table grows too large, without a lon
     /^Seed 1: the table stops after \d+ steps; its states grew too large to show\.$/,
     { timeout: 20_000 },
   );
-  await expect(page.getByRole("button", { name: "Run 200" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Run both" })).toBeEnabled();
   const longTasks = await page.evaluate(() => window.longTasks);
   test.info().annotations.push({ type: "long tasks (ms)", description: JSON.stringify(longTasks) });
   expect(Math.max(0, ...longTasks)).toBeLessThanOrEqual(200);
@@ -631,7 +685,7 @@ test("a readable link clears an unreadable one's notice", async ({ page }) => {
 
 test("diagnostics follow the text", async ({ page }) => {
   await page.goto(simulator);
-  await page.getByLabel("Example").selectOption({ label: "Branching on an E draw" });
+  await pick(page, "Branching on an E draw");
   const marks = page.locator(".cm-lintRange-error, .cm-lintPoint");
   await expect(marks).toHaveCount(1);
   await expect(page.locator(".cm-lint-marker-error")).toHaveCount(1);

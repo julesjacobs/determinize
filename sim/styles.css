@@ -4,7 +4,7 @@
  * column of bands in reading order: header, programs, steps, distributions. Each band switches its
  * layout at its own width through container queries.
  */
-@layer tokens, reset, base, components, legacy;
+@layer tokens, reset, base, components;
 @import "../site/tokens.css";
 
 @layer reset {
@@ -35,6 +35,11 @@
   select {
     font: inherit;
     color: inherit;
+  }
+
+  [hidden] {
+    /* biome-ignore lint/complexity/noImportantStyles: hidden must win over every display rule. */
+    display: none !important;
   }
 }
 
@@ -83,6 +88,12 @@
   button:disabled {
     opacity: 0.45;
     cursor: not-allowed;
+  }
+
+  button.primary {
+    background: var(--ink);
+    color: var(--ground);
+    font-weight: var(--weight-strong);
   }
 
   input[type="checkbox"],
@@ -229,7 +240,8 @@
   .lean-program {
     margin-top: var(--space-2);
     padding: var(--space-3) var(--space-4);
-    overflow-x: auto;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
     border-radius: 3px;
     background: var(--code-fill);
     line-height: var(--leading-code);
@@ -267,17 +279,7 @@
     font-size: var(--size-small);
   }
 
-  .premises-interim {
-    grid-column: 1 / -1;
-  }
-
   .status {
-    color: var(--muted);
-  }
-
-  .estimates {
-    max-width: 62rem;
-    margin-bottom: var(--space-3);
     color: var(--muted);
   }
 
@@ -308,6 +310,10 @@
     flex-wrap: wrap;
     align-items: center;
     gap: var(--space-2);
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
   }
 
   .scrub input {
@@ -360,7 +366,7 @@
     color: var(--muted);
   }
 
-  .steps[aria-busy] .step-table {
+  .steps[aria-busy="true"] .step-table {
     opacity: 0.55;
   }
 
@@ -372,6 +378,10 @@
     margin: 0;
     padding: 0;
     list-style: none;
+  }
+
+  .no-run :is(.step-controls, .run-controls, .gtrace, .steps-honesty, .step-table) {
+    display: none;
   }
 
   .step-table:focus-visible {
@@ -472,8 +482,7 @@
     font-size: var(--size-small);
   }
 
-  .step-note.n-mean,
-  .step-note.n-mean code {
+  .step-note.n-mean {
     color: var(--change);
   }
 
@@ -620,313 +629,363 @@
     clip-path: inset(50%);
     white-space: nowrap;
   }
-}
 
-@layer legacy {
-  h1 {
-    font-size: 28px;
-    line-height: 1.15;
-  }
-
-  .run-outcomes {
-    grid-column: 1 / -1;
-    font-size: 13px;
-  }
-
-  .run-outcomes p {
-    margin: 0 0 4px;
-  }
-
-  .distribution-view {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(118px, 0.42fr) minmax(0, 1fr);
-    gap: 10px;
-    min-height: 285px;
-    overflow: hidden;
-    background: transparent;
-    padding: 10px;
-  }
-
-  .distribution-empty {
-    grid-column: 1 / -1;
-    color: var(--muted);
-    font-size: 13px;
-    font-weight: 700;
-  }
-
-  .dist-card {
-    min-width: 0;
-    overflow: hidden;
-    border: 1px solid var(--rule);
-    border-radius: 8px;
-    background: var(--panel);
-    box-shadow: 0 8px 18px color-mix(in oklab, var(--ink) 4%, transparent);
-  }
-
-  .symbolic-distribution-note {
-    min-height: 262px;
-  }
-
-  .symbolic-distribution-note {
-    display: grid;
-    place-items: center;
-    border: 1px solid var(--rule);
-    border-radius: 8px;
-    background: color-mix(in oklab, var(--ground) 74%, transparent);
-    padding: 12px;
-    color: var(--muted);
-    text-align: center;
-    font-size: 11px;
-    font-weight: 800;
-    line-height: 1.35;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .variance-ratio-card {
-    display: grid;
-    justify-items: center;
-    align-content: center;
-    gap: 10px;
-    width: 100%;
-    min-height: 210px;
-    border: 1px solid var(--code-fill);
-    border-radius: 9px;
-    background: var(--ground);
-    padding: 14px 10px;
-  }
-
-  .variance-ratio-card > span {
-    color: var(--muted);
-    font-size: 11px;
-    font-weight: 900;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-  }
-
-  .variance-ratio-card .metric-value {
-    min-width: 8ch;
-    color: var(--ink);
-    text-align: center;
-    font-size: 24px;
-  }
-
-  .variance-ratio-card p {
-    max-width: 19ch;
-    color: var(--muted);
-    font-size: 12px;
-    font-weight: 750;
-    line-height: 1.35;
-    letter-spacing: 0;
-    text-transform: none;
-  }
-
-  .dist-title {
-    display: flex;
-    justify-content: space-between;
+  /* Distributions */
+  .runs {
+    display: inline-flex;
     align-items: center;
-    gap: 10px;
-    border-bottom: 1px solid var(--code-fill);
-    padding: 8px 10px;
-    font-size: 12px;
-    font-weight: 850;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
+    gap: var(--space-2);
   }
 
-  .dist-title .metric-value {
-    min-width: 4.5ch;
+  .progress {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
   }
 
-  .dist-metrics {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1px;
-    border-bottom: 1px solid var(--code-fill);
+  .progress progress {
+    width: min(14rem, 40vw);
+  }
+
+  /* Between batches the progress row keeps its place, so that nothing below it moves. */
+  .progress.idle {
+    visibility: hidden;
+  }
+
+  .honesty {
+    max-width: 62rem;
+    margin-bottom: var(--space-4);
+    padding-left: var(--space-3);
+    border-left: 3px solid var(--muted);
+  }
+
+  .cmd {
+    overflow-wrap: anywhere;
+  }
+
+  .band-empty {
+    margin-block: var(--space-3);
+    color: var(--muted);
+  }
+
+  .view-switch {
+    display: inline-flex;
+    flex-wrap: wrap;
+    margin-bottom: var(--space-3);
+    padding: 2px;
+    border-radius: 3px;
     background: var(--code-fill);
   }
 
-  .metric-block {
-    display: grid;
-    justify-items: center;
-    align-content: center;
-    gap: 2px;
-    min-width: 0;
-    min-height: 46px;
-    background: var(--ground);
-    padding: 6px 4px;
-    color: var(--muted);
-    font-size: 10px;
-    font-weight: 850;
-    line-height: 1.2;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
+  .seg {
+    position: relative;
   }
 
-  .metric-value {
-    display: inline-block;
-    min-width: 9ch;
-    color: var(--ink);
-    text-align: right;
-    font: 850 13px/1.1 "SF Mono", Menlo, Monaco, Consolas, monospace;
-    font-variant-numeric: tabular-nums;
-    letter-spacing: 0;
-    text-transform: none;
+  .seg input {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
   }
 
-  .metric-block .metric-value {
-    text-align: center;
-  }
-
-  .metric-block small {
-    max-width: 14ch;
-    color: var(--muted);
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0;
-    text-transform: none;
-  }
-
-  .symbolic-distribution-note .metric-block {
-    border: 1px solid var(--code-fill);
-    border-radius: 7px;
-    min-height: 36px;
-    padding: 4px 5px;
-  }
-
-  .symbolic-distribution-note .metric-value {
-    min-width: 10ch;
-    font-size: 12px;
-  }
-
-  .metric-pair {
+  .seg span {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    font-variant-numeric: tabular-nums;
+    min-height: calc(var(--control-height) - 4px);
+    padding: 0 var(--space-3);
+    border-radius: 2px;
   }
 
-  .dist-card.original .dist-title {
-    color: var(--given);
+  .seg input:checked + span {
+    background: var(--ground);
+    box-shadow: inset 0 0 0 1px var(--muted);
+    font-weight: var(--weight-strong);
   }
 
-  .dist-card.determinized .dist-title {
-    color: var(--given);
+  .seg input:focus-visible + span {
+    outline: 2px solid var(--muted);
+    outline-offset: 2px;
   }
 
-  .dist-card svg {
-    display: block;
-    width: 100%;
-    height: 202px;
-  }
-
-  .dist-axis {
-    stroke: var(--muted);
-    stroke-width: 1;
+  .site-picker {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
   }
 
   .dist-grid {
-    stroke: var(--rule);
-    stroke-width: 1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-5) var(--space-7);
   }
 
-  .dist-curve {
-    fill: none;
-    stroke-width: 2.25;
-    stroke-linejoin: round;
+  @container (min-width: 1100px) {
+    .dist-grid {
+      grid-template-columns: minmax(0, 1fr) 24rem;
+      align-items: start;
+    }
   }
 
-  .pdf-curve {
-    stroke-width: 2;
+  .chart-fig {
+    min-width: 0;
   }
 
-  .cdf-curve {
-    stroke-width: 2.25;
+  .chart {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    overflow: visible;
   }
 
-  .dist-area {
-    opacity: 0.12;
+  .chart-fig figcaption,
+  .plot-readout {
+    margin-top: var(--space-2);
+    color: var(--muted);
+    font-size: var(--size-small);
   }
 
-  .pdf-area {
-    opacity: 0.18;
+  /* Room for the caption's longest form, so that it doesn't reflow the page during a batch. */
+  .chart-fig figcaption {
+    min-height: calc(3 * var(--leading-ui) * var(--size-small));
   }
 
-  .dist-bin {
-    opacity: 0.42;
-    shape-rendering: crispEdges;
+  .plot-readout {
+    min-height: 1.3em;
   }
 
-  .cdf-area {
-    opacity: 0.10;
+  .plot {
+    position: relative;
+    max-width: 100%;
   }
 
-  .dist-section-label {
+  .plot canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+
+  .chart text {
     fill: var(--muted);
-    font: 800 10px Inter, ui-sans-serif, system-ui, sans-serif;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+    font-family: var(--font-text);
+    font-size: 12.5px;
   }
 
-  .dist-card.original .dist-curve,
-  .dist-card.original .dist-rug {
+  .chart .given {
+    fill: var(--given);
+  }
+
+  .chart .axis-title {
+    font-size: 13px;
+  }
+
+  .chart .grid {
+    stroke: var(--rule);
+  }
+
+  .chart .zero,
+  .chart .axis,
+  .chart .tick {
+    stroke: var(--muted);
+  }
+
+  .chart .axis-given,
+  .chart .tick-given {
     stroke: var(--given);
+    stroke-width: 1.5;
   }
 
-  .dist-card.original .dist-area {
-    fill: var(--given);
+  .chart .filled {
+    fill: var(--change-fill);
+    stroke: var(--change);
+    stroke-width: 0.8;
   }
 
-  .dist-card.original .dist-bin {
-    fill: var(--given);
+  .chart .outline {
+    fill: none;
+    stroke: var(--muted);
+    stroke-width: 1.4;
   }
 
-  .dist-card.determinized .dist-curve,
-  .dist-card.determinized .dist-rug {
-    stroke: var(--given);
+  .chart .row-label {
+    fill: var(--ink);
+    font-size: 13px;
+    font-weight: var(--weight-strong);
   }
 
-  .dist-card.determinized .dist-area {
-    fill: var(--given);
+  .chart .row-det {
+    fill: var(--change);
   }
 
-  .dist-card.determinized .dist-bin {
-    fill: var(--given);
+  .chart .row-note {
+    fill: var(--muted);
+    font-weight: 400;
   }
 
-  .dist-mean {
+  .chart .break {
+    fill: none;
+    stroke: var(--ground);
+    stroke-width: 2.5;
+  }
+
+  .chart .clip-label,
+  .chart .mean-label {
+    fill: var(--ink);
+  }
+
+  .chart .mean-label {
+    font-weight: var(--weight-strong);
+  }
+
+  .chart .mean-line {
     stroke: var(--ink);
-    stroke-width: 2;
+    stroke-width: 1.2;
     stroke-dasharray: 4 3;
   }
 
-  .dist-rug {
-    stroke-width: 1.4;
-    opacity: 0.28;
+  .chart .mean-det {
+    stroke: var(--change);
   }
 
-  .dist-label {
-    fill: var(--muted);
-    font: 11px "SF Mono", Menlo, Monaco, Consolas, monospace;
+  .chart .halo {
+    paint-order: stroke;
+    stroke: var(--ground);
+    stroke-width: 4px;
+    stroke-linejoin: round;
   }
 
-  .dist-label.end {
-    text-anchor: end;
+  .key {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    margin: 0 0.35em 0 0.6em;
+    border-radius: 50%;
+    vertical-align: 0.05em;
   }
 
-  .dist-label.y {
-    text-anchor: end;
+  .key-source {
+    border: 1.5px solid var(--muted);
   }
 
-  .premise-notice {
-    border-radius: 6px;
-    background: color-mix(in oklab, var(--change) 8%, var(--ground));
-    color: var(--amber);
-    padding: 6px 10px;
-    font-weight: 650;
+  .key-det {
+    background: var(--change);
   }
 
-  .premise-notice[hidden] {
-    display: none;
+  table.stats {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  table.stats th,
+  table.stats td {
+    padding: var(--space-1) var(--space-2);
+    text-align: right;
+    vertical-align: top;
+  }
+
+  table.stats th[scope="row"] {
+    padding-left: 0;
+    font-weight: inherit;
+    text-align: left;
+  }
+
+  table.stats thead th {
+    font-size: var(--size-small);
+    font-weight: var(--weight-strong);
+  }
+
+  table.stats tbody tr {
+    border-top: 1px solid var(--rule);
+  }
+
+  .t-det {
+    color: var(--change);
+  }
+
+  .sub {
+    color: var(--muted);
+    font-size: var(--size-small);
+  }
+
+  .factor {
+    margin-block: var(--space-4);
+  }
+
+  .factor strong {
+    margin-left: 0.2em;
+    color: var(--change);
+    font-size: var(--size-heading);
+    font-weight: 700;
+    vertical-align: -0.1em;
+  }
+
+  .factor-note {
+    display: block;
+    color: var(--muted);
+  }
+
+  .premises h3,
+  .list-out h3 {
+    margin: var(--space-4) 0 var(--space-2);
+    font-size: var(--size-ui);
+    font-weight: var(--weight-heading);
+  }
+
+  .premises ul {
+    margin: 0;
+    padding-left: 1.1em;
+  }
+
+  .premises li {
+    margin-bottom: var(--space-1);
+  }
+
+  .premises a {
+    color: var(--muted);
+  }
+
+  .list-out {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4) var(--space-6);
+  }
+
+  @container (min-width: 720px) {
+    .list-out {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  .list-out .sub {
+    display: block;
+  }
+
+  .list-lead {
+    grid-column: 1 / -1;
+    max-width: 62rem;
+  }
+
+  .block {
+    display: block;
+    margin-block: var(--space-2);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .as-table {
+    margin-top: var(--space-5);
+  }
+
+  .as-table summary {
+    width: fit-content;
+    padding-block: 0.125rem;
+    cursor: pointer;
+  }
+
+  table.bins {
+    max-width: 32rem;
+    margin-top: var(--space-3);
   }
 }

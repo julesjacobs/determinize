@@ -143,9 +143,10 @@ and the sampling worker run it. The page (`sim/src/ui/`) keeps its state in sign
 `@preact/signals-core`. It samples in a worker (`sim/src/worker.ts`) and computes the step
 table in another (`sim/src/trace-worker.ts`), which keeps the run and sends it a page at a time;
 where no worker can start, as when `sim/dist/index.html` is opened from disk, it does both on its
-own thread, sampling in slices of about 50 ms. "Run N" evaluates with ports of Lean's evaluator and samplers, SplitMix64 included
-(`sim/src/core/runtime/eval.ts` and `sampling.ts`, after `Runtime/Eval.lean` and
-`Runtime/Sampling.lean`): run i of a program and of its determinization starts at seed s + i, so
+own thread, sampling in slices of about 50 ms. "Run both" evaluates with ports of Lean's
+evaluator and samplers, SplitMix64 included (`sim/src/core/runtime/eval.ts` and `sampling.ts`,
+after `Runtime/Eval.lean` and `Runtime/Sampling.lean`): run i of a program and of its
+determinization starts at seed s + i, so
 its statistics are those of `./run.sh --seed s --samples N`. `sim/test/fixtures/lean-cli.json`
 records what the Lean CLI prints for every case of `tests/cases.toml`, and the tests compare the
 ports with it; `node scripts/lean-fixtures.ts` in `sim/` records it again. The step table follows
