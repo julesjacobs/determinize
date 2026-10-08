@@ -12,6 +12,7 @@ import { mountProgramView } from "./ui/program-view.ts";
 import { createSampling } from "./ui/sampling.ts";
 import type { Store } from "./ui/store.ts";
 import { createStore } from "./ui/store.ts";
+import { createTraceClient } from "./ui/trace-client.ts";
 import { mountTraceView } from "./ui/trace-view.ts";
 import { bindUrl } from "./ui/url.ts";
 
@@ -41,6 +42,7 @@ function randomSeed() {
 /** The page, from the state in its link or else the first example. */
 function start(decoded: Decoded): Store {
   const sampling = createSampling((response) => store.receive(response));
+  const traces = createTraceClient((response) => store.receiveTrace(response));
   const initial =
     decoded.kind === "state"
       ? decoded.state
@@ -48,6 +50,7 @@ function start(decoded: Decoded): Store {
   const store = createStore(
     { source: initial.source, seed: initial.seed, exampleId: initial.example },
     (request) => sampling.send(request),
+    (request) => traces.request(request),
   );
   mountTraceView(
     {

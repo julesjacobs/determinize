@@ -50,12 +50,14 @@ async function setRunCount(page: Page, count: number) {
 
 /** Records the duration of every long task on the page's main thread from now on. */
 async function watchLongTasks(page: Page) {
-  await page.evaluate(() => {
-    window.longTasks = [];
-    new PerformanceObserver((list) => {
-      for (const entry of list.getEntries()) window.longTasks.push(entry.duration);
-    }).observe({ type: "longtask" });
-  });
+  await page.evaluate(observeLongTasks);
+}
+
+function observeLongTasks() {
+  window.longTasks = [];
+  new PerformanceObserver((list) => {
+    for (const entry of list.getEntries()) window.longTasks.push(entry.duration);
+  }).observe({ type: "longtask" });
 }
 
 const status = (page: Page) => page.locator("#coupling-status");
@@ -73,8 +75,8 @@ for (const [where, url, worker] of [
     await page.getByRole("button", { name: "Run 200" }).click();
     await settled(page);
     await expect(samples(page)).toHaveText("201 runs");
-    expect(workers.map((started) => new URL(started).pathname.split("/").at(-1))).toEqual(
-      worker ? ["worker.js"] : [],
+    expect(workers.map((started) => new URL(started).pathname.split("/").at(-1)).sort()).toEqual(
+      worker ? ["trace-worker.js", "worker.js"] : [],
     );
   });
 }
@@ -330,13 +332,16 @@ test("a long run shows its steps a page at a time", async ({ page }) => {
   const irwinHall = new URL("../../examples/loops/irwin_hall.det", import.meta.url);
   await page.goto(linkTo(readFileSync(irwinHall, "utf8"), 3));
   const pager = page.getByRole("navigation", { name: "Pages of the step table" });
-  await expect(pager).toContainText("Steps 0–199 of 1607");
-  await expect(page.locator(".coupling-row")).toHaveCount(200);
+  await expect(pager).toContainText(/Steps 0–\d+ of 1607/);
+  const end = Number((await pager.textContent())?.match(/Steps 0–(\d+)/)?.[1]);
+  expect(end).toBeGreaterThan(0);
+  await expect(page.locator(".coupling-row")).toHaveCount(end + 1);
   await pager.getByRole("button", { name: "Next" }).click();
-  await expect(pager).toContainText("Steps 200–399 of");
-  await expect(page.locator(".coupling-row").first()).toHaveAttribute("data-step", "200");
+  await expect(pager).toContainText(`Steps ${end + 1}–`);
+  await expect(page.locator(".coupling-row").first()).toHaveAttribute("data-step", String(end + 1));
   await pager.getByRole("button", { name: "Last" }).click();
   await expect(pager.getByRole("button", { name: "Last" })).toBeDisabled();
+  await expect(pager).toContainText(/–1606 of 1607/);
   await expect(status(page)).toHaveText("seed 3 - checked");
 });
 
@@ -345,15 +350,36 @@ test("a run that doesn't end stops at the step table's limit", async ({ page }) 
   await expect(status(page)).toHaveText("seed 1 - stopped after 20000 steps");
 });
 
-test("a deep recursion stops where the step table grows too large to show", async ({ page }) => {
+test("a deep recursion stops where the step table grows too large, without a long task", async ({
+  page,
+}) => {
   const deep = "let u = uniform(0, 1) in (rec f n => if n < 1 then u else 1 + f (n - 1)) 2000";
+  // From the start of the page, which opens with this program.
+  await page.addInitScript(observeLongTasks);
   await page.goto(linkTo(deep, 1));
-  // The page computes the table up to its size bound, which takes about 2 s in Node.
+  // The step table's worker computes the table up to its size bound, which takes about 2 s.
   await expect(status(page)).toHaveText(
     /^seed 1 - stopped after \d+ steps: the table grew too large to show$/,
     { timeout: 20_000 },
   );
   await expect(page.getByRole("button", { name: "Run 200" })).toBeEnabled();
+  const longTasks = await page.evaluate(() => window.longTasks);
+  test.info().annotations.push({ type: "long tasks (ms)", description: JSON.stringify(longTasks) });
+  expect(Math.max(0, ...longTasks)).toBeLessThanOrEqual(200);
+});
+
+test("a newer program replaces the step table's computation in flight", async ({ page }) => {
+  const deep = "let u = uniform(0, 1) in (rec f n => if n < 1 then u else 1 + f (n - 1)) 2000";
+  const workers: string[] = [];
+  page.on("worker", (started) => workers.push(new URL(started.url()).pathname));
+  await page.goto(linkTo(deep, 1));
+  await expect(status(page)).toHaveText("Computing the steps…");
+  await page.locator(".cm-content").first().click();
+  await page.keyboard.press("Control+A");
+  await page.keyboard.type("1 + 2");
+  await expect(status(page)).toHaveText("seed 1 - checked");
+  // The worker that computed the deep recursion was terminated and replaced.
+  expect(workers.filter((path) => path.endsWith("/trace-worker.js"))).toHaveLength(2);
 });
 
 test("a link to an example the gallery doesn't have selects none", async ({ page }) => {

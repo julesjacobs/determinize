@@ -140,15 +140,16 @@ against Node's (`tsconfig.node.json`).
 `sim/src/core/` holds the compiler, the runtime and what the step table and the statistics
 compute. A Biome override keeps it free of the DOM, CodeMirror and signals, so that Node's tests
 and the sampling worker run it. The page (`sim/src/ui/`) keeps its state in signals of
-`@preact/signals-core` and samples in a worker (`sim/src/worker.ts`), or, where no worker can
-start, as when `sim/dist/index.html` is opened from disk, on its own thread in slices of about
-50 ms. "Run N" evaluates with ports of Lean's evaluator and samplers, SplitMix64 included
+`@preact/signals-core`. It samples in a worker (`sim/src/worker.ts`) and computes the step
+table in another (`sim/src/trace-worker.ts`), which keeps the run and sends it a page at a time;
+where no worker can start, as when `sim/dist/index.html` is opened from disk, it does both on its
+own thread, sampling in slices of about 50 ms. "Run N" evaluates with ports of Lean's evaluator and samplers, SplitMix64 included
 (`sim/src/core/runtime/eval.ts` and `sampling.ts`, after `Runtime/Eval.lean` and
 `Runtime/Sampling.lean`): run i of a program and of its determinization starts at seed s + i, so
 its statistics are those of `./run.sh --seed s --samples N`. `sim/test/fixtures/lean-cli.json`
 records what the Lean CLI prints for every case of `tests/cases.toml`, and the tests compare the
 ports with it; `node scripts/lean-fixtures.ts` in `sim/` records it again. The step table follows
-run 0 for at most 20000 symbolic steps and shows 200 at a time.
+run 0 for at most 20000 symbolic steps, in pages of at most 200 steps.
 
 The `.#sim` shell, which direnv loads in `sim/`, links `sim/node_modules` to packages that
 Nix builds from `sim/package-lock.json`; the combined shell does not. To add or update a
