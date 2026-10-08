@@ -1,7 +1,7 @@
 // The example gallery: an ordered list, because its order is a reading order, opened from the
 // header's Example button. Each entry is a link that shares the example's program at seed 1, with
-// one sentence and whether the paper presents it. Below 768 px the list opens as a modal dialog,
-// above as a menu under the button.
+// one sentence and whether the paper presents it; "New program" links to an empty one. Below
+// 768 px the list opens as a modal dialog, above as a menu under the button.
 import { effect } from "@preact/signals-core";
 import { examples } from "../core/examples.ts";
 import { encodeShare } from "../core/share.ts";
@@ -23,6 +23,14 @@ export function mountGallery(
   store: Pick<Store, "exampleId" | "source">,
 ) {
   const { button, dialog, list } = elements;
+  const blank = document.createElement("a");
+  blank.className = "button-link";
+  blank.textContent = "New program";
+  blank.href = "#";
+  void encodeShare({ source: "", seed: gallerySeed, example: "" }).then((hash) => {
+    blank.href = hash;
+  });
+  elements.close.before(blank);
   const links = examples.map((example) => {
     const item = document.createElement("li");
     const link = document.createElement("a");
@@ -52,7 +60,8 @@ export function mountGallery(
   effect(() => {
     const example = examples.find((entry) => entry.id === store.exampleId.value);
     const edited = !example || example.source !== store.source.value;
-    elements.title.textContent = edited ? "Your program" : example.title;
+    const blank = store.source.value.trim() === "";
+    elements.title.textContent = !edited ? example.title : blank ? "New program" : "Your program";
     for (const link of links) {
       const current = !edited && link.dataset.example === example.id;
       link.parentElement?.toggleAttribute("aria-current", current);

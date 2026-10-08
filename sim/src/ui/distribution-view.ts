@@ -277,7 +277,7 @@ export function mountDistributionView(
       empty.hidden = predicting.peek();
       empty.textContent =
         store.checkedSource.peek().trim() === ""
-          ? "Write a program or pick an example, then run both programs to compare their outputs."
+          ? "Write a program to compare its runs with the determinized program's."
           : runnable.peek()
             ? "Run both programs to compare their outputs."
             : result.ok || result.stage !== null

@@ -234,6 +234,15 @@ function siteAt(source: string, pos: number) {
   return sitesOf(result).find((span) => span.from <= pos && pos <= span.to) ?? null;
 }
 
+/** What an empty editor shows: a program with a G draw and an E draw, as an example of the
+ * syntax. */
+function template() {
+  const dom = document.createElement("span");
+  dom.textContent =
+    "(* For example: *)\nlet x = uniform(0, 1) in\nlet y = gauss[E](x, 1) in\nx * y";
+  return dom;
+}
+
 /** The editor; the diagnostics of the text it opens with, or that `replaceDoc` puts in, show at
  * once, those of typing after a pause. */
 export function createEditor(parent: HTMLElement, doc: string, bindings: EditorBindings) {
@@ -278,7 +287,7 @@ export function createEditor(parent: HTMLElement, doc: string, bindings: EditorB
         { delay: analysisDelayMs },
       ),
       hovers(),
-      placeholder("Write a program, or pick an example."),
+      placeholder(template()),
       keymap.of([...defaultKeymap, ...historyKeymap]),
       // The content is in the tab order already; the attribute says so to checkers that look for
       // focusable content in a region that scrolls.

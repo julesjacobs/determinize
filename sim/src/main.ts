@@ -170,6 +170,12 @@ function start(decoded: Decoded): Store {
     if (store.trace.value.kind !== "run") followed = store.followLinked.peek();
   });
 
+  // An empty editor says what to write.
+  const hint = $<HTMLElement>("#source-hint");
+  effect(() => {
+    hint.hidden = store.source.value.trim() !== "";
+  });
+
   effect(() => {
     seedInput.value = String(store.seed.value);
   });
