@@ -221,6 +221,32 @@ test("a link restores the program, the seed and the example", async ({ page, con
   );
 });
 
+test("a link navigated to is restored, though the page rewrites its fragment before the event", async ({
+  page,
+}) => {
+  await page.goto(simulator);
+  await pick(page, "Dungeon crawl");
+  await expect.poll(() => new URL(page.url()).hash).toMatch(/^#v1=/);
+  const link = linkTo("uniform(0, 1)", 1);
+  await page.evaluate(
+    (hash) => {
+      const own = window.location.hash;
+      window.location.hash = hash;
+      // The page's delayed write of its own fragment, between the navigation and its event.
+      history.replaceState(history.state, "", own);
+    },
+    link.slice(link.indexOf("#")),
+  );
+  await expect
+    .poll(() =>
+      page.evaluate(async () => {
+        const { source, seed } = await window.DeterminizeSim.ready;
+        return { source: source.value, seed: seed.value };
+      }),
+    )
+    .toEqual({ source: "uniform(0, 1)", seed: 1 });
+});
+
 test("a variance that overflows shows as Lean's CLI prints it", async ({ page }) => {
   await page.goto(linkTo("uniform(0, 1e200)", 1));
   await setRunCount(page, 10);

@@ -37,10 +37,12 @@ export function bindUrl(
       history.replaceState(history.state, "", hash);
     }, writeDelayMs);
   });
-  window.addEventListener("hashchange", async () => {
-    if (window.location.hash === written) return;
-    written = window.location.hash;
-    restore(await decodeShare(written));
+  // The fragment navigated to, which the page's own write may have replaced before the event.
+  window.addEventListener("hashchange", async (event) => {
+    const hash = new URL(event.newURL).hash;
+    if (hash === written) return;
+    written = hash;
+    restore(await decodeShare(hash));
   });
 }
 
