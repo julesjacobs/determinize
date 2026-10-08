@@ -458,12 +458,21 @@
     min-width: 5.5em;
   }
 
-  /* At least about one row, even where the bar and the region then exceed a short viewport. */
+  /* As tall as the run, up to what fits in the viewport below the bar, but at least about one row,
+     even where the bar and the region then exceed a short viewport. */
   .step-table {
     position: relative;
-    block-size: min(36rem, calc(100dvh - var(--transport-height, 8rem) - var(--space-7)));
-    min-block-size: 12rem;
+    max-block-size: max(
+      12rem,
+      min(40rem, calc(100dvh - var(--transport-height, 8rem) - var(--space-7)))
+    );
     overflow-y: auto;
+    /* A rule at the bottom while more rows follow; the same border, uncoloured, otherwise. */
+    border-bottom: 1px solid transparent;
+  }
+
+  .step-table.more-below {
+    border-bottom-color: var(--rule);
   }
 
   .step-controls {
