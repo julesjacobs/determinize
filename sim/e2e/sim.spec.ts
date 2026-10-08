@@ -83,6 +83,19 @@ function observeLongTasks() {
   }).observe({ type: "longtask" });
 }
 
+/** The long tasks during each of `actions`, done one after the other, and how long the middle one
+ * of their longest tasks took: a regression slows every action, a busy machine only some. */
+async function longTasksPer(page: Page, actions: (() => Promise<void>)[]) {
+  const each: number[][] = [];
+  for (const action of actions) {
+    const from = await page.evaluate(() => window.longTasks.length);
+    await action();
+    each.push(await page.evaluate((n) => window.longTasks.slice(n).map(Math.round), from));
+  }
+  const longest = each.map((tasks) => Math.max(0, ...tasks)).sort((a, b) => a - b);
+  return { median: longest[Math.floor(longest.length / 2)], each: JSON.stringify(each) };
+}
+
 const status = (page: Page) => page.locator("#steps-status");
 
 /** The step table's run as the page's store has it: its seed, its steps and whether every step
@@ -571,6 +584,29 @@ test("a long run shows its steps a page at a time, and the controls reach every 
   expect(fits).toBe(true);
 });
 
+test("a long state shows its first lines, and in the current row all of them", async ({ page }) => {
+  await page.goto(simulator);
+  await pick(page, "Dungeon crawl");
+  await expect(page.locator('.step[data-step="0"] .cell-source')).toContainText("crawl");
+  const row = page.locator('.step[data-step="1"]');
+  const source = row.locator(".cell-source .state");
+  await expect(source.locator(".sl:visible")).toHaveCount(3);
+  await expect(source.locator(".more")).toBeVisible();
+  await row.click();
+  await expect(row).toHaveAttribute("aria-current", "step");
+  await expect(source.locator(".more")).toBeHidden();
+  const lines = await source.locator(".sl").count();
+  expect(lines).toBeGreaterThan(3);
+  await expect(source.locator(".sl:visible")).toHaveCount(lines);
+  await expect(source).toContainText("bernoulli");
+  // Once another row is current, the row shows its first lines again.
+  await page.locator("#step-table").focus();
+  await page.keyboard.press("ArrowDown");
+  await expect(row).not.toHaveAttribute("aria-current", "step");
+  await expect(source.locator(".sl:visible")).toHaveCount(3);
+  await expect(source.locator(".more")).toBeVisible();
+});
+
 test("a number links to a symbol only where it stands for it", async ({ page }) => {
   await page.goto(simulator);
   await passed(page, 1);
@@ -846,6 +882,28 @@ test("a run that doesn't end stops at the step table's limit", async ({ page }) 
   await expect(status(page)).toHaveText(
     "Seed 1: the table stops after 20000 steps; Lean's fuel may still let the run return.",
   );
+});
+
+test("paging through a long run with a large σ takes under 200 ms a page, as a median", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  const program =
+    "let f = rec f n => if n <= 0 then 0 else gauss[E](0, 1) + uniform(0, 1) + f (n - 1) in f 300";
+  await page.goto(linkTo(program, 1));
+  await passed(page, 1);
+  await settled(page, 60_000);
+  await page.locator("#step-table").focus();
+  await page.keyboard.press("End");
+  await expect(page.locator("#steps")).not.toHaveAttribute("aria-busy", "true");
+  await watchLongTasks(page);
+  const pages = Array.from({ length: 10 }, () => async () => {
+    await page.keyboard.press("PageUp");
+    await page.waitForTimeout(200);
+  });
+  const { median, each } = await longTasksPer(page, pages);
+  test.info().annotations.push({ type: "long tasks per page (ms)", description: each });
+  expect(median, `long tasks per page (ms): ${each}`).toBeLessThanOrEqual(200);
 });
 
 test("a deep recursion stops where the step table grows too large, without a long task", async ({

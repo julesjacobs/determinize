@@ -79,6 +79,11 @@ export function mountTraceView(
       ]),
     );
   });
+  /** The row and the symbol that `showCorrespondence` marked last. */
+  let corresponding: { row: HTMLElement | null; symbol: string | null } = {
+    row: null,
+    symbol: null,
+  };
 
   effect(() => {
     elements.gTrace.textContent = describeTraces(store.shownTraces.value);
@@ -194,10 +199,30 @@ export function mountTraceView(
         toggle(button);
       }
     }
-    elements.table
-      .querySelector<HTMLElement>(`.step[data-step="${step}"]`)
-      ?.setAttribute("aria-current", "step");
+    const row = elements.table.querySelector<HTMLElement>(`.step[data-step="${step}"]`);
+    if (!row) return;
+    renderWhole(row);
+    row.setAttribute("aria-current", "step");
     markMore();
+  }
+
+  /** Renders whole the states and σ that `row` holds cut, as the current row shows them in full. */
+  function renderWhole(row: HTMLElement) {
+    if (!row.querySelector(".state.cut, .sigma.cut")) return;
+    const page = run.peek()?.page;
+    const frame = page?.frames[Number(row.dataset.step) - page.first];
+    if (!page || !frame) return;
+    const sigma = sigmaView(frame.sigma);
+    const states = rowStates(frame, facts.peek().get(frame.step));
+    for (const kind of ["source", "sym", "det"] as const) {
+      const cut = row.querySelector(`.cell-${kind} > .state.cut`);
+      if (cut) cut.outerHTML = state(states[kind]);
+    }
+    const added = sigma.count - (frameBefore(page, frame)?.sigma.length ?? 0);
+    const cutSigma = row.querySelector(".sigma.cut");
+    if (cutSigma) cutSigma.outerHTML = sigmaBlock(sigma, added);
+    // The new states lack the marks of the part under the pointer.
+    if (corresponding.row === row) showCorrespondence(row, corresponding.symbol);
   }
 
   /**
@@ -209,6 +234,17 @@ export function mountTraceView(
     const region = elements.table;
     const row = region.querySelector<HTMLElement>(`.step[data-step="${store.currentStep.peek()}"]`);
     if (!row) return;
+    // The rows that the region may show around the current row render before they are measured:
+    // it and those above it, up to the region's height.
+    let above = 0;
+    for (
+      let near: Element | null = row;
+      near instanceof HTMLElement && above < region.clientHeight;
+      near = near.previousElementSibling
+    ) {
+      near.classList.add("near");
+      above += near.offsetHeight;
+    }
     const head = region.querySelector<HTMLElement>(".step-head");
     const covered = head?.offsetParent ? head.offsetHeight : 0;
     const margin = 8;
@@ -315,6 +351,7 @@ export function mountTraceView(
 
   /** Marks, within `row`, the symbol `symbol` of σ and the values that correspond to it. */
   function showCorrespondence(row: HTMLElement | null | undefined, symbol: string | null) {
+    corresponding = { row: row ?? null, symbol };
     for (const item of elements.table.querySelectorAll(".corr-active")) {
       item.classList.remove("corr-active");
     }
@@ -415,15 +452,41 @@ export function htmlLines(html: string): string[] {
 }
 
 /** A state as lines that keep their indentation when they wrap; a long one ends in "…" in every
- * row but the current one. */
-function state(html: string) {
-  const lines = htmlLines(html).map((line) => {
+ * row but the current one. Cut, it holds only the lines that those rows show, so that a page
+ * renders quickly; a row that becomes current renders it whole. */
+function state(html: string, whole = true) {
+  const all = htmlLines(html);
+  const long = all.length > shownLines;
+  const lines = (whole ? all : all.slice(0, shownLines)).map((line) => {
     const indent = /^ */.exec(line.replace(/^(<[^>]+>)+/, ""))?.[0].length ?? 0;
     const text = line.replace(/^((?:<[^>]+>)*) +/, "$1");
     return `<span class="sl" style="--indent: ${indent}">${text || "&nbsp;"}</span>`;
   });
-  const long = lines.length > shownLines;
-  return `<code class="state${long ? " long" : ""}">${lines.join("")}${long ? '<span class="more">…<span class="vh"> more lines not shown</span></span>' : ""}</code>`;
+  const classes = ["state", ...(long ? ["long"] : []), ...(long && !whole ? ["cut"] : [])];
+  return `<code class="${classes.join(" ")}">${lines.join("")}${long ? '<span class="more">…<span class="vh"> more lines not shown</span></span>' : ""}</code>`;
+}
+
+/** A row's states: the source with its sampled values, the symbolic state and the determinized
+ * program with σ's means, each with the part that the step produced. */
+function rowStates(frame: Frame, fact: StepFacts | undefined) {
+  return {
+    source: renderTraceExpr(frame.original, {
+      counterpart: frame.symbolic,
+      valueLabel: "sampled value for",
+      short: true,
+      focusPath: part(fact?.focus.original, frame.original),
+    }),
+    sym: renderTraceExpr(frame.symbolic, {
+      short: true,
+      focusPath: part(fact?.focus.symbolic, frame.symbolic),
+    }),
+    det: renderTraceExpr(frame.determinized, {
+      counterpart: frame.symbolic,
+      valueLabel: "mean substituted for",
+      short: true,
+      focusPath: part(fact?.focus.determinized, frame.determinized),
+    }),
+  };
 }
 
 /** The latest bindings of σ that the current row shows, and that the other rows show; the
@@ -445,13 +508,15 @@ function expander(more: string, fewer: string) {
   return `<button type="button" class="expander" aria-expanded="false" data-more="${more}" data-fewer="${fewer}">${more}</button>`;
 }
 
-/** σ, its bindings since the step before marked, as a block above the symbolic program. */
-function sigmaBlock(lines: string[], added: number) {
+/** σ, its bindings since the step before marked, as a block above the symbolic program. Cut, it
+ * holds only the bindings that rows other than the current one show. */
+function sigmaBlock(sigma: { lines: string[]; count: number }, added: number, whole = true) {
   const label = '<span class="sigma-label">σ</span>';
-  if (lines.length === 0)
+  if (sigma.count === 0)
     return `<span class="sigma">${label}<span class="sigma-lines">empty</span></span>`;
-  const items = lines.map((line, index) => {
-    const age = lines.length - index;
+  const shown = whole ? sigma.lines : sigma.lines.slice(-shownBindings);
+  const items = shown.map((line, offset) => {
+    const age = shown.length - offset;
     const classes = [
       "sigma-line",
       ...(age <= added ? ["sigma-new"] : []),
@@ -461,13 +526,18 @@ function sigmaBlock(lines: string[], added: number) {
     return `<span class="${classes.join(" ")}">${line}</span>`;
   });
   const count = (n: number) => `… ${n} earlier binding${n === 1 ? "" : "s"}`;
-  const elsewhere = lines.length - shownBindings;
-  const current = lines.length - currentBindings;
+  const elsewhere = sigma.count - shownBindings;
+  const current = sigma.count - currentBindings;
   const more =
     (elsewhere > 0
       ? `<span class="sigma-more">${count(elsewhere)}<span class="vh"> not shown</span></span>`
-      : "") + (current > 0 ? expander(count(current), "Fewer bindings") : "");
-  return `<span class="sigma">${label}<span class="sigma-lines">${more}${items.join("")}</span></span>`;
+      : "") + (whole && current > 0 ? expander(count(current), "Fewer bindings") : "");
+  return `<span class="sigma${whole ? "" : " cut"}">${label}<span class="sigma-lines">${more}${items.join("")}</span></span>`;
+}
+
+/** The frame before `frame` on `page`, against which its change shows. */
+function frameBefore(page: TracePage, frame: Frame) {
+  return frame.step === page.first ? page.previous : page.frames[frame.step - page.first - 1];
 }
 
 function renderRows(
@@ -480,19 +550,8 @@ function renderRows(
   const head = `<div class="step-head" aria-hidden="true"><span></span><span>Source</span><span>G draw</span><span>Symbolic state</span><span>${right}</span></div>`;
   const rows = page.frames.map((frame) => {
     const fact = facts.get(frame.step);
-    const sigma = sigmaView(frame.sigma);
-    const source = renderTraceExpr(frame.original, {
-      counterpart: frame.symbolic,
-      valueLabel: "sampled value for",
-      short: true,
-      focusPath: part(fact?.focus.original, frame.original),
-    });
-    const determinized = renderTraceExpr(frame.determinized, {
-      counterpart: frame.symbolic,
-      valueLabel: "mean substituted for",
-      short: true,
-      focusPath: part(fact?.focus.determinized, frame.determinized),
-    });
+    const sigma = sigmaView(frame.sigma, shownBindings);
+    const states = rowStates(frame, fact);
     const eDraw = fact?.eDraw;
     const gDraw = fact?.gDraw;
     const mean = fact?.mean;
@@ -511,9 +570,7 @@ function renderRows(
     const draw = gDraw
       ? `<span class="draw"><code>${gDraw.name ? `${escapeHtml(gDraw.name)} ← ` : ""}${correspondingStep(renderTraceExpr(gDraw.value, { short: true }))}</code><span class="draw-d">${renderHighlightedText(gDraw.distribution, { short: true })}</span></span>`
       : "";
-    const before =
-      frame.step === page.first ? page.previous : page.frames[frame.step - page.first - 1];
-    const added = sigma.lines.length - (before?.sigma.length ?? 0);
+    const added = sigma.count - (frameBefore(page, frame)?.sigma.length ?? 0);
     const result =
       frame.symbolic.kind === "SymFloat" && isValue(frame.symbolic)
         ? note(
@@ -524,21 +581,14 @@ function renderRows(
     const symbolicCell = cell(
       "sym",
       "Symbolic state",
-      sigmaBlock(sigma.lines, added) +
-        state(
-          renderTraceExpr(frame.symbolic, {
-            short: true,
-            focusPath: part(fact?.focus.symbolic, frame.symbolic),
-          }),
-        ) +
-        result,
+      sigmaBlock(sigma, added, false) + state(states.sym, false) + result,
     );
     return `<li class="step${gDraw ? " has-draw" : ""}" data-step="${frame.step}">
       <span class="step-n">${frame.step}</span>
-      ${cell("source", "Source", state(source) + sourceNote)}
+      ${cell("source", "Source", state(states.source, false) + sourceNote)}
       <div class="cell cell-draw">${draw ? `<span class="cell-label">G draw</span>${draw}` : ""}</div>
       ${symbolicCell}
-      ${cell("det", right, state(determinized) + meanNote)}
+      ${cell("det", right, state(states.det, false) + meanNote)}
       ${run.counterexample ? "" : checkNote(frame)}
     </li>`;
   });
@@ -602,10 +652,12 @@ function affineMean(affine: Affine, means: Record<string, number>) {
 }
 
 /** σ, the E draws of the symbolic state so far, each with its mean. */
-function sigmaView(sigma: Binding[]) {
+function sigmaView(sigma: Binding[], shown = sigma.length) {
   const meanBySymbol: Record<string, number> = {};
-  const lines = sigmaMeans(sigma).map(({ binding, mean, error }) => {
+  const lines: string[] = [];
+  for (const [index, { binding, mean, error }] of sigmaMeans(sigma).entries()) {
     meanBySymbol[binding.name] = mean;
+    if (index < sigma.length - shown) continue;
     const args = binding.args
       .map((arg) => renderHighlightedText(prettyAffine(arg), { short: true }))
       .join(", ");
@@ -613,7 +665,9 @@ function sigmaView(sigma: Binding[]) {
     const value = error
       ? `<span class="sigma-error" title="${escapeHtml(error)}">no mean: a domain error</span>`
       : `mean <span class="corr-item" data-corr="${name}" title="mean substituted for ${name}">${escapeHtml(formatNumber(mean))}</span>`;
-    return `<span class="corr-item tok-sym" data-corr="${name}">${name}</span> ~ ${distributionName(binding.kind)}(${args}), ${value}`;
-  });
-  return { lines, meanBySymbol };
+    lines.push(
+      `<span class="corr-item tok-sym" data-corr="${name}">${name}</span> ~ ${distributionName(binding.kind)}(${args}), ${value}`,
+    );
+  }
+  return { lines, count: sigma.length, meanBySymbol };
 }

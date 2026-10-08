@@ -106,6 +106,16 @@ const states: { name: string; open: (page: Page) => Promise<void> }[] = [
     },
   },
   {
+    name: "a long run",
+    open: async (page) => {
+      await page.goto("sim/");
+      await pick(page, "Dungeon crawl");
+      // Rows out of the region's view skip their rendering, which leaves axe without their
+      // colours; here they all render.
+      await page.addStyleTag({ content: ".step { content-visibility: visible !important; }" });
+    },
+  },
+  {
     name: "a rejected program",
     open: async (page) => {
       await page.goto(linkTo("true + 1"));

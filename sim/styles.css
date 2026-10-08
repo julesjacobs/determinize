@@ -572,6 +572,13 @@
       border-color var(--step-fade);
   }
 
+  /* Rows past the first 30, which fill the region at any height, skip their style and layout out of
+     view, so that a page renders quickly; the region renders those it scrolls to (.near) first. */
+  .step:nth-child(n + 31):not(.near) {
+    content-visibility: auto;
+    contain-intrinsic-block-size: auto 7rem;
+  }
+
   .step > :not(.step-n) {
     grid-column: 2;
   }
