@@ -59,9 +59,6 @@ export interface Store {
   exampleId: Signal<string>;
   /** The number of runs that "Run N" adds. */
   sampleCount: Signal<number>;
-  typeHints: Signal<boolean>;
-  /** The source range whose type hint the pointer or the focus is on. */
-  hoveredSpan: Signal<Span | null>;
   /** The step of the step table whose checks are shown. */
   activeStep: Signal<number | null>;
   samples: ReadonlySignal<Samples>;
@@ -81,7 +78,7 @@ export interface Store {
 }
 
 /** The pause in typing after which the editor's text is analyzed and run. */
-const analysisDelayMs = 500;
+export const analysisDelayMs = 500;
 
 let lastAnalysis: { source: string; analysis: Analysis } | null = null;
 
@@ -160,8 +157,6 @@ export function createStore(
   const seed = signal(initial.seed);
   const exampleId = signal(initial.exampleId);
   const sampleCount = signal(200);
-  const typeHints = signal(false);
-  const hoveredSpan = signal<Span | null>(null);
   const activeStep = signal<number | null>(null);
   const analysis = computed(() => analyzeSource(checkedSource.value));
   const runner = computed(() => runnerOf(analysis.value));
@@ -272,8 +267,6 @@ export function createStore(
     seed,
     exampleId,
     sampleCount,
-    typeHints,
-    hoveredSpan,
     activeStep,
     samples,
     running,

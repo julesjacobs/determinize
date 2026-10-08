@@ -162,8 +162,13 @@
     gap: var(--space-2);
   }
 
-  /* Programs: side by side where two 42-character lines of code fit, stacked below. */
+  /* Programs: side by side where two 42-character lines of code fit, stacked below. Both panes
+     have one height, in lines of code, and scroll inside, so that the page keeps its layout however
+     long the program. */
   .programs {
+    --pane-lines: 10;
+    --code-line: calc(var(--leading-code) * var(--size-code));
+    --pane-height: calc(var(--pane-lines) * var(--code-line) + 2 * var(--space-3));
     display: grid;
     gap: var(--space-5) var(--space-6);
     grid-template-columns: minmax(0, 1fr);
@@ -171,6 +176,7 @@
 
   @container (min-width: 900px) {
     .programs {
+      --pane-lines: 14;
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
@@ -189,24 +195,80 @@
     color: var(--change);
   }
 
-  .editor .cm-editor {
-    border-radius: 3px;
-    background: var(--code-fill);
+  /* The checked type and the sample sites, a line each, so that the foot keeps its height. */
+  .pane-foot {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    margin-top: var(--space-2);
+    color: var(--muted);
   }
 
-  .editor-controls {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--space-2);
+  .pane-foot code {
+    color: var(--ink);
+  }
+
+  .pane-empty {
+    height: var(--pane-height);
+    margin: 0;
+    padding-block: var(--space-3);
+    color: var(--muted);
+  }
+
+  .annotated {
     margin-top: var(--space-2);
   }
 
-  .toggle-control {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-2);
-    min-height: 1.5rem;
+  .annotated summary {
+    width: fit-content;
+    padding-block: 0.125rem;
+    color: var(--muted);
+    cursor: pointer;
+  }
+
+  .lean-program {
+    margin-top: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    overflow-x: auto;
+    border-radius: 3px;
+    background: var(--code-fill);
+    line-height: var(--leading-code);
+  }
+
+  /* An alert: the words first, a rule on the left, and the colour only repeating the words. */
+  .alert {
+    margin-block: var(--space-3);
+    padding: var(--space-1) 0 var(--space-1) var(--space-3);
+    border-left: 3px solid var(--alert);
+  }
+
+  .alert strong {
+    color: var(--alert);
+    font-weight: var(--weight-strong);
+  }
+
+  .pane-det.counter {
+    padding-left: var(--space-4);
+    border-left: 3px solid var(--alert);
+  }
+
+  .pane-det.counter .pane-title {
+    color: var(--alert);
+  }
+
+  .counter-label {
+    margin-top: 0;
+  }
+
+  .lean-note {
+    grid-column: 1 / -1;
+    max-width: 62rem;
+    color: var(--muted);
+    font-size: var(--size-small);
+  }
+
+  .premises-interim {
+    grid-column: 1 / -1;
   }
 
   .status {
@@ -878,80 +940,6 @@
     color: var(--change);
   }
 
-  .type-tooltip {
-    max-width: 360px;
-    white-space: pre-wrap;
-    border: 1px solid var(--line-strong);
-    border-radius: 8px;
-    background: var(--ink);
-    color: var(--code-fill);
-    padding: 8px 10px;
-    font: 12px/1.45 "SF Mono", Menlo, Monaco, Consolas, monospace;
-  }
-
-  .diagnostic-tooltip {
-    max-width: 420px;
-    white-space: pre-wrap;
-    border: 1px solid color-mix(in oklab, var(--alert) 40%, var(--ground));
-    border-radius: 8px;
-    background: var(--alert);
-    color: color-mix(in oklab, var(--alert) 6%, var(--ground));
-    padding: 8px 10px;
-    font: 12px/1.45 "SF Mono", Menlo, Monaco, Consolas, monospace;
-  }
-
-  .diagnostic-squiggle {
-    text-decoration-line: underline;
-    text-decoration-style: wavy;
-    text-decoration-color: var(--alert);
-    text-decoration-thickness: 1.5px;
-    text-underline-offset: 3px;
-  }
-
-  .diagnostic-point {
-    display: inline-block;
-    width: 10px;
-    height: 1.15em;
-    margin-left: 1px;
-    vertical-align: text-bottom;
-    border-bottom: 2px wavy var(--alert);
-  }
-
-  .editor-diagnostics {
-    min-height: 34px;
-    border-top: 1px solid var(--line);
-    background: var(--code-fill);
-    color: var(--muted);
-    padding: 8px 12px;
-    white-space: pre-wrap;
-    font: 700 12px/1.45 "SF Mono", Menlo, Monaco, Consolas, monospace;
-  }
-
-  .editor-diagnostics.ok {
-    color: var(--green);
-  }
-
-  .editor-diagnostics.error {
-    background: color-mix(in oklab, var(--alert) 6%, var(--ground));
-    color: var(--red);
-  }
-
-  .lean-output {
-    max-height: 40vh;
-    overflow: auto;
-    border-top: 1px solid var(--line);
-    padding: 8px 12px;
-    font-size: 13px;
-  }
-
-  .lean-output[hidden] {
-    display: none;
-  }
-
-  .lean-output p {
-    margin: 0 0 8px;
-  }
-
   .premise-notice {
     border-radius: 6px;
     background: color-mix(in oklab, var(--change) 8%, var(--ground));
@@ -964,22 +952,6 @@
     display: none;
   }
 
-  .lean-output h3 {
-    margin: 8px 0 4px;
-    font-size: 13px;
-  }
-
-  .lean-program {
-    min-height: 0;
-    margin: 0;
-    padding: 8px 10px;
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    background: var(--panel-strong);
-    white-space: pre-wrap;
-    font: 600 12px/1.45 "SF Mono", Menlo, Monaco, Consolas, monospace;
-  }
-
   .counterexample-label {
     grid-column: 1 / -1;
     margin: 0 0 8px;
@@ -989,85 +961,5 @@
     padding: 8px 12px;
     font-size: 13px;
     font-weight: 800;
-  }
-
-  .mode-hint {
-    display: inline-flex;
-    align-items: center;
-    height: 17px;
-    margin: 0 1px 0 3px;
-    border: 1px solid var(--rule);
-    border-radius: 5px;
-    padding: 0 4px;
-    vertical-align: 1px;
-    font: 700 11px/1 "SF Mono", Menlo, Monaco, Consolas, monospace;
-    opacity: 0.9;
-    pointer-events: none;
-  }
-
-  .mode-hint.e-mode {
-    border-color: color-mix(in oklab, var(--given) 30%, var(--ground));
-    background: color-mix(in oklab, var(--given) 10%, var(--ground));
-    color: var(--given);
-  }
-
-  .mode-hint.g-mode {
-    border-color: color-mix(in oklab, var(--given) 30%, var(--ground));
-    background: color-mix(in oklab, var(--given) 8%, var(--ground));
-    color: var(--given);
-  }
-
-  .type-hint {
-    display: inline-flex;
-    align-items: center;
-    min-height: 17px;
-    margin: 0 2px;
-    border-radius: 5px;
-    background: var(--code-fill);
-    color: var(--muted);
-    padding: 0 4px;
-    vertical-align: 1px;
-    font: 700 11px/1 "SF Mono", Menlo, Monaco, Consolas, monospace;
-    opacity: 0.92;
-    cursor: help;
-  }
-
-  .type-hint:hover,
-  .type-hint:focus {
-    background: color-mix(in oklab, var(--given) 12%, var(--ground));
-    color: var(--given);
-    outline: 1px solid color-mix(in oklab, var(--given) 40%, var(--ground));
-  }
-
-  .type-hint.in-hovered-expression {
-    background: color-mix(in oklab, var(--given) 96%, transparent);
-    color: var(--given);
-    box-shadow: 0 0 0 1px color-mix(in oklab, var(--given) 24%, transparent);
-  }
-
-  .type-hint-target {
-    border-radius: 3px;
-    background: color-mix(in oklab, var(--given) 16%, transparent);
-    box-shadow: 0 0 0 1px color-mix(in oklab, var(--given) 32%, transparent);
-  }
-
-  @media (max-width: 980px) {
-    .workspace {
-      grid-template-columns: 1fr;
-    }
-
-    .example-picker {
-      width: 100%;
-    }
-
-    .editor-controls {
-      display: grid;
-      justify-content: stretch;
-    }
-
-    .outputs {
-      grid-template-columns: 1fr;
-    }
-
   }
 }

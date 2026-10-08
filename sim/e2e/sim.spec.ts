@@ -153,7 +153,7 @@ test("editing during a run discards its stale batches", async ({ page }) => {
   await setRunCount(page, 100000);
   await page.getByRole("button", { name: "Run 100000" }).click();
   await expect(samples(page)).not.toHaveText("1 run");
-  await page.locator(".cm-content").click();
+  await page.locator(".cm-content").first().click();
   await page.keyboard.press("Control+End");
   await page.keyboard.type(" ");
   await settled(page);
@@ -168,7 +168,7 @@ test("a link restores the program, the seed and the example", async ({ page, con
   expect(new URL(page.url()).hash).toBe("");
   await page.getByLabel("Example").selectOption({ label: "Dungeon" });
   await page.getByRole("button", { name: "Rerun" }).click();
-  await page.locator(".cm-content").click();
+  await page.locator(".cm-content").first().click();
   await page.keyboard.press("Control+End");
   await page.keyboard.type("\n(* shared *)");
   await expect.poll(() => new URL(page.url()).hash).toMatch(/^#v1=[A-Za-z0-9_-]+$/);
@@ -214,16 +214,41 @@ test("Lean's output shows the checked type, the sample sites and both programs",
 }) => {
   await page.goto(simulator);
   await expect(page.locator("#checked-type")).toHaveText("float[E]");
-  await expect(page.locator("#sample-sites")).toHaveText(
-    "2 continuous and 0 discrete draws; after determinization, 1 continuous and 0 discrete",
-  );
+  await expect(page.locator("#source-sites")).toHaveText("Sample sites: 2 continuous");
+  await expect(page.locator("#determinized-sites")).toHaveText("Sample sites: 1 continuous");
+  await page.getByText("Annotated source", { exact: true }).click();
   await expect(page.locator("#annotated-program")).toContainText("gauss[E](x, 1)");
-  await expect(page.locator("#determinized-program")).toContainText("mean_gauss(x, 1)");
+  const determinized = page.getByRole("textbox", { name: "Determinized program" });
+  await expect(determinized).toContainText("let y = mean_gauss(x, 1) in");
+  await expect(determinized).toHaveAttribute("aria-readonly", "true");
   // Lean prints nothing for a program that it rejects for another reason than a mode conflict.
-  await page.locator(".cm-content").click();
+  await page.locator(".cm-content").first().click();
   await page.keyboard.press("Control+End");
   await page.keyboard.type(" +");
-  await expect(page.locator("#lean-output")).toBeHidden();
+  await expect(page.locator("#source-alert")).toHaveText(
+    /^Lean rejects this program at parsing\.\s*Line \d+: /,
+  );
+  await expect(page.locator("#checked")).toBeHidden();
+  await expect(page.locator("#determinized-empty")).toHaveText(
+    "No determinized program: Lean rejects the source.",
+  );
+});
+
+test("a program rejected for its modes shows its counterexample in place of the determinized one", async ({
+  page,
+}) => {
+  await page.goto(simulator);
+  await page.getByLabel("Example").selectOption({ label: "Noisy product, both draws E" });
+  await expect(page.locator("#source-alert")).toHaveText(
+    /^Lean rejects this program at inference: inconsistent E\/G constraints\./,
+  );
+  await expect(page.locator("#determinized-title")).toHaveText("Replacing the [E] draws anyway");
+  await expect(page.locator("#counterexample-label")).toHaveText(
+    "Lean rejects this program; this is what replacing its [E] draws anyway does",
+  );
+  await expect(page.getByRole("textbox", { name: "Determinized program" })).toContainText(
+    "let x = mean_uniform(0, 1) in",
+  );
 });
 
 test("the runs' outcomes, the command that reports them and run 0's G trace show", async ({
@@ -376,22 +401,23 @@ test("a readable link clears an unreadable one's notice", async ({ page }) => {
   await expect(page.getByRole("alert")).toHaveCount(0);
 });
 
-test("diagnostics return when an edit is undone before the analysis", async ({ page }) => {
+test("diagnostics follow the text", async ({ page }) => {
   await page.goto(simulator);
   await page.getByLabel("Example").selectOption({ label: "Branching on an E draw" });
-  const marks = page.locator(".diagnostic-squiggle, .diagnostic-point");
+  const marks = page.locator(".cm-lintRange-error, .cm-lintPoint");
   await expect(marks).toHaveCount(1);
-  await page.locator(".cm-content").click();
-  await page.keyboard.press("Control+End");
-  await page.keyboard.type(" ");
-  await page.keyboard.press("Backspace");
+  await expect(page.locator(".cm-lint-marker-error")).toHaveCount(1);
+  await page.locator(".cm-content").first().click();
+  await page.keyboard.press("Control+A");
+  await page.keyboard.type("1 + 2");
   await expect(marks).toHaveCount(0);
+  await page.keyboard.press("Control+Z");
   await expect(marks).toHaveCount(1);
 });
 
 test("Tab moves the focus out of the editor", async ({ page }) => {
   await page.goto(simulator);
-  await page.locator(".cm-content").click();
+  await page.locator(".cm-content").first().click();
   await page.keyboard.press("Tab");
   expect(await page.evaluate(() => document.activeElement?.closest(".cm-editor") ?? null)).toBe(
     null,
@@ -407,13 +433,16 @@ test("a frame's checks open on hover and close with Escape", async ({ page }) =>
   await expect(popover).toBeHidden();
 });
 
-test("type hints show each expression's type", async ({ page }) => {
+test("inferred modes show as hints, and hovers give each site's reason", async ({ page }) => {
   await page.goto(simulator);
-  await expect(page.locator(".type-hint")).toHaveCount(0);
-  await page.getByLabel("Type hints").check();
-  await expect(page.locator(".type-hint").first()).toBeVisible();
-  await page.getByLabel("Type hints").uncheck();
-  await expect(page.locator(".type-hint")).toHaveCount(0);
+  const hints = page.locator(".cm-mode-hint");
+  await expect(hints).toHaveText(["[G]", "[E]"]);
+  await hints.nth(1).hover();
+  const tooltip = page.locator(".cm-tooltip-hover");
+  await expect(tooltip).toContainText(
+    "E: replaced by its mean. The output depends on this draw affinely. (Mode: affinity in the Lean development.)",
+  );
+  await expect(tooltip).toContainText("Type: float[E]");
 });
 
 test("axe finds only the step table's contrast violation", async ({ page }) => {
