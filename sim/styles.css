@@ -322,7 +322,12 @@
     text-decoration: underline;
   }
 
+  /* The step table's columns at its widest, which the distributions' grid shares: the step's
+     number, the source, the G draw, the symbolic state and the determinized program. */
   main.sim {
+    --run-columns: 2rem minmax(0, 1fr) 8rem minmax(0, 1fr) minmax(0, 1fr);
+    /* Below that, the symbolic state sits under the row's other cells. */
+    --run-columns-narrow: 2rem minmax(0, 1fr) 8rem minmax(0, 1fr);
     container-type: inline-size;
     max-width: 90rem;
     margin: 0 auto;
@@ -466,6 +471,9 @@
       min(40rem, calc(100dvh - var(--transport-height, 8rem) - var(--space-7)))
     );
     overflow-y: auto;
+    /* A scroll bar's room is kept for short runs too, so that the columns stay where the
+       distributions' grid has them. */
+    scrollbar-gutter: stable;
     /* A rule at the bottom while more rows follow; the same border, uncoloured, otherwise. */
     border-bottom: 1px solid transparent;
   }
@@ -814,7 +822,7 @@
   @container (min-width: 720px) {
     .step-head,
     .step {
-      grid-template-columns: 2rem minmax(0, 1fr) 8rem minmax(0, 1fr);
+      grid-template-columns: var(--run-columns-narrow);
       gap: var(--space-4);
     }
 
@@ -823,7 +831,7 @@
       position: sticky;
       z-index: 1;
       top: 0;
-      padding: var(--space-1) 0;
+      padding: var(--space-1) var(--space-2) var(--space-1) 0;
       border-left: 3px solid transparent;
       background: var(--ground);
       color: var(--muted);
@@ -858,7 +866,7 @@
   @container (min-width: 960px) {
     .step-head,
     .step {
-      grid-template-columns: 2rem minmax(0, 1fr) 8rem minmax(0, 1fr) minmax(0, 1fr);
+      grid-template-columns: var(--run-columns);
     }
   }
 
@@ -972,21 +980,74 @@
     margin-bottom: var(--space-3);
   }
 
+  /* Stacked: the histograms on one axis, then the statistics. Where the step table has its columns,
+     each histogram sits under its program's column and the statistics between them, on the step
+     table's grid; the conditional-mean plot spans the first columns. */
   .dist-grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    gap: var(--space-5) var(--space-7);
+    grid-template-areas: "source" "det" "plot" "caption" "side";
+    gap: var(--space-4);
   }
 
-  @container (min-width: 1100px) {
+  .hist-source {
+    grid-area: source;
+  }
+
+  .hist-det {
+    grid-area: det;
+  }
+
+  .chart-body {
+    grid-area: plot;
+  }
+
+  .chart-caption {
+    grid-area: caption;
+  }
+
+  .dist-side {
+    grid-area: side;
+  }
+
+  .hist,
+  .chart-body {
+    min-width: 0;
+  }
+
+  @container (min-width: 720px) and (max-width: 959px) {
     .dist-grid {
-      grid-template-columns: minmax(0, 1fr) 24rem;
-      align-items: start;
+      grid-template-columns: var(--run-columns-narrow);
+      grid-template-areas:
+        ". source . det"
+        ". caption caption caption"
+        ". side side side";
+      padding: 0 calc(var(--space-2) + var(--region-gutter, 0px)) 0 3px;
+    }
+
+    .dist-grid.against {
+      grid-template-areas:
+        ". plot plot plot"
+        ". caption caption caption"
+        ". side side side";
     }
   }
 
-  .chart-fig {
-    min-width: 0;
+  @container (min-width: 960px) {
+    .dist-grid {
+      grid-template-columns: var(--run-columns);
+      grid-template-areas:
+        ". source side side det"
+        ". caption caption caption caption";
+      align-items: start;
+      padding: 0 calc(var(--space-2) + var(--region-gutter, 0px)) 0 3px;
+    }
+
+    .dist-grid.against {
+      grid-template-areas:
+        ". plot plot plot side"
+        ". caption caption caption side";
+    }
   }
 
   .chart {
@@ -996,7 +1057,7 @@
     overflow: visible;
   }
 
-  .chart-fig figcaption,
+  .chart-caption,
   .plot-readout {
     margin-top: var(--space-2);
     color: var(--muted);
@@ -1004,8 +1065,9 @@
   }
 
   /* Room for the caption's longest form, so that it doesn't reflow the page during a batch. */
-  .chart-fig figcaption {
+  .chart-caption {
     min-height: calc(3 * var(--leading-ui) * var(--size-small));
+    margin: 0;
   }
 
   .plot-readout {

@@ -1,6 +1,7 @@
 // The distributions band: run both programs many times and compare what they return. The output
-// distributions come first, as histograms on one axis with their means and variances; where a G
-// draw qualifies, a switch shows each run's output against that draw instead, where the
+// distributions come first, a histogram of each program under its column of the step table, on
+// one axis and one scale, with their means and variances; where a G draw qualifies, a switch shows
+// each run's output against that draw instead, where the
 // determinized runs lie on the curve of the source's mean given the draw. Beside the chart: the
 // statistics as Lean's CLI computes them, each linked to the Lean definition it estimates, the
 // variance-reduction factor and the sample sites that determinization leaves. Every number is an
@@ -19,13 +20,13 @@ import {
   cutHeight,
   drawCloud,
   histogram,
+  histogramChart,
   minus,
   niceAxis,
   outputAxis,
   plotAxes,
   plotX,
   plotY,
-  stacked,
   thin,
   widened,
 } from "./charts.ts";
@@ -127,6 +128,8 @@ export function mountDistributionView(
   const plotSite = $<HTMLSelectElement>("plot-site");
   const empty = $<HTMLElement>("dist-empty");
   const grid = $<HTMLElement>("dist-grid");
+  const histSource = $<HTMLElement>("hist-source");
+  const histDet = $<HTMLElement>("hist-det");
   const chartBody = $<HTMLElement>("chart-body");
   const caption = $<HTMLElement>("chart-caption");
   const listOut = $<HTMLElement>("list-out");
@@ -250,13 +253,18 @@ export function mountDistributionView(
     redraw();
   });
   // A chart is redrawn when its width changes, not when the band grows taller.
-  let width = 0;
+  const widths = new Map<Element, number>();
   asTable.addEventListener("toggle", redraw);
-  new ResizeObserver(() => {
-    if (chartBody.clientWidth === width) return;
-    width = chartBody.clientWidth;
-    redraw();
-  }).observe(chartBody);
+  const resized = new ResizeObserver((entries) => {
+    let changed = false;
+    for (const { target } of entries) {
+      if (widths.get(target) === target.clientWidth) continue;
+      widths.set(target, target.clientWidth);
+      changed = true;
+    }
+    if (changed) redraw();
+  });
+  for (const slot of [histSource, chartBody]) resized.observe(slot);
   // The canvas takes the theme's colours when it is drawn.
   new MutationObserver(redraw).observe(document.documentElement, {
     attributes: true,
@@ -304,13 +312,16 @@ export function mountDistributionView(
     asTable.hidden = false;
     const stats = store.stats.peek();
     renderStats(samples, stats, result, right);
-    const width = Math.min(900, chartBody.clientWidth || 640);
     const chosen = site.peek();
-    if (chosen !== null && store.view.peek() === "against") {
-      renderPlot(samples, stats, chosen, width, result);
-    } else {
-      renderOutputs(samples, stats, width, right);
-    }
+    const against = chosen !== null && store.view.peek() === "against";
+    grid.classList.toggle("against", against);
+    histSource.hidden = histDet.hidden = against;
+    chartBody.hidden = !against;
+    if (against)
+      renderPlot(samples, stats, chosen, Math.min(900, chartBody.clientWidth || 640), result);
+    else renderOutputs(samples, stats, right);
+    // The widths drawn at, so that showing a chart doesn't draw it again.
+    for (const slot of [histSource, chartBody]) widths.set(slot, slot.clientWidth);
   }
 
   function renderStats(
@@ -401,7 +412,6 @@ export function mountDistributionView(
   function renderOutputs(
     samples: Samples,
     stats: { original: Stats; determinized: Stats },
-    width: number,
     right: string,
   ) {
     const axis = outputAxis(samples.original.values, samples.determinized.values);
@@ -409,32 +419,39 @@ export function mountDistributionView(
       const any = [...samples.original.values, ...samples.determinized.values].some(
         Number.isFinite,
       );
-      chartBody.innerHTML = any
+      histSource.innerHTML = any
         ? '<p class="band-empty">The returned numbers span more than a float can hold, so they have no histogram.</p>'
         : '<p class="band-empty">No run returned a number.</p>';
+      histDet.innerHTML = "";
       caption.textContent = "";
       $<HTMLElement>("bins-table").innerHTML = "";
       return;
     }
     const source = histogram(samples.original.values, axis.lo, axis.hi, axis.bins);
     const determinized = histogram(samples.determinized.values, axis.lo, axis.hi, axis.bins);
-    const variance = (stat: Stats) => `variance ${cliStat(stat.variance, stat.n)}`;
-    chartBody.innerHTML = stacked({
-      source,
-      determinized,
-      labels: ["Source", right],
-      notes: [variance(stats.original), variance(stats.determinized)],
-      means: [
-        stats.original.n > 0 ? stats.original.mean : null,
-        stats.determinized.n > 0 ? stats.determinized.mean : null,
-      ],
-      meanLabels: [formatStat(stats.original.mean), formatStat(stats.determinized.mean)],
-      ticks: axis.ticks,
-      width,
-      id: "outputs",
-      title: `Histograms of the returned values, the source above and the ${right.toLowerCase()} program below, on one axis.`,
-    });
     const yMax = cutHeight(source.counts, determinized.counts);
+    const variance = (stat: Stats) => `variance ${cliStat(stat.variance, stat.n)}`;
+    const sideBySide = histSource.offsetTop === histDet.offsetTop;
+    const programs = [
+      [histSource, source, "source", "Source", stats.original],
+      [histDet, determinized, "det", right, stats.determinized],
+    ] as const;
+    for (const [slot, hist, kind, label, stat] of programs) {
+      slot.innerHTML = histogramChart({
+        hist,
+        kind,
+        label,
+        note: variance(stat),
+        mean: stat.n > 0 ? stat.mean : null,
+        meanLabel: formatStat(stat.mean),
+        ticks: axis.ticks,
+        yMax,
+        width: Math.min(900, slot.clientWidth || 320),
+        tall: sideBySide,
+        id: `outputs-${kind}`,
+        title: `Histogram of the values that the ${kind === "source" ? "source" : `${right.toLowerCase()} program`} returned, on the axis and scale of both programs' histograms.`,
+      });
+    }
     const cut = [...source.counts, ...determinized.counts].some((count) => count > yMax);
     const outside = (hist: typeof source, name: string) => {
       const count = hist.below + hist.above;
@@ -444,7 +461,7 @@ export function mountDistributionView(
         : ` ${thin(count)} runs of the ${name} lie outside the axis.`;
     };
     caption.textContent =
-      `Runs per bin of width ${formatStat(axis.binWidth).replace(/0+$/, "").replace(/\.$/, "")}, on the same axes; the dashed lines mark the means.` +
+      `Runs per bin of width ${formatStat(axis.binWidth).replace(/0+$/, "").replace(/\.$/, "")}, on one axis and one scale; the dashed lines mark the means.` +
       (cut ? " A cut bar is labelled with its count." : "") +
       outside(source, "source") +
       outside(determinized, right === "Counterexample" ? "counterexample" : "determinized program");

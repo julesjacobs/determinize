@@ -244,8 +244,13 @@ export function mountTraceView(
   new ResizeObserver(() => {
     elements.band.style.setProperty("--transport-height", `${elements.transport.offsetHeight}px`);
   }).observe(elements.transport);
-  // The rule below the region follows its scrolling and its size.
-  new ResizeObserver(markMore).observe(elements.table);
+  // The room of the region's scroll bar, which the distributions' grid keeps as well, so that
+  // their columns line up.
+  new ResizeObserver(() => {
+    const gutter = elements.table.offsetWidth - elements.table.clientWidth;
+    elements.band.parentElement?.style.setProperty("--region-gutter", `${gutter}px`);
+    markMore();
+  }).observe(elements.table);
   elements.table.addEventListener("scroll", markMore, { passive: true });
 
   /** Marks the region while more rows follow below its view. */

@@ -1,8 +1,8 @@
-// The distributions band's charts, hand-rolled: the two programs' output distributions as
-// histograms on one axis, and each run's output against the value of one G draw. The histograms
-// and the plot's axes are SVG markup; the plot's runs are drawn on a canvas, because thousands of
-// SVG circles are slow. Colours are the tokens' roles: the source outlined in --muted, the
-// determinized program filled with --change, the G draw's axis in --given.
+// The distributions band's charts, hand-rolled: each program's output distribution as a histogram
+// on the axis and scale that both share, and each run's output against the value of one G draw.
+// The histograms and the plot's axes are SVG markup; the plot's runs are drawn on a canvas,
+// because thousands of SVG circles are slow. Colours are the tokens' roles: the source outlined in
+// --muted, the determinized program filled with --change, the G draw's axis in --given.
 
 /** A number on an axis or in a label, with a true minus sign. */
 export function minus(text: string | number) {
@@ -115,93 +115,89 @@ export function cutHeight(source: readonly number[], determinized: readonly numb
   return Math.ceil((lowest > 0 ? Math.min(highest, 2.6 * lowest) : highest) * 1.04);
 }
 
-export interface StackedOptions {
-  source: Histogram;
-  determinized: Histogram;
-  labels: [string, string];
-  notes: [string, string];
-  /** Each program's mean, where it has one, and its label. */
-  means: [number | null, number | null];
-  meanLabels: [string, string];
+export interface HistogramOptions {
+  hist: Histogram;
+  /** The source, drawn as a step outline, or the determinized program, as filled bars. */
+  kind: "source" | "det";
+  label: string;
+  note: string;
+  /** The program's mean, where it has one, and its label. */
+  mean: number | null;
+  meanLabel: string;
   ticks: number[];
+  /** The height of the scale that both programs' histograms share; a bar above it is cut. */
+  yMax: number;
   width: number;
+  /** Taller, for histograms side by side. */
+  tall?: boolean;
   id: string;
   title: string;
 }
 
 /**
- * The output distributions: two histograms on one x axis and one y scale, the source above as a
- * step outline and the determinized program below as filled bars, each with a dashed line at its
- * mean. A bar is cut only where it is more than 2.6 times the other program's highest, and the
- * cut bar is labelled with its count.
+ * One program's output distribution: a histogram on the axis and the scale that both programs'
+ * histograms share, so that they compare at a glance side by side, with a dashed line at its
+ * mean. A bar above the scale is cut and labelled with its count.
  */
-export function stacked(o: StackedOptions) {
+export function histogramChart(o: HistogramOptions) {
   const W = o.width;
-  const rowH = W < 500 ? 84 : 96;
-  const gap = 40;
+  const rowH = o.tall ? Math.round(Math.min(200, Math.max(110, W * 0.45))) : W < 360 ? 84 : 110;
   const padX = 8;
   const padT = 34;
   const axisH = 28;
-  const H = padT + rowH * 2 + gap + axisH;
-  const { lo, hi } = o.source;
+  const H = padT + rowH + axisH;
+  const { lo, hi } = o.hist;
   const pw = W - 2 * padX;
-  const bw = pw / o.source.counts.length;
+  const bw = pw / o.hist.counts.length;
   const x = (value: number) => padX + ((value - lo) / (hi - lo)) * pw;
-  const yMax = cutHeight(o.source.counts, o.determinized.counts);
+  const base = padT + rowH;
+  const y = (count: number) => base - (Math.min(count, o.yMax) / o.yMax) * rowH;
   const parts = [
-    `<svg class="chart stacked" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-labelledby="${o.id}-t">`,
+    `<svg class="chart histogram" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-labelledby="${o.id}-t">`,
     `<title id="${o.id}-t">${o.title}</title>`,
+    `<text class="row-label row-${o.kind}" x="${padX}" y="${padT - 14}">${o.label}<tspan class="row-note" dx="8">${o.note}</tspan></text>`,
   ];
-  const cut = (x0: number, top: number, count: number) =>
-    `<path class="break" d="M${f2(x0 - 1)} ${top + 7} L${f2(x0 + bw + 1)} ${top + 3} M${f2(x0 - 1)} ${top + 11} L${f2(x0 + bw + 1)} ${top + 7}"/><text class="clip-label halo" x="${f2(x0 + bw + 5)}" y="${top + 11}">${thin(count)} runs</text>`;
-  const rows = [
-    { hist: o.source, kind: "source", top: padT, index: 0 },
-    { hist: o.determinized, kind: "det", top: padT + rowH + gap, index: 1 },
-  ] as const;
-  for (const row of rows) {
-    const base = row.top + rowH;
-    const y = (count: number) => base - (Math.min(count, yMax) / yMax) * rowH;
-    parts.push(
-      `<text class="row-label row-${row.kind}" x="${padX}" y="${row.top - 10}">${o.labels[row.index]}<tspan class="row-note" dx="8">${o.notes[row.index]}</tspan></text>`,
-    );
-    if (row.kind === "source") {
-      let d = `M${f2(padX)} ${base}`;
-      row.hist.counts.forEach((count, i) => {
-        d += ` L${f2(padX + i * bw)} ${f2(y(count))} L${f2(padX + (i + 1) * bw)} ${f2(y(count))}`;
-      });
-      parts.push(`<path class="outline" d="${d} L${f2(padX + pw)} ${base}"/>`);
-    } else {
-      row.hist.counts.forEach((count, i) => {
-        if (count === 0) return;
-        parts.push(
-          `<rect class="filled" x="${f2(padX + i * bw + 0.5)}" y="${f2(y(count))}" width="${f2(Math.max(bw - 1, 0.8))}" height="${f2(base - y(count))}"/>`,
-        );
-      });
-    }
-    row.hist.counts.forEach((count, i) => {
-      if (count > yMax) parts.push(cut(padX + i * bw, row.top, count));
+  if (o.kind === "source") {
+    let d = `M${f2(padX)} ${base}`;
+    o.hist.counts.forEach((count, i) => {
+      d += ` L${f2(padX + i * bw)} ${f2(y(count))} L${f2(padX + (i + 1) * bw)} ${f2(y(count))}`;
     });
-    parts.push(`<line class="axis" x1="${padX}" x2="${W - padX}" y1="${base}" y2="${base}"/>`);
-    const mean = o.means[row.index];
-    if (mean !== null && Number.isFinite(mean) && mean >= lo && mean <= hi) {
-      const mx = x(mean);
-      const crowded = row.hist.counts.some(
-        (count, i) => count > yMax && padX + i * bw > mx - 12 && padX + i * bw < mx + 90,
-      );
-      const right = mx + 90 > W || crowded;
+    parts.push(`<path class="outline" d="${d} L${f2(padX + pw)} ${base}"/>`);
+  } else {
+    o.hist.counts.forEach((count, i) => {
+      if (count === 0) return;
       parts.push(
-        `<line class="mean-line mean-${row.kind}" x1="${f2(mx)}" x2="${f2(mx)}" y1="${row.top}" y2="${base}"/>`,
-        `<text class="mean-label halo" x="${f2(right ? mx - 5 : mx + 5)}" y="${row.top + 10}"${right ? ' text-anchor="end"' : ""}>mean ${minus(o.meanLabels[row.index])}</text>`,
+        `<rect class="filled" x="${f2(padX + i * bw + 0.5)}" y="${f2(y(count))}" width="${f2(Math.max(bw - 1, 0.8))}" height="${f2(base - y(count))}"/>`,
       );
-    }
+    });
   }
-  const axisY = padT + rowH * 2 + gap;
+  o.hist.counts.forEach((count, i) => {
+    if (count <= o.yMax) return;
+    const x0 = padX + i * bw;
+    const right = x0 + bw + 80 > W;
+    parts.push(
+      `<path class="break" d="M${f2(x0 - 1)} ${padT + 7} L${f2(x0 + bw + 1)} ${padT + 3} M${f2(x0 - 1)} ${padT + 11} L${f2(x0 + bw + 1)} ${padT + 7}"/>`,
+      `<text class="clip-label halo" x="${f2(right ? x0 - 5 : x0 + bw + 5)}" y="${padT + 11}"${right ? ' text-anchor="end"' : ""}>${thin(count)} runs</text>`,
+    );
+  });
+  parts.push(`<line class="axis" x1="${padX}" x2="${W - padX}" y1="${base}" y2="${base}"/>`);
+  if (o.mean !== null && Number.isFinite(o.mean) && o.mean >= lo && o.mean <= hi) {
+    const mx = x(o.mean);
+    const crowded = o.hist.counts.some(
+      (count, i) => count > o.yMax && padX + i * bw > mx - 12 && padX + i * bw < mx + 90,
+    );
+    const right = mx + 90 > W || crowded;
+    parts.push(
+      `<line class="mean-line mean-${o.kind}" x1="${f2(mx)}" x2="${f2(mx)}" y1="${padT}" y2="${base}"/>`,
+      `<text class="mean-label halo" x="${f2(right ? mx - 5 : mx + 5)}" y="${padT + 10}"${right ? ' text-anchor="end"' : ""}>mean ${minus(o.meanLabel)}</text>`,
+    );
+  }
   for (const tick of o.ticks) {
     const tx = x(tick);
     const anchor = tx < padX + 10 ? "start" : tx > W - padX - 10 ? "end" : "middle";
     parts.push(
-      `<line class="tick" x1="${f2(tx)}" x2="${f2(tx)}" y1="${axisY}" y2="${axisY + 4}"/>`,
-      `<text class="tick-label" x="${f2(tx)}" y="${axisY + 18}" text-anchor="${anchor}">${minus(tick)}</text>`,
+      `<line class="tick" x1="${f2(tx)}" x2="${f2(tx)}" y1="${base}" y2="${base + 4}"/>`,
+      `<text class="tick-label" x="${f2(tx)}" y="${base + 18}" text-anchor="${anchor}">${minus(tick)}</text>`,
     );
   }
   parts.push("</svg>");
