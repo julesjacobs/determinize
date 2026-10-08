@@ -150,6 +150,8 @@ test("runs every example", async ({ page }) => {
     // Runs 1 to 19 follow run 0, which the step table keeps showing.
     await expect.poll(() => runs(page)).toBe(20);
     await settled(page);
+    // Every example shows its distributions: histograms, or a number's absence explained.
+    await expect(page.locator("#dist-grid:visible, #list-out:visible")).toHaveCount(1);
     expect(await stepRun(page)).toEqual(before);
   }
 });
@@ -533,7 +535,9 @@ test("after an edit, the statistics show the new program from its first slice of
 
 test("a program that Lean rejects has no runs and no command", async ({ page }) => {
   await page.goto(linkTo("let x =", 1));
-  await expect(page.locator("#dist-empty")).toHaveText("Nothing to run: Lean rejects the program.");
+  await expect(page.locator("#dist-empty")).toHaveText(
+    "No distributions: Lean rejects the program, so neither program runs.",
+  );
   await expect(page.getByRole("button", { name: "Resample" })).toBeDisabled();
   await expect(page.locator("#honesty")).not.toContainText("--samples");
 });
@@ -545,7 +549,7 @@ test("a program the simulator fails on doesn't blame Lean", async ({ page }) => 
     "The simulator failed on this program. ./run.sh --check program.det shows whether Lean accepts it.",
   );
   await expect(page.locator("#dist-empty")).toHaveText(
-    "Nothing to run: the simulator failed on this program.",
+    "No distributions: the simulator failed on this program, so neither program runs.",
   );
 });
 
@@ -600,6 +604,20 @@ test("each histogram sits under its program's column, on one axis", async ({ pag
   expect(stacked.determinized.top).toBeGreaterThan(stacked.source.bottom);
   expect(stacked.determinized.left).toBeCloseTo(stacked.source.left, 0);
   expect(stacked.ticks[1]).toEqual(stacked.ticks[0]);
+});
+
+test("the histograms show the returned runs and count those that observe rejects", async ({
+  page,
+}) => {
+  await page.goto(simulator);
+  await pick(page, "Observe");
+  await sampled(page, 1000);
+  for (const slot of ["#hist-source", "#hist-det"]) {
+    await expect(page.locator(`${slot} .hist-note`)).toHaveText(
+      /^Shows the [\d\s]+ of 1\s000 runs that returned; [\d\s]+ were rejected by observe\.$/,
+    );
+  }
+  await expect(page.locator("#returned-source")).toContainText("rejected by observe");
 });
 
 test("a counterexample compares the means instead of the variances", async ({ page }) => {
