@@ -27,7 +27,8 @@ import { escapeHtml } from "./html.ts";
 import type { Reduced, StepFacts } from "./steps.ts";
 import { stepFacts } from "./steps.ts";
 import type { Store } from "./store.ts";
-import { renderHighlightedText, renderTraceExpr } from "./trace-expr.ts";
+import type { Path } from "./trace-expr.ts";
+import { correspondingStep, renderHighlightedText, renderTraceExpr } from "./trace-expr.ts";
 
 export interface TraceViewElements {
   band: HTMLElement;
@@ -297,7 +298,9 @@ export function mountTraceView(
     const moved = step !== null && step !== store.hoveredStep.peek();
     store.hoveredStep.value = step;
     if (moved) store.followLinked.value += 1;
-    const corr = target?.closest<HTMLElement>(".corr-item");
+    // Within a part that the step produced, the step's parts; elsewhere a symbol's.
+    const corr =
+      target?.closest<HTMLElement>(".corr-step") ?? target?.closest<HTMLElement>(".corr-item");
     showCorrespondence(row, corr?.dataset.corr ?? null);
   });
   elements.table.addEventListener("pointerleave", () => {
@@ -424,6 +427,14 @@ function state(html: string) {
 const currentBindings = 12;
 const shownBindings = 3;
 
+/** The subexpression at `path` of `state` as a part that a row marks: a whole state only where it
+ * is a value, such as the run's result; a step that rewrites a larger state as a whole has no part
+ * to point at. */
+function part(path: Path | null | undefined, state: Expr) {
+  if (!path) return null;
+  return path.length > 0 || isValue(state) ? path : null;
+}
+
 /** A button that shows, in place, what a count stands for, and hides it again. */
 function expander(more: string, fewer: string) {
   return `<button type="button" class="expander" aria-expanded="false" data-more="${more}" data-fewer="${fewer}">${more}</button>`;
@@ -469,29 +480,31 @@ function renderRows(
       counterpart: frame.symbolic,
       valueLabel: "sampled value for",
       short: true,
+      focusPath: part(fact?.focus.original, frame.original),
     });
     const determinized = renderTraceExpr(frame.determinized, {
       counterpart: frame.symbolic,
       valueLabel: "mean substituted for",
       short: true,
+      focusPath: part(fact?.focus.determinized, frame.determinized),
     });
     const eDraw = fact?.eDraw;
     const gDraw = fact?.gDraw;
     const mean = fact?.mean;
     const sourceNote = eDraw
       ? note(
-          `E draw, source only: ${eDraw.name ? `${escapeHtml(eDraw.name)} = ` : ""}${renderTraceExpr(eDraw.value, { short: true })}`,
+          `E draw, source only: ${eDraw.name ? `${escapeHtml(eDraw.name)} = ` : ""}${correspondingStep(renderTraceExpr(eDraw.value, { short: true }))}`,
           "n-e",
         )
       : "";
     const meanNote = mean
       ? note(
-          `${renderHighlightedText(mean.call, { short: true })} = ${renderTraceExpr(mean.value, { short: true })}`,
+          `${correspondingStep(renderHighlightedText(mean.call, { short: true }))} = ${renderTraceExpr(mean.value, { short: true })}`,
           "n-mean",
         )
       : "";
     const draw = gDraw
-      ? `<span class="draw"><code>${gDraw.name ? `${escapeHtml(gDraw.name)} ← ` : ""}${renderTraceExpr(gDraw.value, { short: true })}</code><span class="draw-d">${renderHighlightedText(gDraw.distribution, { short: true })}</span></span>`
+      ? `<span class="draw"><code>${gDraw.name ? `${escapeHtml(gDraw.name)} ← ` : ""}${correspondingStep(renderTraceExpr(gDraw.value, { short: true }))}</code><span class="draw-d">${renderHighlightedText(gDraw.distribution, { short: true })}</span></span>`
       : "";
     const before =
       frame.step === page.first ? page.previous : page.frames[frame.step - page.first - 1];
@@ -507,7 +520,12 @@ function renderRows(
       "sym",
       "Symbolic state",
       sigmaBlock(sigma.lines, added) +
-        state(renderTraceExpr(frame.symbolic, { short: true })) +
+        state(
+          renderTraceExpr(frame.symbolic, {
+            short: true,
+            focusPath: part(fact?.focus.symbolic, frame.symbolic),
+          }),
+        ) +
         result,
     );
     return `<li class="step${gDraw ? " has-draw" : ""}" data-step="${frame.step}">
