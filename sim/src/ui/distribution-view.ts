@@ -121,11 +121,11 @@ function comparisonCard(originalStats: Stats, determinizedStats: Stats) {
   `;
 }
 
-function metricBlock(label: string, value: number, caption: string, suffix = "") {
+function metricBlock(label: string, value: string, caption: string) {
   return `
     <div class="metric-block">
       <span>${label}</span>
-      ${metricValue(value, suffix)}
+      ${value}
       <small>${caption}</small>
     </div>
   `;
@@ -133,6 +133,13 @@ function metricBlock(label: string, value: number, caption: string, suffix = "")
 
 function metricValue(value: number, suffix = "") {
   return `<strong class="metric-value">${escapeHtml(formatNumber(value))}${suffix}</strong>`;
+}
+
+/** A mean or a variance of `n` returned numbers, as Lean's CLI prints one that isn't finite. */
+function cliMetric(value: number, n: number) {
+  return n > 0 && !Number.isFinite(value)
+    ? `<strong class="metric-value">unavailable (floating-point overflow)</strong>`
+    : metricValue(value);
 }
 
 function distributionCard(
@@ -188,11 +195,11 @@ function distributionCard(
     <article class="dist-card ${tone}">
       <div class="dist-title">
         <span>${title}</span>
-        <span class="metric-pair"><a href="${leanLinks.returnedExpectation}">mean</a> ${metricValue(stats.mean)}</span>
+        <span class="metric-pair"><a href="${leanLinks.returnedExpectation}">mean</a> ${cliMetric(stats.mean, stats.n)}</span>
       </div>
       <div class="dist-metrics">
-        ${metricBlock(`<a href="${leanLinks.returnedVariance}">Variance</a>`, stats.variance, "population variance, as Lean's CLI computes it")}
-        ${metricBlock("Std. error", stats.standardError, "mean uncertainty")}
+        ${metricBlock(`<a href="${leanLinks.returnedVariance}">Variance</a>`, cliMetric(stats.variance, stats.n), "population variance, as Lean's CLI computes it")}
+        ${metricBlock("Std. error", metricValue(stats.standardError), "mean uncertainty")}
       </div>
       <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${title} empirical PDF and CDF">
         <text class="dist-section-label" x="${margin.left}" y="12">PDF estimate - 100 bins</text>
