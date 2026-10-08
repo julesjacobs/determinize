@@ -2,7 +2,14 @@
 // evaluates a program over doubles with closures, one unit of fuel per evaluated subexpression,
 // and draws from two SplitMix64 streams, one for E draws and one for G draws. Lean's evaluator is
 // recursive; this one keeps its continuation on an explicit stack, so that a long loop can't
-// overflow JavaScript's call stack, and otherwise takes the same steps in the same order.
+// overflow JavaScript's call stack, and otherwise takes the same steps in the same order. A number
+// also carries whether it is inexact, for the simulator's check alone: a 0 that may be an
+// underflow fails a domain check only in floating point. A continuous draw is inexact, a literal or
+// a discrete draw exact; an operation with an inexact operand is inexact, and so is a product or
+// quotient of non-zero numbers that comes out as 0, but a product with an exact 0, or a quotient of
+// one, is an exact 0. Known gaps: arithmetic on exact numbers that rounds otherwise, such as
+// (1e20 + 1) - 1e20, counts as exact, and an inexact number that is 0 in the reals, such as x - x
+// in 1 / (x - x), as inexact.
 import type { Action, Program } from "../compiler/core.ts";
 import { toNumber } from "../compiler/rational.ts";
 import { makeStreams } from "./rng.ts";
@@ -28,7 +35,7 @@ export type Node =
 export type Value =
   | { tag: "unit" | "nil" }
   | { tag: "bool"; value: boolean }
-  | { tag: "number"; value: number }
+  | { tag: "number"; value: number; inexact?: true }
   | { tag: "pair"; a: Value; b: Value }
   | { tag: "inl" | "inr"; value: Value }
   | { tag: "cons"; head: Value; tail: Value }
@@ -44,12 +51,12 @@ export interface GDraw {
   value: number;
 }
 
-/** What a run did, as Lean's `runOutcome`: a failure is its `Except` error. `draws` counts the
- * draws of either mode. */
+/** What a run did, as Lean's `runOutcome`: a failure is its `Except` error, with whether it is
+ * at an inexact parameter or divisor of exactly 0 only. `draws` counts the draws of either mode. */
 export type Outcome =
   | { kind: "returned"; value: Value; draws: number }
   | { kind: "rejected" }
-  | { kind: "failed"; message: string };
+  | { kind: "failed"; message: string; inexactZero: boolean };
 
 const siteOps: Record<string, Op> = {
   uniform: "uniform",
@@ -122,8 +129,10 @@ export function siteNodes(node: Node, out: (Node & { t: "site" })[] = []) {
 
 class Failure {
   declare message: string;
-  constructor(message: string) {
+  declare inexactZero: boolean;
+  constructor(message: string, inexactZero = false) {
     this.message = message;
+    this.inexactZero = inexactZero;
   }
 }
 
@@ -135,16 +144,25 @@ function number(v: Value): number {
   throw new Failure("expected a numeric value");
 }
 
-function checkedNumber(x: number): Value {
+function checkedNumber(x: number, inexact = false): Value {
   if (!Number.isFinite(x)) throw new Failure("nonfinite arithmetic result");
-  return { tag: "number", value: x };
+  return inexact ? { tag: "number", value: x, inexact } : { tag: "number", value: x };
 }
 
-function numbers(v: Value): number[] {
-  const out: number[] = [];
+function isInexact(v: Value) {
+  return v.tag === "number" && v.inexact === true;
+}
+
+/** The ops whose draws can take any value of an interval, and so are inexact. */
+const continuousOps = new Set<Op>(["uniform", "gaussian", "beta", "gamma", "exponential"]);
+
+/** The numbers of a list, checked in Lean's order. */
+function listValues(v: Value): Value[] {
+  const out: Value[] = [];
   let rest = v;
   while (rest.tag === "cons") {
-    out.push(number(rest.head));
+    number(rest.head);
+    out.push(rest.head);
     rest = rest.tail;
   }
   if (rest.tag !== "nil") throw new Failure("expected a list of probabilities");
@@ -162,9 +180,9 @@ type Frame =
   | { f: "matchSum" | "matchList" | "ite"; env: Env; b: Node; c: Node }
   | { f: "letE"; env: Env; body: Node }
   | { f: "right"; t: "add" | "mul" | "div" | "lt"; env: Env; e: Node }
-  | { f: "operator"; t: "add" | "mul" | "div" | "lt"; left: number }
+  | { f: "operator"; t: "add" | "mul" | "div" | "lt"; left: number; inexact: boolean }
   | { f: "parameter"; site: Node & { t: "site" }; env: Env }
-  | { f: "draw"; site: Node & { t: "site" }; first: number | null };
+  | { f: "draw"; site: Node & { t: "site" }; first: number | null; inexact: boolean };
 
 export interface RunOptions {
   fuel?: number;
@@ -185,17 +203,25 @@ export function run(program: Node, seed: bigint, options: RunOptions = {}): Outc
   let e: Node | null = program;
   let value: Value = unitValue;
 
-  function draw(site: Node & { t: "site" }, args: number[]): Value {
+  /** A draw of `site` with parameters `args`, of which those at `inexactArgs` are inexact. */
+  function draw(site: Node & { t: "site" }, args: number[], inexactArgs: boolean[]): Value {
+    const inexact = inexactArgs.includes(true);
     try {
       if (site.action === "mean") {
-        return { tag: "number", value: sample(site.op, true, args, eStream) };
+        return checkedNumber(sample(site.op, true, args, eStream), inexact);
       }
       const drawn = sample(site.op, false, args, site.action === "G" ? gStream : eStream);
       draws += 1;
       if (site.action === "G") options.onGDraw?.({ site: site.index, op: site.op, value: drawn });
-      return { tag: "number", value: drawn };
+      // A degenerate draw returns its parameter.
+      const degenerate =
+        (site.op === "uniform" && args[0] === args[1]) || (site.op === "gaussian" && args[1] === 0);
+      return checkedNumber(drawn, degenerate ? inexact : continuousOps.has(site.op) || inexact);
     } catch (error) {
-      if (error instanceof SamplingError) throw new Failure(error.message);
+      if (error instanceof SamplingError) {
+        const zerosInexact = args.every((x, i) => x !== 0 || inexactArgs[i]);
+        throw new Failure(error.message, error.atZero && zerosInexact);
+      }
       throw error;
     }
   }
@@ -273,7 +299,7 @@ export function run(program: Node, seed: bigint, options: RunOptions = {}): Outc
             stack.push(
               node.args.length === 2
                 ? { f: "parameter", site: node, env }
-                : { f: "draw", site: node, first: null },
+                : { f: "draw", site: node, first: null, inexact: false },
             );
             e = node.args[0];
             break;
@@ -317,7 +343,7 @@ export function run(program: Node, seed: bigint, options: RunOptions = {}): Outc
           value = { tag: frame.f, value };
           break;
         case "neg":
-          value = checkedNumber(-number(value));
+          value = checkedNumber(-number(value), isInexact(value));
           break;
         case "matchSum":
           if (value.tag === "inl") e = frame.b;
@@ -346,37 +372,55 @@ export function run(program: Node, seed: bigint, options: RunOptions = {}): Outc
           e = frame.body;
           break;
         case "right":
-          stack.push({ f: "operator", t: frame.t, left: number(value) });
+          stack.push({ f: "operator", t: frame.t, left: number(value), inexact: isInexact(value) });
           env = frame.env;
           e = frame.e;
           break;
         case "operator": {
           const a = frame.left;
           const b = number(value);
-          if (frame.t === "add") value = checkedNumber(a + b);
-          else if (frame.t === "mul") value = checkedNumber(a * b);
-          else if (frame.t === "div") {
-            if (b === 0) throw new Failure("division by zero");
-            value = checkedNumber(a / b);
+          const inexact = frame.inexact || isInexact(value);
+          // A product or quotient of non-zero numbers that comes out as 0 underflowed; one with an
+          // exact 0 as a factor or as the dividend is an exact 0.
+          const underflow = (x: number) => x === 0 && a !== 0 && b !== 0;
+          const exactZero = (x: number, xInexact: boolean) => x === 0 && !xInexact;
+          const zeroLeft = exactZero(a, frame.inexact);
+          if (frame.t === "add") value = checkedNumber(a + b, inexact);
+          else if (frame.t === "mul") {
+            const zero = zeroLeft || exactZero(b, isInexact(value));
+            value = checkedNumber(a * b, !zero && (inexact || underflow(a * b)));
+          } else if (frame.t === "div") {
+            if (b === 0) throw new Failure("division by zero", isInexact(value));
+            value = checkedNumber(a / b, !zeroLeft && (inexact || underflow(a / b)));
           } else value = { tag: "bool", value: a < b };
           break;
         }
         case "parameter":
-          stack.push({ f: "draw", site: frame.site, first: number(value) });
+          stack.push({
+            f: "draw",
+            site: frame.site,
+            first: number(value),
+            inexact: isInexact(value),
+          });
           env = frame.env;
           e = frame.site.args[1];
           break;
         case "draw": {
           const { site, first } = frame;
-          if (first !== null) value = draw(site, [first, number(value)]);
-          else if (site.op === "discrete") value = draw(site, numbers(value));
-          else value = draw(site, [number(value)]);
+          if (first !== null) {
+            value = draw(site, [first, number(value)], [frame.inexact, isInexact(value)]);
+          } else if (site.op === "discrete") {
+            const list = listValues(value);
+            value = draw(site, list.map(number), list.map(isInexact));
+          } else value = draw(site, [number(value)], [isInexact(value)]);
           break;
         }
       }
     }
   } catch (error) {
-    if (error instanceof Failure) return { kind: "failed", message: error.message };
+    if (error instanceof Failure) {
+      return { kind: "failed", message: error.message, inexactZero: error.inexactZero };
+    }
     throw error;
   }
 }

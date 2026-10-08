@@ -55,6 +55,13 @@ export function isRequest(value: unknown): value is Request {
   );
 }
 
+function isDomainFailure(value: unknown) {
+  return (
+    value === null ||
+    (isRecord(value) && typeof value.run === "number" && typeof value.message === "string")
+  );
+}
+
 function isRuns(value: unknown): value is Runs {
   const nullableString = (field: unknown) => field === null || typeof field === "string";
   return (
@@ -62,7 +69,11 @@ function isRuns(value: unknown): value is Runs {
     value.values instanceof Float64Array &&
     typeof value.rejected === "number" &&
     typeof value.failed === "number" &&
+    typeof value.stopped === "number" &&
+    typeof value.zeroFailed === "number" &&
     nullableString(value.firstFailure) &&
+    isDomainFailure(value.firstDomainFailure) &&
+    isDomainFailure(value.firstZeroFailure) &&
     nullableString(value.firstValue) &&
     Array.isArray(value.draws) &&
     value.draws.every(

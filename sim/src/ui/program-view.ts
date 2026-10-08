@@ -17,8 +17,6 @@ import { linkedLines, printedNodeAt, printedSiteAt } from "./linking.ts";
 export interface ProgramViewElements {
   pane: HTMLElement;
   title: HTMLElement;
-  /** The counterexample's explanation below its program. */
-  label: HTMLElement;
   editor: HTMLElement;
   /** Why there is no program. */
   empty: HTMLElement;
@@ -121,7 +119,6 @@ export function mountProgramView(
     const counterexample = shown.text !== null && shown.counterexample;
     elements.pane.classList.toggle("counter", counterexample);
     elements.title.textContent = counterexample ? "Replacing the [E] draws anyway" : "Determinized";
-    elements.label.hidden = !counterexample;
     elements.editor.hidden = shown.text === null;
     elements.empty.hidden = shown.text !== null;
     spans = shown.spans;

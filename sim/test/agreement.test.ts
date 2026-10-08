@@ -82,7 +82,10 @@ for (const file of files) {
         const outcome = run(programs[which], BigInt(seed));
         const where = `${which} at seed ${seed}`;
         assert.equal(outcomes[which].kind, outcome.kind, where);
-        if (outcome.kind === "failed") assert.deepEqual(outcomes[which], outcome, where);
+        // The step table doesn't tell a failure at exactly 0 apart; only the statistics do.
+        if (outcome.kind === "failed") {
+          assert.deepEqual(outcomes[which], { kind: "failed", message: outcome.message }, where);
+        }
         const expr = steps[which];
         if (outcome.kind === "returned") assert.ok(expr && same(expr, outcome.value), where);
       }

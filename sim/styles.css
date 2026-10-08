@@ -435,6 +435,62 @@
     margin-block: 0;
   }
 
+  /* The simulator's check of the premises: a line per premise in one box and one size in both of
+     its states, muted while none is found failing and a warning when one is, so that it keeps
+     its height when a run fails. */
+  .verdict {
+    padding: var(--space-1) 0 var(--space-1) var(--space-3);
+    border-left: 3px solid transparent;
+    font-size: var(--size-small);
+  }
+
+  .verdict :is(p, ul) {
+    margin: 0;
+    padding: 0;
+  }
+
+  .verdict ul {
+    list-style: none;
+  }
+
+  .verdict a {
+    color: inherit;
+  }
+
+  .verdict :is(a, .label) {
+    white-space: nowrap;
+  }
+
+  .verdict .count {
+    display: inline-block;
+    text-align: right;
+  }
+
+  .verdict.quiet {
+    color: var(--muted);
+  }
+
+  /* The list over an invisible copy in which domain safety holds the room of each of its
+     findings, so that the box keeps their height when a run fails, with the spare room at the
+     bottom. */
+  .verdict :is(.premise-stack, .stack) {
+    display: grid;
+  }
+
+  .verdict :is(.premise-stack, .stack) > * {
+    grid-area: 1 / 1;
+  }
+
+  .verdict .premise-room {
+    visibility: hidden;
+  }
+
+  /* A failing finding in SemiBold, and the room of domain safety's, in either state. */
+  .verdict.alert [data-status="fails"] .finding,
+  .verdict .premise-room .fails {
+    font-weight: var(--weight-strong);
+  }
+
   /* A frame around a column that the theorems don't cover; an outline, so that it moves nothing
      when it appears. */
   .pane-det {
@@ -443,7 +499,7 @@
     border-radius: 3px;
   }
 
-  .pane-det.counter {
+  .pane-det.uncovered {
     outline-color: var(--alert);
   }
 

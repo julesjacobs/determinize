@@ -34,6 +34,7 @@ import { escapeHtml } from "./html.ts";
 import { describeSites } from "./lean-view.ts";
 import type { ProgramRuns, Samples, Store } from "./store.ts";
 import { eligibleSites, samplingBudgetMs } from "./store.ts";
+import { compareMeans, premiseVerdict } from "./verdict.ts";
 
 /** The most runs that the conditional-mean plot draws: more would take the page's thread too long
  * at every batch. */
@@ -395,6 +396,12 @@ export function mountDistributionView(
     ].filter((entry): entry is [string, string] => entry[1] !== null);
     const failure = $<HTMLElement>("first-failure");
     failure.hidden = failures.length === 0;
+    // The check's witness, in the verdict, gives the run, Lean's message and the seed; a failure
+    // at an inexact 0 is also explained here.
+    const { firstZeroFailure, zeroFailed } = samples.original.summary;
+    const zero = firstZeroFailure
+      ? `<p>Run ${thin(firstZeroFailure.run)} failed at a 0 computed in floating point, which may be an underflow that doesn't occur in the real-valued semantics.</p>`
+      : "";
     failure.innerHTML =
       failures
         .map(
@@ -402,15 +409,29 @@ export function mountDistributionView(
             `<p><strong>First failure</strong> in ${where}: ${escapeHtml(message)}</p>`,
         )
         .join("") +
-      "<p>The statistics are over the runs that returned. The theorems say nothing about failed runs: a run that leaves an operation's domain shows that the program is not domain-safe, and one that reaches the step limit might still have returned.</p>";
+      zero +
+      "<p>The statistics are over the runs that returned. What the failed runs mean for the theorems' premises, the simulator's check below the determinized program says.</p>";
     const factor = $<HTMLElement>("factor");
-    if (counterexample.peek()) {
+    // Where the theorems don't cover the program, or may not cover its runs as a run failed at
+    // exactly 0, the means are compared instead.
+    if (
+      counterexample.peek() ||
+      firstZeroFailure ||
+      premiseVerdict(result, samples.original.summary, samples.seed).failing
+    ) {
       renderSites(result);
-      const [a, b] = [stats.original.mean, stats.determinized.mean].map(formatStat);
-      factor.textContent = a === b ? `Means: ${a} and ${b}.` : `Means differ: ${a} and ${b}.`;
+      const means = compareMeans(stats.original, stats.determinized, formatStat);
+      factor.hidden = means === null;
+      const left = zeroFailed > 0 && !counterexample.peek();
+      factor.innerHTML =
+        escapeHtml(means ?? "") +
+        (left
+          ? `<span class="sub factor-note">${thin(zeroFailed)} of the source's runs failed in floating point and are left out, so its returned runs aren't comparable with the determinized program's.</span>`
+          : "");
       return;
     }
     renderSites(result);
+    factor.hidden = false;
     const ratio = varianceRatio(stats.original, stats.determinized);
     factor.innerHTML = Number.isFinite(ratio.value)
       ? `Variance-reduction factor <strong>${escapeHtml(ratio.value.toFixed(2))}</strong>`

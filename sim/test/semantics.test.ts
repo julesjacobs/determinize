@@ -396,7 +396,7 @@ test("rejected and failed runs are counted apart from returned ones", () => {
   const runs = runsOf([
     { kind: "returned", number: 2, display: "2" },
     { kind: "rejected" },
-    { kind: "failed", message: "division by zero" },
+    { kind: "failed", message: "division by zero", inexactZero: true },
     { kind: "returned", number: null, display: "()" },
     { kind: "failed", message: "step limit reached" },
   ]);
@@ -407,7 +407,11 @@ test("rejected and failed runs are counted apart from returned ones", () => {
       values: undefined,
       rejected: 1,
       failed: 2,
+      stopped: 2,
+      zeroFailed: 1,
       firstFailure: "division by zero",
+      firstDomainFailure: null,
+      firstZeroFailure: { run: 2, message: "division by zero" },
       firstValue: "2",
       draws: [],
     },
