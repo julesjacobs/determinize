@@ -9,7 +9,7 @@ import {
   affineMul,
   affineScale,
   affineToNumber,
-  evalAffine,
+  constantError,
   isConcreteAffine,
 } from "./affine.ts";
 import type { Op } from "./sampling.ts";
@@ -93,6 +93,79 @@ function leanSample(kind: DistributionKind, values: number[], mean: boolean, rng
   }
 }
 
+/** The distributions whose draws vary continuously with their parameters. */
+const continuousDistributions = new Set<DistributionKind>([
+  "Uniform",
+  "Gauss",
+  "Exponential",
+  "Gamma",
+  "Beta",
+]);
+
+/** The bound on the error of a parameter, as `Affine` and `Const` carry it. */
+function argumentError(arg: SampleArg): number {
+  if (typeof arg === "number") return 0;
+  if (arg?.kind === "Const") return arg.error ?? 0;
+  if (arg?.kind === "SymFloat") return constantError(arg.affine);
+  if (arg?.constant != null) return constantError(arg);
+  return 0;
+}
+
+/**
+ * The first-order bound on how far `f(values)`, which is `result`, is from `f` of the exact
+ * values, each of which is within its bound in `errors`: the larger change of `f` at the two ends
+ * of each bound, summed.
+ */
+function propagatedError(
+  values: number[],
+  errors: number[],
+  f: (values: number[]) => number,
+  result: number,
+) {
+  let total = 0;
+  errors.forEach((error, index) => {
+    if (!(error > 0)) return;
+    let largest = 0;
+    for (const moved of [values[index] - error, values[index] + error]) {
+      try {
+        const change = Math.abs(f(values.with(index, moved)) - result);
+        if (Number.isFinite(change)) largest = Math.max(largest, change);
+      } catch (error) {
+        // Outside the domain, the exact parameters can't be either.
+        if (!isDistributionDomainError(error)) throw error;
+      }
+    }
+    total += largest;
+  });
+  return total;
+}
+
+/**
+ * The first-order bound on how far a draw is from the draw that the exact parameters give, from
+ * the bounds on its parameters' errors: how far a draw from `before`, the stream's state before
+ * the draw, moves when each parameter moves within its bound. A discrete draw changes only where
+ * a parameter crosses a threshold, which no bound covers, so its bound is 0.
+ */
+export function drawError(
+  kind: DistributionKind,
+  args: SampleArg[],
+  before: SplitMix64,
+  value: number | boolean,
+): number {
+  if (!continuousDistributions.has(kind) || typeof value !== "number") return 0;
+  return propagatedError(
+    args.map(numberArg),
+    args.map(argumentError),
+    (values) => leanSample(kind, values, false, before.clone()),
+    value,
+  );
+}
+
+/** Whether a draw's bound is 0 without computing it, as for exact parameters. */
+export function hasDrawError(kind: DistributionKind, args: SampleArg[]) {
+  return continuousDistributions.has(kind) && args.some((arg) => argumentError(arg) > 0);
+}
+
 /** A draw from `rng`: a number, a Boolean for `flip`, and an index for `discrete`. */
 export function sampleDistribution(kind: MeanKind, args: SampleArg[], rng: SplitMix64): number;
 export function sampleDistribution(
@@ -110,10 +183,20 @@ export function sampleDistribution(
 }
 
 /** The mean of a distribution: Lean's mean of concrete parameters, and otherwise an affine form
- * in the symbols the parameters depend on. */
+ * in the symbols the parameters depend on; either with the bound on its error. */
 export function meanDistribution(kind: MeanKind, args: Affine[]): Affine {
   if (args.every(isConcreteAffine)) {
-    return { constant: leanSample(kind, args.map(affineToNumber), true, meanStream), terms: {} };
+    const values = args.map(affineToNumber);
+    const mean = leanSample(kind, values, true, meanStream);
+    const error = propagatedError(
+      values,
+      args.map(constantError),
+      (moved) => leanSample(kind, moved, true, meanStream),
+      mean,
+    );
+    return error > 0
+      ? { constant: mean, terms: {}, errors: { constant: error, terms: {} } }
+      : { constant: mean, terms: {} };
   }
   validateSymbolicMean(kind, args);
   switch (kind) {
@@ -142,10 +225,6 @@ export function meanDistribution(kind: MeanKind, args: Affine[]): Affine {
       );
     }
   }
-}
-
-export function instantiateArgs(args: Affine[], env: Map<string, number>): number[] {
-  return args.map((arg) => evalAffine(arg, env));
 }
 
 function numberArg(arg: SampleArg): number {
