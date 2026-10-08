@@ -74,27 +74,57 @@
         </div>
       </section>
 
-      <section class="band steps" aria-labelledby="steps-title">
+      <section id="steps" class="band steps" aria-labelledby="steps-title">
         <div class="band-head">
           <h2 id="steps-title" class="band-title">Steps of one run</h2>
+        </div>
+        <div id="transport" class="transport">
+          <div class="step-controls" role="group" aria-label="Step through the run">
+            <button id="step-first" type="button">First</button>
+            <button id="step-back" type="button">Back</button>
+            <button id="step-next" type="button">Step</button>
+            <button id="step-last" type="button">Last</button>
+            <button id="step-play" type="button" aria-pressed="false">Play</button>
+            <label class="scrub">
+              <span class="vh">Step</span>
+              <input id="scrubber" type="range" min="0" max="0" value="0" />
+            </label>
+            <output id="step-of" class="step-of" for="scrubber">No steps</output>
+          </div>
           <div class="run-controls">
-            <span id="coupling-status" class="status">Ready</span>
-            <button id="rerun-coupling" type="button">Rerun</button>
+            <label class="seed">
+              Seed
+              <input id="seed" type="text" inputmode="numeric" size="6" autocomplete="off" spellcheck="false" />
+            </label>
+            <button id="new-seed" type="button">New seed</button>
+            <label class="check">
+              <input id="show-symbolic" type="checkbox" />
+              Show symbolic state
+            </label>
           </div>
         </div>
-        <p class="step-note">
-          Symbolic state: the
-          <a href="https://julesjacobs.com/determinize/docs/Determinize/Proof/Symbolic/Syntax.html" title="The symbolic semantics in Lean's proof">symbolic semantics</a>
-          of the paper's proof (§5), computed by the simulator outside Lean's pipeline.
+        <p id="symbolic-note" class="sym-note" hidden>
+          Symbolic state: the proof's symbolic semantics (paper, section 5), computed by the
+          simulator; it is not part of the Lean pipeline.
+          <a href="https://julesjacobs.com/determinize/docs/Determinize/Proof/Symbolic/Syntax.html" title="The symbolic semantics in the Lean development">Its definitions in Lean</a>.
         </p>
-        <p class="g-trace">
-          <a href="https://julesjacobs.com/determinize/docs/Determinize/Spec/Traces/Semantics.html#Determinize.Spec.Traces.Trace" title="Lean's trace: the G draws of a run in order">G trace</a>
-          of run 0: <span id="g-trace"></span>
+        <section
+          id="step-table"
+          class="step-table"
+          aria-label="Steps of the run; the arrow keys move the current step"
+        ></section>
+        <p id="steps-status" class="steps-status" role="status">Loading the simulator…</p>
+        <p class="gtrace">
+          <a href="https://julesjacobs.com/determinize/docs/Determinize/Spec/Traces/Semantics.html#Determinize.Spec.Traces.Trace" title="Trace, in the Lean development: the G draws of a run in order">G trace</a>
+          of this run: <code id="g-trace"></code>
         </p>
-        <div id="coupling-trace" class="coupling-trace"></div>
+        <p class="steps-honesty">
+          The simulator computes this run with its port of Lean's runtime; it is an unverified
+          visualization, and Lean's command-line tool and its theorems are the checked artefacts.
+        </p>
       </section>
 
-      <section class="band dist distribution-panel" aria-labelledby="dist-title">
+      <section id="distributions" class="band dist distribution-panel" aria-labelledby="dist-title">
         <div class="band-head">
           <h2 id="dist-title" class="band-title">Distributions</h2>
           <div class="run-controls">

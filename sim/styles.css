@@ -275,12 +275,350 @@
     color: var(--muted);
   }
 
-  .step-note,
-  .g-trace,
   .estimates {
     max-width: 62rem;
     margin-bottom: var(--space-3);
     color: var(--muted);
+  }
+
+  /* Steps: a transport bar above a region of rows that scrolls by itself, so that following the
+     current step never moves the bar or the page. */
+  .transport {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-5);
+    margin-bottom: var(--space-3);
+  }
+
+  #step-play {
+    min-width: 5.5em;
+  }
+
+  /* At least about one row, even where the bar and the region then exceed a short viewport. */
+  .step-table {
+    position: relative;
+    block-size: min(36rem, calc(100dvh - var(--transport-height, 8rem) - var(--space-7)));
+    min-block-size: 12rem;
+    overflow-y: auto;
+  }
+
+  .step-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .scrub input {
+    width: min(18rem, 60vw);
+    min-height: 1.5rem;
+  }
+
+  /* As wide as the table's largest count, "Step 20000 of 20000", so that the bar keeps its layout
+     from run to run. */
+  .step-of {
+    min-width: 19ch;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .seed {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .seed input {
+    min-height: var(--control-height);
+    padding: 0 var(--space-2);
+    border: 1px solid transparent;
+    border-bottom-color: var(--muted);
+    border-radius: 3px 3px 0 0;
+    background: var(--code-fill);
+    font-family: var(--font-code);
+  }
+
+  .check {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 1.5rem;
+  }
+
+  .sym-note {
+    max-width: 62rem;
+    margin-bottom: var(--space-3);
+    color: var(--muted);
+  }
+
+  /* Two lines on a narrow band, so that a longer status doesn't move the distributions. */
+  .steps-status {
+    max-width: 62rem;
+    min-height: 2lh;
+    margin-top: var(--space-3);
+    color: var(--muted);
+  }
+
+  .steps[aria-busy] .step-table {
+    opacity: 0.55;
+  }
+
+  .step-head {
+    display: none;
+  }
+
+  .step-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .step-table:focus-visible {
+    outline-offset: 4px;
+  }
+
+  .step {
+    display: grid;
+    grid-template-columns: 2rem minmax(0, 1fr);
+    gap: var(--space-1) var(--space-3);
+    padding: var(--space-2) var(--space-2) var(--space-2) 0;
+    border-left: 3px solid transparent;
+    cursor: pointer;
+    transition:
+      background-color var(--step-fade),
+      border-color var(--step-fade);
+  }
+
+  .step > :not(.step-n) {
+    grid-column: 2;
+  }
+
+  .step:hover,
+  .step.linked {
+    background: color-mix(in oklab, var(--ink) 5%, transparent);
+  }
+
+  .step[aria-current="step"] {
+    border-left-color: var(--change);
+    background: var(--highlight);
+  }
+
+  .step-n {
+    grid-row: 1 / span 5;
+    padding-top: 0.15em;
+    color: var(--muted);
+    font-family: var(--font-code);
+    font-size: var(--size-small);
+    text-align: right;
+  }
+
+  .cell {
+    min-width: 0;
+  }
+
+  .cell-draw:empty {
+    display: none;
+  }
+
+  .cell-label {
+    display: block;
+    color: var(--muted);
+    font-size: var(--size-small);
+    font-weight: var(--weight-strong);
+  }
+
+  /* States wrap rather than scroll, so the table never needs the focus to scroll sideways; a
+     wrapped line keeps its indentation and hangs two characters further in. */
+  .state {
+    display: block;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    line-height: var(--leading-code);
+  }
+
+  .sl {
+    display: block;
+    padding-left: calc(var(--indent, 0) * 1ch + 2ch);
+    text-indent: -2ch;
+  }
+
+  /* A long state shows in full in the current row, and its first lines elsewhere. */
+  .step:not([aria-current]) .state.long .sl:nth-child(n + 4) {
+    display: none;
+  }
+
+  .more {
+    display: block;
+    color: var(--muted);
+  }
+
+  .step[aria-current] .more {
+    display: none;
+  }
+
+  .step-result {
+    cursor: default;
+  }
+
+  .step-result .step-n {
+    font-family: var(--font-text);
+  }
+
+  .step-note,
+  .draw-d {
+    display: block;
+    color: var(--muted);
+    font-size: var(--size-small);
+  }
+
+  .step-note.n-mean,
+  .step-note.n-mean code {
+    color: var(--change);
+  }
+
+  .draw code {
+    color: var(--given);
+    font-weight: var(--weight-strong);
+  }
+
+  .step-alert,
+  .step-alert-note {
+    margin: var(--space-1) 0 0;
+    font-size: var(--size-small);
+  }
+
+  .step-alert-note {
+    color: var(--muted);
+  }
+
+  .corr-item.corr-active {
+    background: color-mix(in oklab, var(--given) 18%, transparent);
+  }
+
+  .tok-keyword {
+    font-weight: var(--weight-strong);
+  }
+
+  .tok-mean,
+  .tok-mode-e {
+    color: var(--change);
+    font-weight: var(--weight-strong);
+  }
+
+  .tok-mode-e {
+    text-decoration: underline solid 1px;
+    text-underline-offset: 0.2em;
+  }
+
+  .tok-mode-g {
+    color: var(--given);
+    text-decoration: underline dotted 1.5px;
+    text-underline-offset: 0.2em;
+  }
+
+  .page-note {
+    margin-top: var(--space-3);
+    color: var(--muted);
+  }
+
+  /* Two lines, and a longer trace scrolls inside, so that the run's length doesn't move the
+     distributions. The padding leaves room for the link's focus ring. */
+  .gtrace {
+    block-size: calc(2lh + 2 * var(--space-1));
+    margin: var(--space-2) calc(-1 * var(--space-1)) 0;
+    padding: var(--space-1);
+    overflow-y: auto;
+    color: var(--muted);
+  }
+
+  .gtrace code {
+    color: var(--ink);
+    overflow-wrap: anywhere;
+  }
+
+  .steps-honesty {
+    max-width: 62rem;
+    margin-top: var(--space-2);
+    color: var(--muted);
+    font-size: var(--size-small);
+  }
+
+  @container (min-width: 720px) {
+    .steps-status {
+      min-height: 0;
+    }
+
+    .step-head,
+    .step {
+      grid-template-columns: 2rem minmax(0, 1fr) 8rem minmax(0, 1fr);
+      gap: var(--space-4);
+    }
+
+    .step-head {
+      display: grid;
+      position: sticky;
+      z-index: 1;
+      top: 0;
+      padding: var(--space-1) 0;
+      border-left: 3px solid transparent;
+      background: var(--ground);
+      color: var(--muted);
+      font-size: var(--size-small);
+      font-weight: var(--weight-strong);
+    }
+
+    .step > :not(.step-n) {
+      grid-column: auto;
+    }
+
+    .step > .step-alert,
+    .step > .step-alert-note {
+      grid-column: 2 / -1;
+    }
+
+    .step-n {
+      grid-row: auto;
+    }
+
+    .cell-label {
+      display: none;
+    }
+
+    .cell-draw:empty {
+      display: block;
+    }
+  }
+
+  @container (min-width: 1200px) {
+    .with-sym .step-head,
+    .with-sym .step {
+      grid-template-columns: 2rem minmax(0, 1fr) 8rem minmax(0, 1fr) minmax(0, 1fr);
+    }
+  }
+
+  @container (min-width: 720px) and (max-width: 1199px) {
+    .with-sym .cell-sym {
+      grid-column: 2 / -1;
+      grid-row: 2;
+    }
+
+    .with-sym .cell-sym .cell-label {
+      display: block;
+    }
+
+    .with-sym .step-head span:nth-child(4) {
+      display: none;
+    }
+  }
+
+  .vh {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }
 
@@ -288,337 +626,6 @@
   h1 {
     font-size: 28px;
     line-height: 1.15;
-  }
-
-  .coupling-trace {
-    min-height: 0;
-    overflow: auto;
-    padding: 0;
-  }
-
-  .coupling-table-head {
-    display: grid;
-    grid-template-columns: 42px repeat(3, minmax(0, 1fr));
-    position: sticky;
-    top: 0;
-    z-index: 2;
-    border-bottom: 1px solid var(--line);
-    background: var(--panel-strong);
-  }
-
-  .coupling-table-head span {
-    padding: 8px 10px;
-    border-right: 1px solid var(--line);
-    font-size: 12px;
-    font-weight: 850;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-  }
-
-  .coupling-table-head span:nth-child(2) {
-    color: var(--given);
-  }
-
-  .coupling-table-head span:nth-child(3) {
-    color: var(--change);
-  }
-
-  .coupling-table-head span:nth-child(4) {
-    border-right: 0;
-    color: var(--given);
-  }
-
-  .coupling-table-body {
-    display: grid;
-  }
-
-  .trace-pager {
-    position: sticky;
-    bottom: 0;
-    z-index: 2;
-    border-top: 1px solid var(--line);
-    background: var(--panel);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 10px;
-    font-size: 13px;
-    font-weight: 700;
-  }
-
-  .coupling-row {
-    display: grid;
-    grid-template-columns: 42px repeat(3, minmax(0, 1fr));
-    border-bottom: 1px solid var(--line);
-    background: var(--line);
-    --sigma-lines: 1;
-  }
-
-  .coupling-row.failed {
-    background: color-mix(in oklab, var(--alert) 40%, var(--ground));
-  }
-
-  .coupling-row.domain-error-row {
-    background: color-mix(in oklab, var(--change) 30%, var(--ground));
-  }
-
-  .step-rail {
-    display: grid;
-    align-content: center;
-    justify-items: center;
-    gap: 4px;
-    min-height: 106px;
-    border-right: 1px solid var(--line);
-    background: var(--code-fill);
-    color: var(--muted);
-    font-weight: 850;
-  }
-
-  .step-rail span {
-    font-size: 16px;
-    line-height: 1;
-  }
-
-  .step-rail small {
-    color: var(--green);
-    font-size: 10px;
-    letter-spacing: 0.06em;
-  }
-
-  .coupling-row.failed .step-rail small {
-    color: var(--red);
-  }
-
-  .step-check {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 34px;
-    min-width: 34px;
-    min-height: 18px;
-    border-radius: 999px;
-    padding: 0;
-    font-size: 9px;
-    font-weight: 900;
-    letter-spacing: 0.02em;
-    cursor: help;
-    outline: none;
-    white-space: nowrap;
-  }
-
-  .step-check.ok {
-    background: var(--green-bg);
-    color: var(--green);
-  }
-
-  .step-check.fail {
-    background: var(--red-bg);
-    color: var(--red);
-  }
-
-  .step-check.domain {
-    background: color-mix(in oklab, var(--change) 8%, var(--ground));
-    color: var(--amber);
-  }
-
-  .step-check.popover-open {
-    box-shadow: 0 0 0 2px color-mix(in oklab, var(--ink) 12%, transparent);
-  }
-
-  .check-popover-source {
-    display: none;
-  }
-
-  .floating-check-popover {
-    position: fixed;
-    left: 0;
-    top: 0;
-    z-index: 10000;
-    display: none;
-    width: min(420px, 58vw);
-    border: 1px solid var(--rule);
-    border-radius: 10px;
-    background: color-mix(in oklab, var(--ink) 98%, transparent);
-    box-shadow: 0 18px 38px color-mix(in oklab, var(--ink) 22%, transparent);
-    color: var(--code-fill);
-    padding: 12px;
-    text-align: left;
-    letter-spacing: 0;
-    text-transform: none;
-    font: 12px/1.45 Inter, ui-sans-serif, system-ui, sans-serif;
-  }
-
-  .floating-check-popover.visible {
-    display: grid;
-    gap: 8px;
-  }
-
-  .floating-check-popover strong {
-    color: var(--ground);
-    font-size: 13px;
-  }
-
-  .floating-check-popover code {
-    display: block;
-    max-height: 82px;
-    overflow: auto;
-    border: 1px solid color-mix(in oklab, var(--ground) 14%, transparent);
-    border-radius: 7px;
-    background: color-mix(in oklab, var(--ground) 8%, transparent);
-    color: color-mix(in oklab, var(--given) 10%, var(--ground));
-    padding: 7px;
-    white-space: pre-wrap;
-    font: 11px/1.45 "SF Mono", Menlo, Monaco, Consolas, monospace;
-  }
-
-  .floating-check-popover em {
-    border-top: 1px solid color-mix(in oklab, var(--ground) 14%, transparent);
-    padding-top: 8px;
-    color: color-mix(in oklab, var(--change) 30%, var(--ground));
-    font-style: normal;
-    font-weight: 750;
-  }
-
-  .floating-check-popover .domain-error-note {
-    border: 1px solid color-mix(in oklab, var(--change) 28%, transparent);
-    border-radius: 7px;
-    background: color-mix(in oklab, var(--change) 22%, transparent);
-    color: color-mix(in oklab, var(--change) 8%, var(--ground));
-    padding: 7px;
-    font-weight: 800;
-  }
-
-  .coupling-cell {
-    min-width: 0;
-    background: var(--panel);
-    border-right: 1px solid var(--line);
-  }
-
-  .coupling-cell:last-child {
-    border-right: 0;
-  }
-
-  .code-view {
-    min-height: 96px;
-    max-height: 150px;
-    margin: 0;
-    padding: 11px 10px;
-    overflow: auto;
-    white-space: pre-wrap;
-    background: var(--ground);
-  }
-
-  .trace-value {
-    display: inline;
-    border: 1px solid color-mix(in oklab, var(--change) 20%, transparent);
-    border-radius: 4px;
-    background: color-mix(in oklab, var(--change) 14%, transparent);
-    box-decoration-break: clone;
-    -webkit-box-decoration-break: clone;
-    padding: 0 2px;
-  }
-
-  .trace-step {
-    display: inline;
-    border: 1px solid color-mix(in oklab, var(--given) 20%, transparent);
-    border-radius: 4px;
-    background: color-mix(in oklab, var(--given) 32%, transparent);
-    box-decoration-break: clone;
-    -webkit-box-decoration-break: clone;
-    padding: 0 2px;
-  }
-
-  .mean-form {
-    border-radius: 4px;
-    background: color-mix(in oklab, var(--given) 8%, transparent);
-    box-decoration-break: clone;
-    -webkit-box-decoration-break: clone;
-    padding: 0 1px;
-  }
-
-  .trace-domain-error {
-    display: inline;
-    border: 1px solid color-mix(in oklab, var(--change) 36%, transparent);
-    border-radius: 4px;
-    background: color-mix(in oklab, var(--change) 28%, transparent);
-    color: var(--change);
-    box-decoration-break: clone;
-    -webkit-box-decoration-break: clone;
-    padding: 0 2px;
-    font-weight: 800;
-    overflow-wrap: anywhere;
-  }
-
-  .corr-item {
-    border-radius: 4px;
-    box-decoration-break: clone;
-    -webkit-box-decoration-break: clone;
-    cursor: crosshair;
-  }
-
-  .corr-item.corr-active {
-    background: color-mix(in oklab, var(--given) 17%, transparent);
-    box-shadow: 0 0 0 1px color-mix(in oklab, var(--given) 34%, transparent);
-  }
-
-  .sigma-strip {
-    height: calc(12px + var(--sigma-lines) * 16.2px);
-    max-height: 77px;
-    padding: 6px 10px;
-    overflow: auto;
-    white-space: nowrap;
-    background: var(--code-fill);
-    color: var(--ink);
-    font: 700 12px/1.35 "SF Mono", Menlo, Monaco, Consolas, monospace;
-  }
-
-  .sigma-binding {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) max-content;
-    align-items: baseline;
-    gap: 6px;
-    padding: 1px 2px;
-  }
-
-  .sigma-definition {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .sigma-mean {
-    color: var(--muted);
-    font-size: 11px;
-    font-weight: 750;
-    text-align: right;
-  }
-
-  .sigma-mean-value {
-    color: var(--given);
-    font-weight: 850;
-  }
-
-  .sigma-mean-error {
-    color: var(--amber);
-    font-weight: 900;
-  }
-
-  .sigma-strip.blank {
-    color: transparent;
-  }
-
-  .coupling-cell.symbolic .sigma-strip {
-    color: var(--change);
-  }
-
-  .coupling-cell.original .sigma-strip {
-    color: var(--given);
-  }
-
-  .coupling-cell.determinized .sigma-strip {
-    color: var(--given);
   }
 
   .run-outcomes {
@@ -911,35 +918,6 @@
     text-anchor: end;
   }
 
-  .tok-keyword {
-    color: var(--given);
-    font-weight: 750;
-  }
-
-  .tok-dist {
-    color: var(--given);
-    font-weight: 750;
-  }
-
-  .tok-mean {
-    color: var(--given);
-    font-weight: 800;
-  }
-
-  .tok-mode {
-    color: var(--given);
-    font-weight: 850;
-  }
-
-  .tok-sym {
-    color: var(--alert);
-    font-weight: 800;
-  }
-
-  .tok-number {
-    color: var(--change);
-  }
-
   .premise-notice {
     border-radius: 6px;
     background: color-mix(in oklab, var(--change) 8%, var(--ground));
@@ -950,16 +928,5 @@
 
   .premise-notice[hidden] {
     display: none;
-  }
-
-  .counterexample-label {
-    grid-column: 1 / -1;
-    margin: 0 0 8px;
-    border-radius: 8px;
-    background: color-mix(in oklab, var(--change) 8%, var(--ground));
-    color: var(--amber);
-    padding: 8px 12px;
-    font-size: 13px;
-    font-weight: 800;
   }
 }

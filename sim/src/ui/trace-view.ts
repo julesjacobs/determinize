@@ -1,14 +1,19 @@
-// The step table: the step table's run, frame by frame, with each frame's checks in a popover and
-// the symbols and values that correspond to each other highlighted together. A long run shows a
-// page of frames at a time.
-import { effect } from "@preact/signals-core";
+// The steps band: one run of the source and of the determinized program, step by step, beside the
+// G draws they share. A transport bar (a scrubber, step buttons, and Play at one step per second
+// until Pause) and the arrow keys move the current step. The rows scroll in a region of their own
+// below the bar, which stays in place while the region follows the current step. Rows show the
+// source, the G draw, optionally the symbolic state of the paper's proof, and the determinized
+// program, with notes on each step's draws and means; a long run arrives from its worker a page at
+// a time.
+import { computed, effect } from "@preact/signals-core";
 import type { Expr } from "../core/compiler/ast.ts";
-import { prettyExpr } from "../core/compiler/pretty.ts";
 import { formatNumber } from "../core/format.ts";
+import type { Affine } from "../core/runtime/affine.ts";
 import { prettyAffine } from "../core/runtime/affine.ts";
 import { distributionName } from "../core/runtime/distributions.ts";
 import type { GDraw } from "../core/runtime/eval.ts";
 import type { Binding, Frame } from "../core/runtime/semantics.ts";
+import { isValue } from "../core/runtime/semantics.ts";
 import {
   domainErrorMessage,
   frameOk,
@@ -17,194 +22,332 @@ import {
   sigmaMeans,
 } from "../core/trace.ts";
 import type { TraceOverview, TracePage } from "../core/trace-pages.ts";
-import { counterexampleLabel, escapeHtml } from "./html.ts";
+import { pageIndexOf } from "../core/trace-pages.ts";
+import { escapeHtml } from "./html.ts";
+import { writePref } from "./prefs.ts";
+import type { Reduced, StepFacts } from "./steps.ts";
+import { stepFacts } from "./steps.ts";
 import type { Store } from "./store.ts";
-import type { TraceOptions } from "./trace-expr.ts";
-import { changedPath, renderHighlightedText, renderTraceExpr } from "./trace-expr.ts";
+import { renderHighlightedText, renderTraceExpr } from "./trace-expr.ts";
 
 export interface TraceViewElements {
-  table: HTMLElement;
+  band: HTMLElement;
+  /** The step controls above the rows. */
+  transport: HTMLElement;
+  first: HTMLButtonElement;
+  back: HTMLButtonElement;
+  next: HTMLButtonElement;
+  last: HTMLButtonElement;
+  play: HTMLButtonElement;
+  scrubber: HTMLInputElement;
+  stepOf: HTMLOutputElement;
+  symbolic: HTMLInputElement;
+  symbolicNote: HTMLElement;
   status: HTMLElement;
+  table: HTMLElement;
   /** The G trace of the run that the table shows. */
   gTrace: HTMLElement;
 }
 
+/** How long Play shows each step. */
+const playStepMs = 1000;
+
 export function mountTraceView(
   elements: TraceViewElements,
-  store: Pick<Store, "trace" | "activeStep" | "samples" | "showPage">,
+  store: Pick<
+    Store,
+    | "trace"
+    | "samples"
+    | "showPage"
+    | "currentStep"
+    | "hoveredStep"
+    | "hoveredSite"
+    | "linked"
+    | "showSymbolic"
+    | "hoveredRange"
+    | "followLinked"
+  >,
 ) {
+  const run = computed(() => {
+    const state = store.trace.value;
+    return state.kind === "run" ? state : null;
+  });
+  /** What each row of the page shows besides its states. */
+  const facts = computed(() => {
+    const page = run.value?.page;
+    if (!page) return new Map<number, StepFacts>();
+    return new Map(
+      page.frames.map((frame, index) => [
+        frame.step,
+        stepFacts(index === 0 ? page.previous : page.frames[index - 1], frame),
+      ]),
+    );
+  });
+
+  /** Play's timer, while it plays. */
+  let playing: ReturnType<typeof setInterval> | null = null;
+
   effect(() => {
     elements.gTrace.textContent = describeTraces(store.samples.value.traces);
   });
 
-  const portal = document.createElement("div");
-  portal.className = "floating-check-popover";
-  portal.setAttribute("role", "tooltip");
-  document.body.append(portal);
-
-  /** The check whose popover is open. */
-  let activeCheck: Element | null = null;
-  let hideTimer: ReturnType<typeof setTimeout> | undefined;
-  let activeCorrespondence: string | null = null;
-
-  /** The step of the row that holds `check`. */
-  function stepOf(check: Element) {
-    const row = check.closest<HTMLElement>(".coupling-row");
-    return row ? Number(row.dataset.step) : -1;
-  }
-
-  /** The pager button that asked for the page on its way, to focus it again. */
-  let pageButton: string | null = null;
-
-  elements.table.addEventListener("click", (event) => {
-    const button =
-      event.target instanceof Element ? event.target.closest<HTMLElement>("[data-page]") : null;
-    if (!button) return;
-    pageButton = button.dataset.label ?? null;
-    store.showPage(Number(button.dataset.page));
-  });
-
-  function showStep(check: Element) {
-    clearTimeout(hideTimer);
-    const step = stepOf(check);
-    if (step >= 0) store.activeStep.value = step;
-  }
-
-  function scheduleHide() {
-    clearTimeout(hideTimer);
-    hideTimer = setTimeout(() => {
-      store.activeStep.value = null;
-    }, 120);
-  }
-
-  elements.table.addEventListener("pointerover", (event) => {
-    const corr =
-      event.target instanceof Element ? event.target.closest<HTMLElement>(".corr-item") : null;
-    if (corr) showCorrespondence(corr);
-    const check = event.target instanceof Element ? event.target.closest(".step-check") : null;
-    if (check) showStep(check);
-  });
-
-  elements.table.addEventListener("pointerout", (event) => {
-    const corr =
-      event.target instanceof Element ? event.target.closest<HTMLElement>(".corr-item") : null;
-    if (corr) {
-      const next =
-        event.relatedTarget instanceof Element
-          ? event.relatedTarget.closest<HTMLElement>(".corr-item")
-          : null;
-      if (!next || next.dataset.corr !== corr.dataset.corr) hideCorrespondence();
-    }
-    const check = event.target instanceof Element ? event.target.closest(".step-check") : null;
-    if (!check) return;
-    const next = event.relatedTarget instanceof Element ? event.relatedTarget : null;
-    if (next && (check.contains(next) || portal.contains(next))) return;
-    scheduleHide();
-  });
-
-  elements.table.addEventListener("focusin", (event) => {
-    const corr =
-      event.target instanceof Element ? event.target.closest<HTMLElement>(".corr-item") : null;
-    if (corr) showCorrespondence(corr);
-    const check = event.target instanceof Element ? event.target.closest(".step-check") : null;
-    if (check) showStep(check);
-  });
-
-  elements.table.addEventListener("focusout", (event) => {
-    const corr = event.target instanceof Element ? event.target.closest(".corr-item") : null;
-    if (corr) hideCorrespondence();
-    const next = event.relatedTarget instanceof Element ? event.relatedTarget : null;
-    if (next && (elements.table.contains(next) || portal.contains(next))) return;
-    scheduleHide();
-  });
-
-  portal.addEventListener("pointerenter", () => clearTimeout(hideTimer));
-  portal.addEventListener("pointerleave", scheduleHide);
-  window.addEventListener(
-    "scroll",
-    () => {
-      if (activeCheck) positionCheckPopover(portal, activeCheck);
-    },
-    true,
-  );
-  window.addEventListener("resize", () => {
-    if (activeCheck) positionCheckPopover(portal, activeCheck);
-  });
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") store.activeStep.value = null;
-  });
-
+  // The table and the status: busy while the worker computes; the earlier table stays meanwhile.
   effect(() => {
     const state = store.trace.value;
-    store.activeStep.value = null;
-    // The worker computes the table; the earlier one stays until the new one arrives.
-    if (state.kind === "computing") {
-      elements.table.setAttribute("aria-busy", "true");
-      elements.status.textContent = "Computing the steps…";
-      elements.status.className = "status";
+    const busy = state.kind === "computing";
+    elements.band.toggleAttribute("aria-busy", busy);
+    if (busy) {
+      elements.status.textContent = "Computing the steps of this run…";
       return;
     }
-    elements.table.removeAttribute("aria-busy");
-    if (state.kind === "run") {
-      renderCoupling(elements, state.overview, state.page);
-      if (pageButton) {
-        elements.table.querySelector<HTMLElement>(`[data-label="${pageButton}"]`)?.focus();
-        pageButton = null;
-      }
+    if (state.kind !== "run") {
+      elements.table.replaceChildren();
+      elements.status.textContent =
+        state.kind === "not run"
+          ? "Steps appear once Lean accepts the program."
+          : `The simulator couldn't compute the steps: ${state.message}`;
       return;
     }
-    // Lean rejects the program for a reason other than a mode conflict, or the run failed.
-    elements.table.innerHTML = "";
-    elements.status.textContent = state.kind === "not run" ? "Not run" : "Trace unavailable";
-    elements.status.className = "status error";
+    elements.status.textContent = describeRun(state.overview);
   });
 
   effect(() => {
-    const step = store.activeStep.value;
-    clearTimeout(hideTimer);
-    if (activeCheck) activeCheck.classList.remove("popover-open");
-    activeCheck = null;
-    const check =
-      step === null
-        ? null
-        : elements.table.querySelector(`.coupling-row[data-step="${step}"] .step-check`);
-    const source = check?.querySelector(".check-popover-source");
-    if (!check || !source) {
-      portal.classList.remove("visible");
-      return;
-    }
-    activeCheck = check;
-    portal.innerHTML = source.innerHTML;
-    portal.classList.add("visible");
-    check.classList.add("popover-open");
-    positionCheckPopover(portal, check);
+    const current = run.value;
+    const symbolic = store.showSymbolic.value;
+    elements.band.classList.toggle("with-sym", symbolic);
+    elements.symbolicNote.hidden = !symbolic;
+    elements.symbolic.checked = symbolic;
+    if (!current) return;
+    renderRows(elements.table, current.overview, current.page, facts.value, symbolic);
+    markCurrent();
+    // A new page, of this run or a new one, brings the current row into view.
+    follow(true);
   });
 
-  function showCorrespondence(anchor: HTMLElement) {
-    const symbol = anchor.dataset.corr;
-    if (!symbol) return;
-    const scope = anchor.closest(".coupling-row") ?? elements.table;
-    const key = `${symbol}:${rowIndex(scope)}`;
-    if (activeCorrespondence === key) return;
-    hideCorrespondence();
-    activeCorrespondence = key;
-    for (const item of scope.querySelectorAll(`[data-corr="${cssEscape(symbol)}"]`)) {
-      item.classList.add("corr-active");
+  // The controls follow the current step; the page that holds it is fetched when needed.
+  effect(() => {
+    const current = run.value;
+    const step = store.currentStep.value;
+    const last = current ? current.overview.frameCount - 1 : 0;
+    elements.scrubber.max = String(last);
+    elements.scrubber.value = String(step);
+    elements.scrubber.disabled = !current;
+    elements.stepOf.textContent = current ? `Step ${step} of ${last}` : "No steps";
+    elements.first.disabled = elements.back.disabled = !current || step === 0;
+    elements.next.disabled = elements.last.disabled = !current || step === last;
+    elements.play.disabled = !current || (step === last && !playing);
+    if (!current) return;
+    const { page, overview } = current;
+    if (step < page.first || step >= page.first + page.frames.length) {
+      store.showPage(pageIndexOf(overview.pageStarts, step));
+    }
+    markCurrent();
+  });
+
+  /** The part of the source under the pointer in either pane: the smallest span that a step on
+   * the page reduces around it, or else the sample site there. */
+  const hovered = computed(() => {
+    const range = store.hoveredRange.value;
+    if (range) {
+      let smallest: Reduced | null = null;
+      for (const fact of facts.value.values()) {
+        const reduced = fact.reduced;
+        if (!reduced || reduced.from > range.from || range.to > reduced.to) continue;
+        if (!smallest || reduced.to - reduced.from < smallest.to - smallest.from)
+          smallest = reduced;
+      }
+      if (smallest) return smallest;
+    }
+    const site = store.hoveredSite.value;
+    return site && { from: site.from, to: site.to, headTo: site.to };
+  });
+
+  // Both panes highlight what the hovered or current step reduces, or the hovered span.
+  effect(() => {
+    const span = hovered.value;
+    if (span) {
+      store.linked.value = span;
+      return;
+    }
+    const step = store.hoveredStep.value ?? store.currentStep.value;
+    // Step 0 has reduced nothing yet; it shows what the first step reduces.
+    store.linked.value = facts.value.get(Math.max(step, 1))?.reduced ?? null;
+  });
+  // The rows that reduce the hovered span.
+  effect(() => {
+    const span = hovered.value;
+    for (const row of elements.table.querySelectorAll<HTMLElement>(".step")) {
+      const reduced = facts.peek().get(Number(row.dataset.step))?.reduced;
+      row.classList.toggle(
+        "linked",
+        !!span && !!reduced && reduced.from === span.from && reduced.to === span.to,
+      );
+    }
+  });
+
+  function markCurrent() {
+    const step = store.currentStep.peek();
+    for (const row of elements.table.querySelectorAll<HTMLElement>(".step[aria-current]")) {
+      row.removeAttribute("aria-current");
+    }
+    elements.table
+      .querySelector<HTMLElement>(`.step[data-step="${step}"]`)
+      ?.setAttribute("aria-current", "step");
+  }
+
+  /**
+   * Scrolls the rows' region, and only it, so that the current row is fully visible below the
+   * sticky headings, now and again once its page renders: at once while the scrubber is dragged
+   * or Play plays, smoothly for a single move unless the reader prefers reduced motion.
+   */
+  function follow(instant: boolean) {
+    const region = elements.table;
+    const row = region.querySelector<HTMLElement>(`.step[data-step="${store.currentStep.peek()}"]`);
+    if (!row) return;
+    const head = region.querySelector<HTMLElement>(".step-head");
+    const covered = head?.offsetParent ? head.offsetHeight : 0;
+    const margin = 8;
+    const top = row.offsetTop;
+    const bottom = top + row.offsetHeight;
+    const viewTop = region.scrollTop + covered;
+    const viewBottom = region.scrollTop + region.clientHeight;
+    if (top >= viewTop && bottom <= viewBottom) return;
+    const target =
+      top < viewTop || row.offsetHeight > region.clientHeight - covered
+        ? top - covered - margin
+        : bottom - region.clientHeight + margin;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    region.scrollTo({
+      top: Math.max(0, target),
+      behavior: instant || reduced ? "instant" : "smooth",
+    });
+  }
+
+  /** Moves to `step`, within the run, and keeps its row in view in the region. */
+  function moveTo(step: number, instant = false) {
+    const current = run.peek();
+    if (!current) return;
+    const last = current.overview.frameCount - 1;
+    store.currentStep.value = Math.max(0, Math.min(last, step));
+    store.followLinked.value += 1;
+    follow(instant);
+  }
+
+  function pause() {
+    if (playing) clearInterval(playing);
+    playing = null;
+    elements.play.textContent = "Play";
+    elements.play.setAttribute("aria-pressed", "false");
+  }
+  elements.play.addEventListener("click", () => {
+    if (playing) {
+      pause();
+      return;
+    }
+    const current = run.peek();
+    if (!current) return;
+    if (store.currentStep.peek() >= current.overview.frameCount - 1) moveTo(0, true);
+    elements.play.textContent = "Pause";
+    elements.play.setAttribute("aria-pressed", "true");
+    playing = setInterval(() => {
+      const shown = run.peek();
+      if (!shown || store.currentStep.peek() >= shown.overview.frameCount - 1) {
+        pause();
+        return;
+      }
+      moveTo(store.currentStep.peek() + 1, true);
+    }, playStepMs);
+  });
+  // A new run, or a new program, stops Play; a page of the same run doesn't.
+  let playedRun: unknown = null;
+  effect(() => {
+    const overview = run.value?.overview ?? null;
+    if (overview !== playedRun) pause();
+    playedRun = overview;
+  });
+
+  // The rows' region scrolls, so it takes the focus: the keyboard then scrolls it and moves the
+  // current step with the arrow keys.
+  elements.table.tabIndex = 0;
+  new ResizeObserver(() => {
+    elements.band.style.setProperty("--transport-height", `${elements.transport.offsetHeight}px`);
+  }).observe(elements.transport);
+
+  elements.first.addEventListener("click", () => moveTo(0));
+  elements.back.addEventListener("click", () => moveTo(store.currentStep.peek() - 1));
+  elements.next.addEventListener("click", () => moveTo(store.currentStep.peek() + 1));
+  elements.last.addEventListener("click", () => moveTo(Number.POSITIVE_INFINITY));
+  elements.scrubber.addEventListener("input", () => moveTo(Number(elements.scrubber.value), true));
+  // The page remembers the reader's choice, not one that a link set.
+  elements.symbolic.addEventListener("change", () => {
+    store.showSymbolic.value = elements.symbolic.checked;
+    writePref("symbolic", elements.symbolic.checked ? "shown" : null);
+  });
+
+  elements.table.addEventListener("keydown", (event) => {
+    if (event.target !== elements.table) return;
+    const step = store.currentStep.peek();
+    const moves: Record<string, number> = {
+      ArrowDown: step + 1,
+      ArrowUp: step - 1,
+      PageDown: step + 10,
+      PageUp: step - 10,
+      Home: 0,
+      End: Number.POSITIVE_INFINITY,
+    };
+    if (!(event.key in moves)) return;
+    event.preventDefault();
+    moveTo(moves[event.key]);
+  });
+  elements.table.addEventListener("click", (event) => {
+    const target = event.target instanceof Element ? event.target : null;
+    const row = target?.closest<HTMLElement>(".step[data-step]");
+    if (row && store.trace.peek().kind === "run") moveTo(Number(row.dataset.step));
+  });
+  elements.table.addEventListener("pointerover", (event) => {
+    const target = event.target instanceof Element ? event.target : null;
+    const row = target?.closest<HTMLElement>(".step[data-step]");
+    const step = row ? Number(row.dataset.step) : null;
+    const moved = step !== null && step !== store.hoveredStep.peek();
+    store.hoveredStep.value = step;
+    if (moved) store.followLinked.value += 1;
+    const corr = target?.closest<HTMLElement>(".corr-item");
+    showCorrespondence(row, corr?.dataset.corr ?? null);
+  });
+  elements.table.addEventListener("pointerleave", () => {
+    store.hoveredStep.value = null;
+    showCorrespondence(null, null);
+  });
+
+  /** Marks, within `row`, the symbol `symbol` of σ and the values that correspond to it. */
+  function showCorrespondence(row: HTMLElement | null | undefined, symbol: string | null) {
+    for (const item of elements.table.querySelectorAll(".corr-active")) {
+      item.classList.remove("corr-active");
+    }
+    if (!row || !symbol) return;
+    for (const item of row.querySelectorAll<HTMLElement>(".corr-item")) {
+      if (item.dataset.corr === symbol) item.classList.add("corr-active");
     }
   }
+}
 
-  function hideCorrespondence() {
-    if (!activeCorrespondence) return;
-    for (const item of elements.table.querySelectorAll(".corr-active"))
-      item.classList.remove("corr-active");
-    activeCorrespondence = null;
+/** The status of a run as a whole. */
+function describeRun(run: TraceOverview) {
+  const steps = run.frameCount - 1;
+  const at = `Seed ${run.seed}:`;
+  if (run.domainFailure) {
+    return `${at} at step ${steps} a run left an operation's domain (${run.domainFailure}). Typing doesn't establish domain safety, so no theorem relates the runs from there on.`;
   }
-
-  function rowIndex(scope: Element) {
-    return scope instanceof HTMLElement
-      ? String(Array.prototype.indexOf.call(scope.parentElement?.children ?? [], scope))
-      : "all";
+  if (run.stopped === "steps") {
+    return `${at} the table stops after ${maxSymbolicSteps} steps; Lean's fuel may still let the run return.`;
   }
+  if (run.stopped === "size") {
+    return `${at} the table stops after ${steps} steps; its states grew too large to show.`;
+  }
+  const of = run.counterexample ? " of the counterexample" : "";
+  if (!run.ok) return `${at} ${steps} steps${of}; a step check failed.`;
+  const domain = run.domainError ? "; all three runs reached the same domain error" : "";
+  return `${at} ${steps} steps${of}${domain}, and every step check passed.`;
 }
 
 /** The G draws shown of a trace; the rest are counted. */
@@ -232,181 +375,189 @@ function describeTraces(traces: { source: GDraw[]; determinized: GDraw[] } | nul
   return `${describeTrace(source)} in the source, ${describeTrace(determinized)} in the determinized program`;
 }
 
-function renderCoupling(elements: TraceViewElements, coupled: TraceOverview, page: TracePage) {
-  const terminalDomainError = coupled.domainError;
-  const frames = page.frames;
-  if (coupled.counterexample) {
-    elements.status.textContent = `seed ${coupled.seed} - counterexample`;
-    elements.status.className = "status warning";
-  } else if (coupled.domainFailure) {
-    elements.status.textContent = `seed ${coupled.seed} - domain failure`;
-    elements.status.className = "status warning";
-  } else if (coupled.stopped === "steps") {
-    elements.status.textContent = `seed ${coupled.seed} - stopped after ${maxSymbolicSteps} steps`;
-    elements.status.className = "status warning";
-  } else if (coupled.stopped === "size") {
-    elements.status.textContent = `seed ${coupled.seed} - stopped after ${coupled.frameCount - 1} steps: the table grew too large to show`;
-    elements.status.className = "status warning";
-  } else {
-    elements.status.textContent = `seed ${coupled.seed} - ${coupled.ok ? (terminalDomainError ? "checked domain error" : "checked") : "failed"}`;
-    elements.status.className = `status ${coupled.ok ? (terminalDomainError ? "warning" : "ok") : "error"}`;
+function cell(kind: string, label: string, content: string) {
+  return `<div class="cell cell-${kind}"><span class="cell-label">${label}</span>${content}</div>`;
+}
+
+function note(text: string, className: string) {
+  return `<span class="step-note ${className}">${text}</span>`;
+}
+
+/** The lines of a state that rows other than the current one show. */
+const shownLines = 3;
+
+/** `html` split at its line breaks, each line with the elements that are open across it closed
+ * at its end and opened again on the next line. */
+export function htmlLines(html: string): string[] {
+  const lines: string[] = [];
+  const open: string[] = [];
+  let line = "";
+  for (const part of html.split(/(<[^>]+>|\n)/)) {
+    if (part === "\n") {
+      lines.push(line + open.map(() => "</span>").join(""));
+      line = open.join("");
+    } else {
+      if (part.startsWith("</")) open.pop();
+      else if (part.startsWith("<") && !part.endsWith("/>")) open.push(part);
+      line += part;
+    }
   }
-  elements.table.innerHTML =
-    (coupled.counterexample ? `<p class="counterexample-label">${counterexampleLabel}</p>` : "") +
-    `
-    <div class="coupling-table-head">
-      <span></span>
-      <span>Source</span>
-      <span>Symbolic state</span>
-      <span>Determinized</span>
-    </div>
-    <div class="coupling-table-body">
-  ` +
-    frames
-      .map((frame, index) => {
-        const previous = index === 0 ? page.previous : frames[index - 1];
-        const sigma = sigmaView(frame.sigma);
-        const sigmaLines = Math.max(1, Math.min(4, sigma.lineCount));
-        const ok = frameOk(frame);
-        const domainError = hasDomainError(frame);
-        return `
-        <section class="coupling-row ${ok ? "" : "failed"} ${ok && domainError ? "domain-error-row" : ""}" data-step="${frame.step}" style="--sigma-lines: ${sigmaLines}">
-          <div class="step-rail">
-            <span>${frame.step}</span>
-            ${stepCheck(frame, coupled)}
-          </div>
-          ${couplingCell(frame.original, "", "original", { focusPath: changedPath(previous?.original, frame.original), valueBySymbol: frame.sampleBySymbol, valueLabel: "sampled value for" })}
-          ${couplingCell(frame.symbolic, sigma.html, "symbolic", { focusPath: changedPath(previous?.symbolic, frame.symbolic) })}
-          ${couplingCell(frame.determinized, "", "determinized", { focusPath: changedPath(previous?.determinized, frame.determinized), valueBySymbol: sigma.meanBySymbol, valueLabel: "mean substituted for" })}
-        </section>
-      `;
-      })
-      .join("") +
-    "</div>" +
-    pager(page, coupled);
+  lines.push(line);
+  return lines;
 }
 
-/** Buttons to the other pages of the run, if it has more than one page. */
-function pager(page: TracePage, coupled: TraceOverview) {
-  const starts = coupled.pageStarts;
-  const last = starts.length - 1;
-  if (last === 0) return "";
-  const button = (label: string, target: number) =>
-    `<button type="button" data-page="${target}" data-label="${label}" ${target === page.index ? "disabled" : ""}>${label}</button>`;
-  const to = page.first + page.frames.length - 1;
-  return `
-    <nav class="trace-pager" aria-label="Pages of the step table">
-      ${button("First", 0)}
-      ${button("Previous", Math.max(0, page.index - 1))}
-      <span>Steps ${page.first}–${to} of ${coupled.frameCount}</span>
-      ${button("Next", Math.min(last, page.index + 1))}
-      ${button("Last", last)}
-    </nav>
-  `;
+/** A state as lines that keep their indentation when they wrap; a long one ends in "…" in every
+ * row but the current one. */
+function state(html: string) {
+  const lines = htmlLines(html).map((line) => {
+    const indent = /^ */.exec(line.replace(/^(<[^>]+>)+/, ""))?.[0].length ?? 0;
+    const text = line.replace(/^((?:<[^>]+>)*) +/, "$1");
+    return `<span class="sl" style="--indent: ${indent}">${text || "&nbsp;"}</span>`;
+  });
+  const long = lines.length > shownLines;
+  return `<code class="state${long ? " long" : ""}">${lines.join("")}${long ? '<span class="more" aria-hidden="true">…</span>' : ""}</code>`;
 }
 
-function stepCheck(frame: Frame, coupled: TraceOverview) {
-  const ok = frameOk(frame);
-  const domainError = hasDomainError(frame);
-  const label = domainError && ok ? "ERR" : ok ? "OK" : "FAIL";
-  const aria = frame.domainFailure
-    ? "A run failed outside an operation's domain"
-    : domainError && ok
-      ? "The step checks reached a shared domain error"
-      : ok
-        ? "The step checks passed"
-        : "A step check failed";
-  return `
-    <span class="step-check ${ok ? (domainError ? "domain" : "ok") : "fail"}" tabindex="0" aria-label="${aria}">
-      ${label}
-      <span class="check-popover-source">
-        ${checkPopoverContent(frame, coupled, ok, domainError)}
-      </span>
-    </span>
-  `;
-}
-
-function checkPopoverContent(
-  frame: Frame,
-  coupled: TraceOverview,
-  ok: boolean,
-  domainError: boolean,
+function renderRows(
+  table: HTMLElement,
+  run: TraceOverview,
+  page: TracePage,
+  facts: Map<number, StepFacts>,
+  symbolic: boolean,
 ) {
-  const originalTarget = frame.originalTarget ? prettyExpr(frame.originalTarget) : "not available";
-  const determinizedTarget = frame.determinizedTarget
-    ? prettyExpr(frame.determinizedTarget)
-    : "not available";
-  if (frame.domainFailure) {
-    return `
-    <strong>A run failed outside an operation's domain at this symbolic step.</strong>
-    <span class="domain-error-note">${escapeHtml(frame.domainFailure)}</span>
-    <span>The program is not domain-safe at this seed, which typing does not establish, so no theorem relates the runs from here on.</span>
-    ${coupled.counterexample ? `<em>${counterexampleLabel}</em>` : ""}
-  `;
+  const right = run.counterexample ? "Counterexample" : "Determinized";
+  const head = `<div class="step-head" aria-hidden="true"><span></span><span>Source</span><span>G draw</span>${symbolic ? "<span>Symbolic state</span>" : ""}<span>${right}</span></div>`;
+  const rows = page.frames.map((frame) => {
+    const fact = facts.get(frame.step);
+    const sigma = sigmaView(frame.sigma);
+    const source = renderTraceExpr(frame.original, {
+      valueBySymbol: frame.sampleBySymbol,
+      valueLabel: "sampled value for",
+      short: true,
+    });
+    const determinized = renderTraceExpr(frame.determinized, {
+      valueBySymbol: sigma.meanBySymbol,
+      valueLabel: "mean substituted for",
+      short: true,
+    });
+    const eDraw = fact?.eDraw;
+    const gDraw = fact?.gDraw;
+    const mean = fact?.mean;
+    const sourceNote = eDraw
+      ? note(
+          `E draw, source only: ${eDraw.name ? `${escapeHtml(eDraw.name)} = ` : ""}${renderTraceExpr(eDraw.value, { short: true })}`,
+          "n-e",
+        )
+      : "";
+    const meanNote = mean
+      ? note(
+          `${renderHighlightedText(mean.call, { short: true })} = ${renderTraceExpr(mean.value, { short: true })}`,
+          "n-mean",
+        )
+      : "";
+    const draw = gDraw
+      ? `<span class="draw"><code>${gDraw.name ? `${escapeHtml(gDraw.name)} ← ` : ""}${renderTraceExpr(gDraw.value, { short: true })}</code><span class="draw-d">${renderHighlightedText(gDraw.distribution, { short: true })}</span></span>`
+      : "";
+    const before =
+      frame.step === page.first ? page.previous : page.frames[frame.step - page.first - 1];
+    const added = sigma.lines.slice(before?.sigma.length ?? 0);
+    const result =
+      frame.symbolic.kind === "SymFloat" && isValue(frame.symbolic)
+        ? note(
+            `mean ${escapeHtml(formatNumber(affineMean(frame.symbolic.affine, sigma.meanBySymbol)))}`,
+            "n-sym",
+          )
+        : "";
+    const symbolicCell = symbolic
+      ? cell(
+          "sym",
+          "Symbolic state",
+          state(renderTraceExpr(frame.symbolic, { short: true })) +
+            added.map((line) => note(line, "n-sym")).join("") +
+            result,
+        )
+      : "";
+    return `<li class="step${gDraw ? " has-draw" : ""}" data-step="${frame.step}">
+      <span class="step-n">${frame.step}</span>
+      ${cell("source", "Source", state(source) + sourceNote)}
+      <div class="cell cell-draw">${draw ? `<span class="cell-label">G draw</span>${draw}` : ""}</div>
+      ${symbolicCell}
+      ${cell("det", right, state(determinized) + meanNote)}
+      ${checkNote(frame)}
+    </li>`;
+  });
+  const last = page.frames.at(-1);
+  const end = page.first + page.frames.length === run.frameCount;
+  const final = (expr: Expr | undefined, shown: Expr | undefined) =>
+    expr && shown && !isValue(shown) ? renderTraceExpr(expr, { short: true }) : null;
+  const finals = [
+    final(run.finalOriginal, last?.original),
+    final(run.finalDeterminized, last?.determinized),
+  ];
+  if (end && finals.some((final) => final !== null)) {
+    const value = (html: string | null) => (html === null ? "" : state(html));
+    rows.push(`<li class="step step-result">
+      <span class="step-n">→</span>
+      ${cell("source", "Source", note("Beyond the table, the run returns", "n-result") + value(finals[0]))}
+      <div class="cell cell-draw"></div>
+      ${symbolic ? '<div class="cell cell-sym"></div>' : ""}
+      ${cell("det", right, note("Beyond the table, the run returns", "n-result") + value(finals[1]))}
+    </li>`);
   }
-  return `
-    <strong>${domainError && ok ? "All traces reached the same domain error at this symbolic step." : ok ? "The step checks passed at this symbolic step." : "A step check failed at this symbolic step."}</strong>
-    ${domainError ? `<span class="domain-error-note">${escapeHtml(domainErrorMessage(frame))}</span>` : ""}
-    <span>The source trace must match the symbolic state after sampling stored E-bindings with the same E-randomness.</span>
-    <code>${escapeHtml(originalTarget)}</code>
-    <span>The determinized trace must match the symbolic state after replacing stored E-bindings by their means.</span>
-    <code>${escapeHtml(determinizedTarget)}</code>
-    <span>Source sync: ${frame.originalOk ? `${frame.originalMicroSteps} step${frame.originalMicroSteps === 1 ? "" : "s"}` : `failed${frame.originalError ? `: ${escapeHtml(frame.originalError)}` : ""}`}</span>
-    <span>Determinized sync: ${frame.determinizedOk ? `${frame.determinizedMicroSteps} step${frame.determinizedMicroSteps === 1 ? "" : "s"}` : `failed${frame.determinizedError ? `: ${escapeHtml(frame.determinizedError)}` : ""}`}</span>
-    ${frame.consistencyOk === false ? `<span>Terminal consistency: failed: ${escapeHtml(frame.consistencyError)}</span>` : ""}
-    ${frame.symbolicOk === false ? `<span>Symbolic next step failed: ${escapeHtml(frame.symbolicError)}</span>` : ""}
-    ${coupled.counterexample ? `<em>${counterexampleLabel}</em>` : ""}
-  `;
+  table.innerHTML = `${head}<ol class="step-list">${rows.join("")}</ol>${pageNote(page, run)}`;
 }
 
-function couplingCell(expr: Expr, meta: string, tone: string, traceOptions: TraceOptions = {}) {
-  return `
-    <article class="coupling-cell ${tone}">
-      <div class="sigma-strip ${meta ? "" : "blank"}">${meta || "&nbsp;"}</div>
-      <pre class="code-view">${renderTraceExpr(expr, traceOptions)}</pre>
-    </article>
-  `;
+/** What went wrong at a frame whose checks failed or that reached a domain error. */
+function checkNote(frame: Frame) {
+  if (frame.domainFailure) {
+    return `<p class="alert step-alert"><strong>A run left an operation's domain here:</strong> ${escapeHtml(frame.domainFailure)}</p>`;
+  }
+  if (frameOk(frame)) {
+    return hasDomainError(frame)
+      ? `<p class="step-alert-note">All three runs reached the same domain error: ${escapeHtml(domainErrorMessage(frame))}</p>`
+      : "";
+  }
+  const failures = [
+    frame.originalOk
+      ? ""
+      : `the source: ${frame.originalError ?? "it doesn't reach the symbolic state"}`,
+    frame.determinizedOk
+      ? ""
+      : `the determinized program: ${frame.determinizedError ?? "it doesn't reach the symbolic state"}`,
+    frame.consistencyOk === false ? `the terminal effects: ${frame.consistencyError}` : "",
+    frame.symbolicOk === false ? `the symbolic step: ${frame.symbolicError}` : "",
+  ].filter(Boolean);
+  return `<p class="alert step-alert"><strong>A step check failed</strong> for ${escapeHtml(failures.join("; "))}.</p>`;
 }
 
+/** Which steps the page holds, if the run has more than one page. */
+function pageNote(page: TracePage, run: TraceOverview) {
+  if (run.pageStarts.length < 2) return "";
+  const to = page.first + page.frames.length - 1;
+  return `<p class="page-note">Steps ${page.first} to ${to} of ${run.frameCount - 1} are shown; the step controls reach the others.</p>`;
+}
+
+/** The mean of an affine form, given the means of its symbols. */
+function affineMean(affine: Affine, means: Record<string, number>) {
+  let mean = affine.constant;
+  for (const [name, coefficient] of Object.entries(affine.terms))
+    mean += coefficient * (means[name] ?? Number.NaN);
+  return mean;
+}
+
+/** σ, the E draws of the symbolic state so far, each with its mean. */
 function sigmaView(sigma: Binding[]) {
-  if (sigma.length === 0) return { html: "", lineCount: 0, meanBySymbol: {} };
   const meanBySymbol: Record<string, number> = {};
   const lines = sigmaMeans(sigma).map(({ binding, mean, error }) => {
     meanBySymbol[binding.name] = mean;
-    const args = binding.args.map((arg) => renderHighlightedText(prettyAffine(arg))).join(", ");
-    return `<span class="sigma-binding corr-item" data-corr="${escapeHtml(binding.name)}" tabindex="0"><span class="sigma-definition"><span class="tok-sym">${escapeHtml(binding.name)}</span> ~ <span class="tok-dist">${distributionName(binding.kind)}</span>(${args})</span><span class="sigma-mean">E[<span class="tok-sym">${escapeHtml(binding.name)}</span>] = ${meanMarkup(binding.name, mean, error)}</span></span>`;
+    const args = binding.args
+      .map((arg) => renderHighlightedText(prettyAffine(arg), { short: true }))
+      .join(", ");
+    const name = escapeHtml(binding.name);
+    const value = error
+      ? `<span class="sigma-error" title="${escapeHtml(error)}">no mean: a domain error</span>`
+      : `mean <span class="corr-item" data-corr="${name}" title="mean substituted for ${name}">${escapeHtml(formatNumber(mean))}</span>`;
+    return `<span class="corr-item tok-sym" data-corr="${name}">${name}</span> ~ ${distributionName(binding.kind)}(${args}), ${value}`;
   });
-  return { html: lines.join("\n"), lineCount: lines.length, meanBySymbol };
-}
-
-function meanMarkup(symbol: string, mean: number, error: string | null = null) {
-  if (error) {
-    return `<span class="sigma-mean-error" title="${escapeHtml(error)}">domain error</span>`;
-  }
-  const value = formatNumber(mean);
-  return `<span class="corr-item sigma-mean-value" data-corr="${escapeHtml(symbol)}" title="mean substituted for ${escapeHtml(symbol)}">${escapeHtml(value)}</span>`;
-}
-
-function positionCheckPopover(portal: HTMLElement, check: Element) {
-  const anchor = check.getBoundingClientRect();
-  const popover = portal.getBoundingClientRect();
-  const margin = 10;
-  const preferredLeft = anchor.right + 10;
-  const left =
-    preferredLeft + popover.width <= window.innerWidth - margin
-      ? preferredLeft
-      : Math.max(margin, anchor.left - popover.width - 10);
-  const centeredTop = anchor.top + anchor.height / 2 - popover.height / 2;
-  const top = clamp(centeredTop, margin, window.innerHeight - popover.height - margin);
-  portal.style.left = `${left}px`;
-  portal.style.top = `${top}px`;
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, value));
-}
-
-function cssEscape(value: string) {
-  if (window.CSS?.escape) return window.CSS.escape(value);
-  return String(value).replace(/["\\]/g, "\\$&");
+  return { lines, meanBySymbol };
 }

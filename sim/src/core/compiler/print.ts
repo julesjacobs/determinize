@@ -9,7 +9,8 @@ import type { Expr, MeanKind, Mode, ParamDistributionKind } from "./ast.ts";
 import { node } from "./ast.ts";
 import type { Action, Core } from "./core.ts";
 import { children } from "./core.ts";
-import { prettyExpr } from "./pretty.ts";
+import type { PrintedSpan } from "./pretty.ts";
+import { prettyExpr, prettyWithSpans } from "./pretty.ts";
 import { leanLiteral, toNumber } from "./rational.ts";
 
 const siteNames: Record<string, string> = {
@@ -241,4 +242,12 @@ function toExpr<S extends Action | Mode | null>(program: Core<S>): Expr {
 /** The program in Lean's forms with the source's names, minimal parentheses and line breaks. */
 export function sourcePretty<S extends Action | Mode | null>(program: Core<S>): string {
   return prettyExpr(toExpr(program));
+}
+
+/** `sourcePretty(program)`, and where each node of it is in the text; a node's `from` and `to` are
+ * those of the source it stands for. */
+export function sourcePrettyWithSpans<S extends Action | Mode | null>(
+  program: Core<S>,
+): { text: string; spans: PrintedSpan[] } {
+  return prettyWithSpans(toExpr(program));
 }

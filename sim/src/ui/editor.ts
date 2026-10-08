@@ -24,6 +24,7 @@ import type { Analysis, SpanInfo } from "../core/compiler/analyze.ts";
 import type { Mode } from "../core/compiler/ast.ts";
 import { editorTheme } from "./editor-theme.ts";
 import { detHighlighting, detLanguage } from "./language.ts";
+import { linkedLines } from "./linking.ts";
 import { analysisDelayMs, analyzeSource } from "./store.ts";
 
 /** A diagnostic with a range clamped to the document. */
@@ -36,6 +37,9 @@ export interface EditorDiagnostic {
 /** What the editor reports to the store. */
 export interface EditorBindings {
   onChange: (doc: string) => void;
+  /** The position under the pointer and the sample site there, if any; both null when the
+   * pointer leaves the editor. */
+  onHover: (position: number | null, site: { from: number; to: number } | null) => void;
 }
 
 const distributionNames = new Set([
@@ -223,9 +227,25 @@ function hovers(): Extension {
   });
 }
 
+/** The smallest sample site at `pos`, if any. */
+function siteAt(source: string, pos: number) {
+  const result = analyzeSource(source);
+  if (!result.ok) return null;
+  return sitesOf(result).find((span) => span.from <= pos && pos <= span.to) ?? null;
+}
+
 /** The editor; the diagnostics of the text it opens with, or that `replaceDoc` puts in, show at
  * once, those of typing after a pause. */
 export function createEditor(parent: HTMLElement, doc: string, bindings: EditorBindings) {
+  let hovered: number | null = null;
+  const hover = (event: MouseEvent, view: EditorView) => {
+    const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
+    if (pos === hovered) return false;
+    hovered = pos;
+    const site = pos === null ? null : siteAt(view.state.doc.toString(), pos);
+    bindings.onHover(pos, site && { from: site.from, to: site.to });
+    return false;
+  };
   const view = new EditorView({
     parent,
     doc,
@@ -241,6 +261,15 @@ export function createEditor(parent: HTMLElement, doc: string, bindings: EditorB
       detHighlighting,
       editorTheme,
       modeMarks,
+      linkedLines,
+      EditorView.domEventHandlers({
+        mousemove: hover,
+        mouseleave: () => {
+          if (hovered !== null) bindings.onHover(null, null);
+          hovered = null;
+          return false;
+        },
+      }),
       linter(
         (view) => {
           const doc = view.state.doc.toString();

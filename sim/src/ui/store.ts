@@ -17,6 +17,7 @@ import { runIndex, runnerOf, siteDraws } from "../core/sampler.ts";
 import type { Runs, Stats, Summary } from "../core/statistics.ts";
 import { addRuns, noRuns, runsOf, statsOf } from "../core/statistics.ts";
 import type { TraceOverview, TracePage } from "../core/trace-pages.ts";
+import type { Reduced } from "./steps.ts";
 
 /** A range of the source. */
 export interface Span {
@@ -66,8 +67,23 @@ export interface Store {
   exampleId: Signal<string>;
   /** The number of runs that "Run N" adds. */
   sampleCount: Signal<number>;
-  /** The step of the step table whose checks are shown. */
-  activeStep: Signal<number | null>;
+  /** The step of the step table's run that the table shows as current. */
+  currentStep: Signal<number>;
+  /** The row of the step table under the pointer or the focus. */
+  hoveredStep: Signal<number | null>;
+  /** The sample site under the pointer in either program pane, as a range of the checked source. */
+  hoveredSite: Signal<Span | null>;
+  /** What the pointer is on in either program pane, as a range of the checked source: a position
+   * in the source pane, the smallest printed node's source in the determinized one. */
+  hoveredRange: Signal<Span | null>;
+  /** The part of the checked source that both panes highlight: what the hovered or current step
+   * reduces, or the hovered site. */
+  linked: Signal<Reduced | null>;
+  /** Counts the reader's moves of the current step and hovers, each a request to scroll the
+   * program panes to the linked lines; a new run or an edit changes `linked` without one. */
+  followLinked: Signal<number>;
+  /** Whether the step table shows the symbolic state. */
+  showSymbolic: Signal<boolean>;
   samples: ReadonlySignal<Samples>;
   /** The batch of runs in progress, of `source` at `seed`, up to run `end`. */
   running: ReadonlySignal<{ generation: number; source: string; seed: number; end: number } | null>;
@@ -157,7 +173,7 @@ export function eligibleSites(runs: ProgramRuns): number[] {
  * `receiveTrace`.
  */
 export function createStore(
-  initial: { source: string; seed: number; exampleId: string },
+  initial: { source: string; seed: number; exampleId: string; showSymbolic?: boolean },
   send: (request: Request) => void,
   sendTrace: (request: TraceRequest | TracePageRequest) => void,
 ): Store {
@@ -167,7 +183,13 @@ export function createStore(
   const seed = signal(initial.seed);
   const exampleId = signal(initial.exampleId);
   const sampleCount = signal(200);
-  const activeStep = signal<number | null>(null);
+  const currentStep = signal(0);
+  const hoveredStep = signal<number | null>(null);
+  const hoveredSite = signal<Span | null>(null);
+  const hoveredRange = signal<Span | null>(null);
+  const linked = signal<Reduced | null>(null);
+  const followLinked = signal(0);
+  const showSymbolic = signal(initial.showSymbolic ?? false);
   const analysis = computed(() => analyzeSource(checkedSource.value));
   const runner = computed(() => runnerOf(analysis.value));
   const samples = signal(firstRun(initial.source, initial.seed, runner.peek()));
@@ -183,6 +205,7 @@ export function createStore(
     const program = checkedSource.value;
     const at = seed.value;
     traceGeneration += 1;
+    currentStep.value = 0;
     if (!result.ok && !result.counterexample) {
       trace.value = { kind: "not run" };
       return;
@@ -304,7 +327,13 @@ export function createStore(
     seed,
     exampleId,
     sampleCount,
-    activeStep,
+    currentStep,
+    hoveredStep,
+    hoveredSite,
+    hoveredRange,
+    linked,
+    followLinked,
+    showSymbolic,
     samples,
     running,
     analysis,

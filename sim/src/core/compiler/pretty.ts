@@ -35,7 +35,58 @@ const distNames: Record<string, string> = {
   DiscreteList: "discrete_list",
 };
 
+/** While `prettyWithSpans` prints, the nodes printed so far; each node's text is then enclosed in
+ * marks that carry its index, which `prettyWithSpans` removes. */
+let marked: Expr[] | null = null;
+const markPattern = /\uE000(\d+)\uE001|\uE002/g;
+
 export function prettyExpr(expr: Expr, prec = 0): string {
+  const text = printExpr(expr, prec);
+  if (!marked) return text;
+  marked.push(expr);
+  return `\uE000${marked.length - 1}\uE001${text}\uE002`;
+}
+
+/** Where a node of a printed expression is in the printed text. */
+export interface PrintedSpan {
+  expr: Expr;
+  start: number;
+  end: number;
+}
+
+/** `prettyExpr(expr)` and the range of the text that each of its nodes printed as, parentheses
+ * included, outermost first. */
+export function prettyWithSpans(expr: Expr): { text: string; spans: PrintedSpan[] } {
+  marked = [];
+  let withMarks: string;
+  let nodes: Expr[];
+  try {
+    withMarks = prettyExpr(expr);
+    nodes = marked;
+  } finally {
+    marked = null;
+  }
+  const spans: PrintedSpan[] = [];
+  const open: PrintedSpan[] = [];
+  let text = "";
+  let last = 0;
+  for (const match of withMarks.matchAll(markPattern)) {
+    text += withMarks.slice(last, match.index);
+    last = match.index + match[0].length;
+    if (match[1] !== undefined) {
+      const span = { expr: nodes[Number(match[1])], start: text.length, end: text.length };
+      spans.push(span);
+      open.push(span);
+    } else {
+      const span = open.pop();
+      if (span) span.end = text.length;
+    }
+  }
+  text += withMarks.slice(last);
+  return { text, spans };
+}
+
+function printExpr(expr: Expr, prec: number): string {
   const wrap = (s: string, level: number) => (prec > level ? `(${s})` : s);
   switch (expr.kind) {
     case "Var":
@@ -178,7 +229,8 @@ function hasLineBreak(text: string) {
 }
 
 function lineLength(text: string) {
-  return Math.max(...text.split("\n").map((line) => line.length));
+  const lines = text.replace(markPattern, "").split("\n");
+  return Math.max(...lines.map((line) => line.length));
 }
 
 function indent(text: string) {
