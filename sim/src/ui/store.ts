@@ -72,8 +72,8 @@ export interface Store {
   seed: ReadonlySignal<number>;
   /** The example chosen last. */
   exampleId: Signal<string>;
-  /** The number of runs of each program that "Run both" brings the runs to; once they have it,
-   * "Run both" adds as many again. */
+  /** The number of runs of each program that sampling brings the runs to, after an edit, a new
+   * seed or a new count. */
   sampleCount: Signal<number>;
   /** The index of the run that the step table shows: run i is at the seed plus i. */
   shownRun: ReadonlySignal<number>;
@@ -101,8 +101,15 @@ export interface Store {
   followLinked: Signal<number>;
   theme: Signal<Theme>;
   samples: ReadonlySignal<Samples>;
-  /** The batch of runs in progress, of `source` at `seed`, up to run `end`. */
-  running: ReadonlySignal<{ generation: number; source: string; seed: number; end: number } | null>;
+  /** The batch of runs in progress, of `source` at `seed`, up to run `end`, on the way to
+   * `target`. */
+  running: ReadonlySignal<Running | null>;
+  /** Sampling stopped before it reached its target: at its time budget, or on request. */
+  paused: ReadonlySignal<{ why: "budget" | "stopped"; target: number } | null>;
+  /** Whether the samples are the checked program's at the seed, and its first slice of runs after
+   * run 0 has come in or sampling stopped before it did; until then the distributions and the check
+   * keep showing the earlier runs, as run 0 alone would show what isn't so. */
+  samplesReady: ReadonlySignal<boolean>;
   analysis: ReadonlySignal<Analysis>;
   /** The step table's run; computing while its worker works on it. */
   trace: ReadonlySignal<TraceState>;
@@ -111,11 +118,11 @@ export interface Store {
   commitSource: () => void;
   /** Analyzes the editor's text now and runs it at `seed`. */
   runAt: (seed: number) => void;
-  /** Starts a batch of `count` more runs, after the remaining runs of a batch in progress. */
-  runMany: (count: number) => void;
-  /** Runs both programs up to `sampleCount` runs, or that many more once they have them. */
-  runBoth: () => void;
-  /** Stops the batch in progress; the runs so far stay. */
+  /** Samples the runs of a new seed. */
+  resample: () => void;
+  /** Goes on sampling after a pause, with a new time budget. */
+  resume: () => void;
+  /** Stops sampling; the runs so far stay. */
   stop: () => void;
   /** Shows run `index` of the runs in the step table. */
   pickRun: (index: number) => void;
@@ -129,6 +136,25 @@ export interface Store {
 
 /** The pause in typing after which the editor's text is analyzed and run. */
 export const analysisDelayMs = 500;
+
+/** How long sampling runs before it stops and offers to go on. */
+export const samplingBudgetMs = 5000;
+
+/** A batch of runs in progress. */
+export interface Running {
+  generation: number;
+  source: string;
+  seed: number;
+  end: number;
+  target: number;
+  /** When sampling towards `target` started, for its time budget. */
+  since: number;
+}
+
+/** A random seed for a run, from 1 to 2³² − 1. */
+export function randomSeed() {
+  return Math.floor(1 + Math.random() * 0xffffffff);
+}
 
 let lastAnalysis: { source: string; analysis: Analysis } | null = null;
 
@@ -201,6 +227,9 @@ export function createStore(
     exampleId: string;
     view?: ChartView;
     theme?: Theme;
+    /** The runs of the first batch, which shows a program's distributions soon before the rest
+     * of its runs arrive. */
+    firstBatch?: number;
   },
   send: (request: Request) => void,
   sendTrace: (request: TraceRequest | TracePageRequest) => void,
@@ -224,9 +253,15 @@ export function createStore(
   const analysis = computed(() => analyzeSource(checkedSource.value));
   const runner = computed(() => runnerOf(analysis.value));
   const samples = signal(firstRun(initial.source, initial.seed, runner.peek()));
-  const running = signal<{ generation: number; source: string; seed: number; end: number } | null>(
-    null,
-  );
+  const running = signal<Running | null>(null);
+  const paused = signal<{ why: "budget" | "stopped"; target: number } | null>(null);
+  const firstBatch = initial.firstBatch ?? 1000;
+  const samplesReady = computed(() => {
+    const current = samples.value;
+    if (current.source !== checkedSource.value || current.seed !== seed.value) return false;
+    const first = Math.min(2, sampleCount.value);
+    return current.original.summary.runs >= first || paused.value !== null;
+  });
   let generation = 0;
   const trace = signal<TraceState>({ kind: "not run" });
   let traceGeneration = 0;
@@ -308,65 +343,103 @@ export function createStore(
     seed.value = next;
   });
 
-  const runMany = action((count: number) => {
-    commitSource();
-    const { source: program, seed: at, original } = currentSamples();
-    // A batch in progress goes on with its remaining runs, followed by the new ones.
-    const current = running.value;
-    const from = original.summary.runs;
-    const end = (current?.source === program && current.seed === at ? current.end : from) + count;
+  /** Sends a batch of runs from run `from` towards `target`: up to the first batch's end, or to
+   * the target. */
+  function sendBatch(program: string, at: number, from: number, target: number, since: number) {
+    const end = from < firstBatch ? Math.min(target, firstBatch) : target;
     generation += 1;
-    running.value = { generation, source: program, seed: at, end };
+    running.value = { generation, source: program, seed: at, end, target, since };
     send({ type: "run", generation, source: program, seed: at, from, count: end - from });
-  });
+  }
 
-  const runBoth = action(() => {
-    commitSource();
-    const { source: program, seed: at, original } = currentSamples();
-    const current = running.value;
-    const runs =
-      current?.source === program && current.seed === at ? current.end : original.summary.runs;
-    const target = sampleCount.value;
-    runMany(runs < target ? target - runs : target);
-  });
-
-  const stop = action(() => {
-    const current = running.value;
+  function cancelBatch() {
+    const current = running.peek();
     if (!current) return;
     running.value = null;
     send({ type: "cancel", generation: current.generation });
+  }
+
+  /** Brings the runs of the checked program at the seed to `target`: on from the runs so far, or
+   * from run 0 again for fewer runs than there are. */
+  const sampleTo = action((target: number) => {
+    cancelBatch();
+    paused.value = null;
+    if (!runner.peek()) return;
+    let { source: program, seed: at, original } = currentSamples();
+    if (original.summary.runs > target) {
+      samples.value = firstRun(program, at, runner.peek());
+      ({ source: program, seed: at, original } = samples.peek());
+    }
+    if (original.summary.runs < target) {
+      sendBatch(program, at, original.summary.runs, target, performance.now());
+    }
+  });
+
+  // Each analysed program and each seed is sampled at once, as is each new count of runs; a commit
+  // of the same text, as after an edit undone within the pause, goes on with the runs so far.
+  effect(() => {
+    checkedSource.value;
+    seed.value;
+    analysis.value;
+    commits.value;
+    const target = sampleCount.value;
+    untracked(() => sampleTo(target));
+  });
+
+  const resample = action(() => {
+    runAt(randomSeed());
+  });
+
+  const resume = action(() => {
+    const target = paused.peek()?.target ?? sampleCount.peek();
+    sampleTo(target);
+  });
+
+  const stop = action(() => {
+    const current = running.peek();
+    if (!current) return;
+    cancelBatch();
+    paused.value = { why: "stopped", target: current.target };
   });
 
   const pickRun = action((index: number) => {
     shownRun.value = index;
   });
 
-  // Another program or seed makes the batch in progress stale.
+  // Typing makes a batch of another text stale, before the text is analysed again.
   effect(() => {
-    source.value;
-    seed.value;
+    const text = source.value;
     untracked(() => {
-      const current = running.value;
-      if (!current) return;
-      running.value = null;
-      send({ type: "cancel", generation: current.generation });
+      if (running.peek()?.source !== text) cancelBatch();
     });
   });
 
   const receive = action((response: Response) => {
     const current = running.value;
     if (current?.generation !== response.generation) return;
-    if (response.type === "done") {
-      running.value = null;
+    const base = samples.peek();
+    if (base.source !== current.source || base.seed !== current.seed) {
+      cancelBatch();
       return;
     }
-    const base = samples.peek();
-    if (base.source !== current.source || base.seed !== current.seed) return;
-    samples.value = {
-      ...base,
-      original: addTo(base.original, response.source),
-      determinized: addTo(base.determinized, response.determinized),
-    };
+    if (response.type === "batch") {
+      samples.value = {
+        ...base,
+        original: addTo(base.original, response.source),
+        determinized: addTo(base.determinized, response.determinized),
+      };
+    }
+    const done = response.type === "done";
+    const over = performance.now() - current.since > samplingBudgetMs;
+    if (over && samples.peek().original.summary.runs < current.target) {
+      // A heavy program stops at its time budget and offers to go on.
+      cancelBatch();
+      paused.value = { why: "budget", target: current.target };
+    } else if (done && current.end < current.target) {
+      sendBatch(current.source, current.seed, current.end, current.target, current.since);
+    } else if (done) {
+      running.value = null;
+    }
   });
 
   const showPage = action((index: number) => {
@@ -404,13 +477,15 @@ export function createStore(
     theme,
     samples,
     running,
+    paused,
+    samplesReady,
     analysis,
     trace,
     stats,
     commitSource,
     runAt,
-    runMany,
-    runBoth,
+    resample,
+    resume,
     stop,
     pickRun,
     shownRun,

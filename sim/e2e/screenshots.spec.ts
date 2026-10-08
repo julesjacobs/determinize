@@ -18,11 +18,11 @@ interface State {
   name: string;
   example?: string;
   source?: string;
-  /** Run both programs 10 000 times. */
+  /** Wait for the 10 000 runs that sampling brings both programs to. */
   run?: boolean;
   /** Steps to move forward in the step table. */
   steps?: number;
-  /** Before anything else: keep the first visit's question and the introduction. */
+  /** Before anything else: keep the introduction of a first visit. */
   firstVisit?: boolean;
   finally?: (page: Page) => Promise<void>;
 }
@@ -36,7 +36,7 @@ const states: State[] = [
     steps: 3,
     finally: (page) => page.getByRole("radio", { name: "Against x, the G draw" }).check(),
   },
-  { name: "predict", example: "Noisy product", firstVisit: true },
+  { name: "first-visit", example: "Noisy product", firstVisit: true },
   { name: "counterexample", example: "Noisy product, both draws E", run: true, steps: 1 },
   { name: "observe", example: "Observe", run: true, steps: 3 },
   { name: "recursive", example: "Recursive gamma", run: true, steps: 4 },
@@ -62,7 +62,6 @@ async function open(page: Page, path: string, firstVisit: boolean) {
     };
     if (!first) {
       try {
-        localStorage.setItem("determinize:predicted", "yes");
         localStorage.setItem("determinize:intro", "hidden");
       } catch {}
     }
@@ -106,7 +105,6 @@ for (const state of states) {
         }
         await expect(page.locator("[aria-busy]")).toHaveCount(0, { timeout: 30_000 });
         if (state.run) {
-          await page.getByRole("button", { name: "Run both", exact: true }).click();
           await expect(page.locator("[aria-busy]")).toHaveCount(0, { timeout: 30_000 });
         }
         // With the scrubber's arrow keys, so that the step region follows the current row.

@@ -1,4 +1,5 @@
-// The distributions band: run both programs many times and compare what they return. The output
+// The distributions band: both programs run many times, from each edit and each seed on, and what
+// they return is compared, the runs so far as they arrive. The output
 // distributions come first, a histogram of each program under its column of the step table, on
 // one axis and one scale, with their means and variances; where a G draw qualifies, a switch shows
 // each run's output against that draw instead, where the
@@ -7,7 +8,6 @@
 // variance-reduction factor and the sample sites that determinization leaves. Every number is an
 // estimate of this unverified simulator, and the command that has Lean's CLI report the same runs
 // is shown.
-import type { ReadonlySignal } from "@preact/signals-core";
 import { computed, effect } from "@preact/signals-core";
 import type { Analysis } from "../core/compiler/analyze.ts";
 import type { Expr } from "../core/compiler/ast.ts";
@@ -33,7 +33,7 @@ import {
 import { escapeHtml } from "./html.ts";
 import { describeSites } from "./lean-view.ts";
 import type { ProgramRuns, Samples, Store } from "./store.ts";
-import { eligibleSites } from "./store.ts";
+import { eligibleSites, samplingBudgetMs } from "./store.ts";
 
 /** The most runs that the conditional-mean plot draws: more would take the page's thread too long
  * at every batch. */
@@ -61,7 +61,12 @@ function command(samples: Samples, file: string | null) {
   const seed = BigInt.asUintN(64, BigInt(samples.seed));
   const runs = samples.original.summary.runs;
   const line = `./run.sh --seed ${seed} --samples ${runs} ${file ?? "program.det"}`;
-  return ` Reproduce them with <code class="cmd">${escapeHtml(line)}</code>${file ? "." : ", with the program saved as program.det."}`;
+  // It breaks only at its spaces, so that no flag is split.
+  const words = line
+    .split(" ")
+    .map((word) => `<span class="word">${escapeHtml(word)}</span>`)
+    .join(" ");
+  return ` Reproduce them with <code class="cmd">${words}</code>${file ? "." : ", with the program saved as program.det."}`;
 }
 
 function returnedText(summary: Summary) {
@@ -100,8 +105,6 @@ function siteLabel(analysis: Analysis, site: number, source: string) {
 
 export function mountDistributionView(
   band: HTMLElement,
-  /** Whether the band asks for a guess instead of showing its empty state. */
-  predicting: ReadonlySignal<boolean>,
   store: Pick<
     Store,
     | "samples"
@@ -109,9 +112,12 @@ export function mountDistributionView(
     | "analysis"
     | "checkedSource"
     | "running"
+    | "samplesReady"
+    | "paused"
     | "exampleId"
     | "sampleCount"
-    | "runBoth"
+    | "resample"
+    | "resume"
     | "stop"
     | "view"
     | "plotSite"
@@ -121,7 +127,8 @@ export function mountDistributionView(
 ) {
   const $ = <E extends Element>(id: string) => band.querySelector(`#${id}`) as E;
   const runs = $<HTMLSelectElement>("runs");
-  const runBoth = $<HTMLButtonElement>("run-both");
+  const resample = $<HTMLButtonElement>("resample");
+  const action = $<HTMLButtonElement>("sampling-action");
   const progress = $<HTMLElement>("progress");
   const viewSwitch = $<HTMLElement>("view-switch");
   const sitePicker = $<HTMLElement>("site-picker");
@@ -145,7 +152,8 @@ export function mountDistributionView(
     return !result.ok && !!result.counterexample;
   });
 
-  // The controls: the number of runs, Run both, and the progress of a batch with Stop.
+  // The controls: the number of runs, Resample, and the progress of sampling with Stop, or where it
+  // stopped with Continue.
   effect(() => {
     const count = store.sampleCount.value;
     if (![...runs.options].some((option) => option.value === String(count))) {
@@ -156,20 +164,30 @@ export function mountDistributionView(
   runs.addEventListener("change", () => {
     store.sampleCount.value = Number(runs.value);
   });
-  runBoth.addEventListener("click", () => store.runBoth());
-  $<HTMLButtonElement>("stop").addEventListener("click", () => store.stop());
+  resample.addEventListener("click", () => store.resample());
+  action.addEventListener("click", () => (store.running.peek() ? store.stop() : store.resume()));
   effect(() => {
-    runBoth.disabled = !runnable.value;
+    resample.disabled = !runnable.value;
     const running = store.running.value;
+    const paused = store.paused.value;
     const done = store.samples.value.original.summary.runs;
     if (running) band.setAttribute("aria-busy", "true");
     else band.removeAttribute("aria-busy");
-    progress.classList.toggle("idle", !running);
-    if (!running) return;
-    $<HTMLElement>("progress-text").textContent =
-      `Sampling: ${thin(done)} of ${thin(running.end)} runs`;
+    progress.classList.toggle("idle", !running && !paused);
+    action.textContent = running ? "Stop" : "Continue";
+    const target = running?.target ?? paused?.target ?? done;
+    const runs = `${thin(done)} of ${thin(target)} runs`;
+    $<HTMLElement>("progress-text").textContent = running
+      ? `Sampling: ${runs}`
+      : paused?.why === "budget"
+        ? `Stopped after ${samplingBudgetMs / 1000} s at ${runs}.`
+        : paused
+          ? `Stopped at ${runs}.`
+          : runnable.value
+            ? `${thin(done)} run${done === 1 ? "" : "s"} of each program.`
+            : "No runs.";
     const bar = $<HTMLProgressElement>("progress-bar");
-    bar.max = running.end;
+    bar.max = Math.max(target, 1);
     bar.value = done;
   });
 
@@ -179,6 +197,8 @@ export function mountDistributionView(
     const example = examples.find((entry) => entry.id === store.exampleId.value);
     const file = example?.source === samples.source ? `examples/${example.id}.det` : null;
     const reproduce = $<HTMLElement>("reproduce");
+    // The earlier command stays until the first batch of new runs has come in.
+    if (runnable.value && !store.samplesReady.value) return;
     if (!runnable.value || samples.original.summary.runs < 2) reproduce.innerHTML = "";
     else if (counterexample.value) {
       reproduce.textContent =
@@ -212,6 +232,8 @@ export function mountDistributionView(
     const chosen = site.value;
     const result = store.analysis.value;
     const source = store.checkedSource.value;
+    // The switch keeps its place until the first batch of new runs has come in.
+    if (runnable.value && !store.samplesReady.value) return;
     viewSwitch.hidden = chosen === null;
     for (const radio of viewSwitch.querySelectorAll<HTMLInputElement>("input")) {
       radio.checked = radio.value === (chosen === null ? "outputs" : store.view.value);
@@ -247,9 +269,10 @@ export function mountDistributionView(
   effect(() => {
     store.samples.value;
     store.analysis.value;
+    store.running.value;
+    store.samplesReady.value;
     store.view.value;
     site.value;
-    predicting.value;
     redraw();
   });
   // A chart is redrawn when its width changes, not when the band grows taller.
@@ -276,18 +299,22 @@ export function mountDistributionView(
     const samples = store.samples.peek();
     const result = store.analysis.peek();
     const runsSoFar = samples.original.summary.runs;
+    // Until the first batch of new runs has come in, the band keeps the earlier ones, so that
+    // nothing below it moves in the meantime, whether or not the batch was cancelled.
+    const ready = store.samplesReady.peek();
+    if (runnable.peek() && !ready && !(grid.hidden && listOut.hidden)) return;
     const right = counterexample.peek() ? "Counterexample" : "Determinized";
-    $<HTMLElement>("honesty").hidden = !runnable.peek() || runsSoFar < 2;
-    if (!runnable.peek() || runsSoFar < 2) {
+    $<HTMLElement>("honesty").hidden = !runnable.peek() || !ready || runsSoFar < 2;
+    if (!runnable.peek() || !ready || runsSoFar < 2) {
       grid.hidden = true;
       listOut.hidden = true;
       asTable.hidden = true;
-      empty.hidden = predicting.peek();
+      empty.hidden = false;
       empty.textContent =
         store.checkedSource.peek().trim() === ""
           ? "Write a program to compare its runs with the determinized program's."
           : runnable.peek()
-            ? "Run both programs to compare their outputs."
+            ? "Sampling both programs…"
             : result.ok || result.stage !== null
               ? "Nothing to run: Lean rejects the program."
               : "Nothing to run: the simulator failed on this program.";

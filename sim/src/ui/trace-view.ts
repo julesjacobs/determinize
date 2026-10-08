@@ -95,6 +95,8 @@ export function mountTraceView(
     const busy = state.kind === "computing";
     if (busy) elements.band.setAttribute("aria-busy", "true");
     else elements.band.removeAttribute("aria-busy");
+    // Announced, but out of the layout, so that the page doesn't move while a run is computed.
+    elements.status.classList.toggle("vh", busy);
     if (busy) {
       elements.status.textContent = "Computing the steps of this run…";
       return;
