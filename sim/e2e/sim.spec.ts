@@ -18,6 +18,12 @@ declare global {
     longTasks: number[];
     /** The returned runs that the statistics show at each change, with the runs sampled then. */
     returnedTexts: string[];
+    /** The top of the steps band in each state of the verdict, since a test started watching. */
+    stepsTops: string[];
+    /** The verdict's text at each change, since a test started watching. */
+    verdictTexts: string[];
+    /** The top of the steps band, and whether the verdict has a finding yet, from load on. */
+    loadTops: string[];
   }
 }
 
@@ -475,9 +481,10 @@ test("a program rejected for its modes shows its counterexample in place of the 
   );
   await expect(page.locator("#determinized-title")).toHaveText("Replacing the [E] draws anyway");
   await expect(status(page)).toHaveText("");
-  await expect(page.locator("#counterexample-label")).toHaveText(
-    "Lean rejects this program; this is what replacing its [E] draws anyway does.",
+  await expect(page.locator("#verdict-lead")).toHaveText(
+    "This is the counterexample: what replacing the [E] draws anyway does, which the theorems don't cover. The simulator's check:",
   );
+  await expect(page.locator("#determinized-pane")).toHaveClass(/\buncovered\b/);
   await expect(page.getByRole("textbox", { name: "Determinized program" })).toContainText(
     "let x = mean_uniform(0, 1) in",
   );
@@ -538,6 +545,11 @@ test("a program that Lean rejects has no runs and no command", async ({ page }) 
   await expect(page.locator("#dist-empty")).toHaveText(
     "No distributions: Lean rejects the program, so neither program runs.",
   );
+  await expect(page.locator("#premise-type .finding")).toHaveText(
+    "Lean rejects the program at parsing",
+  );
+  await expect(page.locator("#premise-safe .finding")).toHaveText("not run");
+  await expect(page.locator("#determinized-pane")).toHaveClass(/\buncovered\b/);
   await expect(page.getByRole("button", { name: "Resample" })).toBeDisabled();
   await expect(page.locator("#honesty")).not.toContainText("--samples");
 });
@@ -620,14 +632,242 @@ test("the histograms show the returned runs and count those that observe rejects
   await expect(page.locator("#returned-source")).toContainText("rejected by observe");
 });
 
+test("below the determinized program, the simulator's check of the premises is muted while none fails", async ({
+  page,
+}) => {
+  await page.goto(simulator);
+  await sampled(page, 1000);
+  const verdict = page.locator("#verdict");
+  await expect(verdict).toHaveClass(/\bquiet\b/);
+  await expect(page.locator("#verdict-lead")).toHaveText("The simulator's check:");
+  // The list that shows, over the copy that keeps the room of the longest findings.
+  const lines = verdict.locator(".premises:not(.premise-room) > li");
+  const items = await lines.evaluateAll((lis) =>
+    lis.map((li) => li.textContent?.replace(/\s+/g, " ").trim()),
+  );
+  expect(items).toEqual([
+    "Type float[E]: holds",
+    // The normalized text has plain spaces for the narrow ones between thousands.
+    "Domain safety: no domain failure in 1 000 runs",
+    "Positive return probability: 1 000 of 1 000 runs returned",
+    "An expectation, possibly infinite, and a finite second moment: not checked",
+  ]);
+  await expect(verdict.getByRole("link")).toHaveCount(5);
+  await expect(page.locator("#determinized-pane")).not.toHaveClass(/\buncovered\b/);
+  // The spare room is below the list, not a blank line between its premises.
+  for (const width of [390, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    // From the bottom of each premise's finding to the top of the next premise's label.
+    const gaps = await lines.evaluateAll((lis) => {
+      const lineHeight = Number.parseFloat(getComputedStyle(lis[0]).lineHeight);
+      const top = (li: Element) => (li.querySelector("a") as Element).getBoundingClientRect().top;
+      const bottom = (li: Element) =>
+        (li.querySelector(".finding") as Element).getBoundingClientRect().bottom;
+      return lis
+        .slice(1)
+        .map((li, i) => top(li) - bottom(lis[i]))
+        .filter((gap) => gap > lineHeight);
+    });
+    expect(gaps, `${width} px`).toEqual([]);
+  }
+});
+
+test("a premise that the check finds failing is a warning, with the run that witnesses it", async ({
+  page,
+}) => {
+  // A third of the runs draw a negative variance.
+  await page.goto(linkTo("let v = uniform(-0.5, 1) in\ngauss(0, v)", 1));
+  await sampled(page, 1000);
+  const verdict = page.locator("#verdict");
+  await expect(verdict).toHaveClass(/\balert\b/);
+  await expect(page.locator("#verdict-lead strong")).toHaveText("The simulator's check:");
+  // The witness, whose seed Lean's CLI takes; the statistics give Lean's message.
+  await expect(page.locator("#premise-safe .finding")).toHaveText(
+    "run 2 failed: gaussian requires variance ≥ 0 (seed 3)",
+  );
+  // A negative variance is no matter of floating point.
+  await expect(page.locator("#first-failure")).toContainText(
+    "First failure in the source: gaussian requires variance ≥ 0",
+  );
+  await expect(page.locator("#first-failure")).not.toContainText("floating point");
+  // The theorems don't cover the program, so the means are compared, not the variances.
+  await expect(page.locator("#factor")).toHaveText(
+    /^Means(?: differ)?: −?[0-9.]+ and −?[0-9.]+\.$/,
+  );
+  await expect(page.locator("#premise-safe")).toHaveAttribute("data-status", "fails");
+  await expect(page.locator("#determinized-pane")).toHaveClass(/\buncovered\b/);
+  // The frame is an outline, which moves nothing.
+  const outline = await page
+    .locator("#determinized-pane")
+    .evaluate((pane) => getComputedStyle(pane).outlineColor);
+  expect(outline).not.toBe("rgba(0, 0, 0, 0)");
+});
+
+test("a run that fails at an inexact 0 leaves domain safety open, with no frame", async ({
+  page,
+}) => {
+  await page.goto(simulator);
+  await pick(page, "Recursive gamma");
+  await sampled(page, 1000);
+  // An earlier gamma draw underflows to 0 in floating point, which the real-valued semantics
+  // doesn't reach.
+  await expect(page.locator("#verdict")).toHaveClass(/\bquiet\b/);
+  await expect(page.locator("#premise-safe")).toHaveAttribute("data-status", "open");
+  await expect(page.locator("#premise-safe .finding")).toHaveText(
+    "run 9 failed at exactly 0, in floating point: gamma requires positive shape and rate (seed 10)",
+  );
+  const note = page.locator("#first-failure");
+  await expect(note).toContainText(
+    "Run 9 failed at a 0 computed in floating point, which may be an underflow that doesn't occur in the real-valued semantics.",
+  );
+  expect((await note.textContent())?.split("gamma requires positive shape and rate").length).toBe(
+    2,
+  );
+  await expect(page.locator("#determinized-pane")).not.toHaveClass(/\buncovered\b/);
+  // The runs that returned leave out those that failed, so the means are compared, and why.
+  await expect(page.locator("#factor")).toHaveText(
+    /^Means(?: differ)?: [0-9.]+ and [0-9.]+\.[\d\s]+ of the source's runs failed in floating point and are left out, so its returned runs aren't comparable with the determinized program's\.$/,
+  );
+});
+
+test("a literal division by zero fails domain safety, with its witness and the frame", async ({
+  page,
+}) => {
+  // Lean's corpus has it as tests/execution/division-zero.det.
+  await page.goto(linkTo("1/0", 1));
+  await sampled(page, 10);
+  await expect(page.locator("#verdict")).toHaveClass(/\balert\b/);
+  await expect(page.locator("#premise-safe .finding")).toHaveText(
+    "run 0 failed: division by zero (seed 1)",
+  );
+  await expect(page.locator("#premise-returns .finding")).toHaveText(
+    "no run returned in 10 runs, so it likely fails",
+  );
+  await expect(page.locator("#determinized-pane")).toHaveClass(/\buncovered\b/);
+});
+
 test("a counterexample compares the means instead of the variances", async ({ page }) => {
   await page.goto(simulator);
   await pick(page, "Noisy product, both draws E");
-  await sampled(page, 10);
+  await sampled(page, 1000);
   await expect(page.locator("#factor")).toHaveText(/^Means differ: [0-9.]+ and 0\.2500\.$/);
   await expect(page.locator("#sites-text")).toHaveText(
     "2 continuous in the source, → 0 continuous in the counterexample",
   );
+});
+
+// From seed 7 330, run 14 364 is the first to fail, after the 10 000 runs that load samples: on a
+// literal division by zero, which domain safety fails, or on an inexact 0, which leaves it open.
+const lateFailures = [
+  ["a literal 0", "let x = uniform(0, 1) in\nif x < 0.0002 then 1 / 0 else x"],
+  ["an inexact 0", "let x = uniform(0, 1) in\nif x < 0.0002 then 1 / (x - x) else x"],
+];
+for (const width of [390, 1440]) {
+  for (const [zero, program] of lateFailures) {
+    test(`a run that fails at ${zero} mid-sampling moves nothing on the page: ${width} px`, async ({
+      page,
+    }) => {
+      test.setTimeout(120_000);
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto(linkTo(program, 7330));
+      await settled(page, 60_000);
+      await expect(page.locator("#premise-safe .finding")).toHaveText(/^no domain failure/);
+      await page.evaluate(() => {
+        window.stepsTops = [];
+        const steps = document.querySelector("#steps") as HTMLElement;
+        const finding = document.querySelector("#premise-safe .finding") as HTMLElement;
+        const watch = () => {
+          const top = Math.round(steps.getBoundingClientRect().top + window.scrollY);
+          const entry = `${top} ${finding.textContent?.startsWith("run") ? "witness" : "none"}`;
+          if (window.stepsTops.at(-1) !== entry) window.stepsTops.push(entry);
+          requestAnimationFrame(watch);
+        };
+        watch();
+      });
+      // From a script, so that no input is recent.
+      await setRunCount(page, 20_000);
+      await expect
+        .poll(
+          () =>
+            page.evaluate(async () => {
+              const store = await window.DeterminizeSim.ready;
+              if (store.paused.value) store.resume();
+              return document.querySelector("#premise-safe .finding")?.textContent;
+            }),
+          { timeout: 90_000 },
+        )
+        .toMatch(/^run [\d\s]+ failed/);
+      // The watch records the frame that shows the witness.
+      await page.evaluate(
+        () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+      );
+      const seen = await page.evaluate(() => window.stepsTops);
+      test.info().annotations.push({ type: "steps tops", description: JSON.stringify(seen) });
+      const witnessed = seen.findIndex((entry) => entry.includes("witness"));
+      expect(witnessed).toBeGreaterThan(0);
+      expect(seen[witnessed].split(" ")[0]).toBe(seen[witnessed - 1].split(" ")[0]);
+    });
+  }
+}
+
+test("from load to its first finding, the verdict's box moves nothing", async ({ page }) => {
+  await page.addInitScript(() => {
+    window.loadTops = [];
+    const watch = () => {
+      const steps = document.querySelector("#steps");
+      const verdict = document.querySelector("#verdict") as HTMLElement | null;
+      if (steps && verdict) {
+        const finding = document.querySelector("#premise-safe .finding")?.textContent ?? "";
+        const found = !verdict.hidden && finding.startsWith("no domain failure");
+        const top = Math.round(steps.getBoundingClientRect().top + window.scrollY);
+        const entry = `${top} ${found ? "found" : "before"}`;
+        if (window.loadTops.at(-1) !== entry) window.loadTops.push(entry);
+      }
+      requestAnimationFrame(watch);
+    };
+    requestAnimationFrame(watch);
+  });
+  await page.goto(simulator);
+  await expect(page.locator("#premise-safe .finding")).toHaveText(/^no domain failure/);
+  await page.evaluate(
+    () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+  );
+  const seen = await page.evaluate(() => window.loadTops);
+  test.info().annotations.push({ type: "steps tops", description: JSON.stringify(seen) });
+  const found = seen.findIndex((entry) => entry.includes("found"));
+  expect(found).toBeGreaterThan(0);
+  expect(seen[found].split(" ")[0]).toBe(seen[found - 1].split(" ")[0]);
+});
+
+test("the check keeps its earlier verdict until runs of the new program after run 0 come in", async ({
+  page,
+}) => {
+  await page.goto(simulator);
+  await sampled(page, 1000);
+  await expect(page.locator("#verdict")).toHaveClass(/\bquiet\b/);
+  await page.evaluate(async () => {
+    const store = await window.DeterminizeSim.ready;
+    const verdict = document.querySelector("#verdict") as HTMLElement;
+    window.verdictTexts = [];
+    new MutationObserver(() => window.verdictTexts.push(verdict.textContent ?? "")).observe(
+      verdict,
+      { subtree: true, childList: true, characterData: true },
+    );
+    // A program whose runs observe rejects, slowly enough that a keystroke 5 ms after its commit
+    // cancels its first batch.
+    const program =
+      "let w = (rec f n => if n <= 0 then 0 else f (n - 1)) 3000 in\nlet _ = observe(false) in\nw";
+    store.source.value = program;
+    store.commitSource();
+    setTimeout(() => {
+      store.source.value = `${program} `;
+    }, 5);
+  });
+  await expect(page.locator("#verdict")).toHaveClass(/\balert\b/, { timeout: 30_000 });
+  await settled(page);
+  const texts = await page.evaluate(() => window.verdictTexts);
+  expect(texts.length).toBeGreaterThan(0);
+  expect(texts.filter((text) => /\bin 1 run\b/.test(text))).toEqual([]);
 });
 
 test("the plot against a G draw shows each run, and a click steps through it", async ({ page }) => {
@@ -932,8 +1172,11 @@ test("stepping across pages, hovering and scrubbing move neither the bar nor the
       .annotations.push({ type: `layout at ${width} px`, description: JSON.stringify(shown) });
     const short = shown[0];
     const long = shown.slice(2);
-    for (const run of shown) {
-      expect(Math.abs(run.steps - short.steps), `steps at ${width} px`).toBeLessThanOrEqual(4);
+    for (const [index, run] of shown.entries()) {
+      // A warning below the panes takes its room: that of the random walk, whose output is a list.
+      if (programs[index] !== longest) {
+        expect(Math.abs(run.steps - short.steps), `steps at ${width} px`).toBeLessThanOrEqual(4);
+      }
       expect(run.region, `the region at ${width} px`).toBeLessThanOrEqual(run.cap + 1);
     }
     for (const run of long) {

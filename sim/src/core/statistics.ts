@@ -1,15 +1,56 @@
 import { formatNumber } from "./format.ts";
 
 /**
+ * Why a run failed, in the terms of the theorems' premises: an operation outside its domain
+ * (division by zero or an invalid distribution parameter, as `DomainSafe` in Spec/Semantics.lean
+ * names them for typed programs); a limit of the runtime, such as its fuel, which says nothing
+ * about the program; a floating-point result that isn't finite, which the real-valued semantics
+ * doesn't have; or an ill-typed operation, which a checked program doesn't reach.
+ */
+export type FailureKind = "domain" | "limit" | "float" | "type";
+
+/** The kind of a failure, from the message of Lean's runtime. */
+export function failureKind(message: string): FailureKind {
+  if (
+    message === "division by zero" ||
+    message === "discrete probabilities sum to more than one" ||
+    / requires /.test(message)
+  ) {
+    return "domain";
+  }
+  if (message === "step limit reached" || /\blimit\b/.test(message)) return "limit";
+  if (message.startsWith("nonfinite ")) return "float";
+  return "type";
+}
+
+/** A run that failed on an operation outside its domain: its index and Lean's message. */
+export interface DomainFailure {
+  run: number;
+  message: string;
+}
+
+/**
  * What Lean's CLI reports about the runs of one program, as `summarize` in lean/Main.lean computes
  * it: the counts of rejected and failed runs, the first failure, the first returned value, and
- * Welford's running mean and sum of squared deviations of the returned numbers, in run order.
+ * Welford's running mean and sum of squared deviations of the returned numbers, in run order;
+ * and the first runs that failed on a domain error, which the CLI doesn't single out.
  */
 export interface Summary {
   runs: number;
   rejected: number;
   failed: number;
+  /** The failed runs that say nothing about the program: those that a limit of the runtime
+   * stopped, and those that failed in floating point, on a non-finite number or at an inexact
+   * parameter or divisor of exactly 0. */
+  stopped: number;
+  /** The failed runs that failed at an inexact parameter or divisor of exactly 0. */
+  zeroFailed: number;
   firstFailure: string | null;
+  /** The first domain failure, other than one at an inexact parameter or divisor of exactly 0. */
+  firstDomainFailure: DomainFailure | null;
+  /** The first domain failure at an inexact parameter or divisor of exactly 0 only, which a
+   * floating-point underflow can reach where the real-valued semantics doesn't. */
+  firstZeroFailure: DomainFailure | null;
   firstValue: string | null;
   /** How many runs returned a number. */
   count: number;
@@ -21,7 +62,11 @@ export const noRuns: Summary = {
   runs: 0,
   rejected: 0,
   failed: 0,
+  stopped: 0,
+  zeroFailed: 0,
   firstFailure: null,
+  firstDomainFailure: null,
+  firstZeroFailure: null,
   firstValue: null,
   count: 0,
   mean: 0,
@@ -42,7 +87,12 @@ export interface Runs {
   values: Float64Array<ArrayBuffer>;
   rejected: number;
   failed: number;
+  stopped: number;
+  zeroFailed: number;
   firstFailure: string | null;
+  /** The first domain failures of either kind, at their indices among these runs. */
+  firstDomainFailure: DomainFailure | null;
+  firstZeroFailure: DomainFailure | null;
   firstValue: string | null;
   draws: SiteDraws[];
 }
@@ -50,6 +100,8 @@ export interface Runs {
 /** `summary` followed by `runs`. */
 export function addRuns(summary: Summary, runs: Runs): Summary {
   let { count, mean, m2 } = summary;
+  const after = (failure: DomainFailure | null) =>
+    failure && { run: summary.runs + failure.run, message: failure.message };
   for (const x of runs.values) {
     if (Number.isNaN(x)) continue;
     count += 1;
@@ -61,7 +113,11 @@ export function addRuns(summary: Summary, runs: Runs): Summary {
     runs: summary.runs + runs.values.length,
     rejected: summary.rejected + runs.rejected,
     failed: summary.failed + runs.failed,
+    stopped: summary.stopped + runs.stopped,
+    zeroFailed: summary.zeroFailed + runs.zeroFailed,
     firstFailure: summary.firstFailure ?? runs.firstFailure,
+    firstDomainFailure: summary.firstDomainFailure ?? after(runs.firstDomainFailure),
+    firstZeroFailure: summary.firstZeroFailure ?? after(runs.firstZeroFailure),
     firstValue: summary.firstValue ?? runs.firstValue,
     count,
     mean,
@@ -70,11 +126,12 @@ export function addRuns(summary: Summary, runs: Runs): Summary {
 }
 
 /** How a run of one program ended: it returned a value, the number it returned if any, or it
- * was rejected by an observation, or it failed. */
+ * was rejected by an observation, or it failed, at an inexact parameter or divisor of exactly 0
+ * only where `inexactZero` says so. */
 export type RunOutcome =
   | { kind: "returned"; number: number | null; display: string }
   | { kind: "rejected" }
-  | { kind: "failed"; message: string };
+  | { kind: "failed"; message: string; inexactZero?: boolean };
 
 /** Outcomes of runs, in run order, as `Runs`. */
 export function runsOf(outcomes: RunOutcome[], draws: SiteDraws[] = []): Runs {
@@ -82,7 +139,11 @@ export function runsOf(outcomes: RunOutcome[], draws: SiteDraws[] = []): Runs {
     values: new Float64Array(outcomes.length),
     rejected: 0,
     failed: 0,
+    stopped: 0,
+    zeroFailed: 0,
     firstFailure: null,
+    firstDomainFailure: null,
+    firstZeroFailure: null,
     firstValue: null,
     draws,
   };
@@ -92,6 +153,13 @@ export function runsOf(outcomes: RunOutcome[], draws: SiteDraws[] = []): Runs {
     if (outcome.kind === "failed") {
       runs.failed += 1;
       runs.firstFailure ??= outcome.message;
+      const kind = failureKind(outcome.message);
+      const failure = { run: i, message: outcome.message };
+      const zero = kind === "domain" && outcome.inexactZero === true;
+      if (zero) runs.firstZeroFailure ??= failure;
+      else if (kind === "domain") runs.firstDomainFailure ??= failure;
+      if (zero) runs.zeroFailed += 1;
+      if (kind === "limit" || kind === "float" || zero) runs.stopped += 1;
     }
     if (outcome.kind === "returned") runs.firstValue ??= outcome.display;
   }

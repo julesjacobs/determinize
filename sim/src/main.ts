@@ -20,6 +20,7 @@ import { mountTheme, storedTheme } from "./ui/theme.ts";
 import { createTraceClient } from "./ui/trace-client.ts";
 import { mountTraceView } from "./ui/trace-view.ts";
 import { bindUrl, sharedSource } from "./ui/url.ts";
+import { mountVerdict } from "./ui/verdict.ts";
 
 const editorHost = document.querySelector("#editor") as HTMLElement;
 const notices = document.querySelector("#notices") as HTMLElement;
@@ -76,7 +77,6 @@ function start(decoded: Decoded): Store {
     {
       pane: document.querySelector("#determinized-pane") as HTMLElement,
       title: document.querySelector("#determinized-title") as HTMLElement,
-      label: document.querySelector("#counterexample-label") as HTMLElement,
       editor: document.querySelector("#determinized-editor") as HTMLElement,
       empty: document.querySelector("#determinized-empty") as HTMLElement,
     },
@@ -91,6 +91,18 @@ function start(decoded: Decoded): Store {
     },
   );
   mountDistributionView($("#distributions"), store);
+  mountVerdict(
+    {
+      pane: $("#determinized-pane"),
+      verdict: $("#verdict"),
+      lead: $("#verdict-lead"),
+      type: $("#premise-type"),
+      safe: $("#premise-safe"),
+      returns: $("#premise-returns"),
+      moments: $("#premise-moments"),
+    },
+    store,
+  );
   mountGallery(
     {
       button: $("#example-button"),

@@ -17,11 +17,16 @@ export type Op =
 /** The ops whose draws are integers, which `--sample-sites` counts as discrete. */
 export const discreteOps: ReadonlySet<Op> = new Set(["discrete", "bernoulli", "poisson"]);
 
-/** A failure of a sampler, with the message of Lean's `RandomM` error. */
+/** A failure of a sampler, with the message of Lean's `RandomM` error, and whether a parameter of
+ * exactly 0, the others valid, fails the check: where that 0 is inexact, a floating-point
+ * underflow can reach it although the real-valued parameter is positive. */
 export class SamplingError extends Error {
-  constructor(message: string) {
+  declare atZero: boolean;
+
+  constructor(message: string, atZero = false) {
     super(message);
     this.name = "SamplingError";
+    this.atZero = atZero;
   }
 }
 
@@ -232,15 +237,19 @@ function draw(op: Op, mean: boolean, args: readonly number[], rng: SplitMix64): 
       if (a < 0) throw new SamplingError("poisson requires rate ≥ 0");
       return mean ? a : poissonDraw(a, rng);
     case "exponential":
-      if (a <= 0) throw new SamplingError("exponential requires rate > 0");
+      if (a <= 0) throw new SamplingError("exponential requires rate > 0", a === 0);
       if (mean) return 1.0 / a;
       return -Math.log(rng.uniform01()) / a;
     case "gamma":
-      if (a <= 0 || b <= 0) throw new SamplingError("gamma requires positive shape and rate");
+      if (a <= 0 || b <= 0) {
+        throw new SamplingError("gamma requires positive shape and rate", a >= 0 && b >= 0);
+      }
       if (mean) return a / b;
       return gammaDraw(a, rng) / b;
     case "beta": {
-      if (a <= 0 || b <= 0) throw new SamplingError("beta requires positive parameters");
+      if (a <= 0 || b <= 0) {
+        throw new SamplingError("beta requires positive parameters", a >= 0 && b >= 0);
+      }
       if (mean) return a / (a + b);
       const x = gammaDraw(a, rng);
       const y = gammaDraw(b, rng);
