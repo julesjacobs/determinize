@@ -158,7 +158,7 @@ shell. A `sim/node_modules` left by an earlier `npm ci` blocks the links: remove
 with `rm -rf sim/node_modules`. Without Nix, `npm ci --package-lock-only=false` installs
 the packages.
 
-The project page is `site/`: a landing page without JavaScript, `404.html`, and
+The project page is `site/`: a landing page that works without JavaScript, `404.html`, and
 `site/assemble.sh`, which puts it together with the built simulator under `sim/`, the API
 documentation under `docs/` and the paper as `determinize.pdf`, as GitHub Pages serves them.
 `./check.sh site` runs in the `.#site` shell, which adds nixpkgs' headless Chromium and lychee
