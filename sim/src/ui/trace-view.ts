@@ -359,9 +359,11 @@ export function mountTraceView(
   }
 }
 
-/** The status of a run as a whole: run `index` of the runs, at the seed plus `index`. */
+/** The status of a run as a whole, run `index` of the runs at the seed plus `index`: what is
+ * unusual about it, and nothing for run 0 when every step check passed. */
 function describeRun(run: TraceOverview, index: number) {
   const steps = run.frameCount - 1;
+  const count = `${steps} step${steps === 1 ? "" : "s"}`;
   const at = index === 0 ? `Seed ${run.seed}:` : `Run ${index} of the runs, at seed ${run.seed}:`;
   if (run.domainFailure) {
     return `${at} at step ${steps} a run left an operation's domain (${run.domainFailure}). Typing doesn't establish domain safety, so no theorem relates the runs from there on.`;
@@ -370,14 +372,14 @@ function describeRun(run: TraceOverview, index: number) {
     return `${at} the table stops after ${maxSymbolicSteps} steps; Lean's fuel may still let the run return.`;
   }
   if (run.stopped === "size") {
-    return `${at} the table stops after ${steps} steps; its states grew too large to show.`;
+    return `${at} the table stops after ${count}; its states grew too large to show.`;
   }
-  if (run.counterexample) {
-    return `${at} ${steps} steps of the counterexample. Lean rejects the program, so the proof's step checks don't apply to it.`;
-  }
-  if (!run.ok) return `${at} ${steps} steps; a step check failed.`;
-  const domain = run.domainError ? "; all three runs reached the same domain error" : "";
-  return `${at} ${steps} steps${domain}, and every step check passed.`;
+  // What the counterexample is, the note with the determinized program says.
+  if (run.counterexample) return index === 0 ? "" : `${at} ${count} of the counterexample.`;
+  if (!run.ok) return `${at} ${count}; a step check failed.`;
+  if (run.domainError)
+    return `${at} all three runs reached the same domain error at step ${steps}.`;
+  return index === 0 ? "" : `${at} ${count}, and every step check passed.`;
 }
 
 /** The G draws shown of a trace; the rest are counted. */

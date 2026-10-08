@@ -130,28 +130,6 @@
           <div id="editor" class="editor"></div>
           <div id="notices"></div>
           <div id="source-alert" class="alert" role="status" hidden></div>
-          <p class="pane-foot">
-            <span id="checked" hidden>
-              <a
-                href="https://julesjacobs.com/determinize/docs/Determinize/Spec/Syntax.html#Determinize.Spec.Paper.Typed"
-                title="Typed, in the Lean development"
-                >Checked</a
-              >:
-              <code id="checked-type"></code>
-            </span>
-            <span id="source-sites" hidden>
-              <a
-                href="https://julesjacobs.com/determinize/docs/Determinize/Frontend/Syntax.html#Determinize.Spec.Paper.Expr.sites"
-                title="Expr.sites, in the Lean development"
-                >Sample sites</a
-              >:
-              <span></span>
-            </span>
-          </p>
-          <details id="annotated" class="annotated" hidden>
-            <summary>Annotated source</summary>
-            <pre id="annotated-program" class="lean-program"></pre>
-          </details>
         </div>
         <div id="determinized-pane" class="pane pane-det">
           <h2 id="determinized-title" class="pane-title">Determinized</h2>
@@ -160,27 +138,7 @@
           </div>
           <div id="determinized-editor" class="editor"></div>
           <p id="determinized-empty" class="pane-empty" hidden>Loading the simulator…</p>
-          <p class="pane-foot">
-            <span id="determinized-sites" hidden>Sample sites: <span></span></span>
-          </p>
         </div>
-        <p id="lean-note" class="lean-note">
-          The checked type, the sample sites and both printed programs come from the simulator's
-          port of Lean's front end (its
-          <a
-            href="https://julesjacobs.com/determinize/docs/Determinize/Frontend/Infer.html#Determinize.Frontend.infer"
-            title="Lean's inference of the modes (affinities in the Lean development)"
-            >inference</a
-          >
-          and
-          <a
-            href="https://julesjacobs.com/determinize/docs/Determinize/Spec/Syntax.html#Determinize.Spec.Paper.Expr.determinize"
-            title="Expr.determinize, in the Lean development"
-            >determinization</a
-          >);
-          <code>./run.sh --check FILE</code>
-          prints Lean's own.
-        </p>
       </section>
 
       <section id="steps" class="band steps" aria-labelledby="steps-title">
@@ -245,10 +203,6 @@
             >G trace</a
           >
           of this run: <code id="g-trace"></code>
-        </p>
-        <p class="steps-honesty">
-          The simulator computes this run with its port of Lean's runtime; it is an unverified
-          visualization, and Lean's command-line tool and its theorems are the checked artefacts.
         </p>
       </section>
 
@@ -372,46 +326,15 @@
             </table>
             <div id="first-failure" class="alert" hidden></div>
             <p id="factor" class="factor"></p>
+            <p id="sites" class="sites" hidden>
+              <a
+                href="https://julesjacobs.com/determinize/docs/Determinize/Frontend/Syntax.html#Determinize.Spec.Paper.Expr.sites"
+                title="Expr.sites, in the Lean development"
+                >Sample sites</a
+              >:
+              <span id="sites-text"></span>
+            </p>
             <p id="prediction" class="prediction" hidden></p>
-            <div id="premises" class="premises">
-              <h3>When the theorems apply</h3>
-              <ul id="premises-float">
-                <li>
-                  Type <code>float[E]</code>: checked.
-                  <a
-                    href="https://julesjacobs.com/determinize/docs/Determinize/Spec/Syntax.html#Determinize.Spec.Paper.Typed"
-                    >Typed</a
-                  >
-                </li>
-                <li>
-                  Domain safety: not established by typing.
-                  <a
-                    href="https://julesjacobs.com/determinize/docs/Determinize/Spec/Semantics.html#Determinize.Spec.Paper.DomainSafe"
-                    >DomainSafe</a
-                  >
-                </li>
-                <li>
-                  Integrability (a positive return probability, a defined expectation, a finite
-                  second moment): not established by typing.
-                  <a
-                    href="https://julesjacobs.com/determinize/docs/Determinize/Theorems.html#Determinize.Theorems.expectation_preservation"
-                    >expectation_preservation</a
-                  >,
-                  <a
-                    href="https://julesjacobs.com/determinize/docs/Determinize/Theorems.html#Determinize.Theorems.variance_non_increase"
-                    >variance_non_increase</a
-                  >
-                </li>
-              </ul>
-              <p id="premises-other" hidden>
-                No theorem applies to this output. Its type is <code id="other-type"></code>, not
-                <code>float[E]</code>; the theorems are about programs of type
-                <a
-                  href="https://julesjacobs.com/determinize/docs/Determinize/Spec/Syntax.html#Determinize.Spec.Paper.Typed"
-                  >float[E]</a
-                >.
-              </p>
-            </div>
           </div>
         </div>
         <div id="list-out" class="list-out" hidden>

@@ -3,8 +3,9 @@
 // draw qualifies, a switch shows each run's output against that draw instead, where the
 // determinized runs lie on the curve of the source's mean given the draw. Beside the chart: the
 // statistics as Lean's CLI computes them, each linked to the Lean definition it estimates, the
-// variance-reduction factor, and the theorems' premises. Every number is an estimate of this
-// unverified simulator, and the command that has Lean's CLI report the same runs is shown.
+// variance-reduction factor and the sample sites that determinization leaves. Every number is an
+// estimate of this unverified simulator, and the command that has Lean's CLI report the same runs
+// is shown.
 import type { ReadonlySignal } from "@preact/signals-core";
 import { computed, effect } from "@preact/signals-core";
 import type { Analysis } from "../core/compiler/analyze.ts";
@@ -29,6 +30,7 @@ import {
   widened,
 } from "./charts.ts";
 import { escapeHtml } from "./html.ts";
+import { describeSites } from "./lean-view.ts";
 import type { ProgramRuns, Samples, Store } from "./store.ts";
 import { eligibleSites } from "./store.ts";
 
@@ -127,7 +129,6 @@ export function mountDistributionView(
   const grid = $<HTMLElement>("dist-grid");
   const chartBody = $<HTMLElement>("chart-body");
   const caption = $<HTMLElement>("chart-caption");
-  const premises = $<HTMLElement>("premises");
   const listOut = $<HTMLElement>("list-out");
   const asTable = $<HTMLDetailsElement>("as-table");
 
@@ -269,10 +270,8 @@ export function mountDistributionView(
     const runsSoFar = samples.original.summary.runs;
     const right = counterexample.peek() ? "Counterexample" : "Determinized";
     $<HTMLElement>("honesty").hidden = !runnable.peek() || runsSoFar < 2;
-    renderPremises(result);
     if (!runnable.peek() || runsSoFar < 2) {
       grid.hidden = true;
-      empty.after(premises);
       listOut.hidden = true;
       asTable.hidden = true;
       empty.hidden = predicting.peek();
@@ -297,14 +296,12 @@ export function mountDistributionView(
       grid.hidden = true;
       asTable.hidden = true;
       listOut.hidden = false;
-      listOut.after(premises);
       renderList(samples, result, right);
       return;
     }
     listOut.hidden = true;
     grid.hidden = false;
     asTable.hidden = false;
-    $<HTMLElement>("dist-grid").querySelector(".dist-side")?.append(premises);
     const stats = store.stats.peek();
     renderStats(samples, stats, result, right);
     const width = Math.min(900, chartBody.clientWidth || 640);
@@ -359,10 +356,12 @@ export function mountDistributionView(
       "<p>The statistics are over the runs that returned. The theorems say nothing about failed runs: a run that leaves an operation's domain shows that the program is not domain-safe, and one that reaches the step limit might still have returned.</p>";
     const factor = $<HTMLElement>("factor");
     if (counterexample.peek()) {
+      renderSites(result);
       const [a, b] = [stats.original.mean, stats.determinized.mean].map(formatStat);
       factor.textContent = a === b ? `Means: ${a} and ${b}.` : `Means differ: ${a} and ${b}.`;
       return;
     }
+    renderSites(result);
     const ratio = varianceRatio(stats.original, stats.determinized);
     factor.innerHTML = Number.isFinite(ratio.value)
       ? `Variance-reduction factor <strong>${escapeHtml(ratio.value.toFixed(2))}</strong>`
@@ -371,13 +370,14 @@ export function mountDistributionView(
         : `<span class="factor-note">${escapeHtml(ratio.explanation)}</span>`;
   }
 
-  function renderPremises(result: Analysis) {
-    premises.hidden = !result.ok;
-    if (!result.ok) return;
-    const float = result.type === "float[E]";
-    $<HTMLElement>("premises-float").hidden = !float;
-    $<HTMLElement>("premises-other").hidden = float;
-    $<HTMLElement>("other-type").textContent = result.type;
+  /** The sample sites of the source and of what determinization makes of it. */
+  function renderSites(result: Analysis) {
+    const programs = result.ok ? result.program : result.counterexample?.program;
+    $<HTMLElement>("sites").hidden = !programs;
+    if (!programs) return;
+    const target = counterexample.peek() ? "in the counterexample" : "determinized";
+    $<HTMLElement>("sites-text").innerHTML =
+      `${escapeHtml(describeSites(programs.source))}<span class="vh"> in the source,</span> <span aria-hidden="true">→</span> ${escapeHtml(describeSites(programs.determinized))}<span class="vh"> ${target}</span>`;
   }
 
   function renderList(samples: Samples, result: Analysis, right: string) {

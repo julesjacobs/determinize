@@ -70,7 +70,7 @@ const states: { name: string; open: (page: Page) => Promise<void> }[] = [
     },
   },
   {
-    name: "the symbolic state, the glossary and the annotated source",
+    name: "the symbolic state and the glossary",
     open: async (page) => {
       await page.goto("sim/");
       await settled(page);
@@ -78,7 +78,6 @@ const states: { name: string; open: (page: Page) => Promise<void> }[] = [
       const more = page.getByRole("button", { name: "More" });
       if (await more.isVisible()) await more.click();
       await page.getByRole("button", { name: "Glossary" }).click();
-      await page.getByText("Annotated source", { exact: true }).click();
     },
   },
   {
@@ -174,7 +173,7 @@ for (const width of [390, 1440]) {
           return String(index);
         });
     }, focusable);
-    expect(expected.length).toBeGreaterThan(20);
+    expect(expected.length).toBeGreaterThan(10);
     const reached = new Set<string>();
     await page.locator("body").focus();
     for (let i = 0; i < expected.length + 20; i++) {
@@ -280,9 +279,8 @@ test("Escape, then Tab, leaves the editor", async ({ page }) => {
   await page.getByRole("textbox", { name: "Source program" }).click();
   await page.keyboard.press("Escape");
   await page.keyboard.press("Tab");
-  expect(await page.evaluate(() => document.activeElement?.closest(".cm-editor") ?? null)).toBe(
-    null,
-  );
+  // The determinized program's pane may take the focus next; the source editor has let it go.
+  expect(await page.evaluate(() => document.activeElement?.closest("#editor") ?? null)).toBe(null);
 });
 
 for (const width of [390, 1440]) {
