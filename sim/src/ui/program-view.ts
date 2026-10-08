@@ -8,9 +8,11 @@ import { Decoration, EditorView, lineNumbers } from "@codemirror/view";
 import type { ReadonlySignal } from "@preact/signals-core";
 import { effect } from "@preact/signals-core";
 import type { Analysis } from "../core/compiler/analyze.ts";
-import { sourcePretty } from "../core/compiler/print.ts";
+import type { PrintedSpan } from "../core/compiler/pretty.ts";
+import { sourcePrettyWithSpans } from "../core/compiler/print.ts";
 import { editorTheme } from "./editor-theme.ts";
 import { detHighlighting, detLanguage } from "./language.ts";
+import { linkedLines, printedNodeAt, printedSiteAt } from "./linking.ts";
 
 export interface ProgramViewElements {
   pane: HTMLElement;
@@ -38,14 +40,21 @@ function buildMarks(state: EditorState): DecorationSet {
   return builder.finish();
 }
 
-/** The program that the pane shows for `result`, or why it shows none. */
+/** The program that the pane shows for `result`, with where each node is, or why it shows
+ * none. */
 export function shownProgram(result: Analysis) {
-  if (result.ok) return { text: sourcePretty(result.program.determinized), counterexample: false };
+  if (result.ok) {
+    return { ...sourcePrettyWithSpans(result.program.determinized), counterexample: false };
+  }
   if (result.counterexample) {
-    return { text: sourcePretty(result.counterexample.program.determinized), counterexample: true };
+    return {
+      ...sourcePrettyWithSpans(result.counterexample.program.determinized),
+      counterexample: true,
+    };
   }
   return {
     text: null,
+    spans: [],
     why:
       result.stage === null
         ? "No determinized program: the simulator failed on the source."
@@ -57,7 +66,25 @@ export function mountProgramView(
   elements: ProgramViewElements,
   analysis: ReadonlySignal<Analysis>,
   source: ReadonlySignal<string>,
+  /** Receives the source range of the smallest printed node under the pointer and the sample site
+   * there, if any; both null when the pointer leaves the pane. */
+  onHover: (
+    range: { from: number; to: number } | null,
+    site: { from: number; to: number } | null,
+  ) => void,
 ) {
+  /** Where each node of the shown program is. */
+  let spans: PrintedSpan[] = [];
+  let hovered: number | null = null;
+  const hover = (event: MouseEvent, view: EditorView) => {
+    const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
+    if (pos === hovered) return false;
+    hovered = pos;
+    const node = pos === null ? null : printedNodeAt(spans, pos);
+    const site = pos === null ? null : printedSiteAt(spans, pos);
+    onHover(node && { from: node.from, to: node.to }, site && { from: site.from, to: site.to });
+    return false;
+  };
   const view = new EditorView({
     parent: elements.editor,
     state: EditorState.create({
@@ -70,6 +97,15 @@ export function mountProgramView(
         detHighlighting,
         editorTheme,
         marks,
+        linkedLines,
+        EditorView.domEventHandlers({
+          mousemove: hover,
+          mouseleave: () => {
+            if (hovered !== null) onHover(null, null);
+            hovered = null;
+            return false;
+          },
+        }),
         EditorView.contentAttributes.of({
           "aria-label": "Determinized program",
           "aria-readonly": "true",
@@ -88,6 +124,7 @@ export function mountProgramView(
     elements.label.hidden = !counterexample;
     elements.editor.hidden = shown.text === null;
     elements.empty.hidden = shown.text !== null;
+    spans = shown.spans;
     if (shown.text === null) {
       elements.empty.textContent =
         source.value.trim() === ""
@@ -99,5 +136,5 @@ export function mountProgramView(
       view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: shown.text } });
     }
   });
-  return view;
+  return { view, spans: () => spans };
 }

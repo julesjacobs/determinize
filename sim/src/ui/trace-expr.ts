@@ -1,9 +1,10 @@
 import type { DistributionKind, Expr, ExprOf, MeanKind } from "../core/compiler/ast.ts";
 import { listElements, prettyExpr } from "../core/compiler/pretty.ts";
+import { formatNumber } from "../core/format.ts";
 import { escapeHtml } from "./html.ts";
 
 /** The fields leading from an expression to a subexpression, with indices into argument lists. */
-type Path = (string | number)[];
+export type Path = (string | number)[];
 
 export interface TraceOptions {
   /** The subexpression that the last step produced. */
@@ -11,6 +12,9 @@ export interface TraceOptions {
   /** Values to link to the symbols they correspond to. */
   valueBySymbol?: Record<string, number>;
   valueLabel?: string;
+  /** Numbers with about four digits, as the simulator shows them, each with its full value as
+   * its title. */
+  short?: boolean;
 }
 
 /** An expression as a record of its fields, for fields named at run time. */
@@ -117,8 +121,10 @@ function renderExpr(
     case "Unit":
     case "Nil":
     case "Reject":
-    case "SymFloat":
       html = renderHighlightedText(prettyExpr(expr), options);
+      break;
+    case "SymFloat":
+      html = renderHighlightedText(prettyExpr(expr).replaceAll("*", " * "), options);
       break;
     case "DomainError":
       html = `<span class="trace-domain-error" title="${escapeHtml(expr.message)}">${renderHighlightedText(prettyExpr(expr), options)}</span>`;
@@ -208,7 +214,7 @@ export function renderHighlightedText(code: string, options: TraceOptions = {}) 
       if (keywordMatch) return `<span class="tok-keyword">${match}</span>`;
       if (mean) return `<span class="tok-mean">${match}</span>`;
       if (dist) return `<span class="tok-dist">${match}</span>`;
-      if (mode) return `<span class="tok-mode">${match}</span>`;
+      if (mode) return `<span class="tok-mode tok-mode-${match[1].toLowerCase()}">${match}</span>`;
       if (sym) return corrSpan(match, "tok-sym", sym);
       if (number) return numberSpan(match, options);
       return match;
@@ -242,7 +248,9 @@ function renderDistribution(
   options: TraceOptions,
 ) {
   const name = `<span class="tok-dist">${distNames[expr.kind]}</span>`;
-  const mode = expr.mode ? `<span class="tok-mode">[${plain(expr.mode)}]</span>` : "";
+  const mode = expr.mode
+    ? `<span class="tok-mode tok-mode-${expr.mode.toLowerCase()}">[${plain(expr.mode)}]</span>`
+    : "";
   if (expr.kind === "Discrete") {
     return `${name}${mode}(${expr.choices.map((choice) => renderHighlightedText(String(choice.probability), options)).join(", ")})`;
   }
@@ -310,7 +318,11 @@ function corrSpan(text: string, className: string, symbol: string) {
 
 function numberSpan(text: string, options: TraceOptions) {
   const symbol = symbolForNumber(Number(text), options.valueBySymbol);
-  const html = `<span class="tok-number">${text}</span>`;
+  const shown = options.short ? formatNumber(Number(text)) : text;
+  const html =
+    shown === text
+      ? `<span class="tok-number">${text}</span>`
+      : `<span class="tok-number" title="${text}">${escapeHtml(shown)}</span>`;
   const label = options.valueLabel ?? "corresponds to";
   return symbol
     ? `<span class="corr-item" data-corr="${escapeHtml(symbol)}" title="${escapeHtml(label)} ${escapeHtml(symbol)}">${html}</span>`

@@ -1,11 +1,15 @@
-// The state that a link to the simulator carries: the program, the seed and the example, as the
-// fragment `#v1=` followed by the base64url of the deflate-raw-compressed JSON.
+// The state that a link to the simulator carries: the program, the seed, the example and how the
+// page shows them, as the fragment `#v1=` followed by the base64url of the deflate-raw-compressed
+// JSON.
 
 export interface SharedState {
   source: string;
   seed: number;
   /** The id of the example the program came from. */
   example: string;
+  /** Whether the step table shows the symbolic state; a link without it leaves the viewer's
+   * choice. */
+  symbolic?: boolean;
 }
 
 /** What a fragment holds: no state, a state, or a state that can't be restored, with why. */
@@ -61,7 +65,8 @@ function fromBase64Url(text: string) {
 
 /** The fragment of a link to `state`. */
 export async function encodeShare(state: SharedState) {
-  const json = JSON.stringify({ source: state.source, seed: state.seed, example: state.example });
+  const { source, seed, example, symbolic } = state;
+  const json = JSON.stringify({ source, seed, example, ...(symbolic ? { symbolic } : {}) });
   const stream = new Blob([json]).stream().pipeThrough(new CompressionStream("deflate-raw"));
   const bytes = await bytesOf(stream, Number.POSITIVE_INFINITY);
   return `${prefix}${toBase64Url(bytes ?? new Uint8Array())}`;
@@ -86,8 +91,11 @@ export async function decodeShare(hash: string): Promise<Decoded> {
     return unreadable;
   }
   if (typeof json !== "object" || json === null) return unreadable;
-  const { source, seed, example } = json as Record<string, unknown>;
+  const { source, seed, example, symbolic } = json as Record<string, unknown>;
   if (typeof source !== "string" || typeof example !== "string") return unreadable;
   if (typeof seed !== "number" || !Number.isSafeInteger(seed)) return unreadable;
-  return { kind: "state", state: { source, seed, example } };
+  if (symbolic !== undefined && typeof symbolic !== "boolean") return unreadable;
+  const state: SharedState = { source, seed, example };
+  if (symbolic !== undefined) state.symbolic = symbolic;
+  return { kind: "state", state };
 }

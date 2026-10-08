@@ -27,8 +27,13 @@ export const editorTheme = EditorView.theme({
   "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection":
     { backgroundColor: "color-mix(in oklab, var(--given) 24%, transparent)" },
   ".cm-placeholder": { color: "var(--muted)" },
-  // The lines of the span that the step table's current or hovered step reduces.
-  ".cm-linked": { backgroundColor: "var(--highlight)" },
+  // The lines of the span that the step table's current or hovered step reduces. On the editor
+  // fill, a tint of 4 % keeps the E marks, the means and the line numbers above 4.5:1; the line's
+  // number turns ink.
+  ".cm-linked": { backgroundColor: "color-mix(in oklab, var(--ink) 4%, transparent)" },
+  // The highlight cross-fades with the step table's row.
+  ".cm-line, .cm-gutterElement": { transition: "background-color var(--step-fade)" },
+  ".cm-gutterElement.cm-linked": { color: "var(--ink)", fontWeight: "600" },
   // Modes: E SemiBold with a solid underline, G Regular with a dotted one. Inferred modes are
   // hints where the annotation would be written, smaller and not selectable.
   ".cm-mode-e": {

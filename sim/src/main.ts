@@ -8,6 +8,8 @@ import { decodeShare } from "./core/share.ts";
 import { mountDistributionView } from "./ui/distribution-view.ts";
 import { createEditor, replaceDoc } from "./ui/editor.ts";
 import { mountLeanView } from "./ui/lean-view.ts";
+import { printedRange, revealLines, setLinked } from "./ui/linking.ts";
+import { readPref } from "./ui/prefs.ts";
 import { mountProgramView } from "./ui/program-view.ts";
 import { createSampling } from "./ui/sampling.ts";
 import type { Store } from "./ui/store.ts";
@@ -19,7 +21,8 @@ import { bindUrl } from "./ui/url.ts";
 const editorHost = document.querySelector("#editor") as HTMLElement;
 const exampleSelect = document.querySelector("#example-select") as HTMLSelectElement;
 const notices = document.querySelector("#notices") as HTMLElement;
-const rerunButton = document.querySelector("#rerun-coupling") as HTMLButtonElement;
+const seedInput = document.querySelector("#seed") as HTMLInputElement;
+const newSeedButton = document.querySelector("#new-seed") as HTMLButtonElement;
 const manyButton = document.querySelector("#many-coupling") as HTMLButtonElement;
 
 for (const [index, example] of examples.entries()) {
@@ -46,17 +49,34 @@ function start(decoded: Decoded): Store {
   const initial =
     decoded.kind === "state"
       ? decoded.state
-      : { source: examples[0].source, seed: 2026, example: examples[0].id };
+      : { source: examples[0].source, seed: 1, example: examples[0].id };
   const store = createStore(
-    { source: initial.source, seed: initial.seed, exampleId: initial.example },
+    {
+      source: initial.source,
+      seed: initial.seed,
+      exampleId: initial.example,
+      showSymbolic: initial.symbolic ?? readPref("symbolic") === "shown",
+    },
     (request) => sampling.send(request),
     (request) => traces.request(request),
   );
+  const $ = <E extends Element>(selector: string) => document.querySelector(selector) as E;
   mountTraceView(
     {
-      table: document.querySelector("#coupling-trace") as HTMLElement,
-      status: document.querySelector("#coupling-status") as HTMLElement,
-      gTrace: document.querySelector("#g-trace") as HTMLElement,
+      band: $("#steps"),
+      transport: $("#transport"),
+      first: $("#step-first"),
+      back: $("#step-back"),
+      next: $("#step-next"),
+      last: $("#step-last"),
+      play: $("#step-play"),
+      scrubber: $("#scrubber"),
+      stepOf: $("#step-of"),
+      symbolic: $("#show-symbolic"),
+      symbolicNote: $("#symbolic-note"),
+      status: $("#steps-status"),
+      table: $("#step-table"),
+      gTrace: $("#g-trace"),
     },
     store,
   );
@@ -74,7 +94,7 @@ function start(decoded: Decoded): Store {
     store.analysis,
     store.checkedSource,
   );
-  mountProgramView(
+  const determinized = mountProgramView(
     {
       pane: document.querySelector("#determinized-pane") as HTMLElement,
       title: document.querySelector("#determinized-title") as HTMLElement,
@@ -84,6 +104,13 @@ function start(decoded: Decoded): Store {
     },
     store.analysis,
     store.checkedSource,
+    (range, site) => {
+      batch(() => {
+        store.hoveredRange.value = range;
+        store.hoveredSite.value = site;
+      });
+      if (range || site) store.followLinked.value += 1;
+    },
   );
   // The theorems' premises that typing leaves open; a counterexample shows none.
   effect(() => {
@@ -102,8 +129,58 @@ function start(decoded: Decoded): Store {
   );
   const editor = createEditor(editorHost, store.source.peek(), {
     onChange: (doc) => {
-      store.source.value = doc;
+      // Hovered positions are of the checked text, which the edit makes stale.
+      batch(() => {
+        store.source.value = doc;
+        store.hoveredRange.value = null;
+        store.hoveredSite.value = null;
+      });
     },
+    onHover: (position, site) => {
+      // Positions are of the checked text, which an edit makes stale until it is checked again.
+      const checked = editor.state.doc.toString() === store.checkedSource.peek();
+      batch(() => {
+        store.hoveredRange.value =
+          checked && position !== null ? { from: position, to: position } : null;
+        store.hoveredSite.value = checked ? site : null;
+      });
+      if (checked && (position !== null || site)) store.followLinked.value += 1;
+    },
+  });
+  // Both panes highlight the lines of what the hovered or current step reduces, or of the hovered
+  // site; the source pane only while it shows the checked text. They scroll to those lines when the
+  // reader moves the step or hovers, not when a new run or an edit changes them.
+  let followed = store.followLinked.peek();
+  effect(() => {
+    const linked = store.linked.value;
+    const checked = store.checkedSource.value;
+    const inSource = linked && editor.state.doc.toString() === checked;
+    const sourceRange = inSource ? { from: linked.from, to: linked.headTo } : null;
+    const detRange = linked && printedRange(determinized.spans(), linked);
+    editor.dispatch({ effects: setLinked.of(sourceRange) });
+    determinized.view.dispatch({ effects: setLinked.of(detRange) });
+    const request = store.followLinked.value;
+    // A request waits for the lines of a page still on its way.
+    if (request === followed || (!sourceRange && !detRange)) return;
+    followed = request;
+    revealLines(editor, sourceRange);
+    revealLines(determinized.view, detRange);
+  });
+  // A new run drops a request that it leaves unanswered.
+  effect(() => {
+    if (store.trace.value.kind !== "run") followed = store.followLinked.peek();
+  });
+
+  effect(() => {
+    seedInput.value = String(store.seed.value);
+  });
+  seedInput.addEventListener("change", () => {
+    const seed = Number(seedInput.value.trim());
+    if (Number.isSafeInteger(seed) && seed >= 0) store.runAt(seed);
+    else seedInput.value = String(store.seed.peek());
+  });
+  newSeedButton.addEventListener("click", () => {
+    store.runAt(randomSeed());
   });
 
   exampleSelect.addEventListener("change", () => {
@@ -113,9 +190,6 @@ function start(decoded: Decoded): Store {
       replaceDoc(editor, example.source);
       store.commitSource();
     });
-  });
-  rerunButton.addEventListener("click", () => {
-    store.runAt(randomSeed());
   });
   manyButton.addEventListener("click", () => {
     store.runMany(store.sampleCount.peek());
@@ -142,9 +216,10 @@ function restore(store: Store, editor: EditorView, decoded: Decoded) {
   if (decoded.kind === "error") showNotice(store, decoded.message);
   if (decoded.kind !== "state") return;
   dismissNotice();
-  const { source, seed, example } = decoded.state;
+  const { source, seed, example, symbolic } = decoded.state;
   batch(() => {
     store.exampleId.value = example;
+    if (symbolic !== undefined) store.showSymbolic.value = symbolic;
     replaceDoc(editor, source);
     store.runAt(seed);
   });

@@ -1,5 +1,5 @@
-// The page's link to its state: the fragment follows the program, the seed and the example, and a
-// fragment that the page navigates to is restored.
+// The page's link to its state: the fragment follows the program, the seed, the example and
+// whether the symbolic state shows, and a fragment that the page navigates to is restored.
 import { effect } from "@preact/signals-core";
 import type { Decoded } from "../core/share.ts";
 import { decodeShare, encodeShare } from "../core/share.ts";
@@ -9,7 +9,7 @@ import type { Store } from "./store.ts";
 const writeDelayMs = 300;
 
 export function bindUrl(
-  store: Pick<Store, "source" | "seed" | "exampleId">,
+  store: Pick<Store, "source" | "seed" | "exampleId" | "showSymbolic">,
   restore: (decoded: Decoded) => void,
 ) {
   let written = window.location.hash;
@@ -20,6 +20,7 @@ export function bindUrl(
       source: store.source.value,
       seed: store.seed.value,
       example: store.exampleId.value,
+      symbolic: store.showSymbolic.value,
     };
     // The page opens in the state that its link names, or without a fragment.
     if (opened) {
