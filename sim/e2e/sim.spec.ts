@@ -320,6 +320,17 @@ test("a run that doesn't end stops at the step table's limit", async ({ page }) 
   await expect(status(page)).toHaveText("seed 1 - stopped after 20000 steps");
 });
 
+test("a deep recursion stops where the step table grows too large to show", async ({ page }) => {
+  const deep = "let u = uniform(0, 1) in (rec f n => if n < 1 then u else 1 + f (n - 1)) 2000";
+  await page.goto(linkTo(deep, 1));
+  // The page computes the table up to its size bound, which takes about 2 s in Node.
+  await expect(status(page)).toHaveText(
+    /^seed 1 - stopped after \d+ steps: the table grew too large to show$/,
+    { timeout: 20_000 },
+  );
+  await expect(page.getByRole("button", { name: "Run 200" })).toBeEnabled();
+});
+
 test("a link to an example the gallery doesn't have selects none", async ({ page }) => {
   const shared = { source: "1 + 2", seed: 7, example: "paper/no-such-example" };
   const json = JSON.stringify(shared);
