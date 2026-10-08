@@ -1,0 +1,96 @@
+% !TeX root = ../main.tex
+\begin{figure}[t]
+\centering
+\small
+\newcommand{\U}{\kw{unif}}
+\let\dist\draw
+\newcommand{\tr}[1]{{\color{black!55}#1}}
+\newcommand{\nil}{\tr{[\,]}}
+\newcommand{\tg}{\tr{[(\U,r)]}}
+\begin{tikzpicture}[
+  every node/.style={font=\small},
+  col/.style={inner sep=2pt},
+  hdr/.style={align=center, font=\footnotesize, inner sep=1pt},
+]
+\matrix (m) [matrix of math nodes, row sep=2.5mm, column sep=4.5mm,
+             nodes={col, anchor=center}] {
+  (\nil,\ \dist\U\E{1,2}\,/\,\dist\U\G{0,1})
+  & \bigl(\emptyset\mid\dist\U\E{1,2}\,/\,\dist\U\G{0,1}\bigr)
+  & (\nil,\ \dist\U\M{1,2}\,/\,\dist\U\G{0,1}) \\
+  (\nil,\ c\,/\,\dist\U\G{0,1})
+  & \bigl(u_1\sim\U(1,2)\mid u_1\,/\,\dist\U\G{0,1}\bigr)
+  & (\nil,\ \tfrac32\,/\,\dist\U\G{0,1}) \\
+  (\tg,\ c\,/\,r)
+  & \bigl(u_1\sim\U(1,2)\mid u_1\,/\,r\bigr)
+  & (\tg,\ \tfrac32\,/\,r) \\
+  (\tg,\ \tfrac{c}{r})
+  & \bigl(u_1\sim\U(1,2)\mid \tfrac1r\,u_1\bigr)
+  & (\tg,\ \tfrac{3}{2r}) \\
+};
+% column headers, aligned on a common baseline
+\path (m-1-2.north) ++(0,5mm) coordinate (hb);
+\node[hdr, anchor=south] (h1) at (hb -| m-1-1)
+  {\textbf{Actual} \ $\mathsf{Act}_{k}(s_k)$\\$\mathsf{realize}_\rho(\widehat e_k)$\\$\rho(u_1)=c$};
+\node[hdr, anchor=south] (h2) at (hb -| m-1-2)
+  {\textbf{Symbolic state}\\$s_k=(\sigma_k\mid\widehat e_k)$\\$s_0=\mathsf{init}(e)$};
+\node[hdr, anchor=south] (h3) at (hb -| m-1-3)
+  {\textbf{Expected} \ $\mathsf{Exp}_{k}(s_k)$\\$\trans{\mathsf{realize}_{\bar\rho}(\widehat e_k)}$\\$\bar\rho(u_1)=\tfrac32$};
+\draw[black!25] ($(hb -| m.west)+(0,-1.5mm)$) -- ($(hb -| m.east)+(0,-1.5mm)$);
+% row labels on the symbolic states
+\foreach \k in {1,...,4} {
+  \pgfmathtruncatemacro\kk{\k-1}
+  \node[anchor=east, font=\footnotesize, black!60, inner sep=1pt]
+    at (m-\k-2.west) {$s_{\kk}$};
+}
+% result row: the joint measures read off at s_3, per column
+\path (m-4-2.south) ++(0,-4mm) coordinate (rb);
+\draw[black!25] (rb -| m.west) -- (rb -| m.east);
+\path (rb) ++(0,-1.5mm) coordinate (rt);
+\node[hdr, anchor=north] at (rt -| m-4-1)
+  {$\mathsf{Act}_3(s_0)=J_e$ \ \textcolor{black!55}{(\cref{thm:interpretation-initialization})}\\[1pt]
+   $\law e(\,\cdot\mid\tau_r)=\U\bigl(\tfrac1r,\tfrac2r\bigr)$\\[1pt]
+   $\Expect[e\mid\tau_r]=\tfrac{3}{2r}<\infty$};
+\node[hdr, anchor=north] at (rt -| m-4-2)
+  {$\tau_r:=[(\U,r)]$, \ $r\sim\U(0,1)$\\[1pt]
+   $\trlaw e=\trlaw{\trans e}$ \ \textcolor{black!55}{(\cref{lem:trace-preservation})}\\[1pt]
+   $\Expect_{\mathrm{ret}}=\int_0^1\tfrac{3}{2r}\,dr=+\infty$ \ \textcolor{black!55}{(\cref{thm:expectation})}};
+\node[hdr, anchor=north, text=teal!75!black] at (rt -| m-4-3)
+  {$\mathsf{Exp}_3(s_0)=J_{\trans e}$ \ \textcolor{black!55}{(\cref{thm:interpretation-initialization})}\\[1pt]
+   $\law{\trans e}(\,\cdot\mid\tau_r)=\delta_{3/(2r)}$\\[1pt]
+   $=\delta_{\Expect[e\mid\tau_r]}$ \ \textcolor{black!55}{(\cref{thm:interpretation-agreement})}};
+\end{tikzpicture}
+
+\caption{Symbolic execution of
+$e=\draw{uniform}\E{1,2}\,/\,\draw{uniform}\G{0,1}$, shown in lockstep with
+the source program (left) and $\trans e$ (right). 
+% Row $k$ is the $k$-th
+% symbolic state $s_k$, and the outer columns are its two realizations:
+% $\mathsf{Act}_{3-k}(s_k)$ is the joint measure $\joint{\cdot}{3-k}$ of the
+% left entry averaged over $c\sim\kw{uniform}(1,2)$, and
+% $\mathsf{Exp}_{3-k}(s_k)$ is $\joint{\cdot}{3-k}$ of the right entry. Each outer entry
+% pairs the trace prefix emitted so far (gray) with the current expression,
+% matching $J$ on $\Trace\times\Real$; only \textsc{Sample-G} extends the
+% trace.
+% The bottom row reads off the resulting joint measures for the trace
+% $\tau_r$.
+% \textsc{Sample-E} delays the $\E$-draw as $u_1$ rather than sampling it
+% (left) or averaging it (right). \textsc{Sample-G} replaces the $\G$-draw by a value
+% $r$; both interpretations integrate $r$ against $\kw{uniform}(0,1)$ and
+% prepend the same trace entry $(\kw{uniform},r)$. Each step is one instance of
+% \cref{lem:interpretation-commuting}, so $\mathsf{Act}_3(s_0)=J_e$ and
+% $\mathsf{Exp}_3(s_0)=J_{\trans e}$
+% (\cref{thm:interpretation-initialization}). At $s_3$, the result is affine
+% in $u_1$, so the expected interpretation returns the conditional mean of
+% the actual one (\cref{thm:interpretation-agreement}). We abbreviate $\kw{uniform}$ as $\kw{unif}$.
+}
+\label{fig:symbolic-example}
+\Description{A three-column table steps the program uniform E of 1 and 2,
+divided by uniform G of 0 and 1, through four states. The middle column is
+the symbolic state: the E draw becomes a variable u1 declared with
+distribution uniform of 1 and 2, the G draw is sampled as r and recorded in
+the trace, and the result is the affine expression u1 over r. The left column
+realizes u1 as a sample c, giving c over r; the right column realizes u1 as
+its mean 3/2, giving 3 over 2r. Below, the joint measures show conditional
+law uniform of 1 over r and 2 over r versus a point mass at 3 over 2r, with
+the same trace law and an infinite global expectation on both sides.}
+\end{figure}

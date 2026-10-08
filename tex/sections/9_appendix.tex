@@ -9,6 +9,102 @@
 
 \todo[inline]{Add full benchmark programs here}
 
+\section{Determinization}
+\label{sec:appendix-determinization}
+
+We give the full structural definition of the transformation in
+\cref{def:determinization}\leanref{determinization}, covering every constructor
+in \cref{fig:syntax}. To keep the rules compact, we abbreviate recursive
+calls throughout this section by
+\[
+  e'=\trans{e},
+  \qquad e_i'=\trans{e_i}.
+\]
+Thus, each primed expression denotes the determinization of its unprimed
+counterpart. Bound variable names are unchanged.
+For each distribution mode $\alpha$, let
+\[
+  \alpha'=
+  \begin{cases}
+    \M & \alpha=\E,\\
+    \G & \alpha=\G,\\
+    \M & \alpha=\M.
+  \end{cases}
+\]
+
+\paragraph{Variables and constants.}
+\begin{align*}
+  \trans x &= x,&
+  \trans r &= r \quad(r\in\Real),\\
+  \trans{()} &= (),&
+  \trans{\kw{true}} &= \kw{true},\\
+  \trans{\kw{false}} &= \kw{false},&
+  \trans{\kw{reject}} &= \kw{reject},\\
+  \trans{[]} &= [].
+\end{align*}
+
+\paragraph{Functions, recursion, and control flow.}
+\begin{align*}
+  \trans{\lambda x.e} &= \lambda x.e',\\
+  \trans{\recfn f x e} &= \recfn f x{e'},\\
+  \trans{e_1\,e_2} &= e_1'\,e_2',\\
+  \trans{\letin x{e_1}{e_2}} &= \letin x{e_1'}{e_2'},\\
+  \trans{\ite{e_0}{e_1}{e_2}} &= \ite{e_0'}{e_1'}{e_2'}.
+\end{align*}
+
+\paragraph{Arithmetic and comparisons.}
+\begin{align*}
+  \trans{-e} &= -e',\\
+  \trans{e_1+e_2} &= e_1'+e_2',\\
+  \trans{e_1\cdot e_2} &= e_1'\cdot e_2',\\
+  \trans{e_1/e_2} &= e_1'/e_2',\\
+  \trans{e_1<e_2} &= e_1'<e_2'.
+\end{align*}
+
+\paragraph{Pairs, sums, and lists.}
+\begin{align*}
+  \trans{\langle e_1,e_2\rangle} &= \langle e_1',e_2'\rangle,\\
+  \trans{\kw{fst}\,e} &= \kw{fst}\,e',\\
+  \trans{\kw{snd}\,e} &= \kw{snd}\,e',\\
+  \trans{\kw{inl}\,e} &= \kw{inl}\,e',\\
+  \trans{\kw{inr}\,e} &= \kw{inr}\,e',\\
+  \trans{e_1::e_2} &= e_1'::e_2'.
+\end{align*}
+\begin{align*}
+  \trans{\scase{e_0}x{e_1}y{e_2}}
+    &={}\\[-2pt]
+    &\quad\scase{e_0'}x{e_1'}y{e_2'},\\[4pt]
+  \trans{\lcase{e_0}{e_1}x{xs}{e_2}}
+    &={}\\[-2pt]
+    &\quad\lcase{e_0'}{e_1'}x{xs}{e_2'}.
+\end{align*}
+
+\paragraph{Distribution expressions.}
+For all $\alpha\in\{\G,\E,\M\}$, the eight primitive distributions transform as
+follows:
+\begin{align*}
+  \trans{\draw{uniform}\alpha{e_1,e_2}}
+    &= \draw{uniform}{\alpha'}{e_1',e_2'},\\
+  \trans{\draw{gaussian}\alpha{e_1,e_2}}
+    &= \draw{gaussian}{\alpha'}{e_1',e_2'},\\
+  \trans{\draw{poisson}\alpha e}
+    &= \draw{poisson}{\alpha'}{e'},\\
+  \trans{\draw{exponential}\alpha e}
+    &= \draw{exponential}{\alpha'}{e'},\\
+  \trans{\draw{bernoulli}\alpha e}
+    &= \draw{bernoulli}{\alpha'}{e'},\\
+  \trans{\draw{discrete}\alpha e}
+    &= \draw{discrete}{\alpha'}{e'},\\
+  \trans{\draw{beta}\alpha{e_1,e_2}}
+    &= \draw{beta}{\alpha'}{e_1',e_2'},\\
+  \trans{\draw{gamma}\alpha{e_1,e_2}}
+    &= \draw{gamma}{\alpha'}{e_1',e_2'}.
+\end{align*}
+The target retains each distribution primitive and all its arguments; only
+$\E$ changes to $\M$, and every argument is recursively transformed.
+Mean evaluation remains an atomic distribution operation, governed by the
+domain conditions and reduction rule in \cref{fig:semantics}.
+
 \section{Miscellaneous}
 \paragraph{When Expectations Are Undefined}
 \begin{example}

@@ -3,9 +3,11 @@
 \centering
 \small
 \setlength{\jot}{2pt}
-\newcommand{\semanticsHeading}[1]{%
-  \par\nointerlineskip\textbf{#1}\par\nobreak\vspace{6pt}\nointerlineskip}
-\semanticsHeading{Values\leanref{values} and evaluation contexts\leanref{evaluation-contexts}}
+\newcommand{\semanticsHeading}[2]{%
+  \par\nointerlineskip\phantomsubcaption\label{#2}%
+  \textbf{(\thesubfigure) #1}\par\nobreak\vspace{6pt}\nointerlineskip}
+\begin{subcaptiongroup}
+\semanticsHeading{Values\leanref{values} and evaluation contexts\leanref{evaluation-contexts}}{fig:semantics-values}
 \(\displaystyle
 \begin{aligned}
  v&::=r\mid()\mid\kw{true}\mid\kw{false}\mid\lambda x.e\mid\recfn f x e
@@ -15,11 +17,12 @@
        \mid\kw{inl}\,C\mid\kw{inr}\,C\\
   &\quad\mid C::e\mid v::C\mid\scase C x{e_1}y{e_2}\mid\lcase C{e_0}x{xs}{e_1}\\
   &\quad\mid -C\mid C\mathbin\circ e\mid v\mathbin\circ C
-       \mid\draw D\alpha{\bar v,C,\bar e},\qquad\circ\in\{+,\cdot,/,<\}.
+       \mid\draw D\alpha{\bar v,C,\bar e},
+       \qquad \circ\in\{+,\cdot,/,<\},\quad \alpha\in\{\G,\E,\M\}.
 \end{aligned}
 \)\par
 \par\vspace{11pt}
-\semanticsHeading{Deterministic reduction\leanref{reduction}}
+\semanticsHeading{Deterministic reduction\leanref{reduction}}{fig:semantics-reduction}
 \begingroup
 \setlength{\jot}{0pt}
 \(\displaystyle
@@ -41,7 +44,7 @@
 \)\par
 \endgroup
 \par\vspace{11pt}
-\semanticsHeading{Primitive distributions\leanref{primitive-distributions}}
+\semanticsHeading{Primitive distributions\leanref{primitive-distributions}}{fig:semantics-distributions}
 \begingroup
 \renewcommand{\arraystretch}{1.08}
 \setlength{\heavyrulewidth}{0.5pt}
@@ -61,7 +64,7 @@ $\kw{gamma}(k,\lambda)$ & $k>0,\ \lambda>0$ & $k/\lambda$\\
 \end{tabular*}
 \endgroup
 \par\vspace{11pt}
-\semanticsHeading{Output measures\leanref{output-measures}}
+\semanticsHeading{Output measures\leanref{output-measures}}{fig:semantics-output}
 \begingroup
 \settowidth{\dimen0}{$\displaystyle\int_{\Real}\out{C[r]}n(B)\,D(\bar v)(dr)$}
 \edef\outputTermWidth{\the\dimen0}
@@ -88,6 +91,7 @@ $\kw{gamma}(k,\lambda)$ & $k>0,\ \lambda>0$ & $k/\lambda$\\
 \end{aligned}
 \)\par
 \endgroup
+\end{subcaptiongroup}
 \captionsetup{skip=10pt}
 \caption{Operational semantics. $\out e n(B)$ is the probability that $e$ returns a real number in $B$ after exactly $n$ steps. 
 These are subprobability measures: executions that do not successfully return a real value contribute no mass.

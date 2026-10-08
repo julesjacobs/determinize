@@ -4,60 +4,62 @@
 
 This section introduces the probabilistic language on which our
 determinization transformation operates. We first present its syntax and operational semantics, and then define
-determinization as a source-to-source transformation over annotated
-distribution expressions.
+determinization as a source-to-source transformation over annotated expressions. Finally, we define the output measure that characterizes the distribution of successfully returned values.
 
 \paragraph{Syntax.}
 \Cref{fig:syntax} presents the syntax of our language, a call-by-value
-functional language with recursion, pairs, sums, lists, and primitive
-probability distributions. The expression $\kw{reject}$ represents a failed
-execution path and is used to encode conditioning on observations.
+functional language with recursion, pairs, sums, lists, and probability distributions. The expression $\kw{reject}$ represents a failed execution path used to encode conditioning on observations.
 
 \todo[inline]{TODO: explain why reject and diverge are treated similarly??}
 
-Each distribution occurrence is annotated with one of three modes:
-$\G$, $\E$, or $\M$. The modes $\G$ and $\E$ distinguish samples that must
-remain stochastic from those that are eligible for determinization,
-respectively. The type system in \cref{sec:type-system} determines which
-sampling sites may be assigned mode $\E$. The mode $\M$ marks a distribution
-occurrence that computes the distribution's mean and is used in the output
-of determinization.
+Each distribution is annotated with one of three modes:
+$\G$, $\E$, or $\M$. Both $\G$ and $\E$ draw samples, but $\G$ marks sampling sites that remain stochastic under determinization, whereas $\E$ marks those eligible to be replaced by their means. In particular, the type system in \cref{sec:type-system} determines which sampling sites may be assigned mode $\E$. The mode $\M$, used in the output of determinization, evaluates a distribution expression to its mean.
 
 \input{figures/syntax}
 
 \paragraph{Operational semantics.}
-\Cref{fig:semantics} gives the call-by-value operational semantics. Values
-and evaluation contexts determine the order of evaluation, while the
-standard functional constructs reduce by the usual substitution rules.
-We omit the routine reductions for arithmetic and comparisons.
+\Cref{fig:semantics} gives the call-by-value operational semantics.
+Values and evaluation contexts in
+\cref{fig:semantics}(\subref{fig:semantics-values}) specify which
+expressions have finished evaluating and which subexpression is evaluated
+next. In particular, a distribution's arguments are evaluated to values
+before it is sampled or its mean is computed.
 
-For arguments $\bar v$ satisfying the domain condition
-$\operatorname{Domain}_D(\bar v)$, both
-$D^\G(\bar v)$ and $D^\E(\bar v)$ draw a value from the same probability
-distribution $D(\bar v)$. Thus, the distinction between $\G$ and $\E$ does
-not affect the behavior of the source program; it records whether the type
-system permits that sampling operation to be determinized. In contrast, an
-$\M$-annotated distribution reduces deterministically to its mean:
+The deterministic reduction rules in
+\cref{fig:semantics}(\subref{fig:semantics-reduction}) handle the standard
+functional constructs by substitution and case analysis. We omit the
+routine arithmetic and comparison rules. Distribution expressions in
+mode $\M$, introduced by determinization, also reduce deterministically
+to their means:
 \[
   D^\M(\bar v)
   \rightsquigarrow
-  \operatorname{Mean}_D(\bar v).
+  \operatorname{Mean}_D(\bar v)
+  \qquad
+  \text{when }\operatorname{Domain}_D(\bar v),
 \]
-Consequently, changing an annotation from $\E$ to $\M$ replaces a random
-draw by the mean of its distribution while leaving the evaluation of its
-arguments unchanged.
+where the primitive distribution table in
+\cref{fig:semantics}(\subref{fig:semantics-distributions}) specifies
+$\operatorname{Domain}_D$ and $\operatorname{Mean}_D$ for each supported
+distribution. A distribution application outside its domain becomes
+stuck, as does division by zero. In $\kw{gaussian}(u,v)$, $v$ denotes
+the variance; the parameters $\lambda$ of the exponential and gamma
+distributions are rates. The distribution
+$\kw{discrete}([p_i]_{i<n})$ returns $i$ with probability $p_i$ for
+$0\leq i<n$, and returns $n$ with the remaining probability
+$1-\sum_{i<n}p_i$.
 
-The primitive-distribution table in \cref{fig:semantics} specifies the
-domain and mean of each supported distribution. A distribution application
-outside its domain has no reduction, just as division by zero has no
-reduction. In $\kw{gaussian}(u,v)$, $v$ denotes the variance, while the
-parameters of the exponential and gamma distributions are rates. The
-distribution $\kw{discrete}([p_i]_{i<n})$ returns $i$ with probability $p_i$ for $0\leq i<n$, and returns $n$ with
-the remaining probability $1-\sum_{i<n}p_i$.
+In contrast to mode $\M$, modes $\G$ and $\E$ both sample from
+$D(\bar v)$ when the arguments satisfy the domain condition $\operatorname{Domain}_D(\bar v)$.
+Since sampling is stochastic, neither mode has a deterministic reduction
+rule. Their identical sampling behavior is instead specified by the
+output-measure rules in
+\cref{fig:semantics}(\subref{fig:semantics-output}), which we describe
+later in this section.
 
 \input{figures/semantics}
 
-\paragraph{Determinization} This leads us to our determinization definition below:
+\paragraph{Determinization} We now formally define our determinization function below.
 
 \begin{definition}[Determinization\leanref{determinization}]
 \label{def:determinization}
@@ -65,7 +67,7 @@ Let $\mathcal{A}=\{\G,\E,\M\}$ be the set of distribution modes. The
 determinization transformation $\trans{\cdot}$ is defined structurally on
 expressions, replacing each $\E$-mode distribution by its $\M$-mode
 counterpart and leaving all other constructs unchanged. In particular, for
-every distribution primitive $D$, mode $\alpha\in\mathcal{A}$, and argument
+every distribution $D$, mode $\alpha\in\mathcal{A}$, and argument
 expressions $\bar e=(e_1,\ldots,e_n)$,
 \[
 \trans{D^\alpha(\bar e)}
@@ -87,12 +89,10 @@ For every non-distribution constructor $C$,
 =
 C(\trans{e_1},\ldots,\trans{e_n}),
 \]
-and atomic expressions are unchanged.
+and atomic expressions are unchanged (see~\Cref{sec:appendix-determinization}).
 \end{definition}
 
-\todo[inline]{TODO: Provide full determinization transformation in appendix.}
-
-Indeed, determinization may remove all randomness from a program if all distributions are are annotated with $\E$, or only part of it if at least one distirbution is annotated with $\G$. Let us consider several simple examples below to illustrate determinization in action.
+Determinization replaces $\E$-mode sampling with mean evaluation and recursively transforms the distribution's arguments, preserving their call-by-value evaluation order. When all sampling sites are annotated with $\E$, determinization eliminates all randomness, yielding a deterministic program. We refer to this as \emph{full determinization}. When both $\E$- and $\G$-mode sampling sites occur, determinization eliminates the former while retaining the latter. Accordingly, we refer to this as \emph{partial determinization}. In this case, the resulting program may be discrete or remain continuous, depending on the randomness retained. In particular, if all retained sampling sites are discrete, the transformed program is discrete, even if the original program contains continuous distributions. Conversely, retaining continuous sampling sites may leave the transformed program continuous. Let us consider several simple examples below to illustrate determinization in action.
 
 \begin{example}
 In this example, determinization first replaces the outer $\E$-annotated Gaussian by its $\M$-annotated counterpart, and then recursively transforms its arguments (trivial recursive steps on constants, which are unchanged by determinization, are omitted for brevity). The nested uniform distribution is annotated with $\E$, so it also gets replaced by its $\M$-annotated counterpart:
@@ -152,7 +152,7 @@ establishes that those replacements are semantically justified.
 \paragraph{Output measures.}
 As described above, the reduction rules describe how an individual execution proceeds. To
 describe the behavior of all possible executions, we lift these rules to a
-measure over returned real values. For a closed expression $e$ and
+measure over returned real values, as defined in \cref{fig:semantics}(\subref{fig:semantics-output}). For a closed expression $e$ and
 $n\in\mathbb{N}$, $\out e n$ is a measure on the standard Borel space
 $\mathbb{R}$. For every Borel-measurable set $B\subseteq\mathbb{R}$,
 $\out e n(B)$ is the probability that $e$ returns a value in $B$ after

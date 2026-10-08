@@ -4,10 +4,10 @@
 
 \todo[inline]{Add Lean references}
 
-To motivate our proof strategy, first observe that at an $E$-mode distribution, the original program samples a value, whereas the transformed program computes the mean of the distribution. The resulting programs therefore have different output distributions. Thus, our proof relates both programs to a common symbolic semantics, after which two interpretations recover the source and determinized programs. Our proof thus proceeds in three stages:
+To motivate our proof strategy, first observe that at an $\E$-mode distribution, the original program samples a value whereas the transformed program computes the mean of the distribution. The resulting programs therefore have different output distributions. Thus, our proof relates both programs to a common symbolic semantics, after which two interpretations recover the source and determinized programs. Our proof thus proceeds in three stages:
 
 \begin{enumerate}
-  \item Define symbolic semantics;
+  \item Define the symbolic semantics;
   \item Define the actual and expected interepretations that recover the source and determinized programs, respectively, and prove properties regarding these interpretations; and
   \item Derive the results.
 \end{enumerate}
@@ -290,6 +290,17 @@ $\mathsf{Act}_n(s)(\,\cdot\times\Real)$-almost every trace $\tau$,
 \]
 \end{theorem}
 
+\Cref{fig:symbolic-example} works through these results on the program
+$e=\draw{uniform}\E{1,2}\,/\,\draw{uniform}\G{0,1}$. The symbolic
+execution delays the $\E$-draw as a variable $u_1$, samples the $\G$-draw
+as $r$, and ends in the affine result $\tfrac1r u_1$. Realizing $u_1$ as a
+sample $c$ recovers each step of the source program, and realizing it as
+its mean $\tfrac32$ recovers each step of $\trans e$. For each fixed trace
+$[(\kw{uniform},r)]$, the conditional mean $\tfrac3{2r}$ is finite.
+Integrating over $r$, however, gives a global expectation of $+\infty$
+for both programs, which is consistent with \cref{thm:expectation}.
+
+\input{figures/symbolic-example.tex}
 
 \subsection{Deriving the Soundness Results}
 
