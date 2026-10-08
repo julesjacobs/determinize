@@ -129,6 +129,13 @@
           <h2 class="pane-title">Source</h2>
           <div id="editor" class="editor"></div>
           <div id="notices"></div>
+          <p id="source-hint" class="source-hint" hidden>
+            Write a program in the editor, or pick an example. A draw without a mark, such as
+            <code>uniform(0, 1)</code>, gets its mode from inference: E wherever that is allowed,
+            which the determinized program replaces by its mean, and G, kept random, elsewhere.
+            <code>[G]</code>
+            or <code>[E]</code>, as in <code>gauss[E](x, 1)</code>, fixes a mode.
+          </p>
           <div id="source-alert" class="alert" role="status" hidden></div>
         </div>
         <div id="determinized-pane" class="pane pane-det">

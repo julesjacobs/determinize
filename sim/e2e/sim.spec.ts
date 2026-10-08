@@ -889,6 +889,26 @@ test("the gallery lists the examples as links, a menu on wide screens and a dial
   await passed(page);
 });
 
+test("New program opens an empty editor whose placeholder shows the syntax", async ({ page }) => {
+  await page.goto(simulator);
+  await passed(page);
+  await page.getByRole("button", { name: /^Example: / }).click();
+  await page
+    .getByRole("dialog", { name: "Examples" })
+    .getByRole("link", { name: "New program" })
+    .click();
+  await expect(page.locator("#example-title")).toHaveText("New program");
+  const source = page.getByRole("textbox", { name: "Source program" });
+  await expect(source.locator(".cm-placeholder")).toContainText("let y = gauss[E](x, 1) in");
+  const hint = page.locator("#source-hint");
+  await expect(hint).toBeVisible();
+  await expect(hint).toContainText("gets its mode from inference");
+  await source.click();
+  await page.keyboard.type("uniform(0, 1)");
+  await expect(hint).toBeHidden();
+  await expect(page.locator("#example-title")).toHaveText("Your program");
+});
+
 test("the introduction hides on request, and stays hidden", async ({ page }) => {
   await page.goto(simulator);
   const intro = page.getByRole("region", { name: "Introduction" });

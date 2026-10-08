@@ -232,14 +232,34 @@
   .gallery-head {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: var(--space-4);
+    gap: var(--space-2);
     margin-bottom: var(--space-2);
   }
 
   .gallery-title {
+    margin-right: auto;
     font-size: var(--size-ui);
     font-weight: var(--weight-heading);
+  }
+
+  .button-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--control-height);
+    padding: 0 var(--space-3);
+    border: 1px solid var(--muted);
+    border-radius: 3px;
+    text-decoration: none;
+  }
+
+  .button-link:hover {
+    background: var(--code-fill);
+  }
+
+  .source-hint {
+    max-width: 62rem;
+    margin-top: var(--space-2);
+    color: var(--muted);
   }
 
   .gallery ol {
