@@ -22,45 +22,55 @@
         <div class="pane pane-source">
           <h2 class="pane-title">Source</h2>
           <div id="editor" class="editor"></div>
-          <div class="editor-controls">
-            <label class="toggle-control">
-              <input id="type-hints-toggle" type="checkbox" />
-              <span>Type hints</span>
-            </label>
-            <span id="status" class="status editor-status" title="Ready" aria-label="Ready">•</span>
-          </div>
-          <div id="editor-diagnostics" class="editor-diagnostics">No diagnostics.</div>
-          <section id="lean-output" class="lean-output" aria-label="What Lean prints">
-            <p id="lean-counterexample" class="counterexample-label" hidden></p>
-            <p id="lean-summary">
-              <a href="https://julesjacobs.com/determinize/docs/Determinize/Spec/Syntax.html#Determinize.Spec.Paper.Typed" title="Lean's typing judgment">Checked</a>:
-              <code id="checked-type"></code>.
-              <a href="https://julesjacobs.com/determinize/docs/Determinize/Frontend/Syntax.html#Determinize.Spec.Paper.Expr.sites" title="Lean's sample sites of a program">Sample sites</a>:
-              <span id="sample-sites"></span>.
-            </p>
-            <p id="premise-type" class="premise-notice" hidden>
-              Its type is not <code>float[E]</code>, so none of the
-              <a href="https://julesjacobs.com/determinize/docs/Determinize/Theorems.html">theorems</a> about determinization applies to it: each
-              assumes a program of type <code>float[E]</code>.
-            </p>
-            <p id="premise-safety" class="premise-notice">
-              Typing establishes neither the
-              <a href="https://julesjacobs.com/determinize/docs/Determinize/Spec/Semantics.html#Determinize.Spec.Paper.DomainSafe">domain safety</a>
-              nor the
-              <a href="https://julesjacobs.com/determinize/docs/Determinize/Spec/Expectation.html#Determinize.Spec.HasExpectation">defined expectation</a>
-              that the <a href="https://julesjacobs.com/determinize/docs/Determinize/Theorems.html">theorems</a> also assume.
-            </p>
-            <h3>
-              <a href="https://julesjacobs.com/determinize/docs/Determinize/Frontend/Infer.html#Determinize.Frontend.infer" title="Lean's inference of the modes (affinities in the Lean development)">Annotated source</a>
-            </h3>
-            <pre id="annotated-program" class="lean-program"></pre>
-          </section>
+          <div id="notices"></div>
+          <div id="source-alert" class="alert" role="status" hidden></div>
+          <p class="pane-foot">
+            <span id="checked" hidden>
+              <a href="https://julesjacobs.com/determinize/docs/Determinize/Spec/Syntax.html#Determinize.Spec.Paper.Typed" title="Typed, in the Lean development">Checked</a>:
+              <code id="checked-type"></code>
+            </span>
+            <span id="source-sites" hidden>
+              <a href="https://julesjacobs.com/determinize/docs/Determinize/Frontend/Syntax.html#Determinize.Spec.Paper.Expr.sites" title="Expr.sites, in the Lean development">Sample sites</a>:
+              <span></span>
+            </span>
+          </p>
+          <details id="annotated" class="annotated" hidden>
+            <summary>Annotated source</summary>
+            <pre id="annotated-program" class="lean-program" tabindex="0" aria-label="Annotated source"></pre>
+          </details>
         </div>
-        <div class="pane pane-det">
-          <h2 class="pane-title">
-            <a href="https://julesjacobs.com/determinize/docs/Determinize/Spec/Syntax.html#Determinize.Spec.Paper.Expr.determinize" title="Lean's determinization">Determinized</a>
-          </h2>
-          <pre id="determinized-program" class="lean-program"></pre>
+        <div id="determinized-pane" class="pane pane-det">
+          <h2 id="determinized-title" class="pane-title">Determinized</h2>
+          <div id="counterexample-label" class="alert counter-label" hidden>
+            <p>Lean rejects this program; this is what replacing its [E] draws anyway does</p>
+          </div>
+          <div id="determinized-editor" class="editor"></div>
+          <p id="determinized-empty" class="pane-empty" hidden>Loading the simulator…</p>
+          <p class="pane-foot">
+            <span id="determinized-sites" hidden>Sample sites: <span></span></span>
+          </p>
+        </div>
+        <p id="lean-note" class="lean-note">
+          The checked type, the sample sites and both printed programs come from the simulator's
+          port of Lean's front end (its
+          <a href="https://julesjacobs.com/determinize/docs/Determinize/Frontend/Infer.html#Determinize.Frontend.infer" title="Lean's inference of the modes (affinities in the Lean development)">inference</a>
+          and
+          <a href="https://julesjacobs.com/determinize/docs/Determinize/Spec/Syntax.html#Determinize.Spec.Paper.Expr.determinize" title="Expr.determinize, in the Lean development">determinization</a>);
+          <code>./run.sh --check FILE</code> prints Lean's own.
+        </p>
+        <div id="premises" class="premises-interim">
+          <p id="premise-type" class="premise-notice" hidden>
+            Its type is not <code>float[E]</code>, so none of the
+            <a href="https://julesjacobs.com/determinize/docs/Determinize/Theorems.html">theorems</a> about determinization applies to it: each
+            assumes a program of type <code>float[E]</code>.
+          </p>
+          <p id="premise-safety" class="premise-notice">
+            Typing establishes neither the
+            <a href="https://julesjacobs.com/determinize/docs/Determinize/Spec/Semantics.html#Determinize.Spec.Paper.DomainSafe">domain safety</a>
+            nor the
+            <a href="https://julesjacobs.com/determinize/docs/Determinize/Spec/Expectation.html#Determinize.Spec.HasExpectation">defined expectation</a>
+            that the <a href="https://julesjacobs.com/determinize/docs/Determinize/Theorems.html">theorems</a> also assume.
+          </p>
         </div>
       </section>
 

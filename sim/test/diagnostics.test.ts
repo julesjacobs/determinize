@@ -1,8 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { EditorState } from "@codemirror/state";
 import { analyze } from "../src/core/compiler/analyze.ts";
-import { diagnosticsField, normalizeDiagnostics, setDiagnostics } from "../src/ui/editor.ts";
+import { lintDiagnostics, normalizeDiagnostics } from "../src/ui/editor.ts";
 
 const cases = [
   {
@@ -152,22 +151,12 @@ for (const item of cases) {
   });
 }
 
-test("editor diagnostics clear immediately when the document changes", () => {
-  const state = EditorState.create({
-    doc: "let u = uniform[E](0, 1) in",
-    extensions: [diagnosticsField],
-  });
-  const withDiagnostic = state.update({
-    effects: setDiagnostics.of([
-      { from: 26, to: 27, message: "expected expression before end of input" },
-    ]),
-  }).state;
-
-  assert.equal(withDiagnostic.field(diagnosticsField).length, 1);
-
-  const edited = withDiagnostic.update({
-    changes: { from: 16, to: 17, insert: "" },
-  }).state;
-
-  assert.deepEqual(edited.field(diagnosticsField), []);
+test("the editor shows Lean's rejections as errors from the stage that rejects", () => {
+  const source = "uniform[E](0, 1) * uniform[E](0, 1)";
+  const [diagnostic] = lintDiagnostics(analyze(source), source);
+  assert.deepEqual(
+    { severity: diagnostic.severity, source: diagnostic.source },
+    { severity: "error", source: "Lean's front end, inference" },
+  );
+  assert.deepEqual(lintDiagnostics(analyze("1 + 2"), "1 + 2"), []);
 });
