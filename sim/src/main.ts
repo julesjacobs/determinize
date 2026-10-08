@@ -12,11 +12,10 @@ import { mountHeader } from "./ui/header.ts";
 import { mountIntro } from "./ui/intro.ts";
 import { mountLeanView } from "./ui/lean-view.ts";
 import { printedRange, revealLines, setLinked } from "./ui/linking.ts";
-import { mountPredict } from "./ui/predict.ts";
 import { mountProgramView } from "./ui/program-view.ts";
 import { createSampling } from "./ui/sampling.ts";
 import type { Store } from "./ui/store.ts";
-import { createStore } from "./ui/store.ts";
+import { createStore, randomSeed } from "./ui/store.ts";
 import { mountTheme, storedTheme } from "./ui/theme.ts";
 import { createTraceClient } from "./ui/trace-client.ts";
 import { mountTraceView } from "./ui/trace-view.ts";
@@ -30,11 +29,6 @@ const newSeedButton = document.querySelector("#new-seed") as HTMLButtonElement;
 /** The page's store, once the page has opened; scripts and browser tests reach it as
  * `DeterminizeSim.ready`. */
 export const ready = decodeShare(window.location.hash).then(start);
-
-/** A random seed for a run, from 1 to 2³² − 1. */
-function randomSeed() {
-  return Math.floor(1 + Math.random() * 0xffffffff);
-}
 
 /** The page, from the state in its link or else the first example. */
 function start(decoded: Decoded): Store {
@@ -51,6 +45,8 @@ function start(decoded: Decoded): Store {
       exampleId: initial.example,
       view: initial.view,
       theme: storedTheme(),
+      // On the page's own thread, a smaller first batch keeps the first distributions quick.
+      firstBatch: sampling.inThread ? 200 : 1000,
     },
     (request) => sampling.send(request),
     (request) => traces.request(request),
@@ -94,11 +90,7 @@ function start(decoded: Decoded): Store {
       if (range || site) store.followLinked.value += 1;
     },
   );
-  const predicting = mountPredict(
-    { form: $("#predict"), runs: $("#predict-runs"), line: $("#prediction") },
-    store,
-  );
-  mountDistributionView($("#distributions"), predicting, store);
+  mountDistributionView($("#distributions"), store);
   mountGallery(
     {
       button: $("#example-button"),

@@ -1,7 +1,7 @@
-// The messages between the page and its workers: the sampling worker, which runs batches of
-// "Run both", and the step table's worker, which computes the step table's run. A request has a
-// generation number; a newer request replaces an older one, and the page ignores responses of any
-// but the newest.
+// The messages between the page and its workers: the sampling worker, which runs the batches of
+// runs of both programs, and the step table's worker, which computes the step table's run. A
+// request has a generation number; a newer request replaces an older one, and the page ignores
+// responses of any but the newest.
 import type { Runs } from "./statistics.ts";
 import type { TraceOverview, TracePage } from "./trace-pages.ts";
 

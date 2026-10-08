@@ -25,12 +25,11 @@ async function settled(page: Page) {
   await expect(page.locator("[aria-busy=true]")).toHaveCount(0, { timeout: 30_000 });
 }
 
-/** Runs both programs 1000 times. */
-async function runBoth(page: Page) {
+/** Samples both programs 1000 times. */
+async function sampled(page: Page) {
   await page.evaluate(async () => {
     (await window.DeterminizeSim.ready).sampleCount.value = 1000;
   });
-  await page.getByRole("button", { name: "Run both", exact: true }).click();
   await settled(page);
 }
 
@@ -57,7 +56,7 @@ const states: { name: string; open: (page: Page) => Promise<void> }[] = [
     name: "noisy product after a run",
     open: async (page) => {
       await page.goto("sim/");
-      await runBoth(page);
+      await sampled(page);
       // Step 3, the E draw, whose row tints the parts that correspond.
       await page.locator("#scrubber").focus();
       for (let i = 0; i < 3; i++) await page.keyboard.press("ArrowRight");
@@ -67,7 +66,7 @@ const states: { name: string; open: (page: Page) => Promise<void> }[] = [
     name: "the plot against the G draw",
     open: async (page) => {
       await page.goto("sim/");
-      await runBoth(page);
+      await sampled(page);
       await page.getByRole("radio", { name: "Against x, the G draw" }).check();
     },
   },
@@ -94,7 +93,7 @@ const states: { name: string; open: (page: Page) => Promise<void> }[] = [
     open: async (page) => {
       await page.goto("sim/");
       await pick(page, "Noisy product, both draws E");
-      await runBoth(page);
+      await sampled(page);
     },
   },
   {
@@ -102,7 +101,7 @@ const states: { name: string; open: (page: Page) => Promise<void> }[] = [
     open: async (page) => {
       await page.goto("sim/");
       await pick(page, "Gaussian random walk");
-      await runBoth(page);
+      await sampled(page);
     },
   },
   {
@@ -164,7 +163,7 @@ for (const width of [390, 1440]) {
     test.setTimeout(60_000);
     await page.setViewportSize({ width, height: 844 });
     await page.goto("sim/");
-    await runBoth(page);
+    await sampled(page);
     if (width < 600) await page.getByRole("button", { name: "More" }).click();
     const expected = await page.evaluate((selector) => {
       const shown = (element: Element) => {
@@ -234,15 +233,13 @@ for (const width of [390, 1440]) {
   });
 }
 
-test("a batch moves nothing on the page at 390 px", async ({ page }) => {
+test("sampling moves nothing on the page at 390 px", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("sim/");
-  // A first batch shows the distributions; shifts count only for what is on screen, and only when
-  // they don't follow an input within half a second (`hadRecentInput`), so the second batch starts
-  // from a script with the band in view.
-  const runBoth = () => page.evaluate(async () => (await window.DeterminizeSim.ready).runBoth());
-  await settled(page);
-  await runBoth();
+  // Sampling on load shows the distributions. Shifts count only for what is on screen, and only
+  // when they don't follow an input within half a second (`hadRecentInput`), so the next sampling,
+  // Resample's, starts from a script with the band in view.
+  const resample = () => page.evaluate(async () => (await window.DeterminizeSim.ready).resample());
   await settled(page);
   await page.evaluate(() => document.querySelector("#distributions")?.scrollIntoView());
   await page.evaluate(() => {
@@ -256,7 +253,7 @@ test("a batch moves nothing on the page at 390 px", async ({ page }) => {
       }
     }).observe({ type: "layout-shift", buffered: false });
   });
-  await runBoth();
+  await resample();
   await settled(page);
   await page.waitForTimeout(500);
   const shifts = await page.evaluate(() => window.layoutShifts);
@@ -267,7 +264,8 @@ test("a batch moves nothing on the page at 390 px", async ({ page }) => {
 test("the statistics' columns stay in place whatever their numbers", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("sim/");
-  await runBoth(page);
+  await expect(page.locator("#mean-source")).not.toBeEmpty();
+  await settled(page);
   const table = page.locator("#stats");
   const columns = () =>
     table.evaluate((element) =>
@@ -298,7 +296,7 @@ for (const width of [390, 1440]) {
   test(`every control is at least 24 by 24 px, at ${width} px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
     await page.goto("sim/");
-    await runBoth(page);
+    await sampled(page);
     if (width < 600) await page.getByRole("button", { name: "More" }).click();
     await page.getByRole("radio", { name: "Against x, the G draw" }).check();
     // Links within sentences are exempt (WCAG 2.5.8, "inline"); the rest are measured, and a

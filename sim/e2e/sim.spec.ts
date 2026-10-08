@@ -16,6 +16,8 @@ declare global {
     DeterminizeSim: { ready: Promise<Store> };
     /** The durations of the long tasks since `watchLongTasks`. */
     longTasks: number[];
+    /** The returned runs that the statistics show at each change, with the runs sampled then. */
+    returnedTexts: string[];
   }
 }
 
@@ -50,7 +52,7 @@ async function pick(page: Page, title: string) {
   await expect(page.locator("#example-title")).toHaveText(title);
 }
 
-/** Sets how many runs of each program "Run both" brings the runs to, through the page's store. */
+/** Sets how many runs of each program sampling brings the runs to, through the page's store. */
 async function setRunCount(page: Page, count: number) {
   await page.evaluate(async (n) => {
     (await window.DeterminizeSim.ready).sampleCount.value = n;
@@ -65,9 +67,10 @@ function runs(page: Page) {
   );
 }
 
-/** Clicks "Run both" and waits until its runs have arrived. */
-async function runBoth(page: Page, timeout?: number) {
-  await page.getByRole("button", { name: "Run both", exact: true }).click();
+/** Sets the number of runs, and waits until sampling has brought the runs to it. */
+async function sampled(page: Page, count: number, timeout?: number) {
+  await setRunCount(page, count);
+  await expect.poll(() => runs(page), { timeout }).toBe(count);
   await settled(page, timeout);
 }
 
@@ -126,8 +129,7 @@ for (const [where, url, worker] of [
     await page.goto(url);
     await expect.poll(() => stepRun(page)).toEqual({ seed: 1, steps: 5, ok: true });
     await expect(status(page)).toHaveText("");
-    await setRunCount(page, 200);
-    await runBoth(page);
+    await sampled(page, 200);
     expect(await runs(page)).toBe(200);
     expect(workers.map((started) => new URL(started).pathname.split("/").at(-1)).sort()).toEqual(
       worker ? ["trace-worker.js", "worker.js"] : [],
@@ -137,7 +139,7 @@ for (const [where, url, worker] of [
 
 test("runs every example", async ({ page }) => {
   await page.goto(simulator);
-  await setRunCount(page, 20);
+  await sampled(page, 20);
   const titles = await page.locator("#gallery-list a").allTextContents();
   expect(titles.length).toBeGreaterThan(0);
   for (const title of titles) {
@@ -145,9 +147,9 @@ test("runs every example", async ({ page }) => {
     await expect.poll(() => stepRun(page)).not.toBeNull();
     await expect(page.locator(".step").first()).toBeVisible();
     const before = await stepRun(page);
-    await runBoth(page);
     // Runs 1 to 19 follow run 0, which the step table keeps showing.
-    expect(await runs(page)).toBe(20);
+    await expect.poll(() => runs(page)).toBe(20);
+    await settled(page);
     expect(await stepRun(page)).toEqual(before);
   }
 });
@@ -159,14 +161,9 @@ test("a 200-run and a 5000-run batch leave no long task over 200 ms", async ({ p
   // The step table shows the new run once, before the batches that this test measures.
   await expect(page.locator('.step[data-step="0"] .cell-source')).toContainText("crawl");
   await watchLongTasks(page);
-  await setRunCount(page, 200);
-  await runBoth(page);
-  expect(await runs(page)).toBe(200);
-
+  await sampled(page, 200);
   await pick(page, "Noisy product");
-  await setRunCount(page, 5000);
-  await runBoth(page);
-  expect(await runs(page)).toBe(5000);
+  await sampled(page, 5000);
   const longTasks = await page.evaluate(() => window.longTasks);
   test.info().annotations.push({ type: "long tasks (ms)", description: JSON.stringify(longTasks) });
   expect(Math.max(0, ...longTasks)).toBeLessThanOrEqual(200);
@@ -183,41 +180,139 @@ test("a 200-run and a 5000-run batch leave no long task over 200 ms", async ({ p
     .toBeGreaterThan(250);
 });
 
-test("a second Run during a batch adds its runs as well", async ({ page }) => {
+test("sampling shows a first batch soon, goes on to the run count, and further for a larger one", async ({
+  page,
+}) => {
   test.setTimeout(60_000);
   await page.goto(simulator);
-  // 100000 runs of the Gaussian random walk take seconds, so the first batch is still running at
-  // the second click.
   await pick(page, "Gaussian random walk");
-  await setRunCount(page, 100000);
-  await page.getByRole("button", { name: "Run both", exact: true }).click();
-  await expect(page.locator("#distributions[aria-busy=true]")).toHaveCount(1);
-  const runningAtSecondClick = await page.evaluate(async () => {
-    const running = (await window.DeterminizeSim.ready).running.value !== null;
-    (document.querySelector("#run-both") as HTMLButtonElement).click();
-    return running;
+  await settled(page, 30_000);
+  // A new seed starts again from its first run, with a first batch of 1000 runs.
+  const first = await page.evaluate(async () => {
+    const store = await window.DeterminizeSim.ready;
+    store.runAt(7);
+    const running = store.running.value;
+    return running && { end: running.end, target: running.target };
   });
-  expect(runningAtSecondClick).toBe(true);
-  await settled(page, 50_000);
-  // The first click brings the runs to 100000, the second adds as many again.
-  expect(await runs(page)).toBe(200000);
+  expect(first).toEqual({ end: 1000, target: 10000 });
+  await expect.poll(() => runs(page), { timeout: 30_000 }).toBe(10000);
+  await sampled(page, 30000, 50_000);
 });
 
-test("editing during a run discards its stale batches", async ({ page }) => {
+test("a heavy program stops sampling at its time budget, and goes on on request", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(simulator);
   await pick(page, "Gaussian random walk");
-  await setRunCount(page, 100000);
-  await page.getByRole("button", { name: "Run both", exact: true }).click();
-  await expect.poll(() => runs(page)).toBeGreaterThan(1);
+  const progress = page.locator("#progress-text");
+  // Idle, the progress line says how many runs there are, so that it leaves no gap.
+  await expect(progress).toHaveText(/^10\s000 runs of each program\.$/);
+  await setRunCount(page, 1_000_000);
+  await expect(progress).toHaveText(/^Stopped after 5 s at [\d\s]+ of 1\s000\s000 runs\.$/, {
+    timeout: 20_000,
+  });
+  await settled(page);
+  // Its longest line wraps rather than being cut, at 390 px.
+  expect(await progress.evaluate((text) => text.scrollWidth <= text.clientWidth)).toBe(true);
+  const stopped = await runs(page);
+  expect(stopped).toBeLessThan(1_000_000);
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect.poll(() => runs(page)).toBeGreaterThan(stopped);
+  await page.getByRole("button", { name: "Stop", exact: true }).click();
+  await expect(progress).toHaveText(/^Stopped at [\d\s]+ of 1\s000\s000 runs\.$/);
+  await expect(page.getByRole("button", { name: "Continue" })).toBeVisible();
+});
+
+test("Resample samples from a new seed, which the command follows", async ({ page }) => {
+  await page.goto(simulator);
+  await sampled(page, 1000);
+  const honesty = page.locator("#honesty");
+  await expect(honesty).toContainText("./run.sh --seed 1 --samples 1000");
+  await page.getByRole("button", { name: "Resample" }).click();
+  await expect(page.locator("#seed")).not.toHaveValue("1");
+  const seed = await page.locator("#seed").inputValue();
+  await expect.poll(() => runs(page)).toBe(1000);
+  await settled(page);
+  await expect(honesty).toContainText(`./run.sh --seed ${seed} --samples 1000`);
+  await passed(page, Number(seed));
+});
+
+test("an edit undone within the pause goes on sampling", async ({ page }) => {
+  test.setTimeout(60_000);
+  await page.goto(simulator);
+  // The random walk samples slowly enough that sampling is still running at the edit.
+  await pick(page, "Gaussian random walk");
+  await setRunCount(page, 30000);
+  await expect.poll(() => runs(page)).toBeGreaterThan(3000);
   await page.locator(".cm-content").first().click();
   await page.keyboard.press("Control+End");
   await page.keyboard.type(" ");
+  await page.keyboard.press("Backspace");
+  // Sampling goes on to the count, through Continue where a slow machine reaches the time budget.
+  await expect
+    .poll(
+      () =>
+        page.evaluate(async () => {
+          const store = await window.DeterminizeSim.ready;
+          if (store.paused.value?.why === "budget") store.resume();
+          return store.samples.value.original.summary.runs;
+        }),
+      { timeout: 50_000 },
+    )
+    .toBe(30000);
   await settled(page);
-  // The edited program's run in the step table is its first run, and no other arrives.
-  await expect.poll(() => runs(page)).toBe(1);
-  await page.waitForTimeout(1000);
-  expect(await runs(page)).toBe(1);
 });
+
+test("an edit during sampling drops the old program's runs and samples the new one", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  await page.goto(simulator);
+  await setRunCount(page, 100000);
+  await expect.poll(() => runs(page)).toBeGreaterThan(20000);
+  await page.locator(".cm-content").first().click();
+  await page.keyboard.press("Control+End");
+  await page.keyboard.type(" ");
+  await expect
+    .poll(() =>
+      page.evaluate(async () => {
+        const store = await window.DeterminizeSim.ready;
+        return (
+          store.samples.value.source === store.source.value && store.source.value.endsWith(" ")
+        );
+      }),
+    )
+    .toBe(true);
+  // The runs are the new program's, and none of the old program's batches adds to them.
+  await expect.poll(() => runs(page), { timeout: 50_000 }).toBe(100000);
+  await settled(page);
+  expect(await runs(page)).toBe(100000);
+});
+
+for (const title of ["Dungeon crawl", "Gaussian random walk"]) {
+  test(`typing while sampling takes under 200 ms an edit, as a median: ${title}`, async ({
+    page,
+  }) => {
+    test.setTimeout(60_000);
+    await page.goto(simulator);
+    await pick(page, title);
+    await settled(page, 30_000);
+    await watchLongTasks(page);
+    await page.locator(".cm-content").first().click();
+    await page.keyboard.press("Control+End");
+    // Pauses longer than the analysis's delay, so that each edit samples the edited program.
+    const edits = ["\n", " ", "\n", " ", "\n", " ", "\n"].map((text) => async () => {
+      await page.keyboard.type(text);
+      await page.waitForTimeout(800);
+    });
+    const { median, each } = await longTasksPer(page, edits);
+    test.info().annotations.push({ type: "long tasks per edit (ms)", description: each });
+    expect(median, `long tasks per edit (ms): ${each}`).toBeLessThanOrEqual(200);
+    await settled(page, 30_000);
+  });
+}
 
 test("a link restores the program, the seed and the example", async ({ page, context }) => {
   await page.goto(simulator);
@@ -280,8 +375,7 @@ test("a link navigated to is restored, though the page rewrites its fragment bef
 
 test("a variance that overflows shows as Lean's CLI prints it", async ({ page }) => {
   await page.goto(linkTo("uniform(0, 1e200)", 1));
-  await setRunCount(page, 10);
-  await runBoth(page);
+  await sampled(page, 10);
   await expect(page.locator("#variance-source")).toHaveText(
     "unavailable (floating-point overflow)",
   );
@@ -297,8 +391,7 @@ test("the determinized program shows, and the statistics give the sample sites i
   const determinized = page.getByRole("textbox", { name: "Determinized program" });
   await expect(determinized).toContainText("let y = mean_gauss(x, 1) in");
   await expect(determinized).toHaveAttribute("aria-readonly", "true");
-  await setRunCount(page, 10);
-  await runBoth(page);
+  await sampled(page, 10);
   await expect(page.locator("#sites-text")).toHaveText(
     "2 continuous in the source, → 1 continuous determinized",
   );
@@ -393,20 +486,19 @@ test("the runs' outcomes, the command that reports them and the run's G trace sh
 }) => {
   await page.goto(simulator);
   const honesty = page.locator("#honesty");
-  await expect(honesty).not.toContainText("--samples");
   await expect(page.locator("#g-trace")).toHaveText(
     /^\[\(uniform, [-0-9.e]+\)\], in both programs$/,
   );
-  await setRunCount(page, 200);
-  await runBoth(page);
+  await sampled(page, 200);
   await expect(page.locator("#returned-source")).toHaveText("200 of 200");
+  // Idle, the progress bar keeps its room but doesn't show.
+  await expect(page.locator("#progress-bar")).toBeHidden();
   await expect(honesty).toContainText(
     "./run.sh --seed 1 --samples 200 examples/paper/noisy-product.det",
   );
 
   await page.goto(linkTo("1/0", 3));
-  await setRunCount(page, 10);
-  await runBoth(page);
+  await sampled(page, 10);
   await expect(page.locator("#returned-source")).toContainText("0 of 10");
   await expect(page.locator("#returned-source")).toContainText("10 failed");
   await expect(page.locator("#first-failure")).toContainText(
@@ -415,10 +507,34 @@ test("the runs' outcomes, the command that reports them and the run's G trace sh
   await expect(honesty).toContainText("with the program saved as program.det");
 });
 
+test("after an edit, the statistics show the new program from its first slice of runs", async ({
+  page,
+}) => {
+  await page.goto(simulator);
+  await sampled(page, 1000);
+  await page.evaluate(async () => {
+    const store = await window.DeterminizeSim.ready;
+    const returned = document.querySelector("#returned-source") as HTMLElement;
+    window.returnedTexts = [];
+    new MutationObserver(() =>
+      window.returnedTexts.push(
+        `${store.samples.value.original.summary.runs}: ${returned.textContent}`,
+      ),
+    ).observe(returned, { subtree: true, childList: true, characterData: true });
+    // About a millisecond a run, so that its first batch of 1 000 takes many slices.
+    store.source.value =
+      "let w = (rec f n => if n <= 0 then 0 else f (n - 1)) 3000 in\nuniform(0, 1) + w";
+    store.commitSource();
+  });
+  await expect.poll(() => page.evaluate(() => window.returnedTexts.length)).toBeGreaterThan(0);
+  const [first] = await page.evaluate(() => window.returnedTexts);
+  expect(Number.parseInt(first, 10), first).toBeLessThan(1000);
+});
+
 test("a program that Lean rejects has no runs and no command", async ({ page }) => {
   await page.goto(linkTo("let x =", 1));
   await expect(page.locator("#dist-empty")).toHaveText("Nothing to run: Lean rejects the program.");
-  await expect(page.getByRole("button", { name: "Run both", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Resample" })).toBeDisabled();
   await expect(page.locator("#honesty")).not.toContainText("--samples");
 });
 
@@ -437,21 +553,18 @@ test("the share of returned runs links returnProbability only for a float progra
   page,
 }) => {
   await page.goto(simulator);
-  await setRunCount(page, 10);
-  await runBoth(page);
+  await sampled(page, 10);
   const returned = page.getByRole("link", { name: "Returned" });
   await expect(returned).toHaveCount(1);
   await page.goto(linkTo("let x = uniform(0, 1) in x < 0.5", 1));
-  await setRunCount(page, 10);
-  await runBoth(page);
+  await sampled(page, 10);
   await expect(page.locator("#list-source")).toContainText("10 of 10 runs returned.");
   await expect(returned).toHaveCount(0);
 });
 
 test("each histogram sits under its program's column, on one axis", async ({ page }) => {
   await page.goto(simulator);
-  await setRunCount(page, 1000);
-  await runBoth(page);
+  await sampled(page, 1000);
   const layout = (width: number) =>
     page.setViewportSize({ width, height: 900 }).then(async () => {
       await expect(page.locator("#hist-det svg")).toBeVisible();
@@ -492,8 +605,7 @@ test("each histogram sits under its program's column, on one axis", async ({ pag
 test("a counterexample compares the means instead of the variances", async ({ page }) => {
   await page.goto(simulator);
   await pick(page, "Noisy product, both draws E");
-  await setRunCount(page, 10);
-  await runBoth(page);
+  await sampled(page, 10);
   await expect(page.locator("#factor")).toHaveText(/^Means differ: [0-9.]+ and 0\.2500\.$/);
   await expect(page.locator("#sites-text")).toHaveText(
     "2 continuous in the source, → 0 continuous in the counterexample",
@@ -502,8 +614,7 @@ test("a counterexample compares the means instead of the variances", async ({ pa
 
 test("the plot against a G draw shows each run, and a click steps through it", async ({ page }) => {
   await page.goto(simulator);
-  await setRunCount(page, 1000);
-  await runBoth(page);
+  await sampled(page, 1000);
   await page.getByRole("radio", { name: "Against x, the G draw" }).check();
   await expect(page.locator(".chart.conditional")).toBeVisible();
   await expect(page.locator("#chart-caption")).toContainText("1 000 shown");
@@ -918,7 +1029,7 @@ test("a deep recursion stops where the step table grows too large, without a lon
     /^Seed 1: the table stops after \d+ steps; its states grew too large to show\.$/,
     { timeout: 20_000 },
   );
-  await expect(page.getByRole("button", { name: "Run both", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Resample" })).toBeEnabled();
   const longTasks = await page.evaluate(() => window.longTasks);
   test.info().annotations.push({ type: "long tasks (ms)", description: JSON.stringify(longTasks) });
   expect(Math.max(0, ...longTasks)).toBeLessThanOrEqual(200);
@@ -1298,28 +1409,6 @@ test("the header's tools sit behind More on narrow screens", async ({ page }) =>
   await expect(page.getByRole("button", { name: "Copy link" })).toBeHidden();
   await page.getByRole("button", { name: "More" }).click();
   await expect(page.getByRole("button", { name: "Copy link" })).toBeVisible();
-});
-
-test("a first visit asks for a prediction before the first runs, and repeats it after them", async ({
-  page,
-}) => {
-  await page.goto(simulator);
-  const form = page.locator("#predict");
-  await expect(form).toContainText(
-    "Before you run them: what will 10 000 runs of each program show?",
-  );
-  await setRunCount(page, 200);
-  await form.getByLabel("the same as the source's").check();
-  await form.getByLabel("smaller").check();
-  await form.getByRole("button", { name: "Run both and compare" }).click();
-  await settled(page);
-  await expect(form).toBeHidden();
-  await expect(page.locator("#prediction")).toHaveText(
-    "You predicted the same mean and a smaller variance.",
-  );
-  await page.reload();
-  await passed(page);
-  await expect(form).toBeHidden();
 });
 
 test("the theme select overrides the system's scheme, and the page remembers it", async ({

@@ -9,12 +9,15 @@ declare const WORKER_URL: string;
 
 export interface Sampling {
   send(request: Request): void;
+  /** Whether it samples on the page's own thread, where no worker could start. */
+  readonly inThread: boolean;
 }
 
 export function createSampling(receive: (response: Response) => void): Sampling {
   // The latest run and how many of its runs have reported, to resume it if the worker fails.
   let active: { request: Request & { type: "run" }; runs: number } | null = null;
   let send: (request: Request) => void;
+  let onThread = false;
 
   function track(response: Response) {
     if (active?.request.generation === response.generation) {
@@ -25,6 +28,7 @@ export function createSampling(receive: (response: Response) => void): Sampling 
   }
 
   function inThread() {
+    onThread = true;
     const sampler = createSampler({
       post: (response) => track(response),
       defer: (task) => setTimeout(task, 0),
@@ -53,6 +57,9 @@ export function createSampling(receive: (response: Response) => void): Sampling 
   }
 
   return {
+    get inThread() {
+      return onThread;
+    },
     send(request) {
       if (request.type === "run") active = { request, runs: 0 };
       else if (active?.request.generation === request.generation) active = null;

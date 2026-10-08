@@ -130,8 +130,8 @@
         <p>
           The source pane holds your program, and the determinized pane what determinization makes
           of it. Draws marked E are replaced by their means. Draws marked G are kept random, and in
-          each run both programs draw the same values for them. Step through one run below, or run
-          both programs many times and compare their outputs.
+          each run both programs draw the same values for them. Step through one run below; under
+          it, both programs run many times, and their outputs are compared.
         </p>
         <button id="hide-intro" class="quiet" type="button">Hide</button>
       </section>
@@ -229,12 +229,14 @@
                 <option value="100000">100 000</option>
               </select>
             </label>
-            <button id="run-both" type="button" class="primary">Run both</button>
+            <button id="resample" type="button" title="Sample both programs again from a new seed">
+              Resample
+            </button>
           </div>
           <div id="progress" class="progress idle">
             <span id="progress-text"></span>
             <progress id="progress-bar" max="1" value="0" aria-label="Runs so far"></progress>
-            <button id="stop" type="button">Stop</button>
+            <button id="sampling-action" type="button">Stop</button>
           </div>
         </div>
         <p id="honesty" class="honesty">
@@ -256,27 +258,6 @@
           G draw
           <select id="plot-site"></select>
         </label>
-        <form id="predict" class="predict" hidden>
-          <p>
-            Before you run them: what will <span id="predict-runs">10 000</span> runs of each
-            program show?
-          </p>
-          <fieldset>
-            <legend>The determinized program's mean is</legend>
-            <label
-              ><input type="radio" name="predict-mean" value="same">
-              the same as the source's</label
-            >
-            <label><input type="radio" name="predict-mean" value="different"> different</label>
-          </fieldset>
-          <fieldset>
-            <legend>Its variance is</legend>
-            <label><input type="radio" name="predict-variance" value="smaller"> smaller</label>
-            <label><input type="radio" name="predict-variance" value="same"> the same</label>
-            <label><input type="radio" name="predict-variance" value="larger"> larger</label>
-          </fieldset>
-          <button type="submit" class="primary">Run both and compare</button>
-        </form>
         <p id="dist-empty" class="band-empty">Loading the simulator…</p>
         <div id="dist-grid" class="dist-grid" hidden>
           <div id="hist-source" class="hist hist-source"></div>
@@ -345,7 +326,6 @@
               >:
               <span id="sites-text"></span>
             </p>
-            <p id="prediction" class="prediction" hidden></p>
           </div>
         </div>
         <div id="list-out" class="list-out" hidden>
