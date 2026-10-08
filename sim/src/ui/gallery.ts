@@ -1,22 +1,170 @@
-// The example gallery: an ordered list, because its order is a reading order, opened from the
-// header's Example button. Each entry is a link that shares the example's program at seed 1, with
-// one sentence and whether the paper presents it; "New program" links to an empty one. Below
-// 768 px the list opens as a modal dialog, above as a menu under the button.
+// The example gallery, opened from the header's Example button: the examples grouped by why the
+// theorems don't cover them, those that the simulator's check finds no premise failing first, then
+// those that fail only in floating point.
+// Each group is an ordered list, because its order is a reading order. Each entry is a link that
+// shares the example's program at seed 1, with one sentence, whether the paper presents it, and a
+// chip that names its reason, described on hover and focus. "New program" links to an
+// empty program. Below 768 px the gallery opens as a modal dialog, above as a menu under the
+// button.
 import { effect } from "@preact/signals-core";
+import { analyze } from "../core/compiler/analyze.ts";
+import type { Example } from "../core/examples.ts";
 import { examples } from "../core/examples.ts";
 import { encodeShare } from "../core/share.ts";
+import { noRuns } from "../core/statistics.ts";
 import type { Store } from "./store.ts";
+import { premiseVerdict } from "./verdict.ts";
 
 export interface GalleryElements {
   button: HTMLButtonElement;
   title: HTMLElement;
   dialog: HTMLDialogElement;
-  list: HTMLOListElement;
+  list: HTMLElement;
   close: HTMLButtonElement;
 }
 
 /** The seed of the examples' links. */
 const gallerySeed = 1;
+
+/** Why the theorems don't cover a program, or may not: the group it falls in, its chip and what
+ * the chip says on hover and focus, worded as the simulator's check words it. */
+export interface Reason {
+  group: string;
+  chip: string;
+  description: string;
+}
+
+/** The groups of examples with a reason, in the gallery's order. */
+const groups = [
+  "Fails only in floating point",
+  "Lean rejects the written modes",
+  "The output isn't float[E]",
+  "Lean rejects the program",
+] as const;
+
+/** The reason of an example that fails a premise, from its analysis as the simulator's check
+ * finds it, or of one that fails only in floating point, from the example; none for one that the
+ * check finds failing no premise, in floating point or not. */
+export function reasonOf(example: Example): Reason | null {
+  const analysis = analyze(example.source);
+  const type = premiseVerdict(analysis, noRuns, gallerySeed).type;
+  if (!analysis.ok) {
+    return analysis.counterexample
+      ? {
+          group: groups[1],
+          chip: "modes rejected",
+          description: `Type float[E]: ${type.text}. The simulator runs the counterexample, which replaces the [E] draws anyway.`,
+        }
+      : {
+          group: groups[3],
+          chip: "rejected",
+          description: `Type float[E]: ${type.text}, so it doesn't run.`,
+        };
+  }
+  if (type.status === "fails") {
+    return {
+      group: groups[2],
+      chip: "not float[E]",
+      description: `Type float[E]: ${type.text}, about which the theorems say nothing.`,
+    };
+  }
+  if (example.floatFailure) {
+    return {
+      group: groups[0],
+      chip: "underflow",
+      description: `Domain safety: found failing in floating point at a parameter of exactly 0, with “${example.floatFailure.message}”. ${example.floatFailure.why}`,
+    };
+  }
+  return null;
+}
+
+/** A chip naming `reason`, with its description as a tooltip below it, inside `dialog`, while the
+ * pointer is over either or the chip has the focus; Escape dismisses it. */
+function chip(reason: Reason, id: string, dialog: HTMLElement) {
+  const wrap = document.createElement("span");
+  wrap.className = "chip-wrap";
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "chip";
+  button.textContent = reason.chip;
+  button.setAttribute("aria-describedby", id);
+  const tip = document.createElement("span");
+  tip.id = id;
+  tip.className = "chip-tip";
+  tip.setAttribute("role", "tooltip");
+  tip.textContent = reason.description;
+  // Clicks pass through the description to the entries it covers, so the pointer keeps it open
+  // by being over its box, and has a moment to cross from the chip onto it.
+  let leaving: ReturnType<typeof setTimeout> | undefined;
+  const stay = () => {
+    clearTimeout(leaving);
+    leaving = undefined;
+  };
+  const leave = () => {
+    leaving ??= setTimeout(hide, 300);
+  };
+  const track = (event: PointerEvent) => {
+    const box = tip.getBoundingClientRect();
+    const { clientX: x, clientY: y } = event;
+    if (x >= box.left && x <= box.right && y >= box.top && y <= box.bottom) stay();
+    else leave();
+  };
+  const show = () => {
+    stay();
+    document.removeEventListener("pointermove", track);
+    if (button.classList.contains("dismissed") || wrap.classList.contains("open")) return;
+    for (const other of dialog.querySelectorAll(".chip-wrap.open")) other.classList.remove("open");
+    wrap.classList.add("open");
+    keepInside(tip, dialog);
+  };
+  const hide = () => {
+    stay();
+    document.removeEventListener("pointermove", track);
+    wrap.classList.remove("open");
+  };
+  button.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || !wrap.classList.contains("open")) return;
+    // Escape hides the description first; the next one closes the gallery.
+    event.preventDefault();
+    event.stopPropagation();
+    button.classList.add("dismissed");
+    hide();
+  });
+  wrap.addEventListener("pointerenter", show);
+  button.addEventListener("focus", show);
+  wrap.addEventListener("pointerleave", () => {
+    button.classList.remove("dismissed");
+    if (document.activeElement === button || !wrap.classList.contains("open")) return;
+    leave();
+    document.addEventListener("pointermove", track);
+  });
+  button.addEventListener("blur", () => {
+    button.classList.remove("dismissed");
+    if (!wrap.matches(":hover")) hide();
+  });
+  wrap.append(button, tip);
+  return wrap;
+}
+
+/** Moves `tip` inside the content box of `bounds`: left as far as it passes the right edge, and
+ * above its chip if it passes the bottom. */
+function keepInside(tip: HTMLElement, bounds: HTMLElement) {
+  tip.style.left = "";
+  tip.classList.remove("above");
+  const box = tip.getBoundingClientRect();
+  const area = bounds.getBoundingClientRect();
+  const style = getComputedStyle(bounds);
+  const left = area.left + bounds.clientLeft + Number.parseFloat(style.paddingLeft);
+  const right =
+    left +
+    bounds.clientWidth -
+    Number.parseFloat(style.paddingLeft) -
+    Number.parseFloat(style.paddingRight);
+  const shift = Math.max(Math.min(0, right - box.right), left - box.left);
+  if (shift !== 0) tip.style.left = `${shift}px`;
+  const bottom = area.top + bounds.clientTop + bounds.clientHeight;
+  if (box.bottom > bottom) tip.classList.add("above");
+}
 
 export function mountGallery(
   elements: GalleryElements,
@@ -31,31 +179,53 @@ export function mountGallery(
     blank.href = hash;
   });
   elements.close.before(blank);
-  const links = examples.map((example) => {
-    const item = document.createElement("li");
-    const link = document.createElement("a");
-    link.textContent = example.title;
-    link.dataset.example = example.id;
-    // Until its fragment is computed, a link opens the example in the current state's place.
-    link.href = "#";
-    void encodeShare({ source: example.source, seed: gallerySeed, example: example.id }).then(
-      (hash) => {
-        link.href = hash;
-      },
+
+  const entries = examples.map((example) => ({ example, reason: reasonOf(example) }));
+  const headings = ["The check finds no premise failing", ...groups];
+  const links: HTMLAnchorElement[] = [];
+  for (const [index, heading] of headings.entries()) {
+    const members = entries.filter(({ reason }) =>
+      index === 0 ? reason === null : reason?.group === heading,
     );
-    const line = document.createElement("span");
-    line.className = "g-line";
-    line.textContent = ` ${example.explanation}`;
-    item.append(link, line);
-    if (example.fromPaper) {
-      const origin = document.createElement("span");
-      origin.className = "g-origin";
-      origin.textContent = " From the paper.";
-      item.append(origin);
+    if (members.length === 0) continue;
+    const group = document.createElement("section");
+    group.className = "g-group";
+    const title = document.createElement("h3");
+    title.className = "g-heading";
+    title.id = `g-group-${index}`;
+    title.textContent = heading;
+    const items = document.createElement("ol");
+    items.setAttribute("aria-labelledby", title.id);
+    for (const { example, reason } of members) {
+      const item = document.createElement("li");
+      const link = document.createElement("a");
+      link.textContent = example.title;
+      link.dataset.example = example.id;
+      // Until its fragment is computed, a link opens the example in the current state's place.
+      link.href = "#";
+      void encodeShare({ source: example.source, seed: gallerySeed, example: example.id }).then(
+        (hash) => {
+          link.href = hash;
+        },
+      );
+      item.append(link);
+      if (reason) item.append(" ", chip(reason, `g-tip-${links.length}`, dialog));
+      const line = document.createElement("span");
+      line.className = "g-line";
+      line.textContent = ` ${example.explanation}`;
+      item.append(line);
+      if (example.fromPaper) {
+        const origin = document.createElement("span");
+        origin.className = "g-origin";
+        origin.textContent = " From the paper.";
+        item.append(origin);
+      }
+      items.append(item);
+      links.push(link);
     }
-    list.append(item);
-    return link;
-  });
+    group.append(title, items);
+    list.append(group);
+  }
 
   effect(() => {
     const example = examples.find((entry) => entry.id === store.exampleId.value);
@@ -73,7 +243,11 @@ export function mountGallery(
   const narrow = window.matchMedia("(max-width: 767px)");
   function open() {
     if (narrow.matches) dialog.showModal();
-    else dialog.show();
+    else {
+      // The menu opens under its button, wherever the header wraps it.
+      dialog.style.top = `${button.getBoundingClientRect().bottom + window.scrollY + 8}px`;
+      dialog.show();
+    }
     button.setAttribute("aria-expanded", "true");
     (list.querySelector<HTMLElement>('a[aria-current="true"]') ?? links[0]).focus();
   }

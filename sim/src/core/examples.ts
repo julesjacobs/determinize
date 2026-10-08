@@ -1,7 +1,6 @@
 // The simulator's examples: programs from examples/, which Lean's corpus manifest
-// (tests/cases.toml) also checks, in the order the simulator's gallery lists them. The first four
-// are the paper's introduction in its order, and the paper's own counterexample follows its source
-// program.
+// (tests/cases.toml) also checks. The gallery groups them by the premise of the theorems that they
+// fail, and keeps this order within each group: the paper's introduction in its order first.
 
 import geometricAddition from "../../../examples/loops/geometric-addition.det";
 import dungeon from "../../../examples/paper/dungeon.det";
@@ -24,6 +23,11 @@ export interface Example {
   fromPaper: boolean;
   /** The program, without the file's final line break. */
   source: string;
+  /** A domain failure that only the program's runs show, at a parameter of exactly 0 in floating
+   * point, which the simulator's check doesn't count against domain safety: the message of a
+   * failing run and why the real-valued semantics doesn't reach it. Its type and modes the
+   * gallery finds itself. */
+  floatFailure?: { message: string; why: string };
 }
 
 export const examples: Example[] = [
@@ -86,6 +90,10 @@ export const examples: Example[] = [
     explanation: "Recursion through a distribution's parameter.",
     fromPaper: false,
     source: recursiveGamma.trimEnd(),
+    floatFailure: {
+      message: "gamma requires positive shape and rate",
+      why: "An earlier gamma draw underflows to 0, a shape that the real-valued semantics, where every gamma draw is positive, doesn't reach.",
+    },
   },
   {
     id: "simulator/random-list-sum",

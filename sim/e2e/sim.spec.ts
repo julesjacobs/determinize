@@ -1617,6 +1617,104 @@ test("the gallery lists the examples as links, a menu on wide screens and a dial
   await passed(page);
 });
 
+test("the gallery groups the examples by the premise they fail, each with a chip that says why", async ({
+  page,
+}) => {
+  await page.goto(simulator);
+  await page.getByRole("button", { name: /^Example: / }).click();
+  const gallery = page.getByRole("dialog", { name: "Examples" });
+  await expect(gallery.locator(".g-heading")).toHaveText([
+    "The check finds no premise failing",
+    "Fails only in floating point",
+    "Lean rejects the written modes",
+    "The output isn't float[E]",
+  ]);
+  await expect(gallery.getByRole("list").first().locator(".chip")).toHaveCount(0);
+  // The chip's description shows on keyboard focus, and Escape hides it before it closes the
+  // gallery.
+  await gallery.getByRole("link", { name: "Recursive gamma", exact: true }).focus();
+  await page.keyboard.press("Tab");
+  const chip = gallery.getByRole("button", { name: "underflow" });
+  await expect(chip).toBeFocused();
+  await expect(chip).toHaveAccessibleDescription(
+    /^Domain safety: found failing in floating point at a parameter of exactly 0, with “gamma requires positive shape and rate”\. An earlier gamma draw underflows to 0/,
+  );
+  const tip = gallery.getByRole("tooltip");
+  await expect(tip).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(tip).toBeHidden();
+  await expect(gallery).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(gallery).toBeHidden();
+  // And on hover, right below the chip, so that the pointer can move onto it and it stays.
+  await page.getByRole("button", { name: /^Example: / }).click();
+  const notFloat = gallery.getByRole("button", { name: "not float[E]" });
+  await notFloat.hover();
+  const tooltip = gallery.getByRole("tooltip");
+  await expect(tooltip).toHaveText(/^Type float\[E\]: the output has type /);
+  const chipBox = await notFloat.boundingBox();
+  const tipBox = await tooltip.boundingBox();
+  if (!chipBox || !tipBox) throw new Error("no chip or no description");
+  expect(tipBox.y).toBeLessThanOrEqual(chipBox.y + chipBox.height + 1);
+  await page.mouse.move(tipBox.x + 8, tipBox.y + tipBox.height / 2, { steps: 4 });
+  await expect(tooltip).toBeVisible();
+});
+
+test("a click on an entry that a chip's description covers opens the entry", async ({ page }) => {
+  await page.goto(simulator);
+  await page.getByRole("button", { name: /^Example: / }).click();
+  const gallery = page.getByRole("dialog", { name: "Examples" });
+  await gallery.getByRole("button", { name: "underflow" }).hover();
+  const tip = gallery.getByRole("tooltip");
+  await expect(tip).toBeVisible();
+  const tipBox = await tip.boundingBox();
+  if (!tipBox) throw new Error("no description");
+  let covered = null;
+  for (const link of await gallery.locator(".g-group a").all()) {
+    const box = await link.boundingBox();
+    if (!box) continue;
+    const [x, y] = [box.x + box.width / 2, box.y + box.height / 2];
+    if (
+      x >= tipBox.x &&
+      x <= tipBox.x + tipBox.width &&
+      y >= tipBox.y &&
+      y <= tipBox.y + tipBox.height
+    ) {
+      covered = link;
+      break;
+    }
+  }
+  if (!covered) throw new Error("the description covers no entry");
+  const title = await covered.textContent();
+  await covered.click();
+  await expect(gallery).toBeHidden();
+  await expect(page.getByRole("button", { name: `Example: ${title}` })).toBeVisible();
+});
+
+test("at 390 px every chip's description stays inside the gallery", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(simulator);
+  await page.getByRole("button", { name: /^Example: / }).click();
+  const gallery = page.getByRole("dialog", { name: "Examples" });
+  for (const chip of await gallery.locator(".chip").all()) {
+    await chip.scrollIntoViewIfNeeded();
+    await chip.hover();
+    const tip = gallery.getByRole("tooltip");
+    await expect(tip).toBeVisible();
+    const inside = await tip.evaluate((element) => {
+      const box = element.getBoundingClientRect();
+      const dialog = (element.closest("dialog") as Element).getBoundingClientRect();
+      return (
+        box.left >= dialog.left &&
+        box.right <= dialog.right &&
+        box.top >= dialog.top &&
+        box.bottom <= dialog.bottom
+      );
+    });
+    expect(inside, (await chip.textContent()) ?? "").toBe(true);
+  }
+});
+
 test("New program opens an empty editor whose placeholder shows the syntax", async ({ page }) => {
   await page.goto(simulator);
   await passed(page);
