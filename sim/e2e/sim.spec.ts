@@ -252,6 +252,18 @@ test("the runs' outcomes, the command that reports them and run 0's G trace show
   await expect(outcomes).toContainText("with the program saved as program.det");
 });
 
+test("the share of returned runs links returnProbability only for a float program", async ({
+  page,
+}) => {
+  await page.goto(simulator);
+  const share = page.locator(".run-outcomes").getByRole("link", { name: /runs returned a value/ });
+  await expect(share).toHaveCount(2);
+  await page.getByLabel("Example").selectOption({ label: "Gaussian random walk" });
+  await expect(page.locator("#checked-type")).toHaveText("[(float[E] * float[E])]");
+  await expect(page.locator(".run-outcomes")).toContainText("1 of 1 runs returned a value");
+  await expect(share).toHaveCount(0);
+});
+
 test("notices say which premises of the theorems are not met", async ({ page }) => {
   await page.goto(simulator);
   const type = page.locator("#premise-type");
