@@ -568,14 +568,15 @@
     grid-column: 2;
   }
 
+  /* Light fills, so that the tints of corresponding parts keep their text at 4.5:1. */
   .step:hover,
   .step.linked {
-    background: color-mix(in oklab, var(--ink) 5%, transparent);
+    background: color-mix(in oklab, var(--ink) 3%, transparent);
   }
 
   .step[aria-current="step"] {
     border-left-color: var(--change);
-    background: var(--highlight);
+    background: color-mix(in oklab, var(--ink) 5%, transparent);
   }
 
   .step-n {
@@ -734,8 +735,21 @@
     color: var(--muted);
   }
 
+  /* What corresponds within a row: what its step produced in each state, the G draw, the E draw
+     and the mean call, in one tint; hovering a part outlines its counterparts, as it does a symbol
+     of σ and the values that stand for it. */
+  .corr-step {
+    border-radius: 2px;
+    background: color-mix(in oklab, var(--change) 8%, transparent);
+    /* A bar under the part, which shows on the current row's fill without lowering the text's
+       contrast. */
+    box-shadow: inset 0 -2px 0 color-mix(in oklab, var(--change) 55%, transparent);
+  }
+
   .corr-item.corr-active {
-    background: color-mix(in oklab, var(--given) 18%, transparent);
+    border-radius: 2px;
+    outline: 1.5px solid var(--muted);
+    outline-offset: 1px;
   }
 
   .tok-keyword {

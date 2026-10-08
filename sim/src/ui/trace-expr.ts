@@ -7,7 +7,8 @@ import { escapeHtml } from "./html.ts";
 export type Path = (string | number)[];
 
 export interface TraceOptions {
-  /** The subexpression that the last step produced. */
+  /** The subexpression that the last step produced, marked as corresponding to what the step
+   * produced in the row's other states. */
   focusPath?: Path | null;
   /** The symbolic state that this state projects: where it holds a lone symbol, this state holds
    * the symbol's sampled value or mean, which is linked to the symbol. */
@@ -389,7 +390,12 @@ function valueSpan(html: string) {
 }
 
 function stepSpan(html: string) {
-  return `<span class="trace-step" title="result of previous small-step">${html}</span>`;
+  return correspondingStep(html);
+}
+
+/** `html` marked as one of the parts of a row that correspond to what its step reduced. */
+export function correspondingStep(html: string) {
+  return `<span class="corr-item corr-step" data-corr="step">${html}</span>`;
 }
 
 function corrSpan(text: string, className: string, symbol: string) {

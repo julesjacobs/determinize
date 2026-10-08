@@ -83,7 +83,6 @@
 
     --code-fill: color-mix(in oklab, var(--ink) 6%, var(--ground));
     --change-fill: color-mix(in oklab, var(--change) 30%, var(--ground));
-    --highlight: color-mix(in oklab, var(--ink) 10%, transparent);
     --rule: color-mix(in oklab, var(--muted) 30%, var(--ground));
 
     --font-text: "Atkinson Hyperlegible Next", "Atkinson fallback", Arial, sans-serif;

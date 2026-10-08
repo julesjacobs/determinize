@@ -58,7 +58,9 @@ const states: { name: string; open: (page: Page) => Promise<void> }[] = [
     open: async (page) => {
       await page.goto("sim/");
       await runBoth(page);
-      await page.getByRole("button", { name: "End", exact: true }).click();
+      // Step 3, the E draw, whose row tints the parts that correspond.
+      await page.locator("#scrubber").focus();
+      for (let i = 0; i < 3; i++) await page.keyboard.press("ArrowRight");
     },
   },
   {

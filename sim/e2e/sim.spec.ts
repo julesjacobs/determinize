@@ -940,6 +940,32 @@ test("the step controls move the current step, and both panes highlight what it 
   await expect(page.locator('.step[data-step="1"] .cell-draw')).toContainText("x ← ");
 });
 
+test("the parts of a row that correspond share a tint, and hovering one outlines the others", async ({
+  page,
+}) => {
+  await page.goto(simulator);
+  await passed(page);
+  // Step 3 draws y: the source's sample, the symbol v1, the determinized program's mean and the
+  // mean call that computes it.
+  const row = page.locator('.step[data-step="3"]');
+  const parts = row.locator(".corr-step");
+  await expect(row.locator(".cell-source .corr-step")).toHaveText(["0.5235", "0.5235"]);
+  await expect(row.locator(".cell-sym .corr-step")).toHaveText(["v1"]);
+  await expect(row.locator(".cell-det .corr-step")).toHaveText(["0.5666", "mean_gauss(0.5666, 1)"]);
+  const tints = await parts.evaluateAll((elements) =>
+    elements.map((element) => getComputedStyle(element).backgroundColor),
+  );
+  expect(new Set(tints).size).toBe(1);
+  expect(tints[0]).not.toBe("rgba(0, 0, 0, 0)");
+  await row.locator(".cell-sym .corr-step").hover();
+  await expect(row.locator(".corr-step.corr-active")).toHaveCount(await parts.count());
+  // A step that rewrites a larger state as a whole has no part to mark; a state that is a value,
+  // the run's result, is marked whole.
+  await expect(page.locator('.step[data-step="4"] .corr-step')).toHaveCount(0);
+  await expect(page.locator('.step[data-step="5"] .cell-source .corr-step')).toHaveText(["0.2966"]);
+  await expect(page.locator('.step[data-step="5"] .cell-det .corr-step')).toHaveText(["0.321"]);
+});
+
 test("hovering a sample site marks the rows that draw it and its counterpart", async ({ page }) => {
   await page.goto(simulator);
   await passed(page);
