@@ -41,7 +41,12 @@ const states: State[] = [
   { name: "observe", example: "Observe", run: true, steps: 3 },
   { name: "recursive", example: "Recursive gamma", run: true, steps: 4 },
   { name: "random-walk", example: "Gaussian random walk", run: true },
-
+  {
+    name: "gallery",
+    example: "Noisy product",
+    run: true,
+    finally: (page) => page.getByRole("button", { name: /^Example: / }).click(),
+  },
   { name: "rejected", source: "true + 1" },
   { name: "empty", source: "" },
 ];

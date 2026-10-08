@@ -212,6 +212,7 @@
     position: absolute;
     z-index: 10;
     top: 4.5rem;
+    border-color: var(--muted);
     left: max(16px, calc((100vw - 90rem) / 2 + 16px));
   }
 
@@ -255,16 +256,74 @@
     color: var(--muted);
   }
 
-  .gallery ol {
-    margin: 0;
-    padding-left: 1.6em;
+  /* The groups of examples flow in columns; each keeps together under its heading. */
+  .gallery-groups {
     columns: 2 22rem;
     column-gap: var(--space-7);
   }
 
-  .gallery li {
-    padding: var(--space-2) 0;
+  .g-group {
+    margin-bottom: var(--space-3);
     break-inside: avoid;
+  }
+
+  .g-heading {
+    margin: var(--space-2) 0 var(--space-1);
+    color: var(--muted);
+    font-size: var(--size-small);
+    font-weight: var(--weight-strong);
+  }
+
+  .gallery ol {
+    margin: 0;
+    padding-left: 1.6em;
+  }
+
+  .gallery li {
+    padding: var(--space-1) 0;
+  }
+
+  /* The premise that an example fails, described on hover and focus. */
+  .chip {
+    min-height: var(--target-min);
+    padding: 0 var(--space-2);
+    border: 1px solid var(--alert);
+    background: none;
+    color: var(--alert);
+    font-size: var(--size-small);
+  }
+
+  /* The description sits right below its chip, so that the pointer can move onto it; clicks pass
+     through it to the entries it covers. */
+  .chip-wrap {
+    display: inline-block;
+    position: relative;
+  }
+
+  .chip-tip {
+    display: none;
+    position: absolute;
+    z-index: 2;
+    top: 100%;
+    left: 0;
+    width: max-content;
+    max-width: min(24rem, calc(100vw - 4rem));
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    background: var(--ground);
+    color: var(--ink);
+    font-size: var(--size-small);
+    pointer-events: none;
+  }
+
+  .chip-tip.above {
+    top: auto;
+    bottom: 100%;
+  }
+
+  .chip-wrap.open .chip-tip {
+    display: block;
   }
 
   .g-origin,
