@@ -3,7 +3,8 @@
  *
  * Colours are roles: --ground, --ink, --muted, --given (G sites, the G-draw axis), --change
  * (what determinization changes: E sites, mean_ calls, the determinized output) and --alert.
- * Everything else is mixed from them. light-dark() follows color-scheme, which a theme control
+ * Code's syntax colours are quieter than --given and --change, so that the modes stay the most
+ * salient colours in code. Everything else is mixed from them. light-dark() follows color-scheme, which a theme control
  * may set on :root with data-theme.
  */
 
@@ -74,6 +75,11 @@
     --given: light-dark(#3d3a9a, #aaa7f7);
     --change: light-dark(#7a5c00, #ddb650);
     --alert: light-dark(#a4155c, #f290b8);
+
+    /* Keywords, distribution and built-in names, numbers; operators and comments are --muted. */
+    --syntax-keyword: light-dark(#313e4f, #c4d2e5);
+    --syntax-name: light-dark(#29585b, #78a8ab);
+    --syntax-number: light-dark(#38593f, #a5cdac);
 
     --code-fill: color-mix(in oklab, var(--ink) 6%, var(--ground));
     --change-fill: color-mix(in oklab, var(--change) 30%, var(--ground));

@@ -137,13 +137,13 @@ function renderExpr(
       break;
     case "Lam":
       html = wrap(
-        `fun ${plain(expr.param)} =>\n${indent(renderExpr(expr.body, 0, childFocus(focusPath, "body"), options))}`,
+        `${keyword("fun")} ${plain(expr.param)} ${operator("=>")}\n${indent(renderExpr(expr.body, 0, childFocus(focusPath, "body"), options))}`,
         0,
       );
       break;
     case "Rec":
       html = wrap(
-        `rec ${plain(expr.name)} ${plain(expr.param)} =>\n${indent(renderExpr(expr.body, 0, childFocus(focusPath, "body"), options))}`,
+        `${keyword("rec")} ${plain(expr.name)} ${plain(expr.param)} ${operator("=>")}\n${indent(renderExpr(expr.body, 0, childFocus(focusPath, "body"), options))}`,
         0,
       );
       break;
@@ -160,19 +160,22 @@ function renderExpr(
     case "Snd":
     case "Inl":
     case "Inr":
-      html = `${keyword(expr.kind.toLowerCase())} ${renderExpr(expr.expr, 6, childFocus(focusPath, "expr"), options)}`;
+      html = `${builtin(expr.kind.toLowerCase())} ${renderExpr(expr.expr, 6, childFocus(focusPath, "expr"), options)}`;
       break;
     case "Neg":
-      html = wrap(`-${renderExpr(expr.expr, 6, childFocus(focusPath, "expr"), options)}`, 6);
+      html = wrap(
+        `${operator("-")}${renderExpr(expr.expr, 6, childFocus(focusPath, "expr"), options)}`,
+        6,
+      );
       break;
     case "Case":
-      html = `${keyword("match")} ${renderExpr(expr.scrutinee, 0, childFocus(focusPath, "scrutinee"), options)} ${keyword("with")} ${keyword("inl")} ${plain(expr.leftName)} =>\n${indent(renderExpr(expr.left, 0, childFocus(focusPath, "left"), options))}\n| ${keyword("inr")} ${plain(expr.rightName)} =>\n${indent(renderExpr(expr.right, 0, childFocus(focusPath, "right"), options))}`;
+      html = `${keyword("match")} ${renderExpr(expr.scrutinee, 0, childFocus(focusPath, "scrutinee"), options)} ${keyword("with")} ${builtin("inl")} ${plain(expr.leftName)} ${operator("=>")}\n${indent(renderExpr(expr.left, 0, childFocus(focusPath, "left"), options))}\n${operator("|")} ${builtin("inr")} ${plain(expr.rightName)} ${operator("=>")}\n${indent(renderExpr(expr.right, 0, childFocus(focusPath, "right"), options))}`;
       break;
     case "MatchList":
-      html = `${keyword("match")} ${renderExpr(expr.scrutinee, 0, childFocus(focusPath, "scrutinee"), options)} ${keyword("with")} [] =>\n${indent(renderExpr(expr.nilBranch, 0, childFocus(focusPath, "nilBranch"), options))}\n| ${plain(expr.headName)} :: ${plain(expr.tailName)} =>\n${indent(renderExpr(expr.consBranch, 0, childFocus(focusPath, "consBranch"), options))}`;
+      html = `${keyword("match")} ${renderExpr(expr.scrutinee, 0, childFocus(focusPath, "scrutinee"), options)} ${keyword("with")} [] ${operator("=>")}\n${indent(renderExpr(expr.nilBranch, 0, childFocus(focusPath, "nilBranch"), options))}\n${operator("|")} ${plain(expr.headName)} ${operator("::")} ${plain(expr.tailName)} ${operator("=>")}\n${indent(renderExpr(expr.consBranch, 0, childFocus(focusPath, "consBranch"), options))}`;
       break;
     case "Observe":
-      html = `${keyword("observe")}(${renderExpr(expr.cond, 0, childFocus(focusPath, "cond"), options)})`;
+      html = `${builtin("observe")}(${renderExpr(expr.cond, 0, childFocus(focusPath, "cond"), options)})`;
       break;
     case "Mean":
       html = renderMean(expr, focusPath, options);
@@ -181,7 +184,7 @@ function renderExpr(
       if (expr.kind in infix) {
         const [op, level] = infix[expr.kind];
         html = wrap(
-          `${renderExpr(leftOf(expr), level, childFocus(focusPath, leftKey(expr)), options)} ${plain(op)} ${renderExpr(rightOf(expr), level + (expr.kind === "Cons" ? -1 : 1), childFocus(focusPath, rightKey(expr)), options)}`,
+          `${renderExpr(leftOf(expr), level, childFocus(focusPath, leftKey(expr)), options)} ${operator(op)} ${renderExpr(rightOf(expr), level + (expr.kind === "Cons" ? -1 : 1), childFocus(focusPath, rightKey(expr)), options)}`,
           level,
         );
         break;
@@ -201,10 +204,11 @@ function renderExpr(
 export function renderHighlightedText(code: string, options: TraceOptions = {}) {
   const escaped = escapeHtml(code);
   return escaped.replace(
-    /\b(let|in|if|then|else|match|with|fun|rec|true|false|fst|snd|inl|inr|observe|domain_error)\b|\b(mean_(?:uniform|gauss|exponential|gamma|beta|bernoulli|poisson|discrete(?:_list)?))\b|\b(uniform|gauss(?:ian)?|exponential|gamma|beta|flip|bernoulli|poisson|discrete(?:_list)?)\b|(\[[EG]\])|\b(v\d+)\b|(-?\d+(?:\.\d+)?(?:e[+-]?\d+)?)/gi,
+    /\b(let|in|if|then|else|match|with|fun|rec|true|false)\b|\b(fst|snd|inl|inr|observe|domain_error)\b|\b(mean_(?:uniform|gauss|exponential|gamma|beta|bernoulli|poisson|discrete(?:_list)?))\b|\b(uniform|gauss(?:ian)?|exponential|gamma|beta|flip|bernoulli|poisson|discrete(?:_list)?)\b|(\[[EG]\])|\b(v\d+)\b|(-?\d+(?:\.\d+)?(?:e[+-]?\d+)?)/gi,
     (
       match: string,
       keywordMatch: string | undefined,
+      builtinMatch: string | undefined,
       mean: string | undefined,
       dist: string | undefined,
       mode: string | undefined,
@@ -212,6 +216,7 @@ export function renderHighlightedText(code: string, options: TraceOptions = {}) 
       number: string | undefined,
     ) => {
       if (keywordMatch) return `<span class="tok-keyword">${match}</span>`;
+      if (builtinMatch) return `<span class="tok-builtin">${match}</span>`;
       if (mean) return `<span class="tok-mean">${match}</span>`;
       if (dist) return `<span class="tok-dist">${match}</span>`;
       if (mode) return `<span class="tok-mode tok-mode-${match[1].toLowerCase()}">${match}</span>`;
@@ -226,9 +231,9 @@ function renderLet(expr: ExprOf<"Let">, focusPath: Path | null, options: TraceOp
   const value = renderExpr(expr.value, 0, childFocus(focusPath, "value"), options);
   const body = renderExpr(expr.body, 0, childFocus(focusPath, "body"), options);
   if (!prettyExpr(expr.value).includes("\n")) {
-    return `${keyword("let")} ${plain(expr.name)} = ${value} ${keyword("in")}\n${body}`;
+    return `${keyword("let")} ${plain(expr.name)} ${operator("=")} ${value} ${keyword("in")}\n${body}`;
   }
-  return `${keyword("let")} ${plain(expr.name)} =\n${indent(value)}\n${keyword("in")}\n${indent(body)}`;
+  return `${keyword("let")} ${plain(expr.name)} ${operator("=")}\n${indent(value)}\n${keyword("in")}\n${indent(body)}`;
 }
 
 function renderIf(expr: ExprOf<"If">, focusPath: Path | null, options: TraceOptions) {
@@ -373,6 +378,15 @@ function childFocus(focusPath: Path | null, key: string, index: number | null = 
 
 function keyword(text: string) {
   return `<span class="tok-keyword">${escapeHtml(text)}</span>`;
+}
+
+/** The names of the language's built-in constructors and destructors: fst, inl, observe. */
+function builtin(text: string) {
+  return `<span class="tok-builtin">${escapeHtml(text)}</span>`;
+}
+
+function operator(text: string) {
+  return `<span class="tok-op">${escapeHtml(text)}</span>`;
 }
 
 function plain(text: string) {

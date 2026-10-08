@@ -61,10 +61,15 @@ export const detLanguage = StreamLanguage.define({
   },
 });
 
-// Keywords are SemiBold; code has no other syntax colour besides the modes and the means.
+// The syntax colours of site/tokens.css: keywords SemiBold, names of distributions and built-ins,
+// numbers, operators and comments, all quieter than the modes' marks and the means, whose colours
+// the editors' decorations give.
 export const detHighlighting = syntaxHighlighting(
   HighlightStyle.define([
-    { tag: t.keyword, fontWeight: "600" },
+    { tag: t.keyword, color: "var(--syntax-keyword)", fontWeight: "600" },
+    { tag: [t.special(t.variableName), t.atom], color: "var(--syntax-name)" },
+    { tag: t.number, color: "var(--syntax-number)" },
+    { tag: t.operator, color: "var(--muted)" },
     { tag: t.comment, color: "var(--muted)" },
     { tag: t.labelName, fontWeight: "600" },
   ]),
