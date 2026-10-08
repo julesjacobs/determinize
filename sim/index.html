@@ -87,6 +87,17 @@
           <dd>A place in the program that draws from a distribution.</dd>
         </div>
         <div>
+          <dt>Symbolic state</dt>
+          <dd>
+            The proof's symbolic semantics (paper, section 5): σ binds a symbol to each E draw so
+            far, and the program computes with the symbols. The simulator computes it; it is not
+            part of the Lean pipeline (<a
+              href="https://julesjacobs.com/determinize/docs/Determinize/Proof/Symbolic/Syntax.html"
+              >its definitions in Lean</a
+            >).
+          </dd>
+        </div>
+        <div>
           <dt>G trace</dt>
           <dd>
             The values of a run's G draws, in order (<a
@@ -185,21 +196,8 @@
               >
             </label>
             <button id="new-seed" type="button">New seed</button>
-            <label class="check">
-              <input id="show-symbolic" type="checkbox">
-              Show symbolic state
-            </label>
           </div>
         </div>
-        <p id="symbolic-note" class="sym-note" hidden>
-          Symbolic state: the proof's symbolic semantics (paper, section 5), computed by the
-          simulator; it is not part of the Lean pipeline.
-          <a
-            href="https://julesjacobs.com/determinize/docs/Determinize/Proof/Symbolic/Syntax.html"
-            title="The symbolic semantics in the Lean development"
-            >Its definitions in Lean</a
-          >.
-        </p>
         <section
           id="step-table"
           class="step-table"

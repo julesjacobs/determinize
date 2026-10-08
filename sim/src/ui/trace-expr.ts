@@ -124,7 +124,7 @@ function renderExpr(
       html = renderHighlightedText(prettyExpr(expr), options);
       break;
     case "SymFloat":
-      html = renderHighlightedText(prettyExpr(expr).replaceAll("*", " * "), options);
+      html = renderAffine(prettyExpr(expr).replaceAll("*", " * "), options);
       break;
     case "DomainError":
       html = `<span class="trace-domain-error" title="${escapeHtml(expr.message)}">${renderHighlightedText(prettyExpr(expr), options)}</span>`;
@@ -225,6 +225,23 @@ export function renderHighlightedText(code: string, options: TraceOptions = {}) 
       return match;
     },
   );
+}
+
+/** The terms of an affine form that the table shows at most, its first ones and its last. */
+const shownTerms = { first: 2, last: 1 };
+
+/** A printed affine form. One of many terms shows its first and last ones and counts the rest,
+ * with the whole form as its title; in the current row the count is a button that shows them. */
+function renderAffine(text: string, options: TraceOptions) {
+  const terms = text.split(/ (?=[+-] )/);
+  if (terms.length <= shownTerms.first + shownTerms.last + 1) {
+    return renderHighlightedText(text, options);
+  }
+  const hidden = terms.length - shownTerms.first - shownTerms.last;
+  const part = (from: number, to?: number) =>
+    renderHighlightedText(terms.slice(from, to).join(" "), options);
+  const count = `+ … ${hidden} more terms …`;
+  return `<span class="affine" title="${escapeHtml(text)}">${part(0, shownTerms.first)} <span class="tok-more terms-short">${count}<span class="vh"> not shown</span></span><span class="affine-rest" hidden>${part(shownTerms.first, -shownTerms.last)} </span><button type="button" class="expander" aria-expanded="false" data-more="${count}" data-fewer="fewer terms">${count}</button> ${part(-shownTerms.last)}</span>`;
 }
 
 function renderLet(expr: ExprOf<"Let">, focusPath: Path | null, options: TraceOptions) {

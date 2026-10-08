@@ -52,14 +52,12 @@ test("other fragments hold no state or can't be read", async () => {
   assert.deepEqual(await decodeShare("#v1=%%%"), unreadable);
 });
 
-test("a link carries whether the symbolic state shows, and links without it stay readable", async () => {
-  const shown: SharedState = { source: "1", seed: 3, example: "", symbolic: true };
-  const decoded = await decodeShare(await encodeShare(shown));
-  assert.deepEqual(decoded, { kind: "state", state: shown });
-  const hidden = await decodeShare(await encodeShare({ ...shown, symbolic: false }));
-  assert.deepEqual(hidden, { kind: "state", state: { source: "1", seed: 3, example: "" } });
-  const wrong = await decodeShare(await fragmentOf(JSON.stringify({ ...shown, symbolic: "yes" })));
-  assert.equal(wrong.kind, "error");
+test("a link that says whether the symbolic state shows stays readable", async () => {
+  const state: SharedState = { source: "1", seed: 3, example: "" };
+  for (const symbolic of [true, false]) {
+    const decoded = await decodeShare(await fragmentOf(JSON.stringify({ ...state, symbolic })));
+    assert.deepEqual(decoded, { kind: "state", state });
+  }
 });
 
 test("a link to an example's text with its final line break resolves to the example", () => {

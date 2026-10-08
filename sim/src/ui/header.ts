@@ -31,7 +31,7 @@ function disclose(
 
 export function mountHeader(
   elements: HeaderElements,
-  store: Pick<Store, "source" | "seed" | "exampleId" | "showSymbolic" | "view">,
+  store: Pick<Store, "source" | "seed" | "exampleId" | "view">,
 ) {
   disclose(elements.glossaryButton, elements.glossary);
   // The tools show beside the title from 600 px; below, More shows and hides them.
@@ -55,7 +55,6 @@ export function mountHeader(
       source: store.source.peek(),
       seed: store.seed.peek(),
       example: store.exampleId.peek(),
-      symbolic: store.showSymbolic.peek(),
       ...(store.view.peek() === "against" ? { view: "against" as const } : {}),
     });
     const url = new URL(window.location.href);

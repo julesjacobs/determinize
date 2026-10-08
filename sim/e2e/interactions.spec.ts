@@ -70,11 +70,10 @@ const states: { name: string; open: (page: Page) => Promise<void> }[] = [
     },
   },
   {
-    name: "the symbolic state and the glossary",
+    name: "the glossary",
     open: async (page) => {
       await page.goto("sim/");
       await settled(page);
-      await page.getByLabel("Show symbolic state").check();
       const more = page.getByRole("button", { name: "More" });
       if (await more.isVisible()) await more.click();
       await page.getByRole("button", { name: "Glossary" }).click();

@@ -514,19 +514,6 @@
     font-family: var(--font-code);
   }
 
-  .check {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-2);
-    min-height: 1.5rem;
-  }
-
-  .sym-note {
-    max-width: 62rem;
-    margin-bottom: var(--space-3);
-    color: var(--muted);
-  }
-
   /* What is unusual about the run; nothing, and no room, when every step check passed. */
   .steps-status {
     max-width: 62rem;
@@ -663,6 +650,75 @@
     color: var(--change);
   }
 
+  /* σ above the symbolic program, set apart in smaller type on the code fill: its latest bindings,
+     more in the current row than in the others, those of the step in SemiBold. */
+  .sigma {
+    display: flex;
+    gap: 1ch;
+    margin-bottom: var(--space-1);
+    padding: var(--space-1) var(--space-2);
+    border-radius: 3px;
+    background: var(--code-fill);
+    color: var(--muted);
+    font-family: var(--font-code);
+    font-size: var(--size-small);
+    line-height: var(--leading-code);
+  }
+
+  .sigma-lines {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .sigma-line,
+  .sigma-more {
+    display: block;
+  }
+
+  .sigma-new {
+    color: var(--ink);
+    font-weight: var(--weight-strong);
+  }
+
+  /* A count of what a long σ or affine form leaves out; in the current row a button that shows it
+     in place. */
+  .expander {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--target-min);
+    padding: 0 var(--space-1);
+    border: 0;
+    background: none;
+    color: var(--muted);
+    font: inherit;
+    text-decoration: underline dotted;
+    text-underline-offset: 0.2em;
+  }
+
+  .expander:hover {
+    color: var(--ink);
+  }
+
+  .sigma-lines > .expander {
+    display: flex;
+    margin-left: calc(-1 * var(--space-1));
+  }
+
+  .sigma-older,
+  .step:not([aria-current]) :is(.sigma-old, .expander),
+  .step[aria-current] :is(.sigma-more, .terms-short) {
+    display: none;
+  }
+
+  .sigma.expanded .sigma-line {
+    display: block;
+  }
+
+  .sigma.expanded .sigma-more,
+  .affine.expanded .terms-short {
+    display: none;
+  }
+
   .draw code {
     color: var(--given);
     font-weight: var(--weight-strong);
@@ -716,7 +772,8 @@
     color: var(--syntax-number);
   }
 
-  .state .tok-op {
+  .state .tok-op,
+  .tok-more {
     color: var(--muted);
   }
 
@@ -782,24 +839,26 @@
     }
   }
 
-  @container (min-width: 1200px) {
-    .with-sym .step-head,
-    .with-sym .step {
+  /* The symbolic state in a column of its own where three columns of code fit, and below the row's
+     other cells where they don't. */
+  @container (min-width: 960px) {
+    .step-head,
+    .step {
       grid-template-columns: 2rem minmax(0, 1fr) 8rem minmax(0, 1fr) minmax(0, 1fr);
     }
   }
 
-  @container (min-width: 720px) and (max-width: 1199px) {
-    .with-sym .cell-sym {
+  @container (min-width: 720px) and (max-width: 959px) {
+    .step > .cell-sym {
       grid-column: 2 / -1;
       grid-row: 2;
     }
 
-    .with-sym .cell-sym .cell-label {
+    .cell-sym .cell-label {
       display: block;
     }
 
-    .with-sym .step-head span:nth-child(4) {
+    .step-head span:nth-child(4) {
       display: none;
     }
   }
