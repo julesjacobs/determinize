@@ -99,8 +99,6 @@ export interface Store {
   /** Counts the reader's moves of the current step and hovers, each a request to scroll the
    * program panes to the linked lines; a new run or an edit changes `linked` without one. */
   followLinked: Signal<number>;
-  /** Whether the step table shows the symbolic state. */
-  showSymbolic: Signal<boolean>;
   theme: Signal<Theme>;
   samples: ReadonlySignal<Samples>;
   /** The batch of runs in progress, of `source` at `seed`, up to run `end`. */
@@ -201,7 +199,6 @@ export function createStore(
     source: string;
     seed: number;
     exampleId: string;
-    showSymbolic?: boolean;
     view?: ChartView;
     theme?: Theme;
   },
@@ -223,7 +220,6 @@ export function createStore(
   const hoveredRange = signal<Span | null>(null);
   const linked = signal<Reduced | null>(null);
   const followLinked = signal(0);
-  const showSymbolic = signal(initial.showSymbolic ?? false);
   const theme = signal<Theme>(initial.theme ?? "system");
   const analysis = computed(() => analyzeSource(checkedSource.value));
   const runner = computed(() => runnerOf(analysis.value));
@@ -405,7 +401,6 @@ export function createStore(
     hoveredRange,
     linked,
     followLinked,
-    showSymbolic,
     theme,
     samples,
     running,

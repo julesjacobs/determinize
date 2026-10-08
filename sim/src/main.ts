@@ -13,7 +13,6 @@ import { mountIntro } from "./ui/intro.ts";
 import { mountLeanView } from "./ui/lean-view.ts";
 import { printedRange, revealLines, setLinked } from "./ui/linking.ts";
 import { mountPredict } from "./ui/predict.ts";
-import { readPref } from "./ui/prefs.ts";
 import { mountProgramView } from "./ui/program-view.ts";
 import { createSampling } from "./ui/sampling.ts";
 import type { Store } from "./ui/store.ts";
@@ -50,7 +49,6 @@ function start(decoded: Decoded): Store {
       source: initial.source,
       seed: initial.seed,
       exampleId: initial.example,
-      showSymbolic: initial.symbolic ?? readPref("symbolic") === "shown",
       view: initial.view,
       theme: storedTheme(),
     },
@@ -66,8 +64,6 @@ function start(decoded: Decoded): Store {
       last: $("#step-last"),
       scrubber: $("#scrubber"),
       stepOf: $("#step-of"),
-      symbolic: $("#show-symbolic"),
-      symbolicNote: $("#symbolic-note"),
       status: $("#steps-status"),
       showFirst: $("#show-first-run"),
       table: $("#step-table"),
@@ -200,10 +196,9 @@ function restore(store: Store, editor: EditorView, decoded: Decoded) {
   if (decoded.kind === "error") showNotice(store, decoded.message);
   if (decoded.kind !== "state") return;
   dismissNotice();
-  const { source, seed, example, symbolic, view } = decoded.state;
+  const { source, seed, example, view } = decoded.state;
   batch(() => {
     store.exampleId.value = example;
-    if (symbolic !== undefined) store.showSymbolic.value = symbolic;
     store.view.value = view ?? "outputs";
     replaceDoc(editor, sharedSource({ source, example }));
     store.runAt(seed);

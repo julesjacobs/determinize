@@ -1,5 +1,5 @@
-// The viewer's settings that the page remembers in localStorage: the theme, whether the symbolic
-// state shows, and whether the introduction is hidden. Storage can be missing or refuse access
+// The viewer's settings that the page remembers in localStorage: the theme and whether the
+// introduction is hidden. Storage can be missing or refuse access
 // (private windows, blocked site data), and the page then works without it.
 
 const prefix = "determinize:";

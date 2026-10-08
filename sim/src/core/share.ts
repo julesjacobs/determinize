@@ -1,15 +1,13 @@
-// The state that a link to the simulator carries: the program, the seed, the example and how the
-// page shows them (the symbolic state, the chart), as the fragment `#v1=` followed by the base64url of the deflate-raw-compressed
-// JSON.
+// The state that a link to the simulator carries: the program, the seed, the example and the
+// chart, as the fragment `#v1=` followed by the base64url of the deflate-raw-compressed JSON.
+// Links that also say whether the symbolic state shows are read without it, as the state always
+// shows.
 
 export interface SharedState {
   source: string;
   seed: number;
   /** The id of the example the program came from. */
   example: string;
-  /** Whether the step table shows the symbolic state; a link without it leaves the viewer's
-   * choice. */
-  symbolic?: boolean;
   /** The chart of the distributions band, when it is the plot against a G draw. */
   view?: "against";
 }
@@ -67,12 +65,11 @@ function fromBase64Url(text: string) {
 
 /** The fragment of a link to `state`. */
 export async function encodeShare(state: SharedState) {
-  const { source, seed, example, symbolic, view } = state;
+  const { source, seed, example, view } = state;
   const json = JSON.stringify({
     source,
     seed,
     example,
-    ...(symbolic ? { symbolic } : {}),
     ...(view === "against" ? { view } : {}),
   });
   const stream = new Blob([json]).stream().pipeThrough(new CompressionStream("deflate-raw"));
@@ -99,13 +96,11 @@ export async function decodeShare(hash: string): Promise<Decoded> {
     return unreadable;
   }
   if (typeof json !== "object" || json === null) return unreadable;
-  const { source, seed, example, symbolic, view } = json as Record<string, unknown>;
+  const { source, seed, example, view } = json as Record<string, unknown>;
   if (typeof source !== "string" || typeof example !== "string") return unreadable;
   if (typeof seed !== "number" || !Number.isSafeInteger(seed)) return unreadable;
-  if (symbolic !== undefined && typeof symbolic !== "boolean") return unreadable;
   if (view !== undefined && view !== "against") return unreadable;
   const state: SharedState = { source, seed, example };
-  if (symbolic !== undefined) state.symbolic = symbolic;
   if (view !== undefined) state.view = view;
   return { kind: "state", state };
 }

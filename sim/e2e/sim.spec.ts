@@ -143,6 +143,8 @@ test("a 200-run and a 5000-run batch leave no long task over 200 ms", async ({ p
   test.setTimeout(120_000);
   await page.goto(simulator);
   await pick(page, "Dungeon crawl");
+  // The step table shows the new run once, before the batches that this test measures.
+  await expect(page.locator('.step[data-step="0"] .cell-source')).toContainText("crawl");
   await watchLongTasks(page);
   await setRunCount(page, 200);
   await runBoth(page);
@@ -491,7 +493,41 @@ test("a long run shows its steps a page at a time, and the controls reach every 
   await page.getByRole("button", { name: "End", exact: true }).click();
   await expect(page.locator("#step-of")).toHaveText("Step 1606 of 1606");
   await expect(note).toHaveText(/^Steps \d+ to 1606 of 1606 are shown/);
-  await expect(page.locator('.step[aria-current="step"]')).toHaveAttribute("data-step", "1606");
+  const current = page.locator('.step[aria-current="step"]');
+  await expect(current).toHaveAttribute("data-step", "1606");
+  // The current row shows σ's latest bindings and a button for the earlier ones, which shows them
+  // all in place; so do the terms of its long symbolic value.
+  const bindings = await current.locator(".sigma-line").count();
+  const earlier = current.locator(".sigma .expander");
+  await expect(earlier).toHaveText(`… ${bindings - 12} earlier bindings`);
+  await expect(current.locator(".sigma-line:visible")).toHaveCount(12);
+  await earlier.focus();
+  await page.keyboard.press("Enter");
+  await expect(earlier).toHaveAttribute("aria-expanded", "true");
+  await expect(current.locator(".sigma-line:visible")).toHaveCount(bindings);
+  await expect(page.locator("#step-of")).toHaveText("Step 1606 of 1606");
+  const terms = current.locator(".affine .expander").first();
+  await expect(terms).toHaveText(/^\+ … \d+ more terms …$/);
+  await terms.focus();
+  await page.keyboard.press(" ");
+  await expect(current.locator(".affine-rest").first()).toBeVisible();
+  await expect(terms).toHaveText("fewer terms");
+  // The keys move the step from an expander too, and the focus goes back to the region. Once the
+  // row is no longer current, it shows its latest bindings again.
+  await page.keyboard.press("ArrowUp");
+  await expect(page.locator("#step-of")).toHaveText("Step 1605 of 1606");
+  await expect(page.locator("#step-table")).toBeFocused();
+  const last = page.locator('.step[data-step="1606"]');
+  await expect(last.locator(".sigma-line:visible")).toHaveCount(3);
+  await expect(last.locator(".affine-rest").first()).toBeHidden();
+  // Screen readers hear what a row leaves out.
+  await expect(last.locator(".sigma-more")).toHaveText(/^… \d+ earlier bindings not shown$/);
+  // Folded, the current row fits the region.
+  const fits = await page.evaluate(() => {
+    const row = document.querySelector('.step[aria-current="step"]') as HTMLElement;
+    return row.offsetHeight <= (document.querySelector("#step-table") as HTMLElement).clientHeight;
+  });
+  expect(fits).toBe(true);
 });
 
 test("the region holds the flagship's run whole, and a rule shows while rows follow below", async ({
@@ -540,7 +576,12 @@ test("stepping across pages, hovering and scrubbing move neither the bar nor the
       return {
         bar: [Math.round(box.x), Math.round(box.y), Math.round(box.width)],
         scrollY: window.scrollY,
-        rowInRegion: !!row && row.top >= region.top - 1 && row.bottom <= region.bottom + 1,
+        // In view: whole, or from its top when it is taller than the region.
+        rowInRegion:
+          !!row &&
+          row.top >= region.top - 1 &&
+          (row.bottom <= region.bottom + 1 ||
+            (row.height > region.height && row.top < region.top + 60)),
       };
     });
   const before = await where();
@@ -886,16 +927,48 @@ test("hovering a sample site marks the rows that draw it and its counterpart", a
   await expect(page.locator(".step.linked")).toHaveAttribute("data-step", "3");
 });
 
-test("the symbolic state shows on request, and the page remembers the choice", async ({ page }) => {
-  await page.goto(simulator);
-  await passed(page);
-  await expect(page.locator(".cell-sym")).toHaveCount(0);
-  await page.getByLabel("Show symbolic state").check();
-  await expect(page.locator("#symbolic-note")).toBeVisible();
-  await expect(page.locator('.step[data-step="3"] .cell-sym')).toContainText("v1");
-  await page.reload();
-  await expect(page.getByLabel("Show symbolic state")).toBeChecked();
-  await expect(page.locator(".cell-sym").first()).toBeVisible();
+test("every row shows the symbolic state, with the whole of σ above its program", async ({
+  page,
+}) => {
+  // A link from when the symbolic state had a toggle still opens, with the symbolic state shown.
+  const product = new URL("../../examples/paper/noisy-product.det", import.meta.url);
+  const json = JSON.stringify({
+    source: readFileSync(product, "utf8").trimEnd(),
+    seed: 1,
+    example: "paper/noisy-product",
+    symbolic: false,
+  });
+  await page.goto(`${simulator}#v1=${deflateRawSync(json).toString("base64url")}`);
+  await passed(page, 1);
+  await expect(page.locator("#notices")).toBeEmpty();
+  await expect(page.locator("#example-title")).toHaveText("Noisy product");
+  await expect(page.locator(".step[data-step] .cell-sym")).toHaveCount(6);
+  await expect(page.locator('.step[data-step="0"] .sigma')).toContainText("empty");
+  // Step 3 binds v1, which σ keeps in the rows after it.
+  await expect(page.locator('.step[data-step="3"] .sigma-new')).toContainText("v1 ~ gauss(");
+  await expect(page.locator('.step[data-step="4"] .sigma')).toContainText("v1 ~ gauss(");
+  await expect(page.locator('.step[data-step="4"] .sigma-new')).toHaveCount(0);
+  await expect(page.locator('.step[data-step="3"] .cell-sym .state')).toContainText(
+    "let y = v1 in",
+  );
+  // A column of its own where three columns of code fit; below the row's other cells elsewhere.
+  const cells = async (width: number) => {
+    await page.setViewportSize({ width, height: 900 });
+    return page.evaluate(() => {
+      const box = (cell: string) =>
+        (
+          document.querySelector(`.step[data-step="3"] .cell-${cell}`) as Element
+        ).getBoundingClientRect();
+      return { source: box("source"), symbolic: box("sym"), determinized: box("det") };
+    });
+  };
+  const wide = await cells(1440);
+  expect(Math.abs(wide.symbolic.top - wide.source.top)).toBeLessThanOrEqual(1);
+  expect(wide.symbolic.left).toBeGreaterThan(wide.source.right);
+  expect(wide.symbolic.right).toBeLessThan(wide.determinized.left);
+  const middle = await cells(768);
+  expect(middle.symbolic.top).toBeGreaterThanOrEqual(middle.source.bottom);
+  expect(middle.symbolic.width).toBeGreaterThan(middle.source.width);
 });
 
 /** The linear channels of a CSS `rgb()` colour. */

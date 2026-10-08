@@ -41,13 +41,7 @@ const states: State[] = [
   { name: "observe", example: "Observe", run: true, steps: 3 },
   { name: "recursive", example: "Recursive gamma", run: true, steps: 4 },
   { name: "random-walk", example: "Gaussian random walk", run: true },
-  {
-    name: "symbolic",
-    example: "Noisy product",
-    run: true,
-    steps: 3,
-    finally: (page) => page.getByLabel("Show symbolic state").check(),
-  },
+
   { name: "rejected", source: "true + 1" },
   { name: "empty", source: "" },
 ];

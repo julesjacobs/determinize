@@ -1,8 +1,8 @@
 // The steps band: one run of the source and of the determinized program, step by step, beside the
 // G draws they share. A transport bar (a scrubber between buttons to the first and the last step)
 // and the arrow keys move the current step. The rows scroll in a region of their own below the
-// bar, which stays in place while the region follows the current step. Rows show the
-// source, the G draw, optionally the symbolic state of the paper's proof, and the determinized
+// bar, which stays in place while the region follows the current step. Rows show the source, the
+// G draw, the symbolic state of the paper's proof (σ above its program) and the determinized
 // program, with notes on each step's draws and means; a long run arrives from its worker a page at
 // a time.
 import { computed, effect } from "@preact/signals-core";
@@ -24,7 +24,6 @@ import {
 import type { TraceOverview, TracePage } from "../core/trace-pages.ts";
 import { pageIndexOf } from "../core/trace-pages.ts";
 import { escapeHtml } from "./html.ts";
-import { writePref } from "./prefs.ts";
 import type { Reduced, StepFacts } from "./steps.ts";
 import { stepFacts } from "./steps.ts";
 import type { Store } from "./store.ts";
@@ -38,8 +37,6 @@ export interface TraceViewElements {
   last: HTMLButtonElement;
   scrubber: HTMLInputElement;
   stepOf: HTMLOutputElement;
-  symbolic: HTMLInputElement;
-  symbolicNote: HTMLElement;
   status: HTMLElement;
   /** Goes back to run 0 from a run picked in the conditional-mean plot. */
   showFirst: HTMLButtonElement;
@@ -59,7 +56,6 @@ export function mountTraceView(
     | "hoveredStep"
     | "hoveredSite"
     | "linked"
-    | "showSymbolic"
     | "shownRun"
     | "shownTraces"
     | "pickRun"
@@ -118,12 +114,8 @@ export function mountTraceView(
 
   effect(() => {
     const current = run.value;
-    const symbolic = store.showSymbolic.value;
-    elements.band.classList.toggle("with-sym", symbolic);
-    elements.symbolicNote.hidden = !symbolic;
-    elements.symbolic.checked = symbolic;
     if (!current) return;
-    renderRows(elements.table, current.overview, current.page, facts.value, symbolic);
+    renderRows(elements.table, current.overview, current.page, facts.value);
     markCurrent();
     // A new page, of this run or a new one, brings the current row into view.
     follow(true);
@@ -194,6 +186,12 @@ export function mountTraceView(
     const step = store.currentStep.peek();
     for (const row of elements.table.querySelectorAll<HTMLElement>(".step[aria-current]")) {
       row.removeAttribute("aria-current");
+      // A row that is no longer current hides again what its expanders showed.
+      for (const button of row.querySelectorAll<HTMLButtonElement>(
+        '.expander[aria-expanded="true"]',
+      )) {
+        toggle(button);
+      }
     }
     elements.table
       .querySelector<HTMLElement>(`.step[data-step="${step}"]`)
@@ -261,14 +259,13 @@ export function mountTraceView(
   elements.first.addEventListener("click", () => moveTo(0));
   elements.last.addEventListener("click", () => moveTo(Number.POSITIVE_INFINITY));
   elements.scrubber.addEventListener("input", () => moveTo(Number(elements.scrubber.value), true));
-  // The page remembers the reader's choice, not one that a link set.
-  elements.symbolic.addEventListener("change", () => {
-    store.showSymbolic.value = elements.symbolic.checked;
-    writePref("symbolic", elements.symbolic.checked ? "shown" : null);
-  });
 
+  // The keys move the step from the region and from its expanders, whose row may stop being
+  // current; the focus then returns to the region.
   elements.table.addEventListener("keydown", (event) => {
-    if (event.target !== elements.table) return;
+    const target = event.target;
+    const expander = target instanceof HTMLElement && target.matches(".expander");
+    if (target !== elements.table && !expander) return;
     const step = store.currentStep.peek();
     const moves: Record<string, number> = {
       ArrowDown: step + 1,
@@ -280,10 +277,16 @@ export function mountTraceView(
     };
     if (!(event.key in moves)) return;
     event.preventDefault();
+    if (expander) elements.table.focus({ preventScroll: true });
     moveTo(moves[event.key]);
   });
   elements.table.addEventListener("click", (event) => {
     const target = event.target instanceof Element ? event.target : null;
+    const button = target?.closest<HTMLButtonElement>(".expander");
+    if (button) {
+      toggle(button);
+      return;
+    }
     const row = target?.closest<HTMLElement>(".step[data-step]");
     if (row && store.trace.peek().kind === "run") moveTo(Number(row.dataset.step));
   });
@@ -312,6 +315,16 @@ export function mountTraceView(
       if (item.dataset.corr === symbol) item.classList.add("corr-active");
     }
   }
+}
+
+/** Shows or hides, in place, what an expander's count stands for. */
+function toggle(button: HTMLButtonElement) {
+  const expanded = button.getAttribute("aria-expanded") !== "true";
+  button.setAttribute("aria-expanded", String(expanded));
+  button.textContent = (expanded ? button.dataset.fewer : button.dataset.more) ?? "";
+  const fold = button.closest(".sigma, .affine");
+  fold?.classList.toggle("expanded", expanded);
+  fold?.querySelector(".affine-rest")?.toggleAttribute("hidden", !expanded);
 }
 
 /** The status of a run as a whole, run `index` of the runs at the seed plus `index`: what is
@@ -402,7 +415,43 @@ function state(html: string) {
     return `<span class="sl" style="--indent: ${indent}">${text || "&nbsp;"}</span>`;
   });
   const long = lines.length > shownLines;
-  return `<code class="state${long ? " long" : ""}">${lines.join("")}${long ? '<span class="more" aria-hidden="true">…</span>' : ""}</code>`;
+  return `<code class="state${long ? " long" : ""}">${lines.join("")}${long ? '<span class="more">…<span class="vh"> more lines not shown</span></span>' : ""}</code>`;
+}
+
+/** The latest bindings of σ that the current row shows, and that the other rows show; the
+ * earlier ones are counted, so that a run with many E draws keeps rows of a readable height, and
+ * the current row's count is a button that shows them all. */
+const currentBindings = 12;
+const shownBindings = 3;
+
+/** A button that shows, in place, what a count stands for, and hides it again. */
+function expander(more: string, fewer: string) {
+  return `<button type="button" class="expander" aria-expanded="false" data-more="${more}" data-fewer="${fewer}">${more}</button>`;
+}
+
+/** σ, its bindings since the step before marked, as a block above the symbolic program. */
+function sigmaBlock(lines: string[], added: number) {
+  const label = '<span class="sigma-label">σ</span>';
+  if (lines.length === 0)
+    return `<span class="sigma">${label}<span class="sigma-lines">empty</span></span>`;
+  const items = lines.map((line, index) => {
+    const age = lines.length - index;
+    const classes = [
+      "sigma-line",
+      ...(age <= added ? ["sigma-new"] : []),
+      ...(age > shownBindings ? ["sigma-old"] : []),
+      ...(age > currentBindings ? ["sigma-older"] : []),
+    ];
+    return `<span class="${classes.join(" ")}">${line}</span>`;
+  });
+  const count = (n: number) => `… ${n} earlier binding${n === 1 ? "" : "s"}`;
+  const elsewhere = lines.length - shownBindings;
+  const current = lines.length - currentBindings;
+  const more =
+    (elsewhere > 0
+      ? `<span class="sigma-more">${count(elsewhere)}<span class="vh"> not shown</span></span>`
+      : "") + (current > 0 ? expander(count(current), "Fewer bindings") : "");
+  return `<span class="sigma">${label}<span class="sigma-lines">${more}${items.join("")}</span></span>`;
 }
 
 function renderRows(
@@ -410,10 +459,9 @@ function renderRows(
   run: TraceOverview,
   page: TracePage,
   facts: Map<number, StepFacts>,
-  symbolic: boolean,
 ) {
   const right = run.counterexample ? "Counterexample" : "Determinized";
-  const head = `<div class="step-head" aria-hidden="true"><span></span><span>Source</span><span>G draw</span>${symbolic ? "<span>Symbolic state</span>" : ""}<span>${right}</span></div>`;
+  const head = `<div class="step-head" aria-hidden="true"><span></span><span>Source</span><span>G draw</span><span>Symbolic state</span><span>${right}</span></div>`;
   const rows = page.frames.map((frame) => {
     const fact = facts.get(frame.step);
     const sigma = sigmaView(frame.sigma);
@@ -447,7 +495,7 @@ function renderRows(
       : "";
     const before =
       frame.step === page.first ? page.previous : page.frames[frame.step - page.first - 1];
-    const added = sigma.lines.slice(before?.sigma.length ?? 0);
+    const added = sigma.lines.length - (before?.sigma.length ?? 0);
     const result =
       frame.symbolic.kind === "SymFloat" && isValue(frame.symbolic)
         ? note(
@@ -455,15 +503,13 @@ function renderRows(
             "n-sym",
           )
         : "";
-    const symbolicCell = symbolic
-      ? cell(
-          "sym",
-          "Symbolic state",
-          state(renderTraceExpr(frame.symbolic, { short: true })) +
-            added.map((line) => note(line, "n-sym")).join("") +
-            result,
-        )
-      : "";
+    const symbolicCell = cell(
+      "sym",
+      "Symbolic state",
+      sigmaBlock(sigma.lines, added) +
+        state(renderTraceExpr(frame.symbolic, { short: true })) +
+        result,
+    );
     return `<li class="step${gDraw ? " has-draw" : ""}" data-step="${frame.step}">
       <span class="step-n">${frame.step}</span>
       ${cell("source", "Source", state(source) + sourceNote)}
@@ -487,7 +533,7 @@ function renderRows(
       <span class="step-n">→</span>
       ${cell("source", "Source", note("Beyond the table, the run returns", "n-result") + value(finals[0]))}
       <div class="cell cell-draw"></div>
-      ${symbolic ? '<div class="cell cell-sym"></div>' : ""}
+      <div class="cell cell-sym"></div>
       ${cell("det", right, note("Beyond the table, the run returns", "n-result") + value(finals[1]))}
     </li>`);
   }
