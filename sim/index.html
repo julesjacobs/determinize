@@ -3,29 +3,32 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Determinization Explorer</title>
+    <title>Determinize simulator</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <main class="app-shell">
-      <section class="workspace">
-        <section class="editor-pane" aria-label="Program editor">
-          <div class="pane-title">
-            <h2>Program</h2>
-            <div class="editor-controls">
-              <a href="../">Project page</a>
-              <label class="example-picker">
-                <span>Example</span>
-                <select id="example-select"></select>
-              </label>
-              <label class="toggle-control">
-                <input id="type-hints-toggle" type="checkbox" />
-                <span>Type hints</span>
-              </label>
-              <span id="status" class="status editor-status" title="Ready" aria-label="Ready">•</span>
-            </div>
-          </div>
+    <header class="sim-header">
+      <div class="title-group">
+        <h1>Determinize simulator</h1>
+        <a class="home" href="../">Project page</a>
+      </div>
+      <label class="example-picker">
+        <span>Example</span>
+        <select id="example-select"></select>
+      </label>
+    </header>
+    <main class="sim">
+      <section class="band programs" aria-label="Programs">
+        <div class="pane pane-source">
+          <h2 class="pane-title">Source</h2>
           <div id="editor" class="editor"></div>
+          <div class="editor-controls">
+            <label class="toggle-control">
+              <input id="type-hints-toggle" type="checkbox" />
+              <span>Type hints</span>
+            </label>
+            <span id="status" class="status editor-status" title="Ready" aria-label="Ready">•</span>
+          </div>
           <div id="editor-diagnostics" class="editor-diagnostics">No diagnostics.</div>
           <section id="lean-output" class="lean-output" aria-label="What Lean prints">
             <p id="lean-counterexample" class="counterexample-label" hidden></p>
@@ -51,52 +54,55 @@
               <a href="https://julesjacobs.com/determinize/docs/Determinize/Frontend/Infer.html#Determinize.Frontend.infer" title="Lean's inference of the modes (affinities in the Lean development)">Annotated source</a>
             </h3>
             <pre id="annotated-program" class="lean-program"></pre>
-            <h3>
-              <a href="https://julesjacobs.com/determinize/docs/Determinize/Spec/Syntax.html#Determinize.Spec.Paper.Expr.determinize" title="Lean's determinization">Determinized</a>
-            </h3>
-            <pre id="determinized-program" class="lean-program"></pre>
           </section>
-        </section>
+        </div>
+        <div class="pane pane-det">
+          <h2 class="pane-title">
+            <a href="https://julesjacobs.com/determinize/docs/Determinize/Spec/Syntax.html#Determinize.Spec.Paper.Expr.determinize" title="Lean's determinization">Determinized</a>
+          </h2>
+          <pre id="determinized-program" class="lean-program"></pre>
+        </div>
+      </section>
 
-        <section class="outputs" aria-label="Compiler outputs">
-          <article class="output-panel primary coupling-panel">
-            <div class="coupling-heading">
-              <h2>Step table</h2>
-              <div class="coupling-actions">
-                <span id="coupling-status" class="status">Ready</span>
-                <button id="rerun-coupling" type="button">Rerun</button>
-                <button id="many-coupling" type="button">Run 200</button>
-              </div>
-            </div>
-            <p class="step-note">
-              Symbolic state: the
-              <a href="https://julesjacobs.com/determinize/docs/Determinize/Proof/Symbolic/Syntax.html" title="The symbolic semantics in Lean's proof">symbolic semantics</a>
-              of the paper's proof (§5), computed by the simulator outside Lean's pipeline.
-            </p>
-            <p class="g-trace">
-              <a href="https://julesjacobs.com/determinize/docs/Determinize/Spec/Traces/Semantics.html#Determinize.Spec.Traces.Trace" title="Lean's trace: the G draws of a run in order">G trace</a>
-              of run 0: <span id="g-trace"></span>
-            </p>
-            <div id="coupling-trace" class="coupling-trace"></div>
-            <section class="distribution-panel" aria-label="Empirical result distributions">
-              <div class="distribution-heading">
-                <h2>Empirical result distributions</h2>
-                <span id="distribution-status" class="status">0 samples</span>
-              </div>
-              <p class="estimates">
-                For a program of type float, the share of runs that return a value estimates
-                <a href="https://julesjacobs.com/determinize/docs/Determinize/Spec/Expectation.html#Determinize.Spec.returnProbability">returnProbability</a>,
-                and the mean and the variance of the returned numbers estimate
-                <a href="https://julesjacobs.com/determinize/docs/Determinize/Spec/Expectation.html#Determinize.Spec.returnedExpectation">returnedExpectation</a>
-                and
-                <a href="https://julesjacobs.com/determinize/docs/Determinize/Spec/Expectation.html#Determinize.Spec.returnedVariance">returnedVariance</a>.
-                The simulator is an unverified visualization; the Lean CLI and its theorems are the
-                checked artefacts.
-              </p>
-              <div id="distribution-view" class="distribution-view"></div>
-            </section>
-          </article>
-        </section>
+      <section class="band steps" aria-labelledby="steps-title">
+        <div class="band-head">
+          <h2 id="steps-title" class="band-title">Steps of one run</h2>
+          <div class="run-controls">
+            <span id="coupling-status" class="status">Ready</span>
+            <button id="rerun-coupling" type="button">Rerun</button>
+          </div>
+        </div>
+        <p class="step-note">
+          Symbolic state: the
+          <a href="https://julesjacobs.com/determinize/docs/Determinize/Proof/Symbolic/Syntax.html" title="The symbolic semantics in Lean's proof">symbolic semantics</a>
+          of the paper's proof (§5), computed by the simulator outside Lean's pipeline.
+        </p>
+        <p class="g-trace">
+          <a href="https://julesjacobs.com/determinize/docs/Determinize/Spec/Traces/Semantics.html#Determinize.Spec.Traces.Trace" title="Lean's trace: the G draws of a run in order">G trace</a>
+          of run 0: <span id="g-trace"></span>
+        </p>
+        <div id="coupling-trace" class="coupling-trace"></div>
+      </section>
+
+      <section class="band dist distribution-panel" aria-labelledby="dist-title">
+        <div class="band-head">
+          <h2 id="dist-title" class="band-title">Distributions</h2>
+          <div class="run-controls">
+            <button id="many-coupling" type="button">Run 200</button>
+            <span id="distribution-status" class="status">0 samples</span>
+          </div>
+        </div>
+        <p class="estimates">
+          For a program of type float, the share of runs that return a value estimates
+          <a href="https://julesjacobs.com/determinize/docs/Determinize/Spec/Expectation.html#Determinize.Spec.returnProbability">returnProbability</a>,
+          and the mean and the variance of the returned numbers estimate
+          <a href="https://julesjacobs.com/determinize/docs/Determinize/Spec/Expectation.html#Determinize.Spec.returnedExpectation">returnedExpectation</a>
+          and
+          <a href="https://julesjacobs.com/determinize/docs/Determinize/Spec/Expectation.html#Determinize.Spec.returnedVariance">returnedVariance</a>.
+          The simulator is an unverified visualization; the Lean CLI and its theorems are the
+          checked artefacts.
+        </p>
+        <div id="distribution-view" class="distribution-view"></div>
       </section>
     </main>
 
