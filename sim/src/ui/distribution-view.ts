@@ -75,6 +75,15 @@ function renderDistributions(
 ) {
   const runs = samples.original.summary.runs;
   elements.status.textContent = `${runs} run${runs === 1 ? "" : "s"}`;
+  if (!analysis.ok && !analysis.counterexample) {
+    const check = `<code>./run.sh --check ${escapeHtml(file ?? "program.det")}</code>`;
+    const why =
+      analysis.stage === null
+        ? `The simulator failed on this program, so it shows no runs. ${check} shows whether Lean accepts it.`
+        : "Lean rejects this program, so it has no runs.";
+    elements.view.innerHTML = `<div class="run-outcomes"><p>${why}</p></div>`;
+    return;
+  }
   const counterexample = !analysis.ok && analysis.counterexample;
   const floats = analysis.ok && analysis.type.startsWith("float");
   const report = `

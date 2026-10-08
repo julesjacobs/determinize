@@ -252,6 +252,21 @@ test("the runs' outcomes, the command that reports them and run 0's G trace show
   await expect(outcomes).toContainText("with the program saved as program.det");
 });
 
+test("a program that Lean rejects has no runs and no command", async ({ page }) => {
+  await page.goto(linkTo("let x =", 1));
+  const outcomes = page.locator(".run-outcomes");
+  await expect(outcomes).toHaveText("Lean rejects this program, so it has no runs.");
+  await expect(outcomes).not.toContainText("--samples");
+});
+
+test("a program the simulator fails on doesn't blame Lean", async ({ page }) => {
+  // Too deeply nested for the simulator, which recurses over the program.
+  await page.goto(linkTo(Array(10000).fill("1").join(" + "), 1));
+  await expect(page.locator(".run-outcomes")).toHaveText(
+    "The simulator failed on this program, so it shows no runs. ./run.sh --check program.det shows whether Lean accepts it.",
+  );
+});
+
 test("the share of returned runs links returnProbability only for a float program", async ({
   page,
 }) => {
