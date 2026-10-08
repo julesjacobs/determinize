@@ -17,7 +17,7 @@ import { linkedLines, printedNodeAt, printedSiteAt } from "./linking.ts";
 export interface ProgramViewElements {
   pane: HTMLElement;
   title: HTMLElement;
-  /** The counterexample's label above its program. */
+  /** The counterexample's explanation below its program. */
   label: HTMLElement;
   editor: HTMLElement;
   /** Why there is no program. */

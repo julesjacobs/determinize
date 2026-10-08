@@ -127,24 +127,33 @@
       <section class="band programs" aria-label="Programs">
         <div class="pane pane-source">
           <h2 class="pane-title">Source</h2>
-          <div id="editor" class="editor"></div>
-          <div id="notices"></div>
-          <p id="source-hint" class="source-hint" hidden>
-            Write a program in the editor, or pick an example. A draw without a mark, such as
-            <code>uniform(0, 1)</code>, gets its mode from inference: E wherever that is allowed,
-            which the determinized program replaces by its mean, and G, kept random, elsewhere.
-            <code>[G]</code>
-            or <code>[E]</code>, as in <code>gauss[E](x, 1)</code>, fixes a mode.
-          </p>
-          <div id="source-alert" class="alert" role="status" hidden></div>
+          <div id="editor" class="editor pane-box"></div>
+          <div class="pane-below">
+            <div id="notices"></div>
+            <p id="source-hint" class="source-hint" hidden>
+              Write a program in the editor, or pick an example. A draw without a mark, such as
+              <code>uniform(0, 1)</code>, gets its mode from inference: E wherever that is allowed,
+              which the determinized program replaces by its mean, and G, kept random, elsewhere.
+              <code>[G]</code>
+              or <code>[E]</code>, as in <code>gauss[E](x, 1)</code>, fixes a mode.
+            </p>
+            <div id="source-alert" class="alert" role="status" hidden></div>
+          </div>
         </div>
         <div id="determinized-pane" class="pane pane-det">
           <h2 id="determinized-title" class="pane-title">Determinized</h2>
-          <div id="counterexample-label" class="alert counter-label" hidden>
-            <p>Lean rejects this program; this is what replacing its [E] draws anyway does</p>
+          <div class="pane-box">
+            <div id="determinized-editor" class="editor"></div>
+            <p id="determinized-empty" class="pane-empty" hidden>Loading the simulator…</p>
           </div>
-          <div id="determinized-editor" class="editor"></div>
-          <p id="determinized-empty" class="pane-empty" hidden>Loading the simulator…</p>
+          <div class="pane-below">
+            <div id="counterexample-label" class="alert" hidden>
+              <p>
+                <strong>Lean rejects this program</strong>; this is what replacing its [E] draws
+                anyway does.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 

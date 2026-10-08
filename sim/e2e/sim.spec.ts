@@ -299,6 +299,62 @@ test("the determinized program shows, and the statistics give the sample sites i
   );
 });
 
+test("the program panes line up in every state, with what they say below their boxes", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  const example = (path: string) =>
+    readFileSync(new URL(`../../examples/${path}.det`, import.meta.url), "utf8");
+  const states = [
+    ["the noisy product", linkTo(example("paper/noisy-product"), 1)],
+    ["a counterexample", linkTo(example("simulator/noisy-product-all-e"), 1)],
+    ["a rejected program", linkTo("let x =", 1)],
+    ["an output that is not float[E]", linkTo(example("paper/gauss-random-walk"), 1)],
+    ["the blank program", linkTo("", 1)],
+  ];
+  for (const width of [390, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const [name, url] of states) {
+      await page.goto("about:blank");
+      await page.goto(url);
+      await page.evaluate(async () => {
+        await window.DeterminizeSim.ready;
+        await document.fonts.ready;
+      });
+      const panes = await page.evaluate(() =>
+        [...document.querySelectorAll(".pane")].map((pane) => {
+          const shown = (element: Element) => element.getBoundingClientRect().height > 0;
+          const box = [...pane.querySelectorAll(".cm-editor, .pane-empty")].find(shown);
+          const title = (pane.querySelector(".pane-title") as Element).getBoundingClientRect();
+          const rect = (box as Element).getBoundingClientRect();
+          return {
+            top: Math.round(rect.top),
+            bottom: Math.round(rect.bottom),
+            height: Math.round(rect.height),
+            gap: Math.round(rect.top - title.bottom),
+            warnings: [...pane.querySelectorAll(".pane-below .alert")]
+              .filter(shown)
+              .map((warning) => Math.round(warning.getBoundingClientRect().top)),
+          };
+        }),
+      );
+      const at = `${name} at ${width} px`;
+      const [source, determinized] = panes;
+      expect(determinized.height, at).toBe(source.height);
+      if (width === 1440) expect(determinized.top, at).toBe(source.top);
+      for (const pane of panes) {
+        expect(pane.gap, `the label right above its box, ${at}`).toBeLessThanOrEqual(12);
+        for (const warning of pane.warnings) {
+          expect(warning, `a warning below its box, ${at}`).toBeGreaterThanOrEqual(pane.bottom);
+        }
+      }
+      if (name === "a counterexample" || name === "a rejected program") {
+        expect(panes.flatMap((pane) => pane.warnings).length, at).toBeGreaterThan(0);
+      }
+    }
+  }
+});
+
 test("a program rejected for its modes shows its counterexample in place of the determinized one", async ({
   page,
 }) => {
@@ -310,7 +366,7 @@ test("a program rejected for its modes shows its counterexample in place of the 
   await expect(page.locator("#determinized-title")).toHaveText("Replacing the [E] draws anyway");
   await expect(status(page)).toHaveText("");
   await expect(page.locator("#counterexample-label")).toHaveText(
-    "Lean rejects this program; this is what replacing its [E] draws anyway does",
+    "Lean rejects this program; this is what replacing its [E] draws anyway does.",
   );
   await expect(page.getByRole("textbox", { name: "Determinized program" })).toContainText(
     "let x = mean_uniform(0, 1) in",

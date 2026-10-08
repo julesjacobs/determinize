@@ -258,7 +258,6 @@
 
   .source-hint {
     max-width: 62rem;
-    margin-top: var(--space-2);
     color: var(--muted);
   }
 
@@ -360,7 +359,8 @@
 
   /* Programs: side by side where two 42-character lines of code fit, stacked below. Both panes
      have one height, in lines of code, and scroll inside, so that the page keeps its layout however
-     long the program. */
+     long the program. Each pane is a label, a box and what is said about it below, on rows that
+     the panes share, so that side by side their labels and boxes line up in every state. */
   .programs {
     --pane-lines: 10;
     --code-line: calc(var(--leading-code) * var(--size-code));
@@ -370,6 +370,25 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .pane {
+    display: grid;
+    grid-row: span 3;
+    grid-template-rows: subgrid;
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: var(--space-2);
+    min-width: 0;
+  }
+
+  .pane-below {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  #notices:empty {
+    display: none;
+  }
+
   @container (min-width: 900px) {
     .programs {
       --pane-lines: 14;
@@ -377,12 +396,7 @@
     }
   }
 
-  .pane {
-    min-width: 0;
-  }
-
   .pane-title {
-    margin-bottom: var(--space-2);
     font-size: var(--size-ui);
     font-weight: var(--weight-heading);
   }
@@ -391,10 +405,13 @@
     color: var(--change);
   }
 
+  /* In the determinized program's place, a box of the same height with the reason inside. */
   .pane-empty {
     height: var(--pane-height);
     margin: 0;
-    padding-block: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border-radius: 3px;
+    background: var(--code-fill);
     color: var(--muted);
   }
 
@@ -410,17 +427,24 @@
     font-weight: var(--weight-strong);
   }
 
+  .pane-below .alert {
+    margin-block: 0;
+  }
+
+  /* A frame around a column that the theorems don't cover; an outline, so that it moves nothing
+     when it appears. */
+  .pane-det {
+    outline: 2px solid transparent;
+    outline-offset: var(--space-1);
+    border-radius: 3px;
+  }
+
   .pane-det.counter {
-    padding-left: var(--space-4);
-    border-left: 3px solid var(--alert);
+    outline-color: var(--alert);
   }
 
   .pane-det.counter .pane-title {
     color: var(--alert);
-  }
-
-  .counter-label {
-    margin-top: 0;
   }
 
   /* Steps: a transport bar above a region of rows that scrolls by itself, so that following the
