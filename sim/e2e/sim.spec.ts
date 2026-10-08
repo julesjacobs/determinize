@@ -766,10 +766,14 @@ test("a newer program replaces the step table's computation in flight", async ({
   const workers: string[] = [];
   page.on("worker", (started) => workers.push(new URL(started.url()).pathname));
   await page.goto(linkTo(deep, 1));
-  await expect(status(page)).toHaveText("Computing the steps of this run…");
-  await page.locator(".cm-content").first().click();
-  await page.keyboard.press("Control+A");
-  await page.keyboard.type("1 + 2");
+  // In one task of the page, so that the deep recursion, which takes its worker about 2 s, is
+  // still being computed when the newer program arrives.
+  await page.evaluate(async () => {
+    const store = await window.DeterminizeSim.ready;
+    if (store.trace.value.kind !== "computing") throw new Error("the deep recursion is computed");
+    store.source.value = "1 + 2";
+    store.commitSource();
+  });
   await expect.poll(() => stepRun(page)).toEqual({ seed: 1, steps: 1, ok: true });
   // The worker that computed the deep recursion was terminated and replaced.
   expect(workers.filter((path) => path.endsWith("/trace-worker.js"))).toHaveLength(2);
