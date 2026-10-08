@@ -84,7 +84,24 @@ function observeLongTasks() {
 }
 
 const status = (page: Page) => page.locator("#steps-status");
-const checked = /, and every step check passed\.$/;
+
+/** The step table's run as the page's store has it: its seed, its steps and whether every step
+ * check passed; null while there is none. */
+function stepRun(page: Page) {
+  return page.evaluate(async () => {
+    const trace = (await window.DeterminizeSim.ready).trace.value;
+    if (trace.kind !== "run") return null;
+    const { seed, frameCount, ok } = trace.overview;
+    return { seed, steps: frameCount - 1, ok };
+  });
+}
+
+/** Waits until the step table shows a run, at `seed` if given, whose step checks all pass. */
+async function passed(page: Page, seed?: number) {
+  await expect
+    .poll(() => stepRun(page))
+    .toMatchObject(seed === undefined ? { ok: true } : { seed, ok: true });
+}
 
 for (const [where, url, worker] of [
   ["in the preview, with a worker", simulator, true],
@@ -94,7 +111,8 @@ for (const [where, url, worker] of [
     const workers: string[] = [];
     page.on("worker", (started) => workers.push(started.url()));
     await page.goto(url);
-    await expect(status(page)).toHaveText("Seed 1: 5 steps, and every step check passed.");
+    await expect.poll(() => stepRun(page)).toEqual({ seed: 1, steps: 5, ok: true });
+    await expect(status(page)).toHaveText("");
     await setRunCount(page, 200);
     await runBoth(page);
     expect(await runs(page)).toBe(200);
@@ -111,13 +129,13 @@ test("runs every example", async ({ page }) => {
   expect(titles.length).toBeGreaterThan(0);
   for (const title of titles) {
     await pick(page, title);
-    await expect(status(page)).toHaveText(/^Seed \d+: /);
+    await expect.poll(() => stepRun(page)).not.toBeNull();
     await expect(page.locator(".step").first()).toBeVisible();
-    const before = await status(page).textContent();
+    const before = await stepRun(page);
     await runBoth(page);
     // Runs 1 to 19 follow run 0, which the step table keeps showing.
     expect(await runs(page)).toBe(20);
-    await expect(status(page)).toHaveText(before ?? "");
+    expect(await stepRun(page)).toEqual(before);
   }
 });
 
@@ -213,9 +231,7 @@ test("a link restores the program, the seed and the example", async ({ page, con
   const opened = await context.newPage();
   await opened.goto(page.url());
   await expect(opened.locator("#example-title")).toHaveText("Your program");
-  await expect(status(opened)).toHaveText(
-    new RegExp(`^Seed ${state.seed}: .*every step check passed\\.$`),
-  );
+  await passed(opened, state.seed);
   expect(await opened.evaluate(async () => (await window.DeterminizeSim.ready).source.value)).toBe(
     state.source,
   );
@@ -259,18 +275,18 @@ test("a variance that overflows shows as Lean's CLI prints it", async ({ page })
   );
 });
 
-test("Lean's output shows the checked type, the sample sites and both programs", async ({
+test("the determinized program shows, and the statistics give the sample sites it leaves", async ({
   page,
 }) => {
   await page.goto(simulator);
-  await expect(page.locator("#checked-type")).toHaveText("float[E]");
-  await expect(page.locator("#source-sites")).toHaveText("Sample sites: 2 continuous");
-  await expect(page.locator("#determinized-sites")).toHaveText("Sample sites: 1 continuous");
-  await page.getByText("Annotated source", { exact: true }).click();
-  await expect(page.locator("#annotated-program")).toContainText("gauss[E](x, 1)");
   const determinized = page.getByRole("textbox", { name: "Determinized program" });
   await expect(determinized).toContainText("let y = mean_gauss(x, 1) in");
   await expect(determinized).toHaveAttribute("aria-readonly", "true");
+  await setRunCount(page, 10);
+  await runBoth(page);
+  await expect(page.locator("#sites-text")).toHaveText(
+    "2 continuous in the source, → 1 continuous determinized",
+  );
   // Lean prints nothing for a program that it rejects for another reason than a mode conflict.
   await page.locator(".cm-content").first().click();
   await page.keyboard.press("Control+End");
@@ -278,7 +294,6 @@ test("Lean's output shows the checked type, the sample sites and both programs",
   await expect(page.locator("#source-alert")).toHaveText(
     /^Lean rejects this program at parsing\.\s*Line \d+: /,
   );
-  await expect(page.locator("#checked")).toBeHidden();
   await expect(page.locator("#determinized-empty")).toHaveText(
     "No determinized program: Lean rejects the source.",
   );
@@ -293,6 +308,7 @@ test("a program rejected for its modes shows its counterexample in place of the 
     /^Lean rejects this program at inference: inconsistent E\/G constraints\./,
   );
   await expect(page.locator("#determinized-title")).toHaveText("Replacing the [E] draws anyway");
+  await expect(status(page)).toHaveText("");
   await expect(page.locator("#counterexample-label")).toHaveText(
     "Lean rejects this program; this is what replacing its [E] draws anyway does",
   );
@@ -357,29 +373,19 @@ test("the share of returned runs links returnProbability only for a float progra
   await page.goto(linkTo("let x = uniform(0, 1) in x < 0.5", 1));
   await setRunCount(page, 10);
   await runBoth(page);
-  await expect(page.locator("#checked-type")).toHaveText("bool");
   await expect(page.locator("#list-source")).toContainText("10 of 10 runs returned.");
   await expect(returned).toHaveCount(0);
 });
 
-test("notices say which premises of the theorems are not met", async ({ page }) => {
+test("a counterexample compares the means instead of the variances", async ({ page }) => {
   await page.goto(simulator);
+  await pick(page, "Noisy product, both draws E");
   await setRunCount(page, 10);
   await runBoth(page);
-  const premises = page.locator("#premises");
-  await expect(premises).toContainText("Domain safety: not established by typing.");
-  await expect(page.locator("#premises-other")).toBeHidden();
-  await pick(page, "Gaussian random walk");
-  await runBoth(page);
-  await expect(page.locator("#checked-type")).toHaveText("[(float[E] * float[E])]");
-  await expect(page.locator("#premises-other")).toContainText(
-    "No theorem applies to this output. Its type is [(float[E] * float[E])], not float[E]",
-  );
-  // A counterexample shows no theorem notice, and compares the means instead.
-  await pick(page, "Noisy product, both draws E");
-  await runBoth(page);
-  await expect(premises).toBeHidden();
   await expect(page.locator("#factor")).toHaveText(/^Means differ: [0-9.]+ and 0\.2500\.$/);
+  await expect(page.locator("#sites-text")).toHaveText(
+    "2 continuous in the source, → 0 continuous in the counterexample",
+  );
 });
 
 test("the plot against a G draw shows each run, and a click steps through it", async ({ page }) => {
@@ -404,7 +410,8 @@ test("the plot against a G draw shows each run, and a click steps through it", a
   await page.mouse.click(box.x + box.width / 2, y);
   await expect(status(page)).toHaveText(/^Run \d+ of the runs, at seed \d+: /);
   await page.getByRole("button", { name: "Show run 0" }).click();
-  await expect(status(page)).toHaveText(/^Seed 1: /);
+  await expect(status(page)).toHaveText("");
+  await passed(page, 1);
 });
 
 /** The simulator's address for `source` at `seed`, with no example chosen. */
@@ -418,7 +425,7 @@ test("a long run shows its steps a page at a time, and the controls reach every 
 }) => {
   const irwinHall = new URL("../../examples/loops/irwin_hall.det", import.meta.url);
   await page.goto(linkTo(readFileSync(irwinHall, "utf8"), 3));
-  await expect(status(page)).toHaveText("Seed 3: 1606 steps, and every step check passed.");
+  await expect.poll(() => stepRun(page)).toEqual({ seed: 3, steps: 1606, ok: true });
   const note = page.locator(".page-note");
   await expect(note).toHaveText(
     /^Steps 0 to \d+ of 1606 are shown; the step controls reach the others\.$/,
@@ -462,7 +469,7 @@ test("stepping, playing across pages and scrubbing move neither the bar nor the 
   test.setTimeout(60_000);
   const irwinHall = new URL("../../examples/loops/irwin_hall.det", import.meta.url);
   await page.goto(linkTo(readFileSync(irwinHall, "utf8"), 3));
-  await expect(status(page)).toHaveText(checked);
+  await passed(page);
   const end = Number((await page.locator(".page-note").textContent())?.match(/to (\d+)/)?.[1]);
   const scrubber = page.locator("#scrubber");
   // The reader's view: the bar at the top of the window, the region below it.
@@ -572,7 +579,7 @@ test("stepping, playing across pages and scrubbing move neither the bar nor the 
     for (const program of programs) {
       await page.goto(linkTo(program, 1));
       await expect(page.locator("[aria-busy=true]")).toHaveCount(0, { timeout: 30_000 });
-      await expect(status(page)).toHaveText(/^Seed 1: /);
+      await expect.poll(() => stepRun(page)).toMatchObject({ seed: 1 });
       shown.push(await layout());
       if (program !== longest) continue;
       // Stepping with the arrow keys scrolls the source editor to the lines the steps reduce,
@@ -617,7 +624,7 @@ test("stepping, playing across pages and scrubbing move neither the bar nor the 
 test("an edit and its new run leave the source editor at the caret", async ({ page }) => {
   const walk = new URL("../../examples/paper/gauss-random-walk.det", import.meta.url);
   await page.goto(linkTo(readFileSync(walk, "utf8"), 1));
-  await expect(status(page)).toHaveText(checked);
+  await passed(page);
   const source = page.getByRole("textbox", { name: "Source program" });
   await source.click();
   await page.keyboard.press("Control+End");
@@ -635,13 +642,13 @@ test("an edit and its new run leave the source editor at the caret", async ({ pa
     )
     .toBe(true);
   await expect(page.locator("[aria-busy=true]")).toHaveCount(0, { timeout: 30_000 });
-  await expect(status(page)).toHaveText(checked);
+  await passed(page);
   expect(await scroller.evaluate((element) => element.scrollTop)).toBe(atCaret);
 });
 
 test("hovering a span in the source marks the rows that reduce it", async ({ page }) => {
   await page.goto(simulator);
-  await expect(status(page)).toHaveText(checked);
+  await passed(page);
   const scrollY = await page.evaluate(() => window.scrollY);
   const lines = page.getByRole("textbox", { name: "Source program" }).locator(".cm-line");
   // The x of `x * y`: the smallest span that a step reduces around it is the product (step 5).
@@ -661,7 +668,7 @@ test("hovering a node in the determinized program marks the rows that reduce it"
   page,
 }) => {
   await page.goto(simulator);
-  await expect(status(page)).toHaveText(checked);
+  await passed(page);
   const scrollY = await page.evaluate(() => window.scrollY);
   const lines = page.getByRole("textbox", { name: "Determinized program" }).locator(".cm-line");
   // The x of `x * y`, not a sample site: the smallest span that a step reduces around it is the
@@ -707,7 +714,7 @@ test("a newer program replaces the step table's computation in flight", async ({
   await page.locator(".cm-content").first().click();
   await page.keyboard.press("Control+A");
   await page.keyboard.type("1 + 2");
-  await expect(status(page)).toHaveText(/^Seed 1: .*every step check passed\.$/);
+  await expect.poll(() => stepRun(page)).toEqual({ seed: 1, steps: 1, ok: true });
   // The worker that computed the deep recursion was terminated and replaced.
   expect(workers.filter((path) => path.endsWith("/trace-worker.js"))).toHaveLength(2);
 });
@@ -716,8 +723,7 @@ test("a link to an example the gallery doesn't have selects none", async ({ page
   const shared = { source: "1 + 2", seed: 7, example: "paper/no-such-example" };
   const json = JSON.stringify(shared);
   await page.goto(`${simulator}#v1=${deflateRawSync(json).toString("base64url")}`);
-  await expect(status(page)).toHaveText(/^Seed 7: /);
-  await expect(status(page)).toHaveText(checked);
+  await passed(page, 7);
   await expect(page.locator("#example-title")).toHaveText("Your program");
   expect(await page.evaluate(async () => (await window.DeterminizeSim.ready).source.value)).toBe(
     shared.source,
@@ -731,7 +737,7 @@ test("a link to more than 64 KiB opens the first example and says so", async ({ 
     "This link's program is larger than 64 KiB. The simulator opened its first example.",
   );
   await expect(page.locator("#example-title")).toHaveText("Noisy product");
-  await expect(status(page)).toHaveText(/^Seed 1: /);
+  await expect.poll(() => stepRun(page)).toMatchObject({ seed: 1 });
 });
 
 test("a second unreadable link replaces the first one's notice", async ({ page }) => {
@@ -754,7 +760,7 @@ test("a readable link clears an unreadable one's notice", async ({ page }) => {
   await page.evaluate((next) => {
     window.location.hash = next;
   }, hash);
-  await expect(status(page)).toHaveText(/^Seed 7: /);
+  await expect.poll(() => stepRun(page)).toMatchObject({ seed: 7 });
   await expect(page.getByRole("alert")).toHaveCount(0);
 });
 
@@ -776,9 +782,8 @@ test("Tab moves the focus out of the editor", async ({ page }) => {
   await page.goto(simulator);
   await page.locator(".cm-content").first().click();
   await page.keyboard.press("Tab");
-  expect(await page.evaluate(() => document.activeElement?.closest(".cm-editor") ?? null)).toBe(
-    null,
-  );
+  // The determinized program's pane may take the focus next; the source editor has let it go.
+  expect(await page.evaluate(() => document.activeElement?.closest("#editor") ?? null)).toBe(null);
 });
 
 test("the step controls move the current step, and both panes highlight what it reduces", async ({
@@ -808,7 +813,7 @@ test("the step controls move the current step, and both panes highlight what it 
 
 test("hovering a sample site marks the rows that draw it and its counterpart", async ({ page }) => {
   await page.goto(simulator);
-  await expect(status(page)).toHaveText(checked);
+  await passed(page);
   await page.locator(".cm-mode-hint").nth(1).hover();
   const determinized = page.getByRole("textbox", { name: "Determinized program" });
   await expect(determinized.locator(".cm-linked")).toHaveText(["let y = mean_gauss(x, 1) in"]);
@@ -818,7 +823,7 @@ test("hovering a sample site marks the rows that draw it and its counterpart", a
 
 test("the symbolic state shows on request, and the page remembers the choice", async ({ page }) => {
   await page.goto(simulator);
-  await expect(status(page)).toHaveText(checked);
+  await passed(page);
   await expect(page.locator(".cell-sym")).toHaveCount(0);
   await page.getByLabel("Show symbolic state").check();
   await expect(page.locator("#symbolic-note")).toBeVisible();
@@ -830,7 +835,7 @@ test("the symbolic state shows on request, and the page remembers the choice", a
 
 test("Play advances a step per second until Pause", async ({ page }) => {
   await page.goto(simulator);
-  await expect(status(page)).toHaveText(checked);
+  await passed(page);
   const play = page.getByRole("button", { name: "Play" });
   await play.click();
   await expect(page.getByRole("button", { name: "Pause" })).toHaveAttribute("aria-pressed", "true");
@@ -857,7 +862,7 @@ for (const colorScheme of ["light", "dark"] as const) {
   test(`axe finds no violation in ${colorScheme}`, async ({ page }) => {
     await page.emulateMedia({ colorScheme });
     await page.goto(simulator);
-    await expect(status(page)).toHaveText(checked);
+    await passed(page);
     const results = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])
       .analyze();
@@ -889,7 +894,7 @@ test("the gallery lists the examples as links, a menu on wide screens and a dial
   await gallery.getByRole("link", { name: "Observe", exact: true }).click();
   await expect(gallery).toBeHidden();
   await expect(page.getByRole("button", { name: "Example: Observe" })).toBeVisible();
-  await expect(page.locator("#checked-type")).toHaveText("float[E]");
+  await passed(page);
 });
 
 test("the introduction hides on request, and stays hidden", async ({ page }) => {
@@ -899,7 +904,7 @@ test("the introduction hides on request, and stays hidden", async ({ page }) => 
   await intro.getByRole("button", { name: "Hide" }).click();
   await expect(intro).toBeHidden();
   await page.reload();
-  await expect(page.locator("#checked-type")).toHaveText("float[E]");
+  await passed(page);
   await expect(intro).toBeHidden();
 });
 
@@ -945,7 +950,7 @@ test("a first visit asks for a prediction before the first runs, and repeats it 
     "You predicted the same mean and a smaller variance.",
   );
   await page.reload();
-  await expect(page.locator("#checked-type")).toHaveText("float[E]");
+  await passed(page);
   await expect(form).toBeHidden();
 });
 

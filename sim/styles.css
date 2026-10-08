@@ -371,45 +371,11 @@
     color: var(--change);
   }
 
-  /* The checked type and the sample sites, a line each, so that the foot keeps its height. */
-  .pane-foot {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-    margin-top: var(--space-2);
-    color: var(--muted);
-  }
-
-  .pane-foot code {
-    color: var(--ink);
-  }
-
   .pane-empty {
     height: var(--pane-height);
     margin: 0;
     padding-block: var(--space-3);
     color: var(--muted);
-  }
-
-  .annotated {
-    margin-top: var(--space-2);
-  }
-
-  .annotated summary {
-    width: fit-content;
-    padding-block: 0.125rem;
-    color: var(--muted);
-    cursor: pointer;
-  }
-
-  .lean-program {
-    margin-top: var(--space-2);
-    padding: var(--space-3) var(--space-4);
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
-    border-radius: 3px;
-    background: var(--code-fill);
-    line-height: var(--leading-code);
   }
 
   /* An alert: the words first, a rule on the left, and the colour only repeating the words. */
@@ -435,13 +401,6 @@
 
   .counter-label {
     margin-top: 0;
-  }
-
-  .lean-note {
-    grid-column: 1 / -1;
-    max-width: 62rem;
-    color: var(--muted);
-    font-size: var(--size-small);
   }
 
   /* Steps: a transport bar above a region of rows that scrolls by itself, so that following the
@@ -528,12 +487,20 @@
     color: var(--muted);
   }
 
-  /* Two lines on a narrow band, so that a longer status doesn't move the distributions. */
+  /* What is unusual about the run; nothing, and no room, when every step check passed. */
   .steps-status {
     max-width: 62rem;
-    min-height: 2lh;
     margin-top: var(--space-3);
     color: var(--muted);
+  }
+
+  .steps-status:has(> p:empty):has(> button[hidden]) {
+    margin-top: 0;
+  }
+
+  /* Empty, the status leaves the layout but stays in the accessibility tree. */
+  #steps-status:empty {
+    position: absolute;
   }
 
   .steps[aria-busy="true"] .step-table {
@@ -550,7 +517,7 @@
     list-style: none;
   }
 
-  .no-run :is(.step-controls, .run-controls, .gtrace, .steps-honesty, .step-table) {
+  .no-run :is(.step-controls, .run-controls, .gtrace, .step-table) {
     display: none;
   }
 
@@ -716,18 +683,7 @@
     overflow-wrap: anywhere;
   }
 
-  .steps-honesty {
-    max-width: 62rem;
-    margin-top: var(--space-2);
-    color: var(--muted);
-    font-size: var(--size-small);
-  }
-
   @container (min-width: 720px) {
-    .steps-status {
-      min-height: 0;
-    }
-
     .step-head,
     .step {
       grid-template-columns: 2rem minmax(0, 1fr) 8rem minmax(0, 1fr);
@@ -1102,24 +1058,19 @@
     color: var(--muted);
   }
 
-  .premises h3,
+  .sites {
+    margin-bottom: var(--space-4);
+    color: var(--muted);
+  }
+
+  .sites a {
+    color: inherit;
+  }
+
   .list-out h3 {
     margin: var(--space-4) 0 var(--space-2);
     font-size: var(--size-ui);
     font-weight: var(--weight-heading);
-  }
-
-  .premises ul {
-    margin: 0;
-    padding-left: 1.1em;
-  }
-
-  .premises li {
-    margin-bottom: var(--space-1);
-  }
-
-  .premises a {
-    color: var(--muted);
   }
 
   .list-out {

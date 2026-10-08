@@ -1,28 +1,11 @@
-// What Lean's front end reports about the source, as the simulator's port of it computes it: why
-// Lean rejects the program, or its checked type, the sample sites before and after
-// determinization, and the annotated program as Lean prints it with the source's names. For a
-// program that Lean rejects only for a mode conflict, the sample sites of its counterexample too.
+// Why Lean rejects the source, as the simulator's port of its front end finds it, in an alert
+// under the source editor; and the sample sites of a program in words.
 import type { ReadonlySignal } from "@preact/signals-core";
 import { effect } from "@preact/signals-core";
 import type { Analysis, Stage } from "../core/compiler/analyze.ts";
 import type { Program } from "../core/compiler/core.ts";
 import { sampleSites } from "../core/compiler/core.ts";
-import { sourcePretty } from "../core/compiler/print.ts";
 import { normalizeDiagnostics } from "./editor.ts";
-
-export interface LeanViewElements {
-  /** Why Lean rejects the program, under the source editor. */
-  alert: HTMLElement;
-  /** The checked type, under the source editor. */
-  checked: HTMLElement;
-  type: HTMLElement;
-  sourceSites: HTMLElement;
-  determinizedSites: HTMLElement;
-  annotated: HTMLDetailsElement;
-  annotatedProgram: HTMLElement;
-  /** That the simulator computes these with its port of Lean's front end. */
-  note: HTMLElement;
-}
 
 /** The sample sites of a program as `--sample-sites` counts them, in words. */
 export function describeSites(program: Program) {
@@ -100,8 +83,9 @@ function renderAlert(alert: HTMLElement, result: Analysis & { ok: false }, sourc
   );
 }
 
+/** Shows in `alert` why Lean rejects the source, while it does. */
 export function mountLeanView(
-  elements: LeanViewElements,
+  alert: HTMLElement,
   analysis: ReadonlySignal<Analysis>,
   source: ReadonlySignal<string>,
 ) {
@@ -109,20 +93,7 @@ export function mountLeanView(
     const result = analysis.value;
     const text = source.peek();
     const empty = text.trim() === "";
-    elements.alert.hidden = result.ok || empty;
-    if (!result.ok && !empty) renderAlert(elements.alert, result, text);
-    const programs = result.ok ? result.program : result.counterexample?.program;
-    elements.checked.hidden = !result.ok;
-    elements.type.textContent = result.ok ? result.type : "";
-    elements.sourceSites.hidden = !programs;
-    elements.determinizedSites.hidden = !programs;
-    elements.annotated.hidden = !result.ok;
-    elements.note.hidden = !programs;
-    if (!programs) return;
-    elements.sourceSites.lastElementChild?.replaceChildren(describeSites(programs.source));
-    elements.determinizedSites.lastElementChild?.replaceChildren(
-      describeSites(programs.determinized),
-    );
-    if (result.ok) elements.annotatedProgram.textContent = sourcePretty(programs.source);
+    alert.hidden = result.ok || empty;
+    if (!result.ok && !empty) renderAlert(alert, result, text);
   });
 }

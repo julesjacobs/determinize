@@ -79,16 +79,7 @@ function start(decoded: Decoded): Store {
     store,
   );
   mountLeanView(
-    {
-      alert: document.querySelector("#source-alert") as HTMLElement,
-      checked: document.querySelector("#checked") as HTMLElement,
-      type: document.querySelector("#checked-type") as HTMLElement,
-      sourceSites: document.querySelector("#source-sites") as HTMLElement,
-      determinizedSites: document.querySelector("#determinized-sites") as HTMLElement,
-      annotated: document.querySelector("#annotated") as HTMLDetailsElement,
-      annotatedProgram: document.querySelector("#annotated-program") as HTMLElement,
-      note: document.querySelector("#lean-note") as HTMLElement,
-    },
+    document.querySelector("#source-alert") as HTMLElement,
     store.analysis,
     store.checkedSource,
   );
