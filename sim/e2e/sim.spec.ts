@@ -1,7 +1,7 @@
 // The simulator in the assembled preview, where it samples in a worker, and opened from disk,
 // where it samples on the page's own thread: every example runs, batches stream without long
 // tasks and stop when the program changes, links restore the program, the seed and the example,
-// Tab leaves the editor, and axe finds only the step table's two known violations.
+// Tab leaves the editor, and axe finds only the step table's known contrast violation.
 import { readFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { deflateRawSync, inflateRawSync } from "node:zlib";
@@ -416,16 +416,12 @@ test("type hints show each expression's type", async ({ page }) => {
   await expect(page.locator(".type-hint")).toHaveCount(0);
 });
 
-test("axe finds only the step table's contrast and scrolling violations", async ({ page }) => {
+test("axe finds only the step table's contrast violation", async ({ page }) => {
   await page.goto(simulator);
   await expect(status(page)).toHaveText("seed 2026 - checked");
   const results = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])
     .analyze();
-  // The step table's highlighted values lack contrast, and its cells scroll sideways without
-  // taking the focus.
-  expect(results.violations.map((violation) => violation.id)).toEqual([
-    "color-contrast",
-    "scrollable-region-focusable",
-  ]);
+  // The step table's highlighted values lack contrast.
+  expect(results.violations.map((violation) => violation.id)).toEqual(["color-contrast"]);
 });
