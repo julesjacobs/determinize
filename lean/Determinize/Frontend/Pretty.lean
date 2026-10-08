@@ -97,7 +97,8 @@ private def render {Site : Type} [PrettySite Site] (env : List String) (depth : 
   | .beta k a b => primitive "beta" k [render env depth a, render env depth b]
   | .gamma k a b => primitive "gamma" k [render env depth a, render env depth b]
 
-/-- Surface syntax that the parser reads back. -/
+/-- Surface syntax, which the parser reads back as the same program unless the program has a mean
+site: the parser knows no `mean_<dist>` names. -/
 def pretty {Site : Type} [PrettySite Site] (e : Expr Rat Site) : String := render [] 0 e
 
 /-- Constructor syntax for independent kernel checking; every rational is parenthesized. -/
