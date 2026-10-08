@@ -23,7 +23,6 @@ const exampleSelect = document.querySelector("#example-select") as HTMLSelectEle
 const notices = document.querySelector("#notices") as HTMLElement;
 const seedInput = document.querySelector("#seed") as HTMLInputElement;
 const newSeedButton = document.querySelector("#new-seed") as HTMLButtonElement;
-const manyButton = document.querySelector("#many-coupling") as HTMLButtonElement;
 
 for (const [index, example] of examples.entries()) {
   const option = document.createElement("option");
@@ -56,6 +55,7 @@ function start(decoded: Decoded): Store {
       seed: initial.seed,
       exampleId: initial.example,
       showSymbolic: initial.symbolic ?? readPref("symbolic") === "shown",
+      view: initial.view,
     },
     (request) => sampling.send(request),
     (request) => traces.request(request),
@@ -75,6 +75,7 @@ function start(decoded: Decoded): Store {
       symbolic: $("#show-symbolic"),
       symbolicNote: $("#symbolic-note"),
       status: $("#steps-status"),
+      showFirst: $("#show-first-run"),
       table: $("#step-table"),
       gTrace: $("#g-trace"),
     },
@@ -112,21 +113,7 @@ function start(decoded: Decoded): Store {
       if (range || site) store.followLinked.value += 1;
     },
   );
-  // The theorems' premises that typing leaves open; a counterexample shows none.
-  effect(() => {
-    const result = store.analysis.value;
-    (document.querySelector("#premise-safety") as HTMLElement).hidden = !result.ok;
-    (document.querySelector("#premise-type") as HTMLElement).hidden =
-      !result.ok || result.type === "float[E]";
-  });
-  mountDistributionView(
-    {
-      panel: document.querySelector(".distribution-panel") as HTMLElement,
-      view: document.querySelector("#distribution-view") as HTMLElement,
-      status: document.querySelector("#distribution-status") as HTMLElement,
-    },
-    store,
-  );
+  mountDistributionView(document.querySelector("#distributions") as HTMLElement, store);
   const editor = createEditor(editorHost, store.source.peek(), {
     onChange: (doc) => {
       // Hovered positions are of the checked text, which the edit makes stale.
@@ -191,13 +178,7 @@ function start(decoded: Decoded): Store {
       store.commitSource();
     });
   });
-  manyButton.addEventListener("click", () => {
-    store.runMany(store.sampleCount.peek());
-  });
 
-  effect(() => {
-    manyButton.textContent = `Run ${store.sampleCount.value}`;
-  });
   // A link may name an example that the gallery doesn't have; then none is selected.
   effect(() => {
     const index = examples.findIndex((example) => example.id === store.exampleId.value);
@@ -216,10 +197,11 @@ function restore(store: Store, editor: EditorView, decoded: Decoded) {
   if (decoded.kind === "error") showNotice(store, decoded.message);
   if (decoded.kind !== "state") return;
   dismissNotice();
-  const { source, seed, example, symbolic } = decoded.state;
+  const { source, seed, example, symbolic, view } = decoded.state;
   batch(() => {
     store.exampleId.value = example;
     if (symbolic !== undefined) store.showSymbolic.value = symbolic;
+    store.view.value = view ?? "outputs";
     replaceDoc(editor, source);
     store.runAt(seed);
   });

@@ -1,4 +1,4 @@
-// Runs the batches of "Run N" with the port of Lean's evaluator: run i of a program and of its
+// Runs the batches of "Run both" with the port of Lean's evaluator: run i of a program and of its
 // determinization at seed s + i, as Lean's CLI runs `--seed s --samples N`. A batch runs in
 // slices of about 50 ms and reports the outcomes of each slice, so that the thread it runs on
 // handles messages and input between slices. The worker runs it, and so does the page where no

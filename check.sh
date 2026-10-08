@@ -24,7 +24,7 @@ while [[ $# -gt 0 ]]; do
       grep -qE '^(check\.sh|tools/dev-shell\.sh)$' <<<"$changed" && areas+=(lean det sim bundle site tex)
       # The simulator's toolchain: the flake, which pins Node.js, and the sim shell.
       toolchain='^flake\.(nix|lock)$|^flake-modules/(systems|devshells/sim)\.nix$'
-      grep -qE "^sim/(src|test)/|^sim/build\.|^sim/(package(-lock)?|biome|tsconfig(\.node)?)\.json|^(tests|examples)/|$toolchain" <<<"$changed" && areas+=(sim)
+      grep -qE "^sim/(src|test)/|^sim/build\.|^sim/(package(-lock)?|biome|tsconfig(\.node)?)\.json|^sim/[^/]*\.(css|html)$|^(tests|examples)/|$toolchain" <<<"$changed" && areas+=(sim)
       grep -qE "^sim/(src|test)/|^sim/build\.|^sim/(package(-lock)?|tsconfig)\.json|^sim/index\.html|^examples/|$toolchain" <<<"$changed" && areas+=(bundle)
       grep -qE "^site/|^sim/|^examples/|^flake-modules/devshells/site\.nix$|$toolchain" <<<"$changed" && areas+=(site)
       # The landing page's quotes link names declared in the Lean modules outside Proof.

@@ -64,9 +64,10 @@ for (const { name, example, source } of states) {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.emulateMedia({ reducedMotion: "reduce" });
     await open(page, source ? linkTo(source) : "sim/");
-    if (example) await page.getByLabel("Example").selectOption({ label: example });
-    await page.getByRole("button", { name: "Run 200" }).click();
-    await expect(page.locator("[aria-busy=true]")).toHaveCount(0);
+    if (example) await page.locator("#example-select").selectOption({ label: example });
+    await expect(page.locator("[aria-busy]")).toHaveCount(0);
+    await page.getByRole("button", { name: "Run both" }).click();
+    await expect(page.locator("[aria-busy]")).toHaveCount(0, { timeout: 30_000 });
     await page.screenshot({ path: `${directory}/${name}.png`, fullPage: true });
   });
 }

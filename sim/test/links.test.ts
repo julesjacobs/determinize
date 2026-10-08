@@ -4,7 +4,6 @@
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import test from "node:test";
-import { leanLinks } from "../src/ui/links.ts";
 
 const sim = new URL("../", import.meta.url);
 const page = readFileSync(new URL("index.html", sim), "utf8");
@@ -19,7 +18,7 @@ test("the page links every documentation link of the views", () => {
       text.match(/https:\/\/julesjacobs\.com\/determinize\/docs\/[^"`'\s)]*\.html[^"`'\s)]*/g) ??
       [],
   );
-  for (const url of [...Object.values(leanLinks), ...literal]) {
+  for (const url of literal) {
     assert.ok(url.startsWith(docs), url);
     assert.ok(page.includes(`href="${url}"`), `sim/index.html doesn't link ${url}`);
   }
