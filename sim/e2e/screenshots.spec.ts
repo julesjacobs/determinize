@@ -1,6 +1,6 @@
-// Full-page screenshots of the landing page, the not-found page and the simulator at the widths
-// of the design, in light and dark, and of simulator states, for review. They are taken only when
-// SCREENSHOTS names a directory: SCREENSHOTS=DIR playwright test screenshots
+// Full-page screenshots of the landing page, the not-found page and the simulator's states at the
+// widths of the design, in light and dark, for review. They are taken only when SCREENSHOTS names
+// a directory: SCREENSHOTS=DIR playwright test screenshots
 import { deflateRawSync } from "node:zlib";
 import type { Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
@@ -11,34 +11,68 @@ test.skip(!directory, "SCREENSHOTS names no directory");
 const pages = [
   { name: "landing", path: "./", widths: [390, 1280] },
   { name: "404", path: "404.html", widths: [390, 1280] },
-  { name: "sim", path: "sim/", widths: [390, 1280] },
 ];
 
-/** Simulator states after "Run 200": an example of the gallery, or a program of its own. */
-const states: { name: string; example?: string; source?: string }[] = [
-  { name: "sim-noisy-product-run", example: "Noisy product" },
-  { name: "sim-dungeon-run", example: "Dungeon" },
-  { name: "sim-all-e-run", example: "Noisy product, both draws E" },
-  { name: "sim-observe-run", example: "Observe" },
-  { name: "sim-gauss-random-walk-run", example: "Gaussian random walk" },
-  { name: "sim-division-zero-run", source: "1/0" },
+/** A simulator state: an example of the gallery or a program of its own, and what to do there. */
+interface State {
+  name: string;
+  example?: string;
+  source?: string;
+  /** Run both programs 10 000 times. */
+  run?: boolean;
+  /** Steps to move forward in the step table. */
+  steps?: number;
+  /** Before anything else: keep the first visit's question and the introduction. */
+  firstVisit?: boolean;
+  finally?: (page: Page) => Promise<void>;
+}
+
+const states: State[] = [
+  { name: "noisy-product", example: "Noisy product", run: true, steps: 3 },
+  {
+    name: "noisy-product-against",
+    example: "Noisy product",
+    run: true,
+    steps: 3,
+    finally: (page) => page.getByRole("radio", { name: "Against x, the G draw" }).check(),
+  },
+  { name: "predict", example: "Noisy product", firstVisit: true },
+  { name: "counterexample", example: "Noisy product, both draws E", run: true, steps: 1 },
+  { name: "observe", example: "Observe", run: true, steps: 3 },
+  { name: "recursive", example: "Recursive gamma", run: true, steps: 4 },
+  { name: "random-walk", example: "Gaussian random walk", run: true },
+  {
+    name: "symbolic",
+    example: "Noisy product",
+    run: true,
+    steps: 3,
+    finally: (page) => page.getByLabel("Show symbolic state").check(),
+  },
+  { name: "rejected", source: "true + 1" },
+  { name: "empty", source: "" },
 ];
 
-/** The simulator's address for the program `source` at seed 2026. */
+/** The simulator's address for the program `source` at seed 1, with no example chosen. */
 function linkTo(source: string) {
-  const json = JSON.stringify({ source, seed: 2026, example: "" });
+  const json = JSON.stringify({ source, seed: 1, example: "" });
   return `sim/#v1=${deflateRawSync(json).toString("base64url")}`;
 }
 
 /** Loads `path` with a fixed Math.random sequence, so that the simulator's runs repeat. */
-async function open(page: Page, path: string) {
-  await page.addInitScript(() => {
+async function open(page: Page, path: string, firstVisit: boolean) {
+  await page.addInitScript((first) => {
     let state = 1;
     Math.random = () => {
       state = (state * 48271) % 2147483647;
       return state / 2147483647;
     };
-  });
+    if (!first) {
+      try {
+        localStorage.setItem("determinize:predicted", "yes");
+        localStorage.setItem("determinize:intro", "hidden");
+      } catch {}
+    }
+  }, firstVisit);
   await page.goto(path);
   await page.evaluate(() => document.fonts.ready);
 }
@@ -49,7 +83,7 @@ for (const { name, path, widths } of pages) {
       test(`${name} at ${width} px, ${colorScheme}`, async ({ page }) => {
         await page.setViewportSize({ width, height: 900 });
         await page.emulateMedia({ colorScheme, reducedMotion: "reduce" });
-        await open(page, path);
+        await open(page, path, true);
         await page.screenshot({
           path: `${directory}/${name}-${width}-${colorScheme}.png`,
           fullPage: true,
@@ -59,15 +93,40 @@ for (const { name, path, widths } of pages) {
   }
 }
 
-for (const { name, example, source } of states) {
-  test(name, async ({ page }) => {
-    await page.setViewportSize({ width: 1280, height: 900 });
-    await page.emulateMedia({ reducedMotion: "reduce" });
-    await open(page, source ? linkTo(source) : "sim/");
-    if (example) await page.locator("#example-select").selectOption({ label: example });
-    await expect(page.locator("[aria-busy]")).toHaveCount(0);
-    await page.getByRole("button", { name: "Run both" }).click();
-    await expect(page.locator("[aria-busy]")).toHaveCount(0, { timeout: 30_000 });
-    await page.screenshot({ path: `${directory}/${name}.png`, fullPage: true });
-  });
+for (const state of states) {
+  for (const width of [390, 768, 1440]) {
+    for (const colorScheme of ["light", "dark"] as const) {
+      test(`sim-${state.name} at ${width} px, ${colorScheme}`, async ({ page }) => {
+        test.setTimeout(60_000);
+        await page.setViewportSize({ width, height: 900 });
+        await page.emulateMedia({ colorScheme, reducedMotion: "reduce" });
+        const firstVisit = state.firstVisit ?? false;
+        await open(page, state.source === undefined ? "sim/" : linkTo(state.source), firstVisit);
+        if (state.example && state.example !== "Noisy product") {
+          await page.getByRole("button", { name: /^Example: / }).click();
+          await page
+            .getByRole("dialog")
+            .getByRole("link", { name: state.example, exact: true })
+            .click();
+          await expect(page.locator("#example-title")).toHaveText(state.example);
+        }
+        await expect(page.locator("[aria-busy]")).toHaveCount(0, { timeout: 30_000 });
+        if (state.run) {
+          await page.getByRole("button", { name: "Run both", exact: true }).click();
+          await expect(page.locator("[aria-busy]")).toHaveCount(0, { timeout: 30_000 });
+        }
+        for (let i = 0; i < (state.steps ?? 0); i++) {
+          await page.getByRole("button", { name: "Step", exact: true }).click();
+        }
+        await state.finally?.(page);
+        // No hover marks in the picture; the distributions band redraws in the next frame.
+        await page.mouse.move(0, 0);
+        await page.evaluate(() => new Promise((done) => requestAnimationFrame(() => done(null))));
+        await page.screenshot({
+          path: `${directory}/sim-${state.name}-${width}-${colorScheme}.png`,
+          fullPage: true,
+        });
+      });
+    }
+  }
 }
