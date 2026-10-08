@@ -361,7 +361,7 @@ and the PRNG are not covered by the measure-theoretic soundness proof.
 
 Primitive domains follow the formalization: reversed uniform bounds fail instead of
 being swapped; zero-variance Gaussians and point uniforms are allowed; division by
-zero yields zero. Nonfinite arithmetic and sampling results fail explicitly. Gamma
+zero fails. Nonfinite arithmetic and sampling results fail explicitly. Gamma
 rejection and Poisson iterations are bounded, and Poisson rates above 1,000,000 are
 rejected by this numerical runtime. Failed and exhausted runs are reported.
 
