@@ -703,6 +703,23 @@
     text-underline-offset: 0.2em;
   }
 
+  /* The states' syntax colours, as in the editors; notes and draws keep their own colours. */
+  .state .tok-keyword {
+    color: var(--syntax-keyword);
+  }
+
+  .state :is(.tok-dist, .tok-builtin) {
+    color: var(--syntax-name);
+  }
+
+  .state .tok-number {
+    color: var(--syntax-number);
+  }
+
+  .state .tok-op {
+    color: var(--muted);
+  }
+
   .page-note {
     margin-top: var(--space-3);
     color: var(--muted);

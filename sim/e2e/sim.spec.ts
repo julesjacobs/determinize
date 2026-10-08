@@ -894,6 +894,81 @@ test("the symbolic state shows on request, and the page remembers the choice", a
   await expect(page.locator(".cell-sym").first()).toBeVisible();
 });
 
+/** The linear channels of a CSS `rgb()` colour. */
+function linear(css: string) {
+  return (css.match(/[\d.]+/g) ?? []).slice(0, 3).map((channel) => {
+    const value = Number(channel) / 255;
+    return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  });
+}
+
+/** The contrast of two CSS `rgb()` colours, as WCAG computes it. */
+function contrast(one: string, other: string) {
+  const luminance = (css: string) => {
+    const [r, g, b] = linear(css);
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const [light, dark] = [luminance(one), luminance(other)].sort((x, y) => y - x);
+  return (light + 0.05) / (dark + 0.05);
+}
+
+/** The chroma of a CSS `rgb()` colour in OKLCH: how colourful it is. */
+function chroma(css: string) {
+  const [r, g, b] = linear(css);
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+  const a = 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s;
+  const bb = 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s;
+  return Math.hypot(a, bb);
+}
+
+for (const colorScheme of ["light", "dark"] as const) {
+  test(`code has syntax colours, quieter than the modes, in ${colorScheme}`, async ({ page }) => {
+    await page.emulateMedia({ colorScheme });
+    await page.goto(simulator);
+    await passed(page);
+    const colours = await page.evaluate(() => {
+      const colour = (element: Element | undefined | null) =>
+        element ? getComputedStyle(element).color : "";
+      const token = (root: string, text: string) =>
+        [...document.querySelectorAll(`${root} .cm-line span`)].find(
+          (span) => span.textContent === text,
+        );
+      return {
+        syntax: [
+          colour(token("#editor", "let")),
+          colour(token("#editor", "uniform")),
+          colour(token("#editor", "0")),
+          colour(token("#determinized-editor", "let")),
+          colour(document.querySelector(".state .tok-keyword")),
+          colour(document.querySelector(".state .tok-dist")),
+          colour(document.querySelector(".state .tok-number")),
+        ],
+        modes: [
+          colour(document.querySelector("#editor .cm-mode-e")),
+          colour(document.querySelector("#editor .cm-mode-g")),
+          colour(document.querySelector(".tok-mode-e")),
+          colour(document.querySelector(".tok-mode-g")),
+          colour(document.querySelector("#determinized-editor .cm-mean")),
+        ],
+        ink: getComputedStyle(document.body).color,
+        ground: getComputedStyle(document.body).backgroundColor,
+      };
+    });
+    for (const value of [...colours.syntax, ...colours.modes]) expect(value).not.toBe("");
+    // Names stand out less than the G marks, at 4.5:1 at least.
+    const name = contrast(colours.syntax[1], colours.ground);
+    expect(name).toBeLessThan(contrast(colours.modes[1], colours.ground));
+    expect(name).toBeGreaterThanOrEqual(4.5);
+    // Keywords, names and numbers each have a colour of their own.
+    expect(new Set(colours.syntax.slice(0, 3)).size).toBe(3);
+    expect(colours.syntax).not.toContain(colours.ink);
+    const quietest = Math.min(...colours.modes.map(chroma));
+    for (const value of colours.syntax) expect(chroma(value)).toBeLessThan(0.7 * quietest);
+  });
+}
+
 test("inferred modes show as hints, and hovers give each site's reason", async ({ page }) => {
   await page.goto(simulator);
   const hints = page.locator(".cm-mode-hint");
