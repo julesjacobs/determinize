@@ -113,6 +113,9 @@ export interface CoupledTrace {
   finalOriginal: Expr | undefined;
   finalDeterminized: Expr | undefined;
   ok: boolean;
+  /** Why the frames end before the run: its symbolic steps reached their limit, or its states
+   * their total size. Null when the run ended or a check failed. */
+  stopped: "steps" | "size" | null;
 }
 
 type TerminalEffect = { kind: "Reject" } | { kind: "DomainError"; message: string };
@@ -439,11 +442,30 @@ export function checkEquivalences(source: string, seed = 1) {
   };
 }
 
+/** The size of an expression: its nodes and the terms of its affine forms, which each step goes
+ * through. */
+function stateSize(expr: Expr): number {
+  let count = expr.kind === "SymFloat" ? 1 + Object.keys(expr.affine.terms).length : 1;
+  for (const value of Object.values(expr)) {
+    for (const child of Array.isArray(value) ? value : [value]) {
+      if (child && typeof child === "object" && "kind" in child) count += stateSize(child as Expr);
+    }
+  }
+  return count;
+}
+
+/**
+ * The frames of a run of `source` at `seed`, at most `maxSymbolicSteps` steps of the symbolic
+ * machine, each followed by at most `maxSyncSteps` steps of either program. Each frame recomputes
+ * the whole state, so the frames also stop once the sizes of the symbolic states add up to more
+ * than `maxShownSize`; the final values are then left out, as computing them costs as much.
+ */
 export function runCoupledTrace(
   source: string,
   seed = 1,
   maxSymbolicSteps = 1000,
   maxSyncSteps = 200,
+  maxShownSize = Infinity,
 ): CoupledTrace {
   const prepared = prepareRuntime(source);
   const streams = makeStreams(seed);
@@ -467,8 +489,19 @@ export function runCoupledTrace(
   const frames: Frame[] = [];
   const draws = newReplay(streams.rngE);
   const means: Means = { count: 0, env: new Map(), error: null };
+  let shownSize = 0;
+  let stopped: CoupledTrace["stopped"] = null;
 
-  for (let stepIndex = 0; stepIndex <= maxSymbolicSteps; stepIndex++) {
+  for (let stepIndex = 0; ; stepIndex++) {
+    if (stepIndex > maxSymbolicSteps) {
+      stopped = "steps";
+      break;
+    }
+    shownSize += stateSize(symbolic.expr);
+    if (shownSize > maxShownSize) {
+      stopped = "size";
+      break;
+    }
     const originalProjection = safe(() => projectSampleWithEnv(symbolic, streams.rngE, draws));
     const determinizedProjection = safe(() => projectMeanDeterminized(symbolic, means));
     const originalTarget = originalProjection.value?.expr;
@@ -529,14 +562,20 @@ export function runCoupledTrace(
   // A failed check ends the frames before the end of the run; the run then goes on by itself.
   const last = frames.at(-1);
   const final = (state: Expr | undefined, program: Expr) =>
-    state && isValue(state) ? state : finalValue(program, streams, maxSymbolicSteps);
+    state && isValue(state)
+      ? state
+      : stopped === "size"
+        ? undefined
+        : finalValue(program, streams, maxSymbolicSteps);
+  const ok = frames.every(frameChecksOk);
   return {
     seed,
     frames,
     counterexample: prepared.counterexample,
     finalOriginal: final(last?.original, prepared.expr),
     finalDeterminized: final(last?.determinized, prepared.determinized),
-    ok: frames.every(frameChecksOk),
+    ok,
+    stopped,
   };
 }
 

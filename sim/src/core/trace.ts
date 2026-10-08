@@ -12,6 +12,14 @@ import type { RunOutcome } from "./statistics.ts";
  * examples/loops/ ends within it at seeds 1-20; the random walk takes up to 12994 steps there.
  */
 export const maxSymbolicSteps = 20000;
+/**
+ * The page computes the step table itself, and each step costs as much as its state is large, so
+ * a run also stops once its states' sizes (nodes and affine terms) add up to `maxShownSize`; a deep
+ * recursion or a long sum of draws would otherwise hold the page for seconds and exhaust its
+ * memory. At seeds 1-20, the random walk's states add up to 534883, the most of examples/, and the
+ * Irwin-Hall sum's to 255191.
+ */
+export const maxShownSize = 800000;
 /** The steps of either program towards each symbolic step; every program of the corpus needs at
  * most one. */
 export const maxSyncSteps = 200;
@@ -21,13 +29,7 @@ export const maxSyncSteps = 200;
  * another reason than a mode conflict.
  */
 export function runCoupling(source: string, seed: number): CoupledTrace {
-  return runCoupledTrace(source, seed, maxSymbolicSteps, maxSyncSteps);
-}
-
-/** Whether the run stopped at `maxSymbolicSteps` before the program ended. */
-export function stoppedAtLimit(trace: CoupledTrace) {
-  const last = trace.frames.at(-1);
-  return trace.ok && last !== undefined && !isValue(last.symbolic);
+  return runCoupledTrace(source, seed, maxSymbolicSteps, maxSyncSteps, maxShownSize);
 }
 
 /** Whether every check of a frame passed. */

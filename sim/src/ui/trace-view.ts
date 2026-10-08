@@ -15,7 +15,6 @@ import {
   hasDomainError,
   maxSymbolicSteps,
   sigmaMeans,
-  stoppedAtLimit,
 } from "../core/trace.ts";
 import { counterexampleLabel, escapeHtml } from "./html.ts";
 import type { Store } from "./store.ts";
@@ -237,8 +236,11 @@ function renderCoupling(elements: TraceViewElements, coupled: CoupledTrace, page
   } else if (coupled.frames.at(-1)?.domainFailure) {
     elements.status.textContent = `seed ${coupled.seed} - domain failure`;
     elements.status.className = "status warning";
-  } else if (stoppedAtLimit(coupled)) {
+  } else if (coupled.stopped === "steps") {
     elements.status.textContent = `seed ${coupled.seed} - stopped after ${maxSymbolicSteps} steps`;
+    elements.status.className = "status warning";
+  } else if (coupled.stopped === "size") {
+    elements.status.textContent = `seed ${coupled.seed} - stopped after ${coupled.frames.length - 1} steps: the table grew too large to show`;
     elements.status.className = "status warning";
   } else {
     elements.status.textContent = `seed ${coupled.seed} - ${coupled.ok ? (terminalDomainError ? "checked domain error" : "checked") : "failed"}`;
