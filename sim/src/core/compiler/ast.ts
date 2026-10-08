@@ -42,8 +42,10 @@ export interface Choice<C> {
 export type Expr = Span &
   (
     | { kind: "Var"; name: string }
-    /** `exact` is the value of a number literal. */
-    | { kind: "Const"; value: number; exact?: Rational }
+    /** `exact` is the value of a number literal. `error` bounds, to first order, how far a number
+     * that the step table's machines computed is from exact arithmetic on the same literals and
+     * draws; a missing bound is 0. */
+    | { kind: "Const"; value: number; exact?: Rational; error?: number }
     | { kind: "Bool"; value: boolean }
     | { kind: "Unit" | "Nil" }
     | { kind: "Reject" }

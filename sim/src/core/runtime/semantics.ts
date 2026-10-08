@@ -13,8 +13,11 @@ import {
   affineSub,
   affineToNumber,
   affineVar,
+  constantError,
   evalAffine,
+  evalAffineWithError,
   isConcreteAffine,
+  operationError,
   prettyAffine,
   symFloat,
   valueToAffine,
@@ -22,8 +25,9 @@ import {
 import type { DistributionDomainError } from "./distributions.ts";
 import {
   distributionName,
+  drawError,
   floatDistributions,
-  instantiateArgs,
+  hasDrawError,
   isDistributionDomainError,
   meanDistribution,
   sampleDistribution,
@@ -356,20 +360,36 @@ export function projectSample(symbolicState: SymbolicState, rngE: Rng): Expr {
 }
 
 /**
- * The draws of σ's bindings from the E stream, in σ's order. σ only grows during a run, so a
- * replay extends the draws of its previous call; `sampleBySymbol` is a new object only when
- * a draw was added.
+ * The draws of σ's bindings from the E stream, in σ's order, with the bounds on their errors.
+ * σ only grows during a run, so a replay extends the draws of its previous call;
+ * `sampleBySymbol` is a new object only when a draw was added.
  */
 interface Replay {
   count: number;
   env: Map<string, number>;
+  errors: Map<string, number>;
   rng: Rng;
   sampleBySymbol: Record<string, number>;
   error: DistributionDomainError | null;
 }
 
 function newReplay(rngE: Rng): Replay {
-  return { count: 0, env: new Map(), rng: rngE.clone(), sampleBySymbol: {}, error: null };
+  return {
+    count: 0,
+    env: new Map(),
+    errors: new Map(),
+    rng: rngE.clone(),
+    sampleBySymbol: {},
+    error: null,
+  };
+}
+
+/** The parameters of a binding at the values in `env`, each with the bound on its error. */
+function bindingArgs(binding: Binding, env: Map<string, number>, errors: Map<string, number>) {
+  return binding.args.map((arg) => {
+    const { value, error } = evalAffineWithError(arg, env, errors);
+    return affineConst(value, error);
+  });
 }
 
 function replay(state: Replay, sigma: Binding[]): Replay {
@@ -377,10 +397,12 @@ function replay(state: Replay, sigma: Binding[]): Replay {
   const sampleBySymbol = { ...state.sampleBySymbol };
   for (const binding of sigma.slice(state.count)) {
     state.count += 1;
-    const args = instantiateArgs(binding.args, state.env);
+    const args = bindingArgs(binding, state.env, state.errors);
     try {
+      const before = hasDrawError(binding.kind, args) ? state.rng.clone() : null;
       const value = sampleDistribution(binding.kind, args, state.rng);
       state.env.set(binding.name, value);
+      if (before) state.errors.set(binding.name, drawError(binding.kind, args, before, value));
       sampleBySymbol[binding.name] = value;
     } catch (error) {
       if (!isDistributionDomainError(error)) throw error;
@@ -394,8 +416,11 @@ function replay(state: Replay, sigma: Binding[]): Replay {
 
 function projectSampleWithEnv(symbolicState: SymbolicState, rngE: Rng, cache = newReplay(rngE)) {
   const { env, sampleBySymbol, error } = replay(cache, symbolicState.sigma);
+  const { errors } = cache;
   return {
-    expr: error ? domainErrorExpr(error, symbolicState.expr) : concretize(symbolicState.expr, env),
+    expr: error
+      ? domainErrorExpr(error, symbolicState.expr)
+      : concretize(symbolicState.expr, env, errors),
     sampleBySymbol,
   };
 }
@@ -411,16 +436,16 @@ export function projectMean(symbolicState: SymbolicState): Expr {
       return domainErrorExpr(error, symbolicState.expr);
     }
   }
-  return concretize(symbolicState.expr, env);
+  return concretize(symbolicState.expr, env, new Map());
 }
 
 export function projectMeanDeterminized(
   symbolicState: SymbolicState,
-  means: Means = { count: 0, env: new Map(), error: null },
+  means: Means = newMeans(),
 ): Expr {
-  const { env, error } = sequentialMeans(means, symbolicState.sigma);
+  const { env, errors, error } = sequentialMeans(means, symbolicState.sigma);
   if (error) return domainErrorExpr(error, symbolicState.expr);
-  return determinizeResidual(concretize(symbolicState.expr, env));
+  return determinizeResidual(concretize(symbolicState.expr, env, errors));
 }
 
 export function checkEquivalences(source: string, seed = 1) {
@@ -488,7 +513,7 @@ export function runCoupledTrace(
   };
   const frames: Frame[] = [];
   const draws = newReplay(streams.rngE);
-  const means: Means = { count: 0, env: new Map(), error: null };
+  const means = newMeans();
   let shownSize = 0;
   let stopped: CoupledTrace["stopped"] = null;
 
@@ -832,9 +857,12 @@ function stepDistribution(expr: ExprOf<ParamDistributionKind>, ctx: Context): St
     );
   }
   try {
+    const before = hasDrawError(expr.kind, expr.args) ? rng.clone() : null;
     const value = sampleDistribution(expr.kind, expr.args, rng);
     return out(
-      typeof value === "boolean" ? n("Bool", { value }, expr) : n("Const", { value }, expr),
+      typeof value === "boolean"
+        ? n("Bool", { value }, expr)
+        : number(value, before ? drawError(expr.kind, expr.args, before, value) : 0, expr),
       { ...ctx, [streamName]: rng },
     );
   } catch (error) {
@@ -948,21 +976,28 @@ function advanceToTarget(state: OrdinaryState, target: Expr, maxSteps: number): 
   };
 }
 
-/** The means of σ's bindings in σ's order, each over the means before it; like `Replay`, a call
- * extends the means of the previous one. */
+/** The means of σ's bindings in σ's order, each over the means before it, with the bounds on
+ * their errors; like `Replay`, a call extends the means of the previous one. */
 interface Means {
   count: number;
   env: Map<string, number>;
+  errors: Map<string, number>;
   error: DistributionDomainError | null;
+}
+
+function newMeans(): Means {
+  return { count: 0, env: new Map(), errors: new Map(), error: null };
 }
 
 function sequentialMeans(state: Means, sigma: Binding[]): Means {
   for (const binding of sigma.slice(state.count)) {
     if (state.error) break;
     state.count += 1;
-    const args = binding.args.map((arg) => affineConst(evalAffine(arg, state.env)));
+    const args = bindingArgs(binding, state.env, state.errors);
     try {
-      state.env.set(binding.name, affineToNumber(meanDistribution(binding.kind, args)));
+      const mean = meanDistribution(binding.kind, args);
+      state.env.set(binding.name, affineToNumber(mean));
+      if (constantError(mean) > 0) state.errors.set(binding.name, constantError(mean));
     } catch (error) {
       if (!isDistributionDomainError(error)) throw error;
       state.error = error;
@@ -1030,7 +1065,8 @@ function arithmetic(kind: "Add" | "Sub" | "Mul" | "Div", left: Expr, right: Expr
     const y = b.constant;
     const value = kind === "Add" ? x + y : kind === "Sub" ? x + -y : kind === "Mul" ? x * y : x / y;
     if (!Number.isFinite(value)) return failure("nonfinite arithmetic result", source);
-    return n("Const", { value }, source);
+    const error = operationError(kind, x, constantError(a), y, constantError(b), value);
+    return number(value, error, source);
   }
   const result =
     kind === "Add"
@@ -1054,8 +1090,15 @@ function failure(message: string, source: Span): Expr {
 }
 
 function floatResult(affine: Affine, source: Span): Expr {
-  if (Object.keys(affine.terms).length === 0) return n("Const", { value: affine.constant }, source);
+  if (Object.keys(affine.terms).length === 0) {
+    return number(affine.constant, constantError(affine), source);
+  }
   return symFloat(affine, source.from, source.to);
+}
+
+/** A number the machines computed, with the bound on its error where that isn't 0. */
+function number(value: number, error: number, source: Span): Expr {
+  return n("Const", error > 0 ? { value, error } : { value }, source);
 }
 
 function stepChild<K extends string>(expr: Expr & Record<K, Expr>, key: K, ctx: Context) {
@@ -1257,9 +1300,14 @@ function mapChildren(expr: Expr, f: (child: Expr) => Expr): Expr {
   }
 }
 
-function concretize(expr: Expr, env: Map<string, number>): Expr {
-  if (expr.kind === "SymFloat") return n("Const", { value: evalAffine(expr.affine, env) }, expr);
-  return mapShared(expr, (child) => concretize(child, env));
+/** `expr` with each symbolic number at the values of its symbols in `env`, whose errors `errors`
+ * bounds, and with the bound on its own error. */
+function concretize(expr: Expr, env: Map<string, number>, errors: Map<string, number>): Expr {
+  if (expr.kind === "SymFloat") {
+    const { value, error } = evalAffineWithError(expr.affine, env, errors);
+    return number(value, error, expr);
+  }
+  return mapShared(expr, (child) => concretize(child, env, errors));
 }
 
 export function isValue(expr: Expr): boolean {
@@ -1285,18 +1333,24 @@ function numberValue(expr: Expr) {
 }
 
 /**
- * Whether two expressions are equal up to `eps` in each number they compute. The symbolic
+ * Whether two expressions are equal up to rounding in each number they compute. The symbolic
  * machine sums an affine form's constant first and divides through its coefficients, so a number
- * it projects may differ from the ordinary machine's in the last bits wherever it occurs, also
- * inside an expression that is not yet a value. Everything else must be equal.
+ * it projects may differ from the ordinary machine's wherever it occurs, also inside an
+ * expression that is not yet a value. Two numbers are equal within `eps`, or within the sum of
+ * the bounds on their errors (`error`), which grow with the sizes of the numbers they were
+ * computed from. Everything else must be equal.
  */
 export function exprEqual(a: Expr, b: Expr, eps = 1e-9): boolean {
   if (a === b) return true;
   if (a.kind !== b.kind) return false;
   switch (a.kind) {
-    case "Const":
+    case "Const": {
+      const other = b as typeof a;
       // Equal infinities, which nonfinite literals hold, are equal too.
-      return a.value === (b as typeof a).value || Math.abs(a.value - (b as typeof a).value) <= eps;
+      if (a.value === other.value) return true;
+      const bound = Math.max(eps, (a.error ?? 0) + (other.error ?? 0));
+      return Math.abs(a.value - other.value) <= bound;
+    }
     case "SymFloat":
       return prettyAffine(a.affine) === prettyAffine((b as typeof a).affine);
     default:
