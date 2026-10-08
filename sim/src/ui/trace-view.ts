@@ -136,6 +136,7 @@ export function mountTraceView(
     markCurrent();
     // A new page, of this run or a new one, brings the current row into view.
     follow(true);
+    markMore();
   });
 
   // The controls follow the current step; the page that holds it is fetched when needed.
@@ -207,6 +208,7 @@ export function mountTraceView(
     elements.table
       .querySelector<HTMLElement>(`.step[data-step="${step}"]`)
       ?.setAttribute("aria-current", "step");
+    markMore();
   }
 
   /**
@@ -286,6 +288,18 @@ export function mountTraceView(
   new ResizeObserver(() => {
     elements.band.style.setProperty("--transport-height", `${elements.transport.offsetHeight}px`);
   }).observe(elements.transport);
+  // The rule below the region follows its scrolling and its size.
+  new ResizeObserver(markMore).observe(elements.table);
+  elements.table.addEventListener("scroll", markMore, { passive: true });
+
+  /** Marks the region while more rows follow below its view. */
+  function markMore() {
+    const region = elements.table;
+    region.classList.toggle(
+      "more-below",
+      region.scrollTop + region.clientHeight < region.scrollHeight - 1,
+    );
+  }
 
   elements.first.addEventListener("click", () => moveTo(0));
   elements.back.addEventListener("click", () => moveTo(store.currentStep.peek() - 1));

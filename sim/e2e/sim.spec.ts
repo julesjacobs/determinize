@@ -431,6 +431,31 @@ test("a long run shows its steps a page at a time, and the controls reach every 
   await expect(page.locator('.step[aria-current="step"]')).toHaveAttribute("data-step", "1606");
 });
 
+test("the region holds the flagship's run whole, and a rule shows while rows follow below", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(simulator);
+  await expect(page.locator('.step[data-step="5"]')).toBeAttached();
+  const region = page.locator("#step-table");
+  expect(await region.evaluate((element) => element.scrollHeight <= element.clientHeight)).toBe(
+    true,
+  );
+  await expect(region).not.toHaveClass(/\bmore-below\b/);
+  await pick(page, "Dungeon crawl");
+  await expect(page.locator('.step[data-step="0"] .cell-source')).toContainText("crawl");
+  await expect(region).toHaveClass(/\bmore-below\b/);
+  // Rows render as they come into view, so the bottom is where scrolling stops.
+  await expect
+    .poll(() =>
+      region.evaluate((element) => {
+        element.scrollTo({ top: element.scrollHeight, behavior: "instant" });
+        return element.classList.contains("more-below");
+      }),
+    )
+    .toBe(false);
+});
+
 test("stepping, playing across pages and scrubbing move neither the bar nor the page", async ({
   page,
 }) => {
@@ -511,32 +536,44 @@ test("stepping, playing across pages and scrubbing move neither the bar nor the 
   await expect(page.locator("#step-of")).toHaveText(/^Step 0 of /);
   await expect.poll(async () => (await where()).rowInRegion).toBe(true);
   expect((await where()).scrollY).toBe(before.scrollY);
-  // However long the program and its run, the steps and the distributions stay where they are on
-  // the page: a 3-line program, the gallery's longest example and a recursion 2000 deep.
+  // The editors keep their height, so the steps start at the same place for every program; the
+  // step region takes a short run's height and stops at its cap for a long one, so the
+  // distributions start higher after a short run and never further down than the cap allows. The
+  // programs: a run of one step, a 3-line program, the gallery's longest example and a recursion
+  // 2000 deep; the last two have long runs.
   const example = (path: string) =>
     readFileSync(new URL(`../../examples/${path}.det`, import.meta.url), "utf8");
   const longest = example("paper/gauss-random-walk");
   const programs = [
+    "uniform(0, 1)",
     example("paper/noisy-product"),
     longest,
     "let u = uniform(0, 1) in (rec f n => if n < 1 then u else 1 + f (n - 1)) 2000",
   ];
-  const bandTops = () =>
-    page.evaluate(() =>
-      ["#steps", "#distributions"].map((band) =>
+  const layout = () =>
+    page.evaluate(() => {
+      const top = (selector: string) =>
         Math.round(
-          (document.querySelector(band) as Element).getBoundingClientRect().top + window.scrollY,
-        ),
-      ),
-    );
+          (document.querySelector(selector) as Element).getBoundingClientRect().top +
+            window.scrollY,
+        );
+      const rem = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+      const bar = (document.querySelector("#transport") as HTMLElement).offsetHeight;
+      return {
+        steps: top("#steps"),
+        distributions: top("#distributions"),
+        region: (document.querySelector("#step-table") as HTMLElement).offsetHeight,
+        cap: Math.max(12 * rem, Math.min(40 * rem, window.innerHeight - bar - 3 * rem)),
+      };
+    });
   for (const width of [390, 1440]) {
     await page.setViewportSize({ width, height: 844 });
-    const tops: number[][] = [];
+    const shown: Awaited<ReturnType<typeof layout>>[] = [];
     for (const program of programs) {
       await page.goto(linkTo(program, 1));
       await expect(page.locator("[aria-busy=true]")).toHaveCount(0, { timeout: 30_000 });
       await expect(status(page)).toHaveText(/^Seed 1: /);
-      tops.push(await bandTops());
+      shown.push(await layout());
       if (program !== longest) continue;
       // Stepping with the arrow keys scrolls the source editor to the lines the steps reduce,
       // never the page.
@@ -559,13 +596,20 @@ test("stepping, playing across pages and scrubbing move neither the bar nor the 
     }
     test
       .info()
-      .annotations.push({ type: `band tops at ${width} px`, description: JSON.stringify(tops) });
-    for (const [steps, distributions] of tops.slice(1)) {
-      expect(Math.abs(steps - tops[0][0]), `steps at ${width} px`).toBeLessThanOrEqual(4);
+      .annotations.push({ type: `layout at ${width} px`, description: JSON.stringify(shown) });
+    const short = shown[0];
+    const long = shown.slice(2);
+    for (const run of shown) {
+      expect(Math.abs(run.steps - short.steps), `steps at ${width} px`).toBeLessThanOrEqual(4);
+      expect(run.region, `the region at ${width} px`).toBeLessThanOrEqual(run.cap + 1);
+    }
+    for (const run of long) {
       expect(
-        Math.abs(distributions - tops[0][1]),
-        `distributions at ${width} px`,
-      ).toBeLessThanOrEqual(4);
+        Math.abs(run.region - run.cap),
+        `a long run's region at ${width} px`,
+      ).toBeLessThanOrEqual(1);
+      expect(short.region, `a short run's region at ${width} px`).toBeLessThan(run.region);
+      expect(short.distributions, `distributions at ${width} px`).toBeLessThan(run.distributions);
     }
   }
 });
