@@ -1,10 +1,11 @@
 // Builds the simulator into dist/: the minified bundles app.js and worker.js with their source
-// maps, and copies of index.html and styles.css. With --no-minify, the bundles are readable and
-// have no source maps. dist/index.html refers to each asset, and app.js to the worker, with ?v=
-// and the first 10 hex digits of the file's SHA-256, so a browser never combines a cached copy
-// with a newer one.
+// maps, styles.css with the site's tokens and the fonts they load (fonts/, with their licences),
+// and a copy of index.html. With --no-minify, the bundles are readable and have no source maps.
+// dist/index.html refers to each asset, and app.js to the worker, with ?v= and the first 10 hex
+// digits of the file's SHA-256, so a browser never combines a cached copy with a newer one; the
+// fonts' names carry their hash.
 import { createHash } from "node:crypto";
-import { copyFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { parseArgs } from "node:util";
 import type { BuildOptions } from "esbuild";
 import { build } from "esbuild";
@@ -46,7 +47,18 @@ await build({
   outfile: `${outdir}/app.js`,
   define: { WORKER_URL: JSON.stringify(await stamp("worker.js")) },
 });
-await copyFile("styles.css", `${outdir}/styles.css`);
+// styles.css imports the site's tokens, which load the fonts in ../site/fonts/.
+await build({
+  ...bundle,
+  entryPoints: ["styles.css"],
+  outfile: `${outdir}/styles.css`,
+  loader: { ".woff2": "file" },
+  assetNames: "fonts/[name]-[hash]",
+});
+const fonts = "../site/fonts";
+for (const licence of (await readdir(fonts)).filter((file) => file.endsWith(".txt"))) {
+  await copyFile(`${fonts}/${licence}`, `${outdir}/fonts/${licence}`);
+}
 
 let html = await readFile("index.html", "utf8");
 for (const file of ["app.js", "styles.css"]) {

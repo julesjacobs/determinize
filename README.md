@@ -161,6 +161,8 @@ the packages.
 The project page is `site/`: a landing page that works without JavaScript, `404.html`, and
 `site/assemble.sh`, which puts it together with the built simulator under `sim/`, the API
 documentation under `docs/` and the paper as `determinize.pdf`, as GitHub Pages serves them.
+`site/tokens.css` holds the colours, type and spacing of the landing page and the simulator,
+whose build bundles it with the fonts of `site/fonts/` into `sim/dist/`.
 `./check.sh site` runs in the `.#site` shell, which adds nixpkgs' headless Chromium and lychee
 to the simulator's shell and has no `.envrc`. It builds the simulator, assembles the site into
 `_preview/determinize`, and runs the Playwright tests in `sim/e2e/` (for the landing page axe,

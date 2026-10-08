@@ -61,14 +61,11 @@ export const detLanguage = StreamLanguage.define({
   },
 });
 
+// Keywords are SemiBold; code has no other syntax colour besides the modes and the means.
 export const detHighlighting = syntaxHighlighting(
   HighlightStyle.define([
-    { tag: t.keyword, color: "#8a3ffc", fontWeight: "700" },
-    { tag: t.number, color: "#b54708" },
-    { tag: t.comment, color: "#667085", fontStyle: "italic" },
-    { tag: t.operator, color: "#344054" },
-    { tag: t.atom, color: "#0f766e", fontWeight: "650" },
-    { tag: t.special(t.variableName), color: "#1d4ed8", fontWeight: "700" },
-    { tag: t.labelName, color: "#15803d", fontWeight: "800" },
+    { tag: t.keyword, fontWeight: "600" },
+    { tag: t.comment, color: "var(--muted)" },
+    { tag: t.labelName, fontWeight: "600" },
   ]),
 );
