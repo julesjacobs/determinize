@@ -132,10 +132,162 @@
     color: var(--muted);
   }
 
-  .example-picker {
-    display: inline-flex;
+  .example-title {
+    font-weight: var(--weight-strong);
+  }
+
+  .sim-tools {
+    display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: var(--space-2);
+    margin-left: auto;
+  }
+
+  .more-button {
+    display: none;
+  }
+
+  /* Below 600 px the tools sit behind More, beside the link to the project page. */
+  @media (max-width: 599px) {
+    .title-group {
+      flex: 1 1 100%;
+    }
+
+    .title-group h1 {
+      flex: 1 1 100%;
+    }
+
+    .more-button {
+      display: inline-block;
+      margin-left: auto;
+    }
+
+    .more-button::after {
+      content: " ▾" / "";
+    }
+
+    .sim-tools.collapsible:not(.open) {
+      display: none;
+    }
+
+    .sim-tools {
+      flex: 1 1 100%;
+      margin-left: 0;
+    }
+  }
+
+  .copy-status {
+    flex: 1 1 100%;
+    min-height: 0;
+    color: var(--muted);
+  }
+
+  /* Empty, the status leaves the layout but stays in the accessibility tree, so that the outcome
+     of Copy link is announced. */
+  .copy-status:empty {
+    position: absolute;
+  }
+
+  .gallery {
+    width: min(56rem, calc(100vw - 32px));
+    max-height: min(40rem, calc(100vh - 6rem));
+    margin: 0;
+    padding: var(--space-4);
+    overflow-y: auto;
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    background: var(--ground);
+    color: var(--ink);
+  }
+
+  .gallery:not(:modal) {
+    position: absolute;
+    z-index: 10;
+    top: 4.5rem;
+    left: max(16px, calc((100vw - 90rem) / 2 + 16px));
+  }
+
+  .gallery:modal {
+    margin: auto;
+  }
+
+  .gallery::backdrop {
+    background: color-mix(in oklab, var(--ink) 30%, transparent);
+  }
+
+  .gallery-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin-bottom: var(--space-2);
+  }
+
+  .gallery-title {
+    font-size: var(--size-ui);
+    font-weight: var(--weight-heading);
+  }
+
+  .gallery ol {
+    margin: 0;
+    padding-left: 1.6em;
+    columns: 2 22rem;
+    column-gap: var(--space-7);
+  }
+
+  .gallery li {
+    padding: var(--space-2) 0;
+    break-inside: avoid;
+  }
+
+  .g-origin,
+  .g-note {
+    color: var(--muted);
+  }
+
+  .g-note {
+    margin-top: var(--space-2);
+  }
+
+  .glossary {
+    max-width: 90rem;
+    margin: 0 auto var(--space-4);
+    padding: var(--space-3) 16px;
+    border-block: 1px solid var(--rule);
+  }
+
+  .glossary dl {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+    gap: var(--space-3) var(--space-6);
+  }
+
+  .glossary dt {
+    font-weight: var(--weight-strong);
+  }
+
+  .noscript {
+    max-width: 90rem;
+    margin: 0 auto;
+    padding: var(--space-4) 16px;
+  }
+
+  .intro {
+    display: flex;
+    gap: var(--space-4);
+    align-items: flex-start;
+    max-width: 62rem;
+    padding-block: var(--space-3);
+    font-size: var(--size-body);
+    line-height: var(--leading-body);
+  }
+
+  button.quiet {
+    flex: none;
+    background: none;
+    color: var(--muted);
+    text-decoration: underline;
   }
 
   main.sim {
@@ -984,8 +1136,47 @@
     cursor: pointer;
   }
 
+  .predict fieldset {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-4);
+    margin: 0 0 var(--space-3);
+    padding: 0;
+    border: 0;
+  }
+
+  .predict p {
+    margin-bottom: var(--space-3);
+  }
+
+  .predict legend {
+    width: 100%;
+    margin-bottom: var(--space-1);
+    padding: 0;
+  }
+
+  .predict label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 1.5rem;
+  }
+
+  .prediction {
+    color: var(--muted);
+  }
+
   table.bins {
     max-width: 32rem;
     margin-top: var(--space-3);
+  }
+
+  .gallery li a {
+    font-weight: var(--weight-strong);
+  }
+
+  .gallery li[aria-current] a {
+    color: var(--change);
+    text-decoration: none;
   }
 }

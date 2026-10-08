@@ -7,8 +7,12 @@ import type { Decoded } from "./core/share.ts";
 import { decodeShare } from "./core/share.ts";
 import { mountDistributionView } from "./ui/distribution-view.ts";
 import { createEditor, replaceDoc } from "./ui/editor.ts";
+import { mountGallery } from "./ui/gallery.ts";
+import { mountHeader } from "./ui/header.ts";
+import { mountIntro } from "./ui/intro.ts";
 import { mountLeanView } from "./ui/lean-view.ts";
 import { printedRange, revealLines, setLinked } from "./ui/linking.ts";
+import { mountPredict } from "./ui/predict.ts";
 import { readPref } from "./ui/prefs.ts";
 import { mountProgramView } from "./ui/program-view.ts";
 import { createSampling } from "./ui/sampling.ts";
@@ -16,21 +20,12 @@ import type { Store } from "./ui/store.ts";
 import { createStore } from "./ui/store.ts";
 import { createTraceClient } from "./ui/trace-client.ts";
 import { mountTraceView } from "./ui/trace-view.ts";
-import { bindUrl } from "./ui/url.ts";
+import { bindUrl, sharedSource } from "./ui/url.ts";
 
 const editorHost = document.querySelector("#editor") as HTMLElement;
-const exampleSelect = document.querySelector("#example-select") as HTMLSelectElement;
 const notices = document.querySelector("#notices") as HTMLElement;
 const seedInput = document.querySelector("#seed") as HTMLInputElement;
 const newSeedButton = document.querySelector("#new-seed") as HTMLButtonElement;
-
-for (const [index, example] of examples.entries()) {
-  const option = document.createElement("option");
-  option.value = String(index);
-  option.textContent = example.title;
-  option.title = example.explanation;
-  exampleSelect.append(option);
-}
 
 /** The page's store, once the page has opened; scripts and browser tests reach it as
  * `DeterminizeSim.ready`. */
@@ -47,7 +42,7 @@ function start(decoded: Decoded): Store {
   const traces = createTraceClient((response) => store.receiveTrace(response));
   const initial =
     decoded.kind === "state"
-      ? decoded.state
+      ? { ...decoded.state, source: sharedSource(decoded.state) }
       : { source: examples[0].source, seed: 1, example: examples[0].id };
   const store = createStore(
     {
@@ -113,7 +108,33 @@ function start(decoded: Decoded): Store {
       if (range || site) store.followLinked.value += 1;
     },
   );
-  mountDistributionView(document.querySelector("#distributions") as HTMLElement, store);
+  const predicting = mountPredict(
+    { form: $("#predict"), runs: $("#predict-runs"), line: $("#prediction") },
+    store,
+  );
+  mountDistributionView($("#distributions"), predicting, store);
+  mountGallery(
+    {
+      button: $("#example-button"),
+      title: $("#example-title"),
+      dialog: $("#gallery"),
+      list: $("#gallery-list"),
+      close: $("#gallery-close"),
+    },
+    store,
+  );
+  mountHeader(
+    {
+      more: $("#more-button"),
+      tools: $("#sim-tools"),
+      copy: $("#copy-link"),
+      copyStatus: $("#copy-status"),
+      glossaryButton: $("#glossary-button"),
+      glossary: $("#glossary"),
+    },
+    store,
+  );
+  mountIntro($("#intro"), $("#hide-intro"));
   const editor = createEditor(editorHost, store.source.peek(), {
     onChange: (doc) => {
       // Hovered positions are of the checked text, which the edit makes stale.
@@ -170,21 +191,6 @@ function start(decoded: Decoded): Store {
     store.runAt(randomSeed());
   });
 
-  exampleSelect.addEventListener("change", () => {
-    const example = examples[Number(exampleSelect.value)];
-    batch(() => {
-      store.exampleId.value = example.id;
-      replaceDoc(editor, example.source);
-      store.commitSource();
-    });
-  });
-
-  // A link may name an example that the gallery doesn't have; then none is selected.
-  effect(() => {
-    const index = examples.findIndex((example) => example.id === store.exampleId.value);
-    exampleSelect.selectedIndex = index;
-    exampleSelect.title = examples[index]?.explanation ?? "";
-  });
   bindUrl(store, (next) => restore(store, editor, next));
   if (decoded.kind === "error") {
     showNotice(store, `${decoded.message} The simulator opened its first example.`);
@@ -202,7 +208,7 @@ function restore(store: Store, editor: EditorView, decoded: Decoded) {
     store.exampleId.value = example;
     if (symbolic !== undefined) store.showSymbolic.value = symbolic;
     store.view.value = view ?? "outputs";
-    replaceDoc(editor, source);
+    replaceDoc(editor, sharedSource({ source, example }));
     store.runAt(seed);
   });
 }

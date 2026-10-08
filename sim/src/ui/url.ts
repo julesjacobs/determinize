@@ -1,7 +1,8 @@
 // The page's link to its state: the fragment follows the program, the seed, the example, whether
 // the symbolic state shows and the chart, and a fragment that the page navigates to is restored.
 import { effect } from "@preact/signals-core";
-import type { Decoded } from "../core/share.ts";
+import { examples } from "../core/examples.ts";
+import type { Decoded, SharedState } from "../core/share.ts";
 import { decodeShare, encodeShare } from "../core/share.ts";
 import type { Store } from "./store.ts";
 
@@ -41,4 +42,11 @@ export function bindUrl(
     written = window.location.hash;
     restore(await decodeShare(written));
   });
+}
+
+/** The state's program, or its example's text where they differ only in trailing whitespace, as
+ * in links whose program has a final line break. */
+export function sharedSource(state: Pick<SharedState, "source" | "example">) {
+  const example = examples.find((entry) => entry.id === state.example);
+  return example && example.source === state.source.trimEnd() ? example.source : state.source;
 }

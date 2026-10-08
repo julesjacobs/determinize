@@ -40,9 +40,14 @@ async function settled(page: Page, timeout?: number) {
   await expect(page.locator("[aria-busy=true]")).toHaveCount(0, { timeout });
 }
 
-/** Opens the example with the title `title`. */
+/** Opens the example with the title `title` from the gallery. */
 async function pick(page: Page, title: string) {
-  await page.locator("#example-select").selectOption({ label: title });
+  await page.getByRole("button", { name: /^Example: / }).click();
+  await page
+    .getByRole("dialog", { name: "Examples" })
+    .getByRole("link", { name: title, exact: true })
+    .click();
+  await expect(page.locator("#example-title")).toHaveText(title);
 }
 
 /** Sets how many runs of each program "Run both" brings the runs to, through the page's store. */
@@ -62,7 +67,7 @@ function runs(page: Page) {
 
 /** Clicks "Run both" and waits until its runs have arrived. */
 async function runBoth(page: Page, timeout?: number) {
-  await page.getByRole("button", { name: "Run both" }).click();
+  await page.getByRole("button", { name: "Run both", exact: true }).click();
   await settled(page, timeout);
 }
 
@@ -102,7 +107,7 @@ for (const [where, url, worker] of [
 test("runs every example", async ({ page }) => {
   await page.goto(simulator);
   await setRunCount(page, 20);
-  const titles = await page.locator("#example-select option").allTextContents();
+  const titles = await page.locator("#gallery-list a").allTextContents();
   expect(titles.length).toBeGreaterThan(0);
   for (const title of titles) {
     await pick(page, title);
@@ -119,7 +124,7 @@ test("runs every example", async ({ page }) => {
 test("a 200-run and a 5000-run batch leave no long task over 200 ms", async ({ page }) => {
   test.setTimeout(120_000);
   await page.goto(simulator);
-  await pick(page, "Dungeon");
+  await pick(page, "Dungeon crawl");
   await watchLongTasks(page);
   await setRunCount(page, 200);
   await runBoth(page);
@@ -152,7 +157,7 @@ test("a second Run during a batch adds its runs as well", async ({ page }) => {
   // the second click.
   await pick(page, "Gaussian random walk");
   await setRunCount(page, 100000);
-  await page.getByRole("button", { name: "Run both" }).click();
+  await page.getByRole("button", { name: "Run both", exact: true }).click();
   await expect(page.locator("#distributions[aria-busy=true]")).toHaveCount(1);
   const runningAtSecondClick = await page.evaluate(async () => {
     const running = (await window.DeterminizeSim.ready).running.value !== null;
@@ -169,7 +174,7 @@ test("editing during a run discards its stale batches", async ({ page }) => {
   await page.goto(simulator);
   await pick(page, "Gaussian random walk");
   await setRunCount(page, 100000);
-  await page.getByRole("button", { name: "Run both" }).click();
+  await page.getByRole("button", { name: "Run both", exact: true }).click();
   await expect.poll(() => runs(page)).toBeGreaterThan(1);
   await page.locator(".cm-content").first().click();
   await page.keyboard.press("Control+End");
@@ -184,7 +189,7 @@ test("editing during a run discards its stale batches", async ({ page }) => {
 test("a link restores the program, the seed and the example", async ({ page, context }) => {
   await page.goto(simulator);
   expect(new URL(page.url()).hash).toBe("");
-  await pick(page, "Dungeon");
+  await pick(page, "Dungeon crawl");
   await page.getByRole("button", { name: "New seed" }).click();
   await page.locator(".cm-content").first().click();
   await page.keyboard.press("Control+End");
@@ -207,7 +212,7 @@ test("a link restores the program, the seed and the example", async ({ page, con
 
   const opened = await context.newPage();
   await opened.goto(page.url());
-  await expect(opened.locator("#example-select option:checked")).toHaveText("Dungeon");
+  await expect(opened.locator("#example-title")).toHaveText("Your program");
   await expect(status(opened)).toHaveText(
     new RegExp(`^Seed ${state.seed}: .*every step check passed\\.$`),
   );
@@ -300,7 +305,7 @@ test("the runs' outcomes, the command that reports them and the run's G trace sh
 test("a program that Lean rejects has no runs and no command", async ({ page }) => {
   await page.goto(linkTo("let x =", 1));
   await expect(page.locator("#dist-empty")).toHaveText("Nothing to run: Lean rejects the program.");
-  await expect(page.getByRole("button", { name: "Run both" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Run both", exact: true })).toBeDisabled();
   await expect(page.locator("#honesty")).not.toContainText("--samples");
 });
 
@@ -617,7 +622,7 @@ test("a deep recursion stops where the step table grows too large, without a lon
     /^Seed 1: the table stops after \d+ steps; its states grew too large to show\.$/,
     { timeout: 20_000 },
   );
-  await expect(page.getByRole("button", { name: "Run both" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Run both", exact: true })).toBeEnabled();
   const longTasks = await page.evaluate(() => window.longTasks);
   test.info().annotations.push({ type: "long tasks (ms)", description: JSON.stringify(longTasks) });
   expect(Math.max(0, ...longTasks)).toBeLessThanOrEqual(200);
@@ -643,7 +648,7 @@ test("a link to an example the gallery doesn't have selects none", async ({ page
   await page.goto(`${simulator}#v1=${deflateRawSync(json).toString("base64url")}`);
   await expect(status(page)).toHaveText(/^Seed 7: /);
   await expect(status(page)).toHaveText(checked);
-  await expect(page.locator("#example-select option:checked")).toHaveCount(0);
+  await expect(page.locator("#example-title")).toHaveText("Your program");
   expect(await page.evaluate(async () => (await window.DeterminizeSim.ready).source.value)).toBe(
     shared.source,
   );
@@ -655,7 +660,7 @@ test("a link to more than 64 KiB opens the first example and says so", async ({ 
   await expect(page.getByRole("alert")).toHaveText(
     "This link's program is larger than 64 KiB. The simulator opened its first example.",
   );
-  await expect(page.locator("#example-select option:checked")).toHaveText("Noisy product");
+  await expect(page.locator("#example-title")).toHaveText("Noisy product");
   await expect(status(page)).toHaveText(/^Seed 1: /);
 });
 
@@ -685,7 +690,7 @@ test("a readable link clears an unreadable one's notice", async ({ page }) => {
 
 test("diagnostics follow the text", async ({ page }) => {
   await page.goto(simulator);
-  await pick(page, "Branching on an E draw");
+  await pick(page, "Bad E-branching");
   const marks = page.locator(".cm-lintRange-error, .cm-lintPoint");
   await expect(marks).toHaveCount(1);
   await expect(page.locator(".cm-lint-marker-error")).toHaveCount(1);
@@ -789,3 +794,87 @@ for (const colorScheme of ["light", "dark"] as const) {
     expect(results.violations).toEqual([]);
   });
 }
+
+test("the gallery lists the examples as links, a menu on wide screens and a dialog on narrow ones", async ({
+  page,
+}) => {
+  await page.goto(simulator);
+  const button = page.getByRole("button", { name: "Example: Noisy product" });
+  await button.click();
+  const gallery = page.getByRole("dialog", { name: "Examples" });
+  await expect(gallery).toBeVisible();
+  expect(await gallery.evaluate((dialog) => dialog.matches(":modal"))).toBe(false);
+  await expect(gallery.getByRole("listitem")).toHaveCount(10);
+  await expect(gallery.getByRole("listitem").first()).toContainText(
+    "Noisy product A signal and a noisy measurement of it; the measurement becomes its mean. From the paper.",
+  );
+  await expect(gallery.getByRole("link").first()).toHaveAttribute("href", /^#v1=/);
+  await page.keyboard.press("Escape");
+  await expect(gallery).toBeHidden();
+  await expect(button).toBeFocused();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await button.click();
+  expect(await gallery.evaluate((dialog) => dialog.matches(":modal"))).toBe(true);
+  await gallery.getByRole("link", { name: "Observe", exact: true }).click();
+  await expect(gallery).toBeHidden();
+  await expect(page.getByRole("button", { name: "Example: Observe" })).toBeVisible();
+  await expect(page.locator("#checked-type")).toHaveText("float[E]");
+});
+
+test("the introduction hides on request, and stays hidden", async ({ page }) => {
+  await page.goto(simulator);
+  const intro = page.getByRole("region", { name: "Introduction" });
+  await expect(intro).toContainText("Draws marked E are replaced by their means.");
+  await intro.getByRole("button", { name: "Hide" }).click();
+  await expect(intro).toBeHidden();
+  await page.reload();
+  await expect(page.locator("#checked-type")).toHaveText("float[E]");
+  await expect(intro).toBeHidden();
+});
+
+test("the glossary opens from the header, and Copy link copies the state's address", async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.goto(simulator);
+  await page.getByRole("button", { name: "Glossary" }).click();
+  await expect(page.getByRole("region", { name: "Glossary" })).toContainText(
+    "affinity in the Lean development",
+  );
+  await page.getByRole("button", { name: "Copy link" }).click();
+  await expect(page.locator("#copy-status")).toHaveText("Link copied.");
+  const copied = await page.evaluate(() => navigator.clipboard.readText());
+  expect(copied).toMatch(/\/determinize\/sim\/#v1=[A-Za-z0-9_-]+$/);
+});
+
+test("the header's tools sit behind More on narrow screens", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(simulator);
+  await expect(page.getByRole("button", { name: "Copy link" })).toBeHidden();
+  await page.getByRole("button", { name: "More" }).click();
+  await expect(page.getByRole("button", { name: "Copy link" })).toBeVisible();
+});
+
+test("a first visit asks for a prediction before the first runs, and repeats it after them", async ({
+  page,
+}) => {
+  await page.goto(simulator);
+  const form = page.locator("#predict");
+  await expect(form).toContainText(
+    "Before you run them: what will 10 000 runs of each program show?",
+  );
+  await setRunCount(page, 200);
+  await form.getByLabel("the same as the source's").check();
+  await form.getByLabel("smaller").check();
+  await form.getByRole("button", { name: "Run both and compare" }).click();
+  await settled(page);
+  await expect(form).toBeHidden();
+  await expect(page.locator("#prediction")).toHaveText(
+    "You predicted the same mean and a smaller variance.",
+  );
+  await page.reload();
+  await expect(page.locator("#checked-type")).toHaveText("float[E]");
+  await expect(form).toBeHidden();
+});
