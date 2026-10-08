@@ -128,6 +128,13 @@
     line-height: 1.2;
   }
 
+  .home,
+  .stats a {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--target-min);
+  }
+
   .home {
     color: var(--muted);
   }
