@@ -855,9 +855,12 @@
     display: none;
   }
 
+  /* The G draw's line box is a state's, so that it lines up with the code beside it. */
   .draw code {
+    display: block;
     color: var(--given);
     font-weight: var(--weight-strong);
+    line-height: var(--leading-code);
   }
 
   .step-alert,
@@ -989,11 +992,35 @@
   }
 
   /* The symbolic state in a column of its own where three columns of code fit, and below the row's
-     other cells where they don't. */
+     other cells where they don't. Side by side, a row has a track for σ and one for the code, so
+     that every column's code starts where the symbolic program does, below σ. */
   @container (min-width: 960px) {
     .step-head,
     .step {
       grid-template-columns: var(--run-columns);
+    }
+
+    .step {
+      grid-template-rows: auto auto;
+      row-gap: 0;
+    }
+
+    .step > :is(.step-n, .cell-source, .cell-draw, .cell-det) {
+      grid-row: 2;
+    }
+
+    .step > .cell-sym {
+      display: grid;
+      grid-row: 1 / span 2;
+      grid-template-rows: subgrid;
+    }
+
+    .cell-sym > .cell-code {
+      grid-row: 2;
+    }
+
+    .step > :is(.step-alert, .step-alert-note) {
+      margin-top: calc(var(--space-4) + var(--space-1));
     }
   }
 

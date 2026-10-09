@@ -1498,6 +1498,24 @@ test("hovering a sample site marks the rows that draw it and its counterpart", a
   await expect(page.locator(".step.linked")).toHaveAttribute("data-step", "3");
 });
 
+test("in a row with σ, every column's code starts where the symbolic program does", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(simulator);
+  await passed(page);
+  // Step 1 draws x, whose G draw lines up too.
+  for (const step of [0, 1, 3, 5]) {
+    const tops = await page.locator(`.step[data-step="${step}"]`).evaluate((row) =>
+      [".cell-source .state", ".cell-draw code", ".cell-sym .state", ".cell-det .state"]
+        .map((selector) => row.querySelector(selector))
+        .filter((element) => element !== null)
+        .map((element) => Math.round(element.getBoundingClientRect().top)),
+    );
+    expect(new Set(tops).size, `step ${step}: ${tops}`).toBe(1);
+  }
+});
+
 test("every row shows the symbolic state, with the whole of σ above its program", async ({
   page,
 }) => {
@@ -1514,7 +1532,8 @@ test("every row shows the symbolic state, with the whole of σ above its program
   await expect(page.locator("#notices")).toBeEmpty();
   await expect(page.locator("#example-title")).toHaveText("Noisy product");
   await expect(page.locator(".step[data-step] .cell-sym")).toHaveCount(6);
-  await expect(page.locator('.step[data-step="0"] .sigma')).toContainText("empty");
+  // An empty σ shows nothing.
+  await expect(page.locator('.step[data-step="0"] .sigma')).toHaveCount(0);
   // Step 3 binds v1, which σ keeps in the rows after it.
   await expect(page.locator('.step[data-step="3"] .sigma-new')).toContainText("v1 ~ gauss(");
   await expect(page.locator('.step[data-step="4"] .sigma')).toContainText("v1 ~ gauss(");
@@ -1534,7 +1553,8 @@ test("every row shows the symbolic state, with the whole of σ above its program
     });
   };
   const wide = await cells(1440);
-  expect(Math.abs(wide.symbolic.top - wide.source.top)).toBeLessThanOrEqual(1);
+  // σ heads the symbolic column, above the line where every column's code starts.
+  expect(wide.symbolic.top).toBeLessThan(wide.source.top);
   expect(wide.symbolic.left).toBeGreaterThan(wide.source.right);
   expect(wide.symbolic.right).toBeLessThan(wide.determinized.left);
   const middle = await cells(768);
