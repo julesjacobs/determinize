@@ -2,6 +2,7 @@
 // light or dark, Tab reaches every control with a visible focus that nothing covers, Escape and
 // Tab leave the editor, every control is at least 24 × 24 px, nothing moves under
 // prefers-reduced-motion, and nothing scrolls sideways at 390 px.
+import { readFileSync } from "node:fs";
 import { deflateRawSync } from "node:zlib";
 import { AxeBuilder } from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
@@ -99,8 +100,8 @@ const states: { name: string; open: (page: Page) => Promise<void> }[] = [
   {
     name: "a list output",
     open: async (page) => {
-      await page.goto("sim/");
-      await pick(page, "Gaussian random walk");
+      const walk = new URL("../../examples/paper/gauss-random-walk.det", import.meta.url);
+      await page.goto(linkTo(readFileSync(walk, "utf8")));
       await sampled(page);
     },
   },

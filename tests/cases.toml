@@ -381,6 +381,13 @@ expected_type = "float[E]"
 affinities = ["E", "G"]
 
 [[case]]
+file = "examples/simulator/gauss-random-walk.det"
+suite = "typing"
+outcome = "accept"
+expected_type = "float[E]"
+affinities = ["E"]
+
+[[case]]
 file = "examples/simulator/bad-e-branching.det"
 suite = "typing"
 outcome = "reject"

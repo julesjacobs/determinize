@@ -4,10 +4,10 @@
 
 import geometricAddition from "../../../examples/loops/geometric-addition.det";
 import dungeon from "../../../examples/paper/dungeon.det";
-import gaussRandomWalk from "../../../examples/paper/gauss-random-walk.det";
 import noisyIteration from "../../../examples/paper/noisy-iteration.det";
 import noisyProduct from "../../../examples/paper/noisy-product.det";
 import badEBranching from "../../../examples/simulator/bad-e-branching.det";
+import gaussRandomWalk from "../../../examples/simulator/gauss-random-walk.det";
 import noisyProductAllE from "../../../examples/simulator/noisy-product-all-e.det";
 import observe from "../../../examples/simulator/observe.det";
 import randomListSum from "../../../examples/simulator/random-list-sum.det";
@@ -47,10 +47,10 @@ export const examples: Example[] = [
     source: noisyProductAllE.trimEnd(),
   },
   {
-    id: "paper/gauss-random-walk",
+    id: "simulator/gauss-random-walk",
     title: "Gaussian random walk",
     explanation:
-      "A step function passed to reduce; every position becomes its mean, so the path stays at zero.",
+      "A step function passed to reduce, with the output projected to the final position; every position becomes its mean, so the final one is zero.",
     fromPaper: true,
     source: gaussRandomWalk.trimEnd(),
   },

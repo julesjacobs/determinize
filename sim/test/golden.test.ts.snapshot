@@ -50,32 +50,6 @@ batch at seeds 1-200:
     returned numbers: n 200, mean 32.949999999999996, population variance 4505.7175
 `;
 
-exports[`paper/gauss-random-walk 1`] = `
-seed 1: checked, 92 frames
-  checks: OK ×92
-  final source: (6.25, -0.4215887484747177) :: (6, -0.23708366427086758) :: (5.5, -0.7363487074011774) :: (4, -0.24178331970480238) :: (2, -0.9051892762268049) :: (1, -0.043084295823202466) :: (0, 0) :: []
-  final determinized: (6.25, 0) :: (6, 0) :: (5.5, 0) :: (4, 0) :: (2, 0) :: (1, 0) :: (0, 0) :: []
-  outcome: (6.25, -0.4215887484747177) :: (6, -0.23708366427086758) :: (5.5, -0.7363487074011774) :: (4, -0.24178331970480238) :: (2, -0.9051892762268049) :: (1, -0.043084295823202466) :: (0, 0) :: [] | (6.25, 0) :: (6, 0) :: (5.5, 0) :: (4, 0) :: (2, 0) :: (1, 0) :: (0, 0) :: []
-  frames: sha256 820d119258fb7bea18d24c1ed7c61d37f056e547ab43298f04b2c2f83f214a04
-seed 2: checked, 92 frames
-  checks: OK ×92
-  final source: (6.25, 4.27772241435586) :: (6, 4.566962141763872) :: (5.5, 5.1736588768341) :: (4, 2.3137012407066075) :: (2, 2.0963419957639275) :: (1, 2.088113964186578) :: (0, 0) :: []
-  final determinized: (6.25, 0) :: (6, 0) :: (5.5, 0) :: (4, 0) :: (2, 0) :: (1, 0) :: (0, 0) :: []
-  outcome: (6.25, 4.27772241435586) :: (6, 4.566962141763872) :: (5.5, 5.1736588768341) :: (4, 2.3137012407066075) :: (2, 2.0963419957639275) :: (1, 2.088113964186578) :: (0, 0) :: [] | (6.25, 0) :: (6, 0) :: (5.5, 0) :: (4, 0) :: (2, 0) :: (1, 0) :: (0, 0) :: []
-  frames: sha256 4d88a73981815319448c5c6ade7a903f47d56494da9062a27c0a8b74d6f4d220
-seed 3: checked, 92 frames
-  checks: OK ×92
-  final source: (6.25, 2.1009497469682885) :: (6, 2.3359578286430898) :: (5.5, 3.040687308365011) :: (4, 1.8125233299583898) :: (2, 0.4181174810923749) :: (1, 0.2007274333063946) :: (0, 0) :: []
-  final determinized: (6.25, 0) :: (6, 0) :: (5.5, 0) :: (4, 0) :: (2, 0) :: (1, 0) :: (0, 0) :: []
-  outcome: (6.25, 2.1009497469682885) :: (6, 2.3359578286430898) :: (5.5, 3.040687308365011) :: (4, 1.8125233299583898) :: (2, 0.4181174810923749) :: (1, 0.2007274333063946) :: (0, 0) :: [] | (6.25, 0) :: (6, 0) :: (5.5, 0) :: (4, 0) :: (2, 0) :: (1, 0) :: (0, 0) :: []
-  frames: sha256 bdcae6c4c832311389df610bb973b902d398ac6edce2236f982c0cdbf3aa5c5d
-batch at seeds 1-200:
-  source: 200 runs, 0 rejected, 0 failed
-    returned numbers: n 0, mean NaN, population variance NaN
-  determinized: 200 runs, 0 rejected, 0 failed
-    returned numbers: n 0, mean NaN, population variance NaN
-`;
-
 exports[`paper/noisy-iteration 1`] = `
 seed 1: checked, 22 frames
   checks: OK ×22
@@ -164,6 +138,32 @@ batch at seeds 1-200:
     returned numbers: n 200, mean 0.45230831662290993, population variance 0.17100165291408714
   determinized: 200 runs, 0 rejected, 0 failed
     returned numbers: n 200, mean -0.017949650792432034, population variance 0.08323031498376833
+`;
+
+exports[`simulator/gauss-random-walk 1`] = `
+seed 1: checked, 94 frames
+  checks: OK ×94
+  final source: -0.4215887484747177
+  final determinized: 0
+  outcome: -0.4215887484747177 | 0
+  frames: sha256 edd88b33e946f4e5b9f20268f6744ad2f96722210c8a59b2e4e9c9f2e44d6f86
+seed 2: checked, 94 frames
+  checks: OK ×94
+  final source: 4.27772241435586
+  final determinized: 0
+  outcome: 4.27772241435586 | 0
+  frames: sha256 adb10ed0167a864497432be0e2bb3d5bda170386622a41aaac125804f1c3b10a
+seed 3: checked, 94 frames
+  checks: OK ×94
+  final source: 2.1009497469682885
+  final determinized: 0
+  outcome: 2.1009497469682885 | 0
+  frames: sha256 79c565808c99f8a71c396c3299574ce1bf76ea70c93f186de405f9737f0c5c9b
+batch at seeds 1-200:
+  source: 200 runs, 0 rejected, 0 failed
+    returned numbers: n 200, mean 0.028118286694632053, population variance 5.65525817040978
+  determinized: 200 runs, 0 rejected, 0 failed
+    returned numbers: n 200, mean 0, population variance 0
 `;
 
 exports[`simulator/noisy-product-all-e 1`] = `

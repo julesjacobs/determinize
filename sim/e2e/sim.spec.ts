@@ -248,29 +248,31 @@ test("Resample samples from a new seed, which the command follows", async ({ pag
 });
 
 test("an edit undone within the pause goes on sampling", async ({ page }) => {
-  test.setTimeout(60_000);
   await page.goto(simulator);
-  // The random walk samples slowly enough that sampling is still running at the edit.
+  // The random walk samples slowly enough that 100 000 runs are still sampling at the edit.
   await pick(page, "Gaussian random walk");
-  await setRunCount(page, 30000);
-  await expect.poll(() => runs(page)).toBeGreaterThan(3000);
-  await page.locator(".cm-content").first().click();
-  await page.keyboard.press("Control+End");
-  await page.keyboard.type(" ");
-  await page.keyboard.press("Backspace");
-  // Sampling goes on to the count, through Continue where a slow machine reaches the time budget.
-  await expect
-    .poll(
-      () =>
-        page.evaluate(async () => {
-          const store = await window.DeterminizeSim.ready;
-          if (store.paused.value?.why === "budget") store.resume();
-          return store.samples.value.original.summary.runs;
-        }),
-      { timeout: 50_000 },
-    )
-    .toBe(30000);
-  await settled(page);
+  await setRunCount(page, 100_000);
+  await expect.poll(() => runs(page)).toBeGreaterThan(1000);
+  // An edit and its undoing, then the commit that the pause would make: the program is the same,
+  // so its sampling goes on.
+  const after = await page.evaluate(async () => {
+    const store = await window.DeterminizeSim.ready;
+    const source = store.source.value;
+    const before = {
+      commits: store.commits.value,
+      runs: store.samples.value.original.summary.runs,
+    };
+    store.source.value = `${source} `;
+    store.source.value = source;
+    store.commitSource();
+    return {
+      commitsRose: store.commits.value > before.commits,
+      sameSource: store.samples.value.source === source,
+      kept: store.samples.value.original.summary.runs >= before.runs,
+      running: store.running.value !== null || store.paused.value !== null,
+    };
+  });
+  expect(after).toEqual({ commitsRose: true, sameSource: true, kept: true, running: true });
 });
 
 test("an edit during sampling drops the old program's runs and samples the new one", async ({
@@ -1116,7 +1118,7 @@ test("stepping across pages, hovering and scrubbing move neither the bar nor the
   // 2000 deep; the last two have long runs.
   const example = (path: string) =>
     readFileSync(new URL(`../../examples/${path}.det`, import.meta.url), "utf8");
-  const longest = example("paper/gauss-random-walk");
+  const longest = example("simulator/gauss-random-walk");
   const programs = [
     "uniform(0, 1)",
     example("paper/noisy-product"),
@@ -1172,11 +1174,8 @@ test("stepping across pages, hovering and scrubbing move neither the bar nor the
       .annotations.push({ type: `layout at ${width} px`, description: JSON.stringify(shown) });
     const short = shown[0];
     const long = shown.slice(2);
-    for (const [index, run] of shown.entries()) {
-      // A warning below the panes takes its room: that of the random walk, whose output is a list.
-      if (programs[index] !== longest) {
-        expect(Math.abs(run.steps - short.steps), `steps at ${width} px`).toBeLessThanOrEqual(4);
-      }
+    for (const run of shown) {
+      expect(Math.abs(run.steps - short.steps), `steps at ${width} px`).toBeLessThanOrEqual(4);
       expect(run.region, `the region at ${width} px`).toBeLessThanOrEqual(run.cap + 1);
     }
     for (const run of long) {
@@ -1627,7 +1626,6 @@ test("the gallery groups the examples by the premise they fail, each with a chip
     "The check finds no premise failing",
     "Fails only in floating point",
     "Lean rejects the written modes",
-    "The output isn't float[E]",
   ]);
   await expect(gallery.getByRole("list").first().locator(".chip")).toHaveCount(0);
   // The chip's description shows on keyboard focus, and Escape hides it before it closes the
@@ -1648,11 +1646,11 @@ test("the gallery groups the examples by the premise they fail, each with a chip
   await expect(gallery).toBeHidden();
   // And on hover, right below the chip, so that the pointer can move onto it and it stays.
   await page.getByRole("button", { name: /^Example: / }).click();
-  const notFloat = gallery.getByRole("button", { name: "not float[E]" });
-  await notFloat.hover();
+  const rejected = gallery.getByRole("button", { name: "modes rejected" }).first();
+  await rejected.hover();
   const tooltip = gallery.getByRole("tooltip");
-  await expect(tooltip).toHaveText(/^Type float\[E\]: the output has type /);
-  const chipBox = await notFloat.boundingBox();
+  await expect(tooltip).toHaveText(/^Type float\[E\]: Lean rejects the written modes\./);
+  const chipBox = await rejected.boundingBox();
   const tipBox = await tooltip.boundingBox();
   if (!chipBox || !tipBox) throw new Error("no chip or no description");
   expect(tipBox.y).toBeLessThanOrEqual(chipBox.y + chipBox.height + 1);

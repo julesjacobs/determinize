@@ -1,0 +1,35 @@
+(* FROM: Vakar et al. POPL 2019, https://arxiv.org/pdf/1811.04196, Figure 2,
+   with the output projected to the final position *)
+
+let reduce =
+  rec reduce f => fun accumulator => fun xs =>
+    match xs with
+    | [] =>
+        accumulator
+    | x :: rest =>
+        reduce f (f accumulator x) rest
+in
+
+let step =
+  fun path => fun nextTime =>
+    match path with
+    | [] =>
+        []
+    | current :: previous =>
+        let time = fst current in
+        let position = snd current in
+        let nextPosition =
+          gauss(position, nextTime - time)
+        in
+        (nextTime, nextPosition) :: path
+in
+
+let times =
+  1 :: 2 :: 4 :: 5.5 :: 6 :: 6.25 :: []
+in
+
+match reduce step ((0, 0) :: []) times with
+| [] =>
+    0
+| last :: _ =>
+    snd last

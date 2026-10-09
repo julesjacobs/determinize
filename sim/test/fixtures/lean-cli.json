@@ -2702,6 +2702,60 @@
       ]
     },
     {
+      "file": "examples/simulator/gauss-random-walk.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 1
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "(let x0 = (rec f0 x0 => (fun x1 => (fun x2 => (match x2 with [] => x1 | x3 :: xs3 => (((f0 x0) ((x0 x1) x3)) xs3))))) in (let x1 = (fun x1 => (fun x2 => (match x1 with [] => [] | x3 :: xs3 => (let x4 = (fst x3) in (let x5 = (snd x3) in (let x6 = gauss[E](x5, (x2 + (-x4))) in ((x2, x6) :: x1))))))) in (let x2 = (1 :: (2 :: (4 :: (5.5 :: (6 :: (6.25 :: [])))))) in (match (((x0 x1) ((0, 0) :: [])) x2) with [] => 0 | x3 :: xs3 => (snd x3)))))",
+      "determinized": "(let x0 = (rec f0 x0 => (fun x1 => (fun x2 => (match x2 with [] => x1 | x3 :: xs3 => (((f0 x0) ((x0 x1) x3)) xs3))))) in (let x1 = (fun x1 => (fun x2 => (match x1 with [] => [] | x3 :: xs3 => (let x4 = (fst x3) in (let x5 = (snd x3) in (let x6 = mean_gauss(x5, (x2 + (-x4))) in ((x2, x6) :: x1))))))) in (let x2 = (1 :: (2 :: (4 :: (5.5 :: (6 :: (6.25 :: [])))))) in (match (((x0 x1) ((0, 0) :: [])) x2) with [] => 0 | x3 :: xs3 => (snd x3)))))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.027777",
+            "variance": "6.522075"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.000000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.099724",
+            "variance": "0.861078"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.000000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
       "file": "tests/typing/accept/primitives.det",
       "checked": "float[E]",
       "sites": {

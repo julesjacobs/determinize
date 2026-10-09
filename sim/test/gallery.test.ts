@@ -2,6 +2,7 @@
 // for those it groups first, in floating point or not, and for a failure in floating point only,
 // a run that fails at exactly 0 with its message.
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { analyze } from "../src/core/compiler/analyze.ts";
 import { examples } from "../src/core/examples.ts";
@@ -57,4 +58,17 @@ test("a program that Lean rejects outright, and one of type float[G], have their
     description: "Type float[E]: Lean rejects the program at parsing, so it doesn't run.",
   });
   assert.equal(reasonOf(example("uniform[G](0, 1)")), null);
+});
+
+test("the gallery's Gaussian random walk returns its final position, which the theorems cover", () => {
+  const walk = examples.find((example) => example.title === "Gaussian random walk");
+  assert.ok(walk);
+  const analysis = analyze(walk.source);
+  assert.ok(analysis.ok && analysis.type === "float[E]");
+  assert.equal(reasonOf(walk), null);
+  // The paper's walk, which returns the whole path, stays as it is.
+  const paper = analyze(
+    readFileSync(new URL("../../examples/paper/gauss-random-walk.det", import.meta.url), "utf8"),
+  );
+  assert.ok(paper.ok && paper.type === "[(float[E] * float[E])]");
 });
