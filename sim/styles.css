@@ -198,7 +198,7 @@
 
   .gallery {
     width: min(56rem, calc(100vw - 32px));
-    max-height: min(40rem, calc(100vh - 6rem));
+    max-height: calc(100vh - 6rem);
     margin: 0;
     padding: var(--space-4);
     overflow-y: auto;

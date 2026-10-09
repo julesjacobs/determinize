@@ -1711,6 +1711,15 @@ test("a click on an entry that a chip's description covers opens the entry", asy
   await expect(page.getByRole("button", { name: `Example: ${title}` })).toBeVisible();
 });
 
+test("at 768 px the gallery's menu shows every example without scrolling", async ({ page }) => {
+  await page.setViewportSize({ width: 768, height: 900 });
+  await page.goto(simulator);
+  await page.getByRole("button", { name: /^Example: / }).click();
+  const gallery = page.getByRole("dialog", { name: "Examples" });
+  await expect(gallery).toBeVisible();
+  expect(await gallery.evaluate((menu) => menu.scrollHeight <= menu.clientHeight)).toBe(true);
+});
+
 test("at 390 px every chip's description stays inside the gallery", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(simulator);
