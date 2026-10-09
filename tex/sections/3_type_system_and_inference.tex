@@ -3,17 +3,68 @@
 \label{sec:type-system}
 
 \subsection{Typing}
+
+Whether replacing a sample by its mean is valid depends on how the
+sampled value is subsequently used.
+We therefore introduce a type system that checks whether sampled values are used in ways that justify replacing them by their means. \Cref{fig:typing} presents the typing rules.
+The judgment $\Gamma\vdash e:\tau$ assigns expression $e$ type
+$\tau$ under context $\Gamma$. Alongside standard types for
+functions, pairs, sums, and lists, real types carry an annotation
+$m\in\{\G,\E\}$:
+\begin{itemize}
+    \item $\tyR\G$ describes real values that determinization leaves
+    unchanged.
+    \item $\tyR\E$ describes real values that may change under
+    determinization and whose uses are restricted to affine operations.
+\end{itemize}
+The subtyping relation
+$\tyR\G<:\tyR\E$ allows values of type $\tyR\G$ wherever values of type $\tyR\E$ are permitted, but not conversely.
+Subtyping extends to compound types as well.
+
 \input{figures/typing}
 
-We use the type system in \cref{fig:typing} to check which samples can be replaced
-by their means. Its rules restrict how $\E$ samples may be used:
+\paragraph{Typing rules.}
+The key principle is that operations must preserve expectations when values of type $\tyR\E$
+are replaced by their means. The rules enforce this as follows:
+
 \begin{itemize}
-    \item The arguments of addition are at $\E$-mode when the sum itself is.
-    \item Multiplication requires a $\G$ left operand and allows an $\E$ right operand. \jules{Give examples and explain the intuition for why that's ok even though the arguments may not be independent}
-    \item Division requires a $\G$ denominator but allows an $\E$ numerator.
-    \item The distribution rules allow $\E$ parameters where the mean is
-affine in those parameters. \jules{Give examples and explain the intuition for why that's ok}
+    \item \textbf{Addition and negation.}
+    Both permit operands of type $\tyR\E$ because expectation is
+    linear, even for dependent random variables.
+
+    \item \textbf{Multiplication and division.}
+    Multiplication requires a left operand of type $\tyR\G$,
+    while division requires a denominator of type $\tyR\G$.
+    Determinization preserves these values, and scaling by such a value is linear in the other operand (assuming
+    a nonzero denominator).
+    For example, let $x=\kw{uniform}^{\G}(0,1)$ and $y=\kw{gaussian}^{\E}(x,1)$. For each sampled value of $x$, $y$ has mean $x$, so $x*y$ has mean $x^2$. Determinization leaves $x$ unchanged and replaces $y$ by $x$, giving exactly $x^2$. A limitation of this rule is that it rejects multiplication of two $\E$ values even when they are independent; supporting this case would require an additional analysis to establish independence between random variables.
+
+    \item \textbf{Comparisons.}
+    Both operands must have type $\tyR\G$, ensuring that
+    determinization does not change their outcomes
+    and consequently alter control flow.
+
+    \item \textbf{Distribution parameters.}
+    Parameters may have type $\tyR\E$ when the distribution's
+    mean depends affinely on them. For example,
+    $\kw{uniform}^{\E}(0,y)$ permits an upper bound
+    of type $\tyR\E$ because its mean is $y/2$.
+    Similarly, Gaussian means, Poisson rates, Bernoulli
+    probabilities, discrete probabilities, and gamma
+    shapes may have type $\tyR\E$. In contrast, exponential
+    rates, beta parameters, Gaussian variances, and
+    gamma rates must have type $\tyR\G$, since the
+    corresponding mean is not affine in those
+    parameters or does not depend on them.
 \end{itemize}
+
+Finally, the distribution rules impose $\alpha\in\{m,\M\}$:
+$\G$-mode sampling produces values of type $\tyR\G$,
+$\E$-mode sampling produces values of type $\tyR\E$,
+and $\M$-mode mean evaluation may produce either.
+In particular, $\G$-mode distributions require
+parameters of type $\tyR\G$, preserving their sampling
+behavior under determinization.
 
 \subsection{Type Inference}
 \label{sec:type-inference}
