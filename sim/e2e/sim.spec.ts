@@ -236,14 +236,14 @@ test("a heavy program stops sampling at its time budget, and goes on on request"
 test("Resample samples from a new seed, which the command follows", async ({ page }) => {
   await page.goto(simulator);
   await sampled(page, 1000);
-  const honesty = page.locator("#honesty");
-  await expect(honesty).toContainText("./run.sh --seed 1 --samples 1000");
+  const reproduce = page.locator("#reproduce");
+  await expect(reproduce).toContainText("./run.sh --seed 1 --samples 1000");
   await page.getByRole("button", { name: "Resample" }).click();
   await expect(page.locator("#seed")).not.toHaveValue("1");
   const seed = await page.locator("#seed").inputValue();
   await expect.poll(() => runs(page)).toBe(1000);
   await settled(page);
-  await expect(honesty).toContainText(`./run.sh --seed ${seed} --samples 1000`);
+  await expect(reproduce).toContainText(`./run.sh --seed ${seed} --samples 1000`);
   await passed(page, Number(seed));
 });
 
@@ -494,7 +494,7 @@ test("the runs' outcomes, the command that reports them and the run's G trace sh
   page,
 }) => {
   await page.goto(simulator);
-  const honesty = page.locator("#honesty");
+  const reproduce = page.locator("#reproduce");
   await expect(page.locator("#g-trace")).toHaveText(
     /^\[\(uniform, [-0-9.e]+\)\], in both programs$/,
   );
@@ -502,7 +502,7 @@ test("the runs' outcomes, the command that reports them and the run's G trace sh
   await expect(page.locator("#returned-source")).toHaveText("200 of 200");
   // Idle, the progress bar keeps its room but doesn't show.
   await expect(page.locator("#progress-bar")).toBeHidden();
-  await expect(honesty).toContainText(
+  await expect(reproduce).toContainText(
     "./run.sh --seed 1 --samples 200 examples/paper/noisy-product.det",
   );
 
@@ -513,7 +513,7 @@ test("the runs' outcomes, the command that reports them and the run's G trace sh
   await expect(page.locator("#first-failure")).toContainText(
     "First failure in the source: division by zero",
   );
-  await expect(honesty).toContainText("with the program saved as program.det");
+  await expect(reproduce).toContainText("with the program saved as program.det");
 });
 
 test("after an edit, the statistics show the new program from its first slice of runs", async ({
@@ -551,7 +551,7 @@ test("a program that Lean rejects has no runs and no command", async ({ page }) 
   await expect(page.locator("#premise-safe .finding")).toHaveText("not run");
   await expect(page.locator("#determinized-pane")).toHaveClass(/\buncovered\b/);
   await expect(page.getByRole("button", { name: "Resample" })).toBeDisabled();
-  await expect(page.locator("#honesty")).not.toContainText("--samples");
+  await expect(page.locator("#reproduce")).not.toContainText("--samples");
 });
 
 test("a program the simulator fails on doesn't blame Lean", async ({ page }) => {

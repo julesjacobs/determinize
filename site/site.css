@@ -424,10 +424,6 @@ h2 {
 p .decl {
   font-size: 0.85em;
 }
-.honesty {
-  padding-left: var(--space-3);
-  border-left: 3px solid var(--muted);
-}
 @media (min-width: 900px) {
   .foot p {
     grid-column: 2;

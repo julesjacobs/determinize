@@ -5,9 +5,8 @@
 // each run's output against that draw instead, where the
 // determinized runs lie on the curve of the source's mean given the draw. Beside the chart: the
 // statistics as Lean's CLI computes them, each linked to the Lean definition it estimates, the
-// variance-reduction factor and the sample sites that determinization leaves. Every number is an
-// estimate of this unverified simulator, and the command that has Lean's CLI report the same runs
-// is shown.
+// variance-reduction factor and the sample sites that determinization leaves. Above them, the
+// command that has Lean's CLI report the same runs.
 import { computed, effect } from "@preact/signals-core";
 import type { Analysis } from "../core/compiler/analyze.ts";
 import type { Expr } from "../core/compiler/ast.ts";
@@ -67,7 +66,7 @@ function command(samples: Samples, file: string | null) {
     .split(" ")
     .map((word) => `<span class="word">${escapeHtml(word)}</span>`)
     .join(" ");
-  return ` Reproduce them with <code class="cmd">${words}</code>${file ? "." : ", with the program saved as program.det."}`;
+  return `Reproduce these runs with <code class="cmd">${words}</code>${file ? "." : ", with the program saved as program.det."}`;
 }
 
 /** What a histogram leaves out: the runs that observe rejected and the runs that failed. */
@@ -203,7 +202,7 @@ export function mountDistributionView(
     bar.value = done;
   });
 
-  // The honesty sentence and the command that reproduces the numbers.
+  // The command that reproduces the runs.
   effect(() => {
     const samples = store.samples.value;
     const example = examples.find((entry) => entry.id === store.exampleId.value);
@@ -214,7 +213,7 @@ export function mountDistributionView(
     if (!runnable.value || samples.original.summary.runs < 2) reproduce.innerHTML = "";
     else if (counterexample.value) {
       reproduce.textContent =
-        " Lean rejects this program, so its command-line tool runs no counterexample.";
+        "Lean rejects this program, so its command-line tool runs no counterexample.";
     } else reproduce.innerHTML = command(samples, file);
   });
 
@@ -316,7 +315,7 @@ export function mountDistributionView(
     const ready = store.samplesReady.peek();
     if (runnable.peek() && !ready && !(grid.hidden && listOut.hidden)) return;
     const right = counterexample.peek() ? "Counterexample" : "Determinized";
-    $<HTMLElement>("honesty").hidden = !runnable.peek() || !ready || runsSoFar < 2;
+    $<HTMLElement>("reproduce").hidden = !runnable.peek() || !ready || runsSoFar < 2;
     if (!runnable.peek() || !ready || runsSoFar < 2) {
       grid.hidden = true;
       listOut.hidden = true;
