@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import { analyze } from "../src/core/compiler/analyze.ts";
 import { lintDiagnostics, normalizeDiagnostics } from "../src/ui/editor.ts";
+import type { CliFixture } from "./lean-cli.ts";
 
 const cases = [
   {
@@ -159,4 +161,26 @@ test("the editor shows Lean's rejections as errors from the stage that rejects",
     { severity: "error", source: "Lean's front end, inference" },
   );
   assert.deepEqual(lintDiagnostics(analyze("1 + 2"), "1 + 2"), []);
+});
+
+test("a negative discrete weight gets Lean's message, as in discrete-negative.det", () => {
+  const file = "tests/typing/reject/discrete-negative.det";
+  const fixture: CliFixture = JSON.parse(
+    readFileSync(new URL("fixtures/lean-cli.json", import.meta.url), "utf8"),
+  );
+  const lean = fixture.rejected.find((entry) => entry.file === file);
+  assert.ok(lean);
+  const corpus = readFileSync(new URL(`../../${file}`, import.meta.url), "utf8");
+  // Lean rejects a negated zero as well.
+  for (const [source, weight] of [
+    [corpus, "-1"],
+    ["discrete(1, -0)", "-0"],
+  ]) {
+    const result = analyze(source);
+    assert.equal(result.ok, false, source);
+    assert.equal(result.stage, "elaboration");
+    const [diagnostic] = normalizeDiagnostics(result, source);
+    assert.equal(diagnostic.message, lean.message);
+    assert.equal(source.slice(diagnostic.from, diagnostic.to), weight);
+  }
 });
