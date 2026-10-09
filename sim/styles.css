@@ -506,10 +506,11 @@
     margin-block: 0;
   }
 
-  /* The simulator's check of the premises: a warning that lists those found failing or open; the
-     frame around the column says that the theorems don't cover it. */
-  .verdict {
-    font-size: var(--size-small);
+  /* The simulator's check of the premises: a warning that lists those found failing or open, in
+     the source's callout's size, with only its lead SemiBold; the frame around the column says
+     that the theorems don't cover it. */
+  .verdict strong {
+    font-weight: var(--weight-strong);
   }
 
   /* Open findings alone: a premise that the check couldn't confirm, in the muted rule of a note. */
@@ -541,11 +542,6 @@
   .verdict a {
     color: inherit;
     white-space: nowrap;
-  }
-
-  /* A failing finding in SemiBold. */
-  .verdict [data-status="fails"] .finding {
-    font-weight: var(--weight-strong);
   }
 
   /* A frame around a column that the theorems don't cover; an outline, so that it moves nothing

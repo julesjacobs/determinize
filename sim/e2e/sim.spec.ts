@@ -712,6 +712,17 @@ test("the check's warning lists only the premises found failing or open, with th
   await expect(page.locator("#determinized-pane")).toHaveClass(/\buncovered\b/);
 });
 
+/** The size, leading and weight of the text of `selector`'s first element. */
+function textStyle(page: Page, selector: string) {
+  return page
+    .locator(selector)
+    .first()
+    .evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { size: style.fontSize, leading: style.lineHeight, weight: style.fontWeight };
+    });
+}
+
 test("a premise that the check finds failing is a warning, with the run that witnesses it", async ({
   page,
 }) => {
@@ -736,6 +747,10 @@ test("a premise that the check finds failing is a warning, with the run that wit
   );
   await expect(page.locator("#premise-safe")).toHaveAttribute("data-status", "fails");
   await expect(page.locator("#verdict li:visible")).toHaveCount(1);
+  // In the style of the source's callout: its size and leading, and only the lead SemiBold.
+  const callout = await textStyle(page, "#source-alert");
+  expect(await textStyle(page, "#verdict-lead strong")).toEqual({ ...callout, weight: "600" });
+  expect(await textStyle(page, "#premise-safe .finding")).toEqual(callout);
   await expect(page.locator("#determinized-pane")).toHaveClass(/\buncovered\b/);
   // The frame is an outline, which moves nothing.
   const outline = await page
@@ -781,6 +796,9 @@ test("a run that fails at an inexact 0 leaves domain safety open, with no frame"
   await expect(page.locator("#premise-safe .finding")).toHaveText(
     "open. Run 9 failed at exactly 0, in floating point: gamma requires positive shape and rate (seed 10), which may be an underflow the real-valued semantics doesn't reach.",
   );
+  const callout = await textStyle(page, "#source-alert");
+  expect(await textStyle(page, "#verdict-lead strong")).toEqual({ ...callout, weight: "600" });
+  expect(await textStyle(page, "#premise-safe .finding")).toEqual(callout);
   // The note under the statistics is muted too, and says that the run failed in floating point.
   const note = page.locator("#first-failure");
   await expect(note).toContainText(
