@@ -34,6 +34,9 @@ export interface Example {
    * point, which the simulator's check doesn't count against domain safety: the message of a
    * failing run and why the real-valued semantics doesn't reach it. */
   floatFailure?: { message: string; why: string };
+  /** Whether the example opens with the exact values in the additive mode, in which its
+   * determinized program has a finite model. */
+  additive?: true;
 }
 
 export const examples: Example[] = [
@@ -81,6 +84,7 @@ export const examples: Example[] = [
     explanation: "Uniform steps until a coin flip; only the flips stay random.",
     fromPaper: false,
     source: asymmetricWalk.trimEnd(),
+    additive: true,
   },
   {
     id: "simulator/retransmission",
@@ -88,6 +92,7 @@ export const examples: Example[] = [
     explanation: "Retries over a channel that turns good or bad; only coin flips stay random.",
     fromPaper: false,
     source: retransmission.trimEnd(),
+    additive: true,
   },
   {
     id: "simulator/observe",

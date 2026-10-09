@@ -1,5 +1,5 @@
-// The page's link to its state: the fragment follows the program, the seed, the example and the
-// chart, and a fragment that the page navigates to is restored.
+// The page's link to its state: the fragment follows the program, the seed, the example, the
+// chart and the mode of the exact values, and a fragment that the page navigates to is restored.
 import { effect } from "@preact/signals-core";
 import { examples } from "../core/examples.ts";
 import type { Decoded, SharedState } from "../core/share.ts";
@@ -10,7 +10,7 @@ import type { Store } from "./store.ts";
 const writeDelayMs = 300;
 
 export function bindUrl(
-  store: Pick<Store, "source" | "seed" | "exampleId" | "view">,
+  store: Pick<Store, "source" | "seed" | "exampleId" | "view" | "additive">,
   restore: (decoded: Decoded) => void,
 ) {
   let written = window.location.hash;
@@ -22,6 +22,7 @@ export function bindUrl(
       seed: store.seed.value,
       example: store.exampleId.value,
       ...(store.view.value === "against" ? { view: "against" as const } : {}),
+      ...(store.additive.value ? { additive: true as const } : {}),
     };
     // The page opens in the state that its link names, or without a fragment.
     if (opened) {

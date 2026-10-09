@@ -114,6 +114,31 @@
           </dd>
         </div>
         <div>
+          <dt>Exact values</dt>
+          <dd>
+            The mean, the variance and the probability of returning, as fractions, from a program's
+            finite model: its states and their exact transition probabilities (<a
+              href="https://julesjacobs.com/determinize/docs/Determinize/Spec/FiniteModel/Model.html#Determinize.Spec.FiniteModel.Model"
+              >Model</a
+            >). A program has one if its random draws are coin flips and finite discrete draws, and
+            its states stay within Lean's limits. The simulator computes them with its port of
+            Lean's finite models; Lean's command-line tool computes them with a certificate that its
+            kernel checks (<a
+              href="https://julesjacobs.com/determinize/docs/Determinize/Checking/Statistics.html#Determinize.Checking.checkStatistics"
+              >checkStatistics</a
+            >).
+          </dd>
+        </div>
+        <div>
+          <dt>Additive mode</dt>
+          <dd>
+            Exploration that turns a loop's pending outer sums into rewards on the model's edges (<a
+              href="https://julesjacobs.com/determinize/docs/Determinize/Spec/RewardModel/Model.html#Determinize.Spec.RewardModel.Model"
+              >RewardModel.Model</a
+            >), so that a loop like <code>x + f(n - 1)</code> reaches finitely many states.
+          </dd>
+        </div>
+        <div>
           <dt>Variance-reduction factor</dt>
           <dd>The source's variance divided by the determinized program's, over returned runs.</dd>
         </div>
@@ -332,6 +357,66 @@
                   </th>
                   <td id="returned-source"></td>
                   <td id="returned-det"></td>
+                </tr>
+              </tbody>
+              <tbody id="exact" class="exact" hidden>
+                <tr class="exact-head">
+                  <th scope="rowgroup" colspan="3">
+                    <div class="exact-heading">
+                      <p>
+                        <strong>Exact values</strong>
+                        <span class="sub"
+                          >from the simulator's port of Lean's
+                          <a
+                            href="https://julesjacobs.com/determinize/docs/Determinize/Spec/FiniteModel/Model.html#Determinize.Spec.FiniteModel.Model"
+                            title="Model, in the Lean development"
+                            >finite models</a
+                          ></span
+                        >
+                      </p>
+                      <label class="additive"
+                        ><input id="additive" type="checkbox" aria-describedby="additive-help">
+                        Additive mode</label
+                      >
+                      <span id="additive-help" class="vh"
+                        >In the additive mode, a loop's pending outer sums become rewards on the
+                        model's edges, so that a loop like x + f(n - 1) reaches finitely many
+                        states.</span
+                      >
+                    </div>
+                  </th>
+                </tr>
+                <tr class="exact-model">
+                  <th scope="row">Model</th>
+                  <td id="model-source"></td>
+                  <td id="model-det"></td>
+                </tr>
+                <tr id="exact-mean" class="exact-value">
+                  <th scope="row">
+                    <a
+                      href="https://julesjacobs.com/determinize/docs/Determinize/Spec/FiniteModel/Statistics.html#Determinize.Spec.FiniteModel.OutputStatistics.conditionalMean"
+                      title="OutputStatistics.conditionalMean, in the Lean development"
+                      >Mean</a
+                    >
+                  </th>
+                </tr>
+                <tr id="exact-variance" class="exact-value">
+                  <th scope="row">
+                    <a
+                      href="https://julesjacobs.com/determinize/docs/Determinize/Spec/FiniteModel/Statistics.html#Determinize.Spec.FiniteModel.OutputStatistics.conditionalVariance"
+                      title="OutputStatistics.conditionalVariance, in the Lean development"
+                      >Variance</a
+                    >
+                  </th>
+                </tr>
+                <tr id="exact-returned" class="exact-value">
+                  <th scope="row">
+                    <a
+                      href="https://julesjacobs.com/determinize/docs/Determinize/Spec/FiniteModel/Statistics.html#Determinize.Spec.FiniteModel.OutputStatistics.returnMass"
+                      title="OutputStatistics.returnMass, in the Lean development: the probability of returning"
+                      >Returned</a
+                    >
+                  </th>
                 </tr>
               </tbody>
             </table>

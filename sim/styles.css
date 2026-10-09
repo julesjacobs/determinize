@@ -1206,7 +1206,7 @@
       grid-template-columns: var(--run-columns);
       grid-template-areas:
         ". source side side det"
-        ". caption caption caption caption";
+        ". caption side side .";
       align-items: start;
       padding: 0 calc(var(--space-2) + var(--region-gutter, 0px)) 0 3px;
     }
@@ -1395,6 +1395,100 @@
 
   .t-det {
     color: var(--change);
+  }
+
+  /* The exact values: a row group below the estimates, whose rows keep their heights whatever
+     exploration finds, so that nothing moves when it ends. A value row holds a fraction over its
+     decimal; a program without values has, in their place, why. */
+  table.stats tbody.exact th[scope="rowgroup"] {
+    padding: var(--space-4) 0 var(--space-1);
+    font-weight: inherit;
+    text-align: left;
+  }
+
+  .exact-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-1) var(--space-4);
+  }
+
+  .exact-heading p {
+    flex: 1 1 18rem;
+  }
+
+  .exact-heading strong {
+    font-weight: var(--weight-strong);
+  }
+
+  .exact-heading a {
+    min-height: 0;
+  }
+
+  .additive {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: var(--target-min);
+    cursor: pointer;
+  }
+
+  .additive input {
+    margin: 0;
+  }
+
+  table.stats tr.exact-value {
+    height: calc(2lh + 2 * var(--space-1));
+  }
+
+  /* One rule above the values, which a program without values spans with why. */
+  table.stats tbody tr.exact-value + tr.exact-value {
+    border-top: 0;
+  }
+
+  .exact-model .none,
+  table.stats th.none {
+    color: var(--muted);
+  }
+
+  .exact-cell .frac,
+  .exact-cell .dec {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .exact-cell .frac {
+    font-weight: var(--weight-strong);
+  }
+
+  .exact-cell .frac.long {
+    font-size: var(--size-small);
+    line-height: var(--leading-ui);
+  }
+
+  table.stats td.exact-why {
+    vertical-align: middle;
+  }
+
+  .exact-why p {
+    max-width: 22rem;
+    margin-left: auto;
+    text-wrap: pretty;
+  }
+
+  .try-additive {
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.18em;
   }
 
   .sub {

@@ -90,6 +90,23 @@ const states: { name: string; open: (page: Page) => Promise<void> }[] = [
     },
   },
   {
+    name: "the exact values, a finite model and a reason",
+    open: async (page) => {
+      await page.goto("sim/");
+      await pick(page, "Noisy iteration");
+      await sampled(page);
+    },
+  },
+  {
+    name: "the exact values at the state limit, with the additive mode offered",
+    open: async (page) => {
+      await page.goto("sim/");
+      await pick(page, "Asymmetric random walk");
+      await page.getByRole("checkbox", { name: "Additive mode" }).uncheck();
+      await sampled(page);
+    },
+  },
+  {
     name: "the counterexample",
     open: async (page) => {
       await page.goto("sim/");
@@ -307,7 +324,7 @@ for (const width of [390, 1440]) {
     const small = await page.evaluate(() => {
       const targets = [
         ...document.querySelectorAll(
-          "button, select, input:not([type=checkbox]):not([type=radio]), summary, .seg span, a.home, table.stats a",
+          "button, select, input:not([type=checkbox]):not([type=radio]), summary, .seg span, a.home, table.stats [scope=row] a",
         ),
         ...[
           ...document.querySelectorAll("input[type=checkbox], input[type=radio]:not(.seg input)"),

@@ -583,7 +583,8 @@ test("the share of returned runs links returnProbability only for a float progra
 }) => {
   await page.goto(simulator);
   await sampled(page, 10);
-  const returned = page.getByRole("link", { name: "Returned" });
+  // In the estimates; the exact values' Returned links returnMass.
+  const returned = page.locator("#stats tbody").first().getByRole("link", { name: "Returned" });
   await expect(returned).toHaveCount(1);
   await page.goto(linkTo("let x = uniform(0, 1) in x < 0.5", 1));
   await sampled(page, 10);

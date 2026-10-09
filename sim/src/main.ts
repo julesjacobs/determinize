@@ -8,6 +8,7 @@ import { decodeShare } from "./core/share.ts";
 import { mountDistributionView } from "./ui/distribution-view.ts";
 import { createEditor, replaceDoc } from "./ui/editor.ts";
 import { createExactClient } from "./ui/exact-client.ts";
+import { mountExactView } from "./ui/exact-view.ts";
 import { mountGallery } from "./ui/gallery.ts";
 import { mountHeader } from "./ui/header.ts";
 import { mountIntro } from "./ui/intro.ts";
@@ -47,6 +48,7 @@ function start(decoded: Decoded): Store {
       seed: initial.seed,
       exampleId: initial.example,
       view: initial.view,
+      additive: initial.additive,
       theme: storedTheme(),
       // On the page's own thread, a smaller first batch keeps the first distributions quick.
       firstBatch: sampling.inThread ? 200 : 1000,
@@ -94,6 +96,7 @@ function start(decoded: Decoded): Store {
     },
   );
   mountDistributionView($("#distributions"), store);
+  mountExactView($("#stats"), store);
   mountVerdict(
     {
       pane: $("#determinized-pane"),
@@ -203,10 +206,11 @@ function restore(store: Store, editor: EditorView, decoded: Decoded) {
   if (decoded.kind === "error") showNotice(store, decoded.message);
   if (decoded.kind !== "state") return;
   dismissNotice();
-  const { source, seed, example, view } = decoded.state;
+  const { source, seed, example, view, additive } = decoded.state;
   batch(() => {
     store.exampleId.value = example;
     store.view.value = view ?? "outputs";
+    store.additive.value = additive ?? false;
     replaceDoc(editor, sharedSource({ source, example }));
     store.runAt(seed);
   });
