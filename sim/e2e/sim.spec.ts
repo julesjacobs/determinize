@@ -248,17 +248,14 @@ test("a heavy program stops sampling at its time budget, and goes on on request"
   await expect(page.getByRole("button", { name: "Continue" })).toBeVisible();
 });
 
-test("Resample samples from a new seed, which the command follows", async ({ page }) => {
+test("Resample samples from a new seed", async ({ page }) => {
   await page.goto(simulator);
   await sampled(page, 1000);
-  const reproduce = page.locator("#reproduce");
-  await expect(reproduce).toContainText("./run.sh --seed 1 --samples 1000");
   await page.getByRole("button", { name: "Resample" }).click();
   await expect(page.locator("#seed")).not.toHaveValue("1");
   const seed = await page.locator("#seed").inputValue();
   await expect.poll(() => runs(page)).toBe(1000);
   await settled(page);
-  await expect(reproduce).toContainText(`./run.sh --seed ${seed} --samples 1000`);
   await passed(page, Number(seed));
 });
 
@@ -514,11 +511,8 @@ test("a program rejected for its modes shows its counterexample in place of the 
   );
 });
 
-test("the runs' outcomes, the command that reports them and the run's G trace show", async ({
-  page,
-}) => {
+test("the runs' outcomes and the run's G trace show", async ({ page }) => {
   await page.goto(simulator);
-  const reproduce = page.locator("#reproduce");
   await expect(page.locator("#g-trace")).toHaveText(
     /^\[\(uniform, [-0-9.e]+\)\], in both programs$/,
   );
@@ -526,9 +520,6 @@ test("the runs' outcomes, the command that reports them and the run's G trace sh
   await expect(page.locator("#returned-source")).toHaveText("200 of 200");
   // Idle, the progress bar keeps its room but doesn't show.
   await expect(page.locator("#progress-bar")).toBeHidden();
-  await expect(reproduce).toContainText(
-    "./run.sh --seed 1 --samples 200 examples/paper/noisy-product.det",
-  );
 
   await page.goto(linkTo("1/0", 3));
   await sampled(page, 10);
@@ -537,7 +528,6 @@ test("the runs' outcomes, the command that reports them and the run's G trace sh
   await expect(page.locator("#first-failure")).toContainText(
     "First failure in the source: division by zero",
   );
-  await expect(reproduce).toContainText("with the program saved as program.det");
 });
 
 test("after an edit, the statistics show the new program from its first slice of runs", async ({
@@ -564,7 +554,7 @@ test("after an edit, the statistics show the new program from its first slice of
   expect(Number.parseInt(first, 10), first).toBeLessThan(1000);
 });
 
-test("a program that Lean rejects has no runs and no command", async ({ page }) => {
+test("a program that Lean rejects has no runs", async ({ page }) => {
   await page.goto(linkTo("let x =", 1));
   await expect(page.locator("#dist-empty")).toHaveText(
     "No distributions: Lean rejects the program, so neither program runs.",
@@ -575,7 +565,6 @@ test("a program that Lean rejects has no runs and no command", async ({ page }) 
   await expect(page.locator("#premise-safe")).toBeHidden();
   await expect(page.locator("#determinized-pane")).toHaveClass(/\buncovered\b/);
   await expect(page.getByRole("button", { name: "Resample" })).toBeDisabled();
-  await expect(page.locator("#reproduce")).not.toContainText("--samples");
 });
 
 test("a program the simulator fails on doesn't blame Lean", async ({ page }) => {

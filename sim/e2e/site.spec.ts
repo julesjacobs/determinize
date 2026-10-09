@@ -163,7 +163,6 @@ test("neither page calls the simulator unverified", async ({ page }) => {
   await page.goto("./");
   await expect(page.locator("body")).not.toContainText(/\b(?:un|not )verified\b/);
   await page.goto("sim/");
-  await page.locator("#reproduce .cmd").waitFor();
+  await expect(page.locator("#returned-source")).not.toBeEmpty();
   await expect(page.locator("body")).not.toContainText(/\b(?:un|not )verified\b/);
-  await expect(page.locator("#reproduce")).toHaveText(/^Reproduce these runs with \.\/run\.sh /);
 });

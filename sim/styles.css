@@ -1096,21 +1096,6 @@
     }
   }
 
-  .reproduce {
-    max-width: 62rem;
-    margin-bottom: var(--space-4);
-    padding-left: var(--space-3);
-    border-left: 3px solid var(--muted);
-  }
-
-  .cmd {
-    overflow-wrap: anywhere;
-  }
-
-  .cmd .word {
-    white-space: nowrap;
-  }
-
   .band-empty {
     margin-block: var(--space-3);
     color: var(--muted);

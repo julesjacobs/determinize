@@ -5,13 +5,11 @@
 // each run's output against that draw instead, where the
 // determinized runs lie on the curve of the source's mean given the draw. Beside the chart: the
 // statistics as Lean's CLI computes them, each linked to the Lean definition it estimates, the
-// variance-reduction factor and the sample sites that determinization leaves. Above them, the
-// command that has Lean's CLI report the same runs.
+// variance-reduction factor and the sample sites that determinization leaves.
 import { computed, effect } from "@preact/signals-core";
 import type { Analysis } from "../core/compiler/analyze.ts";
 import type { Expr } from "../core/compiler/ast.ts";
 import { sites } from "../core/compiler/core.ts";
-import { examples } from "../core/examples.ts";
 import type { Stats, Summary } from "../core/statistics.ts";
 import { varianceRatio } from "../core/statistics.ts";
 import type { PlotFrame, PlotPoint } from "./charts.ts";
@@ -53,20 +51,6 @@ export function formatStat(value: number) {
 function cliStat(value: number, n: number) {
   if (n === 0) return "–";
   return Number.isFinite(value) ? formatStat(value) : "unavailable (floating-point overflow)";
-}
-
-/** The command with which Lean's CLI reports these runs' statistics, and the file it reads. */
-function command(samples: Samples, file: string | null) {
-  // Lean's seeds are UInt64s; run i is at the seed plus i, wrapping around.
-  const seed = BigInt.asUintN(64, BigInt(samples.seed));
-  const runs = samples.original.summary.runs;
-  const line = `./run.sh --seed ${seed} --samples ${runs} ${file ?? "program.det"}`;
-  // It breaks only at its spaces, so that no flag is split.
-  const words = line
-    .split(" ")
-    .map((word) => `<span class="word">${escapeHtml(word)}</span>`)
-    .join(" ");
-  return `Reproduce these runs with <code class="cmd">${words}</code>${file ? "." : ", with the program saved as program.det."}`;
 }
 
 /** What a histogram leaves out: the runs that observe rejected and the runs that failed. */
@@ -201,21 +185,6 @@ export function mountDistributionView(
     bar.value = done;
   });
 
-  // The command that reproduces the runs.
-  effect(() => {
-    const samples = store.samples.value;
-    const example = examples.find((entry) => entry.id === store.exampleId.value);
-    const file = example?.source === samples.source ? `examples/${example.id}.det` : null;
-    const reproduce = $<HTMLElement>("reproduce");
-    // The earlier command stays until the first batch of new runs has come in.
-    if (runnable.value && !store.samplesReady.value) return;
-    if (!runnable.value || samples.original.summary.runs < 2) reproduce.innerHTML = "";
-    else if (counterexample.value) {
-      reproduce.textContent =
-        "Lean rejects this program, so its command-line tool runs no counterexample.";
-    } else reproduce.innerHTML = command(samples, file);
-  });
-
   // The switch between the charts, where a G draw qualifies.
   for (const radio of viewSwitch.querySelectorAll<HTMLInputElement>("input")) {
     radio.addEventListener("change", () => {
@@ -314,7 +283,6 @@ export function mountDistributionView(
     const ready = store.samplesReady.peek();
     if (runnable.peek() && !ready && !(grid.hidden && listOut.hidden)) return;
     const right = counterexample.peek() ? "Counterexample" : "Determinized";
-    $<HTMLElement>("reproduce").hidden = !runnable.peek() || !ready || runsSoFar < 2;
     if (!runnable.peek() || !ready || runsSoFar < 2) {
       grid.hidden = true;
       listOut.hidden = true;
