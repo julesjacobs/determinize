@@ -134,8 +134,8 @@ Evaluation examples with unbounded recursion:
 Biome formats and lints the simulator as configured in `sim/biome.json`;
 `biome check --write .` in `sim/` applies its formatting and safe fixes. The simulator is
 written in TypeScript, whose types Node and esbuild strip. `npm run typecheck` checks
-`src/` against the browser's types (`tsconfig.json`), and the tests and the build script
-against Node's (`tsconfig.node.json`).
+`src/` against the browser's types (`tsconfig.json`), and the tests, the browser tests, the
+scripts, the build script and the Playwright configuration against Node's (`tsconfig.node.json`).
 
 `sim/src/core/` holds the compiler, the runtime and what the step table and the statistics
 compute. A Biome override keeps it free of the DOM, CodeMirror and signals, so that Node's tests
