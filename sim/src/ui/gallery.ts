@@ -287,6 +287,12 @@ export function mountGallery(
     const target = event.target instanceof Node ? event.target : null;
     if (target && !dialog.contains(target) && !button.contains(target)) close(false);
   });
+  // The menu covers what lies below it, so it closes too when the focus leaves it, as with Tab.
+  dialog.addEventListener("focusout", (event) => {
+    if (!dialog.open || dialog.matches(":modal")) return;
+    const next = event.relatedTarget instanceof Node ? event.relatedTarget : null;
+    if (next && !dialog.contains(next) && !button.contains(next)) close(false);
+  });
   dialog.addEventListener("click", (event) => {
     // A click on the backdrop of the modal dialog lands on the dialog itself.
     if (event.target === dialog) close();

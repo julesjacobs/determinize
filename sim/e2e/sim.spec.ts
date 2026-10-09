@@ -2001,6 +2001,39 @@ test("at 768 px the gallery's menu shows every example without scrolling", async
   expect(await gallery.evaluate((menu) => menu.scrollHeight <= menu.clientHeight)).toBe(true);
 });
 
+test("the gallery's menu closes when the focus leaves it, so that it covers nothing focused", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(simulator);
+  const button = page.getByRole("button", { name: /^Example: / });
+  const gallery = page.getByRole("dialog", { name: "Examples" });
+  const controls = gallery.locator("a[href], button");
+  // Tab within the menu keeps it open.
+  await button.click();
+  await expect(controls.first()).toHaveText("New program");
+  await controls.first().focus();
+  await page.keyboard.press("Tab");
+  await expect(gallery).toBeVisible();
+  // Tab from its last control and Shift+Tab from its first leave it, and close it.
+  for (const [key, control] of [
+    ["Tab", controls.last()],
+    ["Shift+Tab", controls.first()],
+  ] as const) {
+    if (!(await gallery.isVisible())) await button.click();
+    await control.focus();
+    await page.keyboard.press(key);
+    await expect(gallery, key).toBeHidden();
+    await expect(button).toHaveAttribute("aria-expanded", "false");
+    // The focus goes on where the key sends it, not back to the button.
+    const focused = await page.evaluate(() => {
+      const element = document.activeElement;
+      return { inMenu: !!element?.closest("dialog"), onButton: element?.id === "example-button" };
+    });
+    expect(focused, key).toEqual({ inMenu: false, onButton: false });
+  }
+});
+
 test("at 1440 px the gallery's two columns start at the same height", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(simulator);
