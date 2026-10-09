@@ -102,6 +102,32 @@ batch at seeds 1-200:
     returned numbers: n 200, mean 0.35150215573977045, population variance 0.08940687968926142
 `;
 
+exports[`simulator/asymmetric-walk 1`] = `
+seed 1: checked, 31 frames
+  checks: OK ×31
+  final source: 1.027220420802092
+  final determinized: 0.5
+  outcome: 1.027220420802092 | 0.5
+  frames: sha256 12f17008abc6927e274449a27973a957f35a87344abec97cb2868fda1f896eef
+seed 2: checked, 39 frames
+  checks: OK ×39
+  final source: 0.8044767584649923
+  final determinized: 1
+  outcome: 0.8044767584649923 | 1
+  frames: sha256 ba421ebe27875d462d9c5e393c1e14c052de1eba7af29015dcce687ebb9704ec
+seed 3: checked, 7 frames
+  checks: OK ×7
+  final source: -0.4638172825311042
+  final determinized: 0
+  outcome: -0.4638172825311042 | 0
+  frames: sha256 85e8027f681b79ab7e42fa3167da8bb95ee4d93377004b1224c4e7c6af66aa23
+batch at seeds 1-200:
+  source: 200 runs, 0 rejected, 0 failed
+    returned numbers: n 200, mean 0.3912494661682744, population variance 0.7308579775377396
+  determinized: 200 runs, 0 rejected, 0 failed
+    returned numbers: n 200, mean 0.43500000000000016, population variance 0.21827499999999994
+`;
+
 exports[`simulator/bad-e-branching 1`] = `
 seed 1: counterexample, 5 frames
   checks: OK ×4, FAIL
@@ -294,4 +320,30 @@ batch at seeds 1-200:
     returned numbers: n 170, mean 0.17070743231764485, population variance 0.19047605097352077
   determinized: 200 runs, 0 rejected, 0 failed
     returned numbers: n 200, mean 0.2190045009759388, population variance 0.008748966162569163
+`;
+
+exports[`simulator/retransmission 1`] = `
+seed 1: checked, 12 frames
+  checks: OK ×12
+  final source: 3.438346170199302
+  final determinized: 5
+  outcome: 3.438346170199302 | 5
+  frames: sha256 25d6cd97c5bd18c0c53469c9bb019efa1752ba19e956d7a9e35be9944ce6d1ac
+seed 2: checked, 12 frames
+  checks: OK ×12
+  final source: 8.404667933117096
+  final determinized: 5
+  outcome: 8.404667933117096 | 5
+  frames: sha256 68fc160f2fa2eaaee6015572b526f12d2635ace9af69422cd60936abf4376500
+seed 3: checked, 12 frames
+  checks: OK ×12
+  final source: 2.0890110250335305
+  final determinized: 5
+  outcome: 2.0890110250335305 | 5
+  frames: sha256 dfee83d88b824f782f019c29f5826dec49aa4490b86067211b490c4e0b8cecd8
+batch at seeds 1-200:
+  source: 200 runs, 0 rejected, 0 failed
+    returned numbers: n 200, mean 5.374839127491064, population variance 13.172868682146113
+  determinized: 200 runs, 0 rejected, 0 failed
+    returned numbers: n 200, mean 5.799999999999998, population variance 5.249999999999997
 `;

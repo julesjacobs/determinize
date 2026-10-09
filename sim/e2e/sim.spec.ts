@@ -1688,7 +1688,7 @@ test("the gallery lists the examples as links, a menu on wide screens and a dial
   const gallery = page.getByRole("dialog", { name: "Examples" });
   await expect(gallery).toBeVisible();
   expect(await gallery.evaluate((dialog) => dialog.matches(":modal"))).toBe(false);
-  await expect(gallery.getByRole("listitem")).toHaveCount(11);
+  await expect(gallery.getByRole("listitem")).toHaveCount(13);
   await expect(gallery.getByRole("listitem").first()).toContainText(
     "Noisy product A signal and a noisy measurement of it; the measurement becomes its mean. From the paper.",
   );

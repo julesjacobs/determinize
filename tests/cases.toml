@@ -395,6 +395,20 @@ expected_type = "float[E]"
 affinities = ["E", "E"]
 
 [[case]]
+file = "examples/simulator/asymmetric-walk.det"
+suite = "typing"
+outcome = "accept"
+expected_type = "float[E]"
+affinities = ["G", "E", "E", "E"]
+
+[[case]]
+file = "examples/simulator/retransmission.det"
+suite = "typing"
+outcome = "accept"
+expected_type = "float[E]"
+affinities = ["E", "E", "E", "G", "G", "G", "G"]
+
+[[case]]
 file = "examples/simulator/bad-e-branching.det"
 suite = "typing"
 outcome = "reject"
