@@ -107,6 +107,8 @@ const states: { name: string; open: (page: Page) => Promise<void> }[] = [
   {
     name: "a long run",
     open: async (page) => {
+      // axe goes over every row of the dungeon's step table, which takes a slow runner long.
+      test.slow();
       await page.goto("sim/");
       await pick(page, "Dungeon crawl");
       // Rows out of the region's view skip their rendering, which leaves axe without their
