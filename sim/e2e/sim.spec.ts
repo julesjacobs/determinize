@@ -530,6 +530,29 @@ test("a long run shows its steps a page at a time, and the controls reach every 
   expect(fits).toBe(true);
 });
 
+test("a number links to a symbol only where it stands for it", async ({ page }) => {
+  await page.goto(simulator);
+  await passed(page, 1);
+  // At the E draw, x's G draw and v1's mean are equal; only the mean stands for v1.
+  const counterparts = page.locator('.step[data-step="3"] .cell-det [data-corr="v1"]');
+  await expect(counterparts).toHaveCount(1);
+  await expect(counterparts).toHaveAttribute("title", "mean substituted for v1");
+  // A draw's value stands for its symbol until arithmetic combines it with others; the dungeon's
+  // sums of loot and its literal 0 stand for none.
+  await pick(page, "Dungeon crawl");
+  await expect(page.locator('.step[data-step="0"] .cell-source')).toContainText("crawl");
+  const most = await page
+    .locator(".step[data-step]")
+    .evaluateAll((rows) =>
+      Math.max(
+        ...rows.map(
+          (row) => row.querySelectorAll('.cell-source [title^="sampled value for"]').length,
+        ),
+      ),
+    );
+  expect(most).toBeLessThanOrEqual(1);
+});
+
 test("the region holds the flagship's run whole, and a rule shows while rows follow below", async ({
   page,
 }) => {

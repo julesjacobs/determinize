@@ -466,12 +466,12 @@ function renderRows(
     const fact = facts.get(frame.step);
     const sigma = sigmaView(frame.sigma);
     const source = renderTraceExpr(frame.original, {
-      valueBySymbol: frame.sampleBySymbol,
+      counterpart: frame.symbolic,
       valueLabel: "sampled value for",
       short: true,
     });
     const determinized = renderTraceExpr(frame.determinized, {
-      valueBySymbol: sigma.meanBySymbol,
+      counterpart: frame.symbolic,
       valueLabel: "mean substituted for",
       short: true,
     });

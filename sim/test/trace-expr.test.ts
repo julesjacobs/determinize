@@ -1,5 +1,6 @@
 // The step table's printing of states: an affine form of many terms is shortened to its first and
-// last terms, with the whole form as its title and the rest behind a button.
+// last terms, with the whole form as its title and the rest behind a button; a number links to a
+// symbol only where it stands for the symbol.
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Expr } from "../src/core/compiler/ast.ts";
@@ -40,4 +41,47 @@ test("an affine form of many terms shows its first and last terms and counts the
   assert.ok(html.includes(`title="${whole(20)}"`));
   // Shown, the rest completes the form in place.
   assert.equal(text(without(html, count)), whole(20));
+});
+
+const number = (value: number): Expr => ({ kind: "Const", value, from: 0, to: 0 });
+const lone = (symbol: string, coefficient = 1): Expr => ({
+  kind: "SymFloat",
+  affine: { constant: 0, terms: { [symbol]: coefficient } },
+  from: 0,
+  to: 0,
+});
+const product = (left: Expr, right: Expr): Expr => ({ kind: "Mul", left, right, from: 0, to: 0 });
+const linked = (html: string) => [...html.matchAll(/data-corr="(\w+)" title="([^"]*)"/g)];
+
+test("only a number that stands where the symbolic state holds a symbol links to it", () => {
+  // The noisy product's determinized program after its E draw: x's G draw and v1's mean are equal.
+  const html = renderTraceExpr(product(number(0.5666), number(0.5666)), {
+    counterpart: product(number(0.5666), lone("v1")),
+    valueLabel: "mean substituted for",
+  });
+  assert.deepEqual(
+    linked(html).map((match) => [match[1], match[2]]),
+    [["v1", "mean substituted for v1"]],
+  );
+  assert.ok(html.indexOf("data-corr") > html.indexOf("tok-op"));
+});
+
+test("a number computed from a symbol doesn't link to it", () => {
+  assert.deepEqual(linked(renderTraceExpr(number(0), { counterpart: lone("v1", 200) })), []);
+  assert.deepEqual(linked(renderTraceExpr(number(0), { counterpart: number(0) })), []);
+});
+
+test("a mean call's argument links to the symbol of the draw it stands for", () => {
+  const draw: Expr = { kind: "Gauss", mode: "E", args: [lone("v1"), number(1)], from: 0, to: 0 };
+  const mean: Expr = {
+    kind: "Mean",
+    distribution: "Gauss",
+    args: [number(0.5), number(1)],
+    from: 0,
+    to: 0,
+  };
+  assert.deepEqual(
+    linked(renderTraceExpr(mean, { counterpart: draw })).map((match) => match[1]),
+    ["v1"],
+  );
 });
