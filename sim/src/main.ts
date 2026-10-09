@@ -7,6 +7,7 @@ import type { Decoded } from "./core/share.ts";
 import { decodeShare } from "./core/share.ts";
 import { mountDistributionView } from "./ui/distribution-view.ts";
 import { createEditor, replaceDoc } from "./ui/editor.ts";
+import { createExactClient } from "./ui/exact-client.ts";
 import { mountGallery } from "./ui/gallery.ts";
 import { mountHeader } from "./ui/header.ts";
 import { mountIntro } from "./ui/intro.ts";
@@ -35,6 +36,7 @@ export const ready = decodeShare(window.location.hash).then(start);
 function start(decoded: Decoded): Store {
   const sampling = createSampling((response) => store.receive(response));
   const traces = createTraceClient((response) => store.receiveTrace(response));
+  const explore = createExactClient((response) => store.receiveExact(response));
   const initial =
     decoded.kind === "state"
       ? { ...decoded.state, source: sharedSource(decoded.state) }
@@ -51,6 +53,7 @@ function start(decoded: Decoded): Store {
     },
     (request) => sampling.send(request),
     (request) => traces.request(request),
+    explore,
   );
   const $ = <E extends Element>(selector: string) => document.querySelector(selector) as E;
   mountTraceView(

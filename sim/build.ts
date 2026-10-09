@@ -1,9 +1,10 @@
-// Builds the simulator into dist/: the minified bundles app.js, worker.js (sampling) and
-// trace-worker.js (the step table) with their source maps, styles.css with the site's tokens and
-// the fonts they load (fonts/, with their licences), and a copy of index.html. With --no-minify,
-// the bundles are readable and have no source maps. dist/index.html refers to each asset, and
-// app.js to the workers, with ?v= and the first 10 hex digits of the file's SHA-256, so a browser
-// never combines a cached copy with a newer one; the fonts' names carry their hash.
+// Builds the simulator into dist/: the minified bundles app.js, worker.js (sampling),
+// trace-worker.js (the step table) and exact-worker.js (the finite models) with their source
+// maps, styles.css with the site's tokens and the fonts they load (fonts/, with their licences),
+// and a copy of index.html. With --no-minify, the bundles are readable and have no source maps.
+// dist/index.html refers to each asset, and app.js to the workers, with ?v= and the first 10 hex
+// digits of the file's SHA-256, so a browser never combines a cached copy with a newer one; the
+// fonts' names carry their hash.
 import { createHash } from "node:crypto";
 import { copyFile, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { parseArgs } from "node:util";
@@ -47,12 +48,18 @@ await build({
 });
 await build({
   ...bundle,
+  entryPoints: ["src/exact-worker.ts"],
+  outfile: `${outdir}/exact-worker.js`,
+});
+await build({
+  ...bundle,
   entryPoints: ["src/main.ts"],
   globalName: "DeterminizeSim",
   outfile: `${outdir}/app.js`,
   define: {
     WORKER_URL: JSON.stringify(await stamp("worker.js")),
     TRACE_WORKER_URL: JSON.stringify(await stamp("trace-worker.js")),
+    EXACT_WORKER_URL: JSON.stringify(await stamp("exact-worker.js")),
   },
 });
 // styles.css imports the site's tokens, which load the fonts in ../site/fonts/.
