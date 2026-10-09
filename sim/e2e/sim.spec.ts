@@ -938,6 +938,37 @@ test("a histogram's mean label stays inside its chart, beside a clipped bar too"
   }
 });
 
+test("a histogram's labels of cut bars and of the mean don't overlap", async ({ page }) => {
+  // The determinized walk returns sums of the means 1/2 and -1/2: bars at 0, 0.5 and 1 are cut,
+  // and the mean lies between them.
+  for (const width of [390, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(simulator);
+    await pick(page, "Asymmetric random walk");
+    await sampled(page, 1000);
+    const overlaps = await page.locator("#hist-det svg").evaluate((svg) => {
+      const boxes = [...svg.querySelectorAll(".clip-label, .mean-label")].map((label) => ({
+        text: label.textContent,
+        box: label.getBoundingClientRect(),
+      }));
+      const found: string[] = [];
+      for (const [i, a] of boxes.entries()) {
+        for (const b of boxes.slice(i + 1)) {
+          const apart =
+            a.box.right <= b.box.left ||
+            b.box.right <= a.box.left ||
+            a.box.bottom <= b.box.top ||
+            b.box.bottom <= a.box.top;
+          if (!apart) found.push(`${a.text} / ${b.text}`);
+        }
+      }
+      return { count: boxes.length, found };
+    });
+    expect(overlaps.count, `${width} px`).toBeGreaterThan(2);
+    expect(overlaps.found, `${width} px`).toEqual([]);
+  }
+});
+
 test("the plot against a G draw shows each run, and a click steps through it", async ({ page }) => {
   await page.goto(simulator);
   await sampled(page, 1000);

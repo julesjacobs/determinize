@@ -134,6 +134,11 @@ export interface HistogramOptions {
   title: string;
 }
 
+/** About how wide a chart's label of 12.5 px is: its characters at 0.56 em, 0.6 em in bold. */
+function labelWidth(text: string, bold = false) {
+  return text.length * 12.5 * (bold ? 0.6 : 0.56);
+}
+
 /**
  * One program's output distribution: a histogram on the axis and the scale that both programs'
  * histograms share, so that they compare at a glance side by side, with a dashed line at its
@@ -171,30 +176,58 @@ export function histogramChart(o: HistogramOptions) {
       );
     });
   }
-  o.hist.counts.forEach((count, i) => {
-    if (count <= o.yMax) return;
-    const x0 = padX + i * bw;
-    const right = x0 + bw + 80 > W;
-    parts.push(
-      `<path class="break" d="M${f2(x0 - 1)} ${padT + 7} L${f2(x0 + bw + 1)} ${padT + 3} M${f2(x0 - 1)} ${padT + 11} L${f2(x0 + bw + 1)} ${padT + 7}"/>`,
-      `<text class="clip-label halo" x="${f2(right ? x0 - 5 : x0 + bw + 5)}" y="${padT + 11}"${right ? ' text-anchor="end"' : ""}>${thin(count)} runs</text>`,
-    );
-  });
+  // The mean's label sits in the top row, beside its line on a side where no bar reaches that
+  // high; each cut bar's count sits centred on its bar, below its break, in the first row where it
+  // overlaps no other count, and a row lower where it crosses the mean's line.
+  const labels: string[] = [];
+  const tall = o.hist.counts
+    .map((count, i) => ({ from: padX + i * bw, to: padX + (i + 1) * bw, top: y(count) }))
+    .filter((bar) => bar.top < padT + 12);
   parts.push(`<line class="axis" x1="${padX}" x2="${W - padX}" y1="${base}" y2="${base}"/>`);
   if (o.mean !== null && Number.isFinite(o.mean) && o.mean >= lo && o.mean <= hi) {
     const mx = x(o.mean);
-    const crowded = o.hist.counts.some(
-      (count, i) => count > o.yMax && padX + i * bw > mx - 12 && padX + i * bw < mx + 90,
-    );
-    // Left of the line where the right is short of room or holds a clipped bar's label, if the
-    // left has room; else right of it, below that label.
-    const right = (mx + 90 > W || crowded) && mx - 90 >= 0;
-    const lower = crowded && !right;
+    const text = `mean ${minus(o.meanLabel)}`;
+    const width = labelWidth(text, true);
+    const sides = [mx + 5, mx - 5 - width].filter((from) => from >= 0 && from + width <= W);
+    const clear = (from: number) =>
+      tall.every((bar) => bar.to + 2 < from || from + width + 2 < bar.from);
+    const from = sides.find(clear) ?? sides[0] ?? Math.max(0, Math.min(mx + 5, W - width));
     parts.push(
       `<line class="mean-line mean-${o.kind}" x1="${f2(mx)}" x2="${f2(mx)}" y1="${padT}" y2="${base}"/>`,
-      `<text class="mean-label halo" x="${f2(right ? mx - 5 : mx + 5)}" y="${padT + (lower ? 24 : 10)}"${right ? ' text-anchor="end"' : ""}>mean ${minus(o.meanLabel)}</text>`,
     );
+    labels.push(`<text class="mean-label halo" x="${f2(from)}" y="${padT + 10}">${text}</text>`);
   }
+  const counts: { from: number; to: number; row: number }[] = [];
+  const meanX =
+    o.mean !== null && Number.isFinite(o.mean) && o.mean >= lo && o.mean <= hi ? x(o.mean) : null;
+  const tallest = Math.max(...o.hist.counts);
+  o.hist.counts.forEach((count, i) => {
+    if (count <= o.yMax) return;
+    const x0 = padX + i * bw;
+    // The tallest count says what it counts; the caption says it for the others.
+    const text = count === tallest ? `${thin(count)} runs` : thin(count);
+    const width = labelWidth(text);
+    const from = Math.max(0, Math.min(x0 + bw / 2 - width / 2, W - width));
+    // A count across the mean's line starts a row lower, clear of the mean's label.
+    const across = meanX !== null && from - 3 < meanX && meanX < from + width + 3;
+    let row = across ? 1 : 0;
+    while (
+      counts.some(
+        (label) => label.row === row && from < label.to + 4 && label.from < from + width + 4,
+      )
+    ) {
+      row++;
+    }
+    counts.push({ from, to: from + width, row });
+    parts.push(
+      `<path class="break" d="M${f2(x0 - 1)} ${padT + 7} L${f2(x0 + bw + 1)} ${padT + 3} M${f2(x0 - 1)} ${padT + 11} L${f2(x0 + bw + 1)} ${padT + 7}"/>`,
+    );
+    labels.push(
+      `<text class="clip-label halo" x="${f2(from)}" y="${padT + 27 + 17 * row}">${text}</text>`,
+    );
+  });
+  // Over every mark, so that a later bar's break doesn't cross an earlier label.
+  parts.push(...labels);
   for (const tick of o.ticks) {
     const tx = x(tick);
     const anchor = tx < padX + 10 ? "start" : tx > W - padX - 10 ? "end" : "middle";
