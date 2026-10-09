@@ -1052,6 +1052,31 @@
     align-items: baseline;
   }
 
+  /* Where the head doesn't fit on one line, Resample goes beside the runs so far, so that its
+     second row always shows something: the title and Runs, then Resample and the progress. */
+  @container (max-width: 759px) {
+    .dist .band-head {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      justify-items: start;
+      column-gap: var(--space-3);
+    }
+
+    .dist .run-controls {
+      display: contents;
+    }
+
+    .dist #resample {
+      grid-row: 2;
+      grid-column: 1;
+    }
+
+    .dist #progress {
+      grid-row: 2;
+      grid-column: 2;
+    }
+  }
+
   .reproduce {
     max-width: 62rem;
     margin-bottom: var(--space-4);

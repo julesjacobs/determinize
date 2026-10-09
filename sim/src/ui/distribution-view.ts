@@ -194,9 +194,8 @@ export function mountDistributionView(
         ? `Stopped after ${samplingBudgetMs / 1000} s at ${runs}.`
         : paused
           ? `Stopped at ${runs}.`
-          : runnable.value
-            ? `${thin(done)} run${done === 1 ? "" : "s"} of each program.`
-            : "No runs.";
+          : // Idle, the line says nothing that the run count doesn't, and keeps its height.
+            "\u00a0";
     const bar = $<HTMLProgressElement>("progress-bar");
     bar.max = Math.max(target, 1);
     bar.value = done;

@@ -215,8 +215,22 @@ test("a heavy program stops sampling at its time budget, and goes on on request"
   await page.goto(simulator);
   await pick(page, "Gaussian random walk");
   const progress = page.locator("#progress-text");
-  // Idle, the progress line says how many runs there are, so that it leaves no gap.
-  await expect(progress).toHaveText(/^10\s000 runs of each program\.$/);
+  // Idle, the progress line says nothing that the run count doesn't, and keeps its line.
+  await expect(page.locator("#progress")).toHaveClass(/\bidle\b/);
+  expect((await progress.textContent())?.trim()).toBe("");
+  expect(await progress.evaluate((line) => line.getBoundingClientRect().height)).toBeGreaterThan(
+    10,
+  );
+  // At 390 px the head takes two rows, each with something to see: the title and Runs, then
+  // Resample beside the progress.
+  const tops = await page.evaluate(() =>
+    ["#dist-title", ".runs", "#resample", "#progress"].map((selector) =>
+      Math.round((document.querySelector(selector) as Element).getBoundingClientRect().top),
+    ),
+  );
+  expect(Math.abs(tops[0] - tops[1]), `title and Runs: ${tops}`).toBeLessThanOrEqual(12);
+  expect(tops[2], `Resample below the title: ${tops}`).toBeGreaterThan(tops[0] + 12);
+  expect(Math.abs(tops[2] - tops[3]), `Resample and the progress: ${tops}`).toBeLessThanOrEqual(12);
   await setRunCount(page, 1_000_000);
   await expect(progress).toHaveText(/^Stopped after 5 s at [\d\s]+ of 1\s000\s000 runs\.$/, {
     timeout: 20_000,
