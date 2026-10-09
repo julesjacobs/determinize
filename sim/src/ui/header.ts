@@ -1,7 +1,8 @@
 // The header's tools: Copy link copies the address of the current state, Glossary shows the
 // terms the page uses, and below 600 px the tools sit behind a More button.
 import { encodeShare } from "../core/share.ts";
-import type { Store } from "./store.ts";
+import type { SharedStore } from "./url.ts";
+import { sharedStateOf } from "./url.ts";
 
 export interface HeaderElements {
   more: HTMLButtonElement;
@@ -29,10 +30,7 @@ function disclose(
   });
 }
 
-export function mountHeader(
-  elements: HeaderElements,
-  store: Pick<Store, "source" | "seed" | "exampleId" | "view">,
-) {
+export function mountHeader(elements: HeaderElements, store: SharedStore) {
   disclose(elements.glossaryButton, elements.glossary);
   // The tools show beside the title from 600 px; below, More shows and hides them.
   elements.tools.classList.add("collapsible");
@@ -51,12 +49,7 @@ export function mountHeader(
     }, statusMs);
   }
   elements.copy.addEventListener("click", async () => {
-    const hash = await encodeShare({
-      source: store.source.peek(),
-      seed: store.seed.peek(),
-      example: store.exampleId.peek(),
-      ...(store.view.peek() === "against" ? { view: "against" as const } : {}),
-    });
+    const hash = await encodeShare(sharedStateOf(store));
     const url = new URL(window.location.href);
     url.hash = hash;
     try {
