@@ -105,7 +105,7 @@ $\E$ changes to $\M$, and every argument is recursively transformed.
 Mean evaluation remains an atomic distribution operation, governed by the
 domain conditions and reduction rule in \cref{fig:semantics}.
 
-\section{Miscellaneous}
+\section{Miscellaneous}\label{sec:appendix-misc}
 \paragraph{When Expectations Are Undefined}
 \begin{example}
 In the coin-flipping example (cf. \Cref{ex:coin-flip}), each terminating $\G$-trace has positive probability. A trace can also contain continuous draws:
@@ -182,6 +182,28 @@ Thus the domain-safety assumption is necessary, because:
  \Expect_{\mathrm{ret}}[\trans e]=0.
 \]
 \end{example}
+
+\paragraph{Why domain safety is necessary.}
+The preceding guarantees rely essentially on domain safety. Without it, replacing an $\E$-mode sample by its mean can change whether a later operation is defined, and therefore change which executions contribute to the return-conditioned distribution.
+
+For example,
+\begin{lstlisting}
+let u = gaussian[E](0, 1) in
+uniform[E](0, u)
+\end{lstlisting}
+is not domain-safe: executions with $u<0$ become stuck. Conditioning on successful return therefore implicitly conditions $u$ to be positive, giving
+\[
+\Expect_{\mathrm{ret}}[e]
+=
+\frac{1}{2}\Expect[u\mid u>0]
+=
+\frac{1}{\sqrt{2\pi}}.
+\]
+Determinization instead replaces $u$ by its unconditional mean $0$, yielding
+\[
+\Expect_{\mathrm{ret}}[\trans e]=0.
+\]
+Thus domain safety prevents determinization from changing which executions are semantically valid and, consequently, which executions contribute to the return-conditioned output distribution.
 
 
 \subsection{Formal Definitions for Symbolic Execution}

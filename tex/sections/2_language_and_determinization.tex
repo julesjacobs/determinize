@@ -28,7 +28,7 @@ before it is sampled or its mean is computed.
 The deterministic reduction rules in
 \cref{fig:semantics}(\subref{fig:semantics-reduction}) handle the standard
 functional constructs by substitution and case analysis. We omit the
-routine arithmetic and comparison rules. Distribution expressions in
+routine arithmetic and comparison rules here. Distribution expressions in
 mode $\M$, introduced by determinization, also reduce deterministically
 to their means:
 \[
@@ -41,8 +41,8 @@ to their means:
 where the primitive distribution table in
 \cref{fig:semantics}(\subref{fig:semantics-distributions}) specifies
 $\operatorname{Domain}_D$ and $\operatorname{Mean}_D$ for each supported
-distribution. A distribution application outside its domain becomes
-stuck, as does division by zero. In $\kw{gaussian}(u,v)$, $v$ denotes
+distribution. A distribution expression whose arguments lie outside its primitive's
+domain becomes stuck, as does division by zero: execution cannot take another step or return a value. In $\kw{gaussian}(u,v)$, $v$ denotes
 the variance; the parameters $\lambda$ of the exponential and gamma
 distributions are rates. The distribution
 $\kw{discrete}([p_i]_{i<n})$ returns $i$ with probability $p_i$ for
@@ -53,20 +53,19 @@ In contrast to mode $\M$, modes $\G$ and $\E$ both sample from
 $D(\bar v)$ when the arguments satisfy the domain condition $\operatorname{Domain}_D(\bar v)$.
 Since sampling is stochastic, neither mode has a deterministic reduction
 rule. Their identical sampling behavior is instead specified by the
-output-measure rules in
+output measure rules in
 \cref{fig:semantics}(\subref{fig:semantics-output}), which we describe
 later in this section.
 
 \input{figures/semantics}
 
-\paragraph{Determinization} We now formally define our determinization function below.
+\paragraph{Determinization} We now define the determinization transformation, with the full inductive definition deferred to \Cref{sec:appendix-determinization}. 
 
 \begin{definition}[Determinization\leanref{determinization}]
 \label{def:determinization}
 Let $\mathcal{A}=\{\G,\E,\M\}$ be the set of distribution modes. The
 determinization transformation $\trans{\cdot}$ is defined structurally on
-expressions, replacing each $\E$-mode distribution by its $\M$-mode
-counterpart and leaving all other constructs unchanged. In particular, for
+expressions, changing each $\E$-mode distribution to $\M$-mode and leaving all other constructs unchanged. In particular, for
 every distribution $D$, mode $\alpha\in\mathcal{A}$, and argument
 expressions $\bar e=(e_1,\ldots,e_n)$,
 \[
@@ -89,13 +88,17 @@ For every non-distribution constructor $C$,
 =
 C(\trans{e_1},\ldots,\trans{e_n}),
 \]
-and atomic expressions are unchanged (see~\Cref{sec:appendix-determinization}).
+and atomic expressions are unchanged.
 \end{definition}
 
-Determinization replaces $\E$-mode sampling with mean evaluation and recursively transforms the distribution's arguments, preserving their call-by-value evaluation order. When all sampling sites are annotated with $\E$, determinization eliminates all randomness, yielding a deterministic program. We refer to this as \emph{full determinization}. When both $\E$- and $\G$-mode sampling sites occur, determinization eliminates the former while retaining the latter. Accordingly, we refer to this as \emph{partial determinization}. In this case, the resulting program may be discrete or remain continuous, depending on the randomness retained. In particular, if all retained sampling sites are discrete, the transformed program is discrete, even if the original program contains continuous distributions. Conversely, retaining continuous sampling sites may leave the transformed program continuous. Let us consider several simple examples below to illustrate determinization in action.
+Most notably, determinization replaces an $\E$-mode distribution with its mean evaluation and recursively transforms the distribution's arguments, preserving their call-by-value evaluation order. When all distributions are annotated with $\E$, determinization eliminates all randomness, yielding a deterministic program. We refer to this as \emph{full determinization}. When both $\E$- and $\G$-mode distributions occur, determinization eliminates randomness in the former while retaining it in the latter. Accordingly, we refer to this as \emph{partial determinization}. In this case, the resulting program may be discrete or remain continuous, depending on the randomness retained. In particular, if all retained sampling sites are discrete, the transformed program is discrete, even if the original program contains continuous distributions. Conversely, retaining continuous sampling sites may leave the transformed program continuous. Let us consider several simple examples below to illustrate full and partial determinization in action.
 
-\begin{example}
-In this example, determinization first replaces the outer $\E$-annotated Gaussian by its $\M$-annotated counterpart, and then recursively transforms its arguments (trivial recursive steps on constants, which are unchanged by determinization, are omitted for brevity). The nested uniform distribution is annotated with $\E$, so it also gets replaced by its $\M$-annotated counterpart:
+\begin{example}[Full determinization]
+Consider an $\E$-mode Gaussian whose mean is given by an
+$\E$-mode uniform distribution. Determinization changes the
+outer Gaussian to $\M$-mode and recursively transforms its
+arguments. In particular, the nested $\E$-mode uniform
+distribution is also changed to $\M$-mode:
 \begin{align*}
 \trans{
   \kw{gaussian}^{\E}
@@ -114,11 +117,16 @@ In this example, determinization first replaces the outer $\E$-annotated Gaussia
     1
   \bigr).
 \end{align*}
-Thus, the Gaussian and uniform draws are determinized to their means.
+Thus, both sampling sites are replaced by mean evaluations,
+yielding a deterministic program.
 \end{example}
 
-\begin{example}
-Consider the following partial determinization example, where the draws are dependent. The $\G$-annotated uniform draw for $x$ remains stochastic, while the conditional Gaussian draw for $y$ is determinized. Importantly, its mean $2x+1$ may still depend on the sampled value of $x$:
+\begin{example}[Partial determinization]
+Consider a program with dependent random draws.
+The $\G$-mode uniform distribution remains stochastic,
+while the $\E$-mode Gaussian is changed to $\M$-mode.
+Crucially, the Gaussian's mean $2x+1$ still depends
+on the random value of $x$:
 \[
 \trans{\left(
 \begin{aligned}
@@ -134,71 +142,45 @@ Consider the following partial determinization example, where the draws are depe
 &x*y.
 \end{aligned}
 \]
-Thus, determinization removes the randomness introduced by $y$ without removing the randomness on which its mean depends.
+Thus, determinization eliminates the Gaussian's
+conditional randomness while preserving its dependence
+on the retained random value of $x$.
 \end{example}
 
-We note that replacing a sample by its mean is not valid in every context. For example,
-if $X$ is uniformly distributed on $[0,1]$, then $\mathbb{E}[X^2]=\frac{1}{3}$ but $\mathbb{E}[X]^2=\frac{1}{4}$.
-
-The type system therefore prevents the sample in
+We note that determinization itself is syntactic: it performs the required replacements, but the type system is what establishes that those replacements are semantically justified; we present these restrictions in \cref{sec:type-system}. For example, the type system prevents the $\kw{uniform}$ distribution in
 \[
   \kw{let}\ x=\kw{uniform}^{\E}(0,1)\ \kw{in}\ x*x
 \]
-from being assigned mode $\E$. We present these restrictions in
-\cref{sec:type-system}. Thus, the transformation defined above is
-syntactic: it performs the requested replacements, while the type system
-establishes that those replacements are semantically justified.
+from being assigned mode $\E$, since for $X$ uniform on $[0,1]$, the original program returns $X^2$, with
+expectation $\mathbb{E}[X^2]=\frac{1}{3}$, but replacing $X$ by its mean
+instead returns $\mathbb{E}[X]^2=\frac{1}{4}$, changing the expected
+returned value.
 
 \paragraph{Output measures.}
-As described above, the reduction rules describe how an individual execution proceeds. To
-describe the behavior of all possible executions, we lift these rules to a
-measure over returned real values, as defined in \cref{fig:semantics}(\subref{fig:semantics-output}). For a closed expression $e$ and
-$n\in\mathbb{N}$, $\out e n$ is a measure on the standard Borel space
-$\mathbb{R}$. For every Borel-measurable set $B\subseteq\mathbb{R}$,
-$\out e n(B)$ is the probability that $e$ returns a value in $B$ after
-exactly $n$ reduction steps. Deterministic steps continue with the resulting
-expression, while sampling steps integrate over every possible sampled
-value. Summing over all finite return depths gives the complete output law of $e$.
+To characterize the probabilistic behavior of a program,
+we define a subprobability measure over its \emph{returned real values}, as shown in \cref{fig:semantics}(\subref{fig:semantics-output}).
+For a closed expression $e$ and each $n\in\mathbb{N}$,
+the measure $\out e n$ assigns to each Borel measurable set
+$B\subseteq\Real$ the probability that $e$ returns a value
+in $B$ after exactly $n$ reduction steps.
+Deterministic reductions proceed according to $\rightsquigarrow$,
+while $\G$- and $\E$-mode sampling steps integrate over
+all possible sampled values.
+Summing over all finite $n$ yields the
+output subprobability measure $\law e$ on $\Real$.
+Since only executions that successfully return a real value
+contribute mass, $\law e(\Real)\leq 1$, with the missing mass
+accounting for rejection, divergence, stuck executions,
+and executions that terminate without returning a real value.
+Thus, $\law e(\Real)$ is precisely the probability that
+$e$ successfully returns a real value.
 
-The output law may have total mass less than one: for example, executions that do not
-return a real number, contribute no mass. Consequently, $\law e(\mathbb{R})$
-is the probability that $e$ successfully returns a real value. 
-This semantics provides the basis for the results that follow. The output measures give us the mathematical object used in \cref{sec:soundness} to prove that determinizing a
-well-typed program preserves its expected returned value while reducing
-variance under the stated assumptions.
+Although executions that reject, diverge, or become stuck contribute no mass to the output measure, stuck executions require special consideration. Replacing a random sample by its mean may change whether a subsequent operation is defined. For example, a uniform distribution whose upper bound depends on a random sample may be undefined for some sampled values but become well-defined after determinization. This can alter the probability of successful return (see~\Cref{sec:appendix-misc}). So to rule out such behavior, we introduce the following
+domain safety condition, and henceforth assume that all programs we consider are domain safe.
 
-\todo[inline]{TODO: fix and explain domain safety. In:
-
-Operational semantics: explain when an operation becomes stuck
-
-Output measures: explain that stuck executions contribute no output mass.
-
-Domain safety: define it as requiring operations to remain within their domains almost surely at every finite stage of execution. Clarify that probability-zero failures are allowed, while positive-probability failures are not.}
-\begin{remark}[Domain safety\leanref{domain-safety}]
-We assume programs are \emph{domain-safe}: almost surely, every executed
-distribution has parameters in its domain and every executed division has a
-nonzero divisor.  Thus execution cannot become stuck because a primitive
-operation is undefined.  We show below that this assumption is necessary.
-\end{remark}
-
-\paragraph{Why domain safety is necessary.}
-The preceding guarantees rely essentially on domain safety. Without it, replacing an $\E$-mode sample by its mean can change whether a later operation is defined, and therefore change which executions contribute to the return-conditioned distribution.
-
-For example,
-\begin{lstlisting}
-let u = gaussian[E](0, 1) in
-uniform[E](0, u)
-\end{lstlisting}
-is not domain-safe: executions with $u<0$ become stuck. Conditioning on successful return therefore implicitly conditions $u$ to be positive, giving
-\[
-\Expect_{\mathrm{ret}}[e]
-=
-\frac{1}{2}\Expect[u\mid u>0]
-=
-\frac{1}{\sqrt{2\pi}}.
-\]
-Determinization instead replaces $u$ by its unconditional mean $0$, yielding
-\[
-\Expect_{\mathrm{ret}}[\trans e]=0.
-\]
-Thus domain safety prevents determinization from changing which executions are semantically valid and, consequently, which executions contribute to the return-conditioned output distribution.
+\begin{definition}[Domain safety\leanref{domain-safety}]
+A closed expression $e$ is \emph{domain-safe} if, almost surely,
+every executed distribution $D^\alpha(\bar v)$ satisfies
+$\operatorname{Domain}_D(\bar v)$ and every executed division
+has a nonzero divisor.
+\end{definition}
