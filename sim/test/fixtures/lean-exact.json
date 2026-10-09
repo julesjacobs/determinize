@@ -1,0 +1,5336 @@
+{
+  "cases": [
+    {
+      "file": "examples/paper/noisy-iteration.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 34: unsupported execution: stochastic Determinize.Spec.Paper.Op.gaussian. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 68,
+            "second_moment": "1/3",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 31,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "2/9",
+            "conditional_mean": "1/3",
+            "certificate_status": "generated",
+            "answer": "1/3"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 34: unsupported execution: stochastic Determinize.Spec.Paper.Op.gaussian. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 68,
+            "second_moment": "1/3",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 31,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "2/9",
+            "conditional_mean": "1/3",
+            "certificate_status": "generated",
+            "answer": "1/3"
+          }
+        }
+      }
+    },
+    {
+      "file": "examples/paper/noisy-product.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      }
+    },
+    {
+      "file": "examples/paper/dungeon.det",
+      "plain": {
+        "source": {
+          "message": "Incomplete exploration (Determinize.Finite.Limit.states): 10001 discovered, 9873 expanded, 10255 edges. No export written."
+        },
+        "determinized": {
+          "message": "Incomplete exploration (Determinize.Finite.Limit.states): 10001 discovered, 9997 expanded, 10105 edges. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Incomplete exploration (Determinize.Finite.Limit.states): 10001 discovered, 9999 expanded, 10486 edges. No export written."
+        },
+        "determinized": {
+          "message": "Incomplete exploration (Determinize.Finite.Limit.states): 10001 discovered, 9999 expanded, 10255 edges. No export written."
+        }
+      }
+    },
+    {
+      "file": "tests/execution/apply.det",
+      "plain": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 23,
+            "second_moment": "25",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 22,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "5",
+            "certificate_status": "generated",
+            "answer": "5"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 23,
+            "second_moment": "25",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 22,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "5",
+            "certificate_status": "generated",
+            "answer": "5"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 23,
+            "second_moment": "25",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 22,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "5",
+            "certificate_status": "generated",
+            "answer": "5"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 23,
+            "second_moment": "25",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 22,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "5",
+            "certificate_status": "generated",
+            "answer": "5"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/execution/arith.det",
+      "plain": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 10,
+            "second_moment": "49",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 9,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "7",
+            "certificate_status": "generated",
+            "answer": "7"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 10,
+            "second_moment": "49",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 9,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "7",
+            "certificate_status": "generated",
+            "answer": "7"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 10,
+            "second_moment": "49",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 9,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "7",
+            "certificate_status": "generated",
+            "answer": "7"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 10,
+            "second_moment": "49",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 9,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "7",
+            "certificate_status": "generated",
+            "answer": "7"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/typing/accept/beta.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.beta. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.beta. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.beta. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.beta. No export written."
+        }
+      }
+    },
+    {
+      "file": "tests/execution/case-gauss.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 6: unsupported execution: stochastic Determinize.Spec.Paper.Op.gaussian. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 11,
+            "second_moment": "0",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 10,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "0",
+            "certificate_status": "generated",
+            "answer": "0"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 6: unsupported execution: stochastic Determinize.Spec.Paper.Op.gaussian. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 11,
+            "second_moment": "0",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 10,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "0",
+            "certificate_status": "generated",
+            "answer": "0"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/typing/accept/exponential.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 3: unsupported execution: stochastic Determinize.Spec.Paper.Op.exponential. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 3: unsupported execution: stochastic Determinize.Spec.Paper.Op.exponential. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 3: unsupported execution: stochastic Determinize.Spec.Paper.Op.exponential. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 3: unsupported execution: stochastic Determinize.Spec.Paper.Op.exponential. No export written."
+        }
+      }
+    },
+    {
+      "file": "tests/execution/factorial.det",
+      "plain": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 105,
+            "second_moment": "576",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 104,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "24",
+            "certificate_status": "generated",
+            "answer": "24"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 105,
+            "second_moment": "576",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 104,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "24",
+            "certificate_status": "generated",
+            "answer": "24"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 105,
+            "second_moment": "576",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 104,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "24",
+            "certificate_status": "generated",
+            "answer": "24"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 105,
+            "second_moment": "576",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 104,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "24",
+            "certificate_status": "generated",
+            "answer": "24"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/execution/foldr.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 12: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 150,
+            "second_moment": "81/4",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 149,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "9/2",
+            "certificate_status": "generated",
+            "answer": "9/2"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 12: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 150,
+            "second_moment": "81/4",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 149,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "9/2",
+            "certificate_status": "generated",
+            "answer": "9/2"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/typing/accept/funny.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 12: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 198,
+            "second_moment": "101761/65536",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 197,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "319/256",
+            "certificate_status": "generated",
+            "answer": "319/256"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 12: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 198,
+            "second_moment": "101761/65536",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 197,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "319/256",
+            "certificate_status": "generated",
+            "answer": "319/256"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/execution/gamma.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.gamma. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 20,
+            "second_moment": "289/256",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 19,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "17/16",
+            "certificate_status": "generated",
+            "answer": "17/16"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.gamma. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 20,
+            "second_moment": "289/256",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 19,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "17/16",
+            "certificate_status": "generated",
+            "answer": "17/16"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/typing/accept/gauss.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.gaussian. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 13,
+            "second_moment": "0",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 12,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "0",
+            "certificate_status": "generated",
+            "answer": "0"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.gaussian. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 13,
+            "second_moment": "0",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 12,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "0",
+            "certificate_status": "generated",
+            "answer": "0"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/execution/if.det",
+      "plain": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 5,
+            "second_moment": "1",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 4,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "1",
+            "certificate_status": "generated",
+            "answer": "1"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 5,
+            "second_moment": "1",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 4,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "1",
+            "certificate_status": "generated",
+            "answer": "1"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 5,
+            "second_moment": "1",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 4,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "1",
+            "certificate_status": "generated",
+            "answer": "1"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 5,
+            "second_moment": "1",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 4,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "1",
+            "certificate_status": "generated",
+            "answer": "1"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/execution/lambda.det",
+      "plain": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 11,
+            "second_moment": "36",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 10,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "6",
+            "certificate_status": "generated",
+            "answer": "6"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 11,
+            "second_moment": "36",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 10,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "6",
+            "certificate_status": "generated",
+            "answer": "6"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 11,
+            "second_moment": "36",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 10,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "6",
+            "certificate_status": "generated",
+            "answer": "6"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 11,
+            "second_moment": "36",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 10,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "6",
+            "certificate_status": "generated",
+            "answer": "6"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/execution/let.det",
+      "plain": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 12,
+            "second_moment": "9",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 11,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "3",
+            "certificate_status": "generated",
+            "answer": "3"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 12,
+            "second_moment": "9",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 11,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "3",
+            "certificate_status": "generated",
+            "answer": "3"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 12,
+            "second_moment": "9",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 11,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "3",
+            "certificate_status": "generated",
+            "answer": "3"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 12,
+            "second_moment": "9",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 11,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "3",
+            "certificate_status": "generated",
+            "answer": "3"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/execution/lists.det",
+      "plain": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 64,
+            "second_moment": "36",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 63,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "6",
+            "certificate_status": "generated",
+            "answer": "6"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 64,
+            "second_moment": "36",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 63,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "6",
+            "certificate_status": "generated",
+            "answer": "6"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 62,
+            "second_moment": "36",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 61,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "6",
+            "certificate_status": "generated",
+            "answer": "6"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 62,
+            "second_moment": "36",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 61,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "6",
+            "certificate_status": "generated",
+            "answer": "6"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/typing/accept/mult.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 6: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 6: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 6: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 6: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      }
+    },
+    {
+      "file": "tests/typing/accept/observe.det",
+      "plain": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 49,
+            "second_moment": "1/5",
+            "return_mass": "3/10",
+            "rejection_probability": "7/10",
+            "rank_bound": 22,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "2/9",
+            "conditional_mean": "2/3",
+            "certificate_status": "generated",
+            "answer": "1/5"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 49,
+            "second_moment": "1/5",
+            "return_mass": "3/10",
+            "rejection_probability": "7/10",
+            "rank_bound": 22,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "2/9",
+            "conditional_mean": "2/3",
+            "certificate_status": "generated",
+            "answer": "1/5"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 49,
+            "second_moment": "1/5",
+            "return_mass": "3/10",
+            "rejection_probability": "7/10",
+            "rank_bound": 22,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "2/9",
+            "conditional_mean": "2/3",
+            "certificate_status": "generated",
+            "answer": "1/5"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 49,
+            "second_moment": "1/5",
+            "return_mass": "3/10",
+            "rejection_probability": "7/10",
+            "rank_bound": 22,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "2/9",
+            "conditional_mean": "2/3",
+            "certificate_status": "generated",
+            "answer": "1/5"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/execution/pairs.det",
+      "plain": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 17,
+            "second_moment": "9",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 16,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "3",
+            "certificate_status": "generated",
+            "answer": "3"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 17,
+            "second_moment": "9",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 16,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "3",
+            "certificate_status": "generated",
+            "answer": "3"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 17,
+            "second_moment": "9",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 16,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "3",
+            "certificate_status": "generated",
+            "answer": "3"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 17,
+            "second_moment": "9",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 16,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "3",
+            "certificate_status": "generated",
+            "answer": "3"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/execution/partial.det",
+      "plain": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 15,
+            "second_moment": "100",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 14,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "10",
+            "certificate_status": "generated",
+            "answer": "10"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 15,
+            "second_moment": "100",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 14,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "10",
+            "certificate_status": "generated",
+            "answer": "10"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 15,
+            "second_moment": "100",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 14,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "10",
+            "certificate_status": "generated",
+            "answer": "10"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 15,
+            "second_moment": "100",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 14,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "10",
+            "certificate_status": "generated",
+            "answer": "10"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/execution/rec.det",
+      "plain": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 7,
+            "second_moment": "9",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 6,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "3",
+            "certificate_status": "generated",
+            "answer": "3"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 7,
+            "second_moment": "9",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 6,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "3",
+            "certificate_status": "generated",
+            "answer": "3"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 7,
+            "second_moment": "9",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 6,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "3",
+            "certificate_status": "generated",
+            "answer": "3"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 7,
+            "second_moment": "9",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 6,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "3",
+            "certificate_status": "generated",
+            "answer": "3"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/typing/accept/retry.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 48: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 51,
+            "second_moment": "121/4",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 39,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "11/2",
+            "certificate_status": "generated",
+            "answer": "11/2"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 48: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 51,
+            "second_moment": "121/4",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 39,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "11/2",
+            "certificate_status": "generated",
+            "answer": "11/2"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/execution/sums.det",
+      "plain": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 11,
+            "second_moment": "16",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 10,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "4",
+            "certificate_status": "generated",
+            "answer": "4"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 11,
+            "second_moment": "16",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 10,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "4",
+            "certificate_status": "generated",
+            "answer": "4"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 11,
+            "second_moment": "16",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 10,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "4",
+            "certificate_status": "generated",
+            "answer": "4"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 11,
+            "second_moment": "16",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 10,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "4",
+            "certificate_status": "generated",
+            "answer": "4"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/execution/uniform.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 13,
+            "second_moment": "25/4",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 12,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "5/2",
+            "certificate_status": "generated",
+            "answer": "5/2"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 13,
+            "second_moment": "25/4",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 12,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "5/2",
+            "certificate_status": "generated",
+            "answer": "5/2"
+          }
+        }
+      }
+    },
+    {
+      "file": "examples/baselines/clickGraph.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      }
+    },
+    {
+      "file": "examples/loops/bounded-iteration.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 35: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "exact solver state limit exceeded (393 > 256)"
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 35: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "exact solver state limit exceeded (393 > 256)"
+        }
+      }
+    },
+    {
+      "file": "examples/infinite.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 25: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 25: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 25: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 25: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      }
+    },
+    {
+      "file": "examples/loops/irwin_hall.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 37: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "exact solver state limit exceeded (8234 > 256)"
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 37: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "exact solver state limit exceeded (8234 > 256)"
+        }
+      }
+    },
+    {
+      "file": "examples/loops/irwin_hall_observe.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 37: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 37: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 37: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 37: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      }
+    },
+    {
+      "file": "examples/loops/poisson_packet_arrival.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 3: unsupported execution: stochastic Determinize.Spec.Paper.Op.poisson. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 3: unsupported execution: stochastic Determinize.Spec.Paper.Op.poisson. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 3: unsupported execution: stochastic Determinize.Spec.Paper.Op.poisson. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 3: unsupported execution: stochastic Determinize.Spec.Paper.Op.poisson. No export written."
+        }
+      }
+    },
+    {
+      "file": "examples/loops/random_walk.det",
+      "plain": {
+        "source": {
+          "message": "Incomplete exploration (Determinize.Finite.Limit.states): 10001 discovered, 9999 expanded, 10216 edges. No export written."
+        },
+        "determinized": {
+          "message": "Incomplete exploration (Determinize.Finite.Limit.states): 10001 discovered, 9999 expanded, 10216 edges. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Incomplete exploration (Determinize.Finite.Limit.states): 10001 discovered, 9998 expanded, 10215 edges. No export written."
+        },
+        "determinized": {
+          "message": "Incomplete exploration (Determinize.Finite.Limit.states): 10001 discovered, 9998 expanded, 10215 edges. No export written."
+        }
+      }
+    },
+    {
+      "file": "examples/loops/tortoise_hare.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 60: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 60: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 60: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 60: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      }
+    },
+    {
+      "file": "examples/paper/nested-uniform-parameters.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 7: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 7: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 7: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 7: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      }
+    },
+    {
+      "file": "examples/paper/squared-nested-uniform.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 6: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 6: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 6: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 6: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      }
+    },
+    {
+      "file": "examples/paper/sum-of-squares.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.gaussian. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.gaussian. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.gaussian. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.gaussian. No export written."
+        }
+      }
+    },
+    {
+      "file": "examples/paper/gamma-affine-shape.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 10,
+            "second_moment": "1/4",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 9,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "1/2",
+            "certificate_status": "generated",
+            "answer": "1/2"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 10,
+            "second_moment": "1/4",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 9,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "1/2",
+            "certificate_status": "generated",
+            "answer": "1/2"
+          }
+        }
+      }
+    },
+    {
+      "file": "examples/paper/gamma-product-shape.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 6: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 6: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 6: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 6: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      }
+    },
+    {
+      "file": "examples/paper/beta-random-shape.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      }
+    },
+    {
+      "file": "examples/paper/gauss-random-walk.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 102: unsupported execution: stochastic Determinize.Spec.Paper.Op.gaussian. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 432: export requires a numeric terminal result. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 102: unsupported execution: stochastic Determinize.Spec.Paper.Op.gaussian. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 432: export requires a numeric terminal result. No export written."
+        }
+      }
+    },
+    {
+      "file": "examples/symbolic/nested-uniform.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 20,
+            "second_moment": "49/16",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 19,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "7/4",
+            "certificate_status": "generated",
+            "answer": "7/4"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 20,
+            "second_moment": "49/16",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 19,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "7/4",
+            "certificate_status": "generated",
+            "answer": "7/4"
+          }
+        }
+      }
+    },
+    {
+      "file": "examples/symbolic/mixed-affinities.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      }
+    },
+    {
+      "file": "examples/symbolic/pair-sum.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 6: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 25,
+            "second_moment": "9/4",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 24,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "3/2",
+            "certificate_status": "generated",
+            "answer": "3/2"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 6: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 25,
+            "second_moment": "9/4",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 24,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "3/2",
+            "certificate_status": "generated",
+            "answer": "3/2"
+          }
+        }
+      }
+    },
+    {
+      "file": "examples/symbolic/recursion-and-list.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 87: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 101,
+            "second_moment": "1/4",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 100,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "1/2",
+            "certificate_status": "generated",
+            "answer": "1/2"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 87: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 101,
+            "second_moment": "1/4",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 100,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "1/2",
+            "certificate_status": "generated",
+            "answer": "1/2"
+          }
+        }
+      }
+    },
+    {
+      "file": "examples/symbolic/distribution-sum.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 7: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 70,
+            "second_moment": "6241/100",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 69,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "79/10",
+            "certificate_status": "generated",
+            "answer": "79/10"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 7: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 70,
+            "second_moment": "6241/100",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 69,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "79/10",
+            "certificate_status": "generated",
+            "answer": "79/10"
+          }
+        }
+      }
+    },
+    {
+      "file": "examples/uniform_sum.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 31: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Incomplete exploration (Determinize.Finite.Limit.states): 10001 discovered, 10000 expanded, 10333 edges. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 31: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Incomplete exploration (Determinize.Finite.Limit.states): 10001 discovered, 9999 expanded, 10332 edges. No export written."
+        }
+      }
+    },
+    {
+      "file": "examples/while.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 35: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 35: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 35: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 35: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      }
+    },
+    {
+      "file": "examples/simulator/observe.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      }
+    },
+    {
+      "file": "examples/simulator/random-list-sum.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 35: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Incomplete exploration (Determinize.Finite.Limit.states): 10001 discovered, 9982 expanded, 10029 edges. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 35: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Incomplete exploration (Determinize.Finite.Limit.states): 10001 discovered, 9994 expanded, 10102 edges. No export written."
+        }
+      }
+    },
+    {
+      "file": "examples/simulator/recursive-gamma.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 142: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 142: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 142: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 142: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      }
+    },
+    {
+      "file": "examples/simulator/gauss-random-walk.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 103: unsupported execution: stochastic Determinize.Spec.Paper.Op.gaussian. No export written."
+        },
+        "determinized": {
+          "message": "exact solver state limit exceeded (438 > 256)"
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 103: unsupported execution: stochastic Determinize.Spec.Paper.Op.gaussian. No export written."
+        },
+        "determinized": {
+          "message": "exact solver state limit exceeded (438 > 256)"
+        }
+      }
+    },
+    {
+      "file": "examples/simulator/gauss-bound.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.gaussian. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 13,
+            "second_moment": "1/4",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 12,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "1/2",
+            "certificate_status": "generated",
+            "answer": "1/2"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.gaussian. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 13,
+            "second_moment": "1/4",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 12,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "1/2",
+            "certificate_status": "generated",
+            "answer": "1/2"
+          }
+        }
+      }
+    },
+    {
+      "file": "examples/simulator/asymmetric-walk.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 32: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Incomplete exploration (Determinize.Finite.Limit.states): 10001 discovered, 9999 expanded, 10136 edges. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 32: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 199,
+            "second_moment": "59/196",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 51,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "17/98",
+            "conditional_mean": "5/14",
+            "certificate_status": "generated",
+            "answer": "5/14"
+          }
+        }
+      }
+    },
+    {
+      "file": "examples/simulator/retransmission.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 16: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Incomplete exploration (Determinize.Finite.Limit.states): 10001 discovered, 9873 expanded, 10127 edges. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 16: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 204,
+            "second_moment": "110904220/2725801",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 59,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "16036620/2725801",
+            "conditional_mean": "9740/1651",
+            "certificate_status": "generated",
+            "answer": "9740/1651"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/typing/accept/primitives.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 7: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 47,
+            "second_moment": "26569/400",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 46,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "163/20",
+            "certificate_status": "generated",
+            "answer": "163/20"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 7: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 47,
+            "second_moment": "26569/400",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 46,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "163/20",
+            "certificate_status": "generated",
+            "answer": "163/20"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/typing/accept/subtyping.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 63: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 63: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 63: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 63: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      }
+    },
+    {
+      "file": "tests/typing/accept/identity.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 1: export requires a numeric terminal result. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 1: export requires a numeric terminal result. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 1: export requires a numeric terminal result. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 1: export requires a numeric terminal result. No export written."
+        }
+      }
+    },
+    {
+      "file": "tests/execution/pair.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 5: export requires a numeric terminal result. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 5: export requires a numeric terminal result. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 5: export requires a numeric terminal result. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 5: export requires a numeric terminal result. No export written."
+        }
+      }
+    },
+    {
+      "file": "tests/execution/list.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 9: export requires a numeric terminal result. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 9: export requires a numeric terminal result. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 9: export requires a numeric terminal result. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 9: export requires a numeric terminal result. No export written."
+        }
+      }
+    },
+    {
+      "file": "tests/execution/sum.det",
+      "plain": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 7,
+            "second_moment": "49",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 6,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "7",
+            "certificate_status": "generated",
+            "answer": "7"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 7,
+            "second_moment": "49",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 6,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "7",
+            "certificate_status": "generated",
+            "answer": "7"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 7,
+            "second_moment": "49",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 6,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "7",
+            "certificate_status": "generated",
+            "answer": "7"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 7,
+            "second_moment": "49",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 6,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "7",
+            "certificate_status": "generated",
+            "answer": "7"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/execution/closure.det",
+      "plain": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 20,
+            "second_moment": "25",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 19,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "5",
+            "certificate_status": "generated",
+            "answer": "5"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 20,
+            "second_moment": "25",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 19,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "5",
+            "certificate_status": "generated",
+            "answer": "5"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 20,
+            "second_moment": "25",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 19,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "5",
+            "certificate_status": "generated",
+            "answer": "5"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 20,
+            "second_moment": "25",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 19,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "5",
+            "certificate_status": "generated",
+            "answer": "5"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/execution/division-zero.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 4: invalid execution: division by zero. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 4: invalid execution: division by zero. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 4: invalid execution: division by zero. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 4: invalid execution: division by zero. No export written."
+        }
+      }
+    },
+    {
+      "file": "tests/execution/boolean.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 14: export requires a numeric terminal result. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 14: export requires a numeric terminal result. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 14: export requires a numeric terminal result. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 14: export requires a numeric terminal result. No export written."
+        }
+      }
+    },
+    {
+      "file": "tests/execution/unit.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 4: export requires a numeric terminal result. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 4: export requires a numeric terminal result. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 4: export requires a numeric terminal result. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 4: export requires a numeric terminal result. No export written."
+        }
+      }
+    },
+    {
+      "file": "tests/execution/invalid-uniform.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 4: invalid execution: uniform bounds. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 4: invalid execution: uniform bounds. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 4: invalid execution: uniform bounds. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 4: invalid execution: uniform bounds. No export written."
+        }
+      }
+    },
+    {
+      "file": "tests/execution/invalid-gaussian.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 6: invalid execution: gaussian variance. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 6: invalid execution: gaussian variance. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 6: invalid execution: gaussian variance. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 6: invalid execution: gaussian variance. No export written."
+        }
+      }
+    },
+    {
+      "file": "tests/execution/invalid-poisson.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 4: invalid execution: poisson rate. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 4: invalid execution: poisson rate. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 4: invalid execution: poisson rate. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 4: invalid execution: poisson rate. No export written."
+        }
+      }
+    },
+    {
+      "file": "tests/execution/invalid-gamma.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 4: invalid execution: gamma parameters. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 4: invalid execution: gamma parameters. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 4: invalid execution: gamma parameters. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 4: invalid execution: gamma parameters. No export written."
+        }
+      }
+    },
+    {
+      "file": "tests/execution/invalid-beta.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 4: invalid execution: beta parameters. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 4: invalid execution: beta parameters. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 4: invalid execution: beta parameters. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 4: invalid execution: beta parameters. No export written."
+        }
+      }
+    },
+    {
+      "file": "tests/execution/invalid-exponential.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 2: invalid execution: exponential rate. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 2: invalid execution: exponential rate. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 2: invalid execution: exponential rate. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 2: invalid execution: exponential rate. No export written."
+        }
+      }
+    },
+    {
+      "file": "tests/execution/divergence.det",
+      "plain": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 9,
+            "second_moment": "0",
+            "return_mass": "0",
+            "rejection_probability": "0",
+            "rank_bound": 0,
+            "kernel_checked": false,
+            "divergence_probability": "1",
+            "conditional_variance": null,
+            "conditional_mean": null,
+            "certificate_status": "generated",
+            "answer": "0"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 9,
+            "second_moment": "0",
+            "return_mass": "0",
+            "rejection_probability": "0",
+            "rank_bound": 0,
+            "kernel_checked": false,
+            "divergence_probability": "1",
+            "conditional_variance": null,
+            "conditional_mean": null,
+            "certificate_status": "generated",
+            "answer": "0"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 9,
+            "second_moment": "0",
+            "return_mass": "0",
+            "rejection_probability": "0",
+            "rank_bound": 0,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "1",
+            "conditional_variance": null,
+            "conditional_mean": null,
+            "certificate_status": "generated",
+            "answer": "0"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 9,
+            "second_moment": "0",
+            "return_mass": "0",
+            "rejection_probability": "0",
+            "rank_bound": 0,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "1",
+            "conditional_variance": null,
+            "conditional_mean": null,
+            "certificate_status": "generated",
+            "answer": "0"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/execution/rejected-observation.det",
+      "plain": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 5,
+            "second_moment": "0",
+            "return_mass": "0",
+            "rejection_probability": "1",
+            "rank_bound": 4,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": null,
+            "conditional_mean": null,
+            "certificate_status": "generated",
+            "answer": "0"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 5,
+            "second_moment": "0",
+            "return_mass": "0",
+            "rejection_probability": "1",
+            "rank_bound": 4,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": null,
+            "conditional_mean": null,
+            "certificate_status": "generated",
+            "answer": "0"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 5,
+            "second_moment": "0",
+            "return_mass": "0",
+            "rejection_probability": "1",
+            "rank_bound": 4,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": null,
+            "conditional_mean": null,
+            "certificate_status": "generated",
+            "answer": "0"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 5,
+            "second_moment": "0",
+            "return_mass": "0",
+            "rejection_probability": "1",
+            "rank_bound": 4,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": null,
+            "conditional_mean": null,
+            "certificate_status": "generated",
+            "answer": "0"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/execution/variance-operand.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 7: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 7: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 7: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 7: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      }
+    },
+    {
+      "file": "tests/typing/accept/mixed-list.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      }
+    },
+    {
+      "file": "tests/typing/accept/mixed-pair.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 8: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 8: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 8: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 8: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      }
+    },
+    {
+      "file": "tests/typing/accept/mixed-sum.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 8: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 8: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 8: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 8: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      }
+    },
+    {
+      "file": "tests/statistical/uniform.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 6: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 8,
+            "second_moment": "1",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 7,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "1",
+            "certificate_status": "generated",
+            "answer": "1"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 6: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 8,
+            "second_moment": "1",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 7,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "1",
+            "certificate_status": "generated",
+            "answer": "1"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/statistical/gaussian.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 4: unsupported execution: stochastic Determinize.Spec.Paper.Op.gaussian. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 6,
+            "second_moment": "9",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 5,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "3",
+            "certificate_status": "generated",
+            "answer": "3"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 4: unsupported execution: stochastic Determinize.Spec.Paper.Op.gaussian. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 6,
+            "second_moment": "9",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 5,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "3",
+            "certificate_status": "generated",
+            "answer": "3"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/statistical/poisson.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 2: unsupported execution: stochastic Determinize.Spec.Paper.Op.poisson. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 4,
+            "second_moment": "16",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 3,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "4",
+            "certificate_status": "generated",
+            "answer": "4"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 2: unsupported execution: stochastic Determinize.Spec.Paper.Op.poisson. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 4,
+            "second_moment": "16",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 3,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "4",
+            "certificate_status": "generated",
+            "answer": "4"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/statistical/poisson-large.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 2: unsupported execution: stochastic Determinize.Spec.Paper.Op.poisson. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 4,
+            "second_moment": "2025",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 3,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "45",
+            "certificate_status": "generated",
+            "answer": "45"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 2: unsupported execution: stochastic Determinize.Spec.Paper.Op.poisson. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 4,
+            "second_moment": "2025",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 3,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "45",
+            "certificate_status": "generated",
+            "answer": "45"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/statistical/exponential.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 2: unsupported execution: stochastic Determinize.Spec.Paper.Op.exponential. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 4,
+            "second_moment": "1/4",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 3,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "1/2",
+            "certificate_status": "generated",
+            "answer": "1/2"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 2: unsupported execution: stochastic Determinize.Spec.Paper.Op.exponential. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 4,
+            "second_moment": "1/4",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 3,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "1/2",
+            "certificate_status": "generated",
+            "answer": "1/2"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/statistical/gamma.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 4: unsupported execution: stochastic Determinize.Spec.Paper.Op.gamma. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 6,
+            "second_moment": "9/4",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 5,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "3/2",
+            "certificate_status": "generated",
+            "answer": "3/2"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 4: unsupported execution: stochastic Determinize.Spec.Paper.Op.gamma. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 6,
+            "second_moment": "9/4",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 5,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "3/2",
+            "certificate_status": "generated",
+            "answer": "3/2"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/statistical/gamma-small.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 4: unsupported execution: stochastic Determinize.Spec.Paper.Op.gamma. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 6,
+            "second_moment": "1/16",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 5,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "1/4",
+            "certificate_status": "generated",
+            "answer": "1/4"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 4: unsupported execution: stochastic Determinize.Spec.Paper.Op.gamma. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 6,
+            "second_moment": "1/16",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 5,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "1/4",
+            "certificate_status": "generated",
+            "answer": "1/4"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/statistical/beta.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 4: unsupported execution: stochastic Determinize.Spec.Paper.Op.beta. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 6,
+            "second_moment": "4/25",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 5,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "2/5",
+            "certificate_status": "generated",
+            "answer": "2/5"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 4: unsupported execution: stochastic Determinize.Spec.Paper.Op.beta. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 6,
+            "second_moment": "4/25",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 5,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "2/5",
+            "certificate_status": "generated",
+            "answer": "2/5"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/statistical/affine.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 8: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 14,
+            "second_moment": "16",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 13,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "4",
+            "certificate_status": "generated",
+            "answer": "4"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 8: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 14,
+            "second_moment": "16",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 13,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "4",
+            "certificate_status": "generated",
+            "answer": "4"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/statistical/nested.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 17,
+            "second_moment": "49/16",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 16,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "7/4",
+            "certificate_status": "generated",
+            "answer": "7/4"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 17,
+            "second_moment": "49/16",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 16,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "7/4",
+            "certificate_status": "generated",
+            "answer": "7/4"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/statistical/mixed.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      }
+    },
+    {
+      "file": "tests/statistical/branch.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 19: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 23,
+            "second_moment": "7/16",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 14,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "3/64",
+            "conditional_mean": "5/8",
+            "certificate_status": "generated",
+            "answer": "5/8"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 19: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 23,
+            "second_moment": "7/16",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 14,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "3/64",
+            "conditional_mean": "5/8",
+            "certificate_status": "generated",
+            "answer": "5/8"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/statistical/degenerate.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 6: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 20,
+            "second_moment": "25",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 19,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "5",
+            "certificate_status": "generated",
+            "answer": "5"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 6: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 20,
+            "second_moment": "25",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 19,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "5",
+            "certificate_status": "generated",
+            "answer": "5"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/statistical/bernoulli.det",
+      "plain": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 5,
+            "second_moment": "3/10",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 3,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "21/100",
+            "conditional_mean": "3/10",
+            "certificate_status": "generated",
+            "answer": "3/10"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 5,
+            "second_moment": "3/10",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 3,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "21/100",
+            "conditional_mean": "3/10",
+            "certificate_status": "generated",
+            "answer": "3/10"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 5,
+            "second_moment": "3/10",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 3,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "21/100",
+            "conditional_mean": "3/10",
+            "certificate_status": "generated",
+            "answer": "3/10"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 5,
+            "second_moment": "3/10",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 3,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "21/100",
+            "conditional_mean": "3/10",
+            "certificate_status": "generated",
+            "answer": "3/10"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/statistical/discrete.det",
+      "plain": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 14,
+            "second_moment": "9/4",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 11,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "11/16",
+            "conditional_mean": "5/4",
+            "certificate_status": "generated",
+            "answer": "5/4"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 14,
+            "second_moment": "9/4",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 11,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "11/16",
+            "conditional_mean": "5/4",
+            "certificate_status": "generated",
+            "answer": "5/4"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 14,
+            "second_moment": "9/4",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 11,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "11/16",
+            "conditional_mean": "5/4",
+            "certificate_status": "generated",
+            "answer": "5/4"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 14,
+            "second_moment": "9/4",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 11,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "11/16",
+            "conditional_mean": "5/4",
+            "certificate_status": "generated",
+            "answer": "5/4"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/execution/rejection-short-circuit.det",
+      "plain": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 6,
+            "second_moment": "0",
+            "return_mass": "0",
+            "rejection_probability": "1",
+            "rank_bound": 5,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": null,
+            "conditional_mean": null,
+            "certificate_status": "generated",
+            "answer": "0"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 6,
+            "second_moment": "0",
+            "return_mass": "0",
+            "rejection_probability": "1",
+            "rank_bound": 5,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": null,
+            "conditional_mean": null,
+            "certificate_status": "generated",
+            "answer": "0"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 6,
+            "second_moment": "0",
+            "return_mass": "0",
+            "rejection_probability": "1",
+            "rank_bound": 5,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": null,
+            "conditional_mean": null,
+            "certificate_status": "generated",
+            "answer": "0"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 6,
+            "second_moment": "0",
+            "return_mass": "0",
+            "rejection_probability": "1",
+            "rank_bound": 5,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": null,
+            "conditional_mean": null,
+            "certificate_status": "generated",
+            "answer": "0"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/execution/observation-once.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 6: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 6: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 6: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 6: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      }
+    },
+    {
+      "file": "tests/execution/bernoulli-zero.det",
+      "plain": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 4,
+            "second_moment": "0",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 3,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "0",
+            "certificate_status": "generated",
+            "answer": "0"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 4,
+            "second_moment": "0",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 3,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "0",
+            "certificate_status": "generated",
+            "answer": "0"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 4,
+            "second_moment": "0",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 3,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "0",
+            "certificate_status": "generated",
+            "answer": "0"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 4,
+            "second_moment": "0",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 3,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "0",
+            "certificate_status": "generated",
+            "answer": "0"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/execution/bernoulli-one.det",
+      "plain": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 4,
+            "second_moment": "1",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 3,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "1",
+            "certificate_status": "generated",
+            "answer": "1"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 4,
+            "second_moment": "1",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 3,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "1",
+            "certificate_status": "generated",
+            "answer": "1"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 4,
+            "second_moment": "1",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 3,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "1",
+            "certificate_status": "generated",
+            "answer": "1"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 4,
+            "second_moment": "1",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 3,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "1",
+            "certificate_status": "generated",
+            "answer": "1"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/execution/bernoulli-negative.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 4: invalid execution: bernoulli probability. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 4: invalid execution: bernoulli probability. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 4: invalid execution: bernoulli probability. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 4: invalid execution: bernoulli probability. No export written."
+        }
+      }
+    },
+    {
+      "file": "tests/execution/bernoulli-above-one.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 2: invalid execution: bernoulli probability. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 2: invalid execution: bernoulli probability. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 2: invalid execution: bernoulli probability. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 2: invalid execution: bernoulli probability. No export written."
+        }
+      }
+    },
+    {
+      "file": "tests/statistical/bernoulli-e.det",
+      "plain": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 5,
+            "second_moment": "3/10",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 3,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "21/100",
+            "conditional_mean": "3/10",
+            "certificate_status": "generated",
+            "answer": "3/10"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 4,
+            "second_moment": "9/100",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 3,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "3/10",
+            "certificate_status": "generated",
+            "answer": "3/10"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 5,
+            "second_moment": "3/10",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 3,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "21/100",
+            "conditional_mean": "3/10",
+            "certificate_status": "generated",
+            "answer": "3/10"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 4,
+            "second_moment": "9/100",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 3,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "3/10",
+            "certificate_status": "generated",
+            "answer": "3/10"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/statistical/bernoulli-nested.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 8,
+            "second_moment": "1/4",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 7,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "1/2",
+            "certificate_status": "generated",
+            "answer": "1/2"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 8,
+            "second_moment": "1/4",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 7,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "1/2",
+            "certificate_status": "generated",
+            "answer": "1/2"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/execution/bernoulli-general-operand.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      }
+    },
+    {
+      "file": "tests/execution/discrete-zero-weights.det",
+      "plain": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 12,
+            "second_moment": "1",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 11,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "1",
+            "certificate_status": "generated",
+            "answer": "1"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 12,
+            "second_moment": "1",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 11,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "1",
+            "certificate_status": "generated",
+            "answer": "1"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 12,
+            "second_moment": "1",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 11,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "1",
+            "certificate_status": "generated",
+            "answer": "1"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 12,
+            "second_moment": "1",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 11,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "1",
+            "certificate_status": "generated",
+            "answer": "1"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/execution/discrete-singleton.det",
+      "plain": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 4,
+            "second_moment": "0",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 3,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "0",
+            "certificate_status": "generated",
+            "answer": "0"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 4,
+            "second_moment": "0",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 3,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "0",
+            "certificate_status": "generated",
+            "answer": "0"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 4,
+            "second_moment": "0",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 3,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "0",
+            "certificate_status": "generated",
+            "answer": "0"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 4,
+            "second_moment": "0",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 3,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "0",
+            "certificate_status": "generated",
+            "answer": "0"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/execution/discrete-last-nonzero.det",
+      "plain": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 20,
+            "second_moment": "4",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 19,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "2",
+            "certificate_status": "generated",
+            "answer": "2"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 20,
+            "second_moment": "4",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 19,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "2",
+            "certificate_status": "generated",
+            "answer": "2"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 20,
+            "second_moment": "4",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 19,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "2",
+            "certificate_status": "generated",
+            "answer": "2"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 20,
+            "second_moment": "4",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 19,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "2",
+            "certificate_status": "generated",
+            "answer": "2"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/statistical/discrete-e.det",
+      "plain": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 14,
+            "second_moment": "9/4",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 11,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "11/16",
+            "conditional_mean": "5/4",
+            "certificate_status": "generated",
+            "answer": "5/4"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 12,
+            "second_moment": "25/16",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 11,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "5/4",
+            "certificate_status": "generated",
+            "answer": "5/4"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 14,
+            "second_moment": "9/4",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 11,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "11/16",
+            "conditional_mean": "5/4",
+            "certificate_status": "generated",
+            "answer": "5/4"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 12,
+            "second_moment": "25/16",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 11,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "5/4",
+            "certificate_status": "generated",
+            "answer": "5/4"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/execution/discrete-nested.det",
+      "plain": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 43,
+            "second_moment": "5/2",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 25,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "1/4",
+            "conditional_mean": "3/2",
+            "certificate_status": "generated",
+            "answer": "3/2"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 26,
+            "second_moment": "9/4",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 25,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "3/2",
+            "certificate_status": "generated",
+            "answer": "3/2"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 38,
+            "second_moment": "5/2",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 25,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "1/4",
+            "conditional_mean": "3/2",
+            "certificate_status": "generated",
+            "answer": "3/2"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 26,
+            "second_moment": "9/4",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 25,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "3/2",
+            "certificate_status": "generated",
+            "answer": "3/2"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/statistical/bernoulli-mixed.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      }
+    },
+    {
+      "file": "tests/statistical/coupling-branch.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 25: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 29,
+            "second_moment": "37/8",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 17,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "25/16",
+            "conditional_mean": "7/4",
+            "certificate_status": "generated",
+            "answer": "7/4"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 25: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 29,
+            "second_moment": "37/8",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 17,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "25/16",
+            "conditional_mean": "7/4",
+            "certificate_status": "generated",
+            "answer": "7/4"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/statistical/coupling-mixed.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      }
+    },
+    {
+      "file": "tests/execution/beta-shape.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      }
+    },
+    {
+      "file": "tests/execution/div.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 6: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 12: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 6: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 12: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      }
+    },
+    {
+      "file": "tests/execution/flip-prob.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      }
+    },
+    {
+      "file": "tests/execution/gauss-variance.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 5: unsupported execution: stochastic Determinize.Spec.Paper.Op.uniform. No export written."
+        }
+      }
+    },
+    {
+      "file": "tests/statistical/discrete-computed-e.det",
+      "plain": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 39,
+            "second_moment": "9/4",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 20,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "11/16",
+            "conditional_mean": "5/4",
+            "certificate_status": "generated",
+            "answer": "5/4"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 21,
+            "second_moment": "25/16",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 20,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "5/4",
+            "certificate_status": "generated",
+            "answer": "5/4"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 39,
+            "second_moment": "9/4",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 20,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "11/16",
+            "conditional_mean": "5/4",
+            "certificate_status": "generated",
+            "answer": "5/4"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 21,
+            "second_moment": "25/16",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 20,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "5/4",
+            "certificate_status": "generated",
+            "answer": "5/4"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/statistical/discrete-computed-g.det",
+      "plain": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 39,
+            "second_moment": "9/4",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 20,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "11/16",
+            "conditional_mean": "5/4",
+            "certificate_status": "generated",
+            "answer": "5/4"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 38,
+            "second_moment": "29/16",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 20,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "1/4",
+            "conditional_mean": "5/4",
+            "certificate_status": "generated",
+            "answer": "5/4"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 39,
+            "second_moment": "9/4",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 20,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "11/16",
+            "conditional_mean": "5/4",
+            "certificate_status": "generated",
+            "answer": "5/4"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 38,
+            "second_moment": "29/16",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 20,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "1/4",
+            "conditional_mean": "5/4",
+            "certificate_status": "generated",
+            "answer": "5/4"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/execution/discrete-remainder-empty.det",
+      "plain": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 4,
+            "second_moment": "0",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 3,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "0",
+            "certificate_status": "generated",
+            "answer": "0"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 4,
+            "second_moment": "0",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 3,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "0",
+            "certificate_status": "generated",
+            "answer": "0"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 4,
+            "second_moment": "0",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 3,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "0",
+            "certificate_status": "generated",
+            "answer": "0"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 4,
+            "second_moment": "0",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 3,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "0",
+            "certificate_status": "generated",
+            "answer": "0"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/execution/discrete-remainder-last.det",
+      "plain": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 12,
+            "second_moment": "4",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 11,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "2",
+            "certificate_status": "generated",
+            "answer": "2"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 12,
+            "second_moment": "4",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 11,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "2",
+            "certificate_status": "generated",
+            "answer": "2"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 12,
+            "second_moment": "4",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 11,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "2",
+            "certificate_status": "generated",
+            "answer": "2"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 12,
+            "second_moment": "4",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 11,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "0",
+            "conditional_mean": "2",
+            "certificate_status": "generated",
+            "answer": "2"
+          }
+        }
+      }
+    },
+    {
+      "file": "tests/execution/discrete-remainder-domain.det",
+      "plain": {
+        "source": {
+          "message": "Exploration failed at state 10: invalid execution: negative discrete weight. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 10: invalid execution: negative discrete weight. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "message": "Exploration failed at state 10: invalid execution: negative discrete weight. No export written."
+        },
+        "determinized": {
+          "message": "Exploration failed at state 10: invalid execution: negative discrete weight. No export written."
+        }
+      }
+    },
+    {
+      "file": "examples/loops/geometric-addition.det",
+      "plain": {
+        "source": {
+          "message": "Incomplete exploration (Determinize.Finite.Limit.states): 10001 discovered, 9992 expanded, 10118 edges. No export written."
+        },
+        "determinized": {
+          "message": "Incomplete exploration (Determinize.Finite.Limit.states): 10001 discovered, 9992 expanded, 10118 edges. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 45,
+            "second_moment": "3",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 21,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "2",
+            "conditional_mean": "1",
+            "certificate_status": "generated",
+            "answer": "1"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 45,
+            "second_moment": "3",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 21,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "2",
+            "conditional_mean": "1",
+            "certificate_status": "generated",
+            "answer": "1"
+          }
+        }
+      }
+    },
+    {
+      "file": "examples/loops/geometric-random-increment.det",
+      "plain": {
+        "source": {
+          "message": "Incomplete exploration (Determinize.Finite.Limit.states): 10001 discovered, 9745 expanded, 10255 edges. No export written."
+        },
+        "determinized": {
+          "message": "Incomplete exploration (Determinize.Finite.Limit.states): 10001 discovered, 9745 expanded, 10255 edges. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 71,
+            "second_moment": "13",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 31,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "9",
+            "conditional_mean": "2",
+            "certificate_status": "generated",
+            "answer": "2"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 71,
+            "second_moment": "13",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 31,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "9",
+            "conditional_mean": "2",
+            "certificate_status": "generated",
+            "answer": "2"
+          }
+        }
+      }
+    },
+    {
+      "file": "examples/loops/geometric-rejection.det",
+      "plain": {
+        "source": {
+          "message": "Incomplete exploration (Determinize.Finite.Limit.states): 10001 discovered, 9993 expanded, 10217 edges. No export written."
+        },
+        "determinized": {
+          "message": "Incomplete exploration (Determinize.Finite.Limit.states): 10001 discovered, 9993 expanded, 10217 edges. No export written."
+        }
+      },
+      "additive": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 78,
+            "second_moment": "3/2",
+            "return_mass": "1/2",
+            "rejection_probability": "1/2",
+            "rank_bound": 30,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "2",
+            "conditional_mean": "1",
+            "certificate_status": "generated",
+            "answer": "1/2"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 78,
+            "second_moment": "3/2",
+            "return_mass": "1/2",
+            "rejection_probability": "1/2",
+            "rank_bound": 30,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "2",
+            "conditional_mean": "1",
+            "certificate_status": "generated",
+            "answer": "1/2"
+          }
+        }
+      }
+    }
+  ],
+  "limits": [
+    {
+      "file": "examples/paper/noisy-iteration.det",
+      "subject": "determinized",
+      "additive": false,
+      "limits": {
+        "maxStates": 30
+      },
+      "outcome": {
+        "message": "Incomplete exploration (Determinize.Finite.Limit.states): 31 discovered, 30 expanded, 31 edges. No export written."
+      }
+    },
+    {
+      "file": "examples/paper/noisy-iteration.det",
+      "subject": "determinized",
+      "additive": true,
+      "limits": {
+        "maxStates": 30
+      },
+      "outcome": {
+        "message": "Incomplete exploration (Determinize.Finite.Limit.states): 31 discovered, 29 expanded, 30 edges. No export written."
+      }
+    },
+    {
+      "file": "examples/paper/noisy-iteration.det",
+      "subject": "determinized",
+      "additive": false,
+      "limits": {
+        "maxEdges": 40
+      },
+      "outcome": {
+        "message": "Incomplete exploration (Determinize.Finite.Limit.edges): 40 discovered, 39 expanded, 40 edges. No export written."
+      }
+    },
+    {
+      "file": "examples/paper/noisy-iteration.det",
+      "subject": "determinized",
+      "additive": true,
+      "limits": {
+        "maxEdges": 40
+      },
+      "outcome": {
+        "message": "Incomplete exploration (Determinize.Finite.Limit.edges): 40 discovered, 39 expanded, 40 edges. No export written."
+      }
+    },
+    {
+      "file": "examples/paper/noisy-iteration.det",
+      "subject": "determinized",
+      "additive": false,
+      "limits": {
+        "maxResultStates": 67
+      },
+      "outcome": {
+        "message": "exact solver state limit exceeded (68 > 67)"
+      }
+    },
+    {
+      "file": "examples/loops/geometric-addition.det",
+      "subject": "source",
+      "additive": true,
+      "limits": {
+        "maxResultStates": 44
+      },
+      "outcome": {
+        "message": "exact solver state limit exceeded (45 > 44)"
+      }
+    },
+    {
+      "file": "examples/paper/noisy-iteration.det",
+      "subject": "determinized",
+      "additive": false,
+      "limits": {
+        "maxStates": 0
+      },
+      "outcome": {
+        "message": "Incomplete exploration (Determinize.Finite.Limit.states): 0 discovered, 0 expanded, 0 edges. No export written."
+      }
+    },
+    {
+      "file": "examples/paper/noisy-iteration.det",
+      "subject": "determinized",
+      "additive": true,
+      "limits": {
+        "maxStates": 0
+      },
+      "outcome": {
+        "message": "Incomplete exploration (Determinize.Finite.Limit.states): 0 discovered, 0 expanded, 0 edges. No export written."
+      }
+    },
+    {
+      "file": "examples/paper/dungeon.det",
+      "subject": "determinized",
+      "additive": true,
+      "limits": {
+        "maxEdges": 500
+      },
+      "outcome": {
+        "message": "Incomplete exploration (Determinize.Finite.Limit.edges): 489 discovered, 488 expanded, 500 edges. No export written."
+      }
+    },
+    {
+      "file": "examples/paper/noisy-iteration.det",
+      "subject": "determinized",
+      "additive": false,
+      "limits": {
+        "maxStateBytes": 4586
+      },
+      "outcome": {
+        "message": "Incomplete exploration (Determinize.Finite.Limit.stateBytes): 23 discovered, 22 expanded, 23 edges. No export written."
+      }
+    },
+    {
+      "file": "examples/paper/noisy-iteration.det",
+      "subject": "determinized",
+      "additive": false,
+      "limits": {
+        "maxStateBytes": 4587
+      },
+      "outcome": {
+        "result": {
+          "termination_statistics_scope": "graph",
+          "subject": "determinized",
+          "states": 68,
+          "second_moment": "1/3",
+          "return_mass": "1",
+          "rejection_probability": "0",
+          "rank_bound": 31,
+          "kernel_checked": false,
+          "divergence_probability": "0",
+          "conditional_variance": "2/9",
+          "conditional_mean": "1/3",
+          "certificate_status": "generated",
+          "answer": "1/3"
+        }
+      }
+    },
+    {
+      "file": "examples/paper/noisy-iteration.det",
+      "subject": "determinized",
+      "additive": true,
+      "limits": {
+        "maxStateBytes": 4586
+      },
+      "outcome": {
+        "message": "Incomplete exploration (Determinize.Finite.Limit.stateBytes): 23 discovered, 22 expanded, 23 edges. No export written."
+      }
+    },
+    {
+      "file": "examples/paper/noisy-iteration.det",
+      "subject": "determinized",
+      "additive": true,
+      "limits": {
+        "maxStateBytes": 4587
+      },
+      "outcome": {
+        "result": {
+          "termination_statistics_scope": "graph",
+          "subject": "determinized",
+          "states": 68,
+          "second_moment": "1/3",
+          "return_mass": "1",
+          "rejection_probability": "0",
+          "rank_bound": 31,
+          "mode": "additive",
+          "kernel_checked": false,
+          "divergence_probability": "0",
+          "conditional_variance": "2/9",
+          "conditional_mean": "1/3",
+          "certificate_status": "generated",
+          "answer": "1/3"
+        }
+      }
+    },
+    {
+      "file": "examples/loops/geometric-addition.det",
+      "subject": "source",
+      "additive": true,
+      "limits": {
+        "maxStateBytes": 2854
+      },
+      "outcome": {
+        "message": "Incomplete exploration (Determinize.Finite.Limit.stateBytes): 34 discovered, 33 expanded, 34 edges. No export written."
+      }
+    },
+    {
+      "file": "examples/loops/geometric-addition.det",
+      "subject": "source",
+      "additive": true,
+      "limits": {
+        "maxStateBytes": 2855
+      },
+      "outcome": {
+        "result": {
+          "termination_statistics_scope": "graph",
+          "subject": "source",
+          "states": 45,
+          "second_moment": "3",
+          "return_mass": "1",
+          "rejection_probability": "0",
+          "rank_bound": 21,
+          "mode": "additive",
+          "kernel_checked": false,
+          "divergence_probability": "0",
+          "conditional_variance": "2",
+          "conditional_mean": "1",
+          "certificate_status": "generated",
+          "answer": "1"
+        }
+      }
+    },
+    {
+      "file": "examples/symbolic/recursion-and-list.det",
+      "subject": "determinized",
+      "additive": false,
+      "limits": {
+        "maxStateBytes": 6214
+      },
+      "outcome": {
+        "message": "Incomplete exploration (Determinize.Finite.Limit.stateBytes): 18 discovered, 17 expanded, 17 edges. No export written."
+      }
+    },
+    {
+      "file": "examples/symbolic/recursion-and-list.det",
+      "subject": "determinized",
+      "additive": false,
+      "limits": {
+        "maxStateBytes": 6215
+      },
+      "outcome": {
+        "result": {
+          "termination_statistics_scope": "graph",
+          "subject": "determinized",
+          "states": 101,
+          "second_moment": "1/4",
+          "return_mass": "1",
+          "rejection_probability": "0",
+          "rank_bound": 100,
+          "kernel_checked": false,
+          "divergence_probability": "0",
+          "conditional_variance": "0",
+          "conditional_mean": "1/2",
+          "certificate_status": "generated",
+          "answer": "1/2"
+        }
+      }
+    },
+    {
+      "file": "examples/simulator/random-list-sum.det",
+      "subject": "determinized",
+      "additive": false,
+      "limits": {
+        "maxStateBytes": 34903
+      },
+      "outcome": {
+        "message": "Incomplete exploration (Determinize.Finite.Limit.stateBytes): 9989 discovered, 9970 expanded, 10017 edges. No export written."
+      }
+    },
+    {
+      "file": "examples/simulator/random-list-sum.det",
+      "subject": "determinized",
+      "additive": false,
+      "limits": {
+        "maxStateBytes": 34904
+      },
+      "outcome": {
+        "message": "Incomplete exploration (Determinize.Finite.Limit.states): 10001 discovered, 9982 expanded, 10029 edges. No export written."
+      }
+    },
+    {
+      "file": "examples/paper/dungeon.det",
+      "subject": "determinized",
+      "additive": false,
+      "limits": {
+        "maxStates": 2000,
+        "maxStateBytes": 16245
+      },
+      "outcome": {
+        "message": "Incomplete exploration (Determinize.Finite.Limit.stateBytes): 1936 discovered, 1934 expanded, 1968 edges. No export written."
+      }
+    },
+    {
+      "file": "examples/paper/dungeon.det",
+      "subject": "determinized",
+      "additive": false,
+      "limits": {
+        "maxStates": 2000,
+        "maxStateBytes": 16246
+      },
+      "outcome": {
+        "message": "Incomplete exploration (Determinize.Finite.Limit.states): 2001 discovered, 1999 expanded, 2034 edges. No export written."
+      }
+    }
+  ]
+}
