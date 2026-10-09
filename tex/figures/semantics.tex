@@ -93,9 +93,9 @@ $\kw{gamma}(k,\lambda)$ & $k>0,\ \lambda>0$ & $k/\lambda$\\
 \endgroup
 \end{subcaptiongroup}
 \captionsetup{skip=10pt}
-\caption{Operational semantics. $\out e n(B)$ is the probability that $e$ returns a real number in $B$ after exactly $n$ steps. 
-These are subprobability measures: executions that do not successfully return a real value contribute no mass.
-We omit the usual arithmetic and comparison reductions; division by zero gets stuck.}
+\caption{Operational semantics. In (b), we omit the usual arithmetic and comparison reductions; division by zero gets stuck. In (d), the output measures are subprobability measures: executions that do not successfully return a real value contribute no mass. Moreover, deterministic reductions proceed according to $\rightsquigarrow$,
+while $\G$- and $\E$-mode sampling steps integrate over
+all possible sampled values.}
 \label{fig:semantics}
 \Description{The semantics consists of values and evaluation contexts, deterministic reductions, primitive distributions with domains and means, and output measures summed over exact termination depths.}
 \end{figure}

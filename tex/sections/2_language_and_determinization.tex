@@ -2,15 +2,11 @@
 \section{Language and Determinization}
 \label{sec:language}
 
-This section introduces the probabilistic language on which our
-determinization transformation operates. We first present its syntax and operational semantics, and then define
-determinization as a source-to-source transformation over annotated expressions. Finally, we define the output measure that characterizes the distribution of successfully returned values.
+This section introduces the probabilistic language on which our determinization transformation operates. We present its syntax and operational semantics, define determinization as a source-to-source transformation over annotated expressions, and formalize the distribution of successfully returned values through an output measure.
 
 \paragraph{Syntax.}
 \Cref{fig:syntax} presents the syntax of our language, a call-by-value
 functional language with recursion, pairs, sums, lists, and probability distributions. The expression $\kw{reject}$ represents a failed execution path used to encode conditioning on observations.
-
-\todo[inline]{TODO: explain why reject and diverge are treated similarly??}
 
 Each distribution is annotated with one of three modes:
 $\G$, $\E$, or $\M$. Both $\G$ and $\E$ draw samples, but $\G$ marks sampling sites that remain stochastic under determinization, whereas $\E$ marks those eligible to be replaced by their means. In particular, the type system in \cref{sec:type-system} determines which sampling sites may be assigned mode $\E$. The mode $\M$, used in the output of determinization, evaluates a distribution expression to its mean.
@@ -28,7 +24,7 @@ before it is sampled or its mean is computed.
 The deterministic reduction rules in
 \cref{fig:semantics}(\subref{fig:semantics-reduction}) handle the standard
 functional constructs by substitution and case analysis. We omit the
-routine arithmetic and comparison rules here. Distribution expressions in
+routine arithmetic and comparison rules here. We model the expression $\kw{reject}$ as divergence through the infinite reduction sequence $\kw{reject}\rightsquigarrow\kw{reject}$, and thus our semantics does not distinguish observation failure from nontermination. Distribution expressions in
 mode $\M$, introduced by determinization, also reduce deterministically
 to their means:
 \[
@@ -147,35 +143,36 @@ conditional randomness while preserving its dependence
 on the retained random value of $x$.
 \end{example}
 
-We note that determinization itself is syntactic: it performs the required replacements, but the type system is what establishes that those replacements are semantically justified; we present these restrictions in \cref{sec:type-system}. For example, the type system prevents the $\kw{uniform}$ distribution in
+We note that determinization itself is syntactic: it performs the required replacements, but the type system is what establishes that those replacements are semantically justified. For example, the type system prevents the $\kw{uniform}$ distribution in
 \[
   \kw{let}\ x=\kw{uniform}^{\E}(0,1)\ \kw{in}\ x*x
 \]
 from being assigned mode $\E$, since for $X$ uniform on $[0,1]$, the original program returns $X^2$, with
 expectation $\mathbb{E}[X^2]=\frac{1}{3}$, but replacing $X$ by its mean
 instead returns $\mathbb{E}[X]^2=\frac{1}{4}$, changing the expected
-returned value.
+returned value. We formalize such constraints in \cref{sec:type-system}.
 
 \paragraph{Output measures.}
 To characterize the probabilistic behavior of a program,
-we define a subprobability measure over its \emph{returned real values}, as shown in \cref{fig:semantics}(\subref{fig:semantics-output}).
-For a closed expression $e$ and each $n\in\mathbb{N}$,
-the measure $\out e n$ assigns to each Borel measurable set
-$B\subseteq\Real$ the probability that $e$ returns a value
-in $B$ after exactly $n$ reduction steps.
-Deterministic reductions proceed according to $\rightsquigarrow$,
-while $\G$- and $\E$-mode sampling steps integrate over
-all possible sampled values.
-Summing over all finite $n$ yields the
-output subprobability measure $\law e$ on $\Real$.
+we define a subprobability measure over \emph{returned real values}, as shown in \cref{fig:semantics}(\subref{fig:semantics-output}). Let $\mathcal D(\mathbb R)$ denote the space of subprobability measures
+on $\mathbb R$, that is, measures on its Borel sets with total mass at
+most one, and let $Expr$ be the set of all expressions. For each $n\in\mathbb N$, the function
+$\out{(\cdot)}{n}\colon Expr\to\mathcal D(\mathbb R)$
+assigns each expression $e$ its output measure after exactly $n$
+reduction steps. 
+Summing over all finite $n$ defines the function
+$\law{(\cdot)}\colon Expr\to\mathcal D(\mathbb R)$,
+which assigns each expression its complete output measure.
+For each Borel set $B\subseteq\mathbb R$, $\out e n(B)$ and $\law e(B)$
+are the probabilities that $e$ returns a value in $B$ after exactly
+$n$ steps and after any finite number of steps, respectively.
 Since only executions that successfully return a real value
 contribute mass, $\law e(\Real)\leq 1$, with the missing mass
-accounting for rejection, divergence, stuck executions,
-and executions that terminate without returning a real value.
+accounting for rejection, divergence, or stuck executions.
 Thus, $\law e(\Real)$ is precisely the probability that
 $e$ successfully returns a real value.
 
-Although executions that reject, diverge, or become stuck contribute no mass to the output measure, stuck executions require special consideration. Replacing a random sample by its mean may change whether a subsequent operation is defined. For example, a uniform distribution whose upper bound depends on a random sample may be undefined for some sampled values but become well-defined after determinization. This can alter the probability of successful return (see~\Cref{sec:appendix-misc}). So to rule out such behavior, we introduce the following
+Although executions that reject, diverge, or become stuck contribute no mass to the output measure, stuck executions require special consideration. Replacing a random sample by its mean may change whether a subsequent operation is defined. For example, a uniform distribution whose upper bound depends on a random sample may be undefined for some sampled values but become well-defined after determinization, which can alter the probability of successful return (see~\Cref{sec:appendix-misc}). So to rule out such behavior, we introduce the following
 domain safety condition, and henceforth assume that all programs we consider are domain safe.
 
 \begin{definition}[Domain safety\leanref{domain-safety}]
