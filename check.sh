@@ -6,7 +6,8 @@
 #   check.sh --all                  builds, full corpus/certificates, simulator, bundle, site and paper
 #
 # Exit 0 = all selected checks passed, 1 = at least one failed. A human-readable
-# summary goes to stdout; the last ~40 lines of any failing tool go there too.
+# summary goes to stdout; the last ~40 lines of any failing tool go there too, after the
+# details of each failed browser test.
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=tools/dev-shell.sh
@@ -50,6 +51,9 @@ report() { # name status detail
   [[ -n "${3:-}" ]] && printf '%s\n' "$3"
 }
 tail_of() { tail -n 40; }
+# Playwright's line reporter prints a failed test's details as it fails, before the tests that
+# follow it: from "  N) title" to the next progress line "[n/N]".
+playwright_failures() { awk '/^\[[0-9]+\/[0-9]+\] /{show=0} /^  [0-9]+\) /{show=1} show'; }
 
 for area in "${areas[@]}"; do
   case "$area" in
@@ -82,7 +86,11 @@ for area in "${areas[@]}"; do
       else
         out="$(cd sim && in_shell site playwright test --reporter=line 2>&1)"
         if [[ $? -eq 0 ]]; then report site "playwright test OK ($(grep -oE '[0-9]+ passed' <<<"$out" | tail -1))"
-        else fail=1; report site "playwright test FAILED" "$(grep -v '^\[WebServer\]' <<<"$out" | tail_of)"; fi
+        else
+          fail=1
+          out="$(grep -v '^\[WebServer\]' <<<"$out")"
+          report site "playwright test FAILED" "$(playwright_failures <<<"$out"; tail_of <<<"$out")"
+        fi
         out="$(in_shell site html-validate site 2>&1)"
         if [[ $? -eq 0 ]]; then report site "html-validate OK"
         else fail=1; report site "html-validate FAILED" "$(tail_of <<<"$out")"; fi
