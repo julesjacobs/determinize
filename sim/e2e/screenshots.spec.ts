@@ -42,6 +42,17 @@ const states: State[] = [
   { name: "recursive", example: "Recursive gamma", run: true, steps: 4 },
   { name: "gauss-bound", example: "Gaussian bound", run: true, steps: 2 },
   { name: "random-walk", example: "Gaussian random walk", run: true },
+  { name: "noisy-iteration", example: "Noisy iteration", run: true, steps: 2 },
+  { name: "asymmetric-walk", example: "Asymmetric random walk", run: true },
+  {
+    name: "asymmetric-walk-plain",
+    example: "Asymmetric random walk",
+    run: true,
+    finally: async (page) => {
+      await page.getByRole("checkbox", { name: "Additive mode" }).uncheck();
+      await expect(page.locator("#model-det")).toHaveText("too large");
+    },
+  },
   {
     name: "gallery",
     example: "Noisy product",

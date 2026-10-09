@@ -2811,6 +2811,114 @@
       ]
     },
     {
+      "file": "examples/simulator/asymmetric-walk.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 1,
+          "continuous": 3
+        },
+        "after": {
+          "discrete": 1,
+          "continuous": 0
+        }
+      },
+      "annotated": "(let x0 = (rec f0 x0 => (if (0 < bernoulli[G](0.5)) then uniform[E]((-1), 1) else (if (let x1 = 2 in (let x2 = x0 in (if (x2 < x1) then false else true))) then (uniform[E]((-1), 0) + (f0 0)) else (uniform[E](0, 1) + (f0 (x0 + 1)))))) in (x0 0))",
+      "determinized": "(let x0 = (rec f0 x0 => (if (0 < bernoulli[G](0.5)) then mean_uniform((-1), 1) else (if (let x1 = 2 in (let x2 = x0 in (if (x2 < x1) then false else true))) then (mean_uniform((-1), 0) + (f0 0)) else (mean_uniform(0, 1) + (f0 (x0 + 1)))))) in (x0 0))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.378287",
+            "variance": "0.695204"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.395000",
+            "variance": "0.198475"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "1.387658",
+            "variance": "0.088383"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.625000",
+            "variance": "0.046875"
+          }
+        }
+      ]
+    },
+    {
+      "file": "examples/simulator/retransmission.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 4,
+          "continuous": 3
+        },
+        "after": {
+          "discrete": 4,
+          "continuous": 0
+        }
+      },
+      "annotated": "(let x0 = (rec f0 x0 => (let x1 = (if x0 then uniform[E](8, 12) else uniform[E](2, 6)) in (let x2 = uniform[E](0, x1) in (let x3 = (if x0 then (0 < bernoulli[G](0.85)) else (0 < bernoulli[G](0.3))) in (if x3 then x2 else (let x4 = (if x0 then (0 < bernoulli[G](0.8)) else (0 < bernoulli[G](0.25))) in (x2 + (f0 x4)))))))) in (x0 true))",
+      "determinized": "(let x0 = (rec f0 x0 => (let x1 = (if x0 then mean_uniform(8, 12) else mean_uniform(2, 6)) in (let x2 = mean_uniform(0, x1) in (let x3 = (if x0 then (0 < bernoulli[G](0.85)) else (0 < bernoulli[G](0.3))) in (if x3 then x2 else (let x4 = (if x0 then (0 < bernoulli[G](0.8)) else (0 < bernoulli[G](0.25))) in (x2 + (f0 x4)))))))) in (x0 true))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "5.844690",
+            "variance": "15.995803"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "5.956000",
+            "variance": "7.246064"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "12.097977",
+            "variance": "28.124981"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "8.000000",
+            "variance": "4.500000"
+          }
+        }
+      ]
+    },
+    {
       "file": "tests/typing/accept/primitives.det",
       "checked": "float[E]",
       "sites": {

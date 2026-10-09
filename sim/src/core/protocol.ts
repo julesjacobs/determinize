@@ -1,7 +1,8 @@
 // The messages between the page and its workers: the sampling worker, which runs the batches of
-// runs of both programs, and the step table's worker, which computes the step table's run. A
-// request has a generation number; a newer request replaces an older one, and the page ignores
-// responses of any but the newest.
+// runs of both programs, the step table's worker, which computes the step table's run, and the
+// exact worker, which explores both programs' finite models. A request has a generation number; a
+// newer request replaces an older one, and the page ignores responses of any but the newest.
+import type { ExactState } from "./exact.ts";
 import type { Runs } from "./statistics.ts";
 import type { TraceOverview, TracePage } from "./trace-pages.ts";
 
@@ -171,4 +172,103 @@ export function isTraceResponse(value: unknown): value is TraceResponse {
   if (value.type === "trace-failed") return typeof value.message === "string";
   if (value.type === "trace-page") return isPage(value.page);
   return value.type === "trace" && isOverview(value.overview) && isPage(value.page);
+}
+
+/** Explore the finite models of `source` and its determinization, plain or in the additive
+ * mode. */
+export interface ExactRequest {
+  type: "exact";
+  generation: number;
+  source: string;
+  additive: boolean;
+}
+
+/** Both programs' explorations so far; `done` once both have their outcomes. */
+export interface ExactResponse {
+  type: "exact";
+  generation: number;
+  source: ExactState;
+  determinized: ExactState;
+  done: boolean;
+}
+
+export function isExactRequest(value: unknown): value is ExactRequest {
+  return (
+    isRecord(value) &&
+    value.type === "exact" &&
+    typeof value.generation === "number" &&
+    typeof value.source === "string" &&
+    typeof value.additive === "boolean"
+  );
+}
+
+function isExact(value: unknown) {
+  return isRecord(value) && typeof value.fraction === "string" && typeof value.value === "number";
+}
+
+function isRanges(value: unknown) {
+  return (
+    Array.isArray(value) &&
+    value.every(
+      (range: unknown) =>
+        isRecord(range) && Number.isSafeInteger(range.from) && Number.isSafeInteger(range.to),
+    )
+  );
+}
+
+function isExactState(value: unknown): value is ExactState {
+  if (!isRecord(value)) return false;
+  const counts = (...keys: string[]) => keys.every((key) => Number.isSafeInteger(value[key]));
+  const message = typeof value.message === "string";
+  switch (value.kind) {
+    case "exploring":
+      return counts("discovered");
+    case "solving":
+      return counts("states");
+    case "finite":
+      return (
+        counts("states") &&
+        isExact(value.returnProbability) &&
+        isExact(value.rejectionProbability) &&
+        (value.mean === null || isExact(value.mean)) &&
+        (value.variance === null || isExact(value.variance))
+      );
+    case "too many":
+      return counts("states", "maxStates") && message;
+    case "draw":
+      return (
+        typeof value.distribution === "string" &&
+        isRanges(value.sites) &&
+        counts("state") &&
+        message
+      );
+    case "fails":
+      return (
+        typeof value.detail === "string" && isRanges(value.sites) && counts("state") && message
+      );
+    case "not a number":
+      return counts("state") && message;
+    case "limit":
+      return (
+        ["states", "edges", "stateBytes"].includes(value.limit as string) &&
+        counts("discovered") &&
+        message
+      );
+    case "unsolved":
+    case "error":
+      return message;
+    default:
+      return false;
+  }
+}
+
+export function isExactResponse(value: unknown): value is ExactResponse {
+  return (
+    isRecord(value) &&
+    value.type === "exact" &&
+    typeof value.generation === "number" &&
+    isExactState(value.source) &&
+    isExactState(value.determinized) &&
+    typeof value.done === "boolean"
+  );
 }

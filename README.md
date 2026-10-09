@@ -140,10 +140,11 @@ against Node's (`tsconfig.node.json`).
 `sim/src/core/` holds the compiler, the runtime and what the step table and the statistics
 compute. A Biome override keeps it free of the DOM, CodeMirror and signals, so that Node's tests
 and the sampling worker run it. The page (`sim/src/ui/`) keeps its state in signals of
-`@preact/signals-core`. It samples in a worker (`sim/src/worker.ts`) and computes the step
-table in another (`sim/src/trace-worker.ts`), which keeps the run and sends it a page at a time;
-where no worker can start, as when `sim/dist/index.html` is opened from disk, it does both on its
-own thread, sampling in slices of about 50 ms. Sampling, which starts on load and after each
+`@preact/signals-core`. It samples in a worker (`sim/src/worker.ts`), computes the step
+table in another (`sim/src/trace-worker.ts`), which keeps the run and sends it a page at a time,
+and explores both programs' finite models in a third (`sim/src/exact-worker.ts`); where no worker
+can start, as when `sim/dist/index.html` is opened from disk, it does all three on its own thread,
+sampling and exploring in slices of about 50 ms. Sampling, which starts on load and after each
 edit, evaluates with ports of Lean's evaluator and samplers, SplitMix64 included
 (`sim/src/core/runtime/eval.ts` and `sampling.ts`, after `Runtime/Eval.lean` and
 `Runtime/Sampling.lean`): run i of a program and of its determinization starts at seed s + i, so

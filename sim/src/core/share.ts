@@ -1,7 +1,7 @@
-// The state that a link to the simulator carries: the program, the seed, the example and the
-// chart, as the fragment `#v1=` followed by the base64url of the deflate-raw-compressed JSON.
-// Links that also say whether the symbolic state shows are read without it, as the state always
-// shows.
+// The state that a link to the simulator carries: the program, the seed, the example, the chart
+// and the mode of the exact values, as the fragment `#v1=` followed by the base64url of the
+// deflate-raw-compressed JSON. Links that also say whether the symbolic state shows are read
+// without it, as the state always shows.
 
 export interface SharedState {
   source: string;
@@ -10,6 +10,8 @@ export interface SharedState {
   example: string;
   /** The chart of the distributions band, when it is the plot against a G draw. */
   view?: "against";
+  /** Whether the exact values come from the additive mode's models, when they do. */
+  additive?: true;
 }
 
 /** What a fragment holds: no state, a state, or a state that can't be restored, with why. */
@@ -65,12 +67,13 @@ function fromBase64Url(text: string) {
 
 /** The fragment of a link to `state`. */
 export async function encodeShare(state: SharedState) {
-  const { source, seed, example, view } = state;
+  const { source, seed, example, view, additive } = state;
   const json = JSON.stringify({
     source,
     seed,
     example,
     ...(view === "against" ? { view } : {}),
+    ...(additive ? { additive } : {}),
   });
   const stream = new Blob([json]).stream().pipeThrough(new CompressionStream("deflate-raw"));
   const bytes = await bytesOf(stream, Number.POSITIVE_INFINITY);
@@ -96,11 +99,13 @@ export async function decodeShare(hash: string): Promise<Decoded> {
     return unreadable;
   }
   if (typeof json !== "object" || json === null) return unreadable;
-  const { source, seed, example, view } = json as Record<string, unknown>;
+  const { source, seed, example, view, additive } = json as Record<string, unknown>;
   if (typeof source !== "string" || typeof example !== "string") return unreadable;
   if (typeof seed !== "number" || !Number.isSafeInteger(seed)) return unreadable;
   if (view !== undefined && view !== "against") return unreadable;
+  if (additive !== undefined && additive !== true) return unreadable;
   const state: SharedState = { source, seed, example };
   if (view !== undefined) state.view = view;
+  if (additive) state.additive = additive;
   return { kind: "state", state };
 }

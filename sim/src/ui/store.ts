@@ -4,7 +4,10 @@ import type { ReadonlySignal, Signal } from "@preact/signals-core";
 import { action, computed, effect, signal, untracked } from "@preact/signals-core";
 import type { Analysis } from "../core/compiler/analyze.ts";
 import { analyze } from "../core/compiler/analyze.ts";
+import type { ExactState } from "../core/exact.ts";
 import type {
+  ExactRequest,
+  ExactResponse,
   Request,
   Response,
   TracePageRequest,
@@ -61,6 +64,16 @@ export type TraceState =
   | { kind: "run"; overview: TraceOverview; page: TracePage }
   | { kind: "unavailable"; message: string };
 
+/** The exact values of the checked program and of its determinization, from their finite models,
+ * plain or in the additive mode: each program's exploration so far, or its outcome. */
+export interface ExactValues {
+  source: string;
+  additive: boolean;
+  programs: { source: ExactState; determinized: ExactState };
+  /** Whether both explorations have ended. */
+  done: boolean;
+}
+
 export interface Store {
   /** The editor's text, at every change. */
   source: Signal<string>;
@@ -114,6 +127,10 @@ export interface Store {
   /** The step table's run; computing while its worker works on it. */
   trace: ReadonlySignal<TraceState>;
   stats: ReadonlySignal<{ original: Stats; determinized: Stats }>;
+  /** Whether the finite models are explored in Lean's additive mode (`--additive`). */
+  additive: Signal<boolean>;
+  /** The exact values of the checked program; null where Lean rejects it. */
+  exact: ReadonlySignal<ExactValues | null>;
   /** Analyzes and runs the editor's text now. */
   commitSource: () => void;
   /** Analyzes the editor's text now and runs it at `seed`. */
@@ -132,6 +149,8 @@ export interface Store {
   showPage: (index: number) => void;
   /** Takes in the step table's run, or a page of it, from its worker. */
   receiveTrace: (response: TraceResponse) => void;
+  /** Takes in the exact worker's explorations. */
+  receiveExact: (response: ExactResponse) => void;
 }
 
 /** The pause in typing after which the editor's text is analyzed and run. */
@@ -217,8 +236,8 @@ export function eligibleSites(runs: ProgramRuns): number[] {
 
 /**
  * The store, starting from `initial`; `send` hands a request to the sampler, whose responses go
- * to `receive`, and `sendTrace` one to the step table's worker, whose responses go to
- * `receiveTrace`.
+ * to `receive`, `sendTrace` one to the step table's worker, whose responses go to
+ * `receiveTrace`, and `sendExact` one to the exact worker, whose responses go to `receiveExact`.
  */
 export function createStore(
   initial: {
@@ -230,9 +249,11 @@ export function createStore(
     /** The runs of the first batch, which shows a program's distributions soon before the rest
      * of its runs arrive. */
     firstBatch?: number;
+    additive?: boolean;
   },
   send: (request: Request) => void,
   sendTrace: (request: TraceRequest | TracePageRequest) => void,
+  sendExact: (request: ExactRequest) => void,
 ): Store {
   const source = signal(initial.source);
   const checkedSource = signal(initial.source);
@@ -287,6 +308,31 @@ export function createStore(
     untracked(() =>
       sendTrace({ type: "trace", generation: traceGeneration, source: program, seed: at }),
     );
+  });
+  const additive = signal(initial.additive ?? false);
+  const exact = signal<ExactValues | null>(null);
+  let exactGeneration = 0;
+  // Each analysed program, and each mode, is explored afresh; the worker's earlier answers are
+  // stale.
+  effect(() => {
+    const result = analysis.value;
+    const program = checkedSource.value;
+    const mode = additive.value;
+    exactGeneration += 1;
+    // The worker drops the exploration of an earlier program also for one that Lean rejects.
+    const request = { type: "exact" as const, generation: exactGeneration, source: program };
+    untracked(() => sendExact({ ...request, additive: mode }));
+    if (!result.ok) {
+      exact.value = null;
+      return;
+    }
+    const exploring: ExactState = { kind: "exploring", discovered: 0 };
+    exact.value = {
+      source: program,
+      additive: mode,
+      programs: { source: exploring, determinized: exploring },
+      done: false,
+    };
   });
   const shownTraces = computed(() => {
     const index = shownRun.value;
@@ -461,6 +507,16 @@ export function createStore(
         : { kind: "unavailable", message: response.message };
   });
 
+  const receiveExact = action((response: ExactResponse) => {
+    const current = exact.peek();
+    if (response.generation !== exactGeneration || !current) return;
+    exact.value = {
+      ...current,
+      programs: { source: response.source, determinized: response.determinized },
+      done: response.done,
+    };
+  });
+
   return {
     source,
     checkedSource,
@@ -495,5 +551,8 @@ export function createStore(
     receive,
     showPage,
     receiveTrace,
+    additive,
+    exact,
+    receiveExact,
   };
 }

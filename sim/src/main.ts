@@ -7,6 +7,8 @@ import type { Decoded } from "./core/share.ts";
 import { decodeShare } from "./core/share.ts";
 import { mountDistributionView } from "./ui/distribution-view.ts";
 import { createEditor, replaceDoc } from "./ui/editor.ts";
+import { createExactClient } from "./ui/exact-client.ts";
+import { mountExactView } from "./ui/exact-view.ts";
 import { mountGallery } from "./ui/gallery.ts";
 import { mountHeader } from "./ui/header.ts";
 import { mountIntro } from "./ui/intro.ts";
@@ -35,6 +37,7 @@ export const ready = decodeShare(window.location.hash).then(start);
 function start(decoded: Decoded): Store {
   const sampling = createSampling((response) => store.receive(response));
   const traces = createTraceClient((response) => store.receiveTrace(response));
+  const explore = createExactClient((response) => store.receiveExact(response));
   const initial =
     decoded.kind === "state"
       ? { ...decoded.state, source: sharedSource(decoded.state) }
@@ -45,12 +48,14 @@ function start(decoded: Decoded): Store {
       seed: initial.seed,
       exampleId: initial.example,
       view: initial.view,
+      additive: initial.additive,
       theme: storedTheme(),
       // On the page's own thread, a smaller first batch keeps the first distributions quick.
       firstBatch: sampling.inThread ? 200 : 1000,
     },
     (request) => sampling.send(request),
     (request) => traces.request(request),
+    explore,
   );
   const $ = <E extends Element>(selector: string) => document.querySelector(selector) as E;
   mountTraceView(
@@ -91,6 +96,7 @@ function start(decoded: Decoded): Store {
     },
   );
   mountDistributionView($("#distributions"), store);
+  mountExactView($("#stats"), store);
   mountVerdict(
     {
       pane: $("#determinized-pane"),
@@ -200,10 +206,11 @@ function restore(store: Store, editor: EditorView, decoded: Decoded) {
   if (decoded.kind === "error") showNotice(store, decoded.message);
   if (decoded.kind !== "state") return;
   dismissNotice();
-  const { source, seed, example, view } = decoded.state;
+  const { source, seed, example, view, additive } = decoded.state;
   batch(() => {
     store.exampleId.value = example;
     store.view.value = view ?? "outputs";
+    store.additive.value = additive ?? false;
     replaceDoc(editor, sharedSource({ source, example }));
     store.runAt(seed);
   });

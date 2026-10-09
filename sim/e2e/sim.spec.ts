@@ -139,7 +139,7 @@ for (const [where, url, worker] of [
     await sampled(page, 200);
     expect(await runs(page)).toBe(200);
     expect(workers.map((started) => new URL(started).pathname.split("/").at(-1)).sort()).toEqual(
-      worker ? ["trace-worker.js", "worker.js"] : [],
+      worker ? ["exact-worker.js", "trace-worker.js", "worker.js"] : [],
     );
   });
 }
@@ -583,7 +583,8 @@ test("the share of returned runs links returnProbability only for a float progra
 }) => {
   await page.goto(simulator);
   await sampled(page, 10);
-  const returned = page.getByRole("link", { name: "Returned" });
+  // In the estimates; the exact values' Returned links returnMass.
+  const returned = page.locator("#stats tbody").first().getByRole("link", { name: "Returned" });
   await expect(returned).toHaveCount(1);
   await page.goto(linkTo("let x = uniform(0, 1) in x < 0.5", 1));
   await sampled(page, 10);
@@ -935,6 +936,37 @@ test("a histogram's mean label stays inside its chart, beside a clipped bar too"
         .filter((text) => text !== null),
     );
     expect(outside, `${width} px`).toEqual([]);
+  }
+});
+
+test("a histogram's labels of cut bars and of the mean don't overlap", async ({ page }) => {
+  // The determinized walk returns sums of the means 1/2 and -1/2: bars at 0, 0.5 and 1 are cut,
+  // and the mean lies between them.
+  for (const width of [390, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(simulator);
+    await pick(page, "Asymmetric random walk");
+    await sampled(page, 1000);
+    const overlaps = await page.locator("#hist-det svg").evaluate((svg) => {
+      const boxes = [...svg.querySelectorAll(".clip-label, .mean-label")].map((label) => ({
+        text: label.textContent,
+        box: label.getBoundingClientRect(),
+      }));
+      const found: string[] = [];
+      for (const [i, a] of boxes.entries()) {
+        for (const b of boxes.slice(i + 1)) {
+          const apart =
+            a.box.right <= b.box.left ||
+            b.box.right <= a.box.left ||
+            a.box.bottom <= b.box.top ||
+            b.box.bottom <= a.box.top;
+          if (!apart) found.push(`${a.text} / ${b.text}`);
+        }
+      }
+      return { count: boxes.length, found };
+    });
+    expect(overlaps.count, `${width} px`).toBeGreaterThan(2);
+    expect(overlaps.found, `${width} px`).toEqual([]);
   }
 });
 
@@ -1383,6 +1415,126 @@ test("a newer program replaces the step table's computation in flight", async ({
   expect(workers.filter((path) => path.endsWith("/trace-worker.js"))).toHaveLength(2);
 });
 
+/** Both programs' exact values as the page's store has them: their outcomes' kinds once both
+ * explorations have ended, else null. */
+function exactKinds(page: Page) {
+  return page.evaluate(async () => {
+    const exact = (await window.DeterminizeSim.ready).exact.value;
+    if (!exact?.done) return null;
+    return [exact.programs.source.kind, exact.programs.determinized.kind];
+  });
+}
+
+test("exploring the dungeon in its worker to Lean's state limit leaves no long task, as a median", async ({
+  page,
+}) => {
+  await page.goto(simulator);
+  await pick(page, "Dungeon crawl");
+  await sampled(page, 200);
+  await expect.poll(() => exactKinds(page), { timeout: 30_000 }).toEqual(["limit", "limit"]);
+  const limits = await page.evaluate(async () => {
+    const { programs } = (await window.DeterminizeSim.ready).exact.value ?? {};
+    return [programs?.source, programs?.determinized].map((state) =>
+      state?.kind === "limit" ? [state.limit, state.discovered] : null,
+    );
+  });
+  expect(limits).toEqual([
+    ["states", 10001],
+    ["states", 10001],
+  ]);
+  // Each switch of the mode explores both programs again, to the same limit in both modes, while
+  // the runs and the step table stay.
+  await watchLongTasks(page);
+  const switches = Array.from({ length: 5 }, () => async () => {
+    await page.evaluate(async () => {
+      const store = await window.DeterminizeSim.ready;
+      store.additive.value = !store.additive.value;
+    });
+    await expect.poll(() => exactKinds(page), { timeout: 30_000 }).toEqual(["limit", "limit"]);
+  });
+  const { median, each } = await longTasksPer(page, switches);
+  test.info().annotations.push({ type: "long tasks per exploration (ms)", description: each });
+  expect(median, `long tasks per exploration (ms): ${each}`).toBeLessThanOrEqual(200);
+});
+
+test("a newer program replaces a worker busy with a long step of an exploration", async ({
+  page,
+}) => {
+  test.slow();
+  const workers: string[] = [];
+  page.on("worker", (started) => {
+    const path = new URL(started.url()).pathname;
+    if (path.endsWith("/exact-worker.js")) workers.push(path);
+  });
+  await page.goto(simulator);
+  await expect.poll(() => exactKinds(page)).not.toBe(null);
+  const started = workers.length;
+  // Squaring 2/3 twenty times makes rationals of about a million bits, whose single steps take
+  // the worker seconds each.
+  const squares = "(rec f n => fun x => if n < 1 then x else f (n - 1) (x * x)) 20 (2 / 3)";
+  await page.evaluate(async (program) => {
+    const store = await window.DeterminizeSim.ready;
+    store.source.value = program;
+    store.commitSource();
+  }, squares);
+  // Once the worker reports progress, it is deep in the exploration.
+  await expect
+    .poll(() =>
+      page.evaluate(async () => {
+        const { programs } = (await window.DeterminizeSim.ready).exact.value ?? {};
+        return [programs?.source, programs?.determinized].some(
+          (state) => state?.kind === "exploring" && state.discovered > 0,
+        );
+      }),
+    )
+    .toBe(true);
+  expect(await exactKinds(page)).toBe(null);
+  await page.evaluate(async () => {
+    const store = await window.DeterminizeSim.ready;
+    store.source.value = "1 + 2";
+    store.commitSource();
+  });
+  await expect.poll(() => exactKinds(page), { timeout: 10_000 }).toEqual(["finite", "finite"]);
+  // The busy worker was terminated and replaced.
+  expect(workers.slice(started)).toEqual(["/determinize/sim/exact-worker.js"]);
+});
+
+test("an edit within an exploration's first frame replaces it with the new program's", async ({
+  page,
+}) => {
+  const workers: string[] = [];
+  page.on("worker", (started) => {
+    const path = new URL(started.url()).pathname;
+    if (path.endsWith("/exact-worker.js")) workers.push(path);
+  });
+  await page.goto(simulator);
+  await expect.poll(() => exactKinds(page)).not.toBe(null);
+  const started = workers.length;
+  const dungeon = readFileSync(
+    new URL("../../examples/paper/dungeon.det", import.meta.url),
+    "utf8",
+  );
+  // Both edits in one task of the page, so that the dungeon's exploration hasn't reported yet.
+  await page.evaluate(async (program) => {
+    const store = await window.DeterminizeSim.ready;
+    store.source.value = program;
+    store.commitSource();
+    store.source.value = "1 + 2";
+    store.commitSource();
+  }, dungeon);
+  await expect.poll(() => exactKinds(page)).toEqual(["finite", "finite"]);
+  const exact = await page.evaluate(async () => (await window.DeterminizeSim.ready).exact.value);
+  expect(exact?.source).toBe("1 + 2");
+  // The worker that had started on the dungeon was replaced.
+  expect(workers.slice(started)).toEqual(["/determinize/sim/exact-worker.js"]);
+});
+
+test("from disk, the finite models are explored on the page's thread", async ({ page }) => {
+  await page.goto(fromDisk);
+  await pick(page, "Noisy iteration");
+  await expect.poll(() => exactKinds(page)).toEqual(["draw", "finite"]);
+});
+
 test("a link to an example the gallery doesn't have selects none", async ({ page }) => {
   const shared = { source: "1 + 2", seed: 7, example: "paper/no-such-example" };
   const json = JSON.stringify(shared);
@@ -1688,7 +1840,7 @@ test("the gallery lists the examples as links, a menu on wide screens and a dial
   const gallery = page.getByRole("dialog", { name: "Examples" });
   await expect(gallery).toBeVisible();
   expect(await gallery.evaluate((dialog) => dialog.matches(":modal"))).toBe(false);
-  await expect(gallery.getByRole("listitem")).toHaveCount(11);
+  await expect(gallery.getByRole("listitem")).toHaveCount(13);
   await expect(gallery.getByRole("listitem").first()).toContainText(
     "Noisy product A signal and a noisy measurement of it; the measurement becomes its mean. From the paper.",
   );

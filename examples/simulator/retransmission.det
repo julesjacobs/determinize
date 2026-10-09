@@ -1,0 +1,31 @@
+(* FROM: benchmarks/exact/retransmit.det. Transmissions over a channel that is good or bad
+   until one succeeds; the output adds up the quality of every attempt. *)
+
+let receive = rec receive good =>
+  let capacity =
+    if good then
+      uniform(8, 12)
+    else
+      uniform(2, 6)
+  in
+
+  let quality = uniform(0, capacity) in
+
+  let success =
+    if good then
+      flip(0.85)
+    else
+      flip(0.30)
+  in
+
+  if success then
+    quality
+  else
+    let next =
+      if good then flip(0.80)
+      else flip(0.25)
+    in
+    quality + receive next
+in
+
+receive true

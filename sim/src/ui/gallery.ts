@@ -214,11 +214,10 @@ export function mountGallery(
       link.dataset.example = example.id;
       // Until its fragment is computed, a link opens the example in the current state's place.
       link.href = "#";
-      void encodeShare({ source: example.source, seed: gallerySeed, example: example.id }).then(
-        (hash) => {
-          link.href = hash;
-        },
-      );
+      const shared = { source: example.source, seed: gallerySeed, example: example.id };
+      void encodeShare(example.additive ? { ...shared, additive: true } : shared).then((hash) => {
+        link.href = hash;
+      });
       item.append(link);
       if (reason) item.append(" ", chip(reason, `g-tip-${links.length}`, dialog));
       const line = document.createElement("span");

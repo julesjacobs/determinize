@@ -6,6 +6,7 @@ import geometricAddition from "../../../examples/loops/geometric-addition.det";
 import dungeon from "../../../examples/paper/dungeon.det";
 import noisyIteration from "../../../examples/paper/noisy-iteration.det";
 import noisyProduct from "../../../examples/paper/noisy-product.det";
+import asymmetricWalk from "../../../examples/simulator/asymmetric-walk.det";
 import badEBranching from "../../../examples/simulator/bad-e-branching.det";
 import gaussBound from "../../../examples/simulator/gauss-bound.det";
 import gaussRandomWalk from "../../../examples/simulator/gauss-random-walk.det";
@@ -13,6 +14,7 @@ import noisyProductAllE from "../../../examples/simulator/noisy-product-all-e.de
 import observe from "../../../examples/simulator/observe.det";
 import randomListSum from "../../../examples/simulator/random-list-sum.det";
 import recursiveGamma from "../../../examples/simulator/recursive-gamma.det";
+import retransmission from "../../../examples/simulator/retransmission.det";
 
 export interface Example {
   /** The file's path under examples/, without `.det`. */
@@ -32,6 +34,9 @@ export interface Example {
    * point, which the simulator's check doesn't count against domain safety: the message of a
    * failing run and why the real-valued semantics doesn't reach it. */
   floatFailure?: { message: string; why: string };
+  /** Whether the example opens with the exact values in the additive mode, in which its
+   * determinized program has a finite model. */
+  additive?: true;
 }
 
 export const examples: Example[] = [
@@ -72,6 +77,22 @@ export const examples: Example[] = [
     explanation: "Without the Gaussian noise, the loop only visits x = 0 and x = 1.",
     fromPaper: true,
     source: noisyIteration.trimEnd(),
+  },
+  {
+    id: "simulator/asymmetric-walk",
+    title: "Asymmetric random walk",
+    explanation: "Uniform steps until a coin flip; only the flips stay random.",
+    fromPaper: false,
+    source: asymmetricWalk.trimEnd(),
+    additive: true,
+  },
+  {
+    id: "simulator/retransmission",
+    title: "Retransmission",
+    explanation: "Retries over a channel that turns good or bad; only coin flips stay random.",
+    fromPaper: false,
+    source: retransmission.trimEnd(),
+    additive: true,
   },
   {
     id: "simulator/observe",
