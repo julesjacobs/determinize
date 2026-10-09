@@ -43,7 +43,7 @@
         </div>
         <label class="theme" hidden>
           Theme
-          <select id="theme">
+          <select id="theme" autocomplete="off">
             <option value="system">System</option>
             <option value="light">Light</option>
             <option value="dark">Dark</option>
@@ -160,7 +160,9 @@ x * y</code></pre>
           else localStorage.setItem(key, select.value);
         } catch {}
       });
-      // A page restored from the back-forward cache takes up a choice made since in the simulator.
+      // A page restored from the back-forward cache takes up a choice made since in the simulator;
+      // a page loaded again shows it too, as autocomplete="off" keeps the browser from restoring
+      // the select.
       addEventListener("pageshow", (event) => event.persisted && show(stored()));
       show(stored());
       select.parentElement.hidden = false;

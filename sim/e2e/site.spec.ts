@@ -153,6 +153,21 @@ test("the theme select overrides the system's scheme, and both pages keep the ch
   expect(await page.evaluate(() => localStorage.getItem("determinize:theme"))).toBeNull();
 });
 
+test("after Back, the theme select shows a theme picked meanwhile on another page", async ({
+  page,
+}) => {
+  // Playwright's Chromium has no back-forward cache, so Back loads the page again, and the
+  // browser may restore the select as the reader left it.
+  await load(page, "./");
+  const select = page.getByLabel("Theme");
+  await select.selectOption("light");
+  await load(page, "404.html");
+  await page.evaluate(() => localStorage.setItem("determinize:theme", "dark"));
+  await page.goBack();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect(select).toHaveValue("dark");
+});
+
 test("the simulator links back to the landing page", async ({ page }) => {
   await page.goto("sim/");
   await page.getByRole("link", { name: "Project page" }).click();

@@ -2114,3 +2114,18 @@ test("the theme select overrides the system's scheme, and the page remembers it"
   await page.getByLabel("Theme").selectOption("system");
   expect(await ground()).toBe("rgb(243, 244, 241)");
 });
+
+test("after Back, the theme select shows a theme picked meanwhile on another page", async ({
+  page,
+}) => {
+  // Playwright's Chromium has no back-forward cache, so Back loads the page again, and the
+  // browser may restore the select as the reader left it.
+  await page.goto(simulator);
+  const select = page.getByLabel("Theme");
+  await select.selectOption("light");
+  await page.goto("./");
+  await page.evaluate(() => localStorage.setItem("determinize:theme", "dark"));
+  await page.goBack();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect(select).toHaveValue("dark");
+});

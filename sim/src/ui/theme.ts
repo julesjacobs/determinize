@@ -24,7 +24,8 @@ export function mountTheme(select: HTMLSelectElement, theme: Signal<Theme>) {
     theme.value = select.value === "light" || select.value === "dark" ? select.value : "system";
   });
   // Back from the landing page, where the reader may have picked another theme, shows the page
-  // from the cache; its theme then follows the stored one.
+  // from the cache; its theme then follows the stored one. A page loaded again shows the stored
+  // theme too, as the select's autocomplete="off" keeps the browser from restoring it.
   window.addEventListener("pageshow", (event) => {
     if (event.persisted) theme.value = storedTheme();
   });
