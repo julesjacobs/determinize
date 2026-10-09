@@ -103,6 +103,9 @@ async function longTasksPer(page: Page, actions: (() => Promise<void>)[]) {
 
 const status = (page: Page) => page.locator("#steps-status");
 
+/** How long a step table may take to compute: seconds for a long run on CI's runners. */
+const traceTimeout = 30_000;
+
 /** The step table's run as the page's store has it: its seed, its steps and whether every step
  * check passed; null while there is none. */
 function stepRun(page: Page) {
@@ -117,7 +120,7 @@ function stepRun(page: Page) {
 /** Waits until the step table shows a run, at `seed` if given, whose step checks all pass. */
 async function passed(page: Page, seed?: number) {
   await expect
-    .poll(() => stepRun(page))
+    .poll(() => stepRun(page), { timeout: traceTimeout })
     .toMatchObject(seed === undefined ? { ok: true } : { seed, ok: true });
 }
 
@@ -129,7 +132,9 @@ for (const [where, url, worker] of [
     const workers: string[] = [];
     page.on("worker", (started) => workers.push(started.url()));
     await page.goto(url);
-    await expect.poll(() => stepRun(page)).toEqual({ seed: 1, steps: 5, ok: true });
+    await expect
+      .poll(() => stepRun(page), { timeout: traceTimeout })
+      .toEqual({ seed: 1, steps: 5, ok: true });
     await expect(status(page)).toHaveText("");
     await sampled(page, 200);
     expect(await runs(page)).toBe(200);
@@ -146,7 +151,7 @@ test("runs every example", async ({ page }) => {
   expect(titles.length).toBeGreaterThan(0);
   for (const title of titles) {
     await pick(page, title);
-    await expect.poll(() => stepRun(page)).not.toBeNull();
+    await expect.poll(() => stepRun(page), { timeout: traceTimeout }).not.toBeNull();
     await expect(page.locator(".step").first()).toBeVisible();
     const before = await stepRun(page);
     // Runs 1 to 19 follow run 0, which the step table keeps showing.
@@ -980,7 +985,9 @@ test("a long run shows its steps a page at a time, and the controls reach every 
 }) => {
   const irwinHall = new URL("../../examples/loops/irwin_hall.det", import.meta.url);
   await page.goto(linkTo(readFileSync(irwinHall, "utf8"), 3));
-  await expect.poll(() => stepRun(page)).toEqual({ seed: 3, steps: 1606, ok: true });
+  await expect
+    .poll(() => stepRun(page), { timeout: traceTimeout })
+    .toEqual({ seed: 3, steps: 1606, ok: true });
   const note = page.locator(".page-note");
   await expect(note).toHaveText(
     /^Steps 0 to \d+ of 1606 are shown; the step controls reach the others\.$/,
@@ -1219,7 +1226,7 @@ test("stepping across pages, hovering and scrubbing move neither the bar nor the
     for (const program of programs) {
       await page.goto(linkTo(program, 1));
       await expect(page.locator("[aria-busy=true]")).toHaveCount(0, { timeout: 30_000 });
-      await expect.poll(() => stepRun(page)).toMatchObject({ seed: 1 });
+      await expect.poll(() => stepRun(page), { timeout: traceTimeout }).toMatchObject({ seed: 1 });
       shown.push(await layout());
       if (program !== longest) continue;
       // Stepping with the arrow keys scrolls the source editor to the lines the steps reduce,
@@ -1380,7 +1387,9 @@ test("a newer program replaces the step table's computation in flight", async ({
     store.source.value = "1 + 2";
     store.commitSource();
   });
-  await expect.poll(() => stepRun(page)).toEqual({ seed: 1, steps: 1, ok: true });
+  await expect
+    .poll(() => stepRun(page), { timeout: traceTimeout })
+    .toEqual({ seed: 1, steps: 1, ok: true });
   // The worker that computed the deep recursion was terminated and replaced.
   expect(workers.filter((path) => path.endsWith("/trace-worker.js"))).toHaveLength(2);
 });
@@ -1403,7 +1412,7 @@ test("a link to more than 64 KiB opens the first example and says so", async ({ 
     "This link's program is larger than 64 KiB. The simulator opened its first example.",
   );
   await expect(page.locator("#example-title")).toHaveText("Noisy product");
-  await expect.poll(() => stepRun(page)).toMatchObject({ seed: 1 });
+  await expect.poll(() => stepRun(page), { timeout: traceTimeout }).toMatchObject({ seed: 1 });
 });
 
 test("a second unreadable link replaces the first one's notice", async ({ page }) => {
@@ -1426,7 +1435,7 @@ test("a readable link clears an unreadable one's notice", async ({ page }) => {
   await page.evaluate((next) => {
     window.location.hash = next;
   }, hash);
-  await expect.poll(() => stepRun(page)).toMatchObject({ seed: 7 });
+  await expect.poll(() => stepRun(page), { timeout: traceTimeout }).toMatchObject({ seed: 7 });
   await expect(page.getByRole("alert")).toHaveCount(0);
 });
 
