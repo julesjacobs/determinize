@@ -106,7 +106,7 @@ x * y</code></pre>
         <section class="row proved" aria-labelledby="proved-h">
           <h2 id="proved-h">What is proved</h2>
           <div class="body">
-            <p>For a closed program <var>e</var> (<code>program</code> in Lean) of type <code>float[E]</code> that is domain-safe (<a class="decl" href="docs/Determinize/Spec/Semantics.html#Determinize.Spec.Paper.DomainSafe">DomainSafe</a>), and its determinization (<a class="decl" href="docs/Determinize/Spec/Syntax.html#Determinize.Spec.Paper.Expr.determinize">Expr.determinize</a>):</p>
+            <p>For a closed program <var>e</var> (<code>program</code> in Lean) of type <a class="decl" href="docs/Determinize/Spec/Syntax.html#Determinize.Spec.Paper.Typed" title="Typed, in the Lean development">float[E]</a> that is domain-safe (<a class="decl" href="docs/Determinize/Spec/Semantics.html#Determinize.Spec.Paper.DomainSafe">DomainSafe</a>), and its determinization (<a class="decl" href="docs/Determinize/Spec/Syntax.html#Determinize.Spec.Paper.Expr.determinize">Expr.determinize</a>):</p>
             <ol class="theorems">
               <li><p>it returns with the same probability as <var>e</var>;</p>
 <pre class="lean"><code data-theorem="output_mass_preservation"><a href="docs/Determinize/Spec/Expectation.html#Determinize.Spec.returnProbability">returnProbability</a> program.<a href="docs/Determinize/Spec/Syntax.html#Determinize.Spec.Paper.Expr.determinize">determinize</a> = <a href="docs/Determinize/Spec/Expectation.html#Determinize.Spec.returnProbability">returnProbability</a> program</code></pre>
