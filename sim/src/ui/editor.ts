@@ -269,6 +269,7 @@ export function createEditor(parent: HTMLElement, doc: string, bindings: EditorB
       detLanguage,
       detHighlighting,
       editorTheme,
+      EditorView.lineWrapping,
       modeMarks,
       linkedLines,
       EditorView.domEventHandlers({

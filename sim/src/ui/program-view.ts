@@ -94,6 +94,7 @@ export function mountProgramView(
         detLanguage,
         detHighlighting,
         editorTheme,
+        EditorView.lineWrapping,
         marks,
         linkedLines,
         EditorView.domEventHandlers({
