@@ -1208,8 +1208,11 @@
   }
 
   @container (min-width: 960px) {
+    /* The statistics, taller than a histogram, grow the caption's row only, so that the caption
+       stays under its chart. */
     .dist-grid {
       grid-template-columns: var(--run-columns);
+      grid-template-rows: auto 1fr;
       grid-template-areas:
         ". source side side det"
         ". caption side side .";

@@ -632,6 +632,40 @@ test("each histogram sits under its program's column, on one axis", async ({ pag
   expect(stacked.ticks[1]).toEqual(stacked.ticks[0]);
 });
 
+test("at 1440 px the caption sits right under its chart, however tall the statistics", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(simulator);
+  await sampled(page, 1000);
+  // The exact values' reason makes the statistics taller than the histograms.
+  await expect(page.locator("#exact .exact-why")).toBeVisible();
+  /** The room between the bottom of `charts` and the caption's top, the grid's row gap, and
+   * whether the statistics reach below the caption. */
+  const gap = (charts: string) =>
+    page.evaluate((selector) => {
+      const bottom = Math.max(
+        ...[...document.querySelectorAll(selector)].map(
+          (chart) => chart.getBoundingClientRect().bottom,
+        ),
+      );
+      const caption = document.querySelector("#chart-caption") as Element;
+      const side = document.querySelector(".dist-side") as Element;
+      return {
+        room: caption.getBoundingClientRect().top - bottom,
+        rowGap: Number.parseFloat(getComputedStyle(caption.parentElement as Element).rowGap),
+        taller: side.getBoundingClientRect().bottom > caption.getBoundingClientRect().bottom,
+      };
+    }, charts);
+  const histograms = await gap("#hist-source, #hist-det");
+  expect(histograms.taller).toBe(true);
+  expect(histograms.room).toBeCloseTo(histograms.rowGap, 0);
+  await page.getByRole("radio", { name: "Against x, the G draw" }).check();
+  await expect(page.locator("#chart-body svg")).toBeVisible();
+  const plot = await gap("#chart-body");
+  expect(plot.room).toBeCloseTo(plot.rowGap, 0);
+});
+
 test("the histograms show the returned runs and count those that observe rejects", async ({
   page,
 }) => {
