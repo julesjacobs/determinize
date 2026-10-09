@@ -1,6 +1,6 @@
 // The port of Lean's finite models against the Lean CLI: for every accepted case of the corpus
-// manifest, both subjects, without `--additive`, test/fixtures/lean-exact.json records the fields of
-// `--result`'s `.result.json` or the message the CLI prints instead
+// manifest, both subjects, with and without `--additive`, test/fixtures/lean-exact.json records the
+// fields of `--result`'s `.result.json` or the message the CLI prints instead
 // (scripts/lean-exact-fixtures.ts). The port must give the same fractions, state counts and
 // messages, also with the fixture's smaller limits.
 import assert from "node:assert/strict";
@@ -14,7 +14,9 @@ import {
   explore,
   subjectProgram,
 } from "../src/core/finite/explore.ts";
+import { exploreAdditive, solveRewardStatistics } from "../src/core/finite/reward.ts";
 import { defaultSolveStates } from "../src/core/finite/solve.ts";
+import type { Solved } from "../src/core/finite/statistics.ts";
 import { resultFields, solveStatistics } from "../src/core/finite/statistics.ts";
 import type { ExactFixture, ExactLimits, ExactOutcome } from "./lean-exact.ts";
 
@@ -31,7 +33,12 @@ function programsOf(file: string) {
 
 /** What the port gives for `file`, in the fixture's form: the fields of `.result.json`, of which
  * the port computes those of `resultFields`, or the CLI's message. */
-function outcome(file: string, subject: Subject, limits: ExactLimits = {}): ExactOutcome {
+function outcome(
+  file: string,
+  subject: Subject,
+  additive: boolean,
+  limits: ExactLimits = {},
+): ExactOutcome {
   const programs = programsOf(file);
   const bounds: Limits = {
     maxStates: limits.maxStates ?? defaultLimits.maxStates,
@@ -40,14 +47,22 @@ function outcome(file: string, subject: Subject, limits: ExactLimits = {}): Exac
   };
   const program = subjectProgram(programs, subject);
   const solveStates = limits.maxResultStates ?? defaultSolveStates;
-  const exploration = explore(program, programs.source, bounds);
-  if (exploration.kind !== "complete") return { message: explorationMessage(exploration) };
-  const solved = solveStatistics(exploration.model, solveStates);
+  let solved: Solved;
+  if (additive) {
+    const exploration = exploreAdditive(program, programs.source, bounds);
+    if (exploration.kind !== "complete") return { message: explorationMessage(exploration) };
+    solved = solveRewardStatistics(exploration.model, solveStates);
+  } else {
+    const exploration = explore(program, programs.source, bounds);
+    if (exploration.kind !== "complete") return { message: explorationMessage(exploration) };
+    solved = solveStatistics(exploration.model, solveStates);
+  }
   if (!solved.ok) return { message: solved.message };
   return {
     result: {
       ...resultFields(solved.result),
       subject,
+      ...(additive ? { mode: "additive" as const } : {}),
       kernel_checked: false,
       certificate_status: "generated",
       termination_statistics_scope: "graph",
@@ -56,17 +71,20 @@ function outcome(file: string, subject: Subject, limits: ExactLimits = {}): Exac
 }
 
 for (const entry of fixture.cases) {
-  for (const subject of ["source", "determinized"] as const) {
-    test(`${entry.file}, ${subject}`, () => {
-      assert.deepEqual(outcome(entry.file, subject), entry.plain[subject]);
-    });
+  for (const additive of [false, true]) {
+    for (const subject of ["source", "determinized"] as const) {
+      test(`${entry.file}, ${subject}${additive ? ", additive" : ""}`, () => {
+        const expected = entry[additive ? "additive" : "plain"][subject];
+        assert.deepEqual(outcome(entry.file, subject, additive), expected);
+      });
+    }
   }
 }
 
-for (const entry of fixture.limits.filter((run) => !run.additive)) {
-  const { file, subject, limits } = entry;
-  test(`${file}, ${subject}, limits ${JSON.stringify(limits)}`, () => {
-    assert.deepEqual(outcome(file, subject, limits), entry.outcome);
+for (const entry of fixture.limits) {
+  const { file, subject, additive, limits } = entry;
+  test(`${file}, ${subject}${additive ? ", additive" : ""}, limits ${JSON.stringify(limits)}`, () => {
+    assert.deepEqual(outcome(file, subject, additive, limits), entry.outcome);
   });
 }
 
