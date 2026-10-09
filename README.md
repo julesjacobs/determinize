@@ -195,7 +195,7 @@ the symbolic semantics of the paper's proof, and to compare the output distribut
 of both programs. The address's fragment holds the program, the seed, the example and how the page
 shows them, so a copied link opens the same run. The simulator's front end and runtime are
 unverified ports of Lean's; Lean's certificates and theorems apply to the core programs that the
-Lean CLI produces. The simulator is an unverified visualization.
+Lean CLI produces.
 
 See the [Lean documentation](lean/README.md) for the language, theorem premises,
 and implementation limits, and the [test guide](tests/README.md) for analytical

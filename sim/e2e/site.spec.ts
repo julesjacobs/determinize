@@ -1,7 +1,8 @@
 // The landing page and the not-found page of the assembled site: they load, work without
 // JavaScript, fit a 390 px screen, request nothing from another origin and have no axe
 // violations. The landing page stays within its size budget, has its link-preview metadata and a
-// theme select whose choice both pages keep, and the simulator links back to it.
+// theme select whose choice both pages keep, and the simulator links back to it. Neither calls the
+// simulator unverified.
 import { existsSync } from "node:fs";
 import { gzipSync } from "node:zlib";
 import { AxeBuilder } from "@axe-core/playwright";
@@ -156,4 +157,13 @@ test("the simulator links back to the landing page", async ({ page }) => {
   await page.getByRole("link", { name: "Project page" }).click();
   await expect(page).toHaveURL(/\/determinize\/$/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Determinize");
+});
+
+test("neither page calls the simulator unverified", async ({ page }) => {
+  await page.goto("./");
+  await expect(page.locator("body")).not.toContainText(/\b(?:un|not )verified\b/);
+  await page.goto("sim/");
+  await page.locator("#reproduce .cmd").waitFor();
+  await expect(page.locator("body")).not.toContainText(/\b(?:un|not )verified\b/);
+  await expect(page.locator("#reproduce")).toHaveText(/^Reproduce these runs with \.\/run\.sh /);
 });

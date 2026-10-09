@@ -198,7 +198,7 @@
 
   .gallery {
     width: min(56rem, calc(100vw - 32px));
-    max-height: min(40rem, calc(100vh - 6rem));
+    max-height: calc(100vh - 6rem);
     margin: 0;
     padding: var(--space-4);
     overflow-y: auto;
@@ -283,7 +283,8 @@
     padding: var(--space-1) 0;
   }
 
-  /* The premise that an example fails, described on hover and focus. */
+  /* The premise that an example fails, described on hover and focus; one that the check finds
+     open, in the muted outline of a note. */
   .chip {
     min-height: var(--target-min);
     padding: 0 var(--space-2);
@@ -291,6 +292,11 @@
     background: none;
     color: var(--alert);
     font-size: var(--size-small);
+  }
+
+  .chip.open {
+    border-color: var(--muted);
+    color: var(--ink);
   }
 
   /* The description sits right below its chip, so that the pointer can move onto it; clicks pass
@@ -494,13 +500,27 @@
     margin-block: 0;
   }
 
-  /* The simulator's check of the premises: a line per premise in one box and one size in both of
-     its states, muted while none is found failing and a warning when one is, so that it keeps
-     its height when a run fails. */
+  /* The simulator's check of the premises: a warning that lists those found failing or open; the
+     frame around the column says that the theorems don't cover it. */
   .verdict {
-    padding: var(--space-1) 0 var(--space-1) var(--space-3);
-    border-left: 3px solid transparent;
     font-size: var(--size-small);
+  }
+
+  /* Open findings alone: a premise that the check couldn't confirm, in the muted rule of a note. */
+  .verdict.open {
+    padding: var(--space-1) 0 var(--space-1) var(--space-3);
+    border-left: 3px solid var(--muted);
+  }
+
+  .verdict-check {
+    display: block;
+  }
+
+  /* A note beside the statistics, such as of runs that failed only in floating point. */
+  .note {
+    margin-block: var(--space-3);
+    padding: var(--space-1) 0 var(--space-1) var(--space-3);
+    border-left: 3px solid var(--muted);
   }
 
   .verdict :is(p, ul) {
@@ -514,39 +534,11 @@
 
   .verdict a {
     color: inherit;
-  }
-
-  .verdict :is(a, .label) {
     white-space: nowrap;
   }
 
-  .verdict .count {
-    display: inline-block;
-    text-align: right;
-  }
-
-  .verdict.quiet {
-    color: var(--muted);
-  }
-
-  /* The list over an invisible copy in which domain safety holds the room of each of its
-     findings, so that the box keeps their height when a run fails, with the spare room at the
-     bottom. */
-  .verdict :is(.premise-stack, .stack) {
-    display: grid;
-  }
-
-  .verdict :is(.premise-stack, .stack) > * {
-    grid-area: 1 / 1;
-  }
-
-  .verdict .premise-room {
-    visibility: hidden;
-  }
-
-  /* A failing finding in SemiBold, and the room of domain safety's, in either state. */
-  .verdict.alert [data-status="fails"] .finding,
-  .verdict .premise-room .fails {
+  /* A failing finding in SemiBold. */
+  .verdict [data-status="fails"] .finding {
     font-weight: var(--weight-strong);
   }
 
@@ -849,9 +841,12 @@
     display: none;
   }
 
+  /* The G draw's line box is a state's, so that it lines up with the code beside it. */
   .draw code {
+    display: block;
     color: var(--given);
     font-weight: var(--weight-strong);
+    line-height: var(--leading-code);
   }
 
   .step-alert,
@@ -983,11 +978,35 @@
   }
 
   /* The symbolic state in a column of its own where three columns of code fit, and below the row's
-     other cells where they don't. */
+     other cells where they don't. Side by side, a row has a track for σ and one for the code, so
+     that every column's code starts where the symbolic program does, below σ. */
   @container (min-width: 960px) {
     .step-head,
     .step {
       grid-template-columns: var(--run-columns);
+    }
+
+    .step {
+      grid-template-rows: auto auto;
+      row-gap: 0;
+    }
+
+    .step > :is(.step-n, .cell-source, .cell-draw, .cell-det) {
+      grid-row: 2;
+    }
+
+    .step > .cell-sym {
+      display: grid;
+      grid-row: 1 / span 2;
+      grid-template-rows: subgrid;
+    }
+
+    .cell-sym > .cell-code {
+      grid-row: 2;
+    }
+
+    .step > :is(.step-alert, .step-alert-note) {
+      margin-top: calc(var(--space-4) + var(--space-1));
     }
   }
 
@@ -1052,7 +1071,32 @@
     align-items: baseline;
   }
 
-  .honesty {
+  /* Where the head doesn't fit on one line, Resample goes beside the runs so far, so that its
+     second row always shows something: the title and Runs, then Resample and the progress. */
+  @container (max-width: 759px) {
+    .dist .band-head {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      justify-items: start;
+      column-gap: var(--space-3);
+    }
+
+    .dist .run-controls {
+      display: contents;
+    }
+
+    .dist #resample {
+      grid-row: 2;
+      grid-column: 1;
+    }
+
+    .dist #progress {
+      grid-row: 2;
+      grid-column: 2;
+    }
+  }
+
+  .reproduce {
     max-width: 62rem;
     margin-bottom: var(--space-4);
     padding-left: var(--space-3);

@@ -158,49 +158,35 @@
             <p id="determinized-empty" class="pane-empty" hidden>Loading the simulator…</p>
           </div>
           <div class="pane-below">
+            <p id="verdict-status" class="vh" role="status"></p>
             <div id="verdict" class="verdict" hidden>
               <p id="verdict-lead" class="verdict-lead"></p>
-              <div class="premise-stack">
-                <ul class="premises">
-                  <li id="premise-type">
-                    <a
-                      href="https://julesjacobs.com/determinize/docs/Determinize/Spec/Syntax.html#Determinize.Spec.Paper.Typed"
-                      title="Typed, in the Lean development"
-                      >Type <code>float[E]</code></a
-                    >:
-                    <span class="finding"></span>
-                  </li>
-                  <li id="premise-safe">
-                    <a
-                      href="https://julesjacobs.com/determinize/docs/Determinize/Spec/Semantics.html#Determinize.Spec.Paper.DomainSafe"
-                      title="DomainSafe, in the Lean development"
-                      >Domain safety</a
-                    >:
-                    <span class="finding"></span>
-                  </li>
-                  <li id="premise-returns">
-                    <a
-                      href="https://julesjacobs.com/determinize/docs/Determinize/Spec/Expectation.html#Determinize.Spec.returnProbability"
-                      title="returnProbability, in the Lean development"
-                      >Positive return probability</a
-                    >:
-                    <span class="finding"></span>
-                  </li>
-                  <li id="premise-moments">
-                    <a
-                      href="https://julesjacobs.com/determinize/docs/Determinize/Spec/Expectation.html#Determinize.Spec.HasExpectation"
-                      title="HasExpectation, in the Lean development"
-                      >An expectation</a
-                    >, possibly infinite, and a
-                    <a
-                      href="https://julesjacobs.com/determinize/docs/Determinize/Theorems.html#Determinize.Theorems.variance_non_increase"
-                      title="variance_non_increase, in the Lean development, whose premise is MemLp id 2"
-                      >finite second moment</a
-                    >:
-                    <span class="finding"></span>
-                  </li>
-                </ul>
-              </div>
+              <ul class="premises">
+                <li id="premise-type">
+                  <a
+                    href="https://julesjacobs.com/determinize/docs/Determinize/Spec/Syntax.html#Determinize.Spec.Paper.Typed"
+                    title="Typed, in the Lean development"
+                    >Type <code>float[E]</code></a
+                  >:
+                  <span class="finding"></span>
+                </li>
+                <li id="premise-safe">
+                  <a
+                    href="https://julesjacobs.com/determinize/docs/Determinize/Spec/Semantics.html#Determinize.Spec.Paper.DomainSafe"
+                    title="DomainSafe, in the Lean development"
+                    >Domain safety</a
+                  >:
+                  <span class="finding"></span>
+                </li>
+                <li id="premise-returns">
+                  <a
+                    href="https://julesjacobs.com/determinize/docs/Determinize/Spec/Expectation.html#Determinize.Spec.returnProbability"
+                    title="returnProbability, in the Lean development"
+                    >Positive return probability</a
+                  >:
+                  <span class="finding"></span>
+                </li>
+              </ul>
             </div>
           </div>
         </div>
@@ -277,11 +263,7 @@
             <button id="sampling-action" type="button">Stop</button>
           </div>
         </div>
-        <p id="honesty" class="honesty">
-          These are estimates from this browser simulator, which is not verified. The Lean
-          command-line tool and its theorems are the checked artefacts.
-          <span id="reproduce"></span>
-        </p>
+        <p id="reproduce" class="reproduce"></p>
         <div id="view-switch" class="view-switch" role="radiogroup" aria-label="Chart" hidden>
           <label class="seg"
             ><input type="radio" name="chart-view" value="outputs" checked>
@@ -354,7 +336,7 @@
                 </tr>
               </tbody>
             </table>
-            <div id="first-failure" class="alert" hidden></div>
+            <div id="first-failure" hidden></div>
             <p id="factor" class="factor"></p>
             <p id="sites" class="sites" hidden>
               <a

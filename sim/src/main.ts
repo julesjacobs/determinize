@@ -95,11 +95,11 @@ function start(decoded: Decoded): Store {
     {
       pane: $("#determinized-pane"),
       verdict: $("#verdict"),
+      status: $("#verdict-status"),
       lead: $("#verdict-lead"),
       type: $("#premise-type"),
       safe: $("#premise-safe"),
       returns: $("#premise-returns"),
-      moments: $("#premise-moments"),
     },
     store,
   );

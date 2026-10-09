@@ -5,9 +5,8 @@
 // each run's output against that draw instead, where the
 // determinized runs lie on the curve of the source's mean given the draw. Beside the chart: the
 // statistics as Lean's CLI computes them, each linked to the Lean definition it estimates, the
-// variance-reduction factor and the sample sites that determinization leaves. Every number is an
-// estimate of this unverified simulator, and the command that has Lean's CLI report the same runs
-// is shown.
+// variance-reduction factor and the sample sites that determinization leaves. Above them, the
+// command that has Lean's CLI report the same runs.
 import { computed, effect } from "@preact/signals-core";
 import type { Analysis } from "../core/compiler/analyze.ts";
 import type { Expr } from "../core/compiler/ast.ts";
@@ -67,7 +66,7 @@ function command(samples: Samples, file: string | null) {
     .split(" ")
     .map((word) => `<span class="word">${escapeHtml(word)}</span>`)
     .join(" ");
-  return ` Reproduce them with <code class="cmd">${words}</code>${file ? "." : ", with the program saved as program.det."}`;
+  return `Reproduce these runs with <code class="cmd">${words}</code>${file ? "." : ", with the program saved as program.det."}`;
 }
 
 /** What a histogram leaves out: the runs that observe rejected and the runs that failed. */
@@ -195,15 +194,14 @@ export function mountDistributionView(
         ? `Stopped after ${samplingBudgetMs / 1000} s at ${runs}.`
         : paused
           ? `Stopped at ${runs}.`
-          : runnable.value
-            ? `${thin(done)} run${done === 1 ? "" : "s"} of each program.`
-            : "No runs.";
+          : // Idle, the line says nothing that the run count doesn't, and keeps its height.
+            "\u00a0";
     const bar = $<HTMLProgressElement>("progress-bar");
     bar.max = Math.max(target, 1);
     bar.value = done;
   });
 
-  // The honesty sentence and the command that reproduces the numbers.
+  // The command that reproduces the runs.
   effect(() => {
     const samples = store.samples.value;
     const example = examples.find((entry) => entry.id === store.exampleId.value);
@@ -214,7 +212,7 @@ export function mountDistributionView(
     if (!runnable.value || samples.original.summary.runs < 2) reproduce.innerHTML = "";
     else if (counterexample.value) {
       reproduce.textContent =
-        " Lean rejects this program, so its command-line tool runs no counterexample.";
+        "Lean rejects this program, so its command-line tool runs no counterexample.";
     } else reproduce.innerHTML = command(samples, file);
   });
 
@@ -316,7 +314,7 @@ export function mountDistributionView(
     const ready = store.samplesReady.peek();
     if (runnable.peek() && !ready && !(grid.hidden && listOut.hidden)) return;
     const right = counterexample.peek() ? "Counterexample" : "Determinized";
-    $<HTMLElement>("honesty").hidden = !runnable.peek() || !ready || runsSoFar < 2;
+    $<HTMLElement>("reproduce").hidden = !runnable.peek() || !ready || runsSoFar < 2;
     if (!runnable.peek() || !ready || runsSoFar < 2) {
       grid.hidden = true;
       listOut.hidden = true;
@@ -396,29 +394,29 @@ export function mountDistributionView(
     ].filter((entry): entry is [string, string] => entry[1] !== null);
     const failure = $<HTMLElement>("first-failure");
     failure.hidden = failures.length === 0;
-    // The check's witness, in the verdict, gives the run, Lean's message and the seed; a failure
-    // at an inexact 0 is also explained here.
-    const { firstZeroFailure, zeroFailed } = samples.original.summary;
-    const zero = firstZeroFailure
-      ? `<p>Run ${thin(firstZeroFailure.run)} failed at a 0 computed in floating point, which may be an underflow that doesn't occur in the real-valued semantics.</p>`
-      : "";
-    failure.innerHTML =
-      failures
-        .map(
-          ([where, message]) =>
-            `<p><strong>First failure</strong> in ${where}: ${escapeHtml(message)}</p>`,
-        )
-        .join("") +
-      zero +
-      "<p>The statistics are over the runs that returned. What the failed runs mean for the theorems' premises, the simulator's check below the determinized program says.</p>";
+    const { firstDomainFailure, firstZeroFailure, zeroFailed } = samples.original.summary;
+    const failing =
+      counterexample.peek() ||
+      premiseVerdict(result, samples.original.summary, samples.seed).failing;
+    // In the warning's crimson where a premise fails; else, as for a run that failed at an
+    // inexact 0, in the muted rule of a note. The check's witness, with the run, Lean's message
+    // and the seed, is in the verdict.
+    failure.classList.toggle("alert", failing);
+    failure.classList.toggle("note", !failing);
+    const zeroFirst = (message: string) =>
+      !firstDomainFailure && firstZeroFailure?.message === message;
+    const first = failures.map(([where, message]) => {
+      const lead =
+        where === "the source" && zeroFirst(message)
+          ? "First run to fail in floating point"
+          : "First failure";
+      return `<p><strong>${lead}</strong> in ${where}: ${escapeHtml(message)}</p>`;
+    });
+    failure.innerHTML = `${first.join("")}<p>The statistics are over the runs that returned.</p>`;
     const factor = $<HTMLElement>("factor");
     // Where the theorems don't cover the program, or may not cover its runs as a run failed at
     // exactly 0, the means are compared instead.
-    if (
-      counterexample.peek() ||
-      firstZeroFailure ||
-      premiseVerdict(result, samples.original.summary, samples.seed).failing
-    ) {
+    if (failing || firstZeroFailure) {
       renderSites(result);
       const means = compareMeans(stats.original, stats.determinized, formatStat);
       factor.hidden = means === null;
@@ -426,7 +424,7 @@ export function mountDistributionView(
       factor.innerHTML =
         escapeHtml(means ?? "") +
         (left
-          ? `<span class="sub factor-note">${thin(zeroFailed)} of the source's runs failed in floating point and are left out, so its returned runs aren't comparable with the determinized program's.</span>`
+          ? ` <span class="sub factor-note">${thin(zeroFailed)} of the source's runs failed in floating point and are left out, so its returned runs aren't comparable with the determinized program's.</span>`
           : "");
       return;
     }

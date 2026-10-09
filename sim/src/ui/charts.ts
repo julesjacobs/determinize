@@ -186,10 +186,13 @@ export function histogramChart(o: HistogramOptions) {
     const crowded = o.hist.counts.some(
       (count, i) => count > o.yMax && padX + i * bw > mx - 12 && padX + i * bw < mx + 90,
     );
-    const right = mx + 90 > W || crowded;
+    // Left of the line where the right is short of room or holds a clipped bar's label, if the
+    // left has room; else right of it, below that label.
+    const right = (mx + 90 > W || crowded) && mx - 90 >= 0;
+    const lower = crowded && !right;
     parts.push(
       `<line class="mean-line mean-${o.kind}" x1="${f2(mx)}" x2="${f2(mx)}" y1="${padT}" y2="${base}"/>`,
-      `<text class="mean-label halo" x="${f2(right ? mx - 5 : mx + 5)}" y="${padT + 10}"${right ? ' text-anchor="end"' : ""}>mean ${minus(o.meanLabel)}</text>`,
+      `<text class="mean-label halo" x="${f2(right ? mx - 5 : mx + 5)}" y="${padT + (lower ? 24 : 10)}"${right ? ' text-anchor="end"' : ""}>mean ${minus(o.meanLabel)}</text>`,
     );
   }
   for (const tick of o.ticks) {

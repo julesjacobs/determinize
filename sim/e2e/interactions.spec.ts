@@ -2,6 +2,7 @@
 // light or dark, Tab reaches every control with a visible focus that nothing covers, Escape and
 // Tab leave the editor, every control is at least 24 × 24 px, nothing moves under
 // prefers-reduced-motion, and nothing scrolls sideways at 390 px.
+import { readFileSync } from "node:fs";
 import { deflateRawSync } from "node:zlib";
 import { AxeBuilder } from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
@@ -99,14 +100,16 @@ const states: { name: string; open: (page: Page) => Promise<void> }[] = [
   {
     name: "a list output",
     open: async (page) => {
-      await page.goto("sim/");
-      await pick(page, "Gaussian random walk");
+      const walk = new URL("../../examples/paper/gauss-random-walk.det", import.meta.url);
+      await page.goto(linkTo(readFileSync(walk, "utf8")));
       await sampled(page);
     },
   },
   {
     name: "a long run",
     open: async (page) => {
+      // axe goes over every row of the dungeon's step table, which takes a slow runner long.
+      test.slow();
       await page.goto("sim/");
       await pick(page, "Dungeon crawl");
       // Rows out of the region's view skip their rendering, which leaves axe without their

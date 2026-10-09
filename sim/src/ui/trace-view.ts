@@ -217,7 +217,7 @@ export function mountTraceView(
     const sigma = sigmaView(frame.sigma);
     const states = rowStates(frame, facts.peek().get(frame.step));
     for (const kind of ["source", "sym", "det"] as const) {
-      const cut = row.querySelector(`.cell-${kind} > .state.cut`);
+      const cut = row.querySelector(`.cell-${kind} .state.cut`);
       if (cut) cut.outerHTML = state(states[kind]);
     }
     const added = sigma.count - (frameBefore(page, frame)?.sigma.length ?? 0);
@@ -514,8 +514,7 @@ function expander(more: string, fewer: string) {
  * holds only the bindings that rows other than the current one show. */
 function sigmaBlock(sigma: { lines: string[]; count: number }, added: number, whole = true) {
   const label = '<span class="sigma-label">σ</span>';
-  if (sigma.count === 0)
-    return `<span class="sigma">${label}<span class="sigma-lines">empty</span></span>`;
+  if (sigma.count === 0) return "";
   const shown = whole ? sigma.lines : sigma.lines.slice(-shownBindings);
   const items = shown.map((line, offset) => {
     const age = shown.length - offset;
@@ -580,10 +579,11 @@ function renderRows(
             "n-sym",
           )
         : "";
+    // σ, then the symbolic program, which lines up with the other columns' code.
     const symbolicCell = cell(
       "sym",
       "Symbolic state",
-      sigmaBlock(sigma, added, false) + state(states.sym, false) + result,
+      `${sigmaBlock(sigma, added, false)}<div class="cell-code">${state(states.sym, false)}${result}</div>`,
     );
     return `<li class="step${gDraw ? " has-draw" : ""}" data-step="${frame.step}">
       <span class="step-n">${frame.step}</span>
