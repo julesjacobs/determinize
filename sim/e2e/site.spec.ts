@@ -85,7 +85,8 @@ for (const { path, heading, figures } of pages) {
 }
 
 test("the landing page stays within its size budget", async ({ page }) => {
-  // Bytes as GitHub Pages sends them: text compressed, fonts as they are.
+  // The transferred bytes, approximated: HTML and CSS as Node's gzip compresses them (GitHub
+  // Pages sends about 2 % more), fonts as they are.
   const sizes = { html: 0, css: 0, font: 0, other: 0 };
   const counted: Promise<void>[] = [];
   page.on("response", (response) => {
