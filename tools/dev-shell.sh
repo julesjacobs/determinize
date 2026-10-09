@@ -17,11 +17,12 @@ shell_dir() {
 }
 
 # Whether the shell's tools are on PATH: lake for the lean shell, whose scripts (./test.sh) exist
-# without it, and the command itself for the others.
+# without it, and on Linux also the shell's STORM_PYTHON, which a lake of a global elan lacks; the
+# command itself for the others.
 has_shell() {
   local name="$1" command="$2"
   case "$name" in
-    lean) command -v lake ;;
+    lean) command -v lake && [[ "$OSTYPE" != linux* || -n "${STORM_PYTHON:-}" ]] ;;
     sim) command -v "$command" && [[ -e "$ROOT/sim/node_modules" ]] ;;
     site) command -v "$command" && [[ -e "$ROOT/sim/node_modules" && -n "${PLAYWRIGHT_BROWSERS_PATH:-}" ]] ;;
     *) command -v "$command" ;;
