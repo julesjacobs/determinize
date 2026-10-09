@@ -22,7 +22,7 @@ import {
 } from "@codemirror/view";
 import type { Analysis, SpanInfo } from "../core/compiler/analyze.ts";
 import type { Mode } from "../core/compiler/ast.ts";
-import { editorTheme } from "./editor-theme.ts";
+import { editorTheme, hangingIndent } from "./editor-theme.ts";
 import { detHighlighting, detLanguage } from "./language.ts";
 import { linkedLines } from "./linking.ts";
 import { analysisDelayMs, analyzeSource } from "./store.ts";
@@ -270,6 +270,7 @@ export function createEditor(parent: HTMLElement, doc: string, bindings: EditorB
       detHighlighting,
       editorTheme,
       EditorView.lineWrapping,
+      hangingIndent,
       modeMarks,
       linkedLines,
       EditorView.domEventHandlers({

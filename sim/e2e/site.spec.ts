@@ -1,8 +1,8 @@
 // The landing page and the not-found page of the assembled site: they load, work without
 // JavaScript, fit a 390 px screen, request nothing from another origin and have no axe
-// violations. The landing page stays within its size budget, has its link-preview metadata and a
-// theme select whose choice both pages keep, and the simulator links back to it. Neither calls the
-// simulator unverified.
+// violations. The landing page stays within its size budget, its figures' labels cover no mark at
+// 390 px, it has its link-preview metadata and a theme select whose choice both pages keep, and
+// the simulator links back to it. Neither calls the simulator unverified.
 import { existsSync } from "node:fs";
 import { gzipSync } from "node:zlib";
 import { AxeBuilder } from "@axe-core/playwright";
@@ -85,7 +85,8 @@ for (const { path, heading, figures } of pages) {
 }
 
 test("the landing page stays within its size budget", async ({ page }) => {
-  // Bytes as GitHub Pages sends them: text compressed, fonts as they are.
+  // The transferred bytes, approximated: HTML and CSS as Node's gzip compresses them (GitHub
+  // Pages sends about 2 % more), fonts as they are.
   const sizes = { html: 0, css: 0, font: 0, other: 0 };
   const counted: Promise<void>[] = [];
   page.on("response", (response) => {
@@ -109,6 +110,41 @@ test("the landing page stays within its size budget", async ({ page }) => {
   expect(sizes.css).toBeLessThanOrEqual(8_000);
   expect(sizes.other).toBe(0);
   expect(sizes.html + sizes.css + sizes.font).toBeLessThanOrEqual(100_000);
+});
+
+test("at 390 px, the labels in the landing page's figures cover no mark", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await load(page, "./");
+  const covered = await page.evaluate(() => {
+    const meets = (a: DOMRect, b: DOMRect) =>
+      a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+    const found = new Set<string>();
+    for (const chart of document.querySelectorAll("svg.chart.narrow")) {
+      // Each mark's box, or a path's points one unit apart, in the chart's units.
+      const marks: { name: string; box: DOMRect }[] = [];
+      const selector =
+        ".pt-source, .pt-det, .band-point, .band, .filled, .outline, .curve, .mean-line";
+      for (const mark of chart.querySelectorAll<SVGGeometryElement>(selector)) {
+        const name = mark.classList[0];
+        if (mark instanceof SVGPathElement) {
+          for (let at = 0; at <= mark.getTotalLength(); at++) {
+            const point = mark.getPointAtLength(at);
+            marks.push({ name, box: new DOMRect(point.x, point.y, 0, 0) });
+          }
+        } else marks.push({ name, box: mark.getBBox() });
+      }
+      const labels = ".row-label, .mean-label, .curve-label, .band-label";
+      for (const label of chart.querySelectorAll<SVGTextElement>(labels)) {
+        const box = label.getBBox();
+        const text = [...label.childNodes].map((part) => part.textContent).join(" ");
+        for (const mark of marks) {
+          if (meets(box, mark.box)) found.add(`"${text}" covers ${mark.name}`);
+        }
+      }
+    }
+    return [...found];
+  });
+  expect(covered).toEqual([]);
 });
 
 test("the landing page describes itself for link previews", async ({ page, request, baseURL }) => {
@@ -150,6 +186,21 @@ test("the theme select overrides the system's scheme, and both pages keep the ch
   await select.selectOption("system");
   expect(await scheme()).toBe("light dark");
   expect(await page.evaluate(() => localStorage.getItem("determinize:theme"))).toBeNull();
+});
+
+test("after Back, the theme select shows a theme picked meanwhile on another page", async ({
+  page,
+}) => {
+  // Playwright's Chromium has no back-forward cache, so Back loads the page again, and the
+  // browser may restore the select as the reader left it.
+  await load(page, "./");
+  const select = page.getByLabel("Theme");
+  await select.selectOption("light");
+  await load(page, "404.html");
+  await page.evaluate(() => localStorage.setItem("determinize:theme", "dark"));
+  await page.goBack();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect(select).toHaveValue("dark");
 });
 
 test("the simulator links back to the landing page", async ({ page }) => {

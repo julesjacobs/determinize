@@ -246,13 +246,20 @@ test("the walk opens in the additive mode, the state limit offers it, and links 
   await expect(additive).toBeChecked();
   await explored(page);
   expect(await exactRows(page)).toEqual(finite);
-  await expect
-    .poll(() => {
-      const hash = new URL(page.url()).hash.slice("#v1=".length);
-      if (!hash) return null;
-      return JSON.parse(inflateRawSync(Buffer.from(hash, "base64url")).toString("utf8")).additive;
-    })
-    .toBe(true);
+  /** The additive mode of the state in the fragment of `link`. */
+  const additiveOf = (link: string) => {
+    const hash = new URL(link).hash.slice("#v1=".length);
+    if (!hash) return null;
+    return JSON.parse(inflateRawSync(Buffer.from(hash, "base64url")).toString("utf8")).additive;
+  };
+  await expect.poll(() => additiveOf(page.url())).toBe(true);
+  // Copy link copies the same state.
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.getByRole("button", { name: "Copy link" }).click();
+  await expect(page.locator("#copy-status")).toHaveText("Link copied.");
+  const copied = await page.evaluate(() => navigator.clipboard.readText());
+  expect(additiveOf(copied)).toBe(true);
+  expect(copied).toBe(page.url());
   const opened = await context.newPage();
   await opened.goto(page.url());
   await explored(opened);
@@ -262,6 +269,25 @@ test("the walk opens in the additive mode, the state limit offers it, and links 
   await pick(page, "Noisy iteration");
   await expect(additive).not.toBeChecked();
 });
+
+for (const width of [390, 1440]) {
+  test(`at ${width} px, the reason that both programs share is centred across their columns`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(simulator);
+    await explored(page);
+    const why = page.locator("#exact td.exact-why");
+    await expect(why).toHaveAttribute("colspan", "2");
+    const offset = await why.evaluate((cell) => {
+      const text = document.createRange();
+      text.selectNodeContents(cell.querySelector("p") as Element);
+      const centre = (box: DOMRect) => box.left + box.width / 2;
+      return centre(text.getBoundingClientRect()) - centre(cell.getBoundingClientRect());
+    });
+    expect(Math.abs(offset)).toBeLessThanOrEqual(1);
+  });
+}
 
 test("where neither program has values, the rows' headers are plain and muted", async ({
   page,

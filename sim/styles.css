@@ -228,7 +228,7 @@
     display: flex;
     align-items: center;
     gap: var(--space-2);
-    margin-bottom: var(--space-2);
+    margin-bottom: var(--space-4);
   }
 
   .gallery-title {
@@ -272,6 +272,12 @@
     color: var(--muted);
     font-size: var(--size-small);
     font-weight: var(--weight-strong);
+  }
+
+  /* Both columns start at the same height: a column break drops the margin above the heading
+     that starts the second, so the first's has none either. */
+  .g-group:first-child > .g-heading {
+    margin-top: 0;
   }
 
   .gallery ol {
@@ -500,10 +506,11 @@
     margin-block: 0;
   }
 
-  /* The simulator's check of the premises: a warning that lists those found failing or open; the
-     frame around the column says that the theorems don't cover it. */
-  .verdict {
-    font-size: var(--size-small);
+  /* The simulator's check of the premises: a warning that lists those found failing or open, in
+     the source's callout's size, with only its lead SemiBold; the frame around the column says
+     that the theorems don't cover it. */
+  .verdict strong {
+    font-weight: var(--weight-strong);
   }
 
   /* Open findings alone: a premise that the check couldn't confirm, in the muted rule of a note. */
@@ -535,11 +542,6 @@
   .verdict a {
     color: inherit;
     white-space: nowrap;
-  }
-
-  /* A failing finding in SemiBold. */
-  .verdict [data-status="fails"] .finding {
-    font-weight: var(--weight-strong);
   }
 
   /* A frame around a column that the theorems don't cover; an outline, so that it moves nothing
@@ -1202,8 +1204,11 @@
   }
 
   @container (min-width: 960px) {
+    /* The statistics, taller than a histogram, grow the caption's row only, so that the caption
+       stays under its chart. */
     .dist-grid {
       grid-template-columns: var(--run-columns);
+      grid-template-rows: auto 1fr;
       grid-template-areas:
         ". source side side det"
         ". caption side side .";
@@ -1478,6 +1483,12 @@
     max-width: 22rem;
     margin-left: auto;
     text-wrap: pretty;
+  }
+
+  /* The reason that both programs share, centred across their columns. */
+  .exact-why[colspan] p {
+    margin-inline: auto;
+    text-align: center;
   }
 
   .try-additive {

@@ -9,21 +9,26 @@ import type { Store } from "./store.ts";
 /** How long the fragment waits for the state to settle. */
 const writeDelayMs = 300;
 
-export function bindUrl(
-  store: Pick<Store, "source" | "seed" | "exampleId" | "view" | "additive">,
-  restore: (decoded: Decoded) => void,
-) {
+/** The parts of the store that a link carries. */
+export type SharedStore = Pick<Store, "source" | "seed" | "exampleId" | "view" | "additive">;
+
+/** The state that a link to the page carries, as the fragment and Copy link give it. */
+export function sharedStateOf(store: SharedStore): SharedState {
+  return {
+    source: store.source.value,
+    seed: store.seed.value,
+    example: store.exampleId.value,
+    ...(store.view.value === "against" ? { view: "against" as const } : {}),
+    ...(store.additive.value ? { additive: true as const } : {}),
+  };
+}
+
+export function bindUrl(store: SharedStore, restore: (decoded: Decoded) => void) {
   let written = window.location.hash;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let opened = true;
   effect(() => {
-    const state = {
-      source: store.source.value,
-      seed: store.seed.value,
-      example: store.exampleId.value,
-      ...(store.view.value === "against" ? { view: "against" as const } : {}),
-      ...(store.additive.value ? { additive: true as const } : {}),
-    };
+    const state = sharedStateOf(store);
     // The page opens in the state that its link names, or without a fragment.
     if (opened) {
       opened = false;

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # PostToolUse (Edit|Write): fast feedback for the file that was just changed.
 #   sim/**    -> biome check of that file (files Biome skips pass)
-#   sim/src, sim/test, sim/build.ts, sim/tsconfig*.json -> npm run typecheck, npm test
+#   sim/**.ts, sim/src, sim/test, sim/tsconfig*.json -> npm run typecheck; sim/src, sim/test -> npm test
 #   site/*.css, site/*.mts -> biome check of that file; site/*.html -> html-validate
 #   site/index.html -> its theorem quotes against lean/Determinize/Theorems.lean
 #   tex/*.tex -> chktex lint of that file
@@ -43,17 +43,19 @@ case "$file" in
       }
     fi
     ;;
-  sim/src/*|sim/test/*|sim/build.ts|sim/tsconfig*.json)
+  sim/*.ts|sim/src/*|sim/test/*|sim/tsconfig*.json)
     out="$(cd sim && in_shell sim npm run typecheck 2>&1)" || {
       echo "npm run typecheck failed after editing $file:" >&2
       tail -n 40 <<<"$out" >&2
       exit 2
     }
-    out="$(cd sim && in_shell sim npm test 2>&1)" || {
-      echo "npm test failed after editing $file:" >&2
-      grep -vE '^\s*(at |\||ℹ (start|duration|suites|cancelled|skipped|todo))' <<<"$out" | tail -n 40 >&2
-      exit 2
-    }
+    if [[ "$file" == sim/src/* || "$file" == sim/test/* ]]; then
+      out="$(cd sim && in_shell sim npm test 2>&1)" || {
+        echo "npm test failed after editing $file:" >&2
+        grep -vE '^\s*(at |\||ℹ (start|duration|suites|cancelled|skipped|todo))' <<<"$out" | tail -n 40 >&2
+        exit 2
+      }
+    fi
     ;;
   tex/*.tex)
     lint="$(cd tex && in_shell tex chktex -q -n1 -n3 -n8 -n13 -n24 -n36 -n44 -n46 "${file#tex/}" 2>/dev/null | head -n 25)"

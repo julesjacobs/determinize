@@ -134,8 +134,8 @@ Evaluation examples with unbounded recursion:
 Biome formats and lints the simulator as configured in `sim/biome.json`;
 `biome check --write .` in `sim/` applies its formatting and safe fixes. The simulator is
 written in TypeScript, whose types Node and esbuild strip. `npm run typecheck` checks
-`src/` against the browser's types (`tsconfig.json`), and the tests and the build script
-against Node's (`tsconfig.node.json`).
+`src/` against the browser's types (`tsconfig.json`), and the tests, the browser tests, the
+scripts, the build script and the Playwright configuration against Node's (`tsconfig.node.json`).
 
 `sim/src/core/` holds the compiler, the runtime and what the step table and the statistics
 compute. A Biome override keeps it free of the DOM, CodeMirror and signals, so that Node's tests
@@ -191,12 +191,13 @@ To build that archived draft independently:
 
 After `npm run build` in `sim/`, open `sim/dist/index.html`, or
 [its published copy](https://julesjacobs.github.io/determinize/sim/), to follow a run of a
-program and of its determinization step by step, beside the G draws they share and, on request,
-the symbolic semantics of the paper's proof, and to compare the output distributions of many runs
-of both programs. The address's fragment holds the program, the seed, the example and how the page
-shows them, so a copied link opens the same run. The simulator's front end and runtime are
-unverified ports of Lean's; Lean's certificates and theorems apply to the core programs that the
-Lean CLI produces.
+program and of its determinization step by step, beside the G draws they share and the symbolic
+semantics of the paper's proof, and to compare the output distributions of many runs of both
+programs, with the exact values of each one that has a finite model. The address's fragment holds
+the program, the seed, the example and how the page shows them, so a copied link opens the same
+run. The simulator's front end, runtime and finite models are ports of Lean's, held to the Lean
+CLI by the fixtures in `sim/test/fixtures/`; Lean's certificates and theorems apply to the core
+programs that the Lean CLI produces.
 
 See the [Lean documentation](lean/README.md) for the language, theorem premises,
 and implementation limits, and the [test guide](tests/README.md) for analytical

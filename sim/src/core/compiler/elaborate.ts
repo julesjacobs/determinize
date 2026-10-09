@@ -21,22 +21,24 @@ function index(env: string[], name: string, span: Span): number {
   return i;
 }
 
-/** The weights of a literal discrete distribution, checked as `Checking.finiteDistribution`. */
+/** The weights of a literal discrete distribution, checked as `Checking.finiteDistribution`. A
+ * number literal is never negative: the parser reads `-1` as the negation of the literal 1, which
+ * Lean's elaborator rejects as a negative weight, `-0` included. */
 function finiteDistribution(expr: Expr & { kind: "DiscreteWeights" }): Rational[] {
   const weights = expr.weights.map((weight) => {
+    if (weight.kind === "Neg" && weight.expr.kind === "Const") {
+      throw new CompileError(
+        "discrete expects nonnegative literal weights",
+        weight.from,
+        weight.to,
+      );
+    }
     if (weight.kind !== "Const" || weight.exact === undefined) {
       throw new CompileError("discrete weights must be number literals", weight.from, weight.to);
     }
     return weight.exact;
   });
-  const zero = rational(0n);
-  for (const [i, weight] of weights.entries()) {
-    if (compare(weight, zero) < 0) {
-      const span = expr.weights[i];
-      throw new CompileError("discrete weights must be nonnegative", span.from, span.to);
-    }
-  }
-  const total = weights.reduce(add, zero);
+  const total = weights.reduce(add, rational(0n));
   if (compare(total, rational(1n)) !== 0) {
     throw new CompileError(
       `discrete weights must sum to 1, not ${formatDecimal(total)}`,

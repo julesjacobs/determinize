@@ -74,7 +74,8 @@ const thin = (n: number) => n.toLocaleString("en-US").replaceAll(",", " ");
 /**
  * The output distributions: two histograms on one x axis and one y scale, the source above
  * (outlined) and the determinized program below (filled), with a dashed line at their common
- * mean.
+ * mean. The line runs through each row but not the gap between them, where it would cross the
+ * lower row's label on narrow charts.
  */
 function stacked(o: {
   source: Histogram;
@@ -129,7 +130,10 @@ function stacked(o: {
   }
   const mx = x(o.mean.value);
   parts.push(
-    `<line class="mean-line" x1="${f2(mx)}" x2="${f2(mx)}" y1="${padT - 2}" y2="${padT + rowH * 2 + gap}"/>`,
+    ...rows.map(
+      (r) =>
+        `<line class="mean-line" x1="${f2(mx)}" x2="${f2(mx)}" y1="${r.top - 2}" y2="${r.top + rowH}"/>`,
+    ),
     `<text class="mean-label" x="${f2(mx + 5)}" y="${padT + 10}">${o.mean.label}</text>`,
   );
   const axisY = padT + rowH * 2 + gap;
@@ -151,10 +155,24 @@ interface Band {
   point: [number, number];
 }
 
+/** `label` in two lines of about equal length, split between words. */
+function twoLines(label: string): [string, string] {
+  const words = label.split(" ");
+  const at = (k: number): [string, string] => [
+    words.slice(0, k).join(" "),
+    words.slice(k).join(" "),
+  ];
+  const longer = (k: number) => Math.max(...at(k).map((line) => line.length));
+  let best = 1;
+  for (let k = 2; k < words.length; k++) if (longer(k) < longer(best)) best = k;
+  return at(best);
+}
+
 /**
  * Each run's output against its G draw: the source's runs as open circles, the determinized
  * program's as filled points, with the curve they lie on, a shaded band of the G draw, and a
- * dashed line at the common mean.
+ * dashed line at the common mean. The curve and the mean are labelled beside their ends, or, with
+ * `key`, in a key in the top left corner, which the signal example's runs leave empty.
  */
 function conditional(o: {
   pairs: { x: number; source: number; det: number }[];
@@ -165,6 +183,7 @@ function conditional(o: {
   mean: { value: number; label: string };
   width: number;
   height: number;
+  key?: boolean;
   id: string;
   title: string;
 }) {
@@ -221,13 +240,29 @@ function conditional(o: {
     parts.push(`<circle class="pt-det" cx="${f2(X(p.x))}" cy="${f2(Y(p.det))}" r="2.4"/>`);
   }
   const [px, py] = o.band.point;
-  const [lx, ly] = o.curve[o.curve.length - 1];
-  parts.push(
-    `<circle class="band-point" cx="${f2(X(px))}" cy="${f2(Y(py))}" r="6"/>`,
-    `<text class="curve-label halo" x="${f2(X(lx) - 6)}" y="${f2(Y(ly) - 12)}" text-anchor="end">${o.curveLabel}</text>`,
-    `<text class="mean-label halo" x="${padL + 4}" y="${f2(Y(o.mean.value) - 6)}">${o.mean.label}</text>`,
-    "</svg>",
-  );
+  parts.push(`<circle class="band-point" cx="${f2(X(px))}" cy="${f2(Y(py))}" r="6"/>`);
+  if (o.key) {
+    // Each entry: a stroke of the mark, then its label, the mean's in two lines; the three lines
+    // of text fit between the top two grid lines.
+    const sx = padL + 6;
+    const sw = 18; // three dashes of the mean's line
+    const tx = sx + sw + 6;
+    const [y1, y2] = [padT + 14, padT + 30];
+    const [first, second] = twoLines(o.mean.label);
+    parts.push(
+      `<line class="curve" x1="${sx}" x2="${sx + sw}" y1="${y1 - 4}" y2="${y1 - 4}"/>`,
+      `<text class="curve-label halo" x="${tx}" y="${y1}">${o.curveLabel}</text>`,
+      `<line class="mean-line" x1="${sx}" x2="${sx + sw}" y1="${y2 - 4}" y2="${y2 - 4}"/>`,
+      `<text class="mean-label halo" x="${tx}" y="${y2}">${first}<tspan x="${tx}" dy="15">${second}</tspan></text>`,
+    );
+  } else {
+    const [lx, ly] = o.curve[o.curve.length - 1];
+    parts.push(
+      `<text class="curve-label halo" x="${f2(X(lx) - 6)}" y="${f2(Y(ly) - 12)}" text-anchor="end">${o.curveLabel}</text>`,
+      `<text class="mean-label halo" x="${padL + 4}" y="${f2(Y(o.mean.value) - 6)}">${o.mean.label}</text>`,
+    );
+  }
+  parts.push("</svg>");
   return parts.join("");
 }
 
@@ -290,6 +325,7 @@ const figures: Record<string, string> = {
       ...why,
       width: 358,
       height: 320,
+      key: true,
       id: "wn",
       title: `Output of ${plotRuns} runs of each program against x.`,
     }).replace('class="chart conditional"', 'class="chart conditional narrow"'),

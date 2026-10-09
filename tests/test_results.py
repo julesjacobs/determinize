@@ -1,10 +1,10 @@
-"""Exact result certificates, independent kernel replay, and optional real Storm runs."""
+"""Exact result certificates, independent kernel replay, and the Storm adapter without Storm;
+test_results_storm.py runs Storm itself."""
 from fractions import Fraction
 import json
 import importlib.util
 from types import SimpleNamespace
 from unittest.mock import patch
-import os
 from pathlib import Path
 import subprocess
 import sys
@@ -40,6 +40,14 @@ def generate(directory, program, subject="source", *options):
 def kernel(path):
     return subprocess.run(["lake", "env", "lean", path], cwd=LEAN, text=True,
                           capture_output=True, timeout=180)
+
+
+def storm_adapter():
+    """tools/storm.py as a module."""
+    spec = importlib.util.spec_from_file_location("storm_adapter", ROOT / "tools/storm.py")
+    adapter = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(adapter)
+    return adapter
 
 
 class ResultTests(unittest.TestCase):
@@ -155,14 +163,8 @@ class ResultTests(unittest.TestCase):
                 self.assertFalse(Path(str(prefix) + ".result.json").exists())
                 self.assertFalse(Path(str(prefix) + ".tra").exists())
 
-    def adapter(self):
-        spec = importlib.util.spec_from_file_location("storm_adapter", ROOT / "tools/storm.py")
-        adapter = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(adapter)
-        return adapter
-
     def test_storm_failure_reports(self):
-        adapter = self.adapter()
+        adapter = storm_adapter()
         for failure in ("timeout", "storm", "kernel", "disagreement"):
             with self.subTest(failure=failure), tempfile.TemporaryDirectory() as tmp:
                 prefix = Path(tmp) / "model"
@@ -203,7 +205,7 @@ class ResultTests(unittest.TestCase):
                     self.assertNotIn("kernel_checked", report)
 
     def test_certificate_axioms(self):
-        adapter = self.adapter()
+        adapter = storm_adapter()
         names = ("outputStatistics", "terminationProbabilities", "conditionalVariance", "reportedStatistics",
                  "printedStatistics", "printedConditionalMoments")
         lines = [f"'{name}' depends on axioms: [propext, Classical.choice, Quot.sound]" for name in names]
@@ -218,7 +220,7 @@ class ResultTests(unittest.TestCase):
                 adapter.checked_axioms(invalid)
 
     def test_storm_timeout_stops_children(self):
-        adapter = self.adapter()
+        adapter = storm_adapter()
         with tempfile.TemporaryDirectory() as tmp:
             pidfile = Path(tmp) / "child.pid"
             script = ("import subprocess, sys, time; "
@@ -232,48 +234,8 @@ class ResultTests(unittest.TestCase):
                                    text=True, capture_output=True).stdout.strip()
             self.assertTrue(not state or state.startswith("Z"), state)
 
-    @unittest.skipUnless(os.environ.get("STORM_PYTHON"), "set STORM_PYTHON for real Storm integration")
-    def test_storm_report_initial_label_tampering(self):
-        adapter = self.adapter()
-        for additive in (False, True):
-            with self.subTest(additive=additive), tempfile.TemporaryDirectory() as tmp:
-                directory = Path(tmp)
-                source = directory / "input.det"
-                source.write_text("bernoulli[G](0.5)")
-                prefix = directory / "model"
-                mode = ["--additive"] if additive else []
-                run = subprocess.run([os.environ["STORM_PYTHON"], ROOT / "tools/storm.py",
-                    source, "--prefix", prefix, "--subject", "source", *mode],
-                    text=True, capture_output=True, timeout=180)
-                self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
-                result = json.loads(Path(str(prefix) + ".storm-values.json").read_text())
-                with patch.object(sys, "path", [str(ROOT / "tools"), *sys.path]):
-                    original, answer = adapter.certificate_text(prefix, result, additive)
-                self.assertEqual(answer["first"], Fraction(1, 2))
-                _, _, labels, rewards = adapter.read_model(prefix)
-                changed_initial = next(i for i in labels["returned"] if rewards[i] == 1)
-                path = Path(str(prefix) + ".lab")
-                lines = path.read_text().splitlines()
-                changed = lines[:3]
-                for line in lines[3:]:
-                    state, *names = line.split()
-                    names = [name for name in names if name != "init"]
-                    if int(state) == changed_initial:
-                        names.append("init")
-                    changed.append(" ".join([state, *names]))
-                path.write_text("\n".join(changed) + "\n")
-                with patch.object(sys, "path", [str(ROOT / "tools"), *sys.path]):
-                    tampered, answer = adapter.certificate_text(prefix, result, additive)
-                self.assertEqual(answer["first"], 1)
-                self.assertNotEqual(original, tampered)
-                certificate = directory / "tampered.lean"
-                certificate.write_text(tampered)
-                checked = kernel(certificate)
-                self.assertNotEqual(checked.returncode, 0)
-                self.assertIn("error", checked.stdout + checked.stderr)
-
     def test_storm_certificate_validation(self):
-        adapter = self.adapter()
+        adapter = storm_adapter()
         with tempfile.TemporaryDirectory() as tmp:
             result, prefix = generate(Path(tmp), "if flip(0.5) then 1 else 2")
             self.assertEqual(result.returncode, 0, result.stderr)
@@ -293,46 +255,6 @@ class ResultTests(unittest.TestCase):
             path = Path(tmp) / "wrong.lean"
             path.write_text(certificate)
             self.assertNotEqual(kernel(path).returncode, 0)
-
-    @unittest.skipUnless(os.environ.get("STORM_PYTHON"), "set STORM_PYTHON for real Storm integration")
-    def test_storm_above_dense_limit(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            directory = Path(tmp)
-            source = directory / "input.det"
-            source.write_text("let f = rec f x => if x <= 0 then 7 else f (x-1) in f 9")
-            prefix = directory / "model"
-            result = subprocess.run([os.environ["STORM_PYTHON"], ROOT / "tools/storm.py",
-                                     source, "--prefix", prefix, "--subject", "source", "--timeout", "300"],
-                                    text=True, capture_output=True, timeout=360)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-            report = json.loads(Path(str(prefix) + ".storm.json").read_text())
-            self.assertTrue(report["kernel_checked"])
-            self.assertEqual(Fraction(report["exact_answer"]), 7)
-            self.assertGreater(self.adapter().read_model(prefix)[0]-1, 256)
-            self.assertFalse(Path(str(prefix) + ".result.json").exists())
-            self.assertTrue(all("--result" not in command for command in report["commands"]))
-
-    @unittest.skipUnless(os.environ.get("STORM_PYTHON"), "set STORM_PYTHON for real Storm integration")
-    def test_storm(self):
-        for program, subject, expected in CASES + [
-            ("let f = rec f x => f x in f 0", "source", Fraction(0)),
-            ("let f = rec f x => f x in if flip(0.5) then f 0 else 2", "source", Fraction(1)),
-        ]:
-            with self.subTest(program=program), tempfile.TemporaryDirectory() as tmp:
-                directory = Path(tmp)
-                source = directory / "input.det"
-                source.write_text(program)
-                prefix = directory / "model"
-                result = subprocess.run([os.environ["STORM_PYTHON"], ROOT / "tools/storm.py",
-                                         source, "--prefix", prefix, "--subject", subject],
-                                        text=True, capture_output=True, timeout=240)
-                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-                report = json.loads(Path(str(prefix) + ".storm.json").read_text())
-                self.assertEqual(report["status"], "completed")
-                self.assertTrue(report["kernel_checked"])
-                self.assertEqual(Fraction(report["exact_answer"]), expected)
-                self.assertTrue(report["stormpy_version"])
-                self.assertTrue(report["storm_version"])
 
 
 if __name__ == "__main__":

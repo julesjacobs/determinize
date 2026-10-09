@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { deflateRawSync, inflateRawSync } from "node:zlib";
 import { AxeBuilder } from "@axe-core/playwright";
-import type { Page } from "@playwright/test";
+import type { Page, Worker } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 import type { Store } from "../src/ui/store.ts";
 
@@ -632,6 +632,40 @@ test("each histogram sits under its program's column, on one axis", async ({ pag
   expect(stacked.ticks[1]).toEqual(stacked.ticks[0]);
 });
 
+test("at 1440 px the caption sits right under its chart, however tall the statistics", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(simulator);
+  await sampled(page, 1000);
+  // The exact values' reason makes the statistics taller than the histograms.
+  await expect(page.locator("#exact .exact-why")).toBeVisible();
+  /** The room between the bottom of `charts` and the caption's top, the grid's row gap, and
+   * whether the statistics reach below the caption. */
+  const gap = (charts: string) =>
+    page.evaluate((selector) => {
+      const bottom = Math.max(
+        ...[...document.querySelectorAll(selector)].map(
+          (chart) => chart.getBoundingClientRect().bottom,
+        ),
+      );
+      const caption = document.querySelector("#chart-caption") as Element;
+      const side = document.querySelector(".dist-side") as Element;
+      return {
+        room: caption.getBoundingClientRect().top - bottom,
+        rowGap: Number.parseFloat(getComputedStyle(caption.parentElement as Element).rowGap),
+        taller: side.getBoundingClientRect().bottom > caption.getBoundingClientRect().bottom,
+      };
+    }, charts);
+  const histograms = await gap("#hist-source, #hist-det");
+  expect(histograms.taller).toBe(true);
+  expect(histograms.room).toBeCloseTo(histograms.rowGap, 0);
+  await page.getByRole("radio", { name: "Against x, the G draw" }).check();
+  await expect(page.locator("#chart-body svg")).toBeVisible();
+  const plot = await gap("#chart-body");
+  expect(plot.room).toBeCloseTo(plot.rowGap, 0);
+});
+
 test("the histograms show the returned runs and count those that observe rejects", async ({
   page,
 }) => {
@@ -678,6 +712,17 @@ test("the check's warning lists only the premises found failing or open, with th
   await expect(page.locator("#determinized-pane")).toHaveClass(/\buncovered\b/);
 });
 
+/** The size, leading and weight of the text of `selector`'s first element. */
+function textStyle(page: Page, selector: string) {
+  return page
+    .locator(selector)
+    .first()
+    .evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { size: style.fontSize, leading: style.lineHeight, weight: style.fontWeight };
+    });
+}
+
 test("a premise that the check finds failing is a warning, with the run that witnesses it", async ({
   page,
 }) => {
@@ -702,6 +747,10 @@ test("a premise that the check finds failing is a warning, with the run that wit
   );
   await expect(page.locator("#premise-safe")).toHaveAttribute("data-status", "fails");
   await expect(page.locator("#verdict li:visible")).toHaveCount(1);
+  // In the style of the source's callout: its size and leading, and only the lead SemiBold.
+  const callout = await textStyle(page, "#source-alert");
+  expect(await textStyle(page, "#verdict-lead strong")).toEqual({ ...callout, weight: "600" });
+  expect(await textStyle(page, "#premise-safe .finding")).toEqual(callout);
   await expect(page.locator("#determinized-pane")).toHaveClass(/\buncovered\b/);
   // The frame is an outline, which moves nothing.
   const outline = await page
@@ -747,6 +796,9 @@ test("a run that fails at an inexact 0 leaves domain safety open, with no frame"
   await expect(page.locator("#premise-safe .finding")).toHaveText(
     "open. Run 9 failed at exactly 0, in floating point: gamma requires positive shape and rate (seed 10), which may be an underflow the real-valued semantics doesn't reach.",
   );
+  const callout = await textStyle(page, "#source-alert");
+  expect(await textStyle(page, "#verdict-lead strong")).toEqual({ ...callout, weight: "600" });
+  expect(await textStyle(page, "#premise-safe .finding")).toEqual(callout);
   // The note under the statistics is muted too, and says that the run failed in floating point.
   const note = page.locator("#first-failure");
   await expect(note).toContainText(
@@ -1460,43 +1512,44 @@ test("exploring the dungeon in its worker to Lean's state limit leaves no long t
 test("a newer program replaces a worker busy with a long step of an exploration", async ({
   page,
 }) => {
-  test.slow();
-  const workers: string[] = [];
+  const workers: Worker[] = [];
   page.on("worker", (started) => {
-    const path = new URL(started.url()).pathname;
-    if (path.endsWith("/exact-worker.js")) workers.push(path);
+    if (new URL(started.url()).pathname.endsWith("/exact-worker.js")) workers.push(started);
   });
   await page.goto(simulator);
   await expect.poll(() => exactKinds(page)).not.toBe(null);
-  const started = workers.length;
-  // Squaring 2/3 twenty times makes rationals of about a million bits, whose single steps take
-  // the worker seconds each.
-  const squares = "(rec f n => fun x => if n < 1 then x else f (n - 1) (x * x)) 20 (2 / 3)";
-  await page.evaluate(async (program) => {
-    const store = await window.DeterminizeSim.ready;
-    store.source.value = program;
-    store.commitSource();
-  }, squares);
-  // Once the worker reports progress, it is deep in the exploration.
-  await expect
-    .poll(() =>
-      page.evaluate(async () => {
-        const { programs } = (await window.DeterminizeSim.ready).exact.value ?? {};
-        return [programs?.source, programs?.determinized].some(
-          (state) => state?.kind === "exploring" && state.discovered > 0,
-        );
-      }),
-    )
-    .toBe(true);
-  expect(await exactKinds(page)).toBe(null);
-  await page.evaluate(async () => {
-    const store = await window.DeterminizeSim.ready;
-    store.source.value = "1 + 2";
-    store.commitSource();
+  expect(workers).toHaveLength(1);
+  const [busy] = workers;
+  // The worker's next slice of an exploration is a step that doesn't end: it says that it has
+  // begun, then keeps the worker's thread.
+  await busy.evaluate(() => {
+    const defer = self.setTimeout;
+    self.setTimeout = ((_task: () => void, delay?: number) => {
+      self.setTimeout = defer;
+      return defer(() => {
+        console.log("a long step");
+        for (;;) {
+          // The step goes on until the page terminates the worker.
+        }
+      }, delay);
+    }) as typeof setTimeout;
   });
+  const commit = (program: string) =>
+    page.evaluate(async (source) => {
+      const store = await window.DeterminizeSim.ready;
+      store.source.value = source;
+      store.commitSource();
+    }, program);
+  const step = busy.waitForEvent("console");
+  await commit("uniform(0, 1) * 2");
+  expect((await step).text()).toBe("a long step");
+  expect(await exactKinds(page)).toBe(null);
+  const closed = busy.waitForEvent("close");
+  await commit("1 + 2");
   await expect.poll(() => exactKinds(page), { timeout: 10_000 }).toEqual(["finite", "finite"]);
   // The busy worker was terminated and replaced.
-  expect(workers.slice(started)).toEqual(["/determinize/sim/exact-worker.js"]);
+  await closed;
+  expect(workers).toHaveLength(2);
 });
 
 test("an edit within an exploration's first frame replaces it with the new program's", async ({
@@ -1807,6 +1860,45 @@ for (const colorScheme of ["light", "dark"] as const) {
   });
 }
 
+test("at 390 px a wrapped line's rows after its first start two columns past its indent", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const long = "x * 2 + x * 3 + x * 4 + x * 5 + x * 6 + x * 7 + x * 8 + x * 9";
+  await page.goto(linkTo(`let f = fun x =>\n    ${long}\nin\nf (uniform(0, 1))`, 1));
+  await expect(page.locator("#determinized-editor .cm-line").first()).toBeVisible();
+  // For each line, its indent in columns, a character's width, and where each row starts.
+  const lines = await page.locator(".cm-line").evaluateAll((elements) =>
+    elements.map((line) => {
+      const range = document.createRange();
+      const starts: number[] = [];
+      let width = 0;
+      let top = Number.NEGATIVE_INFINITY;
+      const walker = document.createTreeWalker(line, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        for (let i = 0; i < (node.textContent ?? "").length; i++) {
+          range.setStart(node, i);
+          range.setEnd(node, i + 1);
+          const box = range.getBoundingClientRect();
+          if (box.width === 0) continue;
+          width ||= box.width;
+          if (box.top > top + box.height / 2) starts.push(box.left);
+          top = Math.max(top, box.top);
+        }
+      }
+      const indent = /^ */.exec(line.textContent ?? "")?.[0].length ?? 0;
+      return { indent, width, starts };
+    }),
+  );
+  const wrapped = lines.filter((line) => line.starts.length > 1);
+  expect(wrapped.filter((line) => line.indent > 0).length).toBeGreaterThanOrEqual(2);
+  for (const { indent, width, starts } of wrapped) {
+    for (const start of starts.slice(1)) {
+      expect(start - starts[0], `indent ${indent}`).toBeCloseTo((indent + 2) * width, 0);
+    }
+  }
+});
+
 test("inferred modes show as hints, and hovers give each site's reason", async ({ page }) => {
   await page.goto(simulator);
   const hints = page.locator(".cm-mode-hint");
@@ -1948,6 +2040,58 @@ test("at 768 px the gallery's menu shows every example without scrolling", async
   expect(await gallery.evaluate((menu) => menu.scrollHeight <= menu.clientHeight)).toBe(true);
 });
 
+test("the gallery's menu closes when the focus leaves it, so that it covers nothing focused", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(simulator);
+  const button = page.getByRole("button", { name: /^Example: / });
+  const gallery = page.getByRole("dialog", { name: "Examples" });
+  const controls = gallery.locator("a[href], button");
+  // Tab within the menu keeps it open.
+  await button.click();
+  await expect(controls.first()).toHaveText("New program");
+  await controls.first().focus();
+  await page.keyboard.press("Tab");
+  await expect(gallery).toBeVisible();
+  // Tab from its last control and Shift+Tab from its first leave it, and close it.
+  for (const [key, control] of [
+    ["Tab", controls.last()],
+    ["Shift+Tab", controls.first()],
+  ] as const) {
+    if (!(await gallery.isVisible())) await button.click();
+    await control.focus();
+    await page.keyboard.press(key);
+    await expect(gallery, key).toBeHidden();
+    await expect(button).toHaveAttribute("aria-expanded", "false");
+    // The focus goes on where the key sends it, not back to the button.
+    const focused = await page.evaluate(() => {
+      const element = document.activeElement;
+      return { inMenu: !!element?.closest("dialog"), onButton: element?.id === "example-button" };
+    });
+    expect(focused, key).toEqual({ inMenu: false, onButton: false });
+  }
+});
+
+test("at 1440 px the gallery's two columns start at the same height", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(simulator);
+  await page.getByRole("button", { name: /^Example: / }).click();
+  const gallery = page.getByRole("dialog", { name: "Examples" });
+  await expect(gallery).toBeVisible();
+  // The top of each column's first heading, by the column's left edge.
+  const tops = await gallery.locator(".g-heading").evaluateAll((headings) => {
+    const columns = new Map<number, number>();
+    for (const heading of headings) {
+      const box = heading.getBoundingClientRect();
+      if (!columns.has(Math.round(box.left))) columns.set(Math.round(box.left), box.top);
+    }
+    return [...columns.values()];
+  });
+  expect(tops).toHaveLength(2);
+  expect(tops[1]).toBe(tops[0]);
+});
+
 test("at 390 px every chip's description stays inside the gallery", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(simulator);
@@ -2041,4 +2185,19 @@ test("the theme select overrides the system's scheme, and the page remembers it"
   expect(await ground()).toBe("rgb(21, 22, 25)");
   await page.getByLabel("Theme").selectOption("system");
   expect(await ground()).toBe("rgb(243, 244, 241)");
+});
+
+test("after Back, the theme select shows a theme picked meanwhile on another page", async ({
+  page,
+}) => {
+  // Playwright's Chromium has no back-forward cache, so Back loads the page again, and the
+  // browser may restore the select as the reader left it.
+  await page.goto(simulator);
+  const select = page.getByLabel("Theme");
+  await select.selectOption("light");
+  await page.goto("./");
+  await page.evaluate(() => localStorage.setItem("determinize:theme", "dark"));
+  await page.goBack();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect(select).toHaveValue("dark");
 });
