@@ -872,6 +872,28 @@ test("the check keeps its earlier verdict until runs of the new program after ru
   expect(texts.filter((text) => /\bin 1 run\b/.test(text))).toEqual([]);
 });
 
+test("a histogram's mean label stays inside its chart, beside a clipped bar too", async ({
+  page,
+}) => {
+  // The determinized program's runs all return 0.5, near the left of an axis to about 4: a
+  // clipped bar, with its label, right of the mean.
+  for (const width of [390, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(linkTo("let x = gauss(1, 1) in\nuniform(0, x)", 1));
+    await sampled(page, 1000);
+    const outside = await page.locator(".chart .mean-label").evaluateAll((labels) =>
+      labels
+        .map((label) => {
+          const box = label.getBoundingClientRect();
+          const chart = (label.closest("svg") as Element).getBoundingClientRect();
+          return box.left < chart.left || box.right > chart.right ? label.textContent : null;
+        })
+        .filter((text) => text !== null),
+    );
+    expect(outside, `${width} px`).toEqual([]);
+  }
+});
+
 test("the plot against a G draw shows each run, and a click steps through it", async ({ page }) => {
   await page.goto(simulator);
   await sampled(page, 1000);
