@@ -444,10 +444,6 @@
     font-size: var(--size-small);
   }
 
-  .status {
-    color: var(--muted);
-  }
-
   /* Steps: a transport bar above a region of rows that scrolls by itself, so that following the
      current step never moves the bar or the page. */
   .transport {
