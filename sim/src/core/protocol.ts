@@ -24,7 +24,8 @@ export interface CancelRequest {
 
 export type Request = RunRequest | CancelRequest;
 
-/** The outcomes of the runs since the previous batch, of the source and the determinized program. */
+/** The outcomes of the runs since the previous batch, of the source and the determinized
+ * program. */
 export interface BatchResponse {
   type: "batch";
   generation: number;
