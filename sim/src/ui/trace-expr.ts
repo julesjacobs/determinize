@@ -9,9 +9,15 @@ export type Path = (string | number)[];
 export interface TraceOptions {
   /** The subexpression that the last step produced. */
   focusPath?: Path | null;
-  /** Values to link to the symbols they correspond to. */
-  valueBySymbol?: Record<string, number>;
+  /** The symbolic state that this state projects: where it holds a lone symbol, this state holds
+   * the symbol's sampled value or mean, which is linked to the symbol. */
+  counterpart?: Expr;
+  /** What a linked value is to its symbol, as "sampled value for". */
   valueLabel?: string;
+  /** The numbers that stand for a symbol, from `counterpart`. */
+  standIns?: Map<Expr, string>;
+  /** The symbol that the number being rendered stands for. */
+  symbol?: string;
   /** Numbers with about four digits, as the simulator shows them, each with its full value as
    * its title. */
   short?: boolean;
@@ -53,7 +59,56 @@ const distNames: Record<string, string> = {
 };
 
 export function renderTraceExpr(expr: Expr, options: TraceOptions = {}) {
-  return renderExpr(expr, 0, options.focusPath ?? null, options);
+  const standIns = options.counterpart ? symbolStandIns(expr, options.counterpart) : undefined;
+  return renderExpr(expr, 0, options.focusPath ?? null, { ...options, standIns });
+}
+
+/** The draws' kinds, whose nodes the determinized program's states hold as mean calls. */
+function isDraw(kind: string) {
+  return kind in distNames;
+}
+
+/**
+ * The numbers of `state` that stand for a symbol: those where `symbolic`, the symbolic state that
+ * `state` projects, holds the symbol alone, as a value's sampled value or mean does. A number
+ * that only equals one is no stand-in. Walks both states alike as far as they have the same
+ * shape; the determinized program's mean calls stand where the symbolic state has draws.
+ */
+export function symbolStandIns(
+  state: Expr,
+  symbolic: Expr,
+  standIns = new Map<Expr, string>(),
+): Map<Expr, string> {
+  if (symbolic.kind === "SymFloat") {
+    const symbol = loneSymbol(symbolic.affine);
+    if (symbol && state.kind === "Const") standIns.set(state, symbol);
+    return standIns;
+  }
+  if (state.kind !== symbolic.kind && !(state.kind === "Mean" && isDraw(symbolic.kind))) {
+    return standIns;
+  }
+  const a = state as Fields;
+  const b = symbolic as Fields;
+  for (const key of Object.keys(a)) {
+    if (ignoredKeys.has(key)) continue;
+    const x = a[key];
+    const y = b[key];
+    if (isExpr(x) && isExpr(y)) symbolStandIns(x, y, standIns);
+    else if (Array.isArray(x) && Array.isArray(y) && x.length === y.length) {
+      for (const [index, item] of x.entries()) {
+        if (isExpr(item) && isExpr(y[index])) symbolStandIns(item, y[index] as Expr, standIns);
+      }
+    }
+  }
+  return standIns;
+}
+
+/** The symbol of an affine form that is that symbol alone. */
+function loneSymbol(affine: { constant: number; terms: Record<string, number> }) {
+  const symbols = Object.keys(affine.terms);
+  return affine.constant === 0 && symbols.length === 1 && affine.terms[symbols[0]] === 1
+    ? symbols[0]
+    : null;
 }
 
 /** The path to the subexpression of `after` that differs from `before`, found in one descent:
@@ -116,7 +171,11 @@ function renderExpr(
     case "Var":
       html = renderHighlightedText(expr.name, options);
       break;
-    case "Const":
+    case "Const": {
+      const symbol = options.standIns?.get(expr);
+      html = renderHighlightedText(prettyExpr(expr), symbol ? { ...options, symbol } : options);
+      break;
+    }
     case "Bool":
     case "Unit":
     case "Nil":
@@ -339,7 +398,7 @@ function corrSpan(text: string, className: string, symbol: string) {
 }
 
 function numberSpan(text: string, options: TraceOptions) {
-  const symbol = symbolForNumber(Number(text), options.valueBySymbol);
+  const symbol = options.symbol;
   const shown = options.short ? formatNumber(Number(text)) : text;
   const html =
     shown === text
@@ -349,14 +408,6 @@ function numberSpan(text: string, options: TraceOptions) {
   return symbol
     ? `<span class="corr-item" data-corr="${escapeHtml(symbol)}" title="${escapeHtml(label)} ${escapeHtml(symbol)}">${html}</span>`
     : html;
-}
-
-function symbolForNumber(value: number, valueBySymbol: Record<string, number> | undefined) {
-  if (!Number.isFinite(value) || !valueBySymbol) return null;
-  for (const [symbol, target] of Object.entries(valueBySymbol)) {
-    if (Number.isFinite(target) && Math.abs(value - target) <= 1e-9) return symbol;
-  }
-  return null;
 }
 
 /** Whether two states print alike: equal apart from their spans and rounding bounds. Unchanged
