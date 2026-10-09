@@ -228,7 +228,7 @@
     display: flex;
     align-items: center;
     gap: var(--space-2);
-    margin-bottom: var(--space-2);
+    margin-bottom: var(--space-4);
   }
 
   .gallery-title {
@@ -272,6 +272,12 @@
     color: var(--muted);
     font-size: var(--size-small);
     font-weight: var(--weight-strong);
+  }
+
+  /* Both columns start at the same height: a column break drops the margin above the heading
+     that starts the second, so the first's has none either. */
+  .g-group:first-child > .g-heading {
+    margin-top: 0;
   }
 
   .gallery ol {

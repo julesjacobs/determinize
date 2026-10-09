@@ -1949,6 +1949,25 @@ test("at 768 px the gallery's menu shows every example without scrolling", async
   expect(await gallery.evaluate((menu) => menu.scrollHeight <= menu.clientHeight)).toBe(true);
 });
 
+test("at 1440 px the gallery's two columns start at the same height", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(simulator);
+  await page.getByRole("button", { name: /^Example: / }).click();
+  const gallery = page.getByRole("dialog", { name: "Examples" });
+  await expect(gallery).toBeVisible();
+  // The top of each column's first heading, by the column's left edge.
+  const tops = await gallery.locator(".g-heading").evaluateAll((headings) => {
+    const columns = new Map<number, number>();
+    for (const heading of headings) {
+      const box = heading.getBoundingClientRect();
+      if (!columns.has(Math.round(box.left))) columns.set(Math.round(box.left), box.top);
+    }
+    return [...columns.values()];
+  });
+  expect(tops).toHaveLength(2);
+  expect(tops[1]).toBe(tops[0]);
+});
+
 test("at 390 px every chip's description stays inside the gallery", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(simulator);
