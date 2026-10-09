@@ -10,7 +10,7 @@ import { effect } from "@preact/signals-core";
 import type { Analysis } from "../core/compiler/analyze.ts";
 import type { PrintedSpan } from "../core/compiler/pretty.ts";
 import { sourcePrettyWithSpans } from "../core/compiler/print.ts";
-import { editorTheme } from "./editor-theme.ts";
+import { editorTheme, hangingIndent } from "./editor-theme.ts";
 import { detHighlighting, detLanguage } from "./language.ts";
 import { linkedLines, printedNodeAt, printedSiteAt } from "./linking.ts";
 
@@ -95,6 +95,7 @@ export function mountProgramView(
         detHighlighting,
         editorTheme,
         EditorView.lineWrapping,
+        hangingIndent,
         marks,
         linkedLines,
         EditorView.domEventHandlers({

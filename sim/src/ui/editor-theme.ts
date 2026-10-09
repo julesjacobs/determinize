@@ -1,8 +1,47 @@
 // The look of both program panes, from the site's tokens: code on the editor fill, keywords
 // SemiBold and no other syntax colour, E marks and mean calls in the change colour, G marks in the
 // given colour, and Lean's diagnostics in the alert colour. CodeMirror's own styles are not in a
-// cascade layer, so the panes are styled here rather than in styles.css.
-import { EditorView } from "@codemirror/view";
+// cascade layer, so the panes are styled here rather than in styles.css. A line that wraps
+// continues two columns past its own indent.
+import { countColumn, RangeSetBuilder } from "@codemirror/state";
+import type { DecorationSet, ViewUpdate } from "@codemirror/view";
+import { Decoration, EditorView, ViewPlugin } from "@codemirror/view";
+
+/** The visible lines' indents, in columns, as `--indent` on each indented line. */
+function indents(view: EditorView): DecorationSet {
+  const builder = new RangeSetBuilder<Decoration>();
+  for (const { from, to } of view.visibleRanges) {
+    for (let pos = from; pos <= to; ) {
+      const line = view.state.doc.lineAt(pos);
+      const leading = /^[ \t]*/.exec(line.text)?.[0] ?? "";
+      const columns = countColumn(leading, view.state.tabSize);
+      if (columns > 0) {
+        builder.add(
+          line.from,
+          line.from,
+          Decoration.line({ attributes: { style: `--indent: ${columns}` } }),
+        );
+      }
+      pos = line.to + 1;
+    }
+  }
+  return builder.finish();
+}
+
+/** Wrapped lines with a hanging indent: each row after a line's first starts two columns past the
+ * line's indent. */
+export const hangingIndent = ViewPlugin.fromClass(
+  class {
+    decorations: DecorationSet;
+    constructor(view: EditorView) {
+      this.decorations = indents(view);
+    }
+    update(update: ViewUpdate) {
+      if (update.docChanged || update.viewportChanged) this.decorations = indents(update.view);
+    }
+  },
+  { decorations: (plugin) => plugin.decorations },
+);
 
 export const editorTheme = EditorView.theme({
   "&": {
@@ -20,13 +59,18 @@ export const editorTheme = EditorView.theme({
     lineHeight: "var(--leading-code)",
   },
   ".cm-content": { padding: "var(--space-3) 0", caretColor: "var(--ink)" },
-  ".cm-line": { padding: "0 var(--space-4) 0 var(--space-1)" },
+  // The hanging indent: the first row starts at the padding's usual edge, the rows after it
+  // `--indent` + 2 columns further.
+  ".cm-line": {
+    padding: "0 var(--space-4) 0 calc(var(--space-1) + (var(--indent, 0) + 2) * 1ch)",
+    textIndent: "calc((var(--indent, 0) + 2) * -1ch)",
+  },
   ".cm-gutters": { backgroundColor: "transparent", color: "var(--muted)", border: "none" },
   ".cm-lineNumbers .cm-gutterElement": { minWidth: "2.4em", padding: "0 0.5em 0 0.6em" },
   ".cm-cursor, .cm-dropCursor": { borderLeftColor: "var(--ink)" },
   "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection":
     { backgroundColor: "color-mix(in oklab, var(--given) 24%, transparent)" },
-  ".cm-placeholder": { color: "var(--muted)" },
+  ".cm-placeholder": { color: "var(--muted)", textIndent: "0" },
   // The lines of the span that the step table's current or hovered step reduces. On the editor
   // fill, a tint of 4 % keeps the E marks, the means and the line numbers above 4.5:1; the line's
   // number turns ink.

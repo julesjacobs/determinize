@@ -1860,6 +1860,45 @@ for (const colorScheme of ["light", "dark"] as const) {
   });
 }
 
+test("at 390 px a wrapped line's rows after its first start two columns past its indent", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const long = "x * 2 + x * 3 + x * 4 + x * 5 + x * 6 + x * 7 + x * 8 + x * 9";
+  await page.goto(linkTo(`let f = fun x =>\n    ${long}\nin\nf (uniform(0, 1))`, 1));
+  await expect(page.locator("#determinized-editor .cm-line").first()).toBeVisible();
+  // For each line, its indent in columns, a character's width, and where each row starts.
+  const lines = await page.locator(".cm-line").evaluateAll((elements) =>
+    elements.map((line) => {
+      const range = document.createRange();
+      const starts: number[] = [];
+      let width = 0;
+      let top = Number.NEGATIVE_INFINITY;
+      const walker = document.createTreeWalker(line, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        for (let i = 0; i < (node.textContent ?? "").length; i++) {
+          range.setStart(node, i);
+          range.setEnd(node, i + 1);
+          const box = range.getBoundingClientRect();
+          if (box.width === 0) continue;
+          width ||= box.width;
+          if (box.top > top + box.height / 2) starts.push(box.left);
+          top = Math.max(top, box.top);
+        }
+      }
+      const indent = /^ */.exec(line.textContent ?? "")?.[0].length ?? 0;
+      return { indent, width, starts };
+    }),
+  );
+  const wrapped = lines.filter((line) => line.starts.length > 1);
+  expect(wrapped.filter((line) => line.indent > 0).length).toBeGreaterThanOrEqual(2);
+  for (const { indent, width, starts } of wrapped) {
+    for (const start of starts.slice(1)) {
+      expect(start - starts[0], `indent ${indent}`).toBeCloseTo((indent + 2) * width, 0);
+    }
+  }
+});
+
 test("inferred modes show as hints, and hovers give each site's reason", async ({ page }) => {
   await page.goto(simulator);
   const hints = page.locator(".cm-mode-hint");
