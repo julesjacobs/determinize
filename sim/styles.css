@@ -500,13 +500,27 @@
     margin-block: 0;
   }
 
-  /* The simulator's check of the premises: a line per premise in one box and one size in both of
-     its states, muted while none is found failing and a warning when one is, so that it keeps
-     its height when a run fails. */
+  /* The simulator's check of the premises: a warning that lists those found failing or open; the
+     frame around the column says that the theorems don't cover it. */
   .verdict {
-    padding: var(--space-1) 0 var(--space-1) var(--space-3);
-    border-left: 3px solid transparent;
     font-size: var(--size-small);
+  }
+
+  /* Open findings alone: a premise that the check couldn't confirm, in the muted rule of a note. */
+  .verdict.open {
+    padding: var(--space-1) 0 var(--space-1) var(--space-3);
+    border-left: 3px solid var(--muted);
+  }
+
+  .verdict-check {
+    display: block;
+  }
+
+  /* A note beside the statistics, such as of runs that failed only in floating point. */
+  .note {
+    margin-block: var(--space-3);
+    padding: var(--space-1) 0 var(--space-1) var(--space-3);
+    border-left: 3px solid var(--muted);
   }
 
   .verdict :is(p, ul) {
@@ -520,39 +534,11 @@
 
   .verdict a {
     color: inherit;
-  }
-
-  .verdict :is(a, .label) {
     white-space: nowrap;
   }
 
-  .verdict .count {
-    display: inline-block;
-    text-align: right;
-  }
-
-  .verdict.quiet {
-    color: var(--muted);
-  }
-
-  /* The list over an invisible copy in which domain safety holds the room of each of its
-     findings, so that the box keeps their height when a run fails, with the spare room at the
-     bottom. */
-  .verdict :is(.premise-stack, .stack) {
-    display: grid;
-  }
-
-  .verdict :is(.premise-stack, .stack) > * {
-    grid-area: 1 / 1;
-  }
-
-  .verdict .premise-room {
-    visibility: hidden;
-  }
-
-  /* A failing finding in SemiBold, and the room of domain safety's, in either state. */
-  .verdict.alert [data-status="fails"] .finding,
-  .verdict .premise-room .fails {
+  /* A failing finding in SemiBold. */
+  .verdict [data-status="fails"] .finding {
     font-weight: var(--weight-strong);
   }
 

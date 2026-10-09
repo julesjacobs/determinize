@@ -8,12 +8,7 @@ import { runIndex, runnerOf } from "../src/core/sampler.ts";
 import type { FailureKind, Summary } from "../src/core/statistics.ts";
 import { addRuns, failureKind, noRuns, runsOf } from "../src/core/statistics.ts";
 import { thin } from "../src/ui/charts.ts";
-import {
-  compareMeans,
-  longestMessages,
-  longestZeroMessage,
-  premiseVerdict,
-} from "../src/ui/verdict.ts";
+import { compareMeans, premiseVerdict } from "../src/ui/verdict.ts";
 
 /** The kind of each failure of Lean's runtime that the port reproduces. Division by zero and
  * invalid distribution parameters are the failures that `DomainSafe` rules out for typed programs
@@ -105,7 +100,7 @@ test("the noisy product: its type holds, no run fails, every run returns, integr
   );
   assert.deepEqual(verdict, {
     type: { status: "holds", text: "holds" },
-    safe: { status: "open", text: `no domain failure in ${thin(10000)} runs` },
+    safe: { status: "holds", text: `no domain failure in ${thin(10000)} runs` },
     returns: { status: "holds", text: `${thin(10000)} of ${thin(10000)} runs returned` },
     moments: { status: "unchecked", text: "not checked" },
     counterexample: false,
@@ -155,7 +150,7 @@ test("a literal or exact 0 fails domain safety; only an inexact 0, maybe an unde
     [recursiveGamma, 9, "gamma requires positive shape and rate"],
   ] as const) {
     const verdict = checked(source, 20);
-    const text = `run ${run} failed at exactly 0, in floating point: ${message} (seed ${run + 1})`;
+    const text = `run ${run} failed at exactly 0, in floating point: ${message} (seed ${run + 1}), which may be an underflow the real-valued semantics doesn't reach`;
     assert.deepEqual(verdict.safe, { status: "open", text }, source);
     assert.equal(verdict.failing, false, source);
   }
@@ -180,21 +175,6 @@ test("a failure at an inexact 0 is kept apart from one that fails domain safety,
   assert.deepEqual(verdict.safe, { status: "fails", text: `run 1 failed: ${message} (seed 2)` });
 });
 
-test("no domain message is longer than those that the witness's room holds", () => {
-  const longest = Math.max(...longestMessages.map((message) => message.length));
-  const domain = Object.keys(kinds).filter((message) => kinds[message] === "domain");
-  for (const message of domain) assert.ok(message.length <= longest, message);
-  // A parameter or divisor of 0 fails only these checks.
-  for (const message of [
-    "division by zero",
-    "exponential requires rate > 0",
-    "gamma requires positive shape and rate",
-    "beta requires positive parameters",
-  ]) {
-    assert.ok(message.length <= longestZeroMessage.length, message);
-  }
-});
-
 test("an output of type float[G] is typed at float[E] too", () => {
   const verdict = premiseVerdict(analyze("uniform[G](0, 1)"), summary(10), 1);
   assert.deepEqual(verdict.type, {
@@ -213,11 +193,16 @@ test("an output that isn't float[E], a counterexample, a rejected program and no
     1,
   );
   assert.equal(counter?.counterexample, true);
-  assert.deepEqual(counter?.type, { status: "fails", text: "Lean rejects the written modes" });
+  assert.deepEqual(counter?.type, {
+    status: "fails",
+    text: "Lean rejects the written modes",
+    detail: "inconsistent E/G constraints",
+  });
   const rejected = premiseVerdict(analyze("let x ="), summary(0), 1);
   assert.deepEqual(rejected.type, {
     status: "fails",
     text: "Lean rejects the program at parsing",
+    detail: "expected expression before end of input",
   });
   assert.deepEqual(rejected.safe, { status: "unchecked", text: "not run" });
   assert.equal(rejected.failing, true);
@@ -259,7 +244,7 @@ test("failed runs that aren't domain failures leave no domain failure found", ()
     1,
   );
   assert.deepEqual(verdict.safe, {
-    status: "open",
+    status: "holds",
     text: `no domain failure in ${thin(4856)} runs`,
   });
   assert.doesNotMatch(verdict.safe.text, /no failing run/);

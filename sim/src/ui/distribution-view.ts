@@ -394,29 +394,29 @@ export function mountDistributionView(
     ].filter((entry): entry is [string, string] => entry[1] !== null);
     const failure = $<HTMLElement>("first-failure");
     failure.hidden = failures.length === 0;
-    // The check's witness, in the verdict, gives the run, Lean's message and the seed; a failure
-    // at an inexact 0 is also explained here.
-    const { firstZeroFailure, zeroFailed } = samples.original.summary;
-    const zero = firstZeroFailure
-      ? `<p>Run ${thin(firstZeroFailure.run)} failed at a 0 computed in floating point, which may be an underflow that doesn't occur in the real-valued semantics.</p>`
-      : "";
-    failure.innerHTML =
-      failures
-        .map(
-          ([where, message]) =>
-            `<p><strong>First failure</strong> in ${where}: ${escapeHtml(message)}</p>`,
-        )
-        .join("") +
-      zero +
-      "<p>The statistics are over the runs that returned. What the failed runs mean for the theorems' premises, the simulator's check below the determinized program says.</p>";
+    const { firstDomainFailure, firstZeroFailure, zeroFailed } = samples.original.summary;
+    const failing =
+      counterexample.peek() ||
+      premiseVerdict(result, samples.original.summary, samples.seed).failing;
+    // In the warning's crimson where a premise fails; else, as for a run that failed at an
+    // inexact 0, in the muted rule of a note. The check's witness, with the run, Lean's message
+    // and the seed, is in the verdict.
+    failure.classList.toggle("alert", failing);
+    failure.classList.toggle("note", !failing);
+    const zeroFirst = (message: string) =>
+      !firstDomainFailure && firstZeroFailure?.message === message;
+    const first = failures.map(([where, message]) => {
+      const lead =
+        where === "the source" && zeroFirst(message)
+          ? "First run to fail in floating point"
+          : "First failure";
+      return `<p><strong>${lead}</strong> in ${where}: ${escapeHtml(message)}</p>`;
+    });
+    failure.innerHTML = `${first.join("")}<p>The statistics are over the runs that returned.</p>`;
     const factor = $<HTMLElement>("factor");
     // Where the theorems don't cover the program, or may not cover its runs as a run failed at
     // exactly 0, the means are compared instead.
-    if (
-      counterexample.peek() ||
-      firstZeroFailure ||
-      premiseVerdict(result, samples.original.summary, samples.seed).failing
-    ) {
+    if (failing || firstZeroFailure) {
       renderSites(result);
       const means = compareMeans(stats.original, stats.determinized, formatStat);
       factor.hidden = means === null;
@@ -424,7 +424,7 @@ export function mountDistributionView(
       factor.innerHTML =
         escapeHtml(means ?? "") +
         (left
-          ? `<span class="sub factor-note">${thin(zeroFailed)} of the source's runs failed in floating point and are left out, so its returned runs aren't comparable with the determinized program's.</span>`
+          ? ` <span class="sub factor-note">${thin(zeroFailed)} of the source's runs failed in floating point and are left out, so its returned runs aren't comparable with the determinized program's.</span>`
           : "");
       return;
     }

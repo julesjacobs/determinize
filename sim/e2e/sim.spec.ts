@@ -18,12 +18,8 @@ declare global {
     longTasks: number[];
     /** The returned runs that the statistics show at each change, with the runs sampled then. */
     returnedTexts: string[];
-    /** The top of the steps band in each state of the verdict, since a test started watching. */
-    stepsTops: string[];
     /** The verdict's text at each change, since a test started watching. */
     verdictTexts: string[];
-    /** The top of the steps band, and whether the verdict has a finding yet, from load on. */
-    loadTops: string[];
   }
 }
 
@@ -500,6 +496,13 @@ test("a program rejected for its modes shows its counterexample in place of the 
   await expect(page.locator("#verdict-lead")).toHaveText(
     "This is the counterexample: what replacing the [E] draws anyway does, which the theorems don't cover. The simulator's check:",
   );
+  // The check's lead is a line of its own, not split across two.
+  await page.setViewportSize({ width: 1440, height: 900 });
+  expect(
+    await page
+      .locator("#verdict-lead .verdict-check")
+      .evaluate((check) => check.getClientRects().length),
+  ).toBe(1);
   await expect(page.locator("#determinized-pane")).toHaveClass(/\buncovered\b/);
   await expect(page.getByRole("textbox", { name: "Determinized program" })).toContainText(
     "let x = mean_uniform(0, 1) in",
@@ -562,9 +565,9 @@ test("a program that Lean rejects has no runs and no command", async ({ page }) 
     "No distributions: Lean rejects the program, so neither program runs.",
   );
   await expect(page.locator("#premise-type .finding")).toHaveText(
-    "Lean rejects the program at parsing",
+    "fails. Lean rejects the program at parsing.",
   );
-  await expect(page.locator("#premise-safe .finding")).toHaveText("not run");
+  await expect(page.locator("#premise-safe")).toBeHidden();
   await expect(page.locator("#determinized-pane")).toHaveClass(/\buncovered\b/);
   await expect(page.getByRole("button", { name: "Resample" })).toBeDisabled();
   await expect(page.locator("#reproduce")).not.toContainText("--samples");
@@ -648,44 +651,36 @@ test("the histograms show the returned runs and count those that observe rejects
   await expect(page.locator("#returned-source")).toContainText("rejected by observe");
 });
 
-test("below the determinized program, the simulator's check of the premises is muted while none fails", async ({
+test("below the determinized program, the simulator's check shows nothing while nothing is found", async ({
   page,
 }) => {
   await page.goto(simulator);
   await sampled(page, 1000);
-  const verdict = page.locator("#verdict");
-  await expect(verdict).toHaveClass(/\bquiet\b/);
-  await expect(page.locator("#verdict-lead")).toHaveText("The simulator's check:");
-  // The list that shows, over the copy that keeps the room of the longest findings.
-  const lines = verdict.locator(".premises:not(.premise-room) > li");
-  const items = await lines.evaluateAll((lis) =>
-    lis.map((li) => li.textContent?.replace(/\s+/g, " ").trim()),
-  );
-  expect(items).toEqual([
-    "Type float[E]: holds",
-    // The normalized text has plain spaces for the narrow ones between thousands.
-    "Domain safety: no domain failure in 1 000 runs",
-    "Positive return probability: 1 000 of 1 000 runs returned",
-    "An expectation, possibly infinite, and a finite second moment: not checked",
-  ]);
-  await expect(verdict.getByRole("link")).toHaveCount(5);
+  await expect(page.locator("#verdict")).toBeHidden();
   await expect(page.locator("#determinized-pane")).not.toHaveClass(/\buncovered\b/);
-  // The spare room is below the list, not a blank line between its premises.
-  for (const width of [390, 1440]) {
-    await page.setViewportSize({ width, height: 900 });
-    // From the bottom of each premise's finding to the top of the next premise's label.
-    const gaps = await lines.evaluateAll((lis) => {
-      const lineHeight = Number.parseFloat(getComputedStyle(lis[0]).lineHeight);
-      const top = (li: Element) => (li.querySelector("a") as Element).getBoundingClientRect().top;
-      const bottom = (li: Element) =>
-        (li.querySelector(".finding") as Element).getBoundingClientRect().bottom;
-      return lis
-        .slice(1)
-        .map((li, i) => top(li) - bottom(lis[i]))
-        .filter((gap) => gap > lineHeight);
-    });
-    expect(gaps, `${width} px`).toEqual([]);
-  }
+});
+
+test("the check's warning lists only the premises found failing or open, with their links", async ({
+  page,
+}) => {
+  const shown = () =>
+    page
+      .locator("#verdict li:visible")
+      .evaluateAll((lis) => lis.map((li) => li.textContent?.replace(/\s+/g, " ").trim()));
+  // A counterexample: Lean rejects the written modes, and its runs show nothing more.
+  await page.goto(simulator);
+  await pick(page, "Noisy product, both draws E");
+  await sampled(page, 1000);
+  expect(await shown()).toEqual(["Type float[E]: fails. Lean rejects the written modes."]);
+  await expect(page.locator("#verdict li:visible a")).toHaveAttribute("href", /Paper\.Typed$/);
+  // An output that isn't float[E].
+  const walk = new URL("../../examples/paper/gauss-random-walk.det", import.meta.url);
+  await page.goto(linkTo(readFileSync(walk, "utf8"), 1));
+  await sampled(page, 1000);
+  expect(await shown()).toEqual([
+    "Type float[E]: fails. The output has type [(float[E] * float[E])].",
+  ]);
+  await expect(page.locator("#determinized-pane")).toHaveClass(/\buncovered\b/);
 });
 
 test("a premise that the check finds failing is a warning, with the run that witnesses it", async ({
@@ -695,11 +690,11 @@ test("a premise that the check finds failing is a warning, with the run that wit
   await page.goto(linkTo("let v = uniform(-0.5, 1) in\ngauss(0, v)", 1));
   await sampled(page, 1000);
   const verdict = page.locator("#verdict");
-  await expect(verdict).toHaveClass(/\balert\b/);
+  await expect(verdict).toBeVisible();
   await expect(page.locator("#verdict-lead strong")).toHaveText("The simulator's check:");
   // The witness, whose seed Lean's CLI takes; the statistics give Lean's message.
   await expect(page.locator("#premise-safe .finding")).toHaveText(
-    "run 2 failed: gaussian requires variance ≥ 0 (seed 3)",
+    "fails. Run 2 failed: gaussian requires variance ≥ 0 (seed 3).",
   );
   // A negative variance is no matter of floating point.
   await expect(page.locator("#first-failure")).toContainText(
@@ -711,6 +706,7 @@ test("a premise that the check finds failing is a warning, with the run that wit
     /^Means(?: differ)?: −?[0-9.]+ and −?[0-9.]+\.$/,
   );
   await expect(page.locator("#premise-safe")).toHaveAttribute("data-status", "fails");
+  await expect(page.locator("#verdict li:visible")).toHaveCount(1);
   await expect(page.locator("#determinized-pane")).toHaveClass(/\buncovered\b/);
   // The frame is an outline, which moves nothing.
   const outline = await page
@@ -725,10 +721,10 @@ test("the gallery's Gaussian bound fails domain safety, with its witness and the
   await page.goto(simulator);
   await pick(page, "Gaussian bound");
   await sampled(page, 1000);
-  await expect(page.locator("#verdict")).toHaveClass(/\balert\b/);
+  await expect(page.locator("#verdict")).toBeVisible();
   await expect(page.locator("#premise-safe")).toHaveAttribute("data-status", "fails");
   await expect(page.locator("#premise-safe .finding")).toHaveText(
-    "run 6 failed: uniform requires lower ≤ upper (seed 7)",
+    "fails. Run 6 failed: uniform requires lower ≤ upper (seed 7).",
   );
   await expect(page.locator("#determinized-pane")).toHaveClass(/\buncovered\b/);
   // About one run in six draws a bound below 0.
@@ -742,24 +738,131 @@ test("a run that fails at an inexact 0 leaves domain safety open, with no frame"
   await pick(page, "Recursive gamma");
   await sampled(page, 1000);
   // An earlier gamma draw underflows to 0 in floating point, which the real-valued semantics
-  // doesn't reach.
-  await expect(page.locator("#verdict")).toHaveClass(/\bquiet\b/);
+  // doesn't reach: the check couldn't confirm domain safety, a note rather than a warning, with
+  // no frame.
+  const verdict = page.locator("#verdict");
+  await expect(verdict).toBeVisible();
+  await expect(verdict).toHaveClass(/\bopen\b/);
+  await expect(verdict).not.toHaveClass(/\balert\b/);
+  await expect(page.locator("#verdict-lead")).toHaveText(
+    "The simulator's check couldn't confirm a premise:",
+  );
+  await expect(page.locator("#verdict li:visible")).toHaveCount(1);
   await expect(page.locator("#premise-safe")).toHaveAttribute("data-status", "open");
   await expect(page.locator("#premise-safe .finding")).toHaveText(
-    "run 9 failed at exactly 0, in floating point: gamma requires positive shape and rate (seed 10)",
+    "open. Run 9 failed at exactly 0, in floating point: gamma requires positive shape and rate (seed 10), which may be an underflow the real-valued semantics doesn't reach.",
   );
+  // The note under the statistics is muted too, and says that the run failed in floating point.
   const note = page.locator("#first-failure");
   await expect(note).toContainText(
-    "Run 9 failed at a 0 computed in floating point, which may be an underflow that doesn't occur in the real-valued semantics.",
+    "First run to fail in floating point in the source: gamma requires positive shape and rate",
   );
-  expect((await note.textContent())?.split("gamma requires positive shape and rate").length).toBe(
-    2,
-  );
+  await expect(note).toHaveClass(/\bnote\b/);
+  await expect(note).not.toHaveClass(/\balert\b/);
   await expect(page.locator("#determinized-pane")).not.toHaveClass(/\buncovered\b/);
   // The runs that returned leave out those that failed, so the means are compared, and why.
   await expect(page.locator("#factor")).toHaveText(
     /^Means(?: differ)?: [0-9.]+ and [0-9.]+\.[\d\s]+ of the source's runs failed in floating point and are left out, so its returned runs aren't comparable with the determinized program's\.$/,
   );
+});
+
+test("with a failing and an open finding, the warning leads and each says its status", async ({
+  page,
+}) => {
+  // Lean rejects the modes, and the counterexample's runs divide by an inexact 0 half the time.
+  const program =
+    "let x = uniform[E](0, 1) in\nlet y = gaussian[E](x, 1) in\nlet z = uniform(0, 1) in\nif z < 0.5 then x * y else 1 / (z - z)";
+  await page.goto(linkTo(program, 1));
+  await sampled(page, 100);
+  await expect(page.locator("#verdict")).toHaveClass(/\balert\b/);
+  await expect(page.locator("#verdict-lead")).toContainText("This is the counterexample");
+  await expect(page.locator("#premise-type .finding")).toHaveText(
+    /^fails\. Lean rejects the written modes/,
+  );
+  await expect(page.locator("#premise-safe .finding")).toHaveText(
+    /^open\. Run \d+ failed at exactly 0/,
+  );
+});
+
+test("a switch from a counterexample to a program Lean accepts clears its warning at once", async ({
+  page,
+}) => {
+  await page.goto(simulator);
+  await pick(page, "Noisy product, both draws E");
+  await sampled(page, 1000);
+  await expect(page.locator("#verdict")).toBeVisible();
+  // A status line that stays in the page announces which premises fail or are open.
+  await expect(page.locator("#verdict-status")).toHaveText(
+    "This is the counterexample. The simulator's check: Type float[E]: fails.",
+  );
+  // As soon as the analysis has run, before any run of the new program: the type's finding needs
+  // no runs, and the earlier runs found nothing.
+  const state = await page.evaluate(async () => {
+    const store = await window.DeterminizeSim.ready;
+    store.source.value = "let x = uniform(0, 1) in\nlet y = gaussian(x, 1) in\nx * y";
+    store.commitSource();
+    return {
+      ok: store.analysis.value.ok,
+      ready: store.samplesReady.value,
+      hidden: (document.querySelector("#verdict") as HTMLElement).hidden,
+      framed: document.querySelector("#determinized-pane")?.classList.contains("uncovered"),
+    };
+  });
+  expect(state).toEqual({ ok: true, ready: false, hidden: true, framed: false });
+});
+
+test("the check's status line changes once while a program samples, not with every batch", async ({
+  page,
+}) => {
+  await page.goto(simulator);
+  await sampled(page, 1000);
+  await page.evaluate(async () => {
+    const store = await window.DeterminizeSim.ready;
+    const status = document.querySelector("#verdict-status") as HTMLElement;
+    const returns = document.querySelector("#premise-returns .finding") as HTMLElement;
+    window.verdictTexts = [];
+    window.returnedTexts = [];
+    const watch = (element: HTMLElement, texts: string[]) =>
+      new MutationObserver(() => texts.push(element.textContent ?? "")).observe(element, {
+        subtree: true,
+        childList: true,
+        characterData: true,
+      });
+    watch(status, window.verdictTexts);
+    watch(returns, window.returnedTexts);
+    // Every run stops at the step limit, so the return probability is open and its count grows.
+    store.source.value = "let f = rec f n => if n < 0 then uniform(0, 1) else f (n + 1) in f 0";
+    store.commitSource();
+  });
+  // Across a few batches, however fast the machine: the return finding's count changes with each,
+  // the status line once.
+  await expect.poll(() => page.evaluate(() => window.returnedTexts.length)).toBeGreaterThan(3);
+  await expect(page.locator("#premise-returns .finding")).toContainText(
+    "stopped at the runtime's limits",
+  );
+  expect(await page.evaluate(() => window.verdictTexts)).toEqual([
+    "The simulator's check couldn't confirm a premise: Positive return probability: open.",
+  ]);
+});
+
+test("a new program shows none of the previous program's run-based findings", async ({ page }) => {
+  await page.goto(simulator);
+  await pick(page, "Gaussian bound");
+  await sampled(page, 1000);
+  await expect(page.locator("#premise-safe")).toBeVisible();
+  // Right after the counterexample's commit, before its first runs: only the analysis's finding.
+  const shown = await page.evaluate(async () => {
+    const store = await window.DeterminizeSim.ready;
+    store.source.value = "let x = uniform[E](0, 1) in\nlet y = gaussian[E](x, 1) in\nx * y";
+    store.commitSource();
+    return {
+      ready: store.samplesReady.value,
+      items: [...document.querySelectorAll("#verdict li")]
+        .filter((li) => !(li as HTMLElement).hidden)
+        .map((li) => li.id),
+    };
+  });
+  expect(shown).toEqual({ ready: false, items: ["premise-type"] });
 });
 
 test("a literal division by zero fails domain safety, with its witness and the frame", async ({
@@ -768,12 +871,12 @@ test("a literal division by zero fails domain safety, with its witness and the f
   // Lean's corpus has it as tests/execution/division-zero.det.
   await page.goto(linkTo("1/0", 1));
   await sampled(page, 10);
-  await expect(page.locator("#verdict")).toHaveClass(/\balert\b/);
+  await expect(page.locator("#verdict")).toBeVisible();
   await expect(page.locator("#premise-safe .finding")).toHaveText(
-    "run 0 failed: division by zero (seed 1)",
+    "fails. Run 0 failed: division by zero (seed 1).",
   );
   await expect(page.locator("#premise-returns .finding")).toHaveText(
-    "no run returned in 10 runs, so it likely fails",
+    "fails. No run returned in 10 runs, so it likely fails.",
   );
   await expect(page.locator("#determinized-pane")).toHaveClass(/\buncovered\b/);
 });
@@ -788,95 +891,12 @@ test("a counterexample compares the means instead of the variances", async ({ pa
   );
 });
 
-// From seed 7 330, run 14 364 is the first to fail, after the 10 000 runs that load samples: on a
-// literal division by zero, which domain safety fails, or on an inexact 0, which leaves it open.
-const lateFailures = [
-  ["a literal 0", "let x = uniform(0, 1) in\nif x < 0.0002 then 1 / 0 else x"],
-  ["an inexact 0", "let x = uniform(0, 1) in\nif x < 0.0002 then 1 / (x - x) else x"],
-];
-for (const width of [390, 1440]) {
-  for (const [zero, program] of lateFailures) {
-    test(`a run that fails at ${zero} mid-sampling moves nothing on the page: ${width} px`, async ({
-      page,
-    }) => {
-      test.setTimeout(120_000);
-      await page.setViewportSize({ width, height: 900 });
-      await page.goto(linkTo(program, 7330));
-      await settled(page, 60_000);
-      await expect(page.locator("#premise-safe .finding")).toHaveText(/^no domain failure/);
-      await page.evaluate(() => {
-        window.stepsTops = [];
-        const steps = document.querySelector("#steps") as HTMLElement;
-        const finding = document.querySelector("#premise-safe .finding") as HTMLElement;
-        const watch = () => {
-          const top = Math.round(steps.getBoundingClientRect().top + window.scrollY);
-          const entry = `${top} ${finding.textContent?.startsWith("run") ? "witness" : "none"}`;
-          if (window.stepsTops.at(-1) !== entry) window.stepsTops.push(entry);
-          requestAnimationFrame(watch);
-        };
-        watch();
-      });
-      // From a script, so that no input is recent.
-      await setRunCount(page, 20_000);
-      await expect
-        .poll(
-          () =>
-            page.evaluate(async () => {
-              const store = await window.DeterminizeSim.ready;
-              if (store.paused.value) store.resume();
-              return document.querySelector("#premise-safe .finding")?.textContent;
-            }),
-          { timeout: 90_000 },
-        )
-        .toMatch(/^run [\d\s]+ failed/);
-      // The watch records the frame that shows the witness.
-      await page.evaluate(
-        () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
-      );
-      const seen = await page.evaluate(() => window.stepsTops);
-      test.info().annotations.push({ type: "steps tops", description: JSON.stringify(seen) });
-      const witnessed = seen.findIndex((entry) => entry.includes("witness"));
-      expect(witnessed).toBeGreaterThan(0);
-      expect(seen[witnessed].split(" ")[0]).toBe(seen[witnessed - 1].split(" ")[0]);
-    });
-  }
-}
-
-test("from load to its first finding, the verdict's box moves nothing", async ({ page }) => {
-  await page.addInitScript(() => {
-    window.loadTops = [];
-    const watch = () => {
-      const steps = document.querySelector("#steps");
-      const verdict = document.querySelector("#verdict") as HTMLElement | null;
-      if (steps && verdict) {
-        const finding = document.querySelector("#premise-safe .finding")?.textContent ?? "";
-        const found = !verdict.hidden && finding.startsWith("no domain failure");
-        const top = Math.round(steps.getBoundingClientRect().top + window.scrollY);
-        const entry = `${top} ${found ? "found" : "before"}`;
-        if (window.loadTops.at(-1) !== entry) window.loadTops.push(entry);
-      }
-      requestAnimationFrame(watch);
-    };
-    requestAnimationFrame(watch);
-  });
-  await page.goto(simulator);
-  await expect(page.locator("#premise-safe .finding")).toHaveText(/^no domain failure/);
-  await page.evaluate(
-    () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
-  );
-  const seen = await page.evaluate(() => window.loadTops);
-  test.info().annotations.push({ type: "steps tops", description: JSON.stringify(seen) });
-  const found = seen.findIndex((entry) => entry.includes("found"));
-  expect(found).toBeGreaterThan(0);
-  expect(seen[found].split(" ")[0]).toBe(seen[found - 1].split(" ")[0]);
-});
-
 test("the check keeps its earlier verdict until runs of the new program after run 0 come in", async ({
   page,
 }) => {
   await page.goto(simulator);
   await sampled(page, 1000);
-  await expect(page.locator("#verdict")).toHaveClass(/\bquiet\b/);
+  await expect(page.locator("#verdict")).toBeHidden();
   await page.evaluate(async () => {
     const store = await window.DeterminizeSim.ready;
     const verdict = document.querySelector("#verdict") as HTMLElement;
@@ -895,7 +915,7 @@ test("the check keeps its earlier verdict until runs of the new program after ru
       store.source.value = `${program} `;
     }, 5);
   });
-  await expect(page.locator("#verdict")).toHaveClass(/\balert\b/, { timeout: 30_000 });
+  await expect(page.locator("#verdict")).toBeVisible({ timeout: 30_000 });
   await settled(page);
   const texts = await page.evaluate(() => window.verdictTexts);
   expect(texts.length).toBeGreaterThan(0);
