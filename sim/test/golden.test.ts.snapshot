@@ -140,6 +140,32 @@ batch at seeds 1-200:
     returned numbers: n 200, mean -0.017949650792432034, population variance 0.08323031498376833
 `;
 
+exports[`simulator/gauss-bound 1`] = `
+seed 1: checked, 4 frames
+  checks: OK ×4
+  final source: 0.6419839645416536
+  final determinized: 0.5
+  outcome: 0.6419839645416536 | 0.5
+  frames: sha256 1b04cc26b728bb1de4c85aa14c466660ad04433e4d35e6e16ed681e5d0e25b72
+seed 2: checked, 4 frames
+  checks: OK ×4
+  final source: 2.2732424665159336
+  final determinized: 0.5
+  outcome: 2.2732424665159336 | 0.5
+  frames: sha256 df82ce5429c9e50bbc88f0ae3d579e25c76c6305b16d52f24a8c6a97048ce579
+seed 3: checked, 4 frames
+  checks: OK ×4
+  final source: 0.10069432573670398
+  final determinized: 0.5
+  outcome: 0.10069432573670398 | 0.5
+  frames: sha256 f50573aa1fb53515d3d87bf92d4adb3128cfa1fe230b638188e97d771513d3d3
+batch at seeds 1-200:
+  source: 200 runs, 0 rejected, 28 failed (first: uniform requires lower ≤ upper)
+    returned numbers: n 172, mean 0.5928234009962675, population variance 0.30949322548028807
+  determinized: 200 runs, 0 rejected, 0 failed
+    returned numbers: n 200, mean 0.5, population variance 0
+`;
+
 exports[`simulator/gauss-random-walk 1`] = `
 seed 1: checked, 94 frames
   checks: OK ×94

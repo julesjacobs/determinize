@@ -1,0 +1,2 @@
+let x = gauss(1, 1) in
+uniform(0, x)

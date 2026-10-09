@@ -32,6 +32,8 @@ export interface Reason {
   group: string;
   chip: string;
   description: string;
+  /** Whether the check finds the premise open rather than failing. */
+  open?: true;
 }
 
 /** The groups of examples with a reason, in the gallery's order. */
@@ -39,12 +41,13 @@ const groups = [
   "Fails only in floating point",
   "Lean rejects the written modes",
   "The output isn't float[E]",
+  "A run fails a domain check",
   "Lean rejects the program",
 ] as const;
 
 /** The reason of an example that fails a premise, from its analysis as the simulator's check
- * finds it, or of one that fails only in floating point, from the example; none for one that the
- * check finds failing no premise, in floating point or not. */
+ * finds it or, for a failure that only runs show, from the example, as for one that fails only in
+ * floating point; none for one that the check finds failing no premise, in floating point or not. */
 export function reasonOf(example: Example): Reason | null {
   const analysis = analyze(example.source);
   const type = premiseVerdict(analysis, noRuns, gallerySeed).type;
@@ -56,7 +59,7 @@ export function reasonOf(example: Example): Reason | null {
           description: `Type float[E]: ${type.text}. The simulator runs the counterexample, which replaces the [E] draws anyway.`,
         }
       : {
-          group: groups[3],
+          group: groups[4],
           chip: "rejected",
           description: `Type float[E]: ${type.text}, so it doesn't run.`,
         };
@@ -68,10 +71,18 @@ export function reasonOf(example: Example): Reason | null {
       description: `Type float[E]: ${type.text}, about which the theorems say nothing.`,
     };
   }
+  if (example.fails) {
+    return {
+      group: groups[3],
+      chip: "a run fails",
+      description: `Domain safety: fails, as a run fails with “${example.fails.message}”. ${example.fails.why}`,
+    };
+  }
   if (example.floatFailure) {
     return {
       group: groups[0],
       chip: "underflow",
+      open: true,
       description: `Domain safety: found failing in floating point at a parameter of exactly 0, with “${example.floatFailure.message}”. ${example.floatFailure.why}`,
     };
   }
@@ -85,7 +96,7 @@ function chip(reason: Reason, id: string, dialog: HTMLElement) {
   wrap.className = "chip-wrap";
   const button = document.createElement("button");
   button.type = "button";
-  button.className = "chip";
+  button.className = reason.open ? "chip open" : "chip";
   button.textContent = reason.chip;
   button.setAttribute("aria-describedby", id);
   const tip = document.createElement("span");

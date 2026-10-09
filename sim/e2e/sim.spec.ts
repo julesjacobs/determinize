@@ -719,6 +719,22 @@ test("a premise that the check finds failing is a warning, with the run that wit
   expect(outline).not.toBe("rgba(0, 0, 0, 0)");
 });
 
+test("the gallery's Gaussian bound fails domain safety, with its witness and the frame", async ({
+  page,
+}) => {
+  await page.goto(simulator);
+  await pick(page, "Gaussian bound");
+  await sampled(page, 1000);
+  await expect(page.locator("#verdict")).toHaveClass(/\balert\b/);
+  await expect(page.locator("#premise-safe")).toHaveAttribute("data-status", "fails");
+  await expect(page.locator("#premise-safe .finding")).toHaveText(
+    "run 6 failed: uniform requires lower ≤ upper (seed 7)",
+  );
+  await expect(page.locator("#determinized-pane")).toHaveClass(/\buncovered\b/);
+  // About one run in six draws a bound below 0.
+  await expect(page.locator("#returned-source")).toContainText("167 failed");
+});
+
 test("a run that fails at an inexact 0 leaves domain safety open, with no frame", async ({
   page,
 }) => {
@@ -1634,7 +1650,7 @@ test("the gallery lists the examples as links, a menu on wide screens and a dial
   const gallery = page.getByRole("dialog", { name: "Examples" });
   await expect(gallery).toBeVisible();
   expect(await gallery.evaluate((dialog) => dialog.matches(":modal"))).toBe(false);
-  await expect(gallery.getByRole("listitem")).toHaveCount(10);
+  await expect(gallery.getByRole("listitem")).toHaveCount(11);
   await expect(gallery.getByRole("listitem").first()).toContainText(
     "Noisy product A signal and a noisy measurement of it; the measurement becomes its mean. From the paper.",
   );
@@ -1662,6 +1678,7 @@ test("the gallery groups the examples by the premise they fail, each with a chip
     "The check finds no premise failing",
     "Fails only in floating point",
     "Lean rejects the written modes",
+    "A run fails a domain check",
   ]);
   await expect(gallery.getByRole("list").first().locator(".chip")).toHaveCount(0);
   // The chip's description shows on keyboard focus, and Escape hides it before it closes the
@@ -1675,6 +1692,13 @@ test("the gallery groups the examples by the premise they fail, each with a chip
   );
   const tip = gallery.getByRole("tooltip");
   await expect(tip).toBeVisible();
+  // An open finding's chip has a note's muted outline; a failing one, the warning's crimson.
+  const border = (name: string) =>
+    gallery
+      .getByRole("button", { name })
+      .first()
+      .evaluate((button) => getComputedStyle(button).borderColor);
+  expect(await border("underflow")).not.toBe(await border("a run fails"));
   await page.keyboard.press("Escape");
   await expect(tip).toBeHidden();
   await expect(gallery).toBeVisible();

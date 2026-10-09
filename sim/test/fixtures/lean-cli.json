@@ -2756,6 +2756,61 @@
       ]
     },
     {
+      "file": "examples/simulator/gauss-bound.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 0,
+          "continuous": 2
+        },
+        "after": {
+          "discrete": 0,
+          "continuous": 0
+        }
+      },
+      "annotated": "(let x0 = gauss[E](1, 1) in uniform[E](0, x0))",
+      "determinized": "(let x0 = mean_gauss(1, 1) in mean_uniform(0, x0))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 411,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.610600",
+            "variance": "0.323060",
+            "firstFailure": "uniform requires lower ≤ upper"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "0.500000",
+            "variance": "0.000000"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "1.082182",
+            "variance": "0.382105"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "0.500000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
       "file": "tests/typing/accept/primitives.det",
       "checked": "float[E]",
       "sites": {

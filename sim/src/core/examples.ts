@@ -7,6 +7,7 @@ import dungeon from "../../../examples/paper/dungeon.det";
 import noisyIteration from "../../../examples/paper/noisy-iteration.det";
 import noisyProduct from "../../../examples/paper/noisy-product.det";
 import badEBranching from "../../../examples/simulator/bad-e-branching.det";
+import gaussBound from "../../../examples/simulator/gauss-bound.det";
 import gaussRandomWalk from "../../../examples/simulator/gauss-random-walk.det";
 import noisyProductAllE from "../../../examples/simulator/noisy-product-all-e.det";
 import observe from "../../../examples/simulator/observe.det";
@@ -23,10 +24,13 @@ export interface Example {
   fromPaper: boolean;
   /** The program, without the file's final line break. */
   source: string;
+  /** A domain failure that only the program's runs show, worded as the simulator's check words
+   * it: the message of a failing run and why it fails. Its type and modes the gallery finds
+   * itself. */
+  fails?: { message: string; why: string };
   /** A domain failure that only the program's runs show, at a parameter of exactly 0 in floating
    * point, which the simulator's check doesn't count against domain safety: the message of a
-   * failing run and why the real-valued semantics doesn't reach it. Its type and modes the
-   * gallery finds itself. */
+   * failing run and why the real-valued semantics doesn't reach it. */
   floatFailure?: { message: string; why: string };
 }
 
@@ -93,6 +97,18 @@ export const examples: Example[] = [
     floatFailure: {
       message: "gamma requires positive shape and rate",
       why: "An earlier gamma draw underflows to 0, a shape that the real-valued semantics, where every gamma draw is positive, doesn't reach.",
+    },
+  },
+  {
+    id: "simulator/gauss-bound",
+    title: "Gaussian bound",
+    explanation:
+      "A uniform draw up to a Gaussian draw, which falls below 0 in about one run in six.",
+    fromPaper: false,
+    source: gaussBound.trimEnd(),
+    fails: {
+      message: "uniform requires lower ≤ upper",
+      why: "A Gaussian draw below 0 makes the uniform's upper bound smaller than its lower one.",
     },
   },
   {

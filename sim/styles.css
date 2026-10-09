@@ -283,7 +283,8 @@
     padding: var(--space-1) 0;
   }
 
-  /* The premise that an example fails, described on hover and focus. */
+  /* The premise that an example fails, described on hover and focus; one that the check finds
+     open, in the muted outline of a note. */
   .chip {
     min-height: var(--target-min);
     padding: 0 var(--space-2);
@@ -291,6 +292,11 @@
     background: none;
     color: var(--alert);
     font-size: var(--size-small);
+  }
+
+  .chip.open {
+    border-color: var(--muted);
+    color: var(--ink);
   }
 
   /* The description sits right below its chip, so that the pointer can move onto it; clicks pass

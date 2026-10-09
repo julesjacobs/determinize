@@ -40,6 +40,7 @@ const states: State[] = [
   { name: "counterexample", example: "Noisy product, both draws E", run: true, steps: 1 },
   { name: "observe", example: "Observe", run: true, steps: 3 },
   { name: "recursive", example: "Recursive gamma", run: true, steps: 4 },
+  { name: "gauss-bound", example: "Gaussian bound", run: true, steps: 2 },
   { name: "random-walk", example: "Gaussian random walk", run: true },
   {
     name: "gallery",
