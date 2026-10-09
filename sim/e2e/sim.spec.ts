@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { deflateRawSync, inflateRawSync } from "node:zlib";
 import { AxeBuilder } from "@axe-core/playwright";
-import type { Page } from "@playwright/test";
+import type { Page, Worker } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 import type { Store } from "../src/ui/store.ts";
 
@@ -1460,43 +1460,44 @@ test("exploring the dungeon in its worker to Lean's state limit leaves no long t
 test("a newer program replaces a worker busy with a long step of an exploration", async ({
   page,
 }) => {
-  test.slow();
-  const workers: string[] = [];
+  const workers: Worker[] = [];
   page.on("worker", (started) => {
-    const path = new URL(started.url()).pathname;
-    if (path.endsWith("/exact-worker.js")) workers.push(path);
+    if (new URL(started.url()).pathname.endsWith("/exact-worker.js")) workers.push(started);
   });
   await page.goto(simulator);
   await expect.poll(() => exactKinds(page)).not.toBe(null);
-  const started = workers.length;
-  // Squaring 2/3 twenty times makes rationals of about a million bits, whose single steps take
-  // the worker seconds each.
-  const squares = "(rec f n => fun x => if n < 1 then x else f (n - 1) (x * x)) 20 (2 / 3)";
-  await page.evaluate(async (program) => {
-    const store = await window.DeterminizeSim.ready;
-    store.source.value = program;
-    store.commitSource();
-  }, squares);
-  // Once the worker reports progress, it is deep in the exploration.
-  await expect
-    .poll(() =>
-      page.evaluate(async () => {
-        const { programs } = (await window.DeterminizeSim.ready).exact.value ?? {};
-        return [programs?.source, programs?.determinized].some(
-          (state) => state?.kind === "exploring" && state.discovered > 0,
-        );
-      }),
-    )
-    .toBe(true);
-  expect(await exactKinds(page)).toBe(null);
-  await page.evaluate(async () => {
-    const store = await window.DeterminizeSim.ready;
-    store.source.value = "1 + 2";
-    store.commitSource();
+  expect(workers).toHaveLength(1);
+  const [busy] = workers;
+  // The worker's next slice of an exploration is a step that doesn't end: it says that it has
+  // begun, then keeps the worker's thread.
+  await busy.evaluate(() => {
+    const defer = self.setTimeout;
+    self.setTimeout = ((_task: () => void, delay?: number) => {
+      self.setTimeout = defer;
+      return defer(() => {
+        console.log("a long step");
+        for (;;) {
+          // The step goes on until the page terminates the worker.
+        }
+      }, delay);
+    }) as typeof setTimeout;
   });
+  const commit = (program: string) =>
+    page.evaluate(async (source) => {
+      const store = await window.DeterminizeSim.ready;
+      store.source.value = source;
+      store.commitSource();
+    }, program);
+  const step = busy.waitForEvent("console");
+  await commit("uniform(0, 1) * 2");
+  expect((await step).text()).toBe("a long step");
+  expect(await exactKinds(page)).toBe(null);
+  const closed = busy.waitForEvent("close");
+  await commit("1 + 2");
   await expect.poll(() => exactKinds(page), { timeout: 10_000 }).toEqual(["finite", "finite"]);
   // The busy worker was terminated and replaced.
-  expect(workers.slice(started)).toEqual(["/determinize/sim/exact-worker.js"]);
+  await closed;
+  expect(workers).toHaveLength(2);
 });
 
 test("an edit within an exploration's first frame replaces it with the new program's", async ({
