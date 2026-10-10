@@ -3,6 +3,8 @@
 \section{Soundness}
 \label{sec:soundness}
 
+\todo[inline]{TODO: Double check the Lean refs.}
+
 Although determinization is a syntactic transformation, its semantic effect
 can be characterized by conditioning on the random choices that it retains,
 namely, the samples annotated with $\G$. Intuitively, once the outcomes of
@@ -13,7 +15,7 @@ output of the original program over the remaining $\E$-mode randomness.
 
 This conditional characterization is the key to our soundness result and is useful for two reasons. First, it gives a local account of what determinization does even when the program's overall expectation is undefined. Second, when the global expectation does exist, expectation preservation follows by integrating over these fixed choices. Our results distinguish between finite, infinite, and undefined expectations, so let us first make this terminology precise.
 
-\begin{definition}[Expectation]
+\begin{definition}[Expectation\leanref{expectation-defined}]
 Let $X$ be a real-valued random variable with probability distribution $\mu$, and set
 \[
 r^+=\max(r,0),
@@ -101,11 +103,11 @@ or diverging executions contribute no output pair. For each $n$, the measure $\j
 $\E$-mode samples are integrated out, whereas each $\G$-mode sample contributes
 its distribution primitive $D$ and sampled value $r$ to the trace $\tau$.
 Summing these measures over all $n$ steps gives the joint big-step
-subprobability measure $J_e$ on $\Trace\times\Real$. Intuitively, $J_e(A\times B)$ is the probability mass
+subprobability measure $J_e$\leanref{trace-semantics} on $\Trace\times\Real$. Intuitively, $J_e(A\times B)$ is the probability mass
 of successfully returning executions whose trace lies in $A$ and whose
 returned value lies in $B$.
 
-The two marginals of $J_e$ recover our quantities of interest. For each measurable $A\subseteq\Trace$, its trace marginal $\trlaw e(A)$ is the probability mass of successful executions whose trace lies in $A$. Similarly, for each measurable $B\subseteq\Real$, its output marginal $\law e(B)$ is the probability mass of successful executions whose returned value lies in $B$. Evaluating both marginals on their full spaces gives
+The two marginals of $J_e$ recover our quantities of interest. For each measurable $A\subseteq\Trace$, its trace marginal $\trlaw e(A)$\leanref{trace-law} is the probability mass of successful executions whose trace lies in $A$. Similarly, for each measurable $B\subseteq\Real$, its output marginal $\law e(B)$\leanref{trace-erasure} is the probability mass of successful executions whose returned value lies in $B$. Evaluating both marginals on their full spaces gives
 \[
   \trlaw e(\Trace)
   =
@@ -121,10 +123,11 @@ almost surely, every executed distribution has parameters in its domain and
 every executed division has a nonzero divisor; this condition rules out loss of probability mass through invalid
 operations. Determinization preserves both domain safety and this trace marginal:
 
-\begin{lemma}[Trace preservation]
+\begin{lemma}[Trace preservation\leanref{trace-preservation}]
 \label{lem:trace-preservation}
-Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe. Then $\trans e$ is
-domain-safe and
+Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe.
+\par
+Then $\trans e$ is domain-safe and
 \[
 \trlaw{\trans e}=\trlaw e.
 \]
@@ -175,7 +178,7 @@ tracewise characterization.
 \paragraph{Conditioning on successful return.}
 Recall that $\law e$ and $\trlaw e$ are subprobability measures, since diverging or rejected executions contribute no returned value. Thus, let
 \[
-q_e := \law e(\Real)=\trlaw e(\Trace)
+q_e := \law e(\Real)=\trlaw e(\Trace)\leanref{return-probability}
 \]
 denote the probability that $e$ successfully returns. When $q_e>0$, we consider expectations and variances conditioned on successful return. In particular,
 \begin{gather*}
@@ -190,14 +193,14 @@ denote the probability that $e$ successfully returns. When $q_e>0$, we consider 
 =
 \frac{1}{q_e}
 \int_{\Trace}
-\Expect[e\mid\tau]\,\trlaw e(d\tau),
+\Expect[e\mid\tau]\,\trlaw e(d\tau)\quad \leanref{returned-expectation},
 \\
 \Var_{\mathrm{ret}}[e]
 :=
 \frac{1}{q_e}
 \int_{\Real}
 \bigl(r-\Expect_{\mathrm{ret}}[e]\bigr)^2
-\,\law e(dr).
+\,\law e(dr)\quad\leanref{returned-variance}.
 \end{gather*}
 
 Note that such a normalization factor was not needed in~\Cref{sec:traces} since $\trlaw e$ records only traces of successfully returning executions, so $\law e(\Real\mid\tau) = 1$ for a fixed trace $\tau$. Trace preservation immediately implies that determinization preserves the probability of successful return, meaning that the original and transformed programs are conditioned on the same returning mass:
@@ -241,7 +244,7 @@ then $q_{\trans e} > 0$ and $\trans e$ has a finite second moment, and
 This variance reduction is a special case of a more general fact: determinization cannot increase the expected value of any nonnegative convex function of the program's return value. This follows by applying Jensen's inequality tracewise. In particular, when the second moment is finite, choosing
 $\varphi(r)=(r-\Expect_{\mathrm{ret}}[e])^2$ and using expectation preservation yields the variance non-increase result above.
 
-\begin{theorem}[Convex function inequality]
+\begin{theorem}[Convex function inequality\leanref{convex-function-inequality}]
 \label{thm:convex-function}
 Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe. Then, for every
 nonnegative convex function $\varphi:\Real\to\Real$,
@@ -261,7 +264,7 @@ divergence\leanref{divergence}, including rejection.  Under domain safety,
 executions cannot lose probability mass by getting stuck. Together with preservation of output mass, this implies that determinization
 also preserves the total probability of divergence and rejection.
 
-\begin{proposition}[Probability preservation]
+\begin{proposition}[Probability preservation\leanref{probability-preservation}]
 \label{prop:probability}
 Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe. Then $\trans e$ is domain-safe,
 and
