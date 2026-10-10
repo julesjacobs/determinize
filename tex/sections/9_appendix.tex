@@ -679,6 +679,239 @@ Determinization instead replaces $u$ by its unconditional mean $0$, yielding
 Thus domain safety prevents determinization from changing which executions are semantically valid and, consequently, which executions contribute to the return-conditioned output distribution.
 
 
+\subsection{Residual Reduction and Symbolic State Transitions}
+\label{sec:appendix-symbolic-rules}
+
+Residual expressions use the syntax in
+\cref{sec:appendix-symbolic-definitions}.
+Below, $a,b$ denote affine expressions, while $r,q\in\Real$
+denote constant affine expressions. Residual numeric values are
+$\sym a$; $\sym{\bar a}$ wraps parameter tuples and lists
+componentwise. Symbolic variables $u_i$
+are represented by $\sym{u_i}$;
+they are distinct from program variables bound by functions
+and pattern matching. Substitution is capture avoiding.
+
+\paragraph{Values and evaluation contexts.}
+Residual values and left-to-right evaluation contexts are:
+\[
+\begin{aligned}
+\widehat v
+  &::=\sym a\mid()\mid\kw{true}\mid\kw{false}
+    \mid\lambda x.\widehat e
+    \mid\recfn f x{\widehat e}\\
+  &\quad\mid\langle\widehat v,\widehat v\rangle
+    \mid\kw{inl}\,\widehat v
+    \mid\kw{inr}\,\widehat v
+    \mid[]\mid\widehat v::\widehat v,\\
+\widehat C
+  &::=[\,]\mid\widehat C\,\widehat e
+    \mid\widehat v\,\widehat C
+    \mid\letin x{\widehat C}{\widehat e}
+    \mid\ite{\widehat C}{\widehat e_1}{\widehat e_2}\\
+  &\quad\mid\langle\widehat C,\widehat e\rangle
+    \mid\langle\widehat v,\widehat C\rangle
+    \mid\kw{fst}\,\widehat C
+    \mid\kw{snd}\,\widehat C
+    \mid\kw{inl}\,\widehat C
+    \mid\kw{inr}\,\widehat C\\
+  &\quad\mid\widehat C::\widehat e
+    \mid\widehat v::\widehat C
+    \mid\scase{\widehat C}x{\widehat e_1}y{\widehat e_2}
+    \mid\lcase{\widehat C}{\widehat e_0}x{xs}{\widehat e_1}\\
+  &\quad\mid-\widehat C
+    \mid\widehat C\mathbin\circ\widehat e
+    \mid\widehat v\mathbin\circ\widehat C
+    \mid\draw D\alpha{\bar{\widehat v},\widehat C,\bar{\widehat e}},
+\end{aligned}
+\]
+where $\circ\in\{+,\cdot,/,<\}$ and
+$\alpha\in\{\G,\E,\M\}$.
+
+\paragraph{Structural residual reduction.}
+The relation $\rightsquigarrow_{\mathrm{sym}}$ reduces
+a residual redex before it is placed in an evaluation context.
+\[
+\begin{aligned}
+(\lambda x.\widehat e)\,\widehat v
+  &\rightsquigarrow_{\mathrm{sym}}
+    \widehat e[x\mapsto\widehat v],\\
+(\recfn f x{\widehat e})\,\widehat v
+  &\rightsquigarrow_{\mathrm{sym}}
+    \widehat e[x\mapsto\widehat v,
+               f\mapsto\recfn f x{\widehat e}],\\
+\letin x{\widehat v}{\widehat e}
+  &\rightsquigarrow_{\mathrm{sym}}
+    \widehat e[x\mapsto\widehat v],\\
+\kw{reject}
+  &\rightsquigarrow_{\mathrm{sym}}\kw{reject},\\
+\ite{\kw{true}}{\widehat e_1}{\widehat e_2}
+  &\rightsquigarrow_{\mathrm{sym}}\widehat e_1,\\
+\ite{\kw{false}}{\widehat e_1}{\widehat e_2}
+  &\rightsquigarrow_{\mathrm{sym}}\widehat e_2,\\
+\kw{fst}\,\langle\widehat v_1,\widehat v_2\rangle
+  &\rightsquigarrow_{\mathrm{sym}}\widehat v_1,\\
+\kw{snd}\,\langle\widehat v_1,\widehat v_2\rangle
+  &\rightsquigarrow_{\mathrm{sym}}\widehat v_2.
+\end{aligned}
+\]
+\[
+\begin{aligned}
+\scase{\kw{inl}\,\widehat v}x{\widehat e_1}y{\widehat e_2}
+  &\rightsquigarrow_{\mathrm{sym}}
+    \widehat e_1[x\mapsto\widehat v],\\
+\scase{\kw{inr}\,\widehat v}x{\widehat e_1}y{\widehat e_2}
+  &\rightsquigarrow_{\mathrm{sym}}
+    \widehat e_2[y\mapsto\widehat v],\\
+\lcase{[]}{\widehat e_0}x{xs}{\widehat e_1}
+  &\rightsquigarrow_{\mathrm{sym}}\widehat e_0,\\
+\lcase{\widehat v::\widehat w}{\widehat e_0}x{xs}{\widehat e_1}
+  &\rightsquigarrow_{\mathrm{sym}}
+    \widehat e_1[x\mapsto\widehat v,xs\mapsto\widehat w].
+\end{aligned}
+\]
+
+\paragraph{Affine arithmetic and comparisons.}
+Write
+$a=c_0+\sum_i c_i u_i$ and
+$b=d_0+\sum_i d_i u_i$.
+Define operations on affine expressions by
+\[
+\begin{aligned}
+\operatorname{neg}(a)
+  &=-c_0+\sum_i(-c_i)u_i,\\
+\operatorname{add}(a,b)
+  &=(c_0+d_0)+\sum_i(c_i+d_i)u_i,\\
+\operatorname{scale}(r,a)
+  &=rc_0+\sum_i(rc_i)u_i.
+\end{aligned}
+\]
+The corresponding residual reductions are:
+\[
+\begin{aligned}
+-\sym a
+  &\rightsquigarrow_{\mathrm{sym}}\sym{\operatorname{neg}(a)},\\
+\sym a+\sym b
+  &\rightsquigarrow_{\mathrm{sym}}\sym{\operatorname{add}(a,b)},\\
+\sym r\cdot\sym a
+  &\rightsquigarrow_{\mathrm{sym}}\sym{\operatorname{scale}(r,a)},\\
+\sym a\cdot\sym r
+  &\rightsquigarrow_{\mathrm{sym}}\sym{\operatorname{scale}(r,a)},\\
+\sym a/\sym r
+  &\rightsquigarrow_{\mathrm{sym}}
+    \sym{\operatorname{scale}(1/r,a)}\qquad(r\ne0),\\
+\sym r<\sym q
+  &\rightsquigarrow_{\mathrm{sym}}\kw{true}\qquad(r<q),\\
+\sym r<\sym q
+  &\rightsquigarrow_{\mathrm{sym}}\kw{false}\qquad(r\ge q).
+\end{aligned}
+\]
+Multiplication requires at least one constant operand;
+division requires a nonzero constant denominator;
+comparison requires two constant operands.
+The typing rules ensure these structural requirements
+for well-typed residual expressions.
+
+\paragraph{Distribution parameters and symbolic means.}
+For $\E$ sampling and $\M$ evaluation, the underlying affine
+parameter forms (before componentwise wrapping) are
+\[
+\begin{aligned}
+\kw{uniform}(a,b),\qquad&
+\kw{gaussian}(a,r),\\
+\kw{poisson}(a),\qquad&
+\kw{exponential}(r),\\
+\kw{bernoulli}(a),\qquad&
+\kw{discrete}([a_i]_{i<n}),\\
+\kw{beta}(r,q),\qquad&
+\kw{gamma}(a,r).
+\end{aligned}
+\]
+Let $\operatorname{Params}^{\#}_D(\bar a)$ mean that
+the parameters have the corresponding form above.
+This is a structural requirement, distinct from
+the numerical domain condition $\operatorname{Domain}_D$.
+
+The symbolic mean is the following affine expression,
+where addition and scaling use the operations defined above:
+\[
+\begin{aligned}
+\operatorname{Mean}^{\#}_{\kw{uniform}}(a,b)
+  &=\tfrac12(a+b),\\
+\operatorname{Mean}^{\#}_{\kw{gaussian}}(a,r)
+  &=a,\\
+\operatorname{Mean}^{\#}_{\kw{poisson}}(a)
+  &=a,\\
+\operatorname{Mean}^{\#}_{\kw{exponential}}(r)
+  &=1/r,\\
+\operatorname{Mean}^{\#}_{\kw{bernoulli}}(a)
+  &=a,\\
+\operatorname{Mean}^{\#}_{\kw{discrete}}([a_i]_{i<n})
+  &=n+\sum_{i<n}(i-n)a_i,\\
+\operatorname{Mean}^{\#}_{\kw{beta}}(r,q)
+  &=r/(r+q),\\
+\operatorname{Mean}^{\#}_{\kw{gamma}}(a,r)
+  &=(1/r)a.
+\end{aligned}
+\]
+These formulas are used under the domain-safety hypotheses
+of the soundness results. Mean evaluation reduces by
+\[
+\inferrule*[right=Mean]
+  {\operatorname{Params}^{\#}_D(\bar a)}
+  {\avg D{\sym{\bar a}}
+    \rightsquigarrow_{\mathrm{sym}}
+    \sym{\operatorname{Mean}^{\#}_D(\bar a)}}.
+\]
+
+\paragraph{Symbolic state transitions.}
+Write
+$s\xrightarrow{\ell}_{\mathrm{sym}}s'$
+for a symbolic transition, where $\ell=\epsilon$ denotes
+a silent step and $\ell=(D,r)$ records a retained sample.
+The complete transition rules are:
+\begin{mathpar}
+\inferrule*[right=Reduce]
+  {\widehat e_1\rightsquigarrow_{\mathrm{sym}}\widehat e_2}
+  {(\sigma\mid\widehat C[\widehat e_1])
+    \xrightarrow{\epsilon}_{\mathrm{sym}}
+   (\sigma\mid\widehat C[\widehat e_2])}
+\end{mathpar}
+\begin{mathpar}
+\inferrule*[right=Sample-E]
+  {u\notin\operatorname{dom}(\sigma)\\
+   \operatorname{Params}^{\#}_D(\bar a)}
+  {(\sigma\mid\widehat C[\draw D\E{\sym{\bar a}}])
+    \xrightarrow{\epsilon}_{\mathrm{sym}}
+   (\sigma,u\sim D(\bar a)\mid\widehat C[\sym u])}
+\end{mathpar}
+\begin{mathpar}
+\inferrule*[right=Sample-G]
+  {\operatorname{Domain}_D(\bar r)}
+  {(\sigma\mid\widehat C[\draw D\G{\sym{\bar r}}])
+    \xrightarrow{(D,r)}_{\mathrm{sym}}
+   (\sigma\mid\widehat C[\sym r])}
+\end{mathpar}
+
+In \textsc{Sample-G}, $r$ is sampled according to
+$D(\bar r)$; the rule denotes a probabilistic transition,
+not an arbitrary choice of $r$.
+All parameters $\bar r$ are constant values, including
+constant list entries for the discrete primitive.
+
+In \textsc{Sample-E}, $\sym u$ wraps the affine expression
+for the newly introduced coordinate. Existing affine
+expressions are extended with coefficient zero for $u$.
+The step records a distribution without evaluating its
+domain condition at an unknown valuation; domain safety
+is imposed separately in the soundness statements.
+
+A state whose residual expression is a value is terminal.
+Apart from the rejection self-loop, expressions for which
+no rule applies are stuck. Only \textsc{Sample-G} contributes
+an event to the retained trace.
+
+
 \subsection{Formal Definitions for Symbolic Execution}
 \label{sec:appendix-symbolic-definitions}
 
@@ -696,7 +929,7 @@ the following grammar:
   \widehat e
   &::=
   x
-  \mid a
+  \mid\sym a
   \mid ()
   \mid \kw{true}
   \mid \kw{false}
@@ -758,7 +991,7 @@ the following grammar:
 \end{aligned}
 \]
 Thus, the residual grammar is exactly the source grammar with each real
-literal replaced by an affine expression.  In a state containing $k$
+literal replaced by a wrapped affine expression $\sym a$.  In a state containing $k$
 declarations, every affine expression has precisely the coordinates
 $u_1,\ldots,u_k$.  A declaration $u_i\sim D_i(\bar a_i)$ is well formed only
 when $u_i$ is fresh and every parameter in $\bar a_i$ refers only to
@@ -777,11 +1010,11 @@ typing judgment.
 \begin{mathpar}
   \inferrule*[right=Affine-E]
     {a=c_0+\sum_{i=1}^{k}c_i u_i}
-    {\typing a{\tyR\E}}
+    {\typing{\sym a}{\tyR\E}}
   \and
   \inferrule*[right=Affine-G]
     {a=c_0+\sum_{i=1}^{k}c_i u_i\\c_1=\cdots=c_k=0}
-    {\typing a{\tyR\G}}
+    {\typing{\sym a}{\tyR\G}}
   \and
   \inferrule*[right=Var]
     {x:\tau\in\Gamma}
@@ -982,144 +1215,49 @@ $\sigma$ supply the coordinates of affine literals; they are not term
 variables in $\Gamma$.
 \end{definition}
 
+\paragraph{Lifting, realization, and initialization.}\label{def:appendix-symbolic-maps}.
 
-\begin{definition}[Lifting, realization, and initialization]
-The lifting function $\mathsf{lift}$ maps an ordinary expression to a
-residual symbolic expression.  It maps a real literal $r$ to the constant
-affine expression with constant coefficient $r$ and no variable
-coefficients, and it acts recursively on every other constructor.  In
-particular,
+\begin{definition}[Lifting]
+Lifting maps source expressions to residual expressions by
+structural recursion:
 \[
 \begin{aligned}
-  \mathsf{lift}(r)
-  &=r,
-  \\
-  \mathsf{lift}(e_1+e_2)
-  &=\mathsf{lift}(e_1)+\mathsf{lift}(e_2),
-  \\
+  \mathsf{lift}(r)&=\sym{\underline r},\\
+  \mathsf{lift}(e_1+e_2)&=\mathsf{lift}(e_1)+\mathsf{lift}(e_2),\\
   \mathsf{lift}\bigl(D^\alpha(e_1,\ldots,e_n)\bigr)
-  &=D^\alpha\bigl(
-      \mathsf{lift}(e_1),\ldots,\mathsf{lift}(e_n)
-    \bigr).
+    &=D^\alpha\bigl(\mathsf{lift}(e_1),\ldots,\mathsf{lift}(e_n)\bigr).
 \end{aligned}
 \]
-The first $r$ above is an ordinary literal, while the second is its constant
-affine representation.
+Here $\underline r=r+\sum_i0u_i$; all other constructors,
+binders, and modes are preserved.
+\end{definition}
 
-For a state with $k$ declarations, a valuation $\rho$ assigns a real value
-$\rho(u_i)$ to each $u_i$.  Realization maps a residual symbolic expression
-back to an ordinary expression by
+\begin{definition}[Realization]
+For $\rho:\{u_1,\ldots,u_k\}\to\Real$, realization maps
+residual expressions to source expressions by structural recursion:
 \[
 \begin{aligned}
-  \mathsf{realize}_\rho
-  \left(c_0+\sum_{i=1}^{k}c_i u_i\right)
-  &=c_0+\sum_{i=1}^{k}c_i\rho(u_i),
-  \\
+  \mathsf{realize}_\rho\left(\sym{c_0+\sum_{i=1}^k c_i u_i}\right)
+    &=c_0+\sum_{i=1}^k c_i\rho(u_i),\\
   \mathsf{realize}_\rho(\widehat e_1+\widehat e_2)
-  &=\mathsf{realize}_\rho(\widehat e_1)
-    +\mathsf{realize}_\rho(\widehat e_2),
-  \\
-  \mathsf{realize}_\rho
-  \bigl(D^\alpha(\widehat e_1,\ldots,\widehat e_n)\bigr)
-  &=D^\alpha\bigl(
-      \mathsf{realize}_\rho(\widehat e_1),\ldots,
-      \mathsf{realize}_\rho(\widehat e_n)
-    \bigr).
+    &=\mathsf{realize}_\rho(\widehat e_1)
+      +\mathsf{realize}_\rho(\widehat e_2),\\
+  \mathsf{realize}_\rho\bigl(D^\alpha(\widehat e_1,\ldots,\widehat e_n)\bigr)
+    &=D^\alpha\bigl(\mathsf{realize}_\rho(\widehat e_1),\ldots,
+                   \mathsf{realize}_\rho(\widehat e_n)\bigr).
 \end{aligned}
 \]
-It acts recursively in the same way on every remaining constructor, preserving
-binders and distribution modes.  Finally,
-\[
-  \mathsf{init}(e)
-  :=
-  \bigl(\emptyset\mid\mathsf{lift}(e):\tau\bigr)
-  \qquad\text{when }\emptyset\vdash e:\tau.
-\]
+All other constructors, binders, and modes are preserved.
 \end{definition}
 
-\begin{definition}[Actual environment law and sequential mean]
-Let
+\begin{definition}[Initialization]
+For a source expression $e$, define
 \[
-  \sigma
-  =
-  \bigl(
-    u_1\sim D_1(\bar a_1),\ldots,
-    u_k\sim D_k(\bar a_k)
-  \bigr).
+  \mathsf{init}(e):=(\emptyset\mid\mathsf{lift}(e)).
 \]
-The law $\mathcal A_\sigma$ of its valuation is defined recursively.  For
-every measurable set $B$ of valuations,
-\[
-\begin{aligned}
-  \mathcal A_\emptyset
-  &:=\delta_{()},
-  \\
-  \mathcal A_{\sigma,u\sim D(\bar a)}(B)
-  &:=
-  \int
-    D\bigl(\bar a[\theta]\bigr)
-      \bigl(\{r\in\Real\mid(\theta,r)\in B\}\bigr)\,
-    \mathcal A_\sigma(d\theta).
-\end{aligned}
-\]
-Here $(\theta,r)$ denotes the valuation that extends $\theta$ by assigning
-$r$ to the fresh variable $u$.
-Thus a valuation is sampled from $\mathcal A_\sigma$ before the parameters
-$\bar a[\theta]$ of the next declaration are evaluated.  Domain safety
-ensures that each distribution in this recursion is defined and that
-$\mathcal A_\sigma$ is a probability measure.
-
-The sequential mean valuation is defined in the same declaration order:
-\[
-\begin{aligned}
-  \bar\theta_\emptyset
-  &:=(),
-  \\
-  \bar\theta_{\sigma,u\sim D(\bar a)}
-  &:=
-  \bigl(
-    \bar\theta_\sigma,
-    \operatorname{Mean}_D
-      (\bar a[\bar\theta_\sigma])
-  \bigr).
-\end{aligned}
-\]
-Consequently,
-\[
-  \bar\theta_\sigma(u_i)
-  =
-  \operatorname{Mean}_{D_i}
-  \bigl(\bar a_i[\bar\theta_\sigma]\bigr),
-  \qquad i=1,\ldots,k,
-\]
-where the right-hand side depends only on the values already assigned to
-$u_1,\ldots,u_{i-1}$.
 \end{definition}
-
-\begin{definition}[Actual and expected interpretations]
-For a symbolic state $s=(\sigma\mid\widehat e:\tau)$, define
-\[
-\begin{aligned}
-  \mathsf{Act}_n(s)
-  &:={}
-  \int
-    \joint{\mathsf{realize}_\theta(\widehat e)}n\,
-    \mathcal A_\sigma(d\theta),
-  \\
-  \mathsf{Exp}_n(s)
-  &:={}
-  \joint{
-    \trans{
-      \mathsf{realize}_{\bar\theta_\sigma}(\widehat e)
-    }
-  }n.
-\end{aligned}
-\]
-Both are measures on $\Trace\times\Real$.  The actual interpretation samples
-the delayed $\E$-mode declarations according to $\mathcal A_\sigma$; the
-expected interpretation realizes them at their sequential means and then
-determinizes any $\E$-mode sites that symbolic execution has not yet reached.
-\end{definition}
+With $()$ denoting the empty valuation,
+$\mathsf{realize}_{()}(\mathsf{lift}(e))=e$.
 
 \subsection{Theorems and Lemmas from the Symbolic Semantics Proof}
 
@@ -1197,16 +1335,16 @@ then, for every $n\in\Nat$,
 \]
 For a \textsc{Sample-G} state
 \[
-  s=(\sigma\mid\widehat C[\draw D\G{\bar r}]:\tau),
+  s=(\sigma\mid\widehat C[\draw D\G{\sym{\bar r}}]:\tau),
 \]
 every measurable $A\subseteq\Trace$ and $B\subseteq\Real$ satisfy
 \[
 \begin{aligned}
-  \mathsf{Act}_{n+1}(s)(A\times B)
+  &\mathsf{Act}_{n+1}(s)(A\times B)\\
   ={}&
   \int_{\Real}
   \mathsf{Act}_n
-    \bigl((\sigma\mid\widehat C[r]:\tau)\bigr)
+    \bigl((\sigma\mid\widehat C[\sym r]:\tau)\bigr)
     \bigl(
       \{(\tau',x)\mid(D,r)::\tau'\in A\ \text{and}\ x\in B\}
     \bigr)
@@ -1228,16 +1366,16 @@ then, for every $n\in\Nat$,
 \]
 For a \textsc{Sample-G} state
 \[
-  s=(\sigma\mid\widehat C[\draw D\G{\bar r}]:\tau),
+  s=(\sigma\mid\widehat C[\draw D\G{\sym{\bar r}}]:\tau),
 \]
 every measurable $A\subseteq\Trace$ and $B\subseteq\Real$ satisfy
 \[
 \begin{aligned}
-  \mathsf{Exp}_{n+1}(s)(A\times B)
+  &\mathsf{Exp}_{n+1}(s)(A\times B)\\
   ={}&
   \int_{\Real}
   \mathsf{Exp}_n
-    \bigl((\sigma\mid\widehat C[r]:\tau)\bigr)
+    \bigl((\sigma\mid\widehat C[\sym r]:\tau)\bigr)
     \bigl(
       \{(\tau',x)\mid(D,r)::\tau'\in A\ \text{and}\ x\in B\}
     \bigr)

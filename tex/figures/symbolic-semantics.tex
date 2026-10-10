@@ -18,9 +18,9 @@
   &\rightsquigarrow_{\mathrm{sym}}
   \widehat e[x\mapsto\widehat v],
   \\[2pt]
-  \avg D{\bar a}
+  \avg D{\sym{\bar a}}
   &\rightsquigarrow_{\mathrm{sym}}
-  \operatorname{Mean}^{\#}_D(\bar a).
+  \sym{\operatorname{Mean}^{\#}_D(\bar a)}.
 \end{aligned}
 \]
 \raggedright
@@ -38,33 +38,33 @@ symbolic arguments $\bar a$.
   \inferrule*[right=Reduce]
     {\widehat e_1\rightsquigarrow_{\mathrm{sym}}\widehat e_2}
     {
-      (\sigma\mid\widehat C[\widehat e_1]:\rho)
+      (\sigma\mid\widehat C[\widehat e_1])\\
       \xrightarrow{}_{\mathrm{sym}}
-      (\sigma\mid\widehat C[\widehat e_2]:\rho)
+      (\sigma\mid\widehat C[\widehat e_2])
     }
   \and
   \inferrule*[right=Sample-E]
     {u\notin\operatorname{dom}(\sigma)}
     {
-      (\sigma\mid\widehat C[\draw D\E{\bar a}]:\rho)
+      (\sigma\mid\widehat C[\draw D\E{\sym{\bar a}}])\\
       \xrightarrow{}_{\mathrm{sym}}
-      (\sigma,u\sim D(\bar a)\mid\widehat C[u]:\rho)
+      (\sigma,u\sim D(\bar a)\mid\widehat C[\sym u])
     }
   \and
   \inferrule*[right=Sample-G]
     {\operatorname{Domain}_D(\bar r)}
     {
-      (\sigma\mid\widehat C[\draw D\G{\bar r}]:\rho)
+      (\sigma\mid\widehat C[\draw D\G{\sym{\bar r}}])\\
       \xrightarrow{}_{\mathrm{sym}}
-      (\sigma\mid\widehat C[r]:\rho)
+      (\sigma\mid\widehat C[\sym r])
     }
 \end{mathpar}
+\small
 \raggedright
 The \textsc{Reduce} rule lifts reduction of residual symbolic expressions
 to reduction of symbolic states under a symbolic evaluation context.
 In \textsc{Sample-G}, the label $r$ is distributed according to
-$D(\bar r)$. The label $\epsilon$ denotes a step that contributes no entry
-to the $\G$ trace.
+$D(\bar r)$.
 \end{minipage}
 \end{tabular}
 

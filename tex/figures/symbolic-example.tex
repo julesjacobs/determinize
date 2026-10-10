@@ -7,25 +7,26 @@
 \newcommand{\tr}[1]{{\color{black!55}#1}}
 \newcommand{\nil}{\tr{[\,]}}
 \newcommand{\tg}{\tr{[(\U,r)]}}
+\resizebox{\linewidth}{!}{%
 \begin{tikzpicture}[
-  every node/.style={font=\small},
+  every node/.style={font=\footnotesize},
   col/.style={inner sep=2pt},
   hdr/.style={align=center, font=\footnotesize, inner sep=1pt},
 ]
-\matrix (m) [matrix of math nodes, row sep=2.5mm, column sep=4.5mm,
+\matrix (m) [matrix of math nodes, ampersand replacement=\&, row sep=2.5mm, column sep=3mm,
              nodes={col, anchor=center}] {
   (\nil,\ \dist\U\E{1,2}\,/\,\dist\U\G{0,1})
-  & \bigl(\emptyset\mid\dist\U\E{1,2}\,/\,\dist\U\G{0,1}\bigr)
-  & (\nil,\ \dist\U\M{1,2}\,/\,\dist\U\G{0,1}) \\
+  \& \bigl(\emptyset\mid\dist\U\E{\sym1,\sym2}\,/\,\dist\U\G{\sym0,\sym1}\bigr)
+  \& (\nil,\ \dist\U\M{1,2}\,/\,\dist\U\G{0,1}) \\
   (\nil,\ c\,/\,\dist\U\G{0,1})
-  & \bigl(u_1\sim\U(1,2)\mid u_1\,/\,\dist\U\G{0,1}\bigr)
-  & (\nil,\ \tfrac32\,/\,\dist\U\G{0,1}) \\
+  \& \bigl(u_1\sim\U(1,2)\mid\sym{u_1}\,/\,\dist\U\G{\sym0,\sym1}\bigr)
+  \& (\nil,\ \tfrac32\,/\,\dist\U\G{0,1}) \\
   (\tg,\ c\,/\,r)
-  & \bigl(u_1\sim\U(1,2)\mid u_1\,/\,r\bigr)
-  & (\tg,\ \tfrac32\,/\,r) \\
+  \& \bigl(u_1\sim\U(1,2)\mid\sym{u_1}\,/\,\sym r\bigr)
+  \& (\tg,\ \tfrac32\,/\,r) \\
   (\tg,\ \tfrac{c}{r})
-  & \bigl(u_1\sim\U(1,2)\mid \tfrac1r\,u_1\bigr)
-  & (\tg,\ \tfrac{3}{2r}) \\
+  \& \bigl(u_1\sim\U(1,2)\mid\sym{\tfrac1r\,u_1}\bigr)
+  \& (\tg,\ \tfrac{3}{2r}) \\
 };
 % column headers, aligned on a common baseline
 \path (m-1-2.north) ++(0,5mm) coordinate (hb);
@@ -58,7 +59,8 @@
   {$\mathsf{Exp}_3(s_0)=J_{\trans e}$ \ \textcolor{black!55}{(\cref{thm:interpretation-initialization})}\\[1pt]
    $\law{\trans e}(\,\cdot\mid\tau_r)=\delta_{3/(2r)}$\\[1pt]
    $=\delta_{\Expect[e\mid\tau_r]}$ \ \textcolor{black!55}{(\cref{thm:interpretation-agreement})}};
-\end{tikzpicture}
+\end{tikzpicture}%
+}
 
 \caption{Symbolic execution of
 $e=\draw{uniform}\E{1,2}\,/\,\draw{uniform}\G{0,1}$, shown in lockstep with
