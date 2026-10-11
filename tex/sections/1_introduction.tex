@@ -2,80 +2,130 @@
 \section{Introduction}
 \label{sec:introduction}
 
-\begin{itemize}
-    \item Estimate expected output by averaging runs. Can we get the same accuracy with fewer runs?
-    \item Signal \texttt{x}, noisy measurement \texttt{y}: estimate the expected
-    product \texttt{x * y}.
-    \item Type inference marks draws G (keep) or E (replace by mean).
-    We call this replacement determinization.
-\end{itemize}
+Probabilistic programs describe computations that make random choices, yet many analyses seek only the expected return, such as the average reward, cost, or outcome across executions. Monte Carlo methods estimate this expectation by repeatedly executing the program and averaging its outputs. However, the precision of these estimates depends on the variability of the outputs, with higher variance requiring more samples. This motivates a natural alternative: eliminating random choices whose effects can be accounted for analytically, without changing the expected return.
+
+Existing approaches exploit this idea in different ways. Exact inference and moment analysis compute expectations symbolically~\cite{gehr2016psi,gehr2020lpsi,moosbrugger2022moment}. Conditional Monte Carlo and Rao--Blackwellization reduce sampling variance by replacing random quantities with their conditional expectations~\cite{casella1996rao,owen2013montecarlo}. Related techniques combine symbolic reasoning with sampling during inference~\cite{murray2018delayed,atkinson2022semisymbolic}, while expectation programming targets the estimation of expected returns directly~\cite{reichelt2022expectation}. These techniques suggest that not every random choice needs to be explicitly simulated. However, identifying which choices can be safely eliminated is challenging: random values may influence control flow, determine the parameters of subsequent distributions, or participate in nonlinear computations. This raises a natural question: \emph{Can we statically identify and eliminate random choices from a probabilistic program while preserving its expected return?}
 
 \input{figures/intro-signal}
 
-\begin{itemize}
-    \item Given \texttt{x}, \texttt{y} has mean \texttt{x}, and the product is
-    linear in \texttt{y}. Replacing \texttt{y} gives \texttt{x * x}; \texttt{x} stays random.
-    \item With both draws marked E,
-\begin{lstlisting}
-let x = uniform[E](0, 1) in
-let y = gaussian[E](x, 1) in
-x * y
-\end{lstlisting}
-    replacement gives \texttt{x = y = 1/2}, returning $1/4$ instead of $1/3$.
-    \item Dependencies can also flow through higher-order functions, recursive
-    calls, and data structures. The Gaussian random walk in
-    \cref{fig:intro-gaussian-walk} passes a probabilistic step function to
-    \texttt{reduce} and repeatedly uses the previous sampled position as the
-    mean of the next draw.
-\end{itemize}
+Consider the signal and noisy measurement in
+\cref{fig:intro-signal}. The program samples a signal $x$ uniformly
+from $[0,1]$, samples a Gaussian measurement $y$ with mean $x$,
+and returns their product $xy$. Once $x$ is fixed, the measurement
+noise contributes nothing to the average product:
+$$
+  \mathbb E[xy\mid x]
+  =x\,\mathbb E[y\mid x]
+  =x^2.
+$$
+Replacing the Gaussian sample by its mean therefore yields a simpler
+program that samples only $x$ and returns $x^2$. Both programs have
+expected return $1/3$, but the transformed program avoids generating
+measurement noise and has lower output variance.
+
+This replacement also reveals the central difficulty. Replacing the
+remaining uniform sample by its mean, $1/2$, would make the program
+return $1/4$ rather than $1/3$. One random choice can be removed;
+the other must remain. The distinction depends on how their values
+are used: the returned product is linear in $y$ when $x$ is fixed,
+but becomes quadratic in $x$ after averaging over $y$. A sound
+transformation must therefore reason about both the dependencies
+between random choices and their uses throughout the program.
+
+We introduce \emph{determinization}, a type-directed,
+source-to-source transformation that automatically identifies
+which samples can be replaced by their means. Our type system
+distinguishes sampling choices that remain random ($\G$) from
+those that can be eliminated ($\E$). Type inference determines
+these modes by tracking how sampled values are used: values
+marked $\E$ may participate in affine computations, but cannot
+determine control flow or the parameters of retained samples.
+The transformation then replaces each $\E$-mode sample by its
+primitive mean. The resulting program preserves the expected
+return while potentially changing the output distribution.
+
+The challenge is to make this reasoning work beyond individual
+sampling sites. Dependencies can pass through higher-order
+functions, recursive calls, and data structures; a sample's mean
+may itself depend on earlier samples. Determinization tracks these
+dependencies compositionally, allowing a local replacement to
+remain sound within a larger computation.
 
 \input{figures/intro-gaussian-walk}
 
-\begin{itemize}
-    \item Every sampled position is used affinely as the next Gaussian mean and
-    stored in the returned path, so all six Gaussian draws become their
-    conditional means. The source returns a random path; the transformed program
-    returns the deterministic path whose position is zero at every snapshot.
-    \item Next: inference through unbounded recursion.
-    \item Dungeon: before each room, exit with probability $1/4$; otherwise,
-    a $1\%$ chance of a jackpot worth $200$ times the depth, then continue.
-\end{itemize}
+The Gaussian random walk in \cref{fig:intro-gaussian-walk},
+adapted from~\cite{vakar2019domain}, shows how this reasoning
+extends through higher-order functions and data structures.
+The program passes a probabilistic step function to
+\texttt{reduce}, which traverses six time points, sampling
+$y'\sim\mathcal N(y,t'-t)$ at each step and storing the new
+time-position pair in the path. Although the samples are
+dependent, each position is used affinely as the next Gaussian
+mean and stored in the returned list. Inference therefore marks
+all six samples as determinizable without unrolling the
+traversal. Replacing each sample by its mean keeps the position
+unchanged: starting from zero, the transformed program returns
+a deterministic path with zero at every snapshot, matching the
+expected positions of the original random path.
 
 \input{figures/intro-dungeon}
 
-\begin{itemize}
-    \item Exit coins control recursion; jackpots enter the sum linearly.
-    Only jackpots become mean payouts.
-    \item Less variance means fewer independent runs for the same accuracy
-    (\cref{fig:intro-variance}).
-\end{itemize}
-
 \input{figures/intro-variance}
 
-\begin{itemize}
-    \item Removing noise can also make exact computation possible.
-    \item Start at zero; on each fair coin, stop or replace \texttt{x} by
-    \texttt{1 - x} plus Gaussian noise (\cref{fig:intro-exact}).
-    \item After determinization, loop entries have only \texttt{x = 0} or
-    \texttt{x = 1}. Solve two linear equations instead of sampling.
-\end{itemize}
+Partial determinization can also benefit programs whose control
+flow remains random. The dungeon crawl in \cref{fig:intro-dungeon}
+recursively visits rooms until an exit coin ends the computation.
+At depth $d$, a room pays a jackpot of $200d$ with probability
+$0.01$. The exit coins control recursion and remain random,
+but each jackpot contributes linearly to the accumulated reward
+and becomes its mean payout, $2d$. This preserves the expected
+return while reducing output variance by a factor of $12.36$
+(\cref{fig:intro-variance}). Independent Monte Carlo estimation
+therefore needs correspondingly fewer samples for the same
+estimator variance, with the time savings depending on the cost
+of each execution.
 
 \input{figures/intro-exact}
 
+Removing randomness can do more than improve sampling.
+In \cref{fig:intro-exact}, a recursive process either returns
+its current state $x$ or continues from $1-x$ plus Gaussian
+noise, each with probability $1/2$. Determinization removes
+the noise: starting from zero, the transformed loop has only
+two possible states, $0$ and $1$. Their expected returns satisfy
+$$
+  v_0=\tfrac12v_1,
+  \qquad
+  v_1=\tfrac12+\tfrac12v_0,
+$$
+giving $v_0=1/3$. A continuous-state computation thus becomes
+a finite-state problem whose expectation can be computed
+exactly. Our implementation supports this analysis with
+certificate checking for the resulting exact values.
+
 \paragraph{Contributions.}
 \begin{itemize}
-    \item \textbf{Type system and inference.} We infer which samples can be
-    replaced by their primitive means in higher-order recursive programs,
-    including dependent draws.
-    \item \textbf{Soundness.} We prove that determinization preserves the
+  \item \textbf{Type system and inference.}
+  We develop a type system and source-to-source transformation
+  that replace eligible samples by their primitive means in
+  higher-order recursive programs, including dependent sampling.
+  Our inference algorithm finds the greatest assignment of
+  determinizable sites permitted by the type system.
+
+  \item \textbf{Soundness.} We prove that determinization preserves the
     expectation value and only decreases variance. More generally,
     for almost every successful sequence of retained draws, the determinized
     program returns the original program's average over the eliminated draws,
     even when the overall expectation is undefined.
+
     \item \textbf{Lean implementation and verification.} We implement type
     inference, determinization, and sampling in Lean, and mechanize our
     soundness theorems. The full Lean code is available at [TODO], references to individual parts are indicated by a superscript Lean logo like this\leanmark. When determinization yields a finite-state program,
     verified matrix solving additionally computes its expectation value exactly.
     This equals the source expectation under the source safety and integrability
     hypotheses of our preservation theorem.
+
+    \item \textbf{Evaluation.} We examine the transformation's ability to
+  enable exact analysis, reduce output variance, and improve
+  the precision of Monte Carlo estimates for a given time budget.
 \end{itemize}

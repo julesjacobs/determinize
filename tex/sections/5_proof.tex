@@ -4,7 +4,7 @@
 
 \todo[inline]{Add Lean references}
 
-To motivate our proof strategy, first observe that at an $\E$-mode distribution, the original program samples a value whereas the determinized program computes the mean of the distribution. The resulting programs therefore have different output distributions. Thus, our proof relates both programs to a common symbolic semantics, after which two interpretations recover the source and determinized programs. Our proof thus proceeds in three stages:
+In this section, we present our proof strategy for establishing the soundness of determinization. Our proof is centered around a symbolic operational semantics that relates the original and transformed programs, by which two interpretations recover the source and determinized programs. We proceed in three stages:
 
 \begin{enumerate}
   \item Define the symbolic semantics;
@@ -20,33 +20,33 @@ $\G$-mode samples normally. This provides a common execution
 model for the source and determinized programs.
 
 \begin{definition}[Symbolic state]
-A symbolic state has the form
+A symbolic state $s$ has the form
 \begin{align}
-  a
-  &=c_0+\sum_{i=1}^{k}c_i u_i,
-  \qquad c_0,\ldots,c_k\in\Real,\\
+  s &::=(\sigma\mid\widehat e),
+  \qquad \widehat e\in\widehat{\mathrm{Expr}},\\
   \sigma
   &::=\emptyset\mid\sigma,\ u\sim D(\bar a),\\
-  s
-  &::=(\sigma\mid\widehat e).
+  a
+  &=c_0+\sum_{i=1}^{k}c_i u_i,
+  \qquad c_0,\ldots,c_k\in\Real.
 \end{align}
 where $a$ is an affine expression over symbolic variables
-$u_1,\ldots,u_k$, $\sigma$ is an ordered symbolic environment,
-and $\widehat e$ is a residual symbolic expression. Each declaration $u\sim D(\bar a)$ introduces
-a fresh symbolic variable whose distribution parameters
-refer only to variables declared earlier in $\sigma$.
+$u_1,\ldots,u_k$; $\sigma$ is an ordered symbolic environment whose declarations
+$u\sim D(\bar a)$ associate a fresh variable $u$ with a distribution $D$ and affine parameters $\bar a$ referring only to earlier variables in $\sigma$;
+and $\widehat e$ is a residual symbolic expression.
 \end{definition}
 
-In particular, residual symbolic expressions have the same constructors as source expressions,
-with real literals replaced by $\sym a$, where $a$ is an affine expression, to represent
-computations involving samples whose values have not yet been chosen.
+The full syntax and typing rules of residual expressions $\widehat e$ and
+the formal definition of symbolic environments $\sigma$
+appear in \cref{sec:appendix-symbolic-definitions}. In particular, residual expressions have the same constructors as source expressions,
+with real literals replaced by $\sym a$, where $a$ is an affine expression, to represent computations involving samples whose values have not yet been chosen.
 For example, $\sym2*\sym{u}+\sym1$ can reduce to $\sym{2u+1}$
 without sampling $u$; its declaration in $\sigma$ retains the
 distribution for later interpretation using sampled values or
-sequential means. Typing rules are unchanged except that every
-$\sym a$ may have type $\tyR\E$, while only $\sym a$ with constant
-$a$ may have type $\tyR\G$. The full syntax and
-typing rules appear in \cref{sec:appendix-symbolic-definitions}.
+sequential means. To constrain how these symbolic values are used,
+we extend the source typing rules: $\sym a$ may have type $\tyR\E$
+for any affine expression $a$, but may have type $\tyR\G$ only
+when $a$ is constant. 
 
 \paragraph{Lifting, realization, and initialization.}
 We connect source expressions and residual expressions through two
