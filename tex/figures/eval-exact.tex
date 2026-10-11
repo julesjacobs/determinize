@@ -10,7 +10,7 @@
         POLAR &
         $\lambda$PSI \\
         \midrule
-        \texttt{addNoise}~\cite{barthe2016private}
+        \texttt{add-noise}~\cite{barthe2016private}
             & $\bullet\!\bullet$
             & $\mathbb{E}[\mathit{sum}]$
             & $(0,1) \rightarrow (0,0)$
@@ -66,6 +66,13 @@
             & $\times$
             & $\checkmark$ \\
 
+        \texttt{noisy-iteration}
+            & $\bullet\!\circ$
+            & $\mathbb{E}[x]$
+            & $(1,1) \rightarrow (1,0)$
+            & $\checkmark$
+            & $\times$ \\
+
         \texttt{pack}~\cite{chakarov2013martingales}
             & $\bullet\!\circ$
             & $\mathbb{E}[\mathit{weight}_n]$
@@ -80,7 +87,7 @@
             & $\times$
             & $\times$ \\
 
-        \texttt{service\_policy}
+        \texttt{service-policy}
             & $\bullet\!\circ$
             & $\mathbb{E}[\mathit{ret}_n]$
             & $(4,4) \rightarrow (4,0)$
@@ -94,7 +101,7 @@
             & $\checkmark$
             & $\checkmark$ \\
 
-        \texttt{uniform\_nested}~\cite{gehr2016psi}
+        \texttt{uniform-nested}~\cite{gehr2016psi}
             & $\bullet\!\bullet$
             & $\mathbb{E}[d]$
             & $(0,4) \rightarrow (0,0)$
@@ -110,7 +117,7 @@
         \bottomrule
     \end{tabular}
 
-    \caption{Evaluation of determinization on 15 benchmarks.
+    \caption{Determinization on 15 benchmarks.
     In the determinization column, $\bullet\!\bullet$ denotes full
     determinization and $\bullet\!\circ$ denotes partial determinization. Each pair $(d,c)$ counts static
     discrete and continuous sampling sites. In the last two columns, $\checkmark$ denotes language support, and $\times$ denotes a lack of support by the language. Several programs are parameterized by $n$: their expectations vary with each iteration of the loop.}

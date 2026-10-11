@@ -23,3 +23,5 @@ Our approach is closely related to conditional Monte Carlo and Rao--Blackwelliza
 
 \paragraph{Type-Directed Program Transformations.}
 Several probabilistic programming systems use static analyses to guide semantics-preserving program transformations. \textsc{Slice} uses a type-directed analysis to discretize continuous randomness~\cite{wu2026slice}, while \textsc{GradInf} uses information-flow typing to factor and partially evaluate randomness when constructing gradient estimators~\cite{arya2026gradinf}. \textsc{ADEV} similarly transforms higher-order probabilistic programs into programs producing unbiased gradient estimates~\cite{lew2023adev}. Determinization follows this type-directed transformation strategy, but uses static dependence information to identify random choices that can be replaced by their expectations. 
+
+\todo[inline]{TODO: Also compare more directly with delayed sampling, semi-symbolic inference, and expectation programming. Doesn't fully explain when determinization succeeds where they cannot, or conversely when they are preferable.}
