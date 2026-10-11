@@ -30,15 +30,15 @@ A symbolic state $s$ has the form
   &=c_0+\sum_{i=1}^{k}c_i u_i,
   \qquad c_0,\ldots,c_k\in\Real.
 \end{align}
-where $a$ is an affine expression over symbolic variables
-$u_1,\ldots,u_k$; $\sigma$ is an ordered symbolic environment whose declarations
+where $a$ is an affine expression\leanref{symbolic-affine} over symbolic variables
+$u_1,\ldots,u_k$; $\sigma$ is an ordered symbolic environment\leanref{symbolic-environment} whose declarations
 $u\sim D(\bar a)$ associate a fresh variable $u$ with a distribution $D$ and affine parameters $\bar a$ referring only to earlier variables in $\sigma$;
-and $\widehat e$ is a residual symbolic expression.
+and $\widehat e$ is a residual symbolic expression\leanref{symbolic-expression}.
 \end{definition}
 
-The full syntax and typing rules of residual expressions $\widehat e$ and
+The full syntax of residual expressions $\widehat e$ and
 the formal definition of symbolic environments $\sigma$
-appear in \cref{sec:appendix-symbolic-definitions}. In particular, residual expressions have the same constructors as source expressions,
+appear in \cref{sec:appendix-symbolic-definitions-residual-syntax}. In particular, residual expressions have the same constructors as source expressions,
 with real literals replaced by $\sym a$, where $a$ is an affine expression, to represent computations involving samples whose values have not yet been chosen.
 For example, $\sym2*\sym{u}+\sym1$ can reduce to $\sym{2u+1}$
 without sampling $u$; its declaration in $\sigma$ retains the
@@ -46,23 +46,22 @@ distribution for later interpretation using sampled values or
 sequential means. To constrain how these symbolic values are used,
 we extend the source typing rules: $\sym a$ may have type $\tyR\E$
 for any affine expression $a$, but may have type $\tyR\G$ only
-when $a$ is constant. 
+when $a$ is constant. The full typing rules for $\hat e$ are also presented in \cref{sec:appendix-symbolic-definitions-residual-typing}.
 
-\paragraph{Lifting, realization, and initialization.}
-We connect source expressions and residual expressions through two
-structural maps, whose full definitions are given in
-\cref{def:appendix-symbolic-maps}:
+\paragraph{From source expressions to symbolic states.}
+To initialize symbolic execution and relate it to source computations,
+we first introduce the following maps:
 
 \begin{enumerate}
-    \item \emph{Lifting}.
+    \item \emph{Lifting}\leanref{symbolic-lifting}.
     $\mathsf{lift}:Expr\to\widehat{Expr}$
-    embeds a source expression into the residual language
+    embeds a source expression into a residual expression
     by replacing each real literal with a constant affine expression:
     \[
         \mathsf{lift}(r)=\sym{r+\sum_i0u_i}.
     \]
 
-    \item \emph{Realization}.
+    \item \emph{Realization}\leanref{symbolic-realization}.
     $\mathsf{realize}_\rho:\widehat{Expr}\to Expr$
     maps a residual expression back to a source expression
     by evaluating each symbolic literal under a valuation $\rho$:
@@ -74,14 +73,15 @@ structural maps, whose full definitions are given in
 \end{enumerate}
 
 Both maps otherwise preserve constructors and distribution modes,
-acting recursively on subexpressions. Now, from here, symbolic execution is initialized with the lifted source expression
-and an empty symbolic environment:
+acting recursively on subexpressions; their full definitions are given in
+\cref{def:appendix-symbolic-maps}. Symbolic execution starts from the source expression embedded in
+the residual expression, with no samples recorded in the beginning:
 \[
-    \mathsf{init}(e):=(\emptyset\mid\mathsf{lift}(e)).
+  \mathsf{init}(e):=(\emptyset\mid\mathsf{lift}(e)).
 \]
 Since lifting introduces no symbolic variables, realizing the
 initial expression under the empty valuation $()$ recovers
-the original source expression, $\mathsf{realize}_{()}(\mathsf{lift}(e))=e$.
+the original source expression, $\mathsf{realize}_{()}(\mathsf{lift}(e))=e$\leanref{symbolic-realize-lift}.
 
 \input{figures/symbolic-semantics.tex}
 
@@ -93,14 +93,14 @@ performing arithmetic on affine expressions.
 At an $\E$-mode expression $\draw D\E{\sym{\bar a}}$, symbolic
 execution introduces a fresh variable $u$, appends
 $u\sim D(\bar a)$ to $\sigma$, and replaces the expression
-by $\sym u$. This records the draw without sampling it or
+by $\sym u$. This records the sample without sampling it or
 replacing it by its mean. A $\G$-mode distribution is instead sampled immediately.
 
 \subsection{Two Interpretations of the Symbolic Semantics}
 \label{sec:symbolic-interpretations}
 
 A symbolic state admits two interpretations: the
-\emph{actual interpretation} samples the delayed $\E$-mode variables,
+\emph{actual interpretation} samples the variables in $\sigma$,
 whereas the \emph{expected interpretation} replaces them by their
 sequential means.
 
@@ -149,11 +149,11 @@ Let
   }n.
 \end{aligned}
 \]
-Here $\mathcal A_\sigma$ is the joint distribution of the valuation $\rho$ obtained
+Here $\mathcal A_\sigma$\leanref{symbolic-actual-environment} is the joint distribution of the valuation $\rho$ obtained
 by sampling the declarations in $\sigma$ from left to right. Because
 $\bar a_i$ depends only on variables declared before $u_i$, both
 $\mathcal A_\sigma$ and the sequential mean valuation
-$\bar\rho_\sigma$ are well defined in declaration order.
+$\bar\rho_\sigma$\leanref{symbolic-mean-environment} are well defined in declaration order.
 \end{definition}
 
 Both $\mathsf{Act}_n(s)$ and $\mathsf{Exp}_n(s)$ are measures on
@@ -250,15 +250,15 @@ $\mathsf{Act}_n(s)(\,\cdot\times\Real)$-almost every trace $\tau$,
 \]
 \end{theorem}
 
-\Cref{fig:symbolic-example} works through these results on the program
-$e=\draw{uniform}\E{1,2}\,/\,\draw{uniform}\G{0,1}$. The symbolic
-execution delays the $\E$-draw as a variable $u_1$, samples the $\G$-draw
-as $r$, and ends in the residual value $\sym{\tfrac1r u_1}$. Realizing $u_1$ as a
-sample $c$ recovers each step of the source program, and realizing it as
-its mean $\tfrac32$ recovers each step of $\trans e$. For each fixed trace
-$[(\kw{uniform},r)]$, the conditional mean $\tfrac3{2r}$ is finite.
-Integrating over $r$, however, gives a global expectation of $+\infty$
-for both programs, which is consistent with \cref{thm:expectation}.
+% \Cref{fig:symbolic-example} works through these results on the program
+% $e=\draw{uniform}\E{1,2}\,/\,\draw{uniform}\G{0,1}$. The symbolic
+% execution delays the $\E$-draw as a variable $u_1$, samples the $\G$-draw
+% as $r$, and ends in the residual value $\sym{\tfrac1r u_1}$. Realizing $u_1$ as a
+% sample $c$ recovers each step of the source program, and realizing it as
+% its mean $\tfrac32$ recovers each step of $\trans e$. For each fixed trace
+% $[(\kw{uniform},r)]$, the conditional mean $\tfrac3{2r}$ is finite.
+% Integrating over $r$, however, gives a global expectation of $+\infty$
+% for both programs, which is consistent with \cref{thm:expectation}.
 
 \input{figures/symbolic-example.tex}
 
