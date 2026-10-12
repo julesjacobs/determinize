@@ -69,7 +69,7 @@ $\Expect[|U|]=(2a)^{-1}\int_{-a}^{a}|u|\,du=a/2$.} Therefore,
   =\sum_{n=0}^{\infty}\frac14
   =\infty.
 \]
-Because each conditional distribution is symmetric, $\Expect[X^+]=\Expect[X^-]=\infty$, so the global expectation $\Expect[X]$ is undefined. This thus motivates stating our primary soundness result under fixed retained randomness before deriving global soundness when the relevant expectations exist.
+Because each conditional distribution\kb{what is "each conditional distribution"?} is symmetric, $\Expect[X^+]=\Expect[X^-]=\infty$, so the global expectation $\Expect[X]$ is undefined. This thus motivates stating our primary soundness result under fixed retained randomness before deriving global soundness when the relevant expectations exist.
 \end{example}
 
 In what follows, we first formalize this characterization using traces of the retained random choices, and then derive the global soundness. We state the main soundness theorems throughout this section, leaving the proof strategies to~\Cref{sec:proof} and the full proofs to~\Cref{sec:appendix}.
@@ -83,7 +83,7 @@ We begin by making precise what it means to fix the random choices retained by
 determinization.
 
 \begin{definition}[$\G$-trace\leanref{traces}]
-Let $\Trace$ be the space of finite sequences of $\G$-mode sampling outcomes. A \emph{$\G$-trace} is a sequence
+Let $\Trace$\kb{can we define this object more formally? I could not infer its meaning from the context...} be the space of finite sequences of $\G$-mode sampling outcomes. A \emph{$\G$-trace} is a sequence
 \[
   \tau \in \Trace,
   \qquad
