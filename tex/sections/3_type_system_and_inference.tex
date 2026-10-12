@@ -10,7 +10,7 @@ We therefore introduce a type system that checks whether sampled values are used
 The judgment $\Gamma\vdash e:\tau$ assigns expression $e$ type
 $\tau$ under context $\Gamma$. Alongside standard types for
 functions, pairs, sums, and lists, real types carry an annotation
-$m\in\{\G,\E\}$:
+$m\in\{\G,\E\}$:\kb{why does the typing grammar not include M?}
 \begin{itemize}
     \item $\tyR\G$ describes real values that determinization leaves
     unchanged.
@@ -58,7 +58,7 @@ are replaced by their means. The rules enforce this as follows:
     parameters or does not depend on them.
 \end{itemize}
 
-Finally, the distribution rules impose $\alpha\in\{m,\M\}$:
+Finally, the distribution rules impose $\alpha\in\{m,\M\}$:\kb{M is not in the typing grammar}
 $\G$-mode sampling produces values of type $\tyR\G$,
 $\E$-mode sampling produces values of type $\tyR\E$,
 and $\M$-mode mean evaluation may produce either.
