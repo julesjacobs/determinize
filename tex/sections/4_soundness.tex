@@ -106,7 +106,7 @@ subprobability measure $J_e$\leanref{trace-semantics} on\kb{is the measurable sp
 of successfully returning executions whose trace lies in $A$ and whose
 returned value lies in $B$.
 
-The two marginals of $J_e$ recover our quantities of interest. For each measurable $A\subseteq\Trace$, its trace marginal $\trlaw e(A)$\leanref{trace-law} is the probability mass of successful executions whose trace lies in $A$. Similarly, for each measurable\kb{what does that mean?} $B\subseteq\Real$, its output marginal $\law e(B)$\leanref{trace-erasure} is the probability mass of successful executions whose returned value lies in $B$. Evaluating both marginals on their full spaces gives
+The two marginals of $J_e$ recover our quantities of interest. For each measurable $A\subseteq\Trace$, its trace marginal $\trlaw e(A)$\leanref{trace-law} is the probability mass of successful executions whose trace lies in $A$. Similarly, for each measurable\kb{what does that mean?} $B\subseteq\Real$, its output marginal $\law e(B)$\leanref{trace-erasure} is the probability mass of successful executions whose returned value lies in $B$. Evaluating both marginals on their full spaces gives\kb{isn't this already a theorem that deserves a proof?}
 \[
   \trlaw e(\Trace)
   =
@@ -133,13 +133,13 @@ Then $\trans e$ is domain-safe and
 \end{lemma}
 
 \paragraph{Conditioning on traces.} 
-The joint semantics not only recovers the trace and output marginals. Conditioning the joint big-step measure \(J_e\) on its trace component gives the output distribution after a trace has been fixed. We write
+The joint semantics not only recovers the trace and output marginals. Conditioning the joint big-step measure \(J_e\) on its trace component gives the output distribution after a trace has been fixed. We write\kb{define? brief justification for well-definedness, i.e., existence and uniqueness?}
 \begin{align}\label{eq:disintegration}
   \law e(\,\cdot\mid\tau)
   \quad\text{such that}\quad
   J_e(A\times B)=\int_A\law e(B\mid\tau)\,\trlaw e(d\tau)
 \end{align}
-for this conditional output distribution, for measurable $A\subseteq\Trace$ and $B\subseteq\Real$. This measure-theoretic formulation is necessary because a trace containing continuous $\G$-samples may itself have probability zero, so conditioning cannot in general be defined by dividing by the probability of an individual trace. We write 
+for this conditional output distribution, for measurable $A\subseteq\Trace$ and $B\subseteq\Real$. This measure-theoretic formulation is necessary because a trace containing continuous $\G$-samples may itself have probability zero, so conditioning cannot in general be defined by dividing by the probability of an individual trace\kb{how does this def fix this problem and what happens if we condition on a measure zero event?}. We write 
 \begin{align*}\label{eq:conditional-expectation}
   \Expect[e\mid\tau] :=
   \int_{\Real}r^+\,\law e(dr\mid\tau)
@@ -151,7 +151,7 @@ for the expectation of $\law e(\,\cdot\mid\tau)$, which is the expected return v
 \begin{theorem}[Tracewise soundness\leanref{trace-soundness}]
 \label{thm:trace-soundness}
 Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe. For
-$\trlaw e$-almost every trace $\tau$,
+$\trlaw e$-almost every trace\kb{what is $\trlaw e$-almost every trace?} $\tau$,
 \[
   \law{\trans e}(\,\cdot\mid\tau)
   =
@@ -168,6 +168,8 @@ In particular,
 This statement does not require the program to have a global
 expectation. It states that for all traces except a set of measure zero, the transformed program returns the average output of the original program under some fixed trace. When a global expectation is defined, however, \cref{thm:trace-soundness} can be integrated
 over traces to obtain our global soundness guarantees, which we discuss next.
+
+\kbin{I think a small example illustrating this theorem would help.}
 
 \subsection{Global Soundness}
 
