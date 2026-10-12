@@ -191,6 +191,8 @@ for (const width of [390, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto(simulator);
     await pick(page, "Noisy iteration");
+    // In the plain mode, the state limit also offers the additive mode.
+    await page.getByRole("checkbox", { name: "Additive mode" }).uncheck();
     await explored(page);
     const measure = () =>
       page.evaluate(() => {
@@ -219,7 +221,7 @@ for (const width of [390, 768, 1440]) {
   });
 }
 
-test("the walk opens in the additive mode, the state limit offers it, and links carry it", async ({
+test("the walk opens in the additive mode, the state limit offers it, and links carry the plain mode", async ({
   page,
   context,
 }) => {
@@ -242,32 +244,34 @@ test("the walk opens in the additive mode, the state limit offers it, and links 
   await expect(page.locator("#exact")).toContainText(
     "More than 10 000 states, Lean's limit; try the additive mode.",
   );
-  await page.getByRole("button", { name: "try the additive mode" }).click();
-  await expect(additive).toBeChecked();
-  await explored(page);
-  expect(await exactRows(page)).toEqual(finite);
   /** The additive mode of the state in the fragment of `link`. */
   const additiveOf = (link: string) => {
     const hash = new URL(link).hash.slice("#v1=".length);
     if (!hash) return null;
     return JSON.parse(inflateRawSync(Buffer.from(hash, "base64url")).toString("utf8")).additive;
   };
-  await expect.poll(() => additiveOf(page.url())).toBe(true);
+  await expect.poll(() => additiveOf(page.url())).toBe(false);
   // Copy link copies the same state.
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.getByRole("button", { name: "Copy link" }).click();
   await expect(page.locator("#copy-status")).toHaveText("Link copied.");
   const copied = await page.evaluate(() => navigator.clipboard.readText());
-  expect(additiveOf(copied)).toBe(true);
+  expect(additiveOf(copied)).toBe(false);
   expect(copied).toBe(page.url());
   const opened = await context.newPage();
   await opened.goto(page.url());
   await explored(opened);
-  await expect(opened.getByRole("checkbox", { name: "Additive mode" })).toBeChecked();
-  await expect(opened.locator("#model-det")).toHaveText("199 states");
-  // Another example opens in its own mode.
+  await expect(opened.getByRole("checkbox", { name: "Additive mode" })).not.toBeChecked();
+  await expect(opened.locator("#model-det")).toHaveText("too large");
+  await page.getByRole("button", { name: "try the additive mode" }).click();
+  await expect(additive).toBeChecked();
+  await explored(page);
+  expect(await exactRows(page)).toEqual(finite);
+  await expect.poll(() => additiveOf(page.url())).toBeUndefined();
+  // Another example opens in the additive mode too.
+  await additive.uncheck();
   await pick(page, "Noisy iteration");
-  await expect(additive).not.toBeChecked();
+  await expect(additive).toBeChecked();
 });
 
 for (const width of [390, 1440]) {

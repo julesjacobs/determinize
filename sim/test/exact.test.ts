@@ -1,5 +1,5 @@
 // The port of Lean's finite models against the Lean CLI: for every accepted case of the corpus
-// manifest, both subjects, with and without `--additive`, test/fixtures/lean-exact.json records the
+// manifest, both subjects, in the plain and the additive mode, test/fixtures/lean-exact.json records the
 // fields of `--result`'s `.result.json` or the message the CLI prints instead
 // (scripts/lean-exact-fixtures.ts). The port must give the same fractions, state counts and
 // messages, also with the fixture's smaller limits.

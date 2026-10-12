@@ -190,9 +190,10 @@ user-chosen discretization to a continuous program.
 
 ## Additive output models
 
-`--additive` selects a separate backend. Normalization extracts the maximal outer
-suffix of already evaluated numeric-left addition frames, sums their constants
-into the transition reward, and retains one zero-addition frame as a numeric check.
+The additive backend is the default; `--no-additive` selects the plain one.
+Normalization extracts the maximal outer suffix of already evaluated numeric-left
+addition frames, sums their constants into the transition reward, and retains one
+zero-addition frame as a numeric check.
 Computed and random left operands are evaluated normally before extraction.
 Other frames, values and environments remain concrete. Right-hand-side folding,
 multiplication and accumulator abstraction are outside this implementation.
@@ -232,7 +233,7 @@ the theorem. Storm's untrusted `.additive.edges`
 sidecar preserves probability/reward pairs; generated `.storm.lean` certificates
 are checked against the source replay. Native results use `.result.lean`.
 
-The old backend remains the default. Incomplete exploration emits no new model;
+Incomplete exploration emits no new model;
 finite source syntax does not imply a finite normalized graph. Source and
 transformed programs must each be explored separately when both are needed.
 

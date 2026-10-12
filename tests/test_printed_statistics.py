@@ -11,13 +11,14 @@ import unittest
 from test_export import ROOT
 from test_results import generate, kernel
 
-# How to run each route, by the file that generates its certificate; `test_every_generator_has_a_route`
-# requires an entry for every generator that `generators` finds.
+# Each route, by the file that generates its certificate: its backend and whether it runs in the
+# additive mode. `test_every_generator_has_a_route` requires an entry for every generator that
+# `generators` finds.
 ROUTES = {
-    "lean/Determinize/Finite/Export.lean": ("built-in", []),
-    "lean/Determinize/Finite/Reward/Export.lean": ("built-in", ["--additive"]),
-    "tools/storm.py": ("Storm", []),
-    "tools/storm_additive.py": ("Storm", ["--additive"]),
+    "lean/Determinize/Finite/Export.lean": ("built-in", False),
+    "lean/Determinize/Finite/Reward/Export.lean": ("built-in", True),
+    "tools/storm.py": ("Storm", False),
+    "tools/storm_additive.py": ("Storm", True),
 }
 # The report, its key for the first moment, and the certificate.
 OUTPUTS = {"built-in": (".result.json", "answer", ".result.lean"),
@@ -60,10 +61,10 @@ def axioms(output):
 class PrintedStatisticsTests(unittest.TestCase):
     def certify(self, directory, generator, program):
         """The reported statistics and the certificate of one route."""
-        backend, options = ROUTES[generator]
+        backend, additive = ROUTES[generator]
         report, first, certificate = OUTPUTS[backend]
         if backend == "built-in":
-            result, prefix = generate(directory, program, "source", *options)
+            result, prefix = generate(directory, program, "source", additive=additive)
         else:
             if not os.environ.get("STORM_PYTHON"):
                 self.skipTest("set STORM_PYTHON for real Storm integration")
@@ -71,7 +72,8 @@ class PrintedStatisticsTests(unittest.TestCase):
             source.write_text(program)
             prefix = directory / "model"
             result = subprocess.run([os.environ["STORM_PYTHON"], ROOT / "tools/storm.py", source,
-                                     "--prefix", prefix, "--subject", "source", *options, "--skip-certificate"],
+                                     "--prefix", prefix, "--subject", "source",
+                                     *([] if additive else ["--no-additive"]), "--skip-certificate"],
                                     text=True, capture_output=True, timeout=180)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         data = json.loads(Path(str(prefix) + report).read_text())

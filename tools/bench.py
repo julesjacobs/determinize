@@ -281,7 +281,6 @@ def det_exact(model: Path, args: argparse.Namespace, temp: Path) -> dict[str, ob
     command = [
         storm_python, str(STORM), str(model), "--prefix", str(prefix),
         "--binary", str(args.binary), "--subject", "determinized",
-        "--additive",
         "--max-states", str(args.max_states),
         "--timeout", str(args.timeout),
     ]

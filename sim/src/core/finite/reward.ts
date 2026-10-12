@@ -1,4 +1,4 @@
-// A port of Lean's additive mode (`--additive`, `Finite/Reward/*`): exploration that splits off
+// A port of Lean's additive mode (the CLI's default, `Finite/Reward/*`): exploration that splits off
 // the outermost pending additions of a state as a reward on the edge that leads to it, so that a
 // loop like `acc + …` reaches finitely many states, and the statistics of the resulting reward
 // model (`Spec/RewardModel/Model.lean`), whose edges add their rewards to the eventual output.

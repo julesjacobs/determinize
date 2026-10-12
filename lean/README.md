@@ -163,8 +163,8 @@ Lean links re-pinned to `8f89190`. The previous draft in `tex/archive/` is no lo
   paper does not say that every certificate of an exact result, on all four routes, ends with
   `printedStatistics`: the reported return mass and moments as literals, in a statement that
   names only `Spec/` definitions and the literal program (see
-  [below](#certified-output-moments-and-storm)). The paper does not describe the additive
-  reward models (`--additive`, `Spec/RewardModel`) that Section 7 relies on.
+  [below](#certified-output-moments-and-storm)). The paper mentions the additive
+  reward models (`Spec/RewardModel`, the CLI's default) that Section 7 relies on in one sentence.
 - **Lean links.** `tex/lean-links.tex` pins the paper's GitHub links to `8f89190`, the Lean
   development these notes describe; the theorems' links point to `Theorems.lean`. The
   trace-preservation lemma, the convex function inequality, probability preservation as a whole
