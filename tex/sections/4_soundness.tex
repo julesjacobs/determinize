@@ -92,21 +92,21 @@ Let $\Trace$\kb{can we define this object more formally? I could not infer its m
 where each pair $(D,r)$ records the distribution primitive $D$ and sampled value $r$ of an executed $\G$-mode sampling operation along a successfully terminating execution.
 \end{definition}
 
-When the mode is clear, we simply call these \emph{traces}. Note that $\E$-mode samples do not appear in a trace: they remain random after the trace has been fixed. A trace may contain either discrete or continuous
-values, and in the latter case an individual trace may itself have probability zero.
+When the mode is clear, we simply call these \emph{traces}\kb{The preceeding def suggest that we only define traces for G-mode anyway?}. Note that $\E$-mode samples do not appear in a trace: they remain random after the trace has been fixed. A trace may contain either discrete or continuous
+values\kb{how do we distinguish between discrete and continuous values?}, and in the latter case an individual trace may itself have probability zero.\kb{what is the probability of a trace?}
 
 Now, we refine the output semantics to jointly record the trace and the
 returned value, as shown in \cref{fig:traces}. Like the original output
 measure $\law e$, this refined semantics records only executions that successfully return a real value and is therefore a subprobability measure; rejected
-or diverging executions contribute no output pair. For each $n$, the measure $\joint e n$ records executions returning after exactly $n$ steps:
+or diverging executions contribute no output pair.\kbin{can we please give the type of $\joint e n$?} For each $n$, the measure $\joint e n$ records executions returning after exactly $n$ steps:
 $\E$-mode samples are integrated out, whereas each $\G$-mode sample contributes
 its distribution primitive $D$ and sampled value $r$ to the trace $\tau$.
 Summing these measures over all $n$ steps gives the joint big-step
-subprobability measure $J_e$\leanref{trace-semantics} on $\Trace\times\Real$. Intuitively, $J_e(A\times B)$ is the probability mass
+subprobability measure $J_e$\leanref{trace-semantics} on\kb{is the measurable space clear?} $\Trace\times\Real$. Intuitively, $J_e(A\times B)$ is the probability mass
 of successfully returning executions whose trace lies in $A$ and whose
 returned value lies in $B$.
 
-The two marginals of $J_e$ recover our quantities of interest. For each measurable $A\subseteq\Trace$, its trace marginal $\trlaw e(A)$\leanref{trace-law} is the probability mass of successful executions whose trace lies in $A$. Similarly, for each measurable $B\subseteq\Real$, its output marginal $\law e(B)$\leanref{trace-erasure} is the probability mass of successful executions whose returned value lies in $B$. Evaluating both marginals on their full spaces gives
+The two marginals of $J_e$ recover our quantities of interest. For each measurable $A\subseteq\Trace$, its trace marginal $\trlaw e(A)$\leanref{trace-law} is the probability mass of successful executions whose trace lies in $A$. Similarly, for each measurable\kb{what does that mean?} $B\subseteq\Real$, its output marginal $\law e(B)$\leanref{trace-erasure} is the probability mass of successful executions whose returned value lies in $B$. Evaluating both marginals on their full spaces gives
 \[
   \trlaw e(\Trace)
   =
