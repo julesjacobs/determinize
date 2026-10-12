@@ -1,14 +1,18 @@
 // The gallery's reasons are what the simulator's check finds for each example: no premise failing
 // for those it groups first, in floating point or not; for a domain failure, a run that fails with
-// its message; and for a failure in floating point only, a run that fails at exactly 0.
+// its message; and for a failure in floating point only, a run that fails at exactly 0. Its chips
+// for finite models say what the exact values find, in Lean's additive mode.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { analyze } from "../src/core/compiler/analyze.ts";
+import type { ExactState } from "../src/core/exact.ts";
+import { createExactServer } from "../src/core/exact.ts";
 import { examples } from "../src/core/examples.ts";
+import type { ExactResponse } from "../src/core/protocol.ts";
 import { runIndex, runnerOf } from "../src/core/sampler.ts";
 import { addRuns, noRuns, runsOf } from "../src/core/statistics.ts";
-import { reasonOf } from "../src/ui/gallery.ts";
+import { finiteChip, reasonOf } from "../src/ui/gallery.ts";
 import { premiseVerdict } from "../src/ui/verdict.ts";
 
 /** The summary of `count` runs of `source` from seed 1. */
@@ -92,3 +96,42 @@ test("the Gaussian bound fails domain safety, in about one run in six", () => {
     text: "run 6 failed: uniform requires lower ≤ upper (seed 7)",
   });
 });
+
+/** Whether each program of `source` has a finite model, as the exact server finds: a model, or
+ * one with more states than the solver takes. */
+function finiteModels(source: string) {
+  const posted: ExactResponse[] = [];
+  const tasks: (() => void)[] = [];
+  const server = createExactServer({
+    post: (response) => posted.push(response),
+    defer: (task) => tasks.push(task),
+    now: () => performance.now(),
+  });
+  server.handle({ type: "exact", generation: 1, source, additive: true });
+  for (let task = tasks.shift(); task; task = tasks.shift()) task();
+  const last = posted.at(-1);
+  assert.ok(last?.done);
+  const has = (state: ExactState) => state.kind === "finite" || state.kind === "too many";
+  return { source: has(last.source), determinized: has(last.determinized) };
+}
+
+for (const example of examples) {
+  test(`${example.title}: the gallery's chip for finite models says what the exact values find`, () => {
+    const chip = finiteChip(example);
+    const models = finiteModels(example.source);
+    assert.ok(
+      !models.source || models.determinized,
+      "a source finite where its determinization isn't",
+    );
+    if (models.source && models.determinized) {
+      assert.equal(chip?.chip, "finite");
+      assert.equal(chip?.description, "Finite models: both programs have one.");
+    } else if (models.determinized) {
+      assert.equal(chip?.chip, "becomes finite");
+      assert.equal(
+        chip?.description,
+        "Finite models: the source has none, and the determinized program has one.",
+      );
+    } else assert.equal(chip, null);
+  });
+}

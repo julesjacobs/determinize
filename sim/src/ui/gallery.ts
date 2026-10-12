@@ -2,10 +2,10 @@
 // theorems don't cover them, those that the simulator's check finds no premise failing first, then
 // those that fail only in floating point.
 // Each group is an ordered list, because its order is a reading order. Each entry is a link that
-// shares the example's program at seed 1, with one sentence, whether the paper presents it, and a
-// chip that names its reason, described on hover and focus. "New program" links to an
-// empty program. Below 768 px the gallery opens as a modal dialog, above as a menu under the
-// button.
+// shares the example's program at seed 1, with one sentence, whether the paper presents it, a
+// chip that names its reason, and one where its programs have finite models, each described on
+// hover and focus. "New program" links to an empty program. Below 768 px the gallery opens as a
+// modal dialog, above as a menu under the button.
 import { effect } from "@preact/signals-core";
 import { analyze } from "../core/compiler/analyze.ts";
 import type { Example } from "../core/examples.ts";
@@ -89,14 +89,38 @@ export function reasonOf(example: Example): Reason | null {
   return null;
 }
 
+/** The chip of an example whose programs have finite models: both, or only the determinized
+ * program. */
+export function finiteChip(example: Example) {
+  if (example.finite === "both") {
+    return {
+      chip: "finite",
+      className: "chip finite",
+      description: "Finite models: both programs have one.",
+    };
+  }
+  if (example.finite === "determinized") {
+    return {
+      chip: "becomes finite",
+      className: "chip finite becomes",
+      description: "Finite models: the source has none, and the determinized program has one.",
+    };
+  }
+  return null;
+}
+
 /** A chip naming `reason`, with its description as a tooltip below it, inside `dialog`, while the
  * pointer is over either or the chip has the focus; Escape dismisses it. */
-function chip(reason: Reason, id: string, dialog: HTMLElement) {
+function chip(
+  reason: { chip: string; description: string; className: string },
+  id: string,
+  dialog: HTMLElement,
+) {
   const wrap = document.createElement("span");
   wrap.className = "chip-wrap";
   const button = document.createElement("button");
   button.type = "button";
-  button.className = reason.open ? "chip open" : "chip";
+  button.className = reason.className;
   button.textContent = reason.chip;
   button.setAttribute("aria-describedby", id);
   const tip = document.createElement("span");
@@ -224,7 +248,12 @@ export function mountGallery(
         link.href = hash;
       });
       item.append(link);
-      if (reason) item.append(" ", chip(reason, `g-tip-${links.length}`, dialog));
+      if (reason) {
+        const className = reason.open ? "chip open" : "chip";
+        item.append(" ", chip({ ...reason, className }, `g-tip-${links.length}`, dialog));
+      }
+      const finite = finiteChip(example);
+      if (finite) item.append(" ", chip(finite, `g-finite-${links.length}`, dialog));
       const line = document.createElement("span");
       line.className = "g-line";
       line.textContent = ` ${example.explanation}`;

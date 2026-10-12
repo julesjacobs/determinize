@@ -286,7 +286,7 @@
   }
 
   .gallery li {
-    padding: var(--space-1) 0;
+    padding: 0.125rem 0;
   }
 
   /* The premise that an example fails, described on hover and focus; one that the check finds
@@ -303,6 +303,17 @@
   .chip.open {
     border-color: var(--muted);
     color: var(--ink);
+  }
+
+  /* Where an example's programs have finite models, in the determinized program's colour: in
+     outline where both have, solid where determinizing made one. */
+  .chip.finite {
+    border-color: var(--change);
+    color: var(--ink);
+  }
+
+  .chip.finite.becomes {
+    background: var(--change-fill);
   }
 
   /* The description sits right below its chip, so that the pointer can move onto it; clicks pass

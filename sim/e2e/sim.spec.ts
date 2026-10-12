@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { deflateRawSync, inflateRawSync } from "node:zlib";
 import { AxeBuilder } from "@axe-core/playwright";
-import type { Page, Worker } from "@playwright/test";
+import type { Locator, Page, Worker } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 import type { Store } from "../src/ui/store.ts";
 
@@ -1966,7 +1966,7 @@ test("the gallery groups the examples by the premise they fail, each with a chip
     "Lean rejects the written modes",
     "A run fails a domain check",
   ]);
-  await expect(gallery.getByRole("list").first().locator(".chip")).toHaveCount(0);
+  await expect(gallery.getByRole("list").first().locator(".chip:not(.finite)")).toHaveCount(0);
   // The chip's description shows on keyboard focus, and Escape hides it before it closes the
   // gallery.
   await gallery.getByRole("link", { name: "Recursive gamma", exact: true }).focus();
@@ -2002,6 +2002,33 @@ test("the gallery groups the examples by the premise they fail, each with a chip
   expect(tipBox.y).toBeLessThanOrEqual(chipBox.y + chipBox.height + 1);
   await page.mouse.move(tipBox.x + 8, tipBox.y + tipBox.height / 2, { steps: 4 });
   await expect(tooltip).toBeVisible();
+});
+
+test("the gallery marks the examples whose programs have finite models", async ({ page }) => {
+  await page.goto(simulator);
+  await page.getByRole("button", { name: /^Example: / }).click();
+  const gallery = page.getByRole("dialog", { name: "Examples" });
+  const item = (title: string) =>
+    gallery.getByRole("listitem").filter({
+      has: page.getByRole("link", { name: title, exact: true }),
+    });
+  await expect(item("Noisy product").locator(".chip")).toHaveCount(0);
+  await expect(item("Train delay").locator(".chip")).toHaveText(["finite"]);
+  await expect(item("Noisy iteration").locator(".chip")).toHaveText(["becomes finite"]);
+  await expect(item("Gaussian bound").locator(".chip")).toHaveText([
+    "a run fails",
+    "becomes finite",
+  ]);
+  const becomes = item("Noisy iteration").getByRole("button", { name: "becomes finite" });
+  await becomes.focus();
+  await expect(becomes).toHaveAccessibleDescription(
+    /^Finite models: the source has none, and the determinized program has one/,
+  );
+  // In the determinized program's colour, not the warning's.
+  const border = (chip: Locator) => chip.evaluate((button) => getComputedStyle(button).borderColor);
+  expect(await border(becomes)).not.toBe(
+    await border(item("Gaussian bound").getByRole("button", { name: "a run fails" })),
+  );
 });
 
 test("a click on an entry that a chip's description covers opens the entry", async ({ page }) => {

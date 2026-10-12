@@ -27,6 +27,9 @@ export interface Example {
   fromPaper: boolean;
   /** Whether the example opens with the figure of its chains. */
   chains?: true;
+  /** Which of its programs have finite models in Lean's additive mode, where any has: both, or
+   * only the determinized program, whose determinization made it finite. */
+  finite?: "both" | "determinized";
   /** The program, without the file's final line break. */
   source: string;
   /** A domain failure that only the program's runs show, worded as the simulator's check words
@@ -57,6 +60,7 @@ export const examples: Example[] = [
   },
   {
     id: "simulator/gauss-random-walk",
+    finite: "determinized",
     title: "Gaussian random walk",
     explanation:
       "A step function passed to reduce, with the output projected to the final position; every position becomes its mean, so the final one is zero.",
@@ -73,6 +77,7 @@ export const examples: Example[] = [
   },
   {
     id: "paper/noisy-iteration",
+    finite: "determinized",
     title: "Noisy iteration",
     explanation: "Without the Gaussian noise, the loop only visits x = 0 and x = 1.",
     fromPaper: true,
@@ -80,6 +85,7 @@ export const examples: Example[] = [
   },
   {
     id: "simulator/train-delay",
+    finite: "both",
     title: "Train delay",
     explanation: "A coin picks the train; the delay becomes its mean, so only the coin branches.",
     fromPaper: false,
@@ -88,6 +94,7 @@ export const examples: Example[] = [
   },
   {
     id: "simulator/asymmetric-walk",
+    finite: "determinized",
     title: "Asymmetric random walk",
     explanation: "Uniform steps until a coin flip; only the flips stay random.",
     fromPaper: false,
@@ -95,6 +102,7 @@ export const examples: Example[] = [
   },
   {
     id: "simulator/retransmission",
+    finite: "determinized",
     title: "Retransmission",
     explanation: "Retries over a channel that turns good or bad; only coin flips stay random.",
     fromPaper: false,
@@ -128,6 +136,7 @@ export const examples: Example[] = [
   },
   {
     id: "simulator/gauss-bound",
+    finite: "determinized",
     title: "Gaussian bound",
     explanation:
       "A uniform draw up to a Gaussian draw, which falls below 0 in about one run in six.",
@@ -147,6 +156,7 @@ export const examples: Example[] = [
   },
   {
     id: "loops/geometric-addition",
+    finite: "both",
     title: "Geometric addition",
     explanation: "A loop that runs a random number of times.",
     fromPaper: false,
