@@ -7,6 +7,7 @@
 // so that structurally equal states, which Lean's exploration identifies, are the same object, and
 // an id names each. A draw's frame also records the site it evaluates, for the panel's message;
 // the site isn't part of the frame's structure, so of equal frames the first one's site is kept.
+import type { Mode } from "../compiler/ast.ts";
 import type { Action, Program } from "../compiler/core.ts";
 import type { Rational } from "./rational.ts";
 import {
@@ -117,6 +118,14 @@ export class Failure {
     if (this.kind === "unsupported") return `unsupported execution: ${this.detail}`;
     return "export requires a numeric terminal result";
   }
+}
+
+/** A draw with a mode that a state takes: its site, as `Machine.draw` has it, and the sites that
+ * the state may stand for (`Machine.sitesLike`). */
+export interface Draw {
+  at: Program;
+  mode: Mode;
+  sites: Program[];
 }
 
 /** One step's result, as Lean's `Step`: the successors with their probabilities, in Lean's order,
@@ -292,6 +301,24 @@ export class Machine {
     }
     const code = this.code(at);
     return sites.filter((site) => this.code(site) === code);
+  }
+
+  private readonly drawn = new Map<Program, Draw>();
+
+  /** The draw that `state` takes, where its step draws with a mode: a value delivered to a draw
+   * frame with no parameter left to evaluate, or to a discrete frame. */
+  drawAt(state: State): Draw | null {
+    if (state.tag !== "deliver" || !state.stack) return null;
+    const frame = state.stack.head;
+    const drawing =
+      frame.tag === "discrete" || (frame.tag === "draw" && frame.pending.length === 0);
+    if (!drawing || frame.action === "mean") return null;
+    let draw = this.drawn.get(frame.at);
+    if (!draw) {
+      draw = { at: frame.at, mode: frame.action, sites: this.sitesLike(frame.at) };
+      this.drawn.set(frame.at, draw);
+    }
+    return draw;
   }
 
   /** The state that runs `program`, as Lean's `initialState`. */

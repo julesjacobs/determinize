@@ -2,7 +2,9 @@
 // every exact statistic: each complete model of test/fixtures/lean-exact.json, of both subjects in
 // both modes, is contracted, turned back into a model and solved, and must give the Lean CLI's
 // fractions, or, where the model has more states than the solver takes, the port's own solve of the
-// whole model. The unit tests check the chain's shape on small models.
+// whole model. Every branching node of those chains has the draw it branches at, and no node of a
+// determinized program draws an E site, since determinization replaced those by their means. The
+// unit tests check the chain's shape on small models.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -10,6 +12,7 @@ import { analyze } from "../src/core/compiler/analyze.ts";
 import type { Chain } from "../src/core/finite/chain.ts";
 import { contract } from "../src/core/finite/chain.ts";
 import { explore, subjectProgram } from "../src/core/finite/explore.ts";
+import type { Draw } from "../src/core/finite/machine.ts";
 import type { Model, StateKind } from "../src/core/finite/model.ts";
 import type { Rational } from "../src/core/finite/rational.ts";
 import { fraction, isZero, one, rational, zero } from "../src/core/finite/rational.ts";
@@ -151,6 +154,23 @@ for (const entry of fixture.cases) {
           fixtureStatistics(outcome) ?? statistics(solve(explored.model, Number.POSITIVE_INFINITY)),
         );
         compared += 1;
+      });
+      test(`the chain of ${entry.file}, ${subject}, ${mode}, branches at draws`, () => {
+        const explored = exploration(entry.file, subject, mode === "additive");
+        assert.equal(explored.kind, "complete");
+        if (explored.kind !== "complete") return;
+        const { model, draws } = explored;
+        for (const node of contract(model).nodes) {
+          const draw: Draw | null = draws[node.state];
+          if (node.kind !== "branch") continue;
+          assert.ok(draw, `state ${node.state} branches without a draw`);
+          // The draw's mode is its site's, and every site it may stand for has that mode.
+          assert.ok(draw.sites.length > 0);
+          for (const site of [draw.at, ...draw.sites]) {
+            assert.ok("site" in site && site.site === draw.mode, `${site.kind} at ${site.from}`);
+          }
+          assert.ok(draw.mode === "G" || (draw.mode === "E" && subject === "source"));
+        }
       });
     }
   }
