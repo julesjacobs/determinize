@@ -157,7 +157,7 @@ $\trlaw e$-almost every trace\kb{what is $\trlaw e$-almost every trace?} $\tau$,
   =
   \delta_{\Expect[e\mid\tau]}.
 \]
-In particular,
+In particular,\kb{why do we know that these two expectations are real numbers?}
 \[
   \Expect[e\mid\tau],\ \Expect[\trans e\mid\tau]\in\Real,
   \qquad
@@ -166,7 +166,7 @@ In particular,
 \end{theorem}
 
 This statement does not require the program to have a global
-expectation. It states that for all traces except a set of measure zero, the transformed program returns the average output of the original program under some fixed trace. When a global expectation is defined, however, \cref{thm:trace-soundness} can be integrated
+expectation. It states that for all traces except a set of measure zero\kb{I can't parse this sentence}, the transformed program returns the average output of the original program under some fixed trace. When a global expectation is defined, however, \cref{thm:trace-soundness} can be integrated
 over traces to obtain our global soundness guarantees, which we discuss next.
 
 \kbin{I think a small example illustrating this theorem would help.}
@@ -216,7 +216,7 @@ q_e.
 \leanref{output-mass}
 \]
 
-Now, since determinization preserves the trace distribution and replaces each conditional output distribution by its mean, averaging over traces preserves expectation. However, the requirement that the global expectation be well-defined is essential. Tracewise soundness guarantees a finite conditional mean for almost every fixed trace, but averaging these means over all traces need not yield a well-defined global expectation. Formally, we can state:
+Now, since determinization preserves the trace distribution and replaces each conditional output distribution by its mean, averaging over traces preserves expectation. However, the requirement that the global expectation be well-defined is essential. Tracewise soundness guarantees a finite conditional mean for almost\kb{what does that mean?} every fixed trace, but averaging these means over all traces need not yield a well-defined global expectation.\kb{can we give an example of this phenomenon?} Formally, we can state:
 
 \begin{theorem}[Expectation preservation\leanref{expectation-preservation}]
 \label{thm:expectation}
@@ -242,7 +242,7 @@ then $q_{\trans e} > 0$ and $\trans e$ has a finite second moment, and
 \]
 \end{theorem}
 
-This variance reduction is a special case of a more general fact: determinization cannot increase the expected value of any nonnegative convex function of the program's return value. This follows by applying Jensen's inequality tracewise. In particular, when the second moment is finite, choosing
+This variance reduction is a special case of a more general fact: determinization cannot increase the expected value of any nonnegative convex function of the program's return value. This follows by applying Jensen's inequality\kb{cite?} tracewise. In particular, when the second moment is finite, choosing
 $\varphi(r)=(r-\Expect_{\mathrm{ret}}[e])^2$ and using expectation preservation yields the variance non-increase result above.
 
 \begin{theorem}[Convex function inequality\leanref{convex-function-inequality}]
