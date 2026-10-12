@@ -98,12 +98,12 @@ const states: { name: string; open: (page: Page) => Promise<void> }[] = [
     },
   },
   {
-    name: "the exact values at the state limit, with the additive mode offered",
+    name: "the exact values at the state limit",
     open: async (page) => {
-      await page.goto("sim/");
-      await pick(page, "Asymmetric random walk");
-      await page.getByRole("checkbox", { name: "Additive mode" }).uncheck();
+      // A counter that the loop carries as an argument, so that its states never repeat.
+      await page.goto(linkTo("(rec f n => if flip(0.5) then n else f (n + 1)) 0"));
       await sampled(page);
+      await expect(page.locator("#model-det")).toHaveText("too large", { timeout: 30_000 });
     },
   },
   {

@@ -1431,19 +1431,6 @@
     min-height: 0;
   }
 
-  .additive {
-    display: inline-flex;
-    flex: none;
-    align-items: center;
-    gap: var(--space-2);
-    min-height: var(--target-min);
-    cursor: pointer;
-  }
-
-  .additive input {
-    margin: 0;
-  }
-
   table.stats tr.exact-value {
     height: calc(2lh + 2 * var(--space-1));
   }
@@ -1489,17 +1476,6 @@
   .exact-why[colspan] p {
     margin-inline: auto;
     text-align: center;
-  }
-
-  .try-additive {
-    min-height: 0;
-    padding: 0;
-    border: 0;
-    background: none;
-    color: var(--ink);
-    text-decoration: underline;
-    text-decoration-thickness: 1px;
-    text-underline-offset: 0.18em;
   }
 
   .sub {

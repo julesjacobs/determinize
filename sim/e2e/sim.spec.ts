@@ -1494,14 +1494,18 @@ test("exploring the dungeon in its worker to Lean's state limit leaves no long t
     ["states", 10001],
     ["states", 10001],
   ]);
-  // Each switch of the mode explores both programs again, to the same limit in both modes, while
-  // the runs and the step table stay.
+  // Each edit, a final line break added or taken away, explores both programs again to the limit.
   await watchLongTasks(page);
-  const switches = Array.from({ length: 5 }, () => async () => {
-    await page.evaluate(async () => {
-      const store = await window.DeterminizeSim.ready;
-      store.additive.value = !store.additive.value;
-    });
+  const program = await page.evaluate(async () => (await window.DeterminizeSim.ready).source.value);
+  const switches = Array.from({ length: 5 }, (_, i) => async () => {
+    await page.evaluate(
+      async (text) => {
+        const store = await window.DeterminizeSim.ready;
+        store.source.value = text;
+        store.commitSource();
+      },
+      i % 2 === 0 ? `${program}\n` : program,
+    );
     await expect.poll(() => exactKinds(page), { timeout: 30_000 }).toEqual(["limit", "limit"]);
   });
   const { median, each } = await longTasksPer(page, switches);

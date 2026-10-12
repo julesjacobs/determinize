@@ -51,7 +51,6 @@ function start(decoded: Decoded): Store {
       seed: initial.seed,
       exampleId: initial.example,
       view: initial.view,
-      additive: initial.additive,
       chainsOpen: initial.chains,
       theme: storedTheme(),
       // On the page's own thread, a smaller first batch keeps the first distributions quick.
@@ -249,11 +248,10 @@ function restore(store: Store, editor: EditorView, decoded: Decoded) {
   if (decoded.kind === "error") showNotice(store, decoded.message);
   if (decoded.kind !== "state") return;
   dismissNotice();
-  const { source, seed, example, view, additive, chains } = decoded.state;
+  const { source, seed, example, view, chains } = decoded.state;
   batch(() => {
     store.exampleId.value = example;
     store.view.value = view ?? "outputs";
-    store.additive.value = additive ?? true;
     store.chainsOpen.value = chains ?? false;
     replaceDoc(editor, sharedSource({ source, example }));
     store.runAt(seed);

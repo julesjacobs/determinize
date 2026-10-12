@@ -1,8 +1,8 @@
-// The state that a link to the simulator carries: the program, the seed, the example, the chart,
-// the mode of the exact values and whether the chains are open, as the fragment `#v1=` followed by
-// the base64url of the deflate-raw-compressed JSON. Links that also say whether the symbolic state shows are read
-// without it, as the state always shows, and so are links that ask for the additive mode, the
-// default.
+// The state that a link to the simulator carries: the program, the seed, the example, the chart
+// and whether the chains are open, as the fragment `#v1=` followed by the base64url of the
+// deflate-raw-compressed JSON. Links that also say whether the symbolic state shows are read
+// without it, as the state always shows, and so are links that name a mode of the exact values,
+// which come from the additive mode only.
 
 export interface SharedState {
   source: string;
@@ -11,8 +11,6 @@ export interface SharedState {
   example: string;
   /** The chart of the distributions band, when it is the plot against a G draw. */
   view?: "against";
-  /** Whether the exact values come from the additive mode's models, when they don't. */
-  additive?: false;
   /** Whether the figure of the programs' chains is open, when it is. */
   chains?: true;
 }
@@ -70,13 +68,12 @@ function fromBase64Url(text: string) {
 
 /** The fragment of a link to `state`. */
 export async function encodeShare(state: SharedState) {
-  const { source, seed, example, view, additive, chains } = state;
+  const { source, seed, example, view, chains } = state;
   const json = JSON.stringify({
     source,
     seed,
     example,
     ...(view === "against" ? { view } : {}),
-    ...(additive === false ? { additive } : {}),
     ...(chains === true ? { chains } : {}),
   });
   const stream = new Blob([json]).stream().pipeThrough(new CompressionStream("deflate-raw"));
@@ -103,15 +100,13 @@ export async function decodeShare(hash: string): Promise<Decoded> {
     return unreadable;
   }
   if (typeof json !== "object" || json === null) return unreadable;
-  const { source, seed, example, view, additive, chains } = json as Record<string, unknown>;
+  const { source, seed, example, view, chains } = json as Record<string, unknown>;
   if (typeof source !== "string" || typeof example !== "string") return unreadable;
   if (typeof seed !== "number" || !Number.isSafeInteger(seed)) return unreadable;
   if (view !== undefined && view !== "against") return unreadable;
-  if (additive !== undefined && typeof additive !== "boolean") return unreadable;
   if (chains !== undefined && typeof chains !== "boolean") return unreadable;
   const state: SharedState = { source, seed, example };
   if (view !== undefined) state.view = view;
-  if (additive === false) state.additive = additive;
   if (chains === true) state.chains = chains;
   return { kind: "state", state };
 }

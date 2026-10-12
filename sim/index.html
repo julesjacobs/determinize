@@ -132,8 +132,8 @@
         <div>
           <dt>Additive mode</dt>
           <dd>
-            The default exploration, which turns a loop's pending outer sums into rewards on the
-            model's edges (<a
+            How the exact values' models are explored, as by default in Lean's command-line tool: a
+            loop's pending outer sums become rewards on the model's edges (<a
               href="https://julesjacobs.com/determinize/docs/Determinize/Spec/RewardModel/Model.html#Determinize.Spec.RewardModel.Model"
               >RewardModel.Model</a
             >), so that a loop like <code>x + f(n - 1)</code> reaches finitely many states.
@@ -393,15 +393,6 @@
                       >
                         Show the Markov chains
                       </button>
-                      <label class="additive"
-                        ><input id="additive" type="checkbox" aria-describedby="additive-help">
-                        Additive mode</label
-                      >
-                      <span id="additive-help" class="vh"
-                        >In the additive mode, a loop's pending outer sums become rewards on the
-                        model's edges, so that a loop like x + f(n - 1) reaches finitely many
-                        states.</span
-                      >
                     </div>
                   </th>
                 </tr>

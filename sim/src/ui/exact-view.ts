@@ -1,8 +1,8 @@
 // The exact values in the statistics table: each program's finite model, explored by the exact
 // worker, with its mean, variance and probability of returning as fractions over their decimals,
 // below the estimates from the runs; or why the program has none, in the cells that its values
-// would take, with the additive mode to try where exploration stops at Lean's state limit. The
-// rows keep their heights whatever exploration finds, so that nothing moves when it ends.
+// would take. The models are those of Lean's additive mode, the CLI's default. The rows keep their
+// heights whatever exploration finds, so that nothing moves when it ends.
 import type { ReadonlySignal } from "@preact/signals-core";
 import { computed, effect } from "@preact/signals-core";
 import type { Exact, ExactState, Range } from "../core/exact.ts";
@@ -116,11 +116,10 @@ function hasChain(state: ExactState) {
  * hidden. */
 export function mountExactView(
   table: HTMLElement,
-  store: Pick<Store, "exact" | "additive" | "analysis" | "samples" | "samplesReady">,
+  store: Pick<Store, "exact" | "analysis" | "samples" | "samplesReady">,
 ): ReadonlySignal<ExactValues | null> {
   const $ = <E extends Element>(id: string) => table.querySelector(`#${id}`) as E;
   const group = $<HTMLElement>("exact");
-  const additive = $<HTMLInputElement>("additive");
   const rows = ["exact-mean", "exact-variance", "exact-returned"].map((id) => $<HTMLElement>(id));
   // The rows' headers link their Lean definitions; where neither program has values, they are
   // plain and muted, so that the rows read as the one statement beside them.
@@ -130,15 +129,6 @@ export function mountExactView(
     source: $<HTMLElement>("model-source"),
     determinized: $<HTMLElement>("model-det"),
   };
-
-  additive.addEventListener("change", () => {
-    store.additive.value = additive.checked;
-  });
-  table.addEventListener("click", (event) => {
-    if (event.target instanceof HTMLElement && event.target.closest(".try-additive")) {
-      store.additive.value = true;
-    }
-  });
 
   // The program whose estimates the table shows, which changes with a new program, not a batch.
   const estimated = computed(() => store.samples.value.source);
@@ -157,7 +147,6 @@ export function mountExactView(
   });
 
   effect(() => {
-    additive.checked = store.additive.value;
     const exact = shown.value;
     if (!exact) {
       group.hidden = true;
@@ -168,14 +157,9 @@ export function mountExactView(
     if (exact.done) group.removeAttribute("aria-busy");
     else group.setAttribute("aria-busy", "true");
     const programs = [exact.programs.source, exact.programs.determinized];
-    const reasons = programs.map((state) => {
-      const reason = reasonText(state, exact.source);
-      // Where exploration stops at the state limit, the additive mode may need fewer states.
-      if (reason === null || state.kind !== "limit" || state.limit !== "states") return reason;
-      return exact.additive ? reason : reason.replace(/\.$/, "; try the additive mode.");
-    });
+    const reasons = programs.map((state) => reasonText(state, exact.source));
     const why = (text: string, span: number) =>
-      `<td class="exact-why" rowspan="3"${span > 1 ? ` colspan="${span}"` : ""}><p class="sub">${escapeHtml(text).replace("try the additive mode", '<button class="try-additive" type="button">try the additive mode</button>')}</p></td>`;
+      `<td class="exact-why" rowspan="3"${span > 1 ? ` colspan="${span}"` : ""}><p class="sub">${escapeHtml(text)}</p></td>`;
     const cells = programs.map((state, i) => {
       if (state.kind === "finite") {
         return [

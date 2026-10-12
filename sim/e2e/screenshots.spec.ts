@@ -63,15 +63,6 @@ const states: State[] = [
   { name: "noisy-iteration", example: "Noisy iteration", run: true, steps: 2 },
   { name: "asymmetric-walk", example: "Asymmetric random walk", run: true },
   {
-    name: "asymmetric-walk-plain",
-    example: "Asymmetric random walk",
-    run: true,
-    finally: async (page) => {
-      await page.getByRole("checkbox", { name: "Additive mode" }).uncheck();
-      await expect(page.locator("#model-det")).toHaveText("too large");
-    },
-  },
-  {
     name: "gallery",
     example: "Noisy product",
     run: true,

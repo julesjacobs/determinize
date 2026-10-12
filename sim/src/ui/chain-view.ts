@@ -138,7 +138,7 @@ function columnOf(
   const inPane = printedLines(printed, exact.source);
   const lines = (sites: Range[]) =>
     (subject === "determinized" && inPane(sites)) || sourceLines(sites, exact.source);
-  const text = chainText(chain, exact.source, exact.additive, lines);
+  const text = chainText(chain, exact.source, true, lines);
   return { kind: "drawing", states, chain, text, dots: chainDots(text, chain.edges) };
 }
 
@@ -358,7 +358,7 @@ export function mountChainView(
       body.innerHTML = `<div class="chain-scroll">${svgMarkup(subject, column, layout)}</div>`;
       table.innerHTML = tableMarkup(subject, column);
     }
-    about.innerHTML = aboutMarkup(exact.additive, sums, kinds.size > 0);
+    about.innerHTML = aboutMarkup(sums, kinds.size > 0);
     key.innerHTML = keyMarkup(kinds, sums);
     painted = true;
     key.hidden = kinds.size === 0;
@@ -470,7 +470,7 @@ export function mountChainView(
       source: columnOf("source", exact.programs.source, exact, pane),
       determinized: columnOf("determinized", exact.programs.determinized, exact, pane),
     };
-    const plan = JSON.stringify([exact.source, exact.additive, planned]);
+    const plan = JSON.stringify([exact.source, planned]);
     if (stale && painted) {
       busy(true);
       return;
@@ -654,10 +654,9 @@ function mountInfo(info: HTMLButtonElement, about: HTMLElement) {
 
 /** What the drawings are: Lean's models with their probability-1 steps contracted, how their nodes
  * are numbered, and where they add rewards on the way, how to read those. */
-function aboutMarkup(additive: boolean, sums: boolean, drawings: boolean) {
-  const model = additive
-    ? '<a href="https://julesjacobs.com/determinize/docs/Determinize/Spec/RewardModel/Model.html#Determinize.Spec.RewardModel.Model" title="RewardModel, in the Lean development"><code>RewardModel</code></a>'
-    : '<a href="https://julesjacobs.com/determinize/docs/Determinize/Spec/FiniteModel/Model.html#Determinize.Spec.FiniteModel.Model" title="Model, in the Lean development"><code>Model</code></a>';
+function aboutMarkup(sums: boolean, drawings: boolean) {
+  const model =
+    '<a href="https://julesjacobs.com/determinize/docs/Determinize/Spec/RewardModel/Model.html#Determinize.Spec.RewardModel.Model" title="RewardModel, in the Lean development"><code>RewardModel</code></a>';
   const sum = sums
     ? " Each + label adds to the output: a run returns the sum of the + labels on its path."
     : "";
