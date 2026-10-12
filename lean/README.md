@@ -166,12 +166,10 @@ Lean links re-pinned to `8f89190`. The previous draft in `tex/archive/` is no lo
   [below](#certified-output-moments-and-storm)). The paper mentions the additive
   reward models (`Spec/RewardModel`, the CLI's default) that Section 7 relies on in one sentence.
 - **Lean links.** `tex/lean-links.tex` pins the paper's GitHub links to `8f89190`, the Lean
-  development these notes describe; the theorems' links point to `Theorems.lean`. The
-  trace-preservation lemma, the convex function inequality, probability preservation as a whole
-  (only its two equations are linked) and Section 5 have no link yet. `main.tex` builds the
-  anonymous review version, which links to a snapshot on apndx.org instead. That snapshot
-  predates the verified inference (it has no `Spec/Inference.lean`), so the review build's
-  links are off until the snapshot is regenerated from `8f89190`.
+  development these notes describe; the theorems' links point to `Theorems.lean`. `main.tex`
+  builds the anonymous review version, which links to a snapshot on apndx.org instead. That
+  snapshot predates the verified inference (it has no `Spec/Inference.lean`), so the review
+  build's links are off until the snapshot is regenerated from `8f89190`.
 
 ## Style
 
