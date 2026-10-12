@@ -25,6 +25,8 @@ export interface Example {
   explanation: string;
   /** Whether the paper presents the program. */
   fromPaper: boolean;
+  /** Whether the example opens with the figure of its chains. */
+  chains?: true;
   /** The program, without the file's final line break. */
   source: string;
   /** A domain failure that only the program's runs show, worded as the simulator's check words
@@ -81,6 +83,7 @@ export const examples: Example[] = [
     title: "Train delay",
     explanation: "A coin picks the train; the delay becomes its mean, so only the coin branches.",
     fromPaper: false,
+    chains: true,
     source: trainDelay.trimEnd(),
   },
   {

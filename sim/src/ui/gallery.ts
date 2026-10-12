@@ -214,7 +214,12 @@ export function mountGallery(
       link.dataset.example = example.id;
       // Until its fragment is computed, a link opens the example in the current state's place.
       link.href = "#";
-      const shared = { source: example.source, seed: gallerySeed, example: example.id };
+      const shared = {
+        source: example.source,
+        seed: gallerySeed,
+        example: example.id,
+        ...(example.chains ? { chains: true as const } : {}),
+      };
       void encodeShare(shared).then((hash) => {
         link.href = hash;
       });

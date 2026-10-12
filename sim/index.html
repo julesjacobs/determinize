@@ -140,6 +140,15 @@
           </dd>
         </div>
         <div>
+          <dt>Markov chain</dt>
+          <dd>
+            A program's finite model with each step of probability 1 contracted, shown below the
+            distributions with "Show the Markov chains": a node is where a run draws, returns, is
+            rejected or diverges. A source branches at its E and its G draws; its determinized
+            program only at the G draws, as the E draws are replaced by their means.
+          </dd>
+        </div>
+        <div>
           <dt>Variance-reduction factor</dt>
           <dd>The source's variance divided by the determinized program's, over returned runs.</dd>
         </div>
@@ -375,6 +384,15 @@
                           ></span
                         >
                       </p>
+                      <button
+                        id="chains-toggle"
+                        class="chains-toggle absent"
+                        type="button"
+                        aria-controls="chains"
+                        aria-expanded="false"
+                      >
+                        Show the Markov chains
+                      </button>
                       <label class="additive"
                         ><input id="additive" type="checkbox" aria-describedby="additive-help">
                         Additive mode</label
@@ -444,6 +462,56 @@
             <p id="list-det"></p>
           </div>
         </div>
+        <figure
+          id="chains"
+          class="chains"
+          aria-labelledby="chains-title"
+          aria-describedby="chains-about"
+          hidden
+        >
+          <figcaption class="chains-head">
+            <h3 id="chains-title">Markov chains</h3>
+            <button
+              id="chains-info"
+              class="info"
+              type="button"
+              aria-label="About the Markov chains"
+              aria-expanded="false"
+              aria-controls="chains-about"
+            >
+              <span aria-hidden="true">i</span>
+            </button>
+            <div id="chains-about" class="info-pop" popover="manual"></div>
+          </figcaption>
+          <div class="chain-columns">
+            <section class="chain-column" data-subject="source" aria-labelledby="chain-name-source">
+              <h4 class="chain-head">
+                <span id="chain-name-source" class="t-source">Source</span>
+                <span id="chain-count-source" class="sub"></span>
+              </h4>
+              <div id="chain-source"></div>
+            </section>
+            <section
+              class="chain-column"
+              data-subject="determinized"
+              aria-labelledby="chain-name-det"
+            >
+              <h4 class="chain-head">
+                <span id="chain-name-det" class="t-det">Determinized</span>
+                <span id="chain-count-det" class="sub"></span>
+              </h4>
+              <div id="chain-det"></div>
+            </section>
+          </div>
+          <ul id="chain-key" class="chain-key" aria-label="Key"></ul>
+          <details class="as-table chain-tables">
+            <summary>Show the chains as tables</summary>
+            <div class="chain-columns">
+              <div id="chain-table-source" data-subject="source"></div>
+              <div id="chain-table-det" data-subject="determinized"></div>
+            </div>
+          </details>
+        </figure>
         <details id="as-table" class="as-table" hidden>
           <summary>Show the histograms as a table</summary>
           <div id="bins-table"></div>

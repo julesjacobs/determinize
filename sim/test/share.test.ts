@@ -84,3 +84,17 @@ test("a link carries the plain mode of the exact values, and reads the additive 
   const fragment = await fragmentOf(JSON.stringify({ ...additive, additive: "yes" }));
   assert.deepEqual(await decodeShare(fragment), unreadable);
 });
+
+test("a link carries an open figure of the chains, and only an open one", async () => {
+  const state: SharedState = { source: "1", seed: 3, example: "", chains: true };
+  assert.deepEqual(await decodeShare(await encodeShare(state)), { kind: "state", state });
+  const closed = { source: "1", seed: 3, example: "" };
+  assert.equal(await encodeShare(closed), await fragmentOf(JSON.stringify(closed)));
+  const explicit = await fragmentOf(JSON.stringify({ ...closed, chains: false }));
+  assert.deepEqual(await decodeShare(explicit), { kind: "state", state: closed });
+  const fragment = await fragmentOf(JSON.stringify({ ...closed, chains: 1 }));
+  assert.deepEqual(await decodeShare(fragment), {
+    kind: "error",
+    message: "This link could not be read.",
+  });
+});

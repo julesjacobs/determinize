@@ -1,6 +1,7 @@
 // Linked highlighting between the step table and the two program panes: the lines of the part of
 // the source that the current or hovered step reduces, in the source and at its counterpart in the
-// determinized program, and the rows that reduce a hovered sample site. The determinized pane
+// determinized program, and the rows that reduce a hovered sample site; and the lines of the sites
+// of a chain's node under the pointer or the focus. The determinized pane
 // shows a printed program whose nodes keep the spans of the source they stand for, so a source
 // span is found there through the printer's ranges.
 import type { EditorState, Extension, RangeSet, RangeValue } from "@codemirror/state";
@@ -16,7 +17,8 @@ export interface TextRange {
   to: number;
 }
 
-export const setLinked = StateEffect.define<TextRange | null>();
+/** The ranges whose lines an editor highlights. */
+export const setLinked = StateEffect.define<TextRange[]>();
 
 /** The first and the last line of `range`, if it fits the document. */
 function linesOf(state: EditorState, range: TextRange | null) {
@@ -27,7 +29,7 @@ function linesOf(state: EditorState, range: TextRange | null) {
   };
 }
 
-/** A field of `mark` on the start of each line of the linked range. */
+/** A field of `mark` on the start of each line of the linked ranges. */
 function linkedField<T extends RangeValue>(mark: T) {
   return StateField.define<RangeSet<T>>({
     create: () => new RangeSetBuilder<T>().finish(),
@@ -35,9 +37,13 @@ function linkedField<T extends RangeValue>(mark: T) {
       let next = value.map(tr.changes);
       for (const effect of tr.effects) {
         if (!effect.is(setLinked)) continue;
-        const lines = linesOf(tr.state, effect.value);
+        const marked = new Set<number>();
+        for (const range of effect.value) {
+          const lines = linesOf(tr.state, range);
+          for (let line = lines?.first ?? 1; lines && line <= lines.last; line++) marked.add(line);
+        }
         const builder = new RangeSetBuilder<T>();
-        for (let line = lines?.first ?? 1; lines && line <= lines.last; line++) {
+        for (const line of [...marked].sort((a, b) => a - b)) {
           const from = tr.state.doc.line(line).from;
           builder.add(from, from, mark);
         }
@@ -64,6 +70,8 @@ export function revealLines(view: EditorView, range: TextRange | null) {
   const to = view.state.doc.line(lines.last).to;
   view.requestMeasure({
     read(view) {
+      // The text may have changed since the request.
+      if (to > view.state.doc.length) return null;
       const scroller = view.scrollDOM;
       // Where the first line starts in the scroller's content.
       const start = view.documentTop - scroller.getBoundingClientRect().top + scroller.scrollTop;

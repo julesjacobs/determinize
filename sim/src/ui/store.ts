@@ -131,6 +131,11 @@ export interface Store {
   additive: Signal<boolean>;
   /** The exact values of the checked program; null where Lean rejects it. */
   exact: ReadonlySignal<ExactValues | null>;
+  /** Whether the figure of both programs' chains is open. */
+  chainsOpen: Signal<boolean>;
+  /** The sites of the chain's nodes under the pointer or the focus, as ranges of `source`, the
+   * program that the chain is of; null where no node is. */
+  chainSites: Signal<{ source: string; sites: Span[] } | null>;
   /** Analyzes and runs the editor's text now. */
   commitSource: () => void;
   /** Analyzes the editor's text now and runs it at `seed`. */
@@ -250,6 +255,7 @@ export function createStore(
      * of its runs arrive. */
     firstBatch?: number;
     additive?: boolean;
+    chainsOpen?: boolean;
   },
   send: (request: Request) => void,
   sendTrace: (request: TraceRequest | TracePageRequest) => void,
@@ -311,6 +317,8 @@ export function createStore(
   });
   const additive = signal(initial.additive ?? true);
   const exact = signal<ExactValues | null>(null);
+  const chainsOpen = signal(initial.chainsOpen ?? false);
+  const chainSites = signal<{ source: string; sites: Span[] } | null>(null);
   let exactGeneration = 0;
   // Each analysed program, and each mode, is explored afresh; the worker's earlier answers are
   // stale.
@@ -553,6 +561,8 @@ export function createStore(
     receiveTrace,
     additive,
     exact,
+    chainsOpen,
+    chainSites,
     receiveExact,
   };
 }
