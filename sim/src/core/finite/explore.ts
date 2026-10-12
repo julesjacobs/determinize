@@ -2,9 +2,10 @@
 // makes of a complete exploration: the states reachable from a program's initial state, numbered
 // in the order in which they are found, each with its transitions, within Lean's limits on the
 // states, the edges and the size of a state. Exploration runs in steps, so that the thread it runs
-// on can stop between them and report its progress.
+// on can stop between them and report its progress. Beside Lean's model, it records the draw that
+// each state takes, which Lean's model leaves out.
 import type { Program } from "../compiler/core.ts";
-import type { State, Step } from "./machine.ts";
+import type { Draw, State, Step } from "./machine.ts";
 import { Failure, Machine, scoped } from "./machine.ts";
 import type { Model, StateKind } from "./model.ts";
 import type { Rational } from "./rational.ts";
@@ -26,10 +27,11 @@ export type Limit = "states" | "edges" | "stateBytes";
 /** Which program of a source a model is of, as Lean's `Subject`. */
 export type Subject = "source" | "determinized";
 
-/** How an exploration ended, as Lean's `Exploration`. A failure names the state at which it
- * occurred and Lean's failure, with the draw it occurred at. */
+/** How an exploration ended, as Lean's `Exploration`. A complete one also has the draw that each
+ * state takes, if any. A failure names the state at which it occurred and Lean's failure, with
+ * the draw it occurred at. */
 export type Exploration =
-  | { kind: "complete"; model: Model }
+  | { kind: "complete"; model: Model; draws: (Draw | null)[] }
   | { kind: "incomplete"; limit: Limit; discovered: number; expanded: number; edges: number }
   | { kind: "failed"; state: number; failure: Failure };
 
@@ -105,6 +107,7 @@ export function explorer(
   const states: State[] = [initial];
   const index = new Map<number, number>([[initial.id, 0]]);
   const rows: { kind: StateKind; successors: [Rational, State][] }[] = [];
+  const draws: (Draw | null)[] = [];
   let edgeCount = 0;
   let remaining = limits.maxStates;
   let result: Exploration | null = null;
@@ -131,7 +134,7 @@ export function explorer(
 
   /** One step of Lean's `build`, or its result. */
   function build(): Exploration | null {
-    if (rows.length === states.length) return { kind: "complete", model: model() };
+    if (rows.length === states.length) return { kind: "complete", model: model(), draws };
     if (remaining === 0) return incomplete("states", states.length, rows.length, edgeCount);
     remaining -= 1;
     const action = readAction(machine, states[rows.length]);
@@ -150,6 +153,7 @@ export function explorer(
       states.push(state);
     }
     rows.push(action);
+    draws.push(machine.drawAt(states[rows.length - 1]));
     edgeCount += outgoing;
     if (states.length > limits.maxStates) {
       return incomplete("states", states.length, rows.length, edgeCount);

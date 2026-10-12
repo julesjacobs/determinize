@@ -1,6 +1,7 @@
 // Full-page screenshots of the landing page, the not-found page and the simulator's states at the
 // widths of the design, in light and dark, for review. They are taken only when SCREENSHOTS names
 // a directory: SCREENSHOTS=DIR playwright test screenshots
+import { readFileSync } from "node:fs";
 import { deflateRawSync } from "node:zlib";
 import type { Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
@@ -24,8 +25,25 @@ interface State {
   steps?: number;
   /** Before anything else: keep the introduction of a first visit. */
   firstVisit?: boolean;
+  /** With the system's forced colours. */
+  forcedColors?: boolean;
   finally?: (page: Page) => Promise<void>;
 }
+
+/** Shows the figure of the chains with its button, where it isn't open, and waits for its
+ * drawings. */
+async function chains(page: Page) {
+  const toggle = page.locator("#chains-toggle");
+  await expect(toggle).not.toHaveClass(/\babsent\b/, { timeout: 30_000 });
+  if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
+  await expect(page.locator("#chains")).toBeVisible();
+  await expect(page.locator("#chains")).not.toHaveAttribute("aria-busy", { timeout: 30_000 });
+}
+
+const geometricRejection = readFileSync(
+  new URL("../../examples/loops/geometric-rejection.det", import.meta.url),
+  "utf8",
+);
 
 const states: State[] = [
   { name: "noisy-product", example: "Noisy product", run: true, steps: 3 },
@@ -45,19 +63,72 @@ const states: State[] = [
   { name: "noisy-iteration", example: "Noisy iteration", run: true, steps: 2 },
   { name: "asymmetric-walk", example: "Asymmetric random walk", run: true },
   {
-    name: "asymmetric-walk-plain",
-    example: "Asymmetric random walk",
-    run: true,
-    finally: async (page) => {
-      await page.getByRole("checkbox", { name: "Additive mode" }).uncheck();
-      await expect(page.locator("#model-det")).toHaveText("too large");
-    },
-  },
-  {
     name: "gallery",
     example: "Noisy product",
     run: true,
     finally: (page) => page.getByRole("button", { name: /^Example: / }).click(),
+  },
+  {
+    name: "train-delay",
+    example: "Train delay",
+    run: true,
+    finally: chains,
+  },
+  {
+    name: "train-delay-tables",
+    example: "Train delay",
+    run: true,
+    finally: async (page) => {
+      await expect(page.locator("#chains")).not.toHaveAttribute("aria-busy", { timeout: 30_000 });
+      await page.locator(".chain-tables > summary").click();
+      await page.locator("#chain-table-source tbody tr").first().focus();
+      await page.keyboard.press("ArrowDown");
+    },
+  },
+  { name: "noisy-iteration-chains", example: "Noisy iteration", run: true, finally: chains },
+  { name: "retransmission-chains", example: "Retransmission", run: true, finally: chains },
+  {
+    name: "geometric-rejection-chains",
+    source: geometricRejection,
+    run: true,
+    finally: chains,
+  },
+  { name: "random-walk-chains", example: "Gaussian random walk", run: true, finally: chains },
+  {
+    name: "train-delay-forced",
+    example: "Train delay",
+    run: true,
+    forcedColors: true,
+    finally: async (page) => {
+      await chains(page);
+      await page.locator(".chain-tables > summary").click();
+      await page.locator("#chain-table-source tbody tr").first().focus();
+      await page.keyboard.press("ArrowDown");
+    },
+  },
+  {
+    // A source that draws, and a determinized program that is a single node.
+    name: "single-node-chains",
+    source: "let d = discrete(0.25, 0.5, *) in 2 * d",
+    run: true,
+    finally: chains,
+  },
+  {
+    name: "train-delay-about",
+    example: "Train delay",
+    run: true,
+    finally: async (page) => {
+      await chains(page);
+      await page.getByRole("button", { name: "About the Markov chains" }).click();
+    },
+  },
+  {
+    // Near the largest chain that the figure draws: 28 nodes and 42 transitions.
+    name: "flips-chains",
+    source:
+      "(rec f n => fun acc => if n < 1 then acc else f (n - 1) (acc + bernoulli[G](0.5))) 6 0",
+    run: true,
+    finally: chains,
   },
   { name: "rejected", source: "true + 1" },
   { name: "empty", source: "" },
@@ -109,7 +180,11 @@ for (const state of states) {
       test(`sim-${state.name} at ${width} px, ${colorScheme}`, async ({ page }) => {
         test.setTimeout(60_000);
         await page.setViewportSize({ width, height: 900 });
-        await page.emulateMedia({ colorScheme, reducedMotion: "reduce" });
+        await page.emulateMedia({
+          colorScheme,
+          reducedMotion: "reduce",
+          forcedColors: state.forcedColors ? "active" : "none",
+        });
         const firstVisit = state.firstVisit ?? false;
         await open(page, state.source === undefined ? "sim/" : linkTo(state.source), firstVisit);
         if (state.example && state.example !== "Noisy product") {

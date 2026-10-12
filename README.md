@@ -145,8 +145,12 @@ and the sampling worker run it. The page (`sim/src/ui/`) keeps its state in sign
 table in another (`sim/src/trace-worker.ts`), which keeps the run and sends it a page at a time,
 and explores both programs' finite models in a third (`sim/src/exact-worker.ts`); where no worker
 can start, as when `sim/dist/index.html` is opened from disk, it does all three on its own thread,
-sampling and exploring in slices of about 50 ms. Sampling, which starts on load and after each
-edit, evaluates with ports of Lean's evaluator and samplers, SplitMix64 included
+sampling and exploring in slices of about 50 ms. The exact worker also contracts each complete
+model's probability-1 steps (`sim/src/core/finite/chain.ts`), and a fourth worker
+(`sim/src/chain-worker.ts`, with Graphviz from `@viz-js/viz`), loaded only when a reader opens
+the chains, lays them out; from disk, the same bundle runs as a script on the page. Sampling,
+which starts on load and after each edit, evaluates with ports of Lean's evaluator and samplers,
+SplitMix64 included
 (`sim/src/core/runtime/eval.ts` and `sampling.ts`, after `Runtime/Eval.lean` and
 `Runtime/Sampling.lean`): run i of a program and of its determinization starts at seed s + i, so
 its statistics are those of `./run.sh --seed s --samples N`. `sim/test/fixtures/lean-cli.json`
@@ -194,11 +198,13 @@ After `npm run build` in `sim/`, open `sim/dist/index.html`, or
 [its published copy](https://julesjacobs.github.io/determinize/sim/), to follow a run of a
 program and of its determinization step by step, beside the G draws they share and the symbolic
 semantics of the paper's proof, and to compare the output distributions of many runs of both
-programs, with the exact values of each one that has a finite model. The address's fragment holds
-the program, the seed, the example and how the page shows them, so a copied link opens the same
-run. The simulator's front end, runtime and finite models are ports of Lean's, held to the Lean
-CLI by the fixtures in `sim/test/fixtures/`; Lean's certificates and theorems apply to the core
-programs that the Lean CLI produces.
+programs, with the exact values of each one that has a finite model and its Markov chain, drawn
+with its probability-1 steps contracted: a source branches at its E and its G draws, its
+determinized program only at the G draws. The address's fragment holds the program, the seed,
+the example and how the page shows them, so a copied link opens the same run. The simulator's
+front end, runtime and finite models are ports of Lean's, held to the Lean CLI by the fixtures
+in `sim/test/fixtures/`; Lean's certificates and theorems apply to the core programs that the
+Lean CLI produces.
 
 See the [Lean documentation](lean/README.md) for the language, theorem premises,
 and implementation limits, and the [test guide](tests/README.md) for analytical

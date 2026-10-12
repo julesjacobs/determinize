@@ -2,10 +2,11 @@
 // the outermost pending additions of a state as a reward on the edge that leads to it, so that a
 // loop like `acc + …` reaches finitely many states, and the statistics of the resulting reward
 // model (`Spec/RewardModel/Model.lean`), whose edges add their rewards to the eventual output.
+// Beside Lean's model, exploration records the draw that each state takes.
 import type { Program } from "../compiler/core.ts";
 import type { Limit, Limits } from "./explore.ts";
 import { defaultLimits } from "./explore.ts";
-import type { Frame, Stack, State } from "./machine.ts";
+import type { Draw, Frame, Stack, State } from "./machine.ts";
 import { Failure, Machine, scoped } from "./machine.ts";
 import type { Model, StateKind } from "./model.ts";
 import type { Rational } from "./rational.ts";
@@ -49,8 +50,9 @@ type RewardStep =
   | { kind: "returned"; value: Rational }
   | { kind: "rejected" };
 
+/** How an additive exploration ended, as `Exploration`. */
 export type RewardExploration =
-  | { kind: "complete"; model: RewardModel }
+  | { kind: "complete"; model: RewardModel; draws: (Draw | null)[] }
   | { kind: "incomplete"; limit: Limit; discovered: number; expanded: number; edges: number }
   | { kind: "failed"; state: number; failure: Failure };
 
@@ -134,6 +136,7 @@ export function rewardExplorer(
   const states: State[] = [root];
   const index = new Map<number, number>([[root.id, 0]]);
   const rows: { kind: StateKind; edges: RewardEdge[] }[] = [];
+  const draws: (Draw | null)[] = [];
   let edgeCount = 0;
   let fuel = limits.maxStates;
   let result: RewardExploration | null = null;
@@ -174,7 +177,7 @@ export function rewardExplorer(
         kind: rows.map((row) => row.kind),
         edges: rows.map((row) => row.edges),
       };
-      if (replayValid(model)) return { kind: "complete", model };
+      if (replayValid(model)) return { kind: "complete", model, draws };
       return {
         kind: "failed",
         state: rows.length,
@@ -191,6 +194,7 @@ export function rewardExplorer(
       const kind: StateKind =
         step.kind === "returned" ? { kind: "returned", reward: step.value } : { kind: "rejected" };
       rows.push({ kind, edges: [{ target: i, probability: one, reward: zero }] });
+      draws.push(null);
       edgeCount += 1;
       return null;
     }
@@ -222,6 +226,7 @@ export function rewardExplorer(
       edges.push({ target, probability: outcome.probability, reward: outcome.reward });
     }
     rows.push({ kind: { kind: "transient" }, edges });
+    draws.push(machine.drawAt(states[i]));
     edgeCount += edges.length;
     return null;
   }

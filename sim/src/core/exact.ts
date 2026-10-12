@@ -1,13 +1,16 @@
 // Exact values of both programs from their finite models: the exploration and statistics of the
 // port of Lean's `Finite/*`, of the source and then of the determinized program, plain or in the
-// additive mode. Exploration and the solve run in slices of about 50 ms, after each of which the
-// thread they run on handles messages and gets the progress; a newer request replaces an older one.
-// The exact worker runs them, and so does the page where no worker can start.
+// additive mode, with each complete model's chain, its probability-1 steps contracted.
+// Exploration and the solve run in slices of about 50 ms, after each of which the thread they run
+// on handles messages and gets the progress; a newer request replaces an older one. The exact
+// worker runs them, and so does the page where no worker can start.
 import { analyze } from "./compiler/analyze.ts";
+import type { Mode } from "./compiler/ast.ts";
 import type { Program } from "./compiler/core.ts";
+import { contract } from "./finite/chain.ts";
 import type { Exploration, Limit, Subject } from "./finite/explore.ts";
 import { defaultLimits, explorationMessage, explorer } from "./finite/explore.ts";
-import type { Failure } from "./finite/machine.ts";
+import type { Draw, Failure } from "./finite/machine.ts";
 import type { Rational } from "./finite/rational.ts";
 import { fraction, toNumber } from "./finite/rational.ts";
 import type { RewardExploration } from "./finite/reward.ts";
@@ -30,13 +33,41 @@ export interface Range {
   to: number;
 }
 
+/** A node of a program's contracted chain: a draw with its distribution, as the program names
+ * it (`bernoulli`, `discrete`), its mode and the ranges of the sites it may stand for; a return
+ * with its value, which in the additive mode is what the run adds last; a rejection; or a cycle
+ * that never ends. */
+export type ChainNode =
+  | { kind: "branch"; distribution: string; mode: Mode; sites: Range[] }
+  | { kind: "returned"; value: string }
+  | { kind: "rejected" }
+  | { kind: "diverges" };
+
+/** An edge of a contracted chain, between nodes numbered from 0, with its probability and the
+ * reward its path adds, as Lean's fractions. */
+export interface ChainEdge {
+  from: number;
+  to: number;
+  probability: string;
+  reward: string;
+}
+
+/** A program's contracted chain, whose initial node is node 0, with the reward on the way to it;
+ * or, for a chain larger than the page draws, its counts. */
+export type ChainData =
+  | { kind: "chain"; entry: string; nodes: ChainNode[]; edges: ChainEdge[] }
+  | { kind: "too large"; nodes: number; edges: number };
+
+/** The largest chain that the worker sends. */
+export const chainCap = { nodes: 30, edges: 60 };
+
 /**
  * What exploration found for one program: its finite model's exact values; a model of more states
  * than the exact solver takes; or why it has none: a draw that only a sample can give (`draw`, the
  * site's distribution), a run that fails (`fails`), an output that isn't a number, or one of the
  * exploration's limits. `message` is what Lean's CLI prints. `sites` are the ranges of the sites
  * that the failing state may stand for (`Machine.sitesLike`). `error` is the simulator's own
- * failure, which Lean doesn't have.
+ * failure, which Lean doesn't have. A complete model has its chain.
  */
 export type ExactOutcome =
   | {
@@ -47,8 +78,9 @@ export type ExactOutcome =
       /** The mean and the variance given that the program returns; null if it never does. */
       mean: Exact | null;
       variance: Exact | null;
+      chain: ChainData;
     }
-  | { kind: "too many"; states: number; maxStates: number; message: string }
+  | { kind: "too many"; states: number; maxStates: number; message: string; chain: ChainData }
   | { kind: "draw"; distribution: string; sites: Range[]; state: number; message: string }
   | { kind: "fails"; detail: string; sites: Range[]; state: number; message: string }
   | { kind: "not a number"; state: number; message: string }
@@ -67,9 +99,38 @@ function exact(q: Rational): Exact {
   return { fraction: fraction(q), value: toNumber(q) };
 }
 
+function ranges(sites: Program[]): Range[] {
+  return sites.map(({ from, to }) => ({ from, to }));
+}
+
+/** The chain of a complete model, with the draw of each branching state, up to the cap. */
+export function chainData(
+  exploration: Extract<Exploration | RewardExploration, { kind: "complete" }>,
+): ChainData {
+  const chain = contract(exploration.model);
+  if (chain.nodes.length > chainCap.nodes || chain.edges.length > chainCap.edges) {
+    return { kind: "too large", nodes: chain.nodes.length, edges: chain.edges.length };
+  }
+  const nodes = chain.nodes.map((node): ChainNode => {
+    if (node.kind === "returned") return { kind: "returned", value: fraction(node.value) };
+    if (node.kind !== "branch") return { kind: node.kind };
+    const draw: Draw | null = exploration.draws[node.state];
+    if (!draw) throw new Error(`state ${node.state} branches without a draw`);
+    const { at, mode, sites } = draw;
+    return { kind: "branch", distribution: at.kind, mode, sites: ranges(sites) };
+  });
+  const edges = chain.edges.map(({ from, to, probability, reward }) => ({
+    from,
+    to,
+    probability: fraction(probability),
+    reward: fraction(reward),
+  }));
+  return { kind: "chain", entry: fraction(chain.entry), nodes, edges };
+}
+
 function failed(failure: Failure, state: number, message: string): ExactOutcome {
   if (failure.kind === "nonnumericResult") return { kind: "not a number", state, message };
-  const sites = failure.sites.map(({ from, to }) => ({ from, to }));
+  const sites = ranges(failure.sites);
   if (failure.kind === "unsupported") {
     const distribution = failure.at?.kind ?? failure.detail.replace(/^.*\./, "");
     return { kind: "draw", distribution, sites, state, message };
@@ -96,9 +157,9 @@ export function* outcomeSteps(
       ? yield* rewardStatisticsSteps(model, maxStates)
       : yield* statisticsSteps(model, maxStates);
   if (!solved.ok) {
-    return model.size > maxStates
-      ? { kind: "too many", states: model.size, maxStates, message: solved.message }
-      : { kind: "unsolved", message: solved.message };
+    if (model.size <= maxStates) return { kind: "unsolved", message: solved.message };
+    const chain = chainData(exploration);
+    return { kind: "too many", states: model.size, maxStates, message: solved.message, chain };
   }
   const { result } = solved;
   return {
@@ -108,6 +169,7 @@ export function* outcomeSteps(
     rejectionProbability: exact(result.rejectionProbability),
     mean: result.conditionalMean && exact(result.conditionalMean),
     variance: result.conditionalVariance && exact(result.conditionalVariance),
+    chain: chainData(exploration),
   };
 }
 

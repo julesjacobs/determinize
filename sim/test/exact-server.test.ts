@@ -1,11 +1,11 @@
 // The exploration that the exact worker runs: both programs in slices, with progress after each,
-// replaced by a newer request; and the messages it sends, which pass their validators after
-// structured cloning.
+// replaced by a newer request, and each complete model's contracted chain up to the cap; and the
+// messages it sends, which pass their validators after structured cloning.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import type { ExactState } from "../src/core/exact.ts";
-import { createExactServer } from "../src/core/exact.ts";
+import type { ChainNode, ExactState } from "../src/core/exact.ts";
+import { chainCap, createExactServer } from "../src/core/exact.ts";
 import type { ExactResponse } from "../src/core/protocol.ts";
 import { isExactRequest, isExactResponse } from "../src/core/protocol.ts";
 import { createExactClient } from "../src/ui/exact-client.ts";
@@ -40,6 +40,13 @@ test("both programs of the noisy iteration explore to Lean's outcomes", () => {
   assert.equal(last.source.kind, "draw");
   if (last.source.kind !== "draw") return;
   assert.deepEqual([last.source.distribution, last.source.state], ["gaussian", 34]);
+  const [flipAt] = [...source.matchAll(/flip\(0\.5\)/g)].map(({ index }) => index);
+  const flip: ChainNode = {
+    kind: "branch",
+    distribution: "bernoulli",
+    mode: "G",
+    sites: [{ from: flipAt, to: flipAt + "flip(0.5)".length }],
+  };
   assert.deepEqual(
     last.source.sites.map(({ from, to }) => source.slice(from, to)),
     ["gaussian(0, 1)"],
@@ -51,8 +58,48 @@ test("both programs of the noisy iteration explore to Lean's outcomes", () => {
     rejectionProbability: { fraction: "0", value: 0 },
     mean: { fraction: "1/3", value: 1 / 3 },
     variance: { fraction: "2/9", value: 2 / 9 },
+    chain: {
+      kind: "chain",
+      entry: "0",
+      nodes: [flip, flip, { kind: "returned", value: "0" }, { kind: "returned", value: "1" }],
+      edges: [
+        { from: 0, to: 1, probability: "1/2", reward: "0" },
+        { from: 0, to: 2, probability: "1/2", reward: "0" },
+        { from: 1, to: 0, probability: "1/2", reward: "0" },
+        { from: 1, to: 3, probability: "1/2", reward: "0" },
+      ],
+    },
   };
   assert.deepEqual(last.determinized, determinized);
+  for (const response of posted) assert.equal(isExactResponse(response), true);
+});
+
+test("a chain over the cap is sent as its counts, also where the model is too large to solve", () => {
+  const { explorer, posted, drain } = server();
+  // A sum of ten coin flips, carried as an argument: a node for each count of flips and sum.
+  const flips =
+    "(rec f n => fun acc => if n < 1 then acc else f (n - 1) (acc + bernoulli(0.5))) 10 0";
+  explorer.handle({ type: "exact", generation: 1, source: flips, additive: true });
+  drain();
+  const last = posted.at(-1);
+  assert.ok(last?.done && last.source.kind === "too many");
+  assert.deepEqual(last.source.chain, { kind: "too large", nodes: 66, edges: 110 });
+  assert.ok(chainCap.nodes < 66);
+  explorer.handle({
+    type: "exact",
+    generation: 2,
+    source: read("examples/simulator/gauss-random-walk.det"),
+    additive: true,
+  });
+  drain();
+  const walk = posted.at(-1)?.determinized;
+  assert.ok(walk?.kind === "too many");
+  assert.deepEqual(walk.chain, {
+    kind: "chain",
+    entry: "0",
+    nodes: [{ kind: "returned", value: "0" }],
+    edges: [],
+  });
   for (const response of posted) assert.equal(isExactResponse(response), true);
 });
 
@@ -144,6 +191,37 @@ test("an exact response's states are checked by their kind", () => {
     }),
     false,
   );
+  const chain = {
+    kind: "chain",
+    entry: "0",
+    nodes: [
+      { kind: "branch", distribution: "bernoulli", mode: "G", sites: [{ from: 0, to: 9 }] },
+      { kind: "returned", value: "-1/2" },
+      { kind: "rejected" },
+    ],
+    edges: [
+      { from: 0, to: 1, probability: "1/2", reward: "3" },
+      { from: 0, to: 2, probability: "1/2", reward: "0" },
+    ],
+  };
+  const tooMany = { kind: "too many", states: 300, maxStates: 256, message: "…", chain };
+  const withChain = (value: unknown) => isExactResponse({ ...response, source: value });
+  assert.equal(withChain(tooMany), true);
+  assert.equal(withChain({ ...tooMany, chain: { kind: "too large", nodes: 50, edges: 90 } }), true);
+  assert.equal(withChain({ ...tooMany, chain: undefined }), false);
+  const edge = { from: 0, to: 3, probability: "1/2", reward: "0" };
+  assert.equal(withChain({ ...tooMany, chain: { ...chain, edges: [edge] } }), false);
+  assert.equal(withChain({ ...tooMany, chain: { ...chain, entry: "0.5" } }), false);
+  assert.equal(withChain({ ...tooMany, chain: { ...chain, entry: "1/0" } }), false);
+  const node = { kind: "branch", distribution: "bernoulli", mode: "mean", sites: [] };
+  assert.equal(withChain({ ...tooMany, chain: { ...chain, nodes: [node] } }), false);
+  assert.equal(withChain({ ...tooMany, chain: { ...chain, nodes: [] } }), false);
+  const fromReturn = { from: 1, to: 2, probability: "1", reward: "0" };
+  assert.equal(withChain({ ...tooMany, chain: { ...chain, edges: [fromReturn] } }), false);
+  // A sparse array's hole is no node.
+  const sparse = new Array(3);
+  [sparse[0], sparse[2]] = [chain.nodes[0], chain.nodes[2]];
+  assert.equal(withChain({ ...tooMany, chain: { ...chain, nodes: sparse } }), false);
 });
 
 test("a failure names every site that the failing state may stand for", () => {

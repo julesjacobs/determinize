@@ -73,14 +73,24 @@ test("a link to an example's text with its final line break resolves to the exam
   assert.equal(sharedSource({ source: "1\n", example: "" }), "1\n");
 });
 
-test("a link carries the plain mode of the exact values, and reads the additive mode as the default", async () => {
-  const state: SharedState = { source: "1", seed: 3, example: "", additive: false };
+test("a link that names a mode of the exact values opens as one that doesn't", async () => {
+  const state: SharedState = { source: "1", seed: 3, example: "" };
+  for (const additive of [false, true, "yes"]) {
+    const older = await fragmentOf(JSON.stringify({ ...state, additive }));
+    assert.deepEqual(await decodeShare(older), { kind: "state", state });
+  }
+});
+
+test("a link carries an open figure of the chains, and only an open one", async () => {
+  const state: SharedState = { source: "1", seed: 3, example: "", chains: true };
   assert.deepEqual(await decodeShare(await encodeShare(state)), { kind: "state", state });
-  const additive = { source: "1", seed: 3, example: "" };
-  assert.equal(await encodeShare(additive), await fragmentOf(JSON.stringify(additive)));
-  const older = await fragmentOf(JSON.stringify({ ...additive, additive: true }));
-  assert.deepEqual(await decodeShare(older), { kind: "state", state: additive });
-  const unreadable = { kind: "error", message: "This link could not be read." };
-  const fragment = await fragmentOf(JSON.stringify({ ...additive, additive: "yes" }));
-  assert.deepEqual(await decodeShare(fragment), unreadable);
+  const closed = { source: "1", seed: 3, example: "" };
+  assert.equal(await encodeShare(closed), await fragmentOf(JSON.stringify(closed)));
+  const explicit = await fragmentOf(JSON.stringify({ ...closed, chains: false }));
+  assert.deepEqual(await decodeShare(explicit), { kind: "state", state: closed });
+  const fragment = await fragmentOf(JSON.stringify({ ...closed, chains: 1 }));
+  assert.deepEqual(await decodeShare(fragment), {
+    kind: "error",
+    message: "This link could not be read.",
+  });
 });
