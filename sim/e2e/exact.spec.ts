@@ -107,7 +107,13 @@ const outcomes: { programs: [ExactState, ExactState]; shows: RegExp }[] = [
   },
   {
     programs: [
-      { kind: "too many", states: 9999, maxStates: 256, message: "exact solver state limit" },
+      {
+        kind: "too many",
+        states: 9999,
+        maxStates: 256,
+        message: "exact solver state limit",
+        chain: { kind: "too large", nodes: 300, edges: 600 },
+      },
       {
         kind: "fails",
         detail: "expected a list of probabilities",
@@ -155,6 +161,7 @@ const outcomes: { programs: [ExactState, ExactState]; shows: RegExp }[] = [
         rejectionProbability: { fraction: "0", value: 0 },
         mean: { fraction: "9740/1651", value: 9740 / 1651 },
         variance: { fraction: "16036620/2725801", value: 16036620 / 2725801 },
+        chain: { kind: "too large", nodes: 50, edges: 90 },
       },
       {
         kind: "finite",
@@ -163,6 +170,7 @@ const outcomes: { programs: [ExactState, ExactState]; shows: RegExp }[] = [
         rejectionProbability: { fraction: "1", value: 1 },
         mean: null,
         variance: null,
+        chain: { kind: "chain", entry: "0", nodes: [{ kind: "rejected" }], edges: [] },
       },
     ],
     shows: /204 states\s+3 states/,
@@ -178,6 +186,7 @@ const outcomes: { programs: [ExactState, ExactState]; shows: RegExp }[] = [
         rejectionProbability: { fraction: `1/1${"0".repeat(400)}`, value: 0 },
         mean: { fraction: "1", value: 1 },
         variance: { fraction: "0", value: 0 },
+        chain: { kind: "too large", nodes: 41, edges: 41 },
       },
     ],
     shows: /solving….*1\/2\s+1\/10+ rejected/s,

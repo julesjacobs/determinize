@@ -1,7 +1,8 @@
 // The messages between the page and its workers: the sampling worker, which runs the batches of
 // runs of both programs, the step table's worker, which computes the step table's run, and the
-// exact worker, which explores both programs' finite models. A request has a generation number; a
-// newer request replaces an older one, and the page ignores responses of any but the newest.
+// exact worker, which explores both programs' finite models and contracts their chains. A request
+// has a generation number; a newer request replaces an older one, and the page ignores responses
+// of any but the newest.
 import type { ExactState } from "./exact.ts";
 import type { Runs } from "./statistics.ts";
 import type { TraceOverview, TracePage } from "./trace-pages.ts";
@@ -216,6 +217,56 @@ function isRanges(value: unknown) {
   );
 }
 
+/** Whether `value` is a fraction as Lean writes it: an integer, or one over a positive one. */
+function isFraction(value: unknown) {
+  return typeof value === "string" && /^-?\d+(\/[1-9]\d*)?$/.test(value);
+}
+
+function isChainNode(value: unknown) {
+  if (!isRecord(value)) return false;
+  switch (value.kind) {
+    case "branch":
+      return (
+        typeof value.distribution === "string" &&
+        (value.mode === "E" || value.mode === "G") &&
+        isRanges(value.sites)
+      );
+    case "returned":
+      return isFraction(value.value);
+    case "rejected":
+    case "diverges":
+      return true;
+    default:
+      return false;
+  }
+}
+
+function isChain(value: unknown) {
+  if (!isRecord(value)) return false;
+  const counts = (...keys: string[]) => keys.every((key) => Number.isSafeInteger(value[key]));
+  if (value.kind === "too large") return counts("nodes", "edges");
+  if (value.kind !== "chain" || !isFraction(value.entry)) return false;
+  const { nodes, edges } = value;
+  if (!Array.isArray(nodes) || nodes.length === 0 || !Array.isArray(edges)) return false;
+  // Array.from fills a sparse array's holes, which `every` would skip, with undefined.
+  const all = Array.from(nodes as unknown[]);
+  const node = (index: unknown) =>
+    Number.isSafeInteger(index) && (index as number) >= 0 && (index as number) < all.length;
+  return (
+    all.every(isChainNode) &&
+    Array.from(edges as unknown[]).every(
+      (edge) =>
+        isRecord(edge) &&
+        node(edge.from) &&
+        node(edge.to) &&
+        // Only a branch has edges; returns, rejections and loops end their runs.
+        (all[edge.from as number] as { kind: string }).kind === "branch" &&
+        isFraction(edge.probability) &&
+        isFraction(edge.reward),
+    )
+  );
+}
+
 function isExactState(value: unknown): value is ExactState {
   if (!isRecord(value)) return false;
   const counts = (...keys: string[]) => keys.every((key) => Number.isSafeInteger(value[key]));
@@ -231,10 +282,11 @@ function isExactState(value: unknown): value is ExactState {
         isExact(value.returnProbability) &&
         isExact(value.rejectionProbability) &&
         (value.mean === null || isExact(value.mean)) &&
-        (value.variance === null || isExact(value.variance))
+        (value.variance === null || isExact(value.variance)) &&
+        isChain(value.chain)
       );
     case "too many":
-      return counts("states", "maxStates") && message;
+      return counts("states", "maxStates") && message && isChain(value.chain);
     case "draw":
       return (
         typeof value.distribution === "string" &&
