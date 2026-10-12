@@ -50,6 +50,7 @@ functions, recursive calls, and data structures; a sample's mean
 may itself depend on earlier samples. Determinization tracks these
 dependencies compositionally, allowing a local replacement to
 remain sound within a larger computation.
+\kbin{where is "reduce" in the program below?}
 
 \input{figures/intro-gaussian-walk}
 
@@ -57,10 +58,10 @@ The Gaussian random walk in \cref{fig:intro-gaussian-walk},
 adapted from~\cite{vakar2019domain}, shows how this reasoning
 extends through higher-order functions and data structures.
 The program passes a probabilistic step function to
-\texttt{reduce}, which traverses six time points, sampling
+\texttt{reduce}\kb{can we give the full code for this in the appendix? have you actually run our tool on this program?}, which traverses six time points, sampling
 $y'\sim\mathcal N(y,t'-t)$ at each step and storing the new
 time-position pair in the path. Although the samples are
-dependent, each position is used affinely as the next Gaussian
+dependent, each position is used \kb{what does that mean?} as the next Gaussian
 mean and stored in the returned list. Inference therefore marks
 all six samples as determinizable without unrolling the
 traversal. Replacing each sample by its mean keeps the position
@@ -83,7 +84,7 @@ return while reducing output variance by a factor of $12.36$
 (\cref{fig:intro-variance}). Independent Monte Carlo estimation
 therefore needs correspondingly fewer samples for the same
 estimator variance, with the time savings depending on the cost
-of each execution.
+of each execution.\kb{is that true even for Monte Carlo? Have we checked?}
 
 \input{figures/intro-exact}
 
@@ -114,7 +115,7 @@ certificate checking for the resulting exact values.
 
   \item \textbf{Soundness.} We prove that determinization preserves the
     expectation value and only decreases variance. More generally,
-    for almost every successful sequence of retained draws, the determinized
+    for almost\kb{almost?} every successful sequence of retained draws, the determinized
     program returns the original program's average over the eliminated draws,
     even when the overall expectation is undefined.
 
