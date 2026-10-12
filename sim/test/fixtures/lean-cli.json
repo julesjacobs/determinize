@@ -2919,6 +2919,60 @@
       ]
     },
     {
+      "file": "examples/simulator/train-delay.det",
+      "checked": "float[E]",
+      "sites": {
+        "before": {
+          "discrete": 2,
+          "continuous": 0
+        },
+        "after": {
+          "discrete": 1,
+          "continuous": 0
+        }
+      },
+      "annotated": "(let x0 = (0 < bernoulli[G](0.3)) in (let x1 = discrete_list[E]((0.25 :: (0.5 :: []))) in (if x0 then x1 else (4 * x1))))",
+      "determinized": "(let x0 = (0 < bernoulli[G](0.3)) in (let x1 = mean_discrete_list((0.25 :: (0.5 :: []))) in (if x0 then x1 else (4 * x1))))",
+      "runs": [
+        {
+          "seed": "1",
+          "samples": 500,
+          "source": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "3.160000",
+            "variance": "8.062400"
+          },
+          "determinized": {
+            "returned": 500,
+            "samples": 500,
+            "rejected": 0,
+            "mean": "3.112000",
+            "variance": "1.875456"
+          }
+        },
+        {
+          "seed": "18446744073709551614",
+          "samples": 4,
+          "source": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "6.000000",
+            "variance": "12.000000"
+          },
+          "determinized": {
+            "returned": 4,
+            "samples": 4,
+            "rejected": 0,
+            "mean": "4.000000",
+            "variance": "0.000000"
+          }
+        }
+      ]
+    },
+    {
       "file": "tests/typing/accept/primitives.det",
       "checked": "float[E]",
       "sites": {

@@ -15,6 +15,7 @@ import observe from "../../../examples/simulator/observe.det";
 import randomListSum from "../../../examples/simulator/random-list-sum.det";
 import recursiveGamma from "../../../examples/simulator/recursive-gamma.det";
 import retransmission from "../../../examples/simulator/retransmission.det";
+import trainDelay from "../../../examples/simulator/train-delay.det";
 
 export interface Example {
   /** The file's path under examples/, without `.det`. */
@@ -74,6 +75,13 @@ export const examples: Example[] = [
     explanation: "Without the Gaussian noise, the loop only visits x = 0 and x = 1.",
     fromPaper: true,
     source: noisyIteration.trimEnd(),
+  },
+  {
+    id: "simulator/train-delay",
+    title: "Train delay",
+    explanation: "A coin picks the train; the delay becomes its mean, so only the coin branches.",
+    fromPaper: false,
+    source: trainDelay.trimEnd(),
   },
   {
     id: "simulator/asymmetric-walk",

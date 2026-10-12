@@ -2159,6 +2159,83 @@
       }
     },
     {
+      "file": "examples/simulator/train-delay.det",
+      "plain": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 82,
+            "second_moment": "69/4",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 26,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "191/25",
+            "conditional_mean": "31/10",
+            "certificate_status": "generated",
+            "answer": "31/10"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 51,
+            "second_moment": "23/2",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 26,
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "189/100",
+            "conditional_mean": "31/10",
+            "certificate_status": "generated",
+            "answer": "31/10"
+          }
+        }
+      },
+      "additive": {
+        "source": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "source",
+            "states": 82,
+            "second_moment": "69/4",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 26,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "191/25",
+            "conditional_mean": "31/10",
+            "certificate_status": "generated",
+            "answer": "31/10"
+          }
+        },
+        "determinized": {
+          "result": {
+            "termination_statistics_scope": "graph",
+            "subject": "determinized",
+            "states": 51,
+            "second_moment": "23/2",
+            "return_mass": "1",
+            "rejection_probability": "0",
+            "rank_bound": 26,
+            "mode": "additive",
+            "kernel_checked": false,
+            "divergence_probability": "0",
+            "conditional_variance": "189/100",
+            "conditional_mean": "31/10",
+            "certificate_status": "generated",
+            "answer": "31/10"
+          }
+        }
+      }
+    },
+    {
       "file": "tests/typing/accept/primitives.det",
       "plain": {
         "source": {

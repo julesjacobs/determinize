@@ -3,12 +3,13 @@
 // both modes, is contracted, turned back into a model and solved, and must give the Lean CLI's
 // fractions, or, where the model has more states than the solver takes, the port's own solve of the
 // whole model. Every branching node of those chains has the draw it branches at, and no node of a
-// determinized program draws an E site, since determinization replaced those by their means. The
-// unit tests check the chain's shape on small models.
+// determinized program draws an E site, since determinization replaced those by their means; the
+// gallery's train delay shows both. The unit tests check the chain's shape on small models.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { analyze } from "../src/core/compiler/analyze.ts";
+import { chainData } from "../src/core/exact.ts";
 import type { Chain } from "../src/core/finite/chain.ts";
 import { contract } from "../src/core/finite/chain.ts";
 import { explore, subjectProgram } from "../src/core/finite/explore.ts";
@@ -433,4 +434,26 @@ test("the reward on the way to the first node is the entry's", () => {
     edges: ["0→1 1/2", "0→1 1/2 +3"],
   });
   keepsStatistics(model, chain);
+});
+
+test("the gallery's train delay branches at its E draw only in the source, alike in both modes", () => {
+  const file = "examples/simulator/train-delay.det";
+  const chains = (["source", "determinized"] as const).map((subject) => {
+    const [plain, additive] = [false, true].map((mode) => {
+      const explored = exploration(file, subject, mode);
+      assert.equal(explored.kind, "complete");
+      return explored.kind === "complete" ? chainData(explored) : null;
+    });
+    assert.deepEqual(plain, additive);
+    assert.ok(plain?.kind === "chain");
+    return plain;
+  });
+  const modes = chains.map((chain) =>
+    chain.nodes.flatMap((node) => (node.kind === "branch" ? [node.mode] : [])),
+  );
+  assert.deepEqual(modes, [["G", "E", "E"], ["G"]]);
+  assert.deepEqual(
+    chains.map((chain) => chain.nodes.length),
+    [8, 3],
+  );
 });
