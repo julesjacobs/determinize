@@ -1,6 +1,6 @@
 // Records the Lean CLI's exact finite-model results in test/fixtures/lean-exact.json, which the
 // tests of the finite-model port compare with. For every accepted case of the corpus manifest
-// (tests/cases.toml), both subjects, with and without `--additive`: the fields of
+// (tests/cases.toml), both subjects, in the plain and the additive mode: the fields of
 // `PREFIX.result.json`, or the message the CLI prints instead. Then a few runs with smaller
 // limits, among them, for some programs, the largest state each explores: the smallest
 // `--max-state-bytes` at which no state is too large, and the run one byte below it. Run it in
@@ -148,7 +148,7 @@ async function exact(
 ): Promise<ExactOutcome> {
   const prefix = join(scratch, String(runCount++));
   const args = ["--check", "--result", prefix, "--subject", subject];
-  if (additive) args.push("--additive");
+  if (!additive) args.push("--no-additive");
   if (limits.maxStates !== undefined) args.push("--max-states", String(limits.maxStates));
   if (limits.maxEdges !== undefined) args.push("--max-edges", String(limits.maxEdges));
   if (limits.maxStateBytes !== undefined) {

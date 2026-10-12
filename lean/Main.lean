@@ -17,7 +17,7 @@ private structure Options where
   checkOnly : Bool := false
   exportPrefix : Option String := none
   certifyResult : Bool := false
-  additive : Bool := false
+  additive : Bool := true
   sampleSites : Bool := false
   solveLimits : Finite.SolveLimits := {}
   subject : Spec.FiniteModel.Subject := .determinized
@@ -25,7 +25,7 @@ private structure Options where
 
 private def usage :=
   "Usage: determinize [--check] [--samples N] [--seed N] [--fuel N] \
-    [--export PREFIX | --result PREFIX] [--additive] [--sample-sites] [--max-result-states N] \
+    [--export PREFIX | --result PREFIX] [--no-additive] [--sample-sites] [--max-result-states N] \
     [--subject source|determinized] [--max-states N] [--max-edges N] [--max-state-bytes N] FILE.det"
 private def natural (s : String) : Except String Nat :=
   match s.toNat? with
@@ -33,7 +33,7 @@ private def natural (s : String) : Except String Nat :=
   | none => .error s!"expected a nonnegative integer, got '{s}'"
 private def options : List String → Options → Except String Options
   | [], o => if o.file.isEmpty then .error usage else .ok o
-  | "--additive" :: rest, o => options rest {o with additive := true}
+  | "--no-additive" :: rest, o => options rest {o with additive := false}
   | "--sample-sites" :: rest, o => options rest {o with sampleSites := true}
   | "--result" :: outputPath :: rest, o =>
     options rest {o with exportPrefix := some outputPath, certifyResult := true}

@@ -21,7 +21,7 @@ GEOMETRIC = 'let f = rec f u => if flip(0.5) then 0 else 1 + f u in f ()'
 class AdditiveTests(unittest.TestCase):
     def test_native_certificate_and_tampering(self):
         with tempfile.TemporaryDirectory() as tmp:
-            result, prefix = generate(Path(tmp), GEOMETRIC, 'source', '--additive', '--max-states', '100')
+            result, prefix = generate(Path(tmp), GEOMETRIC, 'source', '--max-states', '100', additive=True)
             self.assertEqual(result.returncode, 0, result.stderr)
             data = json.loads(Path(str(prefix) + '.result.json').read_text())
             self.assertFalse(data['kernel_checked'])
@@ -63,7 +63,7 @@ class AdditiveTests(unittest.TestCase):
         ]
         for program, expected in cases:
             with self.subTest(program=program), tempfile.TemporaryDirectory() as tmp:
-                result, prefix = generate(Path(tmp), program, 'source', '--additive')
+                result, prefix = generate(Path(tmp), program, 'source', additive=True)
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 data = json.loads(Path(str(prefix) + '.result.json').read_text())
                 self.assertEqual(tuple(data[key] for key in
@@ -101,7 +101,7 @@ class AdditiveTests(unittest.TestCase):
                 source.write_text(program)
                 result = subprocess.run([os.environ['STORM_PYTHON'], ROOT / 'tools/storm.py',
                     source, '--prefix', Path(tmp) / 'model', '--subject', 'source',
-                    '--additive', '--max-states', '100', '--compare'],
+                    '--max-states', '100', '--compare'],
                     text=True, capture_output=True, timeout=180)
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
