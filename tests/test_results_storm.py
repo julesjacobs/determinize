@@ -25,7 +25,7 @@ class StormTests(unittest.TestCase):
                 source = directory / "input.det"
                 source.write_text("bernoulli[G](0.5)")
                 prefix = directory / "model"
-                mode = ["--additive"] if additive else []
+                mode = [] if additive else ["--no-additive"]
                 run = subprocess.run([os.environ["STORM_PYTHON"], ROOT / "tools/storm.py",
                     source, "--prefix", prefix, "--subject", "source", *mode],
                     text=True, capture_output=True, timeout=180)
@@ -65,7 +65,7 @@ class StormTests(unittest.TestCase):
             source.write_text("let f = rec f x => if x <= 0 then 7 else f (x-1) in f 9")
             prefix = directory / "model"
             result = subprocess.run([os.environ["STORM_PYTHON"], ROOT / "tools/storm.py",
-                                     source, "--prefix", prefix, "--subject", "source", "--timeout", "300"],
+                                     source, "--prefix", prefix, "--subject", "source", "--no-additive", "--timeout", "300"],
                                     text=True, capture_output=True, timeout=360)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             report = json.loads(Path(str(prefix) + ".storm.json").read_text())
@@ -88,7 +88,7 @@ class StormTests(unittest.TestCase):
                 source.write_text(program)
                 prefix = directory / "model"
                 result = subprocess.run([os.environ["STORM_PYTHON"], ROOT / "tools/storm.py",
-                                         source, "--prefix", prefix, "--subject", subject],
+                                         source, "--prefix", prefix, "--subject", subject, "--no-additive"],
                                         text=True, capture_output=True, timeout=240)
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 report = json.loads(Path(str(prefix) + ".storm.json").read_text())

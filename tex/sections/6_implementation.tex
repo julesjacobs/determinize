@@ -2,7 +2,19 @@
 \section{Implementation}
 \label{sec:implementation}
 
-Every theorem of the previous sections is mechanized in the Lean programming language~\cite{lean}, using Mathlib's formalization of measure theory and probability~\cite{mathlib}, in particular the Giry monad, Markov kernels and their disintegration, as well as the standard continuous and discrete distributions. Most of the development, including the definitions and theorem statements, was written by large language models (Claude Fable 5.1, Claude Opus 5.5 and GPT 6 Astra). Since Lean's kernel checks the proofs but not whether a statement says what this paper says, we separated the code into two parts:
+Every theorem of the previous sections is mechanized in the Lean programming language~\cite{lean}, using Mathlib's formalization of measure theory and probability~\cite{mathlib}, in particular the Giry monad, Markov kernels and their disintegration, as well as the standard continuous and discrete distributions. The complete compilation, verification and execution pipeline is outlined in \cref{fig:architecture}.
+
+\input{figures/architecture}
+
+First, the source program is parsed and desugared; this step is unverified. Type inference then fills in every omitted $\E/\G$ annotation and returns a typed program $e_{\mathrm{src}}$. By \cref{thm:inference}, it returns the greatest completion, which has an $\E$ at every site where some completion has one. The determinization function of \cref{def:determinization} then replaces every $\E$-mode sample by a mean site, marked $\M$, and returns a well-typed program $e_{\mathrm{det}}$. The tool runs the same Lean definition that the soundness theorems are about, with rational instead of real literals.
+
+The theorems of \cref{sec:soundness} relate the output laws of $e_{\mathrm{src}}$ and $e_{\mathrm{det}}$ under the hypotheses stated there. These laws are measures on the reals, given by the semantics of \cref{fig:semantics}, which we define in Lean with the Giry monad. Lean cannot compute such measures, so this semantics is not executed. To draw samples, an unverified interpreter runs either program with floating-point numbers and pseudo-random samplers. The theorems do not cover it: we have no formal model that relates floating-point arithmetic and the samplers to the real-valued semantics.
+
+If a program has finitely many reachable states and its only random draws are Bernoulli and discrete ones, its output law is that of a finite Markov chain. Its return probability and the first and second moments of its result then solve linear equations over that chain. The tool builds the chain by exploring the machine states of the program, each an expression, an environment and a continuation with rational numbers, and merging equal states. Numbers added to the result of a pending call become rewards on transitions, which keeps loops that accumulate a sum finite. A solver written and verified in Lean solves the equations with rational arithmetic. Alternatively, Storm~\cite{hensel2022storm}, called through its Python interface, solves them exactly. Both routes write a Lean file with the chain and a certificate: the solution, the states from which the program can no longer return, and for every other state a path to a terminal or non-returning state, which makes the solution unique. For Storm, our wrapper adds the states and paths. Lean's kernel checks the file, which proves that the explored program is domain-safe, that its output law is that of the chain, and that the numbers are its exact return probability and first and second moments. From these, the tool reports the probability that the program returns a result, and the mean and variance of the result given that it returns. If the explored program is $e_{\mathrm{det}}$ and $e_{\mathrm{src}}$ is domain-safe with a defined expectation, \cref{thm:expectation} guarantees that $e_{\mathrm{src}}$ has the same mean.
+
+We also provide a browser-based simulator, an unverified TypeScript port of the parser, type inference, determinization, the floating-point interpreter and the finite graph construction. For a program, it shows the annotated and the determinized program, samples both, steps through a run of both beside the symbolic state of \cref{sec:proof}, and computes their exact values where the graph is finite. Its tests compare it with the Lean tool on every program of our test corpus.
+
+Most of the Lean development, including the definitions and theorem statements, was written by large language models (Claude Fable 5.1, Claude Opus 5.5 and GPT 6 Astra). Since Lean's kernel checks the proofs but not whether a statement says what this paper says, we separated the code into two parts:
 
 \begin{enumerate}
 \item \textbf{Specification}: the definitions in \texttt{Spec/}, such as the syntax, typing rules, semantics and determinization, and the full statement of every theorem in \texttt{Theorems.lean}, about 1,600 lines in total. We reviewed both line by line against \cref{sec:language,sec:type-system,sec:soundness}, and reviewed every later change to them.
@@ -10,29 +22,3 @@ Every theorem of the previous sections is mechanized in the Lean programming lan
 \end{enumerate}
 
 To trust the tool's results, one has to rely on Lean's kernel, these three axioms, the specification and the Mathlib definitions it uses, and the Lean compiler for the output of type inference. Exact results come with a certificate that the kernel checks against the specification. The parser, the elaborator and the floating-point interpreter are unverified.
-
-The complete compilation, verification and execution pipeline is outlined in \cref{fig:architecture}.
-
-\input{figures/architecture}
-
-\paragraph{Parse and elaborate} First, the source program is parsed and desugared. This part is unverified.
-
-\paragraph{Infer types and $\E/\G$} Type inference then fills in every omitted $\E/\G$ annotation (the Lean development calls $\E$ and $\G$ affinities). By \cref{thm:inference}, it fails only if no completion exists and otherwise returns the greatest completion, which has an $\E$ at every site where some completion has one. The result is a typed program $e_{\mathrm{src}}$.
-
-\paragraph{Determinize} The determinization function of \cref{def:determinization} walks through the syntax tree and replaces every $\E$-mode sample by a mean site, marked $\M$. The pipeline runs the same Lean definition that the soundness theorems are stated about, with rational instead of real literals. The output is a well-typed, determinized program $e_{\mathrm{det}}$.
-
-\paragraph{Soundness theorems} The theorems of \cref{sec:soundness} relate the output laws of $e_{\mathrm{src}}$ and $e_{\mathrm{det}}$ under the hypotheses stated there.
-
-\paragraph{Measure-theoretic semantics} These output laws are given by the semantics of \cref{fig:semantics}, which we define in Lean with the Giry monad. They are measures on the reals, which Lean cannot compute, so this semantics is not executed.
-
-\paragraph{Floating-point interpreter} To sample, we also provide an interpreter that evaluates programs with floating-point numbers and pseudo-random samplers. This part is unverified: we have no formal model that relates floating-point arithmetic and the samplers to the real-valued semantics.
-
-\paragraph{Finite graph construction} The tool explores the machine states of the program, each an expression, an environment and a continuation with rational numbers, and merges equal states. Exploration succeeds if finitely many states are reachable and the only random draws left are Bernoulli and discrete ones. With \texttt{-{}-additive}, numbers added to the result of a pending call become rewards on transitions, which keeps loops that accumulate a sum finite. The return probability and the first and second moments then solve linear equations over the resulting Markov chain.
-
-\paragraph{Exact rational solver} A solver written and verified in Lean solves the equations with rational arithmetic.
-
-\paragraph{Storm solver} Alternatively, Storm~\cite{hensel2022storm} solves them, called through its Python interface on an exact rational model.
-
-\paragraph{Certificate checker} Both routes write a Lean file with the chain and a certificate that consists of the solution, the states from which the program can no longer return, and for every other state a path to a terminal or non-returning state, which makes the solution unique. For Storm, our wrapper adds the states and paths. Lean's kernel checks the file, which proves that the explored program is domain-safe, that its output law is that of the chain, and that the certified numbers are its exact return probability, first and second moments, and rejection probability.
-
-\paragraph{Exact mean and variance} Both routes compute the exact probability that the explored program returns a result, and the mean and variance of the result conditioned on that event. If the explored program is $e_{\mathrm{det}}$ and $e_{\mathrm{src}}$ is domain-safe with a defined expectation, \cref{thm:expectation} guarantees that $e_{\mathrm{src}}$ has the same mean.

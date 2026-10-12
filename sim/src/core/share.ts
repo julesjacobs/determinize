@@ -1,7 +1,8 @@
 // The state that a link to the simulator carries: the program, the seed, the example, the chart
 // and the mode of the exact values, as the fragment `#v1=` followed by the base64url of the
 // deflate-raw-compressed JSON. Links that also say whether the symbolic state shows are read
-// without it, as the state always shows.
+// without it, as the state always shows, and so are links that ask for the additive mode, the
+// default.
 
 export interface SharedState {
   source: string;
@@ -10,8 +11,8 @@ export interface SharedState {
   example: string;
   /** The chart of the distributions band, when it is the plot against a G draw. */
   view?: "against";
-  /** Whether the exact values come from the additive mode's models, when they do. */
-  additive?: true;
+  /** Whether the exact values come from the additive mode's models, when they don't. */
+  additive?: false;
 }
 
 /** What a fragment holds: no state, a state, or a state that can't be restored, with why. */
@@ -73,7 +74,7 @@ export async function encodeShare(state: SharedState) {
     seed,
     example,
     ...(view === "against" ? { view } : {}),
-    ...(additive ? { additive } : {}),
+    ...(additive === false ? { additive } : {}),
   });
   const stream = new Blob([json]).stream().pipeThrough(new CompressionStream("deflate-raw"));
   const bytes = await bytesOf(stream, Number.POSITIVE_INFINITY);
@@ -103,9 +104,9 @@ export async function decodeShare(hash: string): Promise<Decoded> {
   if (typeof source !== "string" || typeof example !== "string") return unreadable;
   if (typeof seed !== "number" || !Number.isSafeInteger(seed)) return unreadable;
   if (view !== undefined && view !== "against") return unreadable;
-  if (additive !== undefined && additive !== true) return unreadable;
+  if (additive !== undefined && typeof additive !== "boolean") return unreadable;
   const state: SharedState = { source, seed, example };
   if (view !== undefined) state.view = view;
-  if (additive) state.additive = additive;
+  if (additive === false) state.additive = additive;
   return { kind: "state", state };
 }

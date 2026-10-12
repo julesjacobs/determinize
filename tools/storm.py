@@ -297,8 +297,9 @@ def run_command(argv, *, cwd, timeout):
 
 def run(args):
     prefix = args.prefix.resolve()
+    additive = getattr(args, "additive", True)
     report = {"status": "running", "subject": args.subject, "property": PROPERTY,
-              "mode": "additive" if getattr(args, "additive", False) else "terminal",
+              "mode": "additive" if additive else "terminal",
               "engine": "stormpy sparse exact DTMC, rational arithmetic", "result_source": "storm",
               "timeout_seconds": args.timeout, "stage": "model export", "commands": []}
     report_path = Path(str(prefix) + ".storm.json")
@@ -318,15 +319,16 @@ def run(args):
 
     try:
         report["stormpy_version"] = importlib.metadata.version("stormpy")
-        mode = ["--additive"] if getattr(args, "additive", False) else []
+        mode = [] if additive else ["--no-additive"]
         command([args.binary, *mode, "--check", "--export", prefix, "--subject", args.subject,
                  "--max-states", str(getattr(args, "max_states", 10000)), args.file.resolve()])
         report["stage"] = "Storm"
         values_path = Path(str(prefix) + ".storm-values.json")
         values_path.unlink(missing_ok=True)
-        command([sys.executable, Path(__file__).resolve(), "--worker", prefix, *mode])
+        worker_mode = ["--additive"] if additive else []
+        command([sys.executable, Path(__file__).resolve(), "--worker", prefix, *worker_mode])
         values = json.loads(values_path.read_text())
-        text, answer = certificate_text(prefix, values, additive=bool(mode))
+        text, answer = certificate_text(prefix, values, additive=additive)
         certificate = Path(str(prefix) + ".storm.lean")
         certificate.write_text(text)
         if getattr(args, "skip_certificate", False):
@@ -334,7 +336,7 @@ def run(args):
         else:
             report["stage"] = "kernel check"
             checked = command(["lake", "env", "lean", certificate], ROOT / "lean")
-            report["axioms"] = checked_axioms(checked.stdout + checked.stderr, additive=bool(mode),
+            report["axioms"] = checked_axioms(checked.stdout + checked.stderr, additive=additive,
                                               conditional=answer["mass"] != 0)
             report["kernel_checked"] = True
         report.update(storm_version=values["storm_version"],
@@ -381,7 +383,8 @@ def main():
     parser.add_argument("--subject", choices=("source", "determinized"), default="determinized")
     parser.add_argument("--binary", type=Path, default=ROOT / "lean/.lake/build/bin/determinize")
     parser.add_argument("--max-states", type=int, default=10000)
-    parser.add_argument("--additive", action="store_true", help="extract outer evaluated additions as rewards")
+    parser.add_argument("--no-additive", dest="additive", action="store_false",
+                        help="keep outer evaluated additions in the states instead of extracting them as rewards")
     parser.add_argument("--skip-certificate", action="store_true", help="skip the Lean kernel certificate check")
     parser.add_argument("--compare", action="store_true", help="also compare with the internal solver")
     parser.add_argument("--timeout", type=float, default=120)

@@ -46,7 +46,7 @@ class ExportTests(unittest.TestCase):
         source.write_text(program)
         output = directory / "model"
         result = subprocess.run(
-            [str(BIN), "--check", "--export", str(output), *options, str(source)],
+            [str(BIN), "--check", "--export", str(output), "--no-additive", *options, str(source)],
             cwd=LEAN, text=True, capture_output=True, timeout=60)
         return result, output
 

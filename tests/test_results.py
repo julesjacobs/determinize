@@ -28,12 +28,13 @@ CASES = [
 ]
 
 
-def generate(directory, program, subject="source", *options):
+def generate(directory, program, subject="source", *options, additive=False):
     source = directory / "input.det"
     source.write_text(program)
     prefix = directory / "model"
+    mode = [] if additive else ["--no-additive"]
     result = subprocess.run([BIN, "--check", "--result", prefix, "--subject", subject,
-                             *options, source], text=True, capture_output=True, timeout=60)
+                             *mode, *options, source], text=True, capture_output=True, timeout=60)
     return result, prefix
 
 
@@ -169,7 +170,8 @@ class ResultTests(unittest.TestCase):
             with self.subTest(failure=failure), tempfile.TemporaryDirectory() as tmp:
                 prefix = Path(tmp) / "model"
                 args = SimpleNamespace(prefix=prefix, subject="source", timeout=1,
-                                       binary=BIN, compare=True, file=Path(tmp) / "input.det")
+                                       binary=BIN, compare=True, additive=False,
+                                       file=Path(tmp) / "input.det")
                 calls = []
 
                 def command(argv, **kwargs):

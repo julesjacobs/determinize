@@ -210,7 +210,7 @@ function restore(store: Store, editor: EditorView, decoded: Decoded) {
   batch(() => {
     store.exampleId.value = example;
     store.view.value = view ?? "outputs";
-    store.additive.value = additive ?? false;
+    store.additive.value = additive ?? true;
     replaceDoc(editor, sharedSource({ source, example }));
     store.runAt(seed);
   });
