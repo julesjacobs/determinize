@@ -4,23 +4,20 @@
 
 \todo[inline]{Add Lean references}
 
-In this section, we present our proof strategy for establishing the soundness of determinization. Our proof is centered around a symbolic operational semantics that relates the original and transformed programs, by which two interpretations recover the source and determinized programs. We proceed in three stages:
+In this section, we present our proof strategy for establishing the soundness of determinization. The central idea is to introduce a \emph{symbolic operational semantics} that provides a common representation of both the original and determinized programs. We show that both programs can be recovered from the same symbolic execution through two distinct interpretations: one that preserves the original sampling behavior, and another that replaces eligible random choices with their expected values. This correspondence forms the foundation of our soundness argument, which we develop in three stages:
 
 \begin{enumerate}
   \item Define the symbolic semantics;
-  \item Define the actual and expected interepretations that recover the source and determinized programs, respectively, and prove properties regarding these interpretations; and
-  \item Derive the tracewise and global soundness results.
+  \item Introduce the actual and expected interpretations that recover the source and determinized programs, respectively, and establish their correspondence after $n$ reduction steps; and
+  \item Extend this $n$ step correspondence to whole-program behavior to derive the tracewise and global soundness theorems.
 \end{enumerate}
 
 \label{sec:symbolic-semantics}
 
-We first introduce a symbolic semantics that records $\E$-mode
-samples without choosing their values, while executing
-$\G$-mode samples normally. This provides a common execution
-model for the source and determinized programs.
+Let us first introduce the notion of a symbolic state.
 
 \begin{definition}[Symbolic state]
-A symbolic state $s$ has the form
+A symbolic state $s \in \mathsf{SymState}$ has the form
 \begin{align}
   s &::=(\sigma\mid\widehat e),
   \qquad \widehat e\in\widehat{\mathrm{Expr}},\\
@@ -32,21 +29,99 @@ A symbolic state $s$ has the form
 \end{align}
 where $a$ is an affine expression\leanref{symbolic-affine} over symbolic variables
 $u_1,\ldots,u_k$; $\sigma$ is an ordered symbolic environment\leanref{symbolic-environment} whose declarations
-$u\sim D(\bar a)$ associate a fresh variable $u$ with a distribution $D$ and affine parameters $\bar a$ referring only to earlier variables in $\sigma$;
+$u\sim D(\bar a)$ associate a fresh variable $u$ with a distribution $D$ containing affine parameters $\bar a$ referring only to earlier variables in $\sigma$;
 and $\widehat e$ is a residual symbolic expression\leanref{symbolic-expression}.
 \end{definition}
 
-The full syntax of residual expressions $\widehat e$ and
-the formal definition of symbolic environments $\sigma$
-appear in \cref{sec:appendix-symbolic-definitions-residual-syntax}. In particular, residual expressions have the same constructors as source expressions,
-with real literals replaced by $\sym a$, where $a$ is an affine expression, to represent computations involving samples whose values have not yet been chosen.
-For example, $\sym2*\sym{u}+\sym1$ can reduce to $\sym{2u+1}$
-without sampling $u$; its declaration in $\sigma$ retains the
-distribution for later interpretation using sampled values or
-sequential means. To constrain how these symbolic values are used,
-we extend the source typing rules: $\sym a$ may have type $\tyR\E$
-for any affine expression $a$, but may have type $\tyR\G$ only
-when $a$ is constant. The full typing rules for $\hat e$ are also presented in \cref{sec:appendix-symbolic-definitions-residual-typing}.
+Examining further the two components of $s = (\sigma \mid \hat e)$, first the environment
+$\sigma$ in $s$ induces a joint distribution $\mathcal A_\sigma$
+over valuations $\rho$ by sampling its declarations in order:
+for $\sigma=(u_1\sim D_1(\bar a_1),\ldots,u_k\sim D_k(\bar a_k))$,
+\[
+  \rho\sim\mathcal A_\sigma:
+  \qquad
+  \rho(u_i)\sim D_i(\bar a_i[\rho]),
+  \quad i=1,\ldots,k.
+\]
+Each $\bar a_i$ depends only on earlier variables, so this
+sequential construction is well-defined for domain-safe
+environments. Second, the residual expression $\hat e$ in $s$ retains the source
+expression syntax but represents real values using
+symbolic literals $\sym a$. This allows computations such as
+$\sym2*\sym u+\sym1$ to reduce to $\sym{2u+1}$ without having to sample
+$u$ immediately. The typing rules extend those of source expressions as well. The full syntax
+and typing rules for residual expressions appear in
+\cref{sec:appendix-symbolic-definitions-residual-syntax,sec:appendix-symbolic-definitions-residual-typing}.
+
+\input{figures/symbolic-semantics.tex}
+
+We now define how symbolic execution operates on these states. Notably, it proceeds by reducing residual expressions and extending the symbolic environment with declarations for $\E$-mode distributions. \Cref{fig:symbolic-semantics} presents selected rules, with the full semantics given in
+\cref{sec:appendix-symbolic-rules}. Residual reductions
+$\widehat e_1\rightsquigarrow_{\mathrm{sym}}\widehat e_2$
+follow the source reduction rules but operate on symbolic
+values, performing arithmetic directly on affine expressions.
+In particular, $\operatorname{Mean}^{\#}_D(\bar a)$
+represents the mean of $D$ as an affine expression
+of its symbolic arguments. The symbolic small-step semantics lifts these reductions
+to symbolic states and handles the $\E$- and $\G$-mode distributions additionally.
+We distinguish two kinds of symbolic actions:
+\[
+\underbrace{s\deterministicarrow_{\mathrm{sym}}s'}_{\text{deterministic action}}
+\qquad
+\underbrace{s\samplingarrow{\mu}_{\mathrm{sym}}k}_{\text{sampling action}}.
+\]
+Deterministic actions either perform a residual reduction
+(\textsc{Reduce}) or record an $\E$-mode draw
+(\textsc{Sample-E}). The latter introduces a fresh
+symbolic variable $u$, appends the declaration
+$u\sim D(\bar a)$ to $\sigma$, and replaces the draw
+with $\sym u$.
+In contrast, $\G$-mode draws (\textsc{Sample-G}) produce
+sampling actions with measure $D(\bar r)$.
+More generally, a sampling action consists of a measure
+$\mu$ on $\Real$ and a continuation
+$k:\Real\to\mathsf{SymState}$ mapping sampled values
+to successor states. Its probabilistic meaning is
+obtained by integrating the interpreted continuation
+against $\mu$. This avoids the need for a measurable structure on symbolic
+states, as only the interpreted continuations
+must be measurable, as detailed in
+\cref{sec:appendix-symbolic-rules}.
+
+\begin{example}[Running example]
+\label{ex:symbolic-running}
+Consider the following program:
+\[
+\begin{aligned}
+&\kw{let}\ x=\kw{uniform}^{\G}(0,1)\ \kw{in}\\
+&\kw{let}\ y=\kw{gaussian}^{\E}(x,1)\ \kw{in}\\
+&\kw{let}\ z=\kw{gaussian}^{\E}(y,1)\ \kw{in}\\
+&x+z.
+\end{aligned}
+\]
+Suppose the $\G$-mode sample produces $x=t$.
+Symbolic execution records the two $\E$-mode samples
+as fresh variables $u$ and $v$, eventually reaching
+the state
+\[
+\begin{aligned}
+  s_t &= (\sigma_t\mid\sym{t+v}),\\
+  \sigma_t &=
+  \bigl(u\sim\mathcal N(t,1),\
+        v\sim\mathcal N(u,1)\bigr).
+\end{aligned}
+\]
+where $\mathcal N$ is a Gaussian distribution. The environment $\sigma_t$ records the dependency of
+$v$ on $u$, while the residual expression represents
+the returned value without resolving either sample.
+In particular, $\sigma_t$ induces the joint distribution
+\[
+  \mathcal A_{\sigma_t}(du,dv)
+  =\mathcal N(t,1)(du)\,\mathcal N(u,1)(dv),
+\]
+which samples $u$ first and then $v$ conditionally
+on $u$.
+\end{example}
 
 \paragraph{From source expressions to symbolic states.}
 To initialize symbolic execution and relate it to source computations,
@@ -74,230 +149,259 @@ we first introduce the following maps:
 
 Both maps otherwise preserve constructors and distribution modes,
 acting recursively on subexpressions; their full definitions are given in
-\cref{def:appendix-symbolic-maps}. Symbolic execution starts from the source expression embedded in
-the residual expression, with no samples recorded in the beginning:
+\cref{def:appendix-symbolic-maps}. 
+Symbolic execution starts from the lifted source expression
+with an empty environment:
 \[
   \mathsf{init}(e):=(\emptyset\mid\mathsf{lift}(e)).
 \]
-Since lifting introduces no symbolic variables, realizing the
-initial expression under the empty valuation $()$ recovers
-the original source expression, $\mathsf{realize}_{()}(\mathsf{lift}(e))=e$\leanref{symbolic-realize-lift}.
+In particular,
+$\mathsf{realize}_{()}(\mathsf{lift}(e))=e$\leanref{symbolic-realize-lift}.
 
-\input{figures/symbolic-semantics.tex}
-
-\Cref{fig:symbolic-semantics} presents selected residual
-reduction rules and the symbolic state transitions.
-The full residual reduction and symbolic transition rules
-appear in \cref{sec:appendix-symbolic-rules}. Deterministic reductions follow the concrete semantics,
-performing arithmetic on affine expressions.
-At an $\E$-mode expression $\draw D\E{\sym{\bar a}}$, symbolic
-execution introduces a fresh variable $u$, appends
-$u\sim D(\bar a)$ to $\sigma$, and replaces the expression
-by $\sym u$. This records the sample without sampling it or
-replacing it by its mean. A $\G$-mode distribution is instead sampled immediately.
 
 \subsection{Two Interpretations of the Symbolic Semantics}
 \label{sec:symbolic-interpretations}
+A symbolic state admits two interpretations of its
+symbolic environment $\sigma$. The \emph{actual interpretation}
+samples the declarations in $\sigma$
+according to $\mathcal A_\sigma$, recovering the
+randomness of the source computation. The
+\emph{expected interpretation} instead assigns each
+symbolic variable the mean of its declared distribution
+and determinizes the residual expression.  
 
-A symbolic state admits two interpretations: the
-\emph{actual interpretation} samples the variables in $\sigma$,
-whereas the \emph{expected interpretation} replaces them by their
-sequential means.
+Since declarations in $\sigma$ may depend on preceding
+variables, their means must be evaluated in declaration
+order. Specifically, for an environment
+$\sigma=(u_1\sim D_1(\bar a_1),\ldots,u_k\sim D_k(\bar a_k))$,
+we define the \emph{sequential mean valuation}
+$\bar\rho_\sigma$ by
+\[
+  \bar\rho_\sigma(u_i)
+  :=
+  \operatorname{Mean}_{D_i}(\bar a_i[\bar\rho_\sigma]),
+  \qquad i=1,\ldots,k.
+\]
+Thus, each variable is assigned the mean of its
+declared distribution, evaluated under the assignments
+to preceding variables. We can now formally define the two interpretations,
+indexed by $n\in\Nat$. As in $\joint e n$, each interpretation records executions
+returning after exactly $n$ steps:
 
 \begin{definition}[Actual and expected interpretations]
-Let
+For a symbolic state $s=(\sigma\mid\widehat e)$, define
 \[
 \begin{aligned}
-  s
-  &=
-  (\sigma\mid\widehat e:\rho),
-  \qquad
-  \sigma
-  =
-  \bigl(
-    u_1\sim D_1(\bar a_1),\ldots,
-    u_k\sim D_k(\bar a_k)
-  \bigr),
-  \\
-  \rho\sim\mathcal A_\sigma
-  &:\qquad
-  \rho(u_i)
-  \sim
-  D_i\bigl(\bar a_i[\rho]\bigr),
-  \qquad i=1,\ldots,k
-  \quad\text{in declaration order},
-  \\
-  \bar\rho_\sigma(u_i)
-  &:=
-  \operatorname{Mean}_{D_i}
-  \bigl(\bar a_i[\bar\rho_\sigma]\bigr),
-  \qquad i=1,\ldots,k
-  \quad\text{in declaration order},
-  \\
   \mathsf{Act}_n(s)
   &:=
   \int
     \joint{\mathsf{realize}_\rho(\widehat e)}n\,
-    \mathcal A_\sigma(d\rho),
-  \\
+    \mathcal A_\sigma(d\rho),\\
   \mathsf{Exp}_n(s)
   &:=
   \joint{
-    \trans{
-      \mathsf{realize}_{\bar\rho_\sigma}(\widehat e)
-    }
+    \trans{\mathsf{realize}_{\bar\rho_\sigma}(\widehat e)}
   }n.
 \end{aligned}
 \]
-Here $\mathcal A_\sigma$\leanref{symbolic-actual-environment} is the joint distribution of the valuation $\rho$ obtained
-by sampling the declarations in $\sigma$ from left to right. Because
-$\bar a_i$ depends only on variables declared before $u_i$, both
-$\mathcal A_\sigma$ and the sequential mean valuation
-$\bar\rho_\sigma$\leanref{symbolic-mean-environment} are well defined in declaration order.
 \end{definition}
 
-Both $\mathsf{Act}_n(s)$ and $\mathsf{Exp}_n(s)$ are measures on
-$\Trace\times\Real$. The first recovers the source behavior, while the
-second recovers the determinized behavior. The proof shows that each symbolic step corresponds to a step in both
-programs under their respective interpretations. For a $\G$-mode sample,
-both programs sample from the same distribution. For an $\E$-mode sample,
-the symbolic step records a new variable: the actual interpretation
-samples its value, while the expected interpretation uses its sequential
-mean. Thus, one symbolic execution relates the original and determinized
-programs step by step. Traces are recorded by the interpretations,
-rather than stored in symbolic states.
+Both interpretations are measures on $\Trace\times\Real$.
+The actual interpretation averages the concrete semantics
+over valuations sampled from $\mathcal A_\sigma$, while
+the expected interpretation evaluates the residual expression
+under the sequential mean valuation and then executes its
+determinization.
+At initialization, the symbolic environment is empty and
+realization recovers the source expression. Hence,
+$\mathsf{Act}_n(\mathsf{init}(e))=\joint{e}n$ and
+$\mathsf{Exp}_n(\mathsf{init}(e))=\joint{\trans e}n$.
 
-\begin{lemma}[Interpretations commute with a symbolic step]
-\label{lem:interpretation-commuting}
-Let $s$ be a well-typed, domain-safe symbolic state. If $s\xrightarrow{}_{\mathrm{sym}}s'$, then, for every $n\in\Nat$,
+\begin{example}
+\label{ex:actual-expected-interpretations}
+Returning to \cref{ex:symbolic-running}, the actual
+interpretation samples valuations $(u,v)$ according to
+$\mathcal A_{\sigma_t}$, while the sequential mean
+valuation assigns
 \[
-  \mathsf{Act}_{n+1}(s)=\mathsf{Act}_n(s'),
+  \bar\rho_{\sigma_t}(u)=t,
   \qquad
-  \mathsf{Exp}_{n+1}(s)=\mathsf{Exp}_n(s').
+  \bar\rho_{\sigma_t}(v)=t.
 \]
-For a $\G$-mode state $s=
-  \bigl(
-    \sigma
-    \mid
-    \widehat C[\draw D\G{\sym{\bar r}}]
-    :\rho
-  \bigr)$,
-every measurable $A\subseteq\Trace$ and $B\subseteq\Real$ satisfy
+Since $v$ is marginally distributed as
+$\mathcal N(t,2)$, the two interpretations
+at $n=0$ satisfy, for every measurable
+$B\subseteq\Real$,
 \[
 \begin{aligned}
-\mathsf{Act}_{n+1}(s)(A\times B)
-&=
-\int_{\Real}
-  \mathsf{Act}_n
-  \bigl(\sigma\mid\widehat C[\sym r]:\rho\bigr)
-  \bigl(
-    \{(\tau,x)\mid (D,r)::\tau\in A,\ x\in B\}
-  \bigr)
-  \,D(\bar r)(dr),
-\\
-\mathsf{Exp}_{n+1}(s)(A\times B)
-&=
-\int_{\Real}
-  \mathsf{Exp}_n
-  \bigl(\sigma\mid\widehat C[\sym r]:\rho\bigr)
-  \bigl(
-    \{(\tau,x)\mid (D,r)::\tau\in A,\ x\in B\}
-  \bigr)
-  \,D(\bar r)(dr).
+  \mathsf{Act}_0(s_t)(\{[]\}\times B)
+  &=\mathcal N(2t,2)(B),\\
+  \mathsf{Exp}_0(s_t)(\{[]\}\times B)
+  &=\delta_{2t}(B).
 \end{aligned}
 \]
-\end{lemma}
+Here, $n=0$ because the realized residual expression
+is already a value. Both measures are concentrated on
+the empty trace, since the retained $\G$-mode draw has
+already occurred. Thus, the actual interpretation
+recovers the randomness represented by the declarations
+in $\sigma_t$, whereas the expected interpretation
+replaces it with their sequential means.
+\end{example}
 
-Initializing with an empty environment and using
-$\mathsf{realize}_{()}(\mathsf{lift}(e))=e$ connects the two
-interpretations to the concrete semantics:
+\subsection{Deriving the Results}
 
-\begin{theorem}[Interpretation of initialization]
-\label{thm:interpretation-initialization}
-Suppose $\vdash e:\tyR\E$ and $e$ is closed. Then, for every $n\in\Nat$,
+\paragraph{Finite-step factorization.}
+Having established that the two interpretations recover the
+source and determinized programs, we now relate their output
+distributions. The challenge is that the source program may
+still sample random values that determinization replaces with
+their means. To account for this difference, we introduce a
+\emph{trace-indexed output kernel} $K_{n,s}(\tau,\cdot)$,
+which characterizes the source output distribution after
+$n$ steps, given a fixed trace $\tau$ of retained samples.
+The kernel takes $\G$-mode samples from $\tau$ while
+integrating over $\E$-mode samples, thereby isolating the
+randomness eliminated by determinization. Its formal
+definition appears in the appendix.
+
+The key to relating this kernel to the expected interpretation
+is the affine structure enforced by our type system.
+For any affine expression $a$, its expectation under the
+environment distribution $\mathcal A_\sigma$ coincides
+with its value under the sequential mean valuation:
 \[
-  \mathsf{Act}_n\bigl(\mathsf{init}(e)\bigr)=\joint e n,
-  \qquad
-  \mathsf{Exp}_n\bigl(\mathsf{init}(e)\bigr)=\joint{\trans e}n.
+  \int a[\rho]\,\mathcal A_\sigma(d\rho)
+  = a[\bar\rho_\sigma].
+\]
+This property allows deferred random choices to be replaced
+by their means without changing the expected output,
+even when their distributions depend on earlier choices.
+Together with the typing restrictions, it gives the
+following finite-step correspondence.
+
+\begin{theorem}[Finite-step factorization]
+\label{thm:finite-step-factorization}
+Let $s=(\sigma\mid\widehat e)$ be a well-typed,
+domain-safe symbolic state with $\widehat e:\tyR\E$.
+For every $n\in\Nat$ and measurable
+$A\subseteq\Trace$, $B\subseteq\Real$,
+\[
+  \mathsf{Act}_n(s)(A\times B)
+  =
+  \int_{A\times\Real}
+    K_{n,s}(\tau,B)\,
+    \mathsf{Exp}_n(s)(d\tau,dr).
+\]
+Moreover, for $\mathsf{Exp}_n(s)$-almost every
+$(\tau,r)$, $K_{n,s}(\tau,\cdot)$ is a probability
+measure with finite first absolute moment, and
+\[
+  r=\int_{\Real}x\,K_{n,s}(\tau,dx).
 \]
 \end{theorem}
 
+The theorem establishes two complementary properties.
+First, the actual interpretation can be reconstructed
+from the expected interpretation by restoring the
+randomness represented by $K_{n,s}$. Second, the mean
+of this reconstructed distribution is precisely the
+output of the expected interpretation. Thus,
+determinization preserves the expected output
+for each retained trace at the level of the
+$n$-step semantics.
 
-\begin{theorem}[Agreement of the two interpretations]
-\label{thm:interpretation-agreement}
-Let $s$ be a well-typed, domain-safe symbolic state. For every
-$n\in\Nat$, $\mathsf{Act}_n(s)$ and $\mathsf{Exp}_n(s)$ have the same
-trace marginal: for every measurable $A\subseteq\Trace$,
+
+
+For \cref{ex:symbolic-running}, the kernel at the
+terminal state satisfies
 \[
-  \mathsf{Act}_n(s)(A\times\Real)
-  =
-  \mathsf{Exp}_n(s)(A\times\Real).
-\]
-Moreover, for
-$\mathsf{Act}_n(s)(\,\cdot\times\Real)$-almost every trace $\tau$,
-\[
-  \int_{\Real}
-    |r|\,\mathsf{Act}_n(s)(dr\mid\tau)
-  <\infty,
+  K_{0,s_t}([],\cdot)=\mathcal N(2t,2),
   \qquad
-  \mathsf{Exp}_n(s)(\,\cdot\mid\tau)
+  \int_{\Real}r\,K_{0,s_t}([],dr)=2t.
+\]
+Thus, the kernel reconstructs the source output
+distribution from the expected interpretation,
+whose output is precisely the mean of this distribution.
+
+
+
+\paragraph{From finite-step to whole-program soundness.}
+The finite-step result relates executions that return
+after a fixed number of steps, whereas our soundness
+guarantees concern complete program executions.
+To bridge this gap, we construct a whole-program
+kernel $K_e$ by combining the finite-step kernels
+$K_{n,\mathsf{init}(e)}$ across all step counts.
+A key compatibility lemma establishes that these
+kernels agree with $K_e$ on the relevant successful
+traces, ensuring that the finite-step relationship
+is preserved when we sum over execution lengths.
+The construction and compatibility proof are
+given in the appendix.
+
+\begin{theorem}[Whole-program factorization]
+\label{thm:whole-program-factorization}
+Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe.
+For all measurable $A\subseteq\Trace$ and
+$B\subseteq\Real$,
+\[
+  J_e(A\times B)
   =
-  \delta_{
-    \displaystyle
-    \int_{\Real}
-      r\,\mathsf{Act}_n(s)(dr\mid\tau)
-  }.
+  \int_{A\times\Real}
+    K_e(\tau,B)\,
+    J_{\trans e}(d\tau,dr).
+\]
+Moreover, for $J_{\trans e}$-almost every
+$(\tau,r)$, $K_e(\tau,\cdot)$ is a probability
+measure with finite first absolute moment, and
+\[
+  r=\int_{\Real}x\,K_e(\tau,dx).
 \]
 \end{theorem}
 
-% \Cref{fig:symbolic-example} works through these results on the program
-% $e=\draw{uniform}\E{1,2}\,/\,\draw{uniform}\G{0,1}$. The symbolic
-% execution delays the $\E$-draw as a variable $u_1$, samples the $\G$-draw
-% as $r$, and ends in the residual value $\sym{\tfrac1r u_1}$. Realizing $u_1$ as a
-% sample $c$ recovers each step of the source program, and realizing it as
-% its mean $\tfrac32$ recovers each step of $\trans e$. For each fixed trace
-% $[(\kw{uniform},r)]$, the conditional mean $\tfrac3{2r}$ is finite.
-% Integrating over $r$, however, gives a global expectation of $+\infty$
-% for both programs, which is consistent with \cref{thm:expectation}.
-
-\input{figures/symbolic-example.tex}
-
-\subsection{Deriving the Soundness Results}
-
-The commuting argument establishes symbolic soundness for every
-$n\in\Nat$. By \cref{thm:interpretation-initialization}, initializing the
-symbolic semantics recovers $\joint e n$ under the actual interpretation
-and $\joint{\trans e}n$ under the expected interpretation. The proof then
-shows that these results use a common conditional output distribution indexed by the
-retained trace. Summing over $n$ gives
-\[
-  J_{\trans e}(A\times B)
-  =
-  \int_A
-    \delta_{\Expect[e\mid\tau]}(B)\,
-    \trlaw e(d\tau)
-\]
-for all measurable $A\subseteq\Trace$ and $B\subseteq\Real$. By \cref{lem:trace-preservation},
-$\trlaw{\trans e}=\trlaw e$. The definition of the conditional output distribution
-also gives
-\[
-  J_{\trans e}(A\times B)
-  =
-  \int_A
-    \law{\trans e}(B\mid\tau)\,
-    \trlaw e(d\tau).
-\]
-The two expressions therefore disintegrate the same joint measure with
-respect to the same trace measure. Uniqueness of disintegration implies
+This factorization extends the finite-step relationship
+to the complete output measures and yields our soundness
+results. Taking $B=\Real$ immediately establishes
+trace preservation, $\trlaw{\trans e}=\trlaw e$.
+Moreover, the factorization expresses the source
+joint measure through $K_e$ and the common trace measure.
+By uniqueness of conditional distributions,
+$K_e(\tau,\cdot)=\law e(\,\cdot\mid\tau)$ for almost
+every retained trace. Combining this identification
+with the mean property gives
 \[
   \law{\trans e}(\,\cdot\mid\tau)
   =
-  \delta_{\Expect[e\mid\tau]}
+  \delta_{\Expect[e\mid\tau]},
 \]
-for $\trlaw e$-almost every trace $\tau$, proving
-\cref{thm:trace-soundness}.
+establishing \cref{thm:trace-soundness}.
+Finally, integrating over the common trace measure
+yields the global soundness guarantees, including
+expectation preservation and, under the appropriate
+moment assumptions, variance reduction.
 
-Finally, integrating this tracewise characterization over the common trace
-measure gives the global results. It yields expectation and
-successful return probability preservation, while Jensen's inequality
-gives the convex function and variance guarantees.
+
+
+Finally, consider the complete execution of
+\cref{ex:symbolic-running}. For a retained trace
+$\tau_t=[(\kw{uniform},t)]$, the whole-program kernel
+satisfies
+\[
+  K_e(\tau_t,\cdot)=\mathcal N(2t,2).
+\]
+Consequently, for almost every $t\in(0,1)$,
+\[
+\begin{aligned}
+  \law e(\,\cdot\mid\tau_t)
+  &=\mathcal N(2t,2),\\
+  \law{\trans e}(\,\cdot\mid\tau_t)
+  &=\delta_{2t}.
+\end{aligned}
+\]
+Thus, conditioned on the retained trace,
+determinization replaces the source output
+distribution with a point mass at its mean.
+In particular, both programs have expected output
+$1$, while determinization reduces the output
+variance from $7/3$ to $1/3$.

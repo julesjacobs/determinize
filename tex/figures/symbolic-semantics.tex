@@ -1,81 +1,82 @@
 \begin{figure*}[t]
 \centering
 \small
-\setlength{\jot}{3pt}
+\setlength{\jot}{2pt}
+\setlength{\abovedisplayskip}{3pt}
+\setlength{\belowdisplayskip}{3pt}
 
-\begin{tabular}{@{}p{0.36\textwidth}!{\color{black!20}\vrule width 0.4pt}p{0.58\textwidth}@{}}
-\begin{minipage}[t]{\linewidth}
-\vspace{0pt}
-\centering
+% --------------------------------------------------
+% Residual expression reduction
+% --------------------------------------------------
+
 \textbf{Residual expression reduction}
 \[
-\begin{aligned}
+\begin{gathered}
   (\lambda x.\widehat e)\,\widehat v
-  &\rightsquigarrow_{\mathrm{sym}}
-  \widehat e[x\mapsto\widehat v],
-  \\[2pt]
+  \rightsquigarrow_{\mathrm{sym}}
+  \widehat e[x\mapsto\widehat v]
+  \qquad
   \letin x{\widehat v}{\widehat e}
-  &\rightsquigarrow_{\mathrm{sym}}
+  \rightsquigarrow_{\mathrm{sym}}
   \widehat e[x\mapsto\widehat v],
-  \\[2pt]
+  \\[3pt]
   \avg D{\sym{\bar a}}
-  &\rightsquigarrow_{\mathrm{sym}}
+  \rightsquigarrow_{\mathrm{sym}}
   \sym{\operatorname{Mean}^{\#}_D(\bar a)}.
-\end{aligned}
+\end{gathered}
 \]
-\raggedright
-The remaining reduction
-rules are lifted from \cref{fig:semantics}. The affine expression
-$\operatorname{Mean}^{\#}_D(\bar a)$ represents the primitive mean at the
-symbolic arguments $\bar a$.
-\end{minipage}
-&
-\begin{minipage}[t]{\linewidth}
-\vspace{0pt}
-\centering
+
+\vspace{2pt}
+{\color{black!20}\rule{\textwidth}{0.4pt}}
+\vspace{1pt}
+
+% --------------------------------------------------
+% Symbolic small-step semantics
+% --------------------------------------------------
+
 \textbf{Symbolic small-step semantics}
+\vspace{-5pt}
+
 \begin{mathpar}
   \inferrule*[right=Reduce]
-    {\widehat e_1\rightsquigarrow_{\mathrm{sym}}\widehat e_2}
+    {\widehat e_1\rightsquigarrow_{\mathrm{sym}}
+      \widehat e_2}
     {
       (\sigma\mid\widehat C[\widehat e_1])\\
-      \xrightarrow{}_{\mathrm{sym}}
+      \deterministicarrow_{\mathrm{sym}}
       (\sigma\mid\widehat C[\widehat e_2])
     }
   \and
   \inferrule*[right=Sample-E]
-    {u\notin\operatorname{dom}(\sigma)}
+    {u\notin\operatorname{dom}(\sigma) \\
+     \operatorname{Params}^{\#}_D(\bar a)}
     {
-      (\sigma\mid\widehat C[\draw D\E{\sym{\bar a}}])\\
-      \xrightarrow{}_{\mathrm{sym}}
-      (\sigma,u\sim D(\bar a)\mid\widehat C[\sym u])
+      (\sigma\mid\widehat C[
+        \draw D\E{\sym{\bar a}}])\\
+      \deterministicarrow_{\mathrm{sym}}
+      (\sigma,u\sim D(\bar a)\mid
+        \widehat C[\sym u])
     }
   \and
   \inferrule*[right=Sample-G]
     {\operatorname{Domain}_D(\bar r)}
     {
-      (\sigma\mid\widehat C[\draw D\G{\sym{\bar r}}])\\
-      \xrightarrow{}_{\mathrm{sym}}
-      (\sigma\mid\widehat C[\sym r])
+      (\sigma\mid\widehat C[
+        \draw D\G{\sym{\bar r}}])\\
+      \samplingarrow{D(\bar r)}_{\mathrm{sym}}
+      \bigl(r\mapsto
+      (\sigma\mid\widehat C[\sym r])\bigr)
     }
 \end{mathpar}
-\small
-\raggedright
-The \textsc{Reduce} rule lifts reduction of residual symbolic expressions
-to reduction of symbolic states under a symbolic evaluation context.
-In \textsc{Sample-G}, the label $r$ is distributed according to
-$D(\bar r)$.
-\end{minipage}
-\end{tabular}
+\vspace{-7pt}
 
-\caption{Symbolic semantics. Symbolic expression reduction
-$\rightsquigarrow_{\mathrm{sym}}$ on residual expressions $\widehat e$ is
-shown on the left, and the corresponding small-step transition relation
-$\xrightarrow{}_{\mathrm{sym}}$ on symbolic states is shown on the right.
-The \textsc{Reduce} rule lifts residual expression reduction through a
-symbolic evaluation context, while \textsc{Sample-E} and \textsc{Sample-G}
-handle the two sampling modes directly. Symbolic evaluation contexts
-$\widehat C$ have the same grammar as the evaluation contexts $C$ in
+\caption{Symbolic semantics. Residual expression reduction
+is shown above, and symbolic small-step semantics below.
+\textsc{Reduce} and \textsc{Sample-E} specify deterministic
+successors, while \textsc{Sample-G} specifies a sampling
+action with a continuation mapping sampled values to
+successor states. Symbolic evaluation contexts $\widehat C$
+have the same grammar as the evaluation contexts $C$ in
 \cref{fig:semantics}.}
 \label{fig:symbolic-semantics}
 \end{figure*}
