@@ -1,8 +1,10 @@
 // The messages between the page and its workers: the sampling worker, which runs the batches of
-// runs of both programs, the step table's worker, which computes the step table's run, and the
-// exact worker, which explores both programs' finite models and contracts their chains. A request
-// has a generation number; a newer request replaces an older one, and the page ignores responses
-// of any but the newest.
+// runs of both programs, the step table's worker, which computes the step table's run, the exact
+// worker, which explores both programs' finite models and contracts their chains, and the chain
+// worker, which lays chains out. A request has a generation number; a newer request replaces an
+// older one, and the page ignores responses of any but the newest. Layout requests are answered
+// each by its id.
+import type { ChainLayout } from "./chain-layout.ts";
 import type { ExactState } from "./exact.ts";
 import type { Runs } from "./statistics.ts";
 import type { TraceOverview, TracePage } from "./trace-pages.ts";
@@ -323,4 +325,70 @@ export function isExactResponse(value: unknown): value is ExactResponse {
     isExactState(value.determinized) &&
     typeof value.done === "boolean"
   );
+}
+
+/** Lay out the chain of `nodes` nodes and `edges` edges that `dots` describe (`chainDots`), and
+ * send the narrowest layout. */
+export interface ChainLayoutRequest {
+  type: "chain-layout";
+  id: number;
+  dots: string[];
+  nodes: number;
+  edges: number;
+}
+
+/** The layout of the request `id`, or why dot couldn't lay it out. */
+export type ChainLayoutResponse =
+  | { type: "chain-layout"; id: number; layout: ChainLayout }
+  | { type: "chain-layout-failed"; id: number; message: string };
+
+export function isChainLayoutRequest(value: unknown): value is ChainLayoutRequest {
+  return (
+    isRecord(value) &&
+    value.type === "chain-layout" &&
+    Number.isSafeInteger(value.id) &&
+    Array.isArray(value.dots) &&
+    value.dots.length > 0 &&
+    value.dots.every((dot: unknown) => typeof dot === "string") &&
+    Number.isSafeInteger(value.nodes) &&
+    Number.isSafeInteger(value.edges)
+  );
+}
+
+function isPoint(value: unknown) {
+  return Array.isArray(value) && value.length === 2 && value.every(Number.isFinite);
+}
+
+function isEdgeLayout(value: unknown) {
+  return (
+    isRecord(value) &&
+    Array.isArray(value.curve) &&
+    value.curve.length >= 4 &&
+    value.curve.every(isPoint) &&
+    Array.isArray(value.arrow) &&
+    value.arrow.every(isPoint) &&
+    (value.label === null || isPoint(value.label))
+  );
+}
+
+function isChainLayout(value: unknown): value is ChainLayout {
+  return (
+    isRecord(value) &&
+    [value.width, value.height].every(Number.isFinite) &&
+    Array.isArray(value.nodes) &&
+    value.nodes.every(
+      (node: unknown) =>
+        isRecord(node) && [node.x, node.y, node.width, node.height].every(Number.isFinite),
+    ) &&
+    isPoint(value.start) &&
+    isEdgeLayout(value.entry) &&
+    Array.isArray(value.edges) &&
+    value.edges.every(isEdgeLayout)
+  );
+}
+
+export function isChainLayoutResponse(value: unknown): value is ChainLayoutResponse {
+  if (!isRecord(value) || !Number.isSafeInteger(value.id)) return false;
+  if (value.type === "chain-layout-failed") return typeof value.message === "string";
+  return value.type === "chain-layout" && isChainLayout(value.layout);
 }
