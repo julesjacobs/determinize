@@ -73,14 +73,14 @@ test("a link to an example's text with its final line break resolves to the exam
   assert.equal(sharedSource({ source: "1\n", example: "" }), "1\n");
 });
 
-test("a link carries the additive mode of the exact values, and only as true", async () => {
-  const state: SharedState = { source: "1", seed: 3, example: "", additive: true };
+test("a link carries the plain mode of the exact values, and reads the additive mode as the default", async () => {
+  const state: SharedState = { source: "1", seed: 3, example: "", additive: false };
   assert.deepEqual(await decodeShare(await encodeShare(state)), { kind: "state", state });
-  const plain = { source: "1", seed: 3, example: "" };
-  assert.equal(await encodeShare(plain), await fragmentOf(JSON.stringify(plain)));
+  const additive = { source: "1", seed: 3, example: "" };
+  assert.equal(await encodeShare(additive), await fragmentOf(JSON.stringify(additive)));
+  const older = await fragmentOf(JSON.stringify({ ...additive, additive: true }));
+  assert.deepEqual(await decodeShare(older), { kind: "state", state: additive });
   const unreadable = { kind: "error", message: "This link could not be read." };
-  for (const additive of [false, "yes"]) {
-    const fragment = await fragmentOf(JSON.stringify({ ...plain, additive }));
-    assert.deepEqual(await decodeShare(fragment), unreadable);
-  }
+  const fragment = await fragmentOf(JSON.stringify({ ...additive, additive: "yes" }));
+  assert.deepEqual(await decodeShare(fragment), unreadable);
 });

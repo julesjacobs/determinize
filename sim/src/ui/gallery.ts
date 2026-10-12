@@ -215,7 +215,7 @@ export function mountGallery(
       // Until its fragment is computed, a link opens the example in the current state's place.
       link.href = "#";
       const shared = { source: example.source, seed: gallerySeed, example: example.id };
-      void encodeShare(example.additive ? { ...shared, additive: true } : shared).then((hash) => {
+      void encodeShare(shared).then((hash) => {
         link.href = hash;
       });
       item.append(link);

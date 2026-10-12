@@ -127,7 +127,7 @@ export interface Store {
   /** The step table's run; computing while its worker works on it. */
   trace: ReadonlySignal<TraceState>;
   stats: ReadonlySignal<{ original: Stats; determinized: Stats }>;
-  /** Whether the finite models are explored in Lean's additive mode (`--additive`). */
+  /** Whether the finite models are explored in Lean's additive mode, the CLI's default. */
   additive: Signal<boolean>;
   /** The exact values of the checked program; null where Lean rejects it. */
   exact: ReadonlySignal<ExactValues | null>;
@@ -309,7 +309,7 @@ export function createStore(
       sendTrace({ type: "trace", generation: traceGeneration, source: program, seed: at }),
     );
   });
-  const additive = signal(initial.additive ?? false);
+  const additive = signal(initial.additive ?? true);
   const exact = signal<ExactValues | null>(null);
   let exactGeneration = 0;
   // Each analysed program, and each mode, is explored afresh; the worker's earlier answers are

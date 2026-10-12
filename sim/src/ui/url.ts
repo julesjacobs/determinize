@@ -19,7 +19,7 @@ export function sharedStateOf(store: SharedStore): SharedState {
     seed: store.seed.value,
     example: store.exampleId.value,
     ...(store.view.value === "against" ? { view: "against" as const } : {}),
-    ...(store.additive.value ? { additive: true as const } : {}),
+    ...(store.additive.value ? {} : { additive: false as const }),
   };
 }
 
