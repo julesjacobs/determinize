@@ -360,48 +360,69 @@ measure with finite first absolute moment, and
 \]
 \end{theorem}
 
-This factorization extends the finite-step relationship
-to the complete output measures and yields our soundness
-results. Taking $B=\Real$ immediately establishes
-trace preservation, $\trlaw{\trans e}=\trlaw e$.
-Moreover, the factorization expresses the source
-joint measure through $K_e$ and the common trace measure.
-By uniqueness of conditional distributions,
-$K_e(\tau,\cdot)=\law e(\,\cdot\mid\tau)$ for almost
-every retained trace. Combining this identification
-with the mean property gives
+The whole-program factorization yields tracewise soundness
+in two steps: we first identify $K_e$ with the source's
+conditional output distribution, then show that the
+determinized output is concentrated at its mean.
+
+We now use the whole-program theorem to establish
+\cref{thm:trace-soundness}. The key observation is that
+the kernel $K_e$ describes the uncertainty in the
+source program's output once the retained random choices
+have been fixed. To make this precise, we first observe
+that the normalization of $K_e$, together with the
+whole-program factorization, implies that the source
+and determinized programs induce the same trace measure
+$\eta$. Relative to this common trace measure, the
+factorization identifies $K_e(\tau,\cdot)$ with the
+conditional output distribution $\law e(\cdot\mid\tau)$,
+for $\eta$-almost every trace $\tau$.
+Consequently, the mean of this kernel is precisely
+the conditional expected output of the source program:
 \[
-  \law{\trans e}(\,\cdot\mid\tau)
-  =
-  \delta_{\Expect[e\mid\tau]},
+  m(\tau)
+  :=\int_\Real x\,K_e(\tau,dx)
+  =\Expect[e\mid\tau].
 \]
-establishing \cref{thm:trace-soundness}.
-Finally, integrating over the common trace measure
-yields the global soundness guarantees, including
-expectation preservation and, under the appropriate
-moment assumptions, variance reduction.
 
+The second part of the whole-program theorem
+characterizes the output of the determinized program.
+It guarantees that, for almost every execution of
+$\trans e$, the returned value equals $m(\tau)$,
+where $\tau$ is the retained trace of that execution.
+In other words, once the retained random choices are
+fixed, the determinized program has no remaining
+uncertainty in its returned value. Its conditional
+output distribution is therefore a point mass at
+$m(\tau)$:
+\[
+  \law{\trans e}(\cdot\mid\tau)
+  =\delta_{m(\tau)}
+  =\delta_{\Expect[e\mid\tau]}.
+\]
+This establishes \cref{thm:trace-soundness}:
+determinization preserves the distribution of retained
+traces while replacing, for almost every such trace,
+the source's conditional output distribution with a
+point mass at its mean. The full measure-theoretic
+derivation is given in \cref{sec:appendix-trace-soundness}.
 
-
-Finally, consider the complete execution of
+To illustrate, consider again the program from
 \cref{ex:symbolic-running}. For a retained trace
 $\tau_t=[(\kw{uniform},t)]$, the whole-program kernel
-satisfies
-\[
-  K_e(\tau_t,\cdot)=\mathcal N(2t,2).
-\]
-Consequently, for almost every $t\in(0,1)$,
+is $K_e(\tau_t,\cdot)=\mathcal N(2t,2)$.
+Tracewise soundness therefore gives
 \[
 \begin{aligned}
-  \law e(\,\cdot\mid\tau_t)
+  \law e(\cdot\mid\tau_t)
   &=\mathcal N(2t,2),\\
-  \law{\trans e}(\,\cdot\mid\tau_t)
+  \law{\trans e}(\cdot\mid\tau_t)
   &=\delta_{2t}.
 \end{aligned}
 \]
-Thus, conditioned on the retained trace,
-determinization replaces the source output
-distribution with a point mass at its mean.
-In particular, both programs have expected output
-$1$, while determinization reduces the output
+Thus, the Gaussian uncertainty remaining after
+fixing the uniform sample is eliminated, while
+the randomness of the uniform sample itself is
+preserved. Both programs consequently have expected
+output $1$, but determinization reduces the output
 variance from $7/3$ to $1/3$.
