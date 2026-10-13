@@ -6,10 +6,7 @@ This section introduces the probabilistic language on which our determinization 
 
 \paragraph{Syntax.}
 \Cref{fig:syntax} presents the syntax of our language, a call-by-value
-functional language with recursion, pairs, sums, lists, and probability distributions. The expression $\kw{reject}$ represents a failed execution path used to encode conditioning on observations.
-
-Each distribution is annotated with one of three modes:
-$\G$, $\E$, or $\M$. Both $\G$ and $\E$ draw samples, but $\G$ marks sampling sites that remain stochastic under determinization, whereas $\E$ marks those eligible to be replaced by their means. In particular, the type system in \cref{sec:type-system} determines which sampling sites may be assigned mode $\E$. The mode $\M$, used in the output of determinization, evaluates a distribution expression to its mean.
+functional language with recursion, pairs, sums, lists, and probability distributions. The expression $\kw{reject}$ represents a failed execution path used to encode conditioning on observations. Each distribution expression carries a \emph{distribution mode} $\G$, $\E$, or $\M$ that guides determinization, as illustrated by the examples in the introduction. The modes $\G$ and $\E$ mark sampling sites to preserve or replace by mean evaluations, respectively. Determinization changes $\E$ to $\M$, which evaluates the distribution expression to its mean. The type system in \cref{sec:type-system} checks whether sampling sites may safely be assigned mode $\E$, based on how their sampled values are subsequently used.
 
 \input{figures/syntax}
 
