@@ -70,9 +70,7 @@ behavior under determinization.
 \subsection{Type Inference}
 \label{sec:type-inference}
 
-The typing rules in \cref{fig:typing} check whether a given choice of sampling modes is valid. We now describe how to \emph{infer} these modes,
-together with the types of expressions. Our goal is to assign mode $\E$
-to as many sampling sites as possible, subject to the typing rules.
+The typing rules in \cref{fig:typing} check whether the distribution modes and type annotations assigned to a program are valid. The inference procedure determines these assignments, together with the types of expressions, subject to the typing rules. Our goal is to assign mode $\E$ to as many sampling sites as possible, subject to the typing rules.
 
 \subsubsection{Constraint Generation}
 

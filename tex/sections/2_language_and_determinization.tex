@@ -5,8 +5,7 @@
 This section introduces the probabilistic language on which our determinization transformation operates. We present its syntax and operational semantics, define determinization as a source-to-source transformation over annotated expressions, and formalize the distribution of successfully returned values through an output measure.
 
 \paragraph{Syntax.}
-\Cref{fig:syntax} presents the syntax of our language, a call-by-value
-functional language with recursion, pairs, sums, lists, and probability distributions. The expression $\kw{reject}$ represents a failed execution path used to encode conditioning on observations. Each distribution expression carries a \emph{distribution mode} $\G$, $\E$, or $\M$ that guides determinization, as illustrated by the examples in the introduction. The modes $\G$ and $\E$ mark sampling sites to preserve or replace by mean evaluations, respectively. Determinization changes $\E$ to $\M$, which evaluates the distribution expression to its mean. The type system in \cref{sec:type-system} checks whether sampling sites may safely be assigned mode $\E$, based on how their sampled values are subsequently used.
+\Cref{fig:syntax} presents the syntax of our language, a call-by-value functional language with recursion, pairs, sums, lists, and probability distributions. The expression $\kw{reject}$ represents a failed execution path used to encode conditioning on observations. Each distribution expression carries a \emph{distribution mode} $\G$, $\E$, or $\M$ that guides determinization, as illustrated by the examples in the introduction. The modes $\G$ and $\E$ mark sampling sites to preserve or replace by mean evaluations, respectively. Determinization changes $\E$ to $\M$, which evaluates the distribution expression to its mean. We present these modes explicitly in the syntax to define the transformation precisely, but users may omit them: the inference procedure in \cref{sec:type-system} assigns sampling modes subject to the typing rules, which check that the replacements are justified by how sampled values are subsequently used.
 
 \input{figures/syntax}
 
@@ -42,7 +41,7 @@ $\kw{discrete}([p_i]_{i<n})$ returns $i$ with probability $p_i$ for
 $0\leq i<n$, and returns $n$ with the remaining probability
 $1-\sum_{i<n}p_i$.
 
-In contrast to mode $\M$, modes $\G$ and $\E$ both sample from
+In contrast to mode $\M$, distribution expressions with modes $\G$ and $\E$ both sample from
 $D(\bar v)$ when the arguments satisfy the domain condition $\operatorname{Domain}_D(\bar v)$.
 Since sampling is stochastic, neither mode has a deterministic reduction
 rule. Their identical sampling behavior is instead specified by the
@@ -84,7 +83,7 @@ C(\trans{e_1},\ldots,\trans{e_n}),
 and atomic expressions are unchanged.
 \end{definition}
 
-Most notably, determinization replaces an $\E$-mode distribution with its mean evaluation and recursively transforms the distribution's arguments, preserving their call-by-value evaluation order. When all distributions are annotated with $\E$, determinization eliminates all randomness, yielding a deterministic program. We refer to this as \emph{full determinization}. When both $\E$- and $\G$-mode distributions occur, determinization eliminates randomness in the former while retaining it in the latter. Accordingly, we refer to this as \emph{partial determinization}. In this case, the resulting program may be discrete or remain continuous, depending on the randomness retained. In particular, if all retained sampling sites are discrete, the transformed program is discrete, even if the original program contains continuous distributions. Conversely, retaining continuous sampling sites may leave the transformed program continuous. Let us consider several simple examples below to illustrate full and partial determinization in action.
+Most notably, determinization replaces an $\E$-mode distribution with its mean evaluation and recursively transforms the distribution's arguments, preserving their call-by-value evaluation order. When all sampling sites carry distribution mode $\E$, determinization eliminates all randomness, yielding a deterministic program. We refer to this as \emph{full determinization}. When both $\E$- and $\G$-mode distributions occur, determinization eliminates randomness in the former while retaining it in the latter. Accordingly, we refer to this as \emph{partial determinization}. In this case, the resulting program may be discrete or remain continuous, depending on the randomness retained. In particular, if all retained sampling sites are discrete, the transformed program is discrete, even if the original program contains continuous distributions. Conversely, retaining continuous sampling sites may leave the transformed program continuous. Let us consider several simple examples below to illustrate full and partial determinization in action.
 
 \begin{example}[Full determinization]
 Consider an $\E$-mode Gaussian whose mean is given by an

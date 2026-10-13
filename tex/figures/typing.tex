@@ -76,8 +76,7 @@
  \and
  \inferrule*[right=Sub]{\typing e\tau\\\tau<:\sigma}{\typing e\sigma}
 \end{mathpar}
-\caption{Type grammar, real typing, and subtyping rules, with
-$\alpha\in\{m,\M\}$, where $m$ is $\G$ or $\E$. We omit the standard rules for variables, unit and Boolean literals, functions,
+\caption{Type grammar, real typing, and subtyping rules. For distribution modes $\alpha\in\{\G,\E\}$, the type annotation $m$ must match $\alpha$; for $\alpha=\M$, either type annotation is permitted. We omit the standard rules for variables, unit and Boolean literals, functions,
 recursion, application, let bindings, conditionals, pairs, projections, sum
 injections and case analysis, and list constructors and case analysis.}
 \label{fig:typing}
