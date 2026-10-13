@@ -38,7 +38,7 @@ The default build checks mean sites with affine-dependent operands, invalid mean
 
 ## Deviations from the paper
 
-These notes compare the Lean development with the paper in `tex/` as of `610900b`, whose Lean
+These notes compare the Lean development with the paper in `tex/` as of `a6d499b`, whose Lean
 links are pinned to `8f89190`. The previous draft in `tex/archive/` is not compared.
 
 - **Names.** The paper's set of modes `𝒜 = {G, E, M}` is `DistributionAction`: `sample
@@ -90,23 +90,25 @@ links are pinned to `8f89190`. The previous draft in `tex/archive/` is not compa
   - The theorems are about closed programs of type `real^E`, and an output law has mass only
     at real results. The introduction's Gaussian random walk returns a list of pairs: the
     front end infers and determinizes it, but no theorem applies to it as written.
-
-  `determinized_output_law` is the output marginal of the appendix's big-step symbolic
-  soundness lemma, which Section 5 derives; the lemma's joint form is
-  `traceAndOutputLaw_determinize` (`Proof/Traces/CompactSoundness.lean`), with the replay mean
-  `replayMean` in place of `𝔼[e | τ]`. The paper does not state `return_or_diverge` at affinity
-  G, `finite_expectation_preservation`, `conditional_expectation_preservation`, the
-  unnormalized versions (`unnormalized_expectation_preservation`,
-  `unnormalized_extended_expectation_preservation`, `unnormalized_variance_non_increase`,
-  `unnormalized_trace_variance_decomposition`), or the finite-model and reward-model theorems.
-- **Domain safety.** Section 2 defines domain safety informally: almost surely, every executed
-  distribution has parameters in its domain and every executed division a nonzero divisor.
-  `DomainSafe` makes it precise: for every depth, almost every execution reaches no stuck
-  state within that many steps, and every sampling or mean site it reaches has parameters in
-  its domain. This excludes every stuck state, also an ill-typed one or a free variable. For a
-  typed closed program the only failures are the paper's two: distribution parameters outside
-  the domain and division by zero. The build checks that `1 / bernoulli[G](1/2)`, the
-  appendix's example without its `let`, is not domain-safe (`Proof/InterfaceChecks.lean`).
+ `determinized_output_law` is the output marginal of the appendix's big-step symbolic soundness
+lemma; the lemma's joint form is `traceAndOutputLaw_determinize`
+(`Proof/Traces/CompactSoundness.lean`), with the replay mean `replayMean` in place of `𝔼[e |
+τ]`. Section 5 derives tracewise soundness in prose from its whole-program factorization,
+through `m(τ)`, the mean of `K_e`, which equals `replayMean` almost everywhere. The paper does
+not state `return_or_diverge` at affinity G, `finite_expectation_preservation`,
+`conditional_expectation_preservation`, the unnormalized versions
+(`unnormalized_expectation_preservation`, `unnormalized_extended_expectation_preservation`,
+`unnormalized_variance_non_increase`, `unnormalized_trace_variance_decomposition`), or the
+finite-model and reward-model theorems.
+- **Domain safety.** Section 2's `Safe_n` is `DomainSafeAt n`, and domain safety is
+  `DomainSafe`. `DomainSafeAt` recurses through `reduce` (see below) instead of evaluation
+  contexts. Its sampling case, which also covers mean sites, requires the fiber to have mass
+  one, which holds exactly inside the primitive's domain; `Safe_n` requires `Domain_D(v̄)` at G
+  and E sites and reaches a mean site outside its domain as a stuck expression. Both exclude
+  every stuck state and every off-domain call, a zero fiber in Lean (see below); for a typed
+  closed program these failures are distribution parameters outside the domain and division by
+  zero. The build checks that `1 / bernoulli[G](1/2)`, the appendix's example without its `let`,
+  is not domain-safe (`Proof/InterfaceChecks.lean`).
 - **Evaluation contexts, mean steps and off-domain calls.** `Spec` has no evaluation contexts:
   `reduce` recurses into the leftmost unevaluated operand and wraps the result
   (`Action.wrap`), which realizes the contexts of the paper's semantics figure. That figure's
@@ -123,13 +125,20 @@ links are pinned to `8f89190`. The previous draft in `tex/archive/` is not compa
   measure outside the domain. The paper leaves the law at degenerate parameters implicit:
   `uniform(a, a)` is the Dirac mass at `a`, and so is Mathlib's Gaussian with variance 0.
 - **Traces.** A trace entry records an `Op`, whose discrete label also records the number of
-  supplied probabilities (`Op.discrete arity`); the paper's entry records only the
-  distribution. The paper does not say which measurable sets `Trace` has. Lean generates them
-  from the length of a trace and its entries (`Spec/Traces/Semantics.lean`), with every set of
-  primitive labels measurable.
+  supplied probabilities (`Op.discrete arity`); the paper's entry records only the primitive.
+  Section 4's `Trace` is the disjoint union of the `(Prim × ℝ)^n` with the disjoint-union Borel
+  σ-algebra. Lean's `Trace` is `List (Op × ℝ)`, whose measurable sets are generated by the
+  length of a trace and its entries, with every set of primitive labels measurable
+  (`Spec/Traces/Semantics.lean`); this is the same σ-algebra, with `Op` for `Prim`.
 - **Subtyping.** The paper lists reflexivity and transitivity as rules. `Ty.Sub` has the
   structural rules and reflexivity at base types only; general reflexivity and transitivity are
   lemmas (`Ty.Sub.refl` and `Ty.Sub.trans` in `Proof/Semantics/Subtyping.lean`).
+- **Distribution typing.** The typing figure's caption lets `α` range over `{G, E, M}`
+  independently of the result annotation `m`, so the figure also derives an E site at `real^G`,
+  such as `gaussian^E(u, v) : real^G`, and a G site with `real^E` parameters, such as
+  `uniform^G(0, gaussian^E(1, 1))`. `Typed`, like Section 3's prose, gives a sampling site's
+  parameters and result the site's own affinity (`Typed.uniform`, `Typed.gaussian`, …), up to
+  `Typed.sub`, and a mean site either affinity (`Typed.uniformMean`, …).
 - **Inference algorithm.** The paper checks type shapes, then solves the subtype constraints
   by expanding a type variable one constructor at a time, deferring constraints between two
   unresolved type variables, and propagates E forward and G backward through the remaining
@@ -150,34 +159,50 @@ links are pinned to `8f89190`. The previous draft in `tex/archive/` is not compa
   `SampleEnv.actualMeasure`, `SampleEnv.meanEnvironment` and `meanAffine`, and
   `realize_()(lift(e)) = e` is `AffineExpr.realize_ofExpr`. The typing of residual expressions
   is `AffineExpr.WellTyped`, and a state well-typed at `real^E` and domain-safe through a given
-  depth is a `SafeConfigAt`. The differences:
+  depth is a `SafeConfigAt`. Section 5's finite-step factorization is
+  `compact_exactDepth_fiberSound`, with `compactFiber` as `K_{n,s}`, and its whole-program
+  factorization is `compact_normalized_fiberSound`, with `normalizedKernel` as `K_e`. Both
+  conclude `FiberSound` (`Proof/Traces/Fibers.lean`): the factorization, and for almost every
+  point a fiber that is a probability measure with a finite mean equal to the point's output.
+  The differences:
   - Samples are de Bruijn indices: `Env n` holds the newest sample at index 0, where the paper
     numbers `u_1, …, u_k` in declaration order. A declaration `u ∼ D(ā)` keeps as affine
     expressions only the parameters in which the mean is affine (`affineArity`); the others
     (`generalArity`, such as a Gaussian's variance) are reals, where the paper's typing makes
     them constant affine expressions.
   - The symbolic step is not a relation but a function, `symbolicReduce`, which returns a
-    `SymbolicAction`. A mean site is an action of its own there, not a residual reduction.
-    Like `reduce`, it has no evaluation contexts (`SymbolicAction.wrap`) and checks no
-    parameter domain: each action is realized with the primitive's fiber, which is zero outside
-    the domain, where the appendix's Sample-G rule has `Domain_D(r̄)` as a premise.
+    `SymbolicAction`. Section 5's deterministic actions are `next`, `sampleE` and, at a mean
+    site, `mean`, which the paper counts as a residual reduction; its sampling action is
+    `sampleG`, whose continuation returns a residual expression rather than a state. Like
+    `reduce`, `symbolicReduce` has no evaluation contexts (`SymbolicAction.wrap`). It is `stuck`
+    where Sample-E's structural premise `Params^#_D(ā)` fails, but checks no parameter domain:
+    each action is realized with the primitive's fiber, which is zero outside the domain, where
+    the Sample-G rule has `Domain_D(r̄)` as a premise.
   - `Act_n` and `Exp_n` are `actualTraceLaw` and `targetTraceLaw`
     (`Proof/Symbolic/TraceLaws.lean`), but over detailed traces with one entry per reduction
-    step (`Proof/Traces/Detailed.lean`). The G trace is read off a detailed trace by `retain`.
-    The commuting lemma therefore holds up to the entry each step prepends; it is
-    `actualTraceLaw_next`, `actualTraceLaw_sampleE`, `actualTraceLaw_mean`,
-    `actualTraceLaw_sampleG` and their `targetTraceLaw` counterparts, one per
-    `SymbolicAction` other than `stuck`. Interpretation of initialization is not a lemma of its own:
-    `compact_exactDepth_source_fiberSound` proves its equations from `realize_ofExpr`.
-  - The paper's agreement theorems speak of conditional laws at each depth. Lean's invariant
-    at each depth is `FiberSound` (`Proof/Traces/Fibers.lean`), with the compact replay of a
-    G trace as an explicit fiber (`compact_exactDepth_fiberSound`). It identifies that fiber
-    with Mathlib's `condKernel` only for the laws summed over all depths
-    (`Proof/Traces/ConditionalLaw.lean`).
-  - The appendix's affine-means lemma is `SampleEnv.integrable_affine` (its finiteness claim)
-    and `SampleEnv.integral_affine` (its equation) in `Proof/Symbolic/Moments.lean`. Both take
-    a linear bound on the primitives' first absolute moments (`PrimitiveMomentBounds`) as a
-    premise, which `primitiveMomentBounds_primitiveLaws` proves.
+    step (`Proof/Traces/Detailed.lean`). The G trace is read off a detailed trace by `retain`,
+    through which `compactFiber` reads its trace. The appendix's commuting lemmas therefore hold
+    up to the entry each step prepends; they are `actualTraceLaw_next`,
+    `actualTraceLaw_sampleE`, `actualTraceLaw_mean`, `actualTraceLaw_sampleG` and their
+    `targetTraceLaw` counterparts, one per `SymbolicAction` other than `stuck`. The
+    initialization equations, prose in Section 5 and a theorem in the appendix, are not a lemma
+    of their own: `compact_exactDepth_source_fiberSound` proves them from `realize_ofExpr`.
+  - Section 5 leaves the definitions of `K_{n,s}` and `K_e` and the compatibility lemma to the
+    appendix, which has none of them. `compactFiber` replays the G trace and integrates over
+    `A_σ` (`compactHistoryReplay`). `K_e` is the replay summed over all depths
+    (`outputGivenTrace`), made a Markov kernel by the Dirac mass at 0 where that sum has mass
+    other than 1 (`normalizedOutputGivenTrace`). The compatibility lemma is
+    `outputGivenTrace_eq_outputGivenTraceAt`. The finite-step factorizations are summed over
+    depths on detailed traces (`joint_normalized_fiberSound`), then mapped along `retain`.
+  - The appendix's agreement theorems speak of conditional laws at each depth. Lean, like
+    Section 5, identifies the replay summed over all depths, `outputGivenTrace`, which equals
+    `K_e` almost everywhere, with Mathlib's `condKernel`, and no per-depth fiber
+    (`outputGivenTrace_ae_eq_condKernel` in `Proof/Traces/ConditionalLaw.lean`).
+  - The affine-means equation of Section 5 and the appendix is `SampleEnv.integral_affine`, and
+    the appendix's finiteness claim is `SampleEnv.integrable_affine`
+    (`Proof/Symbolic/Moments.lean`). Both take a linear bound on the primitives' first absolute
+    moments (`PrimitiveMomentBounds`) as a premise, which `primitiveMomentBounds_primitiveLaws`
+    proves.
 - **Surface syntax.** The paper's examples use `fun`, `rec f x =>`, `flip`, subtraction,
   tuples and `match … with` on lists; its grammar has `λ`, `rec`, pairs and `case` instead, and
   no `flip` or subtraction. The unverified front end desugars them, for example `flip(p)` into
@@ -227,11 +252,14 @@ links are pinned to `8f89190`. The previous draft in `tex/archive/` is not compa
   certificate links point to the terminal-reward route (`Finite/Explore.lean`,
   `Finite.solveStatistics`, `Checking.checkStatistics`), not the additive one
   (`Finite/Reward/Explore.lean`, `Finite.Reward.solve`, `Proof/RewardModel/Moments.lean`).
-  Section 5's links point into `Proof/`, and its lemmas and theorems carry none. `main.tex`
-  builds the anonymous review version, which links to the snapshot `sca95063a7c` on apndx.org
-  instead. That snapshot predates the verified inference: it has no `Spec/Inference.lean`,
-  `Spec/Expectation.lean` or `Frontend/Affinity.lean`, and its 66-line `Theorems.lean` uses
-  other names, so the review build's links are off until the snapshot is regenerated.
+  Section 5's links point into `Proof/` and cover its symbolic state, `lift`, `realize_ρ` and
+  `realize_()(lift(e)) = e`; `A_σ`, `ρ̄_σ` and its two theorems carry none, and
+  `tex/lean-links.tex` declares `symbolic-actual-environment` and `symbolic-mean-environment`
+  without a use. `main.tex` builds the anonymous review version, which links to the snapshot
+  `sca95063a7c` on apndx.org instead. That snapshot predates the verified inference: it has no
+  `Spec/Inference.lean`, `Spec/Expectation.lean` or `Frontend/Affinity.lean`, and its 66-line
+  `Theorems.lean` uses other names, so the review build's links are off until the snapshot is
+  regenerated.
 
 ## Style
 
