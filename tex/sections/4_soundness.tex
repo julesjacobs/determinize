@@ -72,7 +72,8 @@ $\Expect[|U|]=(2a)^{-1}\int_{-a}^{a}|u|\,du=a/2$.} Therefore,
 Because the distribution of $X$ conditioned on $N=n$ is symmetric about zero for every $n$, and $\Expect[|X|]=\infty$, we have $\Expect[X^+]=\Expect[X^-]=\infty$. Thus, the global expectation $\Expect[X]$ is undefined. This thus motivates stating our primary soundness result under fixed retained randomness before deriving global soundness when the relevant expectations exist.
 \end{example}
 
-In what follows, we first formalize this characterization using traces of the retained random choices, and then derive the global soundness. We state the main soundness theorems throughout this section, leaving the proof strategies to~\Cref{sec:proof} and the full proofs to~\Cref{sec:appendix}.
+In what follows, we first formalize this characterization using traces of the retained random choices, and then derive the global soundness. Throughout, a property holds for $\mu$-almost every element
+if it holds outside a measurable set of $\mu$-measure zero. We state the main soundness theorems throughout this section, leaving the proof strategies to~\Cref{sec:proof} and the full proofs to~\Cref{sec:appendix}.
 
 \subsection{Tracewise Soundness}
 \label{sec:traces}
@@ -84,7 +85,7 @@ determinization.
 
 \begin{definition}[Trace\leanref{traces}]
 Let $\mathsf{Prim}$ denote the set of distribution
-primitives. We define the trace space $\Trace := \bigsqcup_{n\in\mathbb N}
+primitives listed in \cref{fig:semantics}(\subref{fig:semantics-distributions}). We define the trace space $\Trace := \bigsqcup_{n\in\mathbb N}
     (\mathsf{Prim}\times\Real)^n$,
 equipped with the disjoint-union Borel $\sigma$-algebra.
 A \emph{trace} $\tau\in\Trace$ is a finite sequence
@@ -96,21 +97,34 @@ primitive $D$ and sampled value $r$ of an executed
 $\G$-mode sampling operation, in execution order.
 \end{definition}
 
-Note that $\E$-mode samples do not appear in a trace: they remain random after the trace has been fixed. A trace may contain either discrete or continuous
-values\kb{how do we distinguish between discrete and continuous values?}, and in the latter case an individual trace may itself have probability zero.\kb{what is the probability of a trace?}
+Note that $\E$-mode samples do not appear in a trace: they remain random after the trace has been fixed. The recorded $\G$-mode samples in a trace may come from discrete or continuous distributions. The probability of a trace is the probability that the program successfully terminates with exactly that sequence of sampling outcomes. This probability can be zero, as when the trace specifies the exact outcome of a sample from a continuous distribution.
 
 Now, we refine the output semantics to jointly record the trace and the
 returned value, as shown in \cref{fig:traces}. Like the original output
-measure $\law e$, this refined semantics records only executions that successfully return a real value and is therefore a subprobability measure; rejected
-or diverging executions contribute no output pair.\kbin{can we please give the type of $\joint e n$?} For each $n$, the measure $\joint e n$ records executions returning after exactly $n$ steps:
-$\E$-mode samples are integrated out, whereas each $\G$-mode sample contributes
-its distribution primitive $D$ and sampled value $r$ to the trace $\tau$.
-Summing these measures over all $n$ steps gives the joint big-step
-subprobability measure $J_e$\leanref{trace-semantics} on\kb{is the measurable space clear?} $\Trace\times\Real$. Intuitively, $J_e(A\times B)$ is the probability mass
+measure $\law e$, this refined semantics records only executions that
+successfully return a real value and is therefore a subprobability
+measure; rejected or diverging executions contribute no output pair.
+Let $\mathcal D(\Trace\times\mathbb R)$ denote the space of
+subprobability measures on $\Trace\times\mathbb R$.
+For each $n\in\mathbb N$, the function
+$\joint{(\cdot)}n\colon Expr\to\mathcal D(\Trace\times\mathbb R)$
+assigns each expression $e$ its joint output measure after exactly
+$n$ reduction steps.
+$\E$-mode samples are integrated out, whereas each $\G$-mode sample
+contributes its distribution primitive $D$ and sampled value $r$
+to the trace $\tau$.
+Summing these measures over all finite $n$ defines the function
+$J_{(\cdot)}\colon Expr\to\mathcal D(\Trace\times\mathbb R)$,
+which assigns each expression $e$ its joint big-step
+subprobability measure $J_e$\leanref{trace-semantics}.
+Intuitively, $J_e(A\times B)$ is the probability mass
 of successfully returning executions whose trace lies in $A$ and whose
 returned value lies in $B$.
 
-The two marginals of $J_e$ recover our quantities of interest. For each measurable $A\subseteq\Trace$, its trace marginal $\trlaw e(A)$\leanref{trace-law} is the probability mass of successful executions whose trace lies in $A$. Similarly, for each measurable\kb{what does that mean?} $B\subseteq\Real$, its output marginal $\law e(B)$\leanref{trace-erasure} is the probability mass of successful executions whose returned value lies in $B$. Evaluating both marginals on their full spaces gives\kb{isn't this already a theorem that deserves a proof?}
+The two marginals of $J_e$ recover our quantities of interest. For each measurable $A\subseteq\Trace$, its trace marginal $\trlaw e(A)$\leanref{trace-law} is the probability mass of successful executions whose trace lies in $A$. In particular, $\trlaw e(\{\tau\})$ is the probability that $e$
+successfully terminates with exactly the trace $\tau$. Similarly, for each Borel set $B\subseteq\Real$, its output marginal $\law e(B)$\leanref{trace-erasure} is the probability mass of successful executions whose returned value lies in $B$. This is precisely the output measure defined in \cref{fig:semantics}(\subref{fig:semantics-output}). Evaluating both marginals on their full spaces gives the following
+\begin{theorem}[Equality of total masses]
+For every expression $e$,
 \[
   \trlaw e(\Trace)
   =
@@ -118,6 +132,7 @@ The two marginals of $J_e$ recover our quantities of interest. For each measurab
   =
   \law e(\Real).
 \]
+\end{theorem}
 Thus both marginals have the same total mass: the probability that $e$
 successfully returns.
 
@@ -136,44 +151,79 @@ Then $\trans e$ is domain-safe and
 \]
 \end{lemma}
 
-\paragraph{Conditioning on traces.} 
-The joint semantics not only recovers the trace and output marginals. Conditioning the joint big-step measure \(J_e\) on its trace component gives the output distribution after a trace has been fixed. We write\kb{define? brief justification for well-definedness, i.e., existence and uniqueness?}
-\begin{align}\label{eq:disintegration}
-  \law e(\,\cdot\mid\tau)
-  \quad\text{such that}\quad
-  J_e(A\times B)=\int_A\law e(B\mid\tau)\,\trlaw e(d\tau)
+\paragraph{Conditioning on traces.}
+The joint semantics not only recovers the trace and output marginals.
+Conditioning the joint big-step measure $J_e$ on its trace component
+gives the output distribution after a trace has been fixed.
+Since $\Trace$ and $\Real$ are standard Borel spaces, the
+disintegration theorem guarantees the existence of a conditional
+output distribution, unique $\trlaw e$-almost everywhere.
+We denote this distribution by $\law e(\cdot\mid\tau)$, satisfying
+\begin{align}
+  J_e(A\times B)
+  =\int_A\law e(B\mid\tau)\,\trlaw e(d\tau)
 \end{align}
-for this conditional output distribution, for measurable $A\subseteq\Trace$ and $B\subseteq\Real$. This measure-theoretic formulation is necessary because a trace containing continuous $\G$-samples may itself have probability zero, so conditioning cannot in general be defined by dividing by the probability of an individual trace\kb{how does this def fix this problem and what happens if we condition on a measure zero event?}. We write 
-\begin{align*}\label{eq:conditional-expectation}
+for measurable $A\subseteq\Trace$ and $B\subseteq\Real$.
+Unlike conditioning by dividing by the probability of an individual
+trace, this characterization remains valid even when individual
+traces have probability zero. On a set of traces of
+$\trlaw e$-measure zero, the conditional distribution is not
+uniquely determined, but its value does not affect the integral above.
+We write
+\begin{align*}
   \Expect[e\mid\tau] :=
   \int_{\Real}r^+\,\law e(dr\mid\tau)
   -
   \int_{\Real}r^-\,\law e(dr\mid\tau)
 \end{align*}
-for the expectation of $\law e(\,\cdot\mid\tau)$, which is the expected return value of the original program after fixing a trace $\tau$ and averaging over the remaining $\E$-mode randomness. We can now state tracewise soundness.
+for the expectation of $\law e(\,\cdot\mid\tau)$, which is
+the expected return value of the original program after fixing a
+trace $\tau$ and averaging over the remaining $\E$-mode randomness.
+We can now state tracewise soundness.
+
 
 \begin{theorem}[Tracewise soundness\leanref{trace-soundness}]
 \label{thm:trace-soundness}
-Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe. For
-$\trlaw e$-almost every trace\kb{what is $\trlaw e$-almost every trace?} $\tau$,
+Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe.
+For $\trlaw e$-almost every trace $\tau$,
 \[
+  \int_{\Real}|r|\,\law e(dr\mid\tau)<\infty
+  \qquad\text{and}\qquad
   \law{\trans e}(\,\cdot\mid\tau)
   =
   \delta_{\Expect[e\mid\tau]}.
 \]
-In particular,\kb{why do we know that these two expectations are real numbers?}
+In particular, for these traces,
 \[
-  \Expect[e\mid\tau],\ \Expect[\trans e\mid\tau]\in\Real,
-  \qquad
   \Expect[\trans e\mid\tau]=\Expect[e\mid\tau].
 \]
 \end{theorem}
 
-This statement does not require the program to have a global
-expectation. It states that for all traces except a set of measure zero\kb{I can't parse this sentence}, the transformed program returns the average output of the original program under some fixed trace. When a global expectation is defined, however, \cref{thm:trace-soundness} can be integrated
+Recall a property holds for $\trlaw e$-almost every trace if the set of traces where it fails has measure zero. This theorem statement does not require the program to have a global
+expectation. When a global expectation is defined, however, \cref{thm:trace-soundness} can be integrated
 over traces to obtain our global soundness guarantees, which we discuss next.
 
-\kbin{I think a small example illustrating this theorem would help.}
+\begin{example}
+Consider
+\[
+  \kw{let}\ x=\kw{uniform}^{\G}(0,1)\ \kw{in}\
+  \kw{let}\ y=\kw{uniform}^{\E}(-1,1)\ \kw{in}\ x+y.
+\]
+A trace records only the sampled value $x=r$.
+Given this trace, the original program returns $r+y$,
+which is uniformly distributed on $[r-1,r+1]$ and has
+expectation $r$.
+Determinization replaces the sample $y$ by its mean, zero,
+so the transformed program returns $r$.
+Thus, for each such trace $\tau$,
+\[
+  \Expect[e\mid\tau]=r,
+  \qquad
+  \law{\trans e}(\,\cdot\mid\tau)=\delta_r.
+\]
+The output still varies across traces, but within each trace
+determinization replaces the remaining randomness by its average.
+\end{example}
 
 \subsection{Global Soundness}
 
@@ -220,7 +270,7 @@ q_e.
 \leanref{output-mass}
 \]
 
-Now, since determinization preserves the trace distribution and replaces each conditional output distribution by its mean, averaging over traces preserves expectation. However, the requirement that the global expectation be well-defined is essential. Tracewise soundness guarantees a finite conditional mean for almost\kb{what does that mean?} every fixed trace, but averaging these means over all traces need not yield a well-defined global expectation.\kb{can we give an example of this phenomenon?} Formally, we can state:
+Now, since determinization preserves the trace distribution and replaces conditional output distributions by point masses at their means with probability one, averaging over traces preserves expectation whenever the original program's global expectation is well-defined. This requirement is essential. Tracewise soundness guarantees finite conditional means outside a set of traces of measure zero, but this does not ensure that the original program has a well-defined global expectation. In the coin-flipping example above, every terminating trace has conditional mean zero, yet $\Expect[X^+]=\Expect[X^-]=\infty$, so the original program's global expectation is undefined. Formally, we can state:
 
 \begin{theorem}[Expectation preservation\leanref{expectation-preservation}]
 \label{thm:expectation}
@@ -246,30 +296,12 @@ then $q_{\trans e} > 0$ and $\trans e$ has a finite second moment, and
 \]
 \end{theorem}
 
-This variance reduction is a special case of a more general fact: determinization cannot increase the expected value of any nonnegative convex function of the program's return value. This follows by applying Jensen's inequality\kb{cite?} tracewise. In particular, when the second moment is finite, choosing
-$\varphi(r)=(r-\Expect_{\mathrm{ret}}[e])^2$ and using expectation preservation yields the variance non-increase result above.
-
-\begin{theorem}[Convex function inequality\leanref{convex-function-inequality}]
-\label{thm:convex-function}
-Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe. Then, for every
-nonnegative convex function $\varphi:\Real\to\Real$,
-\[
-  \int_{\Real}
-    \varphi(r)\,\law{\trans e}(dr)
-  \leq
-  \int_{\Real}
-    \varphi(r)\,\law e(dr),
-\]
-where both sides are understood as nonnegative extended integrals and may
-therefore equal $+\infty$.
-\end{theorem}
-
 Finally, we end with the following point regarding how determinization affects the probabilities of successful return, rejection, and divergence. The results above concern the distribution of successfully returned values, but determinization also preserves the probability of returning at all. Let $d_e$ denote the probability of
 divergence\leanref{divergence}, including rejection.  Under domain safety,
 executions cannot lose probability mass by getting stuck. Together with preservation of output mass, this implies that determinization
 also preserves the total probability of divergence and rejection.
 
-\begin{proposition}[Probability preservation\leanref{probability-preservation}]
+\begin{proposition}[Probabilitic type safety\leanref{probability-preservation}]
 \label{prop:probability}
 Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe. Then $\trans e$ is domain-safe,
 and
