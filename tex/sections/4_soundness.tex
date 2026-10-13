@@ -69,7 +69,7 @@ $\Expect[|U|]=(2a)^{-1}\int_{-a}^{a}|u|\,du=a/2$.} Therefore,
   =\sum_{n=0}^{\infty}\frac14
   =\infty.
 \]
-Because each conditional distribution\kb{what is "each conditional distribution"?} is symmetric, $\Expect[X^+]=\Expect[X^-]=\infty$, so the global expectation $\Expect[X]$ is undefined. This thus motivates stating our primary soundness result under fixed retained randomness before deriving global soundness when the relevant expectations exist.
+Because the distribution of $X$ conditioned on $N=n$ is symmetric about zero for every $n$, and $\Expect[|X|]=\infty$, we have $\Expect[X^+]=\Expect[X^-]=\infty$. Thus, the global expectation $\Expect[X]$ is undefined. This thus motivates stating our primary soundness result under fixed retained randomness before deriving global soundness when the relevant expectations exist.
 \end{example}
 
 In what follows, we first formalize this characterization using traces of the retained random choices, and then derive the global soundness. We state the main soundness theorems throughout this section, leaving the proof strategies to~\Cref{sec:proof} and the full proofs to~\Cref{sec:appendix}.
@@ -82,17 +82,21 @@ In what follows, we first formalize this characterization using traces of the re
 We begin by making precise what it means to fix the random choices retained by
 determinization.
 
-\begin{definition}[$\G$-trace\leanref{traces}]
-Let $\Trace$\kb{can we define this object more formally? I could not infer its meaning from the context...} be the space of finite sequences of $\G$-mode sampling outcomes. A \emph{$\G$-trace} is a sequence
+\begin{definition}[Trace\leanref{traces}]
+Let $\mathsf{Prim}$ denote the set of distribution
+primitives. We define the trace space $\Trace := \bigsqcup_{n\in\mathbb N}
+    (\mathsf{Prim}\times\Real)^n$,
+equipped with the disjoint-union Borel $\sigma$-algebra.
+A \emph{trace} $\tau\in\Trace$ is a finite sequence
 \[
-  \tau \in \Trace,
-  \qquad
   \tau ::= [] \mid (D,r)::\tau,
 \]
-where each pair $(D,r)$ records the distribution primitive $D$ and sampled value $r$ of an executed $\G$-mode sampling operation along a successfully terminating execution.
+where each pair $(D,r)$ records the distribution
+primitive $D$ and sampled value $r$ of an executed
+$\G$-mode sampling operation, in execution order.
 \end{definition}
 
-When the mode is clear, we simply call these \emph{traces}\kb{The preceeding def suggest that we only define traces for G-mode anyway?}. Note that $\E$-mode samples do not appear in a trace: they remain random after the trace has been fixed. A trace may contain either discrete or continuous
+Note that $\E$-mode samples do not appear in a trace: they remain random after the trace has been fixed. A trace may contain either discrete or continuous
 values\kb{how do we distinguish between discrete and continuous values?}, and in the latter case an individual trace may itself have probability zero.\kb{what is the probability of a trace?}
 
 Now, we refine the output semantics to jointly record the trace and the
