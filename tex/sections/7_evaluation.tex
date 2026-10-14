@@ -32,7 +32,7 @@ and \texttt{swap}; and unbounded recursion for \texttt{add-uniform-counter}, \te
 The final column of \cref{tab:finite-after-determinization}
 reports the time spent parsing, elaborating, inferring types
 and sampling modes, and replacing eligible samples by their
-means. This computation takes less than one millisecond on every benchmark. Now, to investigate how this cost grows with program size, we generate three benchmarks with increasing numbers of stages $k$ (see appendix for full details). Increasing $k$ adds explicit program structure. \Cref{fig:determinization-scaling} shows median times over seven runs, with interquartile bands.
+means. This computation takes less than one millisecond on every benchmark. Now, to investigate how this cost grows with program size, we generate three benchmarks with increasing numbers of stages $k$ (see \cref{sec:appendix-scaling} for full details). Increasing $k$ adds explicit program structure. \Cref{fig:determinization-scaling} shows median times over seven runs, with interquartile bands.
 
 \input{figures/eval-scaling.tex}
 
