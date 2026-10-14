@@ -20,6 +20,11 @@ uv pip install \
 env STORM_PYTHON=<env name>/bin/python \
   python3 tools/bench.py [--all | --exact | --approx] [--det] [--polar] [--psi]
 
+For frontend timings without sampling or exact analysis:
+  python3 tools/bench.py --exact --det-only
+This times parsing, elaboration, type inference, and mean replacement inside Lean;
+process startup, file reading, formatting, and backend analysis are excluded.
+
 Polar runs with polar/.venv/bin/python (override with POLAR_PYTHON). Each .prob
 file names its Polar arguments on its first line:
     # Polar: python polar.py <file>.prob --goals "E(x)" --at_n 2
@@ -54,6 +59,7 @@ POLAR_VENV_PYTHON = POLAR_DIR / ".venv" / "bin" / "python"
 RESULTS_DIR = ROOT / "results"
 EXACT_RESULTS = RESULTS_DIR / "finite-after-det.json"
 APPROX_RESULTS = RESULTS_DIR / "infinite-after-det.json"
+DET_ONLY_RESULTS = RESULTS_DIR / "determinization-only.json"
 DEFAULT_TIMEOUT = 180
 
 
@@ -264,6 +270,51 @@ def print_sample_sites(sites: SampleSites) -> None:
 # ---------------------------------------------------------------------------
 # determinize
 # ---------------------------------------------------------------------------
+
+def det_only(model: Path, args: argparse.Namespace) -> dict[str, object]:
+    """Time the Lean frontend without running a program or constructing a model."""
+    print("  Det (frontend only)")
+    run = run_tool([str(args.binary), "--det-only", str(model)], ROOT, args.timeout)
+    if run.returncode is None:
+        print(f"    TIMEOUT after {args.timeout:g}s")
+        return {"status": "timeout"}
+    if run.returncode:
+        error = compact_error(run.stderr or run.stdout)
+        print(f"    ERROR: {error}")
+        return {"status": "failed", "error": error}
+    timing = re.search(r"^Determinization time \(ns\): (\d+)$", run.stdout, re.MULTILINE)
+    if timing is None:
+        error = "missing frontend timing; rebuild the determinize executable"
+        print(f"    ERROR: {error}")
+        return {"status": "failed", "error": error}
+    nanoseconds = int(timing.group(1))
+    seconds = nanoseconds / 1_000_000_000
+    print(f"    Determinization time: {seconds:.9f}s")
+    return {"status": "completed", "nanoseconds": nanoseconds, "seconds": seconds}
+
+
+def run_det_only_suite(directory: Path, args: argparse.Namespace) -> int:
+    models = sorted(directory.glob("*.det"))
+    heading(f"DETERMINIZATION ONLY: {directory.name} ({len(models)} benchmarks)")
+    print("Timed: parsing, elaboration, type inference, and mean replacement.")
+    results = []
+    for index, model in enumerate(models, 1):
+        print(f"\n[{index}/{len(models)}] {model.name}")
+        results.append({"benchmark": model.name, **det_only(model, args)})
+    failures = sum(result["status"] != "completed" for result in results)
+    payload = {
+        "suite": directory.name,
+        "configuration": {"mode": "det-only", "timeout_seconds": args.timeout,
+                          "timed_phases": ["parse", "elaborate", "infer", "determinize"]},
+        "benchmarks": results,
+        "failures": failures,
+    }
+    destination = (args.output_dir / f"{directory.name}-determinization-only.json"
+                   if args.output_dir else
+                   DET_ONLY_RESULTS.with_name(f"{directory.name}-determinization-only.json"))
+    save_results(destination, payload)
+    return failures
+
 
 def det_exact(model: Path, args: argparse.Namespace, temp: Path) -> dict[str, object]:
     """Determinize and solve one finite state benchmark with Storm."""
@@ -598,6 +649,8 @@ def main() -> int:
                         help="run benchmarks/approx (infinite state after determinization)")
     tools = parser.add_argument_group("tools (default: all three)")
     tools.add_argument("--det", action="store_true", help="run determinize")
+    tools.add_argument("--det-only", action="store_true",
+                       help="time only the Lean frontend; skip sampling, models, Storm, Polar, and PSI")
     tools.add_argument("--polar", action="store_true", help="run Polar on .prob files")
     tools.add_argument("--psi", action="store_true", help="run lambda PSI on .psi files")
     parser.add_argument("--timeout", type=positive, default=DEFAULT_TIMEOUT,
@@ -613,6 +666,11 @@ def main() -> int:
     parser.add_argument("--no-build", action="store_true", help="use the existing determinize executable")
     args = parser.parse_args()
 
+    if args.det_only:
+        if args.polar or args.psi:
+            parser.error("--det-only cannot be combined with --polar or --psi")
+        args.det = True
+
     run_both = args.all or not (args.exact or args.approx)
     do_exact = args.exact or run_both
     do_approx = args.approx or run_both
@@ -627,9 +685,14 @@ def main() -> int:
             raise SystemExit(f"determinize binary not found: {args.binary}")
 
     failures = 0
-    if do_exact:
+    if args.det_only:
+        if do_exact:
+            failures += run_det_only_suite(EXACT_DIR, args)
+        if do_approx:
+            failures += run_det_only_suite(APPROX_DIR, args)
+    elif do_exact:
         failures += run_suite("EXACT: FINITE STATE AFTER DETERMINIZATION", EXACT_DIR, True, args)
-    if do_approx:
+    if do_approx and not args.det_only:
         failures += run_suite("APPROX: INFINITE STATE AFTER DETERMINIZATION", APPROX_DIR, False, args)
 
     heading("SUMMARY")
