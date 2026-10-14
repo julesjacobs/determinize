@@ -6,7 +6,8 @@
 \begin{lstlisting}[xleftmargin=0pt]
 let x = uniform[G](0, 1) in
 let y = gaussian[E](x, 1) in
-x * y
+let z = gaussian[E](y, 1) in
+x * z
 \end{lstlisting}
 \end{minipage}\hfill
 \begin{minipage}[t]{.48\linewidth}
@@ -16,10 +17,9 @@ let x = uniform[G](0, 1) in
 x * x
 \end{lstlisting}
 \end{minipage}
-\par\smallskip
-Expected output: $\signalMean$ in both programs.
-\caption{A signal and its noisy measurement.}
+\caption{A signal measured through two stages of noise.}
 \label{fig:intro-signal}
-\Description{The first sample remains random and the second is replaced by its
-mean. The output becomes x squared, preserving expectation one third.}
+\Description{The first sample remains random and both Gaussian samples are replaced
+by their means. Both y and z become x in the simplified program.
+The output becomes x squared, preserving expectation one third.}
 \end{figure}

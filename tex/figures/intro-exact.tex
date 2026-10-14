@@ -20,18 +20,6 @@
 ) 0
 \end{lstlisting}
 \end{minipage}
-\par\medskip
-Let $v_i$ be the expected output from loop entry $\texttt{x}=i$
-in the transformed program.
-\[
- \begin{pmatrix}v_0\\v_1\end{pmatrix}
- =\begin{pmatrix}0&\tfrac12\\\tfrac12&0\end{pmatrix}
-  \begin{pmatrix}v_0\\v_1\end{pmatrix}
-  +\begin{pmatrix}0\\\tfrac12\end{pmatrix}
- \qquad\Longrightarrow\qquad
- \begin{pmatrix}v_0\\v_1\end{pmatrix}
- =\begin{pmatrix}\tfrac13\\\tfrac23\end{pmatrix}.
-\]
 \caption{A noisy iteration becomes a finite-state loop.
 Both programs have expected output $v_0=1/3$.}
 \label{fig:intro-exact}
