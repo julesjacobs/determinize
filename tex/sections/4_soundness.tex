@@ -223,7 +223,7 @@ precisely the output measure defined in
 \cref{fig:semantics}(\subref{fig:semantics-output}). Evaluating both
 marginals on their full spaces gives the following
 
-\begin{theorem}[Equality of total masses]
+\begin{theorem}[Equality of total masses\leanref{equality-of-total-masses}]
 For every expression $e$,
 \[
   \trlaw e(\Trace)
@@ -260,7 +260,7 @@ $\Trace$ and $\Real$ are standard Borel spaces, the disintegration
 theorem guarantees the existence of a conditional output distribution,
 unique $\trlaw e$-almost everywhere. We denote this distribution by
 $\law e(\cdot\mid\tau)$, satisfying
-\begin{align}
+\begin{align}\label{eq:disintegration}
   J_e(A\times B)
   =\int_A\law e(B\mid\tau)\,\trlaw e(d\tau)
 \end{align}
@@ -331,7 +331,7 @@ well-defined, the disintegration identity gives
 \[
   \Expect_{\mathrm{ret}}[e]
   =\frac{1}{q_e}
-  \int_{\Trace}\Expect[e\mid\tau] \,\trlaw e(d\tau).
+  \int_{\Trace}\Expect[e\mid\tau] \,\trlaw e(d\tau).\leanref{returned-expectation-along-traces}
 \]
 Note that such a normalization factor was not needed for the
 conditional output distribution, since $\trlaw e$ records only traces
@@ -369,7 +369,7 @@ executions cannot lose probability mass by getting stuck. Together
 with preservation of output mass, this implies that determinization
 also preserves the total probability of divergence and rejection.
 
-\begin{proposition}[Probabilistic type safety\leanref{probability-preservation}]
+\begin{proposition}[Probabilistic type safety\leanref{probabilistic-type-safety}]
 \label{prop:probability}
 Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe. Then $\trans e$
 is domain-safe, and

@@ -34,7 +34,7 @@ and $\widehat e$ is a residual symbolic expression\leanref{symbolic-expression}.
 \end{definition}
 
 Examining further the two components of $s = (\sigma \mid \hat e)$, first the environment
-$\sigma$ in $s$ induces a joint distribution $\mathcal A_\sigma$
+$\sigma$ in $s$ induces a joint distribution $\mathcal A_\sigma$\leanref{symbolic-actual-environment}
 over valuations $\rho$ by sampling its declarations in order:
 for $\sigma=(u_1\sim D_1(\bar a_1),\ldots,u_k\sim D_k(\bar a_k))$,
 \[
@@ -175,7 +175,7 @@ variables, their means must be evaluated in declaration
 order. Specifically, for an environment
 $\sigma=(u_1\sim D_1(\bar a_1),\ldots,u_k\sim D_k(\bar a_k))$,
 we define the \emph{sequential mean valuation}
-$\bar\rho_\sigma$ by
+$\bar\rho_\sigma$\leanref{symbolic-mean-environment} by
 \[
   \bar\rho_\sigma(u_i)
   :=
@@ -280,7 +280,7 @@ even when their distributions depend on earlier choices.
 Together with the typing restrictions, it gives the
 following finite-step correspondence.
 
-\begin{theorem}[Finite-step factorization]
+\begin{theorem}[Finite-step factorization\leanref{finite-step-factorization}]
 \label{thm:finite-step-factorization}
 Let $s=(\sigma\mid\widehat e)$ be a well-typed,
 domain-safe symbolic state with $\widehat e:\tyR\E$.
@@ -340,7 +340,7 @@ is preserved when we sum over execution lengths.
 The construction and compatibility proof are
 given in the appendix.
 
-\begin{theorem}[Whole-program factorization]
+\begin{theorem}[Whole-program factorization\leanref{whole-program-factorization}]
 \label{thm:whole-program-factorization}
 Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe.
 For all measurable $A\subseteq\Trace$ and
