@@ -152,8 +152,9 @@ which the paper does not say.
 - Preservation of the expectation given acceptance, which is what justifies `observe`.
 - The determinized program's output law equals the law of the source's conditional mean given
   the trace.
-- Versions of all the theorems without dividing by the return probability.
-- All the finite-model and reward-model theorems.
+- Every finite reward model has finite first and second moments
+  (`finite_reward_integrability`). Section 6 implies it by calling the certified numbers the
+  exact moments.
 
 ### 17. How the semantics is set up
 
@@ -224,9 +225,6 @@ type") is two Lean rules: one for sampling sites, one for mean sites.
 - The command-line output shows only the first moment. The return probability, the second
   moment, and the conditional mean and variance are in the `.result.json` and `.storm.json`
   files.
-- When the tool transfers a result from the determinized program to the source, its printed
-  note cites the hypotheses of the theorem without division by the return probability. Section
-  6 cites the theorem that divides by it.
 
 ### 25. Hand-simplified example output
 
