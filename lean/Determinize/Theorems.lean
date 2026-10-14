@@ -49,7 +49,7 @@ theorem inference_correctness (input : Input) :
       ∀ completion : Annotated, Completion input completion → AffinityLE completion program :=
   Proof.Frontend.infer_correct input
 
-/-! ## Tracewise soundness (paper, Section 4.1) -/
+/-! ## Tracewise soundness (paper, Section 4.2) -/
 
 /-- The output marginal of the joint law: erasing terminating traces recovers the ordinary
 output semantics. -/
@@ -76,7 +76,7 @@ theorem tracewise_soundness (program : Expr)
         Measure.dirac (∫ value : ℝ, value ∂(traceAndOutputLaw program).condKernel trace) :=
   Proof.Traces.tracewise_soundness program typed safe
 
-/-! ## Global soundness (paper, Section 4.2 and the appendix) -/
+/-! ## Global soundness (paper, Section 4.1 and the appendix) -/
 
 /-- Output-mass preservation. The source and the target return with the same probability. -/
 theorem output_mass_preservation (program : Expr)
