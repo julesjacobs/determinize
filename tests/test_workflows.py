@@ -374,6 +374,12 @@ class TriggerTests(unittest.TestCase):
             return re.findall(r"'([^']*)'", hashed[1])
         self.assertEqual(files("artifact", r"key: lean-html-"), files("pages", r"docs="))
 
+    def test_the_object_files_of_the_dependencies_have_one_key(self):
+        keys = {key for name in workflows()
+                for key in re.findall(r"key: (lean-objects-.*)", (WORKFLOWS / f"{name}.yml").read_text())}
+        self.assertEqual(len(keys), 1, keys)
+        self.assertIn("lean/lakefile.toml", keys.pop())
+
     def test_every_workflow_has_expectations(self):
         for path in sorted(WORKFLOWS.iterdir()):
             with self.subTest(path=path.name):

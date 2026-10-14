@@ -117,7 +117,7 @@ jobs:
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: lean/.lake/packages/*/.lake/build/ir/**/*.c.o*
-          key: lean-objects-${{ hashFiles('lean/lean-toolchain', 'lean/lake-manifest.json') }}
+          key: lean-objects-${{ hashFiles('lean/lean-toolchain', 'lean/lake-manifest.json', 'lean/lakefile.toml') }}
           lookup-only: true
       - name: Keep doc-gen4 and the documentation of the dependencies cached
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -228,6 +228,13 @@ jobs:
           key: lean-docs-${{ hashFiles('lean/lean-toolchain', 'lean/docbuild/lake-manifest.json', 'flake.lock') }}
       - name: Fetch the Mathlib cache
         run: lake exe cache get
+      # Documenting the library builds it, and its precompiled modules need the object files of the
+      # dependencies (see lean.yml, which saves them).
+      - name: Restore the object files of the dependencies
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: lean/.lake/packages/*/.lake/build/ir/**/*.c.o*
+          key: lean-objects-${{ hashFiles('lean/lean-toolchain', 'lean/lake-manifest.json', 'lean/lakefile.toml') }}
       # Lake starts git and doc-gen4 with fork(). Documenting the dependencies, Lake runs over a
       # hundred threads whose stacks merge into one mapping larger than RAM and swap together, so
       # the kernel's default heuristic overcommit refuses every fork although memory is free and
