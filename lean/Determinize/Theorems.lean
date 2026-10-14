@@ -295,7 +295,9 @@ end Determinize.Theorems
 /-! The theorems above may depend only on the standard axioms, and their statements may rely on
 `Proof` only for proofs, which cannot change what they mean: Lean treats any two proofs of a
 proposition as equal. Following the statements through the declarations they use, stopping at
-proofs, must reach nothing declared in a `Proof` module. Otherwise the build fails. -/
+proofs, must reach nothing declared in a `Proof` module. Otherwise the build fails. The
+constructors of an inductive are followed through their types even when they are proofs: the
+constructors of a predicate such as `Typed` define it. -/
 
 open Lean Elab Command in
 run_cmd do
@@ -326,7 +328,9 @@ run_cmd do
       logError m!"{name} is declared in a Proof module and is not a proof, but a theorem's \
           statement relies on it"
     let constructors := match info with | .inductInfo type => type.ctors.toArray | _ => #[]
-    pending := pending ++ constructors ++ info.type.getUsedConstants ++
+    let constructorTypes := constructors.flatMap fun constructor ↦
+      ((env.find? constructor).map (·.type.getUsedConstants)).getD #[]
+    pending := pending ++ constructors ++ constructorTypes ++ info.type.getUsedConstants ++
       ((info.value? (allowOpaque := true)).map (·.getUsedConstants)).getD #[]
   if sound then
     logInfo m!"{theorems.size} theorems proved, using only {standard}"
