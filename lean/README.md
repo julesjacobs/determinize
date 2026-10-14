@@ -122,8 +122,8 @@ prose.
 - **Primitive distributions.** Domains and means agree with the paper's table. Lean has no
   separate `Domain_D` and `Mean_D`: each primitive has one fiber (`uniformFiber` and so on),
   which is its law at a sampling site, the Dirac mass at its mean at a mean site, and the zero
-  measure outside the domain. The paper leaves the law at degenerate parameters implicit:
-  `uniform(a, a)` is the Dirac mass at `a`, and so is Mathlib's Gaussian with variance 0.
+  measure outside the domain. At degenerate parameters both say Dirac mass: `uniform(a, a)` is
+  the Dirac mass at `a`, and so is Mathlib's Gaussian with variance 0.
 - **Traces.** A trace entry records an `Op`, whose discrete label also records the number of
   supplied probabilities (`Op.discrete arity`); the paper's entry records only the primitive.
   Section 4's `Trace` is the disjoint union of the `(Prim × ℝ)^n` with the disjoint-union Borel
@@ -208,9 +208,7 @@ prose.
   the front end lowers `observe(c)` to `if c then () else reject`. The front end also accepts
   `<=`, moves a literal right factor to the left of a multiplication, and reads
   `discrete(p0, …, pn)` with all n + 1 probabilities, dropping the last. The CLI prints `gauss`
-  for `gaussian` and `discrete_list` for `discrete`. The introduction's random-walk figure
-  calls a `reduce` whose definition it leaves to an appendix section that is a to-do;
-  `examples/paper/gauss-random-walk.det` defines it. The right-hand programs of the
+  for `gaussian` and `discrete_list` for `discrete`. The right-hand programs of the
   introduction's four figures are simplified by hand, as their headings say: the CLI prints
   mean sites such as `mean_gauss(…)`, names binders by position (`x0`, `f1`) and removes
   nothing.
@@ -242,10 +240,7 @@ prose.
   unchecked"; its `dreckon` export exceeded the 180-second timeout. Table 1's determinization
   times come from `determinize --det-only` (`tools/bench.py --exact --det-only`), which times
   `compile` and `Expr.determinize`; the recorded run `results/exact-determinization-only.json`
-  differs from the table by up to 16% (`swap`). Section 7 leaves the details of the scaling
-  benchmarks (`benchmarks/exact/scaling/run_scaling.py`) to the appendix, which has no such
-  section. Table 2's `dungeon` and `noisy-product` are in `examples/paper/`, which
-  `tools/bench.py` does not run.
+  differs from the table by up to 16% (`swap`).
 - **Lean links.** `tex/lean-links.tex` pins the paper's GitHub links to `25d2cb6`, and the
   theorems' links point to `Theorems.lean`. Each linked range holds its declaration at that
   revision. The architecture figure's links follow the additive route; its certificate-checker
