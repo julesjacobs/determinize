@@ -16,7 +16,7 @@
     "infer",
     "determinize"
   ],
-  "size_metric": "k: dependent draws or explicit input-list elements",
+  "size_metric": "k: nested uniform draws or explicit input-list elements",
   "binary": "/Users/kaw324/determinize/lean/.lake/build/bin/determinize",
   "failures": []
 }

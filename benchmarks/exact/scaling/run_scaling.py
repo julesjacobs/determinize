@@ -20,7 +20,7 @@ import statistics
 import subprocess
 import tempfile
 
-# Experiment settings: k counts dependent draws or explicit input-list elements.
+# Experiment settings: k counts nested uniform draws or explicit input-list elements.
 SIZES = [10, 25, 50, 100, 200, 400]
 REPETITIONS = 7
 WARMUPS = 1
@@ -31,7 +31,7 @@ ROOT = HERE.parents[2]
 BINARY = ROOT / "lean/.lake/build/bin/determinize"
 OUTPUT = ROOT / "results/scaling"
 FAMILIES = {
-    "dependent-chain": "Dependent sampling chain",
+    "uniform-nested": "Uniform nested",
     "gauss-random-walk": "Gaussian random walk",
     "add-noise": "Add noise",
 }
@@ -39,7 +39,7 @@ FAMILIES = {
 
 def generate(family: str, k: int) -> str:
     lines = []
-    if family == "dependent-chain":
+    if family == "uniform-nested":
         lines.append("let x0 = 1 in")
         for i in range(1, k + 1):
             lines.append(f"let x{i} = uniform(0, x{i - 1}) in")
@@ -73,7 +73,7 @@ def measure(path: Path, family: str, k: int, binary: Path) -> int:
         r"Sampling sites (before|after) determinization: discrete=(\d+), continuous=(\d+)",
         run.stdout,
     )
-    expected = {"before": (0, k if family == "dependent-chain" else 1),
+    expected = {"before": (0, k if family == "uniform-nested" else 1),
                 "after": (0, 0)}
     observed = {when: (int(d), int(c)) for when, d, c in counts}
     if observed != expected:
@@ -113,11 +113,15 @@ def plot(rows: list[dict]) -> None:
         low = [row["q25_ms"] for row in series]
         high = [row["q75_ms"] for row in series]
         fig, ax = plt.subplots(figsize=(6, 4))
-        line, = ax.plot(x, y, "o-", label=label)
-        ax.fill_between(x, low, high, alpha=0.18, color=line.get_color())
-        ax.set(title=label, xlabel=("Number of dependent draws (k)" if family == "dependent-chain"
-                       else "Number of input-list elements (k)"),
-               ylabel="Determinization time (ms)")
+        line, = ax.plot(x, y, "o-", label=label, linewidth=1, markersize=4)
+        ax.fill_between(x, low, high, alpha=0.35, color=line.get_color())
+        ax.set_xlabel("Number of nested uniform draws (k)" if family == "uniform-nested"
+                      else "Number of input list elements (k)",
+                      fontsize=14)
+        ax.set_ylabel("Determinization time (ms)", fontsize=14)
+        ax.tick_params(axis="both", labelsize=12, width=1.3, length=5)
+        for spine in ax.spines.values():
+            spine.set_linewidth(1.3)
         ax.grid(alpha=0.25)
         fig.tight_layout()
         for extension in ("png", "pdf"):
@@ -172,7 +176,7 @@ def main() -> int:
                 "sizes": sorted(set(args.sizes)), "repetitions": args.repetitions,
                 "warmups": WARMUPS, "timeout_seconds": TIMEOUT_SECONDS,
                 "timed_phases": ["parse", "elaborate", "infer", "determinize"],
-                "size_metric": "k: dependent draws or explicit input-list elements",
+                "size_metric": "k: nested uniform draws or explicit input-list elements",
                 "binary": str(binary), "failures": failures,
             }, indent=2) + "\n")
     if summaries:
