@@ -49,13 +49,13 @@
 \draw[->,black!55] (s3.south) .. controls (0.6,-3.82) and (3.2,-3.82) .. (exp.north);
 \end{tikzpicture}%
 }
-\caption{Symbolic execution of the signal-and-measurement program.
-The retained $\G$-mode draw produces $t\sim\kw{uniform}(0,1)$ and the trace
-$\tau_t$, whereas the two $\E$-mode draws are recorded in the symbolic
+\caption{Symbolic execution of the source program in~\Cref{fig:intro-signal}.
+The $\G$-mode sample produces $t\sim\kw{uniform}(0,1)$ and the trace
+$\tau_t$, whereas the two $\E$-mode samples are recorded in the symbolic
 environment. Ordinary reductions (including \texttt{let} substitutions) are
 omitted between states. The terminal state has two interpretations: the source
 output distribution (left) and its mean (right). Both terminal interpretations
-record only the empty \emph{remaining} trace $[]$; the retained draw $t$ has
+record only the empty \emph{remaining} trace $[]$, since the sample $t$ has
 already been made.}
 \label{fig:symbolic-example}
 \Description{A vertical sequence of symbolic states starts from the lifted source
