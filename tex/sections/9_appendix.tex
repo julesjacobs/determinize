@@ -2,6 +2,45 @@
 \section{Appendix}
 \label{sec:appendix}
 
+\section{Gaussian Random Walk}
+\label{sec:appendix-gauss-random-walk}
+
+The full source program of \cref{fig:intro-gaussian-walk}, from~\cite{vakar2019domain},
+is shown below. \texttt{reduce} folds the step function over the requested times,
+starting from the path that contains only $(0,0)$.
+
+\begin{lstlisting}
+let reduce =
+  rec reduce f => fun accumulator => fun xs =>
+    match xs with
+    | [] =>
+        accumulator
+    | x :: rest =>
+        reduce f (f accumulator x) rest
+in
+
+let step =
+  fun path => fun nextTime =>
+    match path with
+    | [] =>
+        []
+    | current :: previous =>
+        let time = fst current in
+        let position = snd current in
+        let nextPosition =
+          gauss(position, nextTime - time)
+        in
+        (nextTime, nextPosition) :: path
+in
+
+let times =
+  1 :: 2 :: 4 :: 5.5 :: 6 :: 6.25 :: []
+in
+
+reduce step ((0, 0) :: []) times
+\end{lstlisting}
+
+
 \begin{itemize}
     \item Detailed proofs
     \item Maybe more benchmark tables
@@ -1575,34 +1614,6 @@ domain-safe and
 Consequently, determinization preserves the combined probability of
 rejection and divergence.
 \end{proposition}
-
-\section{Gaussian Random Walk}
-\label{sec:appendix-gauss-random-walk}
-
-The full source program of \cref{fig:intro-gaussian-walk}, with the annotation that inference
-fills in. \texttt{reduce} folds the step function over the requested times, starting from the
-path that contains only $(0,0)$.
-
-\begin{lstlisting}
-let reduce = rec reduce f => fun acc => fun xs =>
-  match xs with
-    | [] => acc
-    | x :: rest => reduce f (f acc x) rest
-in
-let step = fun path => fun t' =>
-  match path with
-    | [] => []
-    | current :: _ =>
-        let t = fst current in
-        let y = snd current in
-        let y' = gaussian[E](y, t' - t) in
-        (t', y') :: path
-in
-let times =
-  1 :: 2 :: 4 :: 5.5 :: 6 :: 6.25 :: []
-in
-reduce step ((0, 0) :: []) times
-\end{lstlisting}
 
 \section{Determinization Scaling}
 \label{sec:appendix-scaling}

@@ -4,21 +4,17 @@
 
 Probabilistic programming provides a flexible way to express computations involving random choices using familiar programming constructs~\cite{kozen1981semantics,gordon2014probabilistic,vandeMeent2018introduction,carpenter2017stan,bingham2019pyro,cusumano2019gen}. The combination of random sampling with features such as conditionals, higher-order functions, and recursion makes probabilistic programs expressive, but also challenging to analyze. A fundamental quantitative property of interest is the expected value of a program's output.
 
-Monte Carlo methods estimate expected values by averaging the results of repeated independent executions. However, the precision of these estimates depends on the variance of the program's output, with higher variance requiring more samples to achieve the same accuracy. This motivates reducing the randomness in a program while preserving its expected value.
-
-Existing approaches exploit this idea in different ways. Exact inference and moment analysis compute
-expectations symbolically~\cite{gehr2016psi,gehr2020lpsi,moosbrugger2022moment}. Conditional Monte Carlo and Rao-Blackwellization reduce sampling variance by analytically averaging over selected random choices~\cite{casella1996rao,owen2013montecarlo}. Other techniques combine symbolic reasoning with sampling during inference~\cite{murray2018delayed,atkinson2022semisymbolic}, while expectation programming targets the estimation of expected values directly~\cite{reichelt2022expectation}. Together, these approaches demonstrate that not every random choice needs to be explicitly simulated. Identifying which choices can be safely eliminated, however, is challenging: sampled values may influence control flow, determine the parameters of subsequent distributions, or participate in nonlinear computations. This raises a natural question:
+Existing approaches to computing expected values broadly follow two directions. Exact inference and moment analysis compute expectations symbolically for supported classes of programs~\cite{gehr2016psi,gehr2020lpsi,moosbrugger2022moment}. Alternatively, Monte Carlo methods estimate expectations through repeated sampling. Conditional Monte Carlo and Rao-Blackwellization improve the precision of these estimates by analytically averaging over selected random choices~\cite{casella1996rao,owen2013montecarlo}. Other techniques combine symbolic reasoning with sampling during inference~\cite{murray2018delayed,atkinson2022semisymbolic}, while expectation programming directly targets expected value estimation~\cite{reichelt2022expectation}. Together, these approaches illustrate that random choices need not always be explicitly sampled to compute or estimate expectations, suggesting the possibility of simplifying probabilistic programs themselves by eliminating selected random choices while preserving their expected values. Identifying which choices can be safely eliminated, however, is challenging: sampled values may influence control flow, determine the parameters of subsequent distributions, or participate in nonlinear computations. This raises a natural question:
 \begin{center}
 \emph{Can static analysis automatically identify and eliminate
 random choices from a probabilistic program while preserving
 its expected value?}
 \end{center}
 
-Consider the signal and noisy measurement program in
-\cref{fig:intro-signal}. The program samples a signal $x$ uniformly
-from $[0,1]$, samples a Gaussian measurement $y$ with mean $x$,
-then samples a Gaussian measurement $z$ with mean $y$,
-and returns the product $xz$. Once $x$ is fixed, the measurement
+Consider the program in
+\cref{fig:intro-signal}, which samples a signal $x$ uniformly
+from $[0,1]$, then samples a Gaussian measurement $y$ with mean $x$ and a Gaussian measurement $z$ with mean $y$,
+then returns the product $xz$. Once $x$ is fixed, the measurement
 noise contributes nothing to the average product:
 $$
   \mathbb E[xz\mid x]
@@ -30,13 +26,13 @@ $$
 Replacing both Gaussian samples by their means therefore yields a simpler
 program that samples only $x$ and returns $x^2$. Both programs have
 expected value $1/3$, but the transformed program avoids generating
-measurement noise and thus has lower output variance.
+measurement noise and thus has lower output variance (\Cref{fig:intro-variance}).
 
 \input{figures/intro-signal}
 
 This replacement also reveals the central difficulty. Replacing the
 remaining uniform sample by its mean, $1/2$, would make the program
-return $1/4$ rather than $1/3$. Two random choices can be removed;
+return $1/4$ rather than $1/3$. Thus, only two random choices can be removed here, and
 the third must remain. The distinction depends on how their values
 are used: the returned product is linear in $z$ when $x$ is fixed,
 but becomes quadratic in $x$ after averaging over $y$ and $z$. A sound
@@ -57,21 +53,20 @@ how sampled values are used: values marked $\E$ may
 participate in affine computations, but cannot determine
 control flow or the parameters of retained samples.
 The transformation then replaces each $\E$-mode sample by
-its primitive mean. We establish soundness through a
+its mean. We establish soundness through a
 relational proof that connects the original and transformed
 programs via two interpretations of a common symbolic
 semantics. Under suitable conditions, the resulting program
 preserves the expected value of the output while never
 increasing its variance.
 
-The next three examples illustrate how determinization handles
+The next three examples illustrate, at a high level, how determinization handles
 higher-order functions, data structures, and unbounded recursion.
 We begin with the Gaussian random walk in
 \cref{fig:intro-gaussian-walk}, from~\cite{vakar2019domain}.
 The program passes a probabilistic step function to
 \texttt{reduce}, a left fold that traverses the requested times
-and accumulates a list of time-position pairs (the full program, including the definition
-of \texttt{reduce}, appears in~\cref{sec:appendix-gauss-random-walk}).
+and accumulates a list of time-position pairs.
 At each time $t'$, it samples a new position from
 $\mathcal N(y,t'-t)$, where $(t,y)$ is the latest pair in the path. It then adds $(t',y')$ to the front of the path. At the next step, it reads that pair and uses $y'$ as the next Gaussian's mean. Inference marks the Gaussian sampling
 site as determinizable without unrolling the traversal.
@@ -83,30 +78,26 @@ at each requested time.
 
 Beyond the transformation itself, determinization can improve
 Monte Carlo estimation of expected values.
-The dungeon crawl in \cref{fig:intro-dungeon} recursively visits
+Consider the dungeon crawl program in \cref{fig:intro-dungeon}, which recursively visits
 rooms until an exit coin ends the computation, with no fixed
 bound on the number of rooms visited.
 At depth $d$, a room pays a jackpot of $200d$ with probability
 $0.01$. The exit coins remain random because they control
 recursion, while each jackpot contributes linearly to the total
-reward and is replaced by its mean payout, $2d$.
-This preserves the expected value while reducing output
-variance by a factor of $12.36$ (\cref{fig:intro-variance}).
-Since the variance of an average of $N$ independent runs is
-the output variance divided by $N$, the transformed program
-requires correspondingly fewer samples to achieve the same
-estimator variance.
+reward and is replaced by its mean payout, $2d$. The determinized program preserves the expected value while reducing output
+variance by a factor of $12.36$ (\cref{fig:intro-variance}), hence requiring correspondingly fewer samples to achieve the same estimator variance.
 
 \input{figures/intro-dungeon}
 
 \input{figures/intro-variance}
 
-Moreover, removing randomness can do more than improve sampling.
-In \cref{fig:intro-exact}, a recursive process either returns
+Moreover, removing randomness can do more than improve sampling: it can enable exact expectation computation by transforming an infinite-state program into a finite-state one. In \cref{fig:intro-exact}, a recursive process either returns
 its current state $x$ or continues from $1-x$ plus Gaussian
-noise, each with probability $1/2$. Determinization removes
-the noise: starting from zero, the transformed loop has only two possible states, $0$ and $1$. Let $v_i$ be the expected output from loop entry $\texttt{x}=i$
-in the transformed program.
+noise, each with probability $1/2$. Determinization removes the noise: starting from zero, the transformed loop has only two possible states, $0$ and $1$.
+Let $v_i$ denote the expected value eventually returned by the
+transformed program when entering the loop with $\texttt{x}=i$,
+accounting for all subsequent iterations. The expected outputs
+from these two states satisfy
 \[
  \begin{pmatrix}v_0\\v_1\end{pmatrix}
  =\begin{pmatrix}0&\tfrac12\\\tfrac12&0\end{pmatrix}
@@ -116,10 +107,10 @@ in the transformed program.
  \begin{pmatrix}v_0\\v_1\end{pmatrix}
  =\begin{pmatrix}\tfrac13\\\tfrac23\end{pmatrix}.
 \]
-A continuous-state computation thus becomes
-a finite-state problem whose expectation can be computed
-exactly. Our implementation supports this analysis with
-certificate checking for the resulting exact values.
+Since the program starts with $\texttt{x}=0$, its expected
+output is $v_0=\tfrac13$.
+A continuous-state computation thus becomes a finite-state
+problem whose expectation can be computed exactly. Our implementation produces a Lean-checkable certificate for the resulting exact value.
 
 \input{figures/intro-exact}
 
@@ -154,8 +145,7 @@ certificate checking for the resulting exact values.
   end-to-end correctness guarantee: if the original program
   is domain-safe and its expectation is well-defined, the
   computed expectation is exactly that of the original
-  program. These two assumptions are not checked by the
-  tool and must be established by the user
+  program
   (\cref{sec:implementation}).
   The full Lean code is available at [TODO], with references
   to mechanized definitions and theorems indicated by a

@@ -35,9 +35,7 @@ in
 reduce step ((0, 0) :: []) times
 \end{lstlisting}
 \end{minipage}
-\caption{A Gaussian random walk from~\cite{vakar2019domain}.
-Determinization replaces each Gaussian step by its mean,
-yielding a path whose position is zero at every requested time.}
+\caption{Gaussian random walk from~\cite{vakar2019domain}, consisting of a higher order function \texttt{reduce} and a recursive traversal of lists of pairs. Full program in~\cref{sec:appendix-gauss-random-walk}.}
 \label{fig:intro-gaussian-walk}
 \Description{The source passes a probabilistic step function to the recursive
 reduce function. At each requested time, the step draws a Gaussian position

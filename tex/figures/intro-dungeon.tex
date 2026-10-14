@@ -20,8 +20,7 @@ crawl (fun depth => 200 * depth * bernoulli[E](0.01))
 crawl (fun depth => 2 * depth)
 \end{lstlisting}
 \end{minipage}
-\caption{Dungeon crawl. \texttt{flip(p)} returns true with probability $p$,
-false otherwise; \texttt{bernoulli(p)} returns $1$ with probability $p$, $0$ otherwise.}
+\caption{Dungeon crawl: \texttt{crawl} is a higher order function while \texttt{visit} uses unbounded recursion.}
 \label{fig:intro-dungeon}
 \Description{The complete source program defines a recursive crawl and passes
 it a random loot function. Exit coins remain random; jackpot coins become their
