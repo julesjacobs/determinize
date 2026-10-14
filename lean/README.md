@@ -248,8 +248,8 @@ prose.
   Section 5's links point into `Proof/`. `main.tex` builds the anonymous review version, whose
   marks link instead to an appendix that names each mark's declarations and their lines in the
   anonymized archive. `tex/check-lean-links.py` checks that each linked range holds the
-  declarations it names in the working tree, which the archive holds, and says when the linked
-  files differ at the pinned revision.
+  declarations it names in full, or a theorem's statement, in the working tree, which the archive
+  holds, and says when the linked files differ at the pinned revision.
 
 ## Style
 
