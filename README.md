@@ -53,7 +53,7 @@ From the repository root:
 through. `test.sh` runs the full Lean test entry point, including the shared corpus
 and independent certificates. It accepts `--all` and `--statistical`.
 `check.sh --all` additionally checks theorem axioms, the simulator's formatting, lint,
-types, tests and build, the site in a browser, and the paper build. Select individual areas with
+types, tests and build, the site in a browser, and the paper's Lean links and build. Select individual areas with
 `./check.sh lean tex`, or use `./check.sh --changed` for areas affected by uncommitted
 changes. The scripts use tools on `PATH` first; Nix is optional.
 
@@ -61,8 +61,9 @@ On GitHub, each workflow runs for the pull requests that change a file it reads.
 `.github/workflows/lean.yml` runs `lake build --wfail` and `./test.sh --all` in the `.#lean`
 shell, the comparisons with Storm included. `.github/workflows/sim.yml` runs `biome ci`, the type check and the simulator tests in
 the `.#sim` shell, builds the simulator into `sim/dist/` and attaches it to the run as the
-`simulator` artifact. `.github/workflows/tex.yml` builds the paper in the `.#tex` shell, fails
-on unresolved references and citations, and attaches `main.pdf` as the `paper` artifact.
+`simulator` artifact. `.github/workflows/tex.yml` checks the paper's Lean links
+(`tex/check-lean-links.py`), builds the paper in the `.#tex` shell, fails on unresolved
+references and citations, and attaches `main.pdf` as the `paper` artifact.
 `.github/workflows/site.yml` runs `./check.sh site` in the `.#site` shell.
 `.github/workflows/artifact.yml` builds the anonymized archive (see [below](#anonymized-artifact))
 with the API documentation that `main` rendered last, checks it unpacked, and attaches it to the

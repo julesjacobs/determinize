@@ -242,13 +242,14 @@ prose.
   `compile` and `Expr.determinize`; the recorded run `results/exact-determinization-only.json`
   differs from the table by up to 16% (`swap`).
 - **Lean links.** `tex/lean-links.tex` pins the paper's GitHub links to `31924ee`, and the
-  theorems' links point to `Theorems.lean`. Each linked range holds its declaration at that
-  revision. The architecture figure's links follow the additive route; its certificate-checker
-  link points to `Finite.Reward.Solution`, whose equations the kernel decides
-  (`decide +kernel`), as the additive route has no separate checking function. Section 5's
-  links point into `Proof/`. `main.tex` builds the anonymous review version, whose marks link
-  instead to an appendix that names each mark's declarations and their lines in the anonymized
-  archive.
+  theorems' links point to `Theorems.lean`. The architecture figure's links follow the additive
+  route; its certificate-checker link points to `Finite.Reward.Solution`, whose equations the
+  kernel decides (`decide +kernel`), as the additive route has no separate checking function.
+  Section 5's links point into `Proof/`. `main.tex` builds the anonymous review version, whose
+  marks link instead to an appendix that names each mark's declarations and their lines in the
+  anonymized archive. `tex/check-lean-links.py` checks that each linked range holds the
+  declarations it names in the working tree, which the archive holds, and says when the linked
+  files differ at the pinned revision.
 
 ## Style
 

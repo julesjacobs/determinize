@@ -1,6 +1,7 @@
 # Builds the paper, tex/main.pdf, on pull requests, and uploads it as the `paper` artifact of the
 # run. On main, pages.yml runs this workflow. The build fails on a LaTeX error, an unresolved
-# reference or citation, a multiply defined label, and a character missing from its font.
+# reference or citation, a multiply defined label, and a character missing from its font. Before
+# it, check-lean-links.py checks that the paper's Lean links name the lines of their declarations.
 #
 # Every `run` step executes inside the flake's `tex` dev shell, so TeX Live and latexmk are the
 # versions flake.lock pins. acmart.cls and ACM-Reference-Format.bst are committed in tex/.
@@ -12,6 +13,7 @@ on:
     paths:
       - tex/**
       - "!tex/**/*.md"
+      - lean/Determinize/**/*.lean
       - results/**
       - flake.nix
       - flake.lock
@@ -43,6 +45,8 @@ jobs:
         with:
           persist-credentials: false
       - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+      - name: Check the Lean links
+        run: python3 check-lean-links.py
       - name: Build
         run: latexmk -pdf -interaction=nonstopmode -halt-on-error -file-line-error -Werror main.tex
       - name: Upload the paper
