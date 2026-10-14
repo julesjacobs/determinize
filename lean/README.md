@@ -38,8 +38,8 @@ The default build checks mean sites with affine-dependent operands, invalid mean
 
 ## Deviations from the paper
 
-These notes compare the Lean development with the paper in `tex/` as of `f51d5f8`, whose Lean
-links are pinned to `8f89190`. The previous draft in `tex/archive/` is not compared.
+These notes compare the Lean development with the paper in `tex/` as of `e87171c`, whose Lean
+links are pinned to `25d2cb6`. The previous draft in `tex/archive/` is not compared.
 
 - **Names.** The paper's set of modes `𝒜 = {G, E, M}` is `DistributionAction`: `sample
   affinity` for G and E, `mean` for M. Result modes are affinities: `real^m` is `Ty.float m`,
@@ -246,21 +246,16 @@ finite-model and reward-model theorems.
   benchmarks (`benchmarks/exact/scaling/run_scaling.py`) to the appendix, which has no such
   section. Table 2's `dungeon` and `noisy-product` are in `examples/paper/`, which
   `tools/bench.py` does not run.
-- **Lean links.** `tex/lean-links.tex` pins the paper's GitHub links to `8f89190`, and the
+- **Lean links.** `tex/lean-links.tex` pins the paper's GitHub links to `25d2cb6`, and the
   theorems' links point to `Theorems.lean`. Each linked range holds its declaration at that
-  revision. Probability preservation's divergence equation, `d_Determinize(e) = d_e`, and the
-  additive default are newer, and the architecture figure's graph-construction, solver and
-  certificate links point to the terminal-reward route (`Finite/Explore.lean`,
-  `Finite.solveStatistics`, `Checking.checkStatistics`), not the additive one
-  (`Finite/Reward/Explore.lean`, `Finite.Reward.solve`, `Proof/RewardModel/Moments.lean`).
-  Section 5's links point into `Proof/` and cover its symbolic state, `lift`, `realize_ρ` and
-  `realize_()(lift(e)) = e`; `A_σ`, `ρ̄_σ` and its two theorems carry none, and
-  `tex/lean-links.tex` declares `symbolic-actual-environment` and `symbolic-mean-environment`
-  without a use. `main.tex` builds the anonymous review version, which links to the snapshot
-  `sca95063a7c` on apndx.org instead. That snapshot predates the verified inference: it has no
-  `Spec/Inference.lean`, `Spec/Expectation.lean` or `Frontend/Affinity.lean`, and its 66-line
-  `Theorems.lean` uses other names, so the review build's links are off until the snapshot is
-  regenerated.
+  revision. The architecture figure's links follow the additive route; its certificate-checker
+  link points to `Finite.Reward.Solution`, whose equations the kernel decides
+  (`decide +kernel`), as the additive route has no separate checking function. Section 5's
+  links point into `Proof/`. `main.tex` builds the anonymous review version, which links to the
+  snapshot `sca95063a7c` on apndx.org instead. That snapshot predates the verified inference:
+  it has no `Spec/Inference.lean`, `Spec/Expectation.lean` or `Frontend/Affinity.lean`, and its
+  66-line `Theorems.lean` uses other names, so the review build's links are off until the
+  snapshot is regenerated.
 
 ## Style
 
