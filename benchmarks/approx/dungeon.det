@@ -1,0 +1,9 @@
+(* Also in examples/paper *)
+
+let crawl = fun loot =>
+  (rec visit depth =>
+    if flip(0.25) then 0
+    else loot depth + visit (depth + 1)
+  ) 1
+in
+crawl (fun depth => 200 * depth * bernoulli(0.01))
