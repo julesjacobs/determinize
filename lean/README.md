@@ -44,17 +44,17 @@ links are pinned to `8f89190`. The previous draft in `tex/archive/` is not compa
 - **Names.** The paper's set of modes `𝒜 = {G, E, M}` is `DistributionAction`: `sample
   affinity` for G and E, `mean` for M. Result modes are affinities: `real^m` is `Ty.float m`,
   and `Determinize(e)` is `Expr.determinize`. Section 3's completions and their order are
-  `Completion` and `AffinityLE`.
-  The paper's `μ_e^(n)`, `μ_e`, `d_e`, `J_e^(n)`, `J_e` and `η_e` are `outputMeasureAt n`,
-  `bigStepMeasure`, `divergenceProbability`, `traceAndOutputLawAt n`, `traceAndOutputLaw` and
-  `traceLaw`. Sections 2 and 4 type `μ_e^(n)`, `μ_e`, `J_e^(n)` and `J_e` as subprobability
-  measures; the Lean definitions are `Measure ℝ` and `Measure (Trace × ℝ)`, and their mass
-  bound is a lemma (`traceAndOutputLaw_mass_le_one` with `trace_erasure`). The paper defines
-  `d_e` in words, as the probability of diverging or rejecting; `divergenceProbability` is the
-  infimum over depths of the probability of not yet being a value (`runningProbabilityAt`), to
-  which stuck executions add nothing. The conditional law `μ_e(· | τ)` is Mathlib's `condKernel` of
-  `traceAndOutputLaw`. `returnedLaw` is the output law conditioned on returning, which the paper
-  uses only through `𝔼_ret[e]` and `Var_ret[e]`. The return probability `q_e` is
+  `Completion` and `AffinityLE`. The paper's `μ_e^(n)`, `μ_e`, `d_e`, `J_e^(n)`, `J_e` and
+  `η_e` are `outputMeasureAt n`, `bigStepMeasure`, `divergenceProbability`,
+  `traceAndOutputLawAt n`, `traceAndOutputLaw` and `traceLaw`. Sections 2 and 4 type
+  `μ_e^(n)`, `μ_e`, `J_e^(n)` and `J_e` as subprobability measures; the Lean definitions are
+  `Measure ℝ` and `Measure (Trace × ℝ)`, and their mass bound is a lemma
+  (`traceAndOutputLaw_mass_le_one` with `trace_erasure`). The paper defines `d_e` in words, as
+  the probability of diverging or rejecting; `divergenceProbability` is the infimum over
+  depths of the probability of not yet being a value (`runningProbabilityAt`), to which stuck
+  executions add nothing. The conditional law `μ_e(· | τ)` is Mathlib's `condKernel` of
+  `traceAndOutputLaw`. `returnedLaw` is the output law conditioned on returning, which the
+  paper uses only through `𝔼_ret[e]` and `Var_ret[e]`. The return probability `q_e` is
   `returnProbability`, and `𝔼_ret[e]` and `Var_ret[e]` are `returnedExpectation` and
   `returnedVariance`.
 - **Syntax.** Variables are de Bruijn indices. `rec f x. e` is `Expr.fix`, whose body sees the
@@ -68,9 +68,7 @@ links are pinned to `8f89190`. The previous draft in `tex/archive/` is not compa
   `expectation_preservation`, `variance_non_increase`, `probability_preservation` (Section 4),
   `convex_function_inequality` and `trace_variance_decomposition` (appendix). They follow the
   statements of Section 4, and differ from them as follows.
-  - The appendix states the convex function inequality without a label, so Section 6's
-    `\cref{thm:convex-function}` is undefined. Section 4 calls probability preservation
-    "Probabilistic type safety"; the appendix and Lean call it probability preservation.
+  - Section 4 and the appendix call `probability_preservation` "Probabilistic type safety".
   - Section 4's equality of total masses, `η_e(Trace) = J_e(Trace × ℝ) = μ_e(ℝ)`, is no theorem
     of its own: `traceLaw` is defined as the trace marginal, `returnProbability` is
     `bigStepMeasure program univ`, and the second equation follows from `trace_erasure`.
@@ -90,9 +88,6 @@ links are pinned to `8f89190`. The previous draft in `tex/archive/` is not compa
   - A finite second moment is `MemLp id 2`, and `Var_ret[e]` is Mathlib's `variance` of
     `returnedLaw`. `trace_variance_decomposition` also states that the average variance within
     a trace is finite.
-  - The appendix restates the theorems, not always as Section 4 does. Its expectation
-    preservation and variance non-increase omit `q_Determinize(e) > 0`, which Section 4 and Lean
-    conclude.
   - The theorems are about closed programs of type `real^E`, and an output law has mass only
     at real results. The introduction's Gaussian random walk returns a list of pairs: the
     front end infers and determinizes it, but no theorem applies to it as written.
@@ -117,14 +112,12 @@ finite-model and reward-model theorems.
   is not domain-safe (`Proof/InterfaceChecks.lean`).
 - **Evaluation contexts, mean steps and off-domain calls.** `Spec` has no evaluation contexts:
   `reduce` recurses into the leftmost unevaluated operand and wraps the result
-  (`Action.wrap`), which realizes the contexts of the paper's semantics figure. That figure's
-  evaluation-context link points to `Proof/FiniteModel/Contexts.lean`, a proof about
-  finite-model frames. A mean site is not a deterministic reduction, as in the paper, but a
-  sampling action whose fiber is the Dirac mass at the mean. A primitive call outside its
-  domain, at a sampling or a mean site, is not stuck as in Section 2, but a sampling action
-  whose fiber is the zero measure; like a stuck state, it contributes no output and no running
-  probability, and it is not domain-safe. The output law, the reduction depth and the G trace
-  are the same as under the paper's rules.
+  (`Action.wrap`), which realizes the contexts of the paper's semantics figure. A mean site is
+  not a deterministic reduction, as in the paper, but a sampling action whose fiber is the
+  Dirac mass at the mean. A primitive call outside its domain, at a sampling or a mean site,
+  is not stuck as in Section 2, but a sampling action whose fiber is the zero measure; like a
+  stuck state, it contributes no output and no running probability, and it is not domain-safe.
+  The output law, the reduction depth and the G trace are the same as under the paper's rules.
 - **Primitive distributions.** Domains and means agree with the paper's table. Lean has no
   separate `Domain_D` and `Mean_D`: each primitive has one fiber (`uniformFiber` and so on),
   which is its law at a sampling site, the Dirac mass at its mean at a mean site, and the zero
@@ -229,33 +222,29 @@ finite-model and reward-model theorems.
   exact results are stated, have no counterpart there. That `e_det` is well-typed is
   `Proof.Paper.typed_determinize`, not a theorem in `Theorems.lean`.
 - **Exact results.** The paper mentions the additive reward models (`Spec/RewardModel`, the
-  CLI's default, on which Section 7 relies) in one sentence. Storm does not write a certificate:
-  it returns exact value vectors, and `tools/storm.py` adds the divergent states and a rank and
-  next-state witness, then writes the certificate, a `Finite.Reward.Solution` in the additive
-  mode and a `MomentCertificate` with `--no-additive`. The kernel checks a certificate only when
-  its `.lean` file is compiled: `--result` writes `.result.lean` and reports `"kernel_checked":
+  CLI's default, on which Section 7 relies) in one sentence. With Storm, `tools/storm.py`
+  writes the certificate from Storm's exact value vectors, adding the divergent states and a
+  rank and next-state witness: a `Finite.Reward.Solution` in the additive mode and a
+  `MomentCertificate` with `--no-additive`. The kernel checks a certificate only when its
+  `.lean` file is compiled: `--result` writes `.result.lean` and reports `"kernel_checked":
   false`, and `tools/storm.py --skip-certificate` does not compile it. Every certificate also
   proves the finite model's rejection probability, and on all four routes it ends with
   `printedStatistics`: the reported return mass and moments as literals, in a statement that
   names only `Spec/` definitions and the literal program (see
   [below](#certified-output-moments-and-storm)). The CLI prints the first moment of the
-  unnormalized output law; the conditional mean and variance that Section 6 says the tool
-  reports are in the `.result.json` and `.storm.json` files. Section 6 transfers an exact mean
-  from `e_det` to `e_src` by `expectation_preservation`; the CLI's note next to the result
-  states the hypotheses of `unnormalized_extended_expectation_preservation`. The introduction
-  calls the result an end-to-end guarantee; the source's domain safety and well-defined
-  expectation remain hypotheses that no part of the tool checks.
+  unnormalized output law; the return probability, the second moment and the conditional mean
+  and variance are in the `.result.json` and `.storm.json` files. Section 6 transfers an exact
+  mean from `e_det` to `e_src` by `expectation_preservation`; the CLI's note next to the
+  result states the hypotheses of `unnormalized_extended_expectation_preservation`.
 - **Evaluation (Section 7).** Section 7 says the exact values come with certificates.
   `tools/bench.py` passes `--skip-certificate` unless `--check-certificates` is given, and the
   recorded run `results/finite-after-det.json` reports every certificate as "generated,
-  unchecked"; its `dreckon` export exceeded the 180-second timeout. Table 1 counts
-  `retransmit`'s sampling sites as (4,2) → (4,0); `--sample-sites` reports three continuous
-  sites before determinization. Table 1's determinization times come from `determinize
-  --det-only` (`tools/bench.py --exact --det-only`), which times `compile` and
-  `Expr.determinize`; the recorded run `results/exact-determinization-only.json` differs from
-  the table by up to 16% (`swap`). Section 7 leaves the details of the scaling benchmarks
-  (`benchmarks/exact/scaling/run_scaling.py`) to the appendix, which has no such section.
-  Table 2's `dungeon` and `noisy-product` are in `examples/paper/`, which
+  unchecked"; its `dreckon` export exceeded the 180-second timeout. Table 1's determinization
+  times come from `determinize --det-only` (`tools/bench.py --exact --det-only`), which times
+  `compile` and `Expr.determinize`; the recorded run `results/exact-determinization-only.json`
+  differs from the table by up to 16% (`swap`). Section 7 leaves the details of the scaling
+  benchmarks (`benchmarks/exact/scaling/run_scaling.py`) to the appendix, which has no such
+  section. Table 2's `dungeon` and `noisy-product` are in `examples/paper/`, which
   `tools/bench.py` does not run.
 - **Lean links.** `tex/lean-links.tex` pins the paper's GitHub links to `8f89190`, and the
   theorems' links point to `Theorems.lean`. Each linked range holds its declaration at that
