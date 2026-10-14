@@ -91,9 +91,8 @@ returned value. We formalize such constraints in \cref{sec:type-system}.
 
 \paragraph{Output measures.}
 To characterize the probabilistic behavior of a program,
-we define a subprobability measure over \emph{returned real values}, as shown in \cref{fig:semantics}(\subref{fig:semantics-output}). Here, $\delta_r$ denotes the Dirac measure at $r$, defined by $\delta_r(B)=1$ if $r\in B$ and $0$ otherwise. Let $\mathcal D(\mathbb R)$ denote the space of subprobability measures
-on $\mathbb R$, that is, measures on its Borel sets with total mass at
-most one, and let $Expr$ be the set of all expressions. For each $n\in\mathbb N$, the function
+we define a subprobability measure over \emph{returned real values}, as shown in \cref{fig:semantics}(\subref{fig:semantics-output}). Here, $\delta_r$ denotes the Dirac measure at $r$, defined by $\delta_r(B)=1$ if $r\in B$ and $0$ otherwise. We equip $\mathbb R$ with its Borel $\sigma$-algebra and let
+$\mathcal D(\mathbb R)$ denote the set of subprobability measures on this measurable space. Let $Expr$ be the set of all expressions. For each $n\in\mathbb N$, the function
 $\out{(\cdot)}{n}\colon Expr\to\mathcal D(\mathbb R)$
 assigns each expression $e$ its output measure after exactly $n$
 reduction steps. 
