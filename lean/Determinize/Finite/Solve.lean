@@ -1,4 +1,4 @@
-import Determinize.Proof.FiniteModel.Result
+import Determinize.Proof.FiniteModel.Queries
 import Determinize.Proof.LinearAlgebra.Solve
 
 namespace Determinize.Finite
@@ -7,25 +7,10 @@ open Spec.FiniteModel
 structure SolveLimits where
   maxStates : Nat := 256
 
-private def absorption (model : Model) (remaining : Nat) (horizon : Nat)
-    (survival : Vector Rat model.size)
-    (correct : ∀ state, survival[state] = model.survivalWithin horizon state) :
-    Option {n : Nat // ∀ state, model.survivalWithin n state < 1} :=
-  if h : ∀ state : Fin model.size, survival[state] < 1 then
-    some ⟨horizon, by simpa only [correct] using h⟩
-  else match remaining with
-    | 0 => none
-    | remaining + 1 =>
-      let next := Vector.ofFn fun state ↦ if model.kind state = StateKind.transient then
-        ∑ successor, model.transition state successor * survival[successor] else 0
-      absorption model remaining (horizon + 1) next (by
-        intro state
-        simp [next, Model.survivalWithin, correct])
-
 /-- The equations are established by elimination, without checking a proposed answer. -/
 def solveValues (model : Model) (limits : SolveLimits := {}) :
-    Except String {values : Fin model.size → Rat //
-      (⟨values, 0⟩ : ResultCertificate model).Equations model} := do
+    Except String
+      {values : Fin model.size → Rat // Proof.FiniteModel.ValueEquations model values} := do
   if model.size > limits.maxStates then
     throw s!"exact solver state limit exceeded ({model.size} > {limits.maxStates})"
   let A := fun state next : Fin model.size ↦
@@ -47,36 +32,5 @@ def solveValues (model : Model) (limits : SolveLimits := {}) :
         Finset.sum_sub_distrib, Finset.sum_ite_eq, Finset.mem_univ, A, b, reduceCtorEq] at h ⊢
     all_goals first | exact sub_eq_zero.mp h | exact h
   return ⟨solution.val, equations⟩
-
-def absorptionBound (model : Model) :
-    Option {n : Nat // ∀ state, model.survivalWithin n state < 1} :=
-  let initial := Vector.ofFn fun state ↦
-    if model.kind state = StateKind.transient then (1 : Rat) else 0
-  absorption model model.size 0 initial (by simp [initial, Model.survivalWithin])
-
-def solveCertified (model : Model) (limits : SolveLimits := {}) :
-    Except String {certificate : ResultCertificate model // certificate.Valid model} := do
-  let solution ← solveValues model limits
-  let some bound := absorptionBound model
-    | throw "no uniform absorption bound: some state cannot reach a terminal state"
-  return ⟨⟨solution.val, bound.val⟩, solution.property, bound.property⟩
-
-def solve (model : Model) (limits : SolveLimits := {}) : Except String (ResultCertificate model) :=
-  (solveCertified model limits).map Subtype.val
-
-theorem solve_sound (model : Model) (limits : SolveLimits) (certificate : ResultCertificate model)
-    (success : solve model limits = .ok certificate) : certificate.Valid model := by
-  unfold solve at success
-  cases h : solveCertified model limits with
-  | error message => simp [h, Except.map] at success
-  | ok result =>
-    simp only [Except.map, h, Except.ok.injEq] at success
-    exact success ▸ result.property
-
-theorem solve_expectedReward (model : Model) (limits : SolveLimits)
-    (certificate : ResultCertificate model) (success : solve model limits = .ok certificate) :
-    model.expectedReward = (certificate.values model.initial : ℝ) :=
-  Proof.FiniteModel.resultCertificate_sound model certificate
-    (solve_sound model limits certificate success)
 
 end Determinize.Finite

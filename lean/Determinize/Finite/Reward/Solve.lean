@@ -51,8 +51,7 @@ structure Solution (model : Spec.RewardModel.Model) where
   paths : Paths (cut model.control boundary.dead)
   paths_valid : paths.Valid (cut model.control boundary.dead)
   mass : Fin model.size → Rat
-  mass_valid : (⟨mass, 0⟩ : Spec.FiniteModel.ResultCertificate
-    (rewards (cut model.control boundary.dead) Moment.mass.rational)).Equations _
+  mass_valid : ValueEquations (rewards (cut model.control boundary.dead) Moment.mass.rational) mass
   first : Fin model.size → Rat
   first_valid : Equations (cut model.control boundary.dead)
     (firstRhs model boundary.dead mass) first
@@ -60,8 +59,7 @@ structure Solution (model : Spec.RewardModel.Model) where
   second_valid : Equations (cut model.control boundary.dead)
     (secondRhs model boundary.dead mass first) second
   rejection : Fin model.size → Rat
-  rejection_valid : (⟨rejection, 0⟩ : Spec.FiniteModel.ResultCertificate
-    (rejectionQuery model.control boundary.dead)).Equations _
+  rejection_valid : ValueEquations (rejectionQuery model.control boundary.dead) rejection
 
 theorem Solution.moments_valid {model : Spec.RewardModel.Model} (solution : Solution model) :
     Proof.RewardModel.MomentEquations (Proof.RewardModel.cut model solution.boundary.dead)

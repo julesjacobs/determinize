@@ -88,9 +88,7 @@ structure TerminationCertificate (model : Model) where
 def TerminationCertificate.Valid (model : Model) (certificate : TerminationCertificate model) :
     Prop :=
   certificate.output.Valid model ∧
-    (⟨certificate.rejection, 0⟩ :
-      ResultCertificate (rejectionQuery model certificate.output.dead)).Equations
-      (rejectionQuery model certificate.output.dead)
+    ValueEquations (rejectionQuery model certificate.output.dead) certificate.rejection
 
 instance (model : Model) (certificate : TerminationCertificate model) :
     Decidable (certificate.Valid model) :=
@@ -136,7 +134,7 @@ theorem terminationCertificate_sound (model : Model) (certificate : TerminationC
   have rejection :
       model.rejectionProbability.toReal = (certificate.rejection model.initial : ℝ) := by
     have query := query_sound (cut model.rejectionModel certificate.output.dead) (fun _ ↦ 1)
-      (fun _ ↦ 1) (fun _ ↦ by simp) ⟨certificate.rejection, 0⟩ valid.2
+      (fun _ ↦ 1) (fun _ ↦ by simp) certificate.rejection valid.2
       ⟨certificate.output.rank, certificate.output.next⟩ (by
         intro state transient
         apply valid.1.2.1 state
