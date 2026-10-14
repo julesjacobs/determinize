@@ -19,25 +19,23 @@ while true:
     end
 end
 
-Partially determinizable but fully discrete after determinization; infinite state after determinization.
+A flip(1/2) loop guard gives almost-sure termination while retaining
+infinitely many reachable states after determinization.
 *)
 
-(* Query E[x_1] *)
-
-let steps = 10 in
-let loop = rec loop i => fun x => fun y => fun distance =>
-  if i < steps then
+let loop = rec loop x => fun y => fun distance =>
+  if flip(1/2) then
     let direction = discrete(0.25, 0.25, 0.25, 0.25) in
     let step = uniform(0, 10) in
     if direction < 1 then
-      loop (i + 1) (x + step) y distance
+      loop (x + step) y distance
     else if direction < 2 then
-      loop (i + 1) (x - step) y distance
+      loop (x - step) y distance
     else if direction < 3 then
-      loop (i + 1) x (y + step) distance
+      loop x (y + step) distance
     else
-      loop (i + 1) x (y - step) distance
+      loop x (y - step) distance
   else
     x
 in
-loop 0 0 0 0
+loop 0 0 0

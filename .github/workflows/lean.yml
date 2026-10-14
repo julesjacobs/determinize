@@ -20,6 +20,7 @@ on:
       - "!tests/**/*.md"
       - examples/**
       - run.sh
+      - tools/bench.py
       - tools/storm*.py
       - tools/storm-requirements.txt
       - flake.nix

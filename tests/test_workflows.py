@@ -287,7 +287,7 @@ PULL_REQUEST_STARTS = {
     "test.sh": {"artifact"},
     "tools/dev-shell.sh": set(),
     "tools/paper-plots.py": set(),
-    "tools/bench.py": {"artifact"},
+    "tools/bench.py": {"lean", "artifact"},
     ".claude/settings.json": set(),
     "lean/README.md": {"artifact"},
     "lean/PAPER_DEVIATIONS.md": set(),
