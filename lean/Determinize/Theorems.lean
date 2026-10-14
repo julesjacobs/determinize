@@ -22,7 +22,7 @@ proved by one term from `Proof/`. A reviewer reads the statements and the defini
 not the proofs: the command at the end of this file fails the build unless every theorem depends
 only on the standard axioms and its statement uses nothing from `Proof` except proofs.
 
-The first three sections state the paper's theorems, under the paper's names. There `e` is
+The first four sections state the paper's theorems, under the paper's names. There `e` is
 `program`, `Determinize(e)` is `program.determinize`, the output law `μ_e` is
 `bigStepMeasure program`, the joint law `J_e` is `traceAndOutputLaw program` with trace marginal
 `traceLaw program`, the conditional law `μ_e(· | τ)` is
@@ -48,6 +48,13 @@ theorem inference_correctness (input : Input) :
       Typed [] (interpret program) ty ∧
       ∀ completion : Annotated, Completion input completion → AffinityLE completion program :=
   Proof.Frontend.infer_correct input
+
+/-! ## Determinization (paper, appendix) -/
+
+/-- Determinization preserves typing. -/
+theorem determinization_preserves_typing (context : List Ty) (program : Expr) (ty : Ty)
+    (typed : Typed context program ty) : Typed context program.determinize ty :=
+  Proof.Paper.typed_determinize typed
 
 /-! ## Tracewise soundness (paper, Section 4.2) -/
 
