@@ -246,11 +246,9 @@ prose.
   revision. The architecture figure's links follow the additive route; its certificate-checker
   link points to `Finite.Reward.Solution`, whose equations the kernel decides
   (`decide +kernel`), as the additive route has no separate checking function. Section 5's
-  links point into `Proof/`. `main.tex` builds the anonymous review version, which links to the
-  snapshot `sca95063a7c` on apndx.org instead. That snapshot predates the verified inference:
-  it has no `Spec/Inference.lean`, `Spec/Expectation.lean` or `Frontend/Affinity.lean`, and its
-  66-line `Theorems.lean` uses other names, so the review build's links are off until the
-  snapshot is regenerated.
+  links point into `Proof/`. `main.tex` builds the anonymous review version, whose marks link
+  instead to an appendix that names each mark's declarations and their lines in the anonymized
+  archive.
 
 ## Style
 

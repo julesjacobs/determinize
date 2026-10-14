@@ -8,7 +8,7 @@ stay in its sources until the underlying work is resolved.
 - Replace the artifact URL placeholder in `tex/sections/1_introduction.tex` and the
   `github.com/[anonymized]` link in `tex/sections/7_evaluation.tex`. The review build
   points to the anonymized archive (`artifact/build.py`), submitted as supplementary
-  material; its Lean marks have no links, as `\leanreviewbase` is empty.
+  material; its Lean marks link to an appendix that locates their declarations in it.
 - State the Artifact Evaluation plan in `tex/sections/data_availability.tex`, which
   OOPSLA requires.
 - Supply the trace-indexed kernels, compatibility lemma, and derivation of
