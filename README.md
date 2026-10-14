@@ -6,7 +6,8 @@ formalization, exact expected-reward certificates, and a browser simulator.
 [Project page](https://julesjacobs.github.io/determinize/) ·
 [Simulator](https://julesjacobs.github.io/determinize/sim/) ·
 [API documentation](https://julesjacobs.github.io/determinize/docs/) ·
-[Paper (PDF)](https://julesjacobs.github.io/determinize/determinize.pdf)
+[Paper (PDF)](https://julesjacobs.github.io/determinize/determinize.pdf) ·
+[Anonymized artifact (ZIP)](https://julesjacobs.github.io/determinize/determinize-artifact.zip)
 
 - `lean/`: parser, verified affinity inference, determinization, numerical execution,
   exact finite-state exploration, and kernel-checkable certificates.
@@ -14,6 +15,7 @@ formalization, exact expected-reward certificates, and a browser simulator.
 - `tools/storm.py`: exact Storm comparison against independently checked certificates.
 - `sim/`: browser visualization of ordinary, symbolic, and determinized execution.
 - `tex/`: paper sources and figures.
+- `artifact/`: the anonymized archive for the paper's double-blind review.
 
 The theorem statements and the definitions they use can be read as
 [API documentation](https://julesjacobs.github.io/determinize/docs/Determinize/Theorems.html),
@@ -61,14 +63,18 @@ shell, the comparisons with Storm included. `.github/workflows/sim.yml` runs `bi
 the `.#sim` shell, builds the simulator into `sim/dist/` and attaches it to the run as the
 `simulator` artifact. `.github/workflows/tex.yml` builds the paper in the `.#tex` shell, fails
 on unresolved references and citations, and attaches `main.pdf` as the `paper` artifact.
-`.github/workflows/site.yml` runs `./check.sh site` in the `.#site` shell. For `main`,
+`.github/workflows/site.yml` runs `./check.sh site` in the `.#site` shell.
+`.github/workflows/artifact.yml` builds the anonymized archive (see [below](#anonymized-artifact))
+with the API documentation that `main` rendered last, checks it unpacked, and attaches it to the
+run as the `determinize-artifact.zip` artifact, the zip itself. For `main`,
 `.github/workflows/pages.yml` runs these workflows, but skips Lean's tests when their inputs
 passed them before and reuses the API documentation when the same sources were rendered
 before. It then assembles the [project page](https://julesjacobs.github.io/determinize/), the
 [simulator](https://julesjacobs.github.io/determinize/sim/), the
-[API documentation](https://julesjacobs.github.io/determinize/docs/) and the paper
-(`determinize.pdf`) with `site/assemble.sh`, checks the links of the landing page and the
-simulator against the result, and publishes it to GitHub Pages.
+[API documentation](https://julesjacobs.github.io/determinize/docs/), the paper
+(`determinize.pdf`) and the [anonymized artifact](https://julesjacobs.github.io/determinize/determinize-artifact.zip)
+with `site/assemble.sh`, checks the links of the landing page and the simulator against the
+result, and publishes it to GitHub Pages.
 
 An E draw is replaced by its distribution's mean; a G draw remains stochastic.
 Finite-model certificates prove the selected core program's integrability and
@@ -76,6 +82,33 @@ exact expected terminal reward. Rejection contributes zero, without conditioning
 The default subject is `determinized`; use `--subject source` for a source model.
 Transferring a determinized answer to the source requires the determinization
 theorem's premises. See [the contract](lean/finite-model-contract.md).
+
+## Anonymized artifact
+
+`artifact/build.py` builds `determinize-artifact.zip`, the supplementary material for the paper's
+double-blind review, from the tracked files that its `SHIPPED` list selects, the built simulator
+and the API documentation:
+
+```sh
+(cd sim && npm run build)
+artifact/build.py --out determinize-artifact.zip --docs lean/docbuild/.lake/build/doc
+```
+
+The archive's `README.md` is `artifact/README.md`. Its `website/` opens from disk: the landing
+page, the simulator, the documentation, and every shipped file as a page with line numbers, which
+the documentation's source links point to. Links to the repository and to the published site
+become links into the archive; the landing page loses the metadata and footer that name them,
+the simulator its source maps, recorded paths their home directory, and `lean/README.md` its
+comparison with drafts of the paper. The script then fails if any file names a pattern of
+`artifact/identifying.txt` (the authors, their accounts and institutions), a commit of this
+repository or a home directory, if the website loads from other hosts than the documentation's
+MathJax CDN, or if a link of the website or of a Markdown file leaves the archive.
+`artifact/build.py --check DIR` checks an unpacked archive the same way. The script refuses
+documentation rendered from other Lean sources unless given `--allow-stale-docs`, which the pull
+requests' runs use. `sim/e2e/artifact.spec.ts` opens the unpacked archive from disk in a browser
+(`ARTIFACT_DIR=… playwright test e2e/artifact.spec.ts` in `sim/`). `./check.sh artifact` does all
+of this in `_artifact/`, with the documentation that `lake build Determinize:docs` in
+`lean/docbuild` rendered last.
 
 ## Storm
 
