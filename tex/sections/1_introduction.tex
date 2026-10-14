@@ -151,9 +151,11 @@ certificate checking for the resulting exact values.
   in Lean, and mechanize our soundness theorems.
   Our implementation additionally supports verified
   matrix solving and certificate checking, providing an
-  end-to-end correctness guarantee: under the required
-  safety and integrability assumptions, the computed
-  expectation is exactly that of the original program
+  end-to-end correctness guarantee: if the original program
+  is domain-safe and its expectation is well-defined, the
+  computed expectation is exactly that of the original
+  program. These two assumptions are not checked by the
+  tool and must be established by the user
   (\cref{sec:implementation}).
   The full Lean code is available at [TODO], with references
   to mechanized definitions and theorems indicated by a
