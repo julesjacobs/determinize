@@ -32,6 +32,12 @@ $a$ is an affine expression\leanref{symbolic-affine}, and $\sigma$ is an
 ordered symbolic environment\leanref{symbolic-environment}. Each declaration
 $u\sim D(\bar a)$ introduces a fresh variable whose distribution parameters
 may refer only to earlier variables in $\sigma$.
+The environment is well typed when every declaration satisfies
+$\operatorname{Params}^{\#}_D(\bar a)$ from
+\cref{sec:appendix-symbolic-rules}: parameters required to have type
+$\tyR\G$ must be constant affine expressions.
+A symbolic state is well typed when its environment and residual expression
+are well typed.
 \end{definition}
 
 \input{figures/symbolic-example.tex}

@@ -1082,10 +1082,12 @@ literal replaced by a wrapped affine expression $\sym a$.  In a state containing
 declarations, every affine expression has precisely the coordinates
 $u_1,\ldots,u_k$.  A declaration $u_i\sim D_i(\bar a_i)$ is well formed only
 when $u_i$ is fresh and every parameter in $\bar a_i$ refers only to
-$u_1,\ldots,u_{i-1}$.  When symbolic execution appends a declaration, the
+$u_1,\ldots,u_{i-1}$. A symbolic environment is well typed when each declaration
+is well formed and satisfies $\operatorname{Params}^{\#}_{D_i}(\bar a_i)$.
+This requires every parameter of type $\tyR\G$ to be a constant affine
+expression. When symbolic execution appends a declaration, the
 affine expressions already present in the state are extended with coefficient
-zero for the fresh coordinate.  Any distribution parameter required to have
-type $\tyR\G$ is a constant affine expression by the typing rules below.
+zero for the fresh coordinate.
 \end{definition}
 
 \begin{definition}[Typing residual symbolic expressions]\label{sec:appendix-symbolic-definitions-residual-typing}
@@ -1297,8 +1299,8 @@ The subtyping relation is unchanged:
     {\typing{\widehat e}\sigma}
 \end{mathpar}
 A symbolic state $(\sigma\mid\widehat e:\tau)$ is well typed when
-$\emptyset\vdash\widehat e:\tau$ under these rules.  The declarations in
-$\sigma$ supply the coordinates of affine literals; they are not term
+$\sigma$ is well typed and $\emptyset\vdash\widehat e:\tau$ under these rules.
+The declarations in $\sigma$ supply the coordinates of affine literals; they are not term
 variables in $\Gamma$.
 \end{definition}
 
@@ -1390,8 +1392,8 @@ measure on valuations of the variables declared in $\sigma$.
 
 \begin{lemma}[Affine means]
 \label{lem:appendix-affine-means}
-Suppose $\sigma$ is domain-safe and $a$ is an affine expression over the
-variables declared in $\sigma$. Then
+Suppose $\sigma$ is well typed and domain-safe, and $a$ is an affine
+expression over the variables declared in $\sigma$. Then
 \[
   \int |a[\theta]|\,\mathcal A_\sigma(d\theta)<\infty,
   \qquad
