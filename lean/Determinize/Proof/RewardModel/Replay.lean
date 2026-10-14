@@ -9,10 +9,11 @@ open Spec.Paper (Core)
 def Candidate.row (c : Candidate) (i : Fin c.states.size) : Row :=
   c.rows[i.val]?.getD ⟨.rejected, []⟩
 
-def Candidate.RowValid (c : Candidate) (i : Fin c.states.size) : Prop :=
+def Candidate.RowClaim (c : Candidate) (i : Fin c.states.size)
+    (action : Except Failure Step) : Prop :=
   (∀ e ∈ (c.row i).edges, e.target < c.states.size ∧ 0 < e.probability) ∧
   ((c.row i).edges.map Edge.probability).sum = 1 ∧
-  match Reward.step c.states[i] with
+  match action with
   | .error _ => False
   | .ok (.returned b) => (c.row i).kind = .returned b
   | .ok .rejected => (c.row i).kind = .rejected
@@ -24,9 +25,16 @@ def Candidate.RowValid (c : Candidate) (i : Fin c.states.size) : Prop :=
     ((outcomes.filter fun o ↦ 0 < o.probability).map fun o ↦
       (o.probability, o.state, o.reward))
 
-instance (c : Candidate) (i : Fin c.states.size) : Decidable (c.RowValid i) := by
-  unfold Candidate.RowValid
+instance (c : Candidate) (i : Fin c.states.size) (action : Except Failure Step) :
+    Decidable (c.RowClaim i action) := by
+  unfold Candidate.RowClaim
   split <;> infer_instance
+
+def Candidate.RowValid (c : Candidate) (i : Fin c.states.size) : Prop :=
+  c.RowClaim i (Reward.step c.states[i])
+
+instance (c : Candidate) (i : Fin c.states.size) : Decidable (c.RowValid i) :=
+  inferInstanceAs (Decidable (c.RowClaim i _))
 
 /-- This checks local normalized-machine replay, not source-semantic correspondence. -/
 def Candidate.ReplayValid (c : Candidate) (source : Core) (subject : Subject) : Prop :=

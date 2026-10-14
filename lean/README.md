@@ -617,3 +617,62 @@ Real Storm integration tests run when `STORM_PYTHON` names an interpreter with t
 pinned `stormpy` dependency, which the `.#lean` shell sets on Linux. The precise
 contract and proof boundaries are described in
 [finite-model-contract.md](finite-model-contract.md).
+
+### Storm tactic
+
+Import `Determinize.Tactic.Storm` and use `by storm` to prove exact output statistics,
+returned expectation, or returned variance for a closed rational core program:
+
+```lean
+import Determinize.Tactic.Storm
+open Determinize.Spec.Paper Determinize.Spec.FiniteModel
+
+def coin : Core := .bernoulli (.sample .G) (.real (1/3))
+
+theorem coin_statistics : (⟨1, 1/3, 1/3⟩ : OutputStatistics).Matches
+    (bigStepMeasure (Subject.source.program coin)) := by storm
+
+theorem coin_mean : Determinize.Spec.returnedExpectation (Subject.source.program coin) =
+    ((1/3 : Rat) : ℝ) := by storm
+```
+
+Set `STORM_PYTHON` to a Python with `tools/storm-requirements.txt` installed. The tactic
+finds `tools/storm.py` above its working directory; `set_option determinize.storm.worker
+"/absolute/path/to/tools/storm.py"` overrides that search. It supports `Subject.source.program`,
+`Subject.determinized.program`, `interpret`, and the determinization of `interpret`. Other
+program representations must first be reduced to one of these forms. Conditional moments
+require positive return mass. The certified statistics are unnormalized.
+Each invocation checks a fresh model; prove output statistics once when several results
+are needed, then derive conditional moments with `Proof.FiniteModel.statistics_returned_moments`.
+
+Storm supplies exact rational value vectors, a divergent boundary, and descending-path
+witnesses. The tactic encodes the vectors as one string literal, decodes them into arrays,
+and reconstructs the graph from the program inside one compiled verifier. It makes one
+`native_decide` check of sparse equations and the witnesses, then applies
+the existing correspondence and moment theorems. This trusts Lean's compiler and runtime;
+the proof's axiom report includes the native check. Storm and JSON decoding supply candidate
+data that the checker verifies. Reopening a compiled proof requires no Storm installation.
+Set `determinize.storm.native false` for kernel-only checking with no additional axioms;
+this builds separate per-state proofs and is substantially slower on large graphs.
+
+The checked-in `dreckon` benchmark (`n = 2`, three iterations) has 43,218 states and
+43,498 edges. The native tactic completed its statistics theorem in 67.9 seconds with
+3.60 GiB peak process RSS on the development Mac, including imports, exploration, and
+Storm. The kernel-only attempt had not finished after 15 minutes.
+
+From `lean/`, run standalone examples with `lake lean /absolute/path/to/example.lean`.
+Lake loads the precompiled tactic modules with this command; `lake env lean` alone
+uses interpreted tactic code and can be slower.
+
+The native check uses array lookup and iterates over sparse edges. Kernel-only checking
+shares syntax, environments, values, and continuation stacks through auxiliary Lean
+definitions and uses balanced lookup tables. The tactic does not write
+Lean certificate source files or invoke the dense internal solver. `determinize.storm.maxStates`
+defaults to 100000; `determinize.storm.timeout` bounds the Storm subprocess and defaults to
+120 seconds. Lean's heartbeat limit bounds proof construction; increase `maxHeartbeats` for
+large models. `set_option trace.Determinize.storm true` reports the checking stages.
+
+Portable exports also share repeated structures. Additive result certificates check sparse
+edge equations and assemble the existing solution theorem. `--storm-export PREFIX` writes
+only the transition, label, and reward files. `tools/storm.py --skip-certificate` uses this
+mode and skips Lean certificate generation as well as compilation.

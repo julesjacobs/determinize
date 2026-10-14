@@ -1,4 +1,5 @@
 import Determinize.Finite.Graph
+import Determinize.Finite.Hash
 import Determinize.Proof.FiniteModel.BuildModel
 
 namespace Determinize.Finite
@@ -14,8 +15,6 @@ deriving Repr
 inductive Limit where
   | states | edges | stateBytes
 deriving Repr, BEq
-
-instance : Hashable State := ⟨fun state ↦ hash (reprStr state)⟩
 
 inductive Exploration (source : Core) (subject : Subject) where
   | complete (candidate : Candidate) (valid : candidate.ReplayValid source subject)

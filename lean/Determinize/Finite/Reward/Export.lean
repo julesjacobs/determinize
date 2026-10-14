@@ -2,6 +2,8 @@ import Determinize.Finite.Export
 import Determinize.Proof.RewardModel.Soundness
 import Determinize.Finite.Reward.Solve
 import Determinize.Proof.RewardModel.Moments
+import Determinize.Proof.FiniteModel.Evidence
+import Determinize.Proof.RewardModel.Sparse
 
 namespace Determinize.Finite.Reward
 open Spec.FiniteModel
@@ -10,38 +12,31 @@ private def rational (q : Rat) : String :=
   if q.den == 1 then toString q.num else s!"{q.num}/{q.den}"
 private def leanRat (q : Rat) : String := s!"(({q.num} : Rat) / {q.den})"
 
-private def rowText (row : Row) : String :=
-  let edges := row.edges.map fun e ↦ s!"⟨{e.target}, {leanRat e.probability}, {leanRat e.reward}⟩"
-  s!"⟨{Finite.kindText row.kind}, [{String.intercalate ", " edges}]⟩"
 
 def candidateText (candidate : Candidate) : String :=
+  let (data, shared) := (Finite.Shared.rewardCandidate candidate).run {}
   "import Determinize.Finite.Reward.Graph\n\n" ++
   "open Determinize.Finite Determinize.Spec.Paper Determinize.Spec.FiniteModel\n\n" ++
   "set_option maxRecDepth 100000\nset_option maxHeartbeats 0\nset_option Elab.async false\n\n" ++
-  "def candidate : Reward.Candidate where\n" ++
-  s!"  initial := {candidate.initial}\n" ++
-  "  states := #[\n    " ++
-    String.intercalate ",\n    " (candidate.states.toList.map Finite.stateText) ++ "\n  ]\n" ++
-  "  rows := #[\n    " ++
-    String.intercalate ",\n    " (candidate.rows.toList.map rowText) ++ "\n  ]\n"
+  shared.text data
 
 def replayCertificateText (source : Spec.Paper.Core) (subject : Subject) (candidate : Candidate) :
     String :=
   (candidateText candidate).replace "import Determinize.Finite.Reward.Graph"
-    "import Determinize.Proof.RewardModel.Soundness" ++
+    ("import Determinize.Proof.RewardModel.Soundness\n" ++
+      "import Determinize.Proof.FiniteModel.Evidence") ++
   s!"\ndef checkedSource : Expr Rat := {Frontend.leanExpression source}\n" ++
   s!"def checkedSubject : Subject := {reprStr subject}\n" ++
-  "\nabbrev rowClaim (i : Fin candidate.states.size) := candidate.RowValid i\n" ++
+  "\nabbrev rowClaim (i : Fin candidate.states.size) := candidate.StateReplayValid i\n" ++
   Finite.proofTable "row" "rowClaim" "candidate.states.size" "allRows" candidate.states.size ++
   "\ntheorem machineReplay : candidate.ReplayValid checkedSource checkedSubject :=\n" ++
-  "  ⟨by decide +kernel, by decide +kernel, by decide +kernel,\n" ++
-  "   by decide +kernel, by decide +kernel, allRows⟩\n" ++
+  "  candidate.replay_of_states checkedSource checkedSubject (by decide +kernel) allRows\n" ++
   "\nabbrev model := candidate.toModel machineReplay\n" ++
   "\ntheorem modelMatches : model.Matches (checkedSubject.program checkedSource) :=\n" ++
   "  Determinize.Proof.RewardModel.replay_matches candidate machineReplay\n" ++
   "\n#print axioms machineReplay\n#print axioms modelMatches\n"
 
-private def controlCandidate (candidate : Candidate) : Finite.Candidate :=
+def controlCandidate (candidate : Candidate) : Finite.Candidate :=
   {initial := candidate.initial, states := candidate.states, rows := candidate.rows.map fun row ↦
     {kind := row.kind, edges := Id.run do
       let mut edges : Array Finite.Edge := #[]
@@ -52,20 +47,25 @@ private def controlCandidate (candidate : Candidate) : Finite.Candidate :=
         else edges := edges.push ⟨e.target, e.probability⟩
       return edges}}
 
-def write (outputPath : System.FilePath) (source : Spec.Paper.Core) (subject : Subject)
-    (candidate : Candidate) (_valid : candidate.ReplayValid source subject) : IO Unit := do
-  let files ← IO.ofExcept (Finite.render (controlCandidate candidate))
+def writeStorm (outputPath : System.FilePath) (candidate : Candidate) : IO Unit := do
+  let files ← IO.ofExcept (Finite.render (controlCandidate candidate) false)
   let mut edgeText := "additive-rewards 1\n"
   for (row, i) in candidate.rows.toList.zipIdx do
     for edge in row.edges do
       edgeText := edgeText ++
         s!"{i} {edge.target} {rational edge.probability} {rational edge.reward}\n"
   if let some parent := outputPath.parent then IO.FS.createDirAll parent
-  for (suffix, content) in [(".candidate.lean", candidateText candidate),
-      (".replay.lean", replayCertificateText source subject candidate), (".tra", files.transitions),
+  for (suffix, content) in [(".tra", files.transitions),
       (".lab", files.labels), (".positive.state.rew", files.positiveRewards),
       (".negative.state.rew", files.negativeRewards), (".additive.edges", edgeText)] do
     IO.FS.writeFile (outputPath.toString ++ suffix) content
+
+def write (outputPath : System.FilePath) (source : Spec.Paper.Core) (subject : Subject)
+    (candidate : Candidate) (_valid : candidate.ReplayValid source subject) : IO Unit := do
+  writeStorm outputPath candidate
+  IO.FS.writeFile (outputPath.toString ++ ".candidate.lean") (candidateText candidate)
+  IO.FS.writeFile (outputPath.toString ++ ".replay.lean")
+    (replayCertificateText source subject candidate)
 
 def resultCertificateText (source : Spec.Paper.Core) (subject : Subject) (candidate : Candidate)
     (model : Spec.RewardModel.Model) (solution : Solution model) : String :=
@@ -79,22 +79,18 @@ def resultCertificateText (source : Spec.Paper.Core) (subject : Subject) (candid
   (replayCertificateText source subject candidate).replace
     "import Determinize.Proof.RewardModel.Soundness"
     ("import Determinize.Proof.RewardModel.Soundness\n" ++
-      "import Determinize.Proof.RewardModel.Moments") ++
+      "import Determinize.Proof.RewardModel.Sparse") ++
   vector "massValues" solution.mass ++ vector "firstValues" solution.first ++
   vector "secondValues" solution.second ++ vector "rejectionValues" solution.rejection ++
   s!"\ndef deadStates : Vector Bool model.size := ⟨#[{dead}], by rfl⟩\n" ++
   s!"def ranks : Vector Nat model.size := ⟨#[{ranks}], by rfl⟩\n" ++
   s!"def nextStates : Vector (Fin model.size) model.size := ⟨#[{next}], by rfl⟩\n" ++
-  "\ndef boundary : Determinize.Proof.FiniteModel.Boundary model.control where\n" ++
-  "  dead := fun i => deadStates[i]\n  rank := fun i => ranks[i]\n" ++
-  "  closed := by decide +kernel\n" ++
-  "\ndef solution : Reward.Solution model where\n" ++
-  "  boundary := boundary\n  paths := ⟨fun i => ranks[i], fun i => nextStates[i]⟩\n" ++
-  "  paths_valid := by decide +kernel\n" ++
-  "  mass := fun i => massValues[i]\n  mass_valid := by decide +kernel\n" ++
-  "  first := fun i => firstValues[i]\n  first_valid := by decide +kernel\n" ++
-  "  second := fun i => secondValues[i]\n  second_valid := by decide +kernel\n" ++
-  "  rejection := fun i => rejectionValues[i]\n  rejection_valid := by decide +kernel\n" ++
+  "\ndef certificate : Determinize.Proof.RewardModel.Certificate model.size :=\n" ++
+  "  Determinize.Proof.RewardModel.Certificate.ofVectors\n" ++
+  "    deadStates ranks nextStates massValues firstValues secondValues rejectionValues\n" ++
+  "\nabbrev resultClaim (i : Fin model.size) := certificate.StateValid model i\n" ++
+  Finite.proofTable "result" "resultClaim" "model.size" "allResults" model.size ++
+  "\ndef solution := certificate.solution model allResults\n" ++
   "\nabbrev statistics := solution.statistics\n" ++
   "\ntheorem checkedResult : Determinize.Spec.RewardModel.ResultMatches model\n" ++
   "    (checkedSubject.program checkedSource) statistics :=\n" ++

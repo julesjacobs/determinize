@@ -60,31 +60,32 @@ def certificate_text(prefix, values, dead, ranks, following):
 
     text = Path(str(prefix) + ".replay.lean").read_text().replace(
         "import Determinize.Proof.RewardModel.Soundness",
-        "import Determinize.Proof.RewardModel.Soundness\nimport Determinize.Proof.RewardModel.Moments")
+        "import Determinize.Proof.RewardModel.Soundness\nimport Determinize.Proof.RewardModel.Sparse")
     for name, vector in values.items():
         text += f"\ndef {name}Values : Vector Rat model.size := ⟨#[{', '.join(map(rat, vector))}], by rfl⟩\n"
     text += f"\ndef deadStates : Vector Bool model.size := ⟨#[{', '.join(str(b).lower() for b in dead)}], by rfl⟩\n"
     text += f"def ranks : Vector Nat model.size := ⟨#[{', '.join(map(str, ranks))}], by rfl⟩\n"
     destinations = ', '.join(f"⟨{j}, by decide +kernel⟩" for j in following)
     text += f"def nextStates : Vector (Fin model.size) model.size := ⟨#[{destinations}], by rfl⟩\n"
+    n = len(dead)
     text += """
-def boundary : Determinize.Proof.FiniteModel.Boundary model.control where
-  dead := fun i => deadStates[i]
-  rank := fun i => ranks[i]
-  closed := by decide +kernel
+def certificate : Determinize.Proof.RewardModel.Certificate model.size :=
+  Determinize.Proof.RewardModel.Certificate.ofVectors
+    deadStates ranks nextStates massValues firstValues secondValues rejectionValues
 
-def solution : Reward.Solution model where
-  boundary := boundary
-  paths := ⟨fun i => ranks[i], fun i => nextStates[i]⟩
-  paths_valid := by decide +kernel
-  mass := fun i => massValues[i]
-  mass_valid := by decide +kernel
-  first := fun i => firstValues[i]
-  first_valid := by decide +kernel
-  second := fun i => secondValues[i]
-  second_valid := by decide +kernel
-  rejection := fun i => rejectionValues[i]
-  rejection_valid := by decide +kernel
+abbrev resultClaim (i : Fin model.size) := certificate.StateValid model i
+"""
+    for i in range(n):
+        text += f"\ntheorem result_{i} : resultClaim (⟨{i}, by decide +kernel⟩ : Fin model.size) := by\n  decide +kernel\n"
+    entries = ", ".join(f"⟨⟨{i}, by decide +kernel⟩, result_{i}⟩" for i in range(n))
+    text += f"""
+def resultEvidence : Vector (Subtype resultClaim) model.size := ⟨#[{entries}], by rfl⟩
+theorem resultIndices : ∀ i : Fin model.size, (resultEvidence[i]).val = i := by decide +kernel
+theorem allResults (i : Fin model.size) : resultClaim i := (resultIndices i) ▸ (resultEvidence[i]).property
+
+def solution := certificate.solution model allResults
+"""
+    text += """
 
 abbrev statistics := solution.statistics
 

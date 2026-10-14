@@ -14,6 +14,7 @@ import Tests.Statistics
 import Tests.ModelReplay
 import Tests.SemanticBridge
 import Tests.RewardModel
+import Tests.RewardCertificate
 
 open Determinize
 

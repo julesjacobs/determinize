@@ -3,7 +3,6 @@ from fractions import Fraction
 import json
 import os
 from pathlib import Path
-import re
 import subprocess
 import sys
 import tempfile
@@ -37,19 +36,26 @@ class AdditiveTests(unittest.TestCase):
             self.assertNotIn("boundFirstValues", text)
             self.assertNotIn("bounds :=", text)
             self.assertNotIn("moments_valid :=", text)
-            for old, new in [
-                ('first := fun i => firstValues[i]', 'first := fun _ => 12345'),
-                ('mass := fun i => massValues[i]', 'mass := fun _ => 0'),
-                ('second := fun i => secondValues[i]', 'second := fun _ => 0'),
-                ('checkedSource : Expr Rat :=', 'checkedSource : Expr Rat := .real 999 --'),
-            ]:
-                self.assertIn(old, text)
-                certificate.write_text(text.replace(old, new, 1))
-                self.assertNotEqual(kernel(certificate).returncode, 0, new)
-            changed, count = re.subn(
-                r'(⟨\d+, \(\(1 : Rat\) / 1\), )\(\(1 : Rat\) / 1\)',
-                r'\g<1>((9 : Rat) / 1)', text, count=1)
-            self.assertEqual(count, 1)
+            for name, value in [('firstValues', '12345'), ('massValues', '0'),
+                                ('secondValues', '0')]:
+                changed = text.replace(f'def {name} :', f'def original_{name} :', 1)
+                changed = changed.replace('def certificate :',
+                    f'def {name} : Vector Rat model.size := Vector.replicate model.size {value}\n\n'
+                    'def certificate :', 1)
+                self.assertNotEqual(changed, text)
+                certificate.write_text(changed)
+                self.assertNotEqual(kernel(certificate).returncode, 0, name)
+            certificate.write_text(text.replace('checkedSource : Expr Rat :=',
+                                                'checkedSource : Expr Rat := .real 999 --', 1))
+            self.assertNotEqual(kernel(certificate).returncode, 0)
+            changed = text.replace('def candidate :', 'def originalCandidate :', 1)
+            changed = changed.replace('def checkedSource :', """def candidate : Reward.Candidate :=
+  {originalCandidate with rows := originalCandidate.rows.map fun row =>
+    {row with edges := row.edges.map fun edge =>
+      {edge with reward := if edge.reward = 1 then 9 else edge.reward}}}
+
+def checkedSource :""", 1)
+            self.assertNotEqual(changed, text)
             certificate.write_text(changed)
             self.assertNotEqual(kernel(certificate).returncode, 0)
 

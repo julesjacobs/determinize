@@ -18,6 +18,7 @@ private structure Options where
   detOnly : Bool := false
   exportPrefix : Option String := none
   certifyResult : Bool := false
+  stormOnly : Bool := false
   additive : Bool := true
   sampleSites : Bool := false
   solveLimits : Finite.SolveLimits := {}
@@ -26,7 +27,8 @@ private structure Options where
 
 private def usage :=
   "Usage: determinize [--check] [--det-only] [--samples N] [--seed N] [--fuel N] \
-    [--export PREFIX | --result PREFIX] [--no-additive] [--sample-sites] [--max-result-states N] \
+    [--export PREFIX | --storm-export PREFIX | --result PREFIX] [--no-additive] \
+    [--sample-sites] [--max-result-states N] \
     [--subject source|determinized] [--max-states N] [--max-edges N] [--max-state-bytes N] FILE.det"
 private def natural (s : String) : Except String Nat :=
   match s.toNat? with
@@ -37,10 +39,13 @@ private def options : List String → Options → Except String Options
   | "--no-additive" :: rest, o => options rest {o with additive := false}
   | "--sample-sites" :: rest, o => options rest {o with sampleSites := true}
   | "--result" :: outputPath :: rest, o =>
-    options rest {o with exportPrefix := some outputPath, certifyResult := true}
+    options rest {o with exportPrefix := some outputPath, certifyResult := true, stormOnly := false}
+  | "--storm-export" :: outputPath :: rest, o =>
+    options rest {o with exportPrefix := some outputPath, certifyResult := false, stormOnly := true}
   | "--max-result-states" :: n :: rest, o => do
       options rest {o with solveLimits.maxStates := ← natural n}
-  | "--export" :: outputPath :: rest, o => options rest {o with exportPrefix := some outputPath}
+  | "--export" :: outputPath :: rest, o =>
+    options rest {o with exportPrefix := some outputPath, certifyResult := false, stormOnly := false}
   | "--subject" :: subject :: rest, o => do
       let subject ← match subject with
         | "source" => pure Spec.FiniteModel.Subject.source
@@ -167,6 +172,7 @@ def main (args : List String) : IO UInt32 := do
       IO.println s!"Annotated source:\n{pretty p.source}"
       IO.println s!"Determinized:\n{pretty p.source.determinize}"
     if let some outputPath := o.exportPrefix then
+      let exportKind := if o.stormOnly then "Storm input" else "kernel-checkable paper correspondence"
       if o.additive then
         match Finite.Reward.explore p.source o.subject o.limits with
         | .complete candidate valid =>
@@ -177,9 +183,10 @@ def main (args : List String) : IO UInt32 := do
                 ({reprStr o.subject}): {answer}"
             printTransferHypotheses o.subject
           else
-            Finite.Reward.write outputPath p.source o.subject candidate valid
-          IO.println s!"Wrote additive {reprStr o.subject} model (kernel-checkable paper \
-              correspondence): {outputPath} ({candidate.states.size} states)"
+            if o.stormOnly then Finite.Reward.writeStorm outputPath candidate
+            else Finite.Reward.write outputPath p.source o.subject candidate valid
+          IO.println s!"Wrote additive {reprStr o.subject} model ({exportKind}): \
+              {outputPath} ({candidate.states.size} states)"
         | .incomplete limit discovered expanded edges =>
           throw (IO.userError s!"Incomplete exploration ({reprStr limit}): {discovered} \
               discovered, {expanded} expanded, {edges} edges. No export written.")
@@ -196,8 +203,8 @@ def main (args : List String) : IO UInt32 := do
                 ({reprStr o.subject}): {answer}"
             printTransferHypotheses o.subject
           else
-            Finite.write outputPath p.source o.subject candidate valid
-          IO.println s!"Wrote {reprStr o.subject} model (kernel-checkable paper correspondence): \
+            Finite.write outputPath p.source o.subject candidate valid (!o.stormOnly)
+          IO.println s!"Wrote {reprStr o.subject} model ({exportKind}): \
               {outputPath} ({candidate.states.size} states)"
         | .incomplete limit discovered expanded edges =>
           throw (IO.userError s!"Incomplete exploration ({reprStr limit}): {discovered} \

@@ -4,6 +4,7 @@ import Determinize.Frontend
 import Determinize.Proof
 import Determinize.Spec
 import Determinize.Theorems
+import Determinize.Tactic.Storm
 
 /-!
 # Determinize

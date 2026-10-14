@@ -1,6 +1,7 @@
 import Determinize.Finite.Statistics
 import Determinize.Checking.Statistics
 import Determinize.Frontend.Pretty
+import Determinize.Finite.Shared
 
 namespace Determinize.Finite
 open Spec.Paper Spec.FiniteModel
@@ -73,20 +74,13 @@ def stateText : State → String
 def kindText : StateKind → String
   | .transient => ".transient" | .rejected => ".rejected"
   | .returned reward => s!"(.returned {leanRat reward})"
-private def rowText (row : Row) : String :=
-  let edges := row.edges.toList.map fun e ↦ s!"⟨{e.target}, {leanRat e.probability}⟩"
-  s!"⟨{kindText row.kind}, #[{String.intercalate ", " edges}]⟩"
 
 def candidateText (candidate : Candidate) : String :=
+  let (data, shared) := (Shared.candidate candidate).run {}
   "import Determinize.Finite.Graph\n\n" ++
   "open Determinize.Finite Determinize.Spec.Paper Determinize.Spec.FiniteModel\n\n" ++
   "set_option maxRecDepth 100000\nset_option maxHeartbeats 0\nset_option Elab.async false\n\n" ++
-  "def candidate : Candidate where\n" ++
-  s!"  initial := {candidate.initial}\n" ++
-  "  states := #[\n    " ++
-    String.intercalate ",\n    " (candidate.states.toList.map stateText) ++ "\n  ]\n" ++
-  "  rows := #[\n    " ++
-    String.intercalate ",\n    " (candidate.rows.toList.map rowText) ++ "\n  ]\n"
+  shared.text data
 
 /-- Export kernel-checkable replay and paper-semantics correspondence. -/
 def replayCertificateText (source : Spec.Paper.Core) (subject : Subject) (candidate : Candidate) :
@@ -126,7 +120,7 @@ structure Files where
   negativeRewards : String
 
 /-- Structural validation only; this does not check machine transition correctness. -/
-def render (candidate : Candidate) : Except String Files := do
+def render (candidate : Candidate) (includeCandidate : Bool := true) : Except String Files := do
   let size := candidate.states.size
   if size == 0 || candidate.initial ≥ size || candidate.rows.size != size then
     throw "invalid candidate dimensions"
@@ -161,18 +155,23 @@ def render (candidate : Candidate) : Except String Files := do
     if !names.isEmpty then labels := labels ++ s!"{i} {String.intercalate " " names}\n"
   transitions := transitions ++ s!"{size} {size} 1\n"
   labels := labels ++ s!"{size} done\n"
-  return ⟨candidateText candidate, transitions, labels, positiveRewards, negativeRewards⟩
+  return ⟨if includeCandidate then candidateText candidate else "",
+    transitions, labels, positiveRewards, negativeRewards⟩
 
 /-- Call only with complete exploration data. No files are written if rendering fails. -/
 def write (outputPath : System.FilePath) (source : Spec.Paper.Core) (subject : Subject)
-    (candidate : Candidate) (_valid : candidate.ReplayValid source subject) : IO Unit := do
-  let files ← IO.ofExcept (render candidate)
+    (candidate : Candidate) (_valid : candidate.ReplayValid source subject)
+    (certificates : Bool := true) : IO Unit := do
+  let files ← IO.ofExcept (render candidate false)
   if let some parent := outputPath.parent then IO.FS.createDirAll parent
-  for (suffix, content) in [(".candidate.lean", files.candidate),
-      (".replay.lean", replayCertificateText source subject candidate), (".tra", files.transitions),
+  for (suffix, content) in [(".tra", files.transitions),
       (".lab", files.labels), (".positive.state.rew", files.positiveRewards),
       (".negative.state.rew", files.negativeRewards)] do
     IO.FS.writeFile (outputPath.toString ++ suffix) content
+  if certificates then
+    IO.FS.writeFile (outputPath.toString ++ ".candidate.lean") (candidateText candidate)
+    IO.FS.writeFile (outputPath.toString ++ ".replay.lean")
+      (replayCertificateText source subject candidate)
 
 
 /-- The closing theorems of a result certificate, whose statements use only `Spec` definitions,

@@ -73,7 +73,7 @@ class PrintedStatisticsTests(unittest.TestCase):
             prefix = directory / "model"
             result = subprocess.run([os.environ["STORM_PYTHON"], ROOT / "tools/storm.py", source,
                                      "--prefix", prefix, "--subject", "source",
-                                     *([] if additive else ["--no-additive"]), "--skip-certificate"],
+                                     *([] if additive else ["--no-additive"])],
                                     text=True, capture_output=True, timeout=180)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         data = json.loads(Path(str(prefix) + report).read_text())

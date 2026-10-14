@@ -173,7 +173,7 @@ theorem reportedStatistics :
     return text, answer
 
 
-def certificate_text(prefix, result, additive=False):
+def decode_result(prefix, result):
     size, _, labels, _ = read_model(prefix)
     n = size - 1
     dead = result["dead"]
@@ -191,6 +191,12 @@ def certificate_text(prefix, result, additive=False):
     if any(type(q) is not str for vector in values.values() for q in vector):
         raise ValueError("expected exact rational strings")
     values = {name: [Fraction(q) for q in vector] for name, vector in values.items()}
+    return n, values, dead, ranks, following
+
+
+def certificate_text(prefix, result, additive=False):
+    n, values, dead, ranks, following = decode_result(prefix, result)
+    _, _, labels, _ = read_model(prefix)
     if additive:
         import storm_additive
         text = storm_additive.certificate_text(prefix, values, dead, ranks, following)
@@ -320,7 +326,8 @@ def run(args):
     try:
         report["stormpy_version"] = importlib.metadata.version("stormpy")
         mode = [] if additive else ["--no-additive"]
-        command([args.binary, *mode, "--check", "--export", prefix, "--subject", args.subject,
+        export_option = "--storm-export" if getattr(args, "skip_certificate", False) else "--export"
+        command([args.binary, *mode, "--check", export_option, prefix, "--subject", args.subject,
                  "--max-states", str(getattr(args, "max_states", 10000)), args.file.resolve()])
         report["stage"] = "Storm"
         values_path = Path(str(prefix) + ".storm-values.json")
@@ -328,12 +335,16 @@ def run(args):
         worker_mode = ["--additive"] if additive else []
         command([sys.executable, Path(__file__).resolve(), "--worker", prefix, *worker_mode])
         values = json.loads(values_path.read_text())
-        text, answer = certificate_text(prefix, values, additive=additive)
-        certificate = Path(str(prefix) + ".storm.lean")
-        certificate.write_text(text)
         if getattr(args, "skip_certificate", False):
+            _, decoded, _, _, _ = decode_result(prefix, values)
+            _, _, labels, _ = read_model(prefix)
+            initial, = labels["init"]
+            answer = {name: vector[initial] for name, vector in decoded.items()}
             report.update(kernel_checked=False, certificate_check_skipped=True)
         else:
+            text, answer = certificate_text(prefix, values, additive=additive)
+            certificate = Path(str(prefix) + ".storm.lean")
+            certificate.write_text(text)
             report["stage"] = "kernel check"
             checked = command(["lake", "env", "lean", certificate], ROOT / "lean")
             report["axioms"] = checked_axioms(checked.stdout + checked.stderr, additive=additive,
@@ -372,6 +383,13 @@ def run(args):
 
 
 def main():
+    if len(sys.argv) == 4 and sys.argv[1] == "--tactic-worker":
+        completed = run_command(
+            [sys.executable, Path(__file__).resolve(), "--worker", sys.argv[2], "--additive"],
+            cwd=ROOT, timeout=float(sys.argv[3]))
+        sys.stdout.write(completed.stdout)
+        sys.stderr.write(completed.stderr)
+        return completed.returncode
     if len(sys.argv) in (3, 4) and sys.argv[1] == "--worker":
         if len(sys.argv) == 4 and sys.argv[3] != "--additive":
             raise ValueError("unknown worker mode")

@@ -9,6 +9,7 @@ rev = "v4.34.1"
 
 [[lean_lib]]
 name = "Determinize"
+precompileModules = true
 
 [[lean_exe]]
 name = "determinize"

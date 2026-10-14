@@ -17,6 +17,24 @@ from test_results import CASES, kernel, storm_adapter
 
 class StormTests(unittest.TestCase):
     @unittest.skipUnless(os.environ.get("STORM_PYTHON"), "set STORM_PYTHON for real Storm integration")
+    def test_skip_certificate_writes_no_lean_files(self):
+        for additive in (False, True):
+            with self.subTest(additive=additive), tempfile.TemporaryDirectory() as tmp:
+                directory = Path(tmp)
+                source = directory / "input.det"
+                source.write_text("bernoulli[G](1/3)")
+                prefix = directory / "model"
+                mode = [] if additive else ["--no-additive"]
+                result = subprocess.run([os.environ["STORM_PYTHON"], ROOT / "tools/storm.py",
+                    source, "--prefix", prefix, "--subject", "source", "--skip-certificate", *mode],
+                    text=True, capture_output=True, timeout=60)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                report = json.loads(Path(str(prefix) + ".storm.json").read_text())
+                self.assertEqual(Fraction(report["exact_answer"]), Fraction(1, 3))
+                self.assertFalse(report["kernel_checked"])
+                self.assertEqual(list(directory.glob("*.lean")), [])
+
+    @unittest.skipUnless(os.environ.get("STORM_PYTHON"), "set STORM_PYTHON for real Storm integration")
     def test_storm_report_initial_label_tampering(self):
         adapter = storm_adapter()
         for additive in (False, True):
