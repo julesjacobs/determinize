@@ -4,7 +4,12 @@
     "timeout_seconds": 180,
     "samples": 50000,
     "seed": 0,
-    "fuel": 100000
+    "fuel": 100000,
+    "machine": {
+      "model": "MacBook Pro",
+      "processor": "Apple M4 Max",
+      "memory_gib": 48
+    }
   },
   "benchmarks": [
     {
@@ -32,7 +37,7 @@
         "variance": 12.629402
       },
       "variance_reduction_factor": 1.3154735275668634,
-      "sampling_seconds": 0.6802095831371844,
+      "sampling_seconds": 0.6491941250860691,
       "status": "completed"
     },
     {
@@ -60,7 +65,7 @@
         "variance": 0.876057
       },
       "variance_reduction_factor": 4.51313784377044,
-      "sampling_seconds": 0.43193829199299216,
+      "sampling_seconds": 0.4299635416828096,
       "status": "completed"
     },
     {
@@ -88,7 +93,7 @@
         "variance": 0.393508
       },
       "variance_reduction_factor": 4.175091738922715,
-      "sampling_seconds": 0.2725351247936487,
+      "sampling_seconds": 0.2725741248577833,
       "status": "completed"
     },
     {
@@ -116,7 +121,7 @@
         "variance": 0.0
       },
       "variance_reduction_factor": "infinite",
-      "sampling_seconds": 4.332369458861649,
+      "sampling_seconds": 4.295900625176728,
       "status": "completed"
     },
     {
@@ -144,7 +149,7 @@
         "variance": 2928.499182
       },
       "variance_reduction_factor": 13.017022838970354,
-      "sampling_seconds": 0.4279749169945717,
+      "sampling_seconds": 0.4200465832836926,
       "status": "completed"
     },
     {
@@ -172,7 +177,7 @@
         "variance": 0.00028
       },
       "variance_reduction_factor": 1.0,
-      "sampling_seconds": 1.3971905000507832,
+      "sampling_seconds": 1.362821750342846,
       "status": "completed"
     },
     {
@@ -200,7 +205,7 @@
         "variance": 0.214829
       },
       "variance_reduction_factor": 1.0,
-      "sampling_seconds": 0.7465273747220635,
+      "sampling_seconds": 0.7627779580652714,
       "status": "completed"
     },
     {
@@ -228,7 +233,7 @@
         "variance": 5.908009
       },
       "variance_reduction_factor": 1.0949094695014852,
-      "sampling_seconds": 0.24429870815947652,
+      "sampling_seconds": 0.24484841665253043,
       "status": "completed"
     },
     {
@@ -258,7 +263,7 @@
         "rejected": 20096
       },
       "variance_reduction_factor": 108.1308683739902,
-      "sampling_seconds": 1.9404093753546476,
+      "sampling_seconds": 1.949947124812752,
       "status": "completed"
     },
     {
@@ -286,7 +291,7 @@
         "variance": 1.426971
       },
       "variance_reduction_factor": 40.46733395422892,
-      "sampling_seconds": 7.199065082706511,
+      "sampling_seconds": 7.179277666844428,
       "status": "completed"
     },
     {
@@ -314,7 +319,7 @@
         "variance": 0.0
       },
       "variance_reduction_factor": "infinite",
-      "sampling_seconds": 0.6575228339061141,
+      "sampling_seconds": 0.6499392502009869,
       "status": "completed"
     },
     {
@@ -342,7 +347,7 @@
         "variance": 0.088553
       },
       "variance_reduction_factor": 4.732792790758077,
-      "sampling_seconds": 0.13475004164502025,
+      "sampling_seconds": 0.1350360419601202,
       "status": "completed"
     },
     {
@@ -370,7 +375,7 @@
         "variance": 0.410669
       },
       "variance_reduction_factor": 1.195239962110605,
-      "sampling_seconds": 0.33680900000035763,
+      "sampling_seconds": 0.3356925002299249,
       "status": "completed"
     },
     {
@@ -398,7 +403,7 @@
         "variance": 0.411136
       },
       "variance_reduction_factor": 1.897423237079701,
-      "sampling_seconds": 0.3907616250216961,
+      "sampling_seconds": 0.3977021249011159,
       "status": "completed"
     }
   ],

@@ -288,6 +288,7 @@ PULL_REQUEST_STARTS = {
     "tools/dev-shell.sh": set(),
     "tools/paper-plots.py": set(),
     "tools/bench.py": {"lean", "artifact"},
+    "tools/benchmark_estimator_variance.py": {"lean", "artifact"},
     ".claude/settings.json": set(),
     "lean/README.md": {"artifact"},
     "lean/PAPER_DEVIATIONS.md": set(),

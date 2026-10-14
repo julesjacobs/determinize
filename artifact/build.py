@@ -41,6 +41,7 @@ from __future__ import annotations
 
 import argparse
 import html
+import json
 import os
 import posixpath
 import re
@@ -64,6 +65,7 @@ SHIPPED = [
     "lean/Determinize.lean",
     "lean/Determinize/**/*.lean",
     "lean/Main.lean",
+    "lean/SamplingBench.lean",
     "lean/Tests/**/*.lean",
     "lean/lakefile.toml",
     "lean/lake-manifest.json",
@@ -119,7 +121,7 @@ LOCAL_PATH = r"/(?:Users|home)/(?!web_user\b)[\w.-]+|/private/var/folders/|\b[A-
 LOCAL_MARKERS = ("/Users/", "/home/", "/private/var/", ":\\")
 # A recorded path: what is left after the home directory, with the checkout's name, is relative
 # to the archive's root.
-HOME_CHECKOUT = re.compile(r"(?:/Users|/home)/[^/\s\"']+/determinize/")
+HOME_CHECKOUT = re.compile(r"(?:/Users|/home)/[^/\s\"']+/(?:[^/\s\"']+/)*?determinize/")
 MAC_TEMPORARY = re.compile(r"/private/var/folders/[^\s\"']+?/T/")
 
 LINE_RANGE = re.compile(r"#L(\d+)(?:-L(\d+))?\Z")
@@ -304,6 +306,15 @@ def remove_sections(text, path):
     return text
 
 
+def remove_result_revision(text, path):
+    if path.startswith("results/") and path.endswith(".json"):
+        data = json.loads(text)
+        if isinstance(data, dict) and "git_commit" in data:
+            del data["git_commit"]
+            return json.dumps(data, indent=2) + "\n"
+    return text
+
+
 def documentation_revisions(tree: Tree):
     revisions = set()
     for path in tree.paths("website/docs/"):
@@ -457,6 +468,7 @@ def build(sim: Path, docs: Path, allow_stale: bool):
     links = Links(tree, set(texts), bool(stale))
     for path, text in texts.items():
         text = remove_sections(text, path)
+        text = remove_result_revision(text, path)
         text = HOME_CHECKOUT.sub("", text)
         text = MAC_TEMPORARY.sub("$TMPDIR/", text)
         text = links.rewrite(text, path)

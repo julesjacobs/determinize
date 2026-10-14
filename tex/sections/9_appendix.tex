@@ -1687,7 +1687,7 @@ continuous sampling site, which determinization replaces.
 
 Each program is timed by the tool's internal timer, which covers parsing, elaboration, type and
 mode inference, and mean replacement, and excludes process start-up, file reading, output
-formatting, sampling and exact analysis. After one warm-up run, each program is run seven
+formatting, sampling and exact analysis. After one warm-up run, each program is run ten
 times. \Cref{fig:determinization-scaling} shows the median and the range between the 25th and
 75th percentiles. Every run also checks the inferred sampling sites: $k$ continuous sites before
 determinization for \texttt{uniform-nested} and one for the other families, and none after. The measurements

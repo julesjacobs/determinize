@@ -9,10 +9,10 @@ In this section, we evaluate our determinization approach in three complementary
     
     \item \textbf{RQ2: Variance reduction.} How much does determinization reduce output variance?
     
-    \item \textbf{RQ3: Monte Carlo efficiency.} To what extent does this variance reduction improve the precision of Monte Carlo expectation estimates under a fixed wall-clock budget?
+    \item \textbf{RQ3: Monte Carlo efficiency.} How does determinization affect the precision and sampling time of Monte Carlo expectation estimates?
 \end{itemize}
 
-Consequently, our first question investigates whether determinization enables exact expectation computation through finite-state model checking. The latter two investigate its benefits for sampling-based inference, first measuring reductions in output variance and then evaluating whether these reductions improve Monte Carlo precision under a fixed wall-clock budget. We detail the benchmarks, experimental setup, comparisons, and results for each question in the following subsections below. The RQ1 and RQ3 experiments ran on a MacBook Pro M3 with 16GB RAM; the RQ2 experiments ran on a MacBook Pro M4 Max with 48GB RAM. Together with our benchmarks, our implementation is publicly available at \href{https://github.com/[anonymized]}{https://github.com/[anonymized]}.
+Consequently, our first question investigates whether determinization enables exact expectation computation through finite-state model checking. The latter two investigate its benefits for sampling-based inference, first measuring reductions in output variance and then comparing Monte Carlo precision and sampling time. We detail the benchmarks, experimental setup, comparisons, and results for each question in the following subsections below. All experiments ran on a MacBook Pro M4 Max with 48GB RAM. Together with our benchmarks, our implementation is publicly available at \href{https://github.com/[anonymized]}{https://github.com/[anonymized]}.
 
 \subsection{RQ1: Enabling Exact Expectations}
 
@@ -74,6 +74,8 @@ representative benchmarks---\texttt{branching}, \texttt{hmm}, and
 \texttt{load}---that exhibit substantial but finite variance reductions in
 RQ2. 
 
+For each sample size, we run 50 replicates with disjoint seed ranges, pairing the seeds of each source and determinized replicate. We alternate which program runs first. Here $N$ counts attempted executions; each estimate averages the returned values, excluding observation rejections. Every execution completes or rejects within the 100,000-step limit. Each trial runs in a separate process, with 1,000 untimed warm-up executions. We time the sampling loop and online moment calculation, excluding process startup, parsing, determinization, and output.
+
 \input{figures/eval-wallclock.tex}
 
-\paragraph{Results} \Cref{fig:estimator-variance-vs-time} shows lower empirical estimator variance for the determinized programs across all tested sample sizes, with similar sampling times to the source programs. At $N=10^5$, estimator variance is reduced by approximately $6.0\times$ for \texttt{branching}, $113\times$ for \texttt{hmm}, and $48.4\times$ for \texttt{load}. Thus, on these three benchmarks, the variance reductions translate into more precise Monte Carlo estimates at comparable sampling cost.
+\paragraph{Results} \Cref{fig:estimator-variance-vs-time} shows lower empirical estimator variance for the determinized programs across all tested sample sizes, with similar sampling times to the source programs. At $N=10^5$, estimator variance is reduced by approximately $5.4\times$ for \texttt{branching}, $105\times$ for \texttt{hmm}, and $24.9\times$ for \texttt{load}. Thus, on these three benchmarks, the variance reductions translate into more precise Monte Carlo estimates at comparable sampling cost.

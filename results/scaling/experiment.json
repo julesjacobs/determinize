@@ -7,7 +7,7 @@
     200,
     400
   ],
-  "repetitions": 7,
+  "repetitions": 10,
   "warmups": 1,
   "timeout_seconds": 180,
   "timed_phases": [
@@ -17,6 +17,11 @@
     "determinize"
   ],
   "size_metric": "k: nested uniform draws or explicit input-list elements",
-  "binary": "/Users/kaw324/determinize/lean/.lake/build/bin/determinize",
-  "failures": []
+  "binary": "/Users/julesjacobs/git/determinize/lean/.lake/build/bin/determinize",
+  "failures": [],
+  "machine": {
+    "model": "MacBook Pro",
+    "processor": "Apple M4 Max",
+    "memory_gib": 48
+  }
 }
