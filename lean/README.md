@@ -38,7 +38,7 @@ The default build checks mean sites with affine-dependent operands, invalid mean
 
 ## Deviations from the paper
 
-These notes compare the Lean development with the paper in `tex/` as of `a6d499b`, whose Lean
+These notes compare the Lean development with the paper in `tex/` as of `f51d5f8`, whose Lean
 links are pinned to `8f89190`. The previous draft in `tex/archive/` is not compared.
 
 - **Names.** The paper's set of modes `𝒜 = {G, E, M}` is `DistributionAction`: `sample
@@ -47,12 +47,12 @@ links are pinned to `8f89190`. The previous draft in `tex/archive/` is not compa
   `Completion` and `AffinityLE`.
   The paper's `μ_e^(n)`, `μ_e`, `d_e`, `J_e^(n)`, `J_e` and `η_e` are `outputMeasureAt n`,
   `bigStepMeasure`, `divergenceProbability`, `traceAndOutputLawAt n`, `traceAndOutputLaw` and
-  `traceLaw`. Section 2 types `μ_e^(n)` and `μ_e` as subprobability measures; `outputMeasureAt n`
-  and `bigStepMeasure` are `Measure ℝ`, and their mass bound is a lemma
-  (`traceAndOutputLaw_mass_le_one` with `trace_erasure`). The paper defines `d_e` in words, as
-  the probability of diverging or rejecting; `divergenceProbability` is the infimum over depths
-  of the probability of not yet being a value (`runningProbabilityAt`), to which stuck
-  executions add nothing. The conditional law `μ_e(· | τ)` is Mathlib's `condKernel` of
+  `traceLaw`. Sections 2 and 4 type `μ_e^(n)`, `μ_e`, `J_e^(n)` and `J_e` as subprobability
+  measures; the Lean definitions are `Measure ℝ` and `Measure (Trace × ℝ)`, and their mass
+  bound is a lemma (`traceAndOutputLaw_mass_le_one` with `trace_erasure`). The paper defines
+  `d_e` in words, as the probability of diverging or rejecting; `divergenceProbability` is the
+  infimum over depths of the probability of not yet being a value (`runningProbabilityAt`), to
+  which stuck executions add nothing. The conditional law `μ_e(· | τ)` is Mathlib's `condKernel` of
   `traceAndOutputLaw`. `returnedLaw` is the output law conditioned on returning, which the paper
   uses only through `𝔼_ret[e]` and `Var_ret[e]`. The return probability `q_e` is
   `returnProbability`, and `𝔼_ret[e]` and `Var_ret[e]` are `returnedExpectation` and
@@ -65,22 +65,28 @@ links are pinned to `8f89190`. The previous draft in `tex/archive/` is not compa
 - **Theorems.** `Theorems.lean` states the paper's theorems under the paper's names:
   `inference_correctness` (Section 3), `trace_preservation`, `tracewise_soundness`,
   `output_mass_preservation` (an equation in Section 4, a lemma in the appendix),
-  `expectation_preservation`, `variance_non_increase`, `convex_function_inequality`,
-  `probability_preservation` (Section 4) and `trace_variance_decomposition` (appendix). They
-  follow the statements of Section 4, and differ from them as follows.
+  `expectation_preservation`, `variance_non_increase`, `probability_preservation` (Section 4),
+  `convex_function_inequality` and `trace_variance_decomposition` (appendix). They follow the
+  statements of Section 4, and differ from them as follows.
+  - The appendix states the convex function inequality without a label, so Section 6's
+    `\cref{thm:convex-function}` is undefined. Section 4 calls probability preservation
+    "Probabilistic type safety"; the appendix and Lean call it probability preservation.
+  - Section 4's equality of total masses, `η_e(Trace) = J_e(Trace × ℝ) = μ_e(ℝ)`, is no theorem
+    of its own: `traceLaw` is defined as the trace marginal, `returnProbability` is
+    `bigStepMeasure program univ`, and the second equation follows from `trace_erasure`.
   - The paper's definition of expectation is for probability distributions. `HasExpectation`
     and `extendedExpectation` take any measure on the reals and are used at the unnormalized
     output law. Where the paper says that `𝔼_ret[e]` is well-defined, Lean says
     `HasExpectation (bigStepMeasure program)`, which is the same when the return probability
     is positive.
-  - Section 4 defines `𝔼_ret[e]` by an integral over `μ_e` and equates it with
-    `(1/q_e) ∫ 𝔼[e | τ] η_e(dτ)`. `returnedExpectation` is the first expression, and no theorem
-    states the second.
-  - Section 4 calls `μ_e` the output marginal of `J_e`. Section 2 and `bigStepMeasure` define
-    `μ_e` directly, and `trace_erasure` proves that it is the marginal.
-  - `tracewise_soundness` does not go through `𝔼[e | τ]` in the extended reals. It states that
-    the source's conditional law is integrable and that the target's is the Dirac mass at its
-    Bochner integral, which is the paper's equation together with its "in particular" clause.
+  - Section 4 defines `𝔼_ret[e]` by an integral over `μ_e`, which `returnedExpectation` is, and
+    derives `𝔼_ret[e] = (1/q_e) ∫ 𝔼[e | τ] η_e(dτ)` from the disintegration identity; no theorem
+    states the latter.
+  - Section 4 says without proof that the output marginal of `J_e` is the `μ_e` of Section 2;
+    `trace_erasure` proves it.
+  - `tracewise_soundness` takes the target's Dirac mass at the Bochner integral of the source's
+    conditional law, where Section 4 writes `𝔼[e | τ]`, defined in the extended reals. Under the
+    theorem's integrability clause, which both state, the two agree.
   - A finite second moment is `MemLp id 2`, and `Var_ret[e]` is Mathlib's `variance` of
     `returnedLaw`. `trace_variance_decomposition` also states that the average variance within
     a trace is finite.
@@ -133,12 +139,10 @@ finite-model and reward-model theorems.
 - **Subtyping.** The paper lists reflexivity and transitivity as rules. `Ty.Sub` has the
   structural rules and reflexivity at base types only; general reflexivity and transitivity are
   lemmas (`Ty.Sub.refl` and `Ty.Sub.trans` in `Proof/Semantics/Subtyping.lean`).
-- **Distribution typing.** The typing figure's caption lets `α` range over `{G, E, M}`
-  independently of the result annotation `m`, so the figure also derives an E site at `real^G`,
-  such as `gaussian^E(u, v) : real^G`, and a G site with `real^E` parameters, such as
-  `uniform^G(0, gaussian^E(1, 1))`. `Typed`, like Section 3's prose, gives a sampling site's
-  parameters and result the site's own affinity (`Typed.uniform`, `Typed.gaussian`, …), up to
-  `Typed.sub`, and a mean site either affinity (`Typed.uniformMean`, …).
+- **Distribution typing.** Each distribution rule of the typing figure, with its side condition
+  `α = M ∨ α = m`, is two constructors of `Typed`: one for a sampling site, at `m = α`
+  (`Typed.uniform`, `Typed.gaussian`, …), and one for a mean site, at either affinity
+  (`Typed.uniformMean`, …).
 - **Inference algorithm.** The paper checks type shapes, then solves the subtype constraints
   by expanding a type variable one constructor at a time, deferring constraints between two
   unresolved type variables, and propagates E forward and G backward through the remaining
@@ -188,8 +192,8 @@ finite-model and reward-model theorems.
     initialization equations, prose in Section 5 and a theorem in the appendix, are not a lemma
     of their own: `compact_exactDepth_source_fiberSound` proves them from `realize_ofExpr`.
   - Section 5 leaves the definitions of `K_{n,s}` and `K_e` and the compatibility lemma to the
-    appendix, which has none of them. `compactFiber` replays the G trace and integrates over
-    `A_σ` (`compactHistoryReplay`). `K_e` is the replay summed over all depths
+    appendix, whose section for them is a to-do. `compactFiber` replays the G trace and
+    integrates over `A_σ` (`compactHistoryReplay`). `K_e` is the replay summed over all depths
     (`outputGivenTrace`), made a Markov kernel by the Dirac mass at 0 where that sum has mass
     other than 1 (`normalizedOutputGivenTrace`). The compatibility lemma is
     `outputGivenTrace_eq_outputGivenTraceAt`. The finite-step factorizations are summed over
@@ -211,10 +215,11 @@ finite-model and reward-model theorems.
   `<=`, moves a literal right factor to the left of a multiplication, and reads
   `discrete(p0, …, pn)` with all n + 1 probabilities, dropping the last. The CLI prints `gauss`
   for `gaussian` and `discrete_list` for `discrete`. The introduction's random-walk figure
-  calls a `reduce` that it does not define (`examples/paper/gauss-random-walk.det` does). The
-  right-hand programs of the introduction's four figures are simplified by hand, as their
-  headings say: the CLI prints mean sites such as `mean_gauss(…)`, names binders by position
-  (`x0`, `f1`) and removes nothing.
+  calls a `reduce` whose definition it leaves to an appendix section that is a to-do;
+  `examples/paper/gauss-random-walk.det` defines it. The right-hand programs of the
+  introduction's four figures are simplified by hand, as their headings say: the CLI prints
+  mean sites such as `mean_gauss(…)`, names binders by position (`x0`, `f1`) and removes
+  nothing.
 - **Implementation (Section 6).** Section 6 trusts Lean's kernel, the three axioms, the
   specification with the Mathlib definitions it uses, and the Lean compiler for the output of
   type inference, and calls the parser and the floating-point interpreter unverified. The
@@ -237,14 +242,21 @@ finite-model and reward-model theorems.
   unnormalized output law; the conditional mean and variance that Section 6 says the tool
   reports are in the `.result.json` and `.storm.json` files. Section 6 transfers an exact mean
   from `e_det` to `e_src` by `expectation_preservation`; the CLI's note next to the result
-  states the hypotheses of `unnormalized_extended_expectation_preservation`.
+  states the hypotheses of `unnormalized_extended_expectation_preservation`. The introduction
+  calls the result an end-to-end guarantee; the source's domain safety and well-defined
+  expectation remain hypotheses that no part of the tool checks.
 - **Evaluation (Section 7).** Section 7 says the exact values come with certificates.
   `tools/bench.py` passes `--skip-certificate` unless `--check-certificates` is given, and the
   recorded run `results/finite-after-det.json` reports every certificate as "generated,
   unchecked"; its `dreckon` export exceeded the 180-second timeout. Table 1 counts
   `retransmit`'s sampling sites as (4,2) → (4,0); `--sample-sites` reports three continuous
-  sites before determinization. `noisy-iteration`, `dungeon` and `noisy-product` are in
-  `examples/paper/`, which `tools/bench.py` does not run.
+  sites before determinization. Table 1's determinization times come from `determinize
+  --det-only` (`tools/bench.py --exact --det-only`), which times `compile` and
+  `Expr.determinize`; the recorded run `results/exact-determinization-only.json` differs from
+  the table by up to 16% (`swap`). Section 7 leaves the details of the scaling benchmarks
+  (`benchmarks/exact/scaling/run_scaling.py`) to the appendix, which has no such section.
+  Table 2's `dungeon` and `noisy-product` are in `examples/paper/`, which
+  `tools/bench.py` does not run.
 - **Lean links.** `tex/lean-links.tex` pins the paper's GitHub links to `8f89190`, and the
   theorems' links point to `Theorems.lean`. Each linked range holds its declaration at that
   revision. Probability preservation's divergence equation, `d_Determinize(e) = d_e`, and the
