@@ -452,10 +452,10 @@ not use these Float calculations.
 
 ### Discrete-distribution migration
 
-`Spec/FiniteDistribution.lean` defines checked rational probabilities and
-weighted expectation. `Spec/FiniteDistributionMeasure.lean` and
-`Spec/Primitives.lean` define the real finite law, Bernoulli fiber, and mean
-fibers. Their probability, integrability, expectation, and Bernoulli variance and
+`Checking/FiniteDistribution.lean` defines checked rational probabilities and
+weighted expectation, and `Proof/Primitives/FiniteDistributionMeasure.lean` their real
+finite law; no theorem statement uses either. `Spec/Primitives.lean` defines the Bernoulli
+fiber and the mean fibers. Their probability, integrability, expectation, and Bernoulli variance and
 measurability proofs are in the corresponding `Proof/` modules. The shared primitive kernels,
 affine-mean laws, moment bounds, and domain-convexity proofs cover both distributions.
 Both primitives pass through core typing, symbolic and trace semantics, affinity
