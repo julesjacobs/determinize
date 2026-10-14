@@ -22,7 +22,7 @@ proved by one term from `Proof/`. A reviewer reads the statements and the defini
 not the proofs: the command at the end of this file fails the build unless every theorem depends
 only on the standard axioms and its statement uses nothing from `Proof` except proofs.
 
-The first three sections state the paper's theorems, under the paper's names. There `e` is
+The first four sections state the paper's theorems, under the paper's names. There `e` is
 `program`, `Determinize(e)` is `program.determinize`, the output law `μ_e` is
 `bigStepMeasure program`, the joint law `J_e` is `traceAndOutputLaw program` with trace marginal
 `traceLaw program`, the conditional law `μ_e(· | τ)` is
@@ -49,6 +49,13 @@ theorem inference_correctness (input : Input) :
       ∀ completion : Annotated, Completion input completion → AffinityLE completion program :=
   Proof.Frontend.infer_correct input
 
+/-! ## Determinization (paper, appendix) -/
+
+/-- Determinization preserves typing. -/
+theorem determinization_preserves_typing (context : List Ty) (program : Expr) (ty : Ty)
+    (typed : Typed context program ty) : Typed context program.determinize ty :=
+  Proof.Paper.typed_determinize typed
+
 /-! ## Tracewise soundness (paper, Section 4.2) -/
 
 /-- The output marginal of the joint law: erasing terminating traces recovers the ordinary
@@ -56,6 +63,13 @@ output semantics. -/
 theorem trace_erasure (program : Expr) :
     (traceAndOutputLaw program).map Prod.snd = bigStepMeasure program :=
   Proof.Traces.correspondence program
+
+/-- Equality of total masses. The trace marginal, the joint law and the output law have the same
+total mass: the probability that the program returns. -/
+theorem equality_of_total_masses (program : Expr) :
+    traceLaw program Set.univ = traceAndOutputLaw program Set.univ ∧
+      traceAndOutputLaw program Set.univ = returnProbability program :=
+  Proof.Traces.total_masses program
 
 /-- Trace preservation. Determinization preserves domain safety and the law of terminating
 G traces. -/
@@ -75,6 +89,19 @@ theorem tracewise_soundness (program : Expr)
       (traceAndOutputLaw program.determinize).condKernel trace =
         Measure.dirac (∫ value : ℝ, value ∂(traceAndOutputLaw program).condKernel trace) :=
   Proof.Traces.tracewise_soundness program typed safe
+
+/-- Expectation along traces. The expectation conditioned on returning is the integral over the
+trace law of the conditional expectation of the output's positive part given the trace, minus
+that of its negative part, divided by the return probability. It is meaningful when the return
+probability is positive and the expectation conditioned on returning is well-defined. -/
+theorem returned_expectation_along_traces (program : Expr) :
+    returnedExpectation program =
+      ((returnProbability program).toReal⁻¹ : EReal) *
+        (((∫⁻ trace, posPartIntegral ((traceAndOutputLaw program).condKernel trace)
+            ∂traceLaw program : ℝ≥0∞) : EReal) -
+          ((∫⁻ trace, negPartIntegral ((traceAndOutputLaw program).condKernel trace)
+            ∂traceLaw program : ℝ≥0∞) : EReal)) :=
+  Proof.Traces.returned_expectation_along_traces program
 
 /-! ## Global soundness (paper, Section 4.1 and the appendix) -/
 
@@ -117,10 +144,10 @@ theorem convex_function_inequality (program : Expr)
       ∫⁻ value, ENNReal.ofReal (φ value) ∂bigStepMeasure program :=
   Proof.Paper.jensen_soundness program typed safe φ convex nonneg
 
-/-- Probability preservation. The target is domain-safe, the source either returns or diverges
+/-- Probabilistic type safety. The target is domain-safe, the source either returns or diverges
 (rejection counts as divergence), and the target returns, and diverges, with the same
 probabilities as the source. -/
-theorem probability_preservation (program : Expr)
+theorem probabilistic_type_safety (program : Expr)
     (typed : Typed [] program (.float .E)) (safe : DomainSafe program) :
     DomainSafe program.determinize ∧
       returnProbability program + divergenceProbability program = 1 ∧
@@ -146,7 +173,7 @@ theorem trace_variance_decomposition (program : Expr)
 
 /-! ## Further results on returned values (not stated in the paper) -/
 
-/-- The first equation of `probability_preservation` at either affinity: a domain-safe,
+/-- The first equation of `probabilistic_type_safety` at either affinity: a domain-safe,
 real-typed program either returns or continues forever. Rejection counts as divergence. -/
 theorem return_or_diverge (affinity : Affinity) (program : Expr)
     (typed : Typed [] program (.float affinity)) (safe : DomainSafe program) :
