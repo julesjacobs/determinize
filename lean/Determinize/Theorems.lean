@@ -117,10 +117,10 @@ theorem convex_function_inequality (program : Expr)
       ∫⁻ value, ENNReal.ofReal (φ value) ∂bigStepMeasure program :=
   Proof.Paper.jensen_soundness program typed safe φ convex nonneg
 
-/-- Probability preservation. The target is domain-safe, the source either returns or diverges
+/-- Probabilistic type safety. The target is domain-safe, the source either returns or diverges
 (rejection counts as divergence), and the target returns, and diverges, with the same
 probabilities as the source. -/
-theorem probability_preservation (program : Expr)
+theorem probabilistic_type_safety (program : Expr)
     (typed : Typed [] program (.float .E)) (safe : DomainSafe program) :
     DomainSafe program.determinize ∧
       returnProbability program + divergenceProbability program = 1 ∧
@@ -146,7 +146,7 @@ theorem trace_variance_decomposition (program : Expr)
 
 /-! ## Further results on returned values (not stated in the paper) -/
 
-/-- The first equation of `probability_preservation` at either affinity: a domain-safe,
+/-- The first equation of `probabilistic_type_safety` at either affinity: a domain-safe,
 real-typed program either returns or continues forever. Rejection counts as divergence. -/
 theorem return_or_diverge (affinity : Affinity) (program : Expr)
     (typed : Typed [] program (.float affinity)) (safe : DomainSafe program) :
