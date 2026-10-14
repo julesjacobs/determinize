@@ -70,6 +70,6 @@ representative benchmarks---\texttt{branching}, \texttt{hmm}, and
 \texttt{load}---that exhibit substantial but finite variance reductions in
 RQ2. 
 
-\todo[inline]{TODO: finish if there is time}
-
 \input{figures/eval-wallclock.tex}
+
+\paragraph{Results} \Cref{fig:estimator-variance-vs-time} shows lower empirical estimator variance for the determinized programs across all tested sample sizes, with similar sampling times to the source programs. At $N=10^5$, estimator variance is reduced by approximately $6.0\times$ for \texttt{branching}, $113\times$ for \texttt{hmm}, and $48.4\times$ for \texttt{load}. Thus, on these three benchmarks, the variance reductions translate into more precise Monte Carlo estimates at comparable sampling cost.
