@@ -1,0 +1,105 @@
+# Builds the anonymized archive that the paper's double-blind review gets as supplementary material
+# with artifact/build.py, checks it unpacked, and uploads it as the run's artifact
+# determinize-artifact.zip. The artifact is the zip itself (`archive: false`), not a zip around it,
+# so the downloaded file is the one to submit. On main, pages.yml runs this workflow after the
+# documentation and publishes the zip next to the site.
+#
+# The archive takes the API documentation from the Actions cache, where pages.yml saves each
+# rendering by the hash of its sources. On main, that rendering is of the same sources. A pull
+# request restores the newest rendering of main and builds with --allow-stale-docs, so its archive
+# checks the anonymization but its source links may point to the wrong lines. The checkout has the
+# full history, so that the archive is checked for every commit of the repository.
+#
+# The simulator is built in the flake's `site` dev shell, which also runs the browser tests of
+# sim/e2e/artifact.spec.ts on the unpacked archive from disk. artifact/build.py needs only git and
+# Python's standard library, and runs with the runner's.
+name: Artifact
+
+on:
+  pull_request:
+    # What the archive ships and what builds it; tests/test_workflows.py checks the expectations.
+    paths:
+      - artifact/**
+      - lean/**
+      - "!lean/**/*.md"
+      - lean/README.md
+      - lean/finite-model-contract.md
+      - tests/**
+      - "!tests/**/*.md"
+      - tests/README.md
+      - "!tests/test_workflows.py"
+      - examples/**
+      - benchmarks/**
+      - tools/**
+      - "!tools/dev-shell.sh"
+      - "!tools/paper-plots.py"
+      - results/**
+      - run.sh
+      - test.sh
+      - sim/**
+      - site/index.html
+      - site/*.css
+      - site/fonts/**
+      - flake.nix
+      - flake.lock
+      - flake-modules/systems.nix
+      - flake-modules/devshells/lean.nix
+      - flake-modules/devshells/sim.nix
+      - flake-modules/devshells/site.nix
+      - .github/workflows/artifact.yml
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: artifact-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    name: Build and check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+      # The key of pages.yml's documentation, by the same files; tests/test_workflows.py checks it.
+      # Of the renderings of these sources, the newest; else, on a pull request, the newest of all.
+      - name: Restore the documentation
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: _site/docs
+          key: lean-html-${{ hashFiles('lean/Determinize.lean', 'lean/Determinize/**/*.lean', 'lean/lakefile.toml', 'lean/lake-manifest.json', 'lean/lean-toolchain', 'lean/docbuild/**', 'flake.lock', '.github/workflows/pages.yml') }}-${{ github.run_id }}
+          restore-keys: |
+            lean-html-${{ hashFiles('lean/Determinize.lean', 'lean/Determinize/**/*.lean', 'lean/lakefile.toml', 'lean/lake-manifest.json', 'lean/lean-toolchain', 'lean/docbuild/**', 'flake.lock', '.github/workflows/pages.yml') }}-
+            ${{ github.event_name == 'pull_request' && 'lean-html-' || '' }}
+          fail-on-cache-miss: true
+      - name: Build the simulator
+        shell: nix develop .#site --command bash -euo pipefail {0}
+        working-directory: sim
+        run: npm run build
+      - name: Build the archive
+        env:
+          STALE: ${{ github.event_name == 'pull_request' && '--allow-stale-docs' || '' }}
+        run: artifact/build.py --out _artifact/determinize-artifact.zip --docs _site/docs $STALE
+      # Unpacked as a reviewer unpacks it, so that the checks see what the zip holds.
+      - name: Check the unpacked archive
+        run: |
+          python3 -m zipfile -e _artifact/determinize-artifact.zip _unpacked
+          artifact/build.py --check _unpacked/determinize-artifact
+      - name: Open the unpacked website from disk
+        shell: nix develop .#site --command bash -euo pipefail {0}
+        working-directory: sim
+        run: ARTIFACT_DIR="$GITHUB_WORKSPACE/_unpacked/determinize-artifact" playwright test e2e/artifact.spec.ts
+      - name: Upload the archive
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          path: _artifact/determinize-artifact.zip
+          archive: false
+          if-no-files-found: error
+          retention-days: 7

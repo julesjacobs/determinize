@@ -39,9 +39,20 @@ NAMES = {"Determinize.Spec.FiniteModel.OutputStatistics", "Matches", "Determiniz
 
 
 def generators():
-    """Tracked sources that write the main claim of an exact-result certificate."""
-    files = subprocess.run(["git", "ls-files", "-z", "--", "*.lean", "*.py", ":!tests"], cwd=ROOT,
-                           text=True, capture_output=True, check=True).stdout.split("\0")
+    """Tracked sources that write the main claim of an exact-result certificate. Outside a git
+    repository, as in the anonymized archive (artifact/build.py), the sources on disk outside
+    hidden directories such as lean/.lake."""
+    listing = subprocess.run(["git", "ls-files", "-z", "--", "*.lean", "*.py", ":!tests"], cwd=ROOT,
+                             text=True, capture_output=True)
+    if listing.returncode == 0:
+        files = listing.stdout.split("\0")
+    else:
+        files = []
+        for directory, subdirectories, names in os.walk(ROOT):
+            here = Path(directory).relative_to(ROOT)
+            subdirectories[:] = [name for name in subdirectories if not name.startswith(".")
+                                 and name != "__pycache__" and (here.parts or name != "tests")]
+            files += [(here / name).as_posix() for name in names if name.endswith((".lean", ".py"))]
     return {path for path in files if path and "theorem outputStatistics" in (ROOT / path).read_text()}
 
 
