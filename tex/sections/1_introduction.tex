@@ -9,8 +9,9 @@ Monte Carlo methods estimate expected values by averaging the results of repeate
 Existing approaches exploit this idea in different ways. Exact inference and moment analysis compute
 expectations symbolically~\cite{gehr2016psi,gehr2020lpsi,moosbrugger2022moment}. Conditional Monte Carlo and Rao-Blackwellization reduce sampling variance by analytically averaging over selected random choices~\cite{casella1996rao,owen2013montecarlo}. Other techniques combine symbolic reasoning with sampling during inference~\cite{murray2018delayed,atkinson2022semisymbolic}, while expectation programming targets the estimation of expected values directly~\cite{reichelt2022expectation}. Together, these approaches demonstrate that not every random choice needs to be explicitly simulated. Identifying which choices can be safely eliminated, however, is challenging: sampled values may influence control flow, determine the parameters of subsequent distributions, or participate in nonlinear computations. This raises a natural question:
 \begin{center}
-\emph{Can we statically identify and eliminate random choices
-from a probabilistic program while preserving its expected value?}
+\emph{Can static analysis automatically identify and eliminate
+random choices from a probabilistic program while preserving
+its expected value?}
 \end{center}
 
 Consider the signal and noisy measurement program in
