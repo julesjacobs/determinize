@@ -35,15 +35,11 @@ abbrev MomentCertificate.model (model : Model) (certificate : MomentCertificate 
     (moment : Moment) :=
   rewards (cut model certificate.dead) moment.rational
 
-def MomentCertificate.result (model : Model) (certificate : MomentCertificate model)
-    (moment : Moment) :
-    ResultCertificate (certificate.model model moment) := ⟨certificate.values moment, 0⟩
-
 def MomentCertificate.Valid (model : Model) (certificate : MomentCertificate model) : Prop :=
   ClosedDivergence model certificate.dead ∧
     (⟨certificate.rank, certificate.next⟩ : Paths (cut model certificate.dead)).Valid
       (cut model certificate.dead) ∧
-    ∀ moment, (certificate.result model moment).Equations (certificate.model model moment)
+    ∀ moment, ValueEquations (certificate.model model moment) (certificate.values moment)
 
 instance (model : Model) (certificate : MomentCertificate model) :
     Decidable (certificate.Valid model) :=
@@ -59,7 +55,7 @@ theorem momentCertificate_integral (model : Model) (certificate : MomentCertific
     (∫ x, moment.real x ∂model.outputMeasure) = (certificate.values moment model.initial : ℝ) := by
   rw [← cut_outputMeasure model certificate.dead valid.1]
   apply query_sound (cut model certificate.dead) moment.rational moment.real moment.agree
-    (certificate.result model moment) (valid.2.2 moment) ⟨certificate.rank, certificate.next⟩
+    (certificate.values moment) (valid.2.2 moment) ⟨certificate.rank, certificate.next⟩
   intro state transient
   apply valid.2.1 state
   cases h : (cut model certificate.dead).kind state <;> simp_all

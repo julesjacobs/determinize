@@ -132,8 +132,11 @@ private def sampleSites : Core → SampleSites
 private def printSampleSites (label : String) (sites : SampleSites) : IO Unit :=
   IO.println s!"Sampling sites {label}: discrete={sites.discrete}, continuous={sites.continuous}"
 
-/-- An exact result for the determinized program is the source's only under the hypotheses of
-`Theorems.unnormalized_extended_expectation_preservation`, which the tool does not check. -/
+/-- An exact first moment of the determinized program is the source's under the hypotheses of
+`Theorems.expectation_preservation`, which the tool does not check. It is the return probability,
+which `Theorems.output_mass_preservation` preserves, times the expectation conditioned on
+returning, which `Theorems.expectation_preservation` preserves; both moments are zero when the
+program never returns. -/
 private def printTransferHypotheses (subject : Spec.FiniteModel.Subject) : IO Unit :=
   if subject == .determinized then
     IO.println "The source has the same expectation if it is domain-safe and its expectation is \

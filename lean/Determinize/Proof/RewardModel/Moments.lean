@@ -235,7 +235,7 @@ theorem solution_termination (model : Model) (solution : Determinize.Finite.Rewa
       model.control := by
   have output : model.control.outputMeasure.real Set.univ = (solution.mass model.initial : ℝ) := by
     have query := query_sound (FiniteModel.cut model.control solution.boundary.dead) (fun _ ↦ 1)
-      (fun _ ↦ 1) (fun _ ↦ by simp) ⟨solution.mass, 0⟩ solution.mass_valid
+      (fun _ ↦ 1) (fun _ ↦ by simp) solution.mass solution.mass_valid
       ⟨solution.paths.rank, solution.paths.next⟩ (by
         intro state transient
         apply solution.paths_valid state
@@ -246,7 +246,7 @@ theorem solution_termination (model : Model) (solution : Determinize.Finite.Rewa
       model.control.rejectionProbability.toReal = (solution.rejection model.initial : ℝ) := by
     have query := query_sound (FiniteModel.cut model.control.rejectionModel solution.boundary.dead)
         (fun _ ↦ 1)
-      (fun _ ↦ 1) (fun _ ↦ by simp) ⟨solution.rejection, 0⟩ solution.rejection_valid
+      (fun _ ↦ 1) (fun _ ↦ by simp) solution.rejection solution.rejection_valid
       ⟨solution.paths.rank, solution.paths.next⟩ (by
         intro state transient
         apply solution.paths_valid state

@@ -1,4 +1,4 @@
-import Determinize.Checking.Result
+import Determinize.Checking.FiniteModel
 import Determinize.Proof.FiniteModel.SparseQueries
 
 namespace Determinize.Checking
@@ -11,7 +11,7 @@ def checkStatistics (model : Model) (certificate : MomentCertificate model) : Bo
     decide
       ((⟨certificate.rank, certificate.next⟩ : Paths (cut model certificate.dead)).Valid
         (cut model certificate.dead)) &&
-    decide (∀ moment, (certificate.result model moment).Equations (certificate.model model moment))
+    decide (∀ moment, ValueEquations (certificate.model model moment) (certificate.values moment))
 
 theorem checkStatistics_valid (model : Model) (certificate : MomentCertificate model) :
     checkStatistics model certificate = true ↔ certificate.Valid model := by
@@ -42,9 +42,7 @@ theorem checked_conditionalVariance {source : Core} {subject : Subject}
 
 def checkTermination (model : Model) (certificate : TerminationCertificate model) : Bool :=
   checkStatistics model certificate.output && decide
-    ((⟨certificate.rejection, 0⟩ :
-      ResultCertificate (rejectionQuery model certificate.output.dead)).Equations
-      (rejectionQuery model certificate.output.dead))
+    (ValueEquations (rejectionQuery model certificate.output.dead) certificate.rejection)
 
 theorem checkTermination_valid (model : Model) (certificate : TerminationCertificate model) :
     checkTermination model certificate = true ↔ certificate.Valid model := by

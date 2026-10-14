@@ -11,7 +11,6 @@ import Tests.Construction
 import Tests.Explorer
 import Tests.LinearAlgebra
 import Tests.Statistics
-import Tests.Results
 import Tests.ModelReplay
 import Tests.SemanticBridge
 import Tests.RewardModel
@@ -25,7 +24,6 @@ def main (args : List String) : IO UInt32 := do
     Tests.matching
     Tests.runtime
     Tests.linearAlgebra
-    Tests.results
     Tests.statistics
     Tests.modelReplay
     Tests.explorer
