@@ -223,7 +223,7 @@ precisely the output measure defined in
 \cref{fig:semantics}(\subref{fig:semantics-output}). Evaluating both
 marginals on their full spaces gives the following
 
-\begin{theorem}[Equality of total masses]
+\begin{theorem}[Equality of total masses\leanref{equality-of-total-masses}]
 For every expression $e$,
 \[
   \trlaw e(\Trace)
@@ -331,7 +331,7 @@ well-defined, the disintegration identity gives
 \[
   \Expect_{\mathrm{ret}}[e]
   =\frac{1}{q_e}
-  \int_{\Trace}\Expect[e\mid\tau] \,\trlaw e(d\tau).
+  \int_{\Trace}\Expect[e\mid\tau] \,\trlaw e(d\tau).\leanref{returned-expectation-along-traces}
 \]
 Note that such a normalization factor was not needed for the
 conditional output distribution, since $\trlaw e$ records only traces
