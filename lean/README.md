@@ -241,7 +241,7 @@ prose.
   times come from `determinize --det-only` (`tools/bench.py --exact --det-only`), which times
   `compile` and `Expr.determinize`; the recorded run `results/exact-determinization-only.json`
   differs from the table by up to 16% (`swap`).
-- **Lean links.** `tex/lean-links.tex` pins the paper's GitHub links to `25d2cb6`, and the
+- **Lean links.** `tex/lean-links.tex` pins the paper's GitHub links to `31924ee`, and the
   theorems' links point to `Theorems.lean`. Each linked range holds its declaration at that
   revision. The architecture figure's links follow the additive route; its certificate-checker
   link points to `Finite.Reward.Solution`, whose equations the kernel decides
