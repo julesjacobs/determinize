@@ -1507,7 +1507,7 @@ Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe. Then
 \begin{theorem}[Expectation preservation]
 Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe. If $q_e>0$ and
 $\Expect_{\mathrm{ret}}[e]$ is well-defined in the extended reals, then
-$\Expect_{\mathrm{ret}}[\trans e]$ is also well-defined and
+$q_{\trans e}>0$ and $\Expect_{\mathrm{ret}}[\trans e]$ is also well-defined, and
 \[
   \Expect_{\mathrm{ret}}[\trans e]
   =
@@ -1515,7 +1515,8 @@ $\Expect_{\mathrm{ret}}[\trans e]$ is also well-defined and
 \]
 \end{theorem}
 
-\begin{theorem}[Convex function inequality]
+\begin{theorem}[Convex function inequality\leanref{convex-function-inequality}]
+\label{thm:convex-function}
 Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe. For every nonnegative
 convex function $\varphi:\Real\to\Real$,
 \[
@@ -1553,7 +1554,7 @@ Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe. If $q_e>0$ and
 \[
   \int_{\Real}r^2\,\law e(dr)<\infty,
 \]
-then $\trans e$ has finite second moment and
+then $q_{\trans e}>0$ and $\trans e$ has a finite second moment, and
 \[
   \Var_{\mathrm{ret}}[\trans e]
   \leq
@@ -1561,7 +1562,7 @@ then $\trans e$ has finite second moment and
 \]
 \end{theorem}
 
-\begin{proposition}[Probability preservation]
+\begin{proposition}[Probabilistic type safety]
 Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe. Then $\trans e$ is
 domain-safe and
 \[
