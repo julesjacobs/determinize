@@ -121,8 +121,10 @@
   \fi}
 % Lean names and paths in typewriter, broken after their dots and slashes.
 \DeclareUrlCommand{\leancode}{\urlstyle{tt}}
+% Each entry's link target is on its first line, which \phantomsection sets in the paragraph: the
+% one that \item sets precedes the paragraph, and a page break can come between them.
 \newcommand{\leanlink@entry}[1]{%
-  \item\label{lean:#1}%
+  \item\leavevmode\phantomsection\label{lean:#1}%
   \textbf{\@nameuse{leanlink@title@#1}.}
   \def\leanlink@separator{\def\leanlink@separator{, }}%
   \expanded{\noexpand\forcsvlist\noexpand\leanlink@name{\@nameuse{leanlink@names@#1}}}
