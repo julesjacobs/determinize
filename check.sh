@@ -35,7 +35,9 @@ while [[ $# -gt 0 ]]; do
       grep -qE "^site/|^sim/|^examples/|^flake-modules/devshells/site\.nix$|$toolchain" <<<"$changed" && areas+=(site)
       # The landing page's quotes link names declared in the Lean modules outside Proof.
       grep -E '^lean/Determinize(\.lean|/.*\.lean)$' <<<"$changed" | grep -qvE '^lean/Determinize/Proof/' && areas+=(site)
-      grep -qE '^tex/.*\.(tex|bib|cls|bst|sty)$' <<<"$changed" && areas+=(tex)
+      grep -qE '^tex/.*\.(tex|bib|cls|bst|sty|py)$' <<<"$changed" && areas+=(tex)
+      # The paper's Lean links name lines of these Lean files.
+      grep -qxFf <(grep -oE 'lean/[^{}]+\.lean' tex/lean-links.tex) <<<"$changed" && areas+=(tex)
       grep -qE '^lean/.*\.lean$|^lean/(lakefile\.toml|lean-toolchain|lake-manifest\.json)$' <<<"$changed" && areas+=(lean)
       grep -qE '^tests/|^examples/|^tools/|^(test|run)\.sh$|^lean/test\.sh$' <<<"$changed" && areas+=(det)
       grep -qE '^artifact/|^sim/e2e/artifact\.spec\.ts$' <<<"$changed" && areas+=(artifact)
@@ -108,6 +110,9 @@ for area in "${areas[@]}"; do
       fi
       ;;
     tex)
+      out="$(python3 tex/check-lean-links.py 2>&1)"
+      if [[ $? -eq 0 ]]; then report tex "check-lean-links.py OK" "$(sed 1d <<<"$out")"
+      else fail=1; report tex "check-lean-links.py FAILED" "$(tail_of <<<"$out")"; fi
       out="$(cd tex && in_shell tex latexmk -pdf -interaction=nonstopmode -file-line-error -silent main.tex 2>&1)"
       rc=$?
       log="tex/main.log"
