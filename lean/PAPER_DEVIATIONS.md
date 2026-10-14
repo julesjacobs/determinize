@@ -20,6 +20,8 @@ as they are.
   benchmark `benchmarks/exact/gauss_randwalk_finalPos.det` does; or add a sentence saying that
   the guarantees apply to real-valued results.
 
+[post on slack]
+
 ### 2. Degenerate distribution parameters
 
 - **Paper:** the table of distributions does not say what `uniform(a, a)` is, or a Gaussian
@@ -27,6 +29,8 @@ as they are.
 - **Lean:** both are point masses, at `a` and at the mean respectively. Mathlib's Gaussian with
   variance 0 is a point mass.
 - **Option:** one sentence in the table's caption.
+
+[modify paper]
 
 ### 3. The type inference algorithm is described differently
 
@@ -44,6 +48,8 @@ as they are.
   - The appendix's constraint rules cover mean sites (M), but Lean's inference never sees mean
     sites, because its input is a program before determinization.
 
+[doesn't matter]
+
 ### 4. The appendix section on the trace-indexed kernels is missing
 
 - **Paper:** Section 5 says the appendix gives the definitions of the kernels K_{n,s} and K_e,
@@ -54,6 +60,8 @@ as they are.
   - K_e is `normalizedOutputGivenTrace`: the replay summed over all depths, replaced by a point
     mass at 0 where that sum does not have total mass 1.
   - The compatibility lemma is `outputGivenTrace_eq_outputGivenTraceAt`.
+ 
+[ask katherine -> either delete that claim and refer to lean, or add it to the appendix]
 
 ### 5. The examples use syntax the grammar lacks
 
@@ -70,12 +78,16 @@ as they are.
 - **Options:** one sentence in Section 2 saying that the examples use standard syntactic sugar,
   or extend the grammar.
 
+[we should decide whether we have 1 math syntax and 1 monospace program syntax, or make these the same. having them different is fairly common and ok.]
+
 ### 6. The definition of `reduce` is missing
 
 - **Paper:** the random-walk figure calls a function `reduce`, and the introduction says that
   its definition is in the appendix. That appendix section is a to-do.
 - **Repository:** the full program, including `reduce`, is
   `examples/paper/gauss-random-walk.det`.
+
+[add it]
 
 ### 7. The recorded benchmark run has no checked certificates
 
@@ -84,6 +96,8 @@ as they are.
   given. The recorded run `results/finite-after-det.json` lists every certificate as
   "generated, unchecked", and the `dreckon` export hit the 180-second timeout.
 - **Options:** rerun with checking enabled and a longer timeout, or soften the sentence.
+
+[yes]
 
 ### 8. Table 1's determinization times do not match the recorded run
 
@@ -94,6 +108,8 @@ as they are.
 - **Options:** take the numbers from the committed file, or rerun
   `tools/bench.py --exact --det-only` (a minute or two) and commit that run.
 
+[this seems fine, no action -> this will go through artifact review anyway and they'll get slightly different numbers again]
+
 ### 9. Two gaps in the benchmark set-up
 
 - Section 7 refers to the appendix for the details of the scaling experiment, and the appendix
@@ -101,12 +117,16 @@ as they are.
 - Table 2's `dungeon` and `noisy-product` exist only in `examples/paper/`, so `tools/bench.py`
   never runs them.
 
+[fix]
+
 ### 10. The review version links to an outdated snapshot
 
 - **Paper:** the anonymous review build links to the apndx.org snapshot `sca95063a7c` instead of
   GitHub.
 - **Repository:** that snapshot predates verified inference and uses old theorem names, so the
   review build's Lean links are wrong until it is regenerated from the current development.
+
+[we should decide whether we want the submitted version to link to that site. safer for double blind is to submit a zip file with the lean+sim, then in the paper a mode where lean links instead link to a new appendix section with a list of references into that zip file (filename and line number or range)]
 
 ## Accepted
 
