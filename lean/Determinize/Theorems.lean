@@ -64,6 +64,13 @@ theorem trace_erasure (program : Expr) :
     (traceAndOutputLaw program).map Prod.snd = bigStepMeasure program :=
   Proof.Traces.correspondence program
 
+/-- Equality of total masses. The trace marginal, the joint law and the output law have the same
+total mass: the probability that the program returns. -/
+theorem equality_of_total_masses (program : Expr) :
+    traceLaw program Set.univ = traceAndOutputLaw program Set.univ ∧
+      traceAndOutputLaw program Set.univ = returnProbability program :=
+  Proof.Traces.total_masses program
+
 /-- Trace preservation. Determinization preserves domain safety and the law of terminating
 G traces. -/
 theorem trace_preservation (program : Expr)

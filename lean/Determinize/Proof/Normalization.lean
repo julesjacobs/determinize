@@ -133,6 +133,17 @@ theorem conditional_variance_soundness (program : Expr) (typed : Typed [] progra
   rw [second]
   ring
 
+/-- Both marginals of the joint law have the joint law's total mass, the return probability. -/
+theorem total_masses (program : Expr) :
+    Spec.Traces.traceLaw program Set.univ = Spec.Traces.traceAndOutputLaw program Set.univ ∧
+      Spec.Traces.traceAndOutputLaw program Set.univ =
+        Spec.Paper.bigStepMeasure program Set.univ := by
+  refine ⟨?_, ?_⟩
+  · rw [Spec.Traces.traceLaw, Measure.map_apply measurable_fst MeasurableSet.univ,
+      Set.preimage_univ]
+  · rw [← correspondence program, Measure.map_apply measurable_snd MeasurableSet.univ,
+      Set.preimage_univ]
+
 end Traces
 
 end Determinize.Proof
