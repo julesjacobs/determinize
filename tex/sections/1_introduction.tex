@@ -42,17 +42,26 @@ but becomes quadratic in $x$ after averaging over $y$ and $z$. A sound
 transformation must therefore reason about both the dependencies
 between random choices and their uses throughout the program. This challenge is particularly pronounced in higher-order, potentially unbounded recursive programs, where the influence of a random choice can propagate through function calls and across arbitrarily long executions. 
 
-Our key insight is that safe replacements can nevertheless be identified compositionally from how sampled values are used, without requiring symbolic marginalization of their distributions. We introduce \emph{determinization}, a type-directed,
-source-to-source transformation of higher-order, recursive probabilistic programs with continuous distributions that automatically identifies
-which samples can be replaced by their means. Our type system
-distinguishes sampling choices that remain random ($\G$) from
-those that can be eliminated ($\E$). Type inference determines
-these modes by tracking how sampled values are used: values
-marked $\E$ may participate in affine computations, but cannot
-determine control flow or the parameters of retained samples.
-The transformation then replaces each $\E$-mode sample by its
-primitive mean. The resulting program preserves the expected
-return while potentially changing the output distribution.
+Our key insight is that safe replacements can nevertheless be
+identified compositionally from how sampled values are used,
+without requiring symbolic marginalization of their distributions.
+We introduce \emph{determinization}, a type-directed,
+source-to-source transformation of higher-order, recursive
+probabilistic programs with continuous distributions that
+automatically identifies which samples can be replaced by
+their means. Our type system distinguishes sampling choices
+that remain random ($\G$) from those that can be eliminated
+($\E$). Type inference determines these modes by tracking
+how sampled values are used: values marked $\E$ may
+participate in affine computations, but cannot determine
+control flow or the parameters of retained samples.
+The transformation then replaces each $\E$-mode sample by
+its primitive mean. We establish soundness through a
+relational proof that connects the original and transformed
+programs via two interpretations of a common symbolic
+semantics. Under suitable conditions, the resulting program
+preserves the expected value of the output while never
+increasing its variance.
 
 The next three examples illustrate how determinization handles
 higher-order functions, data structures, and unbounded recursion.
@@ -116,23 +125,46 @@ certificate checking for the resulting exact values.
 \paragraph{Contributions.}
 \begin{itemize}
   \item \textbf{Type system and inference.}
-  We develop a type system and source-to-source transformation
-  that replace eligible samples by their primitive means in
-  higher-order recursive programs.
+  We develop a type system and source-to-source
+  transformation that identifies and replaces eligible samples by their means, even in higher-order,
+  potentially unbounded recursive programs.
   Our inference algorithm finds the greatest assignment of
-  determinizable sites permitted by the type system.
+  determinizable sites permitted by the type system,
+  without requiring symbolic marginalization or unrolling
+  recursive computations
+  (\cref{sec:language,sec:type-system}).
 
-  \item \textbf{Soundness.} We prove that determinization preserves the
-    expectation value and only decreases variance. 
+  \item \textbf{Soundness.} We prove that determinization preserves expected values
+  and never increases output variance, under suitable
+  assumptions. Since the transformation changes the output
+  distribution, its correctness requires relating the
+  original and transformed executions rather than showing
+  distributional equivalence. We develop a relational proof
+  based on two interpretations of a common symbolic
+  semantics, establishing a stronger tracewise soundness
+  result from which the global guarantees follow
+  (\cref{sec:soundness,sec:proof}).
 
-    \item \textbf{Lean implementation and verification.} We implement type
-    inference, determinization, and sampling in Lean, and mechanize our
-    soundness theorems. The full Lean code is available at [TODO], references to individual parts are indicated by a superscript Lean logo like this\leanmark. When determinization yields a finite-state program,
-    verified matrix solving additionally computes its expectation value exactly.
-    This equals the source expectation under the source safety and integrability
-    hypotheses of our preservation theorem.
+    \item \textbf{Lean implementation and verification.}
+    We implement type inference, determinization, and sampling
+  in Lean, and mechanize our soundness theorems.
+  Our implementation additionally supports verified
+  matrix solving and certificate checking, providing an
+  end-to-end correctness guarantee: under the required
+  safety and integrability assumptions, the computed
+  expectation is exactly that of the original program
+  (\cref{sec:implementation}).
+  The full Lean code is available at [TODO], with references
+  to mechanized definitions and theorems indicated by a
+  superscript Lean logo, as in \leanmark.
 
-    \item \textbf{Evaluation.} We examine the transformation's ability to
-  enable exact analysis, reduce output variance, and improve
-  the precision of Monte Carlo estimates for a given time budget.
+    \item \textbf{Evaluation.} We evaluate two applications of determinization.
+First, by eliminating continuous sampling, determinization
+can reduce infinite-state programs to finite-state programs,
+enabling exact computation of their expected values using
+existing model-checking techniques.
+Second, even when the transformed program remains infinite-state,
+reducing its randomness can lower output variance and improve
+the precision of Monte Carlo estimates under a fixed
+wall-clock budget (\cref{sec:evaluation}).
 \end{itemize}
