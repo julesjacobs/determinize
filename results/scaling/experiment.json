@@ -1,0 +1,22 @@
+{
+  "sizes": [
+    10,
+    25,
+    50,
+    100,
+    200,
+    400
+  ],
+  "repetitions": 7,
+  "warmups": 1,
+  "timeout_seconds": 180,
+  "timed_phases": [
+    "parse",
+    "elaborate",
+    "infer",
+    "determinize"
+  ],
+  "size_metric": "k: dependent draws or explicit input-list elements",
+  "binary": "/Users/kaw324/determinize/lean/.lake/build/bin/determinize",
+  "failures": []
+}
