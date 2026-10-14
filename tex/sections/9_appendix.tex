@@ -40,14 +40,6 @@ in
 reduce step ((0, 0) :: []) times
 \end{lstlisting}
 
-
-\begin{itemize}
-    \item Detailed proofs
-    \item Maybe more benchmark tables
-\end{itemize}
-
-\todo[inline]{Add full benchmark programs here}
-
 \section{Determinization}
 \label{sec:appendix-determinization}
 
@@ -145,6 +137,62 @@ The target retains each distribution primitive and all its arguments; only
 $\E$ changes to $\M$, and every argument is recursively transformed.
 Mean evaluation remains an atomic distribution operation, governed by the
 domain conditions and reduction rule in \cref{fig:semantics}.
+
+\section{Determinization Examples}\label{sec:appendix-determinization-examples}
+
+\begin{example}[Full determinization]
+Consider an $\E$-mode Gaussian whose mean is given by an
+$\E$-mode uniform distribution. Determinization changes the
+outer Gaussian to $\M$-mode and recursively transforms its
+arguments. In particular, the nested $\E$-mode uniform
+distribution is also changed to $\M$-mode:
+\begin{align*}
+\trans{
+  \kw{gaussian}^{\E}
+    \bigl(\kw{uniform}^{\E}(0,1),1\bigr)}
+&=
+\kw{gaussian}^{\M}
+  \bigl(
+    \trans{\kw{uniform}^{\E}(0,1)},
+    1
+  \bigr)
+\\
+&=
+\kw{gaussian}^{\M}
+  \bigl(
+    \kw{uniform}^{\M}(0,1),
+    1
+  \bigr).
+\end{align*}
+Thus, both sampling sites are replaced by mean evaluations,
+yielding a deterministic program.
+\end{example}
+
+\begin{example}[Partial determinization]
+Consider a program with dependent random draws.
+The $\G$-mode uniform distribution remains stochastic,
+while the $\E$-mode Gaussian is changed to $\M$-mode.
+Crucially, the Gaussian's mean $2x+1$ still depends
+on the random value of $x$:
+\[
+\trans{\left(
+\begin{aligned}
+&\kw{let}\ x=\kw{uniform}^{\G}(0,1)\ \kw{in}\\
+&\kw{let}\ y=\kw{gaussian}^{\E}(2x+1,\sigma^2)\ \kw{in}\\
+&x*y
+\end{aligned}
+\right)}
+=
+\begin{aligned}
+&\kw{let}\ x=\kw{uniform}^{\G}(0,1)\ \kw{in}\\
+&\kw{let}\ y=\kw{gaussian}^{\M}(2x+1,\sigma^2)\ \kw{in}\\
+&x*y.
+\end{aligned}
+\]
+Thus, determinization eliminates the Gaussian's
+conditional randomness while preserving its dependence
+on the retained random value of $x$.
+\end{example}
 
 \section{Constraint Generation Rules}
 \label{sec:appendix-constraint-generation}
