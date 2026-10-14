@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Repository build, test, and theorem-axiom checks.
 #
-#   check.sh [--quiet] AREA...      AREA in: sim bundle site tex lean det
+#   check.sh [--quiet] AREA...      AREA in: sim bundle site tex lean det artifact
 #   check.sh --changed              pick areas from `git status` (what the Stop hook does)
-#   check.sh --all                  builds, full corpus/certificates, simulator, bundle, site and paper
+#   check.sh --all                  builds, full corpus/certificates, simulator, bundle, site, paper
+#                                   and the anonymized archive
 #
 # Exit 0 = all selected checks passed, 1 = at least one failed. A human-readable
 # summary goes to stdout; the last ~40 lines of any failing tool go there too, after the
@@ -22,10 +23,10 @@ quiet=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --quiet) quiet=1 ;;
-    --all) areas+=(lean det sim bundle site tex) ;;
+    --all) areas+=(lean det sim bundle site tex artifact) ;;
     --changed)
       changed="$(git status --porcelain --untracked-files=all | cut -c4-)"
-      grep -qE '^(check\.sh|tools/dev-shell\.sh)$' <<<"$changed" && areas+=(lean det sim bundle site tex)
+      grep -qE '^(check\.sh|tools/dev-shell\.sh)$' <<<"$changed" && areas+=(lean det sim bundle site tex artifact)
       # The simulator's toolchain: the flake, which pins Node.js, and the sim shell.
       toolchain='^flake\.(nix|lock)$|^flake-modules/(systems|devshells/sim)\.nix$'
       # Any file under sim/; its build and test outputs are ignored, so git status lists none of them.
@@ -37,8 +38,9 @@ while [[ $# -gt 0 ]]; do
       grep -qE '^tex/.*\.(tex|bib|cls|bst|sty)$' <<<"$changed" && areas+=(tex)
       grep -qE '^lean/.*\.lean$|^lean/(lakefile\.toml|lean-toolchain|lake-manifest\.json)$' <<<"$changed" && areas+=(lean)
       grep -qE '^tests/|^examples/|^tools/|^(test|run)\.sh$|^lean/test\.sh$' <<<"$changed" && areas+=(det)
+      grep -qE '^artifact/|^sim/e2e/artifact\.spec\.ts$' <<<"$changed" && areas+=(artifact)
       ;;
-    sim|bundle|site|tex|lean|det) areas+=("$1") ;;
+    sim|bundle|site|tex|lean|det|artifact) areas+=("$1") ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
   shift
@@ -148,6 +150,26 @@ for area in "${areas[@]}"; do
           report det "Lean corpus and certificate tests passed, including real Storm comparisons"
         else
           report det "Lean corpus and certificate tests passed; real Storm skipped (STORM_PYTHON is not set)"
+        fi
+      fi
+      ;;
+    artifact)
+      # The anonymized archive, as artifact.yml builds and checks it, from the simulator's build and
+      # the documentation that `lake build Determinize:docs` in lean/docbuild renders, which may be
+      # of other Lean sources.
+      docs=lean/docbuild/.lake/build/doc
+      if [[ ! -f "$docs/Determinize.html" ]]; then
+        report artifact "skipped: no documentation in $docs ('cd lean/docbuild && lake build Determinize:docs' renders it)"
+      else
+        out="$(cd sim && in_shell site npm run build 2>&1 && cd .. && rm -rf _artifact \
+          && python3 artifact/build.py --out _artifact/determinize-artifact.zip --docs "$docs" --allow-stale-docs 2>&1 \
+          && python3 -m zipfile -e _artifact/determinize-artifact.zip _artifact/unpacked 2>&1)"
+        if [[ $? -ne 0 ]]; then fail=1; report artifact "artifact/build.py FAILED" "$(tail_of <<<"$out")"
+        else
+          out="$(cd sim && ARTIFACT_DIR="$ROOT/_artifact/unpacked/determinize-artifact" \
+            in_shell site playwright test e2e/artifact.spec.ts --reporter=line 2>&1)"
+          if [[ $? -eq 0 ]]; then report artifact "artifact/build.py and the browser tests from disk OK (_artifact/determinize-artifact.zip)"
+          else fail=1; report artifact "playwright test e2e/artifact.spec.ts FAILED" "$(playwright_failures <<<"$out"; tail_of <<<"$out")"; fi
         fi
       fi
       ;;

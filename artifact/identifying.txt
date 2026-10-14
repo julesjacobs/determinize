@@ -1,0 +1,33 @@
+# What identifies the authors: artifact/build.py fails when the path or the text of a file in the
+# archive matches one of these lines. Each line is a Python regular expression, matched without
+# regard to case against the text as it is and, in HTML, with its character references decoded,
+# in JavaScript and JSON with their \u escapes decoded. Spell out the variants of a name:
+# ü, ue and u for ü. A bare first name that Mathlib's documentation also uses (Kevin) goes with
+# the surname.
+
+# The authors.
+\bjules\b
+\bjacobs\b
+\bfabian\b
+\bgrubm(?:ü|ue|u)ller\b
+\bkatherine\b
+\bkevin\s*batz\b
+\bbatz\b
+\balexandra\b
+\bsilva\b
+
+# Their accounts, addresses and domains.
+julesjacobs
+flgrubm
+\bgrubm(?:ü|ue|u)ller\.dev\b
+katherinewu
+\bkaw324\b
+kevinbatz
+
+# Their institutions.
+\beth\s+z(?:ü|ue|u)rich\b
+\bethz\b
+\bcornell\b
+\bm(?:ü|ue|u)nster\b
+\bwwu\b
+\buni-muenster\b

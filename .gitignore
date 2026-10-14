@@ -52,3 +52,6 @@ CLAUDE.local.md
 
 # The assembled site (site/assemble.sh --out _preview/determinize)
 _preview/
+
+# The anonymized archive (check.sh artifact)
+_artifact/
