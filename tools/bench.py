@@ -20,6 +20,11 @@ uv pip install \
 env STORM_PYTHON=<env name>/bin/python \
   python3 tools/bench.py [--all | --exact | --approx] [--det] [--polar] [--psi]
 
+Exact results checked by Lean's kernel, each benchmark in its own memory-capped scope
+(Linux, systemd user session), written to a separate file:
+  python3 tools/bench.py --exact --det --check-certificates --memory-limit 40G \
+    --timeout 3600 --results results/finite-after-det-checked.json
+
 For frontend timings without sampling or exact analysis:
   python3 tools/bench.py --exact --det-only
 This times parsing, elaboration, type inference, and mean replacement inside Lean;
@@ -337,6 +342,9 @@ def det_exact(model: Path, args: argparse.Namespace, temp: Path) -> dict[str, ob
     ]
     if not args.check_certificates:
         command.append("--skip-certificate")
+    if args.memory_limit:
+        command = ["systemd-run", "--user", "--scope", "--quiet",
+                   "-p", f"MemoryMax={args.memory_limit}", "-p", "MemorySwapMax=0", *command]
     completed = subprocess.run(command, cwd=ROOT, text=True, capture_output=True)
     report_path = Path(str(prefix) + ".storm.json")
     try:
@@ -345,6 +353,8 @@ def det_exact(model: Path, args: argparse.Namespace, temp: Path) -> dict[str, ob
         report = {}
     if completed.returncode or report.get("status") != "completed":
         error = report.get("error") or completed.stderr or completed.stdout
+        if args.memory_limit and (completed.returncode < 0 or completed.returncode >= 128):
+            error = f"killed, most likely at the {args.memory_limit} memory limit"
         stage = str(report.get("stage", "unknown stage"))
         error = compact_error(str(error))
         result.update(status="failed", stage=stage, error=error)
@@ -612,13 +622,15 @@ def run_suite(name: str, directory: Path, exact: bool, args: argparse.Namespace)
             print(f"\n{label}: {c['completed']} completed, {c['timeout']} timed out, "
                   f"{c['failed']} failed, {c['unsupported']} unsupported")
     if args.det:
-        save_results(EXACT_RESULTS if exact else APPROX_RESULTS, {
+        save_results(args.results or (EXACT_RESULTS if exact else APPROX_RESULTS), {
             "suite": "exact" if exact else "approx",
             "configuration": {
                 "timeout_seconds": args.timeout,
                 **({"subject": "determinized", "additive": True,
                     "check_certificates": args.check_certificates,
-                    "max_states": args.max_states} if exact else
+                    "max_states": args.max_states,
+                    **({"memory_limit": args.memory_limit} if args.memory_limit else {})}
+                   if exact else
                    {"samples": args.samples, "seed": args.seed, "fuel": args.fuel}),
             },
             "benchmarks": results,
@@ -664,6 +676,10 @@ def main() -> int:
     parser.add_argument("--check-certificates", action="store_true", help="independently kernel-check exact results (timed separately)")
     parser.add_argument("--output-dir", type=Path, help="retain exact models, certificates, and JSON reports")
     parser.add_argument("--no-build", action="store_true", help="use the existing determinize executable")
+    parser.add_argument("--memory-limit", metavar="SIZE",
+                        help="run each exact benchmark in a systemd user scope with this MemoryMax (e.g. 40G)")
+    parser.add_argument("--results", type=Path,
+                        help="write the suite's JSON here instead of the default results file")
     args = parser.parse_args()
 
     if args.det_only:
@@ -674,6 +690,8 @@ def main() -> int:
     run_both = args.all or not (args.exact or args.approx)
     do_exact = args.exact or run_both
     do_approx = args.approx or run_both
+    if args.results and do_exact and do_approx:
+        parser.error("--results needs a single suite: --exact or --approx")
     if not (args.det or args.polar or args.psi):
         args.det = args.polar = args.psi = True
     args.binary = args.binary.resolve()

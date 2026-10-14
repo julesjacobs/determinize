@@ -1,7 +1,34 @@
-import Determinize.Spec.FiniteDistribution
+import Mathlib.Algebra.BigOperators.Ring.List
+import Mathlib.Data.Rat.Encodable
+import Mathlib.Logic.Equiv.List
+import Mathlib.Tactic.DeriveCountable
+
+/-!
+# Finite distributions
+
+Distributions on finitely many outcomes with rational probabilities, their rational
+expectations, and the checks that build them from literal probabilities.
+-/
 
 namespace Determinize.Checking
-open Spec.Paper
+
+/-- Probabilities for the outcomes `0, ..., probabilities.length - 1`.
+Zero-probability outcomes retain their indices. -/
+structure FiniteDistribution where
+  /-- The probability of each outcome, by index. -/
+  probabilities : List Rat
+  nonnegative : ∀ p ∈ probabilities, 0 ≤ p
+  total : probabilities.sum = 1
+deriving DecidableEq, Repr, Countable
+
+/-- Rational expectation of a numeric function of the outcome index. -/
+def FiniteDistribution.expectation (d : FiniteDistribution) (value : Nat → Rat) : Rat :=
+  (d.probabilities.zipIdx.map fun (p, i) ↦ p * value i).sum
+
+/-- The mean outcome index. -/
+def FiniteDistribution.mean (d : FiniteDistribution) : Rat :=
+  d.expectation (fun i ↦ (i : Rat))
+
 
 /-- Check literal probabilities once, preserving their values and outcome indices. -/
 def finiteDistribution (weights : List Rat) : Except String FiniteDistribution := do

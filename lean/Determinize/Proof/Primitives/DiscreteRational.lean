@@ -13,7 +13,7 @@ private theorem sum_zipIdx {α β : Type*} [AddCommMonoid β] (xs : List α) (f 
 private theorem sum_getElem (p : List ℝ) : (∑ i : Fin p.length, p[i]) = p.sum := by
   simp
 
-theorem completed_domain (p : List Rat) (d : Spec.Paper.FiniteDistribution)
+theorem completed_domain (p : List Rat) (d : Checking.FiniteDistribution)
     (completed : d.probabilities = p ++ [1 - p.sum]) :
     (∀ i : Fin (p.map (Rat.cast : Rat → ℝ)).length, 0 ≤ (p.map (Rat.cast : Rat → ℝ))[i]) ∧
       ∑ i : Fin (p.map (Rat.cast : Rat → ℝ)).length, (p.map (Rat.cast : Rat → ℝ))[i] ≤ 1 := by
@@ -27,18 +27,18 @@ theorem completed_domain (p : List Rat) (d : Spec.Paper.FiniteDistribution)
   · rw [sum_getElem]
     simpa using (show (p.sum : ℝ) ≤ 1 by exact_mod_cast bounded)
 
-theorem completed_sample (affinity : Affinity) (p : List Rat) (d : Spec.Paper.FiniteDistribution)
+theorem completed_sample (affinity : Affinity) (p : List Rat) (d : Checking.FiniteDistribution)
     (completed : d.probabilities = p ++ [1 - p.sum]) :
     discreteFiber (.sample affinity) (p.map (Rat.cast : Rat → ℝ)) =
         d.measure (fun i ↦ (i : ℝ)) := by
   rw [discreteFiber, ite_eq_left (completed_domain p d completed), sum_getElem,
-    Spec.Paper.FiniteDistribution.measure, completed,
+    Checking.FiniteDistribution.measure, completed,
     List.zipIdx_append, List.map_append, List.sum_append]
   rw [← sum_zipIdx (p.map (Rat.cast : Rat → ℝ))
     (fun entry ↦ ENNReal.ofReal entry.1 • Measure.dirac (entry.2 : ℝ))]
   simp [List.zipIdx_map, List.map_map, Function.comp_def]
 
-theorem completed_mean (p : List Rat) (d : Spec.Paper.FiniteDistribution)
+theorem completed_mean (p : List Rat) (d : Checking.FiniteDistribution)
     (completed : d.probabilities = p ++ [1 - p.sum]) :
     discreteFiber .mean (p.map (Rat.cast : Rat → ℝ)) = Measure.dirac (d.mean : ℝ) := by
   have expectation :=

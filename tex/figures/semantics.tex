@@ -93,7 +93,7 @@ $\kw{gamma}(k,\lambda)$ & $k>0,\ \lambda>0$ & $k/\lambda$\\
 \endgroup
 \end{subcaptiongroup}
 \captionsetup{skip=10pt}
-\caption{Operational semantics. In (b), we omit the usual arithmetic and comparison reductions; division by zero gets stuck. In (d), the output measures are subprobability measures, and are defined for all expressions, but record only executions that successfully return real values; executions returning values of other types contribute no mass.}
+\caption{Operational semantics. In (b), we omit the usual arithmetic and comparison reductions; division by zero gets stuck. In (c), the degenerate distributions $\kw{uniform}(a,a)$ and $\kw{gaussian}(u,0)$ are the point masses $\delta_a$ and $\delta_u$. In (d), the output measures are subprobability measures, and are defined for all expressions, but record only executions that successfully return real values; executions returning values of other types contribute no mass.}
 \label{fig:semantics}
 \Description{The semantics consists of values and evaluation contexts, deterministic reductions, primitive distributions with domains and means, and output measures summed over exact termination depths.}
 \end{figure}
