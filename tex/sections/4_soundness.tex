@@ -4,104 +4,93 @@
 
 \todo[inline]{TODO: Double check the Lean refs.}
 
-We establish two global soundness guarantees for determinization: it
-preserves the expected return whenever that expectation is well-defined,
-and it cannot increase the variance of returned values. We first state
-these results in terms of the output measure $\law e$, then develop a
-tracewise characterization that also applies when the program's overall
-expectation is undefined. We state the main soundness theorems throughout
+We will now prove our determinization technique found in the following natural sense: First,
+it \emph{preserves the expected return whenever that expectation is well-defined}. Second,
+\emph{determinzation never increases the variance of returned values}. We proceed by first stating
+these results in terms of the output measure $\law e$, and then develop a mire fine-grained soundness characterization that also applies when the program's expected return is undefined. We state the main soundness theorems throughout
 this section, leaving the proof strategies to~\Cref{sec:proof} and the
 full proofs to~\Cref{sec:appendix}.
 
 \subsection{Global Soundness}
 
-Our results distinguish between finite, infinite, and undefined
-expectations, so let us first make this terminology precise.
+% Our results distinguish between finite, infinite, and undefined
+% expectations, so let us first make this terminology precise.
+A first prerequisite is to agree on the following notions of expectations:
 
 \begin{definition}[Expectation\leanref{expectation-defined}]
 Let $X$ be a real-valued random variable with probability distribution
-$\mu$, and set
-\[
-  r^+=\max(r,0),
-  \qquad
-  r^-=\max(-r,0).
-\]
-Then
+$\mu$, and write
+%\[
+  $r^+=\max(r,0)$,
+  and
+  $r^-=\max(-r,0)$.
+%\]
+We define
 \[
   \Expect[X^{+}]
-  =\int_{\Real}r^{+}\,\mu(dr)\in[0,\infty],
+  \coloneq \int_{\Real}r^{+}\,\mu(dr)\in[0,\infty]
   \qquad
   \Expect[X^{-}]
-  =\int_{\Real}r^{-}\,\mu(dr)\in[0,\infty]
+  \coloneq \int_{\Real}r^{-}\,\mu(dr)\in[0,\infty]
+  \qquad 
+  \Expect[X]\coloneqq\Expect[X^+]-\Expect[X^-]~.
 \]
-and
-\[
-  \Expect[X]:=\Expect[X^+]-\Expect[X^-].
-\]
-The expectation is \emph{well-defined in the extended reals} when the
-two terms are not both infinite; in this case it may be finite, $+\infty$,
-or $-\infty$. It is \emph{undefined} precisely when
-$\Expect[X^+]=\Expect[X^-]=\infty$, and is \emph{finite} exactly when
-\[
-  \int_{\Real}|r|\,\mu(dr)<\infty.
-\]
+%and
+%\[
+%  \Expect[X]:=\Expect[X^+]-\Expect[X^-].
+%\]
+The expectation $\Expect[X]$ is \emph{well-defined in the extended reals} if the
+two quantities $\Expect[X^{+}]$ and $\Expect[X^{-}]$ are not both infinite. Moreover, $\Expect[X]$ is \emph{finite} iff
+$
+  \int_{\Real}|r|\,\mu(dr)<\infty
+$.
 \end{definition}
 
 \paragraph{Conditioning on successful return.}
-Recall that $\law e$ is a subprobability measure, since diverging or
+Recall that $\law e$ is a \emph{sub}probability measure since diverging or
 rejected executions contribute no returned value. Thus, let
-\[
+$
   q_e := \law e(\Real)\leanref{return-probability}
-\]
-denote the probability that $e$ successfully returns. When $q_e>0$,
+$
+denote the \emph{probability that $e$ successfully returns}. When $q_e>0$,
 we consider expectations and variances conditioned on successful
-return. In particular,
+return. More precisely, we define
 \begin{gather*}
   \Expect_{\mathrm{ret}}[e]
   :=\frac{1}{q_e}
   \left(
     \int_{\Real}r^+\,\law e(dr)
     -\int_{\Real}r^-\,\law e(dr)
-  \right)\quad\leanref{returned-expectation},
+  \right)\quad\leanref{returned-expectation}~,~\text{and}
   \\
   \Var_{\mathrm{ret}}[e]
   :=\frac{1}{q_e}
   \int_{\Real}
     \bigl(r-\Expect_{\mathrm{ret}}[e]\bigr)^2
-  \,\law e(dr)\quad\leanref{returned-variance}.
+  \,\law e(dr)\quad\leanref{returned-variance}~.
 \end{gather*}
 
-Our first theorem states that determinization preserves the expected
-return whenever the original program's global expectation is
-well-defined.
+Wit these notions at hand, we state our central soundness theorem: Determinization preserves the expected
+return whenever the original program's global expectation is well-defined.
 
 \begin{theorem}[Expectation preservation\leanref{expectation-preservation}]
 \label{thm:expectation}
 Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe. If $q_e>0$ and
-$\Expect_{\mathrm{ret}}[e]$ is well-defined in the extended reals,
-then $q_{\trans{e}}>0$ and $\Expect_{\mathrm{ret}}[\trans e]$ is also
-well-defined, and
-\[
-  \Expect_{\mathrm{ret}}[\trans e]
-  =\Expect_{\mathrm{ret}}[e].
-\]
+$\Expect_{\mathrm{ret}}[e]$ is well-defined in the extended reals, then:
+%
+\begin{enumerate}
+ \item $q_{\trans{e}}>0$,
+ \item $\Expect_{\mathrm{ret}}[\trans e]$ is well-defined, and
+ \item $\Expect_{\mathrm{ret}}[\trans e] =\Expect_{\mathrm{ret}}[e]$.
+\end{enumerate}
+% then $q_{\trans{e}}>0$ and , and
+% \[
+%   \Expect_{\mathrm{ret}}[\trans e]
+%   =\Expect_{\mathrm{ret}}[e].
+% \]
 \end{theorem}
 
-Beyond preserving the global expectation, determinization also cannot
-increase the variance of returned values.
-
-\begin{theorem}[Variance non-increase\leanref{variance-non-increase}]
-\label{thm:variance}
-Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe. If $q_e>0$ and
-$\int_{\Real}r^2\,\law e(dr)<\infty$,
-then $q_{\trans e}>0$ and $\trans e$ has a finite second moment, and
-\[
-  \Var_{\mathrm{ret}}[\trans e]
-  \leq\Var_{\mathrm{ret}}[e].
-\]
-\end{theorem}
-
-The expectation-preservation theorem requires the original program's
+This theorem requires the original program's
 expectation to be well-defined. The distinction is important even for
 simple programs, as the following example illustrates.
 
@@ -127,19 +116,41 @@ $U\sim\kw{uniform}(-a,a)$,
 $\Expect[|U|]=(2a)^{-1}\int_{-a}^{a}|u|\,du=a/2$.} Therefore,
 \[
   \Expect[|X|]
-  =\sum_{n=0}^{\infty}\Pr(N=n)\Expect[|X|\mid N=n]
-  =\sum_{n=0}^{\infty}2^{-(n+1)}2^{n-1}
-  =\sum_{n=0}^{\infty}\frac14
-  =\infty.
+  ~{}={}~\sum_{n=0}^{\infty}\Pr(N=n)\Expect[|X|\mid N=n]
+  ~{}={}~\sum_{n=0}^{\infty}2^{-(n+1)}2^{n-1}
+  ~{}={}~\sum_{n=0}^{\infty}\frac14
+  ~{}={}~\infty~.
 \]
 Because the distribution of $X$ conditioned on $N=n$ is symmetric
-about zero for every $n$, and $\Expect[|X|]=\infty$, we have
-$\Expect[X^+]=\Expect[X^-]=\infty$. Thus, the global expectation
-$\Expect[X]$ is undefined. Nevertheless, the expected output after
-fixing any terminating sequence of retained samples is finite. This
-motivates a tracewise soundness guarantee that does not require the
-global expectation to exist.
+around zero for every $n$ and $\Expect[|X|]=\infty$, we have
+$\Expect[X^+]=\Expect[X^-]=\infty$. Thus,
+$\Expect[X]$ is ill-undefined. Nevertheless, the expected return after
+fixing any terminating sequence of retained samples is finite. This observation
+motivates a more fine-grained tracewise soundness guarantee that does not require the
+global expectation to exist, which we present in the next section.
 \end{example}
+
+Our second theorem states that determinization never increases the variance of returned values:
+%
+\begin{theorem}[Variance non-increase\leanref{variance-non-increase}]
+\label{thm:variance}
+Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe. If $q_e>0$ and
+$\int_{\Real}r^2\,\law e(dr)<\infty$, then:
+%
+\begin{enumerate}
+  \item $q_{\trans e}>0$,
+  \item $\trans e$ has a finite second moment, and
+  \item $\Var_{\mathrm{ret}}[\trans e] \leq\Var_{\mathrm{ret}}[e]$.
+\end{enumerate}
+
+% $q_{\trans e}>0$ and $\trans e$ has a finite second moment, and
+% \[
+%   \Var_{\mathrm{ret}}[\trans e]
+%   \leq\Var_{\mathrm{ret}}[e].
+% \]
+\end{theorem}
+
+
 
 \subsection{Tracewise Soundness}
 \label{sec:traces}
