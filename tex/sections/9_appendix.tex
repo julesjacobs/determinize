@@ -1610,9 +1610,11 @@ reduce step ((0, 0) :: []) times
 The script \texttt{benchmarks/exact/scaling/run\_scaling.py} generates three families of
 programs indexed by a size $k\in\{10,25,50,100,200,400\}$:
 \begin{itemize}
-\item \emph{Dependent sampling chain} (\cref{fig:scaling-dependent-chain}): $x_0=1$ and
-  $x_i=\kw{uniform}(0,x_{i-1})$ for $i=1,\ldots,k$, returning $x_k$. It has $k$ continuous
-  sampling sites, each depending on the previous one, and determinization replaces all of them.
+\item \emph{Uniform nested} (\cref{fig:scaling-uniform-nested}): the benchmark
+  \texttt{uniform-nested} of \cref{tab:finite-after-determinization}, with its four nested draws
+  extended to $k$: $x_0=1$ and $x_i=\kw{uniform}(0,x_{i-1})$ for $i=1,\ldots,k$, returning
+  $x_k$. It has $k$ continuous sampling sites, each depending on the previous one, and
+  determinization replaces all of them.
 \item \emph{Gaussian random walk} (\cref{fig:scaling-gauss-random-walk}): the benchmark
   \texttt{gauss-random-walk} of \cref{tab:finite-after-determinization}, with the list of
   requested times replaced by $[1,\ldots,k]$.
@@ -1627,6 +1629,6 @@ mode inference, and mean replacement, and excludes process start-up, file readin
 formatting, sampling and exact analysis. After one warm-up run, each program is run seven
 times. \Cref{fig:determinization-scaling} shows the median and the range between the 25th and
 75th percentiles. Every run also checks the inferred sampling sites: $k$ continuous sites before
-determinization for the chain and one for the other families, and none after. The measurements
+determinization for \texttt{uniform-nested} and one for the other families, and none after. The measurements
 are in \texttt{results/scaling/}.
 
