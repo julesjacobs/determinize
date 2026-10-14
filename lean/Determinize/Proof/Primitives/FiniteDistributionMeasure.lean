@@ -1,8 +1,20 @@
-import Determinize.Spec.FiniteDistributionMeasure
+import Determinize.Checking.FiniteDistribution
+import Mathlib.MeasureTheory.Integral.Bochner.Basic
 import Mathlib.Tactic
 
+namespace Determinize.Checking
+open MeasureTheory
+
+/-- Real-valued law of a rational finite distribution with the given outcome values. -/
+noncomputable def FiniteDistribution.measure (d : FiniteDistribution) (value : Nat → ℝ) :
+    Measure ℝ :=
+  (d.probabilities.zipIdx.map fun (p, i) ↦
+    ENNReal.ofReal (p : ℝ) • Measure.dirac (value i)).sum
+
+end Determinize.Checking
+
 namespace Determinize.Proof.FiniteDistribution
-open Spec.Paper MeasureTheory
+open Checking MeasureTheory
 
 private theorem integrable_list (weights : List Rat) (value : Nat → ℝ) (index : Nat)
     (f : ℝ → ℝ) :
@@ -14,7 +26,7 @@ private theorem integrable_list (weights : List Rat) (value : Nat → ℝ) (inde
     simp only [List.zipIdx_cons, List.map_cons, List.sum_cons]
     exact ((integrable_dirac (by simp)).smul_measure (by simp)).add_measure (ih _)
 
-theorem integrable (d : Spec.Paper.FiniteDistribution) (value : Nat → ℝ) (f : ℝ → ℝ) :
+theorem integrable (d : Checking.FiniteDistribution) (value : Nat → ℝ) (f : ℝ → ℝ) :
     Integrable f (d.measure value) := integrable_list _ _ _ _
 
 private theorem list_mass (weights : List Rat) (value : Nat → ℝ) (index : Nat)
@@ -33,10 +45,10 @@ private theorem list_mass (weights : List Rat) (value : Nat → ℝ) (index : Na
       smul_eq_mul, mul_one]
     rw [ih _ hps, Rat.cast_add, ENNReal.ofReal_add hp hs]
 
-instance probability (d : Spec.Paper.FiniteDistribution) (value : Nat → ℝ) :
+instance probability (d : Checking.FiniteDistribution) (value : Nat → ℝ) :
     IsProbabilityMeasure (d.measure value) where
   measure_univ := by
-    rw [Spec.Paper.FiniteDistribution.measure, list_mass _ _ _ d.nonnegative, d.total]
+    rw [Checking.FiniteDistribution.measure, list_mass _ _ _ d.nonnegative, d.total]
     simp
 
 private theorem list_integral (weights : List Rat) (value : Nat → ℝ) (index : Nat)
@@ -56,18 +68,18 @@ private theorem list_integral (weights : List Rat) (value : Nat → ℝ) (index 
     rw [ih _ hps]
     simp [ENNReal.toReal_ofReal hp]
 
-theorem integral (d : Spec.Paper.FiniteDistribution) (value : Nat → ℝ) (f : ℝ → ℝ) :
+theorem integral (d : Checking.FiniteDistribution) (value : Nat → ℝ) (f : ℝ → ℝ) :
     (∫ x, f x ∂d.measure value) =
       (d.probabilities.zipIdx.map fun entry : Rat × Nat ↦ (entry.1 : ℝ) * f (value entry.2)).sum :=
   list_integral _ _ _ d.nonnegative _
 
-theorem expectation (d : Spec.Paper.FiniteDistribution) (value : Nat → Rat) :
+theorem expectation (d : Checking.FiniteDistribution) (value : Nat → Rat) :
     (∫ x, x ∂d.measure (fun i ↦ (value i : ℝ))) = (d.expectation value : ℝ) := by
   rw [integral]
-  simp [Spec.Paper.FiniteDistribution.expectation, List.map_map, Function.comp_def]
+  simp [Checking.FiniteDistribution.expectation, List.map_map, Function.comp_def]
 
-theorem mean (d : Spec.Paper.FiniteDistribution) :
+theorem mean (d : Checking.FiniteDistribution) :
     (∫ x, x ∂d.measure (fun i ↦ (i : ℝ))) = (d.mean : ℝ) := by
-  simpa [Spec.Paper.FiniteDistribution.mean] using expectation d (fun i ↦ (i : Rat))
+  simpa [Checking.FiniteDistribution.mean] using expectation d (fun i ↦ (i : Rat))
 
 end Determinize.Proof.FiniteDistribution

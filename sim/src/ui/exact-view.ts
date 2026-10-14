@@ -1,14 +1,15 @@
 // The exact values in the statistics table: each program's finite model, explored by the exact
 // worker, with its mean, variance and probability of returning as fractions over their decimals,
 // below the estimates from the runs; or why the program has none, in the cells that its values
-// would take, with the additive mode to try where exploration stops at Lean's state limit. The
-// rows keep their heights whatever exploration finds, so that nothing moves when it ends.
+// would take. The models are those of Lean's additive mode, the CLI's default. The rows keep their
+// heights whatever exploration finds, so that nothing moves when it ends.
+import type { ReadonlySignal } from "@preact/signals-core";
 import { computed, effect } from "@preact/signals-core";
 import type { Exact, ExactState, Range } from "../core/exact.ts";
 import { minus, thin } from "./charts.ts";
 import { formatStat } from "./distribution-view.ts";
 import { escapeHtml } from "./html.ts";
-import type { Store } from "./store.ts";
+import type { ExactValues, Store } from "./store.ts";
 
 /** Why a draw has no finite model: a continuous law, or Poisson's infinitely many outcomes. */
 const draws: Record<string, string> = {
@@ -106,13 +107,19 @@ function valueCell(value: Exact | null | undefined, rejected?: Exact) {
   return `<td class="exact-cell"><span class="frac${long}">${escapeHtml(minus(fraction))}</span> <span class="dec sub">${escapeHtml(below)}</span></td>`;
 }
 
+/** Whether a program has a chain: its model is complete. */
+function hasChain(state: ExactState) {
+  return state.kind === "finite" || state.kind === "too many";
+}
+
+/** Mounts the exact rows in `table`; the exact values that they show, or null while they are
+ * hidden. */
 export function mountExactView(
   table: HTMLElement,
-  store: Pick<Store, "exact" | "additive" | "analysis" | "samples" | "samplesReady">,
-) {
+  store: Pick<Store, "exact" | "analysis" | "samples" | "samplesReady">,
+): ReadonlySignal<ExactValues | null> {
   const $ = <E extends Element>(id: string) => table.querySelector(`#${id}`) as E;
   const group = $<HTMLElement>("exact");
-  const additive = $<HTMLInputElement>("additive");
   const rows = ["exact-mean", "exact-variance", "exact-returned"].map((id) => $<HTMLElement>(id));
   // The rows' headers link their Lean definitions; where neither program has values, they are
   // plain and muted, so that the rows read as the one statement beside them.
@@ -123,28 +130,25 @@ export function mountExactView(
     determinized: $<HTMLElement>("model-det"),
   };
 
-  additive.addEventListener("change", () => {
-    store.additive.value = additive.checked;
-  });
-  table.addEventListener("click", (event) => {
-    if (event.target instanceof HTMLElement && event.target.closest(".try-additive")) {
-      store.additive.value = true;
-    }
-  });
-
   // The program whose estimates the table shows, which changes with a new program, not a batch.
-  const shown = computed(() => store.samples.value.source);
+  const estimated = computed(() => store.samples.value.source);
   /** The rows as last written, so that a new batch of runs rewrites nothing. */
   let written = "";
-
-  effect(() => {
-    additive.checked = store.additive.value;
+  let last: ExactValues | null = null;
+  // The rows follow the estimates above them, which keep the earlier program's until its runs come
+  // in. A program that Lean accepts, and whose output is a number, has exact values.
+  const shown = computed(() => {
     const exact = store.exact.value;
     const result = store.analysis.value;
-    // The rows follow the estimates above them, which keep the earlier program's until its runs
-    // come in. A program that Lean accepts, and whose output is a number, has exact values.
-    if (!store.samplesReady.value) return;
-    if (!exact || exact.source !== shown.value || !result.ok || !result.type.startsWith("float")) {
+    if (!store.samplesReady.value) return last;
+    const accepted = result.ok && result.type.startsWith("float");
+    last = exact && exact.source === estimated.value && accepted ? exact : null;
+    return last;
+  });
+
+  effect(() => {
+    const exact = shown.value;
+    if (!exact) {
       group.hidden = true;
       group.removeAttribute("aria-busy");
       return;
@@ -153,14 +157,9 @@ export function mountExactView(
     if (exact.done) group.removeAttribute("aria-busy");
     else group.setAttribute("aria-busy", "true");
     const programs = [exact.programs.source, exact.programs.determinized];
-    const reasons = programs.map((state) => {
-      const reason = reasonText(state, exact.source);
-      // Where exploration stops at the state limit, the additive mode may need fewer states.
-      if (reason === null || state.kind !== "limit" || state.limit !== "states") return reason;
-      return exact.additive ? reason : reason.replace(/\.$/, "; try the additive mode.");
-    });
+    const reasons = programs.map((state) => reasonText(state, exact.source));
     const why = (text: string, span: number) =>
-      `<td class="exact-why" rowspan="3"${span > 1 ? ` colspan="${span}"` : ""}><p class="sub">${escapeHtml(text).replace("try the additive mode", '<button class="try-additive" type="button">try the additive mode</button>')}</p></td>`;
+      `<td class="exact-why" rowspan="3"${span > 1 ? ` colspan="${span}"` : ""}><p class="sub">${escapeHtml(text)}</p></td>`;
     const cells = programs.map((state, i) => {
       if (state.kind === "finite") {
         return [
@@ -185,8 +184,7 @@ export function mountExactView(
     const keys = ["source", "determinized"] as const;
     for (const [i, key] of keys.entries()) {
       models[key].textContent = texts[i];
-      const kind = programs[i].kind;
-      models[key].classList.toggle("none", kind !== "finite" && kind !== "too many");
+      models[key].classList.toggle("none", !hasChain(programs[i]));
     }
     for (const [i, row] of rows.entries()) {
       for (const cell of row.querySelectorAll("td")) cell.remove();
@@ -196,4 +194,5 @@ export function mountExactView(
       headers[i].classList.toggle("none", without);
     }
   });
+  return shown;
 }

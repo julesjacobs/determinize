@@ -5,6 +5,8 @@ import { batch, effect } from "@preact/signals-core";
 import { examples } from "./core/examples.ts";
 import type { Decoded } from "./core/share.ts";
 import { decodeShare } from "./core/share.ts";
+import { createLayoutClient } from "./ui/chain-client.ts";
+import { mountChainView } from "./ui/chain-view.ts";
 import { mountDistributionView } from "./ui/distribution-view.ts";
 import { createEditor, replaceDoc } from "./ui/editor.ts";
 import { createExactClient } from "./ui/exact-client.ts";
@@ -16,6 +18,7 @@ import { mountLeanView } from "./ui/lean-view.ts";
 import { printedRange, revealLines, setLinked } from "./ui/linking.ts";
 import { mountProgramView } from "./ui/program-view.ts";
 import { createSampling } from "./ui/sampling.ts";
+import type { Reduced } from "./ui/steps.ts";
 import type { Store } from "./ui/store.ts";
 import { createStore, randomSeed } from "./ui/store.ts";
 import { mountTheme, storedTheme } from "./ui/theme.ts";
@@ -48,7 +51,7 @@ function start(decoded: Decoded): Store {
       seed: initial.seed,
       exampleId: initial.example,
       view: initial.view,
-      additive: initial.additive,
+      chainsOpen: initial.chains,
       theme: storedTheme(),
       // On the page's own thread, a smaller first batch keeps the first distributions quick.
       firstBatch: sampling.inThread ? 200 : 1000,
@@ -96,7 +99,36 @@ function start(decoded: Decoded): Store {
     },
   );
   mountDistributionView($("#distributions"), store);
-  mountExactView($("#stats"), store);
+  const shownExact = mountExactView($("#stats"), store);
+  mountChainView(
+    {
+      figure: $("#chains"),
+      toggle: $("#chains-toggle"),
+      info: $("#chains-info"),
+      about: $("#chains-about"),
+      key: $("#chain-key"),
+      columns: {
+        source: {
+          count: $("#chain-count-source"),
+          body: $("#chain-source"),
+          table: $("#chain-table-source"),
+        },
+        determinized: {
+          count: $("#chain-count-det"),
+          body: $("#chain-det"),
+          table: $("#chain-table-det"),
+        },
+      },
+    },
+    store,
+    shownExact,
+    () => ({
+      source: store.checkedSource.peek(),
+      text: determinized.view.state.doc.toString(),
+      spans: determinized.spans(),
+    }),
+    createLayoutClient(),
+  );
   mountVerdict(
     {
       pane: $("#determinized-pane"),
@@ -152,24 +184,34 @@ function start(decoded: Decoded): Store {
       if (checked && (position !== null || site)) store.followLinked.value += 1;
     },
   });
-  // Both panes highlight the lines of what the hovered or current step reduces, or of the hovered
-  // site; the source pane only while it shows the checked text. They scroll to those lines when the
-  // reader moves the step or hovers, not when a new run or an edit changes them.
+  // Both panes highlight the lines of what the hovered or current step reduces, of the hovered
+  // site, or of the sites of the chain's node under the pointer or the focus; the source pane only
+  // while it shows the checked text. They scroll to those lines when the reader moves the step or
+  // hovers, not when a new run or an edit changes them.
   let followed = store.followLinked.peek();
   effect(() => {
     const linked = store.linked.value;
+    const sites = store.chainSites.value;
     const checked = store.checkedSource.value;
-    const inSource = linked && editor.state.doc.toString() === checked;
-    const sourceRange = inSource ? { from: linked.from, to: linked.headTo } : null;
-    const detRange = linked && printedRange(determinized.spans(), linked);
-    editor.dispatch({ effects: setLinked.of(sourceRange) });
-    determinized.view.dispatch({ effects: setLinked.of(detRange) });
+    // A node's sites are ranges of its chain's program, which an edit can make stale.
+    const parts: Reduced[] = sites
+      ? sites.source === checked
+        ? sites.sites.map(({ from, to }) => ({ from, to, headTo: to }))
+        : []
+      : linked
+        ? [linked]
+        : [];
+    const inSource = editor.state.doc.toString() === checked;
+    const sourceRanges = inSource ? parts.map(({ from, headTo }) => ({ from, to: headTo })) : [];
+    const detRanges = parts.flatMap((part) => printedRange(determinized.spans(), part) ?? []);
+    editor.dispatch({ effects: setLinked.of(sourceRanges) });
+    determinized.view.dispatch({ effects: setLinked.of(detRanges) });
     const request = store.followLinked.value;
     // A request waits for the lines of a page still on its way.
-    if (request === followed || (!sourceRange && !detRange)) return;
+    if (request === followed || (sourceRanges.length === 0 && detRanges.length === 0)) return;
     followed = request;
-    revealLines(editor, sourceRange);
-    revealLines(determinized.view, detRange);
+    revealLines(editor, sourceRanges[0] ?? null);
+    revealLines(determinized.view, detRanges[0] ?? null);
   });
   // A new run drops a request that it leaves unanswered.
   effect(() => {
@@ -206,11 +248,11 @@ function restore(store: Store, editor: EditorView, decoded: Decoded) {
   if (decoded.kind === "error") showNotice(store, decoded.message);
   if (decoded.kind !== "state") return;
   dismissNotice();
-  const { source, seed, example, view, additive } = decoded.state;
+  const { source, seed, example, view, chains } = decoded.state;
   batch(() => {
     store.exampleId.value = example;
     store.view.value = view ?? "outputs";
-    store.additive.value = additive ?? true;
+    store.chainsOpen.value = chains ?? false;
     replaceDoc(editor, sharedSource({ source, example }));
     store.runAt(seed);
   });

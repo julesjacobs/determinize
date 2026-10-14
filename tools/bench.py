@@ -20,6 +20,16 @@ uv pip install \
 env STORM_PYTHON=<env name>/bin/python \
   python3 tools/bench.py [--all | --exact | --approx] [--det] [--polar] [--psi]
 
+Exact results checked by Lean's kernel, each benchmark in its own memory-capped scope
+(Linux, systemd user session), written to a separate file:
+  python3 tools/bench.py --exact --det --check-certificates --memory-limit 40G \
+    --timeout 3600 --results results/finite-after-det-checked.json
+
+For frontend timings without sampling or exact analysis:
+  python3 tools/bench.py --exact --det-only
+This times parsing, elaboration, type inference, and mean replacement inside Lean;
+process startup, file reading, formatting, and backend analysis are excluded.
+
 Polar runs with polar/.venv/bin/python (override with POLAR_PYTHON). Each .prob
 file names its Polar arguments on its first line:
     # Polar: python polar.py <file>.prob --goals "E(x)" --at_n 2
@@ -54,6 +64,7 @@ POLAR_VENV_PYTHON = POLAR_DIR / ".venv" / "bin" / "python"
 RESULTS_DIR = ROOT / "results"
 EXACT_RESULTS = RESULTS_DIR / "finite-after-det.json"
 APPROX_RESULTS = RESULTS_DIR / "infinite-after-det.json"
+DET_ONLY_RESULTS = RESULTS_DIR / "determinization-only.json"
 DEFAULT_TIMEOUT = 180
 
 
@@ -265,6 +276,51 @@ def print_sample_sites(sites: SampleSites) -> None:
 # determinize
 # ---------------------------------------------------------------------------
 
+def det_only(model: Path, args: argparse.Namespace) -> dict[str, object]:
+    """Time the Lean frontend without running a program or constructing a model."""
+    print("  Det (frontend only)")
+    run = run_tool([str(args.binary), "--det-only", str(model)], ROOT, args.timeout)
+    if run.returncode is None:
+        print(f"    TIMEOUT after {args.timeout:g}s")
+        return {"status": "timeout"}
+    if run.returncode:
+        error = compact_error(run.stderr or run.stdout)
+        print(f"    ERROR: {error}")
+        return {"status": "failed", "error": error}
+    timing = re.search(r"^Determinization time \(ns\): (\d+)$", run.stdout, re.MULTILINE)
+    if timing is None:
+        error = "missing frontend timing; rebuild the determinize executable"
+        print(f"    ERROR: {error}")
+        return {"status": "failed", "error": error}
+    nanoseconds = int(timing.group(1))
+    seconds = nanoseconds / 1_000_000_000
+    print(f"    Determinization time: {seconds:.9f}s")
+    return {"status": "completed", "nanoseconds": nanoseconds, "seconds": seconds}
+
+
+def run_det_only_suite(directory: Path, args: argparse.Namespace) -> int:
+    models = sorted(directory.glob("*.det"))
+    heading(f"DETERMINIZATION ONLY: {directory.name} ({len(models)} benchmarks)")
+    print("Timed: parsing, elaboration, type inference, and mean replacement.")
+    results = []
+    for index, model in enumerate(models, 1):
+        print(f"\n[{index}/{len(models)}] {model.name}")
+        results.append({"benchmark": model.name, **det_only(model, args)})
+    failures = sum(result["status"] != "completed" for result in results)
+    payload = {
+        "suite": directory.name,
+        "configuration": {"mode": "det-only", "timeout_seconds": args.timeout,
+                          "timed_phases": ["parse", "elaborate", "infer", "determinize"]},
+        "benchmarks": results,
+        "failures": failures,
+    }
+    destination = (args.output_dir / f"{directory.name}-determinization-only.json"
+                   if args.output_dir else
+                   DET_ONLY_RESULTS.with_name(f"{directory.name}-determinization-only.json"))
+    save_results(destination, payload)
+    return failures
+
+
 def det_exact(model: Path, args: argparse.Namespace, temp: Path) -> dict[str, object]:
     """Determinize and solve one finite state benchmark with Storm."""
     print("  Det (Storm)")
@@ -286,6 +342,9 @@ def det_exact(model: Path, args: argparse.Namespace, temp: Path) -> dict[str, ob
     ]
     if not args.check_certificates:
         command.append("--skip-certificate")
+    if args.memory_limit:
+        command = ["systemd-run", "--user", "--scope", "--quiet",
+                   "-p", f"MemoryMax={args.memory_limit}", "-p", "MemorySwapMax=0", *command]
     completed = subprocess.run(command, cwd=ROOT, text=True, capture_output=True)
     report_path = Path(str(prefix) + ".storm.json")
     try:
@@ -294,6 +353,8 @@ def det_exact(model: Path, args: argparse.Namespace, temp: Path) -> dict[str, ob
         report = {}
     if completed.returncode or report.get("status") != "completed":
         error = report.get("error") or completed.stderr or completed.stdout
+        if args.memory_limit and (completed.returncode < 0 or completed.returncode >= 128):
+            error = f"killed, most likely at the {args.memory_limit} memory limit"
         stage = str(report.get("stage", "unknown stage"))
         error = compact_error(str(error))
         result.update(status="failed", stage=stage, error=error)
@@ -561,13 +622,15 @@ def run_suite(name: str, directory: Path, exact: bool, args: argparse.Namespace)
             print(f"\n{label}: {c['completed']} completed, {c['timeout']} timed out, "
                   f"{c['failed']} failed, {c['unsupported']} unsupported")
     if args.det:
-        save_results(EXACT_RESULTS if exact else APPROX_RESULTS, {
+        save_results(args.results or (EXACT_RESULTS if exact else APPROX_RESULTS), {
             "suite": "exact" if exact else "approx",
             "configuration": {
                 "timeout_seconds": args.timeout,
                 **({"subject": "determinized", "additive": True,
                     "check_certificates": args.check_certificates,
-                    "max_states": args.max_states} if exact else
+                    "max_states": args.max_states,
+                    **({"memory_limit": args.memory_limit} if args.memory_limit else {})}
+                   if exact else
                    {"samples": args.samples, "seed": args.seed, "fuel": args.fuel}),
             },
             "benchmarks": results,
@@ -598,6 +661,8 @@ def main() -> int:
                         help="run benchmarks/approx (infinite state after determinization)")
     tools = parser.add_argument_group("tools (default: all three)")
     tools.add_argument("--det", action="store_true", help="run determinize")
+    tools.add_argument("--det-only", action="store_true",
+                       help="time only the Lean frontend; skip sampling, models, Storm, Polar, and PSI")
     tools.add_argument("--polar", action="store_true", help="run Polar on .prob files")
     tools.add_argument("--psi", action="store_true", help="run lambda PSI on .psi files")
     parser.add_argument("--timeout", type=positive, default=DEFAULT_TIMEOUT,
@@ -611,11 +676,22 @@ def main() -> int:
     parser.add_argument("--check-certificates", action="store_true", help="independently kernel-check exact results (timed separately)")
     parser.add_argument("--output-dir", type=Path, help="retain exact models, certificates, and JSON reports")
     parser.add_argument("--no-build", action="store_true", help="use the existing determinize executable")
+    parser.add_argument("--memory-limit", metavar="SIZE",
+                        help="run each exact benchmark in a systemd user scope with this MemoryMax (e.g. 40G)")
+    parser.add_argument("--results", type=Path,
+                        help="write the suite's JSON here instead of the default results file")
     args = parser.parse_args()
+
+    if args.det_only:
+        if args.polar or args.psi:
+            parser.error("--det-only cannot be combined with --polar or --psi")
+        args.det = True
 
     run_both = args.all or not (args.exact or args.approx)
     do_exact = args.exact or run_both
     do_approx = args.approx or run_both
+    if args.results and do_exact and do_approx:
+        parser.error("--results needs a single suite: --exact or --approx")
     if not (args.det or args.polar or args.psi):
         args.det = args.polar = args.psi = True
     args.binary = args.binary.resolve()
@@ -627,9 +703,14 @@ def main() -> int:
             raise SystemExit(f"determinize binary not found: {args.binary}")
 
     failures = 0
-    if do_exact:
+    if args.det_only:
+        if do_exact:
+            failures += run_det_only_suite(EXACT_DIR, args)
+        if do_approx:
+            failures += run_det_only_suite(APPROX_DIR, args)
+    elif do_exact:
         failures += run_suite("EXACT: FINITE STATE AFTER DETERMINIZATION", EXACT_DIR, True, args)
-    if do_approx:
+    if do_approx and not args.det_only:
         failures += run_suite("APPROX: INFINITE STATE AFTER DETERMINIZATION", APPROX_DIR, False, args)
 
     heading("SUMMARY")

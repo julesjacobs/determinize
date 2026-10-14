@@ -30,28 +30,28 @@
    {\typing{e_1<e_2}{\tyB}}
 \end{mathpar}
 \begin{mathpar}
- \inferrule*[right=Uniform]{\typing a{\tyR m}\\\typing b{\tyR m}}
+ \inferrule*[right=Uniform]{\typing a{\tyR m}\\\typing b{\tyR m}\\\alpha=\M\lor\alpha=m}
    {\typing{\draw{uniform}\alpha{a,b}}{\tyR m}}
  \and
- \inferrule*[right=Gaussian]{\typing u{\tyR m}\\\typing v{\tyR\G}}
+ \inferrule*[right=Gaussian]{\typing u{\tyR m}\\\typing v{\tyR\G}\\\alpha=\M\lor\alpha=m}
    {\typing{\draw{gaussian}\alpha{u,v}}{\tyR m}}
  \and
- \inferrule*[right=Poisson]{\typing\lambda{\tyR m}}
+ \inferrule*[right=Poisson]{\typing\lambda{\tyR m}\\\alpha=\M\lor\alpha=m}
    {\typing{\draw{poisson}\alpha\lambda}{\tyR m}}
  \and
- \inferrule*[right=Exponential]{\typing\lambda{\tyR\G}}
+ \inferrule*[right=Exponential]{\typing\lambda{\tyR\G}\\\alpha=\M\lor\alpha=m}
    {\typing{\draw{exponential}\alpha\lambda}{\tyR m}}
  \and
- \inferrule*[right=Bernoulli]{\typing p{\tyR m}}
+ \inferrule*[right=Bernoulli]{\typing p{\tyR m}\\\alpha=\M\lor\alpha=m}
    {\typing{\draw{bernoulli}\alpha p}{\tyR m}}
  \and
- \inferrule*[right=Discrete]{\typing p{\tyL{\tyR m}}}
+ \inferrule*[right=Discrete]{\typing p{\tyL{\tyR m}}\\\alpha=\M\lor\alpha=m}
    {\typing{\draw{discrete}\alpha p}{\tyR m}}
  \and
- \inferrule*[right=Beta]{\typing a{\tyR\G}\\\typing b{\tyR\G}}
+ \inferrule*[right=Beta]{\typing a{\tyR\G}\\\typing b{\tyR\G}\\\alpha=\M\lor\alpha=m}
    {\typing{\draw{beta}\alpha{a,b}}{\tyR m}}
  \and
- \inferrule*[right=Gamma]{\typing k{\tyR m}\\\typing\lambda{\tyR\G}}
+ \inferrule*[right=Gamma]{\typing k{\tyR m}\\\typing\lambda{\tyR\G}\\\alpha=\M\lor\alpha=m}
    {\typing{\draw{gamma}\alpha{k,\lambda}}{\tyR m}}
 \end{mathpar}
 \par\vspace{8pt}
@@ -76,8 +76,7 @@
  \and
  \inferrule*[right=Sub]{\typing e\tau\\\tau<:\sigma}{\typing e\sigma}
 \end{mathpar}
-\caption{Type grammar, real typing, and subtyping rules, with
-$\alpha\in\{m,\M\}$. We omit the standard rules for variables, unit and Boolean literals, functions,
+\caption{Type grammar, real typing, and subtyping rules. For distribution modes $\alpha\in\{\G,\E\}$, the type annotation $m$ must match $\alpha$; for $\alpha=\M$, either type annotation is permitted. We omit the standard rules for variables, unit and Boolean literals, functions,
 recursion, application, let bindings, conditionals, pairs, projections, sum
 injections and case analysis, and list constructors and case analysis.}
 \label{fig:typing}

@@ -286,7 +286,7 @@
   }
 
   .gallery li {
-    padding: var(--space-1) 0;
+    padding: 0.125rem 0;
   }
 
   /* The premise that an example fails, described on hover and focus; one that the check finds
@@ -303,6 +303,17 @@
   .chip.open {
     border-color: var(--muted);
     color: var(--ink);
+  }
+
+  /* Where an example's programs have finite models, in the determinized program's colour: in
+     outline where both have, solid where determinizing made one. */
+  .chip.finite {
+    border-color: var(--change);
+    color: var(--ink);
+  }
+
+  .chip.finite.becomes {
+    background: var(--change-fill);
   }
 
   /* The description sits right below its chip, so that the pointer can move onto it; clicks pass
@@ -1431,19 +1442,6 @@
     min-height: 0;
   }
 
-  .additive {
-    display: inline-flex;
-    flex: none;
-    align-items: center;
-    gap: var(--space-2);
-    min-height: var(--target-min);
-    cursor: pointer;
-  }
-
-  .additive input {
-    margin: 0;
-  }
-
   table.stats tr.exact-value {
     height: calc(2lh + 2 * var(--space-1));
   }
@@ -1489,17 +1487,6 @@
   .exact-why[colspan] p {
     margin-inline: auto;
     text-align: center;
-  }
-
-  .try-additive {
-    min-height: 0;
-    padding: 0;
-    border: 0;
-    background: none;
-    color: var(--ink);
-    text-decoration: underline;
-    text-decoration-thickness: 1px;
-    text-underline-offset: 0.18em;
   }
 
   .sub {
@@ -1580,6 +1567,369 @@
   table.bins {
     max-width: 32rem;
     margin-top: var(--space-3);
+  }
+
+  /* The button that shows the chains keeps its room in the header while it is hidden, so that
+     the rows below don't move. */
+  .chains-toggle {
+    flex: none;
+    font-size: var(--size-ui);
+    font-weight: var(--weight-strong);
+  }
+
+  .chains-toggle.absent {
+    visibility: hidden;
+  }
+
+  /* The chains: both programs' drawings side by side where the band is wide enough, the source
+     first; each drawing keeps its size and scrolls in its own region where it is wider than its
+     column, so that its labels stay at their size. */
+  .chains {
+    margin: var(--space-6) 0 0;
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--rule);
+  }
+
+  .chains-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-4);
+  }
+
+  .chains-head h3 {
+    margin: 0;
+    font-size: var(--size-ui);
+    font-weight: var(--weight-strong);
+  }
+
+  /* The "i" beside the figure's title, which shows what the drawings are. */
+  .info {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--target-min);
+    min-height: var(--target-min);
+    padding: 0;
+    border: 1px solid var(--muted);
+    border-radius: 50%;
+    background: none;
+    color: var(--muted);
+    font-family: var(--font-code);
+    font-size: var(--size-small);
+    font-weight: var(--weight-strong);
+  }
+
+  .info[aria-expanded="true"] {
+    border-color: var(--ink);
+    color: var(--ink);
+  }
+
+  .info-pop {
+    position: absolute;
+    inset: auto;
+    width: max-content;
+    max-width: min(30rem, calc(100vw - 2rem));
+    margin: 0;
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    background: var(--ground);
+    color: var(--ink);
+    font-size: var(--size-small);
+    line-height: var(--leading-ui);
+    text-wrap: pretty;
+  }
+
+  .info-pop a {
+    color: inherit;
+  }
+
+  .chain-columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-5) var(--space-6);
+  }
+
+  @container (min-width: 720px) {
+    .chain-columns {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    /* A drawing wider than its column beside the other takes the whole width. */
+    .chains.stacked .chain-columns {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  .chain-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0 var(--space-3);
+    margin: 0 0 var(--space-3);
+    font-size: var(--size-ui);
+    font-weight: var(--weight-heading);
+  }
+
+  .chain-head .sub {
+    font-weight: 400;
+  }
+
+  /* The drawing's margin, for outlines and halos, may lie in the gutter. */
+  .chain-scroll {
+    margin-inline: -4px;
+    overflow-x: auto;
+  }
+
+  .chain-svg {
+    display: block;
+    margin-inline: auto;
+  }
+
+  .chain-note {
+    max-width: 30rem;
+    margin: 0;
+    text-wrap: pretty;
+  }
+
+  .chain-svg text {
+    fill: var(--ink);
+    font-family: var(--font-code);
+    font-size: 13px;
+    dominant-baseline: central;
+    text-anchor: middle;
+  }
+
+  .chain-svg .label.g {
+    fill: var(--given);
+  }
+
+  .chain-svg .label.e {
+    fill: var(--change);
+    font-weight: var(--weight-strong);
+  }
+
+  .chain-svg .returned .label {
+    font-weight: var(--weight-strong);
+  }
+
+  .chain-svg :is(.where, .number) {
+    fill: var(--muted);
+  }
+
+  .chain-svg .number {
+    font-size: 12px;
+    text-anchor: start;
+  }
+
+  .chain-svg .number-chip {
+    fill: var(--ground);
+  }
+
+  .chain-svg .number-rule {
+    stroke: var(--rule);
+  }
+
+  /* The source in outline, the determinized program solid; on the solid fill, the secondary text
+     is ink, as muted text there would be too faint. */
+  .chain-svg .shape {
+    fill: var(--ground);
+    stroke: var(--muted);
+    stroke-width: 1.5;
+  }
+
+  .key-glyph .shape {
+    fill: none;
+    stroke: var(--muted);
+    stroke-width: 1.5;
+  }
+
+  .chain-svg.det .shape {
+    fill: var(--change-fill);
+    stroke: var(--change);
+    stroke-width: 1;
+  }
+
+  .chain-svg .shape.inner {
+    fill: none;
+  }
+
+  .chain-svg.det .where {
+    fill: var(--ink);
+  }
+
+  .chain-svg.det .number-rule {
+    stroke: color-mix(in oklab, var(--change) 45%, var(--change-fill));
+  }
+
+  .chain-svg .diverges .shape,
+  .key-glyph.diverges .shape {
+    stroke-dasharray: 4 3;
+  }
+
+  /* At 8 % rather than the brief's 10 %, so that E's label keeps 4.7:1 on it. */
+  .chain-svg .node.linked .shape {
+    fill: color-mix(in oklab, var(--ink) 8%, var(--ground));
+    stroke: var(--ink);
+    stroke-width: 2;
+  }
+
+  .chain-svg .node.linked .shape.inner {
+    fill: none;
+    stroke-width: 1;
+  }
+
+  .chain-svg .edge {
+    fill: none;
+    stroke: var(--muted);
+    stroke-width: 1.2;
+  }
+
+  .chain-svg :is(.arrow, .start) {
+    fill: var(--muted);
+  }
+
+  .chain-svg .start {
+    fill: var(--ink);
+  }
+
+  .chain-svg .edge-label {
+    paint-order: stroke;
+    stroke: var(--ground);
+    stroke-width: 4px;
+    stroke-linejoin: round;
+  }
+
+  .chain-key {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-5);
+    margin: var(--space-4) 0 0;
+    padding: 0;
+    color: var(--muted);
+    font-size: var(--size-small);
+    list-style: none;
+  }
+
+  .chain-key li {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .key-plus {
+    color: var(--ink);
+  }
+
+  .chain-tables .chain-columns {
+    margin-top: var(--space-3);
+  }
+
+  table.chain-table {
+    width: 100%;
+    max-width: 32rem;
+    border-collapse: collapse;
+  }
+
+  .chain-table code {
+    font-size: var(--size-small);
+  }
+
+  .chain-table caption {
+    margin-bottom: var(--space-2);
+    font-weight: var(--weight-heading);
+    text-align: left;
+  }
+
+  .chain-table :is(th, td) {
+    padding: var(--space-1) var(--space-2);
+    font-weight: inherit;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  table.chain-table thead th {
+    font-size: var(--size-small);
+    font-weight: var(--weight-strong);
+  }
+
+  .chain-table .num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  table.chain-table tbody tr {
+    border-top: 1px solid var(--rule);
+  }
+
+  .chain-table tbody tr:hover,
+  .chain-table tbody tr:focus {
+    background: color-mix(in oklab, var(--ink) 10%, transparent);
+  }
+
+  .chain-table tbody tr:focus-visible {
+    outline-offset: -2px;
+  }
+
+  .node-number {
+    display: inline-block;
+    min-width: 1.4em;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* System colours only: the cues besides colour, the shapes, the letters and the weights, stay. */
+  @media (forced-colors: active) {
+    .key-glyph .shape {
+      fill: Canvas;
+      stroke: CanvasText;
+    }
+
+    .chain-svg:is(.det, .source) .shape {
+      fill: Canvas;
+      stroke: CanvasText;
+    }
+
+    .chain-svg:is(.det, .source) .shape.inner {
+      fill: none;
+    }
+
+    .chain-svg:is(.det, .source) .number-chip {
+      fill: Canvas;
+    }
+
+    .chain-svg:is(.det, .source) :is(text, .label.g, .label.e, .where, .number),
+    .chain-svg:is(.det, .source) :is(.arrow, .start) {
+      fill: CanvasText;
+    }
+
+    .chain-svg:is(.det, .source) :is(.edge, .number-rule) {
+      stroke: CanvasText;
+    }
+
+    .chain-svg:is(.det, .source) .edge-label {
+      stroke: Canvas;
+    }
+
+    .chain-svg:is(.det, .source) .node.linked .shape:not(.inner) {
+      fill: Highlight;
+      stroke: CanvasText;
+    }
+
+    /* The number keeps its chip's colours, which the highlight leaves as they are. */
+    .chain-svg:is(.det, .source) .node.linked :is(.label, .label.g, .label.e, .where) {
+      fill: HighlightText;
+    }
+
+    /* The row keeps its system colours, which the backplate behind its text needs; an outline
+       marks it. */
+    .chain-table tbody tr:is(:hover, :focus) {
+      background: Canvas;
+      outline: 2px solid Highlight;
+      outline-offset: -2px;
+    }
   }
 
   .gallery li a {

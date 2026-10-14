@@ -5,18 +5,18 @@
 In this section, we evaluate our determinization approach in three complementary ways. We seek to address the following research questions:
 
 \begin{itemize}
-    \item \textbf{RQ1: Exact analysis.} What classes of probabilistic programs can our determinization transformation handle, and can determinization yield exact expected values for programs that prior tools do not support?
+    \item \textbf{RQ1: Exact analysis.} Can determinization transform infinite-state programs into finite-state ones amenable to exact expectation computation, and at what computational cost?
     
-    \item \textbf{RQ2: Variance reduction.} How much does determinization reduce the variance of program outputs?
+    \item \textbf{RQ2: Variance reduction.} When programs remain infinite-state after determinization, how much does the transformation reduce their output variance?
     
-    \item \textbf{RQ3: Monte Carlo efficiency.} How does this variance reduction translate into more precise Monte Carlo estimates under a fixed wall-clock budget?
+    \item \textbf{RQ3: Monte Carlo efficiency.} To what extent does this variance reduction improve the precision of Monte Carlo expectation estimates under a fixed wall-clock budget?
 \end{itemize}
 
-Consequently, our first question concerns \emph{exact inference}, calculating the true expected value of a program over the exact posterior distribution of the program, while the latter two concern \emph{sampling-based inference}, first measuring how much randomness determinization removes and then asking whether that reduction translates into more efficient Monte Carlo estimation in practice. We detail the benchmarks, experimental setup, comparisons, and results for each question in the following subsections below. All experiments have been run on a MacBook Pro M3 with 16GB RAM. Together with our benchmarks, our implementation is publicaly available at \href{https://github.com/[anonymized]}{https://github.com/[anonymized]}.
+Consequently, our first question investigates whether determinization enables exact expectation computation through finite-state model checking. The latter two investigate its benefits for sampling-based inference, first measuring reductions in output variance and then evaluating whether these reductions improve Monte Carlo precision under a fixed wall-clock budget. We detail the benchmarks, experimental setup, comparisons, and results for each question in the following subsections below. All experiments have been run on a MacBook Pro M3 with 16GB RAM. Together with our benchmarks, our implementation is publicly available at \href{https://github.com/[anonymized]}{https://github.com/[anonymized]}.
 
 \subsection{RQ1: Enabling Exact Expectations}
 
-We first ask whether determinization can make exact expectation analysis possible for programs with continuous or infinite-state behavior. We compare the expressiveness of our approach against POLAR~\cite{moosbrugger2022moment} (which computes exact moments by deriving and solving recurrences for probabilistic loops) and $\lambda$PSI~\cite{gehr2020lpsi} (which performs symbolic exact inference; we use its \texttt{--expectation} mode). For the original 14 benchmarks in Table~\ref{tab:finite-after-determinization}, determinization yields a finite-state representation, even when some discrete sampling remains. For these benchmarks, we translate the transformed program into a finite discrete-time Markov chain and use Storm~\cite{hensel2022storm} to compute its expected return value exactly as an expected-reward query.
+We first ask whether determinization can make calculating exact expectations possible for programs with continuous or infinite-state behavior. For the benchmarks in Table~\ref{tab:finite-after-determinization}, determinization yields a finite-state representation, even when some discrete sampling remains. For these benchmarks, we translate the determinized program into a finite discrete-time Markov chain and use Storm~\cite{hensel2022storm} to compute its expectation exactly as an expected-reward query. Each result is accompanied by a Lean-checkable certificate establishing that the finite model represents the determinized program and that the reported expectation satisfies the exact rational reward equations and boundary conditions.
 
 Our benchmark suite draws primarily from prior work~\cite{chakarov2013martingales,chakarov2014expectation,beutner2022guaranteed,barthe2016private,vakar2019domain,sato2019formal,gehr2016psi}, alongside four new examples: \texttt{retransmit}, \texttt{service-policy}, \texttt{workload}, and \texttt{noisy-iteration}. 
 These benchmarks exercise a range of language constructs, including: lists for \texttt{add-noise},
@@ -26,10 +26,15 @@ and \texttt{swap}; and unbounded recursion for \texttt{add-uniform-counter}, \te
 
 \input{figures/eval-exact.tex}
 
-\paragraph{Results} Our results are summarized in~\Cref{tab:finite-after-determinization}. Determinization eliminates all continuous sampling sites across the original 14 benchmarks, with seven programs fully determinized and seven partially determinized. Importantly, even when discrete sampling remains, the determinized programs still admit exact expectation computation via Storm. This includes programs involving lists, higher-order functions, and unbounded recursion, as well as four benchmarks that neither POLAR nor $\lambda$PSI supports. Thus, our evaluation here serves to show that eliminating continuous randomness can turn a program that is unsuitable for finite-state model checking into one whose expectation can be computed exactly, using a verified finite-state construction and certificates.
+\paragraph{Results} \Cref{tab:finite-after-determinization} summarizes our results. For each benchmark, we report the queried expectation, whether determinization is full or partial, the number of static discrete and continuous sampling sites before and after determinization, and the determinization time. All 15 benchmarks have their continuous sampling sites eliminated, with seven fully determinized and eight partially determinized. Even when discrete sampling remains, the resulting programs admit exact expectation computation using Storm. These results demonstrate that determinization can enable finite-state exact analysis of programs involving continuous distributions, higher-order functions, and unbounded recursion.
 
-Although determinization yields finite-state programs for all our benchmarks, this is not guaranteed in general. In particular, sampling sites that influence control flow or contribute nonlinearly to the output generally cannot be determinized, potentially leaving continuous randomness in the transformed program. Existing tools like POLAR may nevertheless support exact analysis of such programs. Our approach thus complements existing techniques.
+\paragraph{Determinization cost.}
+The final column of \cref{tab:finite-after-determinization}
+reports the total determinization time. This takes less than one millisecond on every benchmark instance. Now, to investigate how this cost grows with program size, we
+take three benchmarks from the table and parameterize them by $k$. For \texttt{uniform-nested}, $k$ counts a chain of dependent uniform sampling sites, each parameterized by the preceding sample. For \texttt{gauss-random-walk} and \texttt{add-noise}, $k$ instead counts the number of explicitly constructed input list elements (see \cref{sec:appendix-scaling} for full details). Increasing $k$ thus enlarges the source program. \Cref{fig:determinization-scaling} shows median times over 10 runs, with interquartile bands.
 
+
+\input{figures/eval-scaling.tex}
 
 \subsection{RQ2: Reducing Output Variance}
 
@@ -65,6 +70,6 @@ representative benchmarks---\texttt{branching}, \texttt{hmm}, and
 \texttt{load}---that exhibit substantial but finite variance reductions in
 RQ2. 
 
-\todo[inline]{TODO: finish if there is time}
-
 \input{figures/eval-wallclock.tex}
+
+\paragraph{Results} \Cref{fig:estimator-variance-vs-time} shows lower empirical estimator variance for the determinized programs across all tested sample sizes, with similar sampling times to the source programs. At $N=10^5$, estimator variance is reduced by approximately $6.0\times$ for \texttt{branching}, $113\times$ for \texttt{hmm}, and $48.4\times$ for \texttt{load}. Thus, on these three benchmarks, the variance reductions translate into more precise Monte Carlo estimates at comparable sampling cost.

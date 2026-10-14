@@ -15,6 +15,7 @@ private structure Options where
   samples : Nat := 0
   fuel : Nat := 100000
   checkOnly : Bool := false
+  detOnly : Bool := false
   exportPrefix : Option String := none
   certifyResult : Bool := false
   additive : Bool := true
@@ -24,7 +25,7 @@ private structure Options where
   limits : Finite.Limits := {}
 
 private def usage :=
-  "Usage: determinize [--check] [--samples N] [--seed N] [--fuel N] \
+  "Usage: determinize [--check] [--det-only] [--samples N] [--seed N] [--fuel N] \
     [--export PREFIX | --result PREFIX] [--no-additive] [--sample-sites] [--max-result-states N] \
     [--subject source|determinized] [--max-states N] [--max-edges N] [--max-state-bytes N] FILE.det"
 private def natural (s : String) : Except String Nat :=
@@ -53,6 +54,7 @@ private def options : List String → Options → Except String Options
   | "--max-state-bytes" :: n :: rest, o => do
       options rest {o with limits.maxStateBytes := ← natural n}
   | "--check" :: rest, o => options rest {o with checkOnly := true}
+  | "--det-only" :: rest, o => options rest {o with detOnly := true}
   | "--samples" :: n :: rest, o => do options rest {o with samples := ← natural n}
   | "--seed" :: n :: rest, o => do
       let seed ← natural n
@@ -130,8 +132,11 @@ private def sampleSites : Core → SampleSites
 private def printSampleSites (label : String) (sites : SampleSites) : IO Unit :=
   IO.println s!"Sampling sites {label}: discrete={sites.discrete}, continuous={sites.continuous}"
 
-/-- An exact result for the determinized program is the source's only under the hypotheses of
-`Theorems.unnormalized_extended_expectation_preservation`, which the tool does not check. -/
+/-- An exact first moment of the determinized program is the source's under the hypotheses of
+`Theorems.expectation_preservation`, which the tool does not check. It is the return probability,
+which `Theorems.output_mass_preservation` preserves, times the expectation conditioned on
+returning, which `Theorems.expectation_preservation` preserves; both moments are zero when the
+program never returns. -/
 private def printTransferHypotheses (subject : Spec.FiniteModel.Subject) : IO Unit :=
   if subject == .determinized then
     IO.println "The source has the same expectation if it is domain-safe and its expectation is \
@@ -143,6 +148,16 @@ def main (args : List String) : IO UInt32 := do
   try
     let o ← IO.ofExcept (options args {})
     let text ← IO.FS.readFile o.file
+    if o.detOnly then
+      let started ← IO.monoNanosNow
+      let p ← IO.ofExcept (compile text)
+      let target := p.source.determinize
+      let finished ← IO.monoNanosNow
+      IO.println s!"Determinization time (ns): {finished - started}"
+      IO.println s!"Checked: {prettyType p.ty}"
+      printSampleSites "before determinization" (sampleSites p.source)
+      printSampleSites "after determinization" (sampleSites target)
+      return 0
     let p ← IO.ofExcept (compile text)
     IO.println s!"Checked: {prettyType p.ty}"
     if o.sampleSites then

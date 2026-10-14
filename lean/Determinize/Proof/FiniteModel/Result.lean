@@ -107,52 +107,6 @@ private theorem outputAt_transient (model : Model) (state : Fin model.size)
   intro i a b hab
   exact mul_le_mul_right (outputWithin_mono model i hab s) _
 
-private theorem homogeneous_bound (model : Model) (d : Fin model.size → ℝ)
-    (eqs : ∀ state, d state = if model.kind state = .transient then
-      ∑ next, (model.transition state next : ℝ) * d next else 0)
-    (M : ℝ) (bound : ∀ state, |d state| ≤ M) (n : Nat) (state : Fin model.size) :
-    |d state| ≤ M * (model.survivalWithin n state : ℝ) := by
-  induction n generalizing state with
-  | zero =>
-    by_cases h : model.kind state = .transient
-    · simpa [Model.survivalWithin, h] using bound state
-    · rw [eqs state]
-      simp [Model.survivalWithin, h]
-  | succ n ih =>
-    by_cases h : model.kind state = .transient
-    · rw [eqs state, ite_eq_left h]
-      calc
-        _ ≤ ∑ next, |(model.transition state next : ℝ) * d next| :=
-          Finset.abs_sum_le_sum_abs _ _
-        _ = ∑ next, (model.transition state next : ℝ) * |d next| := by
-          apply Finset.sum_congr rfl
-          intro next _
-          rw [abs_mul, abs_of_nonneg (by exact_mod_cast model.nonnegative state next)]
-        _ ≤ ∑ next, (model.transition state next : ℝ) *
-            (M * (model.survivalWithin n next : ℝ)) :=
-          Finset.sum_le_sum (fun next _ ↦ mul_le_mul_of_nonneg_left (ih next)
-            (by exact_mod_cast model.nonnegative state next))
-        _ = _ := by simp [Model.survivalWithin, h, Rat.cast_sum, Rat.cast_mul,
-          Finset.mul_sum, mul_left_comm]
-    · rw [eqs state]
-      simp [Model.survivalWithin, h]
-
-theorem homogeneous_unique (model : Model) (certificate : ResultCertificate model)
-    (absorption : certificate.Absorption model) (d : Fin model.size → ℝ)
-    (eqs : ∀ state, d state = if model.kind state = .transient then
-      ∑ next, (model.transition state next : ℝ) * d next else 0) : ∀ state, d state = 0 := by
-  obtain ⟨largest, _, largest_bound⟩ := Finset.exists_max_image Finset.univ
-    (fun state ↦ |d state|) ⟨model.initial, Finset.mem_univ _⟩
-  have bound := homogeneous_bound model d eqs |d largest|
-    (fun state ↦ largest_bound state (Finset.mem_univ _)) certificate.horizon largest
-  have survival : (model.survivalWithin certificate.horizon largest : ℝ) < 1 := by
-    exact_mod_cast absorption largest
-  have zero : |d largest| = 0 := by
-    nlinarith [abs_nonneg (d largest)]
-  intro state
-  apply abs_eq_zero.mp
-  exact le_antisymm (zero ▸ largest_bound state (Finset.mem_univ _)) (abs_nonneg _)
-
 theorem outputAt_equations (model : Model) (state : Fin model.size) (f : ℝ → ℝ := id) :
     (∫ value : ℝ, f value ∂outputAt model state) = match model.kind state with
       | .returned reward => f (reward : ℝ)
@@ -172,24 +126,5 @@ theorem outputAt_equations (model : Model) (state : Fin model.size) (f : ℝ →
     apply Finset.sum_congr rfl
     intro next _
     rw [ENNReal.toReal_ofReal (by exact_mod_cast model.nonnegative state next)]
-
-/-- Absorption rules out spurious solutions of the value equations. -/
-theorem resultCertificate_sound (model : Model) (certificate : ResultCertificate model)
-    (valid : certificate.Valid model) :
-    model.expectedReward = (certificate.values model.initial : ℝ) := by
-  have unique := homogeneous_unique model certificate valid.2
-    (fun state ↦ (∫ value : ℝ, value ∂outputAt model state) - (certificate.values state : ℝ))
-  have zero := unique (by
-    intro state
-    rw [outputAt_equations model state (fun x ↦ x)]
-    have eqs := valid.1 state
-    cases h : model.kind state with
-    | returned reward => simp only [h] at eqs ⊢; simp [eqs]
-    | rejected => simp only [h] at eqs ⊢; simp [eqs]
-    | transient =>
-      simp only [h] at eqs ⊢
-      rw [eqs]
-      simp [Rat.cast_sum, Rat.cast_mul, Finset.sum_sub_distrib, mul_sub]) model.initial
-  exact sub_eq_zero.mp zero
 
 end Determinize.Proof.FiniteModel

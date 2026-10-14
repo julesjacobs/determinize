@@ -1,5 +1,5 @@
 // The page's link to its state: the fragment follows the program, the seed, the example, the
-// chart and the mode of the exact values, and a fragment that the page navigates to is restored.
+// chart and whether the chains are open, and a fragment that the page navigates to is restored.
 import { effect } from "@preact/signals-core";
 import { examples } from "../core/examples.ts";
 import type { Decoded, SharedState } from "../core/share.ts";
@@ -10,7 +10,7 @@ import type { Store } from "./store.ts";
 const writeDelayMs = 300;
 
 /** The parts of the store that a link carries. */
-export type SharedStore = Pick<Store, "source" | "seed" | "exampleId" | "view" | "additive">;
+export type SharedStore = Pick<Store, "source" | "seed" | "exampleId" | "view" | "chainsOpen">;
 
 /** The state that a link to the page carries, as the fragment and Copy link give it. */
 export function sharedStateOf(store: SharedStore): SharedState {
@@ -19,7 +19,7 @@ export function sharedStateOf(store: SharedStore): SharedState {
     seed: store.seed.value,
     example: store.exampleId.value,
     ...(store.view.value === "against" ? { view: "against" as const } : {}),
-    ...(store.additive.value ? {} : { additive: false as const }),
+    ...(store.chainsOpen.value ? { chains: true as const } : {}),
   };
 }
 

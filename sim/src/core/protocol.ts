@@ -1,7 +1,10 @@
 // The messages between the page and its workers: the sampling worker, which runs the batches of
-// runs of both programs, the step table's worker, which computes the step table's run, and the
-// exact worker, which explores both programs' finite models. A request has a generation number; a
-// newer request replaces an older one, and the page ignores responses of any but the newest.
+// runs of both programs, the step table's worker, which computes the step table's run, the exact
+// worker, which explores both programs' finite models and contracts their chains, and the chain
+// worker, which lays chains out. A request has a generation number; a newer request replaces an
+// older one, and the page ignores responses of any but the newest. Layout requests are answered
+// each by its id.
+import type { ChainLayout } from "./chain-layout.ts";
 import type { ExactState } from "./exact.ts";
 import type { Runs } from "./statistics.ts";
 import type { TraceOverview, TracePage } from "./trace-pages.ts";
@@ -216,6 +219,56 @@ function isRanges(value: unknown) {
   );
 }
 
+/** Whether `value` is a fraction as Lean writes it: an integer, or one over a positive one. */
+function isFraction(value: unknown) {
+  return typeof value === "string" && /^-?\d+(\/[1-9]\d*)?$/.test(value);
+}
+
+function isChainNode(value: unknown) {
+  if (!isRecord(value)) return false;
+  switch (value.kind) {
+    case "branch":
+      return (
+        typeof value.distribution === "string" &&
+        (value.mode === "E" || value.mode === "G") &&
+        isRanges(value.sites)
+      );
+    case "returned":
+      return isFraction(value.value);
+    case "rejected":
+    case "diverges":
+      return true;
+    default:
+      return false;
+  }
+}
+
+function isChain(value: unknown) {
+  if (!isRecord(value)) return false;
+  const counts = (...keys: string[]) => keys.every((key) => Number.isSafeInteger(value[key]));
+  if (value.kind === "too large") return counts("nodes", "edges");
+  if (value.kind !== "chain" || !isFraction(value.entry)) return false;
+  const { nodes, edges } = value;
+  if (!Array.isArray(nodes) || nodes.length === 0 || !Array.isArray(edges)) return false;
+  // Array.from fills a sparse array's holes, which `every` would skip, with undefined.
+  const all = Array.from(nodes as unknown[]);
+  const node = (index: unknown) =>
+    Number.isSafeInteger(index) && (index as number) >= 0 && (index as number) < all.length;
+  return (
+    all.every(isChainNode) &&
+    Array.from(edges as unknown[]).every(
+      (edge) =>
+        isRecord(edge) &&
+        node(edge.from) &&
+        node(edge.to) &&
+        // Only a branch has edges; returns, rejections and loops end their runs.
+        (all[edge.from as number] as { kind: string }).kind === "branch" &&
+        isFraction(edge.probability) &&
+        isFraction(edge.reward),
+    )
+  );
+}
+
 function isExactState(value: unknown): value is ExactState {
   if (!isRecord(value)) return false;
   const counts = (...keys: string[]) => keys.every((key) => Number.isSafeInteger(value[key]));
@@ -231,10 +284,11 @@ function isExactState(value: unknown): value is ExactState {
         isExact(value.returnProbability) &&
         isExact(value.rejectionProbability) &&
         (value.mean === null || isExact(value.mean)) &&
-        (value.variance === null || isExact(value.variance))
+        (value.variance === null || isExact(value.variance)) &&
+        isChain(value.chain)
       );
     case "too many":
-      return counts("states", "maxStates") && message;
+      return counts("states", "maxStates") && message && isChain(value.chain);
     case "draw":
       return (
         typeof value.distribution === "string" &&
@@ -271,4 +325,70 @@ export function isExactResponse(value: unknown): value is ExactResponse {
     isExactState(value.determinized) &&
     typeof value.done === "boolean"
   );
+}
+
+/** Lay out the chain of `nodes` nodes and `edges` edges that `dots` describe (`chainDots`), and
+ * send the narrowest layout. */
+export interface ChainLayoutRequest {
+  type: "chain-layout";
+  id: number;
+  dots: string[];
+  nodes: number;
+  edges: number;
+}
+
+/** The layout of the request `id`, or why dot couldn't lay it out. */
+export type ChainLayoutResponse =
+  | { type: "chain-layout"; id: number; layout: ChainLayout }
+  | { type: "chain-layout-failed"; id: number; message: string };
+
+export function isChainLayoutRequest(value: unknown): value is ChainLayoutRequest {
+  return (
+    isRecord(value) &&
+    value.type === "chain-layout" &&
+    Number.isSafeInteger(value.id) &&
+    Array.isArray(value.dots) &&
+    value.dots.length > 0 &&
+    value.dots.every((dot: unknown) => typeof dot === "string") &&
+    Number.isSafeInteger(value.nodes) &&
+    Number.isSafeInteger(value.edges)
+  );
+}
+
+function isPoint(value: unknown) {
+  return Array.isArray(value) && value.length === 2 && value.every(Number.isFinite);
+}
+
+function isEdgeLayout(value: unknown) {
+  return (
+    isRecord(value) &&
+    Array.isArray(value.curve) &&
+    value.curve.length >= 4 &&
+    value.curve.every(isPoint) &&
+    Array.isArray(value.arrow) &&
+    value.arrow.every(isPoint) &&
+    (value.label === null || isPoint(value.label))
+  );
+}
+
+function isChainLayout(value: unknown): value is ChainLayout {
+  return (
+    isRecord(value) &&
+    [value.width, value.height].every(Number.isFinite) &&
+    Array.isArray(value.nodes) &&
+    value.nodes.every(
+      (node: unknown) =>
+        isRecord(node) && [node.x, node.y, node.width, node.height].every(Number.isFinite),
+    ) &&
+    isPoint(value.start) &&
+    isEdgeLayout(value.entry) &&
+    Array.isArray(value.edges) &&
+    value.edges.every(isEdgeLayout)
+  );
+}
+
+export function isChainLayoutResponse(value: unknown): value is ChainLayoutResponse {
+  if (!isRecord(value) || !Number.isSafeInteger(value.id)) return false;
+  if (value.type === "chain-layout-failed") return typeof value.message === "string";
+  return value.type === "chain-layout" && isChainLayout(value.layout);
 }

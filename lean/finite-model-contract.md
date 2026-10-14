@@ -129,9 +129,7 @@ probability and derives divergence from the mass-balance theorem.
 The verified internal route uses `solveValues` and the proved Gaussian elimination
 algorithm, retaining equation proofs without checking the solutions afterward.
 `solveStatistics` and `solveTermination` share boundary evidence. Separate right-hand
-sides currently use separate elimination runs. The older horizon-based
-`solveCertified`/`checkResult` API remains available for absorbing models; the CLI
-uses the general moment route.
+sides currently use separate elimination runs.
 
 ## Portable files and Storm
 

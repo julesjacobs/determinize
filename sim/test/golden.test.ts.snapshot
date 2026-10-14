@@ -347,3 +347,29 @@ batch at seeds 1-200:
   determinized: 200 runs, 0 rejected, 0 failed
     returned numbers: n 200, mean 5.799999999999998, population variance 5.249999999999997
 `;
+
+exports[`simulator/train-delay 1`] = `
+seed 1: checked, 7 frames
+  checks: OK ×7
+  final source: 8
+  final determinized: 4
+  outcome: 8 | 4
+  frames: sha256 924f25fb2f8fd679bc595f7fa127f59f572ee9bf9d260a0282706ad9c9b6d54b
+seed 2: checked, 7 frames
+  checks: OK ×7
+  final source: 0
+  final determinized: 4
+  outcome: 0 | 4
+  frames: sha256 52413f025f130b96392907983bdd1c9c06aa4d7db5220cfffa449d5e5a84badf
+seed 3: checked, 6 frames
+  checks: OK ×6
+  final source: 1
+  final determinized: 1
+  outcome: 1 | 1
+  frames: sha256 ebf3ab7352a7e9d73920b079e74857a2a656ae8426f0d58e67499b4102253a60
+batch at seeds 1-200:
+  source: 200 runs, 0 rejected, 0 failed
+    returned numbers: n 200, mean 3.3850000000000007, population variance 8.206774999999999
+  determinized: 200 runs, 0 rejected, 0 failed
+    returned numbers: n 200, mean 3.1900000000000013, population variance 1.7739000000000007
+`;

@@ -1,6 +1,7 @@
 import Determinize.Spec.FiniteModel.Certificates
 import Determinize.Finite.Supported
 import Determinize.Proof.FiniteModel.Model
+import Determinize.Proof.FiniteModel.Queries
 
 namespace Determinize.Tests.FiniteModel
 open Spec.FiniteModel MeasureTheory Determinize.Finite
@@ -19,19 +20,13 @@ abbrev fork : Model where
   nonnegative := by decide +kernel
   normalized := by decide +kernel
 
-def forkCertificate : ResultCertificate fork where
-  values := fun i ↦ if i.val = 0 then 3 / 2 else if i.val = 1 then 3 else 0
-  horizon := 1
-
-example : forkCertificate.Valid fork := by decide +kernel
+example : Proof.FiniteModel.ValueEquations fork
+    (fun i ↦ if i.val = 0 then 3 / 2 else if i.val = 1 then 3 else 0) := by decide +kernel
+example : ¬ Proof.FiniteModel.ValueEquations fork (fun _ ↦ 3) := by decide +kernel
 example : fork.rewardWithin 0 fork.initial = 0 := by decide +kernel
 example : fork.rewardWithin 1 fork.initial = 3 / 2 := by decide +kernel
 example : fork.rewardWithin 20 fork.initial = 3 / 2 := by decide +kernel
 example : fork.survivalWithin 1 fork.initial = 0 := by decide +kernel
-example : ¬ ({forkCertificate with values := fun _ ↦ 3} : ResultCertificate fork).Valid fork := by
-  decide +kernel
-example : ¬ ({forkCertificate with horizon := 0} : ResultCertificate fork).Valid fork := by
-  decide +kernel
 
 theorem fork_outputWithin (steps : Nat) :
     fork.outputWithin (steps + 1) fork.initial =
@@ -53,8 +48,7 @@ theorem fork_output : fork.outputMeasure =
     | succ steps => rw [fork_outputWithin]
   · exact le_iSup_of_le 1 (by rw [fork_outputWithin])
 
-example : fork.expectedReward = (3 / 2 : ℝ) := by
-  unfold Model.expectedReward
+example : ∫ value : ℝ, value ∂fork.outputMeasure = (3 / 2 : ℝ) := by
   rw [fork_output]
   norm_num [integral_smul_measure]
 
@@ -69,8 +63,7 @@ def terminal (reward : Rat) : Model where
 example (steps : Nat) : (terminal (-3)).rewardWithin steps (terminal (-3)).initial = -3 := by
   cases steps <;> rfl
 
-example : (terminal (-3)).expectedReward = (-3 : ℝ) := by
-  unfold Model.expectedReward
+example : ∫ value : ℝ, value ∂(terminal (-3)).outputMeasure = (-3 : ℝ) := by
   rw [Proof.FiniteModel.returned_output (terminal (-3)) (-3) rfl]
   simp
 
@@ -82,8 +75,7 @@ abbrev terminalWithUnusedRow : Model where
   nonnegative := by decide +kernel
   normalized := by decide +kernel
 
-example : terminalWithUnusedRow.expectedReward = 3 := by
-  unfold Model.expectedReward
+example : ∫ value : ℝ, value ∂terminalWithUnusedRow.outputMeasure = 3 := by
   rw [Proof.FiniteModel.returned_output terminalWithUnusedRow 3 rfl]
   simp
 
@@ -95,11 +87,8 @@ abbrev loop : Model where
   nonnegative := by decide +kernel
   normalized := by decide +kernel
 
-def loopCertificate (answer : Rat) : ResultCertificate loop where
-  values := fun _ ↦ answer
-  horizon := 1
-
-example (answer : Rat) : (loopCertificate answer).Equations loop := by
+/-- Every constant satisfies the loop's value equations, although its output law is zero. -/
+example (answer : Rat) : Proof.FiniteModel.ValueEquations loop (fun _ ↦ answer) := by
   intro state
   change answer = ∑ _ : Fin 1, (1 : Rat) * answer
   simp
@@ -114,12 +103,6 @@ theorem loop_survival (steps : Nat) (state : Fin loop.size) :
     change (∑ _ : Fin 1, (1 : Rat)) = 1
     simp
 
-example (certificate : ResultCertificate loop) : ¬ certificate.Valid loop := by
-  rintro ⟨_, bound⟩
-  have h := bound loop.initial
-  rw [loop_survival] at h
-  linarith
-
 theorem loop_outputWithin (steps : Nat) (state : Fin loop.size) :
     loop.outputWithin steps state = 0 := by
   induction steps generalizing state with
@@ -132,8 +115,11 @@ theorem loop_outputWithin (steps : Nat) (state : Fin loop.size) :
 example : loop.outputMeasure = 0 := by
   simp [Model.outputMeasure, loop_outputWithin]
 
-example : loop.expectedReward = 0 := by
-  simp [Model.expectedReward, Model.outputMeasure, loop_outputWithin]
+example : ∫ value : ℝ, value ∂loop.outputMeasure = 0 := by
+  simp [Model.outputMeasure, loop_outputWithin]
+
+example : MeasureTheory.Integrable id loop.outputMeasure :=
+  Proof.FiniteModel.integrable_outputMeasure _
 
 
 end Determinize.Tests.FiniteModel

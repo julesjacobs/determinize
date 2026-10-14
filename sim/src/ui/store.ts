@@ -64,11 +64,11 @@ export type TraceState =
   | { kind: "run"; overview: TraceOverview; page: TracePage }
   | { kind: "unavailable"; message: string };
 
-/** The exact values of the checked program and of its determinization, from their finite models,
- * plain or in the additive mode: each program's exploration so far, or its outcome. */
+/** The exact values of the checked program and of its determinization, from their finite models
+ * in Lean's additive mode, the CLI's default: each program's exploration so far, or its
+ * outcome. */
 export interface ExactValues {
   source: string;
-  additive: boolean;
   programs: { source: ExactState; determinized: ExactState };
   /** Whether both explorations have ended. */
   done: boolean;
@@ -127,10 +127,13 @@ export interface Store {
   /** The step table's run; computing while its worker works on it. */
   trace: ReadonlySignal<TraceState>;
   stats: ReadonlySignal<{ original: Stats; determinized: Stats }>;
-  /** Whether the finite models are explored in Lean's additive mode, the CLI's default. */
-  additive: Signal<boolean>;
   /** The exact values of the checked program; null where Lean rejects it. */
   exact: ReadonlySignal<ExactValues | null>;
+  /** Whether the figure of both programs' chains is open. */
+  chainsOpen: Signal<boolean>;
+  /** The sites of the chain's nodes under the pointer or the focus, as ranges of `source`, the
+   * program that the chain is of; null where no node is. */
+  chainSites: Signal<{ source: string; sites: Span[] } | null>;
   /** Analyzes and runs the editor's text now. */
   commitSource: () => void;
   /** Analyzes the editor's text now and runs it at `seed`. */
@@ -249,7 +252,7 @@ export function createStore(
     /** The runs of the first batch, which shows a program's distributions soon before the rest
      * of its runs arrive. */
     firstBatch?: number;
-    additive?: boolean;
+    chainsOpen?: boolean;
   },
   send: (request: Request) => void,
   sendTrace: (request: TraceRequest | TracePageRequest) => void,
@@ -309,19 +312,18 @@ export function createStore(
       sendTrace({ type: "trace", generation: traceGeneration, source: program, seed: at }),
     );
   });
-  const additive = signal(initial.additive ?? true);
   const exact = signal<ExactValues | null>(null);
+  const chainsOpen = signal(initial.chainsOpen ?? false);
+  const chainSites = signal<{ source: string; sites: Span[] } | null>(null);
   let exactGeneration = 0;
-  // Each analysed program, and each mode, is explored afresh; the worker's earlier answers are
-  // stale.
+  // Each analysed program is explored afresh; the worker's earlier answers are stale.
   effect(() => {
     const result = analysis.value;
     const program = checkedSource.value;
-    const mode = additive.value;
     exactGeneration += 1;
     // The worker drops the exploration of an earlier program also for one that Lean rejects.
     const request = { type: "exact" as const, generation: exactGeneration, source: program };
-    untracked(() => sendExact({ ...request, additive: mode }));
+    untracked(() => sendExact({ ...request, additive: true }));
     if (!result.ok) {
       exact.value = null;
       return;
@@ -329,7 +331,6 @@ export function createStore(
     const exploring: ExactState = { kind: "exploring", discovered: 0 };
     exact.value = {
       source: program,
-      additive: mode,
       programs: { source: exploring, determinized: exploring },
       done: false,
     };
@@ -551,8 +552,9 @@ export function createStore(
     receive,
     showPage,
     receiveTrace,
-    additive,
     exact,
+    chainsOpen,
+    chainSites,
     receiveExact,
   };
 }

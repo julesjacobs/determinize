@@ -35,13 +35,9 @@ in
 reduce step ((0, 0) :: []) times
 \end{lstlisting}
 \end{minipage}
-\par\smallskip
-The source returns a random path; after replacement it returns
-$[(6.25,0),(6,0),(5.5,0),(4,0),(2,0),(1,0),(0,0)]$.
 \caption{A Gaussian random walk from~\cite{vakar2019domain}.
-Both programs return the complete list of sampled time--position pairs.
-\texttt{reduce} takes a parameterized random
-operation, an initial value, and a stream.}
+Determinization replaces each Gaussian step by its mean,
+yielding a path whose position is zero at every requested time.}
 \label{fig:intro-gaussian-walk}
 \Description{The source passes a probabilistic step function to the recursive
 reduce function. At each requested time, the step draws a Gaussian position

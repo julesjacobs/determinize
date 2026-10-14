@@ -1,6 +1,4 @@
 import Determinize.Spec.Expectation
-import Determinize.Spec.FiniteDistribution
-import Determinize.Spec.FiniteDistributionMeasure
 import Determinize.Spec.FiniteModel
 import Determinize.Spec.Frontend
 import Determinize.Spec.Inference
@@ -25,8 +23,6 @@ imports `Determinize.Proof` or the front end.
 - `Determinize.Spec.Traces`: traces and the joint law of trace and output.
 - `Determinize.Spec.Frontend`, `Determinize.Spec.Inference`: the programs of the front end, and
   what affinity inference is measured against.
-- `Determinize.Spec.FiniteDistribution`, `Determinize.Spec.FiniteDistributionMeasure`: finite
-  distributions with rational probabilities, and their measures.
 - `Determinize.Spec.FiniteModel`, `Determinize.Spec.RewardModel`: finite models and reward
   models, which the checked results are about.
 -/

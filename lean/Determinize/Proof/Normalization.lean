@@ -133,6 +133,45 @@ theorem conditional_variance_soundness (program : Expr) (typed : Typed [] progra
   rw [second]
   ring
 
+/-- Both marginals of the joint law have the joint law's total mass, the return probability. -/
+theorem total_masses (program : Expr) :
+    Spec.Traces.traceLaw program Set.univ = Spec.Traces.traceAndOutputLaw program Set.univ ∧
+      Spec.Traces.traceAndOutputLaw program Set.univ =
+        Spec.Paper.bigStepMeasure program Set.univ := by
+  refine ⟨?_, ?_⟩
+  · rw [Spec.Traces.traceLaw, Measure.map_apply measurable_fst MeasurableSet.univ,
+      Set.preimage_univ]
+  · rw [← correspondence program, Measure.map_apply measurable_snd MeasurableSet.univ,
+      Set.preimage_univ]
+
+/-- A nonnegative integral over the output law, taken first over the conditional law given the
+trace and then over the trace law. -/
+theorem lintegral_along_traces (program : Expr) {f : ℝ → ℝ≥0∞} (measurable : Measurable f) :
+    ∫⁻ value, f value ∂Spec.Paper.bigStepMeasure program =
+      ∫⁻ trace, ∫⁻ value, f value ∂(Spec.Traces.traceAndOutputLaw program).condKernel trace
+        ∂Spec.Traces.traceLaw program := by
+  rw [← correspondence program, lintegral_map measurable measurable_snd]
+  conv_lhs => rw [← (Spec.Traces.traceAndOutputLaw program).disintegrate
+    (Spec.Traces.traceAndOutputLaw program).condKernel]
+  rw [Measure.lintegral_compProd (f := fun output ↦ f output.2) (measurable.comp measurable_snd)]
+  rfl
+
+/-- The expectation conditioned on returning, with the positive and negative parts of the output
+each integrated first over the conditional law given the trace and then over the trace law. -/
+theorem returned_expectation_along_traces (program : Expr) :
+    returnedExpectation program =
+      ((returnProbability program).toReal⁻¹ : EReal) *
+        (((∫⁻ trace, posPartIntegral
+              ((Spec.Traces.traceAndOutputLaw program).condKernel trace)
+            ∂Spec.Traces.traceLaw program : ℝ≥0∞) : EReal) -
+          ((∫⁻ trace, negPartIntegral
+              ((Spec.Traces.traceAndOutputLaw program).condKernel trace)
+            ∂Spec.Traces.traceLaw program : ℝ≥0∞) : EReal)) := by
+  unfold returnedExpectation extendedExpectation posPartIntegral negPartIntegral
+  rw [lintegral_along_traces program ENNReal.measurable_ofReal,
+    lintegral_along_traces program (f := fun value ↦ ENNReal.ofReal (-value))
+      (ENNReal.measurable_ofReal.comp measurable_neg)]
+
 end Traces
 
 end Determinize.Proof

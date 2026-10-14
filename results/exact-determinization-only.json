@@ -1,0 +1,106 @@
+{
+  "suite": "exact",
+  "configuration": {
+    "mode": "det-only",
+    "timeout_seconds": 180,
+    "timed_phases": [
+      "parse",
+      "elaborate",
+      "infer",
+      "determinize"
+    ]
+  },
+  "benchmarks": [
+    {
+      "benchmark": "add-uniform-with-counter-large-unbounded_variant.det",
+      "status": "completed",
+      "nanoseconds": 390291,
+      "seconds": 0.000390291
+    },
+    {
+      "benchmark": "addNoise.det",
+      "status": "completed",
+      "nanoseconds": 155333,
+      "seconds": 0.000155333
+    },
+    {
+      "benchmark": "aggregate-rv.det",
+      "status": "completed",
+      "nanoseconds": 101083,
+      "seconds": 0.000101083
+    },
+    {
+      "benchmark": "asym-random-walk_variant.det",
+      "status": "completed",
+      "nanoseconds": 113833,
+      "seconds": 0.000113833
+    },
+    {
+      "benchmark": "dreckon.det",
+      "status": "completed",
+      "nanoseconds": 903375,
+      "seconds": 0.000903375
+    },
+    {
+      "benchmark": "gauss_randwalk_finalPos.det",
+      "status": "completed",
+      "nanoseconds": 249375,
+      "seconds": 0.000249375
+    },
+    {
+      "benchmark": "invpend.det",
+      "status": "completed",
+      "nanoseconds": 332041,
+      "seconds": 0.000332041
+    },
+    {
+      "benchmark": "monte_carlo.det",
+      "status": "completed",
+      "nanoseconds": 168833,
+      "seconds": 0.000168833
+    },
+    {
+      "benchmark": "noisy-iteration.det",
+      "status": "completed",
+      "nanoseconds": 59500,
+      "seconds": 5.95e-05
+    },
+    {
+      "benchmark": "pack.det",
+      "status": "completed",
+      "nanoseconds": 824250,
+      "seconds": 0.00082425
+    },
+    {
+      "benchmark": "retransmit.det",
+      "status": "completed",
+      "nanoseconds": 105292,
+      "seconds": 0.000105292
+    },
+    {
+      "benchmark": "service_policy.det",
+      "status": "completed",
+      "nanoseconds": 275667,
+      "seconds": 0.000275667
+    },
+    {
+      "benchmark": "swap.det",
+      "status": "completed",
+      "nanoseconds": 145875,
+      "seconds": 0.000145875
+    },
+    {
+      "benchmark": "uniform_nested.det",
+      "status": "completed",
+      "nanoseconds": 50792,
+      "seconds": 5.0792e-05
+    },
+    {
+      "benchmark": "workload.det",
+      "status": "completed",
+      "nanoseconds": 150708,
+      "seconds": 0.000150708
+    }
+  ],
+  "failures": 0
+}

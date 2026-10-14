@@ -66,7 +66,7 @@ theorem isValue_list_fold (p : List Rat) :
   induction p <;> simp_all [Expr.isValue]
 
 theorem finiteLawMatches_discrete_sample (affinity : Affinity) (p : List Rat)
-    (d : Spec.Paper.FiniteDistribution) (completed : d.probabilities = p ++ [1 - p.sum]) :
+    (d : Checking.FiniteDistribution) (completed : d.probabilities = p ++ [1 - p.sum]) :
     FiniteLawMatches (.discrete p.length) (.sample affinity) p
       (d.probabilities.zipIdx.map fun (p, i) ↦ (p, (i : Rat))) := by
   refine ⟨?_, ?_, ?_⟩
@@ -76,16 +76,16 @@ theorem finiteLawMatches_discrete_sample (affinity : Affinity) (p : List Rat)
   · simpa [List.map_map, Function.comp_def, List.zipIdx_map_fst] using d.total
   · simp only [primitiveExpr, reduce, isValue_list_fold, ↓reduceIte, realListValue?_fold,
       List.length_map, DiscreteLaws.completed_sample affinity p d completed]
-    simp [Spec.Paper.FiniteDistribution.measure, outcomeMeasure, List.map_map, Function.comp_def]
+    simp [Checking.FiniteDistribution.measure, outcomeMeasure, List.map_map, Function.comp_def]
 
-theorem finiteLawMatches_discrete_mean (p : List Rat) (d : Spec.Paper.FiniteDistribution)
+theorem finiteLawMatches_discrete_mean (p : List Rat) (d : Checking.FiniteDistribution)
     (completed : d.probabilities = p ++ [1 - p.sum]) :
     FiniteLawMatches (.discrete p.length) .mean p [(1, d.mean)] := by
   apply finiteLawMatches_singleton
   simp only [primitiveExpr, reduce, isValue_list_fold, ↓reduceIte, realListValue?_fold,
     List.length_map, DiscreteLaws.completed_mean p d completed]
 
-theorem remainderDistribution_probabilities (p : List Rat) (d : Spec.Paper.FiniteDistribution)
+theorem remainderDistribution_probabilities (p : List Rat) (d : Checking.FiniteDistribution)
     (checked : Checking.remainderDistribution p = .ok d) :
     d.probabilities = p ++ [1 - p.sum] := by
   unfold Checking.remainderDistribution Checking.finiteDistribution at checked

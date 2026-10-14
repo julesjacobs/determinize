@@ -3,123 +3,104 @@
     \footnotesize
     \setlength{\tabcolsep}{2.5pt}
     \renewcommand{\arraystretch}{1.15}
-    \begin{tabular}{@{}l c l c c c@{}}
+    \begin{tabular}{@{}l c l c c@{}}
         \toprule
         Benchmark & Det. & Expectation &
         Sites &
-        POLAR &
-        $\lambda$PSI \\
+        Det. time (ms) \\
         \midrule
         \texttt{add-noise}~\cite{barthe2016private}
             & $\bullet\!\bullet$
             & $\mathbb{E}[\mathit{sum}]$
             & $(0,1) \rightarrow (0,0)$
-            & $\times$
-            & $\times$ \\
+            & 0.151 \\
 
         \texttt{add-uniform-counter}~\cite{beutner2022guaranteed}
             & $\bullet\!\circ$
             & $\mathbb{E}[x]$
             & $(1,2) \rightarrow (1,0)$
-            & $\checkmark$
-            & $\times$ \\
+            & 0.394 \\
 
         \texttt{aggregate-rv}~\cite{chakarov2014expectation}
             & $\bullet\!\bullet$
             & $\mathbb{E}[x_n]$
             & $(0,1) \rightarrow (0,0)$
-            & $\checkmark$
-            & $\checkmark$ \\
+            & 0.097 \\
 
         \texttt{asym-random-walk}~\cite{beutner2022guaranteed}
             & $\bullet\!\circ$
             & $\mathbb{E}[t]$
             & $(1,3) \rightarrow (1,0)$
-            & $\checkmark$
-            & $\times$ \\
+            & 0.121 \\
 
         \texttt{dreckon}~\cite{chakarov2013martingales}
             & $\bullet\!\circ$
             & $\mathbb{E}[x]$
             & $(1,14) \rightarrow (1,0)$
-            & $\checkmark$
-            & $\checkmark$ \\
+            & 0.988 \\
 
         \texttt{gauss-random-walk}~\cite{vakar2019domain}
             & $\bullet\!\bullet$
             & $\mathbb{E}[y_6]$
             & $(0,1) \rightarrow (0,0)$
-            & $\times$
-            & $\times$ \\
+            & 0.279 \\
 
         \texttt{invpend}~\cite{chakarov2013martingales}
             & $\bullet\!\bullet$
             & $\mathbb{E}[\mathit{pAng}_n]$
             & $(0,6) \rightarrow (0,0)$
-            & $\checkmark$
-            & $\checkmark$ \\
+            & 0.337 \\
 
         \texttt{monte-carlo}~\cite{sato2019formal}
             & $\bullet\!\bullet$
             & $\mathbb{E}[\mathit{estimate}]$
             & $(0,1) \rightarrow (0,0)$
-            & $\times$
-            & $\checkmark$ \\
+            & 0.159 \\
 
         \texttt{noisy-iteration}
             & $\bullet\!\circ$
             & $\mathbb{E}[x]$
             & $(1,1) \rightarrow (1,0)$
-            & $\checkmark$
-            & $\times$ \\
+            & 0.060 \\
 
         \texttt{pack}~\cite{chakarov2013martingales}
             & $\bullet\!\circ$
             & $\mathbb{E}[\mathit{weight}_n]$
             & $(1,3) \rightarrow (1,0)$
-            & $\checkmark$
-            & $\times$ \\
+            & 0.924 \\
 
         \texttt{retransmit}
             & $\bullet\!\circ$
             & $\mathbb{E}[\mathit{ret}]$
-            & $(4,2) \rightarrow (4,0)$
-            & $\times$
-            & $\times$ \\
+            & $(4,3) \rightarrow (4,0)$
+            & 0.110 \\
 
         \texttt{service-policy}
             & $\bullet\!\circ$
             & $\mathbb{E}[\mathit{ret}_n]$
             & $(4,4) \rightarrow (4,0)$
-            & $\times$
-            & $\checkmark$ \\
+            & 0.274 \\
 
         \texttt{swap}~\cite{chakarov2014expectation}
             & $\bullet\!\bullet$
             & $\mathbb{E}[x_n]$
             & $(2,2) \rightarrow (0,0)$
-            & $\checkmark$
-            & $\checkmark$ \\
+            & 0.169 \\
 
         \texttt{uniform-nested}~\cite{gehr2016psi}
             & $\bullet\!\bullet$
             & $\mathbb{E}[d]$
             & $(0,4) \rightarrow (0,0)$
-            & $\times$
-            & $\checkmark$ \\
+            & 0.047 \\
 
         \texttt{workload}
             & $\bullet\!\circ$
             & $\mathbb{E}[\mathit{ret}_n]$
             & $(1,2) \rightarrow (1,0)$
-            & $\times$
-            & $\times$ \\
+            & 0.142 \\
         \bottomrule
     \end{tabular}
 
-    \caption{Determinization on 15 benchmarks.
-    In the determinization column, $\bullet\!\bullet$ denotes full
-    determinization and $\bullet\!\circ$ denotes partial determinization. Each pair $(d,c)$ counts static
-    discrete and continuous sampling sites. In the last two columns, $\checkmark$ denotes language support, and $\times$ denotes a lack of support by the language. Several programs are parameterized by $n$: their expectations vary with each iteration of the loop.}
+    \caption{ Determinization on 15 benchmarks. In the determinization column, $\bullet\!\bullet$ denotes full determinization and $\bullet\!\circ$ denotes partial. Each pair $(d,c)$ counts static discrete and continuous sampling sites. Timings measure determinization only, excluding finite-state model construction and Storm model checking. Several programs are parameterized by $n$, which affects their expectations and generated model sizes.}
     \label{tab:finite-after-determinization}
 \end{table}

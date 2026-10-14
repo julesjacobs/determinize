@@ -1,5 +1,4 @@
 import Determinize.Spec.Types
-import Determinize.Spec.FiniteDistributionMeasure
 import Mathlib.Probability.Distributions.Beta
 import Mathlib.Probability.Distributions.Exponential
 import Mathlib.Probability.Distributions.Gaussian.Real

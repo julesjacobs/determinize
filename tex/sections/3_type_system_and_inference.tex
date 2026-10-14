@@ -10,7 +10,8 @@ We therefore introduce a type system that checks whether sampled values are used
 The judgment $\Gamma\vdash e:\tau$ assigns expression $e$ type
 $\tau$ under context $\Gamma$. Alongside standard types for
 functions, pairs, sums, and lists, real types carry an annotation
-$m\in\{\G,\E\}$:\kb{why does the typing grammar not include M?}
+$m\in\{\G,\E\}$, distinguishing values that remain unchanged under
+determinization from those that may change:
 \begin{itemize}
     \item $\tyR\G$ describes real values that determinization leaves
     unchanged.
@@ -30,7 +31,7 @@ are replaced by their means. The rules enforce this as follows:
 \begin{itemize}
     \item \textbf{Addition and negation.}
     Both permit operands of type $\tyR\E$ because expectation is
-    linear, even for dependent random variables.\kb{what do we mean by dependent random variable here?}
+    linear, even when the operands depend on the same random samples.
 
     \item \textbf{Multiplication and division.}
     Multiplication requires a left operand of type $\tyR\G$,
@@ -58,10 +59,10 @@ are replaced by their means. The rules enforce this as follows:
     parameters or does not depend on them.
 \end{itemize}
 
-Finally, the distribution rules impose $\alpha\in\{m,\M\}$:\kb{M is not in the typing grammar}
+Finally, the distribution rules impose $\alpha\in\{\G,\E,\M\}$:
 $\G$-mode sampling produces values of type $\tyR\G$,
 $\E$-mode sampling produces values of type $\tyR\E$,
-and $\M$-mode mean evaluation may produce either.
+and $\M$-mode mean evaluation may produce either $\tyR\G$ or $\tyR\E$.
 In particular, $\G$-mode distributions require
 parameters of type $\tyR\G$, preserving their sampling
 behavior under determinization.
@@ -69,9 +70,7 @@ behavior under determinization.
 \subsection{Type Inference}
 \label{sec:type-inference}
 
-The typing rules in \cref{fig:typing} check whether a given choice of sampling modes is valid. We now describe how to \emph{infer} these modes,
-together with the types of expressions. Our goal is to assign mode $\E$
-to as many sampling sites as possible, subject to the typing rules.
+The typing rules in \cref{fig:typing} check whether the distribution modes and type annotations assigned to a program are valid. The inference procedure determines these assignments, together with the types of expressions, subject to the typing rules. Our goal is to assign mode $\E$ to as many sampling sites as possible, subject to the typing rules.
 
 \subsubsection{Constraint Generation}
 

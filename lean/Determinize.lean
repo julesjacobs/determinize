@@ -29,7 +29,7 @@ what to review and how the development differs from the paper.
   (`Determinize.Frontend.Infer`, the subject of `Determinize.Theorems.inference_correctness`).
 - `Determinize.Finite` and `Determinize.Checking`: exact exploration of finite-state programs,
   and the checks that turn an explored model and candidate results into a theorem about the
-  program, checked by Lean's kernel (`Determinize.Checking.Result`).
+  program, checked by Lean's kernel (`Determinize.Checking.Statistics`).
 
 The default build also checks the coverage examples in `Determinize.Proof.Examples`. The API
 documentation covers every module except the command-line entry point `Main`, the numerical

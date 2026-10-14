@@ -1,0 +1,3 @@
+let express = flip(0.3) in
+let delay = discrete(0.25, 0.5, *) in
+if express then delay else 4 * delay
