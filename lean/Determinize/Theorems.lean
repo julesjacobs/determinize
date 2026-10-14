@@ -90,6 +90,19 @@ theorem tracewise_soundness (program : Expr)
         Measure.dirac (∫ value : ℝ, value ∂(traceAndOutputLaw program).condKernel trace) :=
   Proof.Traces.tracewise_soundness program typed safe
 
+/-- Expectation along traces. The expectation conditioned on returning is the integral over the
+trace law of the conditional expectation of the output's positive part given the trace, minus
+that of its negative part, divided by the return probability. It is meaningful when the return
+probability is positive and the expectation conditioned on returning is well-defined. -/
+theorem returned_expectation_along_traces (program : Expr) :
+    returnedExpectation program =
+      ((returnProbability program).toReal⁻¹ : EReal) *
+        (((∫⁻ trace, posPartIntegral ((traceAndOutputLaw program).condKernel trace)
+            ∂traceLaw program : ℝ≥0∞) : EReal) -
+          ((∫⁻ trace, negPartIntegral ((traceAndOutputLaw program).condKernel trace)
+            ∂traceLaw program : ℝ≥0∞) : EReal)) :=
+  Proof.Traces.returned_expectation_along_traces program
+
 /-! ## Global soundness (paper, Section 4.1 and the appendix) -/
 
 /-- Output-mass preservation. The source and the target return with the same probability. -/
