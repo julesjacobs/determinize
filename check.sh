@@ -13,6 +13,9 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=tools/dev-shell.sh
 source "$ROOT/tools/dev-shell.sh"
 cd "$ROOT"
+# A Nix dev shell exports $out. Here it holds the output of a tool, which must not reach the
+# environment of the tools started after it: one longer than 128 KiB makes every exec fail.
+export -n out
 
 areas=()
 quiet=0
