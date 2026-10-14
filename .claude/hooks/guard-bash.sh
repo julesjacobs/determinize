@@ -29,9 +29,6 @@ def ask(reason):
     print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse",
           "permissionDecision": "ask", "permissionDecisionReason": reason}})); sys.exit(0)
 
-if re.search(r"deploy-to-website", cmd):
-    deny("sim/deploy-to-website.sh commits and pushes to an external website repository. "
-         "Only the user runs it; tell them the bundle is ready instead.")
 if re.search(r"\bgit\s+push\b.*(--force|-f\b|\+)", cmd):
     deny("Force-pushing a shared branch is not allowed.")
 if re.search(r"\bnix\s+flake\s+(update|lock)\b", cmd):

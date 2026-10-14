@@ -163,8 +163,9 @@ def pull_request_starts(path):
 
 @cache
 def tracked():
-    return frozenset(subprocess.run(["git", "ls-files"], cwd=ROOT, text=True, capture_output=True,
-                                    check=True).stdout.splitlines())
+    return frozenset(path for path in subprocess.run(
+        ["git", "ls-files"], cwd=ROOT, text=True, capture_output=True, check=True
+    ).stdout.splitlines() if (ROOT / path).is_file())
 
 
 def named(source, reference):
@@ -259,7 +260,7 @@ GUARDED = {
              (["flake-modules/devshells/lean.nix"], nix_paths)],
     "sim": [(["sim/test/**", "sim/build.ts"], script_paths), (["sim/src/**"], import_paths),
             (["sim/*.css"], css_paths), (["flake-modules/devshells/sim.nix"], nix_paths)],
-    "tex": [(["tex/**/*.tex", "!tex/archive/**"], tex_paths),
+    "tex": [(["tex/**/*.tex"], tex_paths),
             (["flake-modules/devshells/tex.nix"], nix_paths)],
     # check.sh site builds the simulator and assembles the site with site/assemble.sh.
     "site": [(["site/**/*.mts", "sim/e2e/**", "sim/playwright.config.ts", "sim/build.ts"], script_paths),
@@ -283,8 +284,8 @@ PULL_REQUEST_STARTS = {
     ".claude/settings.json": set(),
     "lean/README.md": set(),
     "tests/README.md": set(),
-    "tex/reviews/section-6.md": set(),
-    "tex/archive/1_introduction.tex": set(),
+    "OPEN_ISSUES.md": set(),
+    "tex/sections/drafting.md": set(),
     "benchmarks/approx/branching.det": set(),
     "flake-modules/devshells/all.nix": set(),
     "lean/Determinize/Theorems.lean": {"lean", "site"},

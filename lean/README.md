@@ -39,9 +39,9 @@ The default build checks mean sites with affine-dependent operands, invalid mean
 ## Deviations from the paper
 
 These notes compare the Lean development with the paper in `tex/` as of `e87171c`, whose Lean
-links are pinned to `25d2cb6`. The previous draft in `tex/archive/` is not compared.
+links are pinned to `25d2cb6`. Later changes require rechecking the comparison.
 [PAPER_DEVIATIONS.md](PAPER_DEVIATIONS.md) summarizes them in plain language and marks which
-are open.
+are open. [Open issues](../OPEN_ISSUES.md) records remaining paper work and deferred implementation.
 
 - **Names.** The paper's set of modes `𝒜 = {G, E, M}` is `DistributionAction`: `sample
   affinity` for G and E, `mean` for M. Result modes are affinities: `real^m` is `Ty.float m`,

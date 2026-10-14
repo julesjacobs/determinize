@@ -27,7 +27,6 @@ on:
       - sim/**
       - site/**
       - tex/**
-      - "!tex/archive/**"
       - "!tex/**/*.md"
       - results/**
       - flake.nix

@@ -4,9 +4,9 @@ A plain-language summary of where the paper in `tex/` and the Lean development i
 differ. The detailed list, with the Lean names for every paper notation, is the
 section [Deviations from the paper](README.md#deviations-from-the-paper) of the README.
 
-The first part lists the differences that are still open: each needs a decision about whether
-the paper or the repository changes. The second part lists the differences that are accepted
-as they are.
+This comparison was recorded for the revisions named in the README. Later paper and
+implementation changes require rechecking these findings. Open decisions are retained below;
+accepted differences follow. [Open issues](../OPEN_ISSUES.md) lists the remaining paper work.
 
 ## Open
 
@@ -20,8 +20,6 @@ as they are.
   benchmark `benchmarks/exact/gauss_randwalk_finalPos.det` does; or add a sentence saying that
   the guarantees apply to real-valued results.
 
-[post on slack]
-
 ### 2. The appendix section on the trace-indexed kernels is missing
 
 - **Paper:** Section 5 says the appendix gives the definitions of the kernels K_{n,s} and K_e,
@@ -33,7 +31,8 @@ as they are.
     mass at 0 where that sum does not have total mass 1.
   - The compatibility lemma is `outputGivenTrace_eq_outputGivenTraceAt`.
  
-[ask katherine -> either delete that claim and refer to lean, or add it to the appendix]
+Either supply the promised appendix derivation or replace the promise with precise Lean
+references.
 
 ### 3. The examples use syntax the grammar lacks
 
@@ -50,7 +49,8 @@ as they are.
 - **Options:** one sentence in Section 2 saying that the examples use standard syntactic sugar,
   or extend the grammar.
 
-[we should decide whether we have 1 math syntax and 1 monospace program syntax, or make these the same. having them different is fairly common and ok.]
+Decide whether mathematical syntax and concrete program syntax should coincide, or explain
+their relationship explicitly.
 
 ### 4. The recorded benchmark run has no checked certificates
 
@@ -60,8 +60,6 @@ as they are.
   "generated, unchecked", and the `dreckon` export hit the 180-second timeout.
 - **Options:** rerun with checking enabled and a longer timeout, or soften the sentence.
 
-[yes]
-
 ### 5. The review version links to an outdated snapshot
 
 - **Paper:** the anonymous review build links to the apndx.org snapshot `sca95063a7c` instead of
@@ -69,7 +67,8 @@ as they are.
 - **Repository:** that snapshot predates verified inference and uses old theorem names, so the
   review build's Lean links are wrong until it is regenerated from the current development.
 
-[we should decide whether we want the submitted version to link to that site. safer for double blind is to submit a zip file with the lean+sim, then in the paper a mode where lean links instead link to a new appendix section with a list of references into that zip file (filename and line number or range)]
+Choose between an updated anonymous website and an anonymous supplementary ZIP containing
+Lean and the simulator. For a ZIP, Lean references could name files and lines in an appendix.
 
 ## Accepted
 
@@ -89,8 +88,6 @@ as they are.
   - The appendix's constraint rules cover mean sites (M), but Lean's inference never sees mean
     sites, because its input is a program before determinization.
 
-[doesn't matter]
-
 ### 7. Table 1's determinization times do not match the recorded run
 
 - **Paper:** Table 1 gives per-benchmark determinization times.
@@ -100,7 +97,8 @@ as they are.
 - **Options:** take the numbers from the committed file, or rerun
   `tools/bench.py --exact --det-only` (a minute or two) and commit that run.
 
-[this seems fine, no action -> this will go through artifact review anyway and they'll get slightly different numbers again]
+The timing variation is accepted; reproductions may differ. Numerical results and certificate
+status still need reproducible records.
 
 ### 8. Expectations of unnormalized measures
 

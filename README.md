@@ -13,7 +13,7 @@ formalization, exact expected-reward certificates, and a browser simulator.
 - `tests/`, `examples/`: shared `.det` programs and analytical expectations.
 - `tools/storm.py`: exact Storm comparison against independently checked certificates.
 - `sim/`: browser visualization of ordinary, symbolic, and determinized execution.
-- `tex/`: new paper; `tex/archive/` preserves the previous draft.
+- `tex/`: paper sources and figures.
 
 The theorem statements and the definitions they use can be read as
 [API documentation](https://julesjacobs.github.io/determinize/docs/Determinize/Theorems.html),
@@ -183,16 +183,10 @@ to the documentation of the names that its modules outside `Proof/` declare; `ch
 the quotes with the page. `node site/social/render.mts` renders the link-preview
 image `site/social.png` from `site/social/card.html`.
 
-The new paper starts at `tex/main.tex`, with one file per section in `tex/sections/`,
-formal figures in `tex/figures/`, and supporting material in `tex/appendix/`, following
-[the paper structure](PAPER_STRUCTURE.md) and [figure plan](tex/FIGURE_PLAN.md).
-Add text, notation, and references as they are reviewed; the previous draft is
-reference material in `tex/archive/`.
-To build that archived draft independently:
-
-```sh
-(cd tex/archive && latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex)
-```
+The paper starts at `tex/main.tex`, with one file per section in `tex/sections/`,
+figures in `tex/figures/`, and the appendix in `tex/sections/9_appendix.tex`.
+[Open issues](OPEN_ISSUES.md) records unresolved paper work and deferred implementation.
+[Paper deviations](lean/PAPER_DEVIATIONS.md) records the paper–Lean comparison.
 
 After `npm run build` in `sim/`, open `sim/dist/index.html`, or
 [its published copy](https://julesjacobs.github.io/determinize/sim/), to follow a run of a

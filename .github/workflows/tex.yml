@@ -11,7 +11,6 @@ on:
     # The files that the build reads.
     paths:
       - tex/**
-      - "!tex/archive/**"
       - "!tex/**/*.md"
       - results/**
       - flake.nix
