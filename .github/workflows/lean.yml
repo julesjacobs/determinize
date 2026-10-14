@@ -93,15 +93,19 @@ jobs:
           key: lean-sources-${{ hashFiles('lean/lean-toolchain', 'lean/lake-manifest.json') }}
       - name: Fetch the Mathlib cache
         run: lake exe cache get
-      # Linking the executables needs the object files of every module they import. Mathlib's cache
-      # does not provide them, and compiling them takes about 11 minutes, so they are kept in the
-      # Actions cache (about 250 MB) once per set of pins.
+      # Linking the executables needs the object files of every module they import, and the
+      # library's precompiled modules (precompileModules in lakefile.toml) load the shared libraries
+      # of the dependencies, which take the object files of all their modules, every one of
+      # Mathlib's included. Mathlib's cache does not provide them, and compiling them takes about 20
+      # minutes, so they are kept in the Actions cache (about 420 MB) once per set of pins and
+      # lakefile.toml, which says what is compiled. pages.yml's documentation job restores them too.
+      # A saved entry is never updated, so a change to what the build needs has to change the key.
       - name: Restore the object files of the dependencies
         id: objects
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: lean/.lake/packages/*/.lake/build/ir/**/*.c.o*
-          key: lean-objects-${{ hashFiles('lean/lean-toolchain', 'lean/lake-manifest.json') }}
+          key: lean-objects-${{ hashFiles('lean/lean-toolchain', 'lean/lake-manifest.json', 'lean/lakefile.toml') }}
       # Fails on any warning (a `sorry` included), on a theorem using a non-standard axiom, and on
       # a statement in Theorems.lean relying on Proof for anything but proofs.
       - name: Build
