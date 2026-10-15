@@ -1,8 +1,9 @@
 % !TeX root = ../main.tex
 \begin{figure}[htb]
 \centering
+\scalebox{0.8}{%
 \begin{tikzpicture}[
-  x=\textwidth, y=1cm,
+  x=\textwidth, y=.9cm,
   font=\small,
   stage/.style={draw=black!45, fill=black!3, rounded corners=2pt,
     text width=.18\textwidth, minimum height=12mm, align=center, inner sep=4pt},
@@ -78,6 +79,7 @@
   \end{tikzpicture}
 };
 \end{tikzpicture}
+}
 \caption{Implementation architecture. Box styles say how each stage is justified; Lean marks link to the code.}
 \label{fig:architecture}
 \Description{Compilation parses and elaborates the program without verification,
