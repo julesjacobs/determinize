@@ -13,6 +13,7 @@ import subprocess
 import tempfile
 from types import SimpleNamespace
 import unittest
+from xml.etree import ElementTree
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOWS = ROOT / ".github/workflows"
@@ -440,7 +441,8 @@ status = SimpleNamespace(**runpy.run_path(ROOT / "site/status.py"))
 # The hashes of the inputs of the published site, by the outputs of pages.yml's `changes` job, and
 # the branch status that records them.
 PUBLISHED = {"docs": "d", "sim": "s", "tex": "t", "site": "p", "artifact": "a"}
-BEFORE = {"deployed.json": {"commit": "before", "inputs": PUBLISHED}}
+DEPLOYED = {"commit": "before", "inputs": PUBLISHED}
+BEFORE = {"deployed.json": json.dumps(DEPLOYED, indent=2) + "\n"}
 
 
 def pages_jobs():
@@ -472,17 +474,20 @@ def branch(**messages):
     others up to date."""
     files = dict(BEFORE)
     for chip, (label, _, _) in status.CHIPS.items():
-        message = messages.get(chip, "up to date")
-        files[f"{chip}.json"] = {"schemaVersion": 1, "label": label, "message": message,
-                                 "color": status.STATES[message]}
+        files[f"{chip}.svg"] = status.chip(label, messages.get(chip, "up to date"))
     return files
+
+
+def message(svg):
+    """The state that a chip shows, by its title."""
+    return re.search(r"<title>[^<]*: ([^<]*)</title>", svg)[1]
 
 
 def chips(needs, previous=BEFORE, building=False):
     """The messages of the chips, by name, and the record of the published site."""
     files = status.chips(needs, previous, "now", building)
-    record = files.pop("deployed.json")
-    return {name.removesuffix(".json"): chip["message"] for name, chip in files.items()}, record
+    record = json.loads(files.pop("deployed.json"))
+    return {name.removesuffix(".svg"): message(svg) for name, svg in files.items()}, record
 
 
 class StatusTests(unittest.TestCase):
@@ -496,7 +501,7 @@ class StatusTests(unittest.TestCase):
         messages, record = chips(run(failed={"paper"}, changed={"tex", "sim"}))
         self.assertEqual(messages, {"site": "up to date", "sim": "outdated", "docs": "up to date",
                                     "paper": "failing", "artifact": "up to date"})
-        self.assertEqual(record, BEFORE["deployed.json"])
+        self.assertEqual(record, DEPLOYED)
 
     def test_a_failing_part_fails_although_it_did_not_change(self):
         messages, _ = chips(run(failed={"sim"}))
@@ -544,7 +549,7 @@ class StatusTests(unittest.TestCase):
                                  building=True)
         self.assertEqual(messages, {"site": "up to date", "sim": "building", "docs": "up to date",
                                     "paper": "building", "artifact": "up to date"})
-        self.assertEqual(record, BEFORE["deployed.json"])
+        self.assertEqual(record, DEPLOYED)
         messages, _ = chips(run(changed={"docs"}, job="building"), branch(), building=True)
         self.assertEqual({chip for chip, message in messages.items() if message == "building"},
                          {"docs", "artifact"})
@@ -559,17 +564,25 @@ class StatusTests(unittest.TestCase):
         self.assertEqual(set(messages.values()), {"building"})
         self.assertEqual(record, {"commit": None, "inputs": {}})
 
+    # The chips of an earlier version of status.py were renamed.
     def test_the_branch_holds_the_record_and_the_chips(self):
-        previous = {**branch(), "renamed.json": {}}
+        previous = {**branch(), "sim.json": "{}\n"}
         for building, needs in ((True, run(changed={"sim"}, job="building")), (False, run())):
             with self.subTest(building=building):
                 files = status.chips(needs, previous, "now", building)
-                self.assertEqual(set(files), {"deployed.json", *(f"{chip}.json" for chip in status.CHIPS)})
-                for chip, (label, _, _) in status.CHIPS.items():
-                    badge = files[f"{chip}.json"]
-                    self.assertEqual(set(badge), {"schemaVersion", "label", "message", "color"})
-                    self.assertEqual((badge["schemaVersion"], badge["label"]), (1, label))
-                    self.assertEqual(badge["color"], status.STATES[badge["message"]])
+                self.assertEqual(set(files), {"deployed.json", *(f"{chip}.svg" for chip in status.CHIPS)})
+
+    def test_a_chip_is_a_disk_in_the_colour_of_its_state_or_a_ring_when_building(self):
+        svg = "{http://www.w3.org/2000/svg}"
+        for state, colour in status.STATES.items():
+            with self.subTest(state=state):
+                root = ElementTree.fromstring(status.chip("Paper (PDF)", state))
+                self.assertEqual((root.tag, root.get("width"), root.get("height")), (f"{svg}svg", "12", "12"))
+                self.assertEqual(root.find(f"{svg}title").text, f"Paper (PDF): {state}")
+                self.assertEqual(root.get("aria-label"), f"Paper (PDF): {state}")
+                circle = root.find(f"{svg}circle")
+                self.assertEqual((circle.get("fill"), circle.get("stroke")),
+                                 ("none", colour) if state == "building" else (colour, None))
 
     # The commit of `building` is replaced by that of `status`, and that by the next run's.
     def test_the_branch_holds_one_commit_on_origin(self):
@@ -592,11 +605,11 @@ class StatusTests(unittest.TestCase):
                                         env={**env, "NEEDS": json.dumps(needs), "GITHUB_SHA": commit})
                 self.assertEqual(result.returncode, 0, result.stderr)
                 if building and commit == "two":
-                    self.assertEqual(json.loads(git("show", "status:paper.json"))["message"], "building")
+                    self.assertEqual(message(git("show", "status:paper.svg")), "building")
             self.assertEqual(git("rev-list", "--count", "status").strip(), "1")
             self.assertEqual(git("log", "-1", "--format=%s", "status").strip(), "Status after two")
-            self.assertEqual(json.loads(git("show", "status:paper.json"))["message"], "failing")
-            self.assertEqual(json.loads(git("show", "status:sim.json"))["message"], "up to date")
+            self.assertEqual(message(git("show", "status:paper.svg")), "failing")
+            self.assertEqual(message(git("show", "status:sim.svg")), "up to date")
             self.assertEqual(json.loads(git("show", "status:deployed.json"))["commit"], "one")
 
     # Every job but `tested`, which only records that the Lean tests passed, builds, checks or
