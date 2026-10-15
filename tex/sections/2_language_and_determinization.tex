@@ -5,9 +5,35 @@
 This section introduces the probabilistic language on which our determinization transformation operates. We present its syntax and operational semantics, define determinization as a source-to-source transformation over annotated expressions, and formalize the distribution of successfully returned values through an output measure.
 
 \paragraph{Syntax.}
-\Cref{fig:syntax} presents the syntax of our language, a call-by-value functional language with recursion, pairs, sums, lists, and probability distributions. The expression $\kw{reject}$ represents a failed execution path used to encode conditioning on observations. Each distribution expression carries a \emph{distribution mode} $\G$, $\E$, or $\M$ that guides determinization, as illustrated by the examples in~\Cref{sec:introduction}. The modes $\G$ and $\E$ mark sampling sites to preserve or replace by mean evaluations, respectively. Determinization changes $\E$ to $\M$, which evaluates the distribution expression to its mean. We present these modes explicitly in the syntax to define the transformation precisely, but users may omit them: the inference procedure in \cref{sec:type-system} assigns these modes subject to the typing rules, which check that the replacements are justified by how sampled values are subsequently used.
+\Cref{fig:syntax} presents the syntax of our language, a call-by-value functional language with 
 
-\input{figures/syntax}
+\begin{wrapfigure}{r}{0.5\linewidth}
+%\begin{figure}[htbp]
+\vspace{-1em}
+\centering\small
+$\begin{aligned}
+  e &::= x\mid r\;(r\in\Real)\mid ()\mid\kw{true}\mid\kw{false}\mid\kw{reject}\\
+   &\quad\mid \lambda x.e\mid\recfn f x e\mid e\,e
+       \mid\letin x e e\\
+   &\quad\mid \ite e e e\mid -e\mid e+e\mid e\cdot e\mid e/e\mid e<e\\
+   &\quad\mid \langle e,e\rangle\mid\kw{fst}\,e\mid\kw{snd}\,e\\
+   &\quad\mid \kw{inl}\,e\mid\kw{inr}\,e\mid\scase e x{e_1}y{e_2}\\
+   &\quad\mid []\mid e::e\mid\lcase e{e_0}x{xs}{e_1}\\
+   &\quad\mid \draw{uniform}\alpha{e,e}\mid\draw{gaussian}\alpha{e,e}\\
+   &\quad\mid \draw{poisson}\alpha e\mid\draw{exponential}\alpha e\\
+   &\quad\mid \draw{bernoulli}\alpha e\mid\draw{discrete}\alpha e\\
+   &\quad\mid \draw{beta}\alpha{e,e}\mid\draw{gamma}\alpha{e,e}.\\[1pt]
+  \alpha &::= \G\mid\E\mid\M\\[-1em]
+\end{aligned}$
+\caption{\footnotesize Language grammar\leanref{expressions}. $\G$ and $\E$ denote sampling; $\M$ denotes mean evaluation.}
+\label{fig:syntax}
+\vspace{-2em}
+%\Description{Expressions include literals, functions and recursion, arithmetic, conditionals, products, sums, lists, rejection, and eight distribution primitives. The G, E, and M annotations are listed below the expressions.}
+%\end{figure}
+\end{wrapfigure}
+
+\noindent recursion, pairs, sums, lists, and probability distributions. The expression $\kw{reject}$ represents a failed execution path used to encode conditioning on observations. Each distribution expression carries a \emph{distribution mode} $\G$, $\E$, or $\M$ that guides determinization, as illustrated by the examples in~\Cref{sec:introduction}. The modes $\G$ and $\E$ mark sampling sites to preserve or replace by mean evaluations, respectively. Determinization changes $\E$ to $\M$, which evaluates the distribution expression to its mean. We present these modes explicitly in the syntax to define the transformation precisely, but users may omit them: the inference procedure in \cref{sec:type-system} assigns these modes subject to the typing rules, which check that the replacements are justified by how sampled values are subsequently used.
+
 
 \paragraph{Operational semantics.}
 \Cref{fig:semantics} gives the call-by-value operational semantics.
@@ -18,13 +44,13 @@ The deterministic reduction rules are shown in \cref{fig:semantics}(\subref{fig:
 routine arithmetic and comparison rules here. We model the expression $\kw{reject}$ as divergence through the infinite reduction sequence $\kw{reject}\rightsquigarrow\kw{reject}$, and thus our semantics does not distinguish rejection from nontermination. Distribution expressions in
 mode $\M$, introduced by determinization, also reduce deterministically
 to their means:
-\[
+\(
   D^\M(\bar v)
   \rightsquigarrow
   \operatorname{Mean}_D(\bar v)
   \qquad
   \text{when }\operatorname{Domain}_D(\bar v),
-\]
+\) 
 where the primitive distribution table in
 \cref{fig:semantics}(\subref{fig:semantics-distributions}) specifies
 $\operatorname{Domain}_D$ and $\operatorname{Mean}_D$ for each supported
