@@ -9,7 +9,9 @@
 # assembled site. The landing page, the simulator, the paper and the archive are built every time;
 # the archive after the documentation, which it includes. lean.yml is skipped when its
 # inputs passed it before on main, and the documentation, built while lean.yml runs, is restored
-# when the same sources were rendered before. A manual run redoes both.
+# when the same sources were rendered before. A manual run redoes both. For the chips at the top
+# of the README, building marks the parts that changed as building first, and last, whether or not
+# the site was published, status records whether each part is up to date, outdated or failing.
 name: Pages
 
 on:
@@ -67,19 +69,31 @@ jobs:
     outputs:
       lean: ${{ steps.inputs.outputs.lean }}
       docs: ${{ steps.inputs.outputs.docs }}
+      sim: ${{ steps.inputs.outputs.sim }}
+      tex: ${{ steps.inputs.outputs.tex }}
+      site: ${{ steps.inputs.outputs.site }}
+      artifact: ${{ steps.inputs.outputs.artifact }}
       tested: ${{ steps.tested.outputs.cache-hit == 'true' }}
       rendered: ${{ steps.rendered.outputs.cache-matched-key != '' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      # lean: the files of lean.yml's pull-request filter, which tests/test_workflows.py checks.
+      # lean, sim, tex, site, artifact: the files of each workflow's pull-request filter, which
+      # tests/test_workflows.py checks. status compares all but lean with those of the published
+      # site.
       # docs: the sources and pins that the documentation is built from, and this workflow.
       - name: Hash the inputs
         id: inputs
         run: |
-          echo "lean=${{ hashFiles('lean/**', '!lean/**/*.md', 'tests/**', '!tests/**/*.md', 'examples/**', 'run.sh', 'tools/bench.py', 'tools/benchmark_estimator_variance.py', 'tools/storm*.py', 'tools/storm-requirements.txt', 'flake.nix', 'flake.lock', 'flake-modules/systems.nix', 'flake-modules/devshells/lean.nix', '.github/workflows/**') }}" >> "$GITHUB_OUTPUT"
-          echo "docs=${{ hashFiles('lean/Determinize.lean', 'lean/Determinize/**/*.lean', 'lean/lakefile.toml', 'lean/lake-manifest.json', 'lean/lean-toolchain', 'lean/docbuild/**', 'flake.lock', '.github/workflows/pages.yml') }}" >> "$GITHUB_OUTPUT"
+          {
+            echo "lean=${{ hashFiles('lean/**', '!lean/**/*.md', 'tests/**', '!tests/**/*.md', 'examples/**', 'run.sh', 'tools/bench.py', 'tools/benchmark_estimator_variance.py', 'tools/storm*.py', 'tools/storm-requirements.txt', 'site/status.py', 'flake.nix', 'flake.lock', 'flake-modules/systems.nix', 'flake-modules/devshells/lean.nix', '.github/workflows/**') }}"
+            echo "docs=${{ hashFiles('lean/Determinize.lean', 'lean/Determinize/**/*.lean', 'lean/lakefile.toml', 'lean/lake-manifest.json', 'lean/lean-toolchain', 'lean/docbuild/**', 'flake.lock', '.github/workflows/pages.yml') }}"
+            echo "sim=${{ hashFiles('sim/**', 'tests/**', '!tests/**/*.md', 'examples/**', 'site/tokens.css', 'site/fonts/**', 'flake.nix', 'flake.lock', 'flake-modules/systems.nix', 'flake-modules/devshells/sim.nix', '.github/workflows/sim.yml') }}"
+            echo "tex=${{ hashFiles('tex/**', '!tex/**/*.md', 'lean/Determinize/**/*.lean', 'results/**', 'flake.nix', 'flake.lock', 'flake-modules/systems.nix', 'flake-modules/devshells/tex.nix', '.github/workflows/tex.yml') }}"
+            echo "site=${{ hashFiles('site/**', '!site/status.py', 'sim/**', 'examples/**', 'lean/Determinize.lean', 'lean/Determinize/**/*.lean', '!lean/Determinize/Proof/**', 'flake.nix', 'flake.lock', 'flake-modules/systems.nix', 'flake-modules/devshells/sim.nix', 'flake-modules/devshells/site.nix', '.github/workflows/site.yml') }}"
+            echo "artifact=${{ hashFiles('artifact/**', 'lean/**', '!lean/**/*.md', 'lean/README.md', 'lean/finite-model-contract.md', 'tests/**', '!tests/**/*.md', 'tests/README.md', '!tests/test_workflows.py', 'examples/**', 'benchmarks/**', 'tools/**', '!tools/dev-shell.sh', '!tools/paper-plots.py', 'results/**', 'run.sh', 'test.sh', 'sim/**', 'site/index.html', 'site/*.css', 'site/fonts/**', 'flake.nix', 'flake.lock', 'flake-modules/systems.nix', 'flake-modules/devshells/lean.nix', 'flake-modules/devshells/sim.nix', 'flake-modules/devshells/site.nix', '.github/workflows/artifact.yml') }}"
+          } >> "$GITHUB_OUTPUT"
       - name: Look up a passing run of the Lean tests
         id: tested
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -344,3 +358,41 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+
+  # Marks the chips at the top of the README of the parts that changed since the site was
+  # published last as building (see site/status.py), in the branch status.
+  building:
+    name: Mark the parts being built
+    needs: changes
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write # to push the branch status
+    steps:
+      # With the credentials, which site/status.py fetches and pushes the branch with.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Mark the chips
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: site/status.py --building
+
+  # Records, for the chips at the top of the README, whether each part of the site is up to date,
+  # outdated or failing (see site/status.py) in the branch status. It runs after every other job,
+  # also when one failed or the run was cancelled, so that no chip stays building, as long as the
+  # inputs were hashed.
+  status:
+    name: Record the status of each part
+    needs: [changes, building, lean, sim, paper, site, docs, artifact, build, deploy]
+    if: ${{ always() && needs.changes.result == 'success' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write # to push the branch status
+    steps:
+      # With the credentials, which site/status.py fetches and pushes the branch with.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Record the chips
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: site/status.py
