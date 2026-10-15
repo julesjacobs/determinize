@@ -1,7 +1,7 @@
 \section{Symbolic Semantics}
 \label{sec:symbolic-semantics}
 
-In this section, we present our proof strategy for establishing the soundness of determinization, using a running example to illustrate the main ideas. The central idea is to introduce a \emph{symbolic operational semantics} that provides a common representation of both the original and determinized programs. Instead of immediately sampling $\E$-mode
+In this section, we present our proof strategy for establishing the soundness of determinization, using the source program from \cref{fig:intro-signal} in \Cref{sec:introduction} as a running example to illustrate the main ideas. The central idea is to introduce a \emph{symbolic operational semantics} that provides a common representation of both the original and determinized programs. Instead of immediately sampling $\E$-mode
 distributions, symbolic execution records these choices and postpones their evaluation. Two interpretations of the resulting states then recover the source program and its determinization. We use the source program from \cref{fig:intro-signal} in \Cref{sec:introduction} as our running example.
 
 \input{figures/symbolic-example.tex}
@@ -34,7 +34,7 @@ samples two dependent Gaussian variables $y$ and $z$
 before returning $xz$.
 Suppose the $\G$-mode sample produces $x=t$.
 Symbolic execution records the Gaussian samples as
-fresh variables $u$ and $v$, eventually reaching the symbolic state:
+fresh variables $u$ and $v$, eventually reaching the terminal state shown in \cref{fig:symbolic-example}:
 \[
 \begin{aligned}
   s_t &= (\sigma_t\mid\sym{tv}), \qquad
@@ -101,7 +101,7 @@ $\bar\rho_{\sigma_t}(v)=t$.
 Thus, while the actual interpretation samples
 $v$ according to its dependent Gaussian distribution,
 the expected interpretation replaces it by $t$,
-making the returned value $t^2$.
+making the returned value $t^2$, as shown in the two interpretation boxes in \cref{fig:symbolic-example}.
 
 To define these interpretations formally, we use
 two maps. Lifting $\mathsf{lift}$\leanref{symbolic-lifting} embeds a source
@@ -181,7 +181,6 @@ Given a trace $\tau$ of $\G$-mode
 samples, the kernel describes the source
 output distribution after $n$ remaining steps,
 integrating over the $\E$-mode samples.
-The construction of $K_{n,s}$ is [missing from appendix].
 
 \begin{theorem}[Finite-step factorization
 \leanref{finite-step-factorization}]
@@ -220,10 +219,9 @@ For our terminal state, for example,
 \paragraph{From finite steps to whole programs.}
 We extend finite-step factorization (\cref{thm:finite-step-factorization}) by combining the
 kernels $K_{n,\mathsf{init}(e)}$ over all possible
-return times. A compatibility lemma [missing from appendix] ensures that
+return times. A compatibility lemma\leanref{replay-compatibility} ensures that
 the resulting whole-program kernel $K_e$\leanref{whole-program-output-kernel} preserves
 the factorization when summing over step counts\leanref{whole-program-kernel-factorization}.
-The construction of $K_e$ is [missing from appendix].
 
 \begin{theorem}[Whole-program factorization
 \leanref{whole-program-factorization}]
