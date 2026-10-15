@@ -3,19 +3,34 @@
 \footnotesize
 \setlength{\abovedisplayskip}{5pt}
 \setlength{\belowdisplayskip}{5pt}
+\begin{minipage}{\linewidth}
+\textbf{(a) Shape unification}\leanref{type-shape-unification}
+
+Erase real annotations and unify the shapes on both sides of every
+subtype constraint, rejecting constructor clashes and occurs-check
+violations. Let $\theta$ be the resulting most general shape substitution.
+
 \smallskip
-\textbf{(a) Subtype constraint reduction}\leanref{subtype-constraint-reduction}
+\textbf{(b) Decoration}\leanref{type-affinity-decoration}
+
+Replace each type variable $X$ by $\theta X$ with a fresh annotation
+variable at each real leaf. Reuse the same decoration at every
+occurrence of $X$; use distinct annotation variables for distinct
+type variables. Preserve existing real annotations.
+\end{minipage}
+
+\smallskip
+\textbf{(c) Subtype constraint reduction}\leanref{subtype-constraint-reduction}
 \[
 \begin{gathered}
 \tyR a<:\tyR b
   \;\leadsto\;\{a\le b\}
   \qquad
 \tyL\tau<:\tyL\sigma
-  \;\leadsto\;\{\tau<:\sigma\}
-  \qquad
+  \;\leadsto\;\{\tau<:\sigma\}\\[2pt]
 \chi<:\chi
   \;\leadsto\;\varnothing
-  \quad(\chi\in\{\tyU,\tyB\})\\[2pt]
+  \quad(\chi\text{ is }\tyU,\tyB\text{, or a shape variable})\\[2pt]
 (\tau_1\to\tau_2)<:(\sigma_1\to\sigma_2)
   \;\leadsto\;\{\sigma_1<:\tau_1,\;\tau_2<:\sigma_2\}\\[2pt]
 (\tau_1\star\tau_2)<:(\sigma_1\star\sigma_2)
@@ -24,53 +39,19 @@
 \end{gathered}
 \]
 
-\smallskip
-\textbf{(b) Type variable resolution}\leanref{type-shape-unification}\leanref{type-affinity-decoration}
-
-\begin{minipage}[t]{0.36\linewidth}
-\vspace{0pt}
-\[
-\begin{aligned}
-h(\tyR a)&=\tyR b,\\
-h(\tau\to\sigma)&=U\to V,\\
-h(\tyL\tau)&=\tyL U,\\
-h(\tau\star\sigma)&=U\star V,\\
-h(\chi)&=\chi.
-\end{aligned}
-\]
-\end{minipage}\hfill
-\begin{minipage}[t]{0.62\linewidth}
-\vspace{0pt}
-\[
-\begin{aligned}
-X<:X
-  &\;\leadsto\;\varnothing,\\[3pt]
-X<:Y\ (X\ne Y)
-  &\;\leadsto\;\text{defer }X<:Y,\\[3pt]
-X<:\tau
-  &\;\leadsto\;\{h(\tau)<:\tau\}
-    \quad[X\mapsto h(\tau)],\\[3pt]
-\tau<:X
-  &\;\leadsto\;\{\tau<:h(\tau)\}
-    \quad[X\mapsto h(\tau)].
-\end{aligned}
-\]
-\end{minipage}
-
 \medskip
-\textbf{(c) Mode constraint solving}\leanref{affinity-solving}
+\textbf{(d) Mode constraint solving}\leanref{affinity-solving}
 \[
 \inferrule{a\le b\\a=\E}{b:=\E}
 \qquad\qquad
 \inferrule{a\le b\\b=\G}{a:=\G}
 \]
-\caption{Constraint solving. Subtype reduction and type variable resolution are applied
-repeatedly, followed by mode constraint solving.
-In (b):
-$b,U,V$ are fresh, $\star\in\{\times,+\}$, and
-$\chi\in\{\tyU,\tyB\}$.}
+\caption{Constraint solving, in the order (a)--(d). Conflicting mode
+assignments cause inference to fail. Unassigned annotation variables
+default to $\E$; remaining shape variables become $\tyU$ at read-back.}
 \label{fig:inference-solving}
-\Description{Subtype reduction and type variable resolution
-are repeatedly applied together. Mode inequalities are then
-solved by propagation, with unassigned modes defaulting to E.}
+\Description{Shape unification rejects constructor clashes and cyclic shapes.
+Decoration assigns annotation variables to the real leaves of each type
+variable's unified shape. Subtype reduction yields annotation inequalities,
+which are solved by propagation.}
 \end{figure}
