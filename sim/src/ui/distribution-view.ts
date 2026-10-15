@@ -166,8 +166,8 @@ export function mountDistributionView(
     const running = store.running.value;
     const paused = store.paused.value;
     const done = store.samples.value.original.summary.runs;
+    // The band stays busy until `render` has drawn the runs that ended the batch.
     if (running) band.setAttribute("aria-busy", "true");
-    else band.removeAttribute("aria-busy");
     progress.classList.toggle("idle", !running && !paused);
     action.textContent = running ? "Stop" : "Continue";
     const target = running?.target ?? paused?.target ?? done;
@@ -275,6 +275,7 @@ export function mountDistributionView(
   window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", redraw);
 
   function render() {
+    if (!store.running.peek()) band.removeAttribute("aria-busy");
     const samples = store.samples.peek();
     const result = store.analysis.peek();
     const runsSoFar = samples.original.summary.runs;
