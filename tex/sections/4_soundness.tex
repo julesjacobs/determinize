@@ -169,8 +169,7 @@ is useful for two reasons. First, it gives a local account of what
 determinization does even when the program's overall expectation is
 undefined. Second, when the global expectation does exist, expectation
 preservation follows by integrating over these fixed choices.
-Throughout, a property holds for $\mu$-almost every element if it holds
-outside a measurable set of $\mu$-measure zero.
+Throughout, a property $P(\tau)$ holds for $\mu$-almost every element if we have $\mu(\{\tau ~|~ P(\tau)\}) =1$.
 
 \input{figures/traces.tex}
 
@@ -196,7 +195,7 @@ Note that $\E$-mode samples do not appear in a trace: they remain
 random after the trace has been fixed. The recorded $\G$-mode samples
 in a trace may come from discrete or continuous distributions. The
 probability of a trace is the probability that the program successfully
-terminates with exactly that sequence of sampling outcomes. This
+terminates with exactly that sequence of sampling outcomes. We remark that this
 probability can be zero, as when the trace specifies the exact outcome
 of a sample from a continuous distribution.
 
@@ -209,11 +208,11 @@ Let $\mathcal D(\Trace\times\mathbb R)$ denote the space of
 subprobability measures on $\Trace\times\mathbb R$.
 For each $n\in\mathbb N$, the function
 $\joint{(\cdot)}n\colon Expr\to\mathcal D(\Trace\times\mathbb R)$
-assigns each expression $e$ its joint output measure after exactly
+assigns each expression $e$ its joint output measure after \emph{exactly}
 $n$ reduction steps. $\E$-mode samples are integrated out, whereas
 each $\G$-mode sample contributes its distribution primitive $D$ and
 sampled value $r$ to the trace $\tau$. Summing these measures over
-all finite $n$ defines the function
+all $n \in \mathbb{N}$ gives rise to the function
 $J_{(\cdot)}\colon Expr\to\mathcal D(\Trace\times\mathbb R)$,
 which assigns each expression $e$ its joint big-step subprobability
 measure $J_e$\leanref{trace-semantics}.
@@ -224,15 +223,15 @@ lies in $B$.
 The two marginals of $J_e$ recover our quantities of interest. For
 each measurable $A\subseteq\Trace$, its trace marginal
 $\trlaw e(A)$\leanref{trace-law} is the probability mass of successful
-executions whose trace lies in $A$. In particular,
+executions whose trace lies in~$A$. In particular,
 $\trlaw e(\{\tau\})$ is the probability that $e$ successfully terminates
-with exactly the trace $\tau$. Similarly, for each Borel set
+with exactly the trace~$\tau$. Similarly, for each Borel set
 $B\subseteq\Real$, its output marginal
 $\law e(B)$\leanref{trace-erasure} is the probability mass of
 successful executions whose returned value lies in $B$. This is
 precisely the output measure defined in
 \cref{fig:semantics}(\subref{fig:semantics-output}). Evaluating both
-marginals on their full spaces gives the following
+marginals on their full spaces gives the following:
 
 \begin{theorem}[Equality of total masses\leanref{equality-of-total-masses}]
 For every expression $e$,
@@ -245,22 +244,18 @@ For every expression $e$,
 Thus both marginals have the same total mass: the probability that $e$
 successfully returns.
 
-We first consider how determinization affects the trace marginal
-$\trlaw e$. Recall a program is \emph{domain-safe}\leanref{domain-safety}
-if, almost surely, every executed distribution has parameters in its
-domain and every executed division has a nonzero divisor; this
-condition rules out loss of probability mass through invalid
-operations. Determinization preserves both domain safety and this trace
+Let us first consider how determinization affects the trace marginal
+$\trlaw e$. Determinization preserves both domain safety and this trace
 marginal:
 
 \begin{lemma}[Trace preservation\leanref{trace-preservation}]
 \label{lem:trace-preservation}
-Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe.
-\par
-Then $\trans e$ is domain-safe and
-\[
-  \trlaw{\trans e}=\trlaw e.
-\]
+Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe. Then:
+%
+\begin{enumerate}
+  \item $\trans e$ is domain-safe, and
+  \item $\trlaw{\trans e}=\trlaw e$.
+\end{enumerate}
 \end{lemma}
 
 \paragraph{Conditioning on traces.}
@@ -269,14 +264,13 @@ Conditioning the joint big-step measure $J_e$ on its trace component
 gives the output distribution after a trace has been fixed. Since
 $\Trace$ and $\Real$ are standard Borel spaces, the disintegration
 theorem guarantees the existence of a conditional output distribution,
-unique $\trlaw e$-almost everywhere. We denote this distribution by
+unique $\trlaw e$-almost everywhere. For measurable $A\subseteq\Trace$ and $B\subseteq\Real$, we denote this distribution by
 $\law e(\cdot\mid\tau)$, satisfying
 \begin{align}\label{eq:disintegration}
   J_e(A\times B)
-  =\int_A\law e(B\mid\tau)\,\trlaw e(d\tau)
-\end{align}
-for measurable $A\subseteq\Trace$ and $B\subseteq\Real$. Unlike
-conditioning by dividing by the probability of an individual trace,
+  =\int_A\law e(B\mid\tau)\,\trlaw e(d\tau)~.
+\end{align} 
+Unlike conditioning by dividing by the probability of an individual trace,
 this characterization remains valid even when individual traces have
 probability zero. On a set of traces of $\trlaw e$-measure zero, the
 conditional distribution is not uniquely determined, but its value
@@ -299,21 +293,17 @@ For $\trlaw e$-almost every trace $\tau$,
   \int_{\Real}|r|\,\law e(dr\mid\tau)<\infty
   \qquad\text{and}\qquad
   \law{\trans e}(\,\cdot\mid\tau)
-  =\delta_{\Expect[e\mid\tau]}.
+  =\delta_{\Expect[e\mid\tau]}~.
 \]
-In particular, for these traces,
+Moreover, for $\trlaw e$-almost every trace $\tau$,
 \[
-  \Expect[\trans e\mid\tau]=\Expect[e\mid\tau].
+  \Expect[\trans e\mid\tau]=\Expect[e\mid\tau]~.
 \]
 \end{theorem}
 
-Recall a property holds for $\trlaw e$-almost every trace if the set
-of traces where it fails has measure zero. This theorem statement does
-not require the program to have a global expectation. When a global
-expectation is defined, however, \cref{thm:trace-soundness} can be
-integrated over traces to obtain the global soundness guarantees
-stated earlier.
-
+This theorem statement does
+not require the program to have a well-defined global expectation. %Let us illustrate this theorem by means of :
+%
 \begin{example}
 Consider
 \[
@@ -335,17 +325,17 @@ Thus, for each such trace $\tau$,
 The output still varies across traces, but within each trace
 determinization replaces the remaining randomness by its average.
 \end{example}
-
-The conditional characterization also recovers the global quantities
-introduced above. When $q_e>0$ and $\Expect_{\mathrm{ret}}[e]$ is
-well-defined, the disintegration identity gives
+%
+%
+Now, crucially, if the global
+expectation is defined, then the conditional expectation from \Cref{thm:trace-soundness} can bev integrated over traces to obtain the global soundness \Cref{thm:expectation}. More precisely, if $q_e>0$ and $\Expect_{\mathrm{ret}}[e]$ is well-defined, the disintegration identity gives
 \[
   \Expect_{\mathrm{ret}}[e]
   =\frac{1}{q_e}
   \int_{\Trace}\Expect[e\mid\tau] \,\trlaw e(d\tau).\leanref{returned-expectation-along-traces}
 \]
 Note that such a normalization factor was not needed for the
-conditional output distribution, since $\trlaw e$ records only traces
+conditional output distribution from \Cref{thm:trace-soundness}, since $\trlaw e$ records only traces
 of successfully returning executions, so
 $\law e(\Real\mid\tau)=1$ for $\trlaw e$-almost every trace $\tau$.
 Trace preservation immediately implies that determinization preserves
@@ -358,19 +348,19 @@ transformed programs are conditioned on the same returning mass:
   =q_e.\leanref{output-mass}
 \]
 
-Now, since determinization preserves the trace distribution and
-replaces conditional output distributions by point masses at their
-means with probability one, averaging over traces preserves
-expectation whenever the original program's global expectation is
-well-defined. This requirement is essential. Tracewise soundness
-guarantees finite conditional means outside a set of traces of measure
-zero, but this does not ensure that the original program has a
-well-defined global expectation. In the coin-flipping example above,
-every terminating trace has conditional mean zero, yet
-$\Expect[X^+]=\Expect[X^-]=\infty$, so the original program's global
-expectation is undefined.
+% Since determinization preserves the trace distribution and
+% replaces conditional output distributions by point masses at their
+% means with probability one, averaging over traces preserves
+% expectation whenever the original program's global expectation is
+% well-defined. This requirement is essential. Tracewise soundness
+% guarantees finite conditional means outside a set of traces of measure
+% zero, but this does not ensure that the original program has a
+% well-defined global expectation. In the coin-flipping example above,
+% every terminating trace has conditional mean zero, yet
+% $\Expect[X^+]=\Expect[X^-]=\infty$, so the original program's global
+% expectation is undefined.
 
-Finally, we end with the following point regarding how determinization
+Finally, we investigate how determinization
 affects the probabilities of successful return, rejection, and
 divergence. The results above concern the distribution of successfully
 returned values, but determinization also preserves the probability of
