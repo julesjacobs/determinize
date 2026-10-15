@@ -1026,6 +1026,14 @@ and $\emptyset\vdash\widehat e:\tau$. The declarations provide the
 coordinates of affine literals; they are not term variables in $\Gamma$.
 When a declaration is appended, existing affine expressions are extended
 with coefficient zero for the fresh coordinate.
+
+Writing $\sigma_{<i}$ for the declarations preceding $u_i$, the environment
+is \emph{domain-safe} if, for every declaration $u_i\sim D_i(\bar a_i)$,
+$\operatorname{Domain}_{D_i}(\bar a_i[\rho])$ holds for
+$\mathcal A_{\sigma_{<i}}$-almost every valuation $\rho$.
+A state $(\sigma\mid\widehat e)$ is \emph{domain-safe} if its environment
+is domain-safe and $\mathsf{realize}_\rho(\widehat e)$ is domain-safe for
+$\mathcal A_\sigma$-almost every valuation $\rho$.
 \end{definition}
 
 \subsection{Residual Reduction}
