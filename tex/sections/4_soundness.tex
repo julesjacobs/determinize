@@ -2,14 +2,11 @@
 \section{Soundness}
 \label{sec:soundness}
 
-\todo[inline]{TODO: Double check the Lean refs.}
-
 We will now prove our determinization technique found in the following natural sense: First,
 it \emph{preserves the expected return whenever that expectation is well-defined}. Second,
 \emph{determinzation never increases the variance of returned values}. We proceed by first stating
-these results in terms of the output measure $\law e$, and then develop a mire fine-grained soundness characterization that also applies when the program's expected return is undefined. We state the main soundness theorems throughout
-this section, leaving the proof strategies to~\Cref{sec:symbolic-semantics} and the
-full proofs to~\Cref{sec:appendix}.
+these results in terms of the output measure $\law e$, and then develop a more fine-grained soundness characterization that also applies when the program's expected return is undefined. We state the main soundness theorems throughout
+this section, leaving the proof strategy to~\Cref{sec:symbolic-semantics}.
 
 \subsection{Global Soundness}
 
@@ -70,7 +67,7 @@ return. More precisely, we define
   \,\law e(dr)\quad\leanref{returned-variance}~.
 \end{gather*}
 
-Wit these notions at hand, we state our central soundness theorem: Determinization preserves the expected
+With these notions at hand, we state our central soundness theorem: Determinization preserves the expected
 return whenever the original program's global expectation is well-defined.
 
 \begin{theorem}[Expectation preservation\leanref{expectation-preservation}]
@@ -127,7 +124,7 @@ $\Expect[X^+]=\Expect[X^-]=\infty$. Thus,
 $\Expect[X]$ is ill-undefined. Nevertheless, the expected return after
 fixing any terminating sequence of retained samples is finite. This observation
 motivates a more fine-grained tracewise soundness guarantee that does not require the
-global expectation to exist, which we present in the next section.
+global expectation to exist, which we present in the next subsection.
 \end{example}
 
 Our second theorem states that determinization never increases the variance of returned values:
@@ -302,29 +299,10 @@ Moreover, for $\trlaw e$-almost every trace $\tau$,
 \end{theorem}
 
 This theorem statement does
-not require the program to have a well-defined global expectation. %Let us illustrate this theorem by means of :
+not require the program to have a well-defined global expectation. For a concrete example, \Cref{sec:appendix-trace-soundness-example} illustrates how
+tracewise soundness applies.
+%Let us illustrate this theorem by means of :
 %
-\begin{example}
-Consider
-\[
-\begin{aligned}
-  &\kw{let}\ x=\kw{uniform}^{\G}(0,1)\ \kw{in}\\
-  &\kw{let}\ y=\kw{uniform}^{\E}(-1,1)\ \kw{in}\ x+y.
-\end{aligned}
-\]
-A trace records only the sampled value $x=r$. Given this trace, the
-original program returns $r+y$, which is uniformly distributed on
-$[r-1,r+1]$ and has expectation $r$. Determinization replaces the
-sample $y$ by its mean, zero, so the transformed program returns $r$.
-Thus, for each such trace $\tau$,
-\[
-  \Expect[e\mid\tau]=r,
-  \qquad
-  \law{\trans e}(\,\cdot\mid\tau)=\delta_r.
-\]
-The output still varies across traces, but within each trace
-determinization replaces the remaining randomness by its average.
-\end{example}
 %
 %
 Integrating tracewise soundness (\cref{thm:trace-soundness}) over the common

@@ -664,6 +664,29 @@ sample while replacing both Gaussian samples by
 their conditional means. 
 \end{example}
 
+\section{Tracewise Soundness Theorem, by Example}\label{sec:appendix-trace-soundness-example}
+\begin{example}
+Consider
+\[
+\begin{aligned}
+  &\kw{let}\ x=\kw{uniform}^{\G}(0,1)\ \kw{in}\\
+  &\kw{let}\ y=\kw{uniform}^{\E}(-1,1)\ \kw{in}\ x+y.
+\end{aligned}
+\]
+A trace records only the sampled value $x=r$. Given this trace, the
+original program returns $r+y$, which is uniformly distributed on
+$[r-1,r+1]$ and has expectation $r$. Determinization replaces the
+sample $y$ by its mean, zero, so the transformed program returns $r$.
+Thus, for each such trace $\tau$,
+\[
+  \Expect[e\mid\tau]=r,
+  \qquad
+  \law{\trans e}(\,\cdot\mid\tau)=\delta_r.
+\]
+The output still varies across traces, but within each trace
+determinization replaces the remaining randomness by its average.
+\end{example}
+
 
 \section{Miscellaneous}\label{sec:appendix-misc}
 \paragraph{When Expectations Are Undefined}
