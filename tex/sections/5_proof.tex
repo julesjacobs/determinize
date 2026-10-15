@@ -213,7 +213,9 @@ For our terminal state, for example,
 \]
 
 \paragraph{From finite steps to whole programs.}
-The whole-program kernel construction\leanref{whole-program-output-kernel},
+The whole-program kernel $K_e(\tau,\cdot)$\leanref{whole-program-output-kernel} describing the
+source program's output distribution for a trace
+$\tau$,
 compatibility lemma\leanref{replay-compatibility}, and factorization proof\leanref{whole-program-kernel-factorization}
 are formalized in Lean. We state the resulting theorem here.
 
@@ -236,7 +238,7 @@ measure with finite first absolute moment, and $r=\int_{\Real}x\,K_e(\tau,dx)$.
 \end{theorem}
 
 Tracewise soundness (\cref{thm:trace-soundness}), including the
-identification of $K_e$ with the source's conditional output law
+identification of $K_e$ with the source's conditional output distribution
 almost everywhere, is proved in Lean\leanref{trace-soundness}.
 
 For the running example, fixing the retained
@@ -252,9 +254,9 @@ Integrating over $t\sim\mathcal U(0,1)$,
 both programs have expected output $1/3$,
 while determinization removes the conditional
 Gaussian variance. More generally, integrating over the common
-trace measure gives expectation preservation
+trace measure gives expectation preservation (\Cref{thm:expectation})
 whenever the global expectation is well-defined\leanref{expectation-preservation}.
 The law of total variance then gives variance
-non-increase when the second moment is finite\leanref{variance-non-increase},
+non-increase (\Cref{thm:variance}) when the second moment is finite\leanref{variance-non-increase},
 establishing the global soundness theorems in
 \cref{sec:soundness}.
