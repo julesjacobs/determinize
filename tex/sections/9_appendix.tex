@@ -1672,6 +1672,392 @@ Determinization instead replaces $u$ by its unconditional mean $0$, yielding
 Thus domain safety prevents determinization from changing which executions are semantically valid and, consequently, which executions contribute to the return-conditioned output distribution.
 
 
+\section{Full Benchmarks (for RQ1)}
+\label{sec:appendix-finite-benchmarks}
+
+\subsection{\texttt{add-noise}}
+
+\begin{lstlisting}[breaklines=true]
+let addNoise =
+  rec addNoise db => fun variance =>
+    match db with
+    | [] =>
+        []
+    | y :: ys =>
+        let yn = gauss(y, variance) in
+        let yns = addNoise ys variance in
+        yn :: yns
+in
+
+let sum =
+  rec sum xs =>
+    match xs with
+    | [] => 0
+    | x :: rest => x + sum rest
+in
+
+let database = 1 :: 2 :: 3 :: [] in
+let noisy = addNoise database 1 in
+sum noisy
+\end{lstlisting}
+
+\subsection{\texttt{add-uniform-counter}}
+
+\begin{lstlisting}[breaklines=true]
+let equal = fun x => fun y =>
+  if x <= y then y <= x else false
+in
+
+let f = rec f y =>
+  if equal y 2 then
+    0
+  else
+    let left = flip(0.5) in
+    let cur =
+      if left then
+        uniform(0, 0.5)
+      else
+        uniform(0.5, 1)
+    in
+
+    if left then
+      cur + f (y + 1)
+    else
+      cur + f y
+in
+
+f 0
+\end{lstlisting}
+
+\subsection{\texttt{aggregate-rv}}
+
+\begin{lstlisting}[breaklines=true]
+let aggregate = fun n =>
+  let loop = rec loop i => fun x =>
+    if i < n then
+      let u = uniform(0, 1) in
+      loop (i + 1) (x + u)
+    else
+      x
+  in
+  loop 0 0
+in
+aggregate
+\end{lstlisting}
+
+\subsection{\texttt{asym-random-walk}}
+
+\begin{lstlisting}[breaklines=true]
+let f = rec f x =>
+  if flip(0.5) then
+    uniform(-1, 1)
+  else if 2 <= x then
+    uniform(-1, 0) + f 0
+  else
+    uniform(0, 1) + f (x + 1)
+in
+
+f 0
+\end{lstlisting}
+
+\subsection{\texttt{dreckon}}
+
+\begin{lstlisting}[breaklines=true]
+let n = 2 in
+let loop =
+  rec loop i => fun x => fun y => fun estX => fun estY =>
+    if i <= n then
+      let cmd = discrete(0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.2) in
+      let displacement =
+        if cmd < 1 then
+          (0, uniform(1, 2))
+        else if cmd < 2 then
+          (0, -uniform(1, 2))
+        else if cmd < 3 then
+          (uniform(1, 2), 0)
+        else if cmd < 4 then
+          (-uniform(1, 2), 0)
+        else if cmd < 5 then
+          (uniform(1, 2), uniform(1, 2))
+        else if cmd < 6 then
+          (uniform(1, 2), -uniform(1, 2))
+        else if cmd < 7 then
+          (-uniform(1, 2), uniform(1, 2))
+        else if cmd < 8 then
+          (-uniform(1, 2), -uniform(1, 2))
+        else
+          (0, 0)
+      in
+      let dxc = fst displacement in
+      let dyc = snd displacement in
+      let dx = dxc + uniform(-0.05, 0.05) in
+      let dy = dyc + uniform(-0.05, 0.05) in
+      loop (i + 1) (x + dx) (y + dy) (estX + dxc) (estY + dyc)
+    else
+      x
+in
+loop 0 0 0 0 0
+\end{lstlisting}
+
+\subsection{\texttt{gauss-random-walk}}
+
+\begin{lstlisting}[breaklines=true]
+let walk =
+  rec walk times => fun time => fun position =>
+    match times with
+    | [] =>
+        position
+    | nextTime :: remainingTimes =>
+        let nextPosition =
+          gauss(position, nextTime - time)
+        in
+        walk remainingTimes nextTime nextPosition
+in
+
+let times = 1 :: 2 :: 3 :: 4 :: 5 :: 6 :: [] in
+walk times 0 0
+\end{lstlisting}
+
+\subsection{\texttt{invpend}}
+
+\begin{lstlisting}[breaklines=true]
+let invpend = fun n =>
+  let cartPos = uniform(-5, -3) in
+  let cartVelo = uniform(2, 3) in
+  let pAng = uniform(1, 5) in
+  let pAngDer = uniform(-0.5, 0.5) in
+
+  let loop = rec loop count => fun cartPos => fun cartVelo => fun pAng => fun pAngDer =>
+    if count < n then
+      let count = count + 1 in
+      let cartPos = cartPos + 0.01 * cartVelo in
+      let cartVelo =
+        0.02 * cartPos
+        + 1.03 * cartVelo
+        - 0.3 * pAng
+        - 0.06 * pAngDer
+        + uniform(-1, 1)
+      in
+      let pAng = pAng + 0.01 * pAngDer in
+      let pAngDer =
+        0.04 * cartPos
+        + 0.07 * cartVelo
+        - 0.51 * pAng
+        + 0.85 * pAngDer
+        + uniform(-0.8, 0.8)
+      in
+      loop count cartPos cartVelo pAng pAngDer
+    else
+      pAng
+  in
+  loop 0 cartPos cartVelo pAng pAngDer
+in
+invpend
+\end{lstlisting}
+
+\subsection{\texttt{monte-carlo}}
+
+\begin{lstlisting}[breaklines=true]
+let monteCarlo =
+  fun draw => fun h =>
+    rec loop i =>
+      if i <= 0 then
+        0
+      else
+        let m = loop (i - 1) in
+        let x = draw () in
+        (h x + (i - 1) * m) / i
+in
+
+let draw = fun unit => uniform(0, 1) in
+let h = fun x => 2 * x + 1 in
+
+monteCarlo draw h 10
+\end{lstlisting}
+
+\subsection{\texttt{noisy-iteration}}
+
+\begin{lstlisting}[breaklines=true]
+(rec run x =>
+  if flip(0.5) then x
+  else run (1 - x + gaussian(0, 1))
+) 0
+\end{lstlisting}
+
+\subsection{\texttt{pack}}
+
+\begin{lstlisting}[breaklines=true]
+let pack = fun n =>
+  let loop =
+    rec loop nLight => fun nHeavy => fun nPacked =>
+      if nPacked < n then
+        let obj = discrete(0.5, 0.25, 0.25) in
+
+        if obj < 1 then
+          let weight = 0.9 + uniform(0, 0.2) in
+          weight + loop nLight nHeavy (nPacked + 1)
+
+        else if obj < 2 then
+          let weight = 1.1 + uniform(0, 0.1) in
+          if nHeavy <= nLight then
+            weight + loop nLight (nHeavy + 1) (nPacked + 1)
+          else
+            weight + loop nLight nHeavy nPacked
+
+        else
+          let weight = 0.8 + uniform(0, 0.1) in
+          if nLight <= nHeavy then
+            weight + loop (nLight + 1) nHeavy (nPacked + 1)
+          else
+            weight + loop nLight nHeavy nPacked
+      else
+        0
+  in
+  loop 0 0 0
+in
+pack
+\end{lstlisting}
+
+\subsection{\texttt{retransmit}}
+
+\begin{lstlisting}[breaklines=true]
+let receive = rec receive good =>
+  let capacity =
+    if good then
+      uniform(8, 12)
+    else
+      uniform(2, 6)
+  in
+
+  let quality = uniform(0, capacity) in
+
+  let success =
+    if good then
+      flip(0.85)
+    else
+      flip(0.30)
+  in
+
+  if success then
+    quality
+  else
+    let next =
+      if good then flip(0.80)
+      else flip(0.25)
+    in
+    quality + receive next
+in
+
+receive true
+\end{lstlisting}
+
+\subsection{\texttt{service-policy}}
+
+\begin{lstlisting}[breaklines=true]
+let service_policy = fun n =>
+  let reuse = fun warm =>
+    let next =
+      if warm then flip(0.9)
+      else flip(0.4)
+    in
+
+    let latency =
+      if next then exponential(2.0)
+      else exponential(1.0)
+    in
+
+    (next, latency)
+  in
+
+  let refresh = fun warm =>
+    let next = flip(0.95) in
+
+    let latency =
+      if next then exponential(1.5)
+      else exponential(0.75)
+    in
+
+    (next, latency)
+  in
+
+  let run = rec run step => fun n => fun warm =>
+    if n < 1 then
+      0
+    else
+      let result = step warm in
+      let next = fst result in
+      let latency = snd result in
+      latency + run step (n - 1) next
+  in
+
+  let policy =
+    if flip(0.5) then reuse else refresh
+  in
+
+  run policy n false
+in
+service_policy
+\end{lstlisting}
+
+\subsection{\texttt{swap}}
+
+\begin{lstlisting}[breaklines=true]
+let swap = fun n =>
+  let x = 5 * bernoulli(0.5) in
+  let y = 4 + 3 * bernoulli(0.5) in
+  let loop = rec loop i => fun x => fun y =>
+    if i < n then
+      let unif1 = uniform(-1, 1) in
+      let unif2 = uniform(-2, 2) in
+      loop (i + 1) (y + unif1) (x + unif2)
+    else
+      x
+  in
+  loop 0 x y
+in
+swap
+\end{lstlisting}
+
+\subsection{\texttt{uniform-nested}}
+
+\begin{lstlisting}[breaklines=true]
+let a = uniform(0,1) in
+let b = uniform(0,a) in
+let c = uniform(0,b) in
+let d = uniform(0,c) in d
+\end{lstlisting}
+
+\subsection{\texttt{workload}}
+
+\begin{lstlisting}[breaklines=true]
+let workload = fun n =>
+  let make_jobs = rec make_jobs n =>
+    if n < 1 then
+      []
+    else
+      let major = flip(0.25) in
+      major :: make_jobs (n - 1)
+  in
+
+  let repair = rec repair jobs =>
+    match jobs with
+    | [] =>
+        0
+
+    | major :: rest =>
+        let time =
+          if major then uniform(1.5, 2.5)
+          else uniform(0.5, 1.5)
+        in
+
+        time + repair rest
+  in
+
+  let jobs = make_jobs n in
+  repair jobs
+in
+workload
+\end{lstlisting}
 
 \section{Determinization Scaling}
 \label{sec:appendix-scaling}
@@ -1691,13 +2077,377 @@ programs indexed by a size $k\in\{10,25,50,100,200,400\}$:
   \cref{tab:finite-after-determinization}, with its input list replaced by $[1,\ldots,k]$.
 \end{itemize}
 In the last two families, $k$ is the length of an explicit input list, and the program has one
-continuous sampling site, which determinization replaces.
+continuous sampling site, which determinization replaces. \Cref{fig:determinization-scaling} shows the median and the range between the 25th and
+75th percentiles, across 10 runs. 
 
-Each program is timed by the tool's internal timer, which covers parsing, elaboration, type and
-mode inference, and mean replacement, and excludes process start-up, file reading, output
-formatting, sampling and exact analysis. After one warm-up run, each program is run ten
-times. \Cref{fig:determinization-scaling} shows the median and the range between the 25th and
-75th percentiles. Every run also checks the inferred sampling sites: $k$ continuous sites before
-determinization for \texttt{uniform-nested} and one for the other families, and none after. The measurements
-are in \texttt{results/scaling/}.
+\input{figures/eval-scaling.tex}
 
+\section{Full Benchmarks (for RQ2)}\label{sec:appendix-infinite-benchmarks}
+
+For \texttt{2d-walk}, \texttt{bimodal}, \texttt{random-walk-1d}, and \texttt{vasicek}, we replace fixed iteration bounds with a \texttt{flip(1/2)} continuation guard. The number of iterations is geometrically distributed, with mean one and no finite upper bound. These loops terminate almost surely and retain infinitely many reachable states after determinization. Their stopping coins remain random; in particular, \texttt{vasicek} is partially determinized and retains variance from its stopping time. The \texttt{hmm} benchmark retains its fixed sequence of eight observations and becomes finite-state after determinization.
+
+For \texttt{cont-sampling}, we draw the downward-step probability from $\kw{uniform}(1/3,1)$, so the walk moves toward zero with probability $2/3$ at each step. Starting from 10, it terminates almost surely after 30 steps on average. This bias gives a finite source expectation of 5 and variance $5/2$; determinization returns 5 on every terminating run. The unbiased walk has an undefined expectation and infinite second moment, so it cannot serve as a finite-moment variance benchmark.
+
+\subsection{\texttt{2d-walk}}
+
+\begin{lstlisting}[breaklines=true]
+let loop = rec loop x => fun y => fun distance =>
+  if flip(1/2) then
+    let direction = discrete(0.25, 0.25, 0.25, 0.25) in
+    let step = uniform(0, 10) in
+    if direction < 1 then
+      loop (x + step) y distance
+    else if direction < 2 then
+      loop (x - step) y distance
+    else if direction < 3 then
+      loop x (y + step) distance
+    else
+      loop x (y - step) distance
+  else
+    x
+in
+loop 0 0 0
+\end{lstlisting}
+
+\subsection{\texttt{bimodal}}
+
+\begin{lstlisting}[breaklines=true]
+let loop = rec loop x => fun xlow => fun xup =>
+  if flip(1/2) then
+    let d = bernoulli(1/3) in
+    if d < 1 then
+      let step = gauss(3/4, 4) in
+      let xlow = xlow - step in
+      loop xlow xlow xup
+    else
+      let step = gauss(3/4, 4) in
+      let xup = xup + step in
+      loop xup xlow xup
+  else
+    x
+in
+loop 0 0 0
+\end{lstlisting}
+
+\subsection{\texttt{branching}}
+
+\begin{lstlisting}[breaklines=true]
+let offspring_lambda = 0.2 in
+let rate = 1.0 in
+
+let branch = rec branch unit =>
+  let k = poisson(offspring_lambda) in
+  let lifetime = exponential(rate) in
+
+  let sum_children = rec sum_children remaining => fun total =>
+    if remaining < 1 then total
+    else
+      let child = branch () in
+      sum_children (remaining - 1) (total + child)
+  in
+
+  let children = sum_children k 0 in
+  lifetime + children
+in
+
+branch ()
+\end{lstlisting}
+
+\subsection{\texttt{cont-sampling}}
+
+\begin{lstlisting}[breaklines=true]
+let run = fun n => fun b =>
+  let loop = rec loop n => fun b =>
+    if 0 < n then
+      let p = uniform(1/3, 1) in
+      if flip(p) then
+        loop (n - 1) (b + uniform(0, 1))
+      else
+        loop (n + 1) (b - uniform(0, 1))
+    else
+      b
+  in
+  loop n b
+in
+run 10 0
+\end{lstlisting}
+
+\subsection{\texttt{ckd-epi}}
+
+\begin{lstlisting}[breaklines=true]
+let logScr = uniform[G](-0.6, 0.6) in
+let age = uniform(30, 80) in
+let isFemale = uniform[G](0, 1) in
+let isAA = uniform[G](0, 0.55) in
+let f = 4.94 in
+let f =
+  if 0.5 <= isFemale then
+    let k = -0.357 in
+    (if logScr <= k then
+       f - 0.329 * (logScr - k)
+     else
+       f - 1.209 * (logScr - k))
+    + 0.017
+  else
+    let k = -0.105 in
+    if logScr <= k then
+      f - 0.411 * (logScr - k)
+    else
+      f - 1.209 * (logScr - k)
+in
+let f = if 0.5 <= isAA then f + 0.148 else f in
+let logScrErr = logScr + uniform[G](-0.1, 0.1) in
+let ageErr = age + uniform(-1, 1) in
+let flip1 = uniform[G](0, 1) in
+let isFemaleErr =
+  if flip1 <= 0.01 then 1 - isFemale else isFemale
+in
+let flip2 = uniform[G](0, 1) in
+let isAAErr =
+  if flip2 <= 0.01 then 1 - isAA else isAA
+in
+let f1 = 4.94 in
+let f1 =
+  if 0.5 <= isFemaleErr then
+    let k = -0.357 in
+    (if logScrErr <= k then
+       f1 - 0.329 * (logScrErr - k)
+     else
+       f1 - 1.209 * (logScrErr - k))
+    + 0.017
+  else
+    let k = -0.105 in
+    if logScr <= k then
+      f1 - 0.411 * (logScrErr - k)
+    else
+      f1 - 1.209 * (logScrErr - k)
+in
+let f1 = if 0.5 <= isAAErr then f1 + 0.148 else f1 in
+if f1 <= 4.4 then
+  if 4.6 <= f then 0 else 1
+else
+  1
+\end{lstlisting}
+
+\subsection{\texttt{dungeon}}
+
+\begin{lstlisting}[breaklines=true]
+let crawl = fun loot =>
+  (rec visit depth =>
+    if flip(0.25) then 0
+    else loot depth + visit (depth + 1)
+  ) 1
+in
+crawl (fun depth => 200 * depth * bernoulli(0.01))
+\end{lstlisting}
+
+\subsection{\texttt{figure1}}
+
+\begin{lstlisting}[breaklines=true]
+let run = fun s0 =>
+  let steps = 1 in
+  let loop = rec loop i => fun toggle => fun sum => fun x => fun y => fun z =>
+    if i < steps then
+      let toggle = 1 - toggle in
+      let state =
+        if toggle < 1 then
+          let x = if flip(1/2) then x + 1 else x + 2 in
+          let y = if flip(1/3) then y + z + x * x else y - z - x in
+          let z = if flip(1/4) then z + y else z - y in
+          (x, (y, z))
+        else
+          (x, (y, z))
+      in
+      let x = fst state in
+      let y = fst (snd state) in
+      let z = snd (snd state) in
+      let l = x + y + exponential(1) - exponential(1) in
+      let g = gauss[G](0, 1) in
+      let sum = if g < 1/2 then sum + x else sum in
+      loop (i + 1) toggle sum x y z
+    else
+      sum
+  in
+  loop 0 0 s0 1 1 1
+in
+run 0
+\end{lstlisting}
+
+\subsection{\texttt{growing-walk}}
+
+\begin{lstlisting}[breaklines=true]
+let f = rec f x =>
+  if flip(0.5) then
+    0
+  else
+    x * uniform(0, 1) + f (x + 1)
+in
+
+let t = f 1 in
+t
+\end{lstlisting}
+
+\subsection{\texttt{hmm}}
+
+\begin{lstlisting}[breaklines=true]
+let index = rec index xs => fun i =>
+  match xs with
+  [] => 1 / 0
+  | x :: rest =>
+      if i < 1 then x else index rest (i - 1)
+in
+
+let equal = fun x => fun y =>
+  if x <= y then y <= x else false
+in
+
+let emit = 0.05 :: 0.25 :: [] in
+let dwell_rate = 0.8 :: 1.2 :: [] in
+let trans = 0.05 :: 0.5 :: [] in
+let initial_state = 0 in
+let data = 0 :: 0 :: 0 :: 0 :: 0 :: 0 :: 0 :: 0 :: [] in
+
+let hmm = rec hmm z => fun data =>
+  match data with
+  [] => 0
+  | data :: remaining_data =>
+
+      let y = bernoulli(index emit z) in
+      let _ = observe(equal y data) in
+
+      let dwell = exponential(index dwell_rate z) in
+
+      let next_z = bernoulli(index trans z) in
+
+      let rest = hmm next_z remaining_data in
+
+      dwell + rest
+in
+
+hmm initial_state data
+\end{lstlisting}
+
+\subsection{\texttt{load}}
+
+\begin{lstlisting}[breaklines=true]
+let local = fun load =>
+  let cpu =
+    uniform(
+      1.0 + 0.2 * load * load,
+      3.0 + 0.2 * load * load
+    )
+  in
+  let transfer = exponential(1.0) in
+  cpu + transfer
+in
+
+let remote = fun load =>
+  let cpu =
+    uniform(
+      0.8 + 0.2 * load * load,
+      2.8 + 0.2 * load * load
+    )
+  in
+  let transfer = exponential(0.9) in
+  cpu + transfer
+in
+
+let run = rec run worker => fun n => fun load =>
+  if n < 1 then
+    0
+  else
+    worker load + run worker (n - 1) load
+in
+
+let load = uniform(0, 1) in
+
+let worker =
+  if load < 0.6 then
+    local
+  else
+    remote
+in
+
+run worker 40 load
+\end{lstlisting}
+
+\subsection{\texttt{neals-funnel}}
+
+\begin{lstlisting}[breaklines=true]
+let x = gauss(0, 3) in
+
+let z = x / 2 in
+let z2 = z * z in
+let exp_approx =
+  (1 + z / 2 + z2 / 12) /
+  (1 - z / 2 + z2 / 12)
+in
+
+let y0 = gauss(0, exp_approx) in
+let y1 = gauss(0, exp_approx) in
+let y2 = gauss(0, exp_approx) in
+let y3 = gauss(0, exp_approx) in
+let y4 = gauss(0, exp_approx) in
+let y5 = gauss(0, exp_approx) in
+let y6 = gauss(0, exp_approx) in
+let y7 = gauss(0, exp_approx) in
+let y8 = gauss(0, exp_approx) in
+let y9 = gauss(0, exp_approx) in
+
+y0
+\end{lstlisting}
+
+\subsection{\texttt{noisy-product}}
+
+\begin{lstlisting}[breaklines=true]
+let x = uniform(0, 1) in
+let y = gaussian(x, 1) in
+x * y
+\end{lstlisting}
+
+\subsection{\texttt{random-walk-1d}}
+
+\begin{lstlisting}[breaklines=true]
+let v = 0 in
+let x = 0 in
+let loop = rec loop v => fun x =>
+  if flip(1/2) then
+    let v = uniform(0, 1) in
+    let x =
+      if flip(0.9) then
+        x + v
+      else
+        x - v
+    in
+    loop v x
+  else
+    x
+in
+
+loop v x
+\end{lstlisting}
+
+\subsection{\texttt{vasicek}}
+
+\begin{lstlisting}[breaklines=true]
+let a = 0.5 in
+let b = 0.2 in
+let sigma = 0.8 in
+let w = 0 in
+let r = 2 in
+let loop = rec loop w => fun r =>
+  if flip(1/2) then
+    let w = gauss(0, 1) in
+    let r = (1 - a) * r + a * b + sigma * w in
+    loop w r
+  else
+    r
+in
+
+loop w r
+\end{lstlisting}
+
+\section{Reducing Output Variance Results}
+\label{sec:appendix-variance-results}
+
+\input{figures/eval-approx.tex}
