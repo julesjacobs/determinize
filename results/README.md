@@ -19,6 +19,11 @@ python3 tools/bench.py --approx --det --samples 50000 --seed 0 --fuel 100000 \
   elaboration, inference, and mean replacement, measured inside the executable.
 - RQ1's scaling plots use `scaling/runs.csv` and `scaling/summary.csv`: ten
   measurements after one warm-up run for each program size.
+- RQ1's exact results use [`exact-instances/`](exact-instances/README.md):
+  explicit small instances, exact moments, native Lean checks for 14 of 15
+  benchmarks, and the recorded state-limit failure for `dreckon`. These runs
+  are separate from the frontend timings and do not establish success for
+  every parameter value.
 - RQ2 uses `infinite-after-det.json`: 50,000 attempted executions of each source
   and determinized program. Observation rejections are recorded separately;
   any failed execution invalidates the benchmark.
