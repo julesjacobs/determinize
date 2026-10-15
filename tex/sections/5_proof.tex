@@ -1,8 +1,8 @@
 \section{Symbolic Semantics}
 \label{sec:symbolic-semantics}
 
-In this section, we present our proof strategy for establishing the soundness of determinization, using the source program from \cref{fig:intro-signal} in \Cref{sec:introduction} as a running example to illustrate the main ideas. The central idea is to introduce a \emph{symbolic operational semantics} that provides a common representation of both the original and determinized programs. Instead of immediately sampling $\E$-mode
-distributions, symbolic execution records these choices and postpones their evaluation. Two interpretations of the resulting states then recover the source program and its determinization. 
+In this section, we present our proof strategy for establishing tracewise soundness, from which the global soundness results follow. We use the source program from \cref{fig:intro-signal} in \Cref{sec:introduction} as a running example to illustrate our main ideas, referring to parts in~\Cref{fig:symbolic-example}. The central idea is to introduce a \emph{symbolic operational semantics} that provides a common representation of both the original and determinized programs. Instead of immediately sampling $\E$-mode
+distributions, symbolic execution records these choices and postpones their evaluation. Two interpretations of the resulting symbolic states then recover the source program and its determinization. 
 
 \input{figures/symbolic-example.tex}
 
@@ -11,13 +11,15 @@ Let us first introduce the notion of a symbolic state.
 
 \begin{definition}[Symbolic state]
 A symbolic state $s$ has the form
-\begin{align*}
-  s &::=(\sigma\mid\widehat e),
+\[
+\begin{gathered}
+  s ::=(\sigma\mid\widehat e),
   \qquad \widehat e\in\widehat{\mathrm{Expr}},\\
-  \sigma &::=\emptyset\mid\sigma,\ u\sim D(\bar a),\\
-  a &=c_0+\sum_{i=1}^{k}c_i u_i,
+  \sigma ::=\emptyset\mid\sigma,\ u\sim D(\bar a),
+  \qquad a=c_0+\sum_{i=1}^{k}c_i u_i,
   \qquad c_0,\ldots,c_k\in\Real.
-\end{align*}
+\end{gathered}
+\]
 Here, $\widehat e$ is a residual symbolic expression
 \leanref{symbolic-expression}, whose real literals may
 be affine expressions $a$\leanref{symbolic-affine}.
@@ -60,18 +62,16 @@ $\rho(u_i)\sim D_i(\bar a_i[\rho])$ sequentially. For this example,
   =\mathcal N(t,1)(du)\,\mathcal N(u,1)(dv).
 \]
 
-We now define how symbolic execution operates on these symbolic states. Notably, it proceeds by reducing residual expressions and extending the symbolic environment with declarations for $\E$-mode distributions. \Cref{fig:symbolic-semantics} gives the symbolic
-reduction rules. Ordinary reductions operate on
-symbolic expressions, while an $\E$-mode draw adds
-a declaration to $\sigma$ (\textsc{Sample-E}).
-A $\G$-mode draw instead samples a concrete value
-(\textsc{Sample-G}), as in the uniform sample above.
-Thus, symbolic execution samples only the choices
-that determinization retains. The full rules are
-given in \cref{sec:appendix-symbolic-rules}.
-
-% Keep the existing symbolic-semantics rules figure.
-\input{figures/symbolic-semantics.tex}
+Symbolic execution\leanref{symbolic-reduction} operates on these symbolic states by reducing
+residual expressions and extending the symbolic environment with
+declarations for $\E$-mode distributions. Ordinary reductions
+operate on symbolic expressions (\textsc{Reduce}), while an
+$\E$-mode draw adds a declaration to $\sigma$ without sampling it
+(\textsc{Sample-E}), as illustrated by the two Gaussian declarations
+in \cref{fig:symbolic-example}. A $\G$-mode draw instead samples a
+concrete value (\textsc{Sample-G}), as illustrated by the uniform
+draw $x=t$ in the same figure\leanref{symbolic-actions}. The reduction rules and their full
+definitions are given in \cref{sec:appendix-symbolic-rules}.
 
 \subsection{Two Interpretations of the Symbolic Semantics}
 \label{sec:symbolic-interpretations}
@@ -124,12 +124,12 @@ For $s=(\sigma\mid\widehat e)$ and $n\in\Nat$, define
 \[
 \begin{aligned}
   \mathsf{Act}_n(s)
-  &:=
+  :=
   \int
     \joint{\mathsf{realize}_\rho(\widehat e)}n\,
-    \mathcal A_\sigma(d\rho),\\
+    \mathcal A_\sigma(d\rho), \qquad
   \mathsf{Exp}_n(s)
-  &:=
+  :=
   \joint{
     \trans{\mathsf{realize}_{\bar\rho_\sigma}(\widehat e)}
   }n.
@@ -150,9 +150,8 @@ $\mathcal N(t,2)$, we obtain
 \[
 \begin{aligned}
   \mathsf{Act}_0(s_t)(\{[]\}\times\cdot)
-    &=\mathcal N(t^2,2t^2),\\
-  \mathsf{Exp}_0(s_t)(\{[]\}\times\cdot)
-    &=\delta_{t^2}.
+    =\mathcal N(t^2,2t^2), \qquad \mathsf{Exp}_0(s_t)(\{[]\}\times\cdot)
+    =\delta_{t^2}.
 \end{aligned}
 \]
 The two interpretations have different output distributions, but the mean
@@ -198,10 +197,7 @@ $A\subseteq\Trace$, $B\subseteq\Real$,
 \]
 Moreover, for $\mathsf{Exp}_n(s)$-almost every
 $(\tau,r)$, $K_{n,s}(\tau,\cdot)$ is a probability
-measure with finite first absolute moment, and
-\[
-  r=\int_{\Real}x\,K_{n,s}(\tau,dx).
-\]
+measure with finite first absolute moment, and $r=\int_{\Real}x\,K_{n,s}(\tau,dx)$.
 \end{theorem}
 
 The first equality recovers the actual
@@ -238,10 +234,7 @@ $B\subseteq\Real$,
 \]
 Moreover, for $J_{\trans e}$-almost every
 $(\tau,r)$, $K_e(\tau,\cdot)$ is a probability
-measure with finite first absolute moment, and
-\[
-  r=\int_{\Real}x\,K_e(\tau,dx).
-\]
+measure with finite first absolute moment, and $r=\int_{\Real}x\,K_e(\tau,dx)$.
 \end{theorem}
 
 Since $K_e$ is a probability measure on
