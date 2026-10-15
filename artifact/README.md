@@ -99,7 +99,10 @@ The recorded results of the paper's evaluation are in `results/`. The scripts th
   is `results/approx-results.csv`.
 - `benchmarks/exact/scaling/run_scaling.py` measures how determinization scales with program
   size; its results are in `results/scaling/`.
+- `tools/benchmark_estimator_variance.py` measures Monte Carlo estimator variance and sampling
+  time for RQ3; its individual trials, summary, and plots are in `results/estimator-variance/`.
 
+See `results/README.md` for the commands and the result files used in the current paper.
 Timings depend on the machine.
 
 ## With Nix

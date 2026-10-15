@@ -22,7 +22,7 @@ import tempfile
 
 # Experiment settings: k counts nested uniform draws or explicit input-list elements.
 SIZES = [10, 25, 50, 100, 200, 400]
-REPETITIONS = 7
+REPETITIONS = 10
 WARMUPS = 1
 TIMEOUT_SECONDS = 180
 
@@ -93,7 +93,7 @@ def write_csv(path: Path, rows: list[dict]) -> None:
     if not rows:
         return
     with path.open("w", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
+        writer = csv.DictWriter(handle, fieldnames=list(rows[0]), lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
 

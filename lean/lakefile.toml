@@ -1,6 +1,6 @@
 name = "determinize"
 version = "0.1.0"
-defaultTargets = ["Determinize", "determinize", "det-tests"]
+defaultTargets = ["Determinize", "determinize", "sampling-bench", "det-tests"]
 
 [[require]]
 name = "mathlib"
@@ -14,6 +14,10 @@ precompileModules = true
 [[lean_exe]]
 name = "determinize"
 root = "Main"
+
+[[lean_exe]]
+name = "sampling-bench"
+root = "SamplingBench"
 
 [[lean_lib]]
 name = "Tests"

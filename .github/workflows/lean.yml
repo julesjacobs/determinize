@@ -20,6 +20,8 @@ on:
       - "!tests/**/*.md"
       - examples/**
       - run.sh
+      - tools/bench.py
+      - tools/benchmark_estimator_variance.py
       - tools/storm*.py
       - tools/storm-requirements.txt
       - flake.nix

@@ -10,7 +10,9 @@ w:= Normal(0,1)
 r:= (1−a)r+ ab+ σw
 end while 
 
-Fully determinizable but infinite state (deterministic) after determinization.
+A flip(1/2) loop guard gives almost-sure termination while retaining
+infinitely many reachable states after determinization. The stopping
+coins remain random when the Gaussian draws become their means.
 *)
 
 let a = 0.5 in
@@ -18,15 +20,13 @@ let b = 0.2 in
 let sigma = 0.8 in
 let w = 0 in
 let r = 2 in
-let steps = 10 in
-
-let loop = rec loop i => fun w => fun r =>
-  if i < steps then
+let loop = rec loop w => fun r =>
+  if flip(1/2) then
     let w = gauss(0, 1) in
     let r = (1 - a) * r + a * b + sigma * w in
-    loop (i + 1) w r
+    loop w r
   else
     r
 in
 
-loop 0 w r
+loop w r
