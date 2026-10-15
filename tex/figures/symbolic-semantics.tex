@@ -1,4 +1,4 @@
-\begin{figure*}[t]
+\begin{figure}[H]
 \centering
 \small
 \setlength{\jot}{2pt}
@@ -22,7 +22,8 @@
   \\[3pt]
   \avg D{\sym{\bar a}}
   \rightsquigarrow_{\mathrm{sym}}
-  \sym{\operatorname{Mean}^{\#}_D(\bar a)}.
+  \sym{\operatorname{Mean}^{\#}_D(\bar a)}
+  \quad(\operatorname{Params}^{\#}_D(\bar a)).
 \end{gathered}
 \]
 
@@ -70,12 +71,13 @@
 \end{mathpar}
 \vspace{-7pt}
 
-\caption{Symbolic semantics. Residual expression reduction
-is shown above, and symbolic small-step semantics below.
+\caption{Symbolic semantics. Selected residual expression reductions
+are shown above, and the symbolic state transition rules below.
+The complete residual reductions and parameter conditions are given in this subsection.
 \textsc{Reduce} and \textsc{Sample-E} are deterministic, while \textsc{Sample-G} specifies a sampling
 action with a continuation mapping sampled values to
 successor states. Symbolic evaluation contexts $\widehat C$
 have the same grammar as the evaluation contexts $C$ in
 \cref{fig:semantics}.}
 \label{fig:symbolic-semantics}
-\end{figure*}
+\end{figure}

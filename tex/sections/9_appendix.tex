@@ -687,107 +687,7 @@ The output still varies across traces, but within each trace
 determinization replaces the remaining randomness by its average.
 \end{example}
 
-
-\section{Miscellaneous}\label{sec:appendix-misc}
-\paragraph{When Expectations Are Undefined}
-\begin{example}
-In the coin-flipping example (cf. \Cref{ex:coin-flip}), each terminating $\G$-trace has positive probability. A trace can also contain continuous draws:
-\begin{lstlisting}
-let u = uniform[G](-1, 1) in
-uniform[E](0, 2) / u
-\end{lstlisting}
-This program has an undefined global expectation. Yet for each fixed $u\ne0$,
-the remaining expression has mean $1/u$, exactly the value returned by the
-transformed program. Thus determinization is tracewise sound for this program, but the global expectation preservation theorem does not apply. 
-
-Moreover, note that every individual value of $u$ has probability zero, so conditioning on a trace cannot simply mean dividing by its probability, hence the disintegration-based definition of conditional output distributions in~\Cref{eq:disintegration}.
-\end{example}
-
-\begin{example}
-Consider
-\begin{lstlisting}
-let u = uniform[G](0, 1) in
-let s = 2 * bernoulli[G](1/2) - 1 in
-s / u + uniform[E](-1, 1)
-\end{lstlisting}
-The program returns almost surely and is domain-safe: although division is
-undefined when $u=0$, this event has probability zero under the
-continuous uniform distribution. However,
-\[
-  \int_0^1 \frac{1}{u}\,du=\infty.
-\]
-When $s=1$, the term $s/u$ gives the return value an infinite positive part;
-when $s=-1$, it gives the return value an infinite negative part. Since each
-sign occurs with probability $1/2$, both parts have infinite expectation, so
-the program's global expectation is undefined.
-
-Determinization is nevertheless valid and tracewise sound for this program. Determinization replaces the final uniform draw by its mean zero and therefore
-returns exactly $s/u$ for some fixed $\G$-trace. The global expectation preservation theorem does not
-apply because its hypothesis requires the source expectation to be
-well-defined in the extended reals. Likewise, the variance theorem does not
-apply because the program has an infinite second moment.
-\end{example}
-
-\paragraph{Domain safety and missing probability.}
-\begin{example}
-The following program is not domain-safe:
-\begin{lstlisting}
-let x = bernoulli[G](1/2) in
-1 / x
-\end{lstlisting}
-With probability $1/2$, the sample is $x=0$, at which point division by zero
-causes execution to get stuck. Because this invalid operation occurs with
-positive probability, it cannot be ignored by the almost-sure condition in
-domain safety. When $x=1$, the program successfully returns $1$, so
-\[
-  \law e=\frac12\delta_1,
-  \qquad
-  \law e(\Real)=\frac12.
-\]
-The missing probability mass comes from an invalid operation rather than
-rejection or divergence.
-\end{example}
-
-\begin{example}
-The following well-typed program $e$ is not domain-safe:
-\begin{lstlisting}
-let u = gaussian[E](0, 1) in uniform[E](0, u)
-\end{lstlisting}
-When $u<0$, the uniform distribution's parameters are invalid and execution gets
-stuck. The program returns with probability $1/2$; conditioned on returning,
-its expected output is half the mean of a standard Gaussian conditioned to be
-positive. Determinization sets $u=0$ and returns the mean of
-$\kw{uniform}(0,0)$, which is zero.
-Thus the domain-safety assumption is necessary, because:
-\[
- \Expect_{\mathrm{ret}}[e]=\frac{1}{\sqrt{2\pi}}
- \qquad\text{but}\qquad
- \Expect_{\mathrm{ret}}[\trans e]=0.
-\]
-\end{example}
-
-\paragraph{Why domain safety is necessary.}
-Tracewise soundness and expectation preservation require domain safety
-(\cref{thm:trace-soundness,thm:expectation}). Without domain safety, replacing an $\E$-mode sample by its mean can change whether a later operation is defined, and therefore change which executions contribute to the return-conditioned distribution.
-
-For example,
-\begin{lstlisting}
-let u = gaussian[E](0, 1) in
-uniform[E](0, u)
-\end{lstlisting}
-is not domain-safe: executions with $u<0$ become stuck. Conditioning on successful return therefore implicitly conditions $u$ to be positive, giving
-\[
-\Expect_{\mathrm{ret}}[e]
-=
-\frac{1}{2}\Expect[u\mid u>0]
-=
-\frac{1}{\sqrt{2\pi}}.
-\]
-Determinization instead replaces $u$ by its unconditional mean $0$, yielding
-\[
-\Expect_{\mathrm{ret}}[\trans e]=0.
-\]
-Thus domain safety prevents determinization from changing which executions are semantically valid and, consequently, which executions contribute to the return-conditioned output distribution.
+\section{Symbolic Semantics}
 
 
 \subsection{Residual Reduction and Symbolic State Transitions}
@@ -920,8 +820,9 @@ The corresponding residual reductions are:
 Multiplication requires at least one constant operand;
 division requires a nonzero constant denominator;
 comparison requires two constant operands.
-The typing rules ensure these structural requirements
-for well-typed residual expressions.
+The typing rules ensure the constant-operand requirements for
+well-typed residual expressions; domain safety additionally ensures
+that reached denominators are nonzero almost surely.
 
 \paragraph{Distribution parameters and symbolic means.}
 For $\E$ sampling and $\M$ evaluation, the underlying affine
@@ -976,36 +877,16 @@ of the soundness results. Mean evaluation reduces by
 \]
 
 \paragraph{Symbolic state transitions.}
-Write
-$s\xrightarrow{\ell}_{\mathrm{sym}}s'$
-for a symbolic transition, where $\ell=\epsilon$ denotes
-a silent step and $\ell=(D,r)$ records a retained sample.
-The complete transition rules are:
-\begin{mathpar}
-\inferrule*[right=Reduce]
-  {\widehat e_1\rightsquigarrow_{\mathrm{sym}}\widehat e_2}
-  {(\sigma\mid\widehat C[\widehat e_1])
-    \xrightarrow{\epsilon}_{\mathrm{sym}}
-   (\sigma\mid\widehat C[\widehat e_2])}
-\end{mathpar}
-\begin{mathpar}
-\inferrule*[right=Sample-E]
-  {u\notin\operatorname{dom}(\sigma)\\
-   \operatorname{Params}^{\#}_D(\bar a)}
-  {(\sigma\mid\widehat C[\draw D\E{\sym{\bar a}}])
-    \xrightarrow{\epsilon}_{\mathrm{sym}}
-   (\sigma,u\sim D(\bar a)\mid\widehat C[\sym u])}
-\end{mathpar}
-\begin{mathpar}
-\inferrule*[right=Sample-G]
-  {\operatorname{Domain}_D(\bar r)}
-  {(\sigma\mid\widehat C[\draw D\G{\sym{\bar r}}])
-    \xrightarrow{(D,r)}_{\mathrm{sym}}
-   (\sigma\mid\widehat C[\sym r])}
-\end{mathpar}
+\Cref{fig:symbolic-semantics} gives the symbolic transition rules.
+The arrows distinguish deterministic steps from sampling actions:
+\textsc{Reduce} and \textsc{Sample-E} have a single successor,
+whereas \textsc{Sample-G} gives a distribution and a continuation
+mapping each sampled value to its successor state.
+
+\input{figures/symbolic-semantics.tex}
 
 In \textsc{Sample-G}, $r$ is sampled according to
-$D(\bar r)$; the rule denotes a probabilistic transition,
+$D(\bar r)$; the continuation specifies the resulting state,
 not an arbitrary choice of $r$.
 All parameters $\bar r$ are constant values, including
 constant list entries for the discrete primitive.
@@ -1688,6 +1569,109 @@ domain-safe and
 Consequently, determinization preserves the combined probability of
 rejection and divergence.
 \end{proposition}
+
+\section{Miscellaneous}\label{sec:appendix-misc}
+\paragraph{When Expectations Are Undefined}
+\begin{example}
+In the coin-flipping example (cf. \Cref{ex:coin-flip}), each terminating $\G$-trace has positive probability. A trace can also contain continuous draws:
+\begin{lstlisting}
+let u = uniform[G](-1, 1) in
+uniform[E](0, 2) / u
+\end{lstlisting}
+This program has an undefined global expectation. Yet for each fixed $u\ne0$,
+the remaining expression has mean $1/u$, exactly the value returned by the
+transformed program. Thus determinization is tracewise sound for this program, but the global expectation preservation theorem does not apply. 
+
+Moreover, note that every individual value of $u$ has probability zero, so conditioning on a trace cannot simply mean dividing by its probability, hence the disintegration-based definition of conditional output distributions in~\Cref{eq:disintegration}.
+\end{example}
+
+\begin{example}
+Consider
+\begin{lstlisting}
+let u = uniform[G](0, 1) in
+let s = 2 * bernoulli[G](1/2) - 1 in
+s / u + uniform[E](-1, 1)
+\end{lstlisting}
+The program returns almost surely and is domain-safe: although division is
+undefined when $u=0$, this event has probability zero under the
+continuous uniform distribution. However,
+\[
+  \int_0^1 \frac{1}{u}\,du=\infty.
+\]
+When $s=1$, the term $s/u$ gives the return value an infinite positive part;
+when $s=-1$, it gives the return value an infinite negative part. Since each
+sign occurs with probability $1/2$, both parts have infinite expectation, so
+the program's global expectation is undefined.
+
+Determinization is nevertheless valid and tracewise sound for this program. Determinization replaces the final uniform draw by its mean zero and therefore
+returns exactly $s/u$ for some fixed $\G$-trace. The global expectation preservation theorem does not
+apply because its hypothesis requires the source expectation to be
+well-defined in the extended reals. Likewise, the variance theorem does not
+apply because the program has an infinite second moment.
+\end{example}
+
+\paragraph{Domain safety and missing probability.}
+\begin{example}
+The following program is not domain-safe:
+\begin{lstlisting}
+let x = bernoulli[G](1/2) in
+1 / x
+\end{lstlisting}
+With probability $1/2$, the sample is $x=0$, at which point division by zero
+causes execution to get stuck. Because this invalid operation occurs with
+positive probability, it cannot be ignored by the almost-sure condition in
+domain safety. When $x=1$, the program successfully returns $1$, so
+\[
+  \law e=\frac12\delta_1,
+  \qquad
+  \law e(\Real)=\frac12.
+\]
+The missing probability mass comes from an invalid operation rather than
+rejection or divergence.
+\end{example}
+
+\begin{example}
+The following well-typed program $e$ is not domain-safe:
+\begin{lstlisting}
+let u = gaussian[E](0, 1) in uniform[E](0, u)
+\end{lstlisting}
+When $u<0$, the uniform distribution's parameters are invalid and execution gets
+stuck. The program returns with probability $1/2$; conditioned on returning,
+its expected output is half the mean of a standard Gaussian conditioned to be
+positive. Determinization sets $u=0$ and returns the mean of
+$\kw{uniform}(0,0)$, which is zero.
+Thus the domain-safety assumption is necessary, because:
+\[
+ \Expect_{\mathrm{ret}}[e]=\frac{1}{\sqrt{2\pi}}
+ \qquad\text{but}\qquad
+ \Expect_{\mathrm{ret}}[\trans e]=0.
+\]
+\end{example}
+
+\paragraph{Why domain safety is necessary.}
+Tracewise soundness and expectation preservation require domain safety
+(\cref{thm:trace-soundness,thm:expectation}). Without domain safety, replacing an $\E$-mode sample by its mean can change whether a later operation is defined, and therefore change which executions contribute to the return-conditioned distribution.
+
+For example,
+\begin{lstlisting}
+let u = gaussian[E](0, 1) in
+uniform[E](0, u)
+\end{lstlisting}
+is not domain-safe: executions with $u<0$ become stuck. Conditioning on successful return therefore implicitly conditions $u$ to be positive, giving
+\[
+\Expect_{\mathrm{ret}}[e]
+=
+\frac{1}{2}\Expect[u\mid u>0]
+=
+\frac{1}{\sqrt{2\pi}}.
+\]
+Determinization instead replaces $u$ by its unconditional mean $0$, yielding
+\[
+\Expect_{\mathrm{ret}}[\trans e]=0.
+\]
+Thus domain safety prevents determinization from changing which executions are semantically valid and, consequently, which executions contribute to the return-conditioned output distribution.
+
+
 
 \section{Determinization Scaling}
 \label{sec:appendix-scaling}
