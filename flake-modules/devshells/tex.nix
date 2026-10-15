@@ -13,8 +13,10 @@
             ps: with ps; [
               # main.tex
               cleveref
+              enumitem
               pgfplots
               todonotes
+              wrapfig
 
               # acmart.cls
               libertine
