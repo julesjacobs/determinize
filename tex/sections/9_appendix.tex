@@ -1858,6 +1858,32 @@ continuous sampling site, which determinization replaces. \Cref{fig:determinizat
 
 \input{figures/eval-scaling.tex}
 
+\section{Monte Carlo Protocol for RQ3}
+\label{sec:appendix-sampling-protocol}
+
+Each replicate runs in a separate process using the compiled Lean harness
+\texttt{lean/SamplingBench.lean} in the artifact. The process parses and
+infers the program, selects the source or determinized program, and
+performs 1,000 untimed warmup executions. The timer then covers only
+sampling and online moment calculation; process startup, parsing,
+inference, determinization, warmup, and output are excluded.
+Each attempted execution has its own seed. Source and determinized runs
+use the same seed block, while replicate and execution-count combinations
+use disjoint blocks. The source/determinized order alternates between
+replicates.
+
+Rejected observations contribute no returned value. Each estimate averages
+the returned values among the $N$ attempted executions. Observation
+rejection is recorded separately from execution failure. A failure,
+exhaustion of the 100,000-step limit, process timeout, non-finite result, or incomplete
+execution count invalidates the run and stops the experiment. Recorded
+trials contain requested, returned, rejected, and failed counts, seeds,
+elapsed time, and floating-point moments. The reported estimator variance
+is the sample variance of the 50 replicate means, with denominator 49;
+the reported sampling time is their mean elapsed sampling time.
+Error bars use the approximation $s^2\sqrt{2/49}$, where $s^2$ is that
+sample variance.
+
 \section{Full Benchmarks (for RQ2)}\label{sec:appendix-infinite-benchmarks}
 
 For \texttt{2d-walk}, \texttt{bimodal}, \texttt{random-walk-1d}, and \texttt{vasicek}, we replace fixed iteration bounds with a \texttt{flip(1/2)} continuation guard. The number of iterations is geometrically distributed, with mean one and no finite upper bound. These loops terminate almost surely and retain infinitely many reachable states after determinization. Their stopping coins remain random; in particular, \texttt{vasicek} is partially determinized and retains variance from its stopping time. The \texttt{hmm} benchmark retains its fixed sequence of eight observations and becomes finite-state after determinization.
