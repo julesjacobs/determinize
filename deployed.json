@@ -1,0 +1,10 @@
+{
+  "commit": "a93ae98de784ab2e377a9cc01fa04f211e5c66a2",
+  "inputs": {
+    "artifact": "1b0cbe0c4c329a39b91f40e075efc1e8cdc2b3952a10b1a99c3b345ce000b422",
+    "docs": "76576de8bd469d1226d62c47367097144a9731ff41a5d35a478cafeadc54171c",
+    "sim": "8d95d094478bd6f0c29f336b35fc497badaf084a2bc4fc8f441ca6a74aecd5fe",
+    "site": "3be090f3d7af2b59169af848cc721b57edf0e286688354cc4c507011a11af6f2",
+    "tex": "da0a75597a3444f8f284ef1097bef5193e79e665a24a487765ba695da51bb228"
+  }
+}
