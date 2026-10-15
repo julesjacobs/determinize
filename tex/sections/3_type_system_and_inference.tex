@@ -105,31 +105,32 @@ and $(\E,\E)$, while $(\E,\G)$ is forbidden. \Cref{sec:appendix-constraint-gener
 \input{figures/inference-solving}
 
 We solve the generated constraints following
-\citet{traytel2011subtyping}. Constraint solving decomposes subtype constraints into constraints on their $\mathrm G/\mathrm E$ annotations, expanding unknown types as needed. We repeatedly alternate subtype constraint reduction
-and type variable resolution, as shown in
-\cref{fig:inference-solving}.
-Constraints between types with matching constructors are
-reduced to constraints on their components.
-When an unresolved type variable $X$ is constrained against
-a type $\tau$ with a known outer constructor, we expand $X$
-to $h(\tau)$, which preserves that constructor while
-introducing fresh variables for its components.
-Each substitution is applied throughout the constraints,
-and constraints between unresolved type variables are
-deferred until their structures become known.
-This process continues until no further reductions or
-expansions are possible, leaving inequalities
-$a\le b$, where $\G\le\E$.
+\citet{traytel2011subtyping}, in the phases shown in
+\cref{fig:inference-solving}. A type's \emph{shape} is obtained by
+erasing its real annotations. Since subtyping relates only types of
+the same shape, we first unify the shapes on both sides of every
+subtype constraint. Unification rejects constructor clashes and uses
+an occurs check to reject cyclic equations such as $X=X\to Y$;
+either failure causes inference to fail.
+
+Successful unification yields a most general shape substitution
+$\theta$. We then replace each type variable $X$ by $\theta X$,
+decorated with a fresh annotation variable at each real leaf.
+All occurrences of $X$ share this decoration; distinct type variables
+receive distinct annotation variables even when their shapes agree.
+Existing real annotations are preserved. Subtype constraint reduction
+then decomposes the decorated constraints into inequalities $a\le b$,
+where $\G\le\E$.
 
 Finally, we solve the inequalities by propagating forced
 assignments: $a\le b$ forces $b=\E$ if $a=\E$, and forces
 $a=\G$ if $b=\G$.
 We repeat until no further assignments are forced, rejecting
-conflicting assignments.
-Any remaining variables are assigned $\E$, maximizing
-the number of sampling sites that can be determinized, while
-remaining unresolved type variables are assigned $\tyU$. For an example of how the constraint solving process works more concretely, see~\Cref{sec:appendix-constraint-solving-example}.
-
+conflicting assignments. Remaining annotation variables are assigned
+$\E$, maximizing the number of sampling sites that can be
+determinized. Shape variables left unconstrained by unification are
+assigned $\tyU$ when reading back the inferred type.
+\Cref{sec:appendix-constraint-solving-example} gives an example.
 
 To state the guarantee, a \emph{completion} of an expression $e$ is
 an expression $e'$ obtained by annotating every unannotated sampling
