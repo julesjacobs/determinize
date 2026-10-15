@@ -5,16 +5,16 @@ site, whether it is up to date, outdated, failing or being built.
     NEEDS='<toJSON(needs) of its job>' site/status.py [--building]
 
 pages.yml runs it on main, in a checkout whose credentials push the branch: with --building as soon
-as its `changes` job has hashed the inputs, and without when every other job has finished. The
-chips are shields.io endpoint badges, <chip>.json, which the README loads through
-img.shields.io/endpoint. At the end of a run, a part is
+as its `changes` job has hashed the inputs, and without when every other job has finished. Each
+chip is a coloured disk, <chip>.svg, which the README shows after the link to its part. At the end
+of a run, a part is
 - failing when a job that builds, checks or publishes it failed, timed out or was cancelled;
 - up to date when the site was published, or when what the part is built from is the same as when
   the site was published last;
 - outdated otherwise: it changed, but a failure elsewhere kept the site from being published, as
   each deployment to GitHub Pages replaces the whole site.
-At the start of a run, a part that changed since the site was published last is building; the
-others keep their chips.
+At the start of a run, a part that changed since the site was published last is building, which
+its chip shows as a ring; the others keep their chips.
 
 What a part is built from is compared by the hashes that the `changes` job outputs. deployed.json
 records those of the site that was published last, with its commit. The branch holds one commit,
@@ -48,35 +48,47 @@ INPUTS = sorted({name for _, _, inputs in CHIPS.values() for name in inputs})
 # cancelled. A skipped job either reused an earlier result or waited for one that failed, which
 # fails its own chip.
 FAILED = {"failure", "cancelled"}
+# The colour of each state, from GitHub's palette, with a contrast of at least 3:1 to the page in
+# its light theme (#ffffff) and its dark one (#0d1117).
 STATES = {
-    "failing": "red",
-    "outdated": "orange",
-    "building": "blue",
-    "up to date": "brightgreen",
+    "failing": "#da3633",
+    "outdated": "#bf8700",
+    "building": "#1f6feb",
+    "up to date": "#1f883d",
 }
+
+
+def chip(label, message):
+    """A disk 12 pixels wide, as high as a capital letter beside it; a ring when building."""
+    colour = STATES[message]
+    if message == "building":
+        shape = f'<circle cx="6" cy="6" r="4.25" fill="none" stroke="{colour}" stroke-width="1.5"/>'
+    else:
+        shape = f'<circle cx="6" cy="6" r="5" fill="{colour}"/>'
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" '
+            f'role="img" aria-label="{label}: {message}"><title>{label}: {message}</title>{shape}</svg>\n')
 
 
 def chips(needs, previous, commit, building=False):
     """The files of the branch, by name, given the `needs` context of the job, the files that the
-    branch held before, parsed, and the run's commit; with `building`, at the start of the run."""
+    branch held before and the run's commit; with `building`, at the start of the run."""
     current = needs["changes"]["outputs"]
-    deployed = previous.get("deployed.json") or {"commit": None, "inputs": {}}
+    deployed = json.loads(previous["deployed.json"]) if "deployed.json" in previous else {"commit": None, "inputs": {}}
     if not building and needs["deploy"]["result"] == "success":
         deployed = {"commit": commit, "inputs": {name: current[name] for name in INPUTS}}
-    files = {"deployed.json": deployed}
-    for chip, (label, jobs, inputs) in CHIPS.items():
-        published = all(deployed["inputs"].get(name) == current[name] for name in inputs)
+    files = {"deployed.json": json.dumps(deployed, indent=2) + "\n"}
+    for name, (label, jobs, inputs) in CHIPS.items():
+        published = all(deployed["inputs"].get(hashed) == current[hashed] for hashed in inputs)
         if building:
-            if published and f"{chip}.json" in previous:
-                files[f"{chip}.json"] = previous[f"{chip}.json"]
+            if published and f"{name}.svg" in previous:
+                files[f"{name}.svg"] = previous[f"{name}.svg"]
                 continue
             message = "building"
         elif any(needs[job]["result"] in FAILED for job in jobs):
             message = "failing"
         else:
             message = "up to date" if published else "outdated"
-        files[f"{chip}.json"] = {"schemaVersion": 1, "label": label, "message": message,
-                                 "color": STATES[message]}
+        files[f"{name}.svg"] = chip(label, message)
     return files
 
 
@@ -85,14 +97,14 @@ def git(*args, input=None):
 
 
 def fetch():
-    """The files of the branch on origin, parsed, by name; none before the first run."""
+    """The files of the branch on origin, by name; none before the first run."""
     found = subprocess.run(["git", "ls-remote", "--exit-code", "--heads", "origin", BRANCH],
                            stdout=subprocess.DEVNULL)
     if found.returncode == 2:
         return {}
     found.check_returncode()
     git("fetch", "--depth=1", "origin", BRANCH)
-    return {name: json.loads(git("show", f"FETCH_HEAD:{name}"))
+    return {name: git("show", f"FETCH_HEAD:{name}")
             for name in git("ls-tree", "--name-only", "FETCH_HEAD").splitlines()}
 
 
@@ -100,7 +112,7 @@ def push(files, message):
     """Replaces the branch on origin with one commit, without parents, of `files`."""
     entries = ""
     for name, content in sorted(files.items()):
-        blob = git("hash-object", "-w", "--stdin", input=json.dumps(content, indent=2) + "\n").strip()
+        blob = git("hash-object", "-w", "--stdin", input=content).strip()
         entries += f"100644 blob {blob}\t{name}\n"
     commit = git(*BOT, "commit-tree", git("mktree", input=entries).strip(), "-m", message).strip()
     git("push", "--force", "origin", f"{commit}:refs/heads/{BRANCH}")
@@ -112,8 +124,8 @@ def main():
     args = parser.parse_args()
     commit = os.environ["GITHUB_SHA"]
     files = chips(json.loads(os.environ["NEEDS"]), fetch(), commit, args.building)
-    for chip, (label, _, _) in CHIPS.items():
-        print(f"{label}: {files[f'{chip}.json']['message']}")
+    for name, (label, _, _) in CHIPS.items():
+        print(files[f"{name}.svg"].split("<title>")[1].split("</title>")[0])
     push(files, f"{'Building' if args.building else 'Status after'} {commit}")
 
 
