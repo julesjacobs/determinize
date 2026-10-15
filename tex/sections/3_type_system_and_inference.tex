@@ -6,7 +6,7 @@
 
 Whether replacing a sample by its mean is valid depends on how the
 sampled value is subsequently used.
-We therefore introduce a type system that checks whether sampled values are used in ways that justify replacing them by their means. \Cref{fig:typing} presents the typing rules.
+We therefore introduce a type system that checks whether sampled values are used in ways that justify replacing them by their means. \Cref{fig:typing} the typing rules.
 The judgment $\Gamma\vdash e:\tau$ assigns expression $e$ type
 $\tau$ under context $\Gamma$. Alongside standard types for
 functions, pairs, sums, and lists, real types carry an annotation
@@ -36,8 +36,7 @@ are replaced by their means. The rules enforce this as follows:
     \item \textbf{Multiplication and division.}
     Multiplication requires a left operand of type $\tyR\G$,
     while division requires a denominator of type $\tyR\G$.
-    Determinization preserves these values, and scaling by such a value is linear in the other operand (assuming
-    a nonzero denominator).
+    Determinization leaves these values unchanged, so multiplication by such a value—and division by it when nonzero—is linear in the other operand.
     For example, let $x=\kw{uniform}^{\G}(0,1)$ and $y=\kw{gaussian}^{\E}(x,1)$. For each sampled value of $x$, $y$ has mean $x$, so $x*y$ has mean $x^2$. Determinization leaves $x$ unchanged and replaces $y$ by $x$, giving exactly $x^2$. A limitation of this rule is that it rejects multiplication of two $\E$ values even when they are independent; supporting this case would require an additional analysis to establish independence between random variables.
 
     \item \textbf{Comparisons.}
@@ -70,7 +69,7 @@ behavior under determinization.
 \subsection{Type Inference}
 \label{sec:type-inference}
 
-The typing rules in \cref{fig:typing} check whether the distribution modes and type annotations assigned to a program are valid. The inference procedure determines these assignments, together with the types of expressions, subject to the typing rules. Our goal is to assign mode $\E$ to as many sampling sites as possible, subject to the typing rules.
+The typing rules in \cref{fig:typing} check whether the distribution modes and type annotations assigned to a program are valid. The type inference procedure determines these assignments, together with the types of expressions. Our goal is to assign mode $\E$ to as many sampling sites as possible, subject to the typing rules.
 
 \subsubsection{Constraint Generation}
 
@@ -79,73 +78,17 @@ The typing rules in \cref{fig:typing} check whether the distribution modes and t
 We generate constraints using judgments of the form
 $\Gamma\vdash e\Rightarrow\tau\mid C$, meaning that under context
 $\Gamma$, expression $e$ has type $\tau$ provided that the set
-$C$ of constraints is satisfied.
-We use mode variables $a,b,\ldots$, ranging over $\{\G,\E\}$,
+$C$ of constraints is satisfied. Selected rules appear in \cref{fig:inference}; the complete rules
+are given in \cref{sec:appendix-constraint-generation}. Each rule in the figure recursively infers types for its subexpressions.
+We use variables $a,b,\ldots$, ranging over $\{\G,\E\}$,
 to represent unknown annotations on real types, and type variables
 $X,Y,\ldots$ to represent unknown types.
-In particular, $\tyR a$ denotes a real type whose mode is yet
-to be determined. We order annotations by $\G\le\E$, reflecting the
-subtyping relation $\tyR\G<:\tyR\E$. Thus,
+In particular, $\tyR a$ denotes a real type whose annotation is yet
+to be determined. We order annotations by $a\le b$ iff $a=b$ or
+$(a,b)=(\G,\E)$. Thus,
 $\tyR a<:\tyR b$ holds exactly when $a\le b$:
 the permitted assignments are $(\G,\G)$, $(\G,\E)$,
-and $(\E,\E)$, while $(\E,\G)$ is forbidden.
-
-Each rule recursively infers types for its subexpressions,
-introduces fresh variables as needed, and collects the constraints
-imposed by the corresponding typing rule.
-These constraints capture the restrictions on how values may be used:
-for instance, an operation requiring a $\G$-typed operand imposes
-constraints on the expression producing that operand.
-For each sampling site, a fresh mode variable determines whether
-the site can be annotated with $\E$ or must remain $\G$;
-an explicit annotation $m\in\{\G,\E\}$ additionally imposes
-the constraint $a=m$.
-Selected rules appear in \cref{fig:inference}; the complete rules
-are given in \cref{sec:appendix-constraint-generation}.
-
-
-
-\begin{example}[Constraint generation]
-\label{ex:constraint-generation}
-Consider the following program, with all sampling sites unannotated:
-\[
-\begin{aligned}
-&\kw{let}\ x=\kw{uniform}(0,1)\ \kw{in}\\
-&\kw{let}\ y=\kw{gaussian}(x,1)\ \kw{in}\\
-&\kw{let}\ z=\kw{gaussian}(y,1)\ \kw{in}\\
-&\kw{if}\ x<1/2\ \kw{then}\ x*z\ \kw{else}\ z+1.
-\end{aligned}
-\]
-Let $a_x,a_y,a_z$ denote the fresh mode variables
-associated with the three sampling sites.
-By \textsc{Let} and \textsc{Var}, subsequent uses of
-$x,y,z$ have types $\tyR{a_x},\tyR{a_y},\tyR{a_z}$,
-respectively.
-Similarly, applying the remaining rules in
-\cref{fig:inference} generates the following
-subtype constraints:
-\[
-\begin{aligned}
-\tyR{a_x}<:\tyR{a_y},\quad
-\tyR{a_y}<:\tyR{a_z}
-  &\quad\text{(\textsc{Gaussian})}\\
-\tyR{a_x}<:\tyR\G
-  &\quad\text{(\textsc{Cmp}, \textsc{Mul})}\\
-\tyR{a_z}<:\tyR{a_t},\quad
-\tyR{a_z}<:\tyR{a_f}
-  &\quad\text{(\textsc{Mul}, \textsc{Add})}\\
-\tyR{a_t}<:X,\quad
-\tyR{a_f}<:X
-  &\quad\text{(\textsc{If})}.
-\end{aligned}
-\]
-Here $a_f$ is the mode variable of the else branch's
-result type, and $X$ is the fresh type variable
-introduced by \textsc{If}.
-We omit the constraints involving numeric constants
-and the trivial Boolean guard constraint; these are
-generated by the same rules.
-\end{example}
+and $(\E,\E)$, while $(\E,\G)$ is forbidden. \Cref{sec:appendix-constraint-generation-example} walks through an example of how the constraint generation process works more concretely. 
 
 \subsubsection{Constraint Solving}
 
@@ -156,8 +99,7 @@ We solve the generated constraints following
 and type variable resolution, as shown in
 \cref{fig:inference-solving}.
 Constraints between types with matching constructors are
-reduced to constraints on their components, with function
-arguments handled contravariantly.
+reduced to constraints on their components.
 When an unresolved type variable $X$ is constrained against
 a type $\tau$ with a known outer constructor, we expand $X$
 to $h(\tau)$, which preserves that constructor while
@@ -166,60 +108,17 @@ Each substitution is applied throughout the constraints,
 and constraints between unresolved type variables are
 deferred until their structures become known.
 This process continues until no further reductions or
-expansions are possible, leaving mode inequalities
+expansions are possible, leaving inequalities
 $a\le b$, where $\G\le\E$.
 
-Finally, we solve the mode inequalities by propagating forced
+Finally, we solve the inequalities by propagating forced
 assignments: $a\le b$ forces $b=\E$ if $a=\E$, and forces
 $a=\G$ if $b=\G$.
 We repeat until no further assignments are forced, rejecting
 conflicting assignments.
-Any remaining mode variables are assigned $\E$, maximizing
+Any remaining variables are assigned $\E$, maximizing
 the number of sampling sites that can be determinized, while
-remaining unresolved type variables are assigned $\tyU$.
-
-
-
-\begin{example}[Constraint solving]
-Continuing \cref{ex:constraint-generation}, we apply
-\cref{fig:inference-solving} to reduce the generated
-subtype constraints. The constraint $\tyR{a_t}<:X$
-requires type variable resolution, followed by
-subtype constraint reduction:
-\[
-\tyR{a_t}<:X
-\;\rightarrow{X\mapsto\tyR b}\;\;\;
-\tyR{a_t}<:\tyR b
-\;\leadsto\;
-a_t\le b,
-\]
-where $b$ is fresh. Applying the same substitution
-to $\tyR{a_f}<:X$ and reducing gives $a_f\le b$.
-The remaining real-type constraints reduce directly
-to mode inequalities:
-\[
-\begin{gathered}
-a_x\le a_y,\quad a_y\le a_z,\quad a_x\le\G,\\
-a_z\le a_t,\quad a_z\le a_f,\quad
-a_t\le b,\quad a_f\le b.
-\end{gathered}
-\]
-
-Mode constraint solving forces $a_x=\G$,
-since $a_x\le\G$. No other mode variables are
-forced to $\G$, so all remaining variables are
-assigned $\E$.
-Thus, inference assigns the sampling sites
-\[
-(a_x,a_y,a_z)=(\G,\E,\E)
-\]
-and the program has type $\tyR\E$.
-Determinization consequently retains the uniform
-sample while replacing both Gaussian samples by
-their conditional means.
-\end{example}
-
-
+remaining unresolved type variables are assigned $\tyU$. For an example of how the constraint solving process works more concretely, see~\Cref{sec:appendix-constraint-solving-example}.
 
 
 To state the guarantee, a \emph{completion} of an expression $e$ is

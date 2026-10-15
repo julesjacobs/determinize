@@ -1,7 +1,7 @@
 % !TeX root = ../main.tex
 \begin{figure}[htbp]
 \centering
-\small
+\footnotesize
 \newcommand{\inferconstraints}[3]{\Gamma\vdash #1\Rightarrow #2\mid #3}
 \textbf{Constraint generation}\leanref{constraint-generation}
 \medskip
@@ -52,7 +52,7 @@
  {\inferconstraints{\ite{e_0}{e_1}{e_2}}{X}{C_0\cup C_1\cup C_2\cup\{\tau_0<:\tyB,\ \tau_1<:X,\ \tau_2<:X\}}}
 \end{mathpar}
 \caption{Selected constraint generation rules. The judgment $\inferconstraints e\tau C$ infers type $\tau$ and generates
-constraints $C$. Each affinity $a$ and type variable $X$ introduced in
+constraints $C$. Each annotation $a$ and type variable $X$ introduced in
 an individual rule is fresh. At a sampling site, $a$ supplies the inferred
 annotation; an explicit annotation $m\in\{\G,\E\}$ additionally generates
 $a=m$. The full rules are given in

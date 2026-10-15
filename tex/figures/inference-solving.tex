@@ -1,29 +1,31 @@
 \begin{figure}[t]
 \centering
-\small
+\footnotesize
 \setlength{\abovedisplayskip}{5pt}
 \setlength{\belowdisplayskip}{5pt}
 \smallskip
-\textbf{(a) Subtype constraint reduction}
+\textbf{(a) Subtype constraint reduction}\leanref{subtype-constraint-reduction}
 \[
-\begin{aligned}
+\begin{gathered}
 \tyR a<:\tyR b
-  &\;\leadsto\;\{a\le b\}\\[2pt]
-(\tau_1\to\tau_2)<:(\sigma_1\to\sigma_2)
-  &\;\leadsto\;\{\sigma_1<:\tau_1,\;\tau_2<:\sigma_2\}\\[2pt]
-(\tau_1\star\tau_2)<:(\sigma_1\star\sigma_2)
-  &\;\leadsto\;\{\tau_1<:\sigma_1,\;\tau_2<:\sigma_2\}
-  \quad(\star\in\{\times,+\})\\[2pt]
+  \;\leadsto\;\{a\le b\}
+  \qquad
 \tyL\tau<:\tyL\sigma
-  &\;\leadsto\;\{\tau<:\sigma\}\\[2pt]
+  \;\leadsto\;\{\tau<:\sigma\}
+  \qquad
 \chi<:\chi
-  &\;\leadsto\;\varnothing
-  \quad(\chi\in\{\tyU,\tyB\}).
-\end{aligned}
+  \;\leadsto\;\varnothing
+  \quad(\chi\in\{\tyU,\tyB\})\\[2pt]
+(\tau_1\to\tau_2)<:(\sigma_1\to\sigma_2)
+  \;\leadsto\;\{\sigma_1<:\tau_1,\;\tau_2<:\sigma_2\}\\[2pt]
+(\tau_1\star\tau_2)<:(\sigma_1\star\sigma_2)
+  \;\leadsto\;\{\tau_1<:\sigma_1,\;\tau_2<:\sigma_2\}
+  \quad(\star\in\{\times,+\}).
+\end{gathered}
 \]
 
 \smallskip
-\textbf{(b) Type variable resolution}
+\textbf{(b) Type variable resolution}\leanref{type-shape-unification}\leanref{type-affinity-decoration}
 
 \begin{minipage}[t]{0.36\linewidth}
 \vspace{0pt}
@@ -46,41 +48,27 @@ X<:X
 X<:Y\ (X\ne Y)
   &\;\leadsto\;\text{defer }X<:Y,\\[3pt]
 X<:\tau
-  &\;\leadsto\;\{\tau'<:\tau\}
-    \quad[X\mapsto\tau'],\\[3pt]
+  &\;\leadsto\;\{h(\tau)<:\tau\}
+    \quad[X\mapsto h(\tau)],\\[3pt]
 \tau<:X
-  &\;\leadsto\;\{\tau<:\tau'\}
-    \quad[X\mapsto\tau'].
+  &\;\leadsto\;\{\tau<:h(\tau)\}
+    \quad[X\mapsto h(\tau)].
 \end{aligned}
 \]
 \end{minipage}
 
-\smallskip
-\noindent
-{\footnotesize
-Here $\tau'=h(\tau)$ for constructor-headed $\tau$;
-$b,U,V$ are fresh, $\star\in\{\times,+\}$, and
-$\chi\in\{\tyU,\tyB\}$. Apply substitutions throughout
-and revisit deferred constraints.
-}
-
 \medskip
-\textbf{Mode constraint solving}\leanref{affinity-solving}
+\textbf{(c) Mode constraint solving}\leanref{affinity-solving}
 \[
 \inferrule{a\le b\\a=\E}{b:=\E}
 \qquad\qquad
 \inferrule{a\le b\\b=\G}{a:=\G}
 \]
-\noindent
-{\footnotesize
-Propagate until no further assignments are forced.
-Reject conflicts; otherwise, assign $\E$ to remaining
-mode variables and $\tyU$ to remaining type variables.
-}
-
-\caption{Constraint solving. After checking type shapes,
-subtype reduction and type variable resolution are applied
-repeatedly, followed by mode constraint solving.}
+\caption{Constraint solving. Subtype reduction and type variable resolution are applied
+repeatedly, followed by mode constraint solving.
+In (b):
+$b,U,V$ are fresh, $\star\in\{\times,+\}$, and
+$\chi\in\{\tyU,\tyB\}$.}
 \label{fig:inference-solving}
 \Description{Subtype reduction and type variable resolution
 are repeatedly applied together. Mode inequalities are then
