@@ -206,8 +206,8 @@ Type and affinity variables declared fresh are distinct from all variables
 already in use. Bindings are monomorphic.
 
 \paragraph{Compact summary.}
-The following table reproduces the arithmetic and distribution summary
-from the main figure's earlier tabular presentation. For each operand,
+The following table summarizes constraint generation for arithmetic
+expressions and distributions. For each operand,
 $\Gamma\vdash e_i\Rightarrow\tau_i\mid C_i$. Each displayed $a$ is fresh;
 the complete constraint set is $\bigcup_i C_i$ together with the listed
 constraints. At a sampling site, $a$ supplies the inferred annotation;
@@ -744,7 +744,8 @@ Thus the domain-safety assumption is necessary, because:
 \end{example}
 
 \paragraph{Why domain safety is necessary.}
-The preceding guarantees rely essentially on domain safety. Without it, replacing an $\E$-mode sample by its mean can change whether a later operation is defined, and therefore change which executions contribute to the return-conditioned distribution.
+Tracewise soundness and expectation preservation require domain safety
+(\cref{thm:trace-soundness,thm:expectation}). Without domain safety, replacing an $\E$-mode sample by its mean can change whether a later operation is defined, and therefore change which executions contribute to the return-conditioned distribution.
 
 For example,
 \begin{lstlisting}
@@ -1582,7 +1583,7 @@ In particular,
 \subsection{Tracewise Soundness}
 \label{sec:appendix-trace-soundness}
 
-\todo[inline]{TODO: Give the full measure-theoretic derivation of tracewise soundness that \cref{sec:proof} defers here: the definitions of the trace-indexed output kernels $K_{n,s}$ and $K_e$, the compatibility lemma relating them, and the derivation of \cref{thm:trace-soundness} from the whole-program factorization.}
+\todo[inline]{TODO: Give the full measure-theoretic derivation of tracewise soundness that \cref{sec:symbolic-semantics} defers here: the definitions of the trace-indexed output kernels $K_{n,s}$ and $K_e$, the compatibility lemma relating them, and the derivation of \cref{thm:trace-soundness} from the whole-program factorization.}
 
 \subsection{Global Soundness}
 

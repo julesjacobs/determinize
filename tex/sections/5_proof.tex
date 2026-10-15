@@ -155,10 +155,10 @@ $\mathcal N(t,2)$, we obtain
     &=\delta_{t^2}.
 \end{aligned}
 \]
-The two interpretations have different output
-distributions, but the mean of the former is
-exactly the value returned by the latter. This relationship follows from a property of
-affine expressions. For a well-typed, domain-safe
+The two interpretations have different output distributions, but the mean
+under the actual interpretation equals the value returned by the expected
+interpretation. This equality follows from the affine-means identity
+(\cref{lem:appendix-affine-means}): for a well-typed, domain-safe
 symbolic environment $\sigma$ and affine
 expression $a$,
 \[
@@ -168,9 +168,8 @@ expression $a$,
 In particular, the equality holds even when
 the distributions in $\sigma$ depend on
 earlier samples. Together with the typing
-restrictions, this property allows us to
-relate the two interpretations throughout
-symbolic execution.
+restrictions, the affine-means identity relates the actual and expected
+interpretations throughout symbolic execution.
 
 \subsection{Deriving the Soundness Results}
 
@@ -182,7 +181,7 @@ Given a trace $\tau$ of $\G$-mode
 samples, the kernel describes the source
 output distribution after $n$ remaining steps,
 integrating over the $\E$-mode samples.
-Its construction is given in the appendix.
+The construction of $K_{n,s}$ is [missing from appendix].
 
 \begin{theorem}[Finite-step factorization
 \leanref{finite-step-factorization}]
@@ -209,8 +208,8 @@ measure with finite first absolute moment, and
 The first equality recovers the actual
 interpretation by restoring the randomness
 removed by the expected interpretation.
-The second states that the determinized
-output is the mean of this distribution.
+The mean identity states that the determinized
+output is the mean of $K_{n,s}(\tau,\cdot)$.
 For our terminal state, for example,
 \[
   K_{0,s_t}([],\cdot)=\mathcal N(t^2,2t^2),
@@ -219,12 +218,12 @@ For our terminal state, for example,
 \]
 
 \paragraph{From finite steps to whole programs.}
-We extend the finite-step result by combining the
+We extend finite-step factorization (\cref{thm:finite-step-factorization}) by combining the
 kernels $K_{n,\mathsf{init}(e)}$ over all possible
-return times. A compatibility lemma ensures that
+return times. A compatibility lemma [missing from appendix] ensures that
 the resulting whole-program kernel $K_e$\leanref{whole-program-output-kernel} preserves
 the factorization when summing over step counts\leanref{whole-program-kernel-factorization}.
-The construction is given in the appendix.
+The construction of $K_e$ is [missing from appendix].
 
 \begin{theorem}[Whole-program factorization
 \leanref{whole-program-factorization}]
@@ -259,7 +258,8 @@ whose mean is
   :=\int_\Real x\,K_e(\tau,dx)
   =\Expect[e\mid\tau].
 \]
-The second part of the theorem shows that
+The mean identity in the whole-program factorization theorem
+(\cref{thm:whole-program-factorization}) shows that
 the determinized program returns $m(\tau)$
 for almost every retained trace. Therefore,
 \[

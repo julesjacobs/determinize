@@ -8,7 +8,7 @@ We will now prove our determinization technique found in the following natural s
 it \emph{preserves the expected return whenever that expectation is well-defined}. Second,
 \emph{determinzation never increases the variance of returned values}. We proceed by first stating
 these results in terms of the output measure $\law e$, and then develop a mire fine-grained soundness characterization that also applies when the program's expected return is undefined. We state the main soundness theorems throughout
-this section, leaving the proof strategies to~\Cref{sec:proof} and the
+this section, leaving the proof strategies to~\Cref{sec:symbolic-semantics} and the
 full proofs to~\Cref{sec:appendix}.
 
 \subsection{Global Soundness}
@@ -327,8 +327,12 @@ determinization replaces the remaining randomness by its average.
 \end{example}
 %
 %
-Now, crucially, if the global
-expectation is defined, then the conditional expectation from \Cref{thm:trace-soundness} can bev integrated over traces to obtain the global soundness \Cref{thm:expectation}. More precisely, if $q_e>0$ and $\Expect_{\mathrm{ret}}[e]$ is well-defined, the disintegration identity gives
+Integrating tracewise soundness (\cref{thm:trace-soundness}) over the common
+trace measure yields expectation preservation (\cref{thm:expectation}) when
+the global expectation is well-defined, and variance non-increase
+(\cref{thm:variance}) when the second moment is finite. More precisely, if
+$q_e>0$ and $\Expect_{\mathrm{ret}}[e]$ is well-defined, the disintegration
+identity (\cref{eq:disintegration}) gives
 \[
   \Expect_{\mathrm{ret}}[e]
   =\frac{1}{q_e}
@@ -355,7 +359,7 @@ transformed programs are conditioned on the same returning mass:
 % well-defined. This requirement is essential. Tracewise soundness
 % guarantees finite conditional means outside a set of traces of measure
 % zero, but this does not ensure that the original program has a
-% well-defined global expectation. In the coin-flipping example above,
+% well-defined global expectation. In the undefined-expectation example (\cref{ex:coin-flip}),
 % every terminating trace has conditional mean zero, yet
 % $\Expect[X^+]=\Expect[X^-]=\infty$, so the original program's global
 % expectation is undefined.
