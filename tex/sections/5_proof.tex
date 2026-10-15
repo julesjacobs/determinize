@@ -1,7 +1,7 @@
 \section{Symbolic Semantics}
 \label{sec:symbolic-semantics}
 
-In this section, we present our proof strategy for establishing tracewise soundness, from which the global soundness results follow. We use the source program from \cref{fig:intro-signal} in \Cref{sec:introduction} as a running example to illustrate our main ideas, referring to parts in~\Cref{fig:symbolic-example}. The central idea is to introduce a \emph{symbolic operational semantics} that provides a common representation of both the original and determinized programs. Instead of immediately sampling $\E$-mode
+In this section, we present our proof strategy for establishing tracewise soundness, from which the global soundness results follow. We use the signal example from \Cref{sec:introduction} as a running example to illustrate our main ideas, referring to parts in~\Cref{fig:symbolic-example}. The central idea is to introduce a \emph{symbolic operational semantics} that provides a common representation of both the original and determinized programs. Instead of immediately sampling $\E$-mode
 distributions, symbolic execution records these choices and postpones their evaluation. Two interpretations of the resulting symbolic states then recover the source program and its determinization. 
 
 \input{figures/symbolic-example.tex}
