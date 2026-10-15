@@ -38,8 +38,7 @@ measurement noise and thus has significantly lower output variance (in this case
 This example also exposes the central difficulty in the transformation: had we also replaced the
  uniform sample by its mean, $1/2$, the resulting program would 
 return $1/4$ rather than $1/3$ and hence not be equivalent to the source program. Thus, only two random variables can be soundly replaced in this example, and
-the third must remain. The distinction on whether a replacement can happens depends on how their values
-are used: the returned value of the above program is linear in $z$ when $x$ is fixed,
+the third must remain. Whether a sample can be replaced depends on how its value is used: the returned value of the above program is linear in $z$ when $x$ is fixed,
 but becomes quadratic in $x$ after averaging over $y$ and $z$. A sound
 transformation must therefore reason about both the dependencies
 between random choices and their uses throughout the program. This challenge becomes particularly pronounced in higher-order, potentially unbounded recursive programs, where the influence of a random choice can propagate through function calls and across arbitrarily long executions. 
@@ -81,14 +80,12 @@ increasing its variance.
 The next three examples illustrate, at a high level, how determinization handles
 higher-order functions, data structures, and unbounded recursion.
 
-Determinization gets more interesting in the presence of higher-order functions, data structures, and unbounded recursion, which we now briefly illustrate. 
-
 Consider an example of a Gaussian random walk in
 \cref{fig:intro-gaussian-walk} (on the left).
 This {\em higher-order} program passes a probabilistic step function to
 \texttt{reduce}, a left fold that traverses the requested times
 and accumulates {\em a list} of time-position pairs.
-At each time $t'$, it samples a new position from
+At each time $t'$, it samples a new position $y'$ from
 $\mathcal N(y,t'-t)$, where $(t,y)$ is the latest pair in the path. It then adds $(t',y')$ to the front of the path. At the next step, it reads that pair and uses $y'$ as the next Gaussian's mean. Our type inference procedure will mark the Gaussian sampling
 step as determinizable without unrolling the traversal. 
 Replacing the draws by their means keeps every position at zero,
@@ -198,9 +195,9 @@ In a nutshell, our paper makes the following contributions:
   computed expectation is exactly that of the original
   program
   (\cref{sec:implementation}).
-  The full Lean code is available at [TODO], with references
-  to mechanized definitions and theorems indicated by a
-  superscript Lean logo, as in \leanmark.
+  The Lean code is included in the artifact. References to mechanized
+  definitions and theorems carry a superscript Lean logo, as in
+  \leanmark.
 
     \item[] \textbf{Evaluation.} We evaluate two applications of determinization.
 First, by eliminating continuous sampling, determinization
