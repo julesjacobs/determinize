@@ -32,8 +32,9 @@ $$
 Replacing both Gaussian samples by their means yields a simpler
 program that samples only $x$ and returns $x^2$:
 \lstinline{let x = uniform(0, 1) in x * x}. Both the source and transformed programs have
-expected value $1/3$, but the transformed program avoids generating
-measurement noise and thus has significantly lower output variance (in this case a 4.75x reduction from $\frac {19} {45}$ to $\frac {4} {45}$).
+expected value $1/3$, but replacing the measurement noise reduces output
+variance from $\signalSourceVariance$ to $\signalTargetVariance$, a factor
+of $\signalReduction\times$.
 
 This example also exposes the central difficulty in the transformation: had we also replaced the
  uniform sample by its mean, $1/2$, the resulting program would 

@@ -14,10 +14,10 @@ OUTPUT = ROOT / 'tex/figures/data'
 
 
 def moments():
-    # X ~ U(0,1), Z ~ N(0,1) independently: XY = X² + XZ, target = X².
+    # X ~ U(0,1); independent Z1,Z2 ~ N(0,1): output = X² + X(Z1+Z2).
     signal_mean = F(1, 3)
     signal_target = F(1, 5) - signal_mean**2
-    signal_source = signal_target + F(1, 3)
+    signal_source = signal_target + 2 * F(1, 3)
 
     # N counts non-exit rooms: P(N=n)=(1/4)(3/4)^n, starting at depth 1.
     # E[(N)_k] = k! (q/p)^k for falling factorials (N)_k.
