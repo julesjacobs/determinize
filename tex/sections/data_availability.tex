@@ -18,5 +18,6 @@ Running \texttt{lake build -{}-wfail} checks every proof, and checks that each t
 \texttt{Theorems.lean}, which states the theorems of this paper, uses only Lean's standard axioms
 (\texttt{propext}, \texttt{Classical.choice}, \texttt{Quot.sound}). The first build takes about
 half an hour on a 16-core machine.
-Limitations: the exact results also need the Storm model checker, and the Monte Carlo experiments
-need Pyro. Timings depend on the machine.
+The Monte Carlo experiments use the compiled Lean runtime; plotting
+requires Python and Matplotlib. Exact analysis using the Storm backend
+also requires Storm. Timings depend on the machine.
