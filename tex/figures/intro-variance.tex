@@ -1,7 +1,7 @@
 % !TeX root = ../main.tex
 \begin{figure}[htbp]
 \centering
-\begin{tikzpicture}[font=\footnotesize]
+\begin{tikzpicture}[font=\footnotesize,scale=.7]
 \begin{groupplot}[
   group style={group size=2 by 1, horizontal sep=1.6cm},
   width=.43\linewidth, height=4.6cm,
@@ -37,8 +37,7 @@
   {$\dungeonReduction\times$ reduction};
 \end{groupplot}
 \end{tikzpicture}
-\caption{Analytically calculated output variances for the signal example
-and dungeon crawl in \cref{sec:introduction}.
+\caption{Output variances for the signal example and dungeon crawl (\cref{fig:intro-dungeon}).
 Averaging $n$ independent runs divides variance by $n$,
 so the reduction factors also apply to the runs needed for the same variance of the average.}
 \label{fig:intro-variance}
