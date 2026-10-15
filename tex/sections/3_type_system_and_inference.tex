@@ -66,6 +66,16 @@ In particular, $\G$-mode distributions require
 parameters of type $\tyR\G$, preserving their sampling
 behavior under determinization.
 
+The transformation preserves the types assigned by these rules.
+
+\begin{lemma}[Determinization preserves typing\leanref{determinization-typing}]
+\label{lem:appendix-determinization-typing}
+If $\typing e\tau$, then
+\[
+  \typing{\trans e}\tau.
+\]
+\end{lemma}
+
 \subsection{Type Inference}
 \label{sec:type-inference}
 
