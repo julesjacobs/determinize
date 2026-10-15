@@ -14,7 +14,8 @@ declare global {
   interface Window {
     /** The bundle's exports; `ready` resolves to the page's store. */
     DeterminizeSim: { ready: Promise<Store> };
-    /** The durations of the long tasks since `watchLongTasks`. */
+    /** The durations of the long tasks since `watchLongTasks`, or since `longTasksPer` started
+     * an action. */
     longTasks: number[];
     /** The returned runs that the statistics show at each change, with the runs sampled then. */
     returnedTexts: string[];
@@ -89,13 +90,17 @@ function observeLongTasks() {
 }
 
 /** The long tasks during each of `actions`, done one after the other, and how long the middle one
- * of their longest tasks took: a regression slows every action, a busy machine only some. */
+ * of their longest tasks took: a regression slows every action, a busy machine only some. An
+ * action may open a page, whose tasks count from its start where `observeLongTasks` is an init
+ * script. */
 async function longTasksPer(page: Page, actions: (() => Promise<void>)[]) {
   const each: number[][] = [];
   for (const action of actions) {
-    const from = await page.evaluate(() => window.longTasks.length);
+    await page.evaluate(() => {
+      window.longTasks = [];
+    });
     await action();
-    each.push(await page.evaluate((n) => window.longTasks.slice(n).map(Math.round), from));
+    each.push(await page.evaluate(() => window.longTasks.map(Math.round)));
   }
   const longest = each.map((tasks) => Math.max(0, ...tasks)).sort((a, b) => a - b);
   return { median: longest[Math.floor(longest.length / 2)], each: JSON.stringify(each) };
@@ -1429,22 +1434,26 @@ test("paging through a long run with a large σ takes under 200 ms a page, as a 
   expect(median, `long tasks per page (ms): ${each}`).toBeLessThanOrEqual(200);
 });
 
-test("a deep recursion stops where the step table grows too large, without a long task", async ({
+test("a deep recursion stops where the step table grows too large, without a long task, as a median", async ({
   page,
 }) => {
+  test.setTimeout(90_000);
   const deep = "let u = uniform(0, 1) in (rec f n => if n < 1 then u else 1 + f (n - 1)) 2000";
-  // From the start of the page, which opens with this program.
+  // From the start of the page, which opens with this program, on each of a few loads.
   await page.addInitScript(observeLongTasks);
-  await page.goto(linkTo(deep, 1));
-  // The step table's worker computes the table up to its size bound, which takes about 2 s.
-  await expect(status(page)).toHaveText(
-    /^Seed 1: the table stops after \d+ steps; its states grew too large to show\.$/,
-    { timeout: 20_000 },
-  );
-  await expect(page.getByRole("button", { name: "Resample" })).toBeEnabled();
-  const longTasks = await page.evaluate(() => window.longTasks);
-  test.info().annotations.push({ type: "long tasks (ms)", description: JSON.stringify(longTasks) });
-  expect(Math.max(0, ...longTasks)).toBeLessThanOrEqual(200);
+  const loads = Array.from({ length: 5 }, () => async () => {
+    await page.goto("about:blank");
+    await page.goto(linkTo(deep, 1));
+    // The step table's worker computes the table up to its size bound, which takes about 2 s.
+    await expect(status(page)).toHaveText(
+      /^Seed 1: the table stops after \d+ steps; its states grew too large to show\.$/,
+      { timeout: 20_000 },
+    );
+    await expect(page.getByRole("button", { name: "Resample" })).toBeEnabled();
+  });
+  const { median, each } = await longTasksPer(page, loads);
+  test.info().annotations.push({ type: "long tasks per load (ms)", description: each });
+  expect(median, `long tasks per load (ms): ${each}`).toBeLessThanOrEqual(200);
 });
 
 test("a newer program replaces the step table's computation in flight", async ({ page }) => {
