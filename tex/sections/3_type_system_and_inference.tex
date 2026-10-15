@@ -51,11 +51,10 @@ are replaced by their means. The rules enforce this as follows:
     of type $\tyR\E$ because its mean is $y/2$.
     Similarly, Gaussian means, Poisson rates, Bernoulli
     probabilities, discrete probabilities, and gamma
-    shapes may have type $\tyR\E$. In contrast, exponential
-    rates, beta parameters, Gaussian variances, and
-    gamma rates must have type $\tyR\G$, since the
-    corresponding mean is not affine in those
-    parameters or does not depend on them.
+    shapes may have type $\tyR\E$. Exponential rates, beta parameters, and gamma rates must have type
+    $\tyR\G$ because the corresponding means are not affine in those
+    parameters. This type system also requires Gaussian variances to have
+    type $\tyR\G$, although the Gaussian mean is independent of the variance.
 \end{itemize}
 
 Finally, the distribution rules impose $\alpha\in\{\G,\E,\M\}$:
