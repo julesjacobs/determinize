@@ -3,11 +3,11 @@
 A probabilistic language with E/G sampling modes, a Lean implementation and
 formalization, exact expected-reward certificates, and a browser simulator.
 
-[Project page](https://julesjacobs.github.io/determinize/) ·
-[Simulator](https://julesjacobs.github.io/determinize/sim/) ·
-[API documentation](https://julesjacobs.github.io/determinize/docs/) ·
-[Paper (PDF)](https://julesjacobs.github.io/determinize/determinize.pdf) ·
-[Anonymized artifact (ZIP)](https://julesjacobs.github.io/determinize/determinize-artifact.zip)
+[Project page](https://julesjacobs.github.io/determinize/)&nbsp;[![status](https://raw.githubusercontent.com/julesjacobs/determinize/status/site.svg "Green: up to date · amber: outdated · red: failing · blue ring: being built")](https://github.com/julesjacobs/determinize/actions/workflows/pages.yml?query=branch%3Amain) ·
+[Simulator](https://julesjacobs.github.io/determinize/sim/)&nbsp;[![status](https://raw.githubusercontent.com/julesjacobs/determinize/status/sim.svg "Green: up to date · amber: outdated · red: failing · blue ring: being built")](https://github.com/julesjacobs/determinize/actions/workflows/pages.yml?query=branch%3Amain) ·
+[API documentation](https://julesjacobs.github.io/determinize/docs/)&nbsp;[![status](https://raw.githubusercontent.com/julesjacobs/determinize/status/docs.svg "Green: up to date · amber: outdated · red: failing · blue ring: being built")](https://github.com/julesjacobs/determinize/actions/workflows/pages.yml?query=branch%3Amain) ·
+[Paper (PDF)](https://julesjacobs.github.io/determinize/determinize.pdf)&nbsp;[![status](https://raw.githubusercontent.com/julesjacobs/determinize/status/paper.svg "Green: up to date · amber: outdated · red: failing · blue ring: being built")](https://github.com/julesjacobs/determinize/actions/workflows/pages.yml?query=branch%3Amain) ·
+[Anonymized artifact (ZIP)](https://julesjacobs.github.io/determinize/determinize-artifact.zip)&nbsp;[![status](https://raw.githubusercontent.com/julesjacobs/determinize/status/artifact.svg "Green: up to date · amber: outdated · red: failing · blue ring: being built")](https://github.com/julesjacobs/determinize/actions/workflows/pages.yml?query=branch%3Amain)
 
 - `lean/`: parser, verified affinity inference, determinization, numerical execution,
   exact finite-state exploration, and kernel-checkable certificates.
@@ -75,7 +75,14 @@ before. It then assembles the [project page](https://julesjacobs.github.io/deter
 [API documentation](https://julesjacobs.github.io/determinize/docs/), the paper
 (`determinize.pdf`) and the [anonymized artifact](https://julesjacobs.github.io/determinize/determinize-artifact.zip)
 with `site/assemble.sh`, checks the links of the landing page and the simulator against the
-result, and publishes it to GitHub Pages.
+result, and publishes it to GitHub Pages. `site/status.py` keeps the disks after the links at the
+top of this file in the branch `status`, and each disk links to this workflow's runs. As a run
+starts, each part that changed since the site was published last gets a blue ring. At the run's
+end, also after a failure, a part's disk is red when its build or check failed, timed out or was
+cancelled, amber when the part changed but a failure elsewhere kept the site from being published,
+as each deployment replaces the whole site, and green when it is up to date. A run waits for the
+one before it to finish, and until it starts, the disks describe the earlier one. A disk reaches
+the README within about five minutes.
 
 An E draw is replaced by its distribution's mean; a G draw remains stochastic.
 Finite-model certificates prove the selected core program's integrability and

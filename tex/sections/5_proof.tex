@@ -1,7 +1,7 @@
 \section{Symbolic Semantics}
 \label{sec:symbolic-semantics}
 
-In this section, we present our proof strategy for establishing tracewise soundness, from which the global soundness results follow. We use the source program from \cref{fig:intro-signal} in \Cref{sec:introduction} as a running example to illustrate our main ideas, referring to parts in~\Cref{fig:symbolic-example}. The central idea is to introduce a \emph{symbolic operational semantics} that provides a common representation of both the original and determinized programs. Instead of immediately sampling $\E$-mode
+In this section, we present our proof strategy for establishing tracewise soundness, from which the global soundness results follow. We use the signal example from \Cref{sec:introduction} as a running example to illustrate our main ideas, referring to parts in~\Cref{fig:symbolic-example}. The central idea is to introduce a \emph{symbolic operational semantics} that provides a common representation of both the original and determinized programs. Instead of immediately sampling $\E$-mode
 distributions, symbolic execution records these choices and postpones their evaluation. Two interpretations of the resulting symbolic states then recover the source program and its determinization. 
 
 \input{figures/symbolic-example.tex}
@@ -156,8 +156,8 @@ $\mathcal N(t,2)$, we obtain
 \]
 The two interpretations have different output distributions, but the mean
 under the actual interpretation equals the value returned by the expected
-interpretation. This equality follows from the affine-means identity
-(\cref{lem:appendix-affine-means}): for a well-typed, domain-safe
+interpretation. This equality follows from the affine-means identity:
+for a well-typed, domain-safe
 symbolic environment $\sigma$ and affine
 expression $a$,
 \[
@@ -170,10 +170,10 @@ earlier samples. Together with the typing
 restrictions, the affine-means identity relates the actual and expected
 interpretations throughout symbolic execution.
 
-\subsection{Deriving the Soundness Results}
+\subsection{Soundness Results}
 
 \paragraph{Finite-step factorization.}
-To relate the two interpretations, we introduce
+The following theorem relates the two interpretations through
 a trace-indexed output kernel
 $K_{n,s}(\tau,\cdot)$\leanref{trace-indexed-output-kernel}.
 Given a trace $\tau$ of $\G$-mode
@@ -186,8 +186,8 @@ integrating over the $\E$-mode samples.
 \label{thm:finite-step-factorization}
 Let $s=(\sigma\mid\widehat e)$ be a well-typed,
 domain-safe symbolic state with $\widehat e:\tyR\E$.
-For every $n\in\Nat$ and measurable
-$A\subseteq\Trace$, $B\subseteq\Real$,
+For every $n\in\Nat$, there exists a kernel $K_{n,s}$ such that,
+for all measurable $A\subseteq\Trace$, $B\subseteq\Real$,
 \[
   \mathsf{Act}_n(s)(A\times B)
   =
@@ -213,18 +213,18 @@ For our terminal state, for example,
 \]
 
 \paragraph{From finite steps to whole programs.}
-We extend finite-step factorization (\cref{thm:finite-step-factorization}) by combining the
-kernels $K_{n,\mathsf{init}(e)}$ over all possible
-return times. A compatibility lemma\leanref{replay-compatibility} ensures that
-the resulting whole-program kernel $K_e$\leanref{whole-program-output-kernel} preserves
-the factorization when summing over step counts\leanref{whole-program-kernel-factorization}.
+The whole-program kernel $K_e(\tau,\cdot)$\leanref{whole-program-output-kernel} describing the
+source program's output distribution for a trace
+$\tau$,
+compatibility lemma\leanref{replay-compatibility}, and factorization proof\leanref{whole-program-kernel-factorization}
+are formalized in Lean. We state the resulting theorem here.
 
 \begin{theorem}[Whole-program factorization
 \leanref{whole-program-factorization}]
 \label{thm:whole-program-factorization}
 Suppose $\vdash e:\tyR\E$ and $e$ is domain-safe.
-For all measurable $A\subseteq\Trace$ and
-$B\subseteq\Real$,
+There exists a kernel $K_e$ such that, for all measurable
+$A\subseteq\Trace$ and $B\subseteq\Real$,
 \[
   J_e(A\times B)
   =
@@ -237,29 +237,9 @@ $(\tau,r)$, $K_e(\tau,\cdot)$ is a probability
 measure with finite first absolute moment, and $r=\int_{\Real}x\,K_e(\tau,dx)$.
 \end{theorem}
 
-Since $K_e$ is a probability measure on
-successful traces, the factorization implies
-that the source and determinized programs have
-the same trace measure\leanref{trace-preservation}. Moreover,
-$K_e(\tau,\cdot)$ is the source's conditional
-output distribution $\law e(\cdot\mid\tau)$,
-whose mean is
-\[
-  m(\tau)
-  :=\int_\Real x\,K_e(\tau,dx)
-  =\Expect[e\mid\tau].
-\]
-The mean identity in the whole-program factorization theorem
-(\cref{thm:whole-program-factorization}) shows that
-the determinized program returns $m(\tau)$
-for almost every retained trace. Therefore,
-\[
-  \law{\trans e}(\cdot\mid\tau)
-  =\delta_{m(\tau)}
-  =\delta_{\Expect[e\mid\tau]},
-\]
-establishing tracewise soundness
-(\cref{thm:trace-soundness})\leanref{trace-soundness}.
+Tracewise soundness (\cref{thm:trace-soundness}), including the
+identification of $K_e$ with the source's conditional output distribution
+almost everywhere, is proved in Lean\leanref{trace-soundness}.
 
 For the running example, fixing the retained
 trace $\tau_t=[(\kw{uniform},t)]$ gives
@@ -274,9 +254,9 @@ Integrating over $t\sim\mathcal U(0,1)$,
 both programs have expected output $1/3$,
 while determinization removes the conditional
 Gaussian variance. More generally, integrating over the common
-trace measure gives expectation preservation
+trace measure gives expectation preservation (\Cref{thm:expectation})
 whenever the global expectation is well-defined\leanref{expectation-preservation}.
 The law of total variance then gives variance
-non-increase when the second moment is finite\leanref{variance-non-increase},
+non-increase (\Cref{thm:variance}) when the second moment is finite\leanref{variance-non-increase},
 establishing the global soundness theorems in
 \cref{sec:soundness}.

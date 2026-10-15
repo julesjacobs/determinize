@@ -32,14 +32,15 @@ while [[ $# -gt 0 ]]; do
       # Any file under sim/; its build and test outputs are ignored, so git status lists none of them.
       grep -qE "^sim/|^(tests|examples)/|$toolchain" <<<"$changed" && areas+=(sim)
       grep -qE "^sim/(src|test)/|^sim/build\.|^sim/(package(-lock)?|tsconfig)\.json|^sim/index\.html|^examples/|$toolchain" <<<"$changed" && areas+=(bundle)
-      grep -qE "^site/|^sim/|^examples/|^flake-modules/devshells/site\.nix$|$toolchain" <<<"$changed" && areas+=(site)
+      # site/status.py writes the README's status chips in pages.yml, and the tests of det test it.
+      grep -qE "^site/|^sim/|^examples/|^flake-modules/devshells/site\.nix$|$toolchain" <(grep -vxF site/status.py <<<"$changed") && areas+=(site)
       # The landing page's quotes link names declared in the Lean modules outside Proof.
       grep -E '^lean/Determinize(\.lean|/.*\.lean)$' <<<"$changed" | grep -qvE '^lean/Determinize/Proof/' && areas+=(site)
       grep -qE '^tex/.*\.(tex|bib|cls|bst|sty|py)$' <<<"$changed" && areas+=(tex)
       # The paper's Lean links name lines of these Lean files.
       grep -qxFf <(grep -oE 'lean/[^{}]+\.lean' tex/lean-links.tex) <<<"$changed" && areas+=(tex)
       grep -qE '^lean/.*\.lean$|^lean/(lakefile\.toml|lean-toolchain|lake-manifest\.json)$' <<<"$changed" && areas+=(lean)
-      grep -qE '^tests/|^examples/|^tools/|^(test|run)\.sh$|^lean/test\.sh$' <<<"$changed" && areas+=(det)
+      grep -qE '^tests/|^examples/|^tools/|^(test|run)\.sh$|^lean/test\.sh$|^site/status\.py$' <<<"$changed" && areas+=(det)
       grep -qE '^artifact/|^sim/e2e/artifact\.spec\.ts$' <<<"$changed" && areas+=(artifact)
       ;;
     sim|bundle|site|tex|lean|det|artifact) areas+=("$1") ;;

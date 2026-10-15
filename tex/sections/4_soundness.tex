@@ -2,9 +2,9 @@
 \section{Soundness}
 \label{sec:soundness}
 
-We will now prove our determinization technique found in the following natural sense: First,
+We will now prove our determinization technique sound in the following natural sense: First,
 it \emph{preserves the expected return whenever that expectation is well-defined}. Second,
-\emph{determinzation never increases the variance of returned values}. We proceed by first stating
+\emph{determinization never increases the variance of returned values}. We proceed by first stating
 these results in terms of the output measure $\law e$, and then develop a more fine-grained soundness characterization that also applies when the program's expected return is undefined. We state the main soundness theorems throughout
 this section, leaving the proof strategy to~\Cref{sec:symbolic-semantics}.
 
@@ -121,7 +121,7 @@ $\Expect[|U|]=(2a)^{-1}\int_{-a}^{a}|u|\,du=a/2$.} Therefore,
 Because the distribution of $X$ conditioned on $N=n$ is symmetric
 around zero for every $n$ and $\Expect[|X|]=\infty$, we have
 $\Expect[X^+]=\Expect[X^-]=\infty$. Thus,
-$\Expect[X]$ is ill-undefined. Nevertheless, the expected return after
+$\Expect[X]$ is undefined. Nevertheless, the expected return after
 fixing any terminating sequence of retained samples is finite. This observation
 motivates a more fine-grained tracewise soundness guarantee that does not require the
 global expectation to exist, which we present in the next subsection.
@@ -166,7 +166,9 @@ is useful for two reasons. First, it gives a local account of what
 determinization does even when the program's overall expectation is
 undefined. Second, when the global expectation does exist, expectation
 preservation follows by integrating over these fixed choices.
-Throughout, a property $P(\tau)$ holds for $\mu$-almost every element if we have $\mu(\{\tau ~|~ P(\tau)\}) =1$.
+Throughout, a property $P(\tau)$ holds $\mu$-almost everywhere if
+$\{\tau\mid\neg P(\tau)\}$ is contained in a measurable set of
+$\mu$-measure zero.
 
 \input{figures/traces.tex}
 

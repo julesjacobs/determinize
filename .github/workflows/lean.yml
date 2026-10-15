@@ -24,6 +24,7 @@ on:
       - tools/benchmark_estimator_variance.py
       - tools/storm*.py
       - tools/storm-requirements.txt
+      - site/status.py
       - flake.nix
       - flake.lock
       - flake-modules/systems.nix
