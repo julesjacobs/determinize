@@ -18,24 +18,22 @@ while true:
     end
 end
 
-Partially determinizable but fully discrete after determinization; infinite state after determinization.
+A flip(1/2) loop guard gives almost-sure termination while retaining
+infinitely many reachable states after determinization.
 *)
 
-(* Query E[x_1] *)
-
-let steps = 1 in
-let loop = rec loop i => fun x => fun xlow => fun xup =>
-  if i < steps then
+let loop = rec loop x => fun xlow => fun xup =>
+  if flip(1/2) then
     let d = bernoulli(1/3) in
     if d < 1 then
       let step = gauss(3/4, 4) in
       let xlow = xlow - step in
-      loop (i + 1) xlow xlow xup
+      loop xlow xlow xup
     else
       let step = gauss(3/4, 4) in
       let xup = xup + step in
-      loop (i + 1) xup xlow xup
+      loop xup xlow xup
   else
     x
 in
-loop 0 0 0 0
+loop 0 0 0

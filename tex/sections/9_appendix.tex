@@ -40,14 +40,6 @@ in
 reduce step ((0, 0) :: []) times
 \end{lstlisting}
 
-
-\begin{itemize}
-    \item Detailed proofs
-    \item Maybe more benchmark tables
-\end{itemize}
-
-\todo[inline]{Add full benchmark programs here}
-
 \section{Determinization}
 \label{sec:appendix-determinization}
 
@@ -145,6 +137,62 @@ The target retains each distribution primitive and all its arguments; only
 $\E$ changes to $\M$, and every argument is recursively transformed.
 Mean evaluation remains an atomic distribution operation, governed by the
 domain conditions and reduction rule in \cref{fig:semantics}.
+
+\section{Determinization Examples}\label{sec:appendix-determinization-examples}
+
+\begin{example}[Full determinization]
+Consider an $\E$-mode Gaussian whose mean is given by an
+$\E$-mode uniform distribution. Determinization changes the
+outer Gaussian to $\M$-mode and recursively transforms its
+arguments. In particular, the nested $\E$-mode uniform
+distribution is also changed to $\M$-mode:
+\begin{align*}
+\trans{
+  \kw{gaussian}^{\E}
+    \bigl(\kw{uniform}^{\E}(0,1),1\bigr)}
+&=
+\kw{gaussian}^{\M}
+  \bigl(
+    \trans{\kw{uniform}^{\E}(0,1)},
+    1
+  \bigr)
+\\
+&=
+\kw{gaussian}^{\M}
+  \bigl(
+    \kw{uniform}^{\M}(0,1),
+    1
+  \bigr).
+\end{align*}
+Thus, both sampling sites are replaced by mean evaluations,
+yielding a deterministic program.
+\end{example}
+
+\begin{example}[Partial determinization]
+Consider a program with dependent random draws.
+The $\G$-mode uniform distribution remains stochastic,
+while the $\E$-mode Gaussian is changed to $\M$-mode.
+Crucially, the Gaussian's mean $2x+1$ still depends
+on the random value of $x$:
+\[
+\trans{\left(
+\begin{aligned}
+&\kw{let}\ x=\kw{uniform}^{\G}(0,1)\ \kw{in}\\
+&\kw{let}\ y=\kw{gaussian}^{\E}(2x+1,\sigma^2)\ \kw{in}\\
+&x*y
+\end{aligned}
+\right)}
+=
+\begin{aligned}
+&\kw{let}\ x=\kw{uniform}^{\G}(0,1)\ \kw{in}\\
+&\kw{let}\ y=\kw{gaussian}^{\M}(2x+1,\sigma^2)\ \kw{in}\\
+&x*y.
+\end{aligned}
+\]
+Thus, determinization eliminates the Gaussian's
+conditional randomness while preserving its dependence
+on the retained random value of $x$.
+\end{example}
 
 \section{Constraint Generation Rules}
 \label{sec:appendix-constraint-generation}
@@ -1034,10 +1082,12 @@ literal replaced by a wrapped affine expression $\sym a$.  In a state containing
 declarations, every affine expression has precisely the coordinates
 $u_1,\ldots,u_k$.  A declaration $u_i\sim D_i(\bar a_i)$ is well formed only
 when $u_i$ is fresh and every parameter in $\bar a_i$ refers only to
-$u_1,\ldots,u_{i-1}$.  When symbolic execution appends a declaration, the
+$u_1,\ldots,u_{i-1}$. A symbolic environment is well typed when each declaration
+is well formed and satisfies $\operatorname{Params}^{\#}_{D_i}(\bar a_i)$.
+This requires every parameter of type $\tyR\G$ to be a constant affine
+expression. When symbolic execution appends a declaration, the
 affine expressions already present in the state are extended with coefficient
-zero for the fresh coordinate.  Any distribution parameter required to have
-type $\tyR\G$ is a constant affine expression by the typing rules below.
+zero for the fresh coordinate.
 \end{definition}
 
 \begin{definition}[Typing residual symbolic expressions]\label{sec:appendix-symbolic-definitions-residual-typing}
@@ -1249,8 +1299,8 @@ The subtyping relation is unchanged:
     {\typing{\widehat e}\sigma}
 \end{mathpar}
 A symbolic state $(\sigma\mid\widehat e:\tau)$ is well typed when
-$\emptyset\vdash\widehat e:\tau$ under these rules.  The declarations in
-$\sigma$ supply the coordinates of affine literals; they are not term
+$\sigma$ is well typed and $\emptyset\vdash\widehat e:\tau$ under these rules.
+The declarations in $\sigma$ supply the coordinates of affine literals; they are not term
 variables in $\Gamma$.
 \end{definition}
 
@@ -1342,8 +1392,8 @@ measure on valuations of the variables declared in $\sigma$.
 
 \begin{lemma}[Affine means]
 \label{lem:appendix-affine-means}
-Suppose $\sigma$ is domain-safe and $a$ is an affine expression over the
-variables declared in $\sigma$. Then
+Suppose $\sigma$ is well typed and domain-safe, and $a$ is an affine
+expression over the variables declared in $\sigma$. Then
 \[
   \int |a[\theta]|\,\mathcal A_\sigma(d\theta)<\infty,
   \qquad
@@ -1637,7 +1687,7 @@ continuous sampling site, which determinization replaces.
 
 Each program is timed by the tool's internal timer, which covers parsing, elaboration, type and
 mode inference, and mean replacement, and excludes process start-up, file reading, output
-formatting, sampling and exact analysis. After one warm-up run, each program is run seven
+formatting, sampling and exact analysis. After one warm-up run, each program is run ten
 times. \Cref{fig:determinization-scaling} shows the median and the range between the 25th and
 75th percentiles. Every run also checks the inferred sampling sites: $k$ continuous sites before
 determinization for \texttt{uniform-nested} and one for the other families, and none after. The measurements

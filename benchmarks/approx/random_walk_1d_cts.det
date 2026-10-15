@@ -7,16 +7,15 @@ while true:
     x = x + v {7/10} x - v
 end
 
-Partially determinizable but fully discrete after determinization with infinite state.
+A flip(1/2) loop guard gives almost-sure termination while retaining
+infinitely many reachable states after determinization.
 
 *)
 
 let v = 0 in
 let x = 0 in
-let steps = 10 in
-
-let loop = rec loop i => fun v => fun x =>
-  if i < steps then
+let loop = rec loop v => fun x =>
+  if flip(1/2) then
     let v = uniform(0, 1) in
     let x =
       if flip(0.9) then
@@ -24,9 +23,9 @@ let loop = rec loop i => fun v => fun x =>
       else
         x - v
     in
-    loop (i + 1) v x
+    loop v x
   else
     x
 in
 
-loop 0 v x
+loop v x

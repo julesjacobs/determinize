@@ -5,11 +5,12 @@ stay in its sources until the underlying work is resolved.
 
 ## Paper
 
-- Replace the artifact URL placeholder in `tex/sections/1_introduction.tex`.
-  Choose an anonymous artifact destination, regenerate its snapshot, and verify
-  the file and line references in `tex/lean-links.tex` against that snapshot.
-- Finish and include `tex/sections/data_availability.tex`: measure the build time
-  from a fresh checkout and state the Artifact Evaluation plan.
+- Replace the artifact URL placeholder in `tex/sections/1_introduction.tex` and the
+  `github.com/[anonymized]` link in `tex/sections/7_evaluation.tex`. The review build
+  points to the anonymized archive (`artifact/build.py`), submitted as supplementary
+  material; its Lean marks link to an appendix that locates their declarations in it.
+- State the Artifact Evaluation plan in `tex/sections/data_availability.tex`, which
+  OOPSLA requires.
 - Supply the trace-indexed kernels, compatibility lemma, and derivation of
   tracewise soundness promised by Section 5 and the appendix. Review the derivation
   of the global results from tracewise soundness, the symbolic invariants and

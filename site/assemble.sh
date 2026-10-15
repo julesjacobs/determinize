@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # Assembles the published site in a new directory: the landing page at its root, the built
-# simulator under sim/, the API documentation under docs/ and the paper as determinize.pdf.
+# simulator under sim/, the API documentation under docs/, the paper as determinize.pdf and the
+# anonymized archive for the paper's review (see artifact/) as determinize-artifact.zip.
 #
-#   site/assemble.sh --out DIR [--sim DIR] [--docs DIR] [--paper PDF]
+#   site/assemble.sh --out DIR [--sim DIR] [--docs DIR] [--paper PDF] [--artifact ZIP]
 #
-# --sim defaults to sim/dist, which `npm run build` in sim/ writes. Without --docs or --paper,
-# those parts are left out. The landing page's footer gets the commit that HEAD names.
+# --sim defaults to sim/dist, which `npm run build` in sim/ writes. Without --docs, --paper or
+# --artifact, those parts are left out. The landing page's footer gets the commit that HEAD names.
 # pages.yml publishes the result. To preview it under the same
 # /determinize/ prefix as GitHub Pages, from the repository root in the sim shell:
 #
@@ -15,10 +16,10 @@ set -euo pipefail
 site="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 usage() {
-  echo "usage: $0 --out DIR [--sim DIR] [--docs DIR] [--paper PDF]" >&2
+  echo "usage: $0 --out DIR [--sim DIR] [--docs DIR] [--paper PDF] [--artifact ZIP]" >&2
   exit 2
 }
-out="" sim="$(dirname "$site")/sim/dist" docs="" paper=""
+out="" sim="$(dirname "$site")/sim/dist" docs="" paper="" artifact=""
 while [[ $# -gt 0 ]]; do
   [[ $# -ge 2 ]] || usage
   case "$1" in
@@ -26,6 +27,7 @@ while [[ $# -gt 0 ]]; do
     --sim) sim="$2" ;;
     --docs) docs="$2" ;;
     --paper) paper="$2" ;;
+    --artifact) artifact="$2" ;;
     *) usage ;;
   esac
   shift 2
@@ -41,6 +43,7 @@ if [[ ! -f "$sim/index.html" ]]; then
 fi
 [[ -z "$docs" || -d "$docs" ]] || { echo "$docs is not a directory." >&2; exit 1; }
 [[ -z "$paper" || -f "$paper" ]] || { echo "$paper is not a file." >&2; exit 1; }
+[[ -z "$artifact" || -f "$artifact" ]] || { echo "$artifact is not a file." >&2; exit 1; }
 
 commit="$(git -C "$site" rev-parse HEAD)"
 
@@ -75,4 +78,10 @@ if [[ -n "$paper" ]]; then
   cp "$paper" "$out/determinize.pdf"
 else
   echo "No --paper: the site has no determinize.pdf."
+fi
+
+if [[ -n "$artifact" ]]; then
+  cp "$artifact" "$out/determinize-artifact.zip"
+else
+  echo "No --artifact: the site has no determinize-artifact.zip."
 fi

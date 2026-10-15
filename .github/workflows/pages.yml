@@ -1,11 +1,13 @@
 # Publishes the site from main to GitHub Pages: the landing page from site/ at the root, the
-# simulator under sim/, the API documentation of the Lean development under docs/ and the paper as
-# determinize.pdf. site/assemble.sh puts them together.
+# simulator under sim/, the API documentation of the Lean development under docs/, the paper as
+# determinize.pdf and the anonymized archive for the paper's review as determinize-artifact.zip.
+# site/assemble.sh puts them together.
 #
 # GitHub Pages serves one site per repository and each deployment replaces all of it, so every
-# deployment publishes every part, once sim.yml, tex.yml, site.yml and lean.yml have passed on the
-# same inputs and the links of the landing page and the simulator resolve in the assembled site.
-# The landing page, the simulator and the paper are built every time. lean.yml is skipped when its
+# deployment publishes every part, once sim.yml, tex.yml, site.yml, lean.yml and artifact.yml have
+# passed on the same inputs and the links of the landing page and the simulator resolve in the
+# assembled site. The landing page, the simulator, the paper and the archive are built every time;
+# the archive after the documentation, which it includes. lean.yml is skipped when its
 # inputs passed it before on main, and the documentation, built while lean.yml runs, is restored
 # when the same sources were rendered before. A manual run redoes both.
 name: Pages
@@ -16,14 +18,21 @@ on:
     # The union of the pull-request filters of the workflows it runs, which cover this file too;
     # tests/test_workflows.py checks it.
     paths:
+      - artifact/**
       - lean/**
       - "!lean/**/*.md"
+      - lean/README.md
+      - lean/finite-model-contract.md
       - tests/**
       - "!tests/**/*.md"
+      - tests/README.md
       - examples/**
+      - benchmarks/**
+      - tools/**
+      - "!tools/dev-shell.sh"
+      - "!tools/paper-plots.py"
       - run.sh
-      - tools/storm*.py
-      - tools/storm-requirements.txt
+      - test.sh
       - sim/**
       - site/**
       - tex/**
@@ -69,7 +78,7 @@ jobs:
       - name: Hash the inputs
         id: inputs
         run: |
-          echo "lean=${{ hashFiles('lean/**', '!lean/**/*.md', 'tests/**', '!tests/**/*.md', 'examples/**', 'run.sh', 'tools/storm*.py', 'tools/storm-requirements.txt', 'flake.nix', 'flake.lock', 'flake-modules/systems.nix', 'flake-modules/devshells/lean.nix', '.github/workflows/**') }}" >> "$GITHUB_OUTPUT"
+          echo "lean=${{ hashFiles('lean/**', '!lean/**/*.md', 'tests/**', '!tests/**/*.md', 'examples/**', 'run.sh', 'tools/bench.py', 'tools/benchmark_estimator_variance.py', 'tools/storm*.py', 'tools/storm-requirements.txt', 'flake.nix', 'flake.lock', 'flake-modules/systems.nix', 'flake-modules/devshells/lean.nix', '.github/workflows/**') }}" >> "$GITHUB_OUTPUT"
           echo "docs=${{ hashFiles('lean/Determinize.lean', 'lean/Determinize/**/*.lean', 'lean/lakefile.toml', 'lean/lake-manifest.json', 'lean/lean-toolchain', 'lean/docbuild/**', 'flake.lock', '.github/workflows/pages.yml') }}" >> "$GITHUB_OUTPUT"
       - name: Look up a passing run of the Lean tests
         id: tested
@@ -108,7 +117,7 @@ jobs:
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: lean/.lake/packages/*/.lake/build/ir/**/*.c.o*
-          key: lean-objects-${{ hashFiles('lean/lean-toolchain', 'lean/lake-manifest.json') }}
+          key: lean-objects-${{ hashFiles('lean/lean-toolchain', 'lean/lake-manifest.json', 'lean/lakefile.toml') }}
           lookup-only: true
       - name: Keep doc-gen4 and the documentation of the dependencies cached
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -219,6 +228,13 @@ jobs:
           key: lean-docs-${{ hashFiles('lean/lean-toolchain', 'lean/docbuild/lake-manifest.json', 'flake.lock') }}
       - name: Fetch the Mathlib cache
         run: lake exe cache get
+      # Documenting the library builds it, and its precompiled modules need the object files of the
+      # dependencies (see lean.yml, which saves them).
+      - name: Restore the object files of the dependencies
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: lean/.lake/packages/*/.lake/build/ir/**/*.c.o*
+          key: lean-objects-${{ hashFiles('lean/lean-toolchain', 'lean/lake-manifest.json', 'lean/lakefile.toml') }}
       # Lake starts git and doc-gen4 with fork(). Documenting the dependencies, Lake runs over a
       # hundred threads whose stacks merge into one mapping larger than RAM and swap together, so
       # the kernel's default heuristic overcommit refuses every fork although memory is free and
@@ -248,10 +264,18 @@ jobs:
           path: _site/docs
           key: lean-html-${{ needs.changes.outputs.docs }}-${{ github.run_id }}
 
+  # The anonymized archive for the paper's review, with the documentation that docs rendered or
+  # an earlier run rendered from the same sources.
+  artifact:
+    name: Archive
+    needs: [changes, docs]
+    if: ${{ !cancelled() && !failure() }}
+    uses: $/.github/workflows/artifact.yml
+
   # Runs when no job before it failed; lean and docs are skipped when their results exist.
   build:
     name: Build the site
-    needs: [changes, lean, sim, paper, site, docs]
+    needs: [changes, lean, sim, paper, site, docs, artifact]
     if: ${{ !cancelled() && !failure() && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -276,11 +300,20 @@ jobs:
         with:
           name: paper
           path: _paper
+      # Uploaded as the zip itself, which stays zipped.
+      - name: Download the archive
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: determinize-artifact.zip
+          path: _artifact
+          skip-decompress: true
       # Under _pages/determinize/, as the site is served, so that the links from its root resolve.
       - name: Assemble the site
         run: |
+          archive="$(find _artifact -type f -name determinize-artifact.zip)"
+          [[ -n "$archive" ]] || { echo "The archive was not downloaded: $(find _artifact)" >&2; exit 1; }
           site/assemble.sh --out _pages/determinize --sim _simulator --docs _site/docs \
-            --paper _paper/main.pdf
+            --paper _paper/main.pdf --artifact "$archive"
       - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
       # Links to the canonical host are checked as files of the assembled site, and relative
       # ones as they are; anchors and links in code included. The simulator's scripts are read as

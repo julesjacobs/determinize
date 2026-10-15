@@ -260,12 +260,18 @@ GUARDED = {
              (["flake-modules/devshells/lean.nix"], nix_paths)],
     "sim": [(["sim/test/**", "sim/build.ts"], script_paths), (["sim/src/**"], import_paths),
             (["sim/*.css"], css_paths), (["flake-modules/devshells/sim.nix"], nix_paths)],
-    "tex": [(["tex/**/*.tex"], tex_paths),
+    "tex": [(["tex/**/*.tex"], tex_paths), (["tex/*.py"], python_paths),
             (["flake-modules/devshells/tex.nix"], nix_paths)],
     # check.sh site builds the simulator and assembles the site with site/assemble.sh.
     "site": [(["site/**/*.mts", "sim/e2e/**", "sim/playwright.config.ts", "sim/build.ts"], script_paths),
              (["site/**/*.sh"], shell_paths), (["sim/src/**"], import_paths),
              (["flake-modules/devshells/site.nix", "flake-modules/devshells/sim.nix"], nix_paths)],
+    # It builds the simulator, runs artifact/build.py and opens the archive with Playwright.
+    "artifact": [(["artifact/*.py"], python_paths), (["sim/build.ts"], script_paths),
+                 (["sim/e2e/artifact.spec.ts", "sim/playwright.config.ts"], script_paths),
+                 (["sim/src/**"], import_paths), (["sim/*.css"], css_paths),
+                 (["flake-modules/devshells/lean.nix", "flake-modules/devshells/sim.nix",
+                   "flake-modules/devshells/site.nix"], nix_paths)],
 }
 
 
@@ -278,55 +284,63 @@ def named_paths(name):
 PULL_REQUEST_STARTS = {
     "README.md": set(),
     "check.sh": set(),
-    "test.sh": set(),
+    "test.sh": {"artifact"},
     "tools/dev-shell.sh": set(),
-    "tools/bench.py": set(),
+    "tools/paper-plots.py": set(),
+    "tools/bench.py": {"lean", "artifact"},
+    "tools/benchmark_estimator_variance.py": {"lean", "artifact"},
     ".claude/settings.json": set(),
-    "lean/README.md": set(),
-    "tests/README.md": set(),
+    "lean/README.md": {"artifact"},
+    "lean/PAPER_DEVIATIONS.md": set(),
+    "tests/README.md": {"artifact"},
     "OPEN_ISSUES.md": set(),
     "tex/sections/drafting.md": set(),
-    "benchmarks/approx/branching.det": set(),
+    "benchmarks/approx/branching.det": {"artifact"},
     "flake-modules/devshells/all.nix": set(),
-    "lean/Determinize/Theorems.lean": {"lean", "site"},
-    "lean/Determinize/Spec/Syntax.lean": {"lean", "site"},
-    "lean/Determinize.lean": {"lean", "site"},
-    "lean/Determinize/Proof/Traces/ConditionalLaw.lean": {"lean"},
-    "lean/docbuild/lakefile.toml": {"lean"},
-    "lean/test.sh": {"lean"},
-    "run.sh": {"lean"},
-    "tools/storm.py": {"lean"},
-    "tools/storm_additive.py": {"lean"},
-    "tools/storm-requirements.txt": {"lean"},
-    "flake-modules/devshells/lean.nix": {"lean"},
+    "artifact/build.py": {"artifact"},
+    "artifact/identifying.txt": {"artifact"},
+    "lean/Determinize/Theorems.lean": {"lean", "site", "tex", "artifact"},
+    "lean/Determinize/Spec/Syntax.lean": {"lean", "site", "tex", "artifact"},
+    "lean/Determinize.lean": {"lean", "site", "artifact"},
+    "lean/Determinize/Proof/Traces/ConditionalLaw.lean": {"lean", "tex", "artifact"},
+    "lean/docbuild/lakefile.toml": {"lean", "artifact"},
+    "lean/test.sh": {"lean", "artifact"},
+    "run.sh": {"lean", "artifact"},
+    "tools/storm.py": {"lean", "artifact"},
+    "tools/storm_additive.py": {"lean", "artifact"},
+    "tools/storm-requirements.txt": {"lean", "artifact"},
+    "flake-modules/devshells/lean.nix": {"lean", "artifact"},
     ".github/workflows/lean.yml": {"lean"},
     ".github/workflows/pages.yml": {"lean"},
-    "sim/src/main.ts": {"sim", "site"},
-    "sim/package-lock.json": {"sim", "site"},
-    "sim/e2e/site.spec.ts": {"sim", "site"},
-    "flake-modules/devshells/sim.nix": {"sim", "site"},
-    "site/index.html": {"site"},
-    "site/tokens.css": {"sim", "site"},
-    "site/fonts/atkinson-next-var.woff2": {"sim", "site"},
-    "site/fonts/OFL-JuliaMono.txt": {"sim", "site"},
-    "site/site.css": {"site"},
+    ".github/workflows/artifact.yml": {"lean", "artifact"},
+    "sim/src/main.ts": {"sim", "site", "artifact"},
+    "sim/package-lock.json": {"sim", "site", "artifact"},
+    "sim/e2e/site.spec.ts": {"sim", "site", "artifact"},
+    "flake-modules/devshells/sim.nix": {"sim", "site", "artifact"},
+    "site/index.html": {"site", "artifact"},
+    "site/tokens.css": {"sim", "site", "artifact"},
+    "site/fonts/atkinson-next-var.woff2": {"sim", "site", "artifact"},
+    "site/fonts/OFL-JuliaMono.txt": {"sim", "site", "artifact"},
+    "site/site.css": {"site", "artifact"},
     "site/assemble.sh": {"site"},
-    "flake-modules/devshells/site.nix": {"site"},
+    "flake-modules/devshells/site.nix": {"site", "artifact"},
     ".github/workflows/site.yml": {"lean", "site"},
-    "tests/cases.toml": {"lean", "sim"},
-    "examples/paper/noisy-product.det": {"lean", "sim", "site"},
-    "tests/statistical/nested.det": {"lean", "sim"},
-    "tests/test_results.py": {"lean", "sim"},
-    "examples/baselines/clickGraph.sgcl": {"lean", "sim", "site"},
+    "tests/cases.toml": {"lean", "sim", "artifact"},
+    "tests/test_workflows.py": {"lean", "sim"},
+    "examples/paper/noisy-product.det": {"lean", "sim", "site", "artifact"},
+    "tests/statistical/nested.det": {"lean", "sim", "artifact"},
+    "tests/test_results.py": {"lean", "sim", "artifact"},
+    "examples/baselines/clickGraph.sgcl": {"lean", "sim", "site", "artifact"},
     ".github/workflows/sim.yml": {"lean", "sim"},
     "tex/sections/1_introduction.tex": {"tex"},
-    "results/estimator-variance/hmm.png": {"tex"},
-    "results/approx-results.csv": {"tex"},
+    "tex/check-lean-links.py": {"tex"},
+    "results/estimator-variance/hmm.png": {"tex", "artifact"},
+    "results/approx-results.csv": {"tex", "artifact"},
     "flake-modules/devshells/tex.nix": {"tex"},
     ".github/workflows/tex.yml": {"lean", "tex"},
-    "flake.nix": {"lean", "sim", "tex", "site"},
-    "flake.lock": {"lean", "sim", "tex", "site"},
-    "flake-modules/systems.nix": {"lean", "sim", "tex", "site"},
+    "flake.nix": {"lean", "sim", "tex", "site", "artifact"},
+    "flake.lock": {"lean", "sim", "tex", "site", "artifact"},
+    "flake-modules/systems.nix": {"lean", "sim", "tex", "site", "artifact"},
 }
 
 
@@ -354,6 +368,19 @@ class TriggerTests(unittest.TestCase):
         hashed = re.search(r"lean=\$\{\{ hashFiles\((.*?)\) \}\}", (WORKFLOWS / "pages.yml").read_text())
         self.assertIsNotNone(hashed)
         self.assertEqual(re.findall(r"'([^']*)'", hashed[1]), triggers("lean")["pull_request"]["paths"])
+
+    def test_the_archive_restores_the_documentation_by_its_key_in_pages(self):
+        def files(name, pattern):
+            hashed = re.search(pattern + r"\$\{\{ hashFiles\((.*?)\) \}\}", (WORKFLOWS / f"{name}.yml").read_text())
+            self.assertIsNotNone(hashed, name)
+            return re.findall(r"'([^']*)'", hashed[1])
+        self.assertEqual(files("artifact", r"key: lean-html-"), files("pages", r"docs="))
+
+    def test_the_object_files_of_the_dependencies_have_one_key(self):
+        keys = {key for name in workflows()
+                for key in re.findall(r"key: (lean-objects-.*)", (WORKFLOWS / f"{name}.yml").read_text())}
+        self.assertEqual(len(keys), 1, keys)
+        self.assertIn("lean/lakefile.toml", keys.pop())
 
     def test_every_workflow_has_expectations(self):
         for path in sorted(WORKFLOWS.iterdir()):

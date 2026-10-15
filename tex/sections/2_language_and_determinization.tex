@@ -5,22 +5,17 @@
 This section introduces the probabilistic language on which our determinization transformation operates. We present its syntax and operational semantics, define determinization as a source-to-source transformation over annotated expressions, and formalize the distribution of successfully returned values through an output measure.
 
 \paragraph{Syntax.}
-\Cref{fig:syntax} presents the syntax of our language, a call-by-value functional language with recursion, pairs, sums, lists, and probability distributions. The expression $\kw{reject}$ represents a failed execution path used to encode conditioning on observations. Each distribution expression carries a \emph{distribution mode} $\G$, $\E$, or $\M$ that guides determinization, as illustrated by the examples in the introduction. The modes $\G$ and $\E$ mark sampling sites to preserve or replace by mean evaluations, respectively. Determinization changes $\E$ to $\M$, which evaluates the distribution expression to its mean. We present these modes explicitly in the syntax to define the transformation precisely, but users may omit them: the inference procedure in \cref{sec:type-system} assigns sampling modes subject to the typing rules, which check that the replacements are justified by how sampled values are subsequently used.
+\Cref{fig:syntax} presents the syntax of our language, a call-by-value functional language with recursion, pairs, sums, lists, and probability distributions. The expression $\kw{reject}$ represents a failed execution path used to encode conditioning on observations. Each distribution expression carries a \emph{distribution mode} $\G$, $\E$, or $\M$ that guides determinization, as illustrated by the examples in~\Cref{sec:introduction}. The modes $\G$ and $\E$ mark sampling sites to preserve or replace by mean evaluations, respectively. Determinization changes $\E$ to $\M$, which evaluates the distribution expression to its mean. We present these modes explicitly in the syntax to define the transformation precisely, but users may omit them: the inference procedure in \cref{sec:type-system} assigns these modes subject to the typing rules, which check that the replacements are justified by how sampled values are subsequently used.
 
 \input{figures/syntax}
 
 \paragraph{Operational semantics.}
 \Cref{fig:semantics} gives the call-by-value operational semantics.
-Values and evaluation contexts in
-\cref{fig:semantics}(\subref{fig:semantics-values}) specify which
-expressions have finished evaluating and which subexpression is evaluated
-next. In particular, a distribution's arguments are evaluated to values
-before it is sampled or its mean is computed.
+Values and evaluation contexts are shown in
+\cref{fig:semantics}(\subref{fig:semantics-values}). In particular, a distribution's arguments are evaluated to values before it is sampled or its mean is computed.
 
-The deterministic reduction rules in
-\cref{fig:semantics}(\subref{fig:semantics-reduction}) handle the standard
-functional constructs by substitution and case analysis. We omit the
-routine arithmetic and comparison rules here. We model the expression $\kw{reject}$ as divergence through the infinite reduction sequence $\kw{reject}\rightsquigarrow\kw{reject}$, and thus our semantics does not distinguish observation failure from nontermination. Distribution expressions in
+The deterministic reduction rules are shown in \cref{fig:semantics}(\subref{fig:semantics-reduction}). We omit the
+routine arithmetic and comparison rules here. We model the expression $\kw{reject}$ as divergence through the infinite reduction sequence $\kw{reject}\rightsquigarrow\kw{reject}$, and thus our semantics does not distinguish rejection from nontermination. Distribution expressions in
 mode $\M$, introduced by determinization, also reduce deterministically
 to their means:
 \[
@@ -33,7 +28,7 @@ to their means:
 where the primitive distribution table in
 \cref{fig:semantics}(\subref{fig:semantics-distributions}) specifies
 $\operatorname{Domain}_D$ and $\operatorname{Mean}_D$ for each supported
-distribution. A distribution expression whose arguments lie outside its primitive's
+distribution. A distribution expression whose arguments lie outside its
 domain becomes stuck, as does division by zero: execution cannot take another step or return a value. In $\kw{gaussian}(u,v)$, $v$ denotes
 the variance; the parameters $\lambda$ of the exponential and gamma
 distributions are rates. The distribution
@@ -83,61 +78,7 @@ C(\trans{e_1},\ldots,\trans{e_n}),
 and atomic expressions are unchanged.
 \end{definition}
 
-Most notably, determinization replaces an $\E$-mode distribution with its mean evaluation and recursively transforms the distribution's arguments, preserving their call-by-value evaluation order. When all sampling sites carry distribution mode $\E$, determinization eliminates all randomness, yielding a deterministic program. We refer to this as \emph{full determinization}. When both $\E$- and $\G$-mode distributions occur, determinization eliminates randomness in the former while retaining it in the latter. Accordingly, we refer to this as \emph{partial determinization}. In this case, the resulting program may be discrete or remain continuous, depending on the randomness retained. In particular, if all retained sampling sites are discrete, the transformed program is discrete, even if the original program contains continuous distributions. Conversely, retaining continuous sampling sites may leave the transformed program continuous. Let us consider several simple examples below to illustrate full and partial determinization in action.
-
-\begin{example}[Full determinization]
-Consider an $\E$-mode Gaussian whose mean is given by an
-$\E$-mode uniform distribution. Determinization changes the
-outer Gaussian to $\M$-mode and recursively transforms its
-arguments. In particular, the nested $\E$-mode uniform
-distribution is also changed to $\M$-mode:
-\begin{align*}
-\trans{
-  \kw{gaussian}^{\E}
-    \bigl(\kw{uniform}^{\E}(0,1),1\bigr)}
-&=
-\kw{gaussian}^{\M}
-  \bigl(
-    \trans{\kw{uniform}^{\E}(0,1)},
-    1
-  \bigr)
-\\
-&=
-\kw{gaussian}^{\M}
-  \bigl(
-    \kw{uniform}^{\M}(0,1),
-    1
-  \bigr).
-\end{align*}
-Thus, both sampling sites are replaced by mean evaluations,
-yielding a deterministic program.
-\end{example}
-
-\begin{example}[Partial determinization]
-Consider a program with dependent random draws.
-The $\G$-mode uniform distribution remains stochastic,
-while the $\E$-mode Gaussian is changed to $\M$-mode.
-Crucially, the Gaussian's mean $2x+1$ still depends
-on the random value of $x$:
-\[
-\trans{\left(
-\begin{aligned}
-&\kw{let}\ x=\kw{uniform}^{\G}(0,1)\ \kw{in}\\
-&\kw{let}\ y=\kw{gaussian}^{\E}(2x+1,\sigma^2)\ \kw{in}\\
-&x*y
-\end{aligned}
-\right)}
-=
-\begin{aligned}
-&\kw{let}\ x=\kw{uniform}^{\G}(0,1)\ \kw{in}\\
-&\kw{let}\ y=\kw{gaussian}^{\M}(2x+1,\sigma^2)\ \kw{in}\\
-&x*y.
-\end{aligned}
-\]
-Thus, determinization eliminates the Gaussian's
-conditional randomness while preserving its dependence
-on the retained random value of $x$.
-\end{example}
+Most notably, determinization replaces an $\E$-mode distribution with its mean evaluation and recursively transforms the distribution's arguments, preserving their call-by-value evaluation order. When all sampling sites carry distribution mode $\E$, determinization eliminates all randomness, yielding a deterministic program. We refer to this as \emph{full determinization}. When both $\E$- and $\G$-mode distributions occur, determinization eliminates randomness in the former while retaining randomness in the latter. Accordingly, we refer to this as \emph{partial determinization}. In this case, the resulting program may be discrete or remain continuous, depending on the randomness retained. In particular, if all retained sampling sites are discrete, the transformed program is discrete, even if the original program contains continuous distributions. Conversely, retaining continuous sampling sites may leave the transformed program continuous. \Cref{sec:appendix-determinization-examples} gives several simple examples to illustrate full and partial determinization in action.
 
 We note that determinization itself is syntactic: it performs the required replacements, but the type system is what establishes that those replacements are semantically justified. For example, the type system prevents the $\kw{uniform}$ distribution in
 \[
@@ -150,9 +91,8 @@ returned value. We formalize such constraints in \cref{sec:type-system}.
 
 \paragraph{Output measures.}
 To characterize the probabilistic behavior of a program,
-we define a subprobability measure over \emph{returned real values}, as shown in \cref{fig:semantics}(\subref{fig:semantics-output}). Here, $\delta_r$ denotes the Dirac measure at $r$, defined by $\delta_r(B)=1$ if $r\in B$ and $0$ otherwise. Let $\mathcal D(\mathbb R)$ denote the space of subprobability measures
-on $\mathbb R$, that is, measures on its Borel sets with total mass at
-most one, and let $Expr$ be the set of all expressions. For each $n\in\mathbb N$, the function
+we define a subprobability measure over \emph{returned real values}, as shown in \cref{fig:semantics}(\subref{fig:semantics-output}). Here, $\delta_r$ denotes the Dirac measure at $r$, defined by $\delta_r(B)=1$ if $r\in B$ and $0$ otherwise. We equip $\mathbb R$ with its Borel $\sigma$-algebra and let
+$\mathcal D(\mathbb R)$ denote the set of subprobability measures on this measurable space. Let $Expr$ be the set of all expressions. For each $n\in\mathbb N$, the function
 $\out{(\cdot)}{n}\colon Expr\to\mathcal D(\mathbb R)$
 assigns each expression $e$ its output measure after exactly $n$
 reduction steps. 

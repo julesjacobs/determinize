@@ -1,0 +1,88 @@
+/* The pages of website/source/: a shipped file with numbered lines, and the lines that the address's
+   fragment names (#L12 or #L12-L20) highlighted. */
+:root {
+  color-scheme: light dark;
+  --bg: #ffffff;
+  --fg: #1d1d1f;
+  --muted: #6e6e73;
+  --rule: #d9d9de;
+  --link: #0b57d0;
+  --mark: #fff1a8;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #17181c;
+    --fg: #e8e8ea;
+    --muted: #8e8e96;
+    --rule: #34353b;
+    --link: #8ab4f8;
+    --mark: #4b4422;
+  }
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 15px/1.5 system-ui, sans-serif;
+}
+a {
+  color: var(--link);
+}
+header {
+  position: sticky;
+  top: 0;
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--rule);
+  background: var(--bg);
+  overflow-wrap: anywhere;
+}
+header span {
+  color: var(--muted);
+  margin-left: 0.5rem;
+}
+.index {
+  max-width: 52rem;
+  padding: 0 1rem 2rem;
+}
+.index h2 {
+  font-size: 1rem;
+  margin: 1.5rem 0 0.25rem;
+}
+.index ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+pre.source {
+  margin: 0;
+  padding: 0.5rem 0 2rem;
+  overflow-x: auto;
+  counter-reset: line;
+  font: 13px/1.55 ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+.line {
+  display: block;
+  min-height: 1.55em;
+  padding-right: 1rem;
+  white-space: pre;
+}
+.line::before {
+  counter-increment: line;
+  content: counter(line);
+  display: inline-block;
+  width: 4em;
+  margin-right: 1.25em;
+  text-align: right;
+  color: var(--muted);
+  user-select: none;
+}
+.line:target,
+.line.marked {
+  background: var(--mark);
+}
+.range {
+  display: block;
+  scroll-margin-top: 4rem;
+}
+.line {
+  scroll-margin-top: 4rem;
+}

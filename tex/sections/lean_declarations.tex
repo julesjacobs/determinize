@@ -1,0 +1,16 @@
+% !TeX root = ../main.tex
+% Anonymous builds cannot link the Lean marks to the repository, so each mark links to its entry
+% here; the camera-ready build links them to GitHub and leaves this section out. \printleanlinks
+% lists the marks set before it, so this section follows the last of them.
+\ifleananonymous\ifleanlinks
+\section{Lean Declarations}
+\label{sec:appendix-lean}
+
+Each Lean logo\leanmark{} in this paper links to its entry below, which names the Lean
+declarations that state the marked item and the lines that hold them in the supplementary
+material. Paths are relative to the root of the archive. The website in it shows each file with
+line numbers under \texttt{website/source/}, and the API documentation of the formalization
+under \texttt{website/docs/}.
+
+\printleanlinks
+\fi\fi

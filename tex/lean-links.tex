@@ -1,48 +1,44 @@
-% \ifleanlinks shows the Lean marks; \ifleanurls makes them, and \artifactlink, links.
-% Anonymous builds (the `review` or `anonymous` class option) link to the anonymized snapshot at
-% \leanreviewbase. With \leanreviewbase empty they link nowhere: the marks stay without links,
-% and \artifactlink prints the text that OOPSLA's FAQ suggests, for code submitted as
-% supplementary material instead.
+% The Lean marks. \leanref{KEY} sets the mark after a name and links it to the Lean declarations
+% that \DeclareLeanLink, at the end of this file, gives for KEY; \ifleanlinks shows the marks.
+% The camera-ready build links each mark to its lines on GitHub at \leanrevision. Anonymous builds
+% (the `review` or `anonymous` class option) cannot name the repository: each mark links to its
+% entry in the list that \printleanlinks sets (sections/lean_declarations.tex), which names the
+% declarations and their lines in the anonymized archive submitted as supplementary material.
+% The archive holds the working tree, so check-lean-links.py checks the lines there.
 \newif\ifleanlinks
-\newif\ifleanurls
 \newif\ifleananonymous
-\newcommand{\leanrevision}{25d2cb66e510015f2f78f97cc30a648670147e7d}
+\newcommand{\leanrevision}{31924eea767e4452631abaef281ae97983baf983}
 \newcommand{\leanrepository}{https://github.com/julesjacobs/determinize}
-\newcommand{\leanpublicbase}{\leanrepository/blob/\leanrevision}
-\newcommand{\leanreviewbase}{https://apndx.org/pub/sca95063a7c}
-\newcommand{\leanlinkbase}{}
-\newcommand{\leansourcesuffix}{}
-\newcommand{\artifacturl}{}
-\newcommand{\leanreviewlinks}{%
-  \leananonymoustrue
-  \ifdefempty{\leanreviewbase}{}{%
-    \leanurlstrue
-    \let\leanlinkbase\leanreviewbase
-    \let\artifacturl\leanreviewbase
-    \renewcommand{\leansourcesuffix}{.html}}}
 \makeatletter
 \AtBeginDocument{%
-  \if@ACM@review
-    \leanreviewlinks
-  \else\if@ACM@anonymous
-    \leanreviewlinks
-  \else
-    \leanurlstrue
-    \let\leanlinkbase\leanpublicbase
-    \let\artifacturl\leanrepository
-  \fi\fi}
-\makeatother
-% Where the code is, for the text: a link, or the text replacing it.
+  \if@ACM@review\leananonymoustrue\fi
+  \if@ACM@anonymous\leananonymoustrue\fi}
+% Where the code is, for the text: a link, or the text that OOPSLA's FAQ suggests for code
+% submitted as supplementary material.
 \newcommand{\artifactlink}{%
-  \ifleanurls
-    \edef\artifacturlexpanded{\artifacturl}%
-    \expandafter\url\expandafter{\artifacturlexpanded}%
-  \else
+  \ifleananonymous
     link removed for double-blind review%
+  \else
+    \expandafter\url\expandafter{\leanrepository}%
   \fi}
 
-\newcommand{\DeclareLeanLink}[3]{%
-  \expandafter\def\csname leanurl@#1\endcsname{\leanlinkbase/#2\leansourcesuffix\#L#3}}
+% \DeclareLeanLink{KEY}{TITLE}{NAMES}{FILE}{FIRST-LAST}: the paper's item TITLE is stated by the
+% declarations NAMES, a comma-separated list of full Lean names, in the lines FIRST to LAST of
+% FILE, a path from the root of the repository. The lines may also hold the declarations that
+% NAMES rely on. A single line is given as {FIRST}.
+\NewDocumentCommand{\DeclareLeanLink}{m m m m >{\SplitArgument{1}{-}}m}{%
+  \leanlink@declare{#1}{#2}{#3}{#4}#5}
+\newcommand{\leanlink@declare}[6]{%
+  \ifcsname leanlink@file@#1\endcsname
+    \PackageError{lean-links}{Lean reference '#1' declared twice}{}%
+  \fi
+  \@namedef{leanlink@title@#1}{#2}%
+  \expandafter\edef\csname leanlink@names@#1\endcsname{\detokenize{#3}}%
+  \expandafter\edef\csname leanlink@file@#1\endcsname{\detokenize{#4}}%
+  \IfNoValueTF{#6}
+    {\@namedef{leanlink@fragment@#1}{L#5}\@namedef{leanlink@lines@#1}{line~#5}}
+    {\@namedef{leanlink@fragment@#1}{L#5-L#6}\@namedef{leanlink@lines@#1}{lines~#5--#6}}}
+
 % The link mark is the official Lean logo (the "LEAN" wordmark with the TM sign), used as
 % provided by Lean FRO -- colours and TM sign included -- as its trademark
 % policy requires (https://lean-lang.org/trademark-policy/). Source:
@@ -81,10 +77,17 @@
 \NewDocumentCommand{\leanmark}{s}{%
   \IfBooleanF{#1}{\leanmarksep}\raisebox{.3ex}{\leanbadge}}
 \newcommand{\leanlink}[1]{%
-  \leanmarksep\ifleanurls\href{\csname leanurl@#1\endcsname}{\leanmark*}\else\leanmark*\fi}
+  \leanmarksep
+  \ifleananonymous
+    \leanlink@use{#1}%
+    \hyperref[lean:#1]{\leanmark*}%
+  \else
+    \href{\leanrepository/blob/\leanrevision/\@nameuse{leanlink@file@#1}%
+      \#\@nameuse{leanlink@fragment@#1}}{\leanmark*}%
+  \fi}
 \DeclareRobustCommand{\leanref}[1]{%
   \ifleanlinks
-    \ifcsname leanurl@#1\endcsname
+    \ifcsname leanlink@file@#1\endcsname
       \ifmmode\smash{\text{\mbox{\leanlink{#1}}}}\else\smash{\mbox{\leanlink{#1}}}\fi
     \else
       \PackageError{lean-links}{Unknown Lean reference '#1'}{Add it to lean-links.tex.}%
@@ -92,53 +95,97 @@
   \fi}
 \pdfstringdefDisableCommands{\def\leanref#1{}}
 
-\DeclareLeanLink{expressions}{lean/Determinize/Spec/Syntax.lean}{22-L49}
-\DeclareLeanLink{determinization}{lean/Determinize/Spec/Syntax.lean}{122-L162}
-\DeclareLeanLink{types}{lean/Determinize/Spec/Types.lean}{25-L31}
-\DeclareLeanLink{subtyping}{lean/Determinize/Spec/Types.lean}{34-L42}
-\DeclareLeanLink{typing}{lean/Determinize/Spec/Syntax.lean}{212}
-\DeclareLeanLink{values}{lean/Determinize/Spec/Syntax.lean}{55-L59}
-\DeclareLeanLink{evaluation-contexts}{lean/Determinize/Spec/Semantics.lean}{23-L28}
-\DeclareLeanLink{reduction}{lean/Determinize/Spec/Semantics.lean}{45}
-\DeclareLeanLink{output-measures}{lean/Determinize/Spec/Semantics.lean}{186-L199}
-\DeclareLeanLink{primitive-distributions}{lean/Determinize/Spec/Primitives.lean}{38-L116}
-\DeclareLeanLink{domain-safety}{lean/Determinize/Spec/Semantics.lean}{217-L232}
-\DeclareLeanLink{expectation-defined}{lean/Determinize/Spec/Expectation.lean}{21-L34}
-\DeclareLeanLink{expectation-preservation}{lean/Determinize/Theorems.lean}{114-L124}
-\DeclareLeanLink{variance-non-increase}{lean/Determinize/Theorems.lean}{126-L136}
-\DeclareLeanLink{divergence}{lean/Determinize/Spec/Semantics.lean}{201-L215}
-\DeclareLeanLink{return-or-diverge}{lean/Determinize/Theorems.lean}{176-L181}
-\DeclareLeanLink{output-mass}{lean/Determinize/Theorems.lean}{108-L112}
-\DeclareLeanLink{traces}{lean/Determinize/Spec/Traces/Semantics.lean}{18}
-\DeclareLeanLink{trace-semantics}{lean/Determinize/Spec/Traces/Semantics.lean}{29-L51}
-\DeclareLeanLink{trace-law}{lean/Determinize/Spec/Traces/Semantics.lean}{53-L55}
-\DeclareLeanLink{trace-erasure}{lean/Determinize/Theorems.lean}{61-L65}
-\DeclareLeanLink{trace-soundness}{lean/Determinize/Theorems.lean}{81-L91}
-\DeclareLeanLink{trace-variance}{lean/Determinize/Theorems.lean}{158-L172}
-\DeclareLeanLink{trace-preservation}{lean/Determinize/Theorems.lean}{74-L79}
-\DeclareLeanLink{equality-of-total-masses}{lean/Determinize/Theorems.lean}{67-L72}
-\DeclareLeanLink{returned-expectation-along-traces}{lean/Determinize/Theorems.lean}{93-L104}
-\DeclareLeanLink{determinization-typing}{lean/Determinize/Theorems.lean}{54-L57}
-\DeclareLeanLink{convex-function-inequality}{lean/Determinize/Theorems.lean}{138-L145}
-\DeclareLeanLink{probabilistic-type-safety}{lean/Determinize/Theorems.lean}{147-L156}
-\DeclareLeanLink{return-probability}{lean/Determinize/Spec/Expectation.lean}{36-L37}
-\DeclareLeanLink{returned-expectation}{lean/Determinize/Spec/Expectation.lean}{44-L48}
-\DeclareLeanLink{returned-variance}{lean/Determinize/Spec/Expectation.lean}{39-L52}
-\DeclareLeanLink{frontend}{lean/Determinize/Frontend/Compile.lean}{20-L26}
-\DeclareLeanLink{inference}{lean/Determinize/Theorems.lean}{41-L50}
-\DeclareLeanLink{constraint-generation}{lean/Determinize/Frontend/Infer.lean}{150-L231}
-\DeclareLeanLink{affinity-solving}{lean/Determinize/Frontend/Affinity.lean}{50-L81}
-\DeclareLeanLink{interpreter}{lean/Determinize/Runtime/Eval.lean}{135-L141}
-\DeclareLeanLink{graph-construction}{lean/Determinize/Finite/Reward/Explore.lean}{13-L69}
-\DeclareLeanLink{rational-solver}{lean/Determinize/Finite/Reward/Solve.lean}{82-L94}
-\DeclareLeanLink{certificate-checker}{lean/Determinize/Finite/Reward/Solve.lean}{48-L64}
-\DeclareLeanLink{symbolic-affine}{lean/Determinize/Proof/Semantics/Internal.lean}{60-L64}
-\DeclareLeanLink{symbolic-environment}{lean/Determinize/Proof/Semantics/Internal.lean}{119-L123}
-\DeclareLeanLink{symbolic-expression}{lean/Determinize/Proof/Symbolic/Syntax.lean}{21}
-\DeclareLeanLink{symbolic-lifting}{lean/Determinize/Proof/Symbolic/Syntax.lean}{116-L151}
-\DeclareLeanLink{symbolic-realization}{lean/Determinize/Proof/Symbolic/Syntax.lean}{53-L102}
-\DeclareLeanLink{symbolic-realize-lift}{lean/Determinize/Proof/Symbolic/Syntax.lean}{827-L839}
-\DeclareLeanLink{symbolic-actual-environment}{lean/Determinize/Proof/Semantics/Internal.lean}{127-L134}
-\DeclareLeanLink{symbolic-mean-environment}{lean/Determinize/Proof/Semantics/Internal.lean}{145-L152}
-\DeclareLeanLink{finite-step-factorization}{lean/Determinize/Proof/Traces/CompactFiberSoundness.lean}{193-L196}
-\DeclareLeanLink{whole-program-factorization}{lean/Determinize/Proof/Traces/CompactSoundness.lean}{101-L105}
+% The marks set so far, in the order of their first use, as \leanlink@entry{KEY}...
+\newcommand*{\leanlink@used}{}
+\newcommand{\leanlink@use}[1]{%
+  \ifcsname leanlink@used@#1\endcsname\else
+    \expandafter\gdef\csname leanlink@used@#1\endcsname{}%
+    \g@addto@macro\leanlink@used{\leanlink@entry{#1}}%
+  \fi}
+% The list that the anonymous builds' marks link to: an entry for each mark set before it, in the
+% order of first use, naming the declarations and their lines. A mark set after the list has no
+% entry, and LaTeX warns of its undefined reference. Ragged right, as the long names leave too few
+% spaces to justify the lines.
+\newcounter{leanlink}
+\newcommand{\printleanlinks}{%
+  \ifx\leanlink@used\@empty\else
+    \begin{list}{}{%
+      \usecounter{leanlink}%
+      \setlength{\leftmargin}{1em}%
+      \setlength{\itemindent}{-\leftmargin}%
+      \setlength{\labelwidth}{0pt}%
+      \setlength{\labelsep}{0pt}%
+      \raggedright}%
+    \leanlink@used
+    \end{list}%
+  \fi}
+% Lean names and paths in typewriter, broken after their dots and slashes.
+\DeclareUrlCommand{\leancode}{\urlstyle{tt}}
+% Each entry's link target is on its first line, which \phantomsection sets in the paragraph: the
+% one that \item sets precedes the paragraph, and a page break can come between them.
+\newcommand{\leanlink@entry}[1]{%
+  \item\leavevmode\phantomsection\label{lean:#1}%
+  \textbf{\@nameuse{leanlink@title@#1}.}
+  \def\leanlink@separator{\def\leanlink@separator{, }}%
+  \expanded{\noexpand\forcsvlist\noexpand\leanlink@name{\@nameuse{leanlink@names@#1}}}
+  in \expanded{\noexpand\leancode{\@nameuse{leanlink@file@#1}}},
+  \@nameuse{leanlink@lines@#1}.}
+\newcommand{\leanlink@name}[1]{\leanlink@separator\leancode{#1}}
+\makeatother
+
+\DeclareLeanLink{expressions}{Language grammar}{Determinize.Spec.Paper.Expr}{lean/Determinize/Spec/Syntax.lean}{22-49}
+\DeclareLeanLink{determinization}{Determinization}{Determinize.Spec.Paper.Expr.determinize}{lean/Determinize/Spec/Syntax.lean}{122-162}
+\DeclareLeanLink{types}{Type grammar}{Determinize.Spec.Paper.Ty}{lean/Determinize/Spec/Types.lean}{25-31}
+\DeclareLeanLink{subtyping}{Subtyping}{Determinize.Spec.Paper.Ty.Sub}{lean/Determinize/Spec/Types.lean}{34-42}
+\DeclareLeanLink{typing}{Real typing}{Determinize.Spec.Paper.Typed}{lean/Determinize/Spec/Syntax.lean}{212-286}
+\DeclareLeanLink{values}{Values}{Determinize.Spec.Paper.Expr.isValue}{lean/Determinize/Spec/Syntax.lean}{55-59}
+\DeclareLeanLink{evaluation-contexts}{Evaluation contexts}{Determinize.Spec.Paper.Action.wrap}{lean/Determinize/Spec/Semantics.lean}{23-28}
+\DeclareLeanLink{reduction}{Deterministic reduction}{Determinize.Spec.Paper.reduce}{lean/Determinize/Spec/Semantics.lean}{45-183}
+\DeclareLeanLink{output-measures}{Output measures}{Determinize.Spec.Paper.outputMeasureAt, Determinize.Spec.Paper.bigStepMeasure}{lean/Determinize/Spec/Semantics.lean}{186-199}
+\DeclareLeanLink{primitive-distributions}{Primitive distributions}{Determinize.Spec.Paper.uniformFiber, Determinize.Spec.Paper.gaussianFiber, Determinize.Spec.Paper.poissonFiber, Determinize.Spec.Paper.exponentialFiber, Determinize.Spec.Paper.betaFiber, Determinize.Spec.Paper.gammaFiber, Determinize.Spec.Paper.bernoulliFiber, Determinize.Spec.Paper.discreteFiber}{lean/Determinize/Spec/Primitives.lean}{37-115}
+\DeclareLeanLink{domain-safety}{Domain safety}{Determinize.Spec.Paper.DomainSafe}{lean/Determinize/Spec/Semantics.lean}{217-232}
+\DeclareLeanLink{expectation-defined}{Expectation}{Determinize.Spec.HasExpectation, Determinize.Spec.extendedExpectation}{lean/Determinize/Spec/Expectation.lean}{21-34}
+\DeclareLeanLink{expectation-preservation}{Expectation preservation}{Determinize.Theorems.expectation_preservation}{lean/Determinize/Theorems.lean}{114-124}
+\DeclareLeanLink{variance-non-increase}{Variance non-increase}{Determinize.Theorems.variance_non_increase}{lean/Determinize/Theorems.lean}{126-136}
+\DeclareLeanLink{divergence}{Divergence}{Determinize.Spec.Paper.divergenceProbability}{lean/Determinize/Spec/Semantics.lean}{201-215}
+\DeclareLeanLink{return-or-diverge}{Return or divergence}{Determinize.Theorems.return_or_diverge}{lean/Determinize/Theorems.lean}{176-181}
+\DeclareLeanLink{output-mass}{Output-mass preservation}{Determinize.Theorems.output_mass_preservation}{lean/Determinize/Theorems.lean}{108-112}
+\DeclareLeanLink{traces}{Traces}{Determinize.Spec.Traces.Trace}{lean/Determinize/Spec/Traces/Semantics.lean}{18}
+\DeclareLeanLink{trace-semantics}{Refined output measures}{Determinize.Spec.Traces.traceAndOutputLaw}{lean/Determinize/Spec/Traces/Semantics.lean}{29-51}
+\DeclareLeanLink{trace-law}{Trace marginal}{Determinize.Spec.Traces.traceLaw}{lean/Determinize/Spec/Traces/Semantics.lean}{53-55}
+\DeclareLeanLink{trace-erasure}{Output marginal}{Determinize.Theorems.trace_erasure}{lean/Determinize/Theorems.lean}{61-65}
+\DeclareLeanLink{trace-soundness}{Tracewise soundness}{Determinize.Theorems.tracewise_soundness}{lean/Determinize/Theorems.lean}{81-91}
+\DeclareLeanLink{trace-variance}{Trace variance decomposition}{Determinize.Theorems.trace_variance_decomposition}{lean/Determinize/Theorems.lean}{158-172}
+\DeclareLeanLink{trace-preservation}{Trace preservation}{Determinize.Theorems.trace_preservation}{lean/Determinize/Theorems.lean}{74-79}
+\DeclareLeanLink{equality-of-total-masses}{Equality of total masses}{Determinize.Theorems.equality_of_total_masses}{lean/Determinize/Theorems.lean}{67-72}
+\DeclareLeanLink{returned-expectation-along-traces}{Expectation along traces}{Determinize.Theorems.returned_expectation_along_traces}{lean/Determinize/Theorems.lean}{93-104}
+\DeclareLeanLink{determinization-typing}{Determinization preserves typing}{Determinize.Theorems.determinization_preserves_typing}{lean/Determinize/Theorems.lean}{54-57}
+\DeclareLeanLink{convex-function-inequality}{Convex function inequality}{Determinize.Theorems.convex_function_inequality}{lean/Determinize/Theorems.lean}{138-145}
+\DeclareLeanLink{probabilistic-type-safety}{Probabilistic type safety}{Determinize.Theorems.probabilistic_type_safety}{lean/Determinize/Theorems.lean}{147-156}
+\DeclareLeanLink{return-probability}{Return probability}{Determinize.Spec.returnProbability}{lean/Determinize/Spec/Expectation.lean}{36-37}
+\DeclareLeanLink{returned-expectation}{Expectation conditioned on returning}{Determinize.Spec.returnedExpectation}{lean/Determinize/Spec/Expectation.lean}{44-48}
+\DeclareLeanLink{returned-variance}{Variance conditioned on returning}{Determinize.Spec.returnedVariance}{lean/Determinize/Spec/Expectation.lean}{39-52}
+\DeclareLeanLink{frontend}{Parsing and elaboration}{Determinize.Frontend.compile}{lean/Determinize/Frontend/Compile.lean}{20-26}
+\DeclareLeanLink{inference}{Inference correctness}{Determinize.Theorems.inference_correctness}{lean/Determinize/Theorems.lean}{41-50}
+\DeclareLeanLink{constraint-generation}{Constraint generation}{Determinize.Frontend.generate}{lean/Determinize/Frontend/Infer.lean}{150-231}
+\DeclareLeanLink{affinity-solving}{Mode constraint solving}{Determinize.Frontend.solveAffinities}{lean/Determinize/Frontend/Affinity.lean}{50-81}
+\DeclareLeanLink{interpreter}{Floating-point interpreter}{Determinize.Runtime.runOutcome}{lean/Determinize/Runtime/Eval.lean}{135-141}
+\DeclareLeanLink{graph-construction}{Finite graph construction}{Determinize.Finite.Reward.explore}{lean/Determinize/Finite/Reward/Explore.lean}{13-69}
+\DeclareLeanLink{rational-solver}{Exact rational solver}{Determinize.Finite.Reward.solve}{lean/Determinize/Finite/Reward/Solve.lean}{80-92}
+\DeclareLeanLink{certificate-checker}{Certificate checker}{Determinize.Finite.Reward.Solution}{lean/Determinize/Finite/Reward/Solve.lean}{48-62}
+\DeclareLeanLink{symbolic-affine}{Affine expressions}{Determinize.Proof.Paper.Symbolic.Affine}{lean/Determinize/Proof/Semantics/Internal.lean}{60-63}
+\DeclareLeanLink{symbolic-environment}{Symbolic environments}{Determinize.Proof.Paper.Symbolic.SampleEnv}{lean/Determinize/Proof/Semantics/Internal.lean}{119-123}
+\DeclareLeanLink{symbolic-expression}{Residual symbolic expressions}{Determinize.Proof.Paper.Symbolic.AffineExpr}{lean/Determinize/Proof/Symbolic/Syntax.lean}{21}
+\DeclareLeanLink{symbolic-lifting}{Lifting}{Determinize.Proof.Paper.Symbolic.AffineExpr.ofExpr}{lean/Determinize/Proof/Symbolic/Syntax.lean}{116-151}
+\DeclareLeanLink{symbolic-realization}{Realization}{Determinize.Proof.Paper.Symbolic.AffineExpr.realize}{lean/Determinize/Proof/Symbolic/Syntax.lean}{53-102}
+\DeclareLeanLink{symbolic-realize-lift}{Realization of initialization}{Determinize.Proof.Paper.Symbolic.AffineExpr.realize_ofExpr}{lean/Determinize/Proof/Symbolic/Syntax.lean}{827-839}
+\DeclareLeanLink{symbolic-actual-environment}{Actual valuation}{Determinize.Proof.Paper.Symbolic.SampleEnv.actualMeasure}{lean/Determinize/Proof/Semantics/Internal.lean}{127-134}
+\DeclareLeanLink{symbolic-mean-environment}{Sequential mean valuation}{Determinize.Proof.Paper.Symbolic.SampleEnv.meanEnvironment}{lean/Determinize/Proof/Semantics/Internal.lean}{145-151}
+\DeclareLeanLink{symbolic-actual-interpretation}{Actual interpretation}{Determinize.Proof.StepTraces.actualTraceLaw}{lean/Determinize/Proof/Symbolic/TraceLaws.lean}{49-51}
+\DeclareLeanLink{symbolic-expected-interpretation}{Expected interpretation}{Determinize.Proof.StepTraces.targetTraceLaw}{lean/Determinize/Proof/Symbolic/TraceLaws.lean}{55-57}
+\DeclareLeanLink{symbolic-affine-expectation}{Expectation of an affine expression}{Determinize.Proof.Paper.SymbolicSoundness.SampleEnv.integral_affine}{lean/Determinize/Proof/Symbolic/Moments.lean}{99-104}
+\DeclareLeanLink{finite-step-factorization}{Finite-step factorization}{Determinize.Proof.StepTraces.compact_exactDepth_fiberSound}{lean/Determinize/Proof/Traces/CompactFiberSoundness.lean}{193-196}
+\DeclareLeanLink{trace-indexed-output-kernel}{Trace-indexed output kernel}{Determinize.Proof.StepTraces.compactHistoryReplay, Determinize.Proof.StepTraces.compactFiber}{lean/Determinize/Proof/Traces/CompactFiberSoundness.lean}{23-136}
+\DeclareLeanLink{whole-program-output-kernel}{Whole-program output kernel}{Determinize.Proof.Traces.normalizedKernel}{lean/Determinize/Proof/Traces/CompactSoundness.lean}{42-44}
+\DeclareLeanLink{whole-program-kernel-factorization}{Combining finite-step factorizations}{Determinize.Proof.Traces.joint_normalized_fiberSound}{lean/Determinize/Proof/Traces/CompactSoundness.lean}{77-98}
+\DeclareLeanLink{whole-program-factorization}{Whole-program factorization}{Determinize.Proof.Traces.compact_normalized_fiberSound}{lean/Determinize/Proof/Traces/CompactSoundness.lean}{101-105}

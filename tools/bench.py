@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the exact (finite state) and approx (infinite state) benchmark suites.
+"""Run the exact (finite state) and approx (sampling) benchmark suites.
 
 Each .det benchmark is run through determinize (Storm for exact/, sampling for
 approx/). When a matching .prob (Polar) or .psi (lambda PSI) file sits next to
@@ -197,6 +197,9 @@ def sample_summary_json(summary: SampleSummary) -> dict[str, object]:
     }
     if summary.rejected:
         result["rejected"] = summary.rejected
+    failed = summary.samples - summary.returned - summary.rejected
+    if failed > 0:
+        result["failed"] = failed
     if summary.failure:
         result["first_failure"] = summary.failure
     return result
@@ -430,7 +433,7 @@ def det_exact(model: Path, args: argparse.Namespace, temp: Path) -> dict[str, ob
 
 
 def det_approx(model: Path, args: argparse.Namespace) -> dict[str, object]:
-    """Sample one infinite state benchmark before and after determinization."""
+    """Sample one benchmark before and after determinization."""
     print("  Det (sampling)")
     try:
         sites = count_sample_sites(model, args)
@@ -466,15 +469,37 @@ def det_approx(model: Path, args: argparse.Namespace) -> dict[str, object]:
         return result
     print_sample("Source", source)
     print_sample("Determinized", target)
-    print(f"    Variance reduction: {variance_factor(source.variance, target.variance)}")
     print(f"    Sampling time:      {run.seconds:.3f}s")
     result.update(
-        status="completed",
         source=sample_summary_json(source),
         determinized=sample_summary_json(target),
-        variance_reduction_factor=variance_factor_json(source.variance, target.variance),
+        variance_reduction_factor=None,
         sampling_seconds=run.seconds,
     )
+    errors = []
+    for label, summary in (("Source", source), ("Determinized", target)):
+        failed = summary.samples - summary.returned - summary.rejected
+        if failed > 0:
+            error = f"{label}: {failed}/{summary.samples} executions failed"
+            if summary.failure:
+                error += f"; first failure: {summary.failure}"
+            errors.append(error)
+        elif summary.failure:
+            errors.append(f"{label}: {summary.failure}")
+        elif summary.returned + summary.rejected != summary.samples:
+            errors.append(f"{label}: returned and rejected counts account for "
+                          f"{summary.returned + summary.rejected}/{summary.samples} runs")
+        if summary.samples != args.samples:
+            errors.append(f"{label}: sampled {summary.samples}/{args.samples} requested runs")
+    if errors:
+        error = "; ".join(errors)
+        result.update(status="failed", stage="sampling", error=error)
+        print(f"    ERROR: {error}")
+        print("    Variance reduction: n/a (sampling failed)")
+    else:
+        result.update(status="completed",
+                      variance_reduction_factor=variance_factor_json(source.variance, target.variance))
+        print(f"    Variance reduction: {variance_factor(source.variance, target.variance)}")
     return result
 
 
@@ -658,7 +683,7 @@ def main() -> int:
     suites.add_argument("--exact", "--finite-state", dest="exact", action="store_true",
                         help="run benchmarks/exact (finite state after determinization)")
     suites.add_argument("--approx", "--infinite-state", dest="approx", action="store_true",
-                        help="run benchmarks/approx (infinite state after determinization)")
+                        help="run benchmarks/approx (sampling suite)")
     tools = parser.add_argument_group("tools (default: all three)")
     tools.add_argument("--det", action="store_true", help="run determinize")
     tools.add_argument("--det-only", action="store_true",
@@ -711,7 +736,7 @@ def main() -> int:
     elif do_exact:
         failures += run_suite("EXACT: FINITE STATE AFTER DETERMINIZATION", EXACT_DIR, True, args)
     if do_approx and not args.det_only:
-        failures += run_suite("APPROX: INFINITE STATE AFTER DETERMINIZATION", APPROX_DIR, False, args)
+        failures += run_suite("APPROX: SAMPLING", APPROX_DIR, False, args)
 
     heading("SUMMARY")
     if failures:

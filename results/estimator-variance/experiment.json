@@ -1,0 +1,55 @@
+{
+  "started_at": "2026-10-14T23:21:45.315094+00:00",
+  "machine": {
+    "system": "macOS-26.6.2-arm64-arm-64bit",
+    "architecture": "arm64",
+    "cpu": "Apple M4 Max",
+    "memory_bytes": "51539607552",
+    "model": "Mac16,5"
+  },
+  "configuration": {
+    "models": [
+      "branching",
+      "hmm",
+      "load"
+    ],
+    "sizes": [
+      1000,
+      3000,
+      10000,
+      30000,
+      100000
+    ],
+    "replicates": 50,
+    "fuel": 100000,
+    "warmup": 1000,
+    "timeout_seconds": 180,
+    "seed_policy": "Disjoint consecutive seed blocks per replicate and size; paired subjects.",
+    "subject_order": "Alternate source-first and determinized-first by replicate.",
+    "timing": "Runtime loop and online moments only; excludes parsing, determinization, warmup, output.",
+    "variance_se": "Normal approximation: sample variance * sqrt(2 / (replicates - 1)).",
+    "binary_sha256": "57546df32485240e0548db7cd87467e0d39317e430abd2c192e82a356152ef79",
+    "model_sha256": {
+      "branching": "972092e1d8e7799808870ee0b62be315cc9187ff96412b49913e579236b6f641",
+      "hmm": "da919484c859cfa14adc4b94c29e68dc2e8e5e39fd6603b726e2de9e50e0c378",
+      "load": "9c63f6e3cb49d44e3702891d7eae40c85fe6e23404e8e5a6821b1f078c783494"
+    },
+    "harness_sha256": "9b88e61fd737ea279f946576bc0720a1cadd37a3a623b4058672446759388fa5",
+    "runner_sha256": "59f717f68c8268dd57464bec66f8947b1b002405714ce32645f0aaf98a69624f"
+  },
+  "git_commit": "77682409fd9d42aab77193183aeab7ca47c9709b",
+  "command": [
+    "tools/benchmark_estimator_variance.py",
+    "--binary",
+    "/tmp/sampling-bench"
+  ],
+  "binary": "/private/tmp/sampling-bench",
+  "lean_toolchain": "leanprover/lean4:v4.34.1",
+  "python": "3.12.12 (main, Feb 12 2026, 00:42:34) [Clang 21.1.4 ]",
+  "status": "completed",
+  "finished_at": "2026-10-14T23:45:37.152401+00:00",
+  "completed_trials": 1500,
+  "requested_executions": 43200000,
+  "rejected_executions": 5820990,
+  "failed_executions": 0
+}
