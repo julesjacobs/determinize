@@ -1452,6 +1452,10 @@ Thus domain safety prevents determinization from changing which executions are s
 \section{Full Benchmarks (for RQ1)}
 \label{sec:appendix-finite-benchmarks}
 
+\subsection{Exact-analysis instances}
+\label{sec:appendix-exact-instances}
+We apply \texttt{aggregate-rv}, \texttt{invpend}, \texttt{pack}, \texttt{service-policy}, and \texttt{workload} to $n=2$, and \texttt{swap} to $n=1$. The other nine benchmark files are unchanged, including \texttt{dreckon}'s fixed $n=2$. These are bounded exact-analysis runs; their diagnostic timings are not performance measurements. For all 14 successful instances, a fresh frontend run produced a source Core term structurally equal to the term supplied to the native tactic, which checks its determinization. The artifact's \texttt{results/exact-instances/} directory records the concrete inputs, source and input hashes, commands, exact moments, checking outcomes, generated theorem sources, and axiom reports.
+
 \subsection{\texttt{add-noise}}
 
 \begin{lstlisting}[breaklines=true]

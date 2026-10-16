@@ -201,10 +201,8 @@ In a nutshell, our paper makes the following contributions:
   \leanmark.
 
     \item[] \textbf{Evaluation.} We evaluate two applications of determinization.
-First, by eliminating continuous sampling, determinization
-can reduce infinite-state programs to finite-state programs,
-enabling exact computation of their expected values using
-existing model-checking techniques.
+First, determinization can yield a finite Markov reward representation,
+enabling exact expectation computation with the supported backend.
 Second, even when the transformed program remains infinite-state,
 reducing its randomness can lower output variance and improve
 the precision of Monte Carlo estimates under a fixed
