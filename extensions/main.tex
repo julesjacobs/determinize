@@ -298,19 +298,34 @@ Replacing the binding for $x$ with $\Gamma_1$ yields
 \end{example}
 
 \paragraph{Typing rules (for pairs and lists).}
+PROBLEM I was having:
+\[
+\mathsf{let}\ p=(x,y)\ \mathsf{in}\
+(\mathsf{fst}\ p)\cdot(\mathsf{snd}\ p).
+\]
 
-THE PROBLEM: if you store an entire pair or list in a single variable, your current types cannot remember whether its components are independent!
-ex. 
-let p = (x,y) in fst p * snd p
+Even if $x$ and $y$ are independent, the ordinary pair
+type $p:\real{\E}\times\real{\E}$ does not record this.
 
+\[
+(p:\real{\E}\times\real{\E}),
+(p:\real{\E}\times\real{\E}),
+\]
 
+Both projections use the same binding $p$.
+Applying \textsc{Mul-Ind} requires:
+\[
+\wf((p:\real{\E}\times\real{\E},
+      p:\real{\E}\times\real{\E})),
+\]
+This fails because $p$ occurs on both sides of the comma.
+
+NEED to preserve independence in the pair's type.
 
 
 Ordinary pairs $\tau_1\times\tau_2$ may have dependent
-components; independent pairs $\tau_1\otimes\tau_2$
-have independent components conditional on the retained
-$\G$-random trace, as does multiplicative context separation.
-Bound variables are fresh.
+components, and independent pairs $\tau_1\otimes\tau_2$
+have independent components.
 
 \begin{mathpar}
 \inferrule[$\times$-Intro]
@@ -347,12 +362,31 @@ Bound variables are fresh.
     \mathsf{let}\ (x,y)=e_1\ \mathsf{in}\ e_2:\tau }
 \end{mathpar}
 
-PROBLEM I was having:
-let p = (x, y) in
-fst p * snd p
-the type system has no way to know that fst p and snd p come from independent parts of p. 
-
-want to use the two components of an independent pair as indepedent values in the body. this is exactly what mul-ind needs (the wf premise)
+\paragraph{Examples}
+\begin{example}[Preserving independence with $\otimes$]
+Consider
+\[
+\mathsf{let}\ (a,b)=(x,y)\ \mathsf{in}\ a\cdot b.
+\]
+\textsc{$\otimes$-Intro} gives
+\[
+\inferrule[$\otimes$-Intro]
+  { \varnothing\mid x:\real{\E}\vdash x:\real{\E} \\
+    \varnothing\mid y:\real{\E}\vdash y:\real{\E} \\
+    \wf((x:\real{\E},y:\real{\E})) }
+  { \varnothing\mid(x:\real{\E},y:\real{\E})\vdash(x,y):\real{\E}\otimes \real{\E} }.
+\]
+Unpacking this pair introduces the separated bindings
+$(a:\real{\E},b:\real{\E})$, so \textsc{Mul-Ind} gives
+\[
+\varnothing\mid(a:\real{\E},b:\real{\E})\vdash a\cdot b:\real{\E}.
+\]
+Consequently, \textsc{$\otimes$-Elim} yields
+\[
+\varnothing\mid(x:\real{\E},y:\real{\E})\vdash
+\mathsf{let}\ (a,b)=(x,y)\ \mathsf{in}\ a\cdot b:\real{\E}.
+\]
+\end{example}
 
 
 \newpage
