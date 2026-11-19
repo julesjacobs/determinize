@@ -1,0 +1,408 @@
+% !TeX root = main.tex
+\documentclass[manuscript,review,nonacm]{acmart}
+
+% nonacm suppresses publication metadata for this working draft.
+% Remove nonacm and insert the venue's supplied rights/conference metadata
+% when preparing an ACM publication. For an anonymous review submission,
+% follow the venue's instructions (often anonymous,review options).
+\settopmatter{printacmref=false}
+\setcopyright{none}
+\renewcommand\footnotetextcopyrightpermission[1]{}
+
+\usepackage{booktabs}
+\usepackage{mathpartir}
+
+\newcommand{\G}{\mathsf{G}}
+\newcommand{\E}{\mathsf{E}}
+\newcommand{\real}[1]{\mathsf{real}^{#1}}
+\newcommand{\bool}{\mathsf{bool}}
+\newcommand{\judg}[4]{#1 \mid #2 \vdash #3 : #4} 
+\newcommand{\sep}{,}
+\newcommand{\emptybunch}{\varnothing}
+\newcommand{\hole}[2]{#1[#2]}
+\newcommand{\wf}{\mathsf{wf}}
+
+\title{[Project Title]: Extension}
+\author{[Author Name]}
+\affiliation{%
+  \institution{[Institution]}
+  \city{[City]}
+  \country{[Country]}}
+\email{author@example.com}
+
+\begin{document}
+
+\maketitle
+
+\section{NEW}
+\paragraph{Types}
+$\tau$ describes all expression types.
+
+\begin{align*}
+\tau ::= {}&
+\real{\G} \mid \real{\E}
+\mid \mathsf{bool}
+\mid \mathsf{unit}
+\mid \tau \times \tau
+\mid \tau \otimes \tau.\\
+\sigma ::= {}&
+\real{\G} \mid \mathsf{bool} \mid \mathsf{unit}
+\mid \sigma \times \sigma
+\end{align*}
+
+\paragraph{Typing contexts.}
+Typing judgments have the form $\Delta \mid \Gamma \vdash e : \tau$, where $\Delta$ contains variables of type $\sigma$ that may be used freely across subexpressions, and $\Gamma$ tracks dependencies of values that must be separated when a typing rule requires independence.
+\begin{align*}
+\Delta &::= \cdot \mid \Delta,x:\sigma \\
+\Gamma &::= \varnothing
+  \mid x:\tau
+  \mid (\Gamma;\Gamma)
+  \mid (\Gamma,\Gamma)
+\end{align*}
+
+\begin{enumerate}
+  \item $\Gamma_1 ; \Gamma_2$ permits sharing (additive).
+  \item The $\Gamma_1 , \Gamma_2$ reqires separation (multiplicative).
+\end{enumerate}
+
+Here, $\Gamma$ is a bunched (tree-like) context, whereas $\Delta$ is an ordinary context.
+
+\paragraph{One-hole bunched contexts.}
+We work with a context containing a single hole that may be filled by another context. We use the metavariable $\Gamma_0$ to range over contexts with a hole and write $\Gamma_0(\Gamma)$ to fill the hole in $\Gamma_0$ with $\Delta$.
+\begin{align*}
+\Gamma_0 ::= {}&
+\cdot
+\mid (\Gamma_0;\Gamma)
+\mid (\Gamma;\Gamma_0)
+\mid (\Gamma_0,\Gamma)
+\mid (\Gamma,\Gamma_0).
+\end{align*}
+where $\cdot$ denotes the unique hole here.
+
+For example,
+\[
+\Gamma_0=(\cdot,z:\real{\E})
+\quad\Longrightarrow\quad
+\Gamma_0((x:\real{\E};y:\real{\E}))
+=((x:\real{\E};y:\real{\E}),z:\real{\E}).
+\]
+
+\paragraph{Well-formed bunches}
+A bunch $\Gamma$ is well-formed, written $\wf(\Gamma)$,
+if no variable occurs on both sides of any
+multiplicative comma. Repeated occurrences under
+additive composition are permitted. 
+
+Formally, we can define this as:
+\begin{align*}
+\wf(\varnothing) &\iff \top,\\
+\wf(x:\tau) &\iff \top,\\
+\wf((\Gamma_1;\Gamma_2))
+&\iff \wf(\Gamma_1)\land\wf(\Gamma_2),\\
+\wf((\Gamma_1,\Gamma_2))
+&\iff \wf(\Gamma_1)\land\wf(\Gamma_2)
+\land
+\operatorname{dom}(\Gamma_1)\cap
+\operatorname{dom}(\Gamma_2)=\varnothing.
+\end{align*}
+
+For example, a well-formed bunch is $(x:\tau;y:\tau),z:\tau$, and a bunch that is not well-formed is $(x:\tau;y:\tau),x:\tau$.
+
+
+
+\paragraph{Typing rules.}
+Let $m\in\{\G,\E\}$.
+
+\begin{mathpar}
+% Variables and constants
+\inferrule[Var-$\Delta$]
+  { x:\tau \in \Delta }
+  { \Delta\mid\varnothing\vdash x:\tau }
+
+\and
+\inferrule[Var-$\Gamma$]
+  { }
+  { \Delta\mid x:\tau
+      \vdash x:\tau }
+
+\and
+\inferrule[Real]
+  { r\in\mathbb R }
+  { \Delta\mid\varnothing\vdash r:\real{\G} }
+
+\and
+\inferrule[Bool]
+  { b\in\{\mathsf{true},\mathsf{false}\} }
+  { \Delta\mid\varnothing\vdash b:\bool }
+
+\and
+\inferrule[Unit]
+  { }
+  { \Delta\mid\varnothing\vdash ():\mathsf{unit} }
+\end{mathpar}
+
+\begin{mathpar}
+% Arithmetic
+\inferrule[Add]
+  { \Delta\mid\Gamma_1\vdash e_1:\real{m} \\
+    \Delta\mid\Gamma_2\vdash e_2:\real{m} }
+  { \Delta\mid(\Gamma_1;\Gamma_2)
+      \vdash e_1+e_2:\real{m} }
+
+\and
+\inferrule[Mul-Ind]
+  { \Delta\mid\Gamma_1\vdash e_1:\real{\E} \\
+    \Delta\mid\Gamma_2\vdash e_2:\real{\E} \\
+    \wf((\Gamma_1,\Gamma_2)) }
+  { \Delta\mid(\Gamma_1,\Gamma_2)
+      \vdash e_1\cdot e_2:\real{\E} }
+
+\and
+\inferrule[Mul-G]
+  { \Delta\mid\varnothing
+      \vdash e_1:\real{\G} \\
+    \Delta\mid\Gamma\vdash e_2:\real{m} }
+  { \Delta\mid\Gamma
+      \vdash e_1\cdot e_2:\real{m} }
+\end{mathpar}
+
+\begin{mathpar}
+% Let-bindings
+\inferrule[Let-E]
+  { \Delta\mid\Gamma_1\vdash e_1:\tau_1 \\
+    \Delta\mid\Gamma_0(x:\tau_1)
+      \vdash e_2:\tau_2 \\
+    \wf(\Gamma_0(\Gamma_1)) }
+  { \Delta\mid\Gamma_0(\Gamma_1)
+      \vdash
+      \mathsf{let}\ x=e_1\ \mathsf{in}\ e_2:\tau_2 }
+
+\and
+\inferrule[Let-G]
+  { \Delta\mid\varnothing\vdash e_1:\sigma \\
+    \Delta,x:\sigma\mid\Gamma\vdash e_2:\tau_2 }
+  { \Delta\mid\Gamma\vdash
+      \mathsf{let}\ x=e_1\ \mathsf{in}\ e_2:\tau_2 }
+\end{mathpar}
+
+\begin{mathpar}
+% Conditionals
+\inferrule[If]
+  { \Delta\mid\varnothing\vdash e_0:\bool \\
+    \Delta\mid\Gamma\vdash e_1:\tau \\
+    \Delta\mid\Gamma\vdash e_2:\tau }
+  { \Delta\mid\Gamma\vdash
+      \mathsf{if}\ e_0\ \mathsf{then}\ e_1\
+      \mathsf{else}\ e_2:\tau }
+\end{mathpar}
+
+\begin{mathpar}
+% Uniform distributions
+\inferrule[Uniform-E]
+  { \Delta\mid\Gamma\vdash e_1:\real{\E} \\
+    \Delta\mid\Gamma\vdash e_2:\real{\E} }
+  { \Delta\mid\Gamma\vdash
+      \mathsf{uniform}^{\E}(e_1,e_2)
+      :\real{\E} }
+
+\and
+\inferrule[Uniform-G]
+  { \Delta\mid\varnothing
+      \vdash e_1:\real{\G} \\
+    \Delta\mid\varnothing
+      \vdash e_2:\real{\G} }
+  { \Delta\mid\varnothing\vdash
+      \mathsf{uniform}^{\G}(e_1,e_2)
+      :\real{\G} }
+
+\and
+\inferrule[Uniform-M]
+  { \Delta\mid\Gamma\vdash e_1:\real{m} \\
+    \Delta\mid\Gamma\vdash e_2:\real{m} }
+  { \Delta\mid\Gamma\vdash
+      \mathsf{uniform}^{\mathsf{M}}(e_1,e_2)
+      :\real{m} }
+
+\and
+\inferrule[Flip-G]
+  { \Delta\mid\varnothing\vdash p:\real{\G} }
+  { \Delta\mid\varnothing\vdash
+      \mathsf{flip}^{\G}(p):\bool }
+\end{mathpar}
+
+\paragraph{Structural rules.}
+The following rules show weakening, contraction,
+and conversion in bunched contexts.
+
+\begin{mathpar}
+\inferrule[Weakening]
+  { \Delta\mid\Gamma_0(\Gamma)\vdash e:\tau \\
+    \wf(\Gamma_0((\Gamma;\Gamma'))) }
+  { \Delta\mid\Gamma_0((\Gamma;\Gamma'))
+      \vdash e:\tau }
+
+\and
+\inferrule[Contraction]
+  { \Delta\mid\Gamma_0((\Gamma;\Gamma))
+      \vdash e:\tau }
+  { \Delta\mid\Gamma_0(\Gamma)\vdash e:\tau }
+
+\and
+\inferrule[Conversion]
+  { \Delta\mid\Gamma_0((\Gamma_1;\Gamma_2))
+      \vdash e:\tau \\
+    \wf(\Gamma_0((\Gamma_1,\Gamma_2))) }
+  { \Delta\mid\Gamma_0((\Gamma_1,\Gamma_2))
+      \vdash e:\tau }
+\end{mathpar}
+
+The \textsc{Weakening} and \textsc{Contraction} rules follow standard BI. The \textsc{Conversion} rule allows conversion from additive to mutiplicative composition when the resulting bunch is well-formed.
+
+\paragraph{Examples}
+\begin{example}[Sharing versus separation]
+Consider $x+x$ and $x\cdot x$, where $x:\real{\E}$.
+By \textsc{Var-$\Gamma$}, both operands have the judgment $\varnothing\mid x:\real{\E}\vdash x:\real{\E}$.
+
+For addition, \textsc{Add} gives: $\varnothing\mid(x:\real{\E};x:\real{\E})
+\vdash x+x:\real{\E}$. This bunch is well-formed, and \textsc{Contraction} gives:
+$\varnothing\mid x:\real{\E}\vdash x+x:\real{\E}$. For multiplication, \textsc{Mul-Ind} requires: $\wf((x:\real{\E},x:\real{\E}))$, but this fails because $x$ occurs on both sides of the comma.
+\end{example}
+
+\begin{example}
+Consider
+\[
+\mathsf{let}\ x=u+v\ \mathsf{in}\ x\cdot w,
+\]
+where $u,v,w$ are distinct variables of type $\real{\E}$.
+By \textsc{Add}, the bound expression $u+v$ is typed under
+\[
+\Gamma_1=(u:\real{\E};v:\real{\E}).
+\]
+The semicolon permits $u$ and $v$ to share dependencies.
+By \textsc{Mul-Ind}, the body $x\cdot w$ is typed under
+\[
+x:\real{\E},w:\real{\E}.
+\]
+The comma requires separation between $x$ and $w$.
+
+To apply \textsc{Let-E}, take
+$\Gamma_0=(\cdot,w:\real{\E})$.
+Replacing the binding for $x$ with $\Gamma_1$ yields
+\[
+\varnothing
+\mid ((u:\real{\E};v:\real{\E}),w:\real{\E})
+\vdash
+\mathsf{let}\ x=u+v\ \mathsf{in}\ x\cdot w
+:\real{\E}.
+\]
+\end{example}
+
+\paragraph{Typing rules (for pairs and lists).}
+
+THE PROBLEM: if you store an entire pair or list in a single variable, your current types cannot remember whether its components are independent!
+ex. 
+let p = (x,y) in fst p * snd p
+
+
+
+
+Ordinary pairs $\tau_1\times\tau_2$ may have dependent
+components; independent pairs $\tau_1\otimes\tau_2$
+have independent components conditional on the retained
+$\G$-random trace, as does multiplicative context separation.
+Bound variables are fresh.
+
+\begin{mathpar}
+\inferrule[$\times$-Intro]
+  { \Delta\mid\Gamma_1\vdash e_1:\tau_1 \\
+    \Delta\mid\Gamma_2\vdash e_2:\tau_2 }
+  { \Delta\mid(\Gamma_1;\Gamma_2)
+      \vdash(e_1,e_2):\tau_1\times\tau_2 }
+
+\and
+\inferrule[$\times$-Elim$_1$]
+  { \Delta\mid\Gamma\vdash e:\tau_1\times\tau_2 }
+  { \Delta\mid\Gamma\vdash\mathsf{fst}\ e:\tau_1 }
+
+\and
+\inferrule[$\times$-Elim$_2$]
+  { \Delta\mid\Gamma\vdash e:\tau_1\times\tau_2 }
+  { \Delta\mid\Gamma\vdash\mathsf{snd}\ e:\tau_2 }
+\end{mathpar}
+
+\begin{mathpar}
+\inferrule[$\otimes$-Intro]
+  { \Delta\mid\Gamma_1\vdash e_1:\tau_1 \\
+    \Delta\mid\Gamma_2\vdash e_2:\tau_2 \\
+    \wf((\Gamma_1,\Gamma_2)) }
+  { \Delta\mid(\Gamma_1,\Gamma_2)
+      \vdash (e_1, e_2):\tau_1\otimes\tau_2 }
+
+\and
+\inferrule[$\otimes$-Elim]
+  { \Delta\mid\Gamma_1\vdash e_1:\tau_1\otimes\tau_2 \\
+    \Delta\mid\Gamma_0((x:\tau_1,\,y:\tau_2))\vdash e_2:\tau \\
+    \wf(\Gamma_0(\Gamma_1)) }
+  { \Delta\mid\Gamma_0(\Gamma_1)\vdash
+    \mathsf{let}\ (x,y)=e_1\ \mathsf{in}\ e_2:\tau }
+\end{mathpar}
+
+PROBLEM I was having:
+let p = (x, y) in
+fst p * snd p
+the type system has no way to know that fst p and snd p come from independent parts of p. 
+
+want to use the two components of an independent pair as indepedent values in the body. this is exactly what mul-ind needs (the wf premise)
+
+
+\newpage
+
+
+\section{Miscellaneous}
+\begin{enumerate}
+  \item In BI, contexts are tree-shaped structures called bunches. They distinguish between two ways of combining assymptions:
+  \[
+    \Gamma ::= x:\tau
+    \mid \Gamma;\Gamma
+    \mid \Gamma,\Gamma
+  \]
+
+  where:
+  \begin{itemize}
+    \item ; additive
+    \item , multiplicative
+  \end{itemize}
+
+  \item Flat contexts vs bunched contexts 
+  \item \textsc{IF} rule is not a problem because determinization does not eliminate the $G$ randomness, it retains it.
+  
+  \item let a = if z then x else y in
+let b = if z then y else x in
+a * b Currently, rejects the program.
+
+however, you can rewrite it to the equivalent program:
+
+if z then
+  x * y
+else
+  y * x
+
+\item In traditional BI presentations, the primitive additive typing rule usually uses the same context in both premises:
+\[
+\frac{
+\Delta\mid\Gamma\vdash e_1:\real{\E}
+\qquad
+\Delta\mid\Gamma\vdash e_2:\real{\E}
+}{
+\Delta\mid\Gamma\vdash e_1+e_2:\real{\E}
+}
+\]
+
+Your \(\Gamma_1;\Gamma_2\) formulation is an equivalent, convenient dependency-combining formulation, assuming the usual additive weakening and contraction principles. It makes context inference more explicit.
+\end{enumerate}
+
+\section{Related Work}
+https://www.cambridge.org/core/journals/journal-of-functional-programming/article/on-bunched-typing/4AFEBD081F0F0AFFCF03C8415DDE53A4
+
+
+\end{document}
