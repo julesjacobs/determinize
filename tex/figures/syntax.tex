@@ -1,9 +1,10 @@
 % !TeX root = ../main.tex
-\begin{figure}[htbp]
+\begin{minipage}{0.49\textwidth}
+%\begin{figure}[htbp]
 \centering
 \small
-\begin{align*}
- e &::= x\mid r\;(r\in\Real)\mid ()\mid\kw{true}\mid\kw{false}\mid\kw{reject}\\
+\quad\begin{align*}
+\  e &::= x\mid r\;(r\in\Real)\mid ()\mid\kw{true}\mid\kw{false}\mid\kw{reject}\\
    &\quad\mid \lambda x.e\mid\recfn f x e\mid e\,e
        \mid\letin x e e\\
    &\quad\mid \ite e e e\mid -e\mid e+e\mid e\cdot e\mid e/e\mid e<e\\
@@ -13,10 +14,11 @@
    &\quad\mid \draw{uniform}\alpha{e,e}\mid\draw{gaussian}\alpha{e,e}\\
    &\quad\mid \draw{poisson}\alpha e\mid\draw{exponential}\alpha e\\
    &\quad\mid \draw{bernoulli}\alpha e\mid\draw{discrete}\alpha e\\
-   &\quad\mid \draw{beta}\alpha{e,e}\mid\draw{gamma}\alpha{e,e}.\\[2pt]
- \alpha &::= \G\mid\E\mid\M
+   &\quad\mid \draw{beta}\alpha{e,e}\mid\draw{gamma}\alpha{e,e}.\\[1pt]
+\  \alpha &::= \G\mid\E\mid\M\\[-3em]
 \end{align*}
-\caption{Language grammar\leanref{expressions}. $\G$ and $\E$ denote sampling; $\M$ denotes mean evaluation.}
+\captionof{figure}{Language grammar\leanref{expressions}. $\G$ and $\E$ denote sampling; $\M$ denotes mean evaluation.}
 \label{fig:syntax}
-\Description{Expressions include literals, functions and recursion, arithmetic, conditionals, products, sums, lists, rejection, and eight distribution primitives. The G, E, and M annotations are listed below the expressions.}
-\end{figure}
+%\Description{Expressions include literals, functions and recursion, arithmetic, conditionals, products, sums, lists, rejection, and eight distribution primitives. The G, E, and M annotations are listed below the expressions.}
+%\end{figure}
+\end{minipage}
