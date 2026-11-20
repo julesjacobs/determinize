@@ -53,7 +53,7 @@ $\tau$ describes all expression types.
 \paragraph{Typing contexts.}
 Typing judgments have the form $\Delta \mid \Gamma \vdash e : \tau$, where $\Delta$ contains variables of type $\sigma$ that may be used freely across subexpressions, and $\Gamma$ tracks dependencies of values that must be separated when a typing rule requires independence.
 \begin{align*}
-\Delta &::= \cdot \mid \Delta,x:\sigma \\
+\Delta &::= \varnothing \mid \Delta,x:\sigma \\
 \Gamma &::= \varnothing
   \mid x:\tau
   \mid (\Gamma;\Gamma)
@@ -88,23 +88,26 @@ For example,
 \]
 
 \paragraph{Well-formed bunches}
-A bunch $\Gamma$ is well-formed, written $\wf(\Gamma)$,
-if no variable occurs on both sides of any
-multiplicative comma. Repeated occurrences under
-additive composition are permitted. 
+NOTE:*** Additive sharing should permit two occurrences of the same variable, but not with contradictory types.
+
+A bunch $\Gamma$ is well-formed, written $\wf(\Gamma)$, if shared variables have consistent types and no variable occurs on both sides of a multiplicative comma.
 
 Formally, we can define this as:
 \begin{align*}
 \wf(\varnothing) &\iff \top,\\
 \wf(x:\tau) &\iff \top,\\
 \wf((\Gamma_1;\Gamma_2))
-&\iff \wf(\Gamma_1)\land\wf(\Gamma_2),\\
+&\iff \wf(\Gamma_1)\land\wf(\Gamma_2) \land
+\forall x\in\operatorname{dom}(\Gamma_1)\cap
+\operatorname{dom}(\Gamma_2),\
+\Gamma_1(x)=\Gamma_2(x),\\
 \wf((\Gamma_1,\Gamma_2))
-&\iff \wf(\Gamma_1)\land\wf(\Gamma_2)
-\land
+&\iff \wf(\Gamma_1)\land\wf(\Gamma_2) \land
 \operatorname{dom}(\Gamma_1)\cap
 \operatorname{dom}(\Gamma_2)=\varnothing.
 \end{align*}
+
+where $\Gamma(x)$ denotes the type assigned to $x$ in $\Gamma$.
 
 For example, a well-formed bunch is $(x:\tau;y:\tau),z:\tau$, and a bunch that is not well-formed is $(x:\tau;y:\tau),x:\tau$.
 
@@ -144,9 +147,9 @@ Let $m\in\{\G,\E\}$.
 \begin{mathpar}
 % Arithmetic
 \inferrule[Add]
-  { \Delta\mid\Gamma_1\vdash e_1:\real{m} \\
-    \Delta\mid\Gamma_2\vdash e_2:\real{m} }
-  { \Delta\mid(\Gamma_1;\Gamma_2)
+  { \Delta\mid\Gamma\vdash e_1:\real{m} \\
+    \Delta\mid\Gamma\vdash e_2:\real{m} }
+  { \Delta\mid\Gamma
       \vdash e_1+e_2:\real{m} }
 
 \and
@@ -263,8 +266,8 @@ The \textsc{Weakening} and \textsc{Contraction} rules follow standard BI. The \t
 Consider $x+x$ and $x\cdot x$, where $x:\real{\E}$.
 By \textsc{Var-$\Gamma$}, both operands have the judgment $\varnothing\mid x:\real{\E}\vdash x:\real{\E}$.
 
-For addition, \textsc{Add} gives: $\varnothing\mid(x:\real{\E};x:\real{\E})
-\vdash x+x:\real{\E}$. This bunch is well-formed, and \textsc{Contraction} gives:
+For addition, \textsc{Add} uses the same context $x:\real{\E}$
+in both premises and directly gives
 $\varnothing\mid x:\real{\E}\vdash x+x:\real{\E}$. For multiplication, \textsc{Mul-Ind} requires: $\wf((x:\real{\E},x:\real{\E}))$, but this fails because $x$ occurs on both sides of the comma.
 \end{example}
 
@@ -274,7 +277,8 @@ Consider
 \mathsf{let}\ x=u+v\ \mathsf{in}\ x\cdot w,
 \]
 where $u,v,w$ are distinct variables of type $\real{\E}$.
-By \textsc{Add}, the bound expression $u+v$ is typed under
+By \textsc{Weakening}, both $u$ and $v$ can be typed under
+the shared context below; \textsc{Add} then types $u+v$ under it:
 \[
 \Gamma_1=(u:\real{\E};v:\real{\E}).
 \]
@@ -329,9 +333,9 @@ have independent components.
 
 \begin{mathpar}
 \inferrule[$\times$-Intro]
-  { \Delta\mid\Gamma_1\vdash e_1:\tau_1 \\
-    \Delta\mid\Gamma_2\vdash e_2:\tau_2 }
-  { \Delta\mid(\Gamma_1;\Gamma_2)
+  { \Delta\mid\Gamma\vdash e_1:\tau_1 \\
+    \Delta\mid\Gamma\vdash e_2:\tau_2 }
+  { \Delta\mid\Gamma
       \vdash(e_1,e_2):\tau_1\times\tau_2 }
 
 \and
@@ -363,7 +367,7 @@ have independent components.
 \end{mathpar}
 
 \paragraph{Examples}
-\begin{example}[Preserving independence with $\otimes$]
+\begin{example}
 Consider
 \[
 \mathsf{let}\ (a,b)=(x,y)\ \mathsf{in}\ a\cdot b.
