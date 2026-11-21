@@ -278,6 +278,26 @@ The following rules show weakening, contraction, and conversion in bunched conte
       \vdash e:\tau }
 \end{mathpar}
 
+\paragraph{Subtypes}
+Let $m\in\{\G,\E\}$. As before, $\real{\G}$ may be used where $\real{\E}$ is expected, but not conversely.
+
+\begin{mathpar}
+\inferrule[Sub-Refl]
+  { \tau\in\{\real{\G},\real{\E},\bool,\mathsf{unit}\} }
+  { \tau<:\tau }
+
+\and
+\inferrule[Sub-G-E]
+  { }
+  { \real{\G}<:\real{\E} }
+
+\and
+\inferrule[Subsumption]
+  { \Delta\mid\Gamma\vdash e:\tau \\
+    \tau<:\tau' }
+  { \Delta\mid\Gamma\vdash e:\tau' }
+\end{mathpar}
+
 
 \paragraph{Examples}
 \begin{example}[Sharing versus separation]
@@ -440,6 +460,8 @@ Consequently, \textsc{$\otimes$-Elim} yields
   
   \item One of the reasons to move beyond a strictly linear/affine type system is to allow expressions that reuse variables: x+x and x*x, while tracking independence between expressions where that independence can be established.
 \end{enumerate}
+
+\section{Type Inference}
 
 \newpage
 
