@@ -88,26 +88,28 @@ For example,
 \]
 
 \paragraph{Well-formed bunches}
-NOTE:*** Additive sharing should permit two occurrences of the same variable, but not with contradictory types.
-
-A bunch $\Gamma$ is well-formed, written $\wf(\Gamma)$, if shared variables have consistent types and no variable occurs on both sides of a multiplicative comma.
-
-Formally, we can define this as:
+A bunch $\Gamma$ is well-formed, written $\wf(\Gamma)$, if shared variables have consistent types and no variable occurs on both sides of a multiplicative comma. Formally, we can define this recursively as:
 \begin{align*}
 \wf(\varnothing) &\iff \top,\\
 \wf(x:\tau) &\iff \top,\\
 \wf(\Gamma_1;\Gamma_2)
 &\iff \wf(\Gamma_1)\land\wf(\Gamma_2) \land
+\bigl(
 \forall x\in\operatorname{dom}(\Gamma_1)\cap
 \operatorname{dom}(\Gamma_2),\
-\Gamma_1(x)=\Gamma_2(x),\\
+\Gamma_1(x)=\Gamma_2(x)
+\bigr),\\
 \wf(\Gamma_1,\Gamma_2)
 &\iff \wf(\Gamma_1)\land\wf(\Gamma_2) \land
+\bigl(
 \operatorname{dom}(\Gamma_1)\cap
-\operatorname{dom}(\Gamma_2)=\varnothing.
+\operatorname{dom}(\Gamma_2)=\varnothing
+\bigr).
 \end{align*}
 
 where $\Gamma(x)$ denotes the type assigned to $x$ in $\Gamma$.
+
+NOTE: Additive $;$ can permit occurrences of the same variable, e.g. $x : \tau ; x : \tau$, but not with contradictory types.
 
 For example, a well-formed bunch is $(x:\tau;y:\tau),z:\tau$, and a bunch that is not well-formed is $(x:\tau;y:\tau),x:\tau$.
 
@@ -149,7 +151,7 @@ Let $m\in\{\G,\E\}$. We require that no variables are repeated in a context.
 \and
 \inferrule[Real]
   { r\in\mathbb R }
-  { \Delta\mid\varnothing\vdash r:\real{\G} }
+  { \Delta\mid\varnothing\vdash r:\real{m} }
 
 \and
 \inferrule[Bool]
@@ -284,37 +286,59 @@ By \textsc{Var-$\Gamma$}, both operands have the judgment $\varnothing\mid x:\re
 
 For addition, \textsc{Add} uses the same context $x:\real{\E}$
 in both premises and directly gives
-$\varnothing\mid x:\real{\E}\vdash x+x:\real{\E}$. For multiplication, \textsc{Mul-Ind} requires: $\wf(x:\real{\E},x:\real{\E})$, but this fails because $x$ occurs on both sides of the comma.
+$\varnothing\mid x:\real{\E}\vdash x+x:\real{\E}$. For multiplication, \textsc{Mul-Ind} requires: $\wf(x:\real{\E},x:\real{\E})$, but this is false by definition of $\wf$.
 \end{example}
 
 \begin{example}
-Consider
-\[
-\mathsf{let}\ x=u+v\ \mathsf{in}\ x\cdot w,
-\]
-where $u,v,w$ are distinct variables of type $\real{\E}$.
-By \textsc{Weakening}, both $u$ and $v$ can be typed under
-the shared context below; \textsc{Add} then types $u+v$ under it:
-\[
-\Gamma_1=(u:\real{\E};v:\real{\E}).
-\]
-The semicolon permits $u$ and $v$ to share dependencies.
-By \textsc{Mul-Ind}, the body $x\cdot w$ is typed under
-\[
-x:\real{\E},w:\real{\E}.
-\]
-The comma requires separation between $x$ and $w$.
+Consider $\mathsf{let}\ x=u+v\ \mathsf{in}\ x\cdot w$,
+where $u,v,w$ are sampled from $\mathsf{uniform}^{\E}(0,1)$.
 
-To apply \textsc{Let-E}, take
-$\Gamma_0=(\cdot,w:\real{\E})$.
-Replacing the binding for $x$ with $\Gamma_1$ yields
+By \textsc{Var-$\Gamma$} and \textsc{Weakening}, both
+$u$ and $v$ are typable under $\Gamma_1=(u:\real{\E};v:\real{\E})$.
+Thus, \textsc{Add} gives
 \[
-\varnothing
-\mid ((u:\real{\E};v:\real{\E}),w:\real{\E})
+\varnothing\mid\Gamma_1\vdash u+v:\real{\E}.
+\]
+
+For the body, \textsc{Mul-Ind} gives
+\[
+\varnothing\mid(x:\real{\E},w:\real{\E})
+\vdash x\cdot w:\real{\E}.
+\]
+
+Take $\Gamma_0=(\cdot,w:\real{\E})$.
+Since $\wf(\Gamma_1,w:\real{\E})$, \textsc{Let-E} gives
+\[
+\varnothing\mid((u:\real{\E};v:\real{\E}),w:\real{\E})
 \vdash
 \mathsf{let}\ x=u+v\ \mathsf{in}\ x\cdot w
 :\real{\E}.
 \]
+\end{example}
+
+\begin{example}
+Consider $(u\cdot v)+(u\cdot w)$,
+where $u,v,w$ are sampled from $\mathsf{uniform}^{\E}(0,1)$.
+
+First, \textsc{Mul-Ind} gives
+\[
+\varnothing\mid(u:\real{\E},v:\real{\E})\vdash u\cdot v:\real{\E},
+\qquad
+\varnothing\mid(u:\real{\E},w:\real{\E})\vdash u\cdot w:\real{\E}.
+\]
+
+By \textsc{Weakening}, both products are typable under
+\[
+\Gamma=((u:\real{\E},v:\real{\E});(u:\real{\E},w:\real{\E})).
+\]
+
+Thus, \textsc{Add} gives
+\[
+\varnothing\mid\Gamma
+\vdash(u\cdot v)+(u\cdot w):\real{\E}.
+\]
+
+
 \end{example}
 
 \paragraph{Typing rules (for pairs and lists).}
@@ -408,12 +432,21 @@ Consequently, \textsc{$\otimes$-Elim} yields
 \]
 \end{example}
 
+\section{Notes}
+\begin{enumerate}
+  \item If you restrict the bunched context to multiplicative composition only and only retain the \textsc{Var-$\Gamma$}, \textsc{Mul-Ind}, $\wf$ rules with no weakening or contraction, this is a linear type system.
+  
+  \item If you just add weakening to the above, you get an affine type system.
+  
+  \item One of the reasons to move beyond a strictly linear/affine type system is to allow expressions that reuse variables: x+x and x*x, while tracking independence between expressions where that independence can be established.
+\end{enumerate}
 
 \newpage
 
 
 \section{Miscellaneous}
 \begin{enumerate}
+  \item Think about: uniform(x,x)?
   \item In BI, contexts are tree-shaped structures called bunches. They distinguish between two ways of combining assymptions:
   \[
     \Gamma ::= x:\tau
