@@ -83,7 +83,7 @@ For example,
 \[
 \Gamma_0=(\cdot,z:\real{\E})
 \quad\Longrightarrow\quad
-\Gamma_0((x:\real{\E};y:\real{\E}))
+\Gamma_0(x:\real{\E};y:\real{\E})
 =((x:\real{\E};y:\real{\E}),z:\real{\E}).
 \]
 
@@ -96,12 +96,12 @@ Formally, we can define this as:
 \begin{align*}
 \wf(\varnothing) &\iff \top,\\
 \wf(x:\tau) &\iff \top,\\
-\wf((\Gamma_1;\Gamma_2))
+\wf(\Gamma_1;\Gamma_2)
 &\iff \wf(\Gamma_1)\land\wf(\Gamma_2) \land
 \forall x\in\operatorname{dom}(\Gamma_1)\cap
 \operatorname{dom}(\Gamma_2),\
 \Gamma_1(x)=\Gamma_2(x),\\
-\wf((\Gamma_1,\Gamma_2))
+\wf(\Gamma_1,\Gamma_2)
 &\iff \wf(\Gamma_1)\land\wf(\Gamma_2) \land
 \operatorname{dom}(\Gamma_1)\cap
 \operatorname{dom}(\Gamma_2)=\varnothing.
@@ -156,7 +156,7 @@ Let $m\in\{\G,\E\}$.
 \inferrule[Mul-Ind]
   { \Delta\mid\Gamma_1\vdash e_1:\real{\E} \\
     \Delta\mid\Gamma_2\vdash e_2:\real{\E} \\
-    \wf((\Gamma_1,\Gamma_2)) }
+    \wf(\Gamma_1,\Gamma_2) }
   { \Delta\mid(\Gamma_1,\Gamma_2)
       \vdash e_1\cdot e_2:\real{\E} }
 
@@ -240,22 +240,22 @@ and conversion in bunched contexts.
 \begin{mathpar}
 \inferrule[Weakening]
   { \Delta\mid\Gamma_0(\Gamma)\vdash e:\tau \\
-    \wf(\Gamma_0((\Gamma;\Gamma'))) }
-  { \Delta\mid\Gamma_0((\Gamma;\Gamma'))
+    \wf(\Gamma_0(\Gamma;\Gamma')) }
+  { \Delta\mid\Gamma_0(\Gamma;\Gamma')
       \vdash e:\tau }
 
 \and
 \inferrule[Contraction]
-  { \Delta\mid\Gamma_0((\Gamma;\Gamma))
+  { \Delta\mid\Gamma_0(\Gamma;\Gamma)
       \vdash e:\tau }
   { \Delta\mid\Gamma_0(\Gamma)\vdash e:\tau }
 
 \and
 \inferrule[Conversion]
-  { \Delta\mid\Gamma_0((\Gamma_1;\Gamma_2))
+  { \Delta\mid\Gamma_0(\Gamma_1;\Gamma_2)
       \vdash e:\tau \\
-    \wf(\Gamma_0((\Gamma_1,\Gamma_2))) }
-  { \Delta\mid\Gamma_0((\Gamma_1,\Gamma_2))
+    \wf(\Gamma_0(\Gamma_1,\Gamma_2)) }
+  { \Delta\mid\Gamma_0(\Gamma_1,\Gamma_2)
       \vdash e:\tau }
 \end{mathpar}
 
@@ -268,7 +268,7 @@ By \textsc{Var-$\Gamma$}, both operands have the judgment $\varnothing\mid x:\re
 
 For addition, \textsc{Add} uses the same context $x:\real{\E}$
 in both premises and directly gives
-$\varnothing\mid x:\real{\E}\vdash x+x:\real{\E}$. For multiplication, \textsc{Mul-Ind} requires: $\wf((x:\real{\E},x:\real{\E}))$, but this fails because $x$ occurs on both sides of the comma.
+$\varnothing\mid x:\real{\E}\vdash x+x:\real{\E}$. For multiplication, \textsc{Mul-Ind} requires: $\wf(x:\real{\E},x:\real{\E})$, but this fails because $x$ occurs on both sides of the comma.
 \end{example}
 
 \begin{example}
@@ -319,8 +319,8 @@ type $p:\real{\E}\times\real{\E}$ does not record this.
 Both projections use the same binding $p$.
 Applying \textsc{Mul-Ind} requires:
 \[
-\wf((p:\real{\E}\times\real{\E},
-      p:\real{\E}\times\real{\E})),
+\wf(p:\real{\E}\times\real{\E},
+      p:\real{\E}\times\real{\E}),
 \]
 This fails because $p$ occurs on both sides of the comma.
 
@@ -353,14 +353,14 @@ have independent components.
 \inferrule[$\otimes$-Intro]
   { \Delta\mid\Gamma_1\vdash e_1:\tau_1 \\
     \Delta\mid\Gamma_2\vdash e_2:\tau_2 \\
-    \wf((\Gamma_1,\Gamma_2)) }
+    \wf(\Gamma_1,\Gamma_2) }
   { \Delta\mid(\Gamma_1,\Gamma_2)
       \vdash (e_1, e_2):\tau_1\otimes\tau_2 }
 
 \and
 \inferrule[$\otimes$-Elim]
   { \Delta\mid\Gamma_1\vdash e_1:\tau_1\otimes\tau_2 \\
-    \Delta\mid\Gamma_0((x:\tau_1,\,y:\tau_2))\vdash e_2:\tau \\
+    \Delta\mid\Gamma_0(x:\tau_1,\,y:\tau_2)\vdash e_2:\tau \\
     \wf(\Gamma_0(\Gamma_1)) }
   { \Delta\mid\Gamma_0(\Gamma_1)\vdash
     \mathsf{let}\ (x,y)=e_1\ \mathsf{in}\ e_2:\tau }
@@ -377,7 +377,7 @@ Consider
 \inferrule[$\otimes$-Intro]
   { \varnothing\mid x:\real{\E}\vdash x:\real{\E} \\
     \varnothing\mid y:\real{\E}\vdash y:\real{\E} \\
-    \wf((x:\real{\E},y:\real{\E})) }
+    \wf(x:\real{\E},y:\real{\E}) }
   { \varnothing\mid(x:\real{\E},y:\real{\E})\vdash(x,y):\real{\E}\otimes \real{\E} }.
 \]
 Unpacking this pair introduces the separated bindings
