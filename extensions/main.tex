@@ -462,6 +462,70 @@ Consequently, \textsc{$\otimes$-Elim} yields
 \end{enumerate}
 
 \section{Type Inference}
+Recall that the original type inference assigns types and solves constraints on the G/E modes, but we must now also establish the separation required by mul-ind. The inference rules do not mirror the typing rules 1-1, but this is OK.
+
+Inference judgments have the form $\Delta \vdash e \Rightarrow \tau \mid B \mid C$.
+\begin{align*}
+\Delta &::= \varnothing \mid \Delta,\, x:(\tau, B)
+  && \text{types and dependencies of variables}\\
+B &::= \{a_1,\dots,a_n\}
+  && \text{sampling sites with types $\real{a_1}, \dots, \real{a_n}$}
+\end{align*}
+
+\begin{mathpar}
+\inferrule[Var]
+  { x:(\tau, B) \in \Delta }
+  { \Delta \vdash x \Rightarrow \tau \mid B \mid \varnothing }
+
+\and
+\inferrule[Real]
+  { r \in \mathbb{R} }
+  { \Delta \vdash r \Rightarrow \real{a} \mid \varnothing \mid \varnothing }
+
+\and
+\inferrule[Add]
+  { \Delta \vdash e_1 \Rightarrow \tau_1 \mid B_1 \mid C_1 \\
+    \Delta \vdash e_2 \Rightarrow \tau_2 \mid B_2 \mid C_2 }
+  { \Delta \vdash e_1 + e_2 \Rightarrow \real{a} \mid B_1 \cup B_2 \mid
+    C_1 \cup C_2 \cup \{\tau_1 <: \real{a},\ \tau_2 <: \real{a}\} }
+
+\and
+\inferrule[Mul]
+  { \Delta \vdash e_1 \Rightarrow \tau_1 \mid B_1 \mid C_1 \\
+    \Delta \vdash e_2 \Rightarrow \tau_2 \mid B_2 \mid C_2 }
+  { \Delta \vdash e_1 \cdot e_2 \Rightarrow \real{a} \mid B_1 \cup B_2 \mid
+    C_1 \cup C_2 \cup \{\tau_1 <: \real{a},\ \tau_2 <: \real{a},\ \mathsf{sep}(B_1, B_2)\} }
+
+\and
+\inferrule[Let]
+  { \Delta \vdash e_1 \Rightarrow \tau_1 \mid B_1 \mid C_1 \\
+    \Delta,\, x:(\tau_1, B_1) \vdash e_2 \Rightarrow \tau_2 \mid B_2 \mid C_2 }
+  { \Delta \vdash \mathsf{let}\ x = e_1\ \mathsf{in}\ e_2 \Rightarrow \tau_2 \mid B_2 \mid C_1 \cup C_2 }
+
+\and
+\inferrule[Uniform]
+  { \Delta \vdash e_1 \Rightarrow \tau_1 \mid B_1 \mid C_1 \\
+    \Delta \vdash e_2 \Rightarrow \tau_2 \mid B_2 \mid C_2 }
+  { \Delta \vdash \mathsf{uniform}^{m}(e_1, e_2) \Rightarrow \real{a} \mid B_1 \cup B_2 \cup \{a\} \mid
+    C_1 \cup C_2 \cup \{\tau_1 <: \real{a},\ \tau_2 <: \real{a},\ a = m\} }
+
+\and
+\inferrule[Gaussian]
+  { \Delta \vdash e_1 \Rightarrow \tau_1 \mid B_1 \mid C_1 \\
+    \Delta \vdash e_2 \Rightarrow \tau_2 \mid B_2 \mid C_2 }
+  { \Delta \vdash \mathsf{gaussian}^{m}(e_1, e_2) \Rightarrow \real{a} \mid B_1 \cup B_2 \cup \{a\} \mid
+    C_1 \cup C_2 \cup \{\tau_1 <: \real{a},\ \tau_2 <: \real{\G},\ a = m\} }
+\end{mathpar}
+
+Btw, the let rule contains just $B_2$ because $B_2$ already includes the dependencies of $e_1$ whenever the body uses $x$.
+
+
+\paragraph{Separation constraint reduction.}
+We have this new step in the solving phase:
+
+$\mathsf{sep}(B_1, B_2) \rightsquigarrow \{\, a = \G \mid a \in B_1 \cap B_2 \,\}$
+
+and everything else stays the same.
 
 \newpage
 
