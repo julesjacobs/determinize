@@ -134,7 +134,7 @@ Thus, $\Gamma\equiv\Gamma'$ implies
 $\Gamma_0(\Gamma)\equiv\Gamma_0(\Gamma')$.
 
 \paragraph{Typing rules.}
-Let $m\in\{\G,\E\}$. We require that no variables are repeated in a context. 
+Let $m\in\{\G,\E\}$. 
 
 \begin{mathpar}
 % Variables and constants
@@ -187,6 +187,12 @@ Let $m\in\{\G,\E\}$. We require that no variables are repeated in a context.
     \Delta\mid\Gamma\vdash e_2:\real{m} }
   { \Delta\mid\Gamma
       \vdash e_1\cdot e_2:\real{m} }
+
+\and
+\inferrule[Cmp]
+  { \Delta\mid\varnothing\vdash e_1:\real{\G} \\
+    \Delta\mid\varnothing\vdash e_2:\real{\G} }
+  { \Delta\mid\varnothing\vdash e_1<e_2:\bool }
 \end{mathpar}
 
 \begin{mathpar}
@@ -497,6 +503,13 @@ B &::= \{a_1,\dots,a_n\}
     C_1 \cup C_2 \cup \{\tau_1 <: \real{a},\ \tau_2 <: \real{a},\ \mathsf{sep}(B_1, B_2)\} }
 
 \and
+\inferrule[Cmp]
+  { \Delta \vdash e_1 \Rightarrow \tau_1 \mid B_1 \mid C_1 \\
+    \Delta \vdash e_2 \Rightarrow \tau_2 \mid B_2 \mid C_2 }
+  { \Delta \vdash e_1 < e_2 \Rightarrow \bool \mid B_1 \cup B_2 \mid
+    C_1 \cup C_2 \cup \{\tau_1 <: \real{\G},\ \tau_2 <: \real{\G}\} }
+
+\and
 \inferrule[Let]
   { \Delta \vdash e_1 \Rightarrow \tau_1 \mid B_1 \mid C_1 \\
     \Delta,\, x:(\tau_1, B_1) \vdash e_2 \Rightarrow \tau_2 \mid B_2 \mid C_2 }
@@ -515,6 +528,23 @@ B &::= \{a_1,\dots,a_n\}
     \Delta \vdash e_2 \Rightarrow \tau_2 \mid B_2 \mid C_2 }
   { \Delta \vdash \mathsf{gaussian}^{m}(e_1, e_2) \Rightarrow \real{a} \mid B_1 \cup B_2 \cup \{a\} \mid
     C_1 \cup C_2 \cup \{\tau_1 <: \real{a},\ \tau_2 <: \real{\G},\ a = m\} }
+
+\and
+\inferrule[If]
+  { \Delta \vdash e_0 \Rightarrow \tau_0 \mid B_0 \mid C_0 \\
+    \Delta \vdash e_1 \Rightarrow \tau_1 \mid B_1 \mid C_1 \\
+    \Delta \vdash e_2 \Rightarrow \tau_2 \mid B_2 \mid C_2 }
+  { \Delta \vdash \mathsf{if}\ e_0\ \mathsf{then}\ e_1\ \mathsf{else}\ e_2
+      \Rightarrow \tau \mid B_0 \cup B_1 \cup B_2 \mid
+    C_0 \cup C_1 \cup C_2 \cup
+    \{\tau_0 <: \bool,\ \tau_1 <: \tau,\ \tau_2 <: \tau\} }
+
+\and
+\inferrule[Flip-G]
+  { \Delta \vdash e \Rightarrow \tau_0 \mid B \mid C }
+  { \Delta \vdash \mathsf{flip}^{\G}(e)
+      \Rightarrow \bool \mid B \cup \{a\} \mid
+    C \cup \{\tau_0 <: \real{\G},\ a=\G\} }
 \end{mathpar}
 
 Btw, the let rule contains just $B_2$ because $B_2$ already includes the dependencies of $e_1$ whenever the body uses $x$.
