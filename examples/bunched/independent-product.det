@@ -1,0 +1,2 @@
+let x = uniform[E](0,1) in 
+let y = uniform[E](0,1) in x*y

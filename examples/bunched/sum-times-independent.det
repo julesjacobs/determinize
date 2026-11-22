@@ -1,0 +1,4 @@
+let u = uniform[E](0,1) in
+let v = uniform[E](0,1) in 
+let w = uniform[E](0,1) in 
+let x = u + v in x * w

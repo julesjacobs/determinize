@@ -1,0 +1,9 @@
+let x = gauss(2, 1) in
+let y = gauss(1, 1) in
+let z = gauss(0, 1) in
+
+let a = x + z in
+let b = y + z in
+
+if z < 0.0 then a * b + x * z
+else a * b + z * z
