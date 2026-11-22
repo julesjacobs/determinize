@@ -1,4 +1,5 @@
 import Determinize.Finite.Explore
+import Determinize.Frontend.Bunched
 import Determinize.Frontend.Compile
 import Determinize.Frontend.Pretty
 import Determinize.Runtime.Eval
@@ -16,6 +17,7 @@ private structure Options where
   fuel : Nat := 100000
   checkOnly : Bool := false
   detOnly : Bool := false
+  bunched : Bool := false
   exportPrefix : Option String := none
   certifyResult : Bool := false
   stormOnly : Bool := false
@@ -26,7 +28,7 @@ private structure Options where
   limits : Finite.Limits := {}
 
 private def usage :=
-  "Usage: determinize [--check] [--det-only] [--samples N] [--seed N] [--fuel N] \
+  "Usage: determinize [--bunched] [--check] [--det-only] [--samples N] [--seed N] [--fuel N] \
     [--export PREFIX | --storm-export PREFIX | --result PREFIX] [--no-additive] \
     [--sample-sites] [--max-result-states N] \
     [--subject source|determinized] [--max-states N] [--max-edges N] [--max-state-bytes N] FILE.det"
@@ -59,6 +61,7 @@ private def options : List String → Options → Except String Options
   | "--max-state-bytes" :: n :: rest, o => do
       options rest {o with limits.maxStateBytes := ← natural n}
   | "--check" :: rest, o => options rest {o with checkOnly := true}
+  | "--bunched" :: rest, o => options rest {o with bunched := true}
   | "--det-only" :: rest, o => options rest {o with detOnly := true}
   | "--samples" :: n :: rest, o => do options rest {o with samples := ← natural n}
   | "--seed" :: n :: rest, o => do
@@ -153,6 +156,20 @@ def main (args : List String) : IO UInt32 := do
   try
     let o ← IO.ofExcept (options args {})
     let text ← IO.FS.readFile o.file
+    if o.bunched then
+      -- Experimental: `Bunched.infer` has no correctness theorem, unlike `compile`.
+      let input ← IO.ofExcept (elaborate (← IO.ofExcept (parse text)))
+      let (annotated, ty) ← IO.ofExcept (Bunched.infer input)
+      let source := annotated.toCore
+      IO.println s!"Checked (bunched): {prettyType ty}"
+      unless o.checkOnly do
+        IO.println s!"Annotated source:\n{pretty source}"
+        IO.println s!"Determinized:\n{pretty source.determinize}"
+      if o.samples > 0 then
+        IO.println "Numerical estimates; bunched inference is unverified."
+        summarize "Source" source o
+        summarize "Determinized" source.determinize o
+      return 0
     if o.detOnly then
       let started ← IO.monoNanosNow
       let p ← IO.ofExcept (compile text)

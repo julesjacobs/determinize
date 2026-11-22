@@ -1,4 +1,5 @@
 import Determinize.Frontend.Affinity
+import Determinize.Frontend.Bunched
 import Determinize.Frontend.Compile
 import Determinize.Frontend.Elaborate
 import Determinize.Frontend.Infer

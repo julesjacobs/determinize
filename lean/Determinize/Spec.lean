@@ -1,3 +1,4 @@
+import Determinize.Spec.Bunched
 import Determinize.Spec.Expectation
 import Determinize.Spec.FiniteModel
 import Determinize.Spec.Frontend
