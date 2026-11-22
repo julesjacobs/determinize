@@ -227,22 +227,12 @@ Let $m\in\{\G,\E\}$.
 
 \begin{mathpar}
 % Uniform distributions
-\inferrule[Uniform-E]
-  { \Delta\mid\Gamma\vdash e_1:\real{\E} \\
-    \Delta\mid\Gamma\vdash e_2:\real{\E} }
+\inferrule[Uniform]
+  { \Delta\mid\Gamma\vdash e_1:\real{m} \\
+    \Delta\mid\Gamma\vdash e_2:\real{m} }
   { \Delta\mid\Gamma\vdash
-      \mathsf{uniform}^{\E}(e_1,e_2)
-      :\real{\E} }
-
-\and
-\inferrule[Uniform-G]
-  { \Delta\mid\varnothing
-      \vdash e_1:\real{\G} \\
-    \Delta\mid\varnothing
-      \vdash e_2:\real{\G} }
-  { \Delta\mid\varnothing\vdash
-      \mathsf{uniform}^{\G}(e_1,e_2)
-      :\real{\G} }
+      \mathsf{uniform}^{m}(e_1,e_2)
+      :\real{m} }
 
 \and
 \inferrule[Uniform-M]
@@ -250,6 +240,22 @@ Let $m\in\{\G,\E\}$.
     \Delta\mid\Gamma\vdash e_2:\real{m} }
   { \Delta\mid\Gamma\vdash
       \mathsf{uniform}^{\mathsf{M}}(e_1,e_2)
+      :\real{m} }
+
+\and
+\inferrule[Gaussian]
+  { \Delta\mid\Gamma\vdash e_1:\real{m} \\
+    \Delta\mid\Gamma\vdash e_2:\real{\G} }
+  { \Delta\mid\Gamma\vdash
+      \mathsf{gaussian}^{m}(e_1,e_2)
+      :\real{m} }
+
+\and
+\inferrule[Gaussian-M]
+  { \Delta\mid\Gamma\vdash e_1:\real{m} \\
+    \Delta\mid\Gamma\vdash e_2:\real{\G} }
+  { \Delta\mid\Gamma\vdash
+      \mathsf{gaussian}^{\mathsf{M}}(e_1,e_2)
       :\real{m} }
 
 \and
