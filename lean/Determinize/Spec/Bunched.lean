@@ -38,7 +38,7 @@ def bindings : Bunch → List (Nat × Ty)
 /-- Implements the recursive well-formedness condition. -/
 def wf : Bunch → Bool
   | .empty => true
-  | .bind _ t => scalar t
+  | .bind _ _ => true
   | .add l r => l.wf && r.wf && l.bindings.all (fun (i, t) ↦
       r.bindings.all (fun (j, u) ↦ i != j || t == u))
   | .sep l r => l.wf && r.wf && l.bindings.all (fun (i, _) ↦
