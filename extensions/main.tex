@@ -136,6 +136,8 @@ $\Gamma_0(\Gamma)\equiv\Gamma_0(\Gamma')$.
 \paragraph{Typing rules.}
 Let $m\in\{\G,\E\}$. 
 
+In the \textsc{Let-E} case, $\Gamma[\Gamma_1/x]$ means to replace \emph{every} occurrence of $x$ in the body's bunch $\Gamma$ with $\Gamma_1$.
+
 \begin{mathpar}
 % Variables and constants
 \inferrule[Var-$\Delta$]
@@ -199,10 +201,11 @@ Let $m\in\{\G,\E\}$.
 % Let-bindings
 \inferrule[Let-E]
   { \Delta\mid\Gamma_1\vdash e_1:\tau_1 \\
-    \Delta\mid\Gamma_0(x:\tau_1)
+    \Delta\mid\Gamma
       \vdash e_2:\tau_2 \\
-    \wf(\Gamma_0(\Gamma_1)) }
-  { \Delta\mid\Gamma_0(\Gamma_1)
+    \Gamma(x)=\tau_1 \\
+    \wf(\Gamma[\Gamma_1/x]) }
+  { \Delta\mid\Gamma[\Gamma_1/x]
       \vdash
       \mathsf{let}\ x=e_1\ \mathsf{in}\ e_2:\tau_2 }
 
@@ -338,7 +341,8 @@ For the body, \textsc{Mul-Ind} gives
 \vdash x\cdot w:\real{\E}.
 \]
 
-Take $\Gamma_0=(\cdot,w:\real{\E})$.
+Take $\Gamma=(x:\real{\E},w:\real{\E})$, so that $\Gamma(x)=\real{\E}$ and
+$\Gamma[\Gamma_1/x]=(\Gamma_1,w:\real{\E})$.
 Since $\wf(\Gamma_1,w:\real{\E})$, \textsc{Let-E} gives
 \[
 \varnothing\mid((u:\real{\E};v:\real{\E}),w:\real{\E})
