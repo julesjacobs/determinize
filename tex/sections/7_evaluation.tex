@@ -65,6 +65,18 @@ representative benchmarks---\texttt{branching}, \texttt{hmm}, and
 \texttt{load}---that exhibit substantial but finite variance reductions in
 RQ2. 
 
+\paragraph{Protocol.}
+We use a compiled Lean sampling harness. Each replicate attempts $N$
+executions and estimates the mean from the values that successfully
+return; rejected observations contribute no value. For \texttt{hmm},
+about $59.6\%$ of attempts return. We run 50 replicates for each
+$N\in\{10^3,3\cdot10^3,10^4,3\cdot10^4,10^5\}$.
+Timing covers sampling and online moment calculation after 1,000 untimed
+warmup executions per process. Source and determinized runs use matching
+seeds, with disjoint seed blocks across replicates and execution counts
+and alternating execution order. Further details appear in
+\cref{sec:appendix-sampling-protocol}.
+
 \input{figures/eval-wallclock.tex}
 
-\paragraph{Results} \Cref{fig:estimator-variance-vs-time} shows lower empirical estimator variance for the determinized programs across all tested sample sizes, with similar sampling times to the source programs. At $N=10^5$, estimator variance is reduced by approximately $5.4\times$ for \texttt{branching}, $105\times$ for \texttt{hmm}, and $24.9\times$ for \texttt{load}. Thus, on these three benchmarks, the variance reductions translate into more precise Monte Carlo estimates at comparable sampling cost.
+\paragraph{Results} \Cref{fig:estimator-variance-vs-time} shows lower empirical estimator variance for the determinized programs across all tested execution counts, with similar sampling times to the source programs. At $N=10^5$, estimator variance is reduced by approximately $5.4\times$ for \texttt{branching}, $105\times$ for \texttt{hmm}, and $24.9\times$ for \texttt{load}. Thus, on these three benchmarks, the variance reductions translate into more precise Monte Carlo estimates at comparable sampling cost.

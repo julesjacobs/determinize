@@ -22,10 +22,14 @@
         \caption{\texttt{load}: $24.9\times$ lower}
         \label{fig:estimator-variance-load}
     \end{subfigure}
-    \caption{Empirical estimator variance $\operatorname{Var}(\hat{\mu}_N)$ versus mean sampling time for the
-    source program $P$ and its determinization $\det P$, on log--log axes. Each point is a sample size
-    $N \in \{10^3, 3 \cdot 10^3, 10^4, 3 \cdot 10^4, 10^5\}$; the estimator variance is the variance of the
-    Monte Carlo estimates across 50 independent replicates. Error bars show $\pm 1$ approximate standard error, using $s^2\sqrt{2/49}$ for the sample variance $s^2$ of the 50 estimates. Subcaptions give the reduction in estimator
-    variance at $N = 10^5$.}
+    \caption{Empirical estimator variance $\operatorname{Var}(\hat\mu_N)$ versus mean sampling time for the
+source program $P$ and its determinization $\det P$, on log--log axes.
+Each point uses $N\in\{10^3,3\cdot10^3,10^4,3\cdot10^4,10^5\}$ attempted
+executions per replicate; $\hat\mu_N$ averages the returned values.
+Estimator variance is the sample variance of the estimates across 50
+independent replicates; sampling time is averaged over the same replicates.
+Error bars show $\pm1$ approximate standard error, using
+$s^2\sqrt{2/49}$ for the sample variance $s^2$ of the 50 estimates.
+Subcaptions give the reduction in estimator variance at $N=10^5$.}
     \label{fig:estimator-variance-vs-time}
 \end{figure}
