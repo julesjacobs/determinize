@@ -50,6 +50,20 @@ def shift : Bunch → Bunch
   | .add l r => .add l.shift r.shift
   | .sep l r => .sep l.shift r.shift
 
+/-- `Γ[Γ₁/x]`, for the bound variable `x` (index 0) of a let body's bunch `Γ`: every occurrence
+of `x` replaced by `Γ₁`, the second argument, and the other indices lowered by one, back to those
+outside the let. -/
+def substHead : Bunch → Bunch → Bunch
+  | .empty, _ => .empty
+  | .bind 0 _, b => b
+  | .bind (i + 1) t, _ => .bind i t
+  | .add l r, b => .add (l.substHead b) (r.substHead b)
+  | .sep l r, b => .sep (l.substHead b) (r.substHead b)
+
+/-- `Γ(i) = t`: the variable `i` occurs in the bunch, and every occurrence has type `t`. -/
+def HasType (g : Bunch) (i : Nat) (t : Ty) : Prop :=
+  (i, t) ∈ g.bindings ∧ ∀ u, (i, u) ∈ g.bindings → u = t
+
 /-- Defines proofs that two bunches are structurally equivalent. -/
 inductive Equiv : Bunch → Bunch → Prop
   | refl : Equiv g g
@@ -81,13 +95,6 @@ def Hole.fill : Hole → Bunch → Bunch
   | .addRight l h, g => .add l (h.fill g)
   | .sepLeft h r, g => .sep (h.fill g) r
   | .sepRight l h, g => .sep l (h.fill g)
-
-def Hole.shift : Hole → Hole
-  | .hole => .hole
-  | .addLeft h r => .addLeft h.shift r.shift
-  | .addRight l h => .addRight l.shift h.shift
-  | .sepLeft h r => .sepLeft h.shift r.shift
-  | .sepRight l h => .sepRight l.shift h.shift
 
 abbrev Shared := List (Nat × Ty)
 
@@ -121,10 +128,10 @@ inductive Typed : Shared → Bunch → Expr → Ty → Prop
       Typed shared bunch (.mul left right) (.float affinity)
   | lt : Typed shared .empty left (.float .G) → Typed shared .empty right (.float .G) →
       Typed shared .empty (.lt left right) .bool
-  | letE {outer : Hole} : Typed shared bunch value valueTy →
-      Typed (shiftShared shared) (outer.shift.fill (.bind 0 valueTy)) body result →
-      contextWF shared (outer.fill bunch) = true →
-      Typed shared (outer.fill bunch) (.letE value body) result
+  | letE : Typed shared bunch value valueTy →
+      Typed (shiftShared shared) bodyBunch body result → bodyBunch.HasType 0 valueTy →
+      contextWF shared (bodyBunch.substHead bunch) = true →
+      Typed shared (bodyBunch.substHead bunch) (.letE value body) result
   | letG : shareable valueTy = true → Typed shared .empty value valueTy →
       Typed ((0, valueTy) :: shiftShared shared) bunch.shift body result →
       Typed shared bunch (.letE value body) result

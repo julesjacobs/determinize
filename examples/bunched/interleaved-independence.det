@@ -1,0 +1,8 @@
+let p = uniform[E](0,1) in
+let q = uniform[E](0,1) in
+let r = uniform[E](0,1) in
+let u = p + q in
+let v = r in
+let a = q + r in
+let w = p in
+(w + u) * v + w * a
