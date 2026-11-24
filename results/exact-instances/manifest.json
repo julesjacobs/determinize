@@ -1,0 +1,655 @@
+{
+  "schema_version": 1,
+  "source_commit": "23d7d5f710aa38a92ec0246e4ee2f5dce9f6351e",
+  "scope": "One explicit small instance per RQ1 benchmark; this does not establish success for all parameter values.",
+  "subject": "determinized",
+  "statistics": "Return mass and unnormalized first and second moments of the determinized output measure.",
+  "lean_toolchain": "leanprover/lean4:v4.34.1",
+  "solver": {
+    "storm_version": "1.14.0",
+    "stormpy_version": "1.14.0",
+    "build_type": "Release",
+    "engine": "stormpy sparse exact DTMC, rational arithmetic",
+    "max_states": 1000,
+    "subprocess_timeout_seconds": 15,
+    "outer_solve_timeout_seconds": 35,
+    "native_check_timeout_seconds": 30
+  },
+  "trust": {
+    "route": "by storm with native_decide",
+    "trusted_components": "Lean kernel plus the Lean compiler and runtime used by native_decide. Storm proposes solutions checked by the tactic.",
+    "kernel_only": false
+  },
+  "provenance": {
+    "exporter_sha256": "b2829588ebfe6c70590577e96b783ebc428f6ca3f8d7c2eeb30bc3cad9f52910",
+    "exporter_freshness": "determinize binary predates changes in Main/export; passing native tactic independently reconstructs and verifies the model from the literal Core against current Lean imports",
+    "timings": "Omitted: the runs were diagnostic and are not measurements for the paper timing tables."
+  },
+  "frontend_check": {
+    "file": "CheckFrontend.lean",
+    "status": "passed",
+    "instances_checked": 14,
+    "stdout": "add-uniform-with-counter-large-unbounded_variant.det: current frontend agrees\naddNoise.det: current frontend agrees\naggregate-rv.det: current frontend agrees\nasym-random-walk_variant.det: current frontend agrees\ngauss_randwalk_finalPos.det: current frontend agrees\ninvpend.det: current frontend agrees\nmonte_carlo.det: current frontend agrees\nnoisy-iteration.det: current frontend agrees\npack.det: current frontend agrees\nretransmit.det: current frontend agrees\nservice_policy.det: current frontend agrees\nswap.det: current frontend agrees\nuniform_nested.det: current frontend agrees\nworkload.det: current frontend agrees\n",
+    "meaning": "Recompiled each successful original source plus explicit parameter with current Lean frontend and compared its Core expression structurally with the literal checked by the native theorem"
+  },
+  "results": [
+    {
+      "benchmark": "add-uniform-with-counter-large-unbounded_variant.det",
+      "source": "benchmarks/exact/add-uniform-with-counter-large-unbounded_variant.det",
+      "source_sha256": "bda29f9e7f96d4ae9a1081c4ea7a8bb4631f00304bbf4290d9dd9071679377a0",
+      "instance": "instances/add-uniform-with-counter-large-unbounded_variant.det",
+      "instance_sha256": "be36b4ea857aece925e66a63581aae1abc57afb8a8b9f976bba141dc4ccca823",
+      "parameter_n": null,
+      "parameter_choice": "Original closed program.",
+      "status": "native_checked",
+      "solve": {
+        "exit_code": 0,
+        "stage": "Storm",
+        "logs": [
+          {
+            "stdout": "Checked: float[E]\nWrote additive Determinize.Spec.FiniteModel.Subject.determinized model (Storm input): results/exact-instances/add-uniform-with-counter-large-unbounded_variant (338 states)\n",
+            "stderr": "",
+            "exit_code": 0
+          },
+          {
+            "stdout": "",
+            "stderr": "",
+            "exit_code": 0
+          }
+        ]
+      },
+      "states": 338,
+      "output_statistics": {
+        "return_mass": "1",
+        "first_moment": "2",
+        "second_moment": "25/4"
+      },
+      "theorem": "theorems/add-uniform-with-counter-large-unbounded_variant.native.lean",
+      "solver_solution": "solutions/add-uniform-with-counter-large-unbounded_variant.storm-values.json",
+      "native_check": {
+        "exit_code": 0,
+        "stdout": "'certified' depends on axioms: [propext, Classical.choice, Quot.sound, certified._native.native_decide.ax_1]\n"
+      },
+      "diagnostic_instance_sha256": "be36b4ea857aece925e66a63581aae1abc57afb8a8b9f976bba141dc4ccca823"
+    },
+    {
+      "benchmark": "addNoise.det",
+      "source": "benchmarks/exact/addNoise.det",
+      "source_sha256": "9c93abb8576268c81187a502801c6a409eb2451aa6c68b2d4c353a2a0df9eca6",
+      "instance": "instances/addNoise.det",
+      "instance_sha256": "e1cc06ee1bdaa8874f3597bdbd263d15b4f02f6041c193fc78dbde381167eae6",
+      "parameter_n": null,
+      "parameter_choice": "Original closed program.",
+      "status": "native_checked",
+      "solve": {
+        "exit_code": 0,
+        "stage": "Storm",
+        "logs": [
+          {
+            "stdout": "Checked: float[E]\nWrote additive Determinize.Spec.FiniteModel.Subject.determinized model (Storm input): results/exact-instances/addNoise (162 states)\n",
+            "stderr": "",
+            "exit_code": 0
+          },
+          {
+            "stdout": "",
+            "stderr": "",
+            "exit_code": 0
+          }
+        ]
+      },
+      "states": 162,
+      "output_statistics": {
+        "return_mass": "1",
+        "first_moment": "6",
+        "second_moment": "36"
+      },
+      "theorem": "theorems/addNoise.native.lean",
+      "solver_solution": "solutions/addNoise.storm-values.json",
+      "native_check": {
+        "exit_code": 0,
+        "stdout": "'certified' depends on axioms: [propext, Classical.choice, Quot.sound, certified._native.native_decide.ax_1]\n"
+      },
+      "diagnostic_instance_sha256": "9c93abb8576268c81187a502801c6a409eb2451aa6c68b2d4c353a2a0df9eca6"
+    },
+    {
+      "benchmark": "aggregate-rv.det",
+      "source": "benchmarks/exact/aggregate-rv.det",
+      "source_sha256": "6cfdc8c46d30501450620b1c035592cec55ba43666deadb9a4f31253dea35942",
+      "instance": "instances/aggregate-rv.det",
+      "instance_sha256": "5fef5a3502c131ff641667abe84c2721aa977cb7a8b406029dfd40adc15e5b1d",
+      "parameter_n": 2,
+      "parameter_choice": "Matches companion Polar file --at_n 2",
+      "status": "native_checked",
+      "solve": {
+        "exit_code": 0,
+        "stage": "Storm",
+        "logs": [
+          {
+            "stdout": "Checked: float[E]\nWrote additive Determinize.Spec.FiniteModel.Subject.determinized model (Storm input): results/exact-instances/aggregate-rv (94 states)\n",
+            "stderr": "",
+            "exit_code": 0
+          },
+          {
+            "stdout": "",
+            "stderr": "",
+            "exit_code": 0
+          }
+        ]
+      },
+      "states": 94,
+      "output_statistics": {
+        "return_mass": "1",
+        "first_moment": "1",
+        "second_moment": "1"
+      },
+      "theorem": "theorems/aggregate-rv.native.lean",
+      "solver_solution": "solutions/aggregate-rv.storm-values.json",
+      "native_check": {
+        "exit_code": 0,
+        "stdout": "'certified' depends on axioms: [propext, Classical.choice, Quot.sound, certified._native.native_decide.ax_1]\n"
+      },
+      "diagnostic_instance_sha256": "95b4772a22412bec340180ff8c8dcee3480cea391f962b21d8437f7098aca295"
+    },
+    {
+      "benchmark": "asym-random-walk_variant.det",
+      "source": "benchmarks/exact/asym-random-walk_variant.det",
+      "source_sha256": "62fe9ea4ae9f4a0eda9f7ff370877b6df6f07e4559884449b02f1274c412019a",
+      "instance": "instances/asym-random-walk_variant.det",
+      "instance_sha256": "f9a0cf032cffde7489a880d60144fd9d4eca775c2845c68041253c59e646822a",
+      "parameter_n": null,
+      "parameter_choice": "Original closed program.",
+      "status": "native_checked",
+      "solve": {
+        "exit_code": 0,
+        "stage": "Storm",
+        "logs": [
+          {
+            "stdout": "Checked: float[E]\nWrote additive Determinize.Spec.FiniteModel.Subject.determinized model (Storm input): results/exact-instances/asym-random-walk_variant (199 states)\n",
+            "stderr": "",
+            "exit_code": 0
+          },
+          {
+            "stdout": "",
+            "stderr": "",
+            "exit_code": 0
+          }
+        ]
+      },
+      "states": 199,
+      "output_statistics": {
+        "return_mass": "1",
+        "first_moment": "5/14",
+        "second_moment": "59/196"
+      },
+      "theorem": "theorems/asym-random-walk_variant.native.lean",
+      "solver_solution": "solutions/asym-random-walk_variant.storm-values.json",
+      "native_check": {
+        "exit_code": 0,
+        "stdout": "'certified' depends on axioms: [propext, Classical.choice, Quot.sound, certified._native.native_decide.ax_1]\n"
+      },
+      "diagnostic_instance_sha256": "62fe9ea4ae9f4a0eda9f7ff370877b6df6f07e4559884449b02f1274c412019a"
+    },
+    {
+      "benchmark": "dreckon.det",
+      "source": "benchmarks/exact/dreckon.det",
+      "source_sha256": "7d928647f7250a9a2e2f824d7dd8ffe38483347d8302e4843bb401a275d75550",
+      "instance": "instances/dreckon.det",
+      "instance_sha256": "7d928647f7250a9a2e2f824d7dd8ffe38483347d8302e4843bb401a275d75550",
+      "parameter_n": null,
+      "parameter_choice": "Original closed program.",
+      "status": "state_limit",
+      "solve": {
+        "exit_code": 1,
+        "stage": "model export",
+        "logs": [
+          {
+            "stdout": "Checked: float[E]\n",
+            "stderr": "Incomplete exploration (Determinize.Finite.Limit.states): 1001 discovered, 991 expanded, 999 edges. No export written.\n",
+            "exit_code": 1
+          }
+        ]
+      },
+      "states_discovered": 1001,
+      "states_expanded": 991,
+      "edges": 999,
+      "error": "Incomplete exploration (Determinize.Finite.Limit.states): 1001 discovered, 991 expanded, 999 edges. No export written.",
+      "diagnostic_instance_sha256": "7d928647f7250a9a2e2f824d7dd8ffe38483347d8302e4843bb401a275d75550"
+    },
+    {
+      "benchmark": "gauss_randwalk_finalPos.det",
+      "source": "benchmarks/exact/gauss_randwalk_finalPos.det",
+      "source_sha256": "91c81e6f407ba608ca697b974806c1f1949e68c06978d426283a4634befb557e",
+      "instance": "instances/gauss_randwalk_finalPos.det",
+      "instance_sha256": "9ba98f9019167368fa233a174624653619ff8b57bda7780fd96eb0173268e5c0",
+      "parameter_n": null,
+      "parameter_choice": "Original closed program.",
+      "status": "native_checked",
+      "solve": {
+        "exit_code": 0,
+        "stage": "Storm",
+        "logs": [
+          {
+            "stdout": "Checked: float[E]\nWrote additive Determinize.Spec.FiniteModel.Subject.determinized model (Storm input): results/exact-instances/gauss_randwalk_finalPos (236 states)\n",
+            "stderr": "",
+            "exit_code": 0
+          },
+          {
+            "stdout": "",
+            "stderr": "",
+            "exit_code": 0
+          }
+        ]
+      },
+      "states": 236,
+      "output_statistics": {
+        "return_mass": "1",
+        "first_moment": "0",
+        "second_moment": "0"
+      },
+      "theorem": "theorems/gauss_randwalk_finalPos.native.lean",
+      "solver_solution": "solutions/gauss_randwalk_finalPos.storm-values.json",
+      "native_check": {
+        "exit_code": 0,
+        "stdout": "'certified' depends on axioms: [propext, Classical.choice, Quot.sound, certified._native.native_decide.ax_1]\n"
+      },
+      "diagnostic_instance_sha256": "08fc5d6328c4ec133e14f87957a995c65d210b7194c3b031f591fd4ee74474e5"
+    },
+    {
+      "benchmark": "invpend.det",
+      "source": "benchmarks/exact/invpend.det",
+      "source_sha256": "48f04517c2b67237d8629d6eec5f60ae427bada93ed3a204d270f95dcf1a23de",
+      "instance": "instances/invpend.det",
+      "instance_sha256": "1371500aa1d0be43134ea111e1799b4a105e6a051568cfc1173888eeb20e3139",
+      "parameter_n": 2,
+      "parameter_choice": "Small two-iteration instance; original example uses 11",
+      "status": "native_checked",
+      "solve": {
+        "exit_code": 0,
+        "stage": "Storm",
+        "logs": [
+          {
+            "stdout": "Checked: float[E]\nWrote additive Determinize.Spec.FiniteModel.Subject.determinized model (Storm input): results/exact-instances/invpend (377 states)\n",
+            "stderr": "",
+            "exit_code": 0
+          },
+          {
+            "stdout": "",
+            "stderr": "",
+            "exit_code": 0
+          }
+        ]
+      },
+      "states": 377,
+      "output_statistics": {
+        "return_mass": "1",
+        "first_moment": "59684537/20000000",
+        "second_moment": "3562243956904369/400000000000000"
+      },
+      "theorem": "theorems/invpend.native.lean",
+      "solver_solution": "solutions/invpend.storm-values.json",
+      "native_check": {
+        "exit_code": 0,
+        "stdout": "'certified' depends on axioms: [propext, Classical.choice, Quot.sound, certified._native.native_decide.ax_1]\n"
+      },
+      "diagnostic_instance_sha256": "12225070bbdcc87ada0996d4270d92d1cdbbfbabc24246f1ff09e0fedb27b87e"
+    },
+    {
+      "benchmark": "monte_carlo.det",
+      "source": "benchmarks/exact/monte_carlo.det",
+      "source_sha256": "cf7eec9b3e10de9fba45dc149d73dbfca85905b42f00851c0d3674f5a31dab56",
+      "instance": "instances/monte_carlo.det",
+      "instance_sha256": "fb58831c04f221257f79dfc40d1a1ee708faf74e32a1064d2ab73e4cf5f32384",
+      "parameter_n": null,
+      "parameter_choice": "Original closed program.",
+      "status": "native_checked",
+      "solve": {
+        "exit_code": 0,
+        "stage": "Storm",
+        "logs": [
+          {
+            "stdout": "Checked: float[E]\nWrote additive Determinize.Spec.FiniteModel.Subject.determinized model (Storm input): results/exact-instances/monte_carlo (772 states)\n",
+            "stderr": "",
+            "exit_code": 0
+          },
+          {
+            "stdout": "",
+            "stderr": "",
+            "exit_code": 0
+          }
+        ]
+      },
+      "states": 772,
+      "output_statistics": {
+        "return_mass": "1",
+        "first_moment": "2",
+        "second_moment": "4"
+      },
+      "theorem": "theorems/monte_carlo.native.lean",
+      "solver_solution": "solutions/monte_carlo.storm-values.json",
+      "native_check": {
+        "exit_code": 0,
+        "stdout": "'certified' depends on axioms: [propext, Classical.choice, Quot.sound, certified._native.native_decide.ax_1]\n"
+      },
+      "diagnostic_instance_sha256": "cfc83519e79ed2d5cedd7df754ad627538837e5d28e053bc727f44f30150b1d4"
+    },
+    {
+      "benchmark": "noisy-iteration.det",
+      "source": "benchmarks/exact/noisy-iteration.det",
+      "source_sha256": "1406d0ae8e854844cacb9249e03c5e7a455bdffa509b724bdf855c691077049f",
+      "instance": "instances/noisy-iteration.det",
+      "instance_sha256": "1406d0ae8e854844cacb9249e03c5e7a455bdffa509b724bdf855c691077049f",
+      "parameter_n": null,
+      "parameter_choice": "Original closed program.",
+      "status": "native_checked",
+      "solve": {
+        "exit_code": 0,
+        "stage": "Storm",
+        "logs": [
+          {
+            "stdout": "Checked: float[E]\nWrote additive Determinize.Spec.FiniteModel.Subject.determinized model (Storm input): results/exact-instances/noisy-iteration (68 states)\n",
+            "stderr": "",
+            "exit_code": 0
+          },
+          {
+            "stdout": "",
+            "stderr": "",
+            "exit_code": 0
+          }
+        ]
+      },
+      "states": 68,
+      "output_statistics": {
+        "return_mass": "1",
+        "first_moment": "1/3",
+        "second_moment": "1/3"
+      },
+      "theorem": "theorems/noisy-iteration.native.lean",
+      "solver_solution": "solutions/noisy-iteration.storm-values.json",
+      "native_check": {
+        "exit_code": 0,
+        "stdout": "'certified' depends on axioms: [propext, Classical.choice, Quot.sound, certified._native.native_decide.ax_1]\n"
+      },
+      "diagnostic_instance_sha256": "1406d0ae8e854844cacb9249e03c5e7a455bdffa509b724bdf855c691077049f"
+    },
+    {
+      "benchmark": "pack.det",
+      "source": "benchmarks/exact/pack.det",
+      "source_sha256": "f38ea503ad57404f82eddf19c5d9c24fd18d5cc9483ae59671bb948f15486f1f",
+      "instance": "instances/pack.det",
+      "instance_sha256": "d21dcb64ab55c2fd80c9b8a31018643b70c1c8e18b2f75c6b3ac6a19ffe32f42",
+      "parameter_n": 2,
+      "parameter_choice": "Small two-item instance; original example uses 10",
+      "status": "native_checked",
+      "solve": {
+        "exit_code": 0,
+        "stage": "Storm",
+        "logs": [
+          {
+            "stdout": "Checked: float[E]\nWrote additive Determinize.Spec.FiniteModel.Subject.determinized model (Storm input): results/exact-instances/pack (820 states)\n",
+            "stderr": "",
+            "exit_code": 0
+          },
+          {
+            "stdout": "",
+            "stderr": "",
+            "exit_code": 0
+          }
+        ]
+      },
+      "states": 820,
+      "output_statistics": {
+        "return_mass": "1",
+        "first_moment": "13/6",
+        "second_moment": "71551/14400"
+      },
+      "theorem": "theorems/pack.native.lean",
+      "solver_solution": "solutions/pack.storm-values.json",
+      "native_check": {
+        "exit_code": 0,
+        "stdout": "'certified' depends on axioms: [propext, Classical.choice, Quot.sound, certified._native.native_decide.ax_1]\n"
+      },
+      "diagnostic_instance_sha256": "f6b1c0d37660189db3ad02aea850e41322917a261cd4cc0ffeb5afa181485a7b"
+    },
+    {
+      "benchmark": "retransmit.det",
+      "source": "benchmarks/exact/retransmit.det",
+      "source_sha256": "6e3252e2f283b9b1e60fb81e1ac028354f83b1a5e8c5c11f8407524a842c44fc",
+      "instance": "instances/retransmit.det",
+      "instance_sha256": "6e3252e2f283b9b1e60fb81e1ac028354f83b1a5e8c5c11f8407524a842c44fc",
+      "parameter_n": null,
+      "parameter_choice": "Original closed program.",
+      "status": "native_checked",
+      "solve": {
+        "exit_code": 0,
+        "stage": "Storm",
+        "logs": [
+          {
+            "stdout": "Checked: float[E]\nWrote additive Determinize.Spec.FiniteModel.Subject.determinized model (Storm input): results/exact-instances/retransmit (204 states)\n",
+            "stderr": "",
+            "exit_code": 0
+          },
+          {
+            "stdout": "",
+            "stderr": "",
+            "exit_code": 0
+          }
+        ]
+      },
+      "states": 204,
+      "output_statistics": {
+        "return_mass": "1",
+        "first_moment": "9740/1651",
+        "second_moment": "110904220/2725801"
+      },
+      "theorem": "theorems/retransmit.native.lean",
+      "solver_solution": "solutions/retransmit.storm-values.json",
+      "native_check": {
+        "exit_code": 0,
+        "stdout": "'certified' depends on axioms: [propext, Classical.choice, Quot.sound, certified._native.native_decide.ax_1]\n"
+      },
+      "diagnostic_instance_sha256": "6e3252e2f283b9b1e60fb81e1ac028354f83b1a5e8c5c11f8407524a842c44fc"
+    },
+    {
+      "benchmark": "service_policy.det",
+      "source": "benchmarks/exact/service_policy.det",
+      "source_sha256": "7dfc73b48c59fa4bd09b1670b9c6f56aafd54bbbd56059809e7de7083e12061d",
+      "instance": "instances/service_policy.det",
+      "instance_sha256": "cf21db19b3f8afc7f4f39a3ab72add9008fd66c453770916d8c42ee86b245c21",
+      "parameter_n": 2,
+      "parameter_choice": "Small two-request instance; source comment uses 20",
+      "status": "native_checked",
+      "solve": {
+        "exit_code": 0,
+        "stage": "Storm",
+        "logs": [
+          {
+            "stdout": "Checked: float[E]\nWrote additive Determinize.Spec.FiniteModel.Subject.determinized model (Storm input): results/exact-instances/service_policy (822 states)\n",
+            "stderr": "",
+            "exit_code": 0
+          },
+          {
+            "stdout": "",
+            "stderr": "",
+            "exit_code": 0
+          }
+        ]
+      },
+      "states": 822,
+      "output_statistics": {
+        "return_mass": "1",
+        "first_moment": "29/20",
+        "second_moment": "3989/1800"
+      },
+      "theorem": "theorems/service_policy.native.lean",
+      "solver_solution": "solutions/service_policy.storm-values.json",
+      "native_check": {
+        "exit_code": 0,
+        "stdout": "'certified' depends on axioms: [propext, Classical.choice, Quot.sound, certified._native.native_decide.ax_1]\n"
+      },
+      "diagnostic_instance_sha256": "95984ea7735753c21a1cdb0719802a0850735283372ca35b24a2b15d66b05caa"
+    },
+    {
+      "benchmark": "swap.det",
+      "source": "benchmarks/exact/swap.det",
+      "source_sha256": "93a4de5f3109089b1fba627d8224ca21e4715af07a8ba8047f9fece8d4e639ad",
+      "instance": "instances/swap.det",
+      "instance_sha256": "6593ee5d5fe575b0f4c887f510d8a61cabd353c8c6b489d63f352ef37282c224",
+      "parameter_n": 1,
+      "parameter_choice": "Matches companion Polar file --at_n 1",
+      "status": "native_checked",
+      "solve": {
+        "exit_code": 0,
+        "stage": "Storm",
+        "logs": [
+          {
+            "stdout": "Checked: float[E]\nWrote additive Determinize.Spec.FiniteModel.Subject.determinized model (Storm input): results/exact-instances/swap (109 states)\n",
+            "stderr": "",
+            "exit_code": 0
+          },
+          {
+            "stdout": "",
+            "stderr": "",
+            "exit_code": 0
+          }
+        ]
+      },
+      "states": 109,
+      "output_statistics": {
+        "return_mass": "1",
+        "first_moment": "11/2",
+        "second_moment": "121/4"
+      },
+      "theorem": "theorems/swap.native.lean",
+      "solver_solution": "solutions/swap.storm-values.json",
+      "native_check": {
+        "exit_code": 0,
+        "stdout": "'certified' depends on axioms: [propext, Classical.choice, Quot.sound, certified._native.native_decide.ax_1]\n"
+      },
+      "diagnostic_instance_sha256": "7e7ee5ef075fbdd0ce727d8cdbf1f5dd473ceb308a8f32e94317cdd004d33861"
+    },
+    {
+      "benchmark": "uniform_nested.det",
+      "source": "benchmarks/exact/uniform_nested.det",
+      "source_sha256": "d471df152340e349bd026b1b6ceeac199ce83e211f8ff916b133462bba3b77e3",
+      "instance": "instances/uniform_nested.det",
+      "instance_sha256": "d9f103025beeb392609b479f7083e2eaa6504820821132e71602b61f6a8e5857",
+      "parameter_n": null,
+      "parameter_choice": "Original closed program.",
+      "status": "native_checked",
+      "solve": {
+        "exit_code": 0,
+        "stage": "Storm",
+        "logs": [
+          {
+            "stdout": "Checked: float[E]\nWrote additive Determinize.Spec.FiniteModel.Subject.determinized model (Storm input): results/exact-instances/uniform_nested (30 states)\n",
+            "stderr": "",
+            "exit_code": 0
+          },
+          {
+            "stdout": "",
+            "stderr": "",
+            "exit_code": 0
+          }
+        ]
+      },
+      "states": 30,
+      "output_statistics": {
+        "return_mass": "1",
+        "first_moment": "1/16",
+        "second_moment": "1/256"
+      },
+      "theorem": "theorems/uniform_nested.native.lean",
+      "solver_solution": "solutions/uniform_nested.storm-values.json",
+      "native_check": {
+        "exit_code": 0,
+        "stdout": "'certified' depends on axioms: [propext, Classical.choice, Quot.sound, certified._native.native_decide.ax_1]\n"
+      },
+      "diagnostic_instance_sha256": "2688eb6e87500835e13fc027f8efd05d390dd8012f3bcb498d6b09d3450cb718"
+    },
+    {
+      "benchmark": "workload.det",
+      "source": "benchmarks/exact/workload.det",
+      "source_sha256": "49dcb519c41ec4570813e3c4c0d02d5a547a8ca39efd835f583071ce12823635",
+      "instance": "instances/workload.det",
+      "instance_sha256": "ca94013949f5704c65c373d9bf4dcc48f14cfdc64e3690927ee5079f23c565f8",
+      "parameter_n": 2,
+      "parameter_choice": "Small two-job instance; source comment uses 8",
+      "status": "native_checked",
+      "solve": {
+        "exit_code": 0,
+        "stage": "Storm",
+        "logs": [
+          {
+            "stdout": "Checked: float[E]\nWrote additive Determinize.Spec.FiniteModel.Subject.determinized model (Storm input): results/exact-instances/workload (351 states)\n",
+            "stderr": "",
+            "exit_code": 0
+          },
+          {
+            "stdout": "",
+            "stderr": "",
+            "exit_code": 0
+          }
+        ]
+      },
+      "states": 351,
+      "output_statistics": {
+        "return_mass": "1",
+        "first_moment": "5/2",
+        "second_moment": "53/8"
+      },
+      "theorem": "theorems/workload.native.lean",
+      "solver_solution": "solutions/workload.storm-values.json",
+      "native_check": {
+        "exit_code": 0,
+        "stdout": "'certified' depends on axioms: [propext, Classical.choice, Quot.sound, certified._native.native_decide.ax_1]\n"
+      },
+      "diagnostic_instance_sha256": "e2d285d4563caaa2845d4c756816f92ab85182a109a6cf8f2c0c786f964d59ca"
+    }
+  ],
+  "files_sha256": {
+    "CheckFrontend.lean": "caf780e7576ab267580bc64c0ddb850748331802eaa3511fc9b2840ab46c543e",
+    "instances/add-uniform-with-counter-large-unbounded_variant.det": "be36b4ea857aece925e66a63581aae1abc57afb8a8b9f976bba141dc4ccca823",
+    "instances/addNoise.det": "e1cc06ee1bdaa8874f3597bdbd263d15b4f02f6041c193fc78dbde381167eae6",
+    "instances/aggregate-rv.det": "5fef5a3502c131ff641667abe84c2721aa977cb7a8b406029dfd40adc15e5b1d",
+    "instances/asym-random-walk_variant.det": "f9a0cf032cffde7489a880d60144fd9d4eca775c2845c68041253c59e646822a",
+    "instances/dreckon.det": "7d928647f7250a9a2e2f824d7dd8ffe38483347d8302e4843bb401a275d75550",
+    "instances/gauss_randwalk_finalPos.det": "9ba98f9019167368fa233a174624653619ff8b57bda7780fd96eb0173268e5c0",
+    "instances/invpend.det": "1371500aa1d0be43134ea111e1799b4a105e6a051568cfc1173888eeb20e3139",
+    "instances/monte_carlo.det": "fb58831c04f221257f79dfc40d1a1ee708faf74e32a1064d2ab73e4cf5f32384",
+    "instances/noisy-iteration.det": "1406d0ae8e854844cacb9249e03c5e7a455bdffa509b724bdf855c691077049f",
+    "instances/pack.det": "d21dcb64ab55c2fd80c9b8a31018643b70c1c8e18b2f75c6b3ac6a19ffe32f42",
+    "instances/retransmit.det": "6e3252e2f283b9b1e60fb81e1ac028354f83b1a5e8c5c11f8407524a842c44fc",
+    "instances/service_policy.det": "cf21db19b3f8afc7f4f39a3ab72add9008fd66c453770916d8c42ee86b245c21",
+    "instances/swap.det": "6593ee5d5fe575b0f4c887f510d8a61cabd353c8c6b489d63f352ef37282c224",
+    "instances/uniform_nested.det": "d9f103025beeb392609b479f7083e2eaa6504820821132e71602b61f6a8e5857",
+    "instances/workload.det": "ca94013949f5704c65c373d9bf4dcc48f14cfdc64e3690927ee5079f23c565f8",
+    "solutions/add-uniform-with-counter-large-unbounded_variant.storm-values.json": "a0df058150abf3dd27bd395d33ffa042f3152c08b25c5aeaa6ab969ce7485201",
+    "solutions/addNoise.storm-values.json": "a803e3df84fbc42bdc223e74541fe2af260de19b0e3b615028a0361cc0384d2b",
+    "solutions/aggregate-rv.storm-values.json": "f955653ee5a6746c30ae37c03f9314d3cafe08a07dc1a6ccbb120ed24ac7fd4d",
+    "solutions/asym-random-walk_variant.storm-values.json": "5455bf40b692b1aba01cb48ae7a07c3a81032a513815524122b454122374510d",
+    "solutions/gauss_randwalk_finalPos.storm-values.json": "8d38dffd0f702e5f94b397072c1e2670f8909bc5340ba7e646eba527f6196653",
+    "solutions/invpend.storm-values.json": "b45480ed40744e8b38dad28ddcdc537eddec35932da8f55ed3a93ddfe5bfb39f",
+    "solutions/monte_carlo.storm-values.json": "0bb196b905decd90f2b08aaf38d6d4c293729a2b8781cae69c2eae7f38b86984",
+    "solutions/noisy-iteration.storm-values.json": "f3c71e72d778a105d0438f80f33fdb9f41a0610092bacf22b38f36bc7406ccd2",
+    "solutions/pack.storm-values.json": "4118477c405b2c976fdbaf33838af76759d98c1f9bc09215e9bc7ae6f83df00a",
+    "solutions/retransmit.storm-values.json": "22fb1b950ab190f2d8c532c950d71c50eab10e3dc80c4c4fba39bd5948b4fc66",
+    "solutions/service_policy.storm-values.json": "0af9d9657e6c390fbd48e75b2a349e05e5b05c59eb389d44a5b9ba77154186d5",
+    "solutions/swap.storm-values.json": "0b2b9c6713c3845106a212192dd995659963e2891382070b10b27a5ddf14589a",
+    "solutions/uniform_nested.storm-values.json": "601b82ec45cc853fcdbd62c01b036bebc42b23b9d5a60bffb71920d3410e363c",
+    "solutions/workload.storm-values.json": "b72082ba8df27d3fa25dfe1a806738cdbc66453e75b295d34607869646b75dc7",
+    "theorems/add-uniform-with-counter-large-unbounded_variant.native.lean": "275a378001aa28c18d05b27cdf0ebecd9b7246c15a6997b533043b14e2e45805",
+    "theorems/addNoise.native.lean": "33961070666e2ab0cbad55f730eeca4902e966dc42bd712989f593cc00ae7c23",
+    "theorems/aggregate-rv.native.lean": "ea833fc7b6357796c1454c65bfd535d205a89c3f1115e24e57ffb3c9fae3b77a",
+    "theorems/asym-random-walk_variant.native.lean": "e81c5129a76079e2ad2593b59f697963987f3214f5a7cf0ec26071e389ec1579",
+    "theorems/gauss_randwalk_finalPos.native.lean": "cd0a29632e29abbbd2968d8219c380762364b611185f1419be06d3881c8db467",
+    "theorems/invpend.native.lean": "403262198edbf2a22e11b06c3cb600b99b211ba01274439487d542e36e1397a5",
+    "theorems/monte_carlo.native.lean": "3bbbd92bde2f5a776879310aa953c1754ebd7f3f88a40efdbfc607c661e222f2",
+    "theorems/noisy-iteration.native.lean": "5fe597765177be16ad099b49d9602fd09a1089bc424eb0df9abbf517457f220f",
+    "theorems/pack.native.lean": "055d37c8722f704dbb931e8abe1af48edf5358c6936e6a8d802ac6ea970d9bf4",
+    "theorems/retransmit.native.lean": "310a5c1313e3b16a98964db958a75534f2ad3ede56c79d24ce1d75b1215cf593",
+    "theorems/service_policy.native.lean": "bdf1d726b680338af688bfcda7e1228fc2bb018d6e6b781983349bab8ed913d0",
+    "theorems/swap.native.lean": "8914ea6158cb4a873a2ecf116d7da94ce7ec5d4179dc5b8db4adbe26c92a9e2b",
+    "theorems/uniform_nested.native.lean": "083d31ccac81cb29fa9d243771d83df71e02386a577e13606af4b08e202e9d75",
+    "theorems/workload.native.lean": "30345be5eb3624c2934ca6dcdb4c7ae8ec83601df2d29d5377c5a099d0cab59a"
+  }
+}

@@ -5,18 +5,18 @@
 In this section, we evaluate our determinization approach in three complementary ways. We seek to address the following research questions:
 
 \begin{itemize}
-    \item \textbf{RQ1: Exact analysis.} Can determinization transform infinite-state programs into finite-state ones amenable to exact expectation computation, and what is the computational cost of the determinization transformation?
+    \item \textbf{RQ1: Exact analysis.} Can determinization enable exact expectation computation through finite Markov reward representations, and what does the transformation cost?
     
     \item \textbf{RQ2: Variance reduction.} How much does determinization reduce output variance?
     
     \item \textbf{RQ3: Monte Carlo efficiency.} Does determinization yield more precise Monte Carlo expectation estimates at comparable sampling cost?
 \end{itemize}
 
-Consequently, our first question investigates whether determinization enables computing an exact expectation of a program, through finite-state model checking. The latter two investigate its benefits for sampling-based inference, first measuring reductions in output variance and then comparing Monte Carlo precision and sampling time. We detail the benchmarks, experimental setup, comparisons, and results for each question in the following subsections below. All experiments ran on a MacBook Pro M4 Max with 48GB RAM. Together with our benchmarks, our implementation is publicly available at \href{https://github.com/[anonymized]}{https://github.com/[anonymized]}.
+Our first question investigates whether determinization enables exact expectation computation through finite Markov reward representations. The latter two investigate its benefits for sampling-based inference, first measuring reductions in output variance and then comparing Monte Carlo precision and sampling time. We detail the benchmarks, experimental setup, comparisons, and results for each question in the following subsections below. All experiments ran on a MacBook Pro M4 Max with 48GB RAM. The artifact contains the implementation, benchmarks, and recorded results.
 
 \subsection{RQ1: Enabling Exact Expectations}
 
-We first ask whether determinization can make calculating exact expectations possible for programs with continuous or infinite-state behavior. For the benchmarks in Table~\ref{tab:finite-after-determinization}, determinization yields a finite-state representation, even when some discrete sampling remains. For these benchmarks, we translate the determinized program into a finite discrete-time Markov chain and use Storm~\cite{hensel2022storm} to compute its expectation exactly as an expected-reward query. Each result is accompanied by a Lean-checkable certificate establishing that the finite model represents the determinized program and that the reported expectation satisfies the exact rational reward equations and boundary conditions.
+We measure determinization on 15 benchmark programs and separately test exact analysis on concrete instances of those programs. Exact analysis requires a finite Markov reward representation supported by our backend (\cref{sec:implementation}). For the instances in \cref{tab:exact-instances}, Storm/Stormpy~1.14.0~\cite{hensel2022storm} solves the rational reward equations, and Lean's \texttt{storm} tactic checks the resulting return probability and first two moments against the determinized program's semantics using \texttt{native\_decide}. These checks additionally trust the Lean compiler and runtime.
 
 Our benchmark suite draws primarily from prior work~\cite{chakarov2013martingales,chakarov2014expectation,beutner2022guaranteed,barthe2016private,vakar2019domain,sato2019formal,gehr2016psi}, alongside four new examples: \texttt{retransmit}, \texttt{service-policy}, \texttt{workload}, and \texttt{noisy-iteration}. 
 These benchmarks exercise a range of language constructs, including: lists for \texttt{add-noise},
@@ -26,12 +26,15 @@ and \texttt{swap}; and unbounded recursion for \texttt{add-uniform-counter}, \te
 
 \input{figures/eval-exact.tex}
 
-\paragraph{Results} \Cref{tab:finite-after-determinization} summarizes our results. For each benchmark, we report the queried expectation, whether determinization is full or partial, the number of static discrete and continuous sampling sites before and after determinization, and the determinization time. All 15 benchmarks have their continuous sampling sites eliminated, with seven fully determinized and eight partially determinized. Even when discrete sampling remains, the resulting programs admit an exact expectation computation using Storm since they are finite-state. These results demonstrate that determinization can allow programs involving continuous distributions, higher-order functions, and unbounded recursion to become finite-state.
+\paragraph{Results}
+\Cref{tab:finite-after-determinization} reports transformation results: all 15 programs lose every continuous sampling site, with seven fully determinized and eight retaining discrete sampling. \Cref{tab:exact-instances} reports exact analysis of concrete instances. Fourteen instances passed the native checks; each has return probability one, so its first moment is also its return-conditioned mean. Exploration of \texttt{dreckon} reached the 1,000-state cap before export, leaving its exact result unchecked. Transferring the checked means to the source programs additionally requires source domain safety and a well-defined expectation (\cref{thm:expectation}).
+
+\input{figures/eval-exact-instances.tex}
 
 \paragraph{Determinization cost.}
 The final column of \cref{tab:finite-after-determinization}
-reports the total determinization time. This takes less than one millisecond on every benchmark instance. Now, to investigate how this cost grows with program size, we
-take three benchmarks from the table and parameterize them by $k$. For \texttt{uniform-nested}, $k$ counts a chain of dependent uniform sampling sites, each parameterized by the preceding sample. For \texttt{gauss-random-walk} and \texttt{add-noise}, $k$ instead counts the number of explicitly constructed input list elements (see \cref{sec:appendix-scaling} for full details). \Cref{fig:determinization-scaling} in \cref{sec:appendix-scaling} plot the median times over 10 runs.
+reports the total determinization time. This takes less than one millisecond on every benchmark program. Now, to investigate how this cost grows with program size, we
+take three benchmarks from the table and parameterize them by $k$. For \texttt{uniform-nested}, $k$ counts a chain of dependent uniform sampling sites, each parameterized by the preceding sample. For \texttt{gauss-random-walk} and \texttt{add-noise}, $k$ instead counts the number of explicitly constructed input list elements (see \cref{sec:appendix-scaling} for full details). \Cref{fig:determinization-scaling} in \cref{sec:appendix-scaling} plots the median times over 10 runs.
 
 
 

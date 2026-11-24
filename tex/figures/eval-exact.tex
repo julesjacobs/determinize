@@ -103,6 +103,7 @@
     \end{tabular}%
     }
 
-    \caption{ Determinization on 15 benchmarks. In the determinization column, $\bullet\!\bullet$ denotes full determinization and $\bullet\!\circ$ denotes partial. Each pair $(d,c)$ counts static discrete and continuous sampling sites. Timings measure determinization only, excluding finite-state model construction and Storm model checking. Several programs are parameterized by $n$, which affects their expectations and generated model sizes.}
+    \caption{Determinization on 15 benchmark programs.
+    $\bullet\!\bullet$ denotes full determinization and $\bullet\!\circ$ partial determinization. Each pair $(d,c)$ counts static discrete and continuous sampling sites. Timings cover parsing, elaboration, inference, and mean replacement, excluding model construction, solving, and certificate checking. Parameterized functions are transformed without applying them to concrete inputs.}
     \label{tab:finite-after-determinization}
 \end{table}
